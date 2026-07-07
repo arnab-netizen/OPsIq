@@ -1,0 +1,293 @@
+{
+  "title": "Timeline decision matrix (PASS 47)",
+  "proofs": {
+    "1_chronological": "e01 → e02 → e03 → e04 → e05 → e06 → e07 → e08 → e09 → e10 → e11 → e12 → e13 → e14 → e15 → e16 → e17 → e18 → e19 → e20 → e21 → e22 → e23 → e24 → e25 → e26 → e27 → e28 → e29 → e30 → e31 → e32",
+    "2_top_action_changes": [
+      "survival:data",
+      "survival:customer",
+      "survival:cash",
+      "survival:ops",
+      "survival:validate",
+      "survival:reassess"
+    ],
+    "8_failed_reassessment_loops_back": {
+      "e24_regression": true,
+      "e26_loops_back_to": "CUSTOMER_RECOVERY_REQUIRED"
+    },
+    "9_positive_signal_needs_evidence": {
+      "e25_weak_proof_growthAllowed": false
+    },
+    "10_growth_blocked_in_instability": {
+      "anyGrowthBeforeE30": false
+    },
+    "11_stabilization_gate_only_with_proof": {
+      "e28_phase": "recover"
+    },
+    "12_thrive_gate_after_stabilization": {
+      "e30_growthAllowed": true
+    },
+    "13_one_top_action": true,
+    "14_clean_control_no_fabrication": {
+      "e32_plan": null,
+      "e32_status": "NO_CRISIS"
+    }
+  },
+  "perTick": [
+    {
+      "id": "e01",
+      "week": 1,
+      "crisis": "UNKNOWN_NEEDS_DATA",
+      "top": "survival:data",
+      "phase": "stabilize",
+      "growthAllowed": false
+    },
+    {
+      "id": "e02",
+      "week": 1,
+      "crisis": "UNKNOWN_NEEDS_DATA",
+      "top": "survival:data",
+      "phase": "stabilize",
+      "growthAllowed": false
+    },
+    {
+      "id": "e03",
+      "week": 2,
+      "crisis": "CUSTOMER_RECOVERY_REQUIRED",
+      "top": "survival:customer",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e04",
+      "week": 2,
+      "crisis": "CUSTOMER_RECOVERY_REQUIRED",
+      "top": "survival:customer",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e05",
+      "week": 2,
+      "crisis": "CUSTOMER_RECOVERY_REQUIRED",
+      "top": "survival:customer",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e06",
+      "week": 3,
+      "crisis": "CASH_PROTECTION_REQUIRED",
+      "top": "survival:cash",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e07",
+      "week": 3,
+      "crisis": "CASH_PROTECTION_REQUIRED",
+      "top": "survival:cash",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e08",
+      "week": 3,
+      "crisis": "CASH_PROTECTION_REQUIRED",
+      "top": "survival:cash",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e09",
+      "week": 4,
+      "crisis": "CASH_PROTECTION_REQUIRED",
+      "top": "survival:cash",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e10",
+      "week": 4,
+      "crisis": "CUSTOMER_RECOVERY_REQUIRED",
+      "top": "survival:customer",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e11",
+      "week": 4,
+      "crisis": "UNKNOWN_NEEDS_DATA",
+      "top": "survival:data",
+      "phase": "stabilize",
+      "growthAllowed": false
+    },
+    {
+      "id": "e12",
+      "week": 5,
+      "crisis": "UNKNOWN_NEEDS_DATA",
+      "top": "survival:data",
+      "phase": "stabilize",
+      "growthAllowed": false
+    },
+    {
+      "id": "e13",
+      "week": 5,
+      "crisis": "OPERATIONS_STABILIZATION_REQUIRED",
+      "top": "survival:ops",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e14",
+      "week": 5,
+      "crisis": "OPERATIONS_STABILIZATION_REQUIRED",
+      "top": "survival:ops",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e15",
+      "week": 5,
+      "crisis": "OPERATIONS_STABILIZATION_REQUIRED",
+      "top": "survival:ops",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e16",
+      "week": 6,
+      "crisis": "OPERATIONS_STABILIZATION_REQUIRED",
+      "top": "survival:ops",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e17",
+      "week": 6,
+      "crisis": "OPERATIONS_STABILIZATION_REQUIRED",
+      "top": "survival:ops",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e18",
+      "week": 6,
+      "crisis": "OPERATIONS_STABILIZATION_REQUIRED",
+      "top": "survival:ops",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e19",
+      "week": 7,
+      "crisis": "OPERATIONS_STABILIZATION_REQUIRED",
+      "top": "survival:ops",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e20",
+      "week": 7,
+      "crisis": "OPERATIONS_STABILIZATION_REQUIRED",
+      "top": "survival:ops",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e21",
+      "week": 7,
+      "crisis": "OPERATIONS_STABILIZATION_REQUIRED",
+      "top": "survival:ops",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e22",
+      "week": 7,
+      "crisis": "VALIDATION_BEFORE_GROWTH",
+      "top": "survival:validate",
+      "phase": "stabilize",
+      "growthAllowed": false
+    },
+    {
+      "id": "e23",
+      "week": 7,
+      "crisis": "VALIDATION_BEFORE_GROWTH",
+      "top": "survival:validate",
+      "phase": "stabilize",
+      "growthAllowed": false
+    },
+    {
+      "id": "e24",
+      "week": 8,
+      "crisis": "CUSTOMER_RECOVERY_REQUIRED",
+      "top": "survival:customer",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e25",
+      "week": 8,
+      "crisis": "CUSTOMER_RECOVERY_REQUIRED",
+      "top": "survival:customer",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e26",
+      "week": 8,
+      "crisis": "CUSTOMER_RECOVERY_REQUIRED",
+      "top": "survival:customer",
+      "phase": "survive",
+      "growthAllowed": false
+    },
+    {
+      "id": "e27",
+      "week": 8,
+      "crisis": "VALIDATION_BEFORE_GROWTH",
+      "top": "survival:validate",
+      "phase": "stabilize",
+      "growthAllowed": false
+    },
+    {
+      "id": "e28",
+      "week": 8,
+      "crisis": "STABILIZATION_IN_PROGRESS",
+      "top": "survival:reassess",
+      "phase": "recover",
+      "growthAllowed": false
+    },
+    {
+      "id": "e29",
+      "week": 8,
+      "crisis": "STABILIZATION_IN_PROGRESS",
+      "top": "survival:reassess",
+      "phase": "recover",
+      "growthAllowed": false
+    },
+    {
+      "id": "e30",
+      "week": 8,
+      "crisis": "STABILIZATION_IN_PROGRESS",
+      "top": "survival:reassess",
+      "phase": "grow",
+      "growthAllowed": true
+    },
+    {
+      "id": "e31",
+      "week": 8,
+      "crisis": "VALIDATION_BEFORE_GROWTH",
+      "top": "survival:validate",
+      "phase": "grow",
+      "growthAllowed": true
+    },
+    {
+      "id": "e32",
+      "week": 8,
+      "crisis": "NO_CRISIS",
+      "top": null,
+      "phase": "grow",
+      "growthAllowed": true
+    }
+  ]
+}

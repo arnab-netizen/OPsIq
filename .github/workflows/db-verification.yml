@@ -184,6 +184,7 @@ jobs:
             src/__tests__/execution/owner-public-signals-read.db.test.ts \
             src/__tests__/execution/private-owner-shadow-pilot-pack.db.test.ts \
             src/__tests__/execution/real-public-business-shadow-run.db.test.ts \
+            src/__tests__/execution/long-running-business-timeline.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-b-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
@@ -360,6 +361,7 @@ jobs:
             src/__tests__/execution/owner-public-signals-read.db.test.ts \
             src/__tests__/execution/private-owner-shadow-pilot-pack.db.test.ts \
             src/__tests__/execution/real-public-business-shadow-run.db.test.ts \
+            src/__tests__/execution/long-running-business-timeline.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-a-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e

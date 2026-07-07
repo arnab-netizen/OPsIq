@@ -1,0 +1,39 @@
+{
+  "title": "Long-Running Business Timeline — Evidence Ledger (PASS 47)",
+  "date": "2026-07-07",
+  "branch": "claude/long-running-business-timeline-simulation",
+  "baseMain": "ac87780e3a709fd09b3ead5f8d13c6f64e29d7c7",
+  "objective": "Prove OpsIQ stays coherent, safe, useful and execution-based across an evolving 8-week business timeline, composing the REAL governed engines (no new decision engine, no fabrication).",
+  "filesAdded": [
+    "src/domain/execution/business-timeline-simulation.ts (pure driver composing planBusinessSurvivalRecovery / assessGrowthReadiness / evaluateConditionTransition / evaluateDoNotRepeat)",
+    "src/domain/execution/business-timeline-fixture.ts (canonical 8-week / 32-event laundry timeline)",
+    "src/__tests__/execution/business-timeline-simulation.test.ts (14 unit tests — memory/progression)",
+    "src/__tests__/execution/long-running-business-timeline.db.test.ts (8 DB tests — LANE_B, 20 required proofs)",
+    "docs/real-world-data/long-running-business-timeline/ (fixtures, expectations, event ledger, privacy notes, run report)",
+    "docs/audits/2026-07-07-long-running-business-timeline-simulation/ (final report + decision/memory/safety matrices + this ledger + deferred gaps)"
+  ],
+  "filesChanged": [
+    ".github/workflows/db-verification.yml (added long-running-business-timeline.db.test.ts to the LANE_B and LANE_A explicit test lists)"
+  ],
+  "noNewEngine": "The driver invents no gating logic; every decision delegates to an existing exported engine. Growth signals and crisis inputs are derived from ONE coherent state so finance/growth cannot contradict.",
+  "timeline": { "weeks": 8, "events": 32, "reassessmentCycles": 7 },
+  "dbProof": {
+    "file": "src/__tests__/execution/long-running-business-timeline.db.test.ts",
+    "lane": "LANE_B (postgres:16 service) + LANE_A list",
+    "localRun": "8/8 passed on local Postgres (opsiq_test) with TEST_WITH_DB=true",
+    "marker": "LANE_B_TIMELINE_DB_SIM_EXECUTED logged; LANE_B_DB_VERIFIED printed by db-verification.yml on success",
+    "realServicesDriven": ["recordDoNotRepeat", "ownerDoNotRepeatRule lookup", "evaluateDoNotRepeat", "markFactUnknown", "submitProof", "reviewProof", "evaluateProofClearance", "emitAuditEvent"]
+  },
+  "gates": {
+    "prismaValidate": "PASS",
+    "tsc": "PASS",
+    "governanceScanStrict": "31 frozen / 0 new",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new)",
+    "unitTests": "business-timeline-simulation 14/14",
+    "dbSim": "long-running-business-timeline 8/8 (local Postgres)",
+    "regressionSuites": "recovery-execution-milestone-proof + owner-cockpit-decision-coherence 24/24 (unchanged)",
+    "nextBuild": "PASS"
+  },
+  "frozenBoundaries": ["public SaaS", "billing", "Product Hunt/launch", "live integrations", "Local Mode", "LLM/NLP", "autonomous external action", "private owner data"],
+  "classification": "LONG_RUNNING_BUSINESS_TIMELINE_ELITE_ACCEPTED"
+}
