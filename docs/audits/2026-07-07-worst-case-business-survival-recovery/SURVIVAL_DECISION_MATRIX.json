@@ -1,0 +1,302 @@
+{
+  "audit": "worst-case-business-survival-recovery",
+  "pass": "32",
+  "matrix": "SURVIVAL_DECISION",
+  "date": "2026-07-07",
+  "note": "One row per crisis. expected==actual (deterministic). Proven by business-survival-recovery.test.ts (unit) + worst-case-business-survival-recovery.db.test.ts (LANE_B).",
+  "rows": [
+    {
+      "crisisCaseId": "cr-laundry",
+      "archetype": "laundry_local_service",
+      "expectedTopSurvivalAction": "CASH_PROTECTION_REQUIRED → Protect cash / runway: hold discretionary spend and measure the real cash position",
+      "actualTopSurvivalAction": "CASH_PROTECTION_REQUIRED → Protect cash / runway: hold discretionary spend and measure the real cash position",
+      "expectedBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "actualBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "ownerApprovalRequirements": [],
+      "evidenceRequirements": [
+        "the captured cash/runway figure"
+      ],
+      "recoveryMilestones": [
+        "Stop-loss in force: loss-making/non-essential spend paused.",
+        "Cash position/runway measured (the real figure — never assumed).",
+        "Customer/quality issue corrected with proof.",
+        "Operational/vendor risk resolved.",
+        "Owner workload reduced via delegation/policy.",
+        "Stabilization gate met → recovery plan."
+      ],
+      "unrecoverable": false,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "crisisCaseId": "cr-housekeeping",
+      "archetype": "housekeeping_facility",
+      "expectedTopSurvivalAction": "CUSTOMER_RECOVERY_REQUIRED → Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "actualTopSurvivalAction": "CUSTOMER_RECOVERY_REQUIRED → Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "expectedBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "actualBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "ownerApprovalRequirements": [],
+      "evidenceRequirements": [
+        "evidence the corrected step passes before the issue is closed"
+      ],
+      "recoveryMilestones": [
+        "Stop-loss in force: loss-making/non-essential spend paused.",
+        "Cash position/runway measured (the real figure — never assumed).",
+        "Customer/quality issue corrected with proof.",
+        "Operational/vendor risk resolved.",
+        "Owner workload reduced via delegation/policy.",
+        "Stabilization gate met → recovery plan."
+      ],
+      "unrecoverable": false,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "crisisCaseId": "cr-property",
+      "archetype": "property_management",
+      "expectedTopSurvivalAction": "CUSTOMER_RECOVERY_REQUIRED → Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "actualTopSurvivalAction": "CUSTOMER_RECOVERY_REQUIRED → Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "expectedBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval",
+        "marketing before stabilization + validation"
+      ],
+      "actualBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval",
+        "marketing before stabilization + validation"
+      ],
+      "ownerApprovalRequirements": [
+        "Legal/contract/tender risk decision — owner reviews; nothing is committed, submitted, or spent automatically."
+      ],
+      "evidenceRequirements": [
+        "evidence the corrected step passes before the issue is closed"
+      ],
+      "recoveryMilestones": [
+        "Stop-loss in force: loss-making/non-essential spend paused.",
+        "Cash position/runway measured (the real figure — never assumed).",
+        "Customer/quality issue corrected with proof.",
+        "Operational/vendor risk resolved.",
+        "Owner workload reduced via delegation/policy.",
+        "Stabilization gate met → recovery plan."
+      ],
+      "unrecoverable": false,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "crisisCaseId": "cr-franchise",
+      "archetype": "franchise_operations",
+      "expectedTopSurvivalAction": "CUSTOMER_RECOVERY_REQUIRED → Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "actualTopSurvivalAction": "CUSTOMER_RECOVERY_REQUIRED → Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "expectedBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval",
+        "marketing before stabilization + validation"
+      ],
+      "actualBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval",
+        "marketing before stabilization + validation"
+      ],
+      "ownerApprovalRequirements": [
+        "Legal/contract/tender risk decision — owner reviews; nothing is committed, submitted, or spent automatically."
+      ],
+      "evidenceRequirements": [
+        "evidence the corrected step passes before the issue is closed"
+      ],
+      "recoveryMilestones": [
+        "Stop-loss in force: loss-making/non-essential spend paused.",
+        "Cash position/runway measured (the real figure — never assumed).",
+        "Customer/quality issue corrected with proof.",
+        "Operational/vendor risk resolved.",
+        "Owner workload reduced via delegation/policy.",
+        "Stabilization gate met → recovery plan."
+      ],
+      "unrecoverable": false,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "crisisCaseId": "cr-saas",
+      "archetype": "saas",
+      "expectedTopSurvivalAction": "CUSTOMER_RECOVERY_REQUIRED → Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "actualTopSurvivalAction": "CUSTOMER_RECOVERY_REQUIRED → Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "expectedBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval",
+        "launch before stabilization + validation"
+      ],
+      "actualBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval",
+        "launch before stabilization + validation"
+      ],
+      "ownerApprovalRequirements": [],
+      "evidenceRequirements": [
+        "evidence the corrected step passes before the issue is closed"
+      ],
+      "recoveryMilestones": [
+        "Stop-loss in force: loss-making/non-essential spend paused.",
+        "Cash position/runway measured (the real figure — never assumed).",
+        "Customer/quality issue corrected with proof.",
+        "Operational/vendor risk resolved.",
+        "Owner workload reduced via delegation/policy.",
+        "Stabilization gate met → recovery plan."
+      ],
+      "unrecoverable": false,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "crisisCaseId": "cr-tender",
+      "archetype": "tender_procurement",
+      "expectedTopSurvivalAction": "VALIDATION_BEFORE_GROWTH → Owner decision required: legal/contract/tender risk — nothing committed, submitted, or spent automatically",
+      "actualTopSurvivalAction": "VALIDATION_BEFORE_GROWTH → Owner decision required: legal/contract/tender risk — nothing committed, submitted, or spent automatically",
+      "expectedBlockedGrowth": [
+        "tender auto-submit",
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "actualBlockedGrowth": [
+        "tender auto-submit",
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "ownerApprovalRequirements": [
+        "Legal/contract/tender risk decision — owner reviews; nothing is committed, submitted, or spent automatically."
+      ],
+      "evidenceRequirements": [
+        "the supporting evidence for the owner decision"
+      ],
+      "recoveryMilestones": [
+        "Stop-loss in force: loss-making/non-essential spend paused.",
+        "Cash position/runway measured (the real figure — never assumed).",
+        "Customer/quality issue corrected with proof.",
+        "Operational/vendor risk resolved.",
+        "Owner workload reduced via delegation/policy.",
+        "Stabilization gate met → recovery plan."
+      ],
+      "unrecoverable": false,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "crisisCaseId": "cr-b2b",
+      "archetype": "b2b_service",
+      "expectedTopSurvivalAction": "CUSTOMER_RECOVERY_REQUIRED → Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "actualTopSurvivalAction": "CUSTOMER_RECOVERY_REQUIRED → Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "expectedBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "actualBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "ownerApprovalRequirements": [],
+      "evidenceRequirements": [
+        "evidence the corrected step passes before the issue is closed"
+      ],
+      "recoveryMilestones": [
+        "Stop-loss in force: loss-making/non-essential spend paused.",
+        "Cash position/runway measured (the real figure — never assumed).",
+        "Customer/quality issue corrected with proof.",
+        "Operational/vendor risk resolved.",
+        "Owner workload reduced via delegation/policy.",
+        "Stabilization gate met → recovery plan."
+      ],
+      "unrecoverable": false,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "crisisCaseId": "cr-collective",
+      "archetype": "collective_conflict",
+      "expectedTopSurvivalAction": "CASH_PROTECTION_REQUIRED → Protect cash / runway: hold discretionary spend and measure the real cash position",
+      "actualTopSurvivalAction": "CASH_PROTECTION_REQUIRED → Protect cash / runway: hold discretionary spend and measure the real cash position",
+      "expectedBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval",
+        "growth before stabilization + validation"
+      ],
+      "actualBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval",
+        "growth before stabilization + validation"
+      ],
+      "ownerApprovalRequirements": [
+        "Legal/contract/tender risk decision — owner reviews; nothing is committed, submitted, or spent automatically."
+      ],
+      "evidenceRequirements": [
+        "the captured cash/runway figure"
+      ],
+      "recoveryMilestones": [
+        "Stop-loss in force: loss-making/non-essential spend paused.",
+        "Cash position/runway measured (the real figure — never assumed).",
+        "Customer/quality issue corrected with proof.",
+        "Operational/vendor risk resolved.",
+        "Owner workload reduced via delegation/policy.",
+        "Stabilization gate met → recovery plan."
+      ],
+      "unrecoverable": false,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "crisisCaseId": "cr-unrecoverable",
+      "archetype": "collective_conflict",
+      "expectedTopSurvivalAction": "UNRECOVERABLE_UNDER_CURRENT_CONSTRAINTS → Owner/expert decision: restructure or controlled-shutdown review — survival is not feasible under current constraints",
+      "actualTopSurvivalAction": "UNRECOVERABLE_UNDER_CURRENT_CONSTRAINTS → Owner/expert decision: restructure or controlled-shutdown review — survival is not feasible under current constraints",
+      "expectedBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval",
+        "growth before stabilization + validation"
+      ],
+      "actualBlockedGrowth": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto spend / discount / pricing change without owner approval",
+        "growth before stabilization + validation"
+      ],
+      "ownerApprovalRequirements": [
+        "Restructure vs controlled-shutdown decision (owner + advisor)."
+      ],
+      "evidenceRequirements": [
+        "the owner's decision on restructure vs controlled shutdown, taken with an appropriate advisor"
+      ],
+      "recoveryMilestones": [
+        "Stop-loss in force: loss-making/non-essential spend paused.",
+        "Cash position/runway measured (the real figure — never assumed).",
+        "Customer/quality issue corrected with proof.",
+        "Operational/vendor risk resolved.",
+        "Owner workload reduced via delegation/policy.",
+        "Stabilization gate met → recovery plan."
+      ],
+      "unrecoverable": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "crisisCaseId": "cr-clean",
+      "archetype": "laundry_local_service",
+      "expectedTopSurvivalAction": "NONE",
+      "actualTopSurvivalAction": "NONE",
+      "expectedBlockedGrowth": [],
+      "actualBlockedGrowth": [],
+      "ownerApprovalRequirements": [],
+      "evidenceRequirements": [],
+      "recoveryMilestones": [],
+      "unrecoverable": false,
+      "classification": "ELITE_ACCEPTED"
+    }
+  ],
+  "summary": {
+    "cases": 10,
+    "unrecoverableHonest": true,
+    "growthBlockedEverywhere": true,
+    "classification": "ELITE_ACCEPTED"
+  }
+}
