@@ -1,0 +1,47 @@
+{
+  "title": "Owner UI Surface Gap Map",
+  "date": "2026-07-07",
+  "P0_owner_journey_blockers": [
+    {
+      "gap": "No single canonical minimum owner cockpit meeting the full 10-section safety spec.",
+      "detail": "The proven governed loop is owner-actionable ONLY on owner/process-intelligence, which lacks distinct 'Blocked Unsafe Actions' and 'Next Reassessment' sections and a collapsed proof/audit drawer; owner actions are gathered via browser prompt() rather than labelled controls. owner/now is read-only; owner/ is an aggregate dashboard. No one page is the canonical owner cockpit.",
+      "capabilities": ["owner cockpit", "process execution tasks", "evidence-gated completion"],
+      "resolveIn": "PASS 36 — build the canonical minimum cockpit reusing GET /api/owner/now-view + POST /api/owner/process-execution."
+    }
+  ],
+  "P1_core_action_gaps": [
+    {
+      "gap": "Cockpit explanation, approval decision, and reassessment are present but not as distinct, always-present spec blocks.",
+      "detail": "pi-why (explanation), approval level, and REQUEST_REASSESSMENT exist but are interleaved; the spec wants explicit 'Why This Is First', 'Required Owner Decision', 'Next Reassessment' blocks.",
+      "capabilities": ["cockpit explanation", "approval policy", "reassessment / verification"],
+      "resolveIn": "PASS 36 — render these as named sections."
+    },
+    {
+      "gap": "Newest proven pipeline is unwired: no served endpoint and no owner surface.",
+      "detail": "business-survival-recovery (PASS 32), recovery-milestone-execution (PASS 33), owner-cockpit-decision-explanation (PASS 31), and public-signal-* (PASS 28-30) are proven by tests but imported by no service/route/page. Wiring them needs NEW served endpoints.",
+      "capabilities": ["worst-case survival planning", "recovery milestone execution", "cockpit explanation (module)", "public normalized signal handling", "raw public text interpretation", "conflicting signal handling", "multi-signal prioritisation"],
+      "resolveIn": "DEFERRED beyond PASS 36 minimum (needs new endpoints). Recorded honestly; a future pass wires the survival→recovery-milestone flow to an owner surface. PASS 36 stays within existing proven routes."
+    },
+    {
+      "gap": "Browser E2E does not yet cover the canonical cockpit.",
+      "detail": "owner-pilot-e2e exists but predates the canonical cockpit.",
+      "capabilities": ["browser / owner UI proof"],
+      "resolveIn": "PASS 36 — add/extend browser E2E for the cockpit if the browser env is available."
+    }
+  ],
+  "P2_visibility_gaps": [
+    {
+      "gap": "Read-only proven panels (training, workload, capability-gap, effectiveness, cash-profit, SOP-correction) are all shown together on process-intelligence.",
+      "detail": "Acceptable, but they must live in collapsed secondary/monitor groups in the canonical cockpit to avoid overload; today they are progressive-disclosure groups already.",
+      "capabilities": ["training assignment", "workload reduction", "capability gap handling", "effectiveness / SOP adherence classification", "cash / profit protection", "SOP / checklist correction", "audit logging", "authorization / adjudication"],
+      "resolveIn": "PASS 36 — place in collapsed Secondary / Monitor-only groups + proof drawer."
+    }
+  ],
+  "P3_deferred_or_frozen": [
+    {
+      "gap": "Frozen / not-built items must never appear in the owner cockpit.",
+      "capabilities": ["public SaaS readiness", "billing readiness", "integrations / connectors (live)", "Local Mode", "private owner shadow pilot", "Product Hunt / public launch readiness", "complaint / rework handling (backend)", "tender / procurement readiness (backend)"],
+      "resolveIn": "Keep out of scope. The cockpit must not imply any of these exist or work."
+    }
+  ]
+}
