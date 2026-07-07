@@ -94,3 +94,15 @@ All changes are one commit on `claude/phase-0-truth-safety-corrections`. `git re
 
 ## Product logic changed
 **No.** Changes are limited to security/safety hardening (token crypto, private-mode authz wiring, demo-write production guard, connector readiness labels, smoke fail-close). No business rules, governed flows, modules, or Prisma schema were altered.
+
+## Addendum — CI follow-up fix (test env for fail-closed crypto)
+First CI run of `build-and-test` surfaced a real regression from fix **A**: making OAuth token
+encryption fail closed without `OAUTH_TOKEN_ENCRYPTION_KEY` caused the sibling suites that exercise
+`storeOAuthToken`/`retrieveOAuthToken` — `token-lifecycle.service.test.ts` and
+`sync-manager.service.test.ts` — to throw, because only `oauth-token.service.test.ts` had been given a
+key. Fix: set a synthetic, non-secret 32-byte `OAUTH_TOKEN_ENCRYPTION_KEY` fallback in
+`vitest.setup.ts` (mirroring the existing `DATABASE_URL` fallback), so every suite that round-trips
+token crypto has a key. The fail-closed tests still override/unset it locally within their own
+try/finally, so this default does not mask them. Test-infra only — no product logic, no CI-workflow
+change. (Two earlier `build-and-test`/browser-shard failures on this branch were unrelated flaky
+Next.js build OOMs, which cleared on re-run.)
