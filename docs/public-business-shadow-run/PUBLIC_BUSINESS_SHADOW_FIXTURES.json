@@ -1,0 +1,67 @@
+{
+  "title": "Public Business Shadow Fixtures (PASS 43)",
+  "date": "2026-07-07",
+  "dataClassification": "REAL_PUBLIC_DERIVED_ANONYMIZED_SHADOW_FIXTURES",
+  "notice": "Built from real public sources (see PUBLIC_BUSINESS_SOURCE_LEDGER.json) but fully anonymized and privacy-safe. Real business names appear ONLY in the internal source ledger, never here or in the cockpit. No PII. Public items are PUBLIC SIGNALS, not confirmed facts. Internal cost/cash/staff/revenue data is UNKNOWN and marked missing — never fabricated. OpsIQ performs no live fetch; these are static fixtures.",
+  "cases": [
+    {
+      "publicCaseId": "PC-A", "anonymizedBusinessId": "BUSINESS_A", "archetype": "laundry_local_service",
+      "businessProfile": { "type": "laundry / dry-cleaning with pickup + delivery", "location": "LOCATION_A", "currency": "unknown" },
+      "publicServices": ["garment dry-cleaning", "wash & fold", "pickup + delivery"],
+      "publicPricing": "not disclosed in fixtures (unknown) — do not fabricate",
+      "publicOperatingSignals": [
+        { "signal": "PUBLIC_SIGNAL_A1", "note": "Public review signals suggest possible recurring pickup/delivery-delay complaints.", "rawSignalType": "PUBLIC_COMPLAINT", "sourceQuality": "THIRD_PARTY_UNVERIFIED" },
+        { "signal": "PUBLIC_SIGNAL_A2", "note": "Public review signals suggest possible garment-quality/rework complaints (damage, discolouration, stains after service).", "rawSignalType": "PUBLIC_REVIEW", "sourceQuality": "THIRD_PARTY_UNVERIFIED" }
+      ],
+      "publicPraise": [{ "signal": "PUBLIC_SIGNAL_A3", "note": "Public praise for eco-friendly care and on-time/early delivery (monitor-only).", "rawSignalType": "PUBLIC_REVIEW", "sourceQuality": "THIRD_PARTY_UNVERIFIED" }],
+      "publicOpportunitySignal": [{ "signal": "PUBLIC_SIGNAL_A4", "note": "A public cleaning-services tender exists; the specific listed deadlines have passed (stale).", "rawSignalType": "PUBLIC_TENDER", "sourceQuality": "OFFICIAL_PUBLIC_PORTAL", "staleness": "stale" }],
+      "sourceBackedConstraints": ["delivery reliability appears to be a recurring public theme"],
+      "missingInternalData": ["internal complaint/defect rate", "cash position / runway", "unit margin", "real delivery capacity", "current pricing"],
+      "evidenceAvailable": ["public review/complaint references only (unverified)"],
+      "uncertaintyCaveats": ["public signals are unverified until validated", "internal financials are unknown and not assumed"]
+    },
+    {
+      "publicCaseId": "PC-B", "anonymizedBusinessId": "BUSINESS_B", "archetype": "unknown",
+      "businessProfile": { "type": "restaurant / hospitality (dine-in + service)", "location": "LOCATION_A", "currency": "unknown", "archetypeNote": "no restaurant archetype in the enum; 'unknown' is the conservative default (the interpreter only downgrades from it)" },
+      "publicServices": ["dine-in food service"],
+      "publicPricing": "not disclosed in fixtures (unknown) — do not fabricate",
+      "publicOperatingSignals": [
+        { "signal": "PUBLIC_SIGNAL_B1", "note": "Public review signals suggest possible service-delay / wait-time complaints.", "rawSignalType": "PUBLIC_COMPLAINT", "sourceQuality": "THIRD_PARTY_UNVERIFIED" },
+        { "signal": "PUBLIC_SIGNAL_B2", "note": "Public review signals suggest possible order-accuracy / food-quality complaints (wrong or missing items).", "rawSignalType": "PUBLIC_REVIEW", "sourceQuality": "THIRD_PARTY_UNVERIFIED" },
+        { "signal": "PUBLIC_SIGNAL_B3", "note": "Subjective staff-attentiveness complaints (STAFF_A) — treated as a possible service-process signal, NOT a staff accusation.", "rawSignalType": "PUBLIC_REVIEW", "sourceQuality": "THIRD_PARTY_UNVERIFIED", "weak": true }
+      ],
+      "publicPraise": [{ "signal": "PUBLIC_SIGNAL_B4", "note": "Public praise for friendly service and cleanliness (monitor-only).", "rawSignalType": "PUBLIC_REVIEW", "sourceQuality": "THIRD_PARTY_UNVERIFIED" }],
+      "doNotUse": [{ "signal": "PUBLIC_SIGNAL_B5", "note": "[REDACTED] raw review naming an individual with a personal accusation — PII + defamation risk; excluded.", "classification": "DO_NOT_USE" }],
+      "publicOpportunitySignal": [],
+      "sourceBackedConstraints": ["wait-time and order-accuracy appear to be recurring public themes"],
+      "missingInternalData": ["internal wait-time", "order-error rate", "cash position", "unit margin", "staffing/capacity"],
+      "evidenceAvailable": ["public review references only (unverified)"],
+      "uncertaintyCaveats": ["public signals are unverified until validated", "staff-attitude signal is subjective and weak — coaching only, never discipline"]
+    },
+    {
+      "publicCaseId": "PC-C", "anonymizedBusinessId": "BUSINESS_C", "archetype": "saas",
+      "businessProfile": { "type": "project-management SaaS", "location": "LOCATION_A", "currency": "unknown" },
+      "publicServices": ["project-management software subscription"],
+      "publicPricing": "pricing complaints exist publicly, but no specific figures are used (unknown) — do not fabricate",
+      "publicOperatingSignals": [
+        { "signal": "PUBLIC_SIGNAL_C1", "note": "Public review signals suggest possible support-responsiveness, pricing, and onboarding-friction complaints.", "rawSignalType": "PUBLIC_REVIEW", "sourceQuality": "THIRD_PARTY_AGGREGATE" },
+        { "signal": "PUBLIC_SIGNAL_C2", "note": "Public review signals suggest possible technical-bug and onboarding-difficulty complaints.", "rawSignalType": "PUBLIC_COMPLAINT", "sourceQuality": "THIRD_PARTY_UNVERIFIED" },
+        { "signal": "PUBLIC_SIGNAL_C3", "note": "Conflicting reviews — ease-of-use praise vs steep-learning-curve complaints on the same capability.", "rawSignalType": "PUBLIC_REVIEW", "sourceQuality": "THIRD_PARTY_UNVERIFIED", "conflicting": true },
+        { "signal": "PUBLIC_SIGNAL_C4", "note": "Weak inferred hiring/staffing-pressure signal (support/onboarding roles).", "rawSignalType": "PUBLIC_SIGNAL", "sourceQuality": "INFERRED_WEAK", "weak": true }
+      ],
+      "publicPraise": [],
+      "publicOpportunitySignal": [],
+      "sourceBackedConstraints": ["support responsiveness and onboarding friction appear to be recurring public themes"],
+      "missingInternalData": ["internal support-response time", "churn rate", "onboarding completion rate", "unit margin", "actual pricing tiers"],
+      "evidenceAvailable": ["public aggregate review references only (unverified)"],
+      "uncertaintyCaveats": ["public signals are unverified until validated", "pricing is an owner decision, blocked until margin is known", "signals are aggregate/category-level, not this product's measured rates"]
+    },
+    {
+      "publicCaseId": "PC-CLEAN", "anonymizedBusinessId": "BUSINESS_CLEAN", "archetype": "laundry_local_service",
+      "businessProfile": { "type": "control case — no public risk signals", "location": "LOCATION_A", "currency": "unknown" },
+      "publicServices": [], "publicPricing": "unknown", "publicOperatingSignals": [], "publicPraise": [], "publicOpportunitySignal": [],
+      "sourceBackedConstraints": [], "missingInternalData": ["everything — no public data collected"], "evidenceAvailable": [],
+      "uncertaintyCaveats": ["no public signals → OpsIQ must fabricate nothing (NONE)"]
+    }
+  ]
+}

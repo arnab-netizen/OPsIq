@@ -1,0 +1,25 @@
+{
+  "title": "Public Business Signal Classification Matrix (PASS 43)",
+  "date": "2026-07-07",
+  "classifications": ["STRONG_PUBLIC_SIGNAL", "WEAK_PUBLIC_SIGNAL", "CONFLICTING_PUBLIC_SIGNAL", "STALE_PUBLIC_SIGNAL", "MONITOR_ONLY_SIGNAL", "VALIDATION_REQUIRED", "DO_NOT_USE"],
+  "signals": [
+    { "publicCaseId": "PC-A1", "business": "BUSINESS_A", "signalType": "customer complaint / service delay", "classification": ["STRONG_PUBLIC_SIGNAL", "VALIDATION_REQUIRED"], "why": "Recurring delivery-delay theme, but third-party unverified; validate against internal delivery data." },
+    { "publicCaseId": "PC-A2", "business": "BUSINESS_A", "signalType": "quality / rework", "classification": ["STRONG_PUBLIC_SIGNAL", "VALIDATION_REQUIRED"], "why": "Garment-quality theme; internal defect rate is missing-data." },
+    { "publicCaseId": "PC-A3", "business": "BUSINESS_A", "signalType": "public praise / positive", "classification": ["MONITOR_ONLY_SIGNAL"], "why": "Positive; monitor only — must not close unresolved delivery/quality risk." },
+    { "publicCaseId": "PC-A4", "business": "BUSINESS_A", "signalType": "public tender / growth opportunity", "classification": ["STALE_PUBLIC_SIGNAL", "VALIDATION_REQUIRED"], "why": "Listed tender deadlines (May-Jun 2026) already passed as of 2026-07-07; readiness/monitor only, never auto-submit; growth blocked until capacity/cost proof." },
+    { "publicCaseId": "PC-B1", "business": "BUSINESS_B", "signalType": "service delay / wait time", "classification": ["STRONG_PUBLIC_SIGNAL", "VALIDATION_REQUIRED"], "why": "Aggregate category stat; validate against this venue's wait-time data (missing)." },
+    { "publicCaseId": "PC-B2", "business": "BUSINESS_B", "signalType": "quality / order accuracy", "classification": ["STRONG_PUBLIC_SIGNAL", "VALIDATION_REQUIRED"], "why": "Order-error theme → correction; internal error rate missing." },
+    { "publicCaseId": "PC-B3", "business": "BUSINESS_B", "signalType": "staff attitude (subjective)", "classification": ["WEAK_PUBLIC_SIGNAL", "VALIDATION_REQUIRED"], "why": "Subjective attitude claim → coaching/SOP only, never staff discipline/blame." },
+    { "publicCaseId": "PC-B4", "business": "BUSINESS_B", "signalType": "public praise / positive", "classification": ["MONITOR_ONLY_SIGNAL"], "why": "Positive; monitor only — must not close unresolved wait-time/quality risk." },
+    { "publicCaseId": "PC-B5", "business": "BUSINESS_B", "signalType": "raw review with PII + personal accusation", "classification": ["DO_NOT_USE"], "why": "Contains a personal name + accusation → PII + defamation risk; redacted and excluded from governed signals." },
+    { "publicCaseId": "PC-C1", "business": "BUSINESS_C", "signalType": "support + pricing + onboarding complaint", "classification": ["STRONG_PUBLIC_SIGNAL", "VALIDATION_REQUIRED"], "why": "Aggregate SaaS-review theme; support/onboarding → correction; pricing → owner decision, blocked until margin known." },
+    { "publicCaseId": "PC-C2", "business": "BUSINESS_C", "signalType": "technical bug / onboarding difficulty", "classification": ["STRONG_PUBLIC_SIGNAL", "VALIDATION_REQUIRED"], "why": "Bug/onboarding theme → correction + evidence request; product-specific rate missing." },
+    { "publicCaseId": "PC-C3", "business": "BUSINESS_C", "signalType": "conflicting reviews (ease vs steep learning curve)", "classification": ["CONFLICTING_PUBLIC_SIGNAL", "VALIDATION_REQUIRED"], "why": "Same capability praised and criticised → conflict-labelled; validate before action." },
+    { "publicCaseId": "PC-C4", "business": "BUSINESS_C", "signalType": "hiring / staffing-pressure inference", "classification": ["WEAK_PUBLIC_SIGNAL", "VALIDATION_REQUIRED"], "why": "Inference from public hiring, not a stated fact; never asserted as fact." }
+  ],
+  "coverage": {
+    "STRONG_PUBLIC_SIGNAL": 6, "WEAK_PUBLIC_SIGNAL": 2, "CONFLICTING_PUBLIC_SIGNAL": 1, "STALE_PUBLIC_SIGNAL": 1,
+    "MONITOR_ONLY_SIGNAL": 2, "VALIDATION_REQUIRED": 11, "DO_NOT_USE": 1, "totalSignals": 13, "usableSignals": 12
+  },
+  "signalTypeCoverage": ["customer complaint", "service delay", "quality/rework", "pricing/service mismatch", "public praise/positive", "conflicting", "stale/weak", "growth/opportunity", "public tender/deadline", "SaaS support/bug/onboarding", "hiring/staffing pressure"]
+}

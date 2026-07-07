@@ -1,0 +1,13 @@
+{
+  "title": "Owner Workload Matrix — Public Business Shadow Run (PASS 43)",
+  "date": "2026-07-07",
+  "honesty": "Structural workload behaviour only. No measured owner time-saving is claimed (needs a real owner). No fabricated owner-time-savings.",
+  "perCase": [
+    { "case": "BUSINESS_A", "ownerFacingLoad": "one correction step (fix delivery/quality with proof) + validate public signal; tender is monitor/missing-data", "oneTopAction": true, "reKeying": false },
+    { "case": "BUSINESS_B", "ownerFacingLoad": "one correction step (wait-time/order accuracy); staff signal → coaching", "oneTopAction": true, "reKeying": false },
+    { "case": "BUSINESS_C", "ownerFacingLoad": "one correction step (support/onboarding); pricing deferred to owner decision", "oneTopAction": true, "reKeying": false },
+    { "case": "BUSINESS_CLEAN", "ownerFacingLoad": "none — nothing invented", "oneTopAction": false, "reKeying": false }
+  ],
+  "structuralClaims": ["exactly one top action per risk case", "public signals summarised, not dumped", "validation/missing-data asks are explicit and bounded", "no re-keying of server-computed data"],
+  "notClaimed": ["a measured time-saving", "guaranteed workload reduction"]
+}

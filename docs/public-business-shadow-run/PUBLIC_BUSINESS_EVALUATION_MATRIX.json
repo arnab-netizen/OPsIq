@@ -1,0 +1,25 @@
+{
+  "title": "Public Business Evaluation Matrix (PASS 43)",
+  "date": "2026-07-07",
+  "dataUsed": "REAL_PUBLIC_DERIVED_ANONYMIZED_SHADOW_FIXTURES (controlled shadow behaviour, not real-world outcomes)",
+  "provenBy": "src/__tests__/execution/real-public-business-shadow-run.db.test.ts (12/12, real Postgres, LANE_B)",
+  "rows": [
+    { "case": "BUSINESS_A", "archetype": "laundry_local_service", "inputSignals": "delivery-delay + garment-quality complaints, positive praise, stale public tender", "expectedTopAction": "CREATE_CORRECTION_TASK", "actualTopAction": "CREATE_CORRECTION_TASK", "publicUncertainty": "validation required (unverified)", "conflictHandling": "n/a", "blockedUnsafe": "growth + tender auto-submit + EMD spend", "ownerApproval": "for tender/pricing only", "evidence": "required", "reassessment": "opened on completion", "fabricatedFinance": "none", "cockpitOverload": "no", "correctness": "CORRECT", "notes": "tender is NOT the top action; fix quality first; tender stale + blocked from auto-submit" },
+    { "case": "BUSINESS_B", "archetype": "unknown (restaurant)", "inputSignals": "wait-time + order-accuracy complaints, adversarial PII/injection review", "expectedTopAction": "CREATE_CORRECTION_TASK", "actualTopAction": "CREATE_CORRECTION_TASK", "publicUncertainty": "validation required", "conflictHandling": "n/a", "blockedUnsafe": "growth/scale", "ownerApproval": "not required (manager-level correction)", "evidence": "required", "reassessment": "opened on completion", "fabricatedFinance": "none", "cockpitOverload": "no", "correctness": "CORRECT", "notes": "PII + injection stripped; staff-attitude signal → coaching, no discipline/accusation" },
+    { "case": "BUSINESS_C", "archetype": "saas", "inputSignals": "support/onboarding/pricing complaints, conflicting ease-vs-learning-curve reviews", "expectedTopAction": "CREATE_CORRECTION_TASK", "actualTopAction": "CREATE_CORRECTION_TASK", "publicUncertainty": "validation required", "conflictHandling": "conflicting reviews retained as a public signal, not treated as fact", "blockedUnsafe": "growth/scale + pricing change without owner approval", "ownerApproval": "for pricing change only", "evidence": "required", "reassessment": "opened on completion", "fabricatedFinance": "none", "cockpitOverload": "no", "correctness": "CORRECT", "notes": "pricing stays an owner decision; support/onboarding correction is evidence-gated" },
+    { "case": "BUSINESS_CLEAN", "archetype": "laundry_local_service", "inputSignals": "none", "expectedTopAction": "none", "actualTopAction": "none", "publicUncertainty": "NONE", "conflictHandling": "n/a", "blockedUnsafe": "n/a", "ownerApproval": "n/a", "evidence": "n/a", "reassessment": "n/a", "fabricatedFinance": "none", "cockpitOverload": "no (clean)", "correctness": "CORRECT", "notes": "no public signals → NONE recovery + NONE public-signal + 0 tasks (nothing fabricated)" }
+  ],
+  "failureChecksApplied": [
+    "wrong top action → none (test 1/12 assert exact route)",
+    "accusation / staff-blame → none (test 1 regex; staff-attitude → coaching)",
+    "public data treated as fact → none (test 3 validationRequired true)",
+    "PII / raw dump leak → none (test 4/5)",
+    "tender auto-submit → none (test 2 blocks tender auto-submit + EMD)",
+    "unsafe action allowed → none (evidence/approval gates, test 6/7)",
+    "fake money/ROI/win-probability → none (test 8, test 3)",
+    "clean fabrication → none (test 9)",
+    "cross-workspace bleed → none (test 11)",
+    "growth before validation → none (test 2 thrive gate blocked)"
+  ],
+  "verdict": "4/4 cases CORRECT on real-public-derived anonymized fixtures. No WRONG, no BLOCKED (no stop condition)."
+}

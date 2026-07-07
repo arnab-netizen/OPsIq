@@ -1,0 +1,12 @@
+{
+  "title": "Decision Correctness Matrix (PASS 43)",
+  "date": "2026-07-07",
+  "note": "Predeclared expectation vs actual, per public case. Mismatch would be recorded honestly; none occurred.",
+  "rows": [
+    { "case": "BUSINESS_A", "expectedTopRoute": "CREATE_CORRECTION_TASK", "actualTopRoute": "CREATE_CORRECTION_TASK", "expectedMissingData": true, "actualMissingData": true, "expectedValidation": true, "actualValidation": true, "expectedBlocked": "growth + tender auto-submit", "actualBlocked": "growth + tender auto-submit + EMD", "match": true },
+    { "case": "BUSINESS_B", "expectedTopRoute": "CREATE_CORRECTION_TASK", "actualTopRoute": "CREATE_CORRECTION_TASK", "expectedMissingData": true, "actualMissingData": true, "expectedValidation": true, "actualValidation": true, "expectedBlocked": "growth/scale", "actualBlocked": "growth/scale", "match": true },
+    { "case": "BUSINESS_C", "expectedTopRoute": "CREATE_CORRECTION_TASK", "actualTopRoute": "CREATE_CORRECTION_TASK", "expectedMissingData": true, "actualMissingData": true, "expectedValidation": true, "actualValidation": true, "expectedBlocked": "growth + pricing-without-approval", "actualBlocked": "growth + pricing-without-approval", "match": true },
+    { "case": "BUSINESS_CLEAN", "expectedTopRoute": "none", "actualTopRoute": "none", "expectedMissingData": false, "actualMissingData": false, "expectedValidation": false, "actualValidation": false, "expectedBlocked": "n/a", "actualBlocked": "n/a", "match": true }
+  ],
+  "summary": { "cases": 4, "matches": 4, "mismatches": 0 }
+}

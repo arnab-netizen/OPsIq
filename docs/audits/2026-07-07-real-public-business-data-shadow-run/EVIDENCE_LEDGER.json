@@ -1,0 +1,56 @@
+{
+  "title": "Real Public Business Data Shadow Run — Evidence Ledger (PASS 43)",
+  "date": "2026-07-07",
+  "branch": "claude/real-public-business-data-shadow-run",
+  "baseMain": "6902f5eb0208c4a64f969e6770579a1f0b7bcb0d",
+  "dataUsed": "REAL_PUBLIC_DERIVED_ANONYMIZED_SHADOW_FIXTURES (real public sources → anonymized/redacted fixtures)",
+  "realWorldOutcomeClaimed": false,
+  "liveIngestionInOpsIQ": false,
+  "publicSources": {
+    "count": 14,
+    "domains": ["bbb.org", "premiercleanersma.com", "greatamericandrycleaners.com", "contractsfinder.service.gov.uk", "guestmetrix.com", "upmenu.com", "sundayapp.com", "compttr.com", "paymoapp.com", "g2.com"],
+    "note": "URLs recorded in docs/public-business-shadow-run/PUBLIC_BUSINESS_SOURCE_LEDGER.json; used only to build anonymized fixtures. Real business names never exposed in fixtures/cockpit."
+  },
+  "filesAdded": [
+    "docs/public-business-shadow-run/PUBLIC_BUSINESS_SOURCE_LEDGER.json",
+    "docs/public-business-shadow-run/PUBLIC_BUSINESS_PRIVACY_REDACTION_REPORT.md",
+    "docs/public-business-shadow-run/PUBLIC_BUSINESS_SHADOW_FIXTURES.json",
+    "docs/public-business-shadow-run/PUBLIC_BUSINESS_EXPECTATIONS.json",
+    "docs/public-business-shadow-run/PUBLIC_BUSINESS_SIGNAL_CLASSIFICATION_MATRIX.json",
+    "docs/public-business-shadow-run/PUBLIC_BUSINESS_SHADOW_RUN_RESULTS.md",
+    "docs/public-business-shadow-run/PUBLIC_BUSINESS_EVALUATION_MATRIX.json",
+    "src/__tests__/execution/real-public-business-shadow-run.db.test.ts (12 DB-sim tests)",
+    "tests/browser/49-real-public-business-shadow-run.spec.ts (4 browser tests)",
+    "docs/audits/2026-07-07-real-public-business-data-shadow-run/* (report + 4 matrices + this ledger + deferred gaps)"
+  ],
+  "filesChanged": [
+    ".github/workflows/db-verification.yml (wired real-public-business-shadow-run.db.test.ts into LANE_B + LANE_A)",
+    ".github/workflows/owner-pilot-e2e.yml (wired 49-real-public-business-shadow-run.spec.ts)"
+  ],
+  "noProductSourceChange": "No src/ product source, schema, migration, or route changed. Reuses the proven substrate; new logic is the test harness + fixtures + docs only.",
+  "dbSimProofs": [
+    "1 conservative CORRECTION top action per public risk case; no accusation/staff-blame",
+    "2 growth blocked; public tender blocked from auto-submit + EMD spend",
+    "3 public-signal read active + validationRequired + rawTextHidden + piiStripped + no-live-ingestion + no money",
+    "4 adversarial PII + prompt-injection review stripped (never surfaced)",
+    "5 no raw public review text dumped",
+    "6 evidence gate: no-evidence complete rejected, with-evidence succeeds + reassessment opened",
+    "7 owner-approval task cannot be approved by a non-owner",
+    "8 no fabricated money/ROI/win-probability in any persisted task",
+    "9 clean case fabricates nothing (0 tasks, NONE recovery, NONE public-signal)",
+    "10 recovery-status fail-closed + thrive gate blocked (clean control)",
+    "11 workspace isolation",
+    "12 low-load: exactly one top actionable route per case"
+  ],
+  "localGates": {
+    "prismaValidate": "PASS",
+    "tsc": "PASS",
+    "governanceScanStrict": "0 new (31 frozen)",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new)",
+    "dbSim": "real-public-business-shadow-run.db.test.ts 12/12 (TEST_WITH_DB=true, Postgres 16)",
+    "browserSpec": "49-real-public-business-shadow-run.spec.ts 4/4 (built app + seeded workspace + real Chromium)",
+    "nextBuild": "PASS"
+  },
+  "ciAcceptance": "LANE_B must show real-public-business-shadow-run.db.test.ts executed (not generic green). Required checks (LANE_B, Build+Type+Prisma, lint) green; owner-pilot-e2e green.",
+  "classification": "REAL_PUBLIC_BUSINESS_SHADOW_RUN_PROVEN (controlled shadow behaviour on public data; not real-world outcome proof)"
+}

@@ -1,0 +1,137 @@
+{
+  "title": "Public Business Source Ledger (PASS 43)",
+  "date": "2026-07-07",
+  "notice": "Internal source ledger. Real public sources used only to CREATE anonymized, privacy-safe shadow fixtures. OpsIQ itself performs NO live fetch/scraping/connector; there is no live internet intelligence. Every item is a PUBLIC SIGNAL, not a confirmed fact. Real business names are NOT exposed in fixtures/cockpit — only anonymized BUSINESS_A/B/C. Reviewer/staff PII is redacted. Observations are category/theme-level to avoid defamation of any identifiable business.",
+  "items": [
+    {
+      "publicCaseId": "PC-A1", "anonymizedBusinessId": "BUSINESS_A", "archetype": "local_service_laundry",
+      "sourceType": "public_complaint_bureau", "sourceUrl": "https://www.bbb.org/us/ca/san-francisco/profile/dry-cleaners/rinse-inc-1116-542458/complaints",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Public complaint records for a laundry pickup/delivery service describe valet drivers arriving 1.5-2 hours late despite assured complimentary pickup windows.",
+      "redactedObservation": "Public review signals suggest possible recurring pickup/delivery-delay complaints for a laundry pickup/delivery service (LOCATION_A).",
+      "privacyTreatment": "No reviewer names/PII retained; business anonymized to BUSINESS_A; observation kept at theme level.",
+      "sourceQuality": "THIRD_PARTY_UNVERIFIED", "staleness": "current", "uncertainty": "HIGH — third-party complaint text, not internally verified; volume/rate unknown.",
+      "usableAsSignal": true, "reason": "Operational delivery-delay theme OpsIQ can route to correction/validation (not accusation)."
+    },
+    {
+      "publicCaseId": "PC-A2", "anonymizedBusinessId": "BUSINESS_A", "archetype": "local_service_laundry",
+      "sourceType": "public_industry_guidance", "sourceUrl": "https://premiercleanersma.com/post/top-complaints-about-dry-cleaners-and-how-to-find-one-you-can-trust",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Public guidance summarising common dry-cleaning complaints: garment damage, shrinkage, discolouration, torn seams, and stains appearing after service.",
+      "redactedObservation": "Public review signals suggest possible garment-quality/rework complaints (damage, discolouration, stains after service) in the dry-cleaning category.",
+      "privacyTreatment": "Category-level theme; no business identified; no PII.",
+      "sourceQuality": "THIRD_PARTY_UNVERIFIED", "staleness": "current", "uncertainty": "HIGH — category theme, not this business's measured defect rate.",
+      "usableAsSignal": true, "reason": "Quality/rework theme routes to a correction task with evidence gate; internal defect rate is missing-data."
+    },
+    {
+      "publicCaseId": "PC-A3", "anonymizedBusinessId": "BUSINESS_A", "archetype": "local_service_laundry",
+      "sourceType": "public_reviews", "sourceUrl": "https://greatamericandrycleaners.com/laundry-pickup-and-delivery-service-is-on-the-rise-but-can-it-be-trusted/",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Public reviews also praise some pickup/delivery cleaners for eco-friendly care and delivering ahead of promised dates.",
+      "redactedObservation": "Public review signals also include positive praise (eco-friendly care, on-time/early delivery) for some pickup/delivery cleaners.",
+      "privacyTreatment": "Theme level; no PII.",
+      "sourceQuality": "THIRD_PARTY_UNVERIFIED", "staleness": "current", "uncertainty": "MODERATE — positive praise, not a risk signal.",
+      "usableAsSignal": true, "reason": "Positive signal → monitor-only unless an actionable risk exists; must not close unresolved risks."
+    },
+    {
+      "publicCaseId": "PC-A4", "anonymizedBusinessId": "BUSINESS_A", "archetype": "local_service_laundry",
+      "sourceType": "public_tender_notice", "sourceUrl": "https://www.contractsfinder.service.gov.uk/notice/e12454f5-c362-4bfc-bdd7-42e07ae34bce",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "UK public procurement portals list building/office cleaning tenders (e.g. a town-council cleaning contract with a submission deadline of 15 May 2026; a borough building-cleaning tender published 25 May 2026 with a 22 June 2026 deadline).",
+      "redactedObservation": "A public cleaning-services tender opportunity exists for the cleaning/local-service category; the specific listed deadlines (May-June 2026) have already passed as of 2026-07-07.",
+      "privacyTreatment": "Buyer authorities are public bodies; no personal names/contacts retained; anonymized reference only.",
+      "sourceQuality": "OFFICIAL_PUBLIC_PORTAL", "staleness": "stale (listed deadlines passed)", "uncertainty": "LOW on existence; the specific listed deadlines are expired.",
+      "usableAsSignal": true, "reason": "Growth/opportunity + tender-deadline signal; the specific deadline is STALE → readiness/monitor, never auto-submit."
+    },
+    {
+      "publicCaseId": "PC-B1", "anonymizedBusinessId": "BUSINESS_B", "archetype": "hospitality_restaurant",
+      "sourceType": "public_reviews_analysis", "sourceUrl": "https://guestmetrix.com/resources/blog/prevent-bad-restaurant-reviews/",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Public review analysis: roughly two-thirds of restaurant service complaints relate to wait times; 76% of customers grow impatient after ~15 minutes.",
+      "redactedObservation": "Public review signals suggest possible service-delay/wait-time complaints for a restaurant (BUSINESS_B, LOCATION_A).",
+      "privacyTreatment": "Aggregate industry analysis; no business identified; no PII.",
+      "sourceQuality": "THIRD_PARTY_UNVERIFIED", "staleness": "current", "uncertainty": "HIGH — aggregate category statistic, not this venue's measured wait time.",
+      "usableAsSignal": true, "reason": "Service-delay theme → process correction + reassessment; internal wait-time data is missing."
+    },
+    {
+      "publicCaseId": "PC-B2", "anonymizedBusinessId": "BUSINESS_B", "archetype": "hospitality_restaurant",
+      "sourceType": "public_reviews_analysis", "sourceUrl": "https://www.upmenu.com/blog/restaurant-complaints/",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Public analysis of common restaurant complaints: order errors, wrong/missing items, and 'not what I ordered / different from the photo'.",
+      "redactedObservation": "Public review signals suggest possible order-accuracy/food-quality complaints (wrong or missing items) for a restaurant.",
+      "privacyTreatment": "Category theme; no PII.",
+      "sourceQuality": "THIRD_PARTY_UNVERIFIED", "staleness": "current", "uncertainty": "HIGH — category theme.",
+      "usableAsSignal": true, "reason": "Quality/accuracy theme → correction task, evidence-gated."
+    },
+    {
+      "publicCaseId": "PC-B3", "anonymizedBusinessId": "BUSINESS_B", "archetype": "hospitality_restaurant",
+      "sourceType": "public_reviews_analysis", "sourceUrl": "https://guestmetrix.com/resources/blog/prevent-bad-restaurant-reviews/",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Some negative reviews mention dismissive/inattentive staff attitude; this is subjective and phrased as a personal grievance.",
+      "redactedObservation": "Public review signals include subjective staff-attentiveness complaints (STAFF_A); treated as a possible service-process signal, NOT a staff accusation.",
+      "privacyTreatment": "No staff names; framed as process coaching, never discipline/blame; no PII.",
+      "sourceQuality": "THIRD_PARTY_UNVERIFIED", "staleness": "current", "uncertainty": "VERY HIGH — subjective attitude claim; weak.",
+      "usableAsSignal": true, "reason": "Weak/subjective → validation required; routes to SOP/coaching, never staff discipline."
+    },
+    {
+      "publicCaseId": "PC-B4", "anonymizedBusinessId": "BUSINESS_B", "archetype": "hospitality_restaurant",
+      "sourceType": "public_reviews_analysis", "sourceUrl": "https://sundayapp.com/google-reviews-how-restaurants-can-double-their-positive-ratings/",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Positive reviews praise friendly, attentive service, cleanliness, and ambiance (73% of consumers rank cleanliness in their top 3 attributes).",
+      "redactedObservation": "Public review signals also include praise for friendly service and cleanliness at some restaurants.",
+      "privacyTreatment": "Theme level; no PII.",
+      "sourceQuality": "THIRD_PARTY_UNVERIFIED", "staleness": "current", "uncertainty": "MODERATE — positive, not a risk.",
+      "usableAsSignal": true, "reason": "Positive → monitor-only; must not close unresolved wait-time/quality risk."
+    },
+    {
+      "publicCaseId": "PC-B5", "anonymizedBusinessId": "BUSINESS_B", "archetype": "hospitality_restaurant",
+      "sourceType": "public_review_with_pii", "sourceUrl": "https://www.upmenu.com/blog/restaurant-complaints/",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Some public reviews name an individual staff member and make a personal accusation (illustrative of PII/defamation risk in raw review text).",
+      "redactedObservation": "[REDACTED] A raw review naming an individual with a personal accusation.",
+      "privacyTreatment": "Contains a personal name + accusation → PII + defamation risk; redacted and NOT used as an operational signal.",
+      "sourceQuality": "THIRD_PARTY_UNVERIFIED", "staleness": "current", "uncertainty": "N/A",
+      "usableAsSignal": false, "reason": "DO_NOT_USE — PII + defamation risk; cannot be used as a governed signal."
+    },
+    {
+      "publicCaseId": "PC-C1", "anonymizedBusinessId": "BUSINESS_C", "archetype": "saas_project_management",
+      "sourceType": "public_reviews_analysis", "sourceUrl": "https://compttr.com/en/blog/state-of-saas-review-platforms-2026",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Analysis of ~100k SaaS reviews: support complaints carry the highest churn-signal language (49% of negative reviews); pricing complaints second (41%); onboarding third but highest churn-per-mention (3.2x more likely to signal the reviewer has left/left-planning).",
+      "redactedObservation": "Public review signals for a project-management SaaS (BUSINESS_C) suggest possible support-responsiveness, pricing, and onboarding-friction complaints.",
+      "privacyTreatment": "Aggregate dataset; no reviewer PII; business anonymized.",
+      "sourceQuality": "THIRD_PARTY_AGGREGATE", "staleness": "current", "uncertainty": "HIGH — aggregate across many products, not this product's measured rate.",
+      "usableAsSignal": true, "reason": "Support/onboarding themes → correction/validation; pricing → owner decision (blocked until margin known)."
+    },
+    {
+      "publicCaseId": "PC-C2", "anonymizedBusinessId": "BUSINESS_C", "archetype": "saas_project_management",
+      "sourceType": "public_reviews_analysis", "sourceUrl": "https://www.paymoapp.com/blog/project-management-software/",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Public reviews describe technical bugs (glitchy time trackers needing multiple refreshes) and a steep learning curve overwhelming new users.",
+      "redactedObservation": "Public review signals suggest possible technical-bug and onboarding-difficulty complaints for a project-management SaaS.",
+      "privacyTreatment": "Category theme; no PII.",
+      "sourceQuality": "THIRD_PARTY_UNVERIFIED", "staleness": "current", "uncertainty": "HIGH — category theme, not this product.",
+      "usableAsSignal": true, "reason": "Bug/onboarding theme → correction + evidence request; product-specific rate is missing-data."
+    },
+    {
+      "publicCaseId": "PC-C3", "anonymizedBusinessId": "BUSINESS_C", "archetype": "saas_project_management",
+      "sourceType": "public_reviews_analysis", "sourceUrl": "https://www.g2.com/categories/project-management",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "The same product category shows conflicting reviews — some praise ease-of-use while others report it as overwhelming / steep learning curve.",
+      "redactedObservation": "Public review signals conflict for the project-management SaaS category — ease-of-use praise vs. steep-learning-curve complaints on the same capability.",
+      "privacyTreatment": "Theme level; no PII.",
+      "sourceQuality": "THIRD_PARTY_UNVERIFIED", "staleness": "current", "uncertainty": "HIGH — conflicting signals.",
+      "usableAsSignal": true, "reason": "Conflicting → conflict-labelled, validation required before action."
+    },
+    {
+      "publicCaseId": "PC-C4", "anonymizedBusinessId": "BUSINESS_C", "archetype": "saas_project_management",
+      "sourceType": "public_job_posting_inference", "sourceUrl": "https://www.g2.com/categories/project-management",
+      "dateAccessed": "2026-07-07",
+      "publicObservation": "Public hiring activity (support/onboarding roles) can indicate staffing pressure on the support function referenced in reviews.",
+      "redactedObservation": "A public hiring/staffing-pressure signal (support/onboarding roles) may correlate with the support-responsiveness complaints.",
+      "privacyTreatment": "No individuals; inference only, flagged as weak.",
+      "sourceQuality": "INFERRED_WEAK", "staleness": "current", "uncertainty": "VERY HIGH — inference, not a stated fact.",
+      "usableAsSignal": true, "reason": "Weak/inferred → validation required; never asserted as fact."
+    }
+  ]
+}
