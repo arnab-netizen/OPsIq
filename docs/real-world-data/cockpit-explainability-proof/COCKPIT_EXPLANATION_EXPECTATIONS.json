@@ -1,0 +1,162 @@
+{
+  "pack": "cockpit-explainability-proof",
+  "pass": "31",
+  "note": "Deterministic expected explanation per case. Regenerate if the modules change.",
+  "expectations": [
+    {
+      "cockpitCaseId": "ck-laundry",
+      "explanation": {
+        "topTopic": "quality",
+        "topTier": 3,
+        "topRoute": "CREATE_MISSING_DATA_TASK",
+        "ownerApprovalRequired": false,
+        "ownerApprovalReasonPresent": false,
+        "whyNotGrowthYetPresent": true,
+        "evidenceBeforeCompletionCount": 3,
+        "secondaryGroups": 1,
+        "monitorOnly": 0,
+        "blockedUnsafeActions": [
+          "auto customer/tenant/buyer contact or auto-send of any draft",
+          "auto spend / discount / pricing change without owner approval"
+        ]
+      }
+    },
+    {
+      "cockpitCaseId": "ck-housekeeping",
+      "explanation": {
+        "topTopic": "quality",
+        "topTier": 3,
+        "topRoute": "CREATE_MISSING_DATA_TASK",
+        "ownerApprovalRequired": false,
+        "ownerApprovalReasonPresent": false,
+        "whyNotGrowthYetPresent": false,
+        "evidenceBeforeCompletionCount": 3,
+        "secondaryGroups": 0,
+        "monitorOnly": 0,
+        "blockedUnsafeActions": [
+          "auto customer/tenant/buyer contact or auto-send of any draft",
+          "auto spend / discount / pricing change without owner approval"
+        ]
+      }
+    },
+    {
+      "cockpitCaseId": "ck-property",
+      "explanation": {
+        "topTopic": "operations",
+        "topTier": 2,
+        "topRoute": "CREATE_OWNER_APPROVAL_TASK",
+        "ownerApprovalRequired": true,
+        "ownerApprovalReasonPresent": true,
+        "whyNotGrowthYetPresent": false,
+        "evidenceBeforeCompletionCount": 1,
+        "secondaryGroups": 0,
+        "monitorOnly": 0,
+        "blockedUnsafeActions": [
+          "auto customer/tenant/buyer contact or auto-send of any draft",
+          "auto spend / discount / pricing change without owner approval"
+        ]
+      }
+    },
+    {
+      "cockpitCaseId": "ck-franchise",
+      "explanation": {
+        "topTopic": "quality",
+        "topTier": 3,
+        "topRoute": "CREATE_MISSING_DATA_TASK",
+        "ownerApprovalRequired": false,
+        "ownerApprovalReasonPresent": false,
+        "whyNotGrowthYetPresent": false,
+        "evidenceBeforeCompletionCount": 6,
+        "secondaryGroups": 1,
+        "monitorOnly": 0,
+        "blockedUnsafeActions": [
+          "auto customer/tenant/buyer contact or auto-send of any draft",
+          "auto spend / discount / pricing change without owner approval"
+        ]
+      }
+    },
+    {
+      "cockpitCaseId": "ck-saas",
+      "explanation": {
+        "topTopic": "quality",
+        "topTier": 3,
+        "topRoute": "CREATE_MISSING_DATA_TASK",
+        "ownerApprovalRequired": false,
+        "ownerApprovalReasonPresent": false,
+        "whyNotGrowthYetPresent": true,
+        "evidenceBeforeCompletionCount": 3,
+        "secondaryGroups": 1,
+        "monitorOnly": 0,
+        "blockedUnsafeActions": [
+          "auto customer/tenant/buyer contact or auto-send of any draft",
+          "auto spend / discount / pricing change without owner approval"
+        ]
+      }
+    },
+    {
+      "cockpitCaseId": "ck-tender",
+      "explanation": {
+        "topTopic": "tender",
+        "topTier": 6,
+        "topRoute": "CREATE_MISSING_DATA_TASK",
+        "ownerApprovalRequired": false,
+        "ownerApprovalReasonPresent": false,
+        "whyNotGrowthYetPresent": false,
+        "evidenceBeforeCompletionCount": 4,
+        "secondaryGroups": 0,
+        "monitorOnly": 0,
+        "blockedUnsafeActions": [
+          "auto customer/tenant/buyer contact or auto-send of any draft",
+          "auto spend / discount / pricing change without owner approval",
+          "tender auto-submit",
+          "auto EMD payment / spend",
+          "auto contract signing",
+          "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+        ]
+      }
+    },
+    {
+      "cockpitCaseId": "ck-b2b",
+      "explanation": {
+        "topTopic": "b2b",
+        "topTier": 4,
+        "topRoute": "CREATE_MISSING_DATA_TASK",
+        "ownerApprovalRequired": false,
+        "ownerApprovalReasonPresent": false,
+        "whyNotGrowthYetPresent": false,
+        "evidenceBeforeCompletionCount": 4,
+        "secondaryGroups": 0,
+        "monitorOnly": 0,
+        "blockedUnsafeActions": [
+          "auto customer/tenant/buyer contact or auto-send of any draft",
+          "auto spend / discount / pricing change without owner approval",
+          "auto outreach / auto-send to the buyer"
+        ]
+      }
+    },
+    {
+      "cockpitCaseId": "ck-collective",
+      "explanation": {
+        "topTopic": "quality",
+        "topTier": 4,
+        "topRoute": "CREATE_CORRECTION_TASK",
+        "ownerApprovalRequired": false,
+        "ownerApprovalReasonPresent": false,
+        "whyNotGrowthYetPresent": true,
+        "evidenceBeforeCompletionCount": 1,
+        "secondaryGroups": 0,
+        "monitorOnly": 0,
+        "blockedUnsafeActions": [
+          "auto customer/tenant/buyer contact or auto-send of any draft",
+          "auto spend / discount / pricing change without owner approval",
+          "scale before validation",
+          "spend before cost/capacity data"
+        ]
+      }
+    },
+    {
+      "cockpitCaseId": "ck-monitor",
+      "explanation": null
+    }
+  ]
+}

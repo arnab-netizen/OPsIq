@@ -1,0 +1,27 @@
+{
+  "audit": "owner-cockpit-decision-coherence-proof",
+  "pass": "31",
+  "matrix": "COCKPIT_SAFETY",
+  "date": "2026-07-07",
+  "purpose": "Evaluates each owner-explanation safety property against executable proof (owner-cockpit-decision-explanation.test.ts unit + owner-cockpit-decision-coherence.db.test.ts DB).",
+  "properties": [
+    { "property": "coherent top-action explanation", "held": true, "how": "top action carries title/summary + whyThisIsTopPriority reasons; fail-closed if absent.", "provenBy": ["unit test 1,20", "db test 1+2/5"] },
+    { "property": "evidence-linked", "held": true, "how": "explanation links supporting clusters + signal count and strongest/weakest evidence.", "provenBy": ["unit test 2", "db test 3"] },
+    { "property": "verified vs unverified separated", "held": true, "how": "verifiedFacts (official only) vs unverifiedSignals ('not proof').", "provenBy": ["unit test 3", "db test 4"] },
+    { "property": "missing data explicit", "held": true, "how": "missingData + requiredEvidenceBeforeCompletion listed.", "provenBy": ["unit test 4,9", "db test 4,7"] },
+    { "property": "why top outranks others", "held": true, "how": "tier + reasons + count of secondaries/monitor-only.", "provenBy": ["unit test 1", "db test 5"] },
+    { "property": "growth-blocked explained", "held": true, "how": "whyNotGrowthYet states growth is subordinated + blocked-before-proof.", "provenBy": ["unit test 5", "db test 5"] },
+    { "property": "tender-blocked explained", "held": true, "how": "data-first, auto-submit blocked, risk copy states nothing auto-submitted.", "provenBy": ["unit test 6", "db test 9"] },
+    { "property": "customer-contact blocked explained", "held": true, "how": "blocked list includes auto customer/tenant/buyer contact.", "provenBy": ["unit test 7"] },
+    { "property": "owner-approval reason present", "held": true, "how": "owner-gated top action states why (Zod fail-closed if missing).", "provenBy": ["unit test 8,20", "db test 6"] },
+    { "property": "evidence + reassessment visible", "held": true, "how": "requiredEvidenceBeforeCompletion + reassessmentAfterCompletion present.", "provenBy": ["unit test 9,10", "db test 7,8"] },
+    { "property": "secondary actions grouped (anti-spam)", "held": true, "how": "bounded grouped summaries; one top explanation.", "provenBy": ["unit test 11", "db test 10+11"] },
+    { "property": "monitor-only reasoned", "held": true, "how": "each monitor item carries whyNoAction.", "provenBy": ["unit test 12"] },
+    { "property": "no hidden score", "held": true, "how": "transparent tier + reasons; no field named/containing a score.", "provenBy": ["unit test 13"] },
+    { "property": "no PII / injection / fake money shown", "held": true, "how": "Zod refinement rejects PII/injection/currency in owner-facing strings.", "provenBy": ["unit tests 14,15,16", "db tests 12+13,14"] },
+    { "property": "weak evidence never stated as fact", "held": true, "how": "confidence caveat + unverified labels.", "provenBy": ["unit test 17"] },
+    { "property": "workspace isolation", "held": true, "how": "each workspace's clustered tasks are its own.", "provenBy": ["db test 15"] },
+    { "property": "clean/monitor-only no-fabrication", "held": true, "how": "null explanation when nothing is actionable.", "provenBy": ["unit test 18", "db test 16"] }
+  ],
+  "summary": { "propertiesEvaluated": 17, "propertiesHeld": 17, "propertiesFailed": 0, "classification": "ELITE_ACCEPTED" }
+}

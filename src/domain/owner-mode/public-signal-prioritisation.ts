@@ -61,6 +61,10 @@ export interface IssueClusterView {
   evidenceRequired: string[];
   monitorOnly: boolean;
   collectiveDecision: string;
+  /** Best→worst source quality present in the cluster (e.g. "VERIFIED_SOURCE+THIRD_PARTY_UNVERIFIED"). */
+  sourceQualitySummary: string;
+  /** Best→worst evidence strength present in the cluster (e.g. "MODERATE+WEAK"). */
+  evidenceStrengthSummary: string;
 }
 
 export interface TopCollectiveAction {
@@ -120,6 +124,8 @@ export const publicSignalPrioritisationSchema = z.object({
     evidenceRequired: z.array(z.string()),
     monitorOnly: z.boolean(),
     collectiveDecision: z.string().min(3),
+    sourceQualitySummary: z.string().min(1),
+    evidenceStrengthSummary: z.string().min(1),
   })),
   topCollectiveAction: z.object({
     topic: z.enum(SIGNAL_TOPICS),
@@ -256,6 +262,7 @@ export function prioritisePublicSignals(input: PrioritiseInput): PublicSignalPri
     recommendedExecutionRoute: c.pkg.recommendedExecutionRoute, ownerApprovalRequired: c.pkg.ownerApprovalRequired,
     priorityTier: c.tier, priorityReasons: c.reasons, missingData: c.pkg.missingData, evidenceRequired: c.pkg.evidenceRequired,
     monitorOnly: c.monitorOnly, collectiveDecision: c.pkg.recommendedCollectiveDecision,
+    sourceQualitySummary: c.pkg.sourceQualitySummary, evidenceStrengthSummary: c.pkg.evidenceStrengthSummary,
   });
 
   const top = actionable[0] ?? null;

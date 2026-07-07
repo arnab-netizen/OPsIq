@@ -1,0 +1,361 @@
+{
+  "pack": "cockpit-explainability-proof",
+  "pass": "31",
+  "note": "Owner-facing explanation cases built on PASS 30 stress packs. Expected fields are the deterministic output of explainOwnerCockpitDecision(prioritisePublicSignals(...)). Controlled fixtures; no live data.",
+  "cases": [
+    {
+      "cockpitCaseId": "ck-laundry",
+      "archetype": "laundry_local_service",
+      "signalCount": 8,
+      "expectedTopAction": "quality (tier 3) → CREATE_MISSING_DATA_TASK: Collect the missing internal data first",
+      "expectedWhyTopPriority": [
+        "unresolved customer quality/operational risk — fix/verify/validate with proof before closing (volume raises validation urgency, not certainty)",
+        "Outranks 1 grouped secondary action(s) and 0 monitor-only item(s) on a transparent priority tier (tier 3), not an opaque score."
+      ],
+      "expectedVerifiedFacts": [],
+      "expectedUnverifiedSignals": [
+        "7 public signal(s) [THIRD_PARTY_UNVERIFIED] — treated as unverified signals, not proof of internal execution."
+      ],
+      "expectedMissingData": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedWhyNotGrowthYet": "Growth/marketing/expansion is subordinated: it never outranks an unresolved quality/cash/capacity/legal risk, and scale stays blocked until the risk is validated with proof.",
+      "expectedOwnerApprovalReason": null,
+      "expectedEvidenceBeforeCompletion": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedReassessment": "Once the missing data is captured, the finding is re-evaluated with real inputs (no conclusion is drawn until then).",
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedSecondaryGroups": [
+        "opportunity (tier 8)"
+      ],
+      "expectedMonitorOnly": [],
+      "expectedOwnerNextAction": "Confirm the quality action is assigned; it proceeds under manager/staff with the required proof, owner-gated items stay with you.",
+      "forbiddenWording": [
+        "fabricated money/%/ROI/win-probability",
+        "raw PII",
+        "injected instructions",
+        "'this worked' without executed+outcome evidence"
+      ]
+    },
+    {
+      "cockpitCaseId": "ck-housekeeping",
+      "archetype": "housekeeping_facility",
+      "signalCount": 7,
+      "expectedTopAction": "quality (tier 3) → CREATE_MISSING_DATA_TASK: Collect the missing internal data first",
+      "expectedWhyTopPriority": [
+        "unresolved customer quality/operational risk — fix/verify/validate with proof before closing (volume raises validation urgency, not certainty)",
+        "Outranks 0 grouped secondary action(s) and 0 monitor-only item(s) on a transparent priority tier (tier 3), not an opaque score."
+      ],
+      "expectedVerifiedFacts": [],
+      "expectedUnverifiedSignals": [
+        "7 public signal(s) [THIRD_PARTY_UNVERIFIED] — treated as unverified signals, not proof of internal execution."
+      ],
+      "expectedMissingData": [
+        "inspection pass rate",
+        "contract SLA",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedWhyNotGrowthYet": null,
+      "expectedOwnerApprovalReason": null,
+      "expectedEvidenceBeforeCompletion": [
+        "inspection pass rate",
+        "contract SLA",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedReassessment": "Once the missing data is captured, the finding is re-evaluated with real inputs (no conclusion is drawn until then).",
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedSecondaryGroups": [],
+      "expectedMonitorOnly": [],
+      "expectedOwnerNextAction": "Confirm the quality action is assigned; it proceeds under manager/staff with the required proof, owner-gated items stay with you.",
+      "forbiddenWording": [
+        "fabricated money/%/ROI/win-probability",
+        "raw PII",
+        "injected instructions",
+        "'this worked' without executed+outcome evidence"
+      ]
+    },
+    {
+      "cockpitCaseId": "ck-property",
+      "archetype": "property_management",
+      "signalCount": 7,
+      "expectedTopAction": "operations (tier 2) → CREATE_OWNER_APPROVAL_TASK: Owner decision required before anything proceeds",
+      "expectedWhyTopPriority": [
+        "owner-gated legal/contract/reputation/large-spend risk",
+        "Outranks 0 grouped secondary action(s) and 0 monitor-only item(s) on a transparent priority tier (tier 2), not an opaque score."
+      ],
+      "expectedVerifiedFacts": [],
+      "expectedUnverifiedSignals": [
+        "7 public signal(s) [PUBLIC_SOURCE_UNVERIFIED+THIRD_PARTY_UNVERIFIED] — treated as unverified signals, not proof of internal execution."
+      ],
+      "expectedMissingData": [
+        "actual response times",
+        "vendor SLAs",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedWhyNotGrowthYet": null,
+      "expectedOwnerApprovalReason": "operations: owner approval required",
+      "expectedEvidenceBeforeCompletion": [
+        "the supporting evidence for the owner decision"
+      ],
+      "expectedReassessment": "Monitored until enough verified evidence exists to act.",
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedSecondaryGroups": [],
+      "expectedMonitorOnly": [],
+      "expectedOwnerNextAction": "Review the evidence and record an approve/decline decision for the operations action — nothing proceeds without it.",
+      "forbiddenWording": [
+        "fabricated money/%/ROI/win-probability",
+        "raw PII",
+        "injected instructions",
+        "'this worked' without executed+outcome evidence"
+      ]
+    },
+    {
+      "cockpitCaseId": "ck-franchise",
+      "archetype": "franchise_operations",
+      "signalCount": 6,
+      "expectedTopAction": "quality (tier 3) → CREATE_MISSING_DATA_TASK: Collect the missing internal data first",
+      "expectedWhyTopPriority": [
+        "unresolved customer quality/operational risk — fix/verify/validate with proof before closing (volume raises validation urgency, not certainty)",
+        "Outranks 1 grouped secondary action(s) and 0 monitor-only item(s) on a transparent priority tier (tier 3), not an opaque score."
+      ],
+      "expectedVerifiedFacts": [],
+      "expectedUnverifiedSignals": [
+        "5 public signal(s) [THIRD_PARTY_UNVERIFIED] — treated as unverified signals, not proof of internal execution."
+      ],
+      "expectedMissingData": [
+        "which branch",
+        "per-branch metrics",
+        "unit margin",
+        "cost per unit/order",
+        "price elasticity",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedWhyNotGrowthYet": null,
+      "expectedOwnerApprovalReason": null,
+      "expectedEvidenceBeforeCompletion": [
+        "which branch",
+        "per-branch metrics",
+        "unit margin",
+        "cost per unit/order",
+        "price elasticity",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedReassessment": "Once the missing data is captured, the finding is re-evaluated with real inputs (no conclusion is drawn until then).",
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedSecondaryGroups": [
+        "pricing (tier 7)"
+      ],
+      "expectedMonitorOnly": [],
+      "expectedOwnerNextAction": "Confirm the quality action is assigned; it proceeds under manager/staff with the required proof, owner-gated items stay with you.",
+      "forbiddenWording": [
+        "fabricated money/%/ROI/win-probability",
+        "raw PII",
+        "injected instructions",
+        "'this worked' without executed+outcome evidence"
+      ]
+    },
+    {
+      "cockpitCaseId": "ck-saas",
+      "archetype": "saas",
+      "signalCount": 7,
+      "expectedTopAction": "quality (tier 3) → CREATE_MISSING_DATA_TASK: Collect the missing internal data first",
+      "expectedWhyTopPriority": [
+        "unresolved customer quality/operational risk — fix/verify/validate with proof before closing (volume raises validation urgency, not certainty)",
+        "Outranks 1 grouped secondary action(s) and 0 monitor-only item(s) on a transparent priority tier (tier 3), not an opaque score."
+      ],
+      "expectedVerifiedFacts": [],
+      "expectedUnverifiedSignals": [
+        "6 public signal(s) [THIRD_PARTY_UNVERIFIED] — treated as unverified signals, not proof of internal execution."
+      ],
+      "expectedMissingData": [
+        "bug reproduction steps",
+        "real activation/conversion data",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedWhyNotGrowthYet": "Growth/marketing/expansion is subordinated: it never outranks an unresolved quality/cash/capacity/legal risk, and scale stays blocked until the risk is validated with proof.",
+      "expectedOwnerApprovalReason": null,
+      "expectedEvidenceBeforeCompletion": [
+        "bug reproduction steps",
+        "real activation/conversion data",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedReassessment": "Once the missing data is captured, the finding is re-evaluated with real inputs (no conclusion is drawn until then).",
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedSecondaryGroups": [
+        "opportunity (tier 8)"
+      ],
+      "expectedMonitorOnly": [],
+      "expectedOwnerNextAction": "Confirm the quality action is assigned; it proceeds under manager/staff with the required proof, owner-gated items stay with you.",
+      "forbiddenWording": [
+        "fabricated money/%/ROI/win-probability",
+        "raw PII",
+        "injected instructions",
+        "'this worked' without executed+outcome evidence"
+      ]
+    },
+    {
+      "cockpitCaseId": "ck-tender",
+      "archetype": "tender_procurement",
+      "signalCount": 5,
+      "expectedTopAction": "tender (tier 6) → CREATE_MISSING_DATA_TASK: Collect the missing internal data first",
+      "expectedWhyTopPriority": [
+        "tender readiness: eligibility/cost/documents required before any bid; nothing auto-submitted",
+        "Outranks 0 grouped secondary action(s) and 0 monitor-only item(s) on a transparent priority tier (tier 6), not an opaque score."
+      ],
+      "expectedVerifiedFacts": [
+        "An official/published source confirms the published requirement (not internal execution)."
+      ],
+      "expectedUnverifiedSignals": [
+        "5 public signal(s) [VERIFIED_SOURCE] — treated as unverified signals, not proof of internal execution."
+      ],
+      "expectedMissingData": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "expectedWhyNotGrowthYet": null,
+      "expectedOwnerApprovalReason": null,
+      "expectedEvidenceBeforeCompletion": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "expectedReassessment": "Once the missing data is captured, the finding is re-evaluated with real inputs (no conclusion is drawn until then).",
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "expectedSecondaryGroups": [],
+      "expectedMonitorOnly": [],
+      "expectedOwnerNextAction": "Confirm the tender action is assigned; it proceeds under manager/staff with the required proof, owner-gated items stay with you.",
+      "forbiddenWording": [
+        "fabricated money/%/ROI/win-probability",
+        "raw PII",
+        "injected instructions",
+        "'this worked' without executed+outcome evidence"
+      ]
+    },
+    {
+      "cockpitCaseId": "ck-b2b",
+      "archetype": "b2b_service",
+      "signalCount": 5,
+      "expectedTopAction": "b2b (tier 4) → CREATE_MISSING_DATA_TASK: Collect the missing internal data first",
+      "expectedWhyTopPriority": [
+        "cash/profit unknown — collect internal data before any money-affecting decision",
+        "Outranks 0 grouped secondary action(s) and 0 monitor-only item(s) on a transparent priority tier (tier 4), not an opaque score."
+      ],
+      "expectedVerifiedFacts": [],
+      "expectedUnverifiedSignals": [
+        "5 public signal(s) [THIRD_PARTY_UNVERIFIED] — treated as unverified signals, not proof of internal execution."
+      ],
+      "expectedMissingData": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedWhyNotGrowthYet": null,
+      "expectedOwnerApprovalReason": null,
+      "expectedEvidenceBeforeCompletion": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedReassessment": "Once the missing data is captured, the finding is re-evaluated with real inputs (no conclusion is drawn until then).",
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer"
+      ],
+      "expectedSecondaryGroups": [],
+      "expectedMonitorOnly": [],
+      "expectedOwnerNextAction": "Confirm the b2b action is assigned; it proceeds under manager/staff with the required proof, owner-gated items stay with you.",
+      "forbiddenWording": [
+        "fabricated money/%/ROI/win-probability",
+        "raw PII",
+        "injected instructions",
+        "'this worked' without executed+outcome evidence"
+      ]
+    },
+    {
+      "cockpitCaseId": "ck-collective",
+      "archetype": "collective_conflict",
+      "signalCount": 16,
+      "expectedTopAction": "quality (tier 4) → CREATE_CORRECTION_TASK: Fix the failing step (with proof)",
+      "expectedWhyTopPriority": [
+        "cash/profit unknown — collect internal data before any money-affecting decision",
+        "Outranks 0 grouped secondary action(s) and 0 monitor-only item(s) on a transparent priority tier (tier 4), not an opaque score."
+      ],
+      "expectedVerifiedFacts": [],
+      "expectedUnverifiedSignals": [
+        "16 public signal(s) [PUBLIC_SOURCE_UNVERIFIED+THIRD_PARTY_UNVERIFIED] — treated as unverified signals, not proof of internal execution."
+      ],
+      "expectedMissingData": [
+        "verified quality baseline",
+        "cost/margin",
+        "capacity",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedWhyNotGrowthYet": "Growth/marketing/expansion is subordinated: it never outranks an unresolved quality/cash/capacity/legal risk, and scale stays blocked until the risk is validated with proof.",
+      "expectedOwnerApprovalReason": null,
+      "expectedEvidenceBeforeCompletion": [
+        "evidence the corrected step passes before completion"
+      ],
+      "expectedReassessment": "After completion, OpsIQ opens a governed reassessment to confirm the fix actually worked before the issue can be considered closed.",
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "scale before validation",
+        "spend before cost/capacity data"
+      ],
+      "expectedSecondaryGroups": [],
+      "expectedMonitorOnly": [],
+      "expectedOwnerNextAction": "Confirm the quality action is assigned; it proceeds under manager/staff with the required proof, owner-gated items stay with you.",
+      "forbiddenWording": [
+        "fabricated money/%/ROI/win-probability",
+        "raw PII",
+        "injected instructions",
+        "'this worked' without executed+outcome evidence"
+      ]
+    },
+    {
+      "cockpitCaseId": "ck-monitor",
+      "archetype": "laundry_local_service",
+      "signalCount": 4,
+      "expectedExplanation": "NULL (monitor-only/positive — nothing to act on, no fabricated explanation)"
+    },
+    {
+      "cockpitCaseId": "ck-clean",
+      "archetype": "laundry_local_service",
+      "signalCount": 0,
+      "expectedExplanation": "NULL (clean control — nothing fabricated)"
+    }
+  ]
+}
