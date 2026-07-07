@@ -9,10 +9,17 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The maintained suite runs serially (--maxWorkers 1) over a large repo, on top
+    # of install + build + migrate. 30 min was too tight and the job was killed
+    # mid-suite; give it headroom so a slow (not hung) run completes.
+    timeout-minutes: 55
 
     env:
       TEST_WITH_DB: "true"
+      # Raise the Node heap for the whole job. `next build`'s TypeScript pass and
+      # the large test suite intermittently hit the default ~2 GB limit
+      # (FATAL: heap out of memory / SIGABRT). 4 GB removes that flake.
+      NODE_OPTIONS: "--max-old-space-size=4096"
 
     services:
       postgres:
@@ -48,7 +55,15 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # Retry npm ci: the registry occasionally drops the connection
+        # (npm error code ECONNRESET) and fails the whole shard on a transient
+        # network blip. Up to 3 attempts with backoff.
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            echo "npm ci failed (attempt $i); retrying in $((i*10))s..."
+            sleep $((i*10))
+          done
 
       - name: Configure .env.local for CI
         # prisma.config.ts loads .env.local with override: true, so the tracked
@@ -107,6 +122,9 @@ jobs:
         # .claude/test-quarantine.json (proven pre-existing failures, identical on
         # main). Any failure in a non-quarantined test fails CI. Phase D / P2B / P2C
         # coverage is unaffected (no protected file is quarantined).
+        # Step-level timeout: a genuinely hung test fails this step fast instead of
+        # silently eating the whole job budget; comfortably above the normal run.
+        timeout-minutes: 40
         run: |
           EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
           echo "Quarantined (excluded from blocking lane): $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") file(s)"
@@ -160,7 +178,13 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # Retry npm ci on transient registry ECONNRESET (see build-and-test).
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            echo "npm ci failed (attempt $i); retrying in $((i*10))s..."
+            sleep $((i*10))
+          done
 
       - name: Run linter
         run: npm run lint

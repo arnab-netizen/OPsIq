@@ -106,3 +106,17 @@ token crypto has a key. The fail-closed tests still override/unset it locally wi
 try/finally, so this default does not mask them. Test-infra only — no product logic, no CI-workflow
 change. (Two earlier `build-and-test`/browser-shard failures on this branch were unrelated flaky
 Next.js build OOMs, which cleared on re-run.)
+
+## Addendum 2 — CI infra hardening (user-approved; overrides the original no-CI-change rule)
+After the crypto-test fix, CI kept failing on **infrastructure**, never on Phase-0 code: `next build`
+heap-OOM/`SIGABRT`, `npm ci` `ECONNRESET`, and the serial maintained test suite exceeding the job's
+30-minute cap (killed mid-run → "cancelled"). With explicit approval, `.github/workflows/ci.yml` was
+hardened (only the `build-and-test` and `lint` jobs):
+- Job-level `NODE_OPTIONS=--max-old-space-size=4096` — removes the build/test heap-OOM flake.
+- `build-and-test` `timeout-minutes` 30 → 55, plus a 40-minute step cap on the test suite — a slow but
+  healthy serial run completes; a genuine hang fails fast instead of eating the whole job.
+- 3-attempt `npm ci` retry with backoff (both jobs) — rides out transient registry `ECONNRESET`.
+
+No test logic, product code, gate strictness, or coverage changed. The ~30 browser-pack workflows share
+the same two flakes (`npm ci` reset, `next build` OOM) and can be hardened identically if they are
+required for merge — not done here to keep the change small.
