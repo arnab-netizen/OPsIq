@@ -1,0 +1,18 @@
+{
+  "title": "Owner Load & Safety Matrix — Outside Signals (PASS 39)",
+  "date": "2026-07-07",
+  "checks": [
+    { "control": "outside signals collapsed by default", "enforced": true, "how": "<details data-testid=cockpit-signals-group> without open attr", "test": "public-signals component #1; browser 46" },
+    { "control": "one top action remains primary", "enforced": true, "how": "outside signals renders after the top-action card; top action unchanged", "test": "public-signals #12; existing cockpit #20" },
+    { "control": "no raw public text spam", "enforced": true, "how": "only governed cluster decisions/summaries; interpreter never emits raw text", "test": "unit #2/#3; db #4; component #8" },
+    { "control": "no raw audit spam", "enforced": true, "how": "auditTraceRefs not rendered inline", "test": "component section renders no audit refs" },
+    { "control": "no hidden score", "enforced": true, "how": "no *score* field; component regex", "test": "unit #6; component #10" },
+    { "control": "no fake financials", "enforced": true, "how": "NO_MONEY schema refine + component/db regex", "test": "unit #5; component #13; db #5" },
+    { "control": "no unsafe action button", "enforced": true, "how": "section is read-only; blocked actions shown as text", "test": "no buttons in section; browser 46" },
+    { "control": "no frozen live-ingestion claim", "enforced": true, "how": "noLiveIngestionStatement mandatory (schema refine); forbidden 'live internet intelligence'/'AI found this online'", "test": "unit #1/#7; component #7/#13; db #3; browser 46" },
+    { "control": "clean workspace no-fabrication", "enforced": true, "how": "no intake rows → NONE; component 'no outside signals'", "test": "unit #1; component #11; db #2" },
+    { "control": "PII stripped / raw text hidden", "enforced": true, "how": "interpreter strips PII + resists injection; schema requires both true", "test": "unit #3; db #4; component #8/#9" },
+    { "control": "weak signal not shown as fact", "enforced": true, "how": "sourceQuality/evidence summaries + uncertainty caveat; no 'verified fact'/'market proves'", "test": "db #7; unit #10" },
+    { "control": "read-only (no mutation, no fetch)", "enforced": true, "how": "endpoint is GET; service reads persisted rows only; no external call", "test": "endpoint GET-only; service reads getActiveExternalOpportunitySignals" }
+  ]
+}

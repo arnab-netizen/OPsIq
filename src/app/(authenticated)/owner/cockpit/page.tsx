@@ -13,6 +13,7 @@ import { Button } from "@/ui/primitives";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
 import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
+import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -48,6 +49,7 @@ export default function OwnerCockpitPage() {
   const [bridge, setBridge] = useState<ProcessExecutionBridgeView | null>(null);
   const [avoid, setAvoid] = useState<string[]>([]);
   const [recovery, setRecovery] = useState<OwnerRecoveryStatusResponse | null>(null);
+  const [publicSignals, setPublicSignals] = useState<OwnerPublicSignalsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -64,6 +66,9 @@ export default function OwnerCockpitPage() {
       // Read-only recovery status (best-effort; a failure here must not break the cockpit).
       const rec = await apiGet("/api/owner/recovery-status").catch(() => null);
       setRecovery(rec && typeof rec === "object" && "recoveryStatus" in rec ? (rec as OwnerRecoveryStatusResponse) : null);
+      // Read-only outside signals (best-effort; a failure here must not break the cockpit).
+      const sig = await apiGet("/api/owner/public-signals").catch(() => null);
+      setPublicSignals(sig && typeof sig === "object" && "publicSignalStatus" in sig ? (sig as OwnerPublicSignalsResponse) : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -111,7 +116,7 @@ export default function OwnerCockpitPage() {
         <Button onClick={() => void load()} disabled={busy}>Refresh</Button>
       </header>
       {message && <p data-testid="cockpit-message" style={{ margin: 0, fontSize: 13, color: "#374151" }}>{message}</p>}
-      <MinimumOwnerCockpit bridge={bridge} actionsToAvoid={avoid} recovery={recovery} onAction={onAction} busy={busy} />
+      <MinimumOwnerCockpit bridge={bridge} actionsToAvoid={avoid} recovery={recovery} publicSignals={publicSignals} onAction={onAction} busy={busy} />
     </main>
   );
 }
