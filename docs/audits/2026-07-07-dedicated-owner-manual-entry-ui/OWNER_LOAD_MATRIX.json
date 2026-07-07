@@ -1,0 +1,13 @@
+{
+  "title": "Owner Load Matrix — Manual Entry (PASS 45)",
+  "date": "2026-07-07",
+  "honesty": "Structural low-load only. No fabricated owner-time-savings.",
+  "checks": [
+    { "check": "essential sections first, optional collapsed", "result": "2 essential expanded, 8 optional in <details>" },
+    { "check": "one thing at a time (per-section save)", "result": "each section saves one governed record; no forced long form" },
+    { "check": "plain-language validation", "result": "missing note / negative amount / PII → plain messages, no jargon" },
+    { "check": "no raw audit/system text", "result": "page shows owner copy only; no audit refs, no hidden score" },
+    { "check": "no re-keying", "result": "saved records feed the cockpit; owner does not re-enter them" },
+    { "check": "clear next step", "result": "link to /owner/cockpit to see the resulting top action" }
+  ]
+}

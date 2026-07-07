@@ -1,0 +1,35 @@
+{
+  "title": "Dedicated Owner Manual-Entry UI — Evidence Ledger (PASS 45)",
+  "date": "2026-07-07",
+  "branch": "claude/dedicated-owner-manual-entry-ui",
+  "baseMain": "ebd66cde2fdf0617637191825415c9fb0ea30a66",
+  "objective": "Remove/narrow restriction R1 — give the owner a dedicated low-load manual-entry UI wired to the proven governed backend, without weakening safety gates.",
+  "filesAdded": [
+    "src/app/(authenticated)/owner/manual-entry/page.tsx (the /owner/manual-entry UI)",
+    "src/domain/owner-mode/owner-manual-entry-form.ts (pure: sections→category map, safe copy, PII guard reusing stripPii, validation)",
+    "src/__tests__/owner-mode/owner-manual-entry-form.test.ts (13 unit tests)",
+    "src/__tests__/components/owner-manual-entry-page.test.tsx (10 component tests)",
+    "tests/browser/51-owner-manual-entry.spec.ts (6 browser tests)"
+  ],
+  "filesChanged": [
+    "src/app/api/owner/manual-entry/route.ts (bounded PII guard: block PII with redaction guidance before submitManualEntry)",
+    "src/domain/owner-mode/public-signal-interpretation.ts (export the proven stripPii for reuse — no logic change)",
+    "src/ui/shell/sidebar-nav.tsx (add 'Log business data' → /owner/manual-entry, requiresOwner)",
+    ".github/workflows/owner-pilot-e2e.yml (wired 51-owner-manual-entry.spec.ts)"
+  ],
+  "noDuplication": "No new decision engine, no duplicate persistence. The UI posts to the existing /api/owner/manual-entry → submitManualEntry → parser → OwnerDataIntake. The only new backend logic is a PII guard that REUSES the proven stripPii.",
+  "gatesNotWeakened": ["auth (withCanonicalEnforcement)", "workspace scope + cross-workspace/business rejection (parser)", "OWNER_MANAGE capability", "audit event on write", "approval/evidence/reassessment (unchanged, downstream in the cockpit)"],
+  "piiHandling": "Blocked with redaction guidance client-side (validateManualEntry) AND server-side (route detectPiiInFields → 422 pii_blocked). Reuses the proven public-signal stripPii sanitizer. No raw PII is stored.",
+  "localGates": {
+    "prismaValidate": "PASS",
+    "tsc": "PASS",
+    "governanceScanStrict": "0 new (fixed a transient unsafe-mutation flag by splitting fetch/method onto separate lines, matching the existing owner-page pattern)",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new)",
+    "unitTests": "owner-manual-entry-form 13/13",
+    "componentTests": "owner-manual-entry-page 10/10",
+    "browserSpec": "51-owner-manual-entry 6/6 (built app + seeded workspace + real Chromium; live PII block + governed save)",
+    "nextBuild": "PASS (/owner/manual-entry present)"
+  },
+  "r1Status": "NARROWED → effectively removed: the owner now has a dedicated field-by-field manual-entry form wired to /api/owner/manual-entry. Residual: it is a per-section save (one record at a time), not a bulk importer (bulk stays on /owner/intake).",
+  "classification": "OWNER_MANUAL_ENTRY_UI_PROVEN"
+}

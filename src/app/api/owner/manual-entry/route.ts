@@ -15,6 +15,7 @@ import { parseRequestBody } from "@/lib/validation";
 import { db } from "@/lib/db";
 import { submitManualEntry } from "@/services/owner-mode/owner-manual-entry.service";
 import { OWNER_INPUT_CATEGORIES } from "@/domain/owner-mode/input-catalog";
+import { detectPiiInFields } from "@/domain/owner-mode/owner-manual-entry-form";
 import type { PrismaClient } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,23 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const input = await parseRequestBody(ctx.request!, manualEntrySchema);
     const workspaceId = ctx.verifiedWorkspaceId;
+
+    // Privacy guard (PASS 45): the owner manual-entry path must never persist raw personal data. Reuse the
+    // proven public-signal sanitizer to DETECT an email / phone / named-contact in any free-text field and
+    // block the submission with redaction guidance — OpsIQ stores operational facts, not personal identities.
+    const pii = detectPiiInFields(input.fields);
+    if (pii.hasPii) {
+      return canonicalJson(
+        {
+          ok: false,
+          rejection: "pii_blocked",
+          errors: [
+            "Personal data detected (email/phone/name). Remove it and use a placeholder like CUSTOMER_001, then resubmit — OpsIQ does not store personal identities.",
+          ],
+        },
+        { status: 422 },
+      );
+    }
 
     const result = await submitManualEntry(
       {

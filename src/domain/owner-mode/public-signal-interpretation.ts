@@ -257,8 +257,9 @@ const PHONE_RE = /(?:\+?\d[\d\s().-]{6,}\d)/g;
 const TITLED_NAME_RE = /\b(Mr|Mrs|Ms|Miss|Dr)\.?\s+[A-Z][a-zA-Z]+/g;
 const CONTACT_NAME_RE = /\b(my name is|name is|i am|contact|spoke (?:to|with)|ask for|speak to)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?/gi;
 
-/** Strip / minimize personal data. Returns sanitized text + whether anything was removed. */
-function stripPii(text: string): { sanitized: string; removed: boolean } {
+/** Strip / minimize personal data. Returns sanitized text + whether anything was removed.
+ *  Exported so the owner manual-entry guard reuses the SAME proven sanitizer (no second PII definition). */
+export function stripPii(text: string): { sanitized: string; removed: boolean } {
   let removed = false;
   let out = text.replace(EMAIL_RE, () => {
     removed = true;
