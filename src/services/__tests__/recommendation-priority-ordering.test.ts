@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import {
-  createRecommendation,
-  getRecommendationsForEngagement,
-} from "@/services/recommendation";
+import { getRecommendationsForEngagement } from "@/services/recommendation";
 import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 /**
@@ -46,20 +42,6 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     const userId = uuidv4();
     const stamp = `${uuidv4()}`;
 
-    const authContext = {
-      verifiedActorId: userId,
-      verifiedActorType: "user",
-      verifiedActor: null,
-      verifiedWorkspaceId: workspaceId,
-      verifiedCapabilities: ["RECOMMENDATION_CREATE"],
-      verifiedSessionSnapshot: {
-        actorId: userId,
-        sessionId: uuidv4(),
-        createdAt: new Date(),
-      },
-      policy: null,
-    } as unknown as CanonicalAuthContext;
-
     // Insert priorities in a deliberately SCRAMBLED order so a correct result cannot come from
     // insertion order or lexical string order — only from semantic priority ranking.
     const insertionOrder: Array<"low" | "high" | "medium"> = [
@@ -78,7 +60,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await db.workspace.create({
         data: { id: workspaceId, name: "G2 Ordering WS", slug: `g2-order-${stamp}` },
       });
-      await db.clientAccount.create({ data: { id: clientId, name: `G2 Ordering Client ${stamp}` } });
+      await db.clientAccount.create({
+        data: { id: clientId, name: `G2 Ordering Client ${stamp}`, createdBy: userId, updatedAt: new Date() },
+      });
       await db.engagement.create({
         data: {
           id: engagementId,
@@ -88,6 +72,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
           serviceTier: "tier_1",
           engagementMode: "strategic_planning",
           workspaceId,
+          updatedAt: new Date(),
         },
       });
       // getRecommendationsForEngagement enforces engagement access via an active membership.
@@ -95,17 +80,20 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         data: { id: uuidv4(), userId, engagementId, role: "lead" },
       });
 
-      // Persist recommendations with the caller-provided priority in the scrambled order above.
+      // Persist recommendations with the given priority in the scrambled order above. Direct
+      // create (deterministic priority + createdAt) so the test isolates the READ-path ordering
+      // contract of getRecommendationsForEngagement, independent of the create path.
       for (let i = 0; i < insertionOrder.length; i++) {
-        await createRecommendation(
-          {
+        await db.recommendation.create({
+          data: {
+            id: uuidv4(),
             engagementId,
+            workspaceId,
             title: `G2 rec ${i} (${insertionOrder[i]}) ${stamp}`,
             priority: insertionOrder[i],
+            createdBy: userId,
           },
-          authContext,
-          workspaceId
-        );
+        });
       }
     });
 
