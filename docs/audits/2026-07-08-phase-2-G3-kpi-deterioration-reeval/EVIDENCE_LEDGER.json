@@ -1,0 +1,66 @@
+{
+  "phase": "2",
+  "gap": "G3",
+  "gap_name": "kpi-deterioration-reeval",
+  "owner_journey_stage": "weekly-review-cadence (stage 10)",
+  "date": "2026-07-08",
+  "branch": "claude/phase-2-owner-journey-G3-kpi-deterioration-reeval",
+  "base": "origin/main@c996ae27f19de0559ae1c5c491361941dccd6bf8",
+  "baseline_gap_evidence": {
+    "source": "docs/audits/2026-07-08-phase-1-wave-8-owner-journey-proof-plan/OWNER_JOURNEY_COVERAGE_MATRIX.md",
+    "matrix_proof_state": "partial_gap",
+    "gap_text": "Weekly summary renders; an end-to-end assertion that a significant change (KPI deterioration) routes into governed re-evaluation of condition/mode/phase + review cadence (the CLAUDE.md mandatory adaptive rule) is owed.",
+    "prior_coverage": "escalation-checks.test.ts is quarantined placeholders; re-evaluation-workspace-scope.db.test.ts drives triggerReEvaluation via an intervention transition, NOT the KPI-deterioration path"
+  },
+  "product_source_changed": false,
+  "changed_files": [
+    "src/services/__tests__/kpi-deterioration-reeval.db.test.ts",
+    "docs/audits/2026-07-08-phase-2-G3-kpi-deterioration-reeval/FINAL_REPORT.md",
+    "docs/audits/2026-07-08-phase-2-G3-kpi-deterioration-reeval/EVIDENCE_LEDGER.json",
+    "docs/audits/2026-07-08-phase-2-G3-kpi-deterioration-reeval/COVERAGE_DELTA.md"
+  ],
+  "proof_tests": [
+    {
+      "file": "src/services/__tests__/kpi-deterioration-reeval.db.test.ts",
+      "type": "DB-backed integration (un-mocked)",
+      "lane": "required maintained vitest suite (CI - Build & Test, TEST_WITH_DB=true)",
+      "subject_under_test": [
+        "detectKPIDeteriorationPattern (src/services/escalation.ts)",
+        "triggerReEvaluation (src/services/re-evaluation.ts)"
+      ],
+      "cases": [
+        {
+          "name": "routing",
+          "asserts": "declining KPI snapshots -> detectKPIDeteriorationPattern returns kpi_deterioration_pattern alert AND governed re-eval fired (CONDITION_CHANGED + ESCALATION_ALERT_KPI_DETERIORATION_PATTERN audit events)"
+        },
+        {
+          "name": "dimensions",
+          "asserts": "triggerReEvaluation(kpi_deterioration) => businessConditionImpact(reasoningFactors include kpi_deterioration+critical_cash_pressure, recommendedRating=critical), interventionModeImpact.recommendedMode=recovery, priorityImpact both escalate, reviewCadenceImpact(3 days, critical), healthStatusImpact present, auditEventId truthy; targets condition/mode/recPriority/actionPriority/reviewCadence/health true, interventionPhase false (by design)"
+        }
+      ],
+      "mocked": false,
+      "real_service_logic": true
+    }
+  ],
+  "documented_deviation": "Wave-8 gap text lists phase; the governed engine intentionally excludes interventionPhase for kpi_deterioration (determineReEvaluationTargets). Test asserts the real behaviour (targets.interventionPhase === false) and documents it; phase re-eval is proven on the shock path in G4.",
+  "validation_commands": [
+    "git checkout -B claude/phase-2-owner-journey-G3-kpi-deterioration-reeval origin/main",
+    "verified evaluator thresholds + determineReEvaluationTargets(kpi_deterioration) + detectKPIDeteriorationPattern snapshot logic + Prisma delegate names (db.kPI, db.kPISnapshot) against schema",
+    "pre-audited re-eval recommendation selects for the G2-class invalid-field bug (none)",
+    "npx vitest run src/services/__tests__/kpi-deterioration-reeval.db.test.ts (delegated to PR CI)"
+  ],
+  "ci_checks": {
+    "required": ["CI - Build & Test", "lint", "branch-protection"],
+    "status": "pending_pr",
+    "new_test_runs_in": "CI - Build & Test -> Run maintained test suite (blocking; quarantine excluded)"
+  },
+  "deferred_or_blocked": [
+    {
+      "item": "Smoke - Production Dashboard (membership_lookup_failed 500)",
+      "classification": "pre-existing, non-required, out-of-scope",
+      "action": "not addressed by G3; documented"
+    }
+  ],
+  "quarantine_delta": 0,
+  "rollback": "git revert of the single test-only commit; zero product/source/schema/CI impact"
+}
