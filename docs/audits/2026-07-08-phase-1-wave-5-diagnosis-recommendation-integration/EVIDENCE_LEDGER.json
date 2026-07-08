@@ -1,0 +1,58 @@
+{
+  "phase": "Phase 1 Wave 5 — Diagnosis→Recommendation Integration Proof",
+  "date": "2026-07-08",
+  "branch": "claude/phase-1-wave-5-diagnosis-recommendation-integration",
+  "base": "origin/main (post-Wave-3, 0e536a28)",
+  "predecessor_wave_4": {
+    "branch": "claude/phase-1-wave-4-service-ranking-proof",
+    "note": "Wave-5 branch/PR held until Wave-4 is green + merged + main verified, per owner no-idle loop."
+  },
+  "diagnosis_recommendation_inventory": {
+    "total_quarantined_before_wave5": 90,
+    "reactivated": 1,
+    "remaining_quarantined_after": 89
+  },
+  "reactivated_tests": [
+    {
+      "from": "src/__ignored_tests__/services/diagnosis.integration.test.ts",
+      "to": "src/services/__tests__/diagnosis.integration.test.ts",
+      "method": "git mv (rename, history preserved) + migration to current API",
+      "lane": "mixed — pure validateBusinessProblem (all lanes) + DB-backed diagnoseBusiness (real Postgres, SHOULD_RUN_DB_TESTS)",
+      "source_under_test": [
+        "src/services/diagnosis.ts::diagnoseBusiness",
+        "src/services/diagnosis.ts::validateBusinessProblem"
+      ],
+      "it_blocks": 8,
+      "covers": [
+        "validateBusinessProblem fail-closed (missing businessName, invalid mainIssue, negative revenue, accepts well-formed)",
+        "diagnoseBusiness persists diagnosis + produces structured recommendations (id/title/priority/description) for a valid problem",
+        "findings (diagnostic reasoning surface) produced; confidence present; recommendations persisted under the engagement",
+        "severity escalates to critical when costs far exceed revenue",
+        "sparse input does not fabricate high confidence (confidence != high + dataWarnings) — fail-closed data quality",
+        "created diagnosis is scoped to the caller's workspace (tenant isolation)"
+      ],
+      "api_migration": "Original called diagnoseBusiness(input, 'test-actor') (old 2-arg signature). Migrated to diagnoseBusiness(input, authContext, workspaceId) with a CanonicalAuthContext + seeded workspace/user, run against the real DB. diagnoseBusiness internally creates client/engagement/findings/recommendations; assertions target the returned DiagnosisResult + persisted rows. Placed under __tests__ (excluded from tsc gate, included in vitest).",
+      "static_verification": "diagnoseBusiness/validateBusinessProblem/BusinessProblemInput exported; ValidationError exported; no unused imports; describe.skipIf(!SHOULD_RUN_DB_TESTS) present; primaryProblemCategory('low_sales')='revenue_generation' and severity(costs>125% revenue)='critical' verified against source (determinePrimaryCategory/calculateSeverity).",
+      "db_dependency": "real Postgres (test DB) for the diagnoseBusiness block; pure for validateBusinessProblem"
+    }
+  ],
+  "source_fixes": [],
+  "source_fixes_note": "No product/source fix. No diagnosis engine rewrite. Test migration to the current API only; no assertion weakened.",
+  "validation_commands": [
+    {"cmd": "git checkout -B claude/phase-1-wave-5-diagnosis-recommendation-integration origin/main", "result": "branch at 0e536a28"},
+    {"cmd": "inventory diagnosis/finding/recommendation/scenario candidates; read diagnoseBusiness + validateBusinessProblem + DiagnosisResult + BusinessProblemInput", "result": "diagnoseBusiness is real-DB, produces recommendations; test stale on old 2-arg signature"},
+    {"cmd": "git mv diagnosis integration test -> src/services/__tests__/ + migrate to current API", "result": "reactivated; matches include src/**/*.test.ts; not in .claude/test-quarantine.json; under __tests__"},
+    {"cmd": "static verify imports/exports/usage + category/severity constants", "result": "PASS — 8 it-blocks, no unused imports"},
+    {"cmd": "npx tsc / npx vitest run <reactivated>", "result": "BLOCKED locally (no node_modules, no DB); DEFERRED to PR CI maintained suite (TEST_WITH_DB=true, real Postgres)"}
+  ],
+  "deferred_or_blocked_dynamic_gates": [
+    {"gate": "typecheck (tsc)", "status": "N/A for this file (tsconfig excludes **/__tests__/**); whole-project tsc BLOCKED locally -> PR CI"},
+    {"gate": "lint (eslint)", "status": "BLOCKED locally -> PR CI"},
+    {"gate": "vitest run (diagnosis→recommendation DB test + prior-wave tests)", "status": "BLOCKED locally; PROOF DEFERRED to PR CI maintained suite (real Postgres)"},
+    {"gate": "DB lane", "status": "DEFERRED to CI"}
+  ],
+  "product_logic_changed": false,
+  "phase0_files_touched": false,
+  "prior_wave_active_tests_touched": false,
+  "rollback_plan": "One commit: 1 migrated test (git mv + rewrite) + 3 audit docs. git revert (or git mv the test back and restore prior contents) restores the prior quarantine state. No product/source/schema/CI change -> clean, immediate."
+}
