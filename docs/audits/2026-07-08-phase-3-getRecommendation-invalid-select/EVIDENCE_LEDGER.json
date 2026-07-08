@@ -1,0 +1,61 @@
+{
+  "phase": "Phase 3",
+  "item": "Item 1 — fix getRecommendation invalid select",
+  "date": "2026-07-08",
+  "branch": "claude/phase-3-fix-getRecommendation-invalid-select",
+  "main_baseline_head": "6a0ba15427a4617a248c69923f81792892fc52dd",
+  "classification": "real_owner_facing_500_fixed",
+  "defect": {
+    "location": "src/services/recommendation.ts :: getRecommendation()",
+    "root_cause": "Prisma select requested four columns absent from the Recommendation model (expectedImpact, implementationPhase, executionCertaintyScore, scoreBreakdown), causing PrismaClientValidationError on every call.",
+    "real_column": "estimatedImpact",
+    "identical_to": "Phase 2 G2 getRecommendationsForEngagement invalid select (merge c996ae27)",
+    "impacted_routes": [
+      "GET /api/recommendations/[recommendationId]",
+      "PATCH /api/recommendations/[recommendationId] (post-update re-read)"
+    ]
+  },
+  "fix": {
+    "type": "smallest_source_fix",
+    "change": "Replaced the four non-existent select fields with the single real column estimatedImpact: true.",
+    "file": "src/services/recommendation.ts",
+    "lines_changed": "8 insertions, 4 deletions (select block only)",
+    "unchanged": [
+      "workspace scoping (where: { id, workspaceId })",
+      "NotFoundError fail path",
+      "ordering/ranking/priority semantics",
+      "engagement and finding relation selects"
+    ]
+  },
+  "proof": {
+    "regression_test": "src/services/__tests__/getRecommendation-invalid-select.db.test.ts",
+    "test_lane": "required build-and-test (TEST_WITH_DB=true; not *.integration.test.ts; not quarantined)",
+    "db_backed": true,
+    "mocked_db": false,
+    "pre_fix_result": {
+      "status": "FAIL",
+      "tests": "2 failed",
+      "error": "PrismaClientValidationError: Unknown field `expectedImpact` for select statement on model `Recommendation`."
+    },
+    "post_fix_result": {
+      "status": "PASS",
+      "tests": "2 passed"
+    },
+    "assertions": [
+      "getRecommendation returns the recommendation without throwing (id, engagementId, title, priority, estimatedImpact, engagement relation, finding=null)",
+      "foreign workspace -> NotFoundError (workspace isolation preserved, not a 500, not a cross-tenant read)"
+    ]
+  },
+  "regression_guard": {
+    "phase_2_g2_tests": [
+      "src/services/__tests__/recommendation-priority-ordering.test.ts",
+      "src/services/__tests__/owner-journey-smoke.db.test.ts"
+    ],
+    "result": "4 passed (unaffected)"
+  },
+  "static_checks": {
+    "tsc_noemit": "clean",
+    "eslint_changed_files": "clean"
+  },
+  "commit_subject": "Phase 3: fix getRecommendation invalid select"
+}
