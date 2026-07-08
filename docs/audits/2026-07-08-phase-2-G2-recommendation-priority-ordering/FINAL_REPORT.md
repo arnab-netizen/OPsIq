@@ -38,7 +38,8 @@ semantically correct). Business logic stays in the service layer (no UI/page cha
 ## 6. Proof added
 `src/services/__tests__/recommendation-priority-ordering.test.ts` — a **DB-backed** test that
 persists six recommendations with mixed priorities in a deliberately **scrambled insertion order**
-(`low, high, medium, high, low, medium`) via the real `createRecommendation`, then calls the real
+(`low, high, medium, high, low, medium`) directly to the database (deterministic priority +
+createdAt, isolating the READ-path ordering contract), then calls the real
 `getRecommendationsForEngagement` and asserts:
 1. All six are returned, engagement-scoped.
 2. Priority rank is **monotonically non-decreasing** (highest-priority-first) — this **fails** under
