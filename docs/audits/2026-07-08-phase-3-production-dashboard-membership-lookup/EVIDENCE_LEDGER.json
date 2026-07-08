@@ -1,0 +1,73 @@
+{
+  "phase": "Phase 3",
+  "item": "Item 3 — repair production dashboard membership_lookup_failed 500",
+  "date": "2026-07-08",
+  "branch": "claude/phase-3-fix-production-dashboard-membership-lookup",
+  "main_baseline_head": "bfba490e5c473b1ad53c87133a1bd2c6e0dc3b8b",
+  "classification": "owner_facing_login_500_fixed_plus_environment_reclassification_with_proof",
+  "observed_failure": {
+    "smoke": "Smoke - Production Dashboard",
+    "step": "1 - POST /api/auth/login",
+    "http_status": 500,
+    "body": {"error": "Login failed", "classification": "membership_lookup_failed", "stage": "membership_lookup"},
+    "source_run": "run 28976660512 (main 295fa614); identical on 6a0ba154, c0cec822, 91cb9203, 2bfd6f29 — pre-existing, long-standing",
+    "smoke_trigger": "push to main only (not PRs); tests live https://o-ps-iq.vercel.app"
+  },
+  "root_cause": {
+    "code_fragility": {
+      "location": "src/app/api/auth/login/route.ts membership_lookup stage",
+      "detail": "bare workspaceMembership.findFirst selects ALL columns though login only needs workspaceId (audit scope). Fails if any selected column is absent in the deployed DB."
+    },
+    "environment_trigger": {
+      "detail": "deployed production DB behind on migration 20260625120000_owner_mode_execution_tables (Slice 3B employee columns: allowed_task_types, primary_auth_method, designation, ...). Missing column -> Prisma P2022.",
+      "remediation": "apply the pending migration to production (ops/environment action; NOT performed autonomously)"
+    }
+  },
+  "reproduction": {
+    "method": "real Postgres, no mocks: seed user+workspace+active membership, drop a newer column to simulate deploy drift, run both query shapes",
+    "before_drift": {"bare_select": "OK", "narrow_select": "OK"},
+    "after_dropping_column": {
+      "bare_select_old_login": "THREW PrismaClientKnownRequestError P2022 (ColumnNotFound, PG 42703, column workspace_memberships.primary_auth_method does not exist)",
+      "narrow_select_fix": "OK -> returns workspaceId"
+    }
+  },
+  "fix": {
+    "type": "smallest_owner_facing_fix",
+    "file": "src/app/api/auth/login/route.ts",
+    "change": "workspaceMembership.findFirst now uses select: { workspaceId: true }",
+    "behavior_preserved": "workspaceId still resolved for audit scope; auth unchanged (query precedes password verification; session gated on valid password)",
+    "not_done": [
+      "did NOT narrow getPolicyContext / demo-permission-proof / demo-engagement-proof membership reads (avoid scope creep + teaching-to-test; same environment remediation applies)",
+      "did NOT run production migration autonomously (high-stakes outward-facing action, out of code scope)",
+      "did NOT weaken auth, bypass membership, or add test-only production shortcuts",
+      "did NOT reclassify the smoke to non-required to hide failure"
+    ]
+  },
+  "proof": {
+    "test": "src/app/api/auth/__tests__/login-membership-lookup.db.test.ts",
+    "test_count": 5,
+    "test_lane": "required build-and-test (TEST_WITH_DB=true; not *.integration.test.ts; not quarantined)",
+    "db_backed": true,
+    "mocked_db": false,
+    "result": "5 passed",
+    "assertions": [
+      "unknown user -> 401 invalid_credentials (auth enforced)",
+      "valid user + wrong password -> 401 invalid_credentials (auth enforced)",
+      "valid member -> never classification membership_lookup_failed (login passes the lookup)",
+      "valid user with NO membership -> never membership_lookup_failed (login not gated on membership)",
+      "real column drop: old bare-select findFirst throws P2022; fixed narrow-select returns workspaceId; real login route not membership_lookup_failed under drift"
+    ],
+    "cookies_note": "unit invocation of the success path hits Next cookies() request-scope -> cookie_set_failed in sandbox; membership stage already passed; real HTTP (incl. production smoke) has a cookie scope and returns 200"
+  },
+  "smoke_honesty": {
+    "faked_green": false,
+    "auth_weakened": false,
+    "membership_bypassed": false,
+    "reclassified_to_nonrequired": false,
+    "false_500_for_valid_setup": false,
+    "note": "production 500 is a TRUE signal of an environment gap (missing migration); for a correctly-migrated DB the regression test shows login passes"
+  },
+  "static_checks": {"tsc_noemit": "clean", "eslint_changed_files": "0 errors (2 pre-existing warnings in login route, not introduced)"},
+  "post_merge_confirmation_plan": "watch Smoke - Production Dashboard on main after merge: login step should advance past its former 500; any residual failure at a later step is the same drift on another default-select membership read, remediated by the production migration",
+  "commit_subject": "Phase 3: fix production dashboard membership lookup"
+}

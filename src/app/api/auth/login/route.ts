@@ -69,11 +69,20 @@ export const POST = async (request: NextRequest) => {
       throw new UnauthorizedError("Invalid email or password");
     }
 
-    // Get user's workspace membership for audit scope
+    // Get user's workspace membership for audit scope.
+    // Login only needs the workspace id (to scope the audit events emitted below); it reads no
+    // other membership column. A bare findFirst selects EVERY column of the row, so if the
+    // deployed database is missing any newer `workspace_memberships` column (migration/deploy
+    // drift — e.g. the Slice 3B employee-profile columns), Prisma throws P2022 ("column ... does
+    // not exist") and login 500s with classification "membership_lookup_failed" — the pre-existing
+    // production dashboard-smoke failure. Selecting ONLY workspaceId makes login resilient to
+    // drift on any non-core column (workspace_id is a core column present since the table's
+    // creation), without changing behaviour: workspaceId is still resolved for audit scope.
     stage = "membership_lookup";
     const membership = await db.workspaceMembership.findFirst({
       where: { userId: user.id, isActive: true },
       orderBy: { addedAt: "asc" },
+      select: { workspaceId: true },
     });
 
     const workspaceId = membership?.workspaceId;
@@ -158,7 +167,6 @@ export const POST = async (request: NextRequest) => {
     });
   } catch (error) {
     const errorName = error instanceof Error ? error.constructor.name : "UnknownError";
-    const errorMsg = error instanceof Error ? error.message : String(error);
 
     console.error("[LOGIN_FAILED]", { stage, errorName });
 
