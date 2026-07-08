@@ -1,0 +1,86 @@
+{
+  "phase": "2",
+  "gap": "G2",
+  "gap_name": "recommendation-priority-ordering",
+  "owner_journey_stage": "recommendation-priority (stage 4)",
+  "date": "2026-07-08",
+  "branch": "claude/phase-2-owner-journey-G2-recommendation-priority-ordering",
+  "base": "origin/main@51c3fa551d4f54074c3f248070a7adfd2afa1f71",
+  "baseline_gap_evidence": {
+    "source": "docs/audits/2026-07-08-phase-1-wave-8-owner-journey-proof-plan/OWNER_JOURNEY_COVERAGE_MATRIX.md",
+    "matrix_proof_state": "partial_gap",
+    "gap_text": "Cockpit renders recommendations; an explicit ordering/priority assertion end-to-end (highest-priority first, deterministic) is owed (ties to Wave-3/4 recommendation proofs).",
+    "wave3_prior_proof_flaw": "recommendation.integration.test.ts asserted ordering with lexical string compare (prev.priority >= curr.priority); all recs were 'high' (uniform) so mixed-priority ordering was never exercised"
+  },
+  "product_defects": [
+    {
+      "id": "defect-1-lexical-ordering",
+      "found": true,
+      "location": "src/services/recommendation.ts::getRecommendationsForEngagement",
+      "description": "orderBy [{priority:'desc'},{createdAt:'desc'}] on a plain String priority column sorts lexically (medium>low>high), rendering the owner's highest-priority recommendations LAST.",
+      "owner_visible_via": "src/app/api/engagements/[engagementId]/recommendations/route.ts (cockpit recommendations list)",
+      "fix": "order by semantic priority rank (critical<high<medium<low) in-service, mirroring owner-dashboard.service.ts; stable sort preserves createdAt-desc tie-break. No schema/contract change."
+    },
+    {
+      "id": "defect-2-invalid-select",
+      "found": true,
+      "location": "src/services/recommendation.ts::getRecommendationsForEngagement",
+      "description": "select requested non-existent columns expectedImpact/implementationPhase/executionCertaintyScore (Recommendation) and actions.priority (Action); prisma.recommendation.findMany threw PrismaClientValidationError on EVERY call, so the recommendations API route returned 500 unconditionally. Surfaced by the G2 proof (first maintained-lane caller).",
+      "owner_visible_via": "GET /api/engagements/[id]/recommendations was fully broken (500)",
+      "fix": "expectedImpact -> estimatedImpact (real column); removed implementationPhase, executionCertaintyScore, actions.priority. No working consumer depended on them (endpoint always threw)."
+    }
+  ],
+  "related_defect_out_of_scope": {
+    "location": "src/services/recommendation.ts::getRecommendation (~line 1186)",
+    "description": "same invalid-select defect (expectedImpact/implementationPhase/executionCertaintyScore/scoreBreakdown). Distinct function not exercised by the G2 ordering proof; documented for a dedicated follow-up rather than shipped unproven in this gap PR.",
+    "action": "not fixed in G2 (kept minimal/gap-scoped)"
+  },
+  "changed_files": [
+    "src/services/recommendation.ts",
+    "src/services/__tests__/recommendation-priority-ordering.test.ts",
+    "docs/audits/2026-07-08-phase-2-G2-recommendation-priority-ordering/FINAL_REPORT.md",
+    "docs/audits/2026-07-08-phase-2-G2-recommendation-priority-ordering/EVIDENCE_LEDGER.json",
+    "docs/audits/2026-07-08-phase-2-G2-recommendation-priority-ordering/COVERAGE_DELTA.md"
+  ],
+  "proof_tests": [
+    {
+      "file": "src/services/__tests__/recommendation-priority-ordering.test.ts",
+      "type": "DB-backed integration",
+      "lane": "required maintained vitest suite (CI - Build & Test, TEST_WITH_DB=true)",
+      "subject_under_test": [
+        "getRecommendationsForEngagement (src/services/recommendation.ts)",
+        "createRecommendation (persist explicit priority)"
+      ],
+      "assertions": [
+        "six recs persisted in scrambled priority order (low,high,medium,high,low,medium) are returned engagement-scoped",
+        "priority rank monotonically non-decreasing (highest-priority-first) — fails under old lexical order, passes under fix",
+        "first returned is 'high', last is 'low'; both highs precede any medium, mediums precede any low",
+        "order is deterministic across repeated reads (same id + priority sequence)"
+      ],
+      "mocked": false,
+      "real_service_logic": true,
+      "fails_without_fix": true
+    }
+  ],
+  "validation_commands": [
+    "git checkout -B claude/phase-2-owner-journey-G2-recommendation-priority-ordering origin/main",
+    "schema check: Recommendation.priority is String (prisma/schema.prisma:813)",
+    "caller audit: only recommendations API route + Wave-3 test (uniform 'high') + __ignored_tests__",
+    "npx vitest run src/services/__tests__/recommendation-priority-ordering.test.ts (delegated to PR CI)"
+  ],
+  "ci_checks": {
+    "required": ["CI - Build & Test", "lint", "branch-protection"],
+    "status": "pending_pr",
+    "new_test_runs_in": "CI - Build & Test -> Run maintained test suite (blocking; quarantine excluded)"
+  },
+  "wave3_test_impact": "none — Wave-3 recs are all 'high' (uniform); stable sort preserves its createdAt-desc order; its assertions still hold",
+  "deferred_or_blocked": [
+    {
+      "item": "Smoke - Production Dashboard (membership_lookup_failed 500)",
+      "classification": "pre-existing, non-required, out-of-scope",
+      "action": "not addressed by G2; documented"
+    }
+  ],
+  "quarantine_delta": 0,
+  "rollback": "git revert single commit; localized to one service function"
+}
