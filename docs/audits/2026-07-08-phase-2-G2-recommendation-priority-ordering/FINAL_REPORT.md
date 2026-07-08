@@ -28,12 +28,14 @@ descending: `"medium" > "low" > "high"`. Result: the owner's **highest-priority 
 recommendations were rendered at the BOTTOM** of the list, and `medium` at the top — the opposite of
 highest-priority-first.
 
-**Defect 2 — invalid select columns (endpoint fully broken).** The `select` requested four fields
-that do not exist on the models: `expectedImpact`, `implementationPhase`, `executionCertaintyScore`
-(not on `Recommendation`) and `actions.priority` (not on `Action`). `prisma.recommendation.findMany`
-therefore threw `PrismaClientValidationError` on **every** call, i.e. the owner recommendations API
-route returned a 500 unconditionally. This latent defect was never caught because no maintained-lane
-test exercised `getRecommendationsForEngagement` — the G2 proof is the first, which surfaced it.
+**Defect 2 — invalid select (endpoint fully broken).** The `select` requested three non-existent
+scalar columns on `Recommendation` (`expectedImpact`, `implementationPhase`,
+`executionCertaintyScore`) **and** nested an `actions` relation that `Recommendation` does not
+have (its relations are `engagement`, `finding`, `operatorItems`; `Action.recommendationId` is an
+unlinked FK). `prisma.recommendation.findMany` therefore threw `PrismaClientValidationError` on
+**every** call, i.e. the owner recommendations API route returned a 500 unconditionally. This latent
+defect was never caught because no maintained-lane test exercised `getRecommendationsForEngagement`
+— the G2 proof is the first, which surfaced it.
 
 ## 5. Fixes made
 **Fix 1 (ordering):** fetch ordered by `createdAt` desc, then order in the service by a **semantic
@@ -44,10 +46,11 @@ the `createdAt`-desc order from the query is preserved as the deterministic tie-
 equal-priority group. No schema change, no contract change (still `(priority, createdAt desc)`, now
 semantically correct). Business logic stays in the service layer (no UI/page change).
 
-**Fix 2 (invalid select):** replaced `expectedImpact` with the real column `estimatedImpact` and
-removed `implementationPhase`, `executionCertaintyScore`, and `actions.priority` (no such columns).
-The endpoint now returns real data instead of a 500. Because the endpoint always threw, no working
-consumer depended on the removed fields.
+**Fix 2 (invalid select):** replaced `expectedImpact` with the real column `estimatedImpact`, removed
+the non-existent scalars `implementationPhase` and `executionCertaintyScore`, and removed the
+non-existent `actions` relation block. The remaining 14 selected fields are all real
+`Recommendation` columns, so the endpoint now returns real data instead of a 500. Because the
+endpoint always threw, no working consumer depended on the removed fields.
 
 **Out of scope (documented, not fixed):** `getRecommendation` (single-recommendation fetch, same
 file, ~line 1186) carries the **same** invalid-select defect (`expectedImpact` /

@@ -687,14 +687,10 @@ export async function getRecommendationsForEngagement(
       reliabilityLevel: true,
       kpiHealthScore: true,
       kpiRiskLevel: true,
-      actions: {
-        // `priority` is not a column on Action (also part of the invalid select above).
-        select: {
-          id: true,
-          title: true,
-          status: true,
-        },
-      },
+      // NOTE: `Recommendation` has no `actions` relation (its relations are `engagement`,
+      // `finding`, `operatorItems`; `Action.recommendationId` is an unlinked FK). The previous
+      // select nested `actions: {...}`, which — together with the non-existent scalar columns
+      // corrected above — made this findMany throw PrismaClientValidationError on every call.
     },
     // createdAt-desc is the deterministic secondary order; the primary
     // highest-priority-first order is applied below by semantic rank.
