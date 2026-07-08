@@ -57,12 +57,19 @@ moved one directory deeper. **21 active it-blocks** (11 `mapDriftToRequiredActio
 documented actions. None deleted, none weakened.
 
 ## 9. Defects found
-**None in product/source.** The test is current-API; the only change needed was the relative-import path
-after the directory move.
+**None in product/source.** Two issues in the reactivated **test fixture** only:
+1. Relative-import paths needed `./` → `../` after the directory move.
+2. **Suite-load failure in the maintained-suite (DB) lane** (first CI run): the test's full
+   `vi.mock("@/lib/db", …)` omitted `getDbInstance`, which `vitest.setup.ts`'s `beforeAll` imports
+   when `TEST_WITH_DB=true`. This made the whole suite fail to load (0 of 21 it-blocks ran) — a
+   this-wave test-fixture defect, not a product defect and not an assertion failure.
 
 ## 10. Fixes made
-**No product/source fix. No next-action/drift engine change. No assertion weakened.** One mechanical
-edit: `./` → `../` on two relative imports (forced by the `git mv` into `__tests__/`).
+**No product/source fix. No next-action/drift engine change. No assertion weakened.** Two test-fixture
+edits: (a) `./` → `../` on two relative imports; (b) added `getDbInstance: vi.fn().mockResolvedValue({})`
+to the `@/lib/db` mock factory, matching the repo convention for full-module db mocks (e.g.
+`src/__tests__/owner-mode/*.test.ts`), so the setup hook resolves in the DB lane. The 21 it-blocks are
+unchanged.
 
 ## 11. Files changed
 - Reactivated: `src/services/execution-drift/__tests__/next-action.service.test.ts` (from

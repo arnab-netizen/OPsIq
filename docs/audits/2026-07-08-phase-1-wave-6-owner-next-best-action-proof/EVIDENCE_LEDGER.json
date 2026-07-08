@@ -53,7 +53,14 @@
     }
   ],
   "source_fixes": [],
-  "source_fixes_note": "No product/source fix. No next-action/drift engine change. Only test reactivation (git mv) + relative-import path fix forced by the move; no assertion weakened.",
+  "source_fixes_note": "No product/source fix. No next-action/drift engine change. Only test reactivation (git mv) + two test-fixture edits (no assertion weakened): (1) relative-import path fix ./ -> ../ forced by the move; (2) added getDbInstance: vi.fn().mockResolvedValue({}) to the @/lib/db mock factory after the first CI run showed the full db mock omitting getDbInstance made the whole suite fail to load in the maintained-suite DB lane (vitest.setup.ts beforeAll imports getDbInstance when TEST_WITH_DB=true). Matches the repo convention used by ~20 passing active tests (e.g. src/__tests__/owner-mode/*.test.ts).",
+  "ci_defect_fixed": {
+    "run_first_failed": "28929667152 + 28929692317 (both on 8f666a6c)",
+    "symptom": "Failed Suite (load error), 0 of 21 it-blocks ran: '[vitest] No \"getDbInstance\" export is defined on the \"@/lib/db\" mock' at vitest.setup.ts:29 when TEST_WITH_DB=true",
+    "classification": "this-wave test-fixture defect (not product/source; not an assertion failure)",
+    "fix": "added getDbInstance: vi.fn().mockResolvedValue({}) to the vi.mock('@/lib/db') factory; 21 it-blocks unchanged",
+    "non_required_flakes_this_wave": "browser/scenario next-build heap OOM (SIGABRT) unchanged from prior waves; non-required (mergeable_state unstable, not blocked)"
+  },
   "validation_commands": [
     {"cmd": "git checkout -B claude/phase-1-wave-6-owner-next-best-action-proof main", "result": "branch at c13a0ca3 (Wave-5 merge)"},
     {"cmd": "read mapDriftToRequiredAction + deriveCommitmentStatus + scoreDriftConditions + RequiredAction/ActionCommitment/DriftDetectionResult", "result": "test is current-API; all type/urgency/score assertions match source"},
