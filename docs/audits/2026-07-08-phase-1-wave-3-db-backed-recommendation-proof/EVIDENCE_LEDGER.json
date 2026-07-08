@@ -1,0 +1,92 @@
+{
+  "phase": "Phase 1 Wave 3 — DB-backed Recommendation Proof",
+  "date": "2026-07-08",
+  "branch": "claude/phase-1-wave-3-db-backed-recommendation-proof",
+  "base": "origin/main @ a6f005879b897e2f039715b520311d1d58536d97 (PR #184 merge)",
+  "part_a_pr_184_merge": {
+    "pr": "https://github.com/arnab-netizen/OPsIq/pull/184",
+    "final_diff_review": "clean — 2 test moves + fixture fixes + 3 docs; no product/source/schema/CI/Phase-0; no Wave-1 regression; zero expect() assertions changed; quarantine 93->91; reactivated tests outside quarantine and executed actively",
+    "ci": "both build-and-test runs green (maintained suite ran the 2 Wave-2 tests); only 2 non-required browser-pack next-build OOM/SIGABRT flakes red (could not rerun, 403)",
+    "merged": true,
+    "merge_method": "merge",
+    "merge_commit_sha": "a6f005879b897e2f039715b520311d1d58536d97",
+    "merged_by": "arnab-netizen"
+  },
+  "part_c_post_merge_main_verification": {
+    "main_head": "a6f005879b897e2f039715b520311d1d58536d97",
+    "head_equals_pr_184_merge_commit": true,
+    "pr_184_head_3d05efdc_in_ancestry": true,
+    "working_tree": "clean",
+    "wave1_and_wave2_active_tests_present_on_main": true,
+    "main_push_triggered_workflows": {
+      "CI - Build & Test (run 28913306425)": "success — build-and-test maintained suite (00:16-analog; ran Wave-1 + Wave-2 tests) + lint green",
+      "P2B Database Verification (run 28913306443)": "success",
+      "MVP Readiness Gate (run 28913306452)": "success",
+      "CI/CD Foundations - Phase 13 Slice 1 (run 28913306473)": "success",
+      "Smoke - Production Dashboard (run 28913306503)": "failure — pre-existing production POST /api/auth/login 500 membership_lookup_failed; non-required; NOT a Wave-1/Wave-2 regression; classification preserved"
+    },
+    "classification": "GREEN — all required push-triggered code gates passed; only the pre-existing non-required production smoke is red. Phase 1 Wave 2 fully closed on main."
+  },
+  "wave3_db_recommendation_inventory": {
+    "total_quarantined_before_wave3": 91,
+    "reactivated": 1,
+    "remaining_quarantined_after": 90,
+    "root": "src/__ignored_tests__/",
+    "db_test_gate": "SHOULD_RUN_DB_TESTS = (process.env.TEST_WITH_DB === 'true'); maintained suite sets TEST_WITH_DB=true",
+    "candidates": [
+      "services/recommendation.integration.test.ts (real DB) — SELECTED + migrated to current API",
+      "services/__tests__/recommendation.priority.test.ts (mocks db via vi.spyOn) — deferred (not real-DB per rules 8-9)",
+      "services/__tests__/recommendation.reranking.test.ts (mocks db; reRank needs persisted scoringMetrics) — deferred",
+      "services/control/__tests__/recommendation.test.ts (pure-unit control gate) — deferred",
+      "recommendations-manager.test.tsx (UI) — deferred",
+      "services/action.integration.test.ts (broader action lifecycle) — deferred"
+    ]
+  },
+  "reactivated_tests": [
+    {
+      "from": "src/__ignored_tests__/services/recommendation.integration.test.ts",
+      "to": "src/services/__tests__/recommendation.integration.test.ts",
+      "method": "git mv (rename, history preserved) + full migration to current API",
+      "lane": "DB (real Postgres, gated by SHOULD_RUN_DB_TESTS / TEST_WITH_DB=true)",
+      "sources_under_test": [
+        "src/services/recommendation.ts::createRecommendation",
+        "src/services/recommendation.ts::getRecommendationsForEngagement",
+        "src/services/recommendation.ts::calculateRecommendationScoreBreakdown",
+        "src/services/recommendation.ts::mapScoreToPriority"
+      ],
+      "it_blocks": 5,
+      "covers": [
+        "persisted recommendation create (row present, workspace-scoped)",
+        "priority-from-score (exact: mirrors createRecommendation's own scoring path)",
+        "deterministic priority for identical scoringInput",
+        "persisted listing + ordering (priority desc, createdAt desc) via getRecommendationsForEngagement",
+        "engagement/workspace isolation (no cross-engagement leakage)"
+      ],
+      "api_migration": "Original imported the removed generateRecommendations/listRecommendationsForEngagement; migrated to createRecommendation + getRecommendationsForEngagement (current API). Setup follows the proven DB-test pattern in src/__tests__/p2a/p2a-production-path.test.ts (real workspace/client/engagement seed + CanonicalAuthContext). Placed under a __tests__ dir (excluded from the tsc gate, included in vitest) matching repo convention.",
+      "static_verification": "all named imports resolve to current exports; no unused imports; describe.skipIf(!SHOULD_RUN_DB_TESTS) present; Prisma create shapes match required model fields (User{id,email,updatedAt}; Workspace{id,name,slug}; ClientAccount{id,name}; Engagement{id,code,title,clientId,serviceTier,engagementMode,workspaceId}; EngagementMembership{id,userId,engagementId,role}; Recommendation{engagementId,workspaceId,title,priority}); priority-from-score assertion computes the expected value with the SAME service functions the create path uses.",
+      "db_dependency": "real Postgres (test DB) via db-test gate"
+    }
+  ],
+  "source_fixes": [],
+  "source_fixes_note": "No product/source fix. No recommendation architecture change. The reactivation is a test migration onto the current recommendation service API; assertions mirror current service behaviour and were not weakened.",
+  "validation_commands": [
+    {"cmd": "git checkout -B claude/phase-1-wave-3-db-backed-recommendation-proof origin/main", "result": "branch at a6f00587, clean"},
+    {"cmd": "quarantine inventory + DB-backed candidate classification (mocked vs real db via grep vi.spyOn/@lib/db)", "result": "only recommendation.integration.test.ts is real-DB; priority/reranking mock the db boundary"},
+    {"cmd": "source-contract study: createRecommendation/getRecommendationsForEngagement/reRank signatures + Prisma models + assertEngagementAccess (membership) + db-test-gate", "result": "documented; migration modeled on active p2a-production-path.test.ts"},
+    {"cmd": "git mv integration test -> src/services/__tests__/ + rewrite to current API", "result": "reactivated; matches include src/**/*.test.ts; not in .claude/test-quarantine.json; excluded from tsc gate (**/__tests__/**), included in vitest"},
+    {"cmd": "static verify imports/exports/usage of migrated test", "result": "PASS — all resolve, no unused imports, gate present, 5 it-blocks"},
+    {"cmd": "npx tsc / npx vitest run <reactivated>", "result": "BLOCKED locally — node_modules absent + no local DB; deferred to PR CI maintained suite (TEST_WITH_DB=true)"}
+  ],
+  "deferred_or_blocked_dynamic_gates": [
+    {"gate": "typecheck (tsc)", "status": "N/A for this file — tsconfig excludes **/__tests__/**; whole-project tsc still BLOCKED locally (no node_modules) -> PR CI"},
+    {"gate": "lint (eslint)", "status": "BLOCKED locally -> PR CI"},
+    {"gate": "vitest run (migrated DB-backed test + Wave-1/Wave-2 tests)", "status": "BLOCKED locally (no node_modules, no DB); ACTIVE PROOF DEFERRED to PR CI build-and-test maintained suite (TEST_WITH_DB=true, real Postgres)"},
+    {"gate": "DB lane", "status": "DEFERRED to CI (real Postgres in the maintained suite)"},
+    {"gate": "Prisma", "status": "N/A (schema untouched; test uses existing models)"},
+    {"gate": "Playwright", "status": "N/A (no UI touched)"}
+  ],
+  "product_logic_changed": false,
+  "phase0_files_touched": false,
+  "wave1_wave2_active_tests_touched": false,
+  "rollback_plan": "All changes are one commit on claude/phase-1-wave-3-db-backed-recommendation-proof: 1 migrated test (git mv out of __ignored_tests__ + rewrite) + 3 audit docs. git revert the commit (or git mv the test back and restore its prior contents) reverts to the prior quarantine state. No product/source/schema/CI change, so revert is clean and immediate."
+}
