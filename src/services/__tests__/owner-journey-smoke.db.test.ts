@@ -67,6 +67,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] G5 â€” owner-journey smoke: intake â
     verifiedActor: null,
     verifiedWorkspaceId: workspaceId,
     verifiedCapabilities: ["DIAGNOSIS_CREATE"],
+    // assessCondition (called transitively by diagnoseBusiness) reads authContext.session?.user?.id
+    // for its actor id; provide it alongside verifiedActorId.
+    session: { user: { id: userId } },
     verifiedSessionSnapshot: { actorId: userId, sessionId: randomUUID(), createdAt: new Date() },
     policy: null,
   } as unknown as CanonicalAuthContext;
