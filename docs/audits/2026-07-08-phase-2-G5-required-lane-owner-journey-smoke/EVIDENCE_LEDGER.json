@@ -1,0 +1,62 @@
+{
+  "phase": "2",
+  "gap": "G5",
+  "gap_name": "required-lane-owner-journey-smoke",
+  "owner_journey_stage": "steady-state-governance (stage 12) — cross-cutting lane promotion",
+  "date": "2026-07-08",
+  "branch": "claude/phase-2-owner-journey-G5-required-lane-smoke",
+  "base": "origin/main@91cb920358f1d47e3c7b5e23c7af3d7d46726eda",
+  "baseline_gap_evidence": {
+    "source": "docs/audits/2026-07-08-phase-1-wave-8-owner-journey-proof-plan/OWNER_JOURNEY_COVERAGE_MATRIX.md",
+    "matrix_proof_state": "planned_gap",
+    "gap_text": "Owner-journey proof currently lives ONLY in the non-required browser lane (also the next-build heap-OOM-prone lane). Promote a minimal, memory-stable owner-journey smoke into a required lane so owner-journey regressions block merges.",
+    "seam": "tests/browser/owner-journey-map.ts (OWNER_JOURNEY_STAGES) was inert (no consumer) until this gap"
+  },
+  "product_source_changed": false,
+  "changed_files": [
+    "src/services/__tests__/owner-journey-smoke.db.test.ts",
+    "docs/audits/2026-07-08-phase-2-G5-required-lane-owner-journey-smoke/FINAL_REPORT.md",
+    "docs/audits/2026-07-08-phase-2-G5-required-lane-owner-journey-smoke/EVIDENCE_LEDGER.json",
+    "docs/audits/2026-07-08-phase-2-G5-required-lane-owner-journey-smoke/COVERAGE_DELTA.md"
+  ],
+  "proof_tests": [
+    {
+      "file": "src/services/__tests__/owner-journey-smoke.db.test.ts",
+      "type": "consolidated owner-journey smoke (seam-consumption + DB-backed end-to-end walk)",
+      "lane": "required maintained vitest suite (CI - Build & Test, TEST_WITH_DB=true), memory-stable (no browser, no next build)",
+      "subject_under_test": [
+        "diagnoseBusiness (src/services/diagnosis.ts)",
+        "getRecommendationsForEngagement (src/services/recommendation.ts)",
+        "triggerReEvaluation (src/services/re-evaluation.ts)",
+        "OWNER_JOURNEY_STAGES seam (tests/browser/owner-journey-map.ts)"
+      ],
+      "walk": [
+        "intake+diagnosis: diagnoseBusiness persists engagement + current BusinessConditionProfile + recommendations",
+        "recommendation surfacing: getRecommendationsForEngagement returns them highest-priority-first (G2 contract), set matches persisted",
+        "shock adaptive re-eval: triggerReEvaluation(shock_event) re-evaluates condition/mode/phase/cadence + priority shift + auditEventId"
+      ],
+      "seam_consumption": "asserts OWNER_JOURNEY_STAGES covers all four OWNER_JOURNEY_DIMENSIONS and the stages exercised (onboarding-intake, diagnosis-confidence, recommendation-priority, shock-adaptive-reeval); ordered from entry (order 1)",
+      "mocked": false,
+      "real_service_logic": true
+    }
+  ],
+  "validation_commands": [
+    "git checkout -B claude/phase-2-owner-journey-G5-required-lane-smoke origin/main",
+    "verified diagnoseBusiness/getRecommendationsForEngagement/triggerReEvaluation signatures + seam exports + cross-tree import path (../../../tests/browser/owner-journey-map) + FK-safe cleanup order",
+    "npx vitest run src/services/__tests__/owner-journey-smoke.db.test.ts (delegated to PR CI)"
+  ],
+  "ci_checks": {
+    "required": ["CI - Build & Test", "lint", "branch-protection"],
+    "status": "pending_pr",
+    "new_test_runs_in": "CI - Build & Test -> Run maintained test suite (blocking; quarantine excluded)"
+  },
+  "deferred_or_blocked": [
+    {
+      "item": "Smoke - Production Dashboard (membership_lookup_failed 500)",
+      "classification": "pre-existing, non-required, out-of-scope",
+      "action": "not addressed by G5; documented"
+    }
+  ],
+  "quarantine_delta": 0,
+  "rollback": "git revert of the single test-only commit; zero product/source/schema/CI impact"
+}
