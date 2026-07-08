@@ -1195,10 +1195,14 @@ export async function getRecommendation(
       description: true,
       priority: true,
       status: true,
-      expectedImpact: true,
-      implementationPhase: true,
-      executionCertaintyScore: true,
-      scoreBreakdown: true,
+      // `estimatedImpact` is the real Recommendation column. The previous select requested
+      // `expectedImpact`, `implementationPhase`, `executionCertaintyScore`, and `scoreBreakdown` —
+      // none of which exist on the Recommendation model — so `prisma.recommendation.findUnique`
+      // threw PrismaClientValidationError on EVERY call, i.e. the owner-facing single-recommendation
+      // API route (GET /api/recommendations/[id] and the PATCH re-read) 500'd on every request.
+      // This is the identical defect fixed for the listing path in Phase 2 G2
+      // (`getRecommendationsForEngagement`). Select only real columns.
+      estimatedImpact: true,
       version: true,
       createdAt: true,
       constraintsConsidered: true,
