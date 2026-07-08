@@ -1,0 +1,74 @@
+{
+  "phase": "Phase 1 Wave 6 — Owner Next-Best-Action / Action-Priority Proof",
+  "date": "2026-07-08",
+  "branch": "claude/phase-1-wave-6-owner-next-best-action-proof",
+  "base": "origin/main (post-Wave-5, c13a0ca3)",
+  "predecessor_wave_5": {
+    "pr": "https://github.com/arnab-netizen/OPsIq/pull/188",
+    "merge_commit": "c13a0ca34410315d9b5c35a04599b817087a5f42",
+    "note": "Wave-5 real-DB diagnosis->recommendation proof merged; required CI - Build & Test (run 28926731864) green; main verified structurally green before Wave 6 branched."
+  },
+  "owner_next_best_action_inventory": {
+    "total_quarantined_before_wave6": 88,
+    "reactivated": 1,
+    "remaining_quarantined_after": 87
+  },
+  "reactivated_tests": [
+    {
+      "from": "src/__ignored_tests__/services/execution-drift/next-action.service.test.ts",
+      "to": "src/services/execution-drift/__tests__/next-action.service.test.ts",
+      "method": "git mv (rename, history preserved) + relative-import path fix (./ -> ../) forced by moving into __tests__/",
+      "lane": "mixed — pure mapDriftToRequiredAction (all lanes, no DB) + mocked-db deriveCommitmentStatus (vi.mock @/lib/db)",
+      "source_under_test": [
+        "src/services/execution-drift/next-action.service.ts::mapDriftToRequiredAction",
+        "src/services/execution-drift/next-action.service.ts::deriveCommitmentStatus"
+      ],
+      "it_blocks": 21,
+      "covers": [
+        "no drift detected -> null (fail-closed: no fabricated action)",
+        "deterministic highest-priority selection: overdue critical actions (95) > critical blocker / critical health (85) > critically-low execution certainty (80) > low certainty / critical findings (70-75) > at-risk health (65) > inactivity (50)",
+        "multiple conditions present -> highest score wins (overdue 'action' with entityId chosen over health/blocker)",
+        "urgency mapping critical vs high per category matches scoreDriftConditions",
+        "case-insensitive reason matching",
+        "deriveCommitmentStatus: completed/verified -> completed, in_progress -> in_progress, pending/blocked -> pending, DB error -> pending (fail-safe), non-action type -> pending",
+        "deriveCommitmentStatus lookup is workspace-scoped (where: { id, engagement: { workspaceId } })",
+        "timestamp extraction from db row (startedAt/updatedAt -> ISO)"
+      ],
+      "labels": {
+        "mapDriftToRequiredAction": "PURE deterministic priority-selection proof (no DB, no mocks)",
+        "deriveCommitmentStatus": "SERVICE_LOGIC_ONLY — mocks db.action.findFirst; NOT counted as real-DB proof"
+      },
+      "static_verification": "mapDriftToRequiredAction(drift) and deriveCommitmentStatus(action, workspaceId) exported with matching signatures; RequiredAction/ActionCommitment/DriftDetectionResult types resolve; every asserted type/urgency/score-ordering matches scoreDriftConditions (overdue 95-90, blocker 85-80, critical health 85, at-risk 65, certainty-critical 80, certainty-low 70, critical finding 75-70, inactivity 50-40); no relative ./ imports remain (../ + @/ alias only); not in .claude/test-quarantine.json; placed under __tests__ (excluded from tsc gate, included in vitest src/**/*.test.ts).",
+      "db_dependency": "none for mapDriftToRequiredAction (pure); mocked db.action.findFirst for deriveCommitmentStatus (SERVICE_LOGIC_ONLY)"
+    }
+  ],
+  "deferred_tests": [
+    {
+      "path": "src/__ignored_tests__/services/action.integration.test.ts",
+      "reason": "action lifecycle/state-transition (createAction/updateActionStatus), not next-best-action priority selection. Its own scope."
+    },
+    {
+      "path": "src/__ignored_tests__/services/__tests__/recommendation.priority.test.ts",
+      "reason": "carried from Wave 4 — createRecommendation blocks stale against evolved service (unmocked EventEmitterService.emit/recordRecommendationUsage/evidence-KPI eval); needs broad mock repair."
+    }
+  ],
+  "source_fixes": [],
+  "source_fixes_note": "No product/source fix. No next-action/drift engine change. Only test reactivation (git mv) + relative-import path fix forced by the move; no assertion weakened.",
+  "validation_commands": [
+    {"cmd": "git checkout -B claude/phase-1-wave-6-owner-next-best-action-proof main", "result": "branch at c13a0ca3 (Wave-5 merge)"},
+    {"cmd": "read mapDriftToRequiredAction + deriveCommitmentStatus + scoreDriftConditions + RequiredAction/ActionCommitment/DriftDetectionResult", "result": "test is current-API; all type/urgency/score assertions match source"},
+    {"cmd": "git mv next-action.service.test.ts -> src/services/execution-drift/__tests__/ + fix imports ./ -> ../", "result": "reactivated; matches include src/**/*.test.ts; not in json quarantine; under __tests__"},
+    {"cmd": "static verify imports/exports/usage + score-ordering constants", "result": "PASS — 21 it-blocks, no unused imports, no remaining relative ./ imports"},
+    {"cmd": "npx tsc / npx vitest run <reactivated>", "result": "BLOCKED locally (no node_modules); DEFERRED to PR CI maintained suite"}
+  ],
+  "deferred_or_blocked_dynamic_gates": [
+    {"gate": "typecheck (tsc)", "status": "N/A for this file (tsconfig excludes **/__tests__/**); whole-project tsc BLOCKED locally -> PR CI"},
+    {"gate": "lint (eslint)", "status": "BLOCKED locally -> PR CI"},
+    {"gate": "vitest run (next-action priority + commitment)", "status": "BLOCKED locally (no node_modules); PROOF DEFERRED to PR CI maintained suite"},
+    {"gate": "DB lane", "status": "N/A (mapDriftToRequiredAction pure; deriveCommitmentStatus mocked — SERVICE_LOGIC_ONLY)"}
+  ],
+  "product_logic_changed": false,
+  "phase0_files_touched": false,
+  "prior_wave_active_tests_touched": false,
+  "rollback_plan": "One commit: 1 reactivated test (git mv + import path fix) + 3 audit docs. git revert (or git mv the test back and restore ./ imports) restores the prior quarantine state. No product/source/schema/CI change -> clean, immediate."
+}

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mapDriftToRequiredAction, deriveCommitmentStatus, type RequiredAction } from "./next-action.service";
-import type { DriftDetectionResult } from "./execution-drift.service";
+import { mapDriftToRequiredAction, deriveCommitmentStatus, type RequiredAction } from "../next-action.service";
+import type { DriftDetectionResult } from "../execution-drift.service";
 
 vi.mock("@/lib/db", () => ({
   db: {
