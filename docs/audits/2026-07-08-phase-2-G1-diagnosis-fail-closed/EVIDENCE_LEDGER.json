@@ -1,0 +1,63 @@
+{
+  "phase": "2",
+  "gap": "G1",
+  "gap_name": "diagnosis-fail-closed",
+  "owner_journey_stage": "diagnosis-confidence (stage 3)",
+  "date": "2026-07-08",
+  "branch": "claude/phase-2-owner-journey-G1-diagnosis-fail-closed",
+  "base": "origin/main@41938acc7becb0eaa75d5f3c71e93072ca9ada0a",
+  "baseline_gap_evidence": {
+    "source": "docs/audits/2026-07-08-phase-1-wave-8-owner-journey-proof-plan/OWNER_JOURNEY_COVERAGE_MATRIX.md",
+    "matrix_proof_state": "partial_gap",
+    "gap_text": "Onboarding proves weak-business low-confidence + missing-data; a dedicated end-to-end assertion that a confident diagnosis is BLOCKED (not merely low) on contradictory/insufficient evidence is owed (ties to the Wave-7 isDataSufficient fail-closed unit proof).",
+    "wave7_prior_proof": "src/services/control/__tests__/recommendation.test.ts proves isDataSufficient primitive in isolation only"
+  },
+  "changed_files": [
+    "src/services/intelligence/__tests__/recommendation-fail-closed.test.ts",
+    "docs/audits/2026-07-08-phase-2-G1-diagnosis-fail-closed/FINAL_REPORT.md",
+    "docs/audits/2026-07-08-phase-2-G1-diagnosis-fail-closed/EVIDENCE_LEDGER.json",
+    "docs/audits/2026-07-08-phase-2-G1-diagnosis-fail-closed/COVERAGE_DELTA.md"
+  ],
+  "product_source_changed": false,
+  "proof_tests": [
+    {
+      "file": "src/services/intelligence/__tests__/recommendation-fail-closed.test.ts",
+      "type": "service (pure, deterministic)",
+      "lane": "required maintained vitest suite (CI - Build & Test)",
+      "subject_under_test": [
+        "generateRecommendation (src/services/intelligence/recommendation.ts)",
+        "generateMultipleRecommendations (src/services/intelligence/recommendation.ts)",
+        "isDataSufficient (src/services/control/recommendation.ts, invoked transitively)"
+      ],
+      "assertions": [
+        "insufficient patterns (<3) => blocked=true, INSUFFICIENT_PATTERNS, confidenceScore=0, dataSufficiency=insufficient, no recommendedAction (high var confidence)",
+        "low-confidence/contradictory evidence (var confidence <0.6) => blocked=true, LOW_CONFIDENCE_VARIABLES, confidenceScore=0",
+        "sufficient patterns but unmet >60% success => dataSufficiency=insufficient but NOT blocked (distinct 'merely low' state), contrasted with a confidence-0 hard block",
+        "sufficient + strong + trustworthy => blocked falsy, dataSufficiency=sufficient, confidenceScore>0.6, concrete recommendedAction (gate not always-block)",
+        "generateMultipleRecommendations blocks the whole set on INSUFFICIENT_PATTERNS",
+        "generateMultipleRecommendations blocks the whole set on LOW_CONFIDENCE_VARIABLES"
+      ],
+      "mocked": false,
+      "real_service_logic": true
+    }
+  ],
+  "validation_commands": [
+    "git checkout -B claude/phase-2-owner-journey-G1-diagnosis-fail-closed origin/main",
+    "static trace of every assertion against src/services/intelligence/recommendation.ts + src/services/control/recommendation.ts + src/services/control/variable-registry.ts",
+    "npx vitest run src/services/intelligence/__tests__/recommendation-fail-closed.test.ts (delegated to PR CI; node_modules absent locally as in prior Phase-1 waves)"
+  ],
+  "ci_checks": {
+    "required": ["CI - Build & Test", "lint", "branch-protection"],
+    "status": "pending_pr",
+    "new_test_runs_in": "CI - Build & Test -> Run maintained test suite (blocking; quarantine excluded)"
+  },
+  "deferred_or_blocked": [
+    {
+      "item": "Smoke - Production Dashboard (membership_lookup_failed 500)",
+      "classification": "pre-existing, non-required, out-of-scope; fails identically on all merged Phase-1 commits",
+      "action": "not addressed by G1; documented, not silently ignored"
+    }
+  ],
+  "quarantine_delta": 0,
+  "rollback": "git revert of the single test-only commit; zero product/source/schema/CI impact"
+}
