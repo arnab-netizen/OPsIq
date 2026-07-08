@@ -486,11 +486,17 @@ describe('ADDENDUM F: Mocked Load Tests', () => {
       const result = executeLoadTest(config);
 
       const stats = result.overallLatencyStats;
+      // Order statistics are monotonic by definition: min <= median <= p95 <= p99 <= max.
       expect(stats.minMs).toBeLessThanOrEqual(stats.medianMs);
-      expect(stats.medianMs).toBeLessThanOrEqual(stats.meanMs);
-      expect(stats.meanMs).toBeLessThanOrEqual(stats.p95Ms);
+      expect(stats.medianMs).toBeLessThanOrEqual(stats.p95Ms);
       expect(stats.p95Ms).toBeLessThanOrEqual(stats.p99Ms);
       expect(stats.p99Ms).toBeLessThanOrEqual(stats.maxMs);
+      // The mean is NOT an order statistic: depending on the latency distribution's skew it can
+      // fall above or below the median (and above p95), so it is only guaranteed to lie within
+      // [min, max]. Asserting median <= mean <= p95 was a mathematically-invalid, flaky invariant
+      // (it intermittently failed when the sampled mean landed just below the median).
+      expect(stats.meanMs).toBeGreaterThanOrEqual(stats.minMs);
+      expect(stats.meanMs).toBeLessThanOrEqual(stats.maxMs);
     });
 
     it('should track error patterns', () => {
