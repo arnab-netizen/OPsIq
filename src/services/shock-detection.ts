@@ -194,7 +194,11 @@ export async function detectShockFromCurrentState(
     where: { id: engagementId, workspaceId },
     select: {
       id: true,
-      conditionProfiles: {
+      // The Engagement relation to the condition profile is `businessConditionProfiles`
+      // (not `conditionProfiles`). The previous name made this findFirst throw
+      // PrismaClientValidationError, so shock detection (and thus createShockEvent) failed on
+      // every call — latent because the existing shock test mocks `@/services/shock-detection`.
+      businessConditionProfiles: {
         where: { isCurrent: true },
         select: {
           severityScore: true,
@@ -228,7 +232,7 @@ export async function detectShockFromCurrentState(
 
   return detectShockState({
     engagementId,
-    conditionProfile: engagement.conditionProfiles[0],
+    conditionProfile: engagement.businessConditionProfiles[0],
     evidenceItems: engagement.evidence,
   });
 }

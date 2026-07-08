@@ -1,0 +1,75 @@
+{
+  "phase": "2",
+  "gap": "G4",
+  "gap_name": "shock-reeval",
+  "owner_journey_stage": "shock-adaptive-reeval (stage 11)",
+  "date": "2026-07-08",
+  "branch": "claude/phase-2-owner-journey-G4-shock-reeval",
+  "base": "origin/main@2bfd6f297ef4fe82a364836914f22d927db7db6d",
+  "baseline_gap_evidence": {
+    "source": "docs/audits/2026-07-08-phase-1-wave-8-owner-journey-proof-plan/OWNER_JOURNEY_COVERAGE_MATRIX.md",
+    "matrix_proof_state": "partial_gap",
+    "gap_text": "Crisis/chaos specs exercise shock surfaces; a focused end-to-end assertion binding a shock event to the adaptive re-evaluation of BusinessConditionProfile + InterventionMode/InterventionPhase + priority + review cadence is owed.",
+    "prior_coverage": "shock-01-persist.db.test.ts mocks @/services/re-evaluation and @/services/shock-detection; the real shock -> re-eval binding was never exercised"
+  },
+  "product_defect": {
+    "found": true,
+    "location": "src/services/shock-detection.ts::detectShockFromCurrentState",
+    "description": "engagement select used relation `conditionProfiles`, but the Engagement relation is `businessConditionProfiles`; prisma.engagement.findFirst threw PrismaClientValidationError on every call, so shock detection and createShockEvent failed unconditionally. Latent: shock-01-persist.db.test.ts mocks shock-detection.",
+    "owner_visible_via": "createShockEvent (shock event write path) threw on every call",
+    "fix": "rename conditionProfiles -> businessConditionProfiles in the select and its usage engagement.businessConditionProfiles[0]. No schema/contract change; ShockDetectionResult shape unchanged."
+  },
+  "changed_files": [
+    "src/services/shock-detection.ts",
+    "src/services/__tests__/shock-event-reeval.db.test.ts",
+    "docs/audits/2026-07-08-phase-2-G4-shock-reeval/FINAL_REPORT.md",
+    "docs/audits/2026-07-08-phase-2-G4-shock-reeval/EVIDENCE_LEDGER.json",
+    "docs/audits/2026-07-08-phase-2-G4-shock-reeval/COVERAGE_DELTA.md"
+  ],
+  "proof_tests": [
+    {
+      "file": "src/services/__tests__/shock-event-reeval.db.test.ts",
+      "type": "DB-backed integration (un-mocked)",
+      "lane": "required maintained vitest suite (CI - Build & Test, TEST_WITH_DB=true)",
+      "subject_under_test": [
+        "createShockEvent (src/services/shock-event.ts)",
+        "detectShockFromCurrentState (src/services/shock-detection.ts, fixed)",
+        "triggerReEvaluation (src/services/re-evaluation.ts)"
+      ],
+      "cases": [
+        {
+          "name": "binding",
+          "asserts": "createShockEvent persists the ShockEvent + detectionConfirmed=true + SHOCK_EVENT_RECORDED audit; and BINDS into governed re-eval: CONDITION_CHANGED audit emitted AND engagement.interventionPhase re-evaluated+persisted (growth -> re-evaluated) with version bump"
+        },
+        {
+          "name": "dimensions",
+          "asserts": "triggerReEvaluation(shock_event) => targets ALL true (incl interventionPhase); recommendedRating=critical; recommendedMode=recovery; interventionPhaseImpact.canAdvance boolean; priorityImpact both escalate; reviewCadenceImpact(3 days, critical); healthStatusImpact present; auditEventId truthy"
+        }
+      ],
+      "mocked": false,
+      "real_service_logic": true,
+      "exposes_and_fixes_defect": true
+    }
+  ],
+  "kpi_vs_shock_contrast": "G3 (kpi_deterioration) excludes interventionPhase; G4 (shock_event) includes it. Both asserted, proving the governed target map is change-type-specific.",
+  "validation_commands": [
+    "git checkout -B claude/phase-2-owner-journey-G4-shock-reeval origin/main",
+    "pre-audit shock path -> found detectShockFromCurrentState conditionProfiles relation bug -> fixed",
+    "verified determineReEvaluationTargets(shock_event) all-true + evaluateInterventionPhaseImpact no-findings->triage + evaluator thresholds against source",
+    "npx vitest run src/services/__tests__/shock-event-reeval.db.test.ts (delegated to PR CI)"
+  ],
+  "ci_checks": {
+    "required": ["CI - Build & Test", "lint", "branch-protection"],
+    "status": "pending_pr",
+    "new_test_runs_in": "CI - Build & Test -> Run maintained test suite (blocking; quarantine excluded)"
+  },
+  "deferred_or_blocked": [
+    {
+      "item": "Smoke - Production Dashboard (membership_lookup_failed 500)",
+      "classification": "pre-existing, non-required, out-of-scope",
+      "action": "not addressed by G4; documented"
+    }
+  ],
+  "quarantine_delta": 0,
+  "rollback": "git revert single commit; localized to detectShockFromCurrentState + the test/docs"
+}
