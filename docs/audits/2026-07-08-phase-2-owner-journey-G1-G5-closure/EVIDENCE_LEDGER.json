@@ -1,0 +1,75 @@
+{
+  "phase": "2",
+  "deliverable": "owner-journey proof closure (G1-G5)",
+  "date": "2026-07-08",
+  "classification": "CLOSED_GREEN",
+  "baseline_main": "41938acc7becb0eaa75d5f3c71e93072ca9ada0a",
+  "final_main": "c0cec822e66ee8e1ed156b701a8d4edaae0c880a",
+  "quarantine_delta_total": 0,
+  "gaps": [
+    {
+      "gap": "G1",
+      "stage": "3 diagnosis-confidence",
+      "pr": 192,
+      "merge_commit": "51c3fa55",
+      "proof": "src/services/intelligence/__tests__/recommendation-fail-closed.test.ts",
+      "proof_type": "service (pure, required lane)",
+      "product_fix": null,
+      "audit_dir": "docs/audits/2026-07-08-phase-2-G1-diagnosis-fail-closed"
+    },
+    {
+      "gap": "G2",
+      "stage": "4 recommendation-priority",
+      "pr": 193,
+      "merge_commit": "c996ae27",
+      "proof": "src/services/__tests__/recommendation-priority-ordering.test.ts",
+      "proof_type": "DB-backed (required lane)",
+      "product_fix": "getRecommendationsForEngagement: lexical->semantic priority ordering AND removed invalid select fields (expectedImpact/implementationPhase/executionCertaintyScore + non-existent actions relation) that made the recommendations API 500 on every call",
+      "audit_dir": "docs/audits/2026-07-08-phase-2-G2-recommendation-priority-ordering"
+    },
+    {
+      "gap": "G3",
+      "stage": "10 weekly-review-cadence",
+      "pr": 194,
+      "merge_commit": "2bfd6f29",
+      "proof": "src/services/__tests__/kpi-deterioration-reeval.db.test.ts",
+      "proof_type": "DB-backed, un-mocked (required lane)",
+      "product_fix": null,
+      "audit_dir": "docs/audits/2026-07-08-phase-2-G3-kpi-deterioration-reeval"
+    },
+    {
+      "gap": "G4",
+      "stage": "11 shock-adaptive-reeval",
+      "pr": 195,
+      "merge_commit": "91cb9203",
+      "proof": "src/services/__tests__/shock-event-reeval.db.test.ts",
+      "proof_type": "DB-backed, un-mocked (required lane)",
+      "product_fix": "detectShockFromCurrentState: conditionProfiles -> businessConditionProfiles relation (shock detection / createShockEvent 500 on every call)",
+      "audit_dir": "docs/audits/2026-07-08-phase-2-G4-shock-reeval"
+    },
+    {
+      "gap": "G5",
+      "stage": "12 steady-state-governance",
+      "pr": 196,
+      "merge_commit": "c0cec822",
+      "proof": "src/services/__tests__/owner-journey-smoke.db.test.ts",
+      "proof_type": "consolidated DB-backed smoke + OWNER_JOURNEY_STAGES seam consumer (required lane)",
+      "product_fix": "assessCondition: persist required workspaceId in BusinessConditionProfile create (condition assessment 500 on every call)",
+      "audit_dir": "docs/audits/2026-07-08-phase-2-G5-required-lane-owner-journey-smoke"
+    }
+  ],
+  "latent_defects_fixed": [
+    "G2 getRecommendationsForEngagement invalid select (recommendations API 500)",
+    "G4 detectShockFromCurrentState wrong relation name (shock detection 500)",
+    "G5 assessCondition missing required workspaceId (condition assessment 500)"
+  ],
+  "full_owner_journey_proof": "core journey proven end-to-end in the required lane: diagnosis fail-closed (G1) + recommendation ordering (G2) + weekly KPI adaptive re-eval (G3) + shock adaptive re-eval (G4) + consolidated required-lane governance smoke (G5). Stages 1-2,5-9 already covered by existing browser specs (Wave-8).",
+  "remaining_risks": [
+    "Smoke - Production Dashboard 500 membership_lookup_failed (pre-existing, non-required, out-of-scope)",
+    "getRecommendation single-fetch carries the same invalid-select defect as G2 (out-of-scope follow-up)",
+    "diagnoseBusiness full transaction never runs in a required lane; may carry further workspace-isolation gaps (follow-up)",
+    "owner-journey browser proofs remain in the non-required OOM-prone lane"
+  ],
+  "recommended_next_phase": "owner-facing endpoint hardening: fix getRecommendation invalid select, add a required diagnoseBusiness DB test (surface remaining workspace-isolation gaps), repair Smoke - Production Dashboard membership_lookup_failed; then consider a required Playwright owner-journey smoke. No billing/Product Hunt/public-SaaS/Local-Mode/connector without a new owner instruction.",
+  "rules_honored": "one PR per gap; no gaps combined; no test weakened/deleted/quarantined (delta 0); no proof from skipped/quarantined; no mocked proof counted as real; product fixes were the smallest source change and each proven by a test that fails without it; all merges over green required checks; pre-existing non-required Smoke failure classified honestly; stopped after G5"
+}
