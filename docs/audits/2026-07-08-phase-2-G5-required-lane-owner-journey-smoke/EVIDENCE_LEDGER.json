@@ -12,8 +12,17 @@
     "gap_text": "Owner-journey proof currently lives ONLY in the non-required browser lane (also the next-build heap-OOM-prone lane). Promote a minimal, memory-stable owner-journey smoke into a required lane so owner-journey regressions block merges.",
     "seam": "tests/browser/owner-journey-map.ts (OWNER_JOURNEY_STAGES) was inert (no consumer) until this gap"
   },
-  "product_source_changed": false,
+  "product_source_changed": true,
+  "product_defect": {
+    "found": true,
+    "location": "src/services/business-condition.ts::assessCondition (businessConditionProfile.create)",
+    "description": "create omitted the required, workspace-isolation-enforced workspaceId column, so every assessCondition create threw 'WORKSPACE ISOLATION VIOLATION: create on BusinessConditionProfile requires workspaceId'. Condition assessment (and the diagnoseBusiness path that calls it) was broken. Latent: diagnoseBusiness's only test is the excluded *.integration.test.ts, so assessCondition never ran un-mocked in a required lane.",
+    "owner_visible_via": "condition assessment / diagnosis path failed on every call",
+    "fix": "persist workspaceId: input.workspaceId in the create. One line; no schema/contract change.",
+    "out_of_scope_followup": "the full diagnoseBusiness transaction (evidence/finding/action/client creates) has never run in a required lane and may carry further workspace-isolation gaps; promoting diagnoseBusiness into a required DB test is a dedicated follow-up."
+  },
   "changed_files": [
+    "src/services/business-condition.ts",
     "src/services/__tests__/owner-journey-smoke.db.test.ts",
     "docs/audits/2026-07-08-phase-2-G5-required-lane-owner-journey-smoke/FINAL_REPORT.md",
     "docs/audits/2026-07-08-phase-2-G5-required-lane-owner-journey-smoke/EVIDENCE_LEDGER.json",
@@ -22,22 +31,23 @@
   "proof_tests": [
     {
       "file": "src/services/__tests__/owner-journey-smoke.db.test.ts",
-      "type": "consolidated owner-journey smoke (seam-consumption + DB-backed end-to-end walk)",
+      "type": "consolidated owner-journey governance smoke (seam-consumption + DB-backed end-to-end walk)",
       "lane": "required maintained vitest suite (CI - Build & Test, TEST_WITH_DB=true), memory-stable (no browser, no next build)",
       "subject_under_test": [
-        "diagnoseBusiness (src/services/diagnosis.ts)",
+        "assessCondition (src/services/business-condition.ts, fixed)",
         "getRecommendationsForEngagement (src/services/recommendation.ts)",
         "triggerReEvaluation (src/services/re-evaluation.ts)",
         "OWNER_JOURNEY_STAGES seam (tests/browser/owner-journey-map.ts)"
       ],
       "walk": [
-        "intake+diagnosis: diagnoseBusiness persists engagement + current BusinessConditionProfile + recommendations",
-        "recommendation surfacing: getRecommendationsForEngagement returns them highest-priority-first (G2 contract), set matches persisted",
-        "shock adaptive re-eval: triggerReEvaluation(shock_event) re-evaluates condition/mode/phase/cadence + priority shift + auditEventId"
+        "condition assessment: assessCondition persists a current, workspace-scoped BusinessConditionProfile (asserts profile.workspaceId — proves the fix)",
+        "recommendation surfacing: getRecommendationsForEngagement returns them highest-priority-first (G2 contract), set matches persisted, first is high",
+        "shock adaptive re-eval: triggerReEvaluation(shock_event) re-evaluates condition(critical)/mode(recovery)/phase/cadence + priority shift + auditEventId"
       ],
-      "seam_consumption": "asserts OWNER_JOURNEY_STAGES covers all four OWNER_JOURNEY_DIMENSIONS and the stages exercised (onboarding-intake, diagnosis-confidence, recommendation-priority, shock-adaptive-reeval); ordered from entry (order 1)",
+      "seam_consumption": "asserts OWNER_JOURNEY_STAGES covers all four OWNER_JOURNEY_DIMENSIONS and the stages exercised (diagnosis-confidence, recommendation-priority, shock-adaptive-reeval); ordered from entry (order 1)",
       "mocked": false,
-      "real_service_logic": true
+      "real_service_logic": true,
+      "exposes_and_fixes_defect": true
     }
   ],
   "validation_commands": [

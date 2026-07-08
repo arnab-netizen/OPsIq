@@ -145,6 +145,12 @@ export async function assessCondition(
           data: {
             id: randomUUID(),
             engagementId: input.engagementId,
+            // workspaceId is a required column on BusinessConditionProfile and is enforced by the
+            // workspace-isolation middleware (src/lib/prisma-workspace-enforcement.ts). It was
+            // omitted here, so every assessCondition create violated isolation / failed on the
+            // required column — latent because no maintained-lane test drove assessCondition
+            // un-mocked. Persist the caller's verified workspace.
+            workspaceId: input.workspaceId,
             businessStatus: input.businessStatus,
             severityScore: input.severityScore,
             urgencyLevel: input.urgencyLevel,

@@ -15,39 +15,62 @@ regressions block merges." The `OWNER_JOURNEY_STAGES` seam added in Wave 8 was i
 
 ## 4. Proof added
 `src/services/__tests__/owner-journey-smoke.db.test.ts` — one consolidated, **memory-stable**
-owner-journey smoke that walks the core journey end-to-end through the **real** services against the
-real database, in the **required** maintained vitest lane (`TEST_WITH_DB=true`, no browser, no
-`next build`). A regression anywhere in the intake → diagnosis → recommendation-surfacing →
+owner-journey governance smoke that walks the owner-visible chain end-to-end through the **real**
+services against the real database, in the **required** maintained vitest lane (`TEST_WITH_DB=true`,
+no browser, no `next build`). A regression in the condition-assessment → recommendation-surfacing →
 adaptive-re-evaluation chain now blocks merges.
 
-Journey walked (no mocks):
-1. **Intake + diagnosis** (stages 2–3) — `diagnoseBusiness` persists an engagement, a current
-   `BusinessConditionProfile`, findings and recommendations; the smoke asserts the engagement and a
-   current profile exist and recommendations were persisted.
-2. **Recommendation surfacing + ordering** (stage 4) — after granting the owner engagement access,
-   `getRecommendationsForEngagement` returns the recommendations highest-priority-first (the G2
-   ordering contract), and the returned set matches what was persisted.
+Chain walked (no mocks):
+1. **Condition assessment** (stage 3) — the real `assessCondition` persists a current,
+   **workspace-scoped** `BusinessConditionProfile` (the adaptive baseline); the smoke asserts the
+   profile exists and carries the caller's `workspaceId` (proving the fix in §5).
+2. **Recommendation surfacing + ordering** (stage 4) — `getRecommendationsForEngagement` returns the
+   owner's recommendations highest-priority-first (the G2 ordering contract); the returned set
+   matches what was persisted and the first is `high`.
 3. **Shock → governed adaptive re-evaluation** (stage 11) — `triggerReEvaluation({changeType:
-   "shock_event"})` on the diagnosed engagement re-evaluates every mandated dimension
-   (`businessConditionProfile / interventionMode / interventionPhase / reviewCadence`, plus a
-   recommendation-priority shift, a business-condition rating, and an `auditEventId`).
+   "shock_event"})` re-evaluates every mandated dimension (`businessConditionProfile /
+   interventionMode / interventionPhase / reviewCadence`), yields a `critical` rating + `recovery`
+   mode for the distressed baseline, a recommendation-priority shift, and an `auditEventId`.
 
-## 5. Seam consumption (Wave-8 intent fulfilled)
+**Scope note.** The smoke deliberately drives the real `assessCondition` (fixed in §5) and the proven
+surfacing + adaptive services on directly-seeded, middleware-clean state, rather than the full
+`diagnoseBusiness` transaction — which has never run in a required lane and carries further
+workspace-isolation gaps (§5). The diagnosis fail-closed gate itself is proven at the service level by
+G1. This keeps G5 a *minimal* required-lane smoke (as the gap asks) without pulling a large
+`diagnoseBusiness` repair into a smoke-test PR.
+
+## 5. Product defect found & fixed
+Driving the real `assessCondition` un-mocked (the first time in a required lane — `diagnoseBusiness`'s
+only test is the **excluded** `*.integration.test.ts`) surfaced a real defect: `assessCondition`
+created a `BusinessConditionProfile` **without `workspaceId`**, a required column enforced by the
+workspace-isolation middleware (`src/lib/prisma-workspace-enforcement.ts`, wired globally in
+`src/lib/db.ts`). Every `assessCondition` create therefore threw
+`WORKSPACE ISOLATION VIOLATION: create on BusinessConditionProfile requires workspaceId in data` —
+so condition assessment (and the `diagnoseBusiness` path that calls it) was broken. **Fix:** persist
+`workspaceId: input.workspaceId` in the create (`src/services/business-condition.ts`). One line; no
+schema/contract change. Because the create previously always failed, no maintained-lane test
+exercised it, so the fix cannot regress a passing test.
+
+**Out of scope (documented, not fixed):** the full `diagnoseBusiness` transaction (evidence / finding
+/ action / client creates) has never run in a required lane and may carry further workspace-isolation
+gaps of the same class. Promoting `diagnoseBusiness` itself into a required DB test is a larger,
+dedicated follow-up; G5's smoke exercises condition assessment via the (now-fixed) `assessCondition`
+directly.
+
+## 6. Seam consumption (Wave-8 intent fulfilled)
 The test **consumes** the previously inert `OWNER_JOURNEY_STAGES` / `OWNER_JOURNEY_DIMENSIONS` seam
 (`tests/browser/owner-journey-map.ts`) in a pure, always-run assertion: the journey manifest covers
-all four mandated dimensions and the stages this smoke exercises (`onboarding-intake`,
-`diagnosis-confidence`, `recommendation-priority`, `shock-adaptive-reeval`), and is ordered from
-entry (order 1). This gives the seam its first consumer, exactly as Wave 8 planned.
-
-## 6. Product defects found
-**None.** All services behave correctly (the underlying defects in the recommendation-list and
-shock-detection paths were fixed in G2 and G4 respectively; this smoke exercises the corrected paths).
+all four mandated dimensions and the stages this smoke exercises (`diagnosis-confidence`,
+`recommendation-priority`, `shock-adaptive-reeval`), and is ordered from entry (order 1). This gives
+the seam its first consumer, exactly as Wave 8 planned.
 
 ## 7. Files changed
+- Changed: `src/services/business-condition.ts` (persist `workspaceId` in the `assessCondition`
+  profile create — see §5).
 - Added: `src/services/__tests__/owner-journey-smoke.db.test.ts`.
 - Added: `docs/audits/2026-07-08-phase-2-G5-required-lane-owner-journey-smoke/{FINAL_REPORT.md,
   EVIDENCE_LEDGER.json,COVERAGE_DELTA.md}`.
-- No product/source/schema/CI change.
+- No schema/CI change.
 
 ## 8. Tests added / reactivated
 Added the owner-journey smoke (1 pure seam-consumption case + 1 DB-backed end-to-end walk) in the
