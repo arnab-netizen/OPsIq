@@ -1,0 +1,60 @@
+{
+  "phase": "Phase 3",
+  "item": "Item 2 — prove diagnoseBusiness DB workspace isolation",
+  "date": "2026-07-08",
+  "branch": "claude/phase-3-diagnoseBusiness-db-workspace-isolation",
+  "main_baseline_head": "295fa614df0721895439d4d14745f8a045ad08ff",
+  "classification": "coverage_gap_closed_no_source_defect (Global Rule 10)",
+  "investigation": {
+    "target": "src/services/diagnosis.ts :: diagnoseBusiness()",
+    "prior_coverage": "Only diagnosis.integration.test.ts, which vitest EXCLUDES (**/*.integration.test.ts) — the transaction had never run in the required lane.",
+    "g5_flag": "Phase 2 G5 FINAL_REPORT speculated diagnoseBusiness 'may carry further workspace-isolation gaps of the same class'.",
+    "tenant_backstop": {
+      "file": "src/lib/prisma-workspace-enforcement.ts",
+      "wired_in": "src/lib/db.ts ($extends, verified live in test client)",
+      "invariant": "create/createMany of a workspace-owned model must include workspaceId, else throws WORKSPACE ISOLATION VIOLATION",
+      "workspace_owned_models_written_by_diagnoseBusiness": ["Engagement", "Recommendation", "BusinessConditionProfile (via assessCondition)", "CanonicalEvent (via assessCondition)"],
+      "all_supply_workspaceId": true,
+      "non_workspace_owned_written": ["Evidence", "Finding", "Action", "ClientAccount"],
+      "non_workspace_owned_note": "No direct workspaceId column; tenancy via engagementId -> engagement.workspaceId. Correct."
+    },
+    "client_lookup": "db.clientAccount.findFirst({ where: { name, workspaceId: validatedWorkspaceId } }) — workspace-scoped, no cross-tenant read/reuse.",
+    "conclusion": "No workspace-isolation defect on the exercised owner path; G5 speculation disproven for that path."
+  },
+  "source_fix": {
+    "made": false,
+    "reason": "No defect reproduced (Global Rule 10). Added the smallest regression test that proves current correct behavior; documented why no source fix was needed."
+  },
+  "proof": {
+    "test": "src/services/__tests__/diagnoseBusiness-db-workspace-isolation.db.test.ts",
+    "test_count": 2,
+    "test_lane": "required build-and-test (TEST_WITH_DB=true; not *.integration.test.ts; not quarantined)",
+    "db_backed": true,
+    "mocked_db": false,
+    "runs_real_engines_and_transaction": true,
+    "result": "2 passed (~25s)",
+    "is_regression_guard": true,
+    "guard_mechanism": "Live fail-closed tenant backstop: dropping workspaceId from any workspace-owned create in diagnoseBusiness makes test 1 fail with WORKSPACE ISOLATION VIOLATION.",
+    "assertions": [
+      "diagnosis persists engagement + client + condition profile + findings + evidence + recommendations + actions (no owner-facing 500)",
+      "engagement.workspaceId === caller workspace",
+      "client.workspaceId === caller workspace",
+      "current BusinessConditionProfile.workspaceId === caller workspace",
+      "all recommendations carry caller workspaceId; count matches result",
+      "findings/evidence/actions persisted under the caller's engagement; counts match result",
+      "second workspace diagnosing SAME business name creates its OWN client (distinct id, its workspaceId) — no cross-tenant reuse",
+      "two same-named clients exist, one per workspace (no cross-tenant collapse)",
+      "workspace A engagements do not contain workspace B engagement; workspace B recommendations all scoped to B and its engagement"
+    ]
+  },
+  "regression_guard": {
+    "phase_1_tests": ["src/__tests__/services/diagnosis-value-path.test.ts", "src/__tests__/api/diagnosis-error-visibility.test.ts"],
+    "phase_2_tests": ["src/services/__tests__/owner-journey-smoke.db.test.ts"],
+    "result": "26 passed (unaffected)"
+  },
+  "static_checks": {
+    "tsc_noemit": "clean",
+    "eslint_new_file": "clean"
+  },
+  "commit_subject": "Phase 3: prove diagnoseBusiness DB workspace isolation"
+}
