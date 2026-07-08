@@ -1,0 +1,72 @@
+{
+  "phase": "Phase 1 Wave 8 — Owner-Journey E2E Proof PLAN (NOT full Playwright) — FINAL WAVE",
+  "date": "2026-07-08",
+  "branch": "claude/phase-1-wave-8-owner-journey-proof-plan",
+  "base": "origin/main (post-Wave-7, 16d321d3)",
+  "predecessor_wave_7": {
+    "pr": "https://github.com/arnab-netizen/OPsIq/pull/190",
+    "merge_commit": "16d321d328c80613219eb5a1dcf151f639bfa762",
+    "note": "Wave-7 diagnostic fail-closed proof merged; required CI - Build & Test (run 28937541005) green incl. maintained suite; main verified structurally green before Wave 8 branched."
+  },
+  "wave8_nature": "PLANNING deliverable, not a test reactivation. NO quarantined E2E tests exist to reactivate; full owner-journey Playwright already exists under tests/browser/ (21 owner-* specs + owner-realistic-baseline + owner-pilot-fixtures.ts) and e2e/auth-flow.spec.ts, running in the NON-REQUIRED browser lane.",
+  "quarantine_inventory": {
+    "total_quarantined_before_wave8": 86,
+    "reactivated": 0,
+    "remaining_quarantined_after": 86,
+    "note": "Wave 8 reactivates nothing; it is a plan + coverage matrix + one inert seam."
+  },
+  "deliverables": [
+    {
+      "path": "docs/audits/2026-07-08-phase-1-wave-8-owner-journey-proof-plan/OWNER_JOURNEY_COVERAGE_MATRIX.md",
+      "what": "12-stage owner-journey coverage matrix (entry -> steady-state governance) mapped to the 4 mandated dimensions + existing spec proof surfaces + 5 documented gaps (G1-G5)."
+    },
+    {
+      "path": "docs/audits/2026-07-08-phase-1-wave-8-owner-journey-proof-plan/FINAL_REPORT.md",
+      "what": "Wave-8 final report (predecessor merge, main verify, plan, seam, STOP directive)."
+    },
+    {
+      "path": "tests/browser/owner-journey-map.ts",
+      "what": "THE minimal seam: typed manifest (OwnerJourneyDimension/OwnerJourneyProofState/OwnerJourneyStage/OWNER_JOURNEY_STAGES/OWNER_JOURNEY_OPEN_GAPS). Pure types + data, no imports, no product/business logic, not a *.spec.ts/*.test.ts. A future full-Playwright wave imports it to drive coverage with no rewrite."
+    }
+  ],
+  "seam_safety": {
+    "placement": "tests/browser/ (alongside owner-pilot-fixtures.ts)",
+    "tsc_gate": "tests/** is excluded from the whole-project tsc gate (verified in tsconfig.json exclude); the seam is not typechecked by the required gate.",
+    "execution": "not a *.spec.ts (browser lane) nor *.test.ts (vitest maintained suite); no spec imports it yet -> inert in every CI lane.",
+    "risk": "near-zero: pure types + const data, zero imports, zero product/DB coupling."
+  },
+  "coverage_summary": {
+    "stages_total": 12,
+    "covered_existing_spec": 7,
+    "partial_gap": 4,
+    "planned_gap": 1,
+    "documented_gaps": [
+      "G1 diagnosis fail-closed end-to-end (blocked, not merely low) — ties Wave-7",
+      "G2 recommendation deterministic priority ordering end-to-end — ties Wave-3/4",
+      "G3 weekly KPI-deterioration -> governed re-evaluation + review cadence",
+      "G4 shock event -> adaptive re-eval of BusinessConditionProfile + InterventionMode/Phase + priority + cadence",
+      "G5 promote a minimal owner-journey smoke into a REQUIRED, memory-stable lane (owner proof is currently non-required + OOM-prone)"
+    ]
+  },
+  "referenced_specs_verified": 27,
+  "source_fixes": [],
+  "source_fixes_note": "No product/source/schema/CI change. No test reactivated/deleted/weakened. One inert typed seam + 2 plan docs.",
+  "validation_commands": [
+    {"cmd": "git checkout -B claude/phase-1-wave-8-owner-journey-proof-plan main", "result": "branch at 16d321d3 (Wave-7 merge)"},
+    {"cmd": "inventory owner-journey E2E surfaces (tests/browser owner-* + e2e/ + playwright.config.ts) and quarantined E2E candidates", "result": "no quarantined E2E to reactivate; 21 owner-* browser specs exist (non-required lane)"},
+    {"cmd": "verify tsconfig excludes tests/**", "result": "confirmed — seam under tests/ not in tsc gate"},
+    {"cmd": "write seam tests/browser/owner-journey-map.ts + coverage matrix + report; verify all 27 referenced specs exist", "result": "all 27 spec paths OK; seam pure types+data, no imports"},
+    {"cmd": "JSON validation of EVIDENCE_LEDGER.json", "result": "valid"}
+  ],
+  "deferred_or_blocked_dynamic_gates": [
+    {"gate": "typecheck (tsc)", "status": "seam under tests/** is excluded; docs are non-code; whole-project tsc BLOCKED locally -> PR CI"},
+    {"gate": "lint (eslint)", "status": "BLOCKED locally -> PR CI"},
+    {"gate": "vitest maintained suite", "status": "no test added/changed; seam not executed (not *.test.ts) -> DEFERRED to PR CI (expected no-op for this change)"},
+    {"gate": "owner-journey full Playwright", "status": "NOT RUN / NOT BUILT — explicit STOP after Wave 8 per owner instruction"}
+  ],
+  "product_logic_changed": false,
+  "phase0_files_touched": false,
+  "prior_wave_active_tests_touched": false,
+  "stop_directive": "Execution STOPS after Wave 8 is merged and main verified. The full Playwright build-out closing G1-G5 is NOT started without a new owner instruction.",
+  "rollback_plan": "One commit: 1 inert seam (tests/browser/owner-journey-map.ts) + 2 plan docs. git revert restores prior state. No product/source/schema/CI change, no test change -> clean, immediate."
+}
