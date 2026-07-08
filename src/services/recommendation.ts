@@ -675,9 +675,12 @@ export async function getRecommendationsForEngagement(
       description: true,
       priority: true,
       status: true,
-      expectedImpact: true,
-      implementationPhase: true,
-      executionCertaintyScore: true,
+      // `estimatedImpact` is the real Recommendation column. The previous select requested
+      // `expectedImpact`, `implementationPhase`, and `executionCertaintyScore` — none of which exist
+      // on the Recommendation model — so `prisma.recommendation.findMany` threw
+      // PrismaClientValidationError on EVERY call, i.e. the owner recommendations API route
+      // (GET /api/engagements/[id]/recommendations) was fully broken. Select only real columns.
+      estimatedImpact: true,
       version: true,
       createdAt: true,
       evidenceValidationScore: true,
@@ -685,11 +688,11 @@ export async function getRecommendationsForEngagement(
       kpiHealthScore: true,
       kpiRiskLevel: true,
       actions: {
+        // `priority` is not a column on Action (also part of the invalid select above).
         select: {
           id: true,
           title: true,
           status: true,
-          priority: true,
         },
       },
     },

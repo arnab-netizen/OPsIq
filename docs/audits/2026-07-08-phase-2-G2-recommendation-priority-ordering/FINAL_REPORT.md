@@ -16,24 +16,44 @@ proofs)." The Wave-3 DB test asserted ordering using a **lexical string comparis
 highest-priority-first — lexically `"high" < "low" < "medium"`. Because every recommendation Wave-3
 created was `high` (uniform), that flawed assertion never actually exercised mixed-priority ordering.
 
-## 4. Product defect found
-**Yes — a real owner-facing defect.** `getRecommendationsForEngagement`
+## 4. Product defects found
+**Two real owner-facing defects**, both in `getRecommendationsForEngagement`
 (`src/services/recommendation.ts`) — the listing service behind the owner recommendations API route
-(`src/app/api/engagements/[engagementId]/recommendations/route.ts`) that the cockpit consumes —
-ordered with `orderBy: [{ priority: "desc" }, { createdAt: "desc" }]`. `Recommendation.priority`
+(`src/app/api/engagements/[engagementId]/recommendations/route.ts`) that the cockpit consumes.
+
+**Defect 1 — lexical priority ordering.** The query used
+`orderBy: [{ priority: "desc" }, { createdAt: "desc" }]`. `Recommendation.priority`
 (`prisma/schema.prisma`) is a **plain `String` column**, so Postgres sorted it **lexically**
 descending: `"medium" > "low" > "high"`. Result: the owner's **highest-priority (`high`)
 recommendations were rendered at the BOTTOM** of the list, and `medium` at the top — the opposite of
 highest-priority-first.
 
-## 5. Fix made
-Smallest correct fix, preserving the contract: fetch ordered by `createdAt` desc, then order in the
-service by a **semantic priority rank** (`critical` < `high` < `medium` < `low`; lower rank = higher
-priority), mirroring the established repo pattern in `owner-dashboard.service.ts`
+**Defect 2 — invalid select columns (endpoint fully broken).** The `select` requested four fields
+that do not exist on the models: `expectedImpact`, `implementationPhase`, `executionCertaintyScore`
+(not on `Recommendation`) and `actions.priority` (not on `Action`). `prisma.recommendation.findMany`
+therefore threw `PrismaClientValidationError` on **every** call, i.e. the owner recommendations API
+route returned a 500 unconditionally. This latent defect was never caught because no maintained-lane
+test exercised `getRecommendationsForEngagement` — the G2 proof is the first, which surfaced it.
+
+## 5. Fixes made
+**Fix 1 (ordering):** fetch ordered by `createdAt` desc, then order in the service by a **semantic
+priority rank** (`critical` < `high` < `medium` < `low`; lower rank = higher priority), mirroring the
+established repo pattern in `owner-dashboard.service.ts`
 (`priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 }`). `Array.prototype.sort` is stable, so
 the `createdAt`-desc order from the query is preserved as the deterministic tie-break within an
 equal-priority group. No schema change, no contract change (still `(priority, createdAt desc)`, now
 semantically correct). Business logic stays in the service layer (no UI/page change).
+
+**Fix 2 (invalid select):** replaced `expectedImpact` with the real column `estimatedImpact` and
+removed `implementationPhase`, `executionCertaintyScore`, and `actions.priority` (no such columns).
+The endpoint now returns real data instead of a 500. Because the endpoint always threw, no working
+consumer depended on the removed fields.
+
+**Out of scope (documented, not fixed):** `getRecommendation` (single-recommendation fetch, same
+file, ~line 1186) carries the **same** invalid-select defect (`expectedImpact` /
+`implementationPhase` / `executionCertaintyScore` / `scoreBreakdown`). It is a distinct function not
+exercised by the G2 ordering proof; fixing it here would broaden the PR beyond the gap and ship an
+unproven change. Flagged for a small dedicated follow-up.
 
 ## 6. Proof added
 `src/services/__tests__/recommendation-priority-ordering.test.ts` — a **DB-backed** test that

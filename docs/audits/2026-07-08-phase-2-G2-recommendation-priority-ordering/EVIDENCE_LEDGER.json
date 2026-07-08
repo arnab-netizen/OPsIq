@@ -12,12 +12,28 @@
     "gap_text": "Cockpit renders recommendations; an explicit ordering/priority assertion end-to-end (highest-priority first, deterministic) is owed (ties to Wave-3/4 recommendation proofs).",
     "wave3_prior_proof_flaw": "recommendation.integration.test.ts asserted ordering with lexical string compare (prev.priority >= curr.priority); all recs were 'high' (uniform) so mixed-priority ordering was never exercised"
   },
-  "product_defect": {
-    "found": true,
-    "location": "src/services/recommendation.ts::getRecommendationsForEngagement",
-    "description": "orderBy [{priority:'desc'},{createdAt:'desc'}] on a plain String priority column sorts lexically (medium>low>high), rendering the owner's highest-priority recommendations LAST.",
-    "owner_visible_via": "src/app/api/engagements/[engagementId]/recommendations/route.ts (cockpit recommendations list)",
-    "fix": "order by semantic priority rank (critical<high<medium<low) in-service, mirroring owner-dashboard.service.ts; stable sort preserves createdAt-desc tie-break. No schema/contract change."
+  "product_defects": [
+    {
+      "id": "defect-1-lexical-ordering",
+      "found": true,
+      "location": "src/services/recommendation.ts::getRecommendationsForEngagement",
+      "description": "orderBy [{priority:'desc'},{createdAt:'desc'}] on a plain String priority column sorts lexically (medium>low>high), rendering the owner's highest-priority recommendations LAST.",
+      "owner_visible_via": "src/app/api/engagements/[engagementId]/recommendations/route.ts (cockpit recommendations list)",
+      "fix": "order by semantic priority rank (critical<high<medium<low) in-service, mirroring owner-dashboard.service.ts; stable sort preserves createdAt-desc tie-break. No schema/contract change."
+    },
+    {
+      "id": "defect-2-invalid-select",
+      "found": true,
+      "location": "src/services/recommendation.ts::getRecommendationsForEngagement",
+      "description": "select requested non-existent columns expectedImpact/implementationPhase/executionCertaintyScore (Recommendation) and actions.priority (Action); prisma.recommendation.findMany threw PrismaClientValidationError on EVERY call, so the recommendations API route returned 500 unconditionally. Surfaced by the G2 proof (first maintained-lane caller).",
+      "owner_visible_via": "GET /api/engagements/[id]/recommendations was fully broken (500)",
+      "fix": "expectedImpact -> estimatedImpact (real column); removed implementationPhase, executionCertaintyScore, actions.priority. No working consumer depended on them (endpoint always threw)."
+    }
+  ],
+  "related_defect_out_of_scope": {
+    "location": "src/services/recommendation.ts::getRecommendation (~line 1186)",
+    "description": "same invalid-select defect (expectedImpact/implementationPhase/executionCertaintyScore/scoreBreakdown). Distinct function not exercised by the G2 ordering proof; documented for a dedicated follow-up rather than shipped unproven in this gap PR.",
+    "action": "not fixed in G2 (kept minimal/gap-scoped)"
   },
   "changed_files": [
     "src/services/recommendation.ts",
