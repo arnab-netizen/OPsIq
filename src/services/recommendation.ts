@@ -637,6 +637,21 @@ export async function verifyRecommendationState(
   };
 }
 
+/**
+ * Semantic priority rank for owner-facing recommendation ordering (highest priority first).
+ * Lower rank = higher priority. Mirrors the established repo pattern
+ * (`owner-dashboard.service.ts` priorityOrder). `Recommendation.priority` is a free-form String
+ * column, so ordering MUST be by this rank — a DB `orderBy: { priority: "desc" }` sorts lexically
+ * ("medium" > "low" > "high"), which is not highest-priority-first.
+ */
+const RECOMMENDATION_PRIORITY_ORDER: Record<string, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+const RECOMMENDATION_PRIORITY_UNKNOWN_RANK = 999;
+
 export async function getRecommendationsForEngagement(
   engagementId: string,
   userId: string,
@@ -650,7 +665,7 @@ export async function getRecommendationsForEngagement(
 
   await assertEngagementAccess(userId, engagementId, workspaceId);
 
-  return db.recommendation.findMany({
+  const recommendations = await db.recommendation.findMany({
     where: { engagementId, workspaceId },
     select: {
       id: true,
@@ -678,8 +693,20 @@ export async function getRecommendationsForEngagement(
         },
       },
     },
-    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+    // createdAt-desc is the deterministic secondary order; the primary
+    // highest-priority-first order is applied below by semantic rank.
+    orderBy: [{ createdAt: "desc" }],
   });
+
+  // Highest-priority-first: `priority` is a plain String, so ordering it at the DB level sorts
+  // LEXICALLY ("medium" > "low" > "high") and buried the owner's highest-priority recommendations
+  // at the bottom. Re-order by the semantic priority rank. Array.prototype.sort is stable, so the
+  // createdAt-desc order from the query is preserved as the tie-break within an equal-priority group.
+  return [...recommendations].sort(
+    (a, b) =>
+      (RECOMMENDATION_PRIORITY_ORDER[a.priority] ?? RECOMMENDATION_PRIORITY_UNKNOWN_RANK) -
+      (RECOMMENDATION_PRIORITY_ORDER[b.priority] ?? RECOMMENDATION_PRIORITY_UNKNOWN_RANK)
+  );
 }
 
 export async function updateRecommendationStatus(
