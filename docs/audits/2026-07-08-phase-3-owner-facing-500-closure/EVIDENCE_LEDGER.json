@@ -1,0 +1,57 @@
+{
+  "phase": "Phase 3 — Owner-Facing Latent 500 Closure Loop",
+  "date": "2026-07-08",
+  "classification": "closed",
+  "main_baseline_head": "6a0ba15427a4617a248c69923f81792892fc52dd",
+  "final_code_head": "725998a4bb2578bc330779cc8e3f7b9de2c5ef3b",
+  "history_linear": ["6a0ba15 (baseline #197)", "295fa61 (#198)", "bfba490 (#199)", "725998a (#200)"],
+  "items": [
+    {
+      "item": 1,
+      "title": "fix getRecommendation invalid select",
+      "pr": 198,
+      "merge_sha": "295fa614",
+      "outcome": "owner_facing_500_fixed",
+      "defect": "getRecommendation selected 4 non-existent columns (expectedImpact, implementationPhase, executionCertaintyScore, scoreBreakdown) -> PrismaClientValidationError on every GET/PATCH /api/recommendations/[id]",
+      "fix": "select estimatedImpact (real column)",
+      "test": "src/services/__tests__/getRecommendation-invalid-select.db.test.ts (2, fail pre-fix / pass post-fix, asserts workspace isolation)",
+      "report_dir": "docs/audits/2026-07-08-phase-3-getRecommendation-invalid-select"
+    },
+    {
+      "item": 2,
+      "title": "prove diagnoseBusiness DB workspace isolation",
+      "pr": 199,
+      "merge_sha": "bfba490e",
+      "outcome": "coverage_gap_closed_no_source_defect (Rule 10)",
+      "finding": "diagnoseBusiness transaction correctly workspace-isolated; every workspace-owned create supplies workspaceId; no cross-tenant reuse/leak; G5-speculated gaps do not exist on exercised path",
+      "test": "src/services/__tests__/diagnoseBusiness-db-workspace-isolation.db.test.ts (2, real engines + full transaction x2 workspaces; fail-closed regression guard)",
+      "report_dir": "docs/audits/2026-07-08-phase-3-diagnoseBusiness-db-workspace-isolation"
+    },
+    {
+      "item": 3,
+      "title": "fix production dashboard membership lookup",
+      "pr": 200,
+      "merge_sha": "725998a4",
+      "outcome": "owner_facing_login_500_fixed_plus_environment_reclassification_with_proof",
+      "defect": "login route workspaceMembership.findFirst bare select (all columns); missing newer column in deployed DB -> Prisma P2022 ColumnNotFound -> membership_lookup_failed 500",
+      "root_cause_environment": "production DB behind on migration 20260625120000_owner_mode_execution_tables (schema drift)",
+      "fix": "login selects only { workspaceId }; also removed unused errorMsg dead line to keep governance baseline clean",
+      "reproduction": "real DB column drop -> old bare select throws P2022 (42703), narrow select returns workspaceId",
+      "test": "src/app/api/auth/__tests__/login-membership-lookup.db.test.ts (5)",
+      "report_dir": "docs/audits/2026-07-08-phase-3-production-dashboard-membership-lookup",
+      "post_merge_production_confirmation": "Smoke - Production Dashboard on 725998a4 (run 28982236484): POST /api/auth/login now 200 (was membership_lookup_failed 500 on bfba490e/295fa614/6a0ba154); smoke advances GET / (200) then fails at GET /api/internal/demo-permission-proof (500) — the next default-select membership read, confirming the diagnosis and the environment-drift residual (pending migration 20260625120000_owner_mode_execution_tables)"
+    }
+  ],
+  "required_ci_status": "GREEN on each item PR before merge and re-verified on main after each merge (build-and-test, lint + ratchet, Build+Type+Prisma Verify, MVP Readiness, Security Baseline, branch-protection, Phase 3 Slice 2 Gates, DB-backed simulation lanes)",
+  "tests_added_total": 9,
+  "tests_lane": "required build-and-test (TEST_WITH_DB=true; DB-backed; no mocks; not *.integration.test.ts; not quarantined)",
+  "remaining_owner_facing_500_risks": "none known in the three targeted paths; latent same-class default-select membership reads (getPolicyContext, demo diagnostic endpoints) fragile to deploy drift — optional code follow-up",
+  "remaining_non_required_smoke_risk": "Smoke - Production Dashboard: login step CONFIRMED fixed in production (200 on 725998a4, was 500); now fails one step later at demo-permission-proof (500), same environment drift; stays red until production DB migration 20260625120000_owner_mode_execution_tables is applied (environment; true positive, not false 500)",
+  "rollback_plan": "revert individual squash commits (725998a4 -> bfba490e -> 295fa614); no interdependencies; no Phase 3 schema migrations so no DB rollback",
+  "recommended_next_phase": [
+    "apply pending production migration 20260625120000_owner_mode_execution_tables, then confirm production-dashboard smoke green",
+    "optional: narrow remaining membership-read selects for drift defence-in-depth",
+    "resume deferred backlog only on new owner instruction (none started in Phase 3)"
+  ],
+  "commit_subject": "Phase 3: close owner-facing 500 follow-ups"
+}
