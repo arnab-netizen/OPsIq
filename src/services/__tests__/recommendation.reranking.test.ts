@@ -11,13 +11,20 @@ vi.mock("@/lib/auth-guard", () => ({
 }));
 
 const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
+// Current-API service auth context. reRankRecommendationsInEngagement calls
+// requireServiceContext(authContext, workspaceId), which reads authContext.verifiedActorId.
+// (The prior {session, policy} shape predated the CanonicalAuthContext refactor.)
 const mockAuthContext = {
-  session: {
-    user: { id: "actor-1", email: "test@test.com", name: "Test", isActive: true },
+  verifiedActorId: "actor-1",
+  verifiedActorType: "user",
+  verifiedWorkspaceId: mockWorkspaceId,
+  verifiedCapabilities: ["RECOMMENDATION_APPROVE"],
+  verifiedSessionSnapshot: {
+    actorId: "actor-1",
     sessionId: "session-123",
-    expiresAt: new Date(),
+    createdAt: new Date(),
   },
-  policy: { userId: "actor-1", roles: [] },
+  policy: null,
 };
 
 describe("Recommendation Re-ranking", () => {
