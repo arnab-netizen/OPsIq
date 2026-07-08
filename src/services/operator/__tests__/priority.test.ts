@@ -490,6 +490,11 @@ describe("calculatePriority - Legacy Function", () => {
   it("should work with OperatorItem and calculate deterministic priority", () => {
     const item: OperatorItem = {
       id: "test-1",
+      workspaceId: "workspace-test",
+      ownerUserId: "owner-test",
+      createdBy: "user-test",
+      lastUpdatedBy: null,
+      decisionType: "operational",
       problem: "Test problem",
       action: "Test action",
       impactExpected: 200,
@@ -513,6 +518,11 @@ describe("calculatePriority - Legacy Function", () => {
   it("should return 0 for items with zero or negative impact", () => {
     const item: OperatorItem = {
       id: "test-1",
+      workspaceId: "workspace-test",
+      ownerUserId: "owner-test",
+      createdBy: "user-test",
+      lastUpdatedBy: null,
+      decisionType: "operational",
       problem: "Test problem",
       action: "Test action",
       impactExpected: 0,
@@ -536,6 +546,11 @@ describe("calculatePriority - Legacy Function", () => {
   it("should calculate priority with v2 formula (impact * confidence * recency)", () => {
     const itemWithAnyAccuracy: OperatorItem = {
       id: "test-1",
+      workspaceId: "workspace-test",
+      ownerUserId: "owner-test",
+      createdBy: "user-test",
+      lastUpdatedBy: null,
+      decisionType: "operational",
       problem: "Test problem",
       action: "Test action",
       impactExpected: 100,
@@ -560,6 +575,11 @@ describe("calculatePriority - Legacy Function", () => {
   it("should ignore decisionAccuracy in priority calculation (v2 formula)", () => {
     const itemWithHighAccuracy: OperatorItem = {
       id: "test-2",
+      workspaceId: "workspace-test",
+      ownerUserId: "owner-test",
+      createdBy: "user-test",
+      lastUpdatedBy: null,
+      decisionType: "operational",
       problem: "Test problem",
       action: "Test action",
       impactExpected: 100,

@@ -1,0 +1,114 @@
+{
+  "phase": "Phase 1 Wave 2 — Recommendation-Ranking Reactivation",
+  "date": "2026-07-08",
+  "branch": "claude/phase-1-wave-2-recommendation-ranking",
+  "base": "origin/main @ 4bd6ce2fb5b8617c44b06deffd6ae5a36bb22e09 (PR #183 merge)",
+  "part_a_pr_183_merge": {
+    "pr": "https://github.com/arnab-netizen/OPsIq/pull/183",
+    "preconditions_verified": {
+      "state": "open",
+      "draft": false,
+      "head_ref": "claude/phase-1-diagnostic-core-reactivation",
+      "head_sha": "de26d61cd62814f87e94f902d8b99aef482836b6",
+      "base_ref": "main",
+      "mergeable_state": "clean",
+      "changed_files": "7 = 4 diagnostic-core test renames + 3 audit docs; no source/schema/CI/product files",
+      "ci": "all 52 checks green (build-and-test both runs, lint, browser packs incl. reruns, branch-protection)"
+    },
+    "merged": true,
+    "merge_method": "merge",
+    "merge_commit_sha": "4bd6ce2fb5b8617c44b06deffd6ae5a36bb22e09",
+    "merged_by": "arnab-netizen"
+  },
+  "part_b_post_merge_main_verification": {
+    "main_head": "4bd6ce2fb5b8617c44b06deffd6ae5a36bb22e09",
+    "head_equals_pr_183_merge_commit": true,
+    "de26d61c_in_ancestry": true,
+    "working_tree": "clean",
+    "reactivated_wave1_tests_present_on_main": true,
+    "quarantine_diagnostic_core_dir_empty": true,
+    "main_push_triggered_workflows": {
+      "CI - Build & Test (run 28907796488)": {
+        "build-and-test (20.x)": "steps 1-14 success (deps, governance+auth scans, TypeScript type-checking, Prisma validate/migrate/generate, Build no-OOM, wrapped-handlers ratchet); step 15 maintained vitest suite (runs the 4 Wave-1 tests) — see final response for conclusion",
+        "lint (20.x)": "in_progress -> see final response"
+      },
+      "MVP Readiness Gate (run 28907796467)": "in_progress -> see final response",
+      "CI/CD Foundations - Phase 13 Slice 1 (run 28907796559)": "in_progress -> see final response",
+      "Smoke - Production Dashboard (run 28907796492)": "expected failure — pre-existing production membership_lookup_failed; non-required; NOT a Wave-1/Wave-2 regression; classification preserved"
+    },
+    "classification": "See final response — build-and-test required code gate is the gating signal; pull_request-only workflows (browser packs / DB lanes / Security Baseline / owner-pilot / branch-protection) do not re-trigger on main push."
+  },
+  "wave2_quarantine_inventory": {
+    "total_quarantined_before_wave2": 93,
+    "reactivated": 2,
+    "remaining_quarantined_after": 91,
+    "root": "src/__ignored_tests__/",
+    "recommendation_ranking_candidates_identified": [
+      "services/operator/__tests__/priority.test.ts (pure-unit) — SELECTED",
+      "services/intelligence/__tests__/recommendation.test.ts (pure-unit) — SELECTED",
+      "services/control/__tests__/recommendation.test.ts (pure-unit) — deferred (overlaps control gate; keep wave minimal)",
+      "services/__tests__/recommendation.priority.test.ts (DB-bound) — deferred (DB lane)",
+      "services/__tests__/recommendation.reranking.test.ts (DB-bound) — deferred (DB lane)",
+      "services/recommendation.integration.test.ts (integration/DB) — deferred",
+      "recommendations-manager.test.tsx (UI) — deferred"
+    ]
+  },
+  "reactivated_tests": [
+    {
+      "from": "src/__ignored_tests__/services/operator/__tests__/priority.test.ts",
+      "to": "src/services/operator/__tests__/priority.test.ts",
+      "method": "git mv (rename, history preserved)",
+      "source_under_test": "src/services/operator/priority.ts",
+      "it_test_blocks": 42,
+      "covers": [
+        "deterministic priority scoring (impact * confidence * recency)",
+        "calibration multiplier by historical accuracy (low<0.5 reduce, 0.5-0.8 neutral, >0.8 increase, bounded [0.5,1.5], null-safe)",
+        "recency decay, clamping to 10000, 2-decimal rounding, bounded (no priority explosion)",
+        "legacy calculatePriority over OperatorItem"
+      ],
+      "static_verification": "imports '../priority' resolve; calculatePriorityScore/calculatePriority/getCalibrationMultiplier signatures match; every numeric assertion re-derived from source formulas (getRecencyWeight=1/(1+age), calibration piecewise-linear, clamp 10000, round 2dp) and confirmed exact.",
+      "db_dependency": "none (pure unit)",
+      "stale_fixture_fix": "OperatorItem type gained required identity/governance fields (workspaceId, ownerUserId, createdBy, lastUpdatedBy, decisionType) since authoring; added inert valid values to the 4 OperatorItem fixtures. No assertion value changed (calculatePriority reads only impactExpected/confidence/dueAt/decisionAccuracy)."
+    },
+    {
+      "from": "src/__ignored_tests__/services/intelligence/__tests__/recommendation.test.ts",
+      "to": "src/services/intelligence/__tests__/recommendation.test.ts",
+      "method": "git mv",
+      "source_under_test": "src/services/intelligence/recommendation.ts",
+      "it_test_blocks": 26,
+      "covers": [
+        "generateRecommendation variable disclosure (used/ignored, sorted, registry-filtered)",
+        "data-sufficiency fail-closed gate (>=3 patterns, confidence>=0.6; no problemType; no matching patterns; sub-60% demotion; empty items)",
+        "recommendation output (recommendedAction, basedOnPatternId=highest successRate, confidenceScore=successRate/100)",
+        "generateMultipleRecommendations ordering (patterns sorted desc by successRate; sub-threshold filtered/demoted; insufficient fallback)",
+        "determinism (stable output + variable ordering for same input)"
+      ],
+      "static_verification": "imports '../recommendation','../pattern-engine' resolve; generateRecommendation/generateMultipleRecommendations signatures match; every assertion traced to source: isDataSufficient MIN_PATTERNS=3/MIN_CONFIDENCE=0.6; getVariableRegistry has exactly 8 keys (5 used + dueAt/problemType/decisionType ignored); matchingPatterns filter successRate>60; stable descending sort; applyPriorFailureLearning is a no-op for the fixtures (items carry no problemType -> 0 prior failures).",
+      "db_dependency": "none (pure unit)",
+      "stale_fixture_fix": "DetectedPattern type gained required fields (outcomePattern, frequency, avgImpact, impactRange) and dropped 'description' since authoring; updated the base mockPattern literal accordingly (all other pattern literals spread it). ProblemType is now a strict 4-value union, so the stale 'unknown_type' was changed to a valid non-matching type ('growth_block') preserving the 'no matching patterns -> insufficient fallback' intent. Removed one unused 'ActionRecommendation' type import. No assertion value changed."
+    }
+  ],
+  "source_fixes": [],
+  "source_fixes_note": "No PRODUCT/source fix required. Static analysis exposed no defect in the ranking sources (operator/priority.ts, intelligence/recommendation.ts, control/recommendation.ts, variable-registry.ts) — the reactivated tests match current behavior. The only edits were test-fixture/type staleness updates (documented per test under stale_fixture_fix) required to compile against evolved shared domain types; no assertion value was weakened.",
+  "validation_commands": [
+    {"cmd": "git checkout -B claude/phase-1-wave-2-recommendation-ranking origin/main", "result": "branch at 4bd6ce2f, clean"},
+    {"cmd": "git ls-tree origin/main src/__ignored_tests__ | grep -c test", "result": "93 before; 91 after moving 2"},
+    {"cmd": "git mv <2 tests> into src/services/{operator,intelligence}/__tests__/", "result": "renamed; both now match include 'src/**/*.test.ts', neither in .claude/test-quarantine.json"},
+    {"cmd": "static cross-check: imports resolve, method signatures match, every asserted field/number vs source", "result": "PASS for both tests"},
+    {"cmd": "grep for @/lib/db | vi.mock | .skip in both tests", "result": "none — both pure-unit"},
+    {"cmd": "type audit: OperatorItem/DetectedPattern/ProblemType required fields vs fixtures", "result": "found + fixed stale fixtures (see stale_fixture_fix); no other tsc blockers"},
+    {"cmd": "npx tsc / npx vitest run <reactivated>", "result": "BLOCKED — node_modules absent, install forbidden; deferred to PR CI"}
+  ],
+  "deferred_or_blocked_dynamic_gates": [
+    {"gate": "typecheck (tsc)", "status": "BLOCKED (no node_modules) -> PR CI"},
+    {"gate": "lint (eslint)", "status": "BLOCKED (no node_modules) -> PR CI"},
+    {"gate": "vitest run (2 reactivated recommendation-ranking tests + Wave-1 tests)", "status": "BLOCKED locally (no node_modules); ACTIVE PROOF DEFERRED to PR CI build-and-test maintained suite"},
+    {"gate": "DB tests", "status": "N/A (both reactivated tests are pure-unit; no DB touched)"},
+    {"gate": "Prisma", "status": "N/A (schema untouched)"},
+    {"gate": "Playwright", "status": "N/A (no UI touched)"}
+  ],
+  "product_logic_changed": false,
+  "phase0_files_touched": false,
+  "wave1_active_tests_touched": false,
+  "rollback_plan": "All changes are one commit on claude/phase-1-wave-2-recommendation-ranking: 2 test-file renames (out of __ignored_tests__, with documented stale-fixture edits) + 3 audit docs. git revert the commit (or git mv the 2 tests back and revert fixture edits) restores the prior quarantine state. No product/source/schema/CI change, so revert is clean and immediate."
+}

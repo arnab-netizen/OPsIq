@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { generateRecommendation, generateMultipleRecommendations } from "../recommendation";
-import type { ActionRecommendation } from "../recommendation";
 import type { DecisionResult } from "@/domain/decision/types";
 import type { DetectedPattern } from "../pattern-engine";
 import type { OperatorItem } from "@/domain/operator/types";
@@ -31,9 +30,12 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
   const mockPattern: DetectedPattern = {
     patternId: "pattern-001",
     problemType: "revenue_leak",
+    outcomePattern: "success",
+    frequency: 2,
+    avgImpact: 100000,
+    impactRange: { min: 50000, max: 150000 },
     successRate: 75,
     itemIds: ["item-1", "item-2"],
-    description: "Common revenue leak pattern",
   };
 
   const mockItem1: OperatorItem = {
@@ -511,7 +513,9 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
     it("should return insufficient fallback when no valid recommendations", () => {
       const decision: DecisionResult = {
         ...mockDecisionResult,
-        problemType: "unknown_type",
+        // A valid ProblemType that does NOT match the patterns (all revenue_leak),
+        // exercising the "no matching patterns -> insufficient fallback" path.
+        problemType: "growth_block",
       };
 
       const pattern1 = { ...mockPattern, patternId: "p1" };
