@@ -1,0 +1,64 @@
+{
+  "phase": "Phase 1 Wave 4 — Service Ranking Proof (SERVICE_LOGIC_ONLY)",
+  "date": "2026-07-08",
+  "branch": "claude/phase-1-wave-4-service-ranking-proof",
+  "base": "origin/main (post-Wave-3)",
+  "label": "SERVICE_LOGIC_ONLY — mocked DB boundary; NOT real-DB proof",
+  "predecessor_wave_3": {
+    "pr": "https://github.com/arnab-netizen/OPsIq/pull/185",
+    "note": "Wave-3 real-DB recommendation proof. Wave-4 branch is opened/PR held until Wave-3 is green + merged + main verified, per owner no-idle loop instruction."
+  },
+  "service_ranking_inventory": {
+    "total_quarantined_before_wave4": 90,
+    "reactivated": 1,
+    "remaining_quarantined_after": 89
+  },
+  "reactivated_tests": [
+    {
+      "from": "src/__ignored_tests__/services/__tests__/recommendation.reranking.test.ts",
+      "to": "src/services/__tests__/recommendation.reranking.test.ts",
+      "method": "git mv (rename, history preserved) + fixture fix",
+      "lane": "unit (mocked db boundary via vi.spyOn(db.recommendation, findMany/update))",
+      "source_under_test": "src/services/recommendation.ts::reRankRecommendationsInEngagement",
+      "it_blocks": 9,
+      "covers": [
+        "empty engagement -> updated 0",
+        "recommendation without scoringMetrics -> skipped",
+        "score-driven priority change to high/medium/low",
+        "no-op when derived priority already matches",
+        "multiple recommendations mixed results",
+        "RECOMMENDATION_UPDATED ('recommendation.updated') audit event payload",
+        "version increment on update"
+      ],
+      "fixture_fix": "mockAuthContext migrated from the pre-refactor {session, policy} shape to CanonicalAuthContext-style {verifiedActorId,...}; requireServiceContext reads verifiedActorId (verified in src/lib/service-auth.ts). No assertion changed.",
+      "static_verification": "reRankRecommendationsInEngagement exists; AUDIT_EVENTS.RECOMMENDATION_UPDATED === 'recommendation.updated' (src/domain/constants/audit-events.ts); reRank uses only findMany/update (spied) + emitAuditEvent (mocked) + pure calculateRecommendationScore/mapScoreToPriority; version {increment:1} matches source; no unused imports; placed under __tests__ (excluded from tsc gate, included in vitest).",
+      "db_dependency": "none (mocked); SERVICE_LOGIC_ONLY"
+    }
+  ],
+  "deferred_tests": [
+    {
+      "path": "src/__ignored_tests__/services/__tests__/recommendation.priority.test.ts",
+      "reason": "createRecommendation-based blocks are stale against the current createRecommendation, which reads CanonicalAuthContext and invokes unmocked side-effecting deps (EventEmitterService.emit, recordRecommendationUsage, evidence/KPI evaluation) the test does not stub. Reliable reactivation needs broad mock repair (or real DB, out of Wave-4 scope). score->priority mapping is exercised transitively by the reactivated reranking test.",
+      "proposed_action": "focused follow-up wave to repair recommendation.priority.test.ts mocks, or migrate to real DB."
+    }
+  ],
+  "source_fixes": [],
+  "source_fixes_note": "No product/source fix. No recommendation architecture change. Only a test-fixture (auth context) migration to the current shape; no assertion weakened.",
+  "validation_commands": [
+    {"cmd": "git checkout -B claude/phase-1-wave-4-service-ranking-proof origin/main", "result": "branch created"},
+    {"cmd": "read reRankRecommendationsInEngagement + createRecommendation + requireServiceAuth + AUDIT_EVENTS", "result": "reRank self-contained (findMany/update/audit/pure-scoring); createRecommendation heavy/unmocked -> priority test deferred"},
+    {"cmd": "git mv reranking test -> src/services/__tests__/ + fix mockAuthContext", "result": "reactivated; matches include src/**/*.test.ts; not in .claude/test-quarantine.json; under __tests__ (excluded from tsc, included in vitest)"},
+    {"cmd": "static verify imports/exports/usage + constants", "result": "PASS — 9 it-blocks, no unused imports, audit constant + version-bump match source"},
+    {"cmd": "npx tsc / npx vitest run <reactivated>", "result": "BLOCKED locally (no node_modules); DEFERRED to PR CI maintained suite"}
+  ],
+  "deferred_or_blocked_dynamic_gates": [
+    {"gate": "typecheck (tsc)", "status": "N/A for this file (tsconfig excludes **/__tests__/**); whole-project tsc BLOCKED locally -> PR CI"},
+    {"gate": "lint (eslint)", "status": "BLOCKED locally -> PR CI"},
+    {"gate": "vitest run (reranking service-logic test)", "status": "BLOCKED locally (no node_modules); PROOF DEFERRED to PR CI maintained suite"},
+    {"gate": "DB lane", "status": "N/A (mocked; SERVICE_LOGIC_ONLY)"}
+  ],
+  "product_logic_changed": false,
+  "phase0_files_touched": false,
+  "prior_wave_active_tests_touched": false,
+  "rollback_plan": "One commit: 1 reactivated test (git mv + fixture fix) + 3 audit docs. git revert (or git mv the test back and restore the old mockAuthContext) restores the prior quarantine state. No product/source/schema/CI change -> clean, immediate."
+}
