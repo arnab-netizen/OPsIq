@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mapDriftToRequiredAction, deriveCommitmentStatus, type RequiredAction } from "./next-action.service";
-import type { DriftDetectionResult } from "./execution-drift.service";
+import { mapDriftToRequiredAction, deriveCommitmentStatus, type RequiredAction } from "../next-action.service";
+import type { DriftDetectionResult } from "../execution-drift.service";
 
+// deriveCommitmentStatus calls db.action.findFirst. Mock the "@/lib/db" module,
+// and — matching the repo convention for full-module db mocks (e.g.
+// src/__tests__/owner-mode/*.test.ts) — also export getDbInstance, which
+// vitest.setup.ts's beforeAll imports when TEST_WITH_DB=true. Omitting it makes
+// the whole suite fail to load in the maintained-suite (DB) lane.
 vi.mock("@/lib/db", () => ({
   db: {
     action: {
@@ -9,6 +14,7 @@ vi.mock("@/lib/db", () => ({
       findUnique: vi.fn(),
     },
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 describe("NextActionService", () => {
