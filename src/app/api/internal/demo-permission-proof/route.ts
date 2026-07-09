@@ -18,6 +18,7 @@ import { getCapabilitiesForRole } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { logger } from "@/infra/logger";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
+import { classifyDbRuntimeError } from "@/lib/schema-drift";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
 
@@ -49,7 +50,19 @@ interface PermissionProofResponse {
     | "role_assignment_missing"
     | "membership_missing"
     | "workspace_id_invalid"
-    | "policy_context_mismatch";
+    | "policy_context_mismatch"
+    | "schema_drift";
+  /**
+   * Populated only when `classification === "schema_drift"`: the deployed database is
+   * behind on a migration (a required column is missing), NOT a permission/membership
+   * problem. Operator-safe (no secrets) — produced by `classifyDbRuntimeError`.
+   */
+  schemaDrift?: {
+    table?: string;
+    column?: string;
+    introducedByMigration?: string;
+    summary: string;
+  };
 }
 
 // GET: Prove current permission state
@@ -211,6 +224,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
   } catch (error) {
     logger.error("[DEMO_PERMISSION_PROOF] GET failed", error instanceof Error ? error : new Error(String(error)));
+    // Distinguish a deployed-DB schema-drift error (a required column is missing because a
+    // migration has not been applied) from a genuine permission/membership problem. Before
+    // this, ANY error here was mislabelled "membership_missing" — a false signal that hid the
+    // real cause (the Phase 3 residual: production DB behind on 20260625120000). The summary is
+    // operator-safe (no secrets, no raw error.message).
+    const drift = classifyDbRuntimeError(error);
     return NextResponse.json(
       {
         userFound: false,
@@ -221,7 +240,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         roleAssignmentActive: false,
         roleGrantsEngagementView: false,
         policyContextHasEngagementView: false,
-        classification: "membership_missing",
+        classification: drift.kind === "schema_drift" ? "schema_drift" : "membership_missing",
+        ...(drift.kind === "schema_drift" && {
+          schemaDrift: {
+            table: drift.table,
+            column: drift.column,
+            introducedByMigration: drift.introducedByMigration,
+            summary: drift.summary,
+          },
+        }),
       } as PermissionProofResponse,
       { status: 500 }
     );
