@@ -1,0 +1,257 @@
+{
+  "phase": "Phase 5B",
+  "title": "CI reliability hardening for browser-pack flakes",
+  "date": "2026-07-09",
+  "branch": "claude/phase-5b-ci-reliability-hardening",
+  "scope": "ci_workflow_only",
+  "main_verification": {
+    "base_head": "f92aaec",
+    "ancestry_ok": true,
+    "working_tree_clean": true,
+    "main_push_ci_run_id": 28991234538,
+    "main_push_ci_result": "success",
+    "required_gates_green": [
+      "build-and-test (20.x)",
+      "lint (20.x)",
+      "Build + Type + Prisma Verify",
+      "MVP Readiness Validation",
+      "Security Baseline Check",
+      "branch-protection"
+    ]
+  },
+  "head_before": "f92aaec",
+  "head_after": "03191c4",
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_altered": false,
+    "product_code_changed": false,
+    "test_code_changed": false,
+    "assertions_weakened": false,
+    "tests_skipped_deleted_or_quarantined": false,
+    "continue_on_error_added": false,
+    "required_gate_made_non_required": false,
+    "owner_migration_approval_phrase_received": false,
+    "required_exact_phrase": "I approve running the production migration"
+  },
+  "inventory_rows": [
+    {
+      "workflow": "staff-proof-anti-gaming.yml",
+      "job": "All-120 Staff/Proof desktop + mobile",
+      "symptom": "next build heap OOM / SIGABRT (observed PR #204 shard 1); no npm/pw retry; silent app-start collapse",
+      "required": false,
+      "sibling_shards_passed": true,
+      "product_in_log": false,
+      "classification": "NON_REQUIRED_INFRA_FLAKE"
+    },
+    {
+      "workflow": "ugly-tail-risk-crisis.yml",
+      "job": "All-150 Ugly/Tail-Risk/Crisis desktop + mobile",
+      "symptom": "same defect profile",
+      "required": false,
+      "sibling_shards_passed": true,
+      "product_in_log": false,
+      "classification": "NON_REQUIRED_INFRA_FLAKE"
+    },
+    {
+      "workflow": "daily-operations.yml",
+      "job": "All-300 Daily Operations desktop + mobile",
+      "symptom": "same defect profile",
+      "required": false,
+      "sibling_shards_passed": true,
+      "product_in_log": false,
+      "classification": "NON_REQUIRED_INFRA_FLAKE"
+    },
+    {
+      "workflow": "growth-profit-scaling.yml",
+      "job": "All-150 Growth/Profit/Scaling desktop + mobile",
+      "symptom": "same defect profile",
+      "required": false,
+      "sibling_shards_passed": true,
+      "product_in_log": false,
+      "classification": "NON_REQUIRED_INFRA_FLAKE"
+    },
+    {
+      "workflow": "customer-vendor-market.yml",
+      "job": "All-100 Customer/Vendor/Market desktop + mobile",
+      "symptom": "same defect profile",
+      "required": false,
+      "sibling_shards_passed": true,
+      "product_in_log": false,
+      "classification": "NON_REQUIRED_INFRA_FLAKE"
+    },
+    {
+      "workflow": "weekly-management-trend.yml",
+      "job": "All-150 Weekly Management/Trend desktop + mobile",
+      "symptom": "same defect profile",
+      "required": false,
+      "sibling_shards_passed": true,
+      "product_in_log": false,
+      "classification": "NON_REQUIRED_INFRA_FLAKE"
+    },
+    {
+      "workflow": "unknown-ood.yml",
+      "job": "All-110 Unknown/OOD desktop + mobile",
+      "symptom": "same defect profile",
+      "required": false,
+      "sibling_shards_passed": true,
+      "product_in_log": false,
+      "classification": "NON_REQUIRED_INFRA_FLAKE"
+    },
+    {
+      "workflow": "chaos-exhaustive.yml",
+      "job": "All-180 desktop + representative mobile chaos browser",
+      "symptom": "same defect profile",
+      "required": false,
+      "sibling_shards_passed": true,
+      "product_in_log": false,
+      "classification": "NON_REQUIRED_INFRA_FLAKE"
+    },
+    {
+      "workflow": "sequential-simulations.yml",
+      "job": "Sequential Simulations desktop + mobile",
+      "symptom": "same defect profile",
+      "required": false,
+      "sibling_shards_passed": true,
+      "product_in_log": false,
+      "classification": "NON_REQUIRED_INFRA_FLAKE"
+    }
+  ],
+  "workflows_changed": [
+    {
+      "file": ".github/workflows/staff-proof-anti-gaming.yml",
+      "changes": [
+        "build-step heap bump",
+        "npm ci retry x2",
+        "playwright install retry",
+        "app-start classification"
+      ]
+    },
+    {
+      "file": ".github/workflows/ugly-tail-risk-crisis.yml",
+      "changes": [
+        "build-step heap bump",
+        "npm ci retry x2",
+        "playwright install retry",
+        "app-start classification"
+      ]
+    },
+    {
+      "file": ".github/workflows/daily-operations.yml",
+      "changes": [
+        "build-step heap bump",
+        "npm ci retry x2",
+        "playwright install retry",
+        "app-start classification"
+      ]
+    },
+    {
+      "file": ".github/workflows/growth-profit-scaling.yml",
+      "changes": [
+        "build-step heap bump",
+        "npm ci retry x2",
+        "playwright install retry",
+        "app-start classification"
+      ]
+    },
+    {
+      "file": ".github/workflows/customer-vendor-market.yml",
+      "changes": [
+        "build-step heap bump",
+        "npm ci retry x2",
+        "playwright install retry",
+        "app-start classification"
+      ]
+    },
+    {
+      "file": ".github/workflows/weekly-management-trend.yml",
+      "changes": [
+        "build-step heap bump",
+        "npm ci retry x2",
+        "playwright install retry",
+        "app-start classification"
+      ]
+    },
+    {
+      "file": ".github/workflows/unknown-ood.yml",
+      "changes": [
+        "build-step heap bump",
+        "npm ci retry x2",
+        "playwright install retry",
+        "app-start classification"
+      ]
+    },
+    {
+      "file": ".github/workflows/chaos-exhaustive.yml",
+      "changes": [
+        "build-step heap bump",
+        "npm ci retry x2",
+        "playwright install retry",
+        "app-start classification"
+      ]
+    },
+    {
+      "file": ".github/workflows/sequential-simulations.yml",
+      "changes": [
+        "build-step heap bump",
+        "npm ci retry x2",
+        "playwright install retry",
+        "app-start classification"
+      ]
+    }
+  ],
+  "scripts_changed": [],
+  "hardening_details": {
+    "heap": "NODE_OPTIONS=--max-old-space-size=4096 scoped to the 'Build app' step (build-heavy, matches ci.yml)",
+    "npm_ci_retry": "3 attempts, linear backoff sleep i*10s, final failure still fails",
+    "playwright_install_retry": "3 attempts, linear backoff sleep i*15s, final failure still fails",
+    "app_start_classification": "if app not up within 120s -> ::error::APP_START_FAILED + cat /tmp/app.log + exit 1"
+  },
+  "validation_commands": [
+    {
+      "cmd": "python3 harden.py",
+      "result": "ALL_OK (per-block substitution counts asserted: npm ci x2, build x1, playwright x1, start x1 per file)"
+    },
+    {
+      "cmd": "yaml.safe_load_all over .github/workflows/*.yml",
+      "result": "YAML_OK"
+    },
+    {
+      "cmd": "bash -n on npm-ci-retry / playwright-retry / start-app snippets",
+      "result": "OK"
+    },
+    {
+      "cmd": "git diff --stat",
+      "result": "9 files changed, +288 / -36, workflows only"
+    }
+  ],
+  "deferred_gates": [
+    {
+      "item": "TypeScript typecheck",
+      "reason": "no TS files touched",
+      "state": "not_applicable"
+    },
+    {
+      "item": "DB tests",
+      "reason": "no DB/product code touched",
+      "state": "not_applicable"
+    },
+    {
+      "item": "Playwright local browser run",
+      "reason": "requires CI infra (build + service DB + browser)",
+      "state": "deferred_to_ci"
+    }
+  ],
+  "ci": {
+    "pr_number": "TO_FILL",
+    "pr_url": "TO_FILL",
+    "required_gates_result": "TO_FILL_AFTER_CI",
+    "browser_packs_result": "TO_FILL_AFTER_CI"
+  },
+  "rollback": "revert the commit / nine workflow files; pure YAML diff, no state, instantaneous",
+  "recommended_next_phase": [
+    "A: production migration (requires exact approval phrase, not given)",
+    "D: quarantine reduction",
+    "E: owner-journey Playwright proof local/preview only"
+  ]
+}
