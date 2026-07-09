@@ -1,0 +1,71 @@
+{
+  "phase": "Phase 5D",
+  "artifact": "main-blocker triage + hostile audit (report-only)",
+  "date": "2026-07-09",
+  "branch": "claude/phase-5d-blocker-and-audit-report",
+  "base_main_head": "5badd9b",
+  "type": "report_only_no_product_change",
+  "safety": {
+    "product_code_changed": false,
+    "test_code_changed": false,
+    "assertions_weakened": false,
+    "tests_deleted_or_quarantined": false,
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_altered": false,
+    "owner_migration_approval_phrase_received": false,
+    "required_exact_phrase": "I approve running the production migration"
+  },
+  "main_red_gates": [
+    {
+      "check": "CI - Build & Test",
+      "main_run": "#3001 (run 29011765217)",
+      "result": "failure",
+      "step": "Run maintained test suite (blocking; quarantine excluded)",
+      "classification": "NONDETERMINISTIC_FLAKE",
+      "proof": "identical commit 5badd9b passed as PR run #3000 (success, 30m57s) and failed as main run #3001 (failure, 29m20s)",
+      "candidate_locus": "flood-protection-audit-isolation AuditPersistenceQueue under load (unconfirmed; local repro contaminated by local DB drop)",
+      "required": true,
+      "remedy": "re-run failed job (integration gets 403; owner/account can) or next main push; do not weaken/skip",
+      "wave1_regression": false
+    },
+    {
+      "check": "Smoke - Production Dashboard",
+      "main_run": "#562 (run 29011765212)",
+      "result": "failure",
+      "classification": "KNOWN_PRODUCTION_SCHEMA_DRIFT (BLOCKED_SCHEMA_DRIFT)",
+      "detail": "GET /api/internal/demo-permission-proof 500; missing workspace_memberships.designation; migration 20260625120000_owner_mode_execution_tables pending",
+      "red_on_commits": ["#562 5badd9b", "#561 f953b32", "#560 f92aaec", "#559 4ae217d", "#558 ff131191"],
+      "required": false,
+      "remedy": "owner-approved production migration (exact phrase not received)",
+      "wave1_regression": false
+    }
+  ],
+  "hostile_audit_findings": [
+    { "id": "F1", "sev": "CRITICAL", "verified": "V", "loc": "src/services/findings.ts:582,~700-764,421,496", "summary": "invalid-select of non-existent Finding columns (linkedEvidence/description/findingType/provisionalFlag) -> raw 500 on findings list/detail/evidence endpoints", "class": "getRecommendation-class" },
+    { "id": "F2", "sev": "HIGH", "verified": "V", "loc": "src/app/api/owner/dashboard/route.ts:125", "summary": "db.KPI (should be db.kPI) -> undefined.findMany -> owner dashboard 400 every request" },
+    { "id": "F3", "sev": "CRITICAL(ci)", "verified": "V", "loc": ".github/workflows/mvp-readiness.yml:120,134", "summary": "Security Baseline Check job-level continue-on-error:true + npm audit || true -> required gate can never fail" },
+    { "id": "F4", "sev": "CRITICAL(ci)", "verified": "V", "loc": "src/__tests__/api/*, src/__tests__/security/hostile-auth-tests.test.ts", "summary": "871 vacuous expect(true).toBe(true) asserts across 31 ACTIVE test files run in blocking lane; entire API+hostile-auth surface is placebo" },
+    { "id": "F5", "sev": "HIGH", "verified": "A", "loc": "scripts/mvp-readiness-check.sh", "summary": "MVP Readiness gate collapses to build check (warn not fail; grep -q passed)" },
+    { "id": "F6", "sev": "HIGH", "verified": "A", "loc": "tsconfig.json exclude", "summary": "tsc gates blind to __tests__/tests/__ignored_tests__ paths" },
+    { "id": "F7", "sev": "MED", "verified": "A", "loc": "vitest.config.ts", "summary": "*.integration.test.ts (diagnosis, recommendation) never runs in any lane" },
+    { "id": "F8", "sev": "HIGH", "verified": "V", "loc": "src/services/approval/workflow.ts", "summary": "approve/reject/create $100k approval records: 0 audit, no status guard, no idempotency/concurrency" },
+    { "id": "F9", "sev": "HIGH", "verified": "A", "loc": "private-mode/role-access.service.ts; decisions/decision-creation-service.ts; decision/status-management.ts; deliverable.ts", "summary": "unaudited access grants; createDecision no audit/idempotency; changeDecisionStatus non-atomic swallowed off-chain audit; deliverable version-guard unused" },
+    { "id": "F10", "sev": "HIGH", "verified": "V", "loc": "src/middleware/workspace-enforcement.ts:37", "summary": "bare-select membership read on 39 owner routes -> drift lockout (P2022 -> null -> deny). Fix: select {isActive,role}" },
+    { "id": "F11", "sev": "HIGH", "verified": "V", "loc": "src/app/api/onboarding/invite/route.ts:49", "summary": "broken boolean (role!=='admin' && isActive===false) -> active non-admin can invite at any role incl admin (priv-esc); latent behind F12" },
+    { "id": "F12", "sev": "HIGH", "verified": "V", "loc": "src/lib/auth-guard.ts:124-132", "summary": "withAuth() defaults workspaceId='system' (no such workspace) -> requirePolicyContext throws -> every legacy withAuth() route 401s all users; masks F11; latent-authz time bomb" },
+    { "id": "F13", "sev": "MED", "verified": "A", "loc": "src/app/api/diagnosis/{bottleneck,root-cause,maturity}/route.ts", "summary": "trust body.workspaceId, authorize in 'system' ctx, no membership check; mitigated (pure computation, no DB)" }
+  ],
+  "cleared_false_positives": [
+    "workspace-isolation scanner flags: diagnosis/route.ts debug ternary; entitlement.resetQuota test-only; execution-auditor optional-workspaceId zero callers",
+    "internal/* routes gated by verifyDiagnosticKeyFromRequest (fail-closed); webhooks/stripe signature-verified; admin/* SYSTEM_ADMIN-gated"
+  ],
+  "recommended_next_waves": [
+    "F1+F2 owner-facing 500s (real db-backed tests)",
+    "F3 security-baseline gate",
+    "F10 workspace-enforcement narrow-select",
+    "F8 approval-workflow audit+status guard",
+    "F11 invite boolean + F12 legacy->canonical migration plan",
+    "F4 placebo-test conversion in waves (likely home of the build-and-test flake)"
+  ]
+}
