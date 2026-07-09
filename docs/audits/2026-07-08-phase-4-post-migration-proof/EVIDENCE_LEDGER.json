@@ -26,6 +26,15 @@
     "item_1_merge": "ff131191",
     "runbook": "docs/audits/2026-07-08-phase-4-production-schema-drift-readiness/MIGRATION_RUNBOOK.md"
   },
+  "ledger_rows": [
+    { "id": "pr_202_merge", "detail": "Phase 4 Item 1 merged (schema-drift readiness)", "merge_commit": "ff1311916aa9f5c838568c5a27a101d3ec63c88d", "state": "merged" },
+    { "id": "main_verification_ff131191", "detail": "main push CI (ci.yml build-and-test) for ff131191", "state": "PENDING_CONFIRMATION", "note": "identical code passed on PR #202; not classified GREEN until the ff131191 push run finishes green" },
+    { "id": "pr_203_docs", "detail": "Phase 4 Item 2 docs-only (this packet)", "branch": "claude/phase-4-post-migration-proof-plan", "state": "open_draft" },
+    { "id": "approval_gate", "detail": "explicit owner phrase required before migration", "phrase": "I approve running the production migration", "state": "not_received" },
+    { "id": "migration_run", "detail": "production migration 20260625120000_owner_mode_execution_tables", "state": "not_run" },
+    { "id": "post_migration_checklist", "detail": "POST_MIGRATION_CHECKLIST.md (sequence + evidence template)", "state": "prepared" },
+    { "id": "stop_condition", "detail": "halt + restore snapshot on migration error / post-migration 500 / demo-permission-proof still schema_drift / auth regression / destructive statement", "state": "defined" }
+  ],
   "deliverables": {
     "checklist": "POST_MIGRATION_CHECKLIST.md",
     "final_report": "FINAL_REPORT.md",

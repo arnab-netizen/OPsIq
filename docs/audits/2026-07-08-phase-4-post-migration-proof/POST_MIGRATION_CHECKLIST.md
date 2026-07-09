@@ -74,6 +74,32 @@ Do NOT apply additional migrations or hand-patches to production without a **new
 - Escalation: if restore is needed or smoke fails post-restore, notify the owner immediately with the
   captured evidence (status codes + classifications, no secrets) and stop.
 
+## 8b. Evidence capture template (fill in during/after the OWNER-RUN migration — no secrets)
+Capture the following as the migration record (redact any connection string / token / password):
+
+```
+run_timestamp_utc:        __________________________   (ISO 8601, e.g. 2026-07-09T14:03:00Z)
+actor:                    __________________________   (who ran it — owner / authorized operator)
+environment:              production
+deployment_commit_sha:    __________________________   (from GET /api/internal/build-info)
+approval_phrase_recorded: __________________________   ("I approve running the production migration")
+snapshot_id_or_timestamp: __________________________   (from §1)
+migration_status_pre:     __________________________   (prisma migrate status BEFORE — expect 20260625120000 pending)
+migration_command_output: __________________________   (applied-migration line + exit code; NO url/secret)
+migration_status_post:    __________________________   (prisma migrate status AFTER — expect applied, 0 pending)
+smoke_build_info:         __________________________   (status; deployed commit match yes/no)
+smoke_login:              __________________________   (status; expect 200)
+smoke_dashboard_root:     __________________________   (status; expect 200)
+smoke_demo_permission:    __________________________   (status + classification; expect 200 / permission_ready — NOT schema_drift, NOT 500)
+smoke_engagements:        __________________________   (status; expect 200)
+smoke_engagement_dash:    __________________________   (status; expect 200)
+smoke_unauthorized:       __________________________   (expect denied / 401; no auth bypass)
+smoke_workflow_result:    __________________________   (Smoke - Production Dashboard on main: green / red)
+final_health:             __________________________   (HEALTHY | BLOCKED | FAILED — per §9)
+stop_condition_hit:       __________________________   (none | which one, and action taken)
+```
+Save the completed record into a new run entry (do not overwrite this template).
+
 ## 9. Final production-health classification criteria
 Declare production **HEALTHY** only when ALL are true:
 - [ ] `20260625120000_owner_mode_execution_tables` is applied (migrate status).
