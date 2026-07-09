@@ -7,7 +7,8 @@ import {
   requireAuthInternal,
   getServerAuthContext,
 } from "./auth-guard";
-import type { PolicyContext, AuthContext } from "./auth-guard";
+import type { PolicyContext } from "@/policies/capability-check";
+import type { SessionInfo } from "@/services/auth";
 import { ROLES } from "@/domain/constants/roles";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
@@ -27,7 +28,7 @@ function makeCtx(
   return { userId: "user-1", roles: roles as PolicyContext["roles"] };
 }
 
-function makeSession(userId: string = "user-1") {
+function makeSession(userId: string = "user-1"): SessionInfo {
   return {
     user: { id: userId, email: "user@example.com", name: "User", isActive: true },
     sessionId: "session-1",
@@ -95,7 +96,7 @@ describe("Auth Primitives (Fail-Closed)", () => {
       const session = makeSession();
       const policy = makeCtx([{ role: ROLES.EXPERIENCED_CONSULTANT }]);
 
-      vi.mocked(authService.requireSession).mockResolvedValueOnce(session as any);
+      vi.mocked(authService.requireSession).mockResolvedValueOnce(session);
       vi.mocked(authService.requirePolicyContext).mockResolvedValueOnce(policy);
 
       const auth = await requireAuth();
@@ -113,7 +114,7 @@ describe("Auth Primitives (Fail-Closed)", () => {
 
     it("throws UnauthorizedError when policy context missing", async () => {
       const session = makeSession();
-      vi.mocked(authService.requireSession).mockResolvedValueOnce(session as any);
+      vi.mocked(authService.requireSession).mockResolvedValueOnce(session);
       vi.mocked(authService.requirePolicyContext).mockRejectedValueOnce(
         new UnauthorizedError("No policy")
       );
@@ -127,7 +128,7 @@ describe("Auth Primitives (Fail-Closed)", () => {
       const session = makeSession();
       const policy = makeCtx([{ role: ROLES.EXPERIENCED_CONSULTANT }]);
 
-      vi.mocked(authService.requireSession).mockResolvedValueOnce(session as any);
+      vi.mocked(authService.requireSession).mockResolvedValueOnce(session);
       vi.mocked(authService.requirePolicyContext).mockResolvedValueOnce(policy);
 
       const auth = await requireAuthForCapability(CAPABILITIES.STAGE_VIEW);
@@ -138,7 +139,7 @@ describe("Auth Primitives (Fail-Closed)", () => {
       const session = makeSession();
       const policy = makeCtx([{ role: ROLES.VIEWER }]);
 
-      vi.mocked(authService.requireSession).mockResolvedValueOnce(session as any);
+      vi.mocked(authService.requireSession).mockResolvedValueOnce(session);
       vi.mocked(authService.requirePolicyContext).mockResolvedValueOnce(policy);
 
       await expect(
@@ -162,7 +163,7 @@ describe("Auth Primitives (Fail-Closed)", () => {
       const session = makeSession();
       const policy = makeCtx([{ role: ROLES.EXPERIENCED_CONSULTANT }]);
 
-      vi.mocked(authService.requireSession).mockResolvedValueOnce(session as any);
+      vi.mocked(authService.requireSession).mockResolvedValueOnce(session);
       vi.mocked(authService.requirePolicyContext).mockResolvedValueOnce(policy);
 
       const auth = await requireAuthInternal();
@@ -173,7 +174,7 @@ describe("Auth Primitives (Fail-Closed)", () => {
       const session = makeSession();
       const policy = makeCtx([{ role: ROLES.CLIENT_OWNER }]);
 
-      vi.mocked(authService.requireSession).mockResolvedValueOnce(session as any);
+      vi.mocked(authService.requireSession).mockResolvedValueOnce(session);
       vi.mocked(authService.requirePolicyContext).mockResolvedValueOnce(policy);
 
       await expect(requireAuthInternal()).rejects.toThrow(ForbiddenError);
@@ -185,7 +186,7 @@ describe("Auth Primitives (Fail-Closed)", () => {
       const session = makeSession();
       const policy = makeCtx([{ role: ROLES.EXPERIENCED_CONSULTANT }]);
 
-      vi.mocked(authService.requireSession).mockResolvedValueOnce(session as any);
+      vi.mocked(authService.requireSession).mockResolvedValueOnce(session);
       vi.mocked(authService.requirePolicyContext).mockResolvedValueOnce(policy);
 
       const auth = await getServerAuthContext();
@@ -204,7 +205,7 @@ describe("Auth Primitives (Fail-Closed)", () => {
 
     it("returns null when policy context missing (graceful)", async () => {
       const session = makeSession();
-      vi.mocked(authService.requireSession).mockResolvedValueOnce(session as any);
+      vi.mocked(authService.requireSession).mockResolvedValueOnce(session);
       vi.mocked(authService.requirePolicyContext).mockRejectedValueOnce(
         new UnauthorizedError("No policy")
       );

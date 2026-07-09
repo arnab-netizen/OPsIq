@@ -18,7 +18,7 @@ import type { PolicyContext } from "@/policies/capability-check";
  */
 
 describe("Block 3: RBAC Enforcement", () => {
-  let mockSession: any;
+  let mockSession: { user: { id: string; email: string } };
   let mockPolicy: PolicyContext;
 
   beforeEach(() => {
@@ -401,15 +401,15 @@ describe("Block 3: RBAC Enforcement", () => {
         userId: "scoped-user",
         roles: [
           {
-            role: ROLES.CONSULTANT,
+            role: ROLES.EXPERIENCED_CONSULTANT,
             scope: "engagement",
             scopeId: "eng-123",
-          } as any,
+          },
         ],
       };
 
-      // Note: CONSULTANT is not a standard role, this tests scope behavior
-      // In real scenarios, use EXPERIENCED_CONSULTANT or similar
+      // Engagement-scoped role: this test asserts scope metadata is preserved.
+      // Actual scope-based capability matching is tested elsewhere.
       const scope = { type: "engagement", id: "eng-123" };
       const differentScope = { type: "engagement", id: "eng-456" };
 
