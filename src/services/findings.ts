@@ -53,6 +53,43 @@ export interface LinkEvidenceToFindingInput {
   linkType?: string;
 }
 
+// ── Phase 6A: linked-evidence & derived fields ───────────────────────────────
+// The Finding model has NO `linkedEvidence`/`description`/`findingType`/`provisionalFlag`
+// columns and Evidence has no `relatedFindingId`/`visibility` column. Selecting them threw
+// PrismaClientValidationError → raw 500 on the owner-facing findings endpoints. Linked evidence
+// is persisted in the REAL `Finding.metadata` JSON column; derived DTO fields are computed from
+// real columns. No schema change, no fake fields.
+type FindingMetadata = { linkedEvidenceIds?: unknown } & Record<string, unknown>;
+
+function readLinkedEvidenceIds(metadata: unknown): string[] {
+  const md = (metadata ?? {}) as FindingMetadata;
+  return Array.isArray(md.linkedEvidenceIds)
+    ? md.linkedEvidenceIds.filter((x): x is string => typeof x === "string")
+    : [];
+}
+
+function withLinkedEvidenceIds(metadata: unknown, ids: string[]): Record<string, unknown> {
+  const md = (metadata ?? {}) as FindingMetadata;
+  return { ...md, linkedEvidenceIds: ids };
+}
+
+const FINDING_TYPE_BY_IMPACT: Record<string, string> = {
+  revenue: "market",
+  cost: "operational",
+  execution: "operational",
+  risk: "technical",
+};
+function deriveFindingType(impactArea: string | null): string {
+  return (impactArea && FINDING_TYPE_BY_IMPACT[impactArea]) || "technical";
+}
+
+// Evidence "visibility" is not a column; when present it lives under Evidence.metadata.visibility.
+// Absent/unknown defaults to "internal" (fail-closed for client-visible filtering).
+function readEvidenceVisibility(metadata: unknown): string {
+  const md = (metadata ?? {}) as Record<string, unknown>;
+  return typeof md.visibility === "string" ? md.visibility : "internal";
+}
+
 export async function createFinding(
   input: CreateFindingInput,
   auth: ServiceAuthEnvelope
@@ -257,11 +294,12 @@ export async function validateFinding(
 
   const existing = await db.finding.findUnique({
     where: { id: findingId, engagement: { workspaceId: auth.verifiedWorkspaceId } },
-    select: { id: true, engagementId: true, linkedEvidence: true },
+    select: { id: true, engagementId: true, primaryEvidenceId: true, metadata: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
 
-  if (existing.linkedEvidence && existing.linkedEvidence.length === 0) {
+  const linkedIds = readLinkedEvidenceIds(existing.metadata);
+  if (!existing.primaryEvidenceId && linkedIds.length === 0) {
     throw new ValidationError("Finding must have at least one linked evidence before validation");
   }
 
@@ -353,20 +391,32 @@ export async function supersedeFinding(
   });
   if (!oldFinding) throw new NotFoundError("Finding", oldFindingId);
 
-  // Create new finding using the new field names
-  const findingType = newFindingInput.impactArea === "revenue" ? "market" : "operational";
+  // Create the superseding finding using REAL schema columns only. The prior implementation wrote
+  // phantom columns (description/findingType/linkedEvidence/createdBy/workspaceId) and omitted the
+  // required primaryEvidenceId → PrismaClientValidationError. Finding scopes via engagement; linked
+  // evidence lives in metadata; findingType/description are derived, not stored.
+  const newPrimaryEvidenceId =
+    newFindingInput.primaryEvidenceId || newFindingInput.linkedEvidenceIds?.[0];
+  if (!newPrimaryEvidenceId) {
+    throw new ValidationError(
+      "primaryEvidenceId is required. Evidence must be created before Finding."
+    );
+  }
+  const newSummary = newFindingInput.summary || newFindingInput.description || newFindingInput.statement || "";
   const newFinding = await db.finding.create({
     data: {
+      id: randomUUID(),
       engagementId: newFindingInput.engagementId,
       title: newFindingInput.title,
-      description: newFindingInput.summary,
-      findingType: findingType,
+      summary: newSummary,
+      primaryEvidenceId: newPrimaryEvidenceId,
       impactArea: newFindingInput.impactArea,
       severity: newFindingInput.severity,
       rootCause: newFindingInput.rootCause || null,
-      linkedEvidence: newFindingInput.primaryEvidenceId || null,
-      createdBy: auth.verifiedActorId,
-      workspaceId: auth.verifiedWorkspaceId,
+      ...(newFindingInput.linkedEvidenceIds?.length
+        ? { metadata: { linkedEvidenceIds: newFindingInput.linkedEvidenceIds } }
+        : {}),
+      updatedAt: new Date(),
     },
     select: { id: true, engagementId: true },
   });
@@ -418,7 +468,7 @@ export async function linkEvidenceToFinding(
       id: findingId,
       engagement: { workspaceId: auth.verifiedWorkspaceId },
     },
-    select: { id: true, engagementId: true, linkedEvidence: true },
+    select: { id: true, engagementId: true, metadata: true },
   });
   if (!finding) throw new NotFoundError("Finding", findingId);
 
@@ -427,7 +477,7 @@ export async function linkEvidenceToFinding(
       id: evidenceId,
       engagement: { workspaceId: auth.verifiedWorkspaceId },
     },
-    select: { id: true, engagementId: true, status: true, relatedFindingId: true },
+    select: { id: true, engagementId: true, status: true },
   });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
@@ -443,27 +493,18 @@ export async function linkEvidenceToFinding(
     throw new ValidationError("Cannot link superseded evidence");
   }
 
-  if (finding.linkedEvidence.includes(evidenceId)) {
+  const linkedIds = readLinkedEvidenceIds(finding.metadata);
+  if (linkedIds.includes(evidenceId)) {
     throw new ValidationError("Evidence is already linked to this finding");
   }
 
-  const updated = await db.$transaction(async (tx: any) => {
-    const updatedFinding = await tx.finding.update({
-      where: { id: findingId },
-      data: {
-        linkedEvidence: {
-          push: evidenceId,
-        },
-      },
-      select: { id: true, engagementId: true },
-    });
-
-    await tx.evidence.update({
-      where: { id: evidenceId },
-      data: { relatedFindingId: findingId },
-    });
-
-    return updatedFinding;
+  const updated = await db.finding.update({
+    where: { id: findingId },
+    data: {
+      metadata: withLinkedEvidenceIds(finding.metadata, [...linkedIds, evidenceId]),
+      updatedAt: new Date(),
+    },
+    select: { id: true, engagementId: true },
   });
 
   await emitAuditEvent({
@@ -493,7 +534,7 @@ export async function unlinkEvidenceFromFinding(
       id: findingId,
       engagement: { workspaceId: auth.verifiedWorkspaceId },
     },
-    select: { id: true, engagementId: true, linkedEvidence: true },
+    select: { id: true, engagementId: true, metadata: true },
   });
   if (!finding) throw new NotFoundError("Finding", findingId);
 
@@ -502,7 +543,7 @@ export async function unlinkEvidenceFromFinding(
       id: evidenceId,
       engagement: { workspaceId: auth.verifiedWorkspaceId },
     },
-    select: { id: true, engagementId: true, relatedFindingId: true },
+    select: { id: true, engagementId: true },
   });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
@@ -510,25 +551,21 @@ export async function unlinkEvidenceFromFinding(
     throw new ValidationError("Finding and evidence must belong to the same engagement");
   }
 
-  if (!finding.linkedEvidence.includes(evidenceId)) {
+  const linkedIds = readLinkedEvidenceIds(finding.metadata);
+  if (!linkedIds.includes(evidenceId)) {
     throw new ValidationError("Evidence is not linked to this finding");
   }
 
-  const updated = await db.$transaction(async (tx: any) => {
-    const updatedFinding = await tx.finding.update({
-      where: { id: findingId },
-      data: {
-        linkedEvidence: finding.linkedEvidence.filter((id: any) => id !== evidenceId),
-      },
-      select: { id: true, linkedEvidence: true },
-    });
-
-    await tx.evidence.update({
-      where: { id: evidenceId },
-      data: { relatedFindingId: null },
-    });
-
-    return updatedFinding;
+  const updated = await db.finding.update({
+    where: { id: findingId },
+    data: {
+      metadata: withLinkedEvidenceIds(
+        finding.metadata,
+        linkedIds.filter((id) => id !== evidenceId)
+      ),
+      updatedAt: new Date(),
+    },
+    select: { id: true },
   });
 
   await emitAuditEvent({
@@ -576,7 +613,7 @@ export async function listFindingsForEngagement(
       severity: true,
       impactArea: true,
       createdAt: true,
-      linkedEvidence: true,
+      metadata: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -586,18 +623,12 @@ export async function listFindingsForEngagement(
     // Collect all evidence IDs from all findings
     const evidenceIds = new Set<string>();
     findingsWithEvidence.forEach((f: typeof findingsWithEvidence[0]) => {
-      let linkedIds: string[] = [];
-      if (Array.isArray(f.linkedEvidence)) {
-        linkedIds = f.linkedEvidence;
-      } else if (typeof f.linkedEvidence === "string" && f.linkedEvidence) {
-        linkedIds = [f.linkedEvidence];
-      }
-      linkedIds.forEach((id: string) => {
+      readLinkedEvidenceIds(f.metadata).forEach((id: string) => {
         if (id) evidenceIds.add(id);
       });
     });
 
-    // Fetch visibility info for all evidence
+    // Fetch visibility info for all evidence (from the real Evidence.metadata JSON)
     let evidenceVisibilityMap = new Map<string, string>();
     if (evidenceIds.size > 0) {
       const evidence = await db.evidence.findMany({
@@ -605,22 +636,17 @@ export async function listFindingsForEngagement(
           id: { in: Array.from(evidenceIds) },
           ...(workspaceId && { engagement: { workspaceId } }),
         },
-        select: { id: true, visibility: true },
+        select: { id: true, metadata: true },
       });
 
       evidenceVisibilityMap = new Map(
-        evidence.map((e: typeof evidence[0]) => [e.id, e.visibility])
+        evidence.map((e: typeof evidence[0]) => [e.id, readEvidenceVisibility(e.metadata)])
       );
     }
 
     // Filter based on visibility
     const filtered = findingsWithEvidence.filter((finding: typeof findingsWithEvidence[0]) => {
-      let linkedIds: string[] = [];
-      if (Array.isArray(finding.linkedEvidence)) {
-        linkedIds = finding.linkedEvidence;
-      } else if (typeof finding.linkedEvidence === "string" && finding.linkedEvidence) {
-        linkedIds = [finding.linkedEvidence];
-      }
+      const linkedIds = readLinkedEvidenceIds(finding.metadata);
 
       if (visibility === "client_visible") {
         // All linked evidence must be client_visible
@@ -702,7 +728,7 @@ export async function getFindingDetail(
       id: findingId,
       engagement: { workspaceId },
     },
-    select: { engagementId: true, linkedEvidence: true },
+    select: { engagementId: true, metadata: true },
   });
 
   if (!finding) throw new NotFoundError("Finding", findingId);
@@ -715,12 +741,7 @@ export async function getFindingDetail(
   // Check visibility if visibility filter is provided
   if (visibility === "client_visible") {
     // For client_visible, all linked evidence must be client_visible
-    let linkedIds: string[] = [];
-    if (Array.isArray(finding.linkedEvidence)) {
-      linkedIds = finding.linkedEvidence;
-    } else if (typeof finding.linkedEvidence === "string" && finding.linkedEvidence) {
-      linkedIds = [finding.linkedEvidence];
-    }
+    const linkedIds = readLinkedEvidenceIds(finding.metadata);
 
     // If no linked evidence or any is internal, deny access
     if (linkedIds.length === 0) {
@@ -732,10 +753,12 @@ export async function getFindingDetail(
         id: { in: linkedIds },
         ...(workspaceId && { engagement: { workspaceId } }),
       },
-      select: { id: true, visibility: true },
+      select: { id: true, metadata: true },
     });
 
-    const hasInternalEvidence = evidence.some((e: typeof evidence[0]) => e.visibility === "internal");
+    const hasInternalEvidence = evidence.some(
+      (e: typeof evidence[0]) => readEvidenceVisibility(e.metadata) === "internal"
+    );
     if (hasInternalEvidence) {
       throw new NotFoundError("Finding", findingId);
     }
@@ -750,15 +773,13 @@ export async function getFindingDetail(
       id: true,
       engagementId: true,
       title: true,
-      description: true,
-      findingType: true,
+      summary: true,
       severity: true,
       impactArea: true,
       rootCause: true,
-      linkedEvidence: true,
       status: true,
       version: true,
-      provisionalFlag: true,
+      metadata: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -766,5 +787,22 @@ export async function getFindingDetail(
 
   if (!detailFinding) throw new NotFoundError("Finding", findingId);
 
-  return detailFinding;
+  // Map real schema columns to the response DTO: description←summary, findingType←impactArea,
+  // linkedEvidence←metadata.linkedEvidenceIds, provisionalFlag←status. No phantom columns selected.
+  return {
+    id: detailFinding.id,
+    engagementId: detailFinding.engagementId,
+    title: detailFinding.title,
+    description: detailFinding.summary ?? null,
+    findingType: deriveFindingType(detailFinding.impactArea),
+    severity: detailFinding.severity,
+    impactArea: detailFinding.impactArea,
+    rootCause: detailFinding.rootCause,
+    linkedEvidence: readLinkedEvidenceIds(detailFinding.metadata),
+    status: detailFinding.status,
+    version: detailFinding.version,
+    provisionalFlag: detailFinding.status === "provisional",
+    createdAt: detailFinding.createdAt,
+    updatedAt: detailFinding.updatedAt,
+  };
 }
