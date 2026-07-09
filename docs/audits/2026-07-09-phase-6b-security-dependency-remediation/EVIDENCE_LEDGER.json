@@ -1,0 +1,62 @@
+{
+  "phase": "6B-dependency-remediation",
+  "title": "Remediate 4 High security vulnerabilities",
+  "date": "2026-07-09",
+  "branch": "claude/phase-6b-security-dependency-remediation",
+  "base_head": "c1efc0f",
+  "type": "dependency-remediation",
+  "constraints": [
+    "remediate only the 4 highs (next, hono, undici, vite)",
+    "no major version bumps",
+    "no unrelated package upgrades",
+    "no product feature code changes",
+    "no test weakening / skipping",
+    "no continue-on-error / no security gate made non-required",
+    "no production migration / DB / secrets"
+  ],
+  "audit_before": {
+    "commit": "c1efc0f",
+    "counts": { "critical": 0, "high": 4, "moderate": 8, "low": 2, "total": 14 },
+    "high": [
+      { "package": "next", "kind": "direct", "advisory": "DoS via Server Components; App Router middleware/proxy bypass" },
+      { "package": "hono", "kind": "transitive (prisma/@prisma/dev/@hono/node-server)", "advisory": "path traversal in serve-static on Windows" },
+      { "package": "undici", "kind": "transitive (jsdom)", "advisory": "TLS cert validation bypass; Set-Cookie header injection" },
+      { "package": "vite", "kind": "transitive (vitest/@vitest/mocker)", "advisory": "server.fs.deny bypass on Windows" }
+    ]
+  },
+  "packages_updated": [
+    { "package": "next", "old": "16.2.3", "new": "16.2.10", "mechanism": "dependencies", "semver_major": false },
+    { "package": "eslint-config-next", "old": "16.2.3", "new": "16.2.10", "mechanism": "devDependencies (paired with next)", "semver_major": false },
+    { "package": "undici", "old": "7.25.0", "new": "7.28.0", "mechanism": "overrides", "semver_major": false },
+    { "package": "vite", "old": "8.0.14", "new": "8.1.4", "mechanism": "overrides", "semver_major": false },
+    { "package": "hono", "old": "4.12.22", "new": "4.12.28", "mechanism": "overrides", "semver_major": false }
+  ],
+  "lockfile_change": { "file": "package-lock.json", "insertions": 182, "deletions": 148, "packages_changed": 18, "scope": "next + lockstep @next/*, eslint-config-next, and the 3 overridden transitive packages + dedupes; no unrelated upgrades" },
+  "audit_after": {
+    "counts": { "critical": 0, "high": 0, "moderate": 10, "low": 2, "total": 12 },
+    "all_highs_resolved": true,
+    "note": "moderate moved 8->10 because two advisories previously subsumed under the next HIGH entry now surface as moderate (next, @sentry/nextjs); no new high/critical"
+  },
+  "validation": [
+    { "cmd": "npm install", "result": "exit 0; lockfile synced (changed 18 packages)" },
+    { "cmd": "npm audit", "result": "0 critical, 0 high (12 = 10 moderate + 2 low)" },
+    { "cmd": "npx tsc --noEmit", "result": "exit 0" },
+    { "cmd": "NODE_OPTIONS=--max-old-space-size=4096 npm run build", "result": "next build exit 0 (all routes compiled)" },
+    { "cmd": "npm run lint:ratchet", "result": "PASS (errors 2081 == pre-change; changed_file_lint_errors 0)" },
+    { "cmd": "verify installed versions", "result": "next 16.2.10, undici 7.28.0, vite 8.1.4, hono 4.12.28" }
+  ],
+  "compatibility_issues": "none (next patch bump; tsc + build clean; no source changes)",
+  "files_changed": { "product": [], "config": ["package.json", "package-lock.json"], "tests": [] },
+  "diff_scope_ok": "only package.json + package-lock.json (no src/test/workflow)",
+  "rollback": "revert package.json (next/eslint-config-next to 16.2.3, remove overrides) + package-lock.json and npm install; reintroduces the 4 highs (not recommended)",
+  "next_step": "merge remediation PR -> rebase PR #210 onto remediated main -> security-baseline parser passes honestly (0 critical/high) -> merge PR #210",
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_changed": false,
+    "product_feature_code_changed": false,
+    "tests_weakened_or_skipped": false,
+    "major_version_bumps": false,
+    "authorizing_phrase_received": false
+  }
+}
