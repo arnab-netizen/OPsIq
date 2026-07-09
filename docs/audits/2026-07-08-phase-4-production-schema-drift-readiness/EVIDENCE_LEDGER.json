@@ -1,0 +1,63 @@
+{
+  "phase": "Phase 4",
+  "item": "Item 1 — production schema-drift detection + migration runbook",
+  "date": "2026-07-08",
+  "branch": "claude/phase-4-production-schema-drift-readiness",
+  "main_baseline_head": "c99af928e57ff1852eddac936a5c100821c84e42",
+  "classification": "runtime_readiness_no_production_change",
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_read_or_changed": false,
+    "prisma_schema_changed": false,
+    "membership_reads_swept": false,
+    "auth_weakened": false,
+    "membership_bypassed": false,
+    "smoke_faked_green": false,
+    "destructive_migration_created": false
+  },
+  "root_cause": {
+    "observed": "production smoke on 725998a4 (run 28982236484): POST /api/auth/login 200 (Phase 3 login fix works), then GET /api/internal/demo-permission-proof 500",
+    "failing_read": "src/app/api/internal/demo-permission-proof/route.ts GET — bare db.workspaceMembership.findFirst (selects all columns)",
+    "error_class": "Prisma P2022 / PostgreSQL 42703 / ColumnNotFound",
+    "required_migration": "20260625120000_owner_mode_execution_tables",
+    "migration_in_repo": true,
+    "migration_destructive": false,
+    "migration_additive_idempotent": "ADD COLUMN IF NOT EXISTS (nullable/defaulted) on workspace_memberships + new tables",
+    "app_assumes_migration": "yes — model WorkspaceMembership declares the columns",
+    "prior_misclassification": "demo-permission-proof catch returned classification 'membership_missing' for ANY error (false)"
+  },
+  "drift_detection_added": {
+    "lib": "src/lib/schema-drift.ts",
+    "functions": ["isSchemaDriftError", "extractMissingColumn", "classifyDbRuntimeError", "isSchemaDriftResponseBody"],
+    "manifest": "COLUMN_TO_MIGRATION covers 11 workspace_memberships columns -> 20260625120000_owner_mode_execution_tables",
+    "pure": true,
+    "no_db": true,
+    "no_secrets": true
+  },
+  "wiring": {
+    "demo_permission_proof": "GET catch classifies schema_drift (operator-safe schemaDrift summary) instead of membership_missing",
+    "smoke": "scripts/smoke-production-dashboard.ts permission-proof failure branch prints BLOCKED_SCHEMA_DRIFT (exit 2) on classification schema_drift; generic FAIL (exit 1) otherwise; PASS only when contract satisfied"
+  },
+  "truthful_smoke_contract": {
+    "PASS": "runtime DB contract satisfied (endpoints return expected 2xx)",
+    "BLOCKED_SCHEMA_DRIFT": "required column missing (deployed DB behind on migration); exit 2; never PASS",
+    "FAIL": "genuine product/logic failure; exit 1"
+  },
+  "tests": {
+    "unit": "src/lib/__tests__/schema-drift.test.ts",
+    "real_db": "src/lib/__tests__/schema-drift.db.test.ts (drops a column, classifies the ACTUAL P2022, maps to migration; restores column in finally)",
+    "count": 19,
+    "result": "19 passed locally",
+    "mocked_db": false,
+    "requires_production_db": false
+  },
+  "local_validation": {
+    "tsc_noemit": "clean",
+    "eslint_new_errors": 0,
+    "governance_scan_strict": "0 new",
+    "lint_ratchet": "PASS"
+  },
+  "runbook": "MIGRATION_RUNBOOK.md — OWNER-RUN ONLY; suspected migration 20260625120000; non-destructive/idempotent; backup + approval + rollback + post-migration smoke checks + stop conditions",
+  "commit_subject": "Phase 4: add production schema drift readiness"
+}

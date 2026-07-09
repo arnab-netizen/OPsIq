@@ -224,7 +224,42 @@ async function smokeTest(): Promise<void> {
     }
 
     if (permissionProofResponse.status !== 200) {
+      // A 500 here can be SCHEMA_DRIFT — the deployed database is behind on a migration
+      // (a required column is missing) — rather than a product or permission failure.
+      // Classify honestly from the response body so the smoke reports SCHEMA_DRIFT/BLOCKED
+      // instead of a misleading generic failure. This NEVER passes on drift: it exits
+      // non-zero. It only tells the truth about WHY the run is not green.
+      let proofBody: any = {};
+      try {
+        proofBody = await permissionProofResponse.json();
+      } catch {
+        // non-JSON body; fall through to generic failure
+      }
+
+      if (proofBody?.classification === "schema_drift") {
+        console.log("🟠 SCHEMA_DRIFT — deployed database is behind on a migration (BLOCKED, not a product failure)");
+        if (proofBody.schemaDrift) {
+          console.log(
+            `   Missing column: ${proofBody.schemaDrift.table || "?"}.${proofBody.schemaDrift.column || "?"}`
+          );
+          console.log(
+            `   Introduced by migration: ${proofBody.schemaDrift.introducedByMigration || "unknown"}`
+          );
+          if (proofBody.schemaDrift.summary) {
+            console.log(`   ${proofBody.schemaDrift.summary}`);
+          }
+        }
+        console.log("   Remediation: apply the pending migration to the deployed database.");
+        console.log("   This is OWNER-RUN only — see docs/audits/*-phase-4-production-schema-drift-readiness/MIGRATION_RUNBOOK.md.");
+        console.log("   Smoke result: BLOCKED_SCHEMA_DRIFT (not PASS, not product FAIL).");
+        // Distinct non-zero exit code so SCHEMA_DRIFT/BLOCKED is not conflated with a product FAIL.
+        process.exit(2);
+      }
+
       console.log(`❌ PERMISSION_PROOF_ENDPOINT_FAILED (${permissionProofResponse.status})`);
+      if (proofBody?.classification) {
+        console.log(`   Classification: ${proofBody.classification}`);
+      }
       process.exit(1);
     }
 
