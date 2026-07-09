@@ -1,0 +1,106 @@
+{
+  "phase": "6A",
+  "title": "Owner-facing raw-500 fixes",
+  "date": "2026-07-09",
+  "branch": "claude/phase-6a-owner-facing-raw-500-fixes",
+  "base_head": "e42539b7f67ce4206fce0e5d7bdc728ccc3d28ca",
+  "scope": {
+    "in_scope": ["F1", "F2"],
+    "out_of_scope": ["F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "F13", "quarantine-wave-2"],
+    "constraints": [
+      "no Prisma schema change",
+      "no fake fields",
+      "real required-lane DB tests, no Prisma mocks",
+      "no production migration / DB / secret changes"
+    ]
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "summary": "findings.ts invalid-select cluster -> raw 500 on core findings endpoints and evidence link/unlink",
+      "verdict": "CONFIRMED",
+      "status": "FIXED",
+      "root_cause": "Finding has no linkedEvidence/description/findingType/provisionalFlag columns and Evidence has no relatedFindingId/visibility column; the service selected phantom fields, causing PrismaClientValidationError -> raw 500.",
+      "endpoints_affected": [
+        "GET /api/engagements/[engagementId]/findings",
+        "GET /api/findings/[findingId]",
+        "PATCH /api/findings/[findingId] (re-read)",
+        "POST/DELETE /api/findings/[findingId]/evidence"
+      ],
+      "fix": {
+        "file": "src/services/findings.ts",
+        "schema_change": false,
+        "fake_fields": false,
+        "approach": "Select only real columns. Persist linked evidence in the real Finding.metadata.linkedEvidenceIds JSON. Derive the API DTO fields from real columns: description<-summary, findingType<-deriveFindingType(impactArea), linkedEvidence<-metadata, provisionalFlag<-(status==='provisional'). link/unlink use a single concurrency-safe finding.update and keep the audit event; dropped the phantom Evidence.relatedFindingId write. supersedeFinding.create writes only required real columns.",
+        "public_dto_contract": "unchanged"
+      },
+      "proof": {
+        "test_file": "src/services/__tests__/findings-invalid-select.db.test.ts",
+        "db_backed": true,
+        "prisma_mocks": false,
+        "gate": "TEST_WITH_DB=true",
+        "tests": 5,
+        "result": "5 passed",
+        "cases": [
+          "OLD phantom linkedEvidence select throws on a real DB (defect-class proof)",
+          "listFindingsForEngagement returns findings, no raw 500",
+          "getFindingDetail returns mapped DTO, no raw 500",
+          "link then unlink evidence persists via metadata, no raw 500 (real audit event, FK satisfied)",
+          "foreign workspace -> NotFoundError (tenant isolation preserved)"
+        ]
+      }
+    },
+    {
+      "id": "F2",
+      "summary": "owner/dashboard db.KPI typo claimed to 500 every GET /api/owner/dashboard",
+      "verdict": "DISPROVEN",
+      "status": "CLEARED_FALSE_POSITIVE",
+      "audit_theory": "Generated delegate is db.kPI; db.KPI is undefined; undefined.findMany() throws 500.",
+      "disproof": "src/lib/db.ts db is a $extends-ed Prisma client behind a lazy Proxy. Runtime testing against a real DB shows the extended client exposes BOTH KPI and kPI as working delegates on both the cold/deferred path and the hot/fast (post-init, production) path. db.KPI.findMany() returns rows with no throw after getDbInstance() sets globalForPrisma.prisma.",
+      "why_audit_erred": "Earlier '[V]' rested on static grep casing counts and reading generated class.ts; never runtime-tested; missed Proxy + $extends tolerance of the exact model name KPI.",
+      "product_change": {
+        "file": "src/app/api/owner/dashboard/route.ts",
+        "net_diff": "none",
+        "note": "Speculative db.KPI->db.kPI edit reverted; product left unchanged per 'fix only if tests prove a real defect'."
+      },
+      "proof": {
+        "test_file": "src/services/__tests__/owner-dashboard-kpi-delegate.db.test.ts",
+        "db_backed": true,
+        "prisma_mocks": false,
+        "gate": "TEST_WITH_DB=true",
+        "tests": 2,
+        "result": "2 passed",
+        "cases": [
+          "real client exposes BOTH KPI and kPI delegates on the fast path (disproves the audit theory)",
+          "the dashboard KPI query (db.KPI, as the route runs it) returns the workspace KPI - no raw 500"
+        ]
+      }
+    }
+  ],
+  "gates": {
+    "db_tests": { "files": 2, "tests": 7, "result": "7 passed", "env": "TEST_WITH_DB=true, local Postgres :5433" },
+    "regression": { "file": "src/__tests__/services/diagnosis-value-path.test.ts", "result": "20 passed" },
+    "tsc": { "command": "tsc --noEmit", "exit": 0 },
+    "lint_ratchet": { "result": "PASS", "current_errors": 2081, "baseline_errors": 2155, "changed_file_lint_errors": 0 },
+    "governance_scan_strict": { "exit": 0, "new_findings": 0, "frozen_baseline": 31 }
+  },
+  "files_changed": {
+    "product": ["src/services/findings.ts"],
+    "tests_added": [
+      "src/services/__tests__/findings-invalid-select.db.test.ts",
+      "src/services/__tests__/owner-dashboard-kpi-delegate.db.test.ts"
+    ],
+    "docs_added": [
+      "docs/audits/2026-07-09-phase-6a-owner-facing-raw-500-fixes/FINAL_REPORT.md",
+      "docs/audits/2026-07-09-phase-6a-owner-facing-raw-500-fixes/EVIDENCE_LEDGER.json"
+    ],
+    "reverted_no_net_diff": ["src/app/api/owner/dashboard/route.ts"]
+  },
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_changed": false,
+    "tests_weakened_or_skipped": false,
+    "authorizing_phrase_received": false
+  }
+}
