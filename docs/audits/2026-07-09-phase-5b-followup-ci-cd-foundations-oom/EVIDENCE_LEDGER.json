@@ -1,0 +1,103 @@
+{
+  "phase": "5B-followup",
+  "title": "Harden CI/CD Foundations Next build OOM (required gate)",
+  "date": "2026-07-09",
+  "branch": "claude/phase-5b-followup-ci-cd-foundations-oom",
+  "base_head": "0db6397",
+  "type": "ci-hardening-only",
+  "constraints": [
+    "no product code change",
+    "no test change",
+    "no assertion weakening",
+    "no skip / continue-on-error",
+    "no branch-protection change",
+    "no secret change",
+    "no production migration / DB access"
+  ],
+  "rows": [
+    {
+      "kind": "main_failure",
+      "commit": "0db6397",
+      "workflow": "CI/CD Foundations - Phase 13 Slice 1",
+      "run_number": 1361,
+      "run_id": 29028097689,
+      "event": "push",
+      "job": "Build + Type + Prisma Verify",
+      "failing_step": "Next.js build (npm run build)",
+      "conclusion": "failure",
+      "signature": "next build compiled successfully, then FATAL ERROR: JavaScript heap out of memory (~2085 MB) / SIGABRT during the TypeScript pass",
+      "classification": "nondeterministic Next-build OOM (infra/memory), not a code error"
+    },
+    {
+      "kind": "phase6a_functional_gate_green",
+      "commit": "0db6397",
+      "pr": 208,
+      "workflow": "CI - Build & Test",
+      "run_number": 3007,
+      "event": "push",
+      "conclusion": "success",
+      "note": "Required functional gate GREEN on the same commit; ran the 2 new Phase 6A DB tests against real postgres:16 (TEST_WITH_DB=true). Proves the Phase 6A product change is correct on main independent of the OOM."
+    },
+    {
+      "kind": "oom_flake_evidence",
+      "identical_content_pr_run": {
+        "workflow": "CI/CD Foundations - Phase 13 Slice 1",
+        "run_number": 1360,
+        "event": "pull_request",
+        "head": "9d3008a",
+        "conclusion": "success"
+      },
+      "main_run": {
+        "run_number": 1361,
+        "event": "push",
+        "head": "0db6397",
+        "conclusion": "failure"
+      },
+      "inference": "Same squashed tree, opposite outcome => nondeterministic memory flake, not a Phase 6A regression. Phase 6A diff (1 service file + 2 *.db.test.ts) is not part of `next build`; tsc --noEmit passed; build compiled successfully.",
+      "rerun_attempt": "rerun_failed_jobs -> HTTP 403 (integration lacks actions:write)"
+    },
+    {
+      "kind": "workflow_hardening",
+      "file": ".github/workflows/ci-cd-foundations.yml",
+      "job": "verify",
+      "step": "Next.js build",
+      "change": "added step-scoped env NODE_OPTIONS=\"--max-old-space-size=4096\"",
+      "scope": "single step only; does not affect npm ci / prisma validate / tsc --noEmit / other jobs",
+      "failure_behavior": "preserved — a real build/type error still fails the step and the gate via branch-protection needs.verify.result",
+      "mirrors": "ci.yml build-and-test job env NODE_OPTIONS (ci.yml:22) — same proven fix for the same OOM",
+      "product_or_test_files_changed": false,
+      "tests_weakened": false
+    },
+    {
+      "kind": "validation_command",
+      "command": "python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/ci-cd-foundations.yml'))\"",
+      "result": "PASS — YAML valid; Next.js build step env = {NODE_OPTIONS: --max-old-space-size=4096}"
+    },
+    {
+      "kind": "validation_command",
+      "command": "actionlint / repo workflow linter",
+      "result": "BLOCKED_LOCALLY — not installed; workflow-runtime validation deferred to CI on this PR (not claimed as local PASS)"
+    },
+    {
+      "kind": "validation_command",
+      "command": "git diff --stat",
+      "result": "only .github/workflows/ci-cd-foundations.yml (+ 2 audit docs); route/product/test files untouched"
+    },
+    {
+      "kind": "ci_result",
+      "pr": null,
+      "status": "PENDING",
+      "note": "Filled after PR CI: expect CI/CD Foundations verify to pass with the 4 GB heap and required gates green."
+    }
+  ],
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_changed": false,
+    "branch_protection_changed": false,
+    "tests_weakened_or_skipped": false,
+    "continue_on_error_added": false,
+    "authorizing_phrase_received": false
+  },
+  "next_recommended_phase": "Phase 6B — Security Baseline gate integrity (after main is green and this required-gate flake is closed)"
+}

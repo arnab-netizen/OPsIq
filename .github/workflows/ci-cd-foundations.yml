@@ -56,6 +56,15 @@ jobs:
 
       - name: Next.js build
         run: npm run build
+        env:
+          # `next build`'s TypeScript pass intermittently hits the default ~2 GB
+          # Node heap (FATAL: JavaScript heap out of memory / SIGABRT) even though
+          # the standalone `tsc --noEmit` step above passes — the production build
+          # loads more into one process. Raising the heap to 4 GB removes this
+          # nondeterministic OOM flake. Scoped to this step only; failure behavior
+          # is preserved (a real build error still fails the step). Mirrors the
+          # identical fix already in ci.yml's build-and-test job.
+          NODE_OPTIONS: "--max-old-space-size=4096"
 
   branch-protection:
     name: Enforce Branch Protection
