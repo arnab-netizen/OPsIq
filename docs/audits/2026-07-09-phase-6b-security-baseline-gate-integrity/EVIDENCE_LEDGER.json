@@ -1,0 +1,134 @@
+{
+  "phase": "6B",
+  "title": "Restore security baseline gate integrity",
+  "date": "2026-07-09",
+  "branch": "claude/phase-6b-security-baseline-gate-integrity",
+  "base_head": "c1efc0f",
+  "type": "ci-security-gate-integrity",
+  "constraints": [
+    "no product code change",
+    "no schema change",
+    "no secret change",
+    "no production migration / DB access",
+    "no dependency upgrades in this PR (remediation deferred)",
+    "no hidden failures / no continue-on-error on a gating job / no || true on a blocking command",
+    "no branch-protection change"
+  ],
+  "rows": [
+    {
+      "kind": "main_verification",
+      "commit": "c1efc0f",
+      "required_gates": [
+        { "workflow": "CI/CD Foundations - Phase 13 Slice 1", "run": 1363, "conclusion": "success" },
+        { "workflow": "CI - Build & Test", "run": 3010, "conclusion": "success" }
+      ],
+      "known_non_required_reds": [
+        { "workflow": "MVP Readiness Gate", "run": 1629, "class": "non-required DB-gate flake (passed as #1628 on PR, identical content)" },
+        { "workflow": "Smoke - Production Dashboard", "run": 565, "class": "known non-required BLOCKED_SCHEMA_DRIFT, owner-migration-gated" }
+      ],
+      "decision": "required target gates green -> proceed"
+    },
+    {
+      "kind": "workflow_inventory",
+      "gate": "Security Baseline Check",
+      "workflow": ".github/workflows/mvp-readiness.yml",
+      "job": "security-scan",
+      "command_before": "npm audit --audit-level=moderate || true",
+      "required_or_trusted": "non-required workflow (MVP Readiness), but named/presented as a trusted security gate",
+      "machine_readable_output": false,
+      "other_audit_gates_found": "none (only this job runs npm audit; audit:wrapped-handlers* are internal handler-governance audits, not dependency scanning)",
+      "existing_policy_doc": "none found (no SECURITY.md / severity policy)"
+    },
+    {
+      "kind": "verified_noop_defect",
+      "id": "V-security-baseline-nonfailing",
+      "evidence": [
+        "job-level continue-on-error: true (mvp-readiness.yml:120) excludes job from workflow conclusion",
+        "npm audit --audit-level=moderate || true swallows the audit exit code",
+        "step prints 'npm audit failures are warnings only'",
+        "summary job 'Enforce readiness gate' checks only needs.readiness-check.result, never security-scan"
+      ],
+      "impact": "a critical/high dependency vulnerability passes the security baseline green",
+      "confirmed": true
+    },
+    {
+      "kind": "policy_threshold",
+      "source": "owner-selected (no prior repo policy)",
+      "block_on": ["critical", "high"],
+      "report_non_blocking": ["moderate", "low", "info"],
+      "tooling_error": "exit 2 (broken scanner must not pass as green)",
+      "threshold_location": "BLOCKING_SEVERITIES in scripts/security-baseline-check.mjs"
+    },
+    {
+      "kind": "workflow_script_fix",
+      "files": [
+        {
+          "file": ".github/workflows/mvp-readiness.yml",
+          "changes": [
+            "removed job-level continue-on-error: true on security-scan",
+            "replaced 'npm audit --audit-level=moderate || true' step with 'node scripts/security-baseline-check.mjs'"
+          ]
+        },
+        {
+          "file": "scripts/security-baseline-check.mjs",
+          "new": true,
+          "behavior": "npm audit --json -> parse metadata.vulnerabilities -> exit 1 on critical/high (with advisory list), report moderate/low, exit 2 on tooling error",
+          "deterministic": true,
+          "network": "only the npm audit already performed by the gate",
+          "secret_access": false,
+          "filesystem_writes": false
+        }
+      ],
+      "product_or_test_files_changed": false,
+      "branch_protection_changed": false,
+      "failures_hidden": false
+    },
+    {
+      "kind": "current_vulnerabilities",
+      "audit_commit": "c1efc0f",
+      "counts": { "critical": 0, "high": 4, "moderate": 8, "low": 2, "info": 0, "total": 14 },
+      "high": [
+        { "package": "next", "fix": "next@16.2.10", "advisory": "DoS via Server Components; App Router middleware/proxy bypass" },
+        { "package": "hono", "fix": "available", "advisory": "path traversal in serve-static on Windows (%5C)" },
+        { "package": "undici", "fix": "available", "advisory": "TLS cert validation bypass (SOCKS5 ProxyAgent); Set-Cookie header injection" },
+        { "package": "vite", "fix": "available", "advisory": "server.fs.deny bypass on Windows alternate paths" }
+      ],
+      "moderate": ["@hono/node-server", "@opentelemetry/core", "@opentelemetry/resources", "@opentelemetry/sdk-trace-base", "@prisma/dev", "js-yaml", "postcss", "prisma"],
+      "low": ["@babel/core", "esbuild"]
+    },
+    {
+      "kind": "validation_command",
+      "commands": [
+        { "cmd": "python3 yaml.safe_load(mvp-readiness.yml)", "result": "PASS — YAML valid; security-scan has no continue-on-error; 3 steps" },
+        { "cmd": "node scripts/security-baseline-check.mjs (real tree, 4 highs)", "result": "exit 1 — gate fails honestly, lists next/hono/undici/vite" },
+        { "cmd": "node scripts/security-baseline-check.mjs (clean fixture)", "result": "exit 0 — passes with no vulns" },
+        { "cmd": "node scripts/security-baseline-check.mjs (no package.json)", "result": "exit 2 — tooling error, not silent green" },
+        { "cmd": "npx eslint scripts/security-baseline-check.mjs", "result": "PASS — 0 problems" }
+      ]
+    },
+    {
+      "kind": "ci_result",
+      "pr": null,
+      "status": "PENDING",
+      "expectation": "required gates (CI/CD Foundations, CI - Build & Test, lint, branch-protection) green; Security Baseline Check job legitimately FAILS on the 4 highs (intended, not hidden); non-required MVP Readiness workflow therefore red"
+    },
+    {
+      "kind": "deferred_dependency_remediation",
+      "required": true,
+      "reason": "truthful critical+high gate legitimately fails on 4 highs; not auto-fixed in this integrity PR (rules 14/15)",
+      "recommended_pr": "bump next->16.2.10 (verify build/runtime), hono/undici/vite to fixed versions; re-run baseline to green; moderate/low non-blocking",
+      "blocking_this_phase_merge": false
+    }
+  ],
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_changed": false,
+    "branch_protection_changed": false,
+    "product_or_test_files_changed": false,
+    "dependency_upgrades_in_this_pr": false,
+    "security_failures_hidden": false,
+    "authorizing_phrase_received": false
+  },
+  "next_recommended_phase": "Dependency-remediation PR (next/hono/undici/vite) to green the truthful gate, then Phase 6C placebo-test conversion on new owner instruction"
+}
