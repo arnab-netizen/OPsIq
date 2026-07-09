@@ -117,7 +117,8 @@ jobs:
   security-scan:
     name: Security Baseline Check
     runs-on: ubuntu-latest
-    continue-on-error: true
+    # This job GATES on dependency vulnerabilities. It must be able to fail honestly:
+    # no job-level `continue-on-error`, and the audit command's failure is not swallowed.
 
     steps:
       - name: Checkout code
@@ -129,12 +130,12 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Check for vulnerable dependencies
-        run: |
-          npm audit --audit-level=moderate || true
-          echo ""
-          echo "⚠  Note: npm audit failures are warnings only"
-          echo "    Run 'npm audit' locally to review vulnerabilities"
+      - name: Security baseline (fail on critical/high; report moderate/low)
+        # Deterministic parser: runs `npm audit --json` (reads package-lock.json; no install
+        # needed), fails on any critical/high, reports moderate/low without blocking, and exits
+        # 2 on a tooling error so a broken scanner cannot pass as green. Replaces the former
+        # `npm audit ... || true` no-op.
+        run: node scripts/security-baseline-check.mjs
 
   summary:
     name: Readiness Summary
