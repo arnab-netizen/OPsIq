@@ -1,0 +1,105 @@
+{
+  "phase": "Phase 5D",
+  "wave": 1,
+  "title": "Quarantine reduction wave 1 — auth/RBAC guardrails",
+  "date": "2026-07-09",
+  "branch": "claude/phase-5d-quarantine-reduction-wave-1",
+  "main_verification": {
+    "phase": "Phase 5B",
+    "merge_commit": "f953b32",
+    "main_push_ci_run_id": 29004832206,
+    "build_and_test": "success",
+    "lint": "success",
+    "classification": "GREEN",
+    "ancestry_ok": true,
+    "working_tree_clean_at_branch": true
+  },
+  "head_before": "f953b32",
+  "head_after_reactivation": "073d472",
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_altered": false,
+    "product_code_changed": false,
+    "assertions_weakened": false,
+    "tests_deleted": false,
+    "tests_skipped": false,
+    "tests_newly_quarantined": false,
+    "db_mocked_where_db_proof_required": false,
+    "owner_migration_approval_phrase_received": false,
+    "required_exact_phrase": "I approve running the production migration"
+  },
+  "quarantine_counts": {
+    "ignored_tests_start": 88,
+    "ignored_tests_end": 86,
+    "test_quarantine_json_files": 21,
+    "test_quarantine_json_touched": false
+  },
+  "inventory_summary": {
+    "ignored_tests_by_type": { "unit_service": 67, "integration": 12, "ui_tsx": 6, "placeholder": 1 },
+    "reactivation_mechanism": "move file out of src/__ignored_tests__ into a normal src/** path (non-integration, non-placeholder)",
+    "gotchas": [
+      "tsconfig excludes **/__tests__/** and **/__ignored_tests__/**; tsc scope depends on target dir",
+      "eslint scans everything; lint:ratchet changed-file gate fails on any lint ERROR in a moved file"
+    ]
+  },
+  "selected_cluster": {
+    "name": "owner-facing auth / RBAC authorization guardrails",
+    "selection_priority_matched": ["#2 auth/workspace membership", "#4 reduce auth/isolation risk"],
+    "non_db": true,
+    "required_lane_safe": true,
+    "tests": 52,
+    "probe_result_against_current_source": "52/52 pass unmodified (over-quarantined, not genuinely failing)"
+  },
+  "reactivated_tests": [
+    {
+      "from": "src/__ignored_tests__/lib/auth-guard.test.ts",
+      "to": "src/lib/auth-guard.test.ts",
+      "tests": 18,
+      "covers": "getActorHierarchyLevel, canDo, requireAuth, requireAuthForCapability, requireAuthInternal, getServerAuthContext",
+      "db": false
+    },
+    {
+      "from": "src/__ignored_tests__/app/api/__tests__/rbac-enforcement.test.ts",
+      "to": "src/app/api/__tests__/rbac-enforcement.test.ts",
+      "tests": 34,
+      "covers": "role->capability mapping, deny-by-default, engagement-scoped role behavior",
+      "db": false
+    }
+  ],
+  "test_fixture_fixes": [
+    {
+      "file": "src/lib/auth-guard.test.ts",
+      "changes": [
+        "import PolicyContext from @/policies/capability-check (real module; ./auth-guard does not export it) — fixes latent TS2459 exposed by moving into tsc scope",
+        "type makeSession() helper as SessionInfo; drop 8 unnecessary `as any` casts",
+        "remove unused AuthContext import"
+      ],
+      "assertions_changed": false
+    },
+    {
+      "file": "src/app/api/__tests__/rbac-enforcement.test.ts",
+      "changes": [
+        "replace non-existent ROLES.CONSULTANT (runtime undefined) with ROLES.EXPERIENCED_CONSULTANT per file's own comment; drop accompanying `as any`",
+        "type a mock with a precise structural type instead of `any`"
+      ],
+      "assertions_changed": false
+    }
+  ],
+  "source_code_fixes": [],
+  "validation_commands": [
+    { "cmd": "vitest run src/lib/auth-guard.test.ts src/app/api/__tests__/rbac-enforcement.test.ts", "result": "52 passed" },
+    { "cmd": "tsc --noEmit", "result": "clean (after PolicyContext import fix)" },
+    { "cmd": "eslint <both reactivated files>", "result": "0 errors, 7 pre-existing warnings (non-blocking)" },
+    { "cmd": "node scripts/lint-ratchet.mjs (committed diff)", "result": "PASS; changed_files 2; changed_file_lint_errors 0; errors 2094->2084; warnings 1255->1254" },
+    { "cmd": "governance:scan:strict", "result": "0 new (31 frozen, 30 matched)" },
+    { "cmd": "governance:scan:auth", "result": "all routes comply" }
+  ],
+  "deferred_or_blocked_gates": [
+    { "gate": "full maintained vitest suite + all required CI gates", "state": "deferred_to_ci_on_pr" },
+    { "gate": "DB lane", "state": "not_applicable (cluster is non-DB)" },
+    { "gate": "Playwright/browser", "state": "not_applicable (cluster is non-browser)" }
+  ],
+  "rollback": "revert commit(s); test files move back to __ignored_tests__, docs removed; no product/state/migration",
+  "recommended_next": ["Phase 5D Wave 2 (non-DB service unit tests)", "owner-approved production migration (exact phrase only)", "Phase 5E local/preview owner-journey Playwright proof"]
+}
