@@ -1,0 +1,54 @@
+{
+  "phase": "Phase 5C",
+  "item": "Defect #1 — getPolicyContext default-select membership reads (schema-drift 500)",
+  "date": "2026-07-09",
+  "branch": "claude/phase-5c-owner-facing-route-500-sweep",
+  "main_baseline_head": "4ae217d2",
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_read_or_changed": false,
+    "owner_migration_approval_phrase_received": false,
+    "required_exact_phrase": "I approve running the production migration",
+    "auth_or_membership_bypass": false,
+    "tenant_isolation_preserved": true,
+    "tests_weakened_or_quarantined": false
+  },
+  "defect": {
+    "location": "src/services/auth.ts getPolicyContext",
+    "reads": [
+      { "line_approx": 111, "kind": "findFirst", "old": "default select (all columns)", "consumed": "workspaceId", "new": "select { workspaceId: true }" },
+      { "line_approx": 124, "kind": "findUnique", "old": "default select (all columns)", "consumed": "isActive", "new": "select { isActive: true }" }
+    ],
+    "class": "default-select membership read -> P2022 under schema drift -> raw 500 on owner-facing governed routes",
+    "residual_context": "production DB behind on additive migration 20260625120000_owner_mode_execution_tables",
+    "blast_radius": "canonical wrapper (getPolicyContextFact), resolveServerRole, requirePolicyContext -> most owner-facing routes",
+    "behavior_preserving": true
+  },
+  "selection": {
+    "method": "static inventory of owner-facing route + shared policy/auth membership reads",
+    "chosen": "getPolicyContext #1+#2 (single function, one commit family, CRITICAL blast radius)",
+    "false_positives_already_narrow": [
+      "canonical-route-enforcement.ts:114 resolveWorkspaceSnapshotFacts (narrow select)",
+      "canonical-route-enforcement.ts:348 STEP 1.5 (select { workspaceId })",
+      "app/api/auth/login/route.ts membership findFirst (fixed Phase 3 #200)"
+    ],
+    "out_of_scope_migration_gated": "app/api/internal/demo-permission-proof (internal-only; cleared by owner-approved migration, Phase 4)"
+  },
+  "proof": {
+    "test_file": "src/services/__tests__/getPolicyContext-db-schema-drift.db.test.ts",
+    "lane": "required (maintained vitest suite; gated by TEST_WITH_DB=true)",
+    "db_mocks": "none (real Postgres; next/headers cookies mocked only to supply the session token)",
+    "tests": 4,
+    "result_with_fix": "4 passed",
+    "fail_before_pass_after": "reverting the two select narrowings makes the drift test fail (real getPolicyContext throws P2022); restoring makes it pass",
+    "drift_simulation": "ALTER TABLE workspace_memberships DROP COLUMN primary_auth_method (restored in finally)"
+  },
+  "gates": {
+    "tsc": "clean",
+    "lint_ratchet": "PASS (baseline 2155e/1263w; current 2094e/1255w; changed_files 0 new)",
+    "governance_scan_strict": "0 new (31 frozen findings, 30 matched, 0 new)"
+  },
+  "stop_condition": "one defect family fixed + proven; no remaining CRITICAL/HIGH owner-facing default-select membership raw-500 read on the governed path -> Phase 5C sweep complete",
+  "commit_subject": "Phase 5C: harden getPolicyContext against workspace_memberships schema drift"
+}

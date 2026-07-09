@@ -113,6 +113,12 @@ export async function getPolicyContext(workspaceId?: string): Promise<PolicyCont
       // M6: full deterministic order (workspaceId tiebreaker) so this matches the canonical wrapper's
       // workspace derivation exactly — a same-addedAt tie must resolve to the same workspace in both.
       orderBy: [{ addedAt: "asc" }, { workspaceId: "asc" }],
+      // Phase 5C: select ONLY the column consumed (workspaceId). A bare/default select reads EVERY
+      // workspace_memberships column, so under production schema drift (a newer nullable column missing
+      // from the deployed DB — e.g. columns added by 20260625120000_owner_mode_execution_tables) Prisma
+      // throws P2022 and every owner-facing route that resolves policy 500s. Narrowing is drift-safe and
+      // behavior-preserving: only workspaceId is used below.
+      select: { workspaceId: true },
     });
     resolvedWorkspaceId = membership?.workspaceId;
   }
@@ -123,6 +129,10 @@ export async function getPolicyContext(workspaceId?: string): Promise<PolicyCont
   // Verify user has membership in the target workspace
   const membership = await db.workspaceMembership.findUnique({
     where: { workspaceId_userId: { workspaceId: resolvedWorkspaceId, userId: session.user.id } },
+    // Phase 5C: select ONLY isActive (the sole field consumed). A default select would read every
+    // workspace_memberships column and 500 under schema drift; this narrow read is drift-safe and
+    // behavior-preserving.
+    select: { isActive: true },
   });
 
   if (!membership || !membership.isActive) return null;
