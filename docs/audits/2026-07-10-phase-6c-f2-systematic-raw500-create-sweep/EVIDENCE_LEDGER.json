@@ -1,0 +1,128 @@
+{
+  "phase": "6C-F2",
+  "title": "Systematic raw-500-create sweep",
+  "date": "2026-07-10",
+  "branch": "claude/phase-6c-f2-systematic-raw500-create-sweep",
+  "base_head": "b91f977",
+  "type": "defect-sweep",
+  "constraints": [
+    "no Prisma schema change (create payloads were wrong, not schema)",
+    "no fake fields",
+    "no test weakening/skip/deletion",
+    "real Postgres DB proof (no mocks as DB proof)",
+    "verify before fixing (no static-suspicion-only fixes)",
+    "no secrets, no production migration"
+  ],
+  "rows": [
+    {
+      "kind": "main_verification_before_branching",
+      "commit": "b91f977",
+      "gates": [
+        { "workflow": "CI/CD Foundations - Phase 13 Slice 1", "run": 1373, "conclusion": "success" },
+        { "workflow": "MVP Readiness Gate", "run": 1639, "conclusion": "success", "security_baseline": "HONEST_GREEN" },
+        { "workflow": "CI - Build & Test", "run": 3026, "status": "in_progress_at_branch_time (same content as F1 #3025 which passed)" }
+      ],
+      "non_required_red": [{ "workflow": "Smoke - Production Dashboard", "run": 569, "class": "known BLOCKED_SCHEMA_DRIFT" }]
+    },
+    {
+      "kind": "create_site_inventory",
+      "scanned": "src/app/api + src/services (non-test) db/tx.<model>.create on id-required (no-default) models",
+      "confirmed_fixed": 5,
+      "false_positive": 10,
+      "duplicate_already_tracked": ["decisions createDecision (#212)", "decisions/intake (#213)"]
+    },
+    {
+      "kind": "confirmed_defect_and_fix",
+      "site": "services/engagement.ts createEngagement",
+      "model": "Engagement",
+      "defect": "missing required id + updatedAt -> PrismaClientValidationError -> engagements cannot be created",
+      "probe": "db.engagement.create(fixed shape omitting id) threw 'Argument `id` is missing'; after fix persists OK",
+      "fix": "+id: randomUUID(), +updatedAt: new Date()",
+      "classification": "CONFIRMED_HIGH"
+    },
+    {
+      "kind": "confirmed_defect_and_fix",
+      "site": "app/api/onboarding/invite/route.ts user create",
+      "model": "User",
+      "defect": "missing required id + updatedAt -> raw-500 when inviting a NEW user",
+      "fix": "+id: randomUUID(), +updatedAt: new Date()",
+      "classification": "CONFIRMED_HIGH"
+    },
+    {
+      "kind": "confirmed_defect_and_fix",
+      "site": "services/deliverable.ts createDeliverable",
+      "model": "Deliverable",
+      "defect": "missing required id + updatedAt",
+      "fix": "+id, +updatedAt",
+      "classification": "CONFIRMED_HIGH"
+    },
+    {
+      "kind": "confirmed_defect_and_fix",
+      "site": "services/client-contact.ts contact create",
+      "model": "ClientContact",
+      "defect": "missing required id + updatedAt; phantom createdBy (no such column)",
+      "fix": "+id, +updatedAt, drop phantom createdBy",
+      "classification": "CONFIRMED_HIGH"
+    },
+    {
+      "kind": "confirmed_defect_and_fix",
+      "site": "services/entitlement.service.ts usageEvent create",
+      "model": "UsageEvent",
+      "defect": "missing required id (model has no updatedAt column)",
+      "fix": "+id",
+      "classification": "CONFIRMED_MEDIUM"
+    },
+    {
+      "kind": "test_proof",
+      "file": "src/__tests__/services/raw500-create-sweep.db.test.ts",
+      "db_backed": true,
+      "prisma_mocks": false,
+      "gate": "TEST_WITH_DB=true",
+      "tests": 5,
+      "result": "5 passed",
+      "note": "each runs the exact fixed create payload against real Postgres; all raw-500'd before the fix; full service/route invocation deferred by capability/plan/session harness"
+    },
+    {
+      "kind": "false_positives_cleared",
+      "shorthand_id_supplied": ["recoveryFinding (cycle.service.ts:89)", "ownerFinanceFinding (owner-finance/diagnosis.service.ts:70)", "ownerBudgetAction (owner-budget/action-link.service.ts:92)", "ownerWorkingCapitalItem (working-capital.service.ts:44)", "ownerArchetypeMetric (archetype-metrics.service.ts:47)"],
+      "other": ["operator/store.ts x2", "createAction", "recommendation.create (schema defaults)", "owner/dashboard:70 (DTO)", "action-handlers.ts:210 (commented example)"]
+    },
+    {
+      "kind": "governance_baseline_update",
+      "file": ".claude/governance-baseline.json",
+      "change": "3 line-number updates only (engagement.ts raw-error-message: 480->483, 519->522, 568->571)",
+      "reason": "added import + 2 create-block lines shifted pre-existing findings +3; line-keyed baseline re-anchored",
+      "new_findings_introduced": 0,
+      "findings_added_or_removed": 0
+    },
+    {
+      "kind": "validation_command",
+      "commands": [
+        { "cmd": "TEST_WITH_DB=true vitest raw500-create-sweep.db.test.ts", "result": "5 passed" },
+        { "cmd": "vitest (no DB)", "result": "5 skipped" },
+        { "cmd": "tsc --noEmit", "result": "exit 0" },
+        { "cmd": "prisma validate", "result": "valid" },
+        { "cmd": "npm run lint:ratchet", "result": "PASS (0 changed-file errors)" },
+        { "cmd": "npm run governance:scan:strict", "result": "0 new (exit 0 after baseline re-anchor)" },
+        { "cmd": "npm run governance:scan:auth", "result": "exit 0" },
+        { "cmd": "regression: decisions + decisions-intake + sweep", "result": "15 passed" }
+      ]
+    },
+    {
+      "kind": "ci_result",
+      "pr": null,
+      "status": "PENDING",
+      "expectation": "required gates green; sweep [db] tests run in build-and-test (real postgres:16); Security Baseline HONEST_GREEN"
+    }
+  ],
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_changed": false,
+    "schema_changed": false,
+    "tests_weakened_or_deleted_or_skipped": false,
+    "fake_fields_added": false,
+    "authorizing_phrase_received": false
+  },
+  "next_recommended_phase": "Phase 6C Wave 2 — api/actions placebo conversion (owner instruction required)"
+}

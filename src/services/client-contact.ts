@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -42,6 +43,8 @@ export async function createContact(
 
   const contact = await db.clientContact.create({
     data: {
+      id: randomUUID(),
+      updatedAt: new Date(),
       clientId: input.clientId,
       name: input.name,
       email: input.email ?? null,
@@ -49,7 +52,6 @@ export async function createContact(
       role: input.role ?? null,
       isPrimary: input.isPrimary ?? false,
       notes: input.notes ?? null,
-      createdBy: actorId,
     },
   });
 

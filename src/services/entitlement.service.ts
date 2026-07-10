@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
@@ -357,6 +358,7 @@ export async function trackUsage(
 
   await db.usageEvent.create({
     data: {
+      id: randomUUID(),
       workspaceId,
       key,
       value,
