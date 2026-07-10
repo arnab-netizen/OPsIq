@@ -1,0 +1,110 @@
+{
+  "auditId": "phase-6j-diagnosis-workspace-tenant-isolation",
+  "date": "2026-07-10",
+  "branch": "claude/phase-6j-diagnosis-workspace-tenant-isolation",
+  "baseCommit": "ae718f1954af8b241f3c42bec2bb4190ca710358",
+  "findingId": "D4-01",
+  "severity": "CONFIRMED_HIGH",
+  "findings": [
+    {
+      "id": "D4-01",
+      "route": "POST /api/diagnosis/maturity",
+      "file": "src/app/api/diagnosis/maturity/route.ts",
+      "classification": "CONFIRMED_HIGH",
+      "description": "body.workspaceId accepted without membership validation; untrusted UUID persisted in IdempotencyRecord payload hash and responseBody",
+      "fixApplied": true,
+      "fixCommit": "phase-6j",
+      "testFile": "src/__tests__/api/diagnosis-workspace-tenant-isolation-6j.test.ts",
+      "testCount": 8
+    },
+    {
+      "id": "D4-02",
+      "route": "POST /api/diagnosis/bottleneck",
+      "file": "src/app/api/diagnosis/bottleneck/route.ts",
+      "classification": "CONFIRMED_HIGH",
+      "description": "body.workspaceId accepted without membership validation",
+      "fixApplied": true,
+      "fixCommit": "phase-6j",
+      "testFile": "src/__tests__/api/diagnosis-workspace-tenant-isolation-6j.test.ts",
+      "testCount": 7
+    },
+    {
+      "id": "D4-03",
+      "route": "POST /api/diagnosis/root-cause",
+      "file": "src/app/api/diagnosis/root-cause/route.ts",
+      "classification": "CONFIRMED_HIGH",
+      "description": "body.workspaceId accepted without membership validation",
+      "fixApplied": true,
+      "fixCommit": "phase-6j",
+      "testFile": "src/__tests__/api/diagnosis-workspace-tenant-isolation-6j.test.ts",
+      "testCount": 7
+    }
+  ],
+  "noIdleAuditFindings": [
+    {
+      "id": "D3-01",
+      "domain": "budget-spend-idempotency",
+      "classification": "CONFIRMED",
+      "disposition": "DEFERRED_6K",
+      "description": "recordBudgetSpend has no idempotency guard on double-POST"
+    },
+    {
+      "id": "D5-01",
+      "domain": "fake-test-assertions",
+      "classification": "FALSE_POSITIVE",
+      "description": "Phase 6I tests (decisions-idempotency-6i.test.ts) confirmed real and present on main SHA 716440227059b41673b7798da8d38a18b258f36d"
+    },
+    {
+      "id": "D6-01",
+      "domain": "finance-snapshot-audit-transaction",
+      "classification": "NOTED",
+      "disposition": "DEFERRED",
+      "description": "createFinancialSnapshot not wrapped in DB transaction"
+    },
+    {
+      "id": "D7-01",
+      "domain": "finance-patch-idempotency",
+      "classification": "NOTED",
+      "disposition": "DEFERRED",
+      "description": "PATCH /api/finance/[id] has no idempotency-key enforcement"
+    },
+    {
+      "id": "D8-01",
+      "domain": "billing-upgrade-audit",
+      "classification": "NOTED",
+      "disposition": "DEFERRED",
+      "description": "Upgrade path does not emit audit event"
+    },
+    {
+      "id": "D9-01",
+      "domain": "dead-schema-external-mapping",
+      "classification": "NOTED",
+      "disposition": "DEFERRED",
+      "description": "ExternalFieldMapping / ExternalRawRecord schema present; no active service consumers found"
+    },
+    {
+      "id": "D10-01",
+      "domain": "capability-matrix-overclaims",
+      "classification": "FALSE_POSITIVE",
+      "description": "A0 capability matrix accurately reflects implemented routes"
+    },
+    {
+      "id": "D11-01",
+      "domain": "connector-llm-readiness",
+      "classification": "CONFIRMED",
+      "disposition": "DEFERRED_6K",
+      "description": "Connector stubs present; no production LLM calls wired"
+    }
+  ],
+  "testResults": {
+    "file": "src/__tests__/api/diagnosis-workspace-tenant-isolation-6j.test.ts",
+    "total": 22,
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0
+  },
+  "typecheck": "PASS",
+  "lint": "PASS_NO_ERRORS",
+  "prismaValidate": "NOT_RUN_NO_SCHEMA_CHANGE",
+  "securityBaselineClassification": "HONEST_GREEN"
+}
