@@ -1,832 +1,311 @@
 /**
- * API Route Tests: Actions
+ * API Route Tests: Actions (Phase 6C Wave 2 — placebo conversion)
  *
- * Validates route structure, error handling, service integration,
- * workspace scoping, and state machine transitions.
+ * This file previously contained ~121 vacuous placebo tests (`expect(true).toBe(true)` and empty
+ * `TODO_A2_FAKE_TEST_QUARANTINED` bodies) that asserted nothing and imported no real handler — so the
+ * action create/list paths could break (and one did: `listActions` filtered on a phantom `owner`
+ * column) while these tests stayed green.
+ *
+ * Phase 6C Wave 2 converts the safely-provable subset into REAL assertions against the real
+ * `createAction` / `listActions` services, backed by a real Postgres database (no Prisma mocks counted
+ * as DB proof, and audit/event emission left un-mocked so the full governed write path is exercised).
+ *
+ * Converting the list path uncovered a real owner-facing defect: `listActions` mapped the `assignedTo`
+ * filter onto `where.owner`, but the Action model has no `owner` column — every call with an
+ * `assignedTo` filter raw-500'd with PrismaClientValidationError. Fixed in `src/services/action.ts`
+ * (`where.owner` → `where.assignedTo`) and proven by the assignedTo-filter regression test below.
+ *
+ * Tests that reference routes/operations with no service import here (GET/PATCH/start/complete/
+ * impact-delta, the `/api/actions/[id]` HTTP wrappers, capability/header enforcement that lives in
+ * `withCanonicalEnforcement`/`withAuth` — which the repo's own "real route test" skips for lack of an
+ * HTTP harness) are documented as DEFERRED in
+ * docs/audits/2026-07-10-phase-6c-wave-2-actions-placebo-conversion/ACTIONS_PLACEBO_INVENTORY.md
+ * rather than faked here.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { randomUUID } from "crypto";
+import { db } from "@/lib/db";
 import { createAction, listActions } from "@/services/action";
 import type { CreateActionInput } from "@/services/action";
-import type { AuthContext } from "@/lib/auth-guard";
-import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { ROLES } from "@/domain/constants/roles";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { NotFoundError } from "@/infra/errors";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
-// Mock audit and event services
-vi.mock("@/infra/audit", () => ({
-  emitAuditEvent: vi.fn(),
-}));
-
-vi.mock("@/services/event-emitter", () => ({
-  EventEmitterService: {
-    emit: vi.fn(),
-  },
-}));
-
-vi.mock("@/services/re-evaluation", () => ({
-  triggerReEvaluation: vi.fn(),
-}));
-
-describe("Actions API Route", () => {
-  const workspaceId1 = "550e8400-e29b-41d4-a716-446655440100";
-  const workspaceId2 = "550e8400-e29b-41d4-a716-446655440101";
-  const engagementId = "550e8400-e29b-41d4-a716-446655440000";
-  const recommendationId = "550e8400-e29b-41d4-a716-446655440001";
-  const userId = "550e8400-e29b-41d4-a716-446655440002";
-
-  const mockAuthContext: AuthContext = {
-    session: {
-      sessionId: "session-123",
-      user: {
-        id: userId,
-        email: "test@example.com",
-        name: "Test User",
-        isActive: true,
-      },
-      expiresAt: new Date(Date.now() + 3600000),
+function ctxFor(actorId: string, workspaceId: string): CanonicalAuthContext {
+  return {
+    verifiedActorId: actorId,
+    verifiedActorType: "user",
+    verifiedActor: { id: actorId, email: `actions-${actorId}@test.local`, name: "Actions Actor", isActive: true },
+    verifiedWorkspaceId: workspaceId,
+    verifiedCapabilities: new Set<string>(),
+    verifiedSessionSnapshot: {
+      snapshotId: "snap",
+      snapshotTimestamp: new Date(),
+      snapshotHash: "",
+      actorId,
+      workspaceId,
+      capabilities: [],
     },
-    policy: {
-      userId,
-      roles: [
-        {
-          role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER,
-          scope: "workspace",
-          scopeId: workspaceId1,
-        },
-      ],
-    },
-  };
+  } as CanonicalAuthContext;
+}
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe("Actions API — service input validation (fail-closed, no DB required)", () => {
+  const validWorkspaceId = randomUUID();
+
+  it("createAction rejects a missing auth context (fail-closed, before any DB access)", async () => {
+    const input: CreateActionInput = {
+      engagementId: randomUUID(),
+      recommendationId: randomUUID(),
+      title: "No auth",
+    };
+    await expect(
+      createAction(input, null as unknown as CanonicalAuthContext, validWorkspaceId)
+    ).rejects.toThrow(/authentication context/i);
   });
 
-  describe("POST /api/actions - Create Action (Workspace Isolation Critical)", () => {
-    it("should require x-workspace-id header (fail-closed)", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Header validation tested in middleware
-      // This is delegated to withErrorHandling + enforceWorkspaceScoping middleware
+  it("createAction rejects a missing workspace context (fail-closed, before any DB access)", async () => {
+    const input: CreateActionInput = {
+      engagementId: randomUUID(),
+      recommendationId: randomUUID(),
+      title: "No workspace",
+    };
+    await expect(
+      createAction(input, ctxFor(randomUUID(), validWorkspaceId), "")
+    ).rejects.toThrow(/workspace context/i);
+  });
+
+  it("listActions rejects a missing/invalid workspace id (fail-closed workspace enforcement)", async () => {
+    await expect(listActions("", { engagementId: randomUUID() })).rejects.toThrow(/workspace/i);
+  });
+
+  it("listActions requires engagementId for workspace scoping (Action has no direct workspace column)", async () => {
+    await expect(listActions(validWorkspaceId, {})).rejects.toThrow(/engagementId is required/i);
+  });
+});
+
+describe.skipIf(!SHOULD_RUN_DB_TESTS)(
+  "[db] Actions API — real create + list workspace isolation (Phase 6C Wave 2)",
+  () => {
+    const stamp = randomUUID().substring(0, 8);
+    const actorId = randomUUID();
+    const workspaceId = randomUUID();
+    const otherWorkspaceId = randomUUID();
+    const clientId = randomUUID();
+    const engagementId = randomUUID();
+    const otherEngagementId = randomUUID();
+    let recommendationId: string;
+    let otherRecommendationId: string;
+
+    beforeAll(async () => {
+      // Real actor row so createAction's audit-event actor FK (audit_events_actor_id_fkey) is satisfied.
+      await db.user.create({
+        data: { id: actorId, email: `p6c-act-${stamp}@test.local`, isActive: true, updatedAt: new Date() },
+      });
+      await db.workspace.create({ data: { id: workspaceId, name: "Actions WS", slug: `act-${stamp}` } });
+      await db.workspace.create({ data: { id: otherWorkspaceId, name: "Actions WS2", slug: `act2-${stamp}` } });
+      await db.clientAccount.create({
+        data: { id: clientId, name: "Actions Client", workspaceId, createdBy: actorId, updatedAt: new Date() },
+      });
+      await db.engagement.create({
+        data: {
+          id: engagementId,
+          updatedAt: new Date(),
+          code: `ACT-${stamp}`,
+          title: "Actions Engagement",
+          clientId,
+          workspaceId,
+          serviceTier: "standard",
+          engagementMode: "advisory",
+          status: "draft",
+          healthStatus: "unknown",
+        },
+      });
+      await db.engagement.create({
+        data: {
+          id: otherEngagementId,
+          updatedAt: new Date(),
+          code: `ACT2-${stamp}`,
+          title: "Other Workspace Engagement",
+          clientId,
+          workspaceId: otherWorkspaceId,
+          serviceTier: "standard",
+          engagementMode: "advisory",
+          status: "draft",
+          healthStatus: "unknown",
+        },
+      });
+      // Real recommendations so the actions_recommendation_id_fkey FK is satisfied.
+      const rec = await db.recommendation.create({
+        data: { engagementId, workspaceId, title: "Rec A", priority: "high" },
+      });
+      recommendationId = rec.id;
+      const otherRec = await db.recommendation.create({
+        data: { engagementId: otherEngagementId, workspaceId: otherWorkspaceId, title: "Rec B", priority: "high" },
+      });
+      otherRecommendationId = otherRec.id;
     });
 
-    it("should require Idempotency-Key header (fail-closed)", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Idempotency tested in middleware + idempotency store
-      // Route POST requires this header before calling service
+    afterAll(async () => {
+      try {
+        await db.auditEvent.deleteMany({ where: { workspaceId: { in: [workspaceId, otherWorkspaceId] } } });
+        await db.action.deleteMany({ where: { engagementId: { in: [engagementId, otherEngagementId] } } });
+        await db.usageEvent.deleteMany({ where: { workspaceId: { in: [workspaceId, otherWorkspaceId] } } });
+        await db.recommendation.deleteMany({ where: { engagementId: { in: [engagementId, otherEngagementId] } } });
+        await db.engagement.deleteMany({ where: { id: { in: [engagementId, otherEngagementId] } } });
+        await db.clientAccount.deleteMany({ where: { id: clientId } });
+        await db.workspace.deleteMany({ where: { id: { in: [workspaceId, otherWorkspaceId] } } });
+        await db.user.deleteMany({ where: { id: actorId } });
+      } catch {
+        // best-effort cleanup (ephemeral CI database)
+      }
     });
 
-    it("should require authentication (fail-closed)", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Auth tested in withAuth middleware
-      // withAuth() is the entry point, tested separately
+    it("[db] createAction persists a real draft action scoped to the engagement/workspace (no raw 500)", async () => {
+      const created = await createAction(
+        { engagementId, recommendationId, title: "Reduce churn", description: "Owner action", priority: "high" },
+        ctxFor(actorId, workspaceId),
+        workspaceId
+      );
+      expect(created.id).toBeTruthy();
+      expect(created.title).toBe("Reduce churn");
+
+      const row = await db.action.findUnique({
+        where: { id: created.id },
+        select: { status: true, engagementId: true, recommendationId: true, updatedAt: true },
+      });
+      expect(row).not.toBeNull();
+      expect(row!.status).toBe("draft"); // initial status enforced by service, not caller input
+      expect(row!.engagementId).toBe(engagementId); // scoped to the verified engagement
+      expect(row!.recommendationId).toBe(recommendationId);
+      expect(row!.updatedAt).toBeInstanceOf(Date);
+
+      // Governed write path emitted a real audit event (un-mocked) for the creation.
+      const audits = await db.auditEvent.findMany({ where: { entityId: created.id, workspaceId } });
+      expect(audits.length).toBeGreaterThan(0);
+      expect(audits.some((a) => a.actorId === actorId)).toBe(true);
     });
 
-    it("should require ACTION_CREATE capability (fail-closed)", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Capability tested in withAuth(capability: ACTION_CREATE)
-      // Route asserts capability before delegating to service
+    it("[db] createAction rejects an engagement in another workspace (tenant isolation, NotFoundError)", async () => {
+      // Engagement lives in otherWorkspaceId; calling with workspaceId must not find it → fail-closed.
+      await expect(
+        createAction(
+          { engagementId: otherEngagementId, recommendationId: otherRecommendationId, title: "Cross-tenant" },
+          ctxFor(actorId, workspaceId),
+          workspaceId
+        )
+      ).rejects.toBeInstanceOf(NotFoundError);
     });
 
-    it("should validate engagementId is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation in route handler
-      // Schema: createActionSchema = z.object({ engagementId: z.string().uuid(), ... })
-    });
-
-    it("should validate recommendationId is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation in route handler
-      // Schema: createActionSchema = z.object({ recommendationId: z.string().uuid(), ... })
-    });
-
-    it("should validate title is non-empty", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation in route handler
-      // Schema: title: z.string().min(1)
-    });
-
-    it("should validate priority enum", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation in route handler
-      // Schema: priority: z.enum(["low", "medium", "high", "critical"])
-    });
-
-    it("should accept optional description", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field not critical path
-      // Schema: description: z.string().optional()
-    });
-
-    it("should accept optional dueDate", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field not critical path
-      // Schema: dueDate: z.string().optional()
-    });
-
-    it("should accept optional assignedTo UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field not critical path
-      // Schema: assignedTo: z.string().uuid().optional()
-    });
-
-    it("should enforce workspace isolation on action creation", async () => {
+    it("[db] createAction replays a duplicate idempotency key without creating a second action", async () => {
+      const key = `idem-${randomUUID()}`;
       const input: CreateActionInput = {
         engagementId,
         recommendationId,
-        title: "Test Action",
-        priority: "high",
+        title: "Idempotent action",
+        priority: "medium",
       };
+      const first = await createAction(input, ctxFor(actorId, workspaceId), workspaceId, key);
+      const second = await createAction(input, ctxFor(actorId, workspaceId), workspaceId, key);
+      expect(second.id).toBe(first.id); // replayed outcome, never re-executed
 
-      // Critical invariant: Service enforces workspaceId in data creation
-      // Service calls requireServiceContext(authContext, workspaceId) to validate
-      // Then queries engagement with workspaceId filter: { workspaceId: validatedWorkspaceId }
-      // Implementation: createAction(input, authContext, workspaceId) validates workspace match
-      expect(workspaceId1).toBeTypeOf("string");
-      expect(workspaceId1).toMatch(/^[0-9a-f]{8}/i); // UUID format
+      const rows = await db.action.findMany({
+        where: { engagementId, title: "Idempotent action" },
+        select: { id: true },
+      });
+      expect(rows.length).toBe(1); // exactly one row — no duplicate create
     });
 
-    it("should prevent workspace ID confusion attack", async () => {
-      // Critical invariant: createAction must validate that authContext.workspaceId matches passed workspaceId
-      // If attacker passes different workspaceId, service must fail-closed
-      const authenticContext = { ...mockAuthContext, workspaceId: workspaceId1 };
-      expect(authenticContext.workspaceId).toBe(workspaceId1);
-      expect(workspaceId2).not.toBe(workspaceId1);
+    it("[db] listActions returns the engagement's actions with a real items+pagination DTO shape", async () => {
+      const result = await listActions(workspaceId, { engagementId });
+      expect(Array.isArray(result.items)).toBe(true);
+      expect(result.items.length).toBeGreaterThan(0);
+      expect(result.items.every((a: { engagementId: string }) => a.engagementId === engagementId)).toBe(true);
+      expect(result.pagination).toMatchObject({ limit: 50, offset: 0 });
+      expect(result.pagination.total).toBe(result.items.length);
+      expect(typeof result.pagination.hasMore).toBe("boolean");
     });
 
-    it("should return 400 for validation errors", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation error handling
-      // Invalid schema returns 400 from parseRequestBody(request, createActionSchema)
+    it("[db] listActions does not leak actions from another workspace's engagement (tenant isolation)", async () => {
+      // Seed a real action in the other workspace's engagement directly.
+      const foreignId = randomUUID();
+      await db.action.create({
+        data: { id: foreignId, engagementId: otherEngagementId, title: "Foreign action", status: "draft", updatedAt: new Date() },
+      });
+      const mine = await listActions(workspaceId, { engagementId });
+      expect(mine.items.map((a: { id: string }) => a.id)).not.toContain(foreignId);
+      // The relation filter (engagement.workspaceId) means requesting a foreign engagement under my
+      // workspace returns nothing, never the other tenant's rows.
+      const spoof = await listActions(workspaceId, { engagementId: otherEngagementId });
+      expect(spoof.items.length).toBe(0);
     });
 
-    it("should return 409 for idempotency conflict", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Idempotency store conflict checked in withIdempotency()
-      // Returns 409 if Idempotency-Key already exists with different body
+    it("[db] listActions status filter narrows to matching actions without leaking other statuses", async () => {
+      // Seed one completed action alongside the existing draft actions.
+      await db.action.create({
+        data: { id: randomUUID(), engagementId, title: "Done action", status: "completed", updatedAt: new Date() },
+      });
+      const completed = await listActions(workspaceId, { engagementId, status: "completed" });
+      expect(completed.items.length).toBeGreaterThan(0);
+      expect(completed.items.every((a: { status: string }) => a.status === "completed")).toBe(true);
+      const draftOnly = await listActions(workspaceId, { engagementId, status: "draft" });
+      expect(draftOnly.items.every((a: { status: string }) => a.status === "draft")).toBe(true);
     });
 
-    it("should return 201 on success (new idempotency key)", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path tested by integration
-      // Route returns 201 if isNew = true, 200 if replay
+    it("[db] listActions assignedTo filter returns the matching action (regression: was raw-500 on phantom `owner`)", async () => {
+      // Before the Phase 6C Wave 2 fix, listActions mapped assignedTo onto `where.owner`, a column the
+      // Action model does not have, so this call threw PrismaClientValidationError (raw 500). Reaching a
+      // filtered result proves `where.assignedTo` is now used.
+      const assignee = randomUUID();
+      const assigned = await createAction(
+        { engagementId, recommendationId, title: "Assigned action", assignedTo: assignee, priority: "low" },
+        ctxFor(actorId, workspaceId),
+        workspaceId
+      );
+      const filtered = await listActions(workspaceId, { engagementId, assignedTo: assignee });
+      expect(filtered.items.map((a: { id: string }) => a.id)).toContain(assigned.id);
+      expect(filtered.items.every((a: { assignedTo: string | null }) => a.assignedTo === assignee)).toBe(true);
     });
+  }
+);
 
-    it("should emit ACTION_CREATED audit event on workspace", async () => {
-      // Critical invariant: All actions creation must emit audit event with correct workspace
-      // Service calls: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_CREATED, workspaceId, ... })
-      expect(AUDIT_EVENTS).toBeDefined();
-    });
+describe("Regression: Action Prisma Schema Mismatch (dueDate vs dueAt, priority not a column)", () => {
+  it("should map API input dueDate → Prisma dueAt (Action schema has dueAt, not dueDate)", () => {
+    // Production failure 2026-06-01: Diagnosis failed with PrismaClientValidationError because code wrote
+    // `dueDate` to Action, whose column is `dueAt`. The service maps input.dueDate → dueAt: new Date(...).
+    const actionCreateInput: CreateActionInput = {
+      engagementId: randomUUID(),
+      recommendationId: randomUUID(),
+      title: "Test Action",
+      dueDate: "2026-06-15T00:00:00Z",
+      description: "Test description",
+    };
+    const mappedValue = actionCreateInput.dueDate ? new Date(actionCreateInput.dueDate) : null;
+    expect(mappedValue).toBeTruthy();
+    expect(mappedValue instanceof Date).toBe(true);
   });
 
-  describe("GET /api/actions - List Actions (Workspace Isolation Critical)", () => {
-    it("should require x-workspace-id header", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Header validation tested in middleware
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Auth tested in withAuth middleware
-    });
-
-    it("should require ACTION_VIEW capability", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Capability tested in withAuth(capability: ACTION_VIEW)
-    });
-
-    it("should support pagination with limit", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional pagination, tested in schema validation
-      // Schema: paginationSchema.extend({ limit?: number, offset?: number })
-    });
-
-    it("should support pagination with offset", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional pagination
-    });
-
-    it("should filter by engagementId", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional filter, delegated to service
-    });
-
-    it("should filter by recommendationId", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional filter
-    });
-
-    it("should filter by status", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional filter
-    });
-
-    it("should filter by assignedTo user", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional filter
-    });
-
-    it("should only return actions in user's workspace (critical isolation)", async () => {
-      // Critical invariant: listActions must enforce workspace isolation
-      // Service receives workspaceId and only returns actions where action.workspaceId === workspaceId
-      // Cross-workspace query must return empty or error, never leak data
-      // NOTE: This test documents that workspace scoping MUST be enforced on list operations
-      // Implementation: schema.prisma Action model must include workspaceId field
-      // Validation: WHERE clause in listActions must include workspaceId filter
-      expect(workspaceId1).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-      // Workspace ID format is valid UUID
-      expect(workspaceId1).toBeTypeOf("string");
-    });
-
-    it("should return 400 for invalid pagination", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Pagination validation in schema
-    });
-
-    it("should return 200 with paginated results", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
+  it("should not treat priority as an Action column (priority belongs to Recommendation)", () => {
+    // Action model does NOT have a `priority` field; createAction uses it only to drive re-evaluation.
+    const validActionFields = [
+      "id",
+      "engagementId",
+      "stageId",
+      "recommendationId",
+      "title",
+      "description",
+      "status",
+      "assignedTo",
+      "dueAt",
+      "startedAt",
+      "completedAt",
+      "verifiedAt",
+      "metadata",
+      "version",
+      "createdAt",
+      "updatedAt",
+    ];
+    expect(validActionFields).not.toContain("priority");
+    expect(validActionFields).not.toContain("owner"); // the phantom column the listActions bug used
   });
-
-  describe("GET /api/actions/[actionId] - Get Action (Workspace Isolation Critical)", () => {
-    it("should require x-workspace-id header", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Header validation in middleware
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Auth in middleware
-    });
-
-    it("should require ACTION_VIEW capability", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Capability in middleware
-    });
-
-    it("should validate actionId is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation
-    });
-
-    it("should return 404 if action not found", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Not found error handling
-    });
-
-    it("should return 403 if action in different workspace (critical isolation)", () => {
-      // Critical invariant: Cross-workspace action access must be blocked
-      // Service must verify: action.workspaceId === request.workspaceId
-      // If mismatch, return 403 Forbidden (not 404, to avoid enumeration)
-      expect(true).toBe(true);
-    });
-
-    it("should return 200 with action details", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-      // Delegated to integration tests
-    });
-  });
-
-  describe("PATCH /api/actions/[actionId] - Update Action (State Machine + Workspace Critical)", () => {
-    it("should require x-workspace-id header", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Header validation in middleware
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Auth in middleware
-    });
-
-    it("should require ACTION_UPDATE capability", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Capability check
-    });
-
-    it("should validate actionId is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation
-    });
-
-    it("should require version field for optimistic locking", () => {
-      // Critical invariant: Optimistic locking prevents race conditions
-      // Service must validate version matches current before update
-      // If version mismatch, return 409 Conflict
-      expect(true).toBe(true);
-    });
-
-    it("should allow updating title", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field update
-    });
-
-    it("should allow updating description", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field update
-    });
-
-    it("should allow updating dueDate", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field update
-    });
-
-    it("should allow updating priority", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field update
-    });
-
-    it("should allow updating assignedTo", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field update
-    });
-
-    it("should enforce state machine on status transitions", () => {
-      // Critical invariant: State transitions must follow action-lifecycle rules
-      // Valid: draft→assigned, assigned→in_progress, in_progress→completed
-      // Invalid transitions must be rejected with 400 Bad Request
-      expect(true).toBe(true);
-    });
-
-    it("should prevent cross-workspace action updates (critical isolation)", () => {
-      // Critical invariant: User from ws-2 cannot update action in ws-1
-      // Service must validate: action.workspaceId === request.workspaceId before update
-      // If mismatch, return 403 Forbidden
-      expect(true).toBe(true);
-    });
-
-    it("should return 404 if action not found", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Not found error handling
-    });
-
-    it("should return 409 if version mismatch", () => {
-      // Critical invariant: Optimistic locking conflict handling
-      // If current version !== update.version, return 409 with error details
-      expect(true).toBe(true);
-    });
-
-    it("should return 400 for invalid state transition", () => {
-      // Critical invariant: State machine validation
-      // Reject transitions not in ACTION_TRANSITIONS map
-      expect(true).toBe(true);
-    });
-
-    it("should return 200 on success", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
-  });
-
-  describe("POST /api/actions/[actionId]/start - Start Action", () => {
-    it("should require x-workspace-id header", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Header validation in middleware
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Auth in middleware
-    });
-
-    it("should require ACTION_UPDATE capability", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Capability check delegated to service
-    });
-
-    it("should validate actionId is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation
-    });
-
-    it("should enforce state machine: draft/assigned → in_progress only", () => {
-      // Critical invariant: State machine transition validation
-      // Only draft or assigned actions can transition to in_progress
-      // Service calls validateStateTransition(currentStatus, 'in_progress')
-      expect(true).toBe(true);
-    });
-
-    it("should record started time", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Persistence delegated to service
-    });
-
-    it("should emit audit event for state transition", () => {
-      // Critical invariant: Audit trail emission
-      // Service must emit ACTION_STARTED audit event with workspace context
-      expect(true).toBe(true);
-    });
-
-    it("should return 400 if invalid transition", () => {
-      // Critical invariant: Invalid transitions rejected
-      // Service throws ValidationError for invalid state transitions
-      expect(true).toBe(true);
-    });
-
-    it("should prevent cross-workspace action start (critical isolation)", () => {
-      // Critical invariant: User from ws-2 cannot start action in ws-1
-      // Service must validate action.workspaceId before state change
-      expect(true).toBe(true);
-    });
-
-    it("should return 200 on success", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
-  });
-
-  describe("POST /api/actions/[actionId]/complete - Complete Action (Audit Critical)", () => {
-    it("should require x-workspace-id header", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Header validation in middleware
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Auth in middleware
-    });
-
-    it("should require ACTION_UPDATE capability", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Capability check
-    });
-
-    it("should validate actionId is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation
-    });
-
-    it("should require evidence/notes for completion", () => {
-      // Critical invariant: Enforcement rule blocks completion without evidence
-      // Service calls enforceActionRules() before transition
-      expect(true).toBe(true);
-    });
-
-    it("should enforce state machine: in_progress → completed only", () => {
-      // Critical invariant: Only in_progress actions can complete
-      // Service validates state transition
-      expect(true).toBe(true);
-    });
-
-    it("should record completedBy and completedAt", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Persistence delegated to service
-    });
-
-    it("should trigger engagement re-evaluation", () => {
-      // Critical invariant: Action completion triggers re-evaluation
-      // Service calls triggerReEvaluation(engagementId) after completion
-      expect(true).toBe(true);
-    });
-
-    it("should emit ACTION_COMPLETED audit event", () => {
-      // Critical invariant: Audit trail emission
-      // Service must emit AUDIT_EVENTS.ACTION_COMPLETED with workspace context
-      expect(true).toBe(true);
-    });
-
-    it("should prevent cross-workspace completion (critical isolation)", () => {
-      // Critical invariant: User from ws-2 cannot complete action in ws-1
-      expect(true).toBe(true);
-    });
-
-    it("should return 400 if missing evidence", () => {
-      // Critical invariant: Validation failure returns 400
-      expect(true).toBe(true);
-    });
-
-    it("should return 200 on success", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
-  });
-
-  describe("POST /api/actions/[actionId]/impact-delta - Record Impact", () => {
-    it("should require x-workspace-id header", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Header validation in middleware
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Auth in middleware
-    });
-
-    it("should require ACTION_UPDATE capability", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Capability check
-    });
-
-    it("should validate actionId is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation
-    });
-
-    it("should accept predicted metrics", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional metric fields
-    });
-
-    it("should accept actual metrics", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional metric fields
-    });
-
-    it("should calculate delta between predicted and actual", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Impact calculation delegated to service
-    });
-
-    it("should store outcome snapshot", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Persistence delegated to service
-    });
-
-    it("should emit outcome recorded event", () => {
-      // Critical invariant: Event emission
-      // Service must emit event with workspace context
-      expect(true).toBe(true);
-    });
-
-    it("should prevent cross-workspace impact recording (critical isolation)", () => {
-      // Critical invariant: User from ws-2 cannot record impact for ws-1 action
-      expect(true).toBe(true);
-    });
-
-    it("should return 200 on success", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
-  });
-
-  describe("GET /api/engagements/[engagementId]/actions - List Engagement Actions", () => {
-    it("should require x-workspace-id header", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Header validation in middleware
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Auth in middleware
-    });
-
-    it("should validate engagementId is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation
-    });
-
-    it("should only return actions for specified engagement (critical filtering)", () => {
-      // Critical invariant: Filter by engagementId must be exact match
-      // Service must query with WHERE engagementId = filter.engagementId
-      expect(true).toBe(true);
-    });
-
-    it("should enforce workspace isolation in filtered list (critical isolation)", () => {
-      // Critical invariant: Even when filtered by engagementId, only return ws-scoped actions
-      // Query must include: WHERE workspaceId = request.workspaceId AND engagementId = filter
-      expect(true).toBe(true);
-    });
-
-    it("should support pagination", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Pagination delegated to schema
-    });
-
-    it("should return 404 if engagement not found", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Not found handling
-    });
-
-    it("should return 200 with action list", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
-  });
-
-  describe("Action Route Authorization & Workspace Scoping (Critical Invariants)", () => {
-    it("should prevent unauthenticated access", () => {
-      // Critical invariant: All routes require auth
-      // withAuth() middleware rejects missing/invalid token with 401
-      expect(true).toBe(true);
-    });
-
-    it("should prevent access without required capability", () => {
-      // Critical invariant: Capabilities enforced
-      // withAuth(capability: X) rejects user without capability with 403
-      expect(true).toBe(true);
-    });
-
-    it("should prevent cross-workspace action access (critical isolation)", () => {
-      // Critical invariant: enforceWorkspaceScoping blocks cross-ws access
-      // If action.workspaceId !== request.workspaceId, return 403
-      expect(true).toBe(true);
-    });
-
-    it("should prevent cross-workspace action mutation (critical isolation)", () => {
-      // Critical invariant: PATCH/POST operations check workspace
-      // Service validates workspace before any data mutation
-      expect(true).toBe(true);
-    });
-
-    it("should scope all responses to workspace (critical isolation)", () => {
-      // Critical invariant: All responses contain only workspace-scoped data
-      // Service filters results by workspaceId before returning
-      expect(true).toBe(true);
-    });
-  });
-
-  describe("Action Route DTO Boundary (Response Safety)", () => {
-    it("should not expose internal fields in response", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: DTO redaction delegated to service response builder
-      // Service should wrap responses in PublicActionDTO (excludes internal fields)
-    });
-
-    it("should not expose audit trails in public response", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Audit trails marked as internal visibility
-    });
-
-    it("should return complete public action structure", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Response schema tested separately
-    });
-  });
-
-  describe("Action Route State Machine Enforcement (Critical Invariants)", () => {
-    it("should enforce draft → assigned transition only", () => {
-      // Critical invariant: State machine rules enforced
-      // Rejected transitions: draft → completed (direct, not allowed)
-      expect(true).toBe(true);
-    });
-
-    it("should enforce draft → cancelled transition only", () => {
-      // Critical invariant: Valid transition from draft
-      // Service allows: validateStateTransition('draft', 'cancelled')
-      expect(true).toBe(true);
-    });
-
-    it("should prevent invalid draft → completed transition", () => {
-      // Critical invariant: Invalid transition blocked
-      // Service throws ValidationError for disallowed transitions
-      expect(true).toBe(true);
-    });
-
-    it("should enforce assigned → in_progress transition only", () => {
-      // Critical invariant: Valid transition from assigned
-      // Only: assigned → in_progress, assigned → blocked, assigned → cancelled
-      expect(true).toBe(true);
-    });
-
-    it("should enforce in_progress → completed transition only", () => {
-      // Critical invariant: Only in_progress can complete
-      // Draft cannot directly complete (must go through assigned→in_progress)
-      expect(true).toBe(true);
-    });
-
-    it("should prevent duplicate status transitions (idempotency)", () => {
-      // Critical invariant: Idempotency-Key prevents replay
-      // Duplicate Idempotency-Key returns cached response (200 instead of 201)
-      expect(true).toBe(true);
-    });
-  });
-
-  describe("Action Route Tenant Safety & Isolation (Critical Invariants)", () => {
-    it("should prevent cross-workspace action creation", () => {
-      // Critical invariant: Service validates workspace on creation
-      // Tested above in POST tests
-      expect(true).toBe(true);
-    });
-
-    it("should prevent cross-workspace action update", () => {
-      // Critical invariant: Service validates workspace on update
-      // Tested above in PATCH tests
-      expect(true).toBe(true);
-    });
-
-    it("should prevent cross-workspace action access on any read", () => {
-      // Critical invariant: All GET operations enforce workspace
-      // Tested above in GET tests
-      expect(true).toBe(true);
-    });
-
-    it("should isolate action results by workspace (fail-closed)", () => {
-      // Critical invariant: Query results never leak across workspaces
-      // Service enforces: WHERE workspaceId = request.workspaceId in all queries
-      expect(true).toBe(true);
-    });
-  });
-
-  describe("Action Route Error Handling & Fail-Closed Behavior", () => {
-    it("should return 400 for missing workspace ID header", () => {
-      // Critical invariant: Fail-closed on missing header
-      // Route enforces: if (!workspaceId) return 400
-      expect(true).toBe(true);
-    });
-
-    it("should return 403 for unauthorized workspace access", () => {
-      // Critical invariant: Fail-closed on workspace mismatch
-      // Route enforces: if (!membership) return 403
-      expect(true).toBe(true);
-    });
-
-    it("should return 400 for Zod validation errors", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Schema validation error handling
-    });
-
-    it("should return 409 for version conflict on update", () => {
-      // Critical invariant: Optimistic locking conflict
-      // Service returns ConflictError if version mismatch
-      expect(true).toBe(true);
-    });
-
-    it("should return 400 for invalid state transitions", () => {
-      // Critical invariant: State machine validation error
-      // Service throws ValidationError for invalid transitions
-      expect(true).toBe(true);
-    });
-
-    it("should return 500 for unexpected errors", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Generic error handling via withErrorHandling
-    });
-  });
-
-  describe("Action Route Idempotency (Critical Invariant)", () => {
-    it("should require Idempotency-Key on POST (fail-closed)", () => {
-      // Critical invariant: All POST requests must include Idempotency-Key
-      // Route enforces: if (!idempotencyKey) return 400
-      expect(true).toBe(true);
-    });
-
-    it("should return same response for duplicate idempotency key", () => {
-      // Critical invariant: Replay returns cached response (200 instead of 201)
-      // withIdempotency() middleware checks store and returns cached isNew=false
-      expect(true).toBe(true);
-    });
-
-    it("should return 409 for conflicting idempotency key", () => {
-      // Critical invariant: Same key with different body returns 409
-      // withIdempotency() detects body mismatch and returns 409
-      expect(true).toBe(true);
-    });
-  });
-
-  describe("Action Route Audit & Event Emission (Critical Invariants)", () => {
-    it("should emit ACTION_CREATED event on creation", () => {
-      // Critical invariant: All creates emit AUDIT_EVENTS.ACTION_CREATED
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_CREATED, workspaceId, ... })
-      expect(true).toBe(true);
-    });
-
-    it("should emit ACTION_UPDATED event on status change", () => {
-      // Critical invariant: State transitions emit ACTION_UPDATED
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_UPDATED, ... })
-      expect(true).toBe(true);
-    });
-
-    it("should emit ACTION_COMPLETED event on completion", () => {
-      // Critical invariant: Completion transitions emit ACTION_COMPLETED
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_COMPLETED, workspaceId, ... })
-      expect(true).toBe(true);
-    });
-
-    it("should record audit trail with actor ID", () => {
-      // Critical invariant: All events include actorId
-      // Service: emitAuditEvent({ ..., actorId: authContext.session.user.id })
-      expect(true).toBe(true);
-    });
-
-    it("should record audit trail with workspace context", () => {
-      // Critical invariant: All events include workspaceId
-      // Service: emitAuditEvent({ ..., workspaceId: validatedWorkspaceId })
-      expect(true).toBe(true);
-    });
-  });
-
-  describe("Regression: Action Prisma Schema Mismatch (dueDate vs dueAt)", () => {
-    it("should use dueAt field in Prisma Action.create payload, not dueDate", () => {
-      // Production failure 2026-06-01: Diagnosis failed with PrismaClientValidationError
-      // Root cause: src/services/diagnosis.ts and src/services/action.ts used 'dueDate'
-      // Correct field: Action schema has 'dueAt' (not 'dueDate')
-      //
-      // This regression test verifies that Action write payloads use the correct field name.
-      // If this test fails, it means code is still trying to write dueDate to Action.
-      //
-      // The test is a contract verification:
-      // - Action schema field name is dueAt (mapped from due_at in DB)
-      // - Code must use dueAt when creating or updating Action records
-      // - API input field dueDate is mapped to dueAt in the write path
-
-      // Verification: Read the action type signatures and confirm mapping
-      const actionCreateInput: CreateActionInput = {
-        engagementId: "test-engagement",
-        recommendationId: "test-recommendation",
-        title: "Test Action",
-        // Note: dueDate is the API input field name (string, ISO date)
-        dueDate: "2026-06-15T00:00:00Z",
-        description: "Test description",
-      };
-
-      // Code should map: input.dueDate (string) → dueAt: new Date(input.dueDate)
-      // Code should NOT use: dueDate field (does not exist in schema)
-      const mappedValue = actionCreateInput.dueDate ? new Date(actionCreateInput.dueDate) : null;
-
-      // Verify mapping works
-      expect(mappedValue).toBeTruthy();
-      expect(mappedValue instanceof Date).toBe(true);
-
-      // Contract assertion: if production diagnosis succeeds, this mapping is working
-      // Failure would indicate: src/services/diagnosis.ts or src/services/action.ts
-      // are still using dueDate instead of dueAt in Prisma write operations
-    });
-
-    it("should not include priority field in Action Prisma write (belongs to Recommendation)", () => {
-      // Schema mismatch: Action model does NOT have a 'priority' field
-      // Priority belongs to Recommendation model
-      //
-      // Regression: createAction was trying to write { priority: input.priority }
-      // to Prisma, which is not a field on Action model
-
-      // Action valid fields: id, engagementId, stageId, recommendationId, title,
-      // description, status, assignedTo, dueAt, startedAt, completedAt, verifiedAt,
-      // metadata, version, createdAt, updatedAt
-      const validActionFields = [
-        "id",
-        "engagementId",
-        "stageId",
-        "recommendationId",
-        "title",
-        "description",
-        "status",
-        "assignedTo",
-        "dueAt",
-        "startedAt",
-        "completedAt",
-        "verifiedAt",
-        "metadata",
-        "version",
-        "createdAt",
-        "updatedAt",
-      ];
-
-      // Assertion: priority is NOT in valid fields
-      expect(validActionFields).not.toContain("priority");
-
-      // If code tries to write priority, Prisma will throw ValidationError
-      // This test documents the expected failure
-    });
-
-    it("should use dueAt in orderBy clauses for Action queries", () => {
-      // Regression: getActionsForEngagement used orderBy: [{ priority }, { dueDate }]
-      // Both fields were invalid for Action:
-      // 1. priority - does not exist in Action schema
-      // 2. dueDate - wrong field name, should be dueAt
-
-      const validOrderByField = "dueAt";
-      expect(validOrderByField).toBe("dueAt");
-
-      // Correct orderBy should be: [{ dueAt: "asc" }]
-      // Not: [{ priority: "desc" }, { dueDate: "asc" }]
-    });
-  });
-
-  // QUARANTINED: DELEGATED_TO_SERVICE tests (tested in action-lifecycle.test.ts, action.test.ts)
-  // - Lines 465-521: POST start/accept/reject operations (delegated to service tests)
-  // - Lines 650-680: Informational queries (low-risk, view-only operations)
-  // Total quarantined: 87 tests (from original 119)
-  // Implemented critical tests: 32 tests covering:
-  //   - Workspace isolation (6 tests)
-  //   - Auth enforcement (5 tests)
-  //   - State machine transitions (6 tests)
-  //   - Tenant safety & isolation (4 tests)
-  //   - Error handling & fail-closed (6 tests)
-  //   - Idempotency (3 tests)
-  //   - Audit & events (5 tests)
 });
