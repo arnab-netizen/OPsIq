@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
@@ -61,8 +62,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       if (!user) {
         user = await db.user.create({
           data: {
+            id: randomUUID(),
             email: member.email,
             name: member.email.split("@")[0],
+            updatedAt: new Date(),
           },
         });
       }

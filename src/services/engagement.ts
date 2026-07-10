@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -136,6 +137,8 @@ export async function createEngagement(
     async () => {
       const engagement = await db.engagement.create({
         data: {
+          id: randomUUID(),
+          updatedAt: new Date(),
           code,
           title: input.title,
           clientId: input.clientId,
