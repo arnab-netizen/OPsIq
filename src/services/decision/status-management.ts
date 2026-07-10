@@ -1,6 +1,8 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import type { AuditEventName } from "@/domain/constants/audit-events";
+import { InvalidStateTransitionError } from "@/infra/errors";
 
 /**
  * Decision status enum
@@ -129,7 +131,7 @@ export async function changeDecisionStatus(
   message: string;
   timestamp: Date;
 }> {
-  // Fetch current decision
+  // Fetch current decision (outside transaction for pre-validation)
   const decision = await db.operatorItem.findFirst({
     where: { id: decisionId, workspaceId },
   });
@@ -140,63 +142,57 @@ export async function changeDecisionStatus(
 
   const currentStatus = decision.status;
 
-  // Validate transition
+  // Validate transition before entering transaction
   if (!isValidTransition(currentStatus, newStatus)) {
-    throw new Error(
-      `Invalid transition from ${currentStatus} to ${newStatus}`
-    );
+    throw new InvalidStateTransitionError("Decision", currentStatus, newStatus);
+  }
+
+  // Determine audit event name
+  let eventName: AuditEventName = AUDIT_EVENTS.DECISION_STATUS_CHANGED;
+  if (newStatus === DecisionStatus.APPROVED) {
+    eventName = AUDIT_EVENTS.DECISION_APPROVED;
+  } else if (newStatus === DecisionStatus.REJECTED) {
+    eventName = AUDIT_EVENTS.DECISION_REJECTED;
+  } else if (newStatus === DecisionStatus.BLOCKED) {
+    eventName = AUDIT_EVENTS.DECISION_BLOCKED;
+  } else if (newStatus === DecisionStatus.OVERRIDDEN) {
+    eventName = AUDIT_EVENTS.DECISION_OVERRIDDEN;
+  } else if (newStatus === DecisionStatus.EXECUTED) {
+    eventName = AUDIT_EVENTS.DECISION_EXECUTED;
   }
 
   const timestamp = new Date();
 
-  // Update decision status
-  const updated = await db.operatorItem.update({
-    where: { id: decisionId },
-    data: {
-      status: newStatus,
-      updatedAt: timestamp,
-    },
-  });
+  // CAS + audit in transaction (fail-closed): only update if status is still currentStatus
+  // and workspaceId matches, preventing TOCTOU race and ensuring audit is atomic with state change.
+  await db.$transaction(async (tx) => {
+    const res = await tx.operatorItem.updateMany({
+      where: { id: decisionId, workspaceId, status: currentStatus },
+      data: { status: newStatus, updatedAt: timestamp },
+    });
 
-  // Determine event name based on transition
-  let eventName = "DECISION_STATUS_CHANGED";
-  if (newStatus === DecisionStatus.APPROVED) {
-    eventName = "DECISION_APPROVED";
-  } else if (newStatus === DecisionStatus.REJECTED) {
-    eventName = "DECISION_REJECTED";
-  } else if (newStatus === DecisionStatus.BLOCKED) {
-    eventName = "DECISION_BLOCKED";
-  } else if (newStatus === DecisionStatus.OVERRIDDEN) {
-    eventName = "DECISION_OVERRIDDEN";
-  } else if (newStatus === DecisionStatus.EXECUTED) {
-    eventName = "DECISION_EXECUTED";
-  }
+    if (res.count !== 1) {
+      throw new InvalidStateTransitionError("Decision", currentStatus, newStatus);
+    }
 
-  // Log audit event
-  await logAuditEvent({
-    eventName,
-    entityType: "Decision",
-    entityId: decisionId,
-    actorId: userId,
-    role: null,
-    before: {
-      status: currentStatus,
-    },
-    after: {
-      status: newStatus,
-    },
-    metadata: {
-      action: "change_status",
-      from: currentStatus,
-      to: newStatus,
-      timestamp: timestamp.toISOString(),
-      ...metadata,
-    },
-    workspaceId,
-  }).catch((err: unknown) => {
-    const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
-    console.error(
-      `Audit logging failed: ${governed.operatorMessage}`
+    await emitAuditEvent(
+      {
+        eventName,
+        workspaceId,
+        actorId: userId,
+        actorType: "user",
+        entityType: "Decision",
+        entityId: decisionId,
+        payload: {
+          from: currentStatus,
+          to: newStatus,
+          action: "change_status",
+          timestamp: timestamp.toISOString(),
+          ...(metadata ?? {}),
+        },
+        visibility: "internal",
+      },
+      tx
     );
   });
 

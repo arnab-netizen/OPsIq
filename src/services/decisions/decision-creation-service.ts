@@ -3,6 +3,8 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 export interface VerifiedDecisionInput {
   // Business data
@@ -58,24 +60,47 @@ export async function createDecision(
   }
 
   try {
-    const decision = await db.operatorItem.create({
-      data: {
-        id: randomUUID(),
-        workspaceId,
-        problem: title.trim(),
-        action: type.trim(),
-        impactExpected: impact,
-        impactLow: impact * 0.8,
-        impactHigh: impact * 1.2,
-        confidence,
-        expectedOutcome: expectedOutcome || null,
-        priorityScore: calculatePriorityScore(impact, confidence),
-        status: "pending",
-        ownerUserId: userId,
-        createdByUserId: userId,
-        lastUpdatedByUserId: userId,
-        updatedAt: new Date(),
-      },
+    const decision = await db.$transaction(async (tx) => {
+      const created = await tx.operatorItem.create({
+        data: {
+          id: randomUUID(),
+          workspaceId,
+          problem: title.trim(),
+          action: type.trim(),
+          impactExpected: impact,
+          impactLow: impact * 0.8,
+          impactHigh: impact * 1.2,
+          confidence,
+          expectedOutcome: expectedOutcome || null,
+          priorityScore: calculatePriorityScore(impact, confidence),
+          status: "pending",
+          ownerUserId: userId,
+          createdByUserId: userId,
+          lastUpdatedByUserId: userId,
+          updatedAt: new Date(),
+        },
+      });
+
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.OPERATOR_ITEM_CREATED,
+          workspaceId,
+          actorId: userId,
+          actorType: "user",
+          entityType: "OperatorItem",
+          entityId: created.id,
+          payload: {
+            title: title.trim(),
+            type: type.trim(),
+            impact,
+            confidence,
+          },
+          visibility: "internal",
+        },
+        tx
+      );
+
+      return created;
     });
 
     logger.info("Decision created", {
