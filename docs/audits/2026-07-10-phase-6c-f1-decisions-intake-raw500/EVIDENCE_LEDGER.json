@@ -1,0 +1,102 @@
+{
+  "phase": "6C-F1",
+  "title": "Fix decisions intake raw-500 (fast-follow)",
+  "date": "2026-07-10",
+  "branch": "claude/phase-6c-f1-decisions-intake-raw500",
+  "base_head": "6e4df2b",
+  "type": "minimal-raw500-fix + real-db-regression-test",
+  "constraints": [
+    "no schema change",
+    "no broad route rewrite",
+    "no unrelated routes modified",
+    "no test weakening/skip/deletion",
+    "real Postgres DB proof (no Prisma mocks as DB proof)",
+    "preserve auth/tenant behavior",
+    "no secrets, no production migration"
+  ],
+  "rows": [
+    {
+      "kind": "pr212_merge_main_verification",
+      "pr": 212,
+      "merge_commit": "6e4df2b",
+      "main_required_gates": [
+        { "workflow": "CI - Build & Test", "run": 3022, "conclusion": "success" },
+        { "workflow": "CI/CD Foundations - Phase 13 Slice 1", "run": 1370, "conclusion": "success" },
+        { "workflow": "MVP Readiness Gate", "run": 1636, "conclusion": "success", "security_baseline": "HONEST_GREEN" }
+      ],
+      "createDecision_fix_on_main": true
+    },
+    {
+      "kind": "idle_audit_finding",
+      "id": "CONFIRMED_HIGH-decisions-intake-raw500",
+      "file": "src/app/api/decisions/intake/route.ts",
+      "defect_class": "operatorItem-create raw-500 (phantom columns + missing required fields)",
+      "phantom_fields": ["createdBy", "decisionType", "problemType"],
+      "missing_required_fields": ["id", "updatedAt"],
+      "impact": "POST /api/decisions/intake raw-500s on every call",
+      "confirmed": true
+    },
+    {
+      "kind": "false_positives_cleared",
+      "sites": [
+        { "file": "src/services/operator/store.ts", "note": "two create sites correct (createdByUserId + id + updatedAt)" },
+        { "file": "src/services/action.ts createAction", "note": "correct id/updatedAt/real columns" },
+        { "file": "src/services/action.ts recommendation.create ~561", "note": "Recommendation has @default for id/updatedAt" }
+      ],
+      "suspected_needs_proof": [
+        { "files": ["diagnosis/root-cause", "diagnosis/maturity", "diagnosis/bottleneck"], "note": "pass body.workspaceId into engine without visible membership check — possible cross-workspace bypass; recommend auth/tenant proof phase" }
+      ]
+    },
+    {
+      "kind": "source_fix",
+      "files": [
+        { "file": "src/app/api/decisions/intake/intake-data.ts", "new": true, "note": "extracted buildIntakeOperatorItemData so the create payload is testable; writes only real columns + all required fields" },
+        { "file": "src/app/api/decisions/intake/route.ts", "note": "use buildIntakeOperatorItemData; add id + updatedAt, createdByUserId, drop phantom decisionType/problemType; removed unused IntakeInput type + getSession/randomUUID imports" }
+      ],
+      "schema_change": false,
+      "auth_behavior_changed": false,
+      "verified": "before: PrismaClientValidationError (createdBy/id/updatedAt/decisionType); after: persists pending workspace-scoped decision"
+    },
+    {
+      "kind": "test_proof",
+      "file": "src/__tests__/api/decisions-intake.db.test.ts",
+      "db_backed": true,
+      "prisma_mocks": false,
+      "gate": "TEST_WITH_DB=true",
+      "tests": 2,
+      "result": "2 passed",
+      "cases": [
+        "runs exact intake payload through real DB -> pending, workspace-scoped, createdByUserId/id/updatedAt present (regression: was raw-500)",
+        "builder writes no phantom columns and includes previously-missing required fields"
+      ],
+      "harness_limitation": "full HTTP route invocation deferred (no NextRequest/session harness); DB create (defect locus) proven directly"
+    },
+    {
+      "kind": "validation_command",
+      "commands": [
+        { "cmd": "npx tsc --noEmit", "result": "exit 0" },
+        { "cmd": "npx eslint <changed files>", "result": "0 problems" },
+        { "cmd": "TEST_WITH_DB=true npx vitest run decisions-intake.db.test.ts", "result": "2 passed" },
+        { "cmd": "npx vitest run (no DB)", "result": "2 skipped (gated)" },
+        { "cmd": "npm run lint:ratchet", "result": "PASS (0 changed-file errors)" },
+        { "cmd": "npm run governance:scan:strict", "result": "0 new findings" }
+      ]
+    },
+    {
+      "kind": "ci_result",
+      "pr": null,
+      "status": "PENDING",
+      "expectation": "required gates green; intake [db] test runs in build-and-test (real postgres:16); Security Baseline HONEST_GREEN"
+    }
+  ],
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_changed": false,
+    "schema_changed": false,
+    "tests_weakened_or_deleted_or_skipped": false,
+    "auth_behavior_changed": false,
+    "authorizing_phrase_received": false
+  },
+  "next_recommended_phase": "Phase 6C Wave 2 — api/actions placebo conversion (owner instruction required)"
+}

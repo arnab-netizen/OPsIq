@@ -2,10 +2,10 @@ import { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { getSession } from "@/services/auth";
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { buildIntakeOperatorItemData } from "./intake-data";
 import { z } from "zod";
 
 const IntakeSchema = z.object({
@@ -15,8 +15,6 @@ const IntakeSchema = z.object({
   risk: z.enum(["low", "medium", "high"]).optional().default("medium"),
   recommendationId: z.string().uuid().optional(),
 });
-
-type IntakeInput = z.infer<typeof IntakeSchema>;
 
 /**
  * POST /api/decisions/intake
@@ -67,34 +65,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
   // Create decision
   const decision = await db.operatorItem.create({
-    data: {
-      workspaceId,
-      createdBy: userId,
-      ownerUserId: userId,
-      recommendationId: input.recommendationId,
-      problem: input.title,
-      action: input.description,
-      confidence: input.confidence,
-      impactExpected: 0,
-      impactLow: 0,
-      impactHigh: 0,
-      status: "pending",
-      blockStage: null,
-      blockReason: null,
-      decisionType: "general",
-      problemType: input.risk === "high" ? "growth_block" : "revenue_leak",
-      inputsSnapshot: {
-        title: input.title,
-        description: input.description,
-        confidence: input.confidence,
-        risk: input.risk,
-        recommendationId: input.recommendationId,
-        createdAt: new Date().toISOString(),
-      },
-      priorityScore: 0.5,
-      executionStatus: "not_started",
-      engineVersion: "v1.0.0",
-    },
+    data: buildIntakeOperatorItemData(input, workspaceId, userId),
   });
 
   // Log intake event
