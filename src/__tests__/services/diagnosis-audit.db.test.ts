@@ -29,9 +29,23 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       verifiedWorkspaceId: workspaceId,
       verifiedCapabilities: ["DIAGNOSIS_CREATE"],
       verifiedSessionSnapshot: {
+        snapshotId: uuidv4(),
+        snapshotTimestamp: new Date(),
+        snapshotHash: "test-hash",
         actorId: userId,
+        workspaceId,
+        capabilities: ["DIAGNOSIS_CREATE"],
+      },
+      // assessCondition reads authContext.session?.user?.id for actorId
+      session: {
+        user: {
+          id: userId,
+          email: `6g-fg1-audit-${stamp}@test.local`,
+          name: null,
+          isActive: true,
+        },
         sessionId: uuidv4(),
-        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
       policy: null,
     } as unknown as CanonicalAuthContext;
