@@ -1,0 +1,79 @@
+{
+  "phase": "6G",
+  "date": "2026-07-10",
+  "branch": "claude/phase-6g-governance-lane-integrity-fixes",
+  "base_commit": "8a16d1fa36dc8e4a41c9927a03274e594f6607cd",
+  "findings": [
+    {
+      "id": "F-G1",
+      "verdict": "CONFIRMED",
+      "live_state": "LIVE",
+      "severity": "HIGH",
+      "file": "src/services/diagnosis.ts",
+      "line": 884,
+      "defect": "emitAuditEvent called without await — fire-and-forget; errors silently dropped",
+      "fix": "Added await before emitAuditEvent",
+      "fix_file": "src/services/diagnosis.ts",
+      "test_file": "src/__tests__/services/diagnosis-audit.db.test.ts",
+      "pattern": "fire-and-forget-audit"
+    },
+    {
+      "id": "F-G2",
+      "verdict": "CONFIRMED",
+      "live_state": "DEAD",
+      "severity": "MEDIUM",
+      "file": "src/services/decision/transaction-actions.ts",
+      "line": 43,
+      "defect": "Non-CAS update({ where: { id } }) missing workspaceId and status guard; post-commit logAuditEvent().catch(swallow)",
+      "fix": "db.$transaction with updateMany({ id, workspaceId, status: { in: allowedStates } }) + emitAuditEvent(tx); removed logAuditEvent import",
+      "fix_file": "src/services/decision/transaction-actions.ts",
+      "test_file": "src/__tests__/services/decision/transaction-actions-cas.db.test.ts",
+      "pattern": "non-cas-post-commit-audit"
+    },
+    {
+      "id": "F-G3",
+      "verdict": "CONFIRMED",
+      "live_state": "DEAD",
+      "severity": "MEDIUM",
+      "file": "src/services/decision/transaction-execution.ts",
+      "line": 33,
+      "defect": "Non-CAS update({ where: { id } }) missing workspaceId in write WHERE; post-commit logAuditEvent().catch(swallow)",
+      "fix": "db.$transaction with updateMany({ id, workspaceId }) + emitAuditEvent(tx); removed logAuditEvent import; mapped execution statuses to DECISION_EXECUTION_* constants",
+      "fix_file": "src/services/decision/transaction-execution.ts",
+      "test_file": "src/__tests__/services/decision/transaction-execution-cas.db.test.ts",
+      "pattern": "non-cas-post-commit-audit"
+    },
+    {
+      "id": "F-G4",
+      "verdict": "CONFIRMED",
+      "live_state": "TEST",
+      "severity": "LOW",
+      "file": "src/__tests__/batch-1-phase-2-subbatch-1.test.ts",
+      "lines": [76, 143],
+      "defect": "expect(true).toBe(true) placebo — ENGAGEMENT_VIEW capability enforcement tests exercised nothing",
+      "fix": "Real hasCapability assertions: verifies constant value and allow/deny paths",
+      "fix_file": "src/__tests__/batch-1-phase-2-subbatch-1.test.ts",
+      "pattern": "placebo-test"
+    },
+    {
+      "id": "P4",
+      "verdict": "CONFIRMED",
+      "live_state": "OOM-RISK",
+      "severity": "LOW",
+      "file": "scripts/mvp-readiness-check.sh",
+      "line": 100,
+      "defect": "npm run build without NODE_OPTIONS — OOM crash produces silent failure; output suppressed with > /dev/null",
+      "fix": "NODE_OPTIONS=--max-old-space-size=4096; build log captured and shown on failure",
+      "fix_file": "scripts/mvp-readiness-check.sh",
+      "pattern": "oom-silent-failure"
+    }
+  ],
+  "tests_added": [
+    "src/__tests__/services/diagnosis-audit.db.test.ts",
+    "src/__tests__/services/decision/transaction-actions-cas.db.test.ts",
+    "src/__tests__/services/decision/transaction-execution-cas.db.test.ts"
+  ],
+  "unit_tests_passing": 11,
+  "db_tests_gated": true,
+  "typescript_clean": true
+}

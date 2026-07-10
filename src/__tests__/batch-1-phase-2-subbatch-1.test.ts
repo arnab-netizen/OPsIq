@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NotFoundError } from "@/infra/errors";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { hasCapability } from "@/policies/capability-check";
+import { ROLES } from "@/domain/constants/roles";
 
 /**
  * Tests for Batch 1 Phase 2 Sub-batch 1: 2-route remediation
@@ -70,10 +73,17 @@ describe("Batch 1 Phase 2 Sub-batch 1: Engagement Routes", () => {
     });
 
     it("capability required: ENGAGEMENT_VIEW", async () => {
-      // Route option: { requireCapabilities: ["ENGAGEMENT_VIEW"] }
-      // Wrapper enforces before handler runs
-      // No auth mutations in handler
-      expect(true).toBe(true);
+      // Route is declared with: requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW]
+      // Verify the constant matches what withCanonicalEnforcement receives.
+      expect(CAPABILITIES.ENGAGEMENT_VIEW).toBe("engagement:view");
+
+      // A context with any role that grants ENGAGEMENT_VIEW is allowed.
+      const allowed = { userId: "u1", roles: [{ role: ROLES.VIEWER }] };
+      expect(hasCapability(allowed, CAPABILITIES.ENGAGEMENT_VIEW)).toBe(true);
+
+      // A context with no roles is denied.
+      const denied = { userId: "u1", roles: [] };
+      expect(hasCapability(denied, CAPABILITIES.ENGAGEMENT_VIEW)).toBe(false);
     });
 
     it("does not return Response or NextResponse from wrapped handler", async () => {
@@ -138,9 +148,17 @@ describe("Batch 1 Phase 2 Sub-batch 1: Engagement Routes", () => {
     });
 
     it("capability required: ENGAGEMENT_VIEW", async () => {
-      // Route option: { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
-      // Wrapper enforces before handler runs
-      expect(true).toBe(true);
+      // Route is declared with: requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW]
+      // Verify the constant matches what withCanonicalEnforcement receives.
+      expect(CAPABILITIES.ENGAGEMENT_VIEW).toBe("engagement:view");
+
+      // A context with any role that grants ENGAGEMENT_VIEW is allowed.
+      const allowed = { userId: "u1", roles: [{ role: ROLES.VIEWER }] };
+      expect(hasCapability(allowed, CAPABILITIES.ENGAGEMENT_VIEW)).toBe(true);
+
+      // A context with no roles is denied.
+      const denied = { userId: "u1", roles: [] };
+      expect(hasCapability(denied, CAPABILITIES.ENGAGEMENT_VIEW)).toBe(false);
     });
 
     it("does not return Response or NextResponse from wrapped handler", async () => {

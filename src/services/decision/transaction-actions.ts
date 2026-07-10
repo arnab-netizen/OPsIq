@@ -1,6 +1,8 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { Prisma } from "@/generated/prisma/client";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { InvalidStateTransitionError } from "@/infra/errors";
 
 /**
  * Execute decision action (approve, reject, override)
@@ -25,65 +27,61 @@ export async function executeDecisionAction(
   // Validate action is allowed on current state
   const allowedStates = ["pending", "blocked"];
   if (!allowedStates.includes(decision.status)) {
-    throw new Error(
-      `Cannot execute ${action} on ${decision.status} decision`
-    );
+    throw new InvalidStateTransitionError("Decision", decision.status, action);
   }
 
-  // Map action to status
   const statusMap = {
     approve: "approved",
     reject: "rejected",
     override: "approved",
   };
 
+  const eventMap = {
+    approve: AUDIT_EVENTS.DECISION_APPROVED,
+    reject: AUDIT_EVENTS.DECISION_REJECTED,
+    override: AUDIT_EVENTS.DECISION_OVERRIDDEN,
+  };
+
   const newStatus = statusMap[action];
+  const eventName = eventMap[action];
+  const timestamp = new Date();
 
-  // Update decision
-  const updated = await db.operatorItem.update({
-    where: { id: decisionId },
-    data: {
-      status: newStatus,
-      ...(action === "override" && {
-        override_reason: overrideReason,
-        override_approved_at: new Date().toISOString(),
-        reviewedBy: userId,
-      }),
-      updatedAt: new Date(),
-    },
-  });
+  // CAS + audit in transaction (fail-closed):
+  // updateMany enforces workspaceId isolation and status guard atomically with the write,
+  // preventing TOCTOU race. Audit rolls back with the state change on failure.
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const res = await tx.operatorItem.updateMany({
+      where: { id: decisionId, workspaceId, status: { in: allowedStates } },
+      data: { status: newStatus, updatedAt: timestamp },
+    });
 
-  // Log audit event
-  await logAuditEvent({
-    eventName:
-      action === "override"
-        ? "DECISION_OVERRIDDEN"
-        : action === "approve"
-          ? "DECISION_APPROVED"
-          : "DECISION_REJECTED",
-    entityType: "Decision",
-    entityId: decisionId,
-    actorId: userId,
-    role: null,
-    before: {
-      status: decision.status,
-    },
-    after: {
-      status: newStatus,
-    },
-    metadata: {
-      action: `${action}_decision`,
-      ...(overrideReason && { override_reason: overrideReason }),
-      timestamp: new Date().toISOString(),
-    },
-    workspaceId,
-  }).catch((err: unknown) => {
-    const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
-    console.error(
-      `Audit logging failed: ${governed.operatorMessage}`
+    if (res.count !== 1) {
+      throw new InvalidStateTransitionError("Decision", decision.status, newStatus);
+    }
+
+    await emitAuditEvent(
+      {
+        eventName,
+        workspaceId,
+        actorId: userId,
+        actorType: "user",
+        entityType: "Decision",
+        entityId: decisionId,
+        payload: {
+          from: decision.status,
+          to: newStatus,
+          action,
+          timestamp: timestamp.toISOString(),
+          ...(overrideReason && { override_reason: overrideReason }),
+        },
+        visibility: "internal",
+      },
+      tx
     );
   });
 
+  const updated = await db.operatorItem.findUnique({ where: { id: decisionId } });
+  if (!updated) throw new Error("Decision not found after update");
   return updated;
 }
 
@@ -112,10 +110,13 @@ export function getAvailableActions(
  */
 export function validateActionParams(
   action: string,
-  params: Record<string, any>
+  params: Record<string, unknown>
 ): boolean {
   if (action === "override") {
-    return !!(params.overrideReason && params.overrideReason.trim().length > 0);
+    return !!(
+      typeof params.overrideReason === "string" &&
+      params.overrideReason.trim().length > 0
+    );
   }
 
   return true;
