@@ -5,6 +5,11 @@ import { withEnforcementFull } from "@/lib/enforced-route";
 import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
 import { logger } from "@/infra/logger";
 import { approveOutcomeVerification } from "@/services/outcome/verification-approval.service";
+import {
+  checkIdempotencyKey,
+  recordIdempotencyResponse,
+  recordIdempotencyError,
+} from "@/services/idempotency";
 import { z } from "zod";
 
 const VerifyOutcomeSchema = z.object({
@@ -56,6 +61,26 @@ export const POST = withEnforcementFull(
     const body = await request.json();
     const verificationInput = VerifyOutcomeSchema.parse(body);
 
+    const idempotencyKey = request.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new ValidationError("idempotency-key header is required");
+    }
+
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "verifyOutcome",
+      actorId: userId,
+      workspaceId,
+      payload: { decisionId, workspaceId, verificationStatus: verificationInput.verificationStatus },
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+      throw idempotencyCheck.cachedError;
+    }
+
     try {
       // Approve/verify outcome
       const result = await approveOutcomeVerification(
@@ -72,14 +97,22 @@ export const POST = withEnforcementFull(
         verificationStatus: verificationInput.verificationStatus,
       });
 
-      return {
+      const responseBody = {
         success: true,
         decisionId: result.decisionId,
         verificationStatus: result.verificationStatus,
         verifiedAt: result.verifiedAt,
         message: result.message,
       };
+
+      await recordIdempotencyResponse(idempotencyKey, 200, responseBody, workspaceId);
+      return responseBody;
     } catch (error) {
+      await recordIdempotencyError(
+        idempotencyKey,
+        error instanceof Error ? error : new Error(String(error)),
+        workspaceId
+      );
       if (error instanceof ValidationError) {
         throw error;
       }

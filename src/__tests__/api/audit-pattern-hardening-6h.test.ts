@@ -132,6 +132,9 @@ vi.mock("@/infra/errors", () => ({
   PlanLimitError: class extends Error {
     constructor(feature: string, reason: string) { super(`${feature}: ${reason}`); this.name = "PlanLimitError"; }
   },
+  ValidationError: class extends Error {
+    constructor(msg: string) { super(msg); this.name = "ValidationError"; }
+  },
 }));
 
 // ─── Import routes after mocks ────────────────────────────────────────────────
@@ -143,6 +146,7 @@ import { POST as operatorPOST } from "@/app/api/operator/route";
 
 function makeIntakeRequest(body: Record<string, unknown> = {}) {
   return {
+    headers: { get: (k: string) => (k === "idempotency-key" ? "idem-key-intake-1" : null) },
     nextUrl: { searchParams: { get: () => null } },
     json: () => Promise.resolve({ title: "Cut supplier lead time", risk: "medium", confidence: 0.5, ...body }),
   };

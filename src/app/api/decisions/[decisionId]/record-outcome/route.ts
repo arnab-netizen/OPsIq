@@ -1,13 +1,16 @@
 import { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, ValidationError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { getSession } from "@/services/auth";
 import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
 import { logger } from "@/infra/logger";
 import { recordDecisionOutcome } from "@/services/decisions/decision-lifecycle.service";
 import { db } from "@/lib/db";
-import { ValidationError } from "@/infra/errors";
+import {
+  checkIdempotencyKey,
+  recordIdempotencyResponse,
+  recordIdempotencyError,
+} from "@/services/idempotency";
 import { z } from "zod";
 
 const RecordOutcomeSchema = z.object({
@@ -68,6 +71,26 @@ export const POST = withEnforcementFull(
     const body = await request.json();
     const outcomeData = RecordOutcomeSchema.parse(body);
 
+    const idempotencyKey = request.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new ValidationError("idempotency-key header is required");
+    }
+
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "recordDecisionOutcome",
+      actorId: userId,
+      workspaceId,
+      payload: { decisionId, workspaceId },
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+      throw idempotencyCheck.cachedError;
+    }
+
     try {
       // Record outcome via lifecycle service
       const updated = await recordDecisionOutcome(
@@ -85,17 +108,25 @@ export const POST = withEnforcementFull(
         actualOutcomeValue: outcomeData.actualOutcomeValue,
       });
 
-      return {
+      const responseBody = {
         decisionId,
         status: updated.status,
         message: "Decision outcome recorded successfully",
         outcome: outcomeData,
       };
-    } catch (lifecycleError) {
-      if (lifecycleError instanceof ValidationError) {
-        throw lifecycleError;
+
+      await recordIdempotencyResponse(idempotencyKey, 200, responseBody, workspaceId);
+      return responseBody;
+    } catch (error) {
+      await recordIdempotencyError(
+        idempotencyKey,
+        error instanceof Error ? error : new Error(String(error)),
+        workspaceId
+      );
+      if (error instanceof ValidationError) {
+        throw error;
       }
-      throw lifecycleError;
+      throw error;
     }
   }
 );

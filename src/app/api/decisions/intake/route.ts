@@ -1,11 +1,16 @@
 import { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
-import { UnauthorizedError } from "@/infra/errors";
+import { ValidationError, UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { buildIntakeOperatorItemData } from "./intake-data";
+import {
+  checkIdempotencyKey,
+  recordIdempotencyResponse,
+  recordIdempotencyError,
+} from "@/services/idempotency";
 import { z } from "zod";
 
 const IntakeSchema = z.object({
@@ -30,19 +35,25 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     throw new UnauthorizedError("Unauthorized");
   }
 
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    throw new ValidationError("idempotency-key header is required");
+  }
+
   const userId = session.user.id;
 
   // Get workspace ID from query param
   let workspaceId: string;
   const queryWorkspaceId = request.nextUrl.searchParams.get("workspaceId");
 
-  // If no workspace specified, use user's first active workspace
+  // If no workspace specified, use user's oldest active workspace (deterministic for multi-workspace users)
   if (!queryWorkspaceId) {
     const membership = await db.workspaceMembership.findFirst({
       where: {
         userId,
         isActive: true,
       },
+      orderBy: { createdAt: "asc" },
     });
 
     if (!membership) {
@@ -63,37 +74,69 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   const body = await request.json();
   const input = IntakeSchema.parse(body);
 
-  // Create decision
-  const decision = await db.operatorItem.create({
-    data: buildIntakeOperatorItemData(input, workspaceId, userId),
-  });
-
-  // Log intake event — fail-closed: audit failure aborts the route handler
-  await logAuditEvent({
-    eventName: "DECISION_INTAKE",
-    entityType: "Decision",
-    entityId: decision.id,
+  // Idempotency check — deduplicates network retries before any DB mutation
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "intakeDecision",
     actorId: userId,
-    role: null,
-    before: null,
-    after: {
-      id: decision.id,
-      status: "pending",
-      title: input.title,
-    },
-    metadata: {
-      action: "intake_decision",
-      source: "api",
-      confidence: input.confidence,
-      risk: input.risk,
-      createdAt: new Date().toISOString(),
-    },
     workspaceId,
+    payload: { title: input.title, workspaceId },
   });
 
-  return {
-    decisionId: decision.id,
-    status: "pending",
-    createdAt: decision.createdAt,
-  };
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return idempotencyCheck.cachedResponse.body;
+  }
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+    throw idempotencyCheck.cachedError;
+  }
+
+  try {
+    // Create decision
+    const decision = await db.operatorItem.create({
+      data: buildIntakeOperatorItemData(input, workspaceId, userId),
+    });
+
+    // Log intake event — fail-closed: audit failure aborts the route handler
+    await logAuditEvent({
+      eventName: "DECISION_INTAKE",
+      entityType: "Decision",
+      entityId: decision.id,
+      actorId: userId,
+      role: null,
+      before: null,
+      after: {
+        id: decision.id,
+        status: "pending",
+        title: input.title,
+      },
+      metadata: {
+        action: "intake_decision",
+        source: "api",
+        confidence: input.confidence,
+        risk: input.risk,
+        createdAt: new Date().toISOString(),
+      },
+      workspaceId,
+    });
+
+    const responseBody = {
+      decisionId: decision.id,
+      status: "pending" as const,
+      createdAt: decision.createdAt instanceof Date
+        ? decision.createdAt.toISOString()
+        : decision.createdAt,
+    };
+
+    await recordIdempotencyResponse(idempotencyKey, 200, responseBody, workspaceId);
+
+    return responseBody;
+  } catch (error) {
+    await recordIdempotencyError(
+      idempotencyKey,
+      error instanceof Error ? error : new Error(String(error)),
+      workspaceId
+    );
+    throw error;
+  }
 });
