@@ -1,0 +1,124 @@
+{
+  "phase": "6C-wave-1",
+  "title": "Convert decisions placebo tests + fix owner-facing raw-500 it exposed",
+  "date": "2026-07-10",
+  "branch": "claude/phase-6c-placebo-test-conversion-wave-1-decisions",
+  "base_head": "046430b",
+  "type": "test-integrity-conversion + minimal-proven-product-fix",
+  "constraints": [
+    "no test deletion / quarantine / skip-as-green",
+    "no placebo replaced with placebo",
+    "no meaningless assertions (no expect(true).toBe(true), no bare toBeDefined)",
+    "real CI Postgres for DB proof (no Prisma mocks as DB proof)",
+    "scope limited to decisions cluster",
+    "no schema change, no secrets, no production migration"
+  ],
+  "rows": [
+    {
+      "kind": "phase_6b_main_verification",
+      "commit": "046430b",
+      "required_gates": [
+        { "workflow": "CI - Build & Test", "run": 3020, "conclusion": "success" },
+        { "workflow": "CI/CD Foundations - Phase 13 Slice 1", "run": 1369, "conclusion": "success" },
+        { "workflow": "MVP Readiness Gate", "run": 1635, "conclusion": "success", "security_baseline": "HONEST_GREEN (parser executed in-CI, 0 critical/high, no continue-on-error, no npm audit || true)" }
+      ],
+      "non_required_red": [{ "workflow": "Smoke - Production Dashboard", "run": 567, "class": "known BLOCKED_SCHEMA_DRIFT" }],
+      "classification": "GREEN — Phase 6B CLOSED, HONEST_GREEN"
+    },
+    {
+      "kind": "placebo_inventory",
+      "file": "src/__tests__/api/decisions.test.ts",
+      "starting_cases": 78,
+      "starting_real_assertions": 0,
+      "signature": "expect(true).toBe(true) / empty TODO_A2_FAKE_TEST_QUARANTINED bodies / constant .toMatch; no route/service import",
+      "false_footer_claim": "'IMPLEMENTED: 15 critical invariant tests' — all 15 were vacuous"
+    },
+    {
+      "kind": "converted_test",
+      "group": "input validation (no DB)",
+      "count": 5,
+      "asserts": ["rejects empty title", "rejects empty type", "rejects impact<=0", "rejects confidence outside [0,1]", "rejects missing workspace id"],
+      "db_required": false,
+      "result": "5 passed"
+    },
+    {
+      "kind": "converted_test",
+      "group": "[db] real create + list isolation",
+      "count": 3,
+      "asserts": [
+        "createDecision persists pending, workspace-scoped decision with createdByUserId (regression: was raw-500)",
+        "list query returns only requesting workspace's decisions (no cross-workspace leak, real DTO, no raw 500)",
+        "list status filter narrows to matching decisions only"
+      ],
+      "db_required": true,
+      "gate": "TEST_WITH_DB=true",
+      "result": "3 passed (real Postgres :5433)"
+    },
+    {
+      "kind": "deferred_markers",
+      "obsolete_nonexistent_routes": { "approx": 24, "reason": "/approve and /block routes do not exist (real: accept/reject/close/execute/verify/fail/evaluate/record-outcome)" },
+      "defer_route_wrapper_auth": { "approx": 10, "reason": "route-level 401/403 needs a NextRequest/canonical HTTP harness the repo lacks (operator-route.real.test.ts it.skips it)" },
+      "defer_audit_to_phase_6d": { "approx": 8, "reason": "audit/idempotency/state-machine governance is out of Wave 1 scope" },
+      "faked": false,
+      "deleted": false
+    },
+    {
+      "kind": "product_fix",
+      "file": "src/services/decisions/decision-creation-service.ts",
+      "function": "createDecision (also fixes createDecisionsBulk which loops it)",
+      "defect": "db.operatorItem.create raw-500'd on every call — POST /api/decisions/create fully broken; hidden by placebo tests",
+      "root_causes": [
+        "wrote phantom column `createdBy` (real: createdByUserId)",
+        "omitted required `id` (no default)",
+        "omitted required `updatedAt` (no default)",
+        "wrote phantom columns `decisionType` and `problemType` (neither exists; type is stored in `action`)"
+      ],
+      "fix": "add id: randomUUID(), updatedAt: new Date(); rename createdBy->createdByUserId; drop phantom decisionType/problemType writes; return decisionType from input `type` (DTO unchanged)",
+      "schema_change": false,
+      "verified": "before: 'Invalid db.operatorItem.create() invocation'; after: OK status=pending wsMatch=true createdByUserId=true",
+      "overlaps_phase_6a": false
+    },
+    {
+      "kind": "validation_command",
+      "commands": [
+        { "cmd": "TEST_WITH_DB=true npx vitest run src/__tests__/api/decisions.test.ts", "result": "8 passed" },
+        { "cmd": "npx vitest run (no DB)", "result": "5 passed | 3 skipped" },
+        { "cmd": "npx tsc --noEmit", "result": "exit 0" },
+        { "cmd": "npx eslint <changed files>", "result": "0 problems" },
+        { "cmd": "npm run lint:ratchet", "result": "PASS (2081 errors, 0 changed-file errors)" },
+        { "cmd": "npm run governance:scan:strict", "result": "0 new findings" }
+      ]
+    },
+    {
+      "kind": "ci_result",
+      "pr": null,
+      "status": "PENDING",
+      "expectation": "required gates green; decisions [db] tests run in build-and-test (TEST_WITH_DB=true, real postgres:16); Security Baseline remains HONEST_GREEN"
+    },
+    {
+      "kind": "remaining_risk",
+      "decisions_unconverted": "~42 (obsolete approve/block + deferred route-wrapper auth/audit)",
+      "repo_wide_placebos": "hundreds of TODO_A2_FAKE_TEST_QUARANTINED remain (operator-queue 112, execution-certainty 111, constraint-checks 108, ...)",
+      "recommended_wave_2": "api/actions (74) — owner-facing execution items, likely same create-path defect class"
+    }
+  ],
+  "files_changed": {
+    "product": ["src/services/decisions/decision-creation-service.ts"],
+    "tests_converted": ["src/__tests__/api/decisions.test.ts"],
+    "docs_added": [
+      "docs/audits/2026-07-10-phase-6c-placebo-test-conversion-wave-1/FINAL_REPORT.md",
+      "docs/audits/2026-07-10-phase-6c-placebo-test-conversion-wave-1/PLACEBO_TEST_INVENTORY.md",
+      "docs/audits/2026-07-10-phase-6c-placebo-test-conversion-wave-1/EVIDENCE_LEDGER.json"
+    ]
+  },
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_changed": false,
+    "schema_changed": false,
+    "tests_weakened_or_deleted_or_skipped": false,
+    "placebo_replaced_with_placebo": false,
+    "authorizing_phrase_received": false
+  },
+  "next_recommended_phase": "Phase 6C Wave 2 — api/actions placebo conversion (owner instruction required)"
+}
