@@ -240,7 +240,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   // Determine event name
   const eventName = status === "done" ? "COMPLETE" : "UPDATE";
 
-  // Log audit event (fail-closed if audit fails)
+  // Log audit event — fail-closed: audit failure aborts the route handler
   await logAuditEvent({
     eventName,
     entityType: "OperatorItem",
@@ -249,8 +249,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     role,
     before: beforeItem ?? null,
     after: afterItem ?? null,
-  }).catch((auditError) => {
-    if (logger) logger.error(`Audit failed: ${auditError}`);
+    workspaceId,
   });
 
   if (status === "done") {
