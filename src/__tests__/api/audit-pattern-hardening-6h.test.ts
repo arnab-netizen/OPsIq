@@ -57,6 +57,8 @@ vi.mock("@/lib/auth-guard", () => ({
   withAuth: mocks.withAuth,
 }));
 vi.mock("@/lib/db", () => ({
+  // getDbInstance is called by vitest.setup.ts when TEST_WITH_DB=true
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     workspaceMembership: { findFirst: mocks.dbWorkspaceMembershipFindFirst },
     operatorItem: { create: mocks.dbOperatorItemCreate },
