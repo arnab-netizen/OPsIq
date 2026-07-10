@@ -1,0 +1,106 @@
+{
+  "audit": "A0 — Current-Main Reality Audit",
+  "date": "2026-07-10",
+  "branch": "claude/current-main-reality-audit-operating-layer",
+  "basedOnCommit": "ef7706b",
+  "phase6iNote": "Phase 6I (6e003fa) is on PR #222, not yet merged to main at audit time",
+  "auditor": "hostile-read-only scan",
+  "productionMigrationRun": false,
+  "secretsAltered": false,
+
+  "commandsRun": [
+    "ls /home/user/OPsIq/.claude/",
+    "ls /home/user/OPsIq/.claude/commands/",
+    "find /home/user/OPsIq/.claude -type d",
+    "find /home/user/OPsIq -name 'playwright.config*'",
+    "find /home/user/OPsIq -name '*.spec.ts'",
+    "ls /home/user/OPsIq/tests/browser/",
+    "find /home/user/OPsIq/src/app/api -maxdepth 2 -type d",
+    "find /home/user/OPsIq/src/services -maxdepth 2 -type d",
+    "prisma model count",
+    "cat /home/user/OPsIq/.env.example",
+    "cat /home/user/OPsIq/src/services/ai/openai-provider.ts",
+    "cat /home/user/OPsIq/src/services/ai/provider.ts",
+    "python3 execution_state.json parse",
+    "grep -r OPENAI_API_KEY src/",
+    "find src/services/external-systems -type f",
+    "ls src/app/api/owner/"
+  ],
+
+  "claudeOperatingLayer": {
+    "claudeMdExists": true,
+    "claudeMdLines": 94,
+    "dotClaudeSkillsDir": false,
+    "dotClaudeAgentsDir": false,
+    "dotClaudeHooksDir": false,
+    "dotClaudeCommandsDir": true,
+    "commandFiles": ["continue-build.md", "continue-post-owner-build.md"],
+    "dotClaudeRootFiles": "80+ audit/planning JSON and markdown files (flat, not structured)",
+    "executionRoadmapExists": true,
+    "executionPostOwnerModeExists": true,
+    "executionStateCurrentPhase": "OWNER_MODE_READY_FOR_REAL_BUSINESS_OWNER_USE",
+    "executionStateDate": "2026-06-19"
+  },
+
+  "playwrightStatus": {
+    "configExists": true,
+    "specFileCount": 54,
+    "testDirs": ["tests/browser/", "tests/fixtures/", "tests/load/", "tests/owner-mode/"],
+    "authFlowSpec": true,
+    "ownerModeSpecs": true,
+    "chaosReplaySpec": true,
+    "mobileSpecs": true,
+    "ciIntegrated": true,
+    "missingCoverage": ["tender/application flows", "waste/leakage flows", "pricing admin flows"]
+  },
+
+  "prismaSummary": {
+    "totalModels": 174,
+    "keyModels": [
+      "BusinessConditionProfile", "OwnerBusiness", "OperatorItem",
+      "Recommendation", "Action", "Evidence", "AuditEvent",
+      "OwnerDataIntake", "OwnerFinancialSnapshot", "OwnerCashflowSnapshot",
+      "OwnerMarketingSnapshot", "OwnerSalesSnapshot", "OwnerOperationsSnapshot",
+      "OwnerSopSnapshot", "OwnerStrategySnapshot",
+      "ExternalOAuthToken", "ExternalConnection", "ExternalSyncJob",
+      "BrowserExtractedTable", "BrowserImportSession",
+      "ControlledLearningCandidate", "ControlledLearningAdmission",
+      "IdempotencyRecord", "StartupStatus", "VendorRecord",
+      "PrivateModeAccess"
+    ]
+  },
+
+  "aiLLMStatus": {
+    "providerInterfaceExists": true,
+    "openAiProviderExists": true,
+    "openAiKeyInEnvExample": false,
+    "openAiKeyInCode": true,
+    "failClosedOnMissingKey": true,
+    "deterministicFallback": true,
+    "anthropicIntegration": false,
+    "classification": "LOCAL_MOCK_ONLY — live AI path implemented but no key configured in env"
+  },
+
+  "connectors": {
+    "googleSheets": {
+      "oauthServiceExists": true,
+      "tokenEncryptionExists": true,
+      "syncManagerExists": true,
+      "browserImportExists": true,
+      "googleClientIdInEnvExample": false,
+      "classification": "PLACEHOLDER_ONLY — code complete but no Google credentials in env"
+    },
+    "stripe": {
+      "webhookHandlerExists": true,
+      "secretKeyInEnvExample": true,
+      "classification": "READ_ONLY_REAL — billing/subscription integration wired"
+    }
+  },
+
+  "capabilityFindings": {
+    "MISSING": ["Tender/Application Assistance", "Waste/Leakage dedicated module", "Pricing admin routes"],
+    "PARTIAL": ["Live connectors (Google Sheets code exists, no credentials)", "LLM/NLP (provider exists, no key)", "Local Mode (PrivateModeAccess model + middleware, limited UI)"],
+    "BACKEND_ONLY": ["Simulation/Scenario (services exist, limited Playwright coverage)"],
+    "COMPLETE": ["Owner Mode", "Manual Entry", "Diagnosis", "Finance/Budget/Cash", "Evidence/Audit", "Staff/Proof", "SOP/Training", "Marketing", "Sales/Retention", "Opportunities", "Startup Mode", "Compliance/Risk", "Capacity/Bottleneck (partial)", "Learning/Outcome Review", "Vendor/Procurement (partial)"]
+  }
+}
