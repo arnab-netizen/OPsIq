@@ -68,7 +68,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     data: buildIntakeOperatorItemData(input, workspaceId, userId),
   });
 
-  // Log intake event
+  // Log intake event — fail-closed: audit failure aborts the route handler
   await logAuditEvent({
     eventName: "DECISION_INTAKE",
     entityType: "Decision",
@@ -89,8 +89,6 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       createdAt: new Date().toISOString(),
     },
     workspaceId,
-  }).catch((auditError) => {
-    console.error(`Audit logging failed: ${auditError}`);
   });
 
   return {

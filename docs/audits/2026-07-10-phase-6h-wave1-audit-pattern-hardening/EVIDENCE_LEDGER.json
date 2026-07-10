@@ -1,0 +1,116 @@
+{
+  "phase": "6H-Wave1",
+  "title": "Route-Level Audit Pattern Hardening",
+  "date": "2026-07-10",
+  "branch": "claude/phase-6h-wave1-audit-pattern-hardening",
+  "base_commit": "89b44217",
+  "phase_6g_ci_run": "29085657975",
+  "phase_6g_status": "GREEN",
+  "phase_6g_closed": true,
+
+  "routes_audited": 14,
+  "routes_fixed": 2,
+  "routes_false_positive": 3,
+  "routes_deferred": 9,
+
+  "fixes": [
+    {
+      "route": "src/app/api/decisions/intake/route.ts",
+      "method": "POST",
+      "classification": "FIX_NOW",
+      "defect": "logAuditEvent called with .catch() swallowing audit errors on governed DB mutation (db.operatorItem.create)",
+      "fix": "Removed .catch() block; audit failure now propagates (fail-closed)",
+      "workspaceId_explicit": true,
+      "transaction_rewrite": false
+    },
+    {
+      "route": "src/app/api/operator/route.ts",
+      "method": "POST",
+      "classification": "FIX_NOW",
+      "defect": "logAuditEvent called with .catch() swallowing audit errors despite misleading 'fail-closed' comment; workspaceId not passed explicitly",
+      "fix": "Removed .catch() block; added explicit workspaceId field; audit failure now propagates (fail-closed)",
+      "workspaceId_explicit": true,
+      "transaction_rewrite": false
+    }
+  ],
+
+  "false_positives": [
+    {
+      "route": "src/app/api/operator/myday/route.ts",
+      "reason": "No .catch() present; already fail-closed"
+    },
+    {
+      "route": "src/app/api/calibration/route.ts",
+      "reason": "No .catch() present; already fail-closed"
+    },
+    {
+      "route": "src/app/api/entity/route.ts",
+      "method": "POST",
+      "reason": "No .catch() present; code comment explicitly documents fail-closed intent"
+    }
+  ],
+
+  "deferred": [
+    {
+      "route": "src/app/api/governance/metrics/route.ts",
+      "reason": "Read-only monitoring; best-effort audit is appropriate"
+    },
+    {
+      "route": "src/app/api/governance/alerts/route.ts",
+      "reason": "Read-only monitoring; best-effort audit is appropriate"
+    },
+    {
+      "route": "src/app/api/metrics/control-effectiveness/route.ts",
+      "reason": "Read-only monitoring; best-effort audit is appropriate"
+    },
+    {
+      "route": "src/app/api/metrics/decision-latency/route.ts",
+      "reason": "Read-only monitoring; best-effort audit is appropriate"
+    },
+    {
+      "route": "src/app/api/observability/summary/route.ts",
+      "reason": "Read-only monitoring; best-effort audit is appropriate"
+    },
+    {
+      "route": "src/app/api/value/route.ts",
+      "reason": "Read-only; in-memory calculation"
+    },
+    {
+      "route": "src/app/api/scenario/route.ts",
+      "reason": "Analysis-only; no DB mutation"
+    },
+    {
+      "route": "src/app/api/decisions/[decisionId]/evaluate/route.ts",
+      "reason": "DEFER_WITH_REASON: governed mutation but has hardcoded fetch('http://localhost:3000/api/run') defect that must be resolved first"
+    },
+    {
+      "route": "src/app/api/run/route.ts",
+      "reason": "DEFERRED_NEEDS_HARNESS: complex ~1100-line core engine; success path (RUN_APPROVED) already re-throws audit errors; error paths are best-effort by design"
+    }
+  ],
+
+  "smoke_dashboard": {
+    "status": "known_non_required_red",
+    "failure_modes": [
+      "DEPLOYMENT_COMMIT_MISMATCH",
+      "MISSING_OPSIQ_DIAGNOSTIC_KEY_IN_GITHUB_ACTIONS_ENV",
+      "ENDPOINT_NOT_READY (migration-gated)"
+    ],
+    "production_migration_approved": false,
+    "required_approval_phrase": "I approve running the production migration.",
+    "approval_received": false
+  },
+
+  "tests_added": [
+    "src/__tests__/api/audit-pattern-hardening-6h.test.ts"
+  ],
+
+  "constraints": {
+    "no_production_migration": true,
+    "no_production_db_touch": true,
+    "no_secrets_altered": true,
+    "no_broad_route_migration": true,
+    "no_withCanonicalEnforcement_migration": true,
+    "no_transaction_rewrite": true
+  }
+}
