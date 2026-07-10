@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import type { ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -136,7 +137,7 @@ export async function updateDeliverableReviewStatus(
   // CAS + audit in transaction (fail-closed):
   // version guard ensures stale callers cannot overwrite concurrent changes;
   // status guard prevents silent re-approval racing through a concurrent approve.
-  await db.$transaction(async (tx) => {
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const res = await tx.deliverable.updateMany({
       where: {
         id: deliverableId,

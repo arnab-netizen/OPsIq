@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { emitAuditEvent } from "@/infra/audit";
@@ -60,7 +61,7 @@ export async function createDecision(
   }
 
   try {
-    const decision = await db.$transaction(async (tx) => {
+    const decision = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const created = await tx.operatorItem.create({
         data: {
           id: randomUUID(),

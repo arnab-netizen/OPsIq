@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { AuditEventName } from "@/domain/constants/audit-events";
@@ -165,7 +166,7 @@ export async function changeDecisionStatus(
 
   // CAS + audit in transaction (fail-closed): only update if status is still currentStatus
   // and workspaceId matches, preventing TOCTOU race and ensuring audit is atomic with state change.
-  await db.$transaction(async (tx) => {
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const res = await tx.operatorItem.updateMany({
       where: { id: decisionId, workspaceId, status: currentStatus },
       data: { status: newStatus, updatedAt: timestamp },
