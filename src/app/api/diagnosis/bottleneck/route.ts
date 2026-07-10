@@ -1,5 +1,4 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
-import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { bottleneckEngine } from "@/services/diagnostic-core/bottleneck-engine";
@@ -7,7 +6,8 @@ import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { logger } from "@/infra/logger";
 import { RuntimeError } from "@/runtime/runtime-errors";
-import { BadRequestError, AppError } from "@/infra/errors";
+import { BadRequestError, ForbiddenError, AppError } from "@/infra/errors";
+import { db } from "@/lib/db";
 import { z } from "zod/v4";
 
 const bottleneckSchema = z.object({
@@ -42,6 +42,22 @@ export const POST = withEnforcementFull(async (request) => {
   }
 
   const body = await parseRequestBody(request, bottleneckSchema);
+
+  // Validate caller has active membership in the requested workspace.
+  // body.workspaceId is untrusted: any authenticated user could submit any UUID.
+  // Without this check, a user from workspace A could trigger idempotency cache
+  // writes and analysis results scoped under workspace B.
+  const membership = await db.workspaceMembership.findFirst({
+    where: {
+      workspaceId: body.workspaceId,
+      userId: authContext.session.user.id,
+      isActive: true,
+    },
+    select: { role: true },
+  });
+  if (!membership) {
+    throw new ForbiddenError("Access denied: not an active member of this workspace");
+  }
 
   // Check idempotency
   const idempotencyCheck = await checkIdempotencyKey({
