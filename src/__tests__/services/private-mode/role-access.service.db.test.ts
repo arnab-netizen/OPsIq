@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { PrivateModeRoleAccessService } from '@/services/private-mode/role-access.service';
 import { v4 as uuid } from 'uuid';
 import { SHOULD_RUN_DB_TESTS } from '@/__tests__/test-helpers/db-test-gate';
+import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 
 describe('[db] B24-S2: Private Mode Role Access Service — DB-Backed Tests', () => {
   let service: PrivateModeRoleAccessService;
@@ -27,10 +28,14 @@ describe('[db] B24-S2: Private Mode Role Access Service — DB-Backed Tests', ()
       },
     });
 
-    // Create test users
+    // Create test users — User rows required because AuditEvent.actorId is an FK to User
     ownerId = uuid();
     consultantId = uuid();
     analystId = uuid();
+
+    await db.user.create({ data: { id: ownerId, email: `pm-owner-${workspaceId}@test.local`, isActive: true, updatedAt: new Date() } });
+    await db.user.create({ data: { id: consultantId, email: `pm-consultant-${workspaceId}@test.local`, isActive: true, updatedAt: new Date() } });
+    await db.user.create({ data: { id: analystId, email: `pm-analyst-${workspaceId}@test.local`, isActive: true, updatedAt: new Date() } });
 
     // Grant owner role directly (initial setup)
     await db.privateModeAccess.create({
@@ -52,13 +57,11 @@ describe('[db] B24-S2: Private Mode Role Access Service — DB-Backed Tests', ()
 
   afterEach(async () => {
     if (!SHOULD_RUN_DB_TESTS) return;
-    // Cleanup test data
-    await db.privateModeAccess.deleteMany({
-      where: { workspaceId },
-    });
-    await db.clientAccount.deleteMany({
-      where: { id: workspaceId },
-    });
+    // Cleanup test data (audit events first to avoid FK cascade issues)
+    await db.auditEvent.deleteMany({ where: { workspaceId } });
+    await db.privateModeAccess.deleteMany({ where: { workspaceId } });
+    await db.clientAccount.deleteMany({ where: { id: workspaceId } });
+    await db.user.deleteMany({ where: { id: { in: [ownerId, consultantId, analystId] } } });
   });
 
   describe('Role Grant and Approval Workflow', () => {
@@ -501,6 +504,124 @@ describe('[db] B24-S2: Private Mode Role Access Service — DB-Backed Tests', ()
       );
       expect(revoked.revokedBy).toBe(ownerId);
       expect(revoked.revokedAt).not.toBeNull();
+    });
+  });
+
+  describe('Phase 6F: Audit Event Emission (governance hardening)', () => {
+    it('grantRoleAccess (requireApproval=false) emits ROLE_ASSIGNED audit event', async () => {
+      if (!SHOULD_RUN_DB_TESTS) return;
+
+      const grant = await service.grantRoleAccess(workspaceId, consultantId, 'CONSULTANT', ownerId, false);
+
+      const audit = await db.auditEvent.findFirst({
+        where: { entityId: grant.id, eventName: AUDIT_EVENTS.ROLE_ASSIGNED },
+      });
+      expect(audit).not.toBeNull();
+      expect(audit!.workspaceId).toBe(workspaceId);
+      expect(audit!.actorId).toBe(ownerId);
+    });
+
+    it('grantRoleAccess (requireApproval=true) emits APPROVAL_REQUESTED audit event', async () => {
+      if (!SHOULD_RUN_DB_TESTS) return;
+
+      const grant = await service.grantRoleAccess(workspaceId, consultantId, 'CONSULTANT', ownerId, true);
+
+      const audit = await db.auditEvent.findFirst({
+        where: { entityId: grant.id, eventName: AUDIT_EVENTS.APPROVAL_REQUESTED },
+      });
+      expect(audit).not.toBeNull();
+      expect(audit!.workspaceId).toBe(workspaceId);
+    });
+
+    it('approveRoleAccess emits APPROVAL_GRANTED audit event', async () => {
+      if (!SHOULD_RUN_DB_TESTS) return;
+
+      const grant = await service.grantRoleAccess(workspaceId, consultantId, 'CONSULTANT', ownerId, true);
+      const approved = await service.approveRoleAccess(workspaceId, grant.id, ownerId);
+
+      expect(approved.approvalStatus).toBe('approved');
+
+      const audit = await db.auditEvent.findFirst({
+        where: { entityId: grant.id, eventName: AUDIT_EVENTS.APPROVAL_GRANTED },
+      });
+      expect(audit).not.toBeNull();
+      expect(audit!.workspaceId).toBe(workspaceId);
+      expect(audit!.actorId).toBe(ownerId);
+    });
+
+    it('rejectRoleAccess emits APPROVAL_DENIED audit event', async () => {
+      if (!SHOULD_RUN_DB_TESTS) return;
+
+      const grant = await service.grantRoleAccess(workspaceId, consultantId, 'CONSULTANT', ownerId, true);
+      const rejected = await service.rejectRoleAccess(workspaceId, grant.id, 'Not qualified', ownerId);
+
+      expect(rejected.approvalStatus).toBe('rejected');
+
+      const audit = await db.auditEvent.findFirst({
+        where: { entityId: grant.id, eventName: AUDIT_EVENTS.APPROVAL_DENIED },
+      });
+      expect(audit).not.toBeNull();
+      expect(audit!.workspaceId).toBe(workspaceId);
+    });
+
+    it('revokeRoleAccess emits ROLE_REVOKED audit event', async () => {
+      if (!SHOULD_RUN_DB_TESTS) return;
+
+      const grant = await service.grantRoleAccess(workspaceId, consultantId, 'CONSULTANT', ownerId, false);
+      const revoked = await service.revokeRoleAccess(workspaceId, grant.id, 'Left company', ownerId);
+
+      expect(revoked.revokedAt).not.toBeNull();
+
+      const audit = await db.auditEvent.findFirst({
+        where: { entityId: grant.id, eventName: AUDIT_EVENTS.ROLE_REVOKED },
+      });
+      expect(audit).not.toBeNull();
+      expect(audit!.workspaceId).toBe(workspaceId);
+      expect(audit!.actorId).toBe(ownerId);
+    });
+  });
+
+  describe('Phase 6F: CAS Guarded-Update (TOCTOU hardening)', () => {
+    it('approveRoleAccess with non-pending status throws (CAS guard)', async () => {
+      if (!SHOULD_RUN_DB_TESTS) return;
+
+      const grant = await service.grantRoleAccess(workspaceId, consultantId, 'CONSULTANT', ownerId, true);
+      // Approve once
+      await service.approveRoleAccess(workspaceId, grant.id, ownerId);
+      // Attempt second approve — status is no longer pending
+      await expect(
+        service.approveRoleAccess(workspaceId, grant.id, ownerId),
+      ).rejects.toThrow('Cannot approve: grant is no longer in pending status');
+    });
+
+    it('rejectRoleAccess with non-pending status throws (CAS guard)', async () => {
+      if (!SHOULD_RUN_DB_TESTS) return;
+
+      const grant = await service.grantRoleAccess(workspaceId, consultantId, 'CONSULTANT', ownerId, true);
+      await service.rejectRoleAccess(workspaceId, grant.id, 'First reject', ownerId);
+      await expect(
+        service.rejectRoleAccess(workspaceId, grant.id, 'Second reject', ownerId),
+      ).rejects.toThrow('Cannot reject: grant is no longer in pending status');
+    });
+
+    it('revokeRoleAccess on already-revoked record throws (CAS guard preserves error message)', async () => {
+      if (!SHOULD_RUN_DB_TESTS) return;
+
+      const grant = await service.grantRoleAccess(workspaceId, consultantId, 'CONSULTANT', ownerId, false);
+      await service.revokeRoleAccess(workspaceId, grant.id, 'First revoke', ownerId);
+      await expect(
+        service.revokeRoleAccess(workspaceId, grant.id, 'Second revoke', ownerId),
+      ).rejects.toThrow('Role already revoked');
+    });
+
+    it('revoked grant is not visible as active after revocation', async () => {
+      if (!SHOULD_RUN_DB_TESTS) return;
+
+      const grant = await service.grantRoleAccess(workspaceId, consultantId, 'CONSULTANT', ownerId, false);
+      await service.revokeRoleAccess(workspaceId, grant.id, 'No longer needed', ownerId);
+
+      const role = await service.getUserRole(workspaceId, consultantId);
+      expect(role).toBeNull();
     });
   });
 });

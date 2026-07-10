@@ -1,0 +1,192 @@
+{
+  "phase": "6F",
+  "audit_date": "2026-07-10",
+  "branch": "claude/phase-6f-governance-findings-5gkiec",
+  "prior_phase_commit": "e45a15f",
+  "prior_phase_pr": "PR #217",
+  "findings": [
+    {
+      "id": "F1",
+      "label": "createDecision — missing audit",
+      "file": "src/services/decisions/decision-creation-service.ts",
+      "function": "createDecision",
+      "severity": "CONFIRMED_MEDIUM",
+      "live_or_dead": "LIVE",
+      "defect_type": ["missing_audit"],
+      "pre_fix_evidence": {
+        "description": "logger.info only — no emitAuditEvent call, no AuditEvent row persisted",
+        "missing_pattern": "emitAuditEvent",
+        "present_pattern": "logger.info"
+      },
+      "fix": {
+        "pattern": "audit_in_transaction",
+        "transaction_wraps": ["tx.operatorItem.create", "emitAuditEvent(tx)"],
+        "audit_event": "OPERATOR_ITEM_CREATED",
+        "fail_closed": true
+      },
+      "test_file": "src/__tests__/services/decisions/decision-creation-audit.db.test.ts",
+      "test_count": 4,
+      "test_cases": [
+        "emits OPERATOR_ITEM_CREATED audit event atomically",
+        "persists OperatorItem row with correct workspace",
+        "audit count consistency (one decision = one audit event)",
+        "rejects missing title with validation error"
+      ]
+    },
+    {
+      "id": "F2",
+      "label": "changeDecisionStatus — non-atomic, swallowed audit",
+      "file": "src/services/decision/status-management.ts",
+      "function": "changeDecisionStatus",
+      "severity": "CONFIRMED_MEDIUM",
+      "live_or_dead": "DEAD",
+      "defect_type": ["toctou", "post_commit_audit", "swallowed_error"],
+      "pre_fix_evidence": {
+        "description": "db.operatorItem.update with only { id: decisionId } in WHERE — no status guard. logAuditEvent called post-commit with .catch() swallow.",
+        "non_atomic_where": "{ id: decisionId }",
+        "audit_timing": "post_commit",
+        "error_handling": ".catch((error) => classifyOperatorError(error))"
+      },
+      "fix": {
+        "pattern": "cas_plus_audit_in_transaction",
+        "cas_where": "{ id: decisionId, workspaceId, status: currentStatus }",
+        "cas_failure_error": "InvalidStateTransitionError",
+        "transaction_wraps": ["tx.operatorItem.updateMany", "emitAuditEvent(tx)"],
+        "audit_events": [
+          "DECISION_APPROVED",
+          "DECISION_REJECTED",
+          "DECISION_BLOCKED",
+          "DECISION_OVERRIDDEN",
+          "DECISION_EXECUTED",
+          "DECISION_STATUS_CHANGED"
+        ],
+        "new_audit_events_added": [
+          "DECISION_BLOCKED",
+          "DECISION_OVERRIDDEN",
+          "DECISION_STATUS_CHANGED"
+        ],
+        "fail_closed": true,
+        "removed": ["logAuditEvent import", ".catch() swallow"]
+      },
+      "test_file": "src/__tests__/services/decision/change-decision-status-atomic.db.test.ts",
+      "test_count": 6,
+      "test_cases": [
+        "valid transition (pending→approved) succeeds and emits DECISION_APPROVED audit",
+        "valid transition (pending→rejected) succeeds and emits DECISION_REJECTED audit",
+        "invalid transition (rejected→approved) throws InvalidStateTransitionError",
+        "CAS guard: concurrent modification detected — second call after race fails",
+        "decision not found throws controlled error",
+        "workspace isolation enforced — cross-workspace ID returns not found"
+      ]
+    },
+    {
+      "id": "F3",
+      "label": "PrivateModeRoleAccessService — unaudited grants, TOCTOU in all 4 mutations",
+      "file": "src/services/private-mode/role-access.service.ts",
+      "class": "PrivateModeRoleAccessService",
+      "severity": "CONFIRMED_MEDIUM",
+      "live_or_dead": "DEAD_FROM_HTTP",
+      "defect_type": ["missing_audit", "toctou"],
+      "pre_fix_evidence": {
+        "description": "No emitAuditEvent import. No $transaction calls. No DB-level state guards in WHERE across all 4 mutation methods.",
+        "missing_import": "emitAuditEvent",
+        "missing_transactions": true,
+        "toctou_methods": ["grantRoleAccess", "approveRoleAccess", "rejectRoleAccess", "revokeRoleAccess"]
+      },
+      "fix": {
+        "pattern": "cas_plus_audit_in_transaction",
+        "methods_fixed": [
+          {
+            "method": "grantRoleAccess (re-grant path)",
+            "cas_where": "{ id: existing.id, workspaceId, revokedAt: { not: null } }",
+            "audit_event": "APPROVAL_REQUESTED or ROLE_ASSIGNED"
+          },
+          {
+            "method": "grantRoleAccess (new-grant path)",
+            "transaction_wraps": ["tx.privateModeAccess.create", "emitAuditEvent(tx)"],
+            "audit_event": "APPROVAL_REQUESTED or ROLE_ASSIGNED"
+          },
+          {
+            "method": "approveRoleAccess",
+            "cas_where": "{ id, workspaceId, approvalStatus: 'pending', revokedAt: null }",
+            "audit_event": "APPROVAL_GRANTED"
+          },
+          {
+            "method": "rejectRoleAccess",
+            "cas_where": "{ id, workspaceId, approvalStatus: 'pending' }",
+            "audit_event": "APPROVAL_DENIED"
+          },
+          {
+            "method": "revokeRoleAccess",
+            "cas_where": "{ id, workspaceId, revokedAt: null }",
+            "audit_event": "ROLE_REVOKED",
+            "preserved_error_message": "Role already revoked"
+          }
+        ],
+        "fail_closed": true
+      },
+      "test_file": "src/__tests__/services/private-mode/role-access.service.db.test.ts",
+      "new_tests_added": 9,
+      "test_blocks": [
+        "Phase 6F: Audit Event Emission (5 tests)",
+        "Phase 6F: CAS Guarded-Update (4 tests)"
+      ],
+      "test_cases": [
+        "grantRoleAccess emits APPROVAL_REQUESTED when requireApproval=true",
+        "grantRoleAccess (no approval required) emits ROLE_ASSIGNED",
+        "approveRoleAccess emits APPROVAL_GRANTED",
+        "rejectRoleAccess emits APPROVAL_DENIED",
+        "revokeRoleAccess emits ROLE_REVOKED",
+        "CAS: re-approving an already-approved record fails",
+        "CAS: re-revoking an already-revoked record fails with 'Role already revoked'",
+        "CAS: rejecting an already-approved record fails",
+        "CAS: approving a rejected record fails"
+      ]
+    },
+    {
+      "id": "F4",
+      "label": "updateDeliverableReviewStatus — version guard no-op, lost-update",
+      "file": "src/services/deliverable.ts",
+      "function": "updateDeliverableReviewStatus",
+      "severity": "CONFIRMED_HIGH",
+      "live_or_dead": "DEAD",
+      "defect_type": ["version_guard_noop", "missing_status_guard", "post_commit_audit"],
+      "pre_fix_evidence": {
+        "description": "input.version passed to function but WHERE uses only { id: deliverableId }. No status: { not: 'approved' } guard. emitAuditEvent called after update committed.",
+        "non_atomic_where": "{ id: deliverableId }",
+        "version_in_where": false,
+        "status_guard_in_where": false,
+        "audit_timing": "post_commit"
+      },
+      "fix": {
+        "pattern": "pre_check_plus_cas_plus_audit_in_transaction",
+        "pre_check": "if (deliv.status === 'approved') throw new ConflictError('Deliverable is already approved')",
+        "cas_where": "{ id: deliverableId, version: input.version, status: { not: 'approved' } }",
+        "cas_failure_error": "OptimisticLockError",
+        "transaction_wraps": ["tx.deliverable.updateMany", "emitAuditEvent(tx)"],
+        "audit_event": "DELIVERABLE_APPROVED",
+        "post_tx_refetch": "db.deliverable.findUnique({ where: { id: deliverableId } })",
+        "fail_closed": true,
+        "new_imports": ["ConflictError", "OptimisticLockError"]
+      },
+      "test_file": "src/__tests__/services/deliverable-approval-governance.db.test.ts",
+      "test_count": 5,
+      "test_cases": [
+        "correct version approves and emits DELIVERABLE_APPROVED audit",
+        "stale version fails with OptimisticLockError (version guard enforced in WHERE)",
+        "already-approved deliverable fails with ConflictError before entering transaction",
+        "missing DELIVERABLE_APPROVE capability throws ForbiddenError",
+        "audit is atomic: no DELIVERABLE_APPROVED event for failed approval (stale version)"
+      ]
+    }
+  ],
+  "schema_changes": [],
+  "new_audit_event_constants": [
+    "DECISION_BLOCKED",
+    "DECISION_OVERRIDDEN",
+    "DECISION_STATUS_CHANGED"
+  ],
+  "total_new_tests": 24,
+  "production_migration_approved": false,
+  "production_db_touched": false
+}

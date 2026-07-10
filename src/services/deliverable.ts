@@ -1,9 +1,10 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import type { ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError, ForbiddenError } from "@/infra/errors";
+import { NotFoundError, ForbiddenError, ConflictError, OptimisticLockError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 
@@ -126,27 +127,55 @@ export async function updateDeliverableReviewStatus(
   });
   if (!deliv) throw new NotFoundError("Deliverable", deliverableId);
 
-  const updated = await db.deliverable.update({
-    where: { id: deliverableId },
-    data: {
-      approvedBy: auth.verifiedActorId,
-      approvedAt: new Date(),
-      status: "approved",
-      version: input.version + 1,
-    },
+  // Guard: reject already-approved deliverables before entering transaction
+  if (deliv.status === "approved") {
+    throw new ConflictError("Deliverable is already approved");
+  }
+
+  const now = new Date();
+
+  // CAS + audit in transaction (fail-closed):
+  // version guard ensures stale callers cannot overwrite concurrent changes;
+  // status guard prevents silent re-approval racing through a concurrent approve.
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const res = await tx.deliverable.updateMany({
+      where: {
+        id: deliverableId,
+        version: input.version,
+        status: { not: "approved" },
+      },
+      data: {
+        approvedBy: auth.verifiedActorId,
+        approvedAt: now,
+        status: "approved",
+        version: input.version + 1,
+        updatedAt: now,
+      },
+    });
+
+    if (res.count !== 1) {
+      throw new OptimisticLockError("Deliverable", deliverableId);
+    }
+
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.DELIVERABLE_APPROVED,
+        actorId: auth.verifiedActorId,
+        entityType: "deliverable",
+        entityId: deliverableId,
+        workspaceId: auth.verifiedWorkspaceId,
+        payload: {
+          status: "approved",
+          version: input.version + 1,
+          previousVersion: input.version,
+        },
+        visibility: "internal",
+      },
+      tx
+    );
   });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.DELIVERABLE_APPROVED,
-    actorId: auth.verifiedActorId,
-    entityType: "deliverable",
-    entityId: deliverableId,
-    workspaceId: auth.verifiedWorkspaceId,
-    payload: {
-      status: "approved",
-    },
-    visibility: "internal",
-  });
-
+  const updated = await db.deliverable.findUnique({ where: { id: deliverableId } });
+  if (!updated) throw new NotFoundError("Deliverable", deliverableId);
   return updated;
 }

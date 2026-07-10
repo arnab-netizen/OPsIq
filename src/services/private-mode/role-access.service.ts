@@ -1,10 +1,18 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { v4 as uuid } from 'uuid';
 import { PrivateModeRole } from '@/domain/private-mode/role-config';
+import { emitAuditEvent } from '@/infra/audit';
+import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 
 /**
  * Private mode role access control service.
  * Manages role grant/revoke with approval workflow and workspace isolation.
+ *
+ * All mutation methods emit audit events and use a CAS (compare-and-swap) pattern
+ * via updateMany with a state predicate in the WHERE clause. This prevents TOCTOU
+ * races where concurrent callers both pass an application-level guard then race to
+ * write. The audit event is emitted inside the same transaction so a failed audit
+ * rolls back the state change (fail-closed).
  */
 
 export class PrivateModeRoleAccessService {
@@ -52,40 +60,83 @@ export class PrivateModeRoleAccessService {
       // Reopen the revoked record in place. Creating a new row would violate the
       // unique (workspace_id, user_id) constraint, so the prior grant is reset to
       // a fresh grant with cleared revocation and approval state.
-      const reopened = await this.prisma.privateModeAccess.update({
-        where: { id: existing.id },
-        data: {
-          role,
-          grantedBy,
-          grantedAt: new Date(),
-          revokedAt: null,
-          revokedBy: null,
-          revokeReason: null,
-          approvalStatus: requireApproval ? 'pending' : 'approved',
-          approvedBy: requireApproval ? null : grantedBy,
-          approvedAt: requireApproval ? null : new Date(),
-          rejectionReason: null,
-          updatedAt: new Date(),
-        },
+      // CAS: only update if revokedAt is still non-null (guard against concurrent re-grant).
+      const reopened = await this.prisma.$transaction(async (tx) => {
+        const res = await tx.privateModeAccess.updateMany({
+          where: { id: existing.id, workspaceId, revokedAt: { not: null } },
+          data: {
+            role,
+            grantedBy,
+            grantedAt: new Date(),
+            revokedAt: null,
+            revokedBy: null,
+            revokeReason: null,
+            approvalStatus: requireApproval ? 'pending' : 'approved',
+            approvedBy: requireApproval ? null : grantedBy,
+            approvedAt: requireApproval ? null : new Date(),
+            rejectionReason: null,
+            updatedAt: new Date(),
+          },
+        });
+
+        if (res.count !== 1) {
+          throw new Error('Re-grant conflict: record was concurrently modified');
+        }
+
+        await emitAuditEvent(
+          {
+            eventName: requireApproval ? AUDIT_EVENTS.APPROVAL_REQUESTED : AUDIT_EVENTS.ROLE_ASSIGNED,
+            workspaceId,
+            actorId: grantedBy,
+            actorType: 'user',
+            entityType: 'private_mode_access',
+            entityId: existing.id,
+            payload: { userId, role, requireApproval, action: 're-grant' },
+            visibility: 'internal',
+          },
+          tx,
+        );
+
+        const record = await tx.privateModeAccess.findUnique({ where: { id: existing.id } });
+        if (!record) throw new Error('Unexpected: record not found after re-grant');
+        return record;
       });
       return reopened;
     }
 
-    // Create new access record
+    // Create new access record with audit inside transaction (fail-closed)
     const accessId = uuid();
-    const access = await this.prisma.privateModeAccess.create({
-      data: {
-        id: accessId,
-        workspaceId,
-        userId,
-        role,
-        grantedBy,
-        approvalStatus: requireApproval ? 'pending' : 'approved',
-        approvedBy: requireApproval ? null : grantedBy,
-        approvedAt: requireApproval ? null : new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+    const access = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.privateModeAccess.create({
+        data: {
+          id: accessId,
+          workspaceId,
+          userId,
+          role,
+          grantedBy,
+          approvalStatus: requireApproval ? 'pending' : 'approved',
+          approvedBy: requireApproval ? null : grantedBy,
+          approvedAt: requireApproval ? null : new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      await emitAuditEvent(
+        {
+          eventName: requireApproval ? AUDIT_EVENTS.APPROVAL_REQUESTED : AUDIT_EVENTS.ROLE_ASSIGNED,
+          workspaceId,
+          actorId: grantedBy,
+          actorType: 'user',
+          entityType: 'private_mode_access',
+          entityId: created.id,
+          payload: { userId, role, requireApproval, action: 'new-grant' },
+          visibility: 'internal',
+        },
+        tx,
+      );
+
+      return created;
     });
 
     return access;
@@ -96,7 +147,7 @@ export class PrivateModeRoleAccessService {
    * Only OWNER can approve.
    */
   async approveRoleAccess(workspaceId: string, accessId: string, approvedBy: string) {
-    // Verify approver is OWNER
+    // Verify approver is OWNER (read-only pre-check outside transaction)
     const approver = await this.prisma.privateModeAccess.findFirst({
       where: { workspaceId, userId: approvedBy },
     });
@@ -104,7 +155,7 @@ export class PrivateModeRoleAccessService {
       throw new Error('Only OWNER can approve roles');
     }
 
-    // Find access record and verify it's pending
+    // Verify access record exists and belongs to workspace (pre-check for clear error)
     const access = await this.prisma.privateModeAccess.findUnique({
       where: { id: accessId },
     });
@@ -114,22 +165,46 @@ export class PrivateModeRoleAccessService {
     if (access.workspaceId !== workspaceId) {
       throw new Error('Workspace mismatch');
     }
-    if (access.approvalStatus !== 'pending') {
-      throw new Error(`Cannot approve role in ${access.approvalStatus} status`);
-    }
-    if (access.revokedAt) {
-      throw new Error('Cannot approve revoked role');
-    }
 
-    // Approve the access
-    const updated = await this.prisma.privateModeAccess.update({
-      where: { id: accessId },
-      data: {
-        approvalStatus: 'approved',
-        approvedBy,
-        approvedAt: new Date(),
-        updatedAt: new Date(),
-      },
+    // CAS + audit in transaction: only update if still pending and not revoked.
+    // This prevents concurrent double-approve races (TOCTOU fix).
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.privateModeAccess.updateMany({
+        where: {
+          id: accessId,
+          workspaceId,
+          approvalStatus: 'pending',
+          revokedAt: null,
+        },
+        data: {
+          approvalStatus: 'approved',
+          approvedBy,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      if (res.count !== 1) {
+        throw new Error(`Cannot approve: grant is no longer in pending status`);
+      }
+
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.APPROVAL_GRANTED,
+          workspaceId,
+          actorId: approvedBy,
+          actorType: 'user',
+          entityType: 'private_mode_access',
+          entityId: accessId,
+          payload: { userId: access.userId, role: access.role },
+          visibility: 'internal',
+        },
+        tx,
+      );
+
+      const record = await tx.privateModeAccess.findUnique({ where: { id: accessId } });
+      if (!record) throw new Error('Unexpected: record not found after approval');
+      return record;
     });
 
     return updated;
@@ -145,7 +220,7 @@ export class PrivateModeRoleAccessService {
     rejectionReason: string,
     rejectedBy: string,
   ) {
-    // Verify rejector is OWNER
+    // Verify rejector is OWNER (read-only pre-check)
     const rejector = await this.prisma.privateModeAccess.findFirst({
       where: { workspaceId, userId: rejectedBy },
     });
@@ -153,7 +228,7 @@ export class PrivateModeRoleAccessService {
       throw new Error('Only OWNER can reject roles');
     }
 
-    // Find access record and verify it's pending
+    // Verify access record exists and belongs to workspace (pre-check for clear error)
     const access = await this.prisma.privateModeAccess.findUnique({
       where: { id: accessId },
     });
@@ -163,18 +238,43 @@ export class PrivateModeRoleAccessService {
     if (access.workspaceId !== workspaceId) {
       throw new Error('Workspace mismatch');
     }
-    if (access.approvalStatus !== 'pending') {
-      throw new Error(`Cannot reject role in ${access.approvalStatus} status`);
-    }
 
-    // Reject the access
-    const updated = await this.prisma.privateModeAccess.update({
-      where: { id: accessId },
-      data: {
-        approvalStatus: 'rejected',
-        rejectionReason,
-        updatedAt: new Date(),
-      },
+    // CAS + audit in transaction: only update if still pending (TOCTOU fix)
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.privateModeAccess.updateMany({
+        where: {
+          id: accessId,
+          workspaceId,
+          approvalStatus: 'pending',
+        },
+        data: {
+          approvalStatus: 'rejected',
+          rejectionReason,
+          updatedAt: new Date(),
+        },
+      });
+
+      if (res.count !== 1) {
+        throw new Error(`Cannot reject: grant is no longer in pending status`);
+      }
+
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.APPROVAL_DENIED,
+          workspaceId,
+          actorId: rejectedBy,
+          actorType: 'user',
+          entityType: 'private_mode_access',
+          entityId: accessId,
+          payload: { userId: access.userId, role: access.role, rejectionReason },
+          visibility: 'internal',
+        },
+        tx,
+      );
+
+      const record = await tx.privateModeAccess.findUnique({ where: { id: accessId } });
+      if (!record) throw new Error('Unexpected: record not found after rejection');
+      return record;
     });
 
     return updated;
@@ -211,19 +311,44 @@ export class PrivateModeRoleAccessService {
       throw new Error('Only OWNER can revoke roles');
     }
 
-    if (access.revokedAt) {
-      throw new Error('Role already revoked');
-    }
+    // CAS + audit in transaction: only revoke if revokedAt is still null (TOCTOU fix).
+    // Preserves the "Role already revoked" semantics for callers.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.privateModeAccess.updateMany({
+        where: {
+          id: accessId,
+          workspaceId,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+          revokedBy,
+          revokeReason,
+          updatedAt: new Date(),
+        },
+      });
 
-    // Revoke the access
-    const updated = await this.prisma.privateModeAccess.update({
-      where: { id: accessId },
-      data: {
-        revokedAt: new Date(),
-        revokedBy,
-        revokeReason,
-        updatedAt: new Date(),
-      },
+      if (res.count !== 1) {
+        throw new Error('Role already revoked');
+      }
+
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.ROLE_REVOKED,
+          workspaceId,
+          actorId: revokedBy,
+          actorType: 'user',
+          entityType: 'private_mode_access',
+          entityId: accessId,
+          payload: { userId: access.userId, role: access.role, revokeReason },
+          visibility: 'internal',
+        },
+        tx,
+      );
+
+      const record = await tx.privateModeAccess.findUnique({ where: { id: accessId } });
+      if (!record) throw new Error('Unexpected: record not found after revocation');
+      return record;
     });
 
     return updated;
