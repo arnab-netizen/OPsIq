@@ -512,7 +512,7 @@ export async function listActions(workspaceId: string, params: any) {
     throw new ValidationError("engagementId is required to list actions");
   }
   if (params.status) where.status = params.status;
-  if (params.assignedTo) where.owner = params.assignedTo;
+  if (params.assignedTo) where.assignedTo = params.assignedTo;
 
   const total = await db.action.count({ where });
   const actions = await db.action.findMany({

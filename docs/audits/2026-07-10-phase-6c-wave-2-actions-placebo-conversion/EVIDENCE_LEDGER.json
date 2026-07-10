@@ -1,0 +1,93 @@
+{
+  "phase": "6C Wave 2",
+  "title": "api/actions placebo conversion",
+  "date": "2026-07-10",
+  "branch": "claude/phase-6c-wave-2-actions-placebo-conversion",
+  "base_head": "110ce29",
+  "type": "placebo-conversion + defect-fix",
+  "constraints": [
+    "no test weakening/skip/deletion/quarantine",
+    "no expect(true).toBe(true)",
+    "real Postgres DB proof (no Prisma mocks as DB proof)",
+    "audit/event emission left un-mocked (governed write path exercised)",
+    "verify before fixing (fail-before/pass-after empirical proof)",
+    "createAction treated as FALSE_POSITIVE for raw-500-create; verified, not assumed",
+    "no schema change, no secrets, no production migration"
+  ],
+  "rows": [
+    {
+      "kind": "target",
+      "file": "src/__tests__/api/actions.test.ts",
+      "prior_placebos": 121,
+      "prior_markers": ["expect(true).toBe(true)", "TODO_A2_FAKE_TEST_QUARANTINED"],
+      "post_real_tests": 15,
+      "post_placebo_markers_in_test_bodies": 0
+    },
+    {
+      "kind": "confirmed_defect_and_fix",
+      "site": "src/services/action.ts listActions (line 515)",
+      "model": "Action",
+      "defect": "assignedTo filter mapped onto phantom `where.owner` (no such column) -> PrismaClientValidationError raw-500 on every filtered list call",
+      "class": "phantom-column raw-500 (read/list path)",
+      "fix": "where.owner -> where.assignedTo",
+      "fail_before": "revert makes assignedTo-filter test throw 'Unknown argument `owner`'",
+      "pass_after": "filtered list returns the matching action",
+      "db_proof": true,
+      "classification": "CONFIRMED_HIGH"
+    },
+    {
+      "kind": "false_positive_verified",
+      "site": "src/services/action.ts createAction",
+      "reason": "explicitly sets id: randomUUID(), updatedAt: new Date(), status: 'draft' — schema-valid; no raw-500-create defect",
+      "verified_via": "real createAction persists a draft action + audit event against real Postgres"
+    },
+    {
+      "kind": "test_inventory",
+      "no_db_fail_closed": 4,
+      "db_real_create_list": 7,
+      "real_schema_contract_regression": 2,
+      "notes": "13 executed under TEST_WITH_DB=true; 6 run + 7 skipped without DB"
+    },
+    {
+      "kind": "validation_command",
+      "commands": [
+        { "cmd": "tsc --noEmit", "result": "exit 0" },
+        { "cmd": "TEST_WITH_DB=true vitest actions.test.ts", "result": "13 passed" },
+        { "cmd": "vitest actions.test.ts (no DB)", "result": "6 passed, 7 skipped" },
+        { "cmd": "fail-before (revert owner fix) vitest actions.test.ts", "result": "1 failed (Unknown argument owner) — regression proven" },
+        { "cmd": "regression: actions + actions-error-handling + re-evaluation-workspace-scope.db", "result": "36 passed" },
+        { "cmd": "governance:scan:strict", "result": "exit 0, 0 new" },
+        { "cmd": "governance:scan:auth", "result": "exit 0, all routes comply" },
+        { "cmd": "lint:ratchet", "result": "PASS (0 changed-file errors; 2155 -> 2081)" },
+        { "cmd": "prisma validate", "result": "valid" }
+      ]
+    },
+    {
+      "kind": "deferred_not_faked",
+      "items": [
+        "HTTP header/auth-401/capability-403 enforcement (route wrappers, no HTTP harness)",
+        "Zod body validation 400s (route schema, not service)",
+        "GET/PATCH/start/complete/impact-delta action routes (no service symbol imported here)",
+        "getActionsForEngagement (separate route/service)",
+        "listActions recommendationId filter (unimplemented in service)",
+        "service-boundary DTO redaction (no PublicActionDTO layer exists)"
+      ]
+    },
+    {
+      "kind": "ci_result",
+      "pr": null,
+      "status": "PENDING",
+      "expectation": "required gates green; [db] actions tests run in build-and-test (real postgres:16); Security Baseline HONEST_GREEN"
+    }
+  ],
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_changed": false,
+    "schema_changed": false,
+    "tests_weakened_or_deleted_or_skipped": false,
+    "fake_fields_added": false,
+    "authorizing_phrase_received": false
+  },
+  "next_recommended_phase": "Stop after Wave 2 merged + main green. Do NOT start Phase 6D/6E without owner instruction."
+}
