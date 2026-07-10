@@ -24,16 +24,20 @@ export async function enforceWorkspaceScoping(
       return null;
     }
 
-    // Verify workspace exists
+    // Verify workspace exists. Narrow select to the sole field consumed (`isActive`): a bare/default
+    // select reads every workspaces column and 500s under production schema drift (a newer nullable
+    // column missing from the deployed DB). Narrowing is drift-safe and behavior-preserving.
     const workspace = await db.workspace.findUnique({
       where: { id: workspaceId },
+      select: { isActive: true },
     });
 
     if (!workspace || !workspace.isActive) {
       return null;
     }
 
-    // Verify user is active member of workspace
+    // Verify user is active member of workspace. Narrow select to only the consumed fields
+    // (`role`, `isActive`) for the same drift-safety reason.
     const membership = await db.workspaceMembership.findUnique({
       where: {
         workspaceId_userId: {
@@ -41,6 +45,7 @@ export async function enforceWorkspaceScoping(
           userId: session.user.id,
         },
       },
+      select: { role: true, isActive: true },
     });
 
     if (!membership || !membership.isActive) {

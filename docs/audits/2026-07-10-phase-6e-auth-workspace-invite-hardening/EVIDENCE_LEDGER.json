@@ -1,0 +1,104 @@
+{
+  "phase": "6E",
+  "title": "harden auth / workspace / invite controls",
+  "date": "2026-07-10",
+  "branch": "claude/phase-6e-auth-workspace-invite-hardening",
+  "base_head": "c7d80404",
+  "type": "auth-workspace-hardening",
+  "constraints": [
+    "do not loosen auth; fail closed",
+    "do not broad-migrate 80 withAuth sites",
+    "no auth architecture rewrite",
+    "no schema change / no production migration / no secrets",
+    "no test weakening/skip/placebo",
+    "real DB proof (no Prisma mocks as DB proof); session source may be stubbed (not the unit under test)",
+    "do not escalate suspected findings without proof"
+  ],
+  "rows": [
+    {
+      "kind": "main_verification_before_branching",
+      "commit": "c7d80404",
+      "gates": [
+        { "workflow": "CI - Build & Test", "run": 29069853836, "conclusion": "success" },
+        { "workflow": "CI/CD Foundations", "run": 29069853830, "conclusion": "success" },
+        { "workflow": "MVP Readiness Gate", "run": 29069853822, "conclusion": "success", "security_baseline": "HONEST_GREEN" }
+      ],
+      "phase_6d": "CLOSED_GREEN"
+    },
+    {
+      "kind": "confirmed_defect_and_fix",
+      "target": 1,
+      "site": "src/app/api/onboarding/invite/route.ts:50 (pre-fix)",
+      "defect": "boolean `!userRole || (role!==admin && isActive===false)` admits an ACTIVE non-admin to invite/assign roles; raw Error (500) on denial",
+      "classification": "CONFIRMED_HIGH",
+      "fix": "centralized assertCanInviteMembers (active admin only, ForbiddenError 403); narrow membership select {role,isActive}; NotFoundError for unknown workspace; dropped unused getSession import + InviteInput type",
+      "new_file": "src/services/auth/workspace-invite-policy.ts",
+      "fail_before": "restoring old boolean fails 5 tests (active non-admin admitted)",
+      "tests": "src/__tests__/services/auth/workspace-invite-policy.test.ts (7 pure + 4 db)"
+    },
+    {
+      "kind": "confirmed_defect_and_fix",
+      "target": 2,
+      "site": "src/middleware/workspace-enforcement.ts:28,37",
+      "defect": "bare/default findUnique on workspace + workspaceMembership -> P2022 500 under schema drift on a critical enforcement path",
+      "classification": "CONFIRMED_MEDIUM",
+      "fix": "narrow select: workspace {isActive}; membership {role, isActive}",
+      "tests": "src/__tests__/middleware/workspace-enforcement.db.test.ts (4 pure + 5 db, real enforceWorkspaceScoping, getSession stubbed)"
+    },
+    {
+      "kind": "suspected_resolved",
+      "target": 3,
+      "sites": ["diagnosis/root-cause", "diagnosis/maturity", "diagnosis/bottleneck"],
+      "trace": "withAuth({capability}) binds to 'system' policy (default arg), not body.workspaceId; engines are pure compute (.create/.update/.upsert/emitAuditEvent count = 0 each); workspaceId only echoed; only persistence is idempotency cache keyed by caller authContext",
+      "classification": "FALSE_POSITIVE",
+      "residual": "CONFIRMED_LOW hygiene: body.workspaceId accepted but unvalidated and inert; fold into withAuth migration",
+      "code_change": "none"
+    },
+    {
+      "kind": "migration_plan",
+      "target": 4,
+      "withauth_call_sites_total": 68,
+      "sites_passing_explicit_workspace": 0,
+      "all_default_to": "system",
+      "risk_classes": ["single-guard (highest)", "double-wrapped (lower)", "inert-passthrough"],
+      "doc": "WITHAUTH_MIGRATION_PLAN.md",
+      "sites_migrated_this_pr": 0
+    },
+    {
+      "kind": "validation_command",
+      "commands": [
+        { "cmd": "tsc --noEmit", "result": "exit 0" },
+        { "cmd": "TEST_WITH_DB=true vitest invite + enforcement", "result": "20 passed" },
+        { "cmd": "vitest (no DB)", "result": "11 passed, 9 skipped" },
+        { "cmd": "fail-before (revert invite guard to old boolean)", "result": "5 failed (proves tests catch escalation)" },
+        { "cmd": "regression: auth-guard + owner-onboarding + services/auth/__tests__", "result": "33 passed" },
+        { "cmd": "governance:scan:strict", "result": "0 new" },
+        { "cmd": "governance:scan:auth", "result": "pass (invite route compliant)" },
+        { "cmd": "prisma validate", "result": "valid" },
+        { "cmd": "lint:ratchet", "result": "PASS (0 changed-file errors; warnings 1245->1243)" }
+      ]
+    },
+    {
+      "kind": "ci_result",
+      "pr": null,
+      "status": "PENDING",
+      "expectation": "required gates green; [db] invite + enforcement tests run in build-and-test (real postgres:16); Security Baseline HONEST_GREEN"
+    },
+    {
+      "kind": "idle_audit_delta",
+      "confirmed_added_to_queue": [],
+      "no_new_critical_high_runtime_breaker": true,
+      "notes": "Targets 1-2 fixed; Target 3 false-positive; Target 4 planned. No new CONFIRMED_CRITICAL/HIGH found."
+    }
+  ],
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_changed": false,
+    "schema_changed": false,
+    "auth_loosened": false,
+    "tests_weakened_or_deleted_or_skipped": false,
+    "authorizing_phrase_received": false
+  },
+  "next_recommended_phase": "withAuth 'system' migration (scoped per plan), or Phase 6F agent-reported governance verification"
+}

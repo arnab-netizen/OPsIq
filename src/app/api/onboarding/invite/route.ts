@@ -1,10 +1,10 @@
 import { randomUUID } from "crypto";
 import { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, NotFoundError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { db } from "@/lib/db";
-import { getSession } from "@/services/auth";
+import { assertCanInviteMembers } from "@/services/auth/workspace-invite-policy";
 import { z } from "zod";
 
 const InviteSchema = z.object({
@@ -16,8 +16,6 @@ const InviteSchema = z.object({
     })
   ),
 });
-
-type InviteInput = z.infer<typeof InviteSchema>;
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   const { session } = await withAuth();
@@ -34,10 +32,11 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   });
 
   if (!workspace) {
-    throw new Error("Workspace not found");
+    throw new NotFoundError("Workspace", input.workspaceSlug);
   }
 
-  // Check user is admin of workspace
+  // Authorization: only an ACTIVE workspace admin may invite members / assign roles. Narrow select to
+  // the two fields the policy consumes (drift-safe). Centralized fail-closed check (governed 403).
   const userRole = await db.workspaceMembership.findUnique({
     where: {
       workspaceId_userId: {
@@ -45,11 +44,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         userId: session.user.id,
       },
     },
+    select: { role: true, isActive: true },
   });
 
-  if (!userRole || (userRole.role !== "admin" && userRole.isActive === false)) {
-    throw new Error("Not authorized to invite members");
-  }
+  assertCanInviteMembers(userRole);
 
   // Process invitations (create or update users, add to workspace)
   const results = await Promise.all(
