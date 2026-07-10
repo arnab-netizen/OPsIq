@@ -1,10 +1,14 @@
 import { db } from "@/lib/db";
-import type { ApprovalRequest } from "@/generated/prisma/client";
+import type { ApprovalRequest, Prisma } from "@/generated/prisma/client";
 import {
   resolveOwnerApproval,
   type ResolveOwnerApprovalInput,
   type OwnerApprovalResolutionDeps,
 } from "@/services/owner-mode/owner-approval-resolution.service";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { NotFoundError } from "@/infra/errors";
+import { logger } from "@/infra/logger";
 
 export interface ApprovalStatus {
   approved: boolean;
@@ -21,6 +25,20 @@ export interface ApprovalDecision {
 
 export const APPROVAL_THRESHOLD = 100000;
 
+/**
+ * Resolve the workspace that owns an approval request's operator item. ApprovalRequest has no
+ * workspace column of its own (it is scoped through the operator item), so audit-event workspace
+ * isolation is derived here. Throws NotFoundError if the operator item is missing.
+ */
+async function resolveApprovalWorkspaceId(operatorItemId: string): Promise<string> {
+  const item = await db.operatorItem.findUnique({
+    where: { id: operatorItemId },
+    select: { workspaceId: true },
+  });
+  if (!item) throw new NotFoundError("OperatorItem", operatorItemId);
+  return item.workspaceId;
+}
+
 export async function requestApproval(
   operatorItemId: string,
   requestedBy: string,
@@ -35,18 +53,56 @@ export async function requestApproval(
     },
   });
 
+  // Idempotent: an approval request for this (operatorItem, approver) already exists (also enforced
+  // by the DB unique constraint). Return it without creating a duplicate or re-emitting a creation
+  // audit event.
   if (existingRequest) {
     return existingRequest;
   }
 
-  return await db.approvalRequest.create({
-    data: {
-      operatorItemId,
-      requestedBy,
-      approverUserId: approverId,
-      approvalStatus: "pending",
-    },
+  const workspaceId = await resolveApprovalWorkspaceId(operatorItemId);
+
+  // AUDIT-01: create the governed approval record and emit its creation audit event inside one
+  // transaction. A failed audit write rolls the create back (fail-closed) so a high-value approval
+  // record can never exist without an audit trail.
+  const created = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const request = await tx.approvalRequest.create({
+      data: {
+        operatorItemId,
+        requestedBy,
+        approverUserId: approverId,
+        approvalStatus: "pending",
+      },
+    });
+
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.APPROVAL_REQUESTED,
+        workspaceId,
+        actorId: requestedBy,
+        entityType: "approval_request",
+        entityId: request.id,
+        payload: {
+          operatorItemId,
+          approverUserId: approverId,
+          requestedBy,
+          newStatus: "pending",
+        },
+        visibility: "internal",
+      },
+      tx
+    );
+
+    return request;
   });
+
+  logger.info("Approval requested", {
+    approvalRequestId: created.id,
+    operatorItemId,
+    approverUserId: approverId,
+  });
+
+  return created;
 }
 
 export async function approveOutcome(
@@ -72,18 +128,61 @@ export async function approveOutcome(
     };
   }
 
-  await db.approvalRequest.update({
-    where: { id: approvalRequestId },
-    data: {
-      approvalStatus: "approved",
-      approvalDecision: decision,
-      approvedAt: new Date(),
-    },
+  const workspaceId = await resolveApprovalWorkspaceId(request.operatorItemId);
+  const now = new Date();
+
+  // AUDIT-01 + CONC-01 + status guard: transition via a status-guarded updateMany (only a row that
+  // is STILL pending transitions) inside one transaction with the audit event. This makes concurrent
+  // approve/reject race-safe (exactly one wins), makes re-approve a no-op rather than a re-stamp,
+  // prevents silently flipping an already-rejected record to approved, and rolls the state change
+  // back if the audit write fails (fail-closed).
+  let granted = false;
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const res = await tx.approvalRequest.updateMany({
+      where: { id: approvalRequestId, approvalStatus: "pending" },
+      data: {
+        approvalStatus: "approved",
+        approvalDecision: decision,
+        approvedAt: now,
+      },
+    });
+
+    if (res.count === 1) {
+      granted = true;
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.APPROVAL_GRANTED,
+          workspaceId,
+          actorId: approverId,
+          entityType: "approval_request",
+          entityId: approvalRequestId,
+          payload: {
+            operatorItemId: request.operatorItemId,
+            approverUserId: approverId,
+            decision,
+            previousStatus: "pending",
+            newStatus: "approved",
+          },
+          visibility: "internal",
+        },
+        tx
+      );
+    }
   });
 
+  if (granted) {
+    logger.info("Approval granted", { approvalRequestId, approverUserId: approverId });
+    return { approved: true, reason: "Approval recorded" };
+  }
+
+  // count === 0: the request was not pending. Distinguish idempotent replay from a blocked flip.
+  const current = await db.approvalRequest.findUnique({ where: { id: approvalRequestId } });
+  if (current?.approvalStatus === "approved") {
+    return { approved: true, reason: "Approval already recorded" };
+  }
   return {
-    approved: true,
-    reason: "Approval recorded",
+    approved: false,
+    reason: `Cannot approve: request is ${current?.approvalStatus ?? "missing"}`,
   };
 }
 
@@ -110,18 +209,59 @@ export async function rejectOutcome(
     };
   }
 
-  await db.approvalRequest.update({
-    where: { id: approvalRequestId },
-    data: {
-      approvalStatus: "rejected",
-      approvalDecision: decision,
-    },
+  const workspaceId = await resolveApprovalWorkspaceId(request.operatorItemId);
+
+  // AUDIT-01 + CONC-01 + status guard: reject via a status-guarded updateMany (only a STILL-pending
+  // row transitions) inside one transaction with the audit event. Prevents silently flipping an
+  // already-approved record to rejected, makes repeated reject idempotent, is concurrency-safe, and
+  // rolls the state change back if the audit write fails (fail-closed).
+  let rejected = false;
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const res = await tx.approvalRequest.updateMany({
+      where: { id: approvalRequestId, approvalStatus: "pending" },
+      data: {
+        approvalStatus: "rejected",
+        approvalDecision: decision,
+      },
+    });
+
+    if (res.count === 1) {
+      rejected = true;
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.APPROVAL_DENIED,
+          workspaceId,
+          actorId: approverId,
+          entityType: "approval_request",
+          entityId: approvalRequestId,
+          payload: {
+            operatorItemId: request.operatorItemId,
+            approverUserId: approverId,
+            decision,
+            previousStatus: "pending",
+            newStatus: "rejected",
+          },
+          visibility: "internal",
+        },
+        tx
+      );
+    }
   });
 
-  return {
-    approved: false,
-    reason: decision,
-  };
+  if (rejected) {
+    logger.info("Approval rejected", { approvalRequestId, approverUserId: approverId });
+    return { approved: false, reason: decision };
+  }
+
+  // count === 0: the request was not pending. Distinguish idempotent replay from a blocked flip.
+  const current = await db.approvalRequest.findUnique({ where: { id: approvalRequestId } });
+  if (current?.approvalStatus === "rejected") {
+    return { approved: false, reason: current.approvalDecision || decision };
+  }
+  if (current?.approvalStatus === "approved") {
+    return { approved: false, reason: "Cannot reject: request is already approved" };
+  }
+  return { approved: false, reason: `Cannot reject: request is ${current?.approvalStatus ?? "missing"}` };
 }
 
 export async function getApprovalStatus(
