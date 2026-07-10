@@ -1,507 +1,185 @@
 /**
- * API Route Tests: Decisions
+ * API Route Tests: Decisions (Phase 6C Wave 1 — placebo conversion)
  *
- * Validates decision creation, approval, blocking, and state machine enforcement.
- * Focus: Tier 1 critical invariants (workspace isolation, auth, state machine, audit).
+ * This file previously contained ~78 vacuous placebo tests (`expect(true).toBe(true)` and empty
+ * `TODO_A2_FAKE_TEST_QUARANTINED` bodies) that asserted nothing and imported no real handler — so the
+ * decisions create path could (and did) raw-500 while these tests stayed green.
+ *
+ * Phase 6C Wave 1 converts the safely-provable subset into REAL assertions against the real
+ * `createDecision` service and the exact query the `GET /api/decisions/list` route runs, backed by a
+ * real Postgres database (no Prisma mocks counted as DB proof). Converting the create path uncovered a
+ * real owner-facing defect (createDecision wrote a phantom `createdBy` column and omitted the required
+ * `id`/`updatedAt`, and wrote phantom `decisionType`/`problemType`) — fixed in
+ * `src/services/decisions/decision-creation-service.ts` and proven below.
+ *
+ * Tests that reference routes which do not exist (`/approve`, `/block` — the real transitions are
+ * accept/reject/close/etc.) and route-wrapper HTTP auth (401/403 via withCanonicalEnforcement/withAuth,
+ * which the repo's own "real route test" skips for lack of an HTTP harness) are documented as DEFERRED
+ * in docs/audits/2026-07-10-phase-6c-placebo-test-conversion-wave-1/PLACEBO_TEST_INVENTORY.md rather than
+ * faked here.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { AuthContext } from "@/lib/auth-guard";
-import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { ROLES } from "@/domain/constants/roles";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { randomUUID } from "crypto";
+import { db } from "@/lib/db";
+import { createDecision } from "@/services/decisions/decision-creation-service";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
-vi.mock("@/infra/audit", () => ({
-  emitAuditEvent: vi.fn(),
-}));
-
-vi.mock("@/services/event-emitter", () => ({
-  EventEmitterService: {
-    emit: vi.fn(),
-  },
-}));
-
-vi.mock("@/services/re-evaluation", () => ({
-  triggerReEvaluation: vi.fn(),
-}));
-
-describe("Decisions API Routes", () => {
-  const workspaceId1 = "550e8400-e29b-41d4-a716-446655440300";
-  const workspaceId2 = "550e8400-e29b-41d4-a716-446655440301";
-  const engagementId = "550e8400-e29b-41d4-a716-446655440302";
-  const decisionId = "550e8400-e29b-41d4-a716-446655440303";
-  const userId = "550e8400-e29b-41d4-a716-446655440304";
-
-  const mockAuthContext: AuthContext = {
-    session: {
-      sessionId: "session-789",
-      user: {
-        id: userId,
-        email: "test@example.com",
-        name: "Test User",
-        isActive: true,
-      },
-      expiresAt: new Date(Date.now() + 3600000),
+// The exact query GET /api/decisions/list runs (src/app/api/decisions/list/route.ts). Replicated so the
+// workspace-isolation + valid-select (no raw 500) + DTO invariants are proven against a real DB.
+async function listDecisionsQuery(workspaceId: string, status?: string) {
+  const where: { workspaceId: string; status?: string } = { workspaceId };
+  if (status && ["pending", "blocked", "approved", "done", "failed"].includes(status)) {
+    where.status = status;
+  }
+  const rows = await db.operatorItem.findMany({
+    where,
+    select: {
+      id: true,
+      problem: true,
+      action: true,
+      impactExpected: true,
+      confidence: true,
+      status: true,
+      blockStage: true,
+      blockReason: true,
+      createdAt: true,
+      updatedAt: true,
     },
-    policy: {
-      userId,
-      roles: [
-        {
-          role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER,
-          scope: "workspace",
-          scopeId: workspaceId1,
-        },
-      ],
-    },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map((d) => ({
+    id: d.id,
+    title: d.problem,
+    status: d.status,
+    impact: d.impactExpected,
+    confidence: d.confidence,
+    blockStage: d.blockStage,
+    blockReason: d.blockReason,
+    createdAt: d.createdAt,
+    updatedAt: d.updatedAt,
+  }));
+}
+
+describe("Decisions API — create service input validation (fail-closed, no DB required)", () => {
+  const base = {
+    verifiedActorId: randomUUID(),
+    verifiedWorkspaceId: randomUUID(),
+    type: "operational",
+    impact: 50000,
+    confidence: 0.8,
   };
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+  it("rejects an empty problem statement (title required)", async () => {
+    await expect(createDecision({ ...base, title: "   " })).rejects.toThrow(/title is required/i);
   });
 
-  describe("GET /api/decisions/list - List Decisions (Workspace Isolation Critical)", () => {
-    it("should enforce workspace isolation on list (critical invariant)", () => {
-      // Critical: Only return decisions where decision.workspaceId === request.workspaceId
-      // Cross-workspace query must return empty, never leak data
-      expect(workspaceId1).toMatch(/^[0-9a-f]{8}/i);
-      expect(workspaceId2).toMatch(/^[0-9a-f]{8}/i);
-    });
-
-    it("should require workspace ID header (fail-closed)", () => {
-      // Critical: Missing workspace ID returns 400
-      // enforceWorkspaceScoping middleware validates x-workspace-id header
-      expect(true).toBe(true);
-    });
-
-    it("should require read permission on workspace", () => {
-      // Critical: Policy check enforces READ capability
-      expect(true).toBe(true);
-    });
-
-    it("should require authentication (fail-closed)", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: withAuth middleware enforces session
-    });
-
-    it("should support status filter", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional filter parameter
-    });
-
-    it("should validate status enum", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation (pending|approved|blocked|done|failed)
-    });
-
-    it("should support pagination with limit", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional pagination parameter
-    });
-
-    it("should support pagination with offset", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional pagination parameter
-    });
-
-    it("should validate limit not greater than 1000", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional pagination constraint
-    });
-
-    it("should default limit and offset", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional parameter defaults
-    });
-
-    it("should return decisions ordered by createdAt descending", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Sort order (integration test)
-    });
-
-    it("should include all required decision fields", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: DTO response structure
-    });
-
-    it("should return 400 if workspace ID missing", () => {
-      // Critical: Fail-closed on missing header
-      expect(true).toBe(true);
-    });
-
-    it("should return 403 if unauthorized workspace access", () => {
-      // Critical: Fail-closed on workspace mismatch
-      expect(true).toBe(true);
-    });
-
-    it("should return 403 if insufficient read permissions", () => {
-      // Critical: Fail-closed on capability check
-      expect(true).toBe(true);
-    });
-
-    it("should return 200 with decision list", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
+  it("rejects an empty proposed action (type required)", async () => {
+    await expect(createDecision({ ...base, title: "T", type: "  " })).rejects.toThrow(/type is required/i);
   });
 
-  describe("POST /api/decisions/create - Create Decision (Workspace Isolation + Audit Critical)", () => {
-    it("should enforce workspace isolation on create (critical invariant)", () => {
-      // Critical: Created decision must be scoped to request.workspaceId
-      // Service validates: decision.workspaceId = validatedWorkspaceId (not from user input)
-      expect(true).toBe(true);
-    });
-
-    it("should require workspace ID header (fail-closed)", () => {
-      // Critical: enforceWorkspaceScoping returns 400 if missing
-      expect(true).toBe(true);
-    });
-
-    it("should require write permission on workspace", () => {
-      // Critical: Policy check enforces WRITE capability
-      expect(true).toBe(true);
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: withAuth middleware
-    });
-
-    it("should validate problem statement required", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation (z.string().min(1))
-    });
-
-    it("should validate proposed action required", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation
-    });
-
-    it("should accept optional impact estimate", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field
-    });
-
-    it("should accept optional confidence level", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field
-    });
-
-    it("should link to engagement if provided", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional relationship
-    });
-
-    it("should create decision in pending state (state machine enforced)", () => {
-      // Critical: Initial status must be 'pending' (enforced by service, not user input)
-      // Service sets: status = 'pending' regardless of input
-      expect(true).toBe(true);
-    });
-
-    it("should record creator ID from auth context", () => {
-      // Critical: createdBy = authContext.session.user.id (from session, not input)
-      expect(true).toBe(true);
-    });
-
-    it("should emit DECISION_CREATED audit event with workspace context", () => {
-      // Critical: Audit trail emission
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_CREATED, workspaceId, ... })
-      expect(true).toBe(true);
-    });
-
-    it("should prevent cross-workspace decision creation (critical isolation)", () => {
-      // Critical: User from ws-2 cannot create decision in ws-1
-      // Service validates: authContext.workspaceId === request.workspaceId
-      expect(true).toBe(true);
-    });
-
-    it("should return 400 for invalid input", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation errors
-    });
-
-    it("should return 403 if insufficient write permissions", () => {
-      // Critical: Fail-closed on capability check
-      expect(true).toBe(true);
-    });
-
-    it("should return 201 on success", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
+  it("rejects a non-positive impact", async () => {
+    await expect(createDecision({ ...base, title: "T", impact: 0 })).rejects.toThrow(/impact must be a positive number/i);
   });
 
-  describe("GET /api/decisions/[id] - Get Decision Details (Workspace Isolation Critical)", () => {
-    it("should enforce workspace isolation on get (critical invariant)", () => {
-      // Critical: Reject access to decisions from different workspace
-      // Query: WHERE id = decisionId AND workspaceId = request.workspaceId
-      // If mismatch, return 403 (not 404, to avoid enumeration)
-      expect(true).toBe(true);
-    });
-
-    it("should require workspace ID header (fail-closed)", () => {
-      // Critical: enforceWorkspaceScoping validates header
-      expect(true).toBe(true);
-    });
-
-    it("should require read permission on workspace", () => {
-      // Critical: Policy check enforces READ capability
-      expect(true).toBe(true);
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: withAuth middleware
-    });
-
-    it("should validate decision ID is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation
-    });
-
-    it("should return 404 if decision not found", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Not found handling
-    });
-
-    it("should return 403 if decision in different workspace", () => {
-      // Critical: Cross-workspace access blocked with 403
-      expect(true).toBe(true);
-    });
-
-    it("should return decision with all fields", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: DTO response structure
-    });
-
-    it("should include decision history", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Audit trail integration
-    });
-
-    it("should return 200 on success", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
+  it("rejects a confidence outside [0,1]", async () => {
+    await expect(createDecision({ ...base, title: "T", confidence: 1.5 })).rejects.toThrow(/confidence must be between 0 and 1/i);
   });
 
-  describe("POST /api/decisions/[id]/approve - Approve Decision (State Machine + Audit Critical)", () => {
-    it("should enforce workspace isolation on approve (critical invariant)", () => {
-      // Critical: User from ws-2 cannot approve decision in ws-1
-      expect(true).toBe(true);
-    });
-
-    it("should require write permission for approval", () => {
-      // Critical: Policy check enforces WRITE capability
-      expect(true).toBe(true);
-    });
-
-    it("should enforce state machine: pending → approved only", () => {
-      // Critical: Only pending decisions can be approved
-      // Other states (blocked, done, failed) cannot transition to approved
-      expect(true).toBe(true);
-    });
-
-    it("should record approver ID from auth context", () => {
-      // Critical: approverId = authContext.session.user.id (not input)
-      expect(true).toBe(true);
-    });
-
-    it("should emit DECISION_APPROVED audit event with workspace", () => {
-      // Critical: Audit trail
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_APPROVED, workspaceId, ... })
-      expect(true).toBe(true);
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: withAuth middleware
-    });
-
-    it("should validate decision ID is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation
-    });
-
-    it("should trigger action creation if specified", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional post-approval action
-    });
-
-    it("should trigger recommendation refresh", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Side effect (delegated to service)
-    });
-
-    it("should return 400 if invalid state transition", () => {
-      // Critical: Reject approval of already-approved decision
-      // Service throws ValidationError if transition not allowed
-      expect(true).toBe(true);
-    });
-
-    it("should return 403 if user lacks approval capability", () => {
-      // Critical: Fail-closed on capability check
-      expect(true).toBe(true);
-    });
-
-    it("should return 200 on success", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
+  it("rejects a missing workspace id (fail-closed workspace enforcement)", async () => {
+    await expect(
+      createDecision({ ...base, title: "T", verifiedWorkspaceId: "" })
+    ).rejects.toThrow();
   });
-
-  describe("POST /api/decisions/[id]/block - Block Decision (State Machine + Audit Critical)", () => {
-    it("should enforce workspace isolation on block (critical invariant)", () => {
-      // Critical: User from ws-2 cannot block decision in ws-1
-      expect(true).toBe(true);
-    });
-
-    it("should require write permission on workspace", () => {
-      // Critical: Policy check enforces WRITE capability
-      expect(true).toBe(true);
-    });
-
-    it("should require block reason (mandatory field)", () => {
-      // Critical: Block reason is required (no blocking without reason)
-      // Zod schema: blockReason: z.string().min(1)
-      expect(true).toBe(true);
-    });
-
-    it("should enforce state machine: pending/approved → blocked", () => {
-      // Critical: State machine enforces valid transitions
-      // Allowed: pending→blocked, approved→blocked
-      // Blocked: done/failed cannot transition (terminal states)
-      expect(true).toBe(true);
-    });
-
-    it("should emit DECISION_BLOCKED audit event with workspace", () => {
-      // Critical: Audit trail
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_BLOCKED, workspaceId, ... })
-      expect(true).toBe(true);
-    });
-
-    it("should require authentication", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: withAuth middleware
-    });
-
-    it("should validate decision ID is UUID", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Zod validation
-    });
-
-    it("should optionally accept block stage", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Optional field
-    });
-
-    it("should flag engagement for re-evaluation", () => {
-      // Critical: Blocked decision triggers re-evaluation
-      // Service calls triggerReEvaluation(engagementId)
-      expect(true).toBe(true);
-    });
-
-    it("should return 400 if missing block reason", () => {
-      // Critical: Zod validation rejects missing reason
-      expect(true).toBe(true);
-    });
-
-    it("should return 400 if invalid state transition", () => {
-      // Critical: Cannot block terminal states
-      expect(true).toBe(true);
-    });
-
-    it("should return 200 on success", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Success path
-    });
-  });
-
-  describe("Decision Status Lifecycle (State Machine Critical)", () => {
-    it("should enforce pending → approved transition", () => {
-      // Critical: Valid state machine transition
-      expect(true).toBe(true);
-    });
-
-    it("should enforce pending → blocked transition", () => {
-      // Critical: Valid transition
-      expect(true).toBe(true);
-    });
-
-    it("should enforce blocked → pending transition (unblock)", () => {
-      // Critical: Valid transition (blocker resolved)
-      expect(true).toBe(true);
-    });
-
-    it("should enforce approved → done transition", () => {
-      // Critical: Valid transition (action completed)
-      expect(true).toBe(true);
-    });
-
-    it("should allow any → failed transition", () => {
-      // Critical: Any state can fail (action failure)
-      expect(true).toBe(true);
-    });
-
-    it("should prevent state transitions from done (terminal)", () => {
-      // Critical: Terminal state (no further transitions)
-      expect(true).toBe(true);
-    });
-
-    it("should prevent state transitions from failed (terminal)", () => {
-      // Critical: Terminal state
-      expect(true).toBe(true);
-    });
-
-    it("should track decision through pending → approved → done path", () => {
-      // Critical: Happy path state transitions
-      expect(true).toBe(true);
-    });
-  });
-
-  describe("Decision Audit Trail & Event Emission (Audit Critical)", () => {
-    it("should emit DECISION_CREATED audit event on creation", () => {
-      // Critical: Audit trail for creation
-      expect(true).toBe(true);
-    });
-
-    it("should emit DECISION_APPROVED audit event on approval", () => {
-      // Critical: Audit trail for state change
-      expect(true).toBe(true);
-    });
-
-    it("should emit DECISION_BLOCKED audit event on blocking", () => {
-      // Critical: Audit trail for state change
-      expect(true).toBe(true);
-    });
-
-    it("should include actor ID in all audit events", () => {
-      // Critical: Audit trail includes userId
-      // Service: emitAuditEvent({ actorId: authContext.session.user.id, ... })
-      expect(true).toBe(true);
-    });
-
-    it("should include workspace context in all audit events", () => {
-      // Critical: All events include workspaceId
-      // Service: emitAuditEvent({ workspaceId: validatedWorkspaceId, ... })
-      expect(true).toBe(true);
-    });
-
-    it("should record audit trail with timestamp", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Audit metadata (delegated to audit service)
-    });
-
-    it("should include rationale for status changes", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Audit payload (block reason, etc)
-    });
-
-    it("should allow history retrieval via GET", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: History API (integration test)
-    });
-  });
-
-  describe("Decision Isolation & Authorization (Critical Invariants)", () => {
-    it("should prevent cross-workspace decision access (critical isolation)", () => {
-      // Critical: All operations enforce workspace scoping
-      expect(true).toBe(true);
-    });
-
-    it("should prevent unauthenticated access to any decision operation", () => {
-      // Critical: withAuth middleware enforces auth
-      expect(true).toBe(true);
-    });
-
-    it("should enforce capability-based access control (critical)", () => {
-      // Critical: Policy checks enforce capabilities (READ, WRITE)
-      expect(true).toBe(true);
-    });
-
-    it("should scope all responses to authenticated user's workspace", () => {
-      // Critical: No workspace leakage in responses
-      // Service enforces WHERE workspaceId = request.workspaceId
-      expect(true).toBe(true);
-    });
-
-    it("should return 403 for cross-workspace mutation attempts", () => {
-      // Critical: Fail-closed on cross-workspace operations
-      expect(true).toBe(true);
-    });
-  });
-
-  // QUARANTINED: 117 fake tests (from original 132)
-  // Marked TODO_A2_FAKE_TEST_QUARANTINED with reasons:
-  // - DELEGATED_TO_SERVICE: 47 tests (auth, pagination, optional fields, filtering)
-  // - SUCCESS_PATH: 35 tests (integration test coverage)
-  // - ERROR_HANDLING: 35 tests (generic response handling)
-  //
-  // IMPLEMENTED: 15 critical invariant tests covering Tier 1 production safety
-  // - Workspace isolation: 5 tests
-  // - Auth enforcement: 4 tests
-  // - State machine: 8 tests
-  // - Audit trail: 5 tests
 });
+
+describe.skipIf(!SHOULD_RUN_DB_TESTS)(
+  "[db] Decisions API — real create + list workspace isolation (Phase 6C Wave 1)",
+  () => {
+    const stamp = randomUUID().substring(0, 8);
+    const workspaceId = randomUUID();
+    const otherWorkspaceId = randomUUID();
+    const userId = randomUUID();
+
+    beforeAll(async () => {
+      // Real actor row so createDecision's createdByUserId FK (operator_items_created_by_user_id) is satisfied.
+      await db.user.create({
+        data: { id: userId, email: `p6c-dec-${stamp}@test.local`, isActive: true, updatedAt: new Date() },
+      });
+    });
+
+    afterAll(async () => {
+      try {
+        await db.operatorItem.deleteMany({ where: { workspaceId: { in: [workspaceId, otherWorkspaceId] } } });
+        await db.user.deleteMany({ where: { id: userId } });
+      } catch {
+        // best-effort cleanup (ephemeral CI database)
+      }
+    });
+
+    it("[db] createDecision persists a real pending, workspace-scoped decision (regression: create no longer raw-500s)", async () => {
+      // Before the Phase 6C fix this call raw-500'd: it wrote a phantom `createdBy` column and omitted the
+      // required `id`/`updatedAt` (plus phantom decisionType/problemType) → PrismaClientValidationError.
+      const result = await createDecision({
+        title: "Cut cloud spend",
+        type: "operational",
+        impact: 50000,
+        confidence: 0.8,
+        verifiedActorId: userId,
+        verifiedWorkspaceId: workspaceId,
+      });
+      expect(result.id).toBeTruthy();
+      expect(result.title).toBe("Cut cloud spend");
+      expect(result.decisionType).toBe("operational");
+
+      const row = await db.operatorItem.findUnique({
+        where: { id: result.id },
+        select: { status: true, workspaceId: true, createdByUserId: true, ownerUserId: true, impactExpected: true, problem: true },
+      });
+      expect(row).not.toBeNull();
+      expect(row!.status).toBe("pending"); // state machine: initial status enforced by service
+      expect(row!.workspaceId).toBe(workspaceId); // scoped to the verified workspace, not user input
+      expect(row!.createdByUserId).toBe(userId); // creator recorded from verified actor
+      expect(row!.ownerUserId).toBe(userId);
+      expect(row!.impactExpected).toBe(50000);
+      expect(row!.problem).toBe("Cut cloud spend");
+    });
+
+    it("[db] list query returns only the requesting workspace's decisions (tenant isolation, no leak)", async () => {
+      const mine = await createDecision({
+        title: "My workspace decision",
+        type: "operational",
+        impact: 12000,
+        confidence: 0.6,
+        verifiedActorId: userId,
+        verifiedWorkspaceId: workspaceId,
+      });
+      const foreign = await createDecision({
+        title: "Other workspace decision",
+        type: "operational",
+        impact: 34000,
+        confidence: 0.7,
+        verifiedActorId: userId,
+        verifiedWorkspaceId: otherWorkspaceId,
+      });
+
+      const listed = await listDecisionsQuery(workspaceId);
+      const ids = listed.map((d) => d.id);
+      expect(ids).toContain(mine.id);
+      expect(ids).not.toContain(foreign.id); // cross-workspace decision must never leak
+      expect(listed.every((d) => typeof d.title === "string")).toBe(true); // real DTO shape (title ← problem)
+      // A phantom/invalid select would raw-500 here; reaching this assertion proves it does not.
+      const foreignList = await listDecisionsQuery(otherWorkspaceId);
+      expect(foreignList.map((d) => d.id)).toContain(foreign.id);
+      expect(foreignList.map((d) => d.id)).not.toContain(mine.id);
+    });
+
+    it("[db] list status filter narrows to matching decisions without leaking other statuses", async () => {
+      const all = await listDecisionsQuery(workspaceId);
+      const pendingOnly = await listDecisionsQuery(workspaceId, "pending");
+      expect(pendingOnly.length).toBeGreaterThan(0);
+      expect(pendingOnly.every((d) => d.status === "pending")).toBe(true);
+      expect(pendingOnly.length).toBeLessThanOrEqual(all.length);
+    });
+  }
+);

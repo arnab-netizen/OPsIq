@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
@@ -29,7 +30,7 @@ export interface CreateDecisionResult {
 export async function createDecision(
   input: VerifiedDecisionInput
 ): Promise<CreateDecisionResult> {
-  const { title, type, impact, confidence, verifiedWorkspaceId, verifiedActorId, problemType, expectedOutcome } = input;
+  const { title, type, impact, confidence, verifiedWorkspaceId, verifiedActorId, expectedOutcome } = input;
   const workspaceId = verifiedWorkspaceId;
   const userId = verifiedActorId;
 
@@ -59,6 +60,7 @@ export async function createDecision(
   try {
     const decision = await db.operatorItem.create({
       data: {
+        id: randomUUID(),
         workspaceId,
         problem: title.trim(),
         action: type.trim(),
@@ -66,14 +68,13 @@ export async function createDecision(
         impactLow: impact * 0.8,
         impactHigh: impact * 1.2,
         confidence,
-        decisionType: type.trim(),
-        problemType: problemType || null,
         expectedOutcome: expectedOutcome || null,
         priorityScore: calculatePriorityScore(impact, confidence),
         status: "pending",
         ownerUserId: userId,
-        createdBy: userId,
+        createdByUserId: userId,
         lastUpdatedByUserId: userId,
+        updatedAt: new Date(),
       },
     });
 
@@ -90,7 +91,7 @@ export async function createDecision(
       id: decision.id,
       title: decision.problem,
       problem: decision.problem,
-      decisionType: decision.decisionType,
+      decisionType: type.trim(),
       impactExpected: decision.impactExpected,
       confidence: decision.confidence,
       createdAt: decision.createdAt,
