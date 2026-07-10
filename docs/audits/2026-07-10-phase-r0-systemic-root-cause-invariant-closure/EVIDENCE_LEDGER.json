@@ -1,0 +1,158 @@
+{
+  "auditId": "phase-r0-systemic-root-cause-invariant-closure",
+  "date": "2026-07-10",
+  "branch": "claude/phase-r0-systemic-root-cause-invariant-closure",
+  "baseCommit": "80a3087027",
+  "securityBaselineClassification": "HONEST_GREEN",
+  "invariantFamilies": [
+    {
+      "id": "INV-1",
+      "name": "PRISMA_CREATE_SELECT_INTEGRITY",
+      "status": "FIXED",
+      "findingId": "D1-01"
+    },
+    {
+      "id": "INV-2",
+      "name": "GOVERNED_MUTATION_IDEMPOTENCY",
+      "status": "FIXED",
+      "findingId": "D3-01"
+    },
+    {
+      "id": "INV-3",
+      "name": "GOVERNED_AUDIT_ATOMICITY",
+      "status": "FIXED",
+      "findingId": "D3-03"
+    },
+    {
+      "id": "INV-4",
+      "name": "WORKSPACE_TENANT_AUTHORIZATION",
+      "status": "FIXED",
+      "findingId": "D4-01",
+      "fixedInPhase": "6J",
+      "confirmedOnMain": true
+    },
+    {
+      "id": "INV-5",
+      "name": "DUPLICATE_AUTH_RESOLUTION",
+      "status": "NOTED",
+      "disposition": "DEFERRED_R1"
+    },
+    {
+      "id": "INV-6",
+      "name": "ACTIVE_TEST_ASSERTION_TRUTH",
+      "status": "PARTIAL",
+      "disposition": "773_total_4_converted_769_deferred_R1"
+    },
+    {
+      "id": "INV-7",
+      "name": "CI_LANE_TRUTHFULNESS",
+      "status": "MONITORED",
+      "findingsFound": 0
+    }
+  ],
+  "mustFixFindings": [
+    {
+      "id": "D1-01",
+      "classification": "CONFIRMED_HIGH",
+      "description": "do-not-repeat.service.ts phantom code field — PrismaClientValidationError at runtime on every recommendation promotion with a linked findingId",
+      "file": "src/services/owner-mode/do-not-repeat.service.ts",
+      "line": 63,
+      "fixApplied": true,
+      "fixDescription": "Removed code:true from DnrDb interface and findFirst select. Removed dead if(finding?.code) key derivation.",
+      "testFile": "src/__tests__/services/do-not-repeat-phantom-field-r0.test.ts",
+      "testCount": 8
+    },
+    {
+      "id": "D3-01",
+      "classification": "CONFIRMED",
+      "description": "POST /api/owner/budget/spend — no idempotency guard, duplicate SpendEntry on retry",
+      "file": "src/app/api/owner/budget/spend/route.ts",
+      "fixApplied": true,
+      "fixDescription": "Added idempotency-key header enforcement, checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError",
+      "testFile": "src/__tests__/api/budget-spend-idempotency-r0.test.ts",
+      "testCount": 5
+    },
+    {
+      "id": "D3-03",
+      "classification": "CONFIRMED",
+      "description": "createFinancialSnapshot snapshot create and audit emit not in db.$transaction",
+      "file": "src/services/owner-finance/snapshot.service.ts",
+      "fixApplied": true,
+      "fixDescription": "Wrapped ownerFinancialSnapshot.create and emitAuditEvent(input, tx) in db.$transaction",
+      "testFile": "src/__tests__/services/finance-snapshot-audit-transaction-r0.test.ts",
+      "testCount": 6
+    },
+    {
+      "id": "D4-01",
+      "classification": "CONFIRMED_HIGH",
+      "description": "Three diagnosis POST routes accepted body.workspaceId without membership validation",
+      "fixApplied": true,
+      "fixedInPhase": "6J",
+      "fixCommit": "80a3087027",
+      "confirmedOnMain": true,
+      "testFile": "src/__tests__/api/diagnosis-workspace-tenant-isolation-6j.test.ts",
+      "testCount": 22
+    }
+  ],
+  "deferredFindings": [
+    {
+      "id": "D3-04",
+      "description": "Billing upgrade no audit event",
+      "disposition": "DEFERRED_R1",
+      "rationale": "Webhook handles actual payment mutation; upgrade route creates intent only"
+    },
+    {
+      "id": "D5-01",
+      "description": "Duplicate auth patterns (withAuth + withCanonicalEnforcement in same route)",
+      "disposition": "DEFERRED_R1",
+      "rationale": "Inventory complete; no confirmed runtime failure; Phase R1 consolidation"
+    },
+    {
+      "id": "D6-01",
+      "description": "Fake assertion cluster — 769 remaining after Phase R0 conversions",
+      "disposition": "DEFERRED_R1",
+      "rationale": "Requires test-harness abstraction for route handler integration tests"
+    },
+    {
+      "id": "D7-01",
+      "description": "PATCH /api/finance/[id] has no idempotency-key enforcement",
+      "disposition": "DEFERRED_R1"
+    },
+    {
+      "id": "D8-01",
+      "description": "Additional services with non-atomic create+audit (recordSpendEntry, createBusiness, etc.)",
+      "disposition": "DEFERRED_R1"
+    }
+  ],
+  "filesChanged": [
+    "src/services/owner-mode/do-not-repeat.service.ts",
+    "src/app/api/owner/budget/spend/route.ts",
+    "src/services/owner-finance/snapshot.service.ts",
+    "src/__tests__/security/hostile-auth-tests.test.ts"
+  ],
+  "filesCreated": [
+    "src/__tests__/api/budget-spend-idempotency-r0.test.ts",
+    "src/__tests__/services/finance-snapshot-audit-transaction-r0.test.ts",
+    "src/__tests__/services/do-not-repeat-phantom-field-r0.test.ts",
+    "scripts/scan-prisma-integrity.js",
+    "scripts/scan-fake-assertions.js",
+    "docs/audits/2026-07-10-phase-r0-systemic-root-cause-invariant-closure/ROOT_CAUSE_INVARIANT_MATRIX.md",
+    "docs/audits/2026-07-10-phase-r0-systemic-root-cause-invariant-closure/FINAL_REPORT.md",
+    "docs/audits/2026-07-10-phase-r0-systemic-root-cause-invariant-closure/MUTATION_IDEMPOTENCY_INVENTORY.md",
+    "docs/audits/2026-07-10-phase-r0-systemic-root-cause-invariant-closure/WORKSPACE_TENANT_INVENTORY.md",
+    "docs/audits/2026-07-10-phase-r0-systemic-root-cause-invariant-closure/AUDIT_ATOMICITY_INVENTORY.md",
+    "docs/audits/2026-07-10-phase-r0-systemic-root-cause-invariant-closure/FAKE_ASSERTION_INVENTORY.md",
+    "docs/audits/2026-07-10-phase-r0-systemic-root-cause-invariant-closure/CI_LANE_TRUTHFULNESS.md",
+    "docs/audits/2026-07-10-phase-r0-systemic-root-cause-invariant-closure/EVIDENCE_LEDGER.json"
+  ],
+  "testResults": {
+    "combined": { "suites": 4, "total": 49, "passed": 49, "failed": 0, "skipped": 0, "status": "PASS" },
+    "budgetSpendIdempotency": { "file": "src/__tests__/api/budget-spend-idempotency-r0.test.ts", "status": "PASS" },
+    "financeSnapshotAuditTransaction": { "file": "src/__tests__/services/finance-snapshot-audit-transaction-r0.test.ts", "status": "PASS" },
+    "doNotRepeatPhantomField": { "file": "src/__tests__/services/do-not-repeat-phantom-field-r0.test.ts", "status": "PASS" },
+    "hostileAuth": { "file": "src/__tests__/security/hostile-auth-tests.test.ts", "realAssertions": 4, "deferredAssertions": 22, "status": "PASS" }
+  },
+  "typecheck": "PASS",
+  "lint": "PASS_NO_ERRORS",
+  "prismaValidate": "NOT_RUN_NO_SCHEMA_CHANGE"
+}

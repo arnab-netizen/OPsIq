@@ -9,6 +9,7 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { ConflictError, NotFoundError } from "@/infra/errors";
@@ -118,53 +119,59 @@ export async function createFinancialSnapshot(
     .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
   const confidence = calculateDataConfidence(engineInput);
 
-  const snapshot = await db.ownerFinancialSnapshot.create({
-    data: {
-      id: randomUUID(),
-      workspaceId,
-      businessId,
-      periodStart,
-      periodEnd,
-      currency: input.currency,
-      businessModelType: input.businessModel ?? null,
-      industryTemplate: input.industryTemplate ?? null,
-      revenue: input.revenue ?? null,
-      costOfGoods: input.costOfGoodsOrServices ?? null,
-      fixedCosts: input.fixedCosts ?? null,
-      variableCosts: input.variableCosts ?? null,
-      rent: input.rent ?? null,
-      payroll: input.salaryPayroll ?? null,
-      utilities: input.utilities ?? null,
-      deliveryCost: input.deliveryFulfilmentCost ?? null,
-      marketingSpend: input.marketingSpend ?? null,
-      discountAmount: input.discountAmount ?? null,
-      refundReworkCost: refundReworkComplaint.length > 0 ? refundReworkComplaint.reduce((s, v) => s + v, 0) : null,
-      debtPayments: input.loanEmiDebtPayments ?? null,
-      cashOnHand: input.cashOnHand ?? null,
-      receivables: input.receivables ?? null,
-      overdueReceivables: input.receivablesOverdue ?? null,
-      payables: input.payables ?? null,
-      overduePayables: input.payablesOverdue ?? null,
-      ownerWithdrawals: input.ownerWithdrawals ?? null,
-      inventoryCashLock: input.inventoryStockCashLock ?? null,
-      orderCount: input.orderCount ?? null,
-      customerCount: input.customerCount ?? null,
-      repeatCustomerCount: input.repeatCustomerCount ?? null,
-      b2bRevenue: input.b2bRevenue ?? null,
-      b2cRevenue: input.b2cRevenue ?? null,
-      notes: input.notes ?? null,
-      dataConfidenceScore: confidence.dataConfidenceScore,
-      missingCriticalData: confidence.missingCritical,
-    },
-  });
+  // D3-03: snapshot create and audit in a single transaction so an audit
+  // failure prevents a partially-recorded snapshot with no audit trail.
+  const snapshot = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.ownerFinancialSnapshot.create({
+      data: {
+        id: randomUUID(),
+        workspaceId,
+        businessId,
+        periodStart,
+        periodEnd,
+        currency: input.currency,
+        businessModelType: input.businessModel ?? null,
+        industryTemplate: input.industryTemplate ?? null,
+        revenue: input.revenue ?? null,
+        costOfGoods: input.costOfGoodsOrServices ?? null,
+        fixedCosts: input.fixedCosts ?? null,
+        variableCosts: input.variableCosts ?? null,
+        rent: input.rent ?? null,
+        payroll: input.salaryPayroll ?? null,
+        utilities: input.utilities ?? null,
+        deliveryCost: input.deliveryFulfilmentCost ?? null,
+        marketingSpend: input.marketingSpend ?? null,
+        discountAmount: input.discountAmount ?? null,
+        refundReworkCost: refundReworkComplaint.length > 0 ? refundReworkComplaint.reduce((s, v) => s + v, 0) : null,
+        debtPayments: input.loanEmiDebtPayments ?? null,
+        cashOnHand: input.cashOnHand ?? null,
+        receivables: input.receivables ?? null,
+        overdueReceivables: input.receivablesOverdue ?? null,
+        payables: input.payables ?? null,
+        overduePayables: input.payablesOverdue ?? null,
+        ownerWithdrawals: input.ownerWithdrawals ?? null,
+        inventoryCashLock: input.inventoryStockCashLock ?? null,
+        orderCount: input.orderCount ?? null,
+        customerCount: input.customerCount ?? null,
+        repeatCustomerCount: input.repeatCustomerCount ?? null,
+        b2bRevenue: input.b2bRevenue ?? null,
+        b2cRevenue: input.b2cRevenue ?? null,
+        notes: input.notes ?? null,
+        dataConfidenceScore: confidence.dataConfidenceScore,
+        missingCriticalData: confidence.missingCritical,
+      },
+    });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OWNER_FINANCE_SNAPSHOT_RECORDED,
-    actorId,
-    workspaceId,
-    entityType: "OwnerFinancialSnapshot",
-    entityId: snapshot.id,
-    payload: { businessId, periodStart: input.periodStart, periodEnd: input.periodEnd },
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OWNER_FINANCE_SNAPSHOT_RECORDED,
+      actorId,
+      workspaceId,
+      entityType: "OwnerFinancialSnapshot",
+      entityId: created.id,
+      payload: { businessId, periodStart: input.periodStart, periodEnd: input.periodEnd },
+    }, tx);
+
+    return created;
   });
 
   return snapshot;
