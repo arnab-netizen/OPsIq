@@ -1,0 +1,143 @@
+{
+  "phase": "6D",
+  "title": "harden approval workflow governance (audit + status guard + idempotency/concurrency)",
+  "date": "2026-07-10",
+  "branch": "claude/phase-6d-approval-workflow-audit-idempotency",
+  "base_head": "c68e8029",
+  "type": "governance-defect-fix",
+  "constraints": [
+    "no approval architecture rewrite",
+    "no business threshold change",
+    "no weakening of owner approval semantics",
+    "no schema change / no production migration",
+    "no test weakening/skip/deletion",
+    "real Postgres DB proof (no Prisma mocks); real fail-before/pass-after",
+    "reuse smallest proven sibling pattern",
+    "no secrets"
+  ],
+  "rows": [
+    {
+      "kind": "main_verification_before_branching",
+      "commit": "c68e8029",
+      "gates": [
+        { "workflow": "CI - Build & Test", "run": 29067024290, "conclusion": "success", "note": "maintained suite step 15 success on postgres:16" },
+        { "workflow": "CI/CD Foundations", "run": 29067024296, "conclusion": "success" },
+        { "workflow": "MVP Readiness Gate", "run": 29067024294, "conclusion": "success", "security_baseline": "HONEST_GREEN", "note": "prior MVP Readiness Validation next-build OOM flake did not recur" }
+      ],
+      "phase_6c_wave_2": "CLOSED_GREEN"
+    },
+    {
+      "kind": "approval_workflow_inventory",
+      "file": "src/services/approval/workflow.ts",
+      "model": "ApprovalRequest",
+      "model_facts": "no version/updatedAt/workspaceId column; @@unique([operatorItemId, approverUserId]); workspace via operatorItem",
+      "functions": ["requestApproval(create)", "approveOutcome(approve)", "rejectOutcome(reject)", "getApprovalStatus(read)", "requiresApproval(pure)", "enforceApprovalRequirement(orchestrate)", "canCompleteWithApprovalStatus(gate)"],
+      "sibling_pattern_reused": "src/services/decision-validation/decision-acceptance.service.ts (DEC-01/CONC-01/AUDIT-01: status-guarded updateMany + audit in $transaction, fail-closed)"
+    },
+    {
+      "kind": "confirmed_defect",
+      "id": "missing_audit",
+      "sites": ["requestApproval create (~L42)", "approveOutcome (~L75)", "rejectOutcome (~L113)"],
+      "defect": "no audit event on any mutation of a >$100k governed approval surface",
+      "classification": "CONFIRMED_HIGH"
+    },
+    {
+      "kind": "confirmed_defect",
+      "id": "missing_status_guard",
+      "sites": ["approveOutcome (~L75)", "rejectOutcome (~L113)"],
+      "defect": "unconditional update -> an already-approved request can be silently flipped to rejected (and vice-versa)",
+      "classification": "CONFIRMED_HIGH"
+    },
+    {
+      "kind": "confirmed_defect",
+      "id": "missing_idempotency_concurrency",
+      "sites": ["approveOutcome (~L75)", "rejectOutcome (~L113)"],
+      "defect": "read-then-write TOCTOU; repeated approve re-stamps approvedAt; concurrent approve+reject can double-apply",
+      "classification": "CONFIRMED_HIGH"
+    },
+    {
+      "kind": "source_fix",
+      "file": "src/services/approval/workflow.ts",
+      "changes": [
+        "add resolveApprovalWorkspaceId helper (derive audit workspaceId via operatorItem)",
+        "requestApproval: create + APPROVAL_REQUESTED audit in one $transaction (fail-closed); keep unique-key idempotency",
+        "approveOutcome: status-guarded updateMany CAS(status=pending)->approved + APPROVAL_GRANTED in tx; idempotent replay; blocks flip of terminal records",
+        "rejectOutcome: status-guarded updateMany CAS(status=pending)->rejected + APPROVAL_DENIED in tx; blocks approved->rejected flip; idempotent",
+        "authorization (approverUserId check) preserved; no schema change"
+      ]
+    },
+    {
+      "kind": "test_proof",
+      "file": "src/__tests__/services/approval-workflow-governance.db.test.ts",
+      "db_backed": true,
+      "prisma_mocks": false,
+      "gate": "TEST_WITH_DB=true",
+      "tests": 10,
+      "cases": [
+        "requestApproval persists pending + emits APPROVAL_REQUESTED",
+        "requestApproval idempotent (no dup row, no 2nd audit)",
+        "approveOutcome pending->approved + APPROVAL_GRANTED",
+        "rejectOutcome pending->rejected + APPROVAL_DENIED",
+        "approved cannot be silently flipped to rejected (guard)",
+        "rejected cannot be silently flipped to approved (guard)",
+        "repeated approve idempotent (no re-stamp, single grant audit)",
+        "unauthorized actor cannot approve/reject (no mutation, no audit)",
+        "invalid transition returns controlled result, no raw 500",
+        "concurrent approve+reject: exactly one wins + exactly one transition audit (CAS)"
+      ],
+      "result": "10 passed"
+    },
+    {
+      "kind": "fail_before_proof",
+      "method": "temporarily reverted approveOutcome to the pre-fix unconditional update (no audit, no guard)",
+      "result": "4 tests failed: APPROVAL_GRANTED audit, rejected->approved guard, idempotent replay, concurrency CAS",
+      "then": "restored fix -> 10 passed"
+    },
+    {
+      "kind": "validation_command",
+      "commands": [
+        { "cmd": "tsc --noEmit", "result": "exit 0" },
+        { "cmd": "TEST_WITH_DB=true vitest approval-workflow-governance.db.test.ts", "result": "10 passed" },
+        { "cmd": "vitest (no DB)", "result": "10 skipped" },
+        { "cmd": "fail-before (revert approve to unconditional update)", "result": "4 failed (proves tests catch defects)" },
+        { "cmd": "vitest r1-runtime/approval-workflow.test.ts", "result": "4 passed (no regression)" },
+        { "cmd": "regression: decision-outcome-path + verified-lifecycle + operator-queue", "result": "138 passed" },
+        { "cmd": "governance:scan:strict", "result": "0 new" },
+        { "cmd": "governance:scan:auth", "result": "pass" },
+        { "cmd": "prisma validate", "result": "valid" },
+        { "cmd": "lint:ratchet", "result": "PASS (0 changed-file errors)" }
+      ]
+    },
+    {
+      "kind": "ci_result",
+      "pr": null,
+      "status": "PENDING",
+      "expectation": "required gates green; [db] approval tests run in build-and-test (real postgres:16); Security Baseline HONEST_GREEN"
+    },
+    {
+      "kind": "deferred_risks",
+      "items": [
+        "no optimistic-lock/version column on ApprovalRequest (CAS suffices; version column deferred as it needs a migration)",
+        "transition primitives have no dedicated HTTP route wrapper (route-level auth = Phase 6E)",
+        "owner-mode approval path (resolveOwnerApproval) out of scope"
+      ]
+    },
+    {
+      "kind": "idle_audit_delta",
+      "confirmed_high_added_to_queue": [
+        "invite boolean privilege escalation: active non-admin can invite members and assign roles (src/app/api/onboarding/invite/route.ts:50) -> Phase 6E"
+      ],
+      "no_new_critical_high_runtime_breaker": true
+    }
+  ],
+  "safety": {
+    "production_migration_run": false,
+    "production_db_touched": false,
+    "secrets_changed": false,
+    "schema_changed": false,
+    "tests_weakened_or_deleted_or_skipped": false,
+    "approval_semantics_weakened": false,
+    "authorizing_phrase_received": false
+  },
+  "next_recommended_phase": "Phase 6E — workspace enforcement + invite-boolean privilege fix + withAuth migration"
+}
