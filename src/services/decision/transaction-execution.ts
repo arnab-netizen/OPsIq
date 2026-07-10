@@ -1,6 +1,8 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { Prisma } from "@/generated/prisma/client";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import type { AuditEventName } from "@/domain/constants/audit-events";
 
 export type ExecutionStatus =
   | "not_started"
@@ -28,43 +30,52 @@ export async function updateExecutionStatus(
   }
 
   const previousStatus = decision.executionStatus;
+  const timestamp = new Date();
 
-  // Update execution status
-  const updated = await db.operatorItem.update({
-    where: { id: decisionId },
-    data: {
-      executionStatus: status,
-      updatedAt: new Date(),
-    },
-  });
+  const executionEventMap: Partial<Record<ExecutionStatus, AuditEventName>> = {
+    in_progress: AUDIT_EVENTS.DECISION_EXECUTION_STARTED,
+    completed: AUDIT_EVENTS.DECISION_EXECUTION_SUCCESS,
+    failed: AUDIT_EVENTS.DECISION_EXECUTION_FAILED,
+  };
+  const eventName: AuditEventName =
+    executionEventMap[status] ?? AUDIT_EVENTS.DECISION_STATUS_CHANGED;
 
-  // Log execution status change
-  await logAuditEvent({
-    eventName: "DECISION_EXECUTION_STATUS_CHANGED",
-    entityType: "Decision",
-    entityId: decisionId,
-    actorId: userId,
-    role: null,
-    before: {
-      executionStatus: previousStatus,
-    },
-    after: {
-      executionStatus: status,
-    },
-    metadata: {
-      action: "update_execution_status",
-      status,
-      notes,
-      timestamp: new Date().toISOString(),
-    },
-    workspaceId,
-  }).catch((err: unknown) => {
-    const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
-    console.error(
-      `Audit logging failed: ${governed.operatorMessage}`
+  // CAS + audit in transaction (fail-closed):
+  // updateMany enforces workspaceId isolation atomically with the write.
+  // Audit rolls back with the state change on failure.
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const res = await tx.operatorItem.updateMany({
+      where: { id: decisionId, workspaceId },
+      data: { executionStatus: status, updatedAt: timestamp },
+    });
+
+    if (res.count !== 1) {
+      throw new Error(`Execution status update failed for decision ${decisionId}`);
+    }
+
+    await emitAuditEvent(
+      {
+        eventName,
+        workspaceId,
+        actorId: userId,
+        actorType: "user",
+        entityType: "Decision",
+        entityId: decisionId,
+        payload: {
+          from: previousStatus,
+          to: status,
+          action: "update_execution_status",
+          timestamp: timestamp.toISOString(),
+          ...(notes && { notes }),
+        },
+        visibility: "internal",
+      },
+      tx
     );
   });
 
+  const updated = await db.operatorItem.findUnique({ where: { id: decisionId } });
+  if (!updated) throw new Error("Decision not found after update");
   return updated;
 }
 
@@ -90,9 +101,10 @@ export async function getExecutionSummary(
       entityId: decisionId,
       eventName: {
         in: [
-          "DECISION_EXECUTION_STATUS_CHANGED",
-          "DECISION_APPROVED",
-          "DECISION_COMPLETED",
+          AUDIT_EVENTS.DECISION_EXECUTION_STARTED,
+          AUDIT_EVENTS.DECISION_EXECUTION_SUCCESS,
+          AUDIT_EVENTS.DECISION_EXECUTION_FAILED,
+          AUDIT_EVENTS.DECISION_APPROVED,
         ],
       },
     },
@@ -105,17 +117,16 @@ export async function getExecutionSummary(
     decisionId,
     status: decision.status,
     executionStatus: decision.executionStatus,
-    approvedAt: executionEvents.find((e: typeof executionEvents[number]) => e.eventName === "DECISION_APPROVED")
+    approvedAt: executionEvents.find((e: typeof executionEvents[number]) => e.eventName === AUDIT_EVENTS.DECISION_APPROVED)
       ?.createdAt,
     startedAt: executionEvents.find(
       (e: typeof executionEvents[number]) =>
-        e.eventName === "DECISION_EXECUTION_STATUS_CHANGED" &&
-        e.metadata?.status === "in_progress"
+        e.eventName === AUDIT_EVENTS.DECISION_EXECUTION_STARTED
     )?.createdAt,
     completedAt: executionEvents.find(
       (e: typeof executionEvents[number]) =>
-        e.eventName === "DECISION_EXECUTION_STATUS_CHANGED" &&
-        (e.metadata?.status === "completed" || e.metadata?.status === "failed")
+        e.eventName === AUDIT_EVENTS.DECISION_EXECUTION_SUCCESS ||
+        e.eventName === AUDIT_EVENTS.DECISION_EXECUTION_FAILED
     )?.createdAt,
     timeline: executionEvents,
   };

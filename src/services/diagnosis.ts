@@ -881,7 +881,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     });
   }
 
-  emitAuditEvent({
+  await emitAuditEvent({
     eventName: AUDIT_EVENTS.DIAGNOSIS_COMPLETED,
     actorId,
     entityType: "Engagement",

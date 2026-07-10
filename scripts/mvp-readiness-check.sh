@@ -97,9 +97,13 @@ else
 fi
 
 echo -e "${BLUE}→${NC} Building project"
-if npm run build > /dev/null 2>&1; then
+BUILD_LOG=$(mktemp)
+if NODE_OPTIONS="--max-old-space-size=4096" npm run build > "$BUILD_LOG" 2>&1; then
   pass "Build successful"
+  rm -f "$BUILD_LOG"
 else
+  cat "$BUILD_LOG"
+  rm -f "$BUILD_LOG"
   fail "Build failed"
   exit 2
 fi
