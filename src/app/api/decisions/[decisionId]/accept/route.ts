@@ -2,6 +2,12 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { acceptDecision, type VerifiedAcceptanceInput } from "@/services/decision-validation/decision-acceptance.service";
 import { logger } from "@/infra/logger";
+import { ValidationError } from "@/infra/errors";
+import {
+  checkIdempotencyKey,
+  recordIdempotencyResponse,
+  recordIdempotencyError,
+} from "@/services/idempotency";
 import { z } from "zod";
 
 const AcceptDecisionSchema = z.object({
@@ -14,11 +20,30 @@ export const POST = withCanonicalEnforcement(
     const decisionId = params.decisionId;
     const workspaceId = ctx.verifiedWorkspaceId;
 
+    const idempotencyKey = ctx.request!.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new ValidationError("idempotency-key header is required");
+    }
+
     // Parse and validate request body
     const body = await ctx.request!.json();
     const parsed = AcceptDecisionSchema.parse(body);
 
-    // Accept decision
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "acceptDecision",
+      actorId: ctx.verifiedActorId,
+      workspaceId,
+      payload: { decisionId, workspaceId, engagementId: parsed.engagementId },
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+      throw idempotencyCheck.cachedError;
+    }
+
     const verifiedInput: VerifiedAcceptanceInput = {
       decisionId,
       engagementId: parsed.engagementId,
@@ -26,15 +51,35 @@ export const POST = withCanonicalEnforcement(
       verifiedActorId: ctx.verifiedActorId,
       rationale: parsed.rationale,
     };
-    const result = await acceptDecision(verifiedInput);
 
-    logger.info("Decision acceptance recorded", {
-      decisionId,
-      engagementId: parsed.engagementId,
-      userId: ctx.verifiedActorId,
-    });
+    try {
+      const result = await acceptDecision(verifiedInput);
 
-    return result;
+      logger.info("Decision acceptance recorded", {
+        decisionId,
+        engagementId: parsed.engagementId,
+        userId: ctx.verifiedActorId,
+      });
+
+      const serialized: Record<string, unknown> = {
+        decisionId: result.decisionId,
+        acceptedBy: result.acceptedBy,
+        acceptedAt: result.acceptedAt instanceof Date
+          ? result.acceptedAt.toISOString()
+          : result.acceptedAt,
+        rationale: result.rationale ?? null,
+        auditEventId: result.auditEventId,
+      };
+      await recordIdempotencyResponse(idempotencyKey, 200, serialized, workspaceId);
+      return result;
+    } catch (error) {
+      await recordIdempotencyError(
+        idempotencyKey,
+        error instanceof Error ? error : new Error(String(error)),
+        workspaceId
+      );
+      throw error;
+    }
   },
   { requireCapabilities: ["DECISION_ACCEPT"], requireWorkspace: true }
 );

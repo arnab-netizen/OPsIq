@@ -11,8 +11,13 @@ import {
 } from "@/services/decisions/decision-creation-service";
 import { logger } from "@/infra/logger";
 import { assertCapability } from "@/services/entitlement.service";
-import { PlanLimitError, UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { PlanLimitError, UnauthorizedError, ForbiddenError, ValidationError } from "@/infra/errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import {
+  checkIdempotencyKey,
+  recordIdempotencyResponse,
+  recordIdempotencyError,
+} from "@/services/idempotency";
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
@@ -35,10 +40,15 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || "Plan limit exceeded");
   }
 
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    throw new ValidationError("idempotency-key header is required");
+  }
+
   const contentType = request.headers.get("content-type") || "";
   const userId = session.user.id;
 
-  // Handle JSON request (single decision)
+  // Handle JSON request (single decision or bulk)
   if (contentType.includes("application/json")) {
     const body = await request.json();
 
@@ -50,41 +60,92 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         verifiedActorId: userId,  // Verified at route level (session)
       }));
 
-      const result = await createDecisionsBulk({ decisions });
-
-      logger.info("Bulk decisions created via API", {
+      const idempotencyCheck = await checkIdempotencyKey({
+        idempotencyKey,
+        operationName: "createDecisionsBulk",
+        actorId: userId,
         workspaceId,
-        userId,
-        count: result.summary.succeeded,
+        payload: { workspaceId, decisionCount: decisions.length },
       });
 
-      return result;
+      if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+        return idempotencyCheck.cachedResponse.body;
+      }
+      if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+        throw idempotencyCheck.cachedError;
+      }
+
+      try {
+        const result = await createDecisionsBulk({ decisions });
+
+        logger.info("Bulk decisions created via API", {
+          workspaceId,
+          userId,
+          count: result.summary.succeeded,
+        });
+
+        const serialized = JSON.parse(JSON.stringify(result)) as Record<string, unknown>;
+        await recordIdempotencyResponse(idempotencyKey, 200, serialized, workspaceId);
+        return result;
+      } catch (error) {
+        await recordIdempotencyError(
+          idempotencyKey,
+          error instanceof Error ? error : new Error(String(error)),
+          workspaceId
+        );
+        throw error;
+      }
     } else {
       // Single decision creation
-      const { title, type, impact, confidence, problemType, expectedOutcome } =
-        body;
+      const { title, type, impact, confidence, problemType, expectedOutcome } = body;
 
-      // Construct verified input with explicit auth boundary
-      const verifiedInput: VerifiedDecisionInput = {
-        title,
-        type,
-        impact,
-        confidence,
-        verifiedActorId: userId,  // Verified at route level (session)
-        verifiedWorkspaceId: workspaceId,  // Verified at route level (enforcement)
-        problemType,
-        expectedOutcome,
-      };
-
-      const decision = await createDecision(verifiedInput);
-
-      logger.info("Decision created via API", {
-        decisionId: decision.id,
+      const idempotencyCheck = await checkIdempotencyKey({
+        idempotencyKey,
+        operationName: "createDecision",
+        actorId: userId,
         workspaceId,
-        userId,
+        payload: { title: title || null, type: type || null, workspaceId },
       });
 
-      return decision;
+      if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+        return idempotencyCheck.cachedResponse.body;
+      }
+      if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+        throw idempotencyCheck.cachedError;
+      }
+
+      try {
+        // Construct verified input with explicit auth boundary
+        const verifiedInput: VerifiedDecisionInput = {
+          title,
+          type,
+          impact,
+          confidence,
+          verifiedActorId: userId,  // Verified at route level (session)
+          verifiedWorkspaceId: workspaceId,  // Verified at route level (enforcement)
+          problemType,
+          expectedOutcome,
+        };
+
+        const decision = await createDecision(verifiedInput);
+
+        logger.info("Decision created via API", {
+          decisionId: decision.id,
+          workspaceId,
+          userId,
+        });
+
+        const serialized = JSON.parse(JSON.stringify(decision)) as Record<string, unknown>;
+        await recordIdempotencyResponse(idempotencyKey, 200, serialized, workspaceId);
+        return decision;
+      } catch (error) {
+        await recordIdempotencyError(
+          idempotencyKey,
+          error instanceof Error ? error : new Error(String(error)),
+          workspaceId
+        );
+        throw error;
+      }
     }
   }
 
@@ -95,6 +156,21 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
     if (!file) {
       throw new UnauthorizedError("CSV file is required");
+    }
+
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "importDecisionsCSV",
+      actorId: userId,
+      workspaceId,
+      payload: { workspaceId, fileName: file.name },
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+      throw idempotencyCheck.cachedError;
     }
 
     const csvContent = await file.text();
@@ -116,10 +192,14 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         count: result.summary.succeeded,
       });
 
+      const serialized = JSON.parse(JSON.stringify(result)) as Record<string, unknown>;
+      await recordIdempotencyResponse(idempotencyKey, 200, serialized, workspaceId);
       return result;
     } catch (parseError) {
       const governed = classifyOperatorError(parseError instanceof Error ? parseError : new Error(String(parseError)), { context: 'action' });
-      throw new UnauthorizedError(governed.operatorMessage);
+      const wrappedError = new UnauthorizedError(governed.operatorMessage);
+      await recordIdempotencyError(idempotencyKey, wrappedError, workspaceId);
+      throw wrappedError;
     }
   }
 

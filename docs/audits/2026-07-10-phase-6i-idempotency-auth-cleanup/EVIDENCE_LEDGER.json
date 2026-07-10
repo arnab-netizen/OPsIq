@@ -1,0 +1,79 @@
+{
+  "phase": "6I",
+  "title": "Idempotency Hardening + Duplicate Auth Cleanup",
+  "date": "2026-07-10",
+  "branch": "claude/phase-6i-idempotency-auth-cleanup",
+  "priorPhase": "Phase 6H Wave 1 (c8c85c3d), Phase 6F (ef7706b3)",
+  "securityBaselineStatus": "HONEST_GREEN — no regressions introduced",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "CONFIRMED_CRITICAL",
+      "location": "src/app/api/decisions/create/route.ts",
+      "description": "POST /api/decisions/create had zero idempotency protection. Network retries silently created duplicate governed OperatorItem records. Affected single JSON, bulk JSON, and CSV paths.",
+      "status": "FIXED",
+      "live": true,
+      "fix": "Added idempotency-key header requirement and checkIdempotencyKey / recordIdempotencyResponse / recordIdempotencyError wrapping around all three code paths."
+    },
+    {
+      "id": "F2",
+      "severity": "CONFIRMED_HIGH",
+      "location": "src/app/api/decisions/intake/route.ts",
+      "description": "POST /api/decisions/intake had zero idempotency protection. Additionally, db.workspaceMembership.findFirst had no orderBy clause making workspace selection non-deterministic for multi-workspace users.",
+      "status": "FIXED",
+      "live": true,
+      "fix": "Added idempotency-key header requirement and full idempotency pattern. Added orderBy: { createdAt: 'asc' } to workspace findFirst for determinism."
+    },
+    {
+      "id": "F3",
+      "severity": "CONFIRMED_HIGH",
+      "location": "src/app/api/decisions/[decisionId]/accept/route.ts, reject/route.ts, close/route.ts",
+      "description": "Three state-transition routes using withCanonicalEnforcement had no idempotency-key requirement. Network retries after the CAS commit returned ValidationError instead of a cached success, violating the idempotency contract established by execute/route.ts.",
+      "status": "FIXED",
+      "live": true,
+      "fix": "Added idempotency-key requirement and route-level check/record pattern to accept, reject, close."
+    },
+    {
+      "id": "F4",
+      "severity": "CONFIRMED_HIGH",
+      "location": "src/app/api/decisions/[decisionId]/fail/route.ts, verify/route.ts, record-outcome/route.ts",
+      "description": "Three state-transition routes using withEnforcementFull + inner withAuth() had no idempotency-key requirement. Same retry-gets-error failure mode as F3.",
+      "status": "FIXED",
+      "live": true,
+      "fix": "Added idempotency-key requirement and route-level check/record pattern to fail, verify, record-outcome. Removed unused getSession import from fail and record-outcome."
+    },
+    {
+      "id": "F5",
+      "severity": "SUSPECTED / CONFIRMED",
+      "location": "src/app/api/decisions/intake/route.ts:41",
+      "description": "db.workspaceMembership.findFirst with no orderBy — non-deterministic workspace selection for users with multiple active workspaces.",
+      "status": "FIXED",
+      "live": true,
+      "fix": "Added orderBy: { createdAt: 'asc' } — always selects oldest active workspace, deterministic across calls."
+    },
+    {
+      "id": "F6",
+      "severity": "INVENTORY_ONLY",
+      "location": "20+ routes using withEnforcementFull + inner withAuth()",
+      "description": "Duplicate session resolution: outer wrapper and inner withAuth() both resolve the same session. Redundant DB round-trip per request. Not a security defect.",
+      "status": "INVENTORIED — migration deferred",
+      "live": true,
+      "fix": "DUPLICATE_AUTH_ROUTE_INVENTORY.md documents the full classification. Migration to withCanonicalEnforcement planned for a future phase."
+    }
+  ],
+  "testsAdded": [
+    {
+      "file": "src/__tests__/api/decisions-idempotency-6i.test.ts",
+      "count": 20,
+      "coverage": "intake: missing key denied, first creates, retry cached, cached-error replay, workspace orderBy, audit-fail records error | create: missing key denied, single creates+records, single retry cached, single error recorded, workspace in payload | accept: missing key denied, first calls service+records, retry cached, error recorded | close: missing key denied, first calls service+records, retry cached, error recorded"
+    },
+    {
+      "file": "src/__tests__/api/audit-pattern-hardening-6h.test.ts",
+      "count": 0,
+      "coverage": "Updated (not new tests): added headers mock to makeIntakeRequest, added ValidationError to error mock to support Phase 6I intake route changes"
+    }
+  ],
+  "schemaChanges": "None — all fixes are application-layer only",
+  "productionMigrationApproved": false,
+  "productionMigrationRequiredPhrase": "I approve running the production migration"
+}

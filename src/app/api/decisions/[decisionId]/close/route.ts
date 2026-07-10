@@ -2,6 +2,12 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { closeDecision } from "@/services/decisions/decision-lifecycle.service";
 import { logger } from "@/infra/logger";
+import { ValidationError } from "@/infra/errors";
+import {
+  checkIdempotencyKey,
+  recordIdempotencyResponse,
+  recordIdempotencyError,
+} from "@/services/idempotency";
 
 /**
  * POST /api/decisions/[decisionId]/close
@@ -17,20 +23,52 @@ export const POST = withCanonicalEnforcement(
     const workspaceId = ctx.verifiedWorkspaceId;
     const userId = ctx.verifiedActorId;
 
-    // Close via lifecycle service
-    const updated = await closeDecision(decisionId, workspaceId, userId);
+    const idempotencyKey = ctx.request!.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new ValidationError("idempotency-key header is required");
+    }
 
-    logger.info("Decision closed via API", {
-      decisionId,
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "closeDecision",
+      actorId: userId,
       workspaceId,
-      userId,
+      payload: { decisionId, workspaceId },
     });
 
-    return {
-      decisionId,
-      status: updated.status,
-      message: "Decision closed successfully",
-    };
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+      throw idempotencyCheck.cachedError;
+    }
+
+    try {
+      // Close via lifecycle service
+      const updated = await closeDecision(decisionId, workspaceId, userId);
+
+      logger.info("Decision closed via API", {
+        decisionId,
+        workspaceId,
+        userId,
+      });
+
+      const responseBody = {
+        decisionId,
+        status: updated.status,
+        message: "Decision closed successfully",
+      };
+
+      await recordIdempotencyResponse(idempotencyKey, 200, responseBody, workspaceId);
+      return responseBody;
+    } catch (error) {
+      await recordIdempotencyError(
+        idempotencyKey,
+        error instanceof Error ? error : new Error(String(error)),
+        workspaceId
+      );
+      throw error;
+    }
   },
   { requireCapabilities: ["DECISION_CLOSE"], requireWorkspace: true }
 );
