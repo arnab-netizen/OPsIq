@@ -46,6 +46,7 @@ vi.mock("@/lib/db", () => ({
     },
     $transaction: (...args: unknown[]) => mockDbTransaction(...args),
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("crypto", () => ({
