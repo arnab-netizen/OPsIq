@@ -23,6 +23,7 @@ import {
   type ParseResult,
 } from "@/domain/owner-mode/input-record-parser";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
+import { categoryToSnapshotDomain } from "@/domain/owner-mode/input-catalog";
 import { buildInputGuidance } from "@/domain/owner-mode/input-guidance";
 import {
   mapBusinessTypeToProfile,
@@ -178,6 +179,24 @@ export async function submitManualEntry(input: ManualEntryInput, deps: ManualEnt
     entityId: intakeId,
     payload: { workspaceId: input.workspaceId, businessId: input.businessId, actorId: deps.actorId, source: parsed.source, category: parsed.category },
   });
+
+  // When auto-confirmed, attempt to materialize the intake into the snapshot read models so
+  // diagnosis can run immediately without a separate confirm step. Best-effort: if the record
+  // lacks the required period/currency fields the materializer skips it gracefully.
+  if (confirm) {
+    const snapshotDomain = categoryToSnapshotDomain(parsed.category);
+    if (snapshotDomain) {
+      try {
+        const { materializeIntake } = await import("@/services/owner-intake/materialize");
+        await materializeIntake(
+          { targetDomain: snapshotDomain, businessId: input.businessId, workspaceId: input.workspaceId, records: [parsed.normalizedFields] },
+          deps.actorId
+        );
+      } catch (_err) {
+        // Materialization failure must not fail the intake record — advisory only.
+      }
+    }
+  }
 
   return {
     ok: true,

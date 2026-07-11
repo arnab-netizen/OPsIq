@@ -2,6 +2,20 @@
   "execution_date": "2026-07-11",
   "current_phase": "STAGE_A6_WORKFLOW1_FEEDBACK_LOOP_COMPLETE",
   "current_branch": "claude/phase-6f-governance-findings-5gkiec",
+  "stage_a6_workflow2": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "INTEGRATION_DEFECT_FIX",
+    "defect": "submitManualEntry auto-confirmed intakes without calling materializeIntake; category taxonomy (OwnerInputCategory) did not map to intake domain names (IntakeTargetDomain)",
+    "fix": "Added categoryToSnapshotDomain() mapping in input-catalog.ts; wired materializeIntake into submitManualEntry after auto-confirm (best-effort, non-blocking)",
+    "files_changed": [
+      "src/domain/owner-mode/input-catalog.ts",
+      "src/services/owner-mode/owner-manual-entry.service.ts",
+      "src/__tests__/integration/workflow2-manual-entry-to-diagnosis.test.ts"
+    ],
+    "test_coverage": "16 tests: mapping coverage (6), wiring (8), edge cases (2)",
+    "gates_run": "npx tsc --noEmit (✓), npm run build (✓), vitest 16/16 (✓)",
+    "workflow2_classification": "COMPLETE — manual entry now auto-materializes into snapshots for snapshot-eligible categories"
+  },
   "stage_a6_workflow1": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "INTEGRATION_DEFECT_FIX",

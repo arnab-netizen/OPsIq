@@ -250,3 +250,52 @@ export function categoryConfidenceDomain(category: OwnerInputCategory): Ingestio
 export function categoriesForDomain(domain: IngestionDomain): OwnerInputCategory[] {
   return OWNER_INPUT_CATEGORIES.filter((c) => INPUT_CATALOG[c].confidenceDomain === domain);
 }
+
+/**
+ * The intake target domain names understood by the snapshot materialization layer.
+ * These match `IntakeTargetDomain` in the intake field-specs contract.
+ */
+export type IntakeSnapshotDomain = "finance" | "sales" | "operations" | "sop" | "marketing";
+
+/**
+ * Maps an `OwnerInputCategory` to the snapshot domain it feeds, if any.
+ *
+ * Categories that primarily capture qualitative or non-periodic evidence (proof records,
+ * compliance docs, b2b contracts, complaints) do not map to a snapshot domain because
+ * they cannot form a valid period-keyed snapshot. Returns null for those.
+ */
+const CATEGORY_TO_SNAPSHOT_DOMAIN: Record<OwnerInputCategory, IntakeSnapshotDomain | null> = {
+  // Financial snapshot feeds
+  revenue_sales:   "finance",
+  expenses:        "finance",
+  fixed_costs:     "finance",
+  payroll:         "finance",
+  cash_debt:       "finance",
+  inventory_stock: "finance",
+  // Sales/marketing snapshot feeds
+  customer_count:  "sales",
+  marketing:       "marketing",
+  // Operations snapshot feeds
+  staff_attendance: "operations",
+  staff_rota:       "operations",
+  equipment_logs:   "operations",
+  delivery_records: "operations",
+  vendor_invoices:  "operations",
+  branch_records:   "operations",
+  // SOP snapshot feeds
+  sops_checklists: "sop",
+  staff_training:  "sop",
+  // Non-periodic evidence — no period snapshot domain
+  complaints_reviews: null,
+  b2b_contracts:      null,
+  proof_completion:   null,
+  tax_compliance:     null,
+};
+
+/**
+ * Returns the snapshot domain that a manual entry category can feed, or null if the
+ * category does not map to any period-keyed snapshot (e.g., qualitative evidence).
+ */
+export function categoryToSnapshotDomain(category: OwnerInputCategory): IntakeSnapshotDomain | null {
+  return CATEGORY_TO_SNAPSHOT_DOMAIN[category] ?? null;
+}
