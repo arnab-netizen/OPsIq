@@ -133,7 +133,7 @@ describe("owner loop (service-level)", () => {
     const evalResult = await recordSelfEvaluation(
       {
         workspaceId: "ws1", businessId: "biz1", recommendationId: "rec-express",
-        memoryKey: "EXPRESS_TIER_UNDERPRICED", expectedOutcome: "margin up 5%",
+        memoryKey: "scope:pricing", expectedOutcome: "margin up 5%",
         signals: { executed: true, metExpectation: false }, // bad_recommendation → blocking caution
       },
       { db: { ownerSelfEvaluation: { create: vi.fn(async () => ({ id: "se1" })) } }, now: () => NOW, recordCaution: (input) => recordDoNotRepeat(input, dnrDeps as never) }

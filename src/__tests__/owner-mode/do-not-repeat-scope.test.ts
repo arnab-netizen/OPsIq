@@ -46,14 +46,14 @@ describe("scopeKeyForImpactArea", () => {
 describe("enforceDoNotRepeatForPromotion scope matching", () => {
   it("blocks via scope key even when the finding code differs", async () => {
     // Rule recorded under scope:operations; this finding has a DIFFERENT code but same area.
+    // D1-01: finding.code was phantom (PrismaClientValidationError); matching is scope-only.
     const { deps: d, captured } = deps({ code: "OPS_REWORK_SPIKE", impactArea: "operations" }, ["scope:operations"]);
     await expect(enforceDoNotRepeatForPromotion("rec1", "ws1", d as never)).rejects.toBeInstanceOf(DoNotRepeatBlockedError);
     expect(captured.keys).toContain("scope:operations");
-    expect(captured.keys).toContain("OPS_REWORK_SPIKE");
   });
 
-  it("blocks via exact finding code", async () => {
-    const { deps: d } = deps({ code: "SALES_DISCOUNT", impactArea: "sales" }, ["SALES_DISCOUNT"]);
+  it("blocks via scope key for impact area", async () => {
+    const { deps: d } = deps({ code: "SALES_DISCOUNT", impactArea: "sales" }, ["scope:sales"]);
     await expect(enforceDoNotRepeatForPromotion("rec1", "ws1", d as never)).rejects.toBeInstanceOf(DoNotRepeatBlockedError);
   });
 

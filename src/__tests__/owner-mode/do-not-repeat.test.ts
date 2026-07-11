@@ -34,7 +34,7 @@ function deps(findingCode: string | null, memory: { changedContextExplanation: s
   return {
     db: {
       recommendation: { findUnique: vi.fn(async () => (findingCode === null ? { findingId: null } : { findingId: "f1" })) },
-      finding: { findFirst: vi.fn(async () => ({ code: findingCode })) },
+      finding: { findFirst: vi.fn(async () => (findingCode ? { impactArea: "operations" } : null)) },
       ownerDoNotRepeatRule: {
         findFirst: vi.fn(async () => (memory ? { blocksRepetition: true, ...memory } : null)),
         create: vi.fn(async () => ({ id: "m1" })),
@@ -44,7 +44,7 @@ function deps(findingCode: string | null, memory: { changedContextExplanation: s
 }
 
 describe("enforceDoNotRepeatForPromotion (DI)", () => {
-  it("blocks + audits when an active do_not_repeat memory matches the finding code", async () => {
+  it("blocks + audits when an active do_not_repeat memory matches the finding scope key", async () => {
     const d = deps("SALES_DISCOUNT", { changedContextExplanation: null });
     await expect(enforceDoNotRepeatForPromotion("rec1", "ws1", d)).rejects.toBeInstanceOf(DoNotRepeatBlockedError);
     expect(emitAuditEvent).toHaveBeenCalledTimes(1);
