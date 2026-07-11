@@ -49,6 +49,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("crypto", () => ({
+  default: { randomUUID: () => "fixed-uuid-001" },
   randomUUID: () => "fixed-uuid-001",
 }));
 
