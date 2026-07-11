@@ -76,6 +76,25 @@ Model only business-operational human variables:
 
 Do not model mental-health diagnosis, personality diagnosis, or pseudo-psychology.
 
+## PR Cost Control and Root-Cause Closure
+
+**MANDATORY — applies to all future commits and PRs.**
+
+Full policy: `docs/opsiq-governance/PR_COST_AND_ROOT_CAUSE_POLICY.md`
+
+Ten rules (enforced):
+
+1. **PR_BUDGET_GATE**: Run `npx vitest run <affected-test>` locally before any CI push.
+2. **Root-cause diagnosis before fix**: Write the root cause (what, why, how many instances) before touching code.
+3. **Batch all instances**: Search the full codebase for every instance of the root cause before fixing any one of them.
+4. **Close the root cause, not the symptom**: Fix passes only when no other file can produce the same failure by the same mechanism.
+5. **No scope creep in fix commits**: Fix commits contain only the root-cause fix. Nothing else.
+6. **Local lint + type check before push**: `npm run lint` and `npx tsc --noEmit` must both exit clean.
+7. **One PR per root-cause class**: Do not mix unrelated root causes in a single PR.
+8. **No fix-on-fix commits**: If a fix introduces a new failure, revert → rediagnose → push corrected fix.
+9. **Commit message states root cause and local verification**: Must include defect class and "ran vitest run X, Y/Y pass".
+10. **No new phase until previous phase CI is green on main**: Resolve all CI failures before starting new feature work.
+
 ## Response format
 When asked to implement a slice, return exactly:
 A. Files created
