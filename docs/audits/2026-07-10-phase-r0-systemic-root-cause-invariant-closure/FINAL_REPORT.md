@@ -96,15 +96,43 @@ tooling and documentation to prevent recurrence.
 
 ---
 
+## Part E — Whole-Repo No-Idle Audit Results
+
+*Completed 2026-07-11 by dedicated audit agent. All findings classified.*
+
+### Summary by Class
+
+| Class | New Findings | Verdict |
+|---|---|---|
+| INV-1 PRISMA_CREATE_SELECT_INTEGRITY | 0 — D1-01 FIXED; all other `code` selects target models with a real `code` field | CLEAN |
+| INV-2 GOVERNED_MUTATION_IDEMPOTENCY | D7-02 NEW — 22+ owner-module POST routes with no idempotency guard | DEFERRED_R1 |
+| INV-3 GOVERNED_AUDIT_ATOMICITY | D8-01 confirmed and scope expanded — 7 budget service functions + business/cashflow/sales/engagement/dnr services | DEFERRED_R1 |
+| INV-4 WORKSPACE_TENANT_AUTHORIZATION | 0 — all examined routes have membership checks; D4-01 CONFIRMED CLOSED | CLEAN |
+| INV-5 DUPLICATE_AUTH_RESOLUTION | Already inventoried; no new violations | CLEAN |
+| INV-6 ACTIVE_TEST_ASSERTION_TRUTH | hostile-auth CONFIRMED FIXED (0 bare fakes); 748 remaining across 28 files = D6-01 (known, deferred) | PARTIAL |
+| INV-7 CI_LANE_TRUTHFULNESS | D9-01 NEW — 5 CONFIRMED_MEDIUM violations found; CI_LANE_TRUTHFULNESS.md previously under-reported as 0 | DEFERRED_R1 |
+
+### Most Severe New Finding: D7-02
+
+The entire owner-module snapshot/diagnosis write surface (22+ routes) has no idempotency guard. Period/cycle uniqueness constraints provide partial protection but not true idempotency — a network retry before the DB write commits can produce duplicate records. D7-02 added to EVIDENCE_LEDGER.json, DEFERRED_R1.
+
+### Most Severe Confirmed Finding: D8-01 (expanded)
+
+`recordSpendEntry` in `budget.service.ts` is the highest-priority D8-01 instance: it creates a spend entry (line 252) then audits it (line 275) as two separate non-transactional operations. If the process crashes between the two, a spend entry exists with no audit trail — this is the budget governance trust anchor. Confirmed CONFIRMED_HIGH, DEFERRED_R1.
+
+---
+
 ## Deferred Findings
 
 | ID | Description | Disposition |
 |---|---|---|
 | D3-04 | Billing upgrade no audit event | DEFERRED — webhook handles actual payment mutation |
 | D5-01 | Duplicate auth patterns | NOTED — inventory complete, no must-fix in R0 scope |
-| D6-01 | Fake assertion cluster (773 total) | PARTIAL — 4 converted, 769 deferred to Phase R1 |
+| D6-01 | Fake assertion cluster (748 remaining post-R0) | PARTIAL — 4 converted, 769 deferred; audit confirmed count |
 | D7-01 | PATCH finance idempotency | DEFERRED — Phase R1 |
-| D8-01 | Other audit atomicity (TO_VERIFY services) | DEFERRED — Phase R1 |
+| D7-02 | Owner-module POST routes (22+) — no idempotency guard | NEW — CONFIRMED_HIGH — DEFERRED_R1 |
+| D8-01 | Non-atomic create+audit — budget (7 funcs), business, cashflow, sales, engagement, dnr | CONFIRMED — expanded scope — DEFERRED_R1 |
+| D9-01 | CI lane truthfulness — 5 workflow files suppress compiler/linter/test output | NEW — CONFIRMED_MEDIUM — DEFERRED_R1 |
 
 ---
 

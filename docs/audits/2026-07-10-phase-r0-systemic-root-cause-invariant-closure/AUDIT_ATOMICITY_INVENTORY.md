@@ -16,15 +16,25 @@
 
 ## Services Assessed
 
+*Updated 2026-07-11 with Part E whole-repo audit confirmed findings.*
+
 | Service | Function | Pattern | Status |
 |---|---|---|---|
-| `src/services/owner-finance/snapshot.service.ts` | `createFinancialSnapshot` | create + emitAuditEvent | FIXED_R0 (D3-03) |
-| `src/services/owner-budget/budget.service.ts` | `recordSpendEntry` | create + emitAuditEvent | TO_VERIFY |
-| `src/services/owner-mode/do-not-repeat.service.ts` | `recordDoNotRepeat` | create + emitAuditEvent | NON_ATOMIC (assessed low-risk) |
-| `src/services/founder-recovery/business.service.ts` | `createBusiness` | create + emitAuditEvent | TO_VERIFY |
-| `src/services/findings/finding.service.ts` | `createFinding` | create + emitAuditEvent | TO_VERIFY |
-| `src/services/engagement/engagement.service.ts` | `createEngagement` | create + emitAuditEvent | TO_VERIFY |
-| Decision state-change routes | various | update + emitAuditEvent | ENFORCED — via `db.$transaction` in service layer |
+| `src/services/owner-finance/snapshot.service.ts` | `createFinancialSnapshot` | create + emitAuditEvent in `$transaction` | FIXED_R0 (D3-03) |
+| `src/services/owner-budget/budget.service.ts` | `createBudgetPeriod` | create + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 |
+| `src/services/owner-budget/budget.service.ts` | `addBudgetLine` | create + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 |
+| `src/services/owner-budget/budget.service.ts` | `updateBudgetLineAmount` | update + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 |
+| `src/services/owner-budget/budget.service.ts` | `recordSpendEntry` | create + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 (highest priority — financial record) |
+| `src/services/owner-budget/budget.service.ts` | `updateSpendProofStatus` | update + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 |
+| `src/services/owner-budget/budget.service.ts` | `updateSpendReconciliation` | update + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 |
+| `src/services/owner-budget/budget.service.ts` | `reassessBudget` | `$transaction` covers snapshot/reassessment create; emitAuditEvent at line 669 is OUTSIDE tx | NON_ATOMIC — D8-01 DEFERRED_R1 |
+| `src/services/founder-recovery/business.service.ts` | `createBusiness` | create + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 |
+| `src/services/owner-mode/do-not-repeat.service.ts` | `recordDoNotRepeat` | create + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 (low-risk: operational memory) |
+| `src/services/engagement.ts` | `createEngagement` | `withIdempotency` wraps create; emitAuditEvent OUTSIDE idempotency wrapper | NON_ATOMIC — D8-01 DEFERRED_R1 (audit dropped on retry replay) |
+| `src/services/owner-cashflow/snapshot.service.ts` | `createCashflowSnapshot` | create + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 |
+| `src/services/owner-sales/snapshot.service.ts` | `createSalesSnapshot` | create + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 |
+| Domain snapshot/diagnosis services (marketing, operations, SOP, strategy) | createXxxSnapshot / createXxxCycle | create + emitAuditEvent (separate) | NON_ATOMIC — D8-01 DEFERRED_R1 |
+| Decision state-change routes | various | update + emitAuditEvent | ATOMIC — via `db.$transaction` in service layer |
 
 ---
 

@@ -1,8 +1,8 @@
 # Phase R0 — CI Lane Truthfulness
 
-**Date:** 2026-07-10
+**Date:** 2026-07-10 (updated 2026-07-11 after Part E whole-repo audit)
 **Invariant:** INV-7 — CI_LANE_TRUTHFULNESS
-**Finding:** No CI lane misrepresentation detected in Phase R0
+**Finding:** 5 CONFIRMED_MEDIUM violations found in workflow files (previously under-reported as 0)
 
 ---
 
@@ -40,6 +40,27 @@ For this repository, CI lanes report as:
 **Phase R0 target:** HONEST_GREEN on all new test files.
 **Phase R0 classification for hostile-auth conversion:** DEGRADED_GREEN — 22/25 tests use
 Phase R1 deferred placeholder assertions (not fake — they assert the deferred string, not `true`).
+
+---
+
+## Part E Whole-Repo Audit Findings (2026-07-11)
+
+*Source: no-idle root-cause audit agent run during Phase R0 enforcement.*
+
+| ID | File | Location | Pattern | Classification |
+|---|---|---|---|---|
+| D9-01a | `.github/workflows/ci.yml` | line 191 | `continue-on-error: true` on "Run linter" | CONFIRMED_MEDIUM — full lint run non-blocking; ratchet only blocks net-new debt; existing failures invisible |
+| D9-01b | `.github/workflows/phase-3-slice-2-truth-pass.yml` | line 109 | `npx eslint ... \|\| true` on Gate 5 | CONFIRMED_MEDIUM — eslint failures on `event-emitter.ts` and `recommendation.ts` unconditionally swallowed |
+| D9-01c | `.github/workflows/owner-real-world-smb-cases.yml` | line 35 | `npx tsc --noEmit ... \|\| true` | CONFIRMED_MEDIUM — TypeScript errors never fail CI for this workflow |
+| D9-01d | `.github/workflows/owner-real-world-simulation.yml` | line 35 | `npx tsc --noEmit ... \|\| true` | CONFIRMED_MEDIUM — same pattern |
+| D9-01e | `.github/workflows/owner-mode-holdout.yml` | line 35 | `npx tsc --noEmit ... \|\| true` | CONFIRMED_MEDIUM — same pattern |
+| — | `.github/workflows/ci.yml` | line 143 | `continue-on-error: true` on quarantined tests | FALSE_POSITIVE — intentional visibility lane per inline comment |
+| — | `.github/workflows/deploy-staging.yml` | lines 101, 110 | `continue-on-error: true` on stubs | FALSE_POSITIVE — integration/smoke steps are stubs with echo; not hiding real test results |
+| — | `.github/workflows/mvp-readiness.yml` | line 107 | `continue-on-error: true` on TODO counter | FALSE_POSITIVE — advisory metric, no enforcement intent |
+
+**Disposition:** D9-01 (a–e) grouped as finding D9-01, DEFERRED_R1. Fix requires removing `|| true` suppressions and replacing with correct non-blocking patterns (advisory steps with `continue-on-error: true` at the step level are acceptable; swallowing compiler/linter output with `|| true` is not).
+
+Note: `resolve-failed-migration.yml:314` (`npx vitest run ... || true`) was also flagged. Classified DEFERRED_R1 alongside D9-01.
 
 ---
 

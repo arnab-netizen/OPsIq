@@ -46,8 +46,10 @@
     {
       "id": "INV-7",
       "name": "CI_LANE_TRUTHFULNESS",
-      "status": "MONITORED",
-      "findingsFound": 0
+      "status": "FINDINGS_DEFERRED",
+      "findingsFound": 5,
+      "findingId": "D9-01",
+      "note": "Part E whole-repo audit (2026-07-11) found 5 CONFIRMED_MEDIUM violations. Previously under-reported as 0. All deferred to R1."
     }
   ],
   "mustFixFindings": [
@@ -119,9 +121,30 @@
       "disposition": "DEFERRED_R1"
     },
     {
+      "id": "D7-02",
+      "description": "Owner-module snapshot/diagnosis/override POST routes (22+ routes) have no idempotency guard — creates OwnerCashflowSnapshot, OwnerFinancialSnapshot, OwnerSalesSnapshot, OwnerMarketingSnapshot, OwnerOperationsSnapshot, OwnerSopSnapshot, OwnerStrategySnapshot, OwnerMetricSnapshot, OwnerBusiness, OwnerCycle family, OwnerOverride, budget authority, working-capital, archetype-metrics, and action-verify routes. Period/cycle uniqueness constraints provide partial protection but not idempotency.",
+      "classification": "CONFIRMED_HIGH",
+      "confirmedDate": "2026-07-11",
+      "confirmedBy": "Part E whole-repo audit",
+      "disposition": "DEFERRED_R1",
+      "rationale": "Scope requires systematic idempotency-key enforcement across the owner module POST surface; Phase R1 work item"
+    },
+    {
       "id": "D8-01",
-      "description": "Additional services with non-atomic create+audit (recordSpendEntry, createBusiness, etc.)",
+      "description": "Additional services with non-atomic create+audit — confirmed scope from Part E audit: budget.service.ts (7 functions: createBudgetPeriod, addBudgetLine, updateBudgetLineAmount, recordSpendEntry, updateSpendProofStatus, updateSpendReconciliation, reassessBudget), createBusiness, createEngagement (audit outside idempotency wrapper), recordDoNotRepeat, createCashflowSnapshot, createSalesSnapshot, and all domain snapshot/diagnosis services (marketing, operations, SOP, strategy). recordSpendEntry is highest priority — financial trust anchor.",
+      "classification": "CONFIRMED_HIGH",
+      "confirmedDate": "2026-07-11",
+      "confirmedBy": "Part E whole-repo audit",
       "disposition": "DEFERRED_R1"
+    },
+    {
+      "id": "D9-01",
+      "description": "CI lane truthfulness violations — 5 CONFIRMED_MEDIUM findings: (a) ci.yml:191 lint run non-blocking via continue-on-error; (b) phase-3-slice-2-truth-pass.yml:109 dual-suppression of eslint on event-emitter.ts and recommendation.ts; (c) owner-real-world-smb-cases.yml:35 tsc || true; (d) owner-real-world-simulation.yml:35 tsc || true; (e) owner-mode-holdout.yml:35 tsc || true. Also: resolve-failed-migration.yml:314 vitest || true.",
+      "classification": "CONFIRMED_MEDIUM",
+      "confirmedDate": "2026-07-11",
+      "confirmedBy": "Part E whole-repo audit",
+      "disposition": "DEFERRED_R1",
+      "rationale": "Each suppression was likely added to unblock CI rather than to hide real failures. Fix requires per-workflow review and replacing || true with proper continue-on-error: true on advisory steps."
     }
   ],
   "filesChanged": [
