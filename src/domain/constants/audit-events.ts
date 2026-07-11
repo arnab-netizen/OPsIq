@@ -417,6 +417,9 @@ export const AUDIT_EVENTS = {
   // Personalized SOP / workflow engine (Slice 16)
   SOP_VERSION_APPROVED: "sop.version_approved",
 
+  // Owner Tender / Application Pack (Module A5)
+  OWNER_TENDER_APPLICATION_PACK_GENERATED: "owner.tender_application_pack_generated",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
