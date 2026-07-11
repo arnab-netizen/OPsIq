@@ -417,6 +417,12 @@ export const AUDIT_EVENTS = {
   // Personalized SOP / workflow engine (Slice 16)
   SOP_VERSION_APPROVED: "sop.version_approved",
 
+  // Owner Vendor / Procurement Risk (Module #14)
+  OWNER_VENDOR_RISK_ASSESSED: "owner.vendor_risk_assessed",
+
+  // Owner Progress / Review (Workflow 7 — businessId-scoped, no engagementId required)
+  OWNER_BUSINESS_REVIEW_GENERATED: "owner.business_review_generated",
+
   // Owner Tender / Application Pack (Module A5)
   OWNER_TENDER_APPLICATION_PACK_GENERATED: "owner.tender_application_pack_generated",
 

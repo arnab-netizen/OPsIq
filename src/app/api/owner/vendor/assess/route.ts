@@ -26,6 +26,8 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody } from "@/lib/validation";
 import { vendorAssessRequestSchema } from "@/domain/owner-mode/vendor-assess.validation";
 import { assessVendorRisk } from "@/domain/owner-mode/vendor-risk-boundary";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -55,7 +57,7 @@ export const POST = withCanonicalEnforcement(
       performanceFailures,
     });
 
-    return {
+    const response = {
       workspaceId: ctx.verifiedWorkspaceId,
       vendorName,
       classification: result.classification,
@@ -66,6 +68,27 @@ export const POST = withCanonicalEnforcement(
       disclaimer: result.disclaimer,
       ...(contextNote !== undefined ? { contextNote } : {}),
     };
+
+    // Emit audit event for all non-informational assessments so the governance
+    // trail exists when the domain rule "owner must be notified" applies.
+    if (result.classification !== "informational") {
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.OWNER_VENDOR_RISK_ASSESSED,
+        actorId: ctx.verifiedActorId,
+        workspaceId: ctx.verifiedWorkspaceId,
+        entityType: "VendorRiskAssessment",
+        entityId: `${ctx.verifiedWorkspaceId}:vendor:${vendorName}`,
+        payload: {
+          vendorName,
+          classification: result.classification,
+          ownerNotificationRequired: result.ownerNotificationRequired,
+          blockedFromNewOrders: result.blockedFromNewOrders,
+          reasonCount: result.reasons.length,
+        },
+      });
+    }
+
+    return response;
   },
   { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true },
 );

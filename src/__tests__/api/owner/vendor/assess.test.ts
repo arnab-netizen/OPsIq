@@ -26,6 +26,9 @@ vi.mock("@/lib/canonical-route-enforcement", () => ({
   },
 }));
 
+// emitAuditEvent is now called for non-informational vendor risk assessments.
+vi.mock("@/infra/audit", () => ({ emitAuditEvent: vi.fn().mockResolvedValue("audit-ok") }));
+
 import { POST } from "@/app/api/owner/vendor/assess/route";
 import { vendorAssessRequestSchema } from "@/domain/owner-mode/vendor-assess.validation";
 
