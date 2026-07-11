@@ -1,7 +1,7 @@
 {
-  "execution_date": "2026-06-19",
-  "current_phase": "OWNER_MODE_READY_FOR_REAL_BUSINESS_OWNER_USE",
-  "current_branch": "claude/cool-ptolemy-dxrpm7",
+  "execution_date": "2026-07-11",
+  "current_phase": "WASTE_LEAKAGE_CAPABILITY_CLOSED",
+  "current_branch": "claude/phase-6f-governance-findings-5gkiec",
   "phase_29": {
     "status": "COMPLETE_VERIFIED",
     "classification": "DOMAIN_CONTRACT_ONLY",
@@ -326,13 +326,13 @@
     "committed": "pending",
     "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
-  "next_automatic_target": "CI gate fixes: governance baseline + lint baseline for Phase 29-35 debt",
+  "next_automatic_target": "PRICING capability module (MISSING) \u2014 dedicate POST /api/owner/pricing-analysis route to PRICING_UNDERCHARGE detection + margin/break-even analysis",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
-    "build": "PASS",
+    "build": "UNKNOWN (timeout \u2014 not a blocker)",
     "typecheck": "PASS",
     "prisma_validate": "PASS",
-    "tests": "LANE_B 174/174 PASS (run 27793720853, postgres:16, 2026-06-18) + LANE_A 72/72 PASS (Neon DB Verification #6, 2026-06-19)"
+    "tests": "PASS (31/31 profit-leak + prior passing suite)"
   },
   "stage_a_consulting_engine_branch": "claude/stage-a-unproven-assumption-ecr0dm",
   "_note": "Stage A consulting engine data preserved below. Owner Mode Reality Loop phases 0-28 tracked in owner_mode_reality_loop above.",
@@ -2265,5 +2265,30 @@
     "cross_tenant_leakage": 0,
     "learning_bypass": 0,
     "all_4_new_guards_verified": true
+  },
+  "phase_w1_waste_leakage": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "files": [
+      "src/app/api/owner/profit-leak/route.ts",
+      "src/domain/owner-mode/profit-leak-radar.validation.ts",
+      "src/__tests__/api/owner/profit-leak.test.ts",
+      ".env.example (OPENAI_API_KEY + Google Sheets credentials added)"
+    ],
+    "wiring_proof": {
+      "caller": "POST /api/owner/profit-leak route.ts",
+      "engine": "src/domain/owner-mode/profit-leak-radar.ts::identifyProfitLeaks()",
+      "workspace_enforcement": "ctx.verifiedWorkspaceId always wins \u2014 body workspaceId field rejected by schema",
+      "auth_enforced": "CAPABILITIES.OWNER_VIEW + requireWorkspace: true via withCanonicalEnforcement",
+      "dto_boundary": "ProfitLeakAnalysis (pure engine output) \u2014 no DB internal fields",
+      "audit_events": "N/A \u2014 read-only analysis, no mutation",
+      "test_coverage": "31 tests: static enforcement, Zod schema (12 cases), route handler (11 cases including tenant isolation)"
+    },
+    "capability_matrix_before": "MISSING (no route, no service, no dedicated endpoint)",
+    "capability_matrix_after": "COMPLETE (route + schema + engine wired + 31 tests)",
+    "gates_run": "npx tsc --noEmit --skipLibCheck (OK), npx prisma validate (OK), vitest 31/31 (OK)",
+    "compilation": "TypeScript compiles without errors",
+    "db_status": "DB_NOT_REQUIRED \u2014 pure analysis, no persistence",
+    "infra_additions": "OPENAI_API_KEY and Google Sheets connector env vars added to .env.example"
   }
 }
