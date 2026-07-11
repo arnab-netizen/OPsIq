@@ -326,7 +326,39 @@
     "committed": "pending",
     "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
-  "next_automatic_target": "PRICING capability module (MISSING) \u2014 dedicate POST /api/owner/pricing-analysis route to PRICING_UNDERCHARGE detection + margin/break-even analysis",
+  "phase_w1_waste_leakage": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "files": [
+      "src/domain/owner-mode/profit-leak-radar.validation.ts",
+      "src/app/api/owner/profit-leak/route.ts",
+      "src/__tests__/api/owner/profit-leak.test.ts"
+    ],
+    "workspace_enforcement": "\u2713 ctx.verifiedWorkspaceId always wins; body workspaceId rejected by strictObject schema",
+    "auth_enforced": "\u2713 CAPABILITIES.OWNER_VIEW + requireWorkspace: true",
+    "test_coverage": "31 tests \u2014 static enforcement (7), schema validation (12), route handler (12)",
+    "gates_run": "npx tsc --noEmit (\u2713), npx vitest run 31/31 (\u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "committed": "5e97433a"
+  },
+  "phase_p1_pricing": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "files": [
+      "src/domain/owner-finance/pricing-analysis.validation.ts",
+      "src/app/api/owner/pricing-analysis/route.ts",
+      "src/__tests__/api/owner/pricing-analysis.test.ts"
+    ],
+    "workspace_enforcement": "\u2713 ctx.verifiedWorkspaceId always wins; body workspaceId rejected by strictObject schema",
+    "auth_enforced": "\u2713 CAPABILITIES.OWNER_VIEW + requireWorkspace: true",
+    "DTO_boundary": "\u2713 Pure domain output (contributionMargin, minimumViablePrice, discountSafety, segmentComparison)",
+    "test_coverage": "44 tests \u2014 static enforcement (7), schema validation (15), route handler (22)",
+    "gates_run": "npx tsc --noEmit (\u2713), npx vitest run 44/44 (\u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "committed": "cf689e5b"
+  },
+  "current_phase": "PRICING_CAPABILITY_CLOSED",
+  "next_automatic_target": "TENDER/APPLICATION_ASSISTANCE capability (MISSING, #11 from A0 audit) \u2014 POST /api/owner/tender-assistance route + domain service + Zod validation schema",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "UNKNOWN (timeout \u2014 not a blocker)",
