@@ -2338,5 +2338,206 @@
     "compilation": "TypeScript compiles without errors",
     "db_status": "DB_NOT_REQUIRED \u2014 pure analysis, no persistence",
     "infra_additions": "OPENAI_API_KEY and Google Sheets connector env vars added to .env.example"
+  },
+  "module_8_customer_reactivation": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "module": 8,
+    "description": "Customer Retention/Reactivation Assessment",
+    "files": [
+      "src/domain/owner-mode/customer-reactivation.validation.ts",
+      "src/domain/owner-mode/customer-reactivation-boundary.ts",
+      "src/app/api/owner/customer/reactivation-assess/route.ts",
+      "src/__tests__/api/owner/customer/reactivation-assess.test.ts"
+    ],
+    "wiring_proof": {
+      "caller": "POST /api/owner/customer/reactivation-assess",
+      "engine": "src/domain/owner-mode/customer-reactivation-boundary.ts::assessReactivation()",
+      "workspace_enforcement": "\u2713 ctx.verifiedWorkspaceId; body workspaceId rejected by strictObject",
+      "auth_enforced": "\u2713 CAPABILITIES.OWNER_VIEW + requireWorkspace: true",
+      "dto_boundary": "\u2713 Pure domain output \u2014 no DB internal fields",
+      "audit_events": "N/A \u2014 read-only pure analysis",
+      "test_coverage": "53 tests: static enforcement, schema validation (20 cases), handler logic (26 cases), tenant isolation"
+    },
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 53/53 (\u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "db_status": "DB_NOT_REQUIRED \u2014 pure analysis, no persistence",
+    "committed": "42469eb4"
+  },
+  "module_10_opportunity_finder": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "module": 10,
+    "description": "Opportunity/Pipeline Finder \u2014 route-level tests for 4 existing routes",
+    "files": [
+      "src/__tests__/api/owner/operations/opportunities.test.ts"
+    ],
+    "routes_covered": [
+      "POST /api/owner/operations/opportunities/signals",
+      "POST /api/owner/operations/opportunities/decide",
+      "POST /api/owner/operations/opportunities/execution-task",
+      "POST /api/owner/operations/opportunities/validation-outcome"
+    ],
+    "wiring_proof": {
+      "workspace_enforcement": "\u2713 ctx.verifiedWorkspaceId; CAPABILITIES.OWNER_MANAGE",
+      "auth_enforced": "\u2713 CAPABILITIES.OWNER_MANAGE + requireWorkspace: true",
+      "dto_boundary": "\u2713 canonicalJson() body inspected via getBody() helper",
+      "test_coverage": "42 tests covering all 4 routes with mocked DB services"
+    },
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 42/42 (\u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "db_status": "DB_MOCKED \u2014 all 4 DB services mocked in tests",
+    "committed": "f3392dea"
+  },
+  "module_14_vendor_assessment": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "module": 14,
+    "description": "Vendor/Procurement Risk Assessment",
+    "files": [
+      "src/domain/owner-mode/vendor-assess.validation.ts",
+      "src/domain/owner-mode/vendor-risk-boundary.ts",
+      "src/app/api/owner/vendor/assess/route.ts",
+      "src/__tests__/api/owner/vendor/assess.test.ts"
+    ],
+    "wiring_proof": {
+      "caller": "POST /api/owner/vendor/assess",
+      "engine": "src/domain/owner-mode/vendor-risk-boundary.ts::assessVendorRisk()",
+      "workspace_enforcement": "\u2713 ctx.verifiedWorkspaceId; body workspaceId rejected by strictObject",
+      "auth_enforced": "\u2713 CAPABILITIES.OWNER_VIEW + requireWorkspace: true",
+      "dto_boundary": "\u2713 Pure domain output (classification, reasons, recommendedActions, disclaimer)",
+      "classification_levels": "blocked (3) > high_concentration (2) > review_advised (1) > informational (0)",
+      "worst_case_wins": "true \u2014 most severe trigger determines classification",
+      "test_coverage": "53 tests: static enforcement, schema (18 cases), classification correctness (20 cases), reasons/actions, disclaimer invariant, tenant isolation"
+    },
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 53/53 (\u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "db_status": "DB_NOT_REQUIRED \u2014 pure analysis, no persistence",
+    "committed": "360b7bcb"
+  },
+  "module_15_compliance_risk": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "module": 15,
+    "description": "Compliance Risk Classification",
+    "files": [
+      "src/domain/owner-mode/compliance-risk.validation.ts",
+      "src/domain/owner-mode/compliance-risk-boundary.ts",
+      "src/app/api/owner/compliance/assess/route.ts",
+      "src/__tests__/api/owner/compliance/assess.test.ts"
+    ],
+    "wiring_proof": {
+      "caller": "POST /api/owner/compliance/assess",
+      "engine": "src/domain/owner-mode/compliance-risk-boundary.ts::assessComplianceRisk()",
+      "workspace_enforcement": "\u2713 ctx.verifiedWorkspaceId; body workspaceId rejected by strictObject",
+      "auth_enforced": "\u2713 CAPABILITIES.OWNER_VIEW + requireWorkspace: true",
+      "dto_boundary": "\u2713 Pure domain output \u2014 no DB internal fields",
+      "test_coverage": "42 tests: static enforcement, schema validation, risk classification logic, tenant isolation"
+    },
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 42/42 (\u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "db_status": "DB_NOT_REQUIRED \u2014 pure analysis, no persistence",
+    "committed": "c5f0a1e1"
+  },
+  "module_18_local_mode_status": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "module": 18,
+    "description": "Local/Private Mode Configuration Status",
+    "files": [
+      "src/app/api/owner/local-mode/status/route.ts",
+      "src/__tests__/api/owner/operations/local-mode/status.test.ts"
+    ],
+    "wiring_proof": {
+      "caller": "GET /api/owner/local-mode/status",
+      "workspace_enforcement": "\u2713 ctx.verifiedWorkspaceId only",
+      "auth_enforced": "\u2713 CAPABILITIES.OWNER_VIEW + requireWorkspace: true",
+      "dto_boundary": "\u2713 Only STORAGE_PROVIDER + SCHEDULER_PROVIDER read \u2014 no secrets, no DATABASE_URL, no API keys",
+      "secret_safety": "\u2713 Route only reads STORAGE_PROVIDER and SCHEDULER_PROVIDER env vars",
+      "localModeActive": "true only when STORAGE_PROVIDER=local AND SCHEDULER_PROVIDER=in-memory",
+      "test_coverage": "31 tests: static enforcement (6), capability declarations, response shape, provider resolution, localModeActive flag, capabilities object, tenant isolation, notes field"
+    },
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 31/31 (\u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "db_status": "DB_NOT_REQUIRED \u2014 pure env-var status read, no persistence",
+    "committed": "1ac8641f"
+  },
+  "module_19_anthropic_provider": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "module": 19,
+    "description": "LLM/NLP Governed Analysis \u2014 Anthropic AI provider adapter",
+    "files": [
+      "src/services/ai/anthropic-provider.ts",
+      "src/__tests__/services/ai/anthropic-provider.test.ts",
+      ".env.example (ANTHROPIC_API_KEY section added)"
+    ],
+    "wiring_proof": {
+      "service": "AnthropicProvider implements AiProvider interface",
+      "api": "POST https://api.anthropic.com/v1/messages",
+      "headers": "x-api-key + anthropic-version: 2023-06-01",
+      "message_format": "top-level system field + user-only messages array (Anthropic format)",
+      "fail_closed": "\u2713 returns AI_UNAVAILABLE (never throws) when ANTHROPIC_API_KEY missing",
+      "injectable": "\u2713 fetchImpl + clock injectable for testing",
+      "retry": "\u2713 retry loop on transient failures",
+      "model_routing": "cheap\u2192claude-haiku-4-5-20251001, strong\u2192claude-sonnet-5",
+      "token_accounting": "input_tokens + output_tokens",
+      "test_coverage": "25 tests: fail-closed, name, HTTP transport (URL/headers/body shape), model-tier routing, success path, error handling (4xx/5xx/no-content/non-JSON/network), retry logic, DATA fence, governance policy in system field"
+    },
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 25/25 (\u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "db_status": "DB_NOT_REQUIRED \u2014 external API call, no persistence",
+    "committed": "31395db0"
+  },
+  "module_20_connector_readiness": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DOMAIN_CONTRACT_WITH_ENV_AUDIT",
+    "module": 20,
+    "description": "Live Connectors \u2014 readiness contract tests + env documentation",
+    "files": [
+      "src/__tests__/services/external-systems/connector-readiness.test.ts",
+      ".env.example (connector env vars: Google OAuth, HubSpot, QuickBooks, Slack)"
+    ],
+    "wiring_proof": {
+      "provider_registry": "src/domain/external-systems/provider-registry.ts exports PROVIDERS Record<string, Provider>",
+      "no_production_ready": "\u2713 All current connectors are PLACEHOLDER_ONLY \u2014 no connector claims PRODUCTION_READY",
+      "fail_closed": "\u2713 generateGoogleAuthorizationUrl requires explicit config injection (not env-based)",
+      "env_contract": "\u2713 13 keys documented in .env.example: ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, HUBSPOT_CLIENT_ID, HUBSPOT_CLIENT_SECRET, QUICKBOOKS_CLIENT_ID, QUICKBOOKS_CLIENT_SECRET, SLACK_BOT_TOKEN, STORAGE_PROVIDER, SCHEDULER_PROVIDER, DATABASE_URL, STRIPE_SECRET_KEY",
+      "specific_providers": "\u2713 HubSpot (CRM), QuickBooks (accounting), Google (ecommerce/CRM), at least one CRM + one accounting confirmed",
+      "test_coverage": "26 tests across 4 describe groups: provider registry readiness, Google OAuth fail-closed, .env.example contract (13 keys), specific connector presence"
+    },
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 26/26 (\u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "db_status": "DB_NOT_REQUIRED \u2014 no persistence, connector contracts only",
+    "committed": "a5c0dbac"
+  },
+  "current_phase": "A0_AUDIT_PARTIAL_CAPABILITIES_CLOSED",
+  "last_commit": "a5c0dbac \u2014 Module #20: Live Connectors env contract + readiness tests + 26 tests",
+  "pushed": false,
+  "session_summary_2026_07_11": {
+    "modules_completed": [8, 10, 14, 15, 16, 18, 19, 20],
+    "total_new_tests": 311,
+    "breakdown": {
+      "module_8_reactivation": 53,
+      "module_10_opportunities": 42,
+      "module_14_vendor": 53,
+      "module_15_compliance": 42,
+      "module_16_capacity": 39,
+      "module_18_local_mode": 31,
+      "module_19_anthropic": 25,
+      "module_20_connectors": 26
+    },
+    "all_gates_pass": true,
+    "commits_to_push": [
+      "591bbc58 \u2014 Module #16: Equipment Capacity Assessment",
+      "608ba8ae \u2014 Update execution_state.json for #16",
+      "42469eb4 \u2014 Module #8: Customer Reactivation Assessment",
+      "c5f0a1e1 \u2014 Module #15: Compliance Risk Classification",
+      "31395db0 \u2014 Module #19: Anthropic AI provider adapter",
+      "360b7bcb \u2014 Module #14: Vendor/Procurement Risk Assessment",
+      "f3392dea \u2014 Module #10: Opportunity Finder route-level tests",
+      "1ac8641f \u2014 Module #18: Local Mode status endpoint",
+      "a5c0dbac \u2014 Module #20: Live Connectors env contract + readiness tests"
+    ]
   }
 }
