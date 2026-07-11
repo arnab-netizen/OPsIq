@@ -79,6 +79,40 @@ export async function updateSalesAction(
     payload: { status: updated.status, assignedTo: updated.assignedTo },
   });
 
+  // On action completion, emit a dedicated event and trigger re-diagnosis from latest snapshot.
+  if (updated.status === "completed") {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OWNER_SALES_ACTION_COMPLETED,
+      actorId,
+      workspaceId,
+      entityType: "OwnerSalesAction",
+      entityId: actionId,
+      payload: { businessId: updated.businessId, cycleId: updated.cycleId },
+    });
+
+    try {
+      const latestSnapshot = await db.ownerSalesSnapshot.findFirst({
+        where: { businessId: updated.businessId, workspaceId },
+        orderBy: { periodEnd: "desc" },
+        select: { id: true },
+      });
+      if (latestSnapshot) {
+        const { runSalesDiagnosis } = await import("./diagnosis.service");
+        const newCycle = await runSalesDiagnosis(updated.businessId, latestSnapshot.id, actorId, workspaceId);
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.OWNER_SALES_REASSESSMENT_TRIGGERED,
+          actorId,
+          workspaceId,
+          entityType: "OwnerSalesCycle",
+          entityId: newCycle.id,
+          payload: { trigger: "action_completed", triggerActionId: actionId },
+        });
+      }
+    } catch (_err) {
+      // Re-diagnosis failure must not fail the action update — advisory only.
+    }
+  }
+
   return updated;
 }
 

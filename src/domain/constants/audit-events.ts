@@ -314,18 +314,27 @@ export const AUDIT_EVENTS = {
   OWNER_SALES_SNAPSHOT_RECORDED: "owner.sales_snapshot_recorded",
   OWNER_SALES_DIAGNOSIS_RUN: "owner.sales_diagnosis_run",
   OWNER_SALES_ACTION_UPDATED: "owner.sales_action_updated",
+  OWNER_SALES_ACTION_COMPLETED: "owner.sales_action_completed",
+  OWNER_SALES_REASSESSMENT_TRIGGERED: "owner.sales_reassessment_triggered",
   OWNER_SALES_OUTCOME_VERIFIED: "owner.sales_outcome_verified",
+  OWNER_SALES_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.sales_verification_reassessment_triggered",
 
   // Owner Operations (Module 4)
   OWNER_OPERATIONS_SNAPSHOT_RECORDED: "owner.operations_snapshot_recorded",
   OWNER_OPERATIONS_DIAGNOSIS_RUN: "owner.operations_diagnosis_run",
   OWNER_OPERATIONS_ACTION_UPDATED: "owner.operations_action_updated",
+  OWNER_OPERATIONS_ACTION_COMPLETED: "owner.operations_action_completed",
+  OWNER_OPERATIONS_REASSESSMENT_TRIGGERED: "owner.operations_reassessment_triggered",
   OWNER_OPERATIONS_OUTCOME_VERIFIED: "owner.operations_outcome_verified",
+  OWNER_OPERATIONS_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.operations_verification_reassessment_triggered",
 
   OWNER_SOP_SNAPSHOT_RECORDED: "owner.sop_snapshot_recorded",
   OWNER_SOP_DIAGNOSIS_RUN: "owner.sop_diagnosis_run",
   OWNER_SOP_ACTION_UPDATED: "owner.sop_action_updated",
+  OWNER_SOP_ACTION_COMPLETED: "owner.sop_action_completed",
+  OWNER_SOP_REASSESSMENT_TRIGGERED: "owner.sop_reassessment_triggered",
   OWNER_SOP_OUTCOME_VERIFIED: "owner.sop_outcome_verified",
+  OWNER_SOP_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.sop_verification_reassessment_triggered",
 
   OWNER_MARKETING_SNAPSHOT_RECORDED: "owner.marketing_snapshot_recorded",
   OWNER_MARKETING_DIAGNOSIS_RUN: "owner.marketing_diagnosis_run",
@@ -335,7 +344,13 @@ export const AUDIT_EVENTS = {
   OWNER_STRATEGY_SNAPSHOT_RECORDED: "owner.strategy_snapshot_recorded",
   OWNER_STRATEGY_DIAGNOSIS_RUN: "owner.strategy_diagnosis_run",
   OWNER_STRATEGY_ACTION_UPDATED: "owner.strategy_action_updated",
+  OWNER_STRATEGY_ACTION_COMPLETED: "owner.strategy_action_completed",
+  OWNER_STRATEGY_REASSESSMENT_TRIGGERED: "owner.strategy_reassessment_triggered",
   OWNER_STRATEGY_OUTCOME_VERIFIED: "owner.strategy_outcome_verified",
+  OWNER_STRATEGY_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.strategy_verification_reassessment_triggered",
+
+  // Finance domain — verification-triggered reassessment (separate from action-completion trigger)
+  OWNER_FINANCE_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.finance_verification_reassessment_triggered",
 
   OWNER_DATA_INTAKE_RECORDED: "owner.data_intake_recorded",
   OWNER_DATA_INTAKE_CONFIRMED: "owner.data_intake_confirmed",

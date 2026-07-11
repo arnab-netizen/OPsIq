@@ -79,6 +79,41 @@ export async function updateOperationsAction(
     payload: { status: updated.status, assignedTo: updated.assignedTo },
   });
 
+  // On action completion, emit a dedicated event and trigger re-diagnosis from latest snapshot.
+  if (updated.status === "completed") {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OWNER_OPERATIONS_ACTION_COMPLETED,
+      actorId,
+      workspaceId,
+      entityType: "OwnerOperationsAction",
+      entityId: actionId,
+      payload: { businessId: updated.businessId, cycleId: updated.cycleId },
+    });
+
+    // Attempt automatic re-diagnosis from the latest confirmed snapshot (best-effort; non-blocking).
+    try {
+      const latestSnapshot = await db.ownerOperationsSnapshot.findFirst({
+        where: { businessId: updated.businessId, workspaceId },
+        orderBy: { periodEnd: "desc" },
+        select: { id: true },
+      });
+      if (latestSnapshot) {
+        const { runOperationsDiagnosis } = await import("./diagnosis.service");
+        const newCycle = await runOperationsDiagnosis(updated.businessId, latestSnapshot.id, actorId, workspaceId);
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.OWNER_OPERATIONS_REASSESSMENT_TRIGGERED,
+          actorId,
+          workspaceId,
+          entityType: "OwnerOperationsCycle",
+          entityId: newCycle.id,
+          payload: { trigger: "action_completed", triggerActionId: actionId },
+        });
+      }
+    } catch (_err) {
+      // Re-diagnosis failure must not fail the action update — advisory only.
+    }
+  }
+
   return updated;
 }
 
