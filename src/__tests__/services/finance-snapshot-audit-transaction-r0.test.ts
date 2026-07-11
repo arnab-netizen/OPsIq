@@ -4,22 +4,23 @@
  * Verifies that snapshot creation and audit event emission are wrapped in a
  * single Prisma $transaction so an audit failure rolls back the snapshot write.
  */
+import { describe, test, beforeEach, expect, vi } from "vitest";
 import { createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import type { FinancialSnapshotCreateInput } from "@/domain/owner-finance/validation";
 
 // ── mocks ──────────────────────────────────────────────────────────────────
 
-jest.mock("@/services/founder-recovery/business.service", () => ({
-  getBusiness: jest.fn().mockResolvedValue({ id: "biz-001" }),
+vi.mock("@/services/founder-recovery/business.service", () => ({
+  getBusiness: vi.fn().mockResolvedValue({ id: "biz-001" }),
 }));
 
-const mockEmitAuditEvent = jest.fn();
-jest.mock("@/infra/audit", () => ({
+const mockEmitAuditEvent = vi.fn();
+vi.mock("@/infra/audit", () => ({
   emitAuditEvent: (...args: unknown[]) => mockEmitAuditEvent(...args),
 }));
 
-jest.mock("@/domain/owner-finance/data-confidence", () => ({
-  calculateDataConfidence: jest.fn().mockReturnValue({
+vi.mock("@/domain/owner-finance/data-confidence", () => ({
+  calculateDataConfidence: vi.fn().mockReturnValue({
     dataConfidenceScore: 0.8,
     missingCritical: false,
   }),
@@ -28,17 +29,17 @@ jest.mock("@/domain/owner-finance/data-confidence", () => ({
 // Fake transaction client passed to the $transaction callback
 const fakeTx = {
   ownerFinancialSnapshot: {
-    create: jest.fn(),
+    create: vi.fn(),
   },
   auditEvent: {
-    create: jest.fn(),
+    create: vi.fn(),
   },
 };
 
-const mockDbTransaction = jest.fn();
-const mockFindFirst = jest.fn();
+const mockDbTransaction = vi.fn();
+const mockFindFirst = vi.fn();
 
-jest.mock("@/lib/db", () => ({
+vi.mock("@/lib/db", () => ({
   db: {
     ownerFinancialSnapshot: {
       findFirst: (...args: unknown[]) => mockFindFirst(...args),
@@ -47,7 +48,7 @@ jest.mock("@/lib/db", () => ({
   },
 }));
 
-jest.mock("crypto", () => ({
+vi.mock("crypto", () => ({
   randomUUID: () => "fixed-uuid-001",
 }));
 
@@ -69,7 +70,7 @@ const createdRow = {
 };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   // No existing snapshot → allow create
   mockFindFirst.mockResolvedValue(null);
   // Simulate transaction: call the callback with fakeTx

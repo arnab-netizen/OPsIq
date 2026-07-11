@@ -5,27 +5,29 @@
  * selected `code` from finding.findFirst, causing PrismaClientValidationError
  * at runtime. This test verifies the fix: only `impactArea` is selected.
  */
+import { describe, test, expect, vi } from "vitest";
 import {
   enforceDoNotRepeatForPromotion,
   recordDoNotRepeat,
   scopeKeyForImpactArea,
   type DnrDeps,
 } from "@/services/owner-mode/do-not-repeat.service";
+import { evaluateDoNotRepeat } from "@/domain/owner-mode/do-not-repeat";
 
 // ── mock audit ───────────────────────────────────────────────────────────────
-jest.mock("@/infra/audit", () => ({
-  emitAuditEvent: jest.fn().mockResolvedValue("audit-id"),
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: vi.fn().mockResolvedValue("audit-id"),
 }));
 
-jest.mock("@/domain/constants/audit-events", () => ({
+vi.mock("@/domain/constants/audit-events", () => ({
   AUDIT_EVENTS: {
     OWNER_DO_NOT_REPEAT_BLOCKED: "OWNER_DO_NOT_REPEAT_BLOCKED",
     OWNER_DO_NOT_REPEAT_RECORDED: "OWNER_DO_NOT_REPEAT_RECORDED",
   },
 }));
 
-jest.mock("@/domain/owner-mode/do-not-repeat", () => ({
-  evaluateDoNotRepeat: jest.fn().mockReturnValue({ blocked: false, reason: null }),
+vi.mock("@/domain/owner-mode/do-not-repeat", () => ({
+  evaluateDoNotRepeat: vi.fn().mockReturnValue({ blocked: false, reason: null }),
 }));
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -33,20 +35,20 @@ jest.mock("@/domain/owner-mode/do-not-repeat", () => ({
 function makeDeps(overrides: Partial<{
   findingResult: { impactArea: string | null } | null;
   ruleResult: { blocksRepetition: boolean; changedContextExplanation: string | null } | null;
-}> = {}): { deps: DnrDeps; findingFindFirst: jest.Mock; ruleCreate: jest.Mock } {
-  const findingFindFirst = jest.fn().mockResolvedValue(overrides.findingResult ?? null);
-  const ruleCreate = jest.fn().mockResolvedValue({ id: "rule-001" });
+}> = {}): { deps: DnrDeps; findingFindFirst: ReturnType<typeof vi.fn>; ruleCreate: ReturnType<typeof vi.fn> } {
+  const findingFindFirst = vi.fn().mockResolvedValue(overrides.findingResult ?? null);
+  const ruleCreate = vi.fn().mockResolvedValue({ id: "rule-001" });
 
   const deps: DnrDeps = {
     db: {
       recommendation: {
-        findUnique: jest.fn().mockResolvedValue({ findingId: "finding-001" }),
+        findUnique: vi.fn().mockResolvedValue({ findingId: "finding-001" }),
       },
       finding: {
         findFirst: findingFindFirst,
       },
       ownerDoNotRepeatRule: {
-        findFirst: jest.fn().mockResolvedValue(overrides.ruleResult ?? null),
+        findFirst: vi.fn().mockResolvedValue(overrides.ruleResult ?? null),
         create: ruleCreate,
       },
     } as unknown as DnrDeps["db"],
@@ -92,13 +94,11 @@ describe("do-not-repeat service — phantom field fix (D1-01)", () => {
 
     test("scope key built from impactArea when finding has impactArea", async () => {
       const { deps } = makeDeps({ findingResult: { impactArea: "finance" } });
-      // evaluateDoNotRepeat returns not blocked — no throw expected
-      const { evaluateDoNotRepeat } = jest.requireMock("@/domain/owner-mode/do-not-repeat");
-      evaluateDoNotRepeat.mockReturnValueOnce({ blocked: false, reason: null });
+      vi.mocked(evaluateDoNotRepeat).mockReturnValueOnce({ blocked: false, reason: null } as never);
 
       await enforceDoNotRepeatForPromotion("rec-001", "ws-001", deps);
 
-      const ruleCall = (deps.db.ownerDoNotRepeatRule.findFirst as jest.Mock).mock.calls[0][0];
+      const ruleCall = (deps.db.ownerDoNotRepeatRule.findFirst as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(ruleCall.where.memoryKey.in).toContain("scope:finance");
     });
 
@@ -108,7 +108,7 @@ describe("do-not-repeat service — phantom field fix (D1-01)", () => {
       await enforceDoNotRepeatForPromotion("rec-001", "ws-001", deps);
 
       expect(findingFindFirst).toHaveBeenCalledTimes(1);
-      expect(deps.db.ownerDoNotRepeatRule.findFirst as jest.Mock).not.toHaveBeenCalled();
+      expect((deps.db.ownerDoNotRepeatRule.findFirst as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
     });
 
     test("no keys built when impactArea is null", async () => {
@@ -117,14 +117,13 @@ describe("do-not-repeat service — phantom field fix (D1-01)", () => {
       await enforceDoNotRepeatForPromotion("rec-001", "ws-001", deps);
 
       // No memoryKeys → no rule lookup
-      expect(deps.db.ownerDoNotRepeatRule.findFirst as jest.Mock).not.toHaveBeenCalled();
+      expect((deps.db.ownerDoNotRepeatRule.findFirst as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
     });
   });
 
   describe("DoNotRepeatBlockedError", () => {
     test("throws DoNotRepeatBlockedError when rule matches and evaluateDoNotRepeat returns blocked", async () => {
-      const { evaluateDoNotRepeat } = jest.requireMock("@/domain/owner-mode/do-not-repeat");
-      evaluateDoNotRepeat.mockReturnValueOnce({ blocked: true, reason: "already tried" });
+      vi.mocked(evaluateDoNotRepeat).mockReturnValueOnce({ blocked: true, reason: "already tried" } as never);
 
       const { deps } = makeDeps({
         findingResult: { impactArea: "revenue" },

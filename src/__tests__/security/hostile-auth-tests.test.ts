@@ -10,10 +10,11 @@
  *   complex route handler mocking with full withAuth / withEnforcement stacks
  *   and are deferred pending a test-harness abstraction layer.
  */
+import { describe, test, beforeAll, expect, vi } from "vitest";
 
 // ── Converted: submit-external permanently disabled ──────────────────────────
 
-jest.mock("@/lib/enforced-route", () => ({
+vi.mock("@/lib/enforced-route", () => ({
   withEnforcement: (fn: (...args: unknown[]) => Promise<unknown>) =>
     async (...args: unknown[]) => fn(...args),
   withEnforcementFull: (fn: (...args: unknown[]) => Promise<unknown>) =>
@@ -22,37 +23,37 @@ jest.mock("@/lib/enforced-route", () => ({
 
 // ── Converted: health / readiness — no auth dependencies ─────────────────────
 
-jest.mock("@/lib/db", () => ({
+vi.mock("@/lib/db", () => ({
   db: {
-    $queryRawUnsafe: jest.fn().mockResolvedValue([{ "?column?": 1 }]),
+    $queryRawUnsafe: vi.fn().mockResolvedValue([{ "?column?": 1 }]),
   },
-  getDbInstance: jest.fn().mockResolvedValue({}),
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
-jest.mock("@/infra/logger", () => ({
-  logger: { debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() },
+vi.mock("@/infra/logger", () => ({
+  logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 
-jest.mock("@/infra/error-tracking", () => ({
-  classifyError: jest.fn().mockReturnValue({ classified: true }),
-  reportError: jest.fn(),
+vi.mock("@/infra/error-tracking", () => ({
+  classifyError: vi.fn().mockReturnValue({ classified: true }),
+  reportError: vi.fn(),
 }));
 
-jest.mock("@/services/production/retention-cleanup", () => ({
-  cleanupOldRecords: jest.fn().mockResolvedValue(undefined),
+vi.mock("@/services/production/retention-cleanup", () => ({
+  cleanupOldRecords: vi.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock("@/infra/startup-state", () => ({
-  isStartupComplete: jest.fn().mockReturnValue(false),
+vi.mock("@/infra/startup-state", () => ({
+  isStartupComplete: vi.fn().mockReturnValue(false),
 }));
 
-jest.mock("@/lib/operator-error-governance", () => ({
-  classifyOperatorError: jest.fn().mockReturnValue({ operatorMessage: "DB unavailable" }),
+vi.mock("@/lib/operator-error-governance", () => ({
+  classifyOperatorError: vi.fn().mockReturnValue({ operatorMessage: "DB unavailable" }),
 }));
 
-jest.mock("@/middleware/monitoring.middleware", () => ({
-  getMonitoringServiceInstance: jest.fn().mockReturnValue({
-    checkReadiness: jest.fn().mockResolvedValue({
+vi.mock("@/middleware/monitoring.middleware", () => ({
+  getMonitoringServiceInstance: vi.fn().mockReturnValue({
+    checkReadiness: vi.fn().mockResolvedValue({
       database_healthy: true,
       queue_healthy: true,
       database_latency_ms: 5,
@@ -63,12 +64,12 @@ jest.mock("@/middleware/monitoring.middleware", () => ({
   }),
 }));
 
-jest.mock("@/infra/startup-orchestrator", () => ({
-  ensureStartupComplete: jest.fn().mockResolvedValue(undefined),
+vi.mock("@/infra/startup-orchestrator", () => ({
+  ensureStartupComplete: vi.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock("@/services/startup-status", () => ({
-  getStartupStatus: jest.fn().mockResolvedValue({ status: "READY", error: null }),
+vi.mock("@/services/startup-status", () => ({
+  getStartupStatus: vi.fn().mockResolvedValue({ status: "READY", error: null }),
 }));
 
 // Dynamic imports after mocks are in place

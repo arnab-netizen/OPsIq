@@ -5,13 +5,14 @@
  * deduplicates requests via checkIdempotencyKey, and does not create a
  * duplicate SpendEntry on retry.
  */
+import { describe, test, beforeEach, expect, vi } from "vitest";
 import { POST } from "@/app/api/owner/budget/spend/route";
 
 // ── mock canonical enforcement (passthrough with deterministic context) ──
 const mockVerifiedActorId = "actor-001";
 const mockVerifiedWorkspaceId = "workspace-001";
 
-jest.mock("@/lib/canonical-route-enforcement", () => ({
+vi.mock("@/lib/canonical-route-enforcement", () => ({
   withCanonicalEnforcement: (handler: (ctx: unknown) => Promise<unknown>) => {
     return async (request: Request) => {
       const ctx = {
@@ -25,46 +26,46 @@ jest.mock("@/lib/canonical-route-enforcement", () => ({
   },
 }));
 
-jest.mock("@/lib/canonical-json-response", () => ({
-  canonicalJson: jest.fn((body: unknown, opts: { status: number }) => ({
+vi.mock("@/lib/canonical-json-response", () => ({
+  canonicalJson: vi.fn((body: unknown, opts: { status: number }) => ({
     __canonicalJsonResponse: true,
     body,
     status: opts?.status ?? 200,
   })),
 }));
 
-jest.mock("@/lib/validation", () => ({
-  parseRequestBody: jest.fn(),
+vi.mock("@/lib/validation", () => ({
+  parseRequestBody: vi.fn(),
 }));
 
-jest.mock("@/domain/owner-budget/validation", () => ({
+vi.mock("@/domain/owner-budget/validation", () => ({
   budgetSpendCreateSchema: {},
 }));
 
-const mockCheckIdempotencyKey = jest.fn();
-const mockRecordIdempotencyResponse = jest.fn();
-const mockRecordIdempotencyError = jest.fn();
+const mockCheckIdempotencyKey = vi.fn();
+const mockRecordIdempotencyResponse = vi.fn();
+const mockRecordIdempotencyError = vi.fn();
 
-jest.mock("@/services/idempotency", () => ({
+vi.mock("@/services/idempotency", () => ({
   checkIdempotencyKey: (...args: unknown[]) => mockCheckIdempotencyKey(...args),
   recordIdempotencyResponse: (...args: unknown[]) => mockRecordIdempotencyResponse(...args),
   recordIdempotencyError: (...args: unknown[]) => mockRecordIdempotencyError(...args),
 }));
 
-const mockRecordSpendEntry = jest.fn();
-jest.mock("@/services/owner-budget/budget.service", () => ({
+const mockRecordSpendEntry = vi.fn();
+vi.mock("@/services/owner-budget/budget.service", () => ({
   recordSpendEntry: (...args: unknown[]) => mockRecordSpendEntry(...args),
 }));
 
-jest.mock("@/domain/constants/capabilities", () => ({
+vi.mock("@/domain/constants/capabilities", () => ({
   CAPABILITIES: { OWNER_MANAGE: "OWNER_MANAGE" },
 }));
 
 import { parseRequestBody } from "@/lib/validation";
 import { canonicalJson } from "@/lib/canonical-json-response";
 
-const parseRequestBodyMock = parseRequestBody as jest.Mock;
-const canonicalJsonMock = canonicalJson as jest.Mock;
+const parseRequestBodyMock = parseRequestBody as ReturnType<typeof vi.fn>;
+const canonicalJsonMock = canonicalJson as ReturnType<typeof vi.fn>;
 
 function makeRequest(headers: Record<string, string> = {}): Request {
   const h = new Headers(headers);
@@ -84,7 +85,7 @@ const validBody = {
 const spendResult = { id: "spend-001", ...validBody };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   canonicalJsonMock.mockImplementation((body: unknown, opts: { status: number }) => ({
     __canonicalJsonResponse: true,
     body,
