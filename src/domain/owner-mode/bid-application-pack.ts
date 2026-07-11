@@ -164,7 +164,7 @@ export function generateBidApplicationPack(
   const allOwnerActions = [
     ...eligibilityOwnerActions,
     ...economicsOwnerActions,
-    ...candidate.missingData.map((d) => `Collect missing data: ${d}`),
+    ...(candidate.missingData ?? []).map((d) => `Collect missing data: ${d}`),
   ];
 
   return {

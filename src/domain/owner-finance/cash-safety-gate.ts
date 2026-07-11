@@ -100,6 +100,35 @@ export class CashSafetyGateError extends Error {
   }
 }
 
+/**
+ * Simplified cash-runway gate for high-level decision checks.
+ * Maps `cashRunwayDays` to a financial health state and evaluates the gate.
+ * GROWTH_SENSITIVE actions are blocked when runway ≤ 60 days; MAINTENANCE-class
+ * actions pass through even at CRITICAL (they are essential operations).
+ */
+export function checkCashSafetyGate(
+  { cashRunwayDays }: { cashRunwayDays: number },
+  sensitivity: string
+): { allowed: boolean; reason: string } {
+  const state: FinancialHealthState =
+    cashRunwayDays <= 30 ? "CRITICAL"
+    : cashRunwayDays <= 60 ? "AT_RISK"
+    : cashRunwayDays <= 90 ? "WATCH"
+    : "SAFE";
+
+  const SENSITIVITY_MAP: Partial<Record<string, RecommendationSensitivity>> = {
+    GROWTH_SENSITIVE: RecommendationSensitivity.GROWTH_SENSITIVE,
+    FINANCE_SENSITIVE: RecommendationSensitivity.FINANCE_SENSITIVE,
+    PRICING_SENSITIVE: RecommendationSensitivity.PRICING_SENSITIVE,
+    HIRING_SENSITIVE: RecommendationSensitivity.HIRING_SENSITIVE,
+    COMPLIANCE_SENSITIVE: RecommendationSensitivity.COMPLIANCE_SENSITIVE,
+  };
+  const sensi = SENSITIVITY_MAP[sensitivity] ?? RecommendationSensitivity.GENERAL;
+
+  const result = evaluateCashSafetyGate(state, state, sensi);
+  return { allowed: result.allowed, reason: result.reason };
+}
+
 /** Guard the recommendation service calls; throws CashSafetyGateError when blocked. */
 export function assertCashSafetyForPromotion(
   cashflowState: FinancialHealthState,

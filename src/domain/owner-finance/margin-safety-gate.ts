@@ -89,6 +89,22 @@ export function assertMarginSafetyForPromotion(
   if (!result.allowed) throw new MarginSafetyGateError(recommendationId, result);
 }
 
+/**
+ * Simplified margin safety check for high-level decision checks.
+ * Evaluates whether applying a proposed discount to the current gross margin
+ * would drop the resulting margin below the default safety floor (15%).
+ * A PRICING_SENSITIVE recommendation is blocked when the post-discount margin
+ * would breach the floor.
+ */
+export function checkMarginSafetyGate(
+  { grossMarginPct }: { grossMarginPct: number },
+  proposedDiscountPct: number
+): { allowed: boolean; reason: string } {
+  const postDiscountMargin = grossMarginPct - proposedDiscountPct;
+  const result = evaluateMarginSafety(postDiscountMargin, RecommendationSensitivity.PRICING_SENSITIVE, DEFAULT_MARGIN_FLOOR_PCT);
+  return { allowed: result.allowed, reason: result.reason };
+}
+
 /** Pure gross-margin percent from revenue + COGS (mirrors owner-finance/metrics). */
 export function grossMarginPctFrom(revenue: number | null, costOfGoods: number | null): number | null {
   if (revenue === null || costOfGoods === null || revenue === 0) return null;

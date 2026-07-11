@@ -19,42 +19,6 @@ const querySchema = z.object({
   daysOfHistory: z.string().optional().default("30"),
 });
 
-type DashboardEngagement = {
-  id: string;
-  workspaceId: string;
-  title: string;
-  status: string;
-  healthStatus: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  kpis: DashboardKpi[];
-  actions: DashboardAction[];
-};
-
-type DashboardKpi = {
-  id: string;
-  engagementId: string;
-  name: string;
-  status: string;
-  currentValue: number | null;
-  targetValue: number | null;
-  direction: string | null;
-  trend: string | null;
-  updatedAt: Date;
-  engagement?: { id: string };
-};
-
-type DashboardAction = {
-  id: string;
-  engagementId: string | null;
-  title: string;
-  status: string | null;
-  priority: string | null;
-  dueAt: Date | null;
-  assignedTo: { id: string; name: string | null; email: string } | null;
-  engagement?: { id: string; title: string };
-};
-
 function toOwnerDashboardDTO(data: any, realRecommendations?: any[]) {
   const recommendedActions = realRecommendations && realRecommendations.length > 0
     ? realRecommendations.map((rec: any) => ({
@@ -102,109 +66,69 @@ export async function buildOwnerDashboardPayload(
 
   const context = { workspaceId, userId };
 
-  // QUERY 1: Get real engagements for workspace
+  // Use owner-mode tables only — not consulting-mode Engagement/Action/KPI tables.
+  // RC-A7-001 fix: replaced db.engagement/action/KPI/recommendation with owner-mode sources.
   const { db } = await import("@/lib/db");
-  const engagements = await db.engagement.findMany({
-    where: { workspaceId },
-    include: {
-      kpis: true,
-      actions: true,
-    },
-  });
+  const { listBusinesses } = await import("@/services/founder-recovery/business.service");
+  const { getOwnerBusinessProgress } = await import("@/services/owner-mode/owner-progress.service");
 
-  // QUERY 2: Get real actions for workspace
-  const engagementIds = engagements.map((e: DashboardEngagement) => e.id);
-  const actions = await db.action.findMany({
-    where: { engagementId: { in: engagementIds } },
-    include: {
-      engagement: { select: { id: true, title: true } },
-    },
-  });
+  // QUERY 1: Owner-mode businesses (workspace-scoped)
+  const businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }> =
+    await listBusinesses(workspaceId);
 
-  // QUERY 3: Get real KPIs for workspace
-  const kpis = await db.KPI.findMany({
-    where: { engagementId: { in: engagementIds } },
-    include: {
-      engagement: { select: { id: true } },
-    },
-  });
+  // QUERY 2: Per-business — health status from latest finance cycle + cross-domain action counts
+  const businessSnapshots = await Promise.all(
+    businesses.map(async (biz, idx) => {
+      const [progress, latestCycle] = await Promise.all([
+        getOwnerBusinessProgress(biz.id, workspaceId, db as never),
+        (db as any).ownerFinanceCycle.findFirst({
+          where: { businessId: biz.id, workspaceId },
+          orderBy: { createdAt: "desc" },
+          select: { survivalState: true },
+        }),
+      ]);
 
-  // QUERY 4: Get real recommendations for workspace
-  const recommendations = engagementIds.length > 0
-    ? await db.recommendation.findMany({
-        where: {
-          engagementId: { in: engagementIds },
-          workspaceId: workspaceId,
-        },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-      })
-    : [];
+      const survivalState: string | null = (latestCycle as any)?.survivalState ?? null;
+      const healthStatus: "healthy" | "at_risk" | "critical" | "improving" =
+        survivalState === "critical" || progress.summary === "blocked" ? "critical"
+        : survivalState === "at_risk" || progress.summary === "at_risk" ? "at_risk"
+        : survivalState === "recovering" ? "improving"
+        : "healthy";
 
-  // Transform real data into expected format for health calculation
-  type DashboardEngagement = {
-    id: string;
-    workspaceId: string;
-    title: string;
-    status: string;
-    healthStatus: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    kpis: any[];
-    actions: any[];
-  };
-  type DashboardKpi = {
-    id: string;
-    engagementId: string;
-    name: string;
-    status: string;
-    currentValue: number | null;
-    targetValue: number | null;
-    direction: string | null;
-    trend: string | null;
-    updatedAt: Date;
-    engagement?: { id: string };
-  };
+      return { bizId: biz.id, bizIdx: idx, healthStatus, progress };
+    })
+  );
 
-  const engagementSnapshots = engagements.map((engagement: DashboardEngagement) => {
-    const engagementKPIs = kpis.filter((k: DashboardKpi) => k.engagementId === engagement.id);
-    const onTrackCount = engagementKPIs.filter((k: DashboardKpi) => k.status === "on_track").length;
-    return {
-      engagementId: engagement.id,
-      status: (engagement.healthStatus?.toLowerCase() || "healthy") as
-        | "healthy"
-        | "at_risk"
-        | "critical"
-        | "improving",
-      kpiOnTrackCount: onTrackCount,
-      kpiTotalCount: engagementKPIs.length,
-    };
-  });
-
-  // Transform real actions into expected format
-  type DashboardAction = {
-    id: string;
-    engagementId: string | null;
-    title: string;
-    status: string | null;
-    priority: string | null;
-    dueAt: Date | null;
-    assignedTo: { id: string; name: string | null; email: string } | null;
-    engagement?: { id: string; title: string };
-  };
-
-  const actionData = actions.map((action: DashboardAction) => ({
-    id: action.id,
-    engagementId: action.engagementId,
-    name: action.title,
-    status: action.status || "draft",
-    priority: action.priority || "medium",
-    dueDate: action.dueAt?.toISOString(),
-    assignee: undefined,
-    blockerCount: 0,
+  // Map to EngagementHealthSnapshot shape (businessId used as snapshot key — no consulting model needed)
+  const engagementSnapshots = businessSnapshots.map(({ bizId, healthStatus, progress }) => ({
+    engagementId: bizId,
+    status: healthStatus,
+    kpiOnTrackCount: progress.totals.completed,
+    kpiTotalCount: progress.totals.total,
   }));
 
-  // Calculate health from REAL data (empty if no engagements)
+  // Build ActionData[] from aggregated cross-domain progress (5 domain spines)
+  // Each logical action gets a unique synthetic id so summarizeActionQueue counts correctly.
+  const actionData: Array<{
+    id: string; engagementId: string; name: string; status: string;
+    priority: string; dueDate?: string; assignee?: string; blockerCount: number;
+  }> = [];
+
+  for (const { bizId, progress } of businessSnapshots) {
+    const { open, inProgress, completed, blocked, overdue } = progress.totals;
+    for (let i = 0; i < open; i++)
+      actionData.push({ id: `${bizId}-open-${i}`, engagementId: bizId, name: "Open action", status: "open", priority: "medium", blockerCount: 0 });
+    for (let i = 0; i < inProgress; i++)
+      actionData.push({ id: `${bizId}-ip-${i}`, engagementId: bizId, name: "In-progress action", status: "in_progress", priority: "medium", blockerCount: 0 });
+    for (let i = 0; i < completed; i++)
+      actionData.push({ id: `${bizId}-done-${i}`, engagementId: bizId, name: "Completed action", status: "completed", priority: "low", blockerCount: 0 });
+    for (let i = 0; i < blocked; i++)
+      actionData.push({ id: `${bizId}-blocked-${i}`, engagementId: bizId, name: "Blocked action", status: "blocked", priority: "high", blockerCount: 1 });
+    for (let i = 0; i < overdue; i++)
+      actionData.push({ id: `${bizId}-overdue-${i}`, engagementId: bizId, name: "Overdue action", status: "overdue", priority: "critical", blockerCount: 0 });
+  }
+
+  // Calculate health from owner-mode business snapshots
   const health = await calculateWorkspaceHealth(context, engagementSnapshots);
   const actionQueue = await summarizeActionQueue(context, actionData);
 
@@ -221,30 +145,10 @@ export async function buildOwnerDashboardPayload(
     enableAdvancedFiltering: true,
   };
 
-  // Transform real KPIs into dashboard format
-  const realKPIs = kpis.map((kpi: DashboardKpi) => ({
-    id: kpi.id,
-    name: kpi.name,
-    currentValue: kpi.currentValue || 0,
-    targetValue: kpi.targetValue || 0,
-    direction: (kpi.direction as "increase" | "decrease") || "increase",
-    trend: (kpi.trend as "improving" | "stable" | "declining") || "stable",
-    percentOfTarget:
-      kpi.targetValue && kpi.targetValue > 0
-        ? Math.round((((kpi.currentValue || 0) / kpi.targetValue) * 100))
-        : 0,
-    lastUpdated: kpi.updatedAt?.toISOString() || new Date().toISOString(),
-  }));
+  // Owner-mode does not use consulting KPI records; pass [] unless a future slice adds owner KPIs
+  const dashboard = await buildOwnerDashboardView(context, config, health, actionQueue, []);
 
-  const dashboard = await buildOwnerDashboardView(
-    context,
-    config,
-    health,
-    actionQueue,
-    queryParams.includeKPIs === "true" ? realKPIs : []
-  );
-
-  return toOwnerDashboardDTO(dashboard, recommendations);
+  return toOwnerDashboardDTO(dashboard, []);
 }
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
