@@ -13,7 +13,7 @@
 | I2 | Critical mutations are idempotent or replay-protected | Data integrity | NOT VIOLATED | 2026-07-12 |
 | I3 | All material mutations emit audit events via `emitAuditEvent` | Audit | DEFERRED | 2026-07-12 |
 | I4 | Governed records use CAS locking for concurrent updates | Data integrity | NOT VIOLATED | 2026-07-12 |
-| I5 | All protected actions enforce capability checks server-side | Auth | NOT VIOLATED | 2026-07-12 |
+| I5 | All protected actions enforce capability checks server-side | Auth | CLOSED (DC-A7.6-I5-DC06) | 2026-07-12 |
 | I6 | No duplicate business logic in independent locations | Architecture | DEFERRED (I13) | 2026-07-12 |
 | I7 | No stub or fake implementations in production paths | Quality | NOT VIOLATED | 2026-07-12 |
 | I8 | Tests do not pass by asserting incorrect values | Testing | NOT VIOLATED | 2026-07-12 |
@@ -58,6 +58,19 @@
 20+ direct bypass sites found. Two competing audit writers active. See DC-A7.6-I16.
 
 **Prevention:** ESLint no-restricted-syntax on `auditEvent.create`. Delete `logAuditEvent`.
+
+---
+
+## I5 — Capability Enforcement
+
+**Rule:** All protected actions must enforce capability checks server-side. Capability strings passed to `hasPermission()` must exist in the permission map — unregistered strings silently return `false` for all roles, making actions permanently inaccessible.
+
+**Status:** CLOSED (DC-A7.6-I5-DC06)  
+- Added `execute`, `record_outcome`, `fail_decision`, `verify_outcome` to permission map in `src/middleware/workspace-enforcement.ts`
+- Introduced `WorkspaceAction` TypeScript union type — future callers with unregistered strings fail at compile time
+- 4 decision routes restored: execute, record-outcome, fail, verify
+
+**Prevention:** `WorkspaceAction` union type in `workspace-enforcement.ts`. TypeScript compiler enforces exhaustiveness.
 
 ---
 

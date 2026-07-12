@@ -151,6 +151,23 @@
       "broken": "src/services/audit/audit-log.ts::logAuditEvent (falls back to broken context.ts, no hash chain)",
       "deferred_reason": "Requires consolidation after I16A migration complete"
     },
+    "DC-A7.6-I5-DC06": {
+      "name": "Missing permission strings in hasPermission() — 4 decision routes permanently inaccessible",
+      "severity": "CRITICAL",
+      "status": "FIXED",
+      "instances_found": 4,
+      "instances_fixed": 4,
+      "root_cause_file": "src/middleware/workspace-enforcement.ts",
+      "root_cause": "hasPermission() permission map lacked 'execute', 'record_outcome', 'fail_decision', 'verify_outcome' — every call returned false for ALL roles including admin, making 4 decision state transitions permanently inaccessible to all users",
+      "affected_routes": [
+        "src/app/api/decisions/[decisionId]/execute/route.ts:42",
+        "src/app/api/decisions/[decisionId]/record-outcome/route.ts:57",
+        "src/app/api/decisions/[decisionId]/fail/route.ts:53",
+        "src/app/api/decisions/[decisionId]/verify/route.ts:56"
+      ],
+      "fix_applied": "Added 'execute', 'record_outcome', 'fail_decision', 'verify_outcome' to admin array; 'execute', 'record_outcome', 'fail_decision' to operator array; 'verify_outcome' to reviewer array. Introduced WorkspaceAction union type so future callers with unregistered strings fail at compile time.",
+      "prevention": "WorkspaceAction TypeScript union type enforces compile-time exhaustiveness — any future hasPermission() call with an unregistered string will produce a TypeScript error"
+    },
     "DC-A7.6-I20": {
       "name": "Three competing requireWorkspaceContext implementations",
       "severity": "CRITICAL",
@@ -196,6 +213,7 @@
     "src/app/api/owner/learning-harm-events/route.ts",
     "src/app/api/owner/learning-attribution-reviews/route.ts",
     "src/app/api/owner/learning-privacy/route.ts",
-    "src/app/api/owner/learning-retention/route.ts"
+    "src/app/api/owner/learning-retention/route.ts",
+    "src/middleware/workspace-enforcement.ts"
   ]
 }

@@ -12,6 +12,7 @@
 | Workspace Isolation (canonical routes) | 100% | All withCanonicalEnforcement routes now use ctx.verifiedWorkspaceId |
 | Workspace Isolation (legacy routes) | 0% | 14 deferred routes still read x-workspace-id header or broken context.ts |
 | Actor Identity Integrity | 100% | All 7 actor-from-body violations fixed |
+| Capability Enforcement | 100% | DC-A7.6-I5-DC06 closed — 4 missing permission strings fixed; WorkspaceAction type prevents regression |
 | Auth Pattern Uniformity | 78% | 274/353 routes use canonical pattern (274 + 39 + 40) |
 | Audit Write Integrity | <50% | 2 competing writers + 20+ direct bypasses; canonical emitAuditEvent used in minority of writes |
 | State Machine Deduplication | 0% | 9 independent implementations, none consolidated |
@@ -23,6 +24,7 @@
 
 | Risk | Likelihood | Impact | Mitigation Status |
 |------|-----------|--------|------------------|
+| All 4 decision lifecycle routes (execute/record-outcome/fail/verify) blocked for all users due to missing permission strings | FIXED | CRITICAL | Resolved: DC-A7.6-I5-DC06 |
 | Attacker forges x-workspace-id header to access another workspace's data | HIGH (for 14 deferred routes) | CRITICAL | Deferred behind I12 migration |
 | context.ts::requireWorkspaceContext returning userId instead of workspaceId causes cross-tenant data leakage | HIGH (for 5 deferred callers) | CRITICAL | Deferred behind I12 + I20 |
 | Audit log bypass allows undetected mutations | MEDIUM (for 20+ bypasses) | HIGH | Deferred behind I16 work |
@@ -40,6 +42,7 @@ A7.6 (this branch, from main baseline) re-applies equivalent fixes and extends c
 - +2 routes fixed (I1B: governance/alerts, observability/summary)  
 - +7 routes fixed (I1C: all actor-from-body violations)
 - +4 defect classes formally documented with prevention mechanisms
+- +1 critical I5 defect closed: 4 missing permission strings in hasPermission() added; WorkspaceAction union type introduced
 - +6 audit deliverables created
 - INVARIANT_LEDGER.md created
 

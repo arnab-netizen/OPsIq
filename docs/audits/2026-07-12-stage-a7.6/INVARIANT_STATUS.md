@@ -13,7 +13,7 @@
 | I2 | All critical mutations are idempotent or replay-protected | NOT VIOLATED in canonical routes | No new violations found |
 | I3 | Every material mutation emits an audit event via `emitAuditEvent` | DEFERRED (I16) | 20+ direct bypass sites documented |
 | I4 | Governed records use CAS locking for concurrent updates | NOT VIOLATED in canonical routes | Existing CAS patterns intact |
-| I5 | All protected actions enforce capability checks server-side | NOT VIOLATED | withCanonicalEnforcement enforces capabilities |
+| I5 | All protected actions enforce capability checks server-side | CLOSED | DC-A7.6-I5-DC06: 4 missing permission strings added; WorkspaceAction union type prevents regression |
 | I6 | No duplicate business logic in independent locations | DEFERRED (I13) | 9 state machines documented |
 | I7 | No stub or fake implementations in production paths | NOT VIOLATED | No stubs found in canonical routes |
 | I8 | Tests do not pass by asserting incorrect values | NOT VIOLATED | No new test integrity issues found |
@@ -37,6 +37,7 @@
 | # | Evidence |
 |---|---------|
 | I1 (partial) | All `withCanonicalEnforcement` routes now use `ctx.verifiedWorkspaceId` for workspace and `ctx.verifiedActorId` for actor — I1C 100% closed, I1A/B partially closed |
+| I5 | DC-A7.6-I5-DC06: 4 missing permission strings (`execute`, `record_outcome`, `fail_decision`, `verify_outcome`) added to `hasPermission()` in `workspace-enforcement.ts`. `WorkspaceAction` union type added as compile-time prevention. 4 permanently-inaccessible decision routes restored. |
 
 ---
 

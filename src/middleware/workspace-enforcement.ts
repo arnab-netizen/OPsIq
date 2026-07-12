@@ -70,15 +70,29 @@ export async function enforceWorkspaceScoping(
  * Check if user has permission for an action in workspace
  *
  * Permissions:
- * - operator: create, read (view decisions only)
- * - reviewer: read, approve, reject (cannot override)
- * - admin: all actions including override
+ * - operator: create, read, evaluate, execute, record_outcome, fail_decision
+ * - reviewer: read, approve, reject, evaluate, verify_outcome
+ * - admin: all actions including override, execute, record_outcome, fail_decision, verify_outcome
  */
-export function hasPermission(role: string, action: string): boolean {
-  const permissions: Record<string, string[]> = {
-    admin: ["create", "read", "update", "delete", "approve", "reject", "override", "evaluate"],
-    operator: ["create", "read", "evaluate"],
-    reviewer: ["read", "approve", "reject", "evaluate"],
+export type WorkspaceAction =
+  | "create"
+  | "read"
+  | "update"
+  | "delete"
+  | "approve"
+  | "reject"
+  | "override"
+  | "evaluate"
+  | "execute"
+  | "record_outcome"
+  | "fail_decision"
+  | "verify_outcome";
+
+export function hasPermission(role: string, action: WorkspaceAction): boolean {
+  const permissions: Record<string, WorkspaceAction[]> = {
+    admin: ["create", "read", "update", "delete", "approve", "reject", "override", "evaluate", "execute", "record_outcome", "fail_decision", "verify_outcome"],
+    operator: ["create", "read", "evaluate", "execute", "record_outcome", "fail_decision"],
+    reviewer: ["read", "approve", "reject", "evaluate", "verify_outcome"],
   };
 
   return permissions[role]?.includes(action) ?? false;
