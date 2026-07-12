@@ -89,9 +89,9 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/growth/retention-metrics/route.ts",
     "src/app/api/leads/[leadId]/route.ts",
     "src/app/api/opsiq/consulting-engine/run/route.ts",
-    "src/app/api/public/actions/route.ts",
-    "src/app/api/public/engagements/route.ts",
-    "src/app/api/public/kpis/route.ts",
+    // public/actions — MIGRATED to withCanonicalEnforcement in A7.7 (no x-workspace-id header)
+    // public/engagements — MIGRATED to withCanonicalEnforcement in A7.7
+    // public/kpis — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/users/[userId]/route.ts",
     "src/app/api/webhooks/[id]/test/route.ts",
     "src/app/api/webhooks/subscribe/route.ts",
@@ -204,11 +204,11 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/onboarding/invite/route.ts",
     "src/app/api/onboarding/workspace/route.ts",
     "src/app/api/opsiq/consulting-engine/run/route.ts",
-    "src/app/api/public/actions/route.ts",
-    "src/app/api/public/engagements/route.ts",
-    "src/app/api/public/kpis/route.ts",
+    // public/actions — MIGRATED to withCanonicalEnforcement in A7.7
+    // public/engagements — MIGRATED to withCanonicalEnforcement in A7.7
+    // public/kpis — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/run/route.ts",
-    "src/app/api/verify/route.ts",
+    // verify/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/webhooks/[id]/test/route.ts",
     "src/app/api/webhooks/stripe/route.ts",
     "src/app/api/webhooks/subscribe/route.ts",
