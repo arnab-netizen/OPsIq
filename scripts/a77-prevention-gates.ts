@@ -71,7 +71,7 @@ const ALLOWLISTS: Record<string, string[]> = {
   "x-workspace-id-routes": [
     "src/app/api/admin/billing/diagnostics/route.ts",
     "src/app/api/billing/plan/route.ts",
-    "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
+    // clients/[clientId]/contacts/[contactId] — MIGRATED to withCanonicalEnforcement in A7.7
     // decisions/create — MIGRATED to withCanonicalEnforcement in A7.7
     // business-impact — MIGRATED to withCanonicalEnforcement in A7.7 (no x-workspace-id header)
     // constraint-checks — MIGRATED to withCanonicalEnforcement in A7.7
@@ -87,7 +87,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     // growth/offers — MIGRATED to withCanonicalEnforcement in A7.7
     // growth/pricing-tiers — MIGRATED to withCanonicalEnforcement in A7.7
     // growth/retention-metrics — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/leads/[leadId]/route.ts",
+    // leads/[leadId] — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/opsiq/consulting-engine/run/route.ts",
     // public/actions — MIGRATED to withCanonicalEnforcement in A7.7 (no x-workspace-id header)
     // public/engagements — MIGRATED to withCanonicalEnforcement in A7.7
@@ -183,12 +183,12 @@ const ALLOWLISTS: Record<string, string[]> = {
     // users/[userId] — MIGRATED to withCanonicalEnforcement in A7.7
     // business-impact/summary — MIGRATED to withCanonicalEnforcement in A7.7
     // business-impact/decision/[id] — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/leads/[leadId]/route.ts",
-    "src/app/api/control/today/route.ts",
-    "src/app/api/owner/config/route.ts",
-    "src/app/api/owner/first-value/route.ts",
-    "src/app/api/clients/[clientId]/route.ts",
-    "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
+    // leads/[leadId] — MIGRATED to withCanonicalEnforcement in A7.7
+    // control/today — MIGRATED to withCanonicalEnforcement in A7.7
+    // owner/config — MIGRATED to withCanonicalEnforcement in A7.7
+    // owner/first-value — MIGRATED to withCanonicalEnforcement in A7.7
+    // clients/[clientId] — MIGRATED to withCanonicalEnforcement in A7.7 (stale imports removed)
+    // clients/[clientId]/contacts/[contactId] — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/admin/billing/diagnostics/route.ts",
     // withEnforcementFull-only routes (37 remaining):
     // decisions/* — ALL MIGRATED to withCanonicalEnforcement in A7.7

@@ -5,8 +5,7 @@
  */
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { ForbiddenError, BadRequestError, AppError } from "@/infra/errors";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { BadRequestError, AppError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { validateOwnerDashboardConfig, ActionQueuePriority, HealthStatus, OwnerDashboardConfig } from "@/domain/owner-mode/owner-dashboard";
@@ -62,11 +61,6 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
 
-  const membership = await enforceWorkspaceScoping(ctx.request, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
   try {
     const stored = configStore.get(`${workspaceId}:${userId}`);
     const config = stored || defaultConfig(workspaceId, userId);
@@ -94,7 +88,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       }
     );
   }
-}, { requireCapabilities: ["OWNER_VIEW"] });
+}, { requireWorkspace: true, requireCapabilities: ["OWNER_VIEW"] });
 
 export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   if (!ctx.request) {
@@ -103,11 +97,6 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
   const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
-
-  const membership = await enforceWorkspaceScoping(ctx.request, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
 
   try {
     const body = await ctx.request.json();
@@ -190,4 +179,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       }
     );
   }
-}, { requireCapabilities: ["OWNER_MANAGE"] });
+}, { requireWorkspace: true, requireCapabilities: ["OWNER_MANAGE"] });

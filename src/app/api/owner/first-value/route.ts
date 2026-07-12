@@ -1,5 +1,4 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { ForbiddenError, NotFoundError, AppError } from "@/infra/errors";
 import { getFirstValue } from "@/services/first-value.service";
 
@@ -9,11 +8,6 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   }
 
   const workspaceId = ctx.verifiedWorkspaceId;
-
-  const membership = await enforceWorkspaceScoping(ctx.request, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
 
   try {
     const firstValue = await getFirstValue(ctx, workspaceId);
@@ -49,4 +43,4 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       }
     );
   }
-});
+}, { requireWorkspace: true });
