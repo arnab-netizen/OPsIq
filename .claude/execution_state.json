@@ -2807,8 +2807,24 @@
     "tests": "9 tests: workspaceId/actorId from verified context, body fields forwarded, no role field in call, return value propagated, called once per request, workspace from ctx not body, actorId from ctx not body, rejection propagated, different actors produce different actorId",
     "gates_run": "npx tsc --noEmit (0 errors), npm run governance:scan:a77 (17/17 PASS), vitest 9/9 PASS"
   },
-  "current_phase": "A7_7_BATCH_17_DEAD_ROLE_REMOVED",
-  "last_commit": "pending — A7.7 Batch 17 Phase 6L: remove dead resolveServerRole/role/getSession",
+  "stage_a77_batch18": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "AUDIT_LOG_SANITIZATION + PREVENTION_GATE",
+    "description": "Phase 6M: Fix raw auditError logging in value/scenario/governance-alerts routes. Three routes used bare console.error(`${auditError}`) in audit .catch() handlers — potential log information-leakage. Fixed to use classifyOperatorError before logging. Added DC-18 prevention gate to detect regression. All routes remain fail-open on read paths (no DB mutations precede these audits).",
+    "root_cause": "value/route.ts, scenario/route.ts, governance/alerts/route.ts interpolated raw Error objects into console.error strings in audit .catch() handlers. Other routes (governance/metrics, metrics/control-effectiveness, metrics/decision-latency) already used classifyOperatorError — inconsistency fixed.",
+    "files_changed": [
+      "src/app/api/value/route.ts (classifyOperatorError in audit .catch)",
+      "src/app/api/scenario/route.ts (classifyOperatorError in audit .catch)",
+      "src/app/api/governance/alerts/route.ts (classifyOperatorError in audit .catch)",
+      "scripts/a77-prevention-gates.ts (added DC-18: no raw auditError in console.error)",
+      "src/__tests__/api/audit-error-sanitization-6m.test.ts (4 tests proving value route correctness)"
+    ],
+    "gate_added": "DC-18: No raw auditError in console.error (use classifyOperatorError for sanitization)",
+    "tests": "4 tests: metrics returned on success, no rejection when audit fails (fail-open), classifyOperatorError called on audit failure, emitAuditEvent called with correct workspaceId/actorId",
+    "gates_run": "npx tsc --noEmit (0 errors), npm run governance:scan:a77 (18/18 PASS), vitest 4/4 PASS"
+  },
+  "current_phase": "A7_7_BATCH_18_AUDIT_SANITIZATION_DC18",
+  "last_commit": "pending — A7.7 Batch 18 Phase 6M: audit error sanitization + DC-18 gate",
   "pushed": false,
   "session_summary_2026_07_11": {
     "modules_completed": [8, 10, 14, 15, 16, 18, 19, 20],

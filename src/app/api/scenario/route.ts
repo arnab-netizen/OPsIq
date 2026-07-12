@@ -4,6 +4,7 @@ import { runScenario } from "@/services/scenario/engine";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { randomUUID } from "crypto";
 
 export const POST = withCanonicalEnforcement(
@@ -57,7 +58,8 @@ export const POST = withCanonicalEnforcement(
       },
     },
   }).catch((auditError) => {
-    console.error(`Audit logging failed: ${auditError}`);
+    const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+    console.error(`Audit logging failed: ${governed.operatorMessage}`);
   });
 
   return result;

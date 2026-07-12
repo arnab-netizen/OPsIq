@@ -467,10 +467,23 @@ gate("DC-17", "No file calls both claimWorkspaceId and resolveWorkspaceTier (cla
   "src/middleware/rate-limit.ts",
 ]);
 
+// ─── gate 18: unsanitized audit error in console.error ───────────────────────
+// Audit .catch() handlers must use classifyOperatorError before logging.
+// Raw `${auditError}` interpolation can leak internal error messages into logs.
+// Pattern: console.error(`Audit logging failed: ${auditError}`) without
+// classifyOperatorError sanitization.
+
+const rawAuditErrorLog = rgLines(
+  'console\\.error\\(.*\\$\\{auditError\\}',
+  ["src/app/api", "src/services"],
+  ["--glob", "*.ts", "--glob", "!*.test.*", "--glob", "!__tests__/*"]
+);
+gate("DC-18", "No raw auditError in console.error (use classifyOperatorError for sanitization)", rawAuditErrorLog, []);
+
 // ─── report ───────────────────────────────────────────────────────────────────
 
 console.log("\n╔════════════════════════════════════════════════════════════╗");
-console.log("║       A7.7 PREVENTION GATES — SCAN REPORT (17 gates)      ║");
+console.log("║       A7.7 PREVENTION GATES — SCAN REPORT (18 gates)      ║");
 console.log("╚════════════════════════════════════════════════════════════╝\n");
 
 let failures = 0;

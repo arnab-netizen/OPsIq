@@ -6,6 +6,7 @@ import { resolveServerRole } from "@/services/auth/server-role";
 import { canView } from "@/services/auth/access";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -48,7 +49,8 @@ export const GET = withCanonicalEnforcement(
       itemsAnalyzed: metrics.itemsAnalyzed,
     },
   }).catch((auditError) => {
-    console.error(`Audit logging failed: ${auditError}`);
+    const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+    console.error(`Audit logging failed: ${governed.operatorMessage}`);
   });
 
   return metrics;

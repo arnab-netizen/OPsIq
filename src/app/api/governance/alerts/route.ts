@@ -5,6 +5,7 @@ import { getObservabilitySummary } from "@/services/observability/statistics";
 import { evaluateGovernanceAlerts } from "@/services/governance/alerts";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import type { NextRequest } from "next/server";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
@@ -49,8 +50,8 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       warningCount: alerts.period.warningCount,
     },
   }).catch((auditError) => {
-    // Log but don't fail on audit error - observability only
-    console.error(`Audit logging failed: ${auditError}`);
+    const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+    console.error(`Audit logging failed: ${governed.operatorMessage}`);
   });
 
   return alerts;
