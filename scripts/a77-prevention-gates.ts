@@ -72,7 +72,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/admin/billing/diagnostics/route.ts",
     "src/app/api/billing/plan/route.ts",
     "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
-    "src/app/api/decisions/create/route.ts",
+    // decisions/create — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/engagements/[engagementId]/business-impact/route.ts",
     "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
     "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
@@ -191,14 +191,8 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
     "src/app/api/admin/billing/diagnostics/route.ts",
     // withEnforcementFull-only routes (37 remaining):
-    "src/app/api/decisions/[decisionId]/evaluate/route.ts",
-    "src/app/api/decisions/[decisionId]/execute/route.ts",
-    "src/app/api/decisions/[decisionId]/fail/route.ts",
-    "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
-    "src/app/api/decisions/[decisionId]/route.ts",
-    "src/app/api/decisions/[decisionId]/verify/route.ts",
-    "src/app/api/decisions/create/route.ts",
-    "src/app/api/decisions/intake/route.ts",
+    // decisions/* — ALL MIGRATED to withCanonicalEnforcement in A7.7
+    // (evaluate, execute, fail, record-outcome, [decisionId], verify, create, intake)
     // diagnosis/* — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/execute/route.ts",
     "src/app/api/governance/metrics/route.ts",
