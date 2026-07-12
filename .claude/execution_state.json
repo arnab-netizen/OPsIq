@@ -2755,9 +2755,30 @@
     "branch": "claude/phase-6f-governance-findings-5gkiec",
     "pushed": true
   },
-  "current_phase": "A7_7_BATCH_14_AUDIT_MIGRATION_COMPLETE",
-  "last_commit": "568e18b8 \u2014 A7.7 Batch 14: Complete logAuditEvent \u2192 emitAuditEvent migration across all 19 production sites",
-  "pushed": true,
+  "stage_a77_batch15": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "AUDIT_FAIL_CLOSED_HARDENING",
+    "description": "Phase 6J: Remove .catch() from emitAuditEvent in POST /api/decisions/[decisionId]/evaluate. The audit call followed db.operatorItem.update (a governed mutation) but swallowed audit failures, allowing silent success even when audit was unavailable. Fix aligns evaluate route with Phase 6H pattern already applied to intake and operator routes.",
+    "root_cause": "evaluate/route.ts had .catch() after emitAuditEvent AFTER db.operatorItem.update succeeded \u2014 audit failures did not propagate, violating fail-closed requirement for governed mutations",
+    "files_changed": [
+      "src/app/api/decisions/[decisionId]/evaluate/route.ts (removed .catch() from post-mutation audit)",
+      "src/__tests__/api/evaluate-audit-failclosed-6j.test.ts (9 tests proving fail-closed)"
+    ],
+    "classification_summary": {
+      "evaluate_route_catch": "REMOVED \u2014 post-mutation audit now fail-closed",
+      "run_route_line_1068": "ALREADY_FAIL_CLOSED \u2014 .catch() re-throws audit error",
+      "run_route_blocked_paths_536_648_982": "ACCEPTABLE \u2014 audit on request-rejection paths; request always throws anyway",
+      "value_scenario_governance_observability_metrics": "INTENTIONAL_FAIL_OPEN \u2014 read paths / pure computation, no DB mutation"
+    },
+    "tests": "9 tests: happy path, fail-closed proof, eventName/entityId/workspaceId, call order (update before audit), workspace guard, non-pending rejection, payload structure, actorId binding",
+    "gates_run": "npx tsc --noEmit (0 errors), npm run governance:scan:a77 (17/17 PASS), vitest 9/9 PASS",
+    "committed": "pending",
+    "branch": "claude/phase-6f-governance-findings-5gkiec",
+    "next_automatic_target": "A7.7 Batch 16: Survey remaining mutation routes for idempotency gaps or further audit hardening"
+  },
+  "current_phase": "A7_7_BATCH_15_EVALUATE_AUDIT_FAIL_CLOSED",
+  "last_commit": "pending",
+  "pushed": false,
   "session_summary_2026_07_11": {
     "modules_completed": [8, 10, 14, 15, 16, 18, 19, 20],
     "total_new_tests": 311,

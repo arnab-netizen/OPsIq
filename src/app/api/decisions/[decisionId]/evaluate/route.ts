@@ -110,8 +110,6 @@ export const POST = withCanonicalEnforcement(
         control_layer_violations: evaluationResult.controlLayerViolations,
         timestamp: new Date().toISOString(),
       },
-    }).catch((auditError) => {
-      console.error(`Audit logging failed: ${auditError}`);
     });
 
     return {
