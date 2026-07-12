@@ -1,6 +1,6 @@
 #!/usr/bin/env npx ts-node
 /**
- * A7.7 Prevention Gates — 15 recurrence-prevention checks
+ * A7.7 Prevention Gates — 19 recurrence-prevention checks
  *
  * Run: npx ts-node scripts/a77-prevention-gates.ts
  * CI:  npm run governance:scan:a77
@@ -107,15 +107,10 @@ const ALLOWLISTS: Record<string, string[]> = {
   ],
 
   // DC-02: requireWorkspaceContext from broken context.ts
-  "context-ts-callers": [
-    // store.ts — FIXED in A7.7: all requireWorkspaceContext calls removed
-    // metrics/control-effectiveness — FIXED in A7.7: migrated to canonical auth
-    // metrics/decision-latency — FIXED in A7.7: migrated to canonical auth
-    // audit-log.ts — FIXED in A7.7: requireWorkspaceContext fallback removed (callers provide workspaceId)
-    // run/route.ts — MIGRATED to withCanonicalEnforcement in A7.7 (requireWorkspaceContext removed)
-    // inbox/page.tsx — FIXED in A7.7: requireWorkspaceContext replaced with DB membership lookup
-    "src/services/workspace/context.ts",
-  ],
+  // DELETED in A7.7 historical reconciliation (2026-07-12): context.ts was deleted;
+  // all callers removed; validateWorkspaceAccess removed from operator/store.ts.
+  // Allowlist is now empty — no callers permitted.
+  "context-ts-callers": [],
 
   // DC-05: direct db.auditEvent.create — only approved callers
   "direct-audit-create": [
@@ -366,10 +361,10 @@ const wsResolverDefs = rg(
   ["--glob", "*.ts", "--glob", "!*.test.*"]
 );
 gate("DC-10", "No new workspace resolver implementations", wsResolverDefs, [
-  "src/services/workspace/context.ts",         // broken legacy — being migrated
-  "src/services/workspace/activation-context.ts", // correct but unused
+  // context.ts DELETED in A7.7 historical reconciliation (2026-07-12)
+  "src/services/workspace/activation-context.ts", // DB-backed — canonical activation resolver
   "src/services/workspace/service-auth.ts",    // different purpose (validates param)
-  "src/lib/service-auth.ts",                   // validates workspaceId param (not a resolver)
+  "src/lib/service-auth.ts",                   // validates workspaceId param (not a session resolver)
 ]);
 
 // ─── gate 11: new enforceWorkspaceScoping implementations ─────────────────────
@@ -480,10 +475,33 @@ const rawAuditErrorLog = rgLines(
 );
 gate("DC-18", "No raw auditError in console.error (use classifyOperatorError for sanitization)", rawAuditErrorLog, []);
 
+// ─── gate 19: .catch() on emitAuditEvent in write-path handlers ──────────────
+// Post-mutation audit calls must be fail-closed. Only read-path (GET) handlers
+// may use .catch() on emitAuditEvent (fail-open intentional for read paths).
+// A write-path handler that swallows audit failures leaves governed mutations
+// without an audit trail and with no error signal to the caller.
+// Pattern: emitAuditEvent(...).catch( in files containing db write operations.
+
+const failOpenWriteAudit = rgLines(
+  'emitAuditEvent\\([^)]*\\)\\.catch\\(',
+  ["src/app/api", "src/services"],
+  ["--glob", "*.ts", "--glob", "!*.test.*", "--glob", "!__tests__/*"]
+);
+// Read-path allowlist: these routes are GET handlers where fail-open audit is intentional.
+const FAIL_OPEN_READ_ALLOWLIST = [
+  "src/app/api/value/route.ts",
+  "src/app/api/scenario/route.ts",
+  "src/app/api/governance/alerts/route.ts",
+  "src/app/api/governance/metrics/route.ts",
+  "src/app/api/metrics/control-effectiveness/route.ts",
+  "src/app/api/metrics/decision-latency/route.ts",
+];
+gate("DC-19", "No .catch() on emitAuditEvent in write-path handlers (fail-closed required post-mutation)", failOpenWriteAudit, FAIL_OPEN_READ_ALLOWLIST);
+
 // ─── report ───────────────────────────────────────────────────────────────────
 
 console.log("\n╔════════════════════════════════════════════════════════════╗");
-console.log("║       A7.7 PREVENTION GATES — SCAN REPORT (18 gates)      ║");
+console.log("║       A7.7 PREVENTION GATES — SCAN REPORT (19 gates)      ║");
 console.log("╚════════════════════════════════════════════════════════════╝\n");
 
 let failures = 0;

@@ -30,7 +30,13 @@ const rules = [
     name: 'withRequestContext',
     severity: 'critical' as const,
     pattern: /export const.*= withRequestContext/,
-    message: 'withRequestContext is forbidden. Use withEnforcementFull.',
+    message: 'withRequestContext is forbidden. Use withCanonicalEnforcement from @/lib/canonical-route-enforcement.',
+  },
+  {
+    name: 'withEnforcementFull in routes',
+    severity: 'high' as const,
+    pattern: /export const.*= withEnforcementFull/,
+    message: 'withEnforcementFull is legacy. Use withCanonicalEnforcement from @/lib/canonical-route-enforcement.',
   },
   {
     name: 'Error("Unauthorized")',
@@ -48,7 +54,7 @@ const rules = [
     name: 'direct getSession()',
     severity: 'high' as const,
     pattern: /getSession\(\)/,
-    message: 'Call withAuth() instead of getSession() directly in routes',
+    message: 'Use withCanonicalEnforcement instead of calling getSession() directly in routes.',
   },
 ];
 
@@ -130,10 +136,10 @@ if (violations.length === 0) {
 - Total violations: ${violations.length}
 
 REMEDIATION:
-1. Replace withRequestContext with withEnforcementFull
+1. Replace withRequestContext/withEnforcementFull with withCanonicalEnforcement (from @/lib/canonical-route-enforcement)
 2. Replace Error() with UnauthorizedError/ForbiddenError
 3. Replace Response.json(401/403) with thrown errors
-4. Replace direct getSession() with withAuth()
+4. Replace direct getSession() with withCanonicalEnforcement
 
 CI WILL FAIL until all critical violations are resolved.
 `);

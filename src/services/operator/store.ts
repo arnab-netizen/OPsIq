@@ -3,7 +3,6 @@ import { OperatorItem } from "@/domain/operator/types";
 import { CalibrationRecord } from "@/domain/calibration/types";
 import { calculateDeviation } from "@/services/calibration/engine";
 import { isFirstWinConditionMet } from "@/services/firstwin/detector";
-import { validateWorkspaceAccess } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
@@ -17,11 +16,10 @@ let calibrationStore: CalibrationRecord[] = [];
 
 export async function addItems(items: OperatorItem[]): Promise<void> {
   for (const item of items) {
-    // Fail closed: require workspaceId on item and verify it matches current workspace
+    // Fail closed: require workspaceId on item (route layer already verifies via canonical enforcement)
     if (!item.workspaceId) {
       throw new Error("OperatorItem workspaceId is required for workspace isolation");
     }
-    await validateWorkspaceAccess(item.workspaceId);
 
     // Fail closed: require ownership fields
     if (!item.ownerUserId) {
@@ -408,8 +406,6 @@ export async function addBlockedDecision(params: {
   guardrailResult?: Record<string, unknown>;
   problemType?: string;
 }): Promise<string> {
-  await validateWorkspaceAccess(params.workspaceId);
-
   // FAIL-CLOSED: Verify all required blocking information is present
   if (!params.blockStage || !params.blockReason) {
     throw new Error("blockStage and blockReason are required for blocked decision records");
