@@ -45,7 +45,7 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
     }
 
     // Fetch queued items
-    const items = await getQueuedItems(status, limit);
+    const items = await getQueuedItems(workspaceId, status, limit);
 
     // Emit audit event
     await emitAuditEvent({

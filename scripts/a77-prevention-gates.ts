@@ -108,7 +108,7 @@ const ALLOWLISTS: Record<string, string[]> = {
 
   // DC-02: requireWorkspaceContext from broken context.ts
   "context-ts-callers": [
-    "src/services/operator/store.ts",
+    // store.ts — FIXED in A7.7: all requireWorkspaceContext calls removed
     "src/services/audit/audit-log.ts",
     "src/app/api/metrics/control-effectiveness/route.ts",
     "src/app/api/metrics/decision-latency/route.ts",
@@ -199,9 +199,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/decisions/[decisionId]/verify/route.ts",
     "src/app/api/decisions/create/route.ts",
     "src/app/api/decisions/intake/route.ts",
-    "src/app/api/diagnosis/bottleneck/route.ts",
-    "src/app/api/diagnosis/maturity/route.ts",
-    "src/app/api/diagnosis/root-cause/route.ts",
+    // diagnosis/* — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/execute/route.ts",
     "src/app/api/governance/metrics/route.ts",
     "src/app/api/growth/offers/route.ts",
@@ -220,7 +218,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/webhooks/[id]/test/route.ts",
     "src/app/api/webhooks/stripe/route.ts",
     "src/app/api/webhooks/subscribe/route.ts",
-    "src/app/api/calibration/route.ts",
+    // calibration/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
     // Mixed pattern (withCanonicalEnforcement + internal enforceWorkspaceScoping call):
     "src/middleware/workspace-enforcement.ts",
   ],
@@ -265,9 +263,9 @@ gate("DC-01", "No new x-workspace-id header reads in production code", wsHeaderF
 // ─── gate 02: requireWorkspaceContext from broken context.ts ─────────────────
 
 const ctxCallers = rg(
-  "from.*workspace/context",
+  "import.*requireWorkspaceContext",
   ["src"],
-  ["--glob", "*.ts", "--glob", "*.tsx", "--glob", "!*.test.*", "--glob", "!__tests__/*", "--glob", "!__ignored_tests__/*"]
+  ["--glob", "*.ts", "--glob", "*.tsx", "--glob", "!*.test.*", "--glob", "!__tests__/*"]
 );
 gate("DC-02", "No new callers of broken context.ts::requireWorkspaceContext", ctxCallers, ALLOWLISTS["context-ts-callers"]);
 

@@ -21,9 +21,10 @@ export const GET = withCanonicalEnforcement(
 
     // Get actor ID from verified context
     const actorId = ctx.verifiedActorId;
+    const workspaceId = ctx.verifiedWorkspaceId;
 
   // Fetch all items
-  const items = await getItems();
+  const items = await getItems(workspaceId);
 
   // Compute value metrics
   const metrics = calculateValue(items);

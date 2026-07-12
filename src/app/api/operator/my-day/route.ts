@@ -29,7 +29,7 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
 
   try {
     // Get My Day items (top 5 by priority)
-    const myDayItems = await getMyDayItems();
+    const myDayItems = await getMyDayItems(workspaceId);
 
     return {
       workspaceId,

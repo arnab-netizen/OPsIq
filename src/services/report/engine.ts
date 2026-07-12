@@ -1,8 +1,8 @@
 import { Report } from "@/domain/report/types";
 import { getItems, getCalibrationRecords } from "@/services/operator/store";
 
-export async function generateReport(): Promise<Report> {
-  const items = await getItems();
+export async function generateReport(workspaceId: string): Promise<Report> {
+  const items = await getItems(workspaceId);
   const calibrationRecords = getCalibrationRecords();
 
   const totalImpact = items.reduce((sum, item) => sum + item.impactExpected, 0);

@@ -11,8 +11,10 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
     throw new UnauthorizedError("Unauthorized");
   }
 
+  const workspaceId = ctx.verifiedWorkspaceId;
+
   // Fetch My Day items (max 5, highest priority)
-  const items = await getMyDayItems();
+  const items = await getMyDayItems(workspaceId);
 
   // Get actor ID for audit from verified context snapshot
   const actorId = ctx.verifiedSessionSnapshot.actorId;
@@ -28,6 +30,7 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
     after: {
       itemCount: items.length,
     },
+    workspaceId,
   });
 
   return { items };

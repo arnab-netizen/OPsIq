@@ -12,7 +12,7 @@ export const GET = withCanonicalEnforcement(
     }
 
     try {
-      const report = await generateReport();
+      const report = await generateReport(ctx.verifiedWorkspaceId);
       return report;
     } catch (error) {
       const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });

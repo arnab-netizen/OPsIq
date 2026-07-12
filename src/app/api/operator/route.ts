@@ -27,7 +27,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   const workspaceId = ctx.verifiedWorkspaceId;
   const logger = createEventLogger("api_operator_get", workspaceId);
 
-  const items = await getItems();
+  const items = await getItems(workspaceId);
   const sorted = sortByPriority(items);
 
   logger.success({ itemCount: sorted.length });
@@ -75,9 +75,9 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   // Check idempotency (need workspace context first)
   // Will be set after we get workspace from item
 
-  // Capture before state for audit. getItems() is scoped to the caller's resolved
-  // workspace context, so a foreign item (another tenant's) is never returned here.
-  const allItemsBefore = await getItems();
+  // Capture before state for audit. Scoped to the verified workspace — a foreign item
+  // (another tenant's) is never returned.
+  const allItemsBefore = await getItems(ctx.verifiedWorkspaceId);
   const beforeItem = allItemsBefore.find((i) => i.id === id);
 
   // SEC-02: fail closed. Previously a missing beforeItem (e.g. an item in another
@@ -120,7 +120,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
   // Validate completion policy when task is completed
   if (status === "done") {
-    const items = await getItems();
+    const items = await getItems(ctx.verifiedWorkspaceId);
     const item = items.find((i) => i.id === id);
 
     if (item) {
@@ -234,7 +234,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   await updateItem(id, updatePayload, beforeItem.workspaceId);
 
   // Capture after state and log audit event
-  const allItemsAfter = await getItems();
+  const allItemsAfter = await getItems(ctx.verifiedWorkspaceId);
   const afterItem = allItemsAfter.find((i) => i.id === id);
 
   // Determine event name
