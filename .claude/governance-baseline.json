@@ -1,16 +1,7 @@
 {
   "_comment": "Frozen pre-existing governance findings on main. Any error-severity finding NOT listed here fails a strict scan. Deterministic (sorted, no timestamps). Regenerate with: npm run governance:scan -- --update-baseline",
-  "total_frozen": 31,
+  "total_frozen": 30,
   "findings": [
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
-      "file": "src/app/api/auth/login/route.ts",
-      "line": 161,
-      "severity": "error",
-      "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
-      "reason": "auth route server-side log/context string; not operator-rendered"
-    },
     {
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
@@ -33,7 +24,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/engagements/route.ts",
-      "line": 85,
+      "line": 82,
       "severity": "error",
       "code": "error instanceof Error ? error.message : \"invalid query parameters\",",
       "reason": "API route server-side error string used for classification/logging"
@@ -42,7 +33,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/engagements/route.ts",
-      "line": 108,
+      "line": 105,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error);",
       "reason": "API route server-side error string used for classification/logging"
@@ -51,7 +42,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/engagements/route.ts",
-      "line": 177,
+      "line": 174,
       "severity": "error",
       "code": "const msg = error instanceof Error ? error.message : String(error);",
       "reason": "API route server-side error string used for classification/logging"
@@ -213,7 +204,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 401,
+      "line": 402,
       "severity": "error",
       "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -222,7 +213,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 734,
+      "line": 735,
       "severity": "error",
       "code": "const errorMessage = error instanceof Error ? error.message : String(error);",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -231,7 +222,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 751,
+      "line": 752,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error),",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -240,7 +231,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 817,
+      "line": 818,
       "severity": "error",
       "code": "errorMessage: error instanceof Error ? error.message : String(error),",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
