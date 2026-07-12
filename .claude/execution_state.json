@@ -2665,9 +2665,61 @@
     "db_status": "DB_NOT_REQUIRED \u2014 no persistence, connector contracts only",
     "committed": "a5c0dbac"
   },
-  "current_phase": "A0_AUDIT_PARTIAL_CAPABILITIES_CLOSED",
-  "last_commit": "a5c0dbac \u2014 Module #20: Live Connectors env contract + readiness tests + 26 tests",
-  "pushed": false,
+  "stage_a77_batch13": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SECURITY_IDENTITY_SEPARATION",
+    "description": "DC-01 hostile adjudication \u2014 branded workspace identity separation. Introduced ClaimedWorkspaceId/VerifiedWorkspaceId branded types; threaded VerifiedWorkspaceId through canonical auth pipeline; all 8 DC-01 allowlisted header readers now typed as ClaimedWorkspaceId; DC-16/DC-17 prevention gates added.",
+    "files_created": [
+      "src/lib/workspace-identity.ts"
+    ],
+    "files_modified": [
+      "src/lib/canonical-route-enforcement.ts",
+      "src/lib/canonical-auth-facts.ts",
+      "src/lib/auth-guard.ts",
+      "src/lib/workspace-validation.ts",
+      "src/middleware/tier-enforcement.ts",
+      "src/middleware/idempotency-enforcement.ts",
+      "src/middleware/private-mode-gate.ts",
+      "src/infra/error-handler.ts",
+      "src/middleware/rate-limit.ts",
+      "src/runtime/enforcement/request-enforcer.ts",
+      "scripts/a77-prevention-gates.ts"
+    ],
+    "dc01_adjudication": {
+      "workspace-validation.ts": "Dead; format-only check; renamed misleading x-workspace-id-validated header; UNTRUSTED_FORMAT_CHECK_ALLOWED",
+      "tier-enforcement.ts": "Dead; throw guard added; if wired: TIER_ENFORCEMENT_VIOLATION + CROSS_TENANT_RESOURCE_POISONING_RISK",
+      "idempotency-enforcement.ts:65": "Dead; presence check typed ClaimedWorkspaceId; DEAD_PRESENCE_CHECK_ALLOWED",
+      "idempotency-enforcement.ts:78": "Dead; scopedKey uses ClaimedWorkspaceId; IDEMPOTENCY_SCOPE_VIOLATION_if_wired",
+      "private-mode-gate.ts": "Dead; DB lookup with claimed identity; UNPROVEN_IDENTITY_FOR_DB_LOOKUP",
+      "error-handler.ts": "Dead; value discarded after format check; UNTRUSTED_PREAUTH_HINT_ALLOWED",
+      "rate-limit.ts (factory)": "Dead factory; ClaimedWorkspaceId compile-time barrier; checkWorkspaceRateLimit now requires VerifiedWorkspaceId",
+      "request-enforcer.ts": "Only via disabled submit-external; UNTRUSTED_DIAGNOSTIC_ONLY; requireWorkspaceInEnforcedContext returns ClaimedWorkspaceId"
+    },
+    "type_threading": {
+      "asVerifiedWorkspaceId": "STEP 1.5 only (canonical-route-enforcement.ts after DB membership proof)",
+      "CanonicalAuthContext.verifiedWorkspaceId": "VerifiedWorkspaceId (was string)",
+      "AuthState.workspaceId": "VerifiedWorkspaceId | null (was string | null)",
+      "buildAuthState": "workspaceId: VerifiedWorkspaceId | null (was string | null)",
+      "AuthDecision.context.verifiedWorkspaceId": "VerifiedWorkspaceId (was string)",
+      "checkWorkspaceRateLimit": "first param now VerifiedWorkspaceId; one live caller (actions/route.ts) passes ctx.verifiedWorkspaceId (type-safe)"
+    },
+    "prevention_gates": {
+      "total": 17,
+      "new": ["DC-16 (asVerifiedWorkspaceId sole-caller gate)", "DC-17 (no file calls both claimWorkspaceId and resolveWorkspaceTier)"],
+      "result": "17/17 PASS"
+    },
+    "dc02_status": "PROVEN_CLOSED_REPOSITORY_WIDE (7-dimension semantic proof \u2014 zero production callers)",
+    "dc03_status": "PROVEN_NON_EXECUTABLE (intervention/route.ts:47 is comment text, not import/call)",
+    "gates_run": "npx tsc --noEmit (\u2713 0 errors), npm run governance:scan:a77 (17/17 PASS), npm run build (\u2713 compiled 21.5s)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "committed": "034cab64",
+    "branch": "claude/phase-6f-governance-findings-5gkiec",
+    "pushed": true,
+    "negative_tests_status": "TypeScript enforces ClaimedWorkspaceId\u2260VerifiedWorkspaceId at compile time; dead middleware throw guards prevent runtime use; runtime negative tests deferred to next batch"
+  },
+  "current_phase": "A7_7_BATCH_14_AUDIT_MIGRATION",
+  "last_commit": "034cab64 \u2014 Stage A7.7 Batch 13: DC-01 hostile adjudication \u2014 branded workspace identity separation",
+  "pushed": true,
   "session_summary_2026_07_11": {
     "modules_completed": [8, 10, 14, 15, 16, 18, 19, 20],
     "total_new_tests": 311,
