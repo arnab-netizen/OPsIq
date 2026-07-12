@@ -44,7 +44,7 @@
     "audit:wrapped-handlers": "node scripts/audit-wrapped-handlers.js audit",
     "audit:wrapped-handlers:ratchet": "node scripts/audit-wrapped-handlers.js ratchet",
     "audit:wrapped-handlers:update-baseline": "node scripts/audit-wrapped-handlers.js update-baseline",
-    "governance:scan:a77": "npx ts-node scripts/a77-prevention-gates.ts"
+    "governance:scan:a77": "tsx scripts/a77-prevention-gates.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
