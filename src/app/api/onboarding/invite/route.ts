@@ -1,8 +1,6 @@
 import { randomUUID } from "crypto";
-import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
-import { UnauthorizedError, NotFoundError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { NotFoundError } from "@/infra/errors";
 import { db } from "@/lib/db";
 import { assertCanInviteMembers } from "@/services/auth/workspace-invite-policy";
 import { z } from "zod";
@@ -17,92 +15,84 @@ const InviteSchema = z.object({
   ),
 });
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  const { session } = await withAuth();
-  if (!session?.user?.id) {
-    throw new UnauthorizedError("Unauthorized");
-  }
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const actorId = ctx.verifiedActorId;
 
-  const body = await request.json();
-  const input = InviteSchema.parse(body);
+    const body = await ctx.request?.json();
+    const input = InviteSchema.parse(body);
 
-  // Get workspace
-  const workspace = await db.workspace.findUnique({
-    where: { slug: input.workspaceSlug },
-  });
+    const workspace = await db.workspace.findUnique({
+      where: { slug: input.workspaceSlug },
+    });
 
-  if (!workspace) {
-    throw new NotFoundError("Workspace", input.workspaceSlug);
-  }
+    if (!workspace) {
+      throw new NotFoundError("Workspace", input.workspaceSlug);
+    }
 
-  // Authorization: only an ACTIVE workspace admin may invite members / assign roles. Narrow select to
-  // the two fields the policy consumes (drift-safe). Centralized fail-closed check (governed 403).
-  const userRole = await db.workspaceMembership.findUnique({
-    where: {
-      workspaceId_userId: {
-        workspaceId: workspace.id,
-        userId: session.user.id,
+    const userRole = await db.workspaceMembership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId: workspace.id,
+          userId: actorId,
+        },
       },
-    },
-    select: { role: true, isActive: true },
-  });
+      select: { role: true, isActive: true },
+    });
 
-  assertCanInviteMembers(userRole);
+    assertCanInviteMembers(userRole);
 
-  // Process invitations (create or update users, add to workspace)
-  const results = await Promise.all(
-    input.members.map(async (member) => {
-      // Find or create user
-      let user = await db.user.findUnique({
-        where: { email: member.email },
-      });
-
-      if (!user) {
-        user = await db.user.create({
-          data: {
-            id: randomUUID(),
-            email: member.email,
-            name: member.email.split("@")[0],
-            updatedAt: new Date(),
-          },
+    const results = await Promise.all(
+      input.members.map(async (member) => {
+        let user = await db.user.findUnique({
+          where: { email: member.email },
         });
-      }
 
-      // Add to workspace (or update existing membership)
-      try {
-        await db.workspaceMembership.create({
-          data: {
-            workspaceId: workspace.id,
-            userId: user.id,
-            role: member.role,
-            addedBy: session.user.id,
-          },
-        });
-      } catch {
-        // User already in workspace, try to update if inactive
-        await db.workspaceMembership.updateMany({
-          where: {
-            workspaceId: workspace.id,
-            userId: user.id,
-          },
-          data: {
-            role: member.role,
-            isActive: true,
-            removedAt: null,
-          },
-        });
-      }
+        if (!user) {
+          user = await db.user.create({
+            data: {
+              id: randomUUID(),
+              email: member.email,
+              name: member.email.split("@")[0],
+              updatedAt: new Date(),
+            },
+          });
+        }
 
-      return {
-        email: member.email,
-        success: true,
-      };
-    })
-  );
+        try {
+          await db.workspaceMembership.create({
+            data: {
+              workspaceId: workspace.id,
+              userId: user.id,
+              role: member.role,
+              addedBy: actorId,
+            },
+          });
+        } catch {
+          await db.workspaceMembership.updateMany({
+            where: {
+              workspaceId: workspace.id,
+              userId: user.id,
+            },
+            data: {
+              role: member.role,
+              isActive: true,
+              removedAt: null,
+            },
+          });
+        }
 
-  return {
-    workspaceId: workspace.id,
-    invitations: results,
-    message: `Invited ${results.length} member(s) to workspace`,
-  };
-});
+        return {
+          email: member.email,
+          success: true,
+        };
+      })
+    );
+
+    return {
+      workspaceId: workspace.id,
+      invitations: results,
+      message: `Invited ${results.length} member(s) to workspace`,
+    };
+  }
+);

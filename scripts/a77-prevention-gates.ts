@@ -83,7 +83,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     // experiments/[experimentId]/start — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
     // shock-events — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/execute/route.ts",
+    // execute — MIGRATED to withCanonicalEnforcement in A7.7
     // growth/offers — MIGRATED to withCanonicalEnforcement in A7.7
     // growth/pricing-tiers — MIGRATED to withCanonicalEnforcement in A7.7
     // growth/retention-metrics — MIGRATED to withCanonicalEnforcement in A7.7
@@ -194,15 +194,15 @@ const ALLOWLISTS: Record<string, string[]> = {
     // decisions/* — ALL MIGRATED to withCanonicalEnforcement in A7.7
     // (evaluate, execute, fail, record-outcome, [decisionId], verify, create, intake)
     // diagnosis/* — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/execute/route.ts",
+    // execute — MIGRATED to withCanonicalEnforcement in A7.7
     // governance/metrics — MIGRATED to withCanonicalEnforcement in A7.7
     // growth/offers — MIGRATED to withCanonicalEnforcement in A7.7
     // growth/pricing-tiers — MIGRATED to withCanonicalEnforcement in A7.7
     // growth/retention-metrics — MIGRATED to withCanonicalEnforcement in A7.7
     // metrics/control-effectiveness — MIGRATED to withCanonicalEnforcement in A7.7
     // metrics/decision-latency — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/onboarding/invite/route.ts",
-    "src/app/api/onboarding/workspace/route.ts",
+    // onboarding/invite — MIGRATED to withCanonicalEnforcement in A7.7 (no requireWorkspace: workspace created during flow)
+    // onboarding/workspace — MIGRATED to withCanonicalEnforcement in A7.7 (no requireWorkspace: workspace created during flow)
     "src/app/api/opsiq/consulting-engine/run/route.ts",
     // public/actions — MIGRATED to withCanonicalEnforcement in A7.7
     // public/engagements — MIGRATED to withCanonicalEnforcement in A7.7
