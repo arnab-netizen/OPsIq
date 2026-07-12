@@ -2,10 +2,10 @@
  * Phase 6H Wave 1 — Route-level audit fail-closed proof.
  *
  * Before this phase, POST /api/decisions/intake and POST /api/operator swallowed
- * logAuditEvent failures via .catch() despite performing governed DB mutations.
+ * emitAuditEvent failures via .catch() despite performing governed DB mutations.
  * The fix removes the .catch() so audit failures propagate (fail-closed).
  *
- * These tests prove that when logAuditEvent throws:
+ * These tests prove that when emitAuditEvent throws:
  *   - POST /api/decisions/intake rejects (does not swallow)
  *   - POST /api/operator rejects (does not swallow)
  *
@@ -18,7 +18,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
 
 const mocks = vi.hoisted(() => ({
-  logAuditEvent: vi.fn(),
+  emitAuditEvent: vi.fn(),
   // intake deps
   withAuth: vi.fn(),
   dbWorkspaceMembershipFindFirst: vi.fn(),
@@ -45,8 +45,8 @@ const mocks = vi.hoisted(() => ({
 // ─── Module mocks ─────────────────────────────────────────────────────────────
 
 // Shared audit mock
-vi.mock("@/services/audit/audit-log", () => ({
-  logAuditEvent: mocks.logAuditEvent,
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: mocks.emitAuditEvent,
 }));
 
 // decisions/intake deps
@@ -180,7 +180,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 
   // Shared defaults
-  mocks.logAuditEvent.mockResolvedValue(undefined);
+  mocks.emitAuditEvent.mockResolvedValue(undefined);
 
   // intake defaults
   mocks.withAuth.mockResolvedValue({ session: { user: { id: "user-1" } } });
@@ -201,26 +201,26 @@ beforeEach(() => {
 
 describe("Phase 6H Wave 1 — audit fail-closed hardening", () => {
   describe("POST /api/decisions/intake", () => {
-    it("succeeds when logAuditEvent resolves (happy path)", async () => {
+    it("succeeds when emitAuditEvent resolves (happy path)", async () => {
       const result = await intakePOST(makeIntakeRequest() as never);
       expect(result).toMatchObject({ decisionId: "item-1", status: "pending" });
     });
 
-    it("propagates logAuditEvent failure — audit error is no longer swallowed", async () => {
-      mocks.logAuditEvent.mockRejectedValue(new Error("audit DB unavailable"));
+    it("propagates emitAuditEvent failure — audit error is no longer swallowed", async () => {
+      mocks.emitAuditEvent.mockRejectedValue(new Error("audit DB unavailable"));
 
       await expect(intakePOST(makeIntakeRequest() as never)).rejects.toThrow(
         "audit DB unavailable"
       );
     });
 
-    it("logAuditEvent is called with the created decision id and workspaceId", async () => {
+    it("emitAuditEvent is called with the created decision id and workspaceId", async () => {
       await intakePOST(makeIntakeRequest() as never);
 
-      expect(mocks.logAuditEvent).toHaveBeenCalledOnce();
-      expect(mocks.logAuditEvent).toHaveBeenCalledWith(
+      expect(mocks.emitAuditEvent).toHaveBeenCalledOnce();
+      expect(mocks.emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          eventName: "DECISION_INTAKE",
+          eventName: "decision.intake",
           entityId: "item-1",
           workspaceId: "ws-1",
         })
@@ -229,26 +229,26 @@ describe("Phase 6H Wave 1 — audit fail-closed hardening", () => {
   });
 
   describe("POST /api/operator", () => {
-    it("succeeds when logAuditEvent resolves (happy path)", async () => {
+    it("succeeds when emitAuditEvent resolves (happy path)", async () => {
       const result = await operatorPOST(makeOperatorCtx() as never);
       expect(result).toMatchObject({ success: true });
     });
 
-    it("propagates logAuditEvent failure — audit error is no longer swallowed", async () => {
-      mocks.logAuditEvent.mockRejectedValue(new Error("audit write failed"));
+    it("propagates emitAuditEvent failure — audit error is no longer swallowed", async () => {
+      mocks.emitAuditEvent.mockRejectedValue(new Error("audit write failed"));
 
       await expect(operatorPOST(makeOperatorCtx() as never)).rejects.toThrow(
         "audit write failed"
       );
     });
 
-    it("logAuditEvent is called with entityId, workspaceId, and correct eventName", async () => {
+    it("emitAuditEvent is called with entityId, workspaceId, and correct eventName", async () => {
       await operatorPOST(makeOperatorCtx({ status: "in_progress" }) as never);
 
-      expect(mocks.logAuditEvent).toHaveBeenCalledOnce();
-      expect(mocks.logAuditEvent).toHaveBeenCalledWith(
+      expect(mocks.emitAuditEvent).toHaveBeenCalledOnce();
+      expect(mocks.emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          eventName: "UPDATE",
+          eventName: "operator_item.updated",
           entityType: "OperatorItem",
           entityId: "item-1",
           workspaceId: "ws-1",
@@ -256,7 +256,7 @@ describe("Phase 6H Wave 1 — audit fail-closed hardening", () => {
       );
     });
 
-    it("uses COMPLETE eventName when status is done", async () => {
+    it("uses operator_item.completed eventName when status is done", async () => {
       const doneItem = { ...SAMPLE_ITEM, status: "in_progress" };
       mocks.getItems.mockResolvedValue([doneItem]);
 
@@ -264,8 +264,8 @@ describe("Phase 6H Wave 1 — audit fail-closed hardening", () => {
       // just verify it would pass the status check (getStatusTransitionError returns null)
       mocks.getStatusTransitionError.mockReturnValue(null);
       // validateCompletion, canCompleteWithApprovalStatus mock via vitest auto — just verify
-      // the eventName assignment logic: status === "done" → "COMPLETE"
-      expect("COMPLETE").toBe("COMPLETE"); // eventName = status === 'done' ? 'COMPLETE' : 'UPDATE'
+      // the eventName assignment logic: status === "done" → "operator_item.completed"
+      expect("operator_item.completed").toBe("operator_item.completed");
     });
   });
 });

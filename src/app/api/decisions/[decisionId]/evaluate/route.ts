@@ -2,7 +2,8 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { hasPermission } from "@/middleware/workspace-enforcement";
 import { db } from "@/lib/db";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 /**
  * POST /api/decisions/[decisionId]/evaluate
@@ -85,22 +86,23 @@ export const POST = withCanonicalEnforcement(
       },
     });
 
-    await logAuditEvent({
-      eventName: "DECISION_EVALUATED",
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.DECISION_EVALUATED,
       entityType: "Decision",
       entityId: decisionId,
       actorId,
-      role: null,
-      before: {
-        status: decision.status,
-        blockStage: decision.blockStage,
-      },
-      after: {
-        status: decision.status,
-        blockStage: updated.blockStage,
-        recommendation: isApproved ? "approved" : "blocked",
-      },
-      metadata: {
+      actorType: "user",
+      workspaceId,
+      payload: {
+        before: {
+          status: decision.status,
+          blockStage: decision.blockStage,
+        },
+        after: {
+          status: updated.status,
+          blockStage: updated.blockStage,
+          recommendation: isApproved ? "approved" : "blocked",
+        },
         action: "evaluate_decision",
         recommendation: isApproved ? "approved" : "blocked",
         block_stage: blockStage,
@@ -108,7 +110,6 @@ export const POST = withCanonicalEnforcement(
         control_layer_violations: evaluationResult.controlLayerViolations,
         timestamp: new Date().toISOString(),
       },
-      workspaceId,
     }).catch((auditError) => {
       console.error(`Audit logging failed: ${auditError}`);
     });

@@ -12,7 +12,8 @@ import { evaluatePolicy, validateCompletion } from "@/services/policy/engine";
 import { canEdit } from "@/services/auth/access";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { sendWebhook } from "@/services/integration/webhook";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { validateStatusTransition, getStatusTransitionError } from "@/services/operator/validate";
 import { createEventLogger } from "@/lib/observability/log";
 import { emitWebhookAsync } from "@/lib/integrations/webhook";
@@ -238,18 +239,23 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   const afterItem = allItemsAfter.find((i) => i.id === id);
 
   // Determine event name
-  const eventName = status === "done" ? "COMPLETE" : "UPDATE";
+  const auditEventName = status === "done"
+    ? AUDIT_EVENTS.OPERATOR_ITEM_COMPLETED
+    : AUDIT_EVENTS.OPERATOR_ITEM_UPDATED;
 
   // Log audit event — fail-closed: audit failure aborts the route handler
-  await logAuditEvent({
-    eventName,
+  await emitAuditEvent({
+    eventName: auditEventName,
     entityType: "OperatorItem",
     entityId: id,
     actorId,
-    role,
-    before: beforeItem ?? null,
-    after: afterItem ?? null,
+    actorType: "user",
     workspaceId,
+    payload: {
+      role,
+      before: beforeItem ?? null,
+      after: afterItem ?? null,
+    },
   });
 
   if (status === "done") {

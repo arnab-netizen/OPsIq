@@ -6,7 +6,8 @@ import { generateOperatorItems } from "@/services/operator/generate";
 import { addItems, addBlockedDecision } from "@/services/operator/store";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { canEdit, resolveApprovalGrant } from "@/services/auth/access";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { createDecisionResult } from "@/services/explanation/generate";
 import { createIntegrityPayload } from "@/services/integrity/hash";
 import { createSignaturePayload } from "@/services/integrity/sign";
@@ -78,18 +79,15 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     const role = await resolveServerRole();
     if (!role) {
       // Log AUTH_FAILED audit event
-      await logAuditEvent({
-        eventName: "AUTH_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.AUTH_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: null,
-        role: null,
-        before: null,
-        after: null,
-        metadata: {
+        actorType: "user",
+        workspaceId: workspace?.workspaceId,
+        payload: {
           reason: "Session not found or invalid",
         },
-        workspaceId: workspace?.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -102,19 +100,17 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
     if (!canEdit(role)) {
       // Log PERMISSION_DENIED audit event
-      await logAuditEvent({
-        eventName: "PERMISSION_DENIED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.PERMISSION_DENIED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: null,
-        metadata: {
-          reason: "User role lacks edit permission",
-          role: role,
-        },
+        actorId: userId || undefined,
+        actorType: "user",
         workspaceId: workspace.workspaceId,
+        payload: {
+          reason: "User role lacks edit permission",
+          role,
+        },
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -178,15 +174,16 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       );
 
       // Log INPUT_VALIDATION_FAILED audit event
-      await logAuditEvent({
-        eventName: "INPUT_VALIDATION_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INPUT_VALIDATION_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           reason: "Missing or invalid financial inputs",
           expectedFields: ["revenue", "cost"],
           providedFields: {
@@ -194,7 +191,6 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
             cost: typeof cost,
           },
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -230,20 +226,20 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       );
 
       // Log INPUT_VALIDATION_FAILED audit event
-      await logAuditEvent({
-        eventName: "INPUT_VALIDATION_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INPUT_VALIDATION_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           reason: "Missing or invalid confidence value",
           expectedFields: ["confidence"],
           providedType: typeof confidence,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -279,15 +275,16 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       );
 
       // Log INPUT_VALIDATION_FAILED audit event
-      await logAuditEvent({
-        eventName: "INPUT_VALIDATION_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INPUT_VALIDATION_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           reason: "Missing or invalid revenue/cost change values",
           expectedFields: ["revenueChange", "costChange"],
           providedFields: {
@@ -295,7 +292,6 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
             costChange: typeof costChange,
           },
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -335,21 +331,21 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       );
 
       // Log INPUT_VALIDATION_FAILED audit event
-      await logAuditEvent({
-        eventName: "INPUT_VALIDATION_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INPUT_VALIDATION_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           reason: "Missing FX rate for non-base currency",
           currency: inputCurrency,
           baseCurrency: "INR",
           providedFxRates: Object.keys(fxRatesInput),
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -404,20 +400,20 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       );
 
       // Log INPUT_VALIDATION_FAILED audit event
-      await logAuditEvent({
-        eventName: "INPUT_VALIDATION_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INPUT_VALIDATION_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           reason: "Input normalization/validation failed",
           errorMessage: errorMsg,
           inputCurrency,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -520,15 +516,16 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       );
 
       // Log DEPENDENCY_VALIDATION_BLOCKED audit event
-      await logAuditEvent({
-        eventName: "DEPENDENCY_VALIDATION_BLOCKED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.DEPENDENCY_VALIDATION_BLOCKED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           blockStage: "dependency_validation",
           blockReason: depValidation.error.details,
           variable: depValidation.error.variable,
@@ -536,7 +533,6 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
           expectedImpact,
           confidence: normalizedMetrics.confidence,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -631,15 +627,16 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       );
 
       // Log DECISION_GATE_BLOCKED audit event
-      await logAuditEvent({
-        eventName: "DECISION_GATE_BLOCKED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.DECISION_GATE_BLOCKED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           blockStage: "decision_gate",
           blockReason: gateResult.reason || "Decision gate validation failed",
           missingVariables: gateResult.missingVariables,
@@ -648,7 +645,6 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
           expectedImpact,
           confidence: normalizedMetrics.confidence,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -869,27 +865,26 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     // Audit trail: no financial-block override without a record of who granted
     // it, and a record of any unauthorized self-approval attempt that was denied.
     if (isHighImpact && approvalRequested) {
-      await logAuditEvent({
+      await emitAuditEvent({
         eventName: approverAuthorized
-          ? "HIGH_IMPACT_APPROVAL_GRANTED"
-          : "HIGH_IMPACT_APPROVAL_DENIED",
+          ? AUDIT_EVENTS.HIGH_IMPACT_APPROVAL_GRANTED
+          : AUDIT_EVENTS.HIGH_IMPACT_APPROVAL_DENIED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: {
-          expectedImpact: result.impact.impactExpected,
-          threshold: HIGH_IMPACT_APPROVAL_THRESHOLD,
-          approverAuthorized,
-        },
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: {
+            expectedImpact: result.impact.impactExpected,
+            threshold: HIGH_IMPACT_APPROVAL_THRESHOLD,
+            approverAuthorized,
+          },
           reason: approverAuthorized
             ? "High-impact decision approved by an authorized approver"
             : "High-impact approval flag ignored: actor role is not authorized to approve",
-          role,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(
@@ -960,15 +955,16 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       );
 
       // Log GUARDRAILS_BLOCKED audit event
-      await logAuditEvent({
-        eventName: "GUARDRAILS_BLOCKED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.GUARDRAILS_BLOCKED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           blockStage: "guardrails",
           blockReason: guardrailsResult.violations.map((v) => v.message).join("; "),
           violations: guardrailsResult.violations.map((v) => ({
@@ -983,7 +979,6 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
           expectedImpact: result.impact.impactExpected,
           confidence: normalizedMetrics.confidence,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -1053,15 +1048,16 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     const actorId = userId;
 
     // 11. Log audit event for run execution (fail-closed)
-    await logAuditEvent({
-      eventName: "RUN_APPROVED",
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.RUN_APPROVED,
       entityType: "Decision",
       entityId: "system-run",
       actorId,
-      role,
-      before: null,
-      after: decisionResult,
-      metadata: {
+      actorType: "user",
+      workspaceId: workspace.workspaceId,
+      payload: {
+        role,
+        after: decisionResult,
         inputRevenue: revenue,
         inputCost: cost,
         inputCurrency: inputCurrency,
@@ -1069,7 +1065,6 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         confidence: normalizedMetrics.confidence,
         problemType,
       },
-      workspaceId: workspace.workspaceId,
     }).catch((auditError) => {
       if (logger) logger.error(`Audit logging failed: ${auditError}`);
       throw auditError;

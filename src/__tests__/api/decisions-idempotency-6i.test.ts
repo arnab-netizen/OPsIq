@@ -33,7 +33,7 @@ const mocks = vi.hoisted(() => ({
   dbOperatorItemCreate: vi.fn(),
   dbOperatorItemFindFirst: vi.fn(),
   // audit
-  logAuditEvent: vi.fn(),
+  emitAuditEvent: vi.fn(),
   // intake data builder
   buildIntakeOperatorItemData: vi.fn(),
   // workspace enforcement
@@ -86,8 +86,8 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/services/audit/audit-log", () => ({
-  logAuditEvent: mocks.logAuditEvent,
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: mocks.emitAuditEvent,
 }));
 
 vi.mock("@/app/api/decisions/intake/intake-data", () => ({
@@ -258,7 +258,7 @@ beforeEach(() => {
   mocks.buildIntakeOperatorItemData.mockReturnValue({ title: "Reduce churn rate" });
 
   // Audit
-  mocks.logAuditEvent.mockResolvedValue(undefined);
+  mocks.emitAuditEvent.mockResolvedValue(undefined);
 
   // Idempotency defaults: new request
   mocks.checkIdempotencyKey.mockResolvedValue({ isNew: true, cachedResponse: null });
@@ -326,8 +326,8 @@ describe("POST /api/decisions/intake — idempotency (Phase 6I)", () => {
     );
   });
 
-  it("recordIdempotencyError called and error propagates when logAuditEvent fails", async () => {
-    mocks.logAuditEvent.mockRejectedValue(new Error("audit write failed"));
+  it("recordIdempotencyError called and error propagates when emitAuditEvent fails", async () => {
+    mocks.emitAuditEvent.mockRejectedValue(new Error("audit write failed"));
 
     await expect(intakePOST(makeIntakeRequest() as never)).rejects.toThrow("audit write failed");
     expect(mocks.recordIdempotencyError).toHaveBeenCalledOnce();

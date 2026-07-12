@@ -4,7 +4,8 @@ import { getItems } from "@/services/operator/store";
 import { calculateValue } from "@/services/value/tracker";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { canView } from "@/services/auth/access";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -30,15 +31,15 @@ export const GET = withCanonicalEnforcement(
   const metrics = calculateValue(items);
 
   // Log audit event for viewing value metrics
-  await logAuditEvent({
-    eventName: "VALUE_VIEWED",
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.VALUE_VIEWED,
     entityType: "Value",
     entityId: "system",
     actorId,
-    role,
-    before: null,
-    after: null,
-    metadata: {
+    actorType: "user",
+    workspaceId,
+    payload: {
+      role,
       totalExpected: metrics.totalExpected,
       totalActual: metrics.totalActual,
       totalDelta: metrics.totalDelta,

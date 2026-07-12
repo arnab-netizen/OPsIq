@@ -3,7 +3,8 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { evaluateGovernanceAlerts } from "@/services/governance/alerts";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { NextRequest } from "next/server";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
@@ -33,15 +34,14 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   );
 
   // Log audit event for alerts access
-  await logAuditEvent({
-    eventName: "GOVERNANCE_ALERTS_ACCESSED",
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.GOVERNANCE_ALERTS_ACCESSED,
     entityType: "GovernanceAlerts",
     entityId: workspaceId,
     actorId: userId,
-    role: null,
-    before: null,
-    after: null,
-    metadata: {
+    actorType: "user",
+    workspaceId,
+    payload: {
       action: "view_governance_alerts",
       period,
       alertCount: alerts.period.alertCount,

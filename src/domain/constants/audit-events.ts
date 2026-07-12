@@ -426,6 +426,42 @@ export const AUDIT_EVENTS = {
   // Owner Tender / Application Pack (Module A5)
   OWNER_TENDER_APPLICATION_PACK_GENERATED: "owner.tender_application_pack_generated",
 
+  // Decision engine — auth / permission failures
+  AUTH_FAILED: "auth.failed",
+  PERMISSION_DENIED: "auth.permission_denied",
+
+  // Decision engine — input and dependency validation
+  INPUT_VALIDATION_FAILED: "validation.input_failed",
+  DEPENDENCY_VALIDATION_BLOCKED: "validation.dependency_blocked",
+
+  // Decision engine — control layer
+  DECISION_GATE_BLOCKED: "decision.gate_blocked",
+  HIGH_IMPACT_APPROVAL_GRANTED: "decision.high_impact_approval_granted",
+  HIGH_IMPACT_APPROVAL_DENIED: "decision.high_impact_approval_denied",
+  GUARDRAILS_BLOCKED: "decision.guardrails_blocked",
+  RUN_APPROVED: "run.approved",
+
+  // Decision lifecycle
+  DECISION_INTAKE: "decision.intake",
+  DECISION_EVALUATED: "decision.evaluated",
+
+  // Operator item lifecycle
+  OPERATOR_ITEM_COMPLETED: "operator_item.completed",
+
+  // Entity management
+  ENTITY_CREATED: "entity.created",
+
+  // Analytics / observability reads
+  VALUE_VIEWED: "analytics.value_viewed",
+  MYDAY_VIEWED: "operator.myday_viewed",
+  GOVERNANCE_METRICS_ACCESSED: "governance.metrics_accessed",
+  GOVERNANCE_ALERTS_ACCESSED: "governance.alerts_accessed",
+  CONTROL_EFFECTIVENESS_ACCESSED: "metrics.control_effectiveness_accessed",
+  DECISION_LATENCY_ACCESSED: "metrics.decision_latency_accessed",
+  OBSERVABILITY_SUMMARY_ACCESSED: "observability.summary_accessed",
+  SCENARIO_ANALYZED: "scenario.analyzed",
+  CALIBRATION_VIEWED: "calibration.viewed",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",

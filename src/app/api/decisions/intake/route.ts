@@ -1,7 +1,8 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { ValidationError } from "@/infra/errors";
 import { db } from "@/lib/db";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { buildIntakeOperatorItemData } from "./intake-data";
 import {
   checkIdempotencyKey,
@@ -57,26 +58,25 @@ export const POST = withCanonicalEnforcement(
         data: buildIntakeOperatorItemData(input, workspaceId, actorId),
       });
 
-      await logAuditEvent({
-        eventName: "DECISION_INTAKE",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.DECISION_INTAKE,
         entityType: "Decision",
         entityId: decision.id,
         actorId,
-        role: null,
-        before: null,
-        after: {
-          id: decision.id,
-          status: "pending",
-          title: input.title,
-        },
-        metadata: {
+        actorType: "user",
+        workspaceId,
+        payload: {
+          after: {
+            id: decision.id,
+            status: "pending",
+            title: input.title,
+          },
           action: "intake_decision",
           source: "api",
           confidence: input.confidence,
           risk: input.risk,
           createdAt: new Date().toISOString(),
         },
-        workspaceId,
       });
 
       const responseBody = {

@@ -2,7 +2,8 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
 import { getMyDayItems } from "@/services/operator/myday";
 import { resolveServerRole } from "@/services/auth/server-role";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 export const GET = withCanonicalEnforcement(async (ctx) => {
   // Enforce server-side auth (fail-closed)
@@ -20,17 +21,17 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
   const actorId = ctx.verifiedSessionSnapshot.actorId;
 
   // Emit audit event
-  await logAuditEvent({
-    eventName: "MYDAY_VIEWED",
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.MYDAY_VIEWED,
     entityType: "MyDay",
     entityId: "myday",
     actorId,
-    role,
-    before: null,
-    after: {
-      itemCount: items.length,
-    },
+    actorType: "user",
     workspaceId,
+    payload: {
+      role,
+      after: { itemCount: items.length },
+    },
   });
 
   return { items };

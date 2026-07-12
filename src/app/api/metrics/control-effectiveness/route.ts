@@ -1,6 +1,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { db } from "@/lib/db";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
@@ -232,15 +233,14 @@ export const GET = withCanonicalEnforcement(
     };
 
     // Log audit event for metrics access
-    await logAuditEvent({
-      eventName: "CONTROL_EFFECTIVENESS_ACCESSED",
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.CONTROL_EFFECTIVENESS_ACCESSED,
       entityType: "ControlMetrics",
       entityId: workspaceId,
       actorId,
-      role: null,
-      before: null,
-      after: null,
-      metadata: {
+      actorType: "user",
+      workspaceId,
+      payload: {
         action: "view_control_effectiveness",
         days,
         summary: {
@@ -249,7 +249,6 @@ export const GET = withCanonicalEnforcement(
           overallBlockRate: metrics.summary.overallBlockRate,
         },
       },
-      workspaceId,
     }).catch((auditError) => {
       const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: 'load' });
       console.error(`Audit logging failed: ${governed.operatorMessage}`);

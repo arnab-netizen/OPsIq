@@ -4,7 +4,8 @@ import { getItems } from "@/services/operator/store";
 import { computeCalibration, computeCalibrationBySegment } from "@/services/calibration/engine";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { canView } from "@/services/auth/access";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -37,15 +38,15 @@ export const GET = withCanonicalEnforcement(
     };
 
     // Log audit event for viewing calibration
-    await logAuditEvent({
-      eventName: "CALIBRATION_VIEWED",
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.CALIBRATION_VIEWED,
       entityType: "Calibration",
       entityId: "system",
       actorId,
-      role,
-      before: null,
-      after: null,
-      metadata: {
+      actorType: "user",
+      workspaceId,
+      payload: {
+        role,
         itemsAnalyzed: overall.itemsAnalyzed,
         successRate: overall.successRate,
         avgAccuracy: overall.avgAccuracy,

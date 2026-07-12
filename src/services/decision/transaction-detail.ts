@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { logAuditEvent } from "@/services/audit/audit-log";
 
 /**
  * Fetch complete decision detail with all context
