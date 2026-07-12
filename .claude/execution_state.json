@@ -1,6 +1,6 @@
 {
   "execution_date": "2026-07-11",
-  "current_phase": "STAGE_A7_BOS_VALIDATION_COMPLETE",
+  "current_phase": "A7_7_HISTORICAL_RECONCILIATION_COMPLETE",
   "stage_a7_bos_validation": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "INTEGRATION_TEST_SUITE",
@@ -24,7 +24,11 @@
       "RC-A7-007: E1-E5 used wrong VendorRiskInput fields",
       "RC-A7-008: detectProfitLeaks returned DATA_INSUFFICIENT for healthy business"
     ],
-    "test_counts": { "bos_validation": 55, "baseline": 136, "total": 191 },
+    "test_counts": {
+      "bos_validation": 55,
+      "baseline": 136,
+      "total": 191
+    },
     "gates_run": "vitest 191/191 pass; tsc 0 errors; build clean",
     "committed": "129583ac",
     "branch": "claude/phase-6f-governance-findings-5gkiec",
@@ -34,25 +38,31 @@
   "stage_a6_workflow3": {
     "status": "COMPLETE",
     "classification": "INTEGRATION_VERIFIED_NO_DEFECT",
-    "notes": "Finance snapshot → diagnosis (cash+profitability findings) → actions → verification → re-diagnosis all fully wired. 'Budget' in workflow description maps to cash runway findings (FIN_LOW_CASH_RUNWAY_*). Separate cashflow domain also exists and is fully wired.",
+    "notes": "Finance snapshot \u2192 diagnosis (cash+profitability findings) \u2192 actions \u2192 verification \u2192 re-diagnosis all fully wired. 'Budget' in workflow description maps to cash runway findings (FIN_LOW_CASH_RUNWAY_*). Separate cashflow domain also exists and is fully wired.",
     "workflow3_classification": "COMPLETE"
   },
   "stage_a6_workflow4": {
     "status": "COMPLETE",
     "classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
-    "wired": ["opportunity_finder", "tender_assessment", "owner_approval (advisory)", "submission_readiness", "application_pack (POST /owner/tender/application-pack)"],
+    "wired": [
+      "opportunity_finder",
+      "tender_assessment",
+      "owner_approval (advisory)",
+      "submission_readiness",
+      "application_pack (POST /owner/tender/application-pack)"
+    ],
     "files": [
       "src/domain/owner-mode/bid-application-pack.ts",
       "src/domain/owner-mode/bid-application-pack.validation.ts",
       "src/app/api/owner/tender/application-pack/route.ts",
       "src/__tests__/integration/workflow4-application-pack.test.ts"
     ],
-    "workspace_enforcement": "✓ ctx.verifiedWorkspaceId overwrites any body workspaceId; body workspaceId rejected by strictObject",
-    "auth_enforced": "✓ CAPABILITIES.OWNER_MANAGE + requireWorkspace: true",
+    "workspace_enforcement": "\u2713 ctx.verifiedWorkspaceId overwrites any body workspaceId; body workspaceId rejected by strictObject",
+    "auth_enforced": "\u2713 CAPABILITIES.OWNER_MANAGE + requireWorkspace: true",
     "governance_invariants": "submissionAllowed: false (always), ownerApprovalRequired: true (always), decision: PREPARE_BID_DRAFT (never SUBMIT)",
     "audit_event": "OWNER_TENDER_APPLICATION_PACK_GENERATED emitted on every call with actorId + workspaceId",
-    "test_coverage": "28 tests — governance invariants (4), cover section (3), eligibility (5), risk summary (4), economics (4), missing data (3), urgency (2), non-bid decisions (3)",
-    "gates_run": "npx tsc --noEmit (✓), npm run build (✓), npx vitest run 28/28 (✓)",
+    "test_coverage": "28 tests \u2014 governance invariants (4), cover section (3), eligibility (5), risk summary (4), economics (4), missing data (3), urgency (2), non-bid decisions (3)",
+    "gates_run": "npx tsc --noEmit (\u2713), npm run build (\u2713), npx vitest run 28/28 (\u2713)",
     "committed": "ae032da6",
     "workflow4_classification": "COMPLETE"
   },
@@ -60,22 +70,22 @@
     "status": "COMPLETE",
     "classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "wired": [
-      "pricing_analysis (POST /owner/pricing-analysis) → profit-assessment.ts + business-impact-engine.ts",
+      "pricing_analysis (POST /owner/pricing-analysis) \u2192 profit-assessment.ts + business-impact-engine.ts",
       "finance_recommendations (FINREC_IMPROVE_MARGIN, FINREC_REDUCE_LEAKAGE)",
-      "profit_leak_radar (POST /owner/profit-leak) → profit-leak-radar.ts (14 detection types, all 5 leakage categories)",
+      "profit_leak_radar (POST /owner/profit-leak) \u2192 profit-leak-radar.ts (14 detection types, all 5 leakage categories)",
       "profit_impact (expectedFinancialImpactScore in pricing-analysis + business-impact-engine.ts)"
     ],
-    "notes": "PARTIAL was a false positive — profit-leak-radar.ts (14 types, full route) and business-impact-engine.ts already existed with 53 passing tests when classified. Leakage detection engine and profit impact engine were both present.",
+    "notes": "PARTIAL was a false positive \u2014 profit-leak-radar.ts (14 types, full route) and business-impact-engine.ts already existed with 53 passing tests when classified. Leakage detection engine and profit impact engine were both present.",
     "test_coverage": "31 profit-leak tests + 22 pricing-analysis handler tests + 53 domain tests = 106 total",
-    "gates_run": "npx tsc --noEmit (✓), npx vitest run (✓)",
-    "committed": "3628a355 (false-positive PARTIAL confirmed — no new code needed)",
+    "gates_run": "npx tsc --noEmit (\u2713), npx vitest run (\u2713)",
+    "committed": "3628a355 (false-positive PARTIAL confirmed \u2014 no new code needed)",
     "workflow5_classification": "COMPLETE"
   },
   "stage_a6_workflow6": {
     "status": "COMPLETE",
     "classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "wired": [
-      "vendor_risk_assessment (POST /owner/vendor/assess) — pure stateless (intentional: no entity to persist without vendor ID)",
+      "vendor_risk_assessment (POST /owner/vendor/assess) \u2014 pure stateless (intentional: no entity to persist without vendor ID)",
       "risk_classification (4 levels: informational / review_advised / high_concentration_risk / blocked_pending_review)",
       "recommendations (recommendedActions array per classification)",
       "audit_event (OWNER_VENDOR_RISK_ASSESSED emitted for non-informational classifications)"
@@ -86,7 +96,7 @@
       "src/__tests__/api/owner/vendor/assess.test.ts (added vi.mock infra/audit)"
     ],
     "test_coverage": "Existing tests + audit mock correction; audit governance now proven",
-    "gates_run": "npx tsc --noEmit (✓), npm run build (✓), npx vitest run (✓)",
+    "gates_run": "npx tsc --noEmit (\u2713), npm run build (\u2713), npx vitest run (\u2713)",
     "committed": "3628a355",
     "workflow6_classification": "COMPLETE"
   },
@@ -97,8 +107,8 @@
       "startup_validate (POST /owner/startup-validate)",
       "business_context (business CRUD)",
       "strategy_diagnosis (OwnerStrategyCycle)",
-      "progress_tracking (GET /owner/businesses/[businessId]/progress) → owner-progress.service.ts::getOwnerBusinessProgress",
-      "business_review (GET /owner/businesses/[businessId]/progress?review=true) → generateOwnerBusinessReview (decoupled from engagementId)"
+      "progress_tracking (GET /owner/businesses/[businessId]/progress) \u2192 owner-progress.service.ts::getOwnerBusinessProgress",
+      "business_review (GET /owner/businesses/[businessId]/progress?review=true) \u2192 generateOwnerBusinessReview (decoupled from engagementId)"
     ],
     "files": [
       "src/services/owner-mode/owner-progress.service.ts",
@@ -106,13 +116,13 @@
       "src/__tests__/integration/workflow7-progress-review.test.ts"
     ],
     "gap_closed": "generateReviewCycle was tied to consulting-mode Engagement model. Implemented parallel owner-mode generateOwnerBusinessReview using injectable OwnerProgressDb interface (5 action tables + 5 cycle tables). No engagementId required.",
-    "workspace_enforcement": "✓ workspaceId and businessId flow through all service calls; injectable DB interface allows test isolation",
-    "auth_enforced": "✓ CAPABILITIES.OWNER_VIEW + requireWorkspace: true",
+    "workspace_enforcement": "\u2713 workspaceId and businessId flow through all service calls; injectable DB interface allows test isolation",
+    "auth_enforced": "\u2713 CAPABILITIES.OWNER_VIEW + requireWorkspace: true",
     "audit_event": "OWNER_BUSINESS_REVIEW_GENERATED emitted on every review call with actorId, workspaceId, businessId, status, completionRate, reviewedAt",
     "review_statuses": "improving / stagnant / worsening / insufficient_data",
     "progress_summary": "on_track / at_risk / blocked / no_actions",
-    "test_coverage": "19 tests — aggregation (4), completion rate (1), summary states (3), review statuses (4), audit governance (2), workspace isolation (3), rationale (1), reviewedAt (1)",
-    "gates_run": "npx tsc --noEmit (✓), npm run build (✓), npx vitest run 19/19 (✓)",
+    "test_coverage": "19 tests \u2014 aggregation (4), completion rate (1), summary states (3), review statuses (4), audit governance (2), workspace isolation (3), rationale (1), reviewedAt (1)",
+    "gates_run": "npx tsc --noEmit (\u2713), npm run build (\u2713), npx vitest run 19/19 (\u2713)",
     "committed": "3628a355",
     "workflow7_classification": "COMPLETE"
   },
@@ -128,8 +138,8 @@
       "src/__tests__/integration/workflow2-manual-entry-to-diagnosis.test.ts"
     ],
     "test_coverage": "16 tests: mapping coverage (6), wiring (8), edge cases (2)",
-    "gates_run": "npx tsc --noEmit (✓), npm run build (✓), vitest 16/16 (✓)",
-    "workflow2_classification": "COMPLETE — manual entry now auto-materializes into snapshots for snapshot-eligible categories"
+    "gates_run": "npx tsc --noEmit (\u2713), npm run build (\u2713), vitest 16/16 (\u2713)",
+    "workflow2_classification": "COMPLETE \u2014 manual entry now auto-materializes into snapshots for snapshot-eligible categories"
   },
   "stage_a6_workflow1": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -151,10 +161,10 @@
     ],
     "audit_events_added": 13,
     "test_coverage": "18 tests: Class A (6), Class B (7), workspace isolation (2), edge cases (3)",
-    "workspace_enforcement": "✓ workspaceId enforced on all findFirst calls across all spines",
-    "best_effort_pattern": "✓ re-diagnosis wrapped in try/catch — failure never blocks primary operation",
-    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 18/18 (✓)",
-    "workflow1_classification": "COMPLETE — all 5 spines now have action-completion→re-diagnosis AND verification-success→re-diagnosis"
+    "workspace_enforcement": "\u2713 workspaceId enforced on all findFirst calls across all spines",
+    "best_effort_pattern": "\u2713 re-diagnosis wrapped in try/catch \u2014 failure never blocks primary operation",
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), npm run build (\u2713), vitest 18/18 (\u2713)",
+    "workflow1_classification": "COMPLETE \u2014 all 5 spines now have action-completion\u2192re-diagnosis AND verification-success\u2192re-diagnosis"
   },
   "phase_29": {
     "status": "COMPLETE_VERIFIED",
@@ -484,16 +494,26 @@
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "API_ROUTES_WITH_WIRING",
     "files": [
-      "src/domain/owner-mode/profit-leak-radar.validation.ts",
       "src/app/api/owner/profit-leak/route.ts",
-      "src/__tests__/api/owner/profit-leak.test.ts"
+      "src/domain/owner-mode/profit-leak-radar.validation.ts",
+      "src/__tests__/api/owner/profit-leak.test.ts",
+      ".env.example (OPENAI_API_KEY + Google Sheets credentials added)"
     ],
-    "workspace_enforcement": "\u2713 ctx.verifiedWorkspaceId always wins; body workspaceId rejected by strictObject schema",
-    "auth_enforced": "\u2713 CAPABILITIES.OWNER_VIEW + requireWorkspace: true",
-    "test_coverage": "31 tests \u2014 static enforcement (7), schema validation (12), route handler (12)",
-    "gates_run": "npx tsc --noEmit (\u2713), npx vitest run 31/31 (\u2713)",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "committed": "5e97433a"
+    "wiring_proof": {
+      "caller": "POST /api/owner/profit-leak route.ts",
+      "engine": "src/domain/owner-mode/profit-leak-radar.ts::identifyProfitLeaks()",
+      "workspace_enforcement": "ctx.verifiedWorkspaceId always wins \u2014 body workspaceId field rejected by schema",
+      "auth_enforced": "CAPABILITIES.OWNER_VIEW + requireWorkspace: true via withCanonicalEnforcement",
+      "dto_boundary": "ProfitLeakAnalysis (pure engine output) \u2014 no DB internal fields",
+      "audit_events": "N/A \u2014 read-only analysis, no mutation",
+      "test_coverage": "31 tests: static enforcement, Zod schema (12 cases), route handler (11 cases including tenant isolation)"
+    },
+    "capability_matrix_before": "MISSING (no route, no service, no dedicated endpoint)",
+    "capability_matrix_after": "COMPLETE (route + schema + engine wired + 31 tests)",
+    "gates_run": "npx tsc --noEmit --skipLibCheck (OK), npx prisma validate (OK), vitest 31/31 (OK)",
+    "compilation": "TypeScript compiles without errors",
+    "db_status": "DB_NOT_REQUIRED \u2014 pure analysis, no persistence",
+    "infra_additions": "OPENAI_API_KEY and Google Sheets connector env vars added to .env.example"
   },
   "phase_p1_pricing": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -527,7 +547,6 @@
     "compilation": "\u2713 TypeScript compiles without errors",
     "committed": "591bbc58"
   },
-  "current_phase": "CAPACITY_ASSESS_CAPABILITY_CLOSED",
   "next_automatic_target": "A0 audit PARTIAL capabilities: #19 LLM/NLP Governed Analysis or #8 Customer Retention/Reactivation",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
@@ -1741,7 +1760,7 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE 33 Slice 1: Controlled Learning Regression Results \u2014 schema, service, 32 tests",
+  "last_commit": "c47f0316 A7.7 Historical Reconciliation: defect-class closure register + corrective controls",
   "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
@@ -2468,31 +2487,6 @@
     "learning_bypass": 0,
     "all_4_new_guards_verified": true
   },
-  "phase_w1_waste_leakage": {
-    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
-    "classification": "API_ROUTES_WITH_WIRING",
-    "files": [
-      "src/app/api/owner/profit-leak/route.ts",
-      "src/domain/owner-mode/profit-leak-radar.validation.ts",
-      "src/__tests__/api/owner/profit-leak.test.ts",
-      ".env.example (OPENAI_API_KEY + Google Sheets credentials added)"
-    ],
-    "wiring_proof": {
-      "caller": "POST /api/owner/profit-leak route.ts",
-      "engine": "src/domain/owner-mode/profit-leak-radar.ts::identifyProfitLeaks()",
-      "workspace_enforcement": "ctx.verifiedWorkspaceId always wins \u2014 body workspaceId field rejected by schema",
-      "auth_enforced": "CAPABILITIES.OWNER_VIEW + requireWorkspace: true via withCanonicalEnforcement",
-      "dto_boundary": "ProfitLeakAnalysis (pure engine output) \u2014 no DB internal fields",
-      "audit_events": "N/A \u2014 read-only analysis, no mutation",
-      "test_coverage": "31 tests: static enforcement, Zod schema (12 cases), route handler (11 cases including tenant isolation)"
-    },
-    "capability_matrix_before": "MISSING (no route, no service, no dedicated endpoint)",
-    "capability_matrix_after": "COMPLETE (route + schema + engine wired + 31 tests)",
-    "gates_run": "npx tsc --noEmit --skipLibCheck (OK), npx prisma validate (OK), vitest 31/31 (OK)",
-    "compilation": "TypeScript compiles without errors",
-    "db_status": "DB_NOT_REQUIRED \u2014 pure analysis, no persistence",
-    "infra_additions": "OPENAI_API_KEY and Google Sheets connector env vars added to .env.example"
-  },
   "module_8_customer_reactivation": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "API_ROUTES_WITH_WIRING",
@@ -2705,7 +2699,10 @@
     },
     "prevention_gates": {
       "total": 17,
-      "new": ["DC-16 (asVerifiedWorkspaceId sole-caller gate)", "DC-17 (no file calls both claimWorkspaceId and resolveWorkspaceTier)"],
+      "new": [
+        "DC-16 (asVerifiedWorkspaceId sole-caller gate)",
+        "DC-17 (no file calls both claimWorkspaceId and resolveWorkspaceTier)"
+      ],
       "result": "17/17 PASS"
     },
     "dc02_status": "PROVEN_CLOSED_REPOSITORY_WIDE (7-dimension semantic proof \u2014 zero production callers)",
@@ -2779,14 +2776,14 @@
   "stage_a77_batch16": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "DEAD_IMPORT_WIRED",
-    "description": "Phase 6K: Wire isDuplicateRequest in run/route.ts. The function was imported but never called — basic in-process dedup protection was present in code but inactive. Fix: call getRequestHash + isDuplicateRequest after body parsing, before expensive computation. Provides 5-second in-process dedup window against accidental double-submissions.",
+    "description": "Phase 6K: Wire isDuplicateRequest in run/route.ts. The function was imported but never called \u2014 basic in-process dedup protection was present in code but inactive. Fix: call getRequestHash + isDuplicateRequest after body parsing, before expensive computation. Provides 5-second in-process dedup window against accidental double-submissions.",
     "root_cause": "isDuplicateRequest and getRequestHash were imported from @/services/production/safety-config in run/route.ts but neither was ever called. Basic in-process duplicate protection was silently inactive.",
     "files_changed": [
       "src/app/api/run/route.ts (wired getRequestHash + isDuplicateRequest after body parsing)",
       "src/__tests__/api/run-dedup-6k.test.ts (7 tests proving dedup behavior)"
     ],
     "limitation": "In-process only (5-second window). Not a substitute for DB-backed checkIdempotencyKey (DB_BLOCKED). Proper idempotency for run/route.ts is in BLOCKED_RECOVERY_QUEUE.",
-    "tests": "7 tests: hash called with workspaceId+body, isDuplicateRequest called with hash, duplicate rejected, no compute/mutation on duplicate, non-duplicate proceeds, different bodies → different hashes, rate-limit called before dedup",
+    "tests": "7 tests: hash called with workspaceId+body, isDuplicateRequest called with hash, duplicate rejected, no compute/mutation on duplicate, non-duplicate proceeds, different bodies \u2192 different hashes, rate-limit called before dedup",
     "gates_run": "npx tsc --noEmit (0 errors), npm run governance:scan:a77 (17/17 PASS), vitest 7/7 PASS",
     "committed": "7f786127",
     "branch": "claude/phase-6f-governance-findings-5gkiec",
@@ -2795,23 +2792,23 @@
   "stage_a77_batch17": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "DEAD_CODE_REMOVAL",
-    "description": "Phase 6L: Remove dead resolveServerRole call from override/route.ts and dead role field from OperatorOverrideInput. The service never used the role field — removing it shrinks the auth surface without weakening protection (OVERRIDE_DECIDE capability still enforced by withCanonicalEnforcement). Also removed dead getSession import from entity/route.ts.",
-    "root_cause": "override/route.ts called resolveServerRole() and passed result as role to recordOperatorOverride, but the service destructured only operatorItemId/overriddenAction/reason/riskAcknowledged/workspaceId/actorId — role was silently discarded. entity/route.ts imported getSession but never called it.",
+    "description": "Phase 6L: Remove dead resolveServerRole call from override/route.ts and dead role field from OperatorOverrideInput. The service never used the role field \u2014 removing it shrinks the auth surface without weakening protection (OVERRIDE_DECIDE capability still enforced by withCanonicalEnforcement). Also removed dead getSession import from entity/route.ts.",
+    "root_cause": "override/route.ts called resolveServerRole() and passed result as role to recordOperatorOverride, but the service destructured only operatorItemId/overriddenAction/reason/riskAcknowledged/workspaceId/actorId \u2014 role was silently discarded. entity/route.ts imported getSession but never called it.",
     "files_changed": [
       "src/app/api/override/route.ts (removed resolveServerRole import + call + role field)",
       "src/services/override/operator-override.service.ts (removed role: string | null from OperatorOverrideInput)",
       "src/app/api/entity/route.ts (removed dead getSession import)",
       "src/__tests__/api/override-route-6l.test.ts (9 tests proving auth surface correctness)"
     ],
-    "auth_still_enforced": "✓ CAPABILITIES.OVERRIDE_DECIDE + requireWorkspace: true via withCanonicalEnforcement",
+    "auth_still_enforced": "\u2713 CAPABILITIES.OVERRIDE_DECIDE + requireWorkspace: true via withCanonicalEnforcement",
     "tests": "9 tests: workspaceId/actorId from verified context, body fields forwarded, no role field in call, return value propagated, called once per request, workspace from ctx not body, actorId from ctx not body, rejection propagated, different actors produce different actorId",
     "gates_run": "npx tsc --noEmit (0 errors), npm run governance:scan:a77 (17/17 PASS), vitest 9/9 PASS"
   },
   "stage_a77_batch18": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "AUDIT_LOG_SANITIZATION + PREVENTION_GATE",
-    "description": "Phase 6M: Fix raw auditError logging in value/scenario/governance-alerts routes. Three routes used bare console.error(`${auditError}`) in audit .catch() handlers — potential log information-leakage. Fixed to use classifyOperatorError before logging. Added DC-18 prevention gate to detect regression. All routes remain fail-open on read paths (no DB mutations precede these audits).",
-    "root_cause": "value/route.ts, scenario/route.ts, governance/alerts/route.ts interpolated raw Error objects into console.error strings in audit .catch() handlers. Other routes (governance/metrics, metrics/control-effectiveness, metrics/decision-latency) already used classifyOperatorError — inconsistency fixed.",
+    "description": "Phase 6M: Fix raw auditError logging in value/scenario/governance-alerts routes. Three routes used bare console.error(`${auditError}`) in audit .catch() handlers \u2014 potential log information-leakage. Fixed to use classifyOperatorError before logging. Added DC-18 prevention gate to detect regression. All routes remain fail-open on read paths (no DB mutations precede these audits).",
+    "root_cause": "value/route.ts, scenario/route.ts, governance/alerts/route.ts interpolated raw Error objects into console.error strings in audit .catch() handlers. Other routes (governance/metrics, metrics/control-effectiveness, metrics/decision-latency) already used classifyOperatorError \u2014 inconsistency fixed.",
     "files_changed": [
       "src/app/api/value/route.ts (classifyOperatorError in audit .catch)",
       "src/app/api/scenario/route.ts (classifyOperatorError in audit .catch)",
@@ -2823,11 +2820,17 @@
     "tests": "4 tests: metrics returned on success, no rejection when audit fails (fail-open), classifyOperatorError called on audit failure, emitAuditEvent called with correct workspaceId/actorId",
     "gates_run": "npx tsc --noEmit (0 errors), npm run governance:scan:a77 (18/18 PASS), vitest 4/4 PASS"
   },
-  "current_phase": "A7_7_BATCH_18_AUDIT_SANITIZATION_DC18",
-  "last_commit": "pending — A7.7 Batch 18 Phase 6M: audit error sanitization + DC-18 gate",
-  "pushed": false,
   "session_summary_2026_07_11": {
-    "modules_completed": [8, 10, 14, 15, 16, 18, 19, 20],
+    "modules_completed": [
+      8,
+      10,
+      14,
+      15,
+      16,
+      18,
+      19,
+      20
+    ],
     "total_new_tests": 311,
     "breakdown": {
       "module_8_reactivation": 53,
@@ -2851,5 +2854,44 @@
       "1ac8641f \u2014 Module #18: Local Mode status endpoint",
       "a5c0dbac \u2014 Module #20: Live Connectors env contract + readiness tests"
     ]
+  },
+  "stage_a77_historical_reconciliation": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "HISTORICAL_RECONCILIATION_COMPLETE_DB_PROOF_PENDING",
+    "description": "Historical closure reconciliation: 14 deliverables created; 7 root causes documented; corrective controls A/B/D implemented. DC gate count: 18\u219219. context.ts deleted (DC-02 fully closed). validateWorkspaceAccess hidden caller found and removed from store.ts. auth-governance-scanner updated to recommend withCanonicalEnforcement. DC-19 gate added for fail-open write-path audit prevention.",
+    "corrective_actions_done": [
+      "A: auth-governance-scanner updated (withEnforcementFull \u2192 withCanonicalEnforcement guidance)",
+      "B: context.ts deleted; validateWorkspaceAccess removed from store.ts (was broken: compared workspaceId vs userId)",
+      "D: DC-19 gate added (19/19 gates all pass)"
+    ],
+    "corrective_actions_pending": [
+      "C: Wire governance:scan:a77 into .github/workflows/ci.yml",
+      "E: Enable noUnusedLocals in tsconfig.json",
+      "F: Merge branch to main; verify CI green with postgres:16"
+    ],
+    "deliverables": [
+      "docs/audits/2026-07-12-historical-closure-reconciliation/BASELINE.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/HISTORICAL_CLOSURE_REGISTER.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/HISTORICAL_CLOSURE_REGISTER.json",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/PRIOR_CLAIM_RECONCILIATION.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/REPEATED_DEFECT_ROOT_CAUSES.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/BRANCH_AND_MERGE_RECONCILIATION.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/PREVENTION_GATE_HISTORY_AND_GAPS.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/DATABASE_PROOF_LANE_RECONCILIATION.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/MAIN_BRANCH_CLOSURE_STATUS.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/PERMANENT_CLOSURE_STANDARD.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/REAL_WORLD_READINESS_GATE.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/DUPLICATE_WORK_AVOIDANCE_MATRIX.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/REQUIRED_CORRECTIVE_ACTIONS.md",
+      "docs/audits/2026-07-12-historical-closure-reconciliation/FINAL_HISTORICAL_RECONCILIATION_REPORT.md"
+    ],
+    "defect_classes_total": 26,
+    "permanently_closed": 0,
+    "closed_on_branch": 23,
+    "gate_only_on_branch": 6,
+    "open": 0,
+    "gates_run": "npm run build (PASS), npx tsc --noEmit (PASS), governance:scan:auth (PASS), governance:scan:a77 19/19 (PASS)",
+    "committed": "c47f0316",
+    "pushed": true
   }
 }
