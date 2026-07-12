@@ -121,7 +121,7 @@ const ALLOWLISTS: Record<string, string[]> = {
   "direct-audit-create": [
     "src/infra/audit.ts",           // canonical writer — approved
     "src/generated/prisma/models/AuditEvent.ts", // generated code — approved
-    "src/services/audit/audit-log.ts", // legacy writer being migrated — temporary
+    // src/services/audit/audit-log.ts — DELETED in A7.7 Batch 14 (migration complete)
     "src/services/ai/ledger-persistence.ts",
     "src/services/business-condition/business-condition-profile.service.ts",
     "src/services/controlled-learning-retention.service.ts",
@@ -140,25 +140,11 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/services/owner-mode/validation-outcome.service.ts",
   ],
 
-  // DC-06: logAuditEvent callers — all known, none new
+  // DC-06: logAuditEvent callers — migration complete (A7.7 Batch 14)
+  // All production callers migrated to emitAuditEvent; src/services/audit/audit-log.ts deleted.
+  // Only remaining match: request-tracer.ts has a CLASS METHOD named logAuditEvent (unrelated to legacy function).
   "log-audit-event-callers": [
-    "src/services/audit/audit-log.ts",
-    "src/app/api/calibration/route.ts",
-    "src/app/api/decisions/[decisionId]/evaluate/route.ts",
-    "src/app/api/decisions/intake/route.ts",
-    "src/app/api/entity/route.ts",
-    "src/app/api/governance/alerts/route.ts",
-    "src/app/api/governance/metrics/route.ts",
-    "src/app/api/metrics/control-effectiveness/route.ts",
-    "src/app/api/metrics/decision-latency/route.ts",
-    "src/app/api/observability/summary/route.ts",
-    "src/app/api/operator/myday/route.ts",
-    "src/app/api/operator/route.ts",
-    "src/app/api/run/route.ts",
-    "src/app/api/scenario/route.ts",
-    "src/app/api/value/route.ts",
-    "src/infra/request-tracer.ts",
-    "src/services/decision/transaction-detail.ts",
+    "src/infra/request-tracer.ts", // class method definition — not an import/call of the legacy function
   ],
 
   // DC-03: non-canonical wrappers in route files
