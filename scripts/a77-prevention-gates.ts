@@ -69,8 +69,8 @@ const ALLOWLISTS: Record<string, string[]> = {
   // DC-01: x-workspace-id reads in route/service files
   // These files are the KNOWN legacy backlog; all others are new violations.
   "x-workspace-id-routes": [
-    "src/app/api/admin/billing/diagnostics/route.ts",
-    "src/app/api/billing/plan/route.ts",
+    // admin/billing/diagnostics — MIGRATED; comment-only x-workspace-id mention (not a header read)
+    // billing/plan — MIGRATED; comment-only x-workspace-id mention (not a header read)
     // clients/[clientId]/contacts/[contactId] — MIGRATED to withCanonicalEnforcement in A7.7
     // decisions/create — MIGRATED to withCanonicalEnforcement in A7.7
     // business-impact — MIGRATED to withCanonicalEnforcement in A7.7 (no x-workspace-id header)
@@ -111,9 +111,9 @@ const ALLOWLISTS: Record<string, string[]> = {
     // store.ts — FIXED in A7.7: all requireWorkspaceContext calls removed
     // metrics/control-effectiveness — FIXED in A7.7: migrated to canonical auth
     // metrics/decision-latency — FIXED in A7.7: migrated to canonical auth
-    "src/services/audit/audit-log.ts",
+    // audit-log.ts — FIXED in A7.7: requireWorkspaceContext fallback removed (callers provide workspaceId)
     // run/route.ts — MIGRATED to withCanonicalEnforcement in A7.7 (requireWorkspaceContext removed)
-    "src/app/dashboard/inbox/page.tsx",
+    // inbox/page.tsx — FIXED in A7.7: requireWorkspaceContext replaced with DB membership lookup
     "src/services/workspace/context.ts",
   ],
 
@@ -189,7 +189,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     // owner/first-value — MIGRATED to withCanonicalEnforcement in A7.7
     // clients/[clientId] — MIGRATED to withCanonicalEnforcement in A7.7 (stale imports removed)
     // clients/[clientId]/contacts/[contactId] — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/admin/billing/diagnostics/route.ts",
+    // admin/billing/diagnostics — MIGRATED to withCanonicalEnforcement in A7.7
     // withEnforcementFull-only routes (37 remaining):
     // decisions/* — ALL MIGRATED to withCanonicalEnforcement in A7.7
     // (evaluate, execute, fail, record-outcome, [decisionId], verify, create, intake)

@@ -1,5 +1,4 @@
 import type { UserRole } from "@/domain/auth/types";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 
@@ -18,13 +17,7 @@ export interface AuditEventParams {
 export async function logAuditEvent(params: AuditEventParams): Promise<void> {
   try {
     // Workspace isolation: fail closed if no workspace ID provided
-    let workspaceId = params.workspaceId;
-
-    if (!workspaceId) {
-      // Try to get workspace from context if not provided
-      const workspace = await requireWorkspaceContext();
-      workspaceId = workspace.workspaceId;
-    }
+    const workspaceId = params.workspaceId;
 
     if (!workspaceId) {
       throw new Error("Audit event workspaceId is required for workspace isolation");
