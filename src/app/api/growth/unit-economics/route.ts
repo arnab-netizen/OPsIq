@@ -1,11 +1,8 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { UnitEconomicsEngine } from "@/services/growth/unit-economics-engine";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const calculateCACSchema = z.object({
@@ -40,25 +37,12 @@ const assessHealthSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
-    if (!workspaceId) {
-      return canonicalJson(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
-    }
-
-    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
-    const nextRequest = ctx.request as NextRequest;
-    const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-    if (!membership) {
-      throw new ForbiddenError("Unauthorized");
-    }
 
     try {
       const body = await ctx.request?.json() || {};
-      const request = ctx.request as NextRequest;
+      const request = ctx.request!;
 
-      // Route to appropriate handler based on query parameter or body structure
+      // Route to appropriate handler based on path segment or body structure
       const pathSegments = request.nextUrl.pathname.split("/");
       const action = pathSegments[pathSegments.length - 1];
 
@@ -69,7 +53,6 @@ export const POST = withCanonicalEnforcement(
           validated.totalAcquisitionSpend,
           validated.newCustomersAcquired
         );
-
         return canonicalJson(result, { status: 201 });
       } else if (action === "ltv" || body.avgMonthlyRevenue !== undefined) {
         const validated = calculateLTVSchema.parse(body);
@@ -79,7 +62,6 @@ export const POST = withCanonicalEnforcement(
           validated.avgMonthlyChurn,
           validated.grossMargin
         );
-
         return canonicalJson(result, { status: 201 });
       } else if (action === "payback" || body.cac !== undefined) {
         const validated = calculateCACPaybackSchema.parse(body);
@@ -88,7 +70,6 @@ export const POST = withCanonicalEnforcement(
           validated.cac,
           validated.monthlyProfit
         );
-
         return canonicalJson(result, { status: 201 });
       } else {
         const validated = assessHealthSchema.parse(body);
@@ -99,7 +80,6 @@ export const POST = withCanonicalEnforcement(
           validated.paybackMonths,
           validated.monthlyProfit
         );
-
         return canonicalJson(result, { status: 201 });
       }
     } catch (error) {
@@ -109,15 +89,10 @@ export const POST = withCanonicalEnforcement(
           { status: 400 }
         );
       }
-
       if (error instanceof Error) {
         return canonicalJson({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
       }
-
-      return canonicalJson(
-        { error: "Internal server error" },
-        { status: 500 }
-      );
+      return canonicalJson({ error: "Internal server error" }, { status: 500 });
     }
   },
   {

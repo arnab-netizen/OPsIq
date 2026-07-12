@@ -1,24 +1,12 @@
-import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { calculateDecisionImpact } from "@/services/business-impact/decision-impact.service";
-import { UnauthorizedError } from "@/infra/errors";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceIdParam = ctx.request!.nextUrl.searchParams.get("workspaceId");
-    if (!workspaceIdParam) {
-      throw new Error("Workspace ID required");
-    }
-
-    const membership = await enforceWorkspaceScoping(ctx.request!, workspaceIdParam);
-    if (!membership) {
-      throw new UnauthorizedError("Unauthorized or invalid workspace");
-    }
-
+    const workspaceId = ctx.verifiedWorkspaceId;
     const decisionId = params.id;
-    const metrics = await calculateDecisionImpact(decisionId, workspaceIdParam);
-
+    const metrics = await calculateDecisionImpact(decisionId, workspaceId);
     return metrics;
-  }
+  },
+  { requireWorkspace: true }
 );

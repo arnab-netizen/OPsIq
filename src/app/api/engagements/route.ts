@@ -1,7 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { hasInternalAccess } from "@/policies/capability-check";
-import type { NextRequest } from "next/server";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createEngagement, listEngagements, ENGAGEMENTS_SERVICE_VERSION } from "@/services/engagement";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
@@ -10,8 +8,7 @@ import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES } from "@/domain/constants/statuses";
 import { assertCapability } from "@/services/entitlement.service";
-import { PlanLimitError, UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { logger } from "@/infra/logger";
+import { PlanLimitError, UnauthorizedError } from "@/infra/errors";
 import { ClassifiedApiError, hasClassification } from "@/infra/classified-error";
 
 const createEngagementSchema = z.object({

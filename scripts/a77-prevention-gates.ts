@@ -73,9 +73,9 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/billing/plan/route.ts",
     "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
     // decisions/create — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/engagements/[engagementId]/business-impact/route.ts",
+    // business-impact — MIGRATED to withCanonicalEnforcement in A7.7 (no x-workspace-id header)
     // constraint-checks — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
+    // decision-evidence — MIGRATED to withCanonicalEnforcement in A7.7 (no x-workspace-id header)
     // experiments/[experimentId]/approve — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/[experimentId]/learning — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/[experimentId]/progress — MIGRATED to withCanonicalEnforcement in A7.7
@@ -92,7 +92,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     // public/actions — MIGRATED to withCanonicalEnforcement in A7.7 (no x-workspace-id header)
     // public/engagements — MIGRATED to withCanonicalEnforcement in A7.7
     // public/kpis — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/users/[userId]/route.ts",
+    // users/[userId] — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/webhooks/[id]/test/route.ts",
     "src/app/api/webhooks/subscribe/route.ts",
     // Operational middleware — forgeable but operational (rate-limit, tier, idempotency, error)
@@ -164,11 +164,11 @@ const ALLOWLISTS: Record<string, string[]> = {
   // DC-03: non-canonical wrappers in route files
   "non-canonical-route-wrappers": [
     // enforceWorkspaceScoping callers (39 + those called inside canonical):
-    "src/app/api/engagements/route.ts",
-    "src/app/api/engagements/[engagementId]/route.ts",
-    "src/app/api/engagements/[engagementId]/business-impact/route.ts",
+    // engagements/route.ts — MIGRATED in A7.7 (stale enforceWorkspaceScoping import removed)
+    // engagements/[engagementId]/route.ts — MIGRATED in A7.7 (stale enforceWorkspaceScoping import removed)
+    // business-impact — MIGRATED to withCanonicalEnforcement in A7.7
     // constraint-checks — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
+    // decision-evidence — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/[experimentId]/approve — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/[experimentId]/learning — MIGRATED to withCanonicalEnforcement in A7.7
@@ -176,13 +176,13 @@ const ALLOWLISTS: Record<string, string[]> = {
     // experiments/[experimentId]/result — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/[experimentId]/start — MIGRATED to withCanonicalEnforcement in A7.7
     // shock-events — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/evidence-bundles/route.ts",
-    "src/app/api/growth/unit-economics/route.ts",
-    "src/app/api/growth/acquisition-metrics/route.ts",
-    "src/app/api/growth/sales-pipeline/route.ts",
-    "src/app/api/users/[userId]/route.ts",
-    "src/app/api/business-impact/summary/route.ts",
-    "src/app/api/business-impact/decision/[id]/route.ts",
+    // evidence-bundles — MIGRATED to withCanonicalEnforcement in A7.7
+    // growth/unit-economics — MIGRATED to withCanonicalEnforcement in A7.7
+    // growth/acquisition-metrics — MIGRATED to withCanonicalEnforcement in A7.7
+    // growth/sales-pipeline — MIGRATED to withCanonicalEnforcement in A7.7
+    // users/[userId] — MIGRATED to withCanonicalEnforcement in A7.7
+    // business-impact/summary — MIGRATED to withCanonicalEnforcement in A7.7
+    // business-impact/decision/[id] — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/leads/[leadId]/route.ts",
     "src/app/api/control/today/route.ts",
     "src/app/api/owner/config/route.ts",

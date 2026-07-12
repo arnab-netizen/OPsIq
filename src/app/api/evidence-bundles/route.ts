@@ -1,6 +1,4 @@
-import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   createEvidenceBundle,
@@ -9,56 +7,43 @@ import {
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { createEvidenceBundleSchema } from "@/domain/validation/evidence";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
+import { ValidationError } from "@/infra/errors";
 import { z } from "zod/v4";
-import { errorToResponse } from "@/infra/errors";
-import { logger } from "@/infra/logger";
-import type { NextRequest } from "next/server";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 const listBundlesSchema = z.object({
   engagementId: z.string().uuid(),
 });
 
 export const POST = withCanonicalEnforcement(
-  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new ValidationError("idempotency-key header required");
+    }
+
+    const body = await parseRequestBody(ctx.request!, createEvidenceBundleSchema);
+
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "createEvidenceBundle",
+      actorId: ctx.verifiedActorId,
+      payload: body,
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+
     try {
-      const workspaceId = ctx.verifiedWorkspaceId;
-
-      const idempotencyKey = ctx.request?.headers.get("idempotency-key");
-      if (!idempotencyKey) {
-        return Response.json(
-          { error: "idempotency-key header required" },
-          { status: 400 }
-        );
-      }
-
-      const body = await parseRequestBody(ctx.request!, createEvidenceBundleSchema);
-
-      // Check idempotency
-      const idempotencyCheck = await checkIdempotencyKey({
-        idempotencyKey,
-        operationName: "createEvidenceBundle",
-        actorId: ctx.verifiedActorId,
-        payload: body,
-      });
-
-      if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-        return Response.json(idempotencyCheck.cachedResponse.body, {
-          status: idempotencyCheck.cachedResponse.status,
-        });
-      }
-
       const result = await createEvidenceBundle(body, ctx, workspaceId);
       await recordIdempotencyResponse(idempotencyKey, 201, result);
-
-      return Response.json(result, { status: 201 });
+      return result;
     } catch (error) {
-      logger.error("Error creating evidence bundle", error);
-      if (ctx.request?.headers.get("idempotency-key")) {
-        const err = error instanceof Error ? error : new Error("Unknown error");
-        await recordIdempotencyError(ctx.request.headers.get("idempotency-key")!, err);
-      }
-      return errorToResponse(error);
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
     }
   },
   {
@@ -74,5 +59,5 @@ export const GET = withCanonicalEnforcement(
     const result = await listEvidenceBundles(params.engagementId, workspaceId);
     return { bundles: result };
   },
-  { requireWorkspace: true, requireCapabilities: ['EVIDENCE_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.EVIDENCE_VIEW] }
 );

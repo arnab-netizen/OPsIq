@@ -1,13 +1,10 @@
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { SalesPipelineEngine } from "@/services/growth/sales-pipeline-engine";
 import { DealStage } from "@/domain/growth/growth-engines";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
 
 const recordDealSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
@@ -48,19 +45,6 @@ const calculateMetricsSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
-    if (!workspaceId) {
-      return canonicalJson(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
-    }
-
-    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
-    const nextRequest = ctx.request as NextRequest;
-    const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-    if (!membership) {
-      throw new ForbiddenError("Unauthorized");
-    }
 
     try {
       const body = await ctx.request?.json() || {};
@@ -80,15 +64,10 @@ export const POST = withCanonicalEnforcement(
           { status: 400 }
         );
       }
-
       if (error instanceof Error) {
         return canonicalJson({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
       }
-
-      return canonicalJson(
-        { error: "Internal server error" },
-        { status: 500 }
-      );
+      return canonicalJson({ error: "Internal server error" }, { status: 500 });
     }
   },
   {

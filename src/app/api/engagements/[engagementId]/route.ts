@@ -1,8 +1,6 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { hasInternalAccess } from "@/policies/capability-check";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getEngagementById, updateEngagement } from "@/services/engagement";
 import { assertEngagementAccess } from "@/lib/visibility";
@@ -16,7 +14,6 @@ import {
   ENGAGEMENT_MODES,
   HEALTH_STATUSES,
 } from "@/domain/constants/statuses";
-import type { NextRequest } from "next/server";
 
 const updateEngagementSchema = z.object({
   title: z.string().min(1).optional(),
