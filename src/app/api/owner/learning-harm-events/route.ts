@@ -28,7 +28,6 @@ const harmEventSchema = z.object({
     "SAFETY_RISK",
   ]),
   severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
-  detectedBy: z.string().min(1),
   detectedAt: z.string().min(1).transform((s) => new Date(s)),
   harmDescription: z.string().min(1),
 });
@@ -53,7 +52,7 @@ export const POST = withCanonicalEnforcement(
       candidateId: body.candidateId,
       harmType: body.harmType,
       severity: body.severity,
-      detectedBy: body.detectedBy,
+      detectedBy: ctx.verifiedActorId,
       detectedAt: body.detectedAt,
       harmDescription: body.harmDescription,
     });

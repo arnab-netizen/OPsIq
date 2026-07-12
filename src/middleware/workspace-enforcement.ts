@@ -76,8 +76,8 @@ export async function enforceWorkspaceScoping(
  */
 export function hasPermission(role: string, action: string): boolean {
   const permissions: Record<string, string[]> = {
-    admin: ["create", "read", "update", "delete", "approve", "reject", "override", "evaluate"],
-    operator: ["create", "read", "evaluate"],
+    admin: ["create", "read", "update", "delete", "approve", "reject", "override", "evaluate", "execute", "fail_decision", "verify_outcome", "record_outcome"],
+    operator: ["create", "read", "evaluate", "execute", "fail_decision", "record_outcome"],
     reviewer: ["read", "approve", "reject", "evaluate"],
   };
 

@@ -17,6 +17,8 @@
 
 import { randomBytes } from "crypto";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
   decryptOAuthToken,
   encryptOAuthToken,
@@ -96,6 +98,14 @@ export async function storeOAuthToken(
       updatedAt: new Date(),
     },
   });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.OAUTH_TOKEN_STORED,
+    workspaceId,
+    entityType: "ExternalOAuthToken",
+    entityId: connectionId,
+    payload: { connectionId, tokenType: encrypted.tokenType },
+  }).catch(() => {});
 
   return encrypted;
 }
@@ -232,6 +242,14 @@ export async function updateSyncJobStatus(
         lastErrorMessage: request.errorMessage,
       },
     });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.SYNC_JOB_FAILED,
+      workspaceId,
+      entityType: "ExternalSyncJob",
+      entityId: request.connectionId,
+      payload: { connectionId: request.connectionId, errorMessage: request.errorMessage, recordsImported: request.recordsImported },
+    }).catch(() => {});
   } else {
     // Create successful job
     await prisma.externalSyncJob.create({
@@ -252,6 +270,14 @@ export async function updateSyncJobStatus(
         lastSyncAt: now,
       },
     });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.SYNC_JOB_COMPLETED,
+      workspaceId,
+      entityType: "ExternalSyncJob",
+      entityId: request.connectionId,
+      payload: { connectionId: request.connectionId, recordsImported: request.recordsImported },
+    }).catch(() => {});
   }
 }
 
@@ -302,6 +328,14 @@ export async function disconnectOAuthConnection(
     });
   }
 
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.OAUTH_CONNECTION_REVOKED,
+    workspaceId: request.workspaceId,
+    entityType: "ExternalConnection",
+    entityId: request.connectionId,
+    payload: { connectionId: request.connectionId },
+  }).catch(() => {});
+
   return {
     success: true,
     revokeToken: true,
@@ -336,6 +370,14 @@ export async function markConnectionExpired(
       lastErrorMessage: errorMessage || "Token expired",
     },
   });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.OAUTH_CONNECTION_EXPIRED,
+    workspaceId,
+    entityType: "ExternalConnection",
+    entityId: connectionId,
+    payload: { connectionId, errorMessage: errorMessage ?? "Token expired" },
+  }).catch(() => {});
 }
 
 /**

@@ -402,6 +402,15 @@ export const AUDIT_EVENTS = {
   // Personalized SOP / workflow engine (Slice 16)
   SOP_VERSION_APPROVED: "sop.version_approved",
 
+  // External OAuth / Connection lifecycle
+  OAUTH_TOKEN_STORED: "oauth.token_stored",
+  OAUTH_CONNECTION_REVOKED: "oauth.connection_revoked",
+  OAUTH_CONNECTION_EXPIRED: "oauth.connection_expired",
+
+  // External sync jobs
+  SYNC_JOB_COMPLETED: "sync.job_completed",
+  SYNC_JOB_FAILED: "sync.job_failed",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",

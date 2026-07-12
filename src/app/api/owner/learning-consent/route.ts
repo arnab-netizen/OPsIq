@@ -20,7 +20,6 @@ export const runtime = "nodejs";
 const consentSchema = z.object({
   candidateId: z.string().min(1),
   consentGiven: z.boolean(),
-  consentBy: z.string().min(1),
   consentAt: z.string().min(1).transform((s) => new Date(s)),
   consentScope: z.enum(["WORKSPACE_ONLY", "ANONYMIZED_AGGREGATE", "NONE"]),
   consentNotes: z.string(),
@@ -43,7 +42,7 @@ export const POST = withCanonicalEnforcement(
       workspaceId: ctx.verifiedWorkspaceId,
       candidateId: body.candidateId,
       consentGiven: body.consentGiven,
-      consentBy: body.consentBy,
+      consentBy: ctx.verifiedActorId,
       consentAt: body.consentAt,
       consentScope: body.consentScope,
       consentNotes: body.consentNotes,

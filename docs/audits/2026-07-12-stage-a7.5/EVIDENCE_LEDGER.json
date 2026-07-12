@@ -1,0 +1,654 @@
+{
+  "audit": "OPSIQ Stage A7.5 — Systemic Invariant Verification & Architecture Hardening",
+  "date": "2026-07-12",
+  "branch": "claude/phase-a7.5-invariant-hardening",
+  "auditors": ["parallel-agent-I1+I2", "parallel-agent-I3", "parallel-agent-I4+I5", "parallel-agent-I6+I7", "parallel-agent-I8+I9+I10"],
+  "findings": [
+    {
+      "id": "I1-001",
+      "invariant": "I1",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I1",
+      "file": "src/app/api/owner/learning-privacy/route.ts",
+      "line": 48,
+      "evidence": "appliedBy: body.appliedBy",
+      "description": "Actor identity written to privacy-control audit record comes from request body, not verified session. Any authenticated caller can forge the appliedBy field."
+    },
+    {
+      "id": "I1-002",
+      "invariant": "I1",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I1",
+      "file": "src/app/api/owner/learning-retention/route.ts",
+      "line": 41,
+      "evidence": "appliedBy: body.appliedBy",
+      "description": "Same forgeable actor-ID pattern. appliedBy on retention policy record is caller-supplied."
+    },
+    {
+      "id": "I1-003",
+      "invariant": "I1",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I1",
+      "file": "src/app/api/owner/learning-consent/route.ts",
+      "line": 46,
+      "evidence": "consentBy: body.consentBy",
+      "description": "Actor who recorded consent taken verbatim from request body. Authenticated caller can store arbitrary identity in consent record."
+    },
+    {
+      "id": "I1-004",
+      "invariant": "I1",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I1",
+      "file": "src/app/api/owner/learning-harm-events/route.ts",
+      "line": 56,
+      "evidence": "detectedBy: body.detectedBy",
+      "description": "detectedBy is caller-supplied and stored in harm-event record. Authenticated user can attribute safety-critical records to any actor identity."
+    },
+    {
+      "id": "I1-005",
+      "invariant": "I1",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I1B",
+      "file": "src/services/idempotency.ts",
+      "line": 42,
+      "evidence": "const existing = await db.idempotencyRecord.findFirst({ where: { idempotencyKey } })",
+      "description": "Idempotency key lookup not scoped to workspaceId. Cross-tenant response leakage possible on key collision. Schema has no workspaceId column — requires DB migration to fix."
+    },
+    {
+      "id": "I2-001",
+      "invariant": "I2",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I2B",
+      "file": "src/services/external-systems/token-lifecycle.service.ts",
+      "line": 215,
+      "evidence": "await prisma.externalSyncJob.create({ data: { id: `sync_${request.connectionId}_${randomBytes(8).toString('hex')}` ... } })",
+      "description": "updateSyncJobStatus creates externalSyncJob with random ID on every call. No unique constraint, no upsert. Every retry appends a new row."
+    },
+    {
+      "id": "I2-002",
+      "invariant": "I2",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I2B",
+      "file": "src/services/external-systems/token-lifecycle.service.ts",
+      "line": 237,
+      "evidence": "await prisma.externalSyncJob.create({ ... status: 'completed' ... })",
+      "description": "Same duplicate-creation risk on success path."
+    },
+    {
+      "id": "I2-003",
+      "invariant": "I2",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I2A",
+      "file": "src/app/api/auth/signup/route.ts",
+      "line": 51,
+      "evidence": "const user = await db.user.create(...) [followed by 4 non-transactional creates]",
+      "description": "Signup creates 5 records in sequential non-transactional calls. Partial failure leaves user record without workspace/session, blocking future signup retries with 'Email already in use'."
+    },
+    {
+      "id": "I2-004",
+      "invariant": "I2",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I2C",
+      "file": "src/app/api/onboarding/invite/route.ts",
+      "line": 61,
+      "evidence": "user = await db.user.create({ data: { id: randomUUID(), email: member.email ... } })",
+      "description": "Concurrent invitations for same email: both pass null-check (L56-58), both attempt user.create. Second throws unhandled P2002."
+    },
+    {
+      "id": "I2-005",
+      "invariant": "I2",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I2C",
+      "file": "src/app/api/billing/upgrade/route.ts",
+      "line": 74,
+      "evidence": "billingAccount = await db.billingAccount.create({ ... })",
+      "description": "findUnique then create without transaction. Concurrent upgrade requests for same workspace: second throws P2002."
+    },
+    {
+      "id": "I2-006",
+      "invariant": "I2",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I2C",
+      "file": "src/services/owner-finance/diagnosis.service.ts",
+      "line": 42,
+      "evidence": "const sequenceNumber = (previousCycle?.sequenceNumber ?? 0) + 1",
+      "description": "sequenceNumber computed outside $transaction. Concurrent calls both read N, both insert N+1. Unique constraint prevents corruption but gives unhandled P2002 to caller."
+    },
+    {
+      "id": "I3-001",
+      "invariant": "I3",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I3",
+      "file": "src/services/external-systems/token-lifecycle.service.ts",
+      "lines": [81, 228, 249, 291, 300, 331],
+      "mutations": ["externalOAuthToken.upsert", "externalConnection.update (error)", "externalConnection.update (success)", "externalConnection.update (revoked)", "externalOAuthToken.delete", "externalConnection.update (expired)"],
+      "audit_pattern": "none",
+      "description": "6 mutations across security-sensitive governed entities with zero audit coverage. No emitAuditEvent import, no tx.auditEvent.create anywhere in file."
+    },
+    {
+      "id": "I3-002",
+      "invariant": "I3",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I3",
+      "file": "src/services/outcome/outcome-modification.service.ts",
+      "lines": [66, 143, 188],
+      "mutations": ["operatorItem.update (PENDING_MODIFICATION)", "operatorItem.update (REJECT)", "operatorItem.update (APPROVE)"],
+      "audit_pattern": "none",
+      "description": "3 operatorItem mutations without canonical audit. Embedded JSON auditTrail column (line 207-217) is a document field, NOT a system audit event. No emitAuditEvent import."
+    },
+    {
+      "id": "I3-003",
+      "invariant": "I3",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I3",
+      "file": "src/services/decision-control/enforcement.service.ts",
+      "lines": [277],
+      "mutations": ["operatorItem.update (outcomeDelta)"],
+      "audit_pattern": "none",
+      "description": "triggerReEvaluationOnCompletion writes outcomeDelta to governed decision without audit. No emitAuditEvent import in file."
+    },
+    {
+      "id": "I3-004",
+      "invariant": "I3",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I3",
+      "file": "src/services/recommendation/attribution.ts",
+      "lines": [37],
+      "mutations": ["operatorItem.update (recommendationId)"],
+      "audit_pattern": "none",
+      "description": "linkDecisionToRecommendation updates decision-to-recommendation linkage without audit event. No emitAuditEvent import."
+    },
+    {
+      "id": "I3-005",
+      "invariant": "I3",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I3",
+      "file": "src/services/projection-rebuild-engine.ts",
+      "lines": [30, 103],
+      "mutations": ["recommendation.deleteMany", "recommendation.create"],
+      "audit_pattern": "none",
+      "description": "System-level projection rebuild writes recommendation without audit. Lower risk (infrastructure operation), but rebuild should emit a platform audit event."
+    },
+    {
+      "id": "I3-006",
+      "invariant": "I3",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I3",
+      "file": "src/services/projection-engine.ts",
+      "lines": [101],
+      "mutations": ["recommendation.update"],
+      "audit_pattern": "none",
+      "description": "Event projection handler updates recommendation read-model without audit. Upstream CanonicalEvent provides partial traceability but projection write is unaudited."
+    },
+    {
+      "id": "I4-001",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4B",
+      "file": "src/services/operator/store.ts",
+      "lines": [225, 299],
+      "description": "updateItem and applyOverride on OperatorItem (governed decision) use WHERE { id } only. No version guard. Last write silently wins on concurrent access."
+    },
+    {
+      "id": "I4-002",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4B",
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "lines": [391],
+      "description": "recordDecisionOutcome uses WHERE { id } with no status or version guard. Sibling transitionDecisionState uses updateMany with status guard (line 106) — inconsistent."
+    },
+    {
+      "id": "I4-003",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4B",
+      "file": "src/services/roi-lifecycle-gating.ts",
+      "lines": [205, 253, 349],
+      "description": "3 operatorItem.update calls write impact, outcome, ROI fields with WHERE { id } only. Can race against state-transition writes."
+    },
+    {
+      "id": "I4-004",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4B",
+      "file": "src/services/decision-control/enforcement.service.ts",
+      "lines": [277],
+      "description": "outcomeDelta update on governed decision with WHERE { id, workspaceId } — no version guard."
+    },
+    {
+      "id": "I4-005",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4B",
+      "file": "src/app/api/decisions/[decisionId]/evaluate/route.ts",
+      "lines": [88],
+      "description": "Evaluation route writes to OperatorItem with WHERE { id, workspaceId } — no version. Concurrent state transition can interleave."
+    },
+    {
+      "id": "I4-006",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4A",
+      "file": "src/services/action-lifecycle.ts",
+      "lines": [175],
+      "description": "transitionActionState: version incremented in data but NOT in WHERE guard. TOCTOU: both concurrent callers pass read+validate, second write overwrites first."
+    },
+    {
+      "id": "I4-007",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4A",
+      "file": "src/services/action.ts",
+      "lines": [462, 479],
+      "description": "updateAction: pre-checks version at line 462 then updates at 479 with no version in WHERE. Classic TOCTOU — should use updateMany with version in WHERE."
+    },
+    {
+      "id": "I4-008",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4A",
+      "file": "src/services/intervention-state.ts",
+      "lines": [306, 330, 405, 447],
+      "description": "initializeInterventionState, transitionPhase, blockEngagement, unblockEngagement all do findUnique+update without version in WHERE. withVersionCheck helper exists and is used elsewhere but missed here."
+    },
+    {
+      "id": "I4-009",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4A",
+      "file": "src/services/recommendation.ts",
+      "lines": [1036, 1287],
+      "description": "updateRecommendationPriorityFromScore and updateRecommendation both have TOCTOU version races: pre-read without version in WHERE on update."
+    },
+    {
+      "id": "I4-010",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4B",
+      "file": "src/services/founder-recovery/action.service.ts",
+      "lines": [81],
+      "description": "RecoveryAction has version column but WHERE is { id } only. No version guard on update."
+    },
+    {
+      "id": "I4-011",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4B",
+      "file": "src/services/founder-recovery/business.service.ts",
+      "lines": [71],
+      "description": "OwnerBusiness has version column but WHERE is { id } only."
+    },
+    {
+      "id": "I4-012",
+      "invariant": "I4",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I4C",
+      "file": "src/services/owner-operations/action.service.ts",
+      "lines": [68],
+      "description": "OwnerOperationsAction and 5 sibling tables (owner-sales, owner-finance, owner-marketing, owner-cashflow, owner-sop, owner-strategy action.service.ts) have no version column. CAS is architecturally impossible without schema migration."
+    },
+    {
+      "id": "I5-001",
+      "invariant": "I5",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I5C",
+      "file": "src/app/api/decisions/intake/route.ts",
+      "lines": [32],
+      "description": "Intake route creates governed decision with workspace membership check only. Canonical decisions/create route gates on CAPABILITIES.DECISION_CREATE. Intake bypasses capability entirely."
+    },
+    {
+      "id": "I5-002",
+      "invariant": "I5",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I5B",
+      "file": "src/app/api/proof/review/route.ts",
+      "lines": [14],
+      "description": "Required permission level for proof review taken from client request body (body.requiredPermission). Attacker can set any GuidedExecutionPermission value to downgrade authorization requirement."
+    },
+    {
+      "id": "I5-003",
+      "invariant": "I5",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I5A",
+      "file": "src/app/api/decisions/[decisionId]/execute/route.ts",
+      "lines": [42],
+      "evidence": "hasPermission(membership.role, 'execute')",
+      "description": "'execute' not in hasPermission map for any role. Route permanently denies all users. Functional breakage."
+    },
+    {
+      "id": "I5-004",
+      "invariant": "I5",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I5A",
+      "file": "src/app/api/decisions/[decisionId]/fail/route.ts",
+      "lines": [53],
+      "evidence": "hasPermission(membership.role, 'fail_decision')",
+      "description": "'fail_decision' not in hasPermission map. Route permanently denies all users."
+    },
+    {
+      "id": "I5-005",
+      "invariant": "I5",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I5A",
+      "file": "src/app/api/decisions/[decisionId]/verify/route.ts",
+      "lines": [56],
+      "evidence": "hasPermission(membership.role, 'verify_outcome')",
+      "description": "'verify_outcome' not in hasPermission map. Route permanently denies all users including admin."
+    },
+    {
+      "id": "I5-006",
+      "invariant": "I5",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I5A",
+      "file": "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
+      "lines": [57],
+      "evidence": "hasPermission(membership.role, 'record_outcome')",
+      "description": "'record_outcome' not in hasPermission map. Route permanently denies all users."
+    },
+    {
+      "id": "I6-001",
+      "invariant": "I6",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I6",
+      "file": "src/services/owner-mode/opportunity-decision.service.ts",
+      "lines": [87],
+      "evidence": "const marginFloorPct = DEFAULT_MARGIN_FLOOR_PCT / 100",
+      "description": "DEFAULT_MARGIN_FLOOR_PCT=15 (percent) divided by 100 inline to become 0..1 fraction for opportunity-contract-guardrails.ts. Same business rule encoded in two unit systems bridged by ad-hoc /100 conversion. Any new caller that misses this conversion silently applies floor 100× wrong."
+    },
+    {
+      "id": "I6-002",
+      "invariant": "I6",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I6",
+      "file": "src/domain/owner-mode/cash-profit-protection.ts",
+      "lines": [134],
+      "evidence": "const NET_MARGIN_FLOOR = 5",
+      "description": "Second margin floor (net, 5%) exists independently of DEFAULT_MARGIN_FLOOR_PCT=15 (gross). Different metrics — not a duplicate — but no cross-reference means policy changes must be applied to both independently."
+    },
+    {
+      "id": "I7-001",
+      "invariant": "I7",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I7A",
+      "file": "src/services/external-systems/google-sheets-oauth.service.ts",
+      "lines": [134, 149, 271, 290],
+      "description": "4 functions always throw: exchangeCodeForTokens, extractGoogleSheetData, refreshAccessToken, revokeGoogleAccess. Google Sheets OAuth integration is completely inoperative."
+    },
+    {
+      "id": "I7-002",
+      "invariant": "I7",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I7A",
+      "file": "src/services/external-systems/browser-import.service.ts",
+      "lines": [370],
+      "evidence": "throw new Error('Not yet implemented - requires DB tables')",
+      "description": "Audit trail retrieval function is a stub that unconditionally throws."
+    },
+    {
+      "id": "I7-003",
+      "invariant": "I7",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I7A",
+      "file": "src/services/external-systems/token-lifecycle.service.ts",
+      "lines": [187],
+      "evidence": "throw new Error(`Token refresh for provider ${providerId} not implemented`)",
+      "description": "exchangeRefreshTokenForAccessToken always throws. Token refresh path is inoperative."
+    },
+    {
+      "id": "I7-004",
+      "invariant": "I7",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I7A",
+      "file": "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
+      "lines": [72],
+      "evidence": "return { cycles: [], note: 'Review cycle history not yet implemented' }",
+      "description": "GET endpoint always returns hardcoded empty array. No DB query. Clients always receive empty cycles list."
+    },
+    {
+      "id": "I7-005",
+      "invariant": "I7",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I7A",
+      "file": "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+      "lines": [130],
+      "evidence": "return Response.json({ note: 'Constraint check history not yet persisted', lastCheck: null })",
+      "description": "GET handler returns stub response with lastCheck: null. No persistence wired."
+    },
+    {
+      "id": "I7-006",
+      "invariant": "I7",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I7B",
+      "file": "src/services/snapshot-engine.ts",
+      "lines": [119],
+      "evidence": "logger.info('SnapshotEngine: Cleanup (not yet implemented)'); // TODO: Implement snapshot cleanup logic",
+      "description": "cleanupOldSnapshots is a no-op. Snapshot growth is unbounded. Cleanup silently does nothing."
+    },
+    {
+      "id": "I7-007",
+      "invariant": "I7",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I7C",
+      "file": "src/services/cache/cache-factory.ts",
+      "lines": [8],
+      "description": "CACHE_BACKEND=redis silently falls back to in-memory with console.warn. Redis branch is declared but not implemented. Multi-instance deployments will have split caches without error."
+    },
+    {
+      "id": "I7-008",
+      "invariant": "I7",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I7C",
+      "file": "src/infra/error-monitoring.ts",
+      "lines": [167],
+      "evidence": "// TODO: Integrate with Sentry/DataDog/CloudWatch",
+      "description": "Error-rate alert integration is a TODO. No alert leaves the process."
+    },
+    {
+      "id": "I8-001",
+      "invariant": "I8",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I8",
+      "file": "src/__tests__/services/finance-snapshot-audit-transaction-r0.test.ts",
+      "lines": [22],
+      "evidence": "vi.mock('@/domain/owner-finance/data-confidence', () => ({ calculateDataConfidence: vi.fn().mockReturnValue(...) }))",
+      "description": "Test exercises createFinancialSnapshot but mocks away the domain function it calls. Domain regressions invisible to this test."
+    },
+    {
+      "id": "I8-002",
+      "invariant": "I8",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I8",
+      "file": "src/__tests__/services/do-not-repeat-phantom-field-r0.test.ts",
+      "lines": [29],
+      "evidence": "vi.mock('@/domain/owner-mode/do-not-repeat', () => ({ evaluateDoNotRepeat: vi.fn().mockReturnValue(...) }))",
+      "description": "Service test mocks the exact domain function the service calls. Domain logic never exercised."
+    },
+    {
+      "id": "I8-003",
+      "invariant": "I8",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I8",
+      "file": "src/__tests__/p2c/condition-route-hardening.test.ts",
+      "lines": [27],
+      "evidence": "vi.mock('@/lib/canonical-route-enforcement', ...) pass-through",
+      "description": "Route test hollows out auth enforcement and all services. Only domain adapter exercised. Route integration semantics not validated."
+    },
+    {
+      "id": "I9-001",
+      "invariant": "I9",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I9",
+      "file": "src/domain/owner-strategy/business-wisdom.ts",
+      "lines": [50, 65],
+      "description": "tierForSourceType and detectGuruRedFlags are exported but have no external production callers. Both called only internally within the file. Exports unnecessarily widen public API surface."
+    },
+    {
+      "id": "I10-001",
+      "invariant": "I10",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I10A",
+      "file": "src/domain/owner-mode/input-catalog.ts",
+      "lines": [17],
+      "evidence": "import { CRITICAL_INGESTION_DOMAINS } from '@/services/owner-mode/owner-domain-ingestion'",
+      "description": "Domain file imports runtime value (const array) from service layer. Hard upward dependency: domain → services. Constant should be defined in domain."
+    },
+    {
+      "id": "I10-002",
+      "invariant": "I10",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I10B",
+      "file": "src/app/api/owner/arbitrate/route.ts",
+      "lines": [12],
+      "evidence": "import { arbitrate } from '@/domain/owner-mode/decision-arbitration'; ... return canonicalJson(arbitrate(candidates))",
+      "description": "Route calls domain function directly. Service wrapper arbitrateInterventions() exists in src/services/owner-mode/intervention-arbitration.service.ts but is bypassed."
+    },
+    {
+      "id": "I10-003",
+      "invariant": "I10",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I10B",
+      "file": "src/app/api/owner/proof-risk/queue/route.ts",
+      "lines": [13],
+      "evidence": "import { buildAdjudicationQueue } from '@/domain/owner-mode/adjudication-queue'",
+      "description": "Route calls domain logic directly without service intermediary."
+    },
+    {
+      "id": "I10-004",
+      "invariant": "I10",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I10B",
+      "file": "src/app/api/owner/config/route.ts",
+      "lines": [12],
+      "evidence": "import { validateOwnerDashboardConfig } from '@/domain/owner-mode/owner-dashboard'",
+      "description": "Route calls domain validation directly without service layer."
+    },
+    {
+      "id": "I10-005",
+      "invariant": "I10",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I10B",
+      "file": "src/app/api/owner/guardrails/screen/route.ts",
+      "lines": [16],
+      "evidence": "import { screenOpportunity, screenContractQuote, shouldRunMarketing } from '@/domain/owner-mode/opportunity-contract-guardrails'",
+      "description": "Route calls 3 domain business-logic functions directly. These make accept/defer/reject decisions that should be owned by service layer."
+    },
+    {
+      "id": "I10-006",
+      "invariant": "I10",
+      "severity": "FAIL",
+      "defect_class": "DC-A7.5-I10B",
+      "file": "src/app/api/employee/tasks/[taskId]/guidance/route.ts",
+      "lines": [4],
+      "evidence": "import { sealBoundary } from '@/domain/execution/boundary'",
+      "description": "Route calls domain sealBoundary() directly. Security-relevant operation should go through service (guidance service exists at src/services/execution/)."
+    },
+    {
+      "id": "I10-007",
+      "invariant": "I10",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I10C",
+      "file": "src/domain/decision/monetization.ts",
+      "lines": [8],
+      "evidence": "import type { ScenarioComparison } from '@/services/control/scenario-comparison'",
+      "description": "Domain file uses value-import syntax for a type from service layer. Type belongs in domain or shared types module."
+    },
+    {
+      "id": "I10-008",
+      "invariant": "I10",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I10C",
+      "file": "src/domain/owner-mode/supervisor-summary.ts",
+      "lines": [21],
+      "description": "Domain imports Confidence type from service layer. Type-only import but wrong direction."
+    },
+    {
+      "id": "I10-009",
+      "invariant": "I10",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I10C",
+      "file": "src/domain/owner-mode/owner-onboarding.ts",
+      "lines": [24],
+      "description": "Same Confidence type import from service layer."
+    },
+    {
+      "id": "I10-010",
+      "invariant": "I10",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I10C",
+      "file": "src/domain/owner-mode/readiness-score.ts",
+      "lines": [25],
+      "description": "Same Confidence type import from service layer."
+    },
+    {
+      "id": "I10-011",
+      "invariant": "I10",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I10C",
+      "file": "src/domain/owner-mode/input-guidance.ts",
+      "lines": [35],
+      "description": "Confidence and IngestionDomain types imported from service layer. Both should be extracted to domain-level types module."
+    },
+    {
+      "id": "I10-012",
+      "invariant": "I10",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I10C",
+      "file": "src/domain/execution/proof-dispute.ts",
+      "lines": [16],
+      "evidence": "import type { ReassessmentTrigger } from '@/services/owner-mode/reassessment-event.service'",
+      "description": "ReassessmentTrigger is a domain concept defined in a service file. Domain reaches up to import it."
+    },
+    {
+      "id": "I10-013",
+      "invariant": "I10",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I10B",
+      "file": "src/app/api/owner/approvals/resolve/route.ts",
+      "lines": [17],
+      "evidence": "import { APPROVAL_RISK_CLASSES, hashApprovalContent } from '@/domain/owner-mode/approval-memory'",
+      "description": "Route calls domain utility hashApprovalContent() directly alongside service call."
+    },
+    {
+      "id": "I10-014",
+      "invariant": "I10",
+      "severity": "WARN",
+      "defect_class": "DC-A7.5-I10B",
+      "file": "src/app/api/owner/manual-entry/route.ts",
+      "lines": [18],
+      "evidence": "import { detectPiiInFields } from '@/domain/owner-mode/owner-manual-entry-form'",
+      "description": "Route calls domain PII detection function directly. PII classification is business logic that should sit in service boundary."
+    }
+  ],
+  "summary": {
+    "total_findings": 44,
+    "by_severity": { "FAIL": 28, "WARN": 16 },
+    "by_invariant": {
+      "I1": 5, "I2": 6, "I3": 6, "I4": 12, "I5": 6, "I6": 2,
+      "I7": 8, "I8": 3, "I9": 1, "I10": 14
+    },
+    "defect_classes": [
+      "DC-A7.5-I1: Actor identity forgery (4 findings)",
+      "DC-A7.5-I1B: Idempotency cross-tenant scope (1 finding, DB-blocked fix)",
+      "DC-A7.5-I2A: Non-transactional multi-step create (1 finding)",
+      "DC-A7.5-I2B: Unbounded record creation on retry (2 findings)",
+      "DC-A7.5-I2C: Check-then-act races (3 findings)",
+      "DC-A7.5-I3: Missing audit on governed mutation (6 findings)",
+      "DC-A7.5-I4A: TOCTOU version race (5 findings)",
+      "DC-A7.5-I4B: Missing version guard entirely (7 findings)",
+      "DC-A7.5-I4C: Missing version column — schema gap (1 finding)",
+      "DC-A7.5-I5A: Broken permission strings — routes permanently denied (4 findings)",
+      "DC-A7.5-I5B: Permission level from client body (1 finding)",
+      "DC-A7.5-I5C: Capability bypass on intake route (1 finding)",
+      "DC-A7.5-I6: Margin floor unit inconsistency (2 findings)",
+      "DC-A7.5-I7A: Throwing stubs in production routes/services (5 findings)",
+      "DC-A7.5-I7B: No-op stub (1 finding)",
+      "DC-A7.5-I7C: Silent degraded mode (2 findings)",
+      "DC-A7.5-I8: Tests mocking their own system under test (3 findings)",
+      "DC-A7.5-I9: Dead exports (1 finding)",
+      "DC-A7.5-I10A: Domain imports runtime value from service (1 finding)",
+      "DC-A7.5-I10B: Route bypasses service layer, calls domain directly (7 findings)",
+      "DC-A7.5-I10C: Domain imports types from service layer (6 findings)"
+    ]
+  }
+}

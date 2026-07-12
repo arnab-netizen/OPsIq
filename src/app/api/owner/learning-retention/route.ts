@@ -19,7 +19,6 @@ export const runtime = "nodejs";
 
 const retentionSchema = z.object({
   retentionDays: z.number().int().positive(),
-  appliedBy: z.string().min(1),
   appliedAt: z.string().min(1).transform((s) => new Date(s)),
   policyNotes: z.string(),
 });
@@ -38,7 +37,7 @@ export const POST = withCanonicalEnforcement(
     const result = await setRetentionPolicy(db as any, {
       workspaceId: ctx.verifiedWorkspaceId,
       retentionDays: body.retentionDays,
-      appliedBy: body.appliedBy,
+      appliedBy: ctx.verifiedActorId,
       appliedAt: body.appliedAt,
       policyNotes: body.policyNotes,
     });
