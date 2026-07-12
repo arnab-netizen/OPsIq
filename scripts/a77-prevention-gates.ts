@@ -76,12 +76,12 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/engagements/[engagementId]/business-impact/route.ts",
     "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
     "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/route.ts",
+    // experiments/[experimentId]/approve — MIGRATED to withCanonicalEnforcement in A7.7
+    // experiments/[experimentId]/learning — MIGRATED to withCanonicalEnforcement in A7.7
+    // experiments/[experimentId]/progress — MIGRATED to withCanonicalEnforcement in A7.7
+    // experiments/[experimentId]/result — MIGRATED to withCanonicalEnforcement in A7.7
+    // experiments/[experimentId]/start — MIGRATED to withCanonicalEnforcement in A7.7
+    // experiments/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/engagements/[engagementId]/shock-events/route.ts",
     "src/app/api/execute/route.ts",
     "src/app/api/growth/offers/route.ts",
@@ -169,12 +169,12 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/engagements/[engagementId]/business-impact/route.ts",
     "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
     "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
+    // experiments/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
+    // experiments/[experimentId]/approve — MIGRATED to withCanonicalEnforcement in A7.7
+    // experiments/[experimentId]/learning — MIGRATED to withCanonicalEnforcement in A7.7
+    // experiments/[experimentId]/progress — MIGRATED to withCanonicalEnforcement in A7.7
+    // experiments/[experimentId]/result — MIGRATED to withCanonicalEnforcement in A7.7
+    // experiments/[experimentId]/start — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/engagements/[engagementId]/shock-events/route.ts",
     "src/app/api/evidence-bundles/route.ts",
     "src/app/api/growth/unit-economics/route.ts",
