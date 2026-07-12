@@ -1,14 +1,11 @@
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { runSystem } from "@/services/system/run";
 import { createBaseline } from "@/services/onboarding/basic";
 import { generateOperatorItems } from "@/services/operator/generate";
 import { addItems, addBlockedDecision } from "@/services/operator/store";
-import { resolveServerRole, getSession } from "@/services/auth/server-role";
+import { resolveServerRole } from "@/services/auth/server-role";
 import { canEdit, resolveApprovalGrant } from "@/services/auth/access";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { createDecisionResult } from "@/services/explanation/generate";
 import { createIntegrityPayload } from "@/services/integrity/hash";
@@ -43,8 +40,7 @@ function addIntegrity(
   };
 }
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  await withAuth();
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   let decisionResult: DecisionResult | null = null;
   let workspace;
   let userId: string | null = null;
@@ -54,8 +50,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Track execution of control layer validations for bypass prevention
   const executedValidations: string[] = ["variable_registry"];
 
-  // Get workspace context early (fail closed if missing)
-  workspace = await requireWorkspaceContext();
+  // Get workspace context from canonical auth
+  workspace = { workspaceId: ctx.verifiedWorkspaceId };
 
     // Initialize logger once workspace is available
     logger = createEventLogger("api_run", workspace.workspaceId);
@@ -75,9 +71,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       // Ignore lifecycle recording errors - observability only
     });
 
-    // Get session for user identity
-    const { session } = await withAuth();
-    userId = session?.user.id ?? null;
+    // Get user identity from canonical auth
+    userId = ctx.verifiedActorId;
 
     // Enforce server-side auth
     const role = await resolveServerRole();
@@ -143,7 +138,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     });
 
     // 1. Parse body
-    const body = await request.json();
+    const body = await ctx.request!.json();
     const { revenue, cost, currency, confidence, revenueChange, costChange, fxRates, recommendationId } = body;
 
     // Capture inputs snapshot for replay
@@ -1151,4 +1146,4 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     }
 
   return responsePayload;
-});
+}, { requireWorkspace: true });

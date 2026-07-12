@@ -88,7 +88,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     // growth/pricing-tiers — MIGRATED to withCanonicalEnforcement in A7.7
     // growth/retention-metrics — MIGRATED to withCanonicalEnforcement in A7.7
     // leads/[leadId] — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/opsiq/consulting-engine/run/route.ts",
+    // opsiq/consulting-engine/run — MIGRATED to withCanonicalEnforcement in A7.7
     // public/actions — MIGRATED to withCanonicalEnforcement in A7.7 (no x-workspace-id header)
     // public/engagements — MIGRATED to withCanonicalEnforcement in A7.7
     // public/kpis — MIGRATED to withCanonicalEnforcement in A7.7
@@ -112,7 +112,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     // metrics/control-effectiveness — FIXED in A7.7: migrated to canonical auth
     // metrics/decision-latency — FIXED in A7.7: migrated to canonical auth
     "src/services/audit/audit-log.ts",
-    "src/app/api/run/route.ts",
+    // run/route.ts — MIGRATED to withCanonicalEnforcement in A7.7 (requireWorkspaceContext removed)
     "src/app/dashboard/inbox/page.tsx",
     "src/services/workspace/context.ts",
   ],
@@ -203,11 +203,11 @@ const ALLOWLISTS: Record<string, string[]> = {
     // metrics/decision-latency — MIGRATED to withCanonicalEnforcement in A7.7
     // onboarding/invite — MIGRATED to withCanonicalEnforcement in A7.7 (no requireWorkspace: workspace created during flow)
     // onboarding/workspace — MIGRATED to withCanonicalEnforcement in A7.7 (no requireWorkspace: workspace created during flow)
-    "src/app/api/opsiq/consulting-engine/run/route.ts",
+    // opsiq/consulting-engine/run — MIGRATED to withCanonicalEnforcement in A7.7
     // public/actions — MIGRATED to withCanonicalEnforcement in A7.7
     // public/engagements — MIGRATED to withCanonicalEnforcement in A7.7
     // public/kpis — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/run/route.ts",
+    // run/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
     // verify/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
     // webhooks/[id]/test — MIGRATED to withCanonicalEnforcement in A7.7
     // webhooks/stripe — MIGRATED to plain handler (Stripe-to-server call, no user session)
