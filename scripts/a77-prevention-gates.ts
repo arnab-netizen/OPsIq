@@ -109,9 +109,9 @@ const ALLOWLISTS: Record<string, string[]> = {
   // DC-02: requireWorkspaceContext from broken context.ts
   "context-ts-callers": [
     // store.ts — FIXED in A7.7: all requireWorkspaceContext calls removed
+    // metrics/control-effectiveness — FIXED in A7.7: migrated to canonical auth
+    // metrics/decision-latency — FIXED in A7.7: migrated to canonical auth
     "src/services/audit/audit-log.ts",
-    "src/app/api/metrics/control-effectiveness/route.ts",
-    "src/app/api/metrics/decision-latency/route.ts",
     "src/app/api/run/route.ts",
     "src/app/dashboard/inbox/page.tsx",
     "src/services/workspace/context.ts",
@@ -205,8 +205,8 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/growth/offers/route.ts",
     "src/app/api/growth/pricing-tiers/route.ts",
     "src/app/api/growth/retention-metrics/route.ts",
-    "src/app/api/metrics/control-effectiveness/route.ts",
-    "src/app/api/metrics/decision-latency/route.ts",
+    // metrics/control-effectiveness — MIGRATED to withCanonicalEnforcement in A7.7
+    // metrics/decision-latency — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/onboarding/invite/route.ts",
     "src/app/api/onboarding/workspace/route.ts",
     "src/app/api/opsiq/consulting-engine/run/route.ts",
