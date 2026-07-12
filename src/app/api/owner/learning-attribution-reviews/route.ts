@@ -21,7 +21,6 @@ export const runtime = "nodejs";
 const attributionReviewSchema = z.object({
   candidateId: z.string().min(1),
   harmEventId: z.string().min(1),
-  reviewedBy: z.string().min(1),
   reviewedAt: z.string().min(1).transform((s) => new Date(s)),
   verdict: z.enum(["ATTRIBUTED", "NOT_ATTRIBUTED", "PARTIAL", "INCONCLUSIVE"]),
   confidenceScore: z.number().min(0).max(1),
@@ -53,7 +52,7 @@ export const POST = withCanonicalEnforcement(
       workspaceId: ctx.verifiedWorkspaceId,
       candidateId: body.candidateId,
       harmEventId: body.harmEventId,
-      reviewedBy: body.reviewedBy,
+      reviewedBy: ctx.verifiedActorId,
       reviewedAt: body.reviewedAt,
       verdict: body.verdict,
       confidenceScore: body.confidenceScore,

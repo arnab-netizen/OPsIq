@@ -17,7 +17,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const promoteSchema = z.object({
-  approvedBy: z.string().min(1, "approvedBy (human identity) is required"),
   approvedAt: z.string().min(1, "approvedAt timestamp is required"),
   sourceLabel: z.enum([
     "SYNTHETIC_ONLY_CANDIDATE",
@@ -37,7 +36,7 @@ export const POST = withCanonicalEnforcement(
     const body = await parseRequestBody(ctx.request!, promoteSchema);
 
     const result = await promoteLearningCandidate(db as any, ctx.verifiedWorkspaceId, candidateId, {
-      approvedBy: body.approvedBy,
+      approvedBy: ctx.verifiedActorId,
       approvedAt: body.approvedAt,
       sourceLabel: body.sourceLabel,
     });

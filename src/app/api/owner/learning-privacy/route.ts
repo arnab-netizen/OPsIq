@@ -21,7 +21,6 @@ export const runtime = "nodejs";
 const privacyControlSchema = z.object({
   candidateId: z.string().min(1),
   controlType: z.enum(["ANONYMIZE", "REDACT", "EXCLUDE", "QUARANTINE"]),
-  appliedBy: z.string().min(1),
   appliedAt: z.string().min(1).transform((s) => new Date(s)),
   reason: z.string().min(1),
 });
@@ -45,7 +44,7 @@ export const POST = withCanonicalEnforcement(
       workspaceId: ctx.verifiedWorkspaceId,
       candidateId: body.candidateId,
       controlType: body.controlType,
-      appliedBy: body.appliedBy,
+      appliedBy: ctx.verifiedActorId,
       appliedAt: body.appliedAt,
       reason: body.reason,
     });

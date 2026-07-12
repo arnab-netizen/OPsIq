@@ -1,6 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { evaluateGovernanceAlerts } from "@/services/governance/alerts";
@@ -8,9 +7,7 @@ import { logAuditEvent } from "@/services/audit/audit-log";
 import type { NextRequest } from "next/server";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  // Get workspace context (fail closed if missing)
-  const workspace = await requireWorkspaceContext();
-
+  const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
 
   // Get period parameter from query
@@ -20,15 +17,15 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
 
   // Get governance metrics and observability summary
   const metrics = await calculateGovernanceMetrics({
-    workspaceId: workspace.workspaceId,
+    workspaceId,
     days: period === "last7d" ? 7 : 1,
   });
 
-  const summary = await getObservabilitySummary(workspace.workspaceId);
+  const summary = await getObservabilitySummary(workspaceId);
 
   // Evaluate governance alerts against real metrics and summary
   const alerts = evaluateGovernanceAlerts(
-    workspace.workspaceId,
+    workspaceId,
     metrics,
     summary,
     undefined,
@@ -39,7 +36,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   await logAuditEvent({
     eventName: "GOVERNANCE_ALERTS_ACCESSED",
     entityType: "GovernanceAlerts",
-    entityId: workspace.workspaceId,
+    entityId: workspaceId,
     actorId: userId,
     role: null,
     before: null,

@@ -1,29 +1,25 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import type { NextRequest } from "next/server";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { createEventLogger } from "@/lib/observability/log";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  // Get workspace context early (fail closed if missing)
-  const workspace = await requireWorkspaceContext();
-
-  // Initialize logger once workspace is available
-  const logger = createEventLogger("api_observability_summary", workspace.workspaceId);
-
+  const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
 
+  // Initialize logger
+  const logger = createEventLogger("api_observability_summary", workspaceId);
+
   // Get observability summary from persisted real data only
-  const summary = await getObservabilitySummary(workspace.workspaceId);
+  const summary = await getObservabilitySummary(workspaceId);
 
   // Log audit event for observability access
   await logAuditEvent({
     eventName: "OBSERVABILITY_SUMMARY_ACCESSED",
     entityType: "ObservabilitySummary",
-    entityId: workspace.workspaceId,
+    entityId: workspaceId,
     actorId: userId,
     role: null,
     before: null,
@@ -33,7 +29,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       last24h_events: summary.period.last24h.lifecycleCounts.reduce((sum, c) => sum + c.count, 0),
       last7d_events: summary.period.last7d.lifecycleCounts.reduce((sum, c) => sum + c.count, 0),
     },
-    workspaceId: workspace.workspaceId,
+    workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only
     const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: 'load' });

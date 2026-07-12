@@ -6,7 +6,7 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { engagementId } = params;
-    const workspaceId = ctx.request!.headers.get("x-workspace-id") || "";
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
