@@ -74,7 +74,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
     // decisions/create — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/engagements/[engagementId]/business-impact/route.ts",
-    "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+    // constraint-checks — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
     // experiments/[experimentId]/approve — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/[experimentId]/learning — MIGRATED to withCanonicalEnforcement in A7.7
@@ -82,11 +82,11 @@ const ALLOWLISTS: Record<string, string[]> = {
     // experiments/[experimentId]/result — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/[experimentId]/start — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/engagements/[engagementId]/shock-events/route.ts",
+    // shock-events — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/execute/route.ts",
-    "src/app/api/growth/offers/route.ts",
-    "src/app/api/growth/pricing-tiers/route.ts",
-    "src/app/api/growth/retention-metrics/route.ts",
+    // growth/offers — MIGRATED to withCanonicalEnforcement in A7.7
+    // growth/pricing-tiers — MIGRATED to withCanonicalEnforcement in A7.7
+    // growth/retention-metrics — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/leads/[leadId]/route.ts",
     "src/app/api/opsiq/consulting-engine/run/route.ts",
     // public/actions — MIGRATED to withCanonicalEnforcement in A7.7 (no x-workspace-id header)
@@ -167,7 +167,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/app/api/engagements/route.ts",
     "src/app/api/engagements/[engagementId]/route.ts",
     "src/app/api/engagements/[engagementId]/business-impact/route.ts",
-    "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+    // constraint-checks — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
     // experiments/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/[experimentId]/approve — MIGRATED to withCanonicalEnforcement in A7.7
@@ -175,7 +175,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     // experiments/[experimentId]/progress — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/[experimentId]/result — MIGRATED to withCanonicalEnforcement in A7.7
     // experiments/[experimentId]/start — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/engagements/[engagementId]/shock-events/route.ts",
+    // shock-events — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/evidence-bundles/route.ts",
     "src/app/api/growth/unit-economics/route.ts",
     "src/app/api/growth/acquisition-metrics/route.ts",
@@ -195,10 +195,10 @@ const ALLOWLISTS: Record<string, string[]> = {
     // (evaluate, execute, fail, record-outcome, [decisionId], verify, create, intake)
     // diagnosis/* — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/execute/route.ts",
-    "src/app/api/governance/metrics/route.ts",
-    "src/app/api/growth/offers/route.ts",
-    "src/app/api/growth/pricing-tiers/route.ts",
-    "src/app/api/growth/retention-metrics/route.ts",
+    // governance/metrics — MIGRATED to withCanonicalEnforcement in A7.7
+    // growth/offers — MIGRATED to withCanonicalEnforcement in A7.7
+    // growth/pricing-tiers — MIGRATED to withCanonicalEnforcement in A7.7
+    // growth/retention-metrics — MIGRATED to withCanonicalEnforcement in A7.7
     // metrics/control-effectiveness — MIGRATED to withCanonicalEnforcement in A7.7
     // metrics/decision-latency — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/onboarding/invite/route.ts",
