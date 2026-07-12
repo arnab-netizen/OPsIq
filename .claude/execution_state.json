@@ -2788,12 +2788,27 @@
     "limitation": "In-process only (5-second window). Not a substitute for DB-backed checkIdempotencyKey (DB_BLOCKED). Proper idempotency for run/route.ts is in BLOCKED_RECOVERY_QUEUE.",
     "tests": "7 tests: hash called with workspaceId+body, isDuplicateRequest called with hash, duplicate rejected, no compute/mutation on duplicate, non-duplicate proceeds, different bodies → different hashes, rate-limit called before dedup",
     "gates_run": "npx tsc --noEmit (0 errors), npm run governance:scan:a77 (17/17 PASS), vitest 7/7 PASS",
-    "committed": "pending",
+    "committed": "7f786127",
     "branch": "claude/phase-6f-governance-findings-5gkiec",
     "next_automatic_target": "A7.7 Batch 17: Add DC-18 prevention gate or survey remaining auth/workspace gaps"
   },
-  "current_phase": "A7_7_BATCH_16_RUN_DEDUP_WIRED",
-  "last_commit": "pending",
+  "stage_a77_batch17": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DEAD_CODE_REMOVAL",
+    "description": "Phase 6L: Remove dead resolveServerRole call from override/route.ts and dead role field from OperatorOverrideInput. The service never used the role field — removing it shrinks the auth surface without weakening protection (OVERRIDE_DECIDE capability still enforced by withCanonicalEnforcement). Also removed dead getSession import from entity/route.ts.",
+    "root_cause": "override/route.ts called resolveServerRole() and passed result as role to recordOperatorOverride, but the service destructured only operatorItemId/overriddenAction/reason/riskAcknowledged/workspaceId/actorId — role was silently discarded. entity/route.ts imported getSession but never called it.",
+    "files_changed": [
+      "src/app/api/override/route.ts (removed resolveServerRole import + call + role field)",
+      "src/services/override/operator-override.service.ts (removed role: string | null from OperatorOverrideInput)",
+      "src/app/api/entity/route.ts (removed dead getSession import)",
+      "src/__tests__/api/override-route-6l.test.ts (9 tests proving auth surface correctness)"
+    ],
+    "auth_still_enforced": "✓ CAPABILITIES.OVERRIDE_DECIDE + requireWorkspace: true via withCanonicalEnforcement",
+    "tests": "9 tests: workspaceId/actorId from verified context, body fields forwarded, no role field in call, return value propagated, called once per request, workspace from ctx not body, actorId from ctx not body, rejection propagated, different actors produce different actorId",
+    "gates_run": "npx tsc --noEmit (0 errors), npm run governance:scan:a77 (17/17 PASS), vitest 9/9 PASS"
+  },
+  "current_phase": "A7_7_BATCH_17_DEAD_ROLE_REMOVED",
+  "last_commit": "pending — A7.7 Batch 17 Phase 6L: remove dead resolveServerRole/role/getSession",
   "pushed": false,
   "session_summary_2026_07_11": {
     "modules_completed": [8, 10, 14, 15, 16, 18, 19, 20],

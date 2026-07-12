@@ -2,7 +2,6 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { UnauthorizedError } from "@/infra/errors";
 import { createEntity, getEntities } from "@/services/entity/store";
 import { resolveServerRole } from "@/services/auth/server-role";
-import { getSession } from "@/services/auth";
 import { canEdit } from "@/services/auth/access";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
