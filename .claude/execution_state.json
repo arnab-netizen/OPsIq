@@ -2717,8 +2717,46 @@
     "pushed": true,
     "negative_tests_status": "TypeScript enforces ClaimedWorkspaceId\u2260VerifiedWorkspaceId at compile time; dead middleware throw guards prevent runtime use; runtime negative tests deferred to next batch"
   },
-  "current_phase": "A7_7_BATCH_14_AUDIT_MIGRATION",
-  "last_commit": "034cab64 \u2014 Stage A7.7 Batch 13: DC-01 hostile adjudication \u2014 branded workspace identity separation",
+  "stage_a77_batch14": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "AUDIT_MIGRATION_COMPLETE",
+    "description": "Full migration of all logAuditEvent callers to canonical emitAuditEvent. Legacy module deleted. 23 typed event name constants added. 5 missing workspaceId fields fixed. Data bug in evaluate/route.ts fixed (after.status used pre-update value). Two active test files updated to mock @/infra/audit::emitAuditEvent.",
+    "sites_migrated": [
+      "src/app/api/run/route.ts (12 calls)",
+      "src/app/api/decisions/intake/route.ts (1 call)",
+      "src/app/api/decisions/[decisionId]/evaluate/route.ts (1 call)",
+      "src/app/api/operator/route.ts (1 call)",
+      "src/app/api/entity/route.ts (1 call)",
+      "src/app/api/value/route.ts (1 call)",
+      "src/app/api/operator/myday/route.ts (1 call)",
+      "src/app/api/governance/metrics/route.ts (1 call)",
+      "src/app/api/governance/alerts/route.ts (1 call)",
+      "src/app/api/metrics/control-effectiveness/route.ts (1 call)",
+      "src/app/api/metrics/decision-latency/route.ts (1 call)",
+      "src/app/api/observability/summary/route.ts (1 call)",
+      "src/app/api/scenario/route.ts (1 call)",
+      "src/app/api/calibration/route.ts (1 call)",
+      "src/services/decision/transaction-detail.ts (dead import removed)"
+    ],
+    "deleted": "src/services/audit/audit-log.ts",
+    "tests_updated": [
+      "src/__tests__/api/audit-pattern-hardening-6h.test.ts",
+      "src/__tests__/api/decisions-idempotency-6i.test.ts"
+    ],
+    "missing_workspaceId_fixed_at": [
+      "governance/alerts/route.ts",
+      "scenario/route.ts",
+      "calibration/route.ts",
+      "entity/route.ts",
+      "value/route.ts"
+    ],
+    "gates_run": "npx tsc --noEmit \u2713, npm run build \u2713, npx prisma validate \u2713",
+    "committed": "568e18b8",
+    "branch": "claude/phase-6f-governance-findings-5gkiec",
+    "pushed": true
+  },
+  "current_phase": "A7_7_BATCH_14_AUDIT_MIGRATION_COMPLETE",
+  "last_commit": "568e18b8 \u2014 A7.7 Batch 14: Complete logAuditEvent \u2192 emitAuditEvent migration across all 19 production sites",
   "pushed": true,
   "session_summary_2026_07_11": {
     "modules_completed": [8, 10, 14, 15, 16, 18, 19, 20],
