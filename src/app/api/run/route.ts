@@ -137,6 +137,14 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     const body = await ctx.request!.json();
     const { revenue, cost, currency, confidence, revenueChange, costChange, fxRates, recommendationId } = body;
 
+    // 1-dedup. In-process duplicate detection (5-second window, in-memory).
+    // Provides basic protection against accidental double-submissions within the same
+    // server process. Not a substitute for DB-backed idempotency (DB_BLOCKED).
+    const requestHash = getRequestHash(workspace.workspaceId, { revenue, cost, currency, confidence, revenueChange, costChange, recommendationId });
+    if (isDuplicateRequest(requestHash)) {
+      throw new Error("Duplicate request detected — identical run submitted within the deduplication window. Please wait before resubmitting.");
+    }
+
     // Capture inputs snapshot for replay
     const inputsSnapshot = {
       revenue,

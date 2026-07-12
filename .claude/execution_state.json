@@ -2772,11 +2772,27 @@
     },
     "tests": "9 tests: happy path, fail-closed proof, eventName/entityId/workspaceId, call order (update before audit), workspace guard, non-pending rejection, payload structure, actorId binding",
     "gates_run": "npx tsc --noEmit (0 errors), npm run governance:scan:a77 (17/17 PASS), vitest 9/9 PASS",
-    "committed": "pending",
+    "committed": "4ce3f184",
     "branch": "claude/phase-6f-governance-findings-5gkiec",
     "next_automatic_target": "A7.7 Batch 16: Survey remaining mutation routes for idempotency gaps or further audit hardening"
   },
-  "current_phase": "A7_7_BATCH_15_EVALUATE_AUDIT_FAIL_CLOSED",
+  "stage_a77_batch16": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DEAD_IMPORT_WIRED",
+    "description": "Phase 6K: Wire isDuplicateRequest in run/route.ts. The function was imported but never called — basic in-process dedup protection was present in code but inactive. Fix: call getRequestHash + isDuplicateRequest after body parsing, before expensive computation. Provides 5-second in-process dedup window against accidental double-submissions.",
+    "root_cause": "isDuplicateRequest and getRequestHash were imported from @/services/production/safety-config in run/route.ts but neither was ever called. Basic in-process duplicate protection was silently inactive.",
+    "files_changed": [
+      "src/app/api/run/route.ts (wired getRequestHash + isDuplicateRequest after body parsing)",
+      "src/__tests__/api/run-dedup-6k.test.ts (7 tests proving dedup behavior)"
+    ],
+    "limitation": "In-process only (5-second window). Not a substitute for DB-backed checkIdempotencyKey (DB_BLOCKED). Proper idempotency for run/route.ts is in BLOCKED_RECOVERY_QUEUE.",
+    "tests": "7 tests: hash called with workspaceId+body, isDuplicateRequest called with hash, duplicate rejected, no compute/mutation on duplicate, non-duplicate proceeds, different bodies → different hashes, rate-limit called before dedup",
+    "gates_run": "npx tsc --noEmit (0 errors), npm run governance:scan:a77 (17/17 PASS), vitest 7/7 PASS",
+    "committed": "pending",
+    "branch": "claude/phase-6f-governance-findings-5gkiec",
+    "next_automatic_target": "A7.7 Batch 17: Add DC-18 prevention gate or survey remaining auth/workspace gaps"
+  },
+  "current_phase": "A7_7_BATCH_16_RUN_DEDUP_WIRED",
   "last_commit": "pending",
   "pushed": false,
   "session_summary_2026_07_11": {
