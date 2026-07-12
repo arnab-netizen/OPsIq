@@ -93,8 +93,8 @@ const ALLOWLISTS: Record<string, string[]> = {
     // public/engagements — MIGRATED to withCanonicalEnforcement in A7.7
     // public/kpis — MIGRATED to withCanonicalEnforcement in A7.7
     // users/[userId] — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/webhooks/[id]/test/route.ts",
-    "src/app/api/webhooks/subscribe/route.ts",
+    // webhooks/[id]/test — MIGRATED to withCanonicalEnforcement in A7.7
+    // webhooks/subscribe — MIGRATED to withCanonicalEnforcement in A7.7
     // Operational middleware — forgeable but operational (rate-limit, tier, idempotency, error)
     "src/middleware/idempotency-enforcement.ts",
     "src/middleware/private-mode-gate.ts",
@@ -209,9 +209,9 @@ const ALLOWLISTS: Record<string, string[]> = {
     // public/kpis — MIGRATED to withCanonicalEnforcement in A7.7
     "src/app/api/run/route.ts",
     // verify/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
-    "src/app/api/webhooks/[id]/test/route.ts",
-    "src/app/api/webhooks/stripe/route.ts",
-    "src/app/api/webhooks/subscribe/route.ts",
+    // webhooks/[id]/test — MIGRATED to withCanonicalEnforcement in A7.7
+    // webhooks/stripe — MIGRATED to plain handler (Stripe-to-server call, no user session)
+    // webhooks/subscribe — MIGRATED to withCanonicalEnforcement in A7.7
     // calibration/route.ts — MIGRATED to withCanonicalEnforcement in A7.7
     // Mixed pattern (withCanonicalEnforcement + internal enforceWorkspaceScoping call):
     "src/middleware/workspace-enforcement.ts",
