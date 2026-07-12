@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
+import { type ClaimedWorkspaceId, claimWorkspaceId, claimedIdForLog } from "@/lib/workspace-identity";
 
 /**
  * In-memory quota tracking: workspace → endpoint → usage count
@@ -129,56 +130,30 @@ export function tierEnforcement() {
       return response;
     }
 
-    // Get workspace from x-workspace-id header (set by workspace-enforcement middleware)
-    const workspaceId = request.headers.get("x-workspace-id");
-    if (!workspaceId) {
-      // Missing workspace ID means workspace-enforcement middleware didn't run
+    // DEAD MIDDLEWARE — not wired in production. Read is typed as ClaimedWorkspaceId (untrusted claim).
+    // If this middleware is ever wired, caller MUST supply a VerifiedWorkspaceId via a safe channel,
+    // not derive it from this header. The header read here is UNTRUSTED_DIAGNOSTIC_ONLY.
+    const claimedId: ClaimedWorkspaceId | null = claimWorkspaceId(request.headers.get("x-workspace-id"));
+    if (!claimedId) {
       return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
         status: 403,
       });
     }
 
-    // BILL-01: tier is resolved SERVER-SIDE from the workspace's active subscription,
-    // never from a client-supplied x-tier header. Fails safe to "free".
-    const { resolveWorkspaceTier } = await import("@/services/entitlement.service");
-    const tier: SubscriptionTier = await resolveWorkspaceTier(workspaceId);
-
-    // Get endpoint path for quota tracking
-    const endpoint = new URL(request.url).pathname;
-
-    // Check quota
-    const quota = checkQuota(workspaceId, tier, endpoint);
-
-    if (!quota.allowed) {
-      // Quota exceeded: return 429 with retry-after header
-      const retryAfter = Math.ceil((quota.resetAt - Date.now()) / 1000);
-      return new NextResponse(
-        JSON.stringify({
-          error: "Quota exceeded",
-          tier,
-          limit: getTierConfig(tier).limits.actionsPerMonth,
-          resetAt: new Date(quota.resetAt).toISOString(),
-          message: `Free tier limited to ${getTierConfig(tier).limits.actionsPerMonth} actions/month. Upgrade to Pro for unlimited.`,
-        }),
-        {
-          status: 429,
-          headers: {
-            "Retry-After": retryAfter.toString(),
-            "X-RateLimit-Reset": quota.resetAt.toString(),
-          },
-        }
-      );
-    }
-
-    // Quota OK: increment counter and add headers to response
-    const updated = incrementQuota(workspaceId, endpoint);
-
-    // Set rate limit headers on response
-    response.headers.set("X-RateLimit-Limit", getTierConfig(tier).limits.actionsPerMonth.toString());
-    response.headers.set("X-RateLimit-Remaining", quota.remaining.toString());
-    response.headers.set("X-RateLimit-Reset", quota.resetAt.toString());
-
-    return response;
+    // SECURITY GATE: This middleware is dead code. The block below would constitute
+    // TIER_ENFORCEMENT_VIOLATION + CROSS_TENANT_RESOURCE_POISONING_RISK if wired, because
+    // resolveWorkspaceTier would execute a DB query keyed on an unverified caller claim.
+    // DO NOT wire tierEnforcement() without replacing claimedId with a VerifiedWorkspaceId
+    // passed through a safe out-of-band channel (e.g., withCanonicalEnforcement context).
+    // Wiring this middleware is permanently blocked. Any future wiring must:
+    // 1. Remove this throw
+    // 2. Accept VerifiedWorkspaceId from withCanonicalEnforcement context (not from header)
+    // 3. Rewrite tier and quota checks against verified identity
+    throw new Error(
+      "tierEnforcement() is dead middleware and must not be wired. " +
+      `Claimed workspace: ${claimedIdForLog(claimedId)}. ` +
+      "Use withCanonicalEnforcement with VerifiedWorkspaceId for tier checks."
+    );
   };
 }
 

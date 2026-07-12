@@ -19,6 +19,7 @@ import type { SessionInfo } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
 import { hasCapability, highestRole, hasInternalAccess } from "@/policies/capability-check";
 import { resolveCanonicalCapabilities } from "@/lib/canonical-capability-resolver";
+import type { VerifiedWorkspaceId } from "@/lib/workspace-identity";
 
 // ─── Auth Facts: Raw State ──────────────────────────────────────────────────
 
@@ -76,9 +77,9 @@ export interface AuthState {
   // Internal access check
   internalAccessFact: InternalAccessFact;
 
-  // Workspace requirement
+  // Workspace requirement — VerifiedWorkspaceId means DB membership was proven
   workspaceRequired: boolean;
-  workspaceId: string | null;
+  workspaceId: VerifiedWorkspaceId | null;
   workspaceValid: boolean;
 }
 
@@ -102,7 +103,7 @@ export interface AuthDecision {
     policy: PolicyContext;
     verifiedActorId: string;
     verifiedActorType: "user";
-    verifiedWorkspaceId: string;
+    verifiedWorkspaceId: VerifiedWorkspaceId;
     verifiedCapabilities: Set<string>;
   } | null;
 
@@ -340,7 +341,7 @@ export function validateLegacySemanticStripdown(context: {
 export async function buildAuthState(input: {
   correlationId: string;
   requestId: string;
-  workspaceId: string | null;
+  workspaceId: VerifiedWorkspaceId | null;
   workspaceRequired: boolean;
   sessionFact: SessionFact;
   policyFact: PolicyFact;
@@ -555,7 +556,7 @@ export function evaluateAuthState(
       policy,
       verifiedActorId: session.user.id,
       verifiedActorType: "user",
-      verifiedWorkspaceId: state.workspaceId!,
+      verifiedWorkspaceId: state.workspaceId!,  // VerifiedWorkspaceId — brand inherited from buildAuthState input
       verifiedCapabilities,
     },
     trace,

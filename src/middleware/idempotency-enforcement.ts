@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getIdempotencyStore } from "@/infra/idempotency-store-memory";
 import { createHash } from "crypto";
+import { type ClaimedWorkspaceId, claimWorkspaceId } from "@/lib/workspace-identity";
 
 export interface IdempotencyOptions {
   ttlMs?: number; // TTL in milliseconds (default 24 hours)
@@ -60,23 +61,29 @@ export function withIdempotencyEnforcement(
       return handler(request, ...args);
     }
 
-    // Validate workspace scoping if required
+    // DEAD MIDDLEWARE — not wired in production.
+    // x-workspace-id read is typed as ClaimedWorkspaceId (untrusted claim).
+    // If this were wired, IDEMPOTENCY_SCOPE_VIOLATION applies: an attacker
+    // claiming a victim workspace ID would collide idempotency records cross-tenant.
+    // When wiring, supply VerifiedWorkspaceId from withCanonicalEnforcement context instead.
+
+    // Validate workspace scoping if required — presence check only; no auth proof
     if (options.requireWorkspaceId) {
-      const workspaceId = request.headers.get("x-workspace-id");
-      if (!workspaceId) {
+      const claimed: ClaimedWorkspaceId | null = claimWorkspaceId(request.headers.get("x-workspace-id"));
+      if (!claimed) {
         return NextResponse.json(
           {
             error: "IDEMPOTENCY_ERROR",
-            message: "x-workspace-id header required with Idempotency-Key",
+            message: "x-workspace-id header required with Idempotency-Key (valid UUID)",
           },
           { status: 400 }
         );
       }
     }
 
-    // Scope idempotency key to workspace if available
-    const workspaceId = request.headers.get("x-workspace-id");
-    const scopedKey = workspaceId ? `${workspaceId}:${idempotencyKey}` : idempotencyKey;
+    // Scope idempotency key to workspace claim (UNTRUSTED — dead middleware, format-validated only)
+    const claimedWorkspace: ClaimedWorkspaceId | null = claimWorkspaceId(request.headers.get("x-workspace-id"));
+    const scopedKey = claimedWorkspace ? `${claimedWorkspace}:${idempotencyKey}` : idempotencyKey;
 
     // Parse body for payload hash and create new request with body
     let bodyData: unknown = null;

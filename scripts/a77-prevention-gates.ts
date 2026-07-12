@@ -440,10 +440,51 @@ const proofReviewBodyPerm = rgLines(
 );
 gate("DC-15", "DC-07 closed: proof/review does not accept body.requiredPermission", proofReviewBodyPerm, []);
 
+// ─── gate 16: asVerifiedWorkspaceId called outside canonical enforcement ──────
+// The VerifiedWorkspaceId brand must ONLY be applied after DB membership proof.
+// Only withCanonicalEnforcement (canonical-route-enforcement.ts) may call
+// asVerifiedWorkspaceId(). Any other caller self-promotes an unverified claim.
+
+const asVerifiedCallers = rg(
+  "asVerifiedWorkspaceId\\(",
+  ["src"],
+  ["--glob", "*.ts", "--glob", "!*.test.*", "--glob", "!__tests__/*", "--glob", "!__ignored_tests__/*"]
+);
+gate("DC-16", "asVerifiedWorkspaceId() called only in canonical-route-enforcement (DB proof exclusive)", asVerifiedCallers, [
+  "src/lib/workspace-identity.ts",           // definition
+  "src/lib/canonical-route-enforcement.ts",  // sole allowed caller (post DB membership proof)
+]);
+
+// ─── gate 17: claimWorkspaceId result passed to resolveWorkspaceTier ──────────
+// resolveWorkspaceTier must receive a VerifiedWorkspaceId.
+// A raw string from claimWorkspaceId() must never be the sole argument.
+// TypeScript branded types enforce this at compile time; this gate detects
+// files that import BOTH claimWorkspaceId and resolveWorkspaceTier without
+// going through the VerifiedWorkspaceId brand.
+// Dead middleware (DC-01 allowlist) is exempted; this catches any new wiring.
+
+const claimToTierFiles = rg(
+  "claimWorkspaceId",
+  ["src"],
+  ["--glob", "*.ts", "--glob", "!*.test.*", "--glob", "!__tests__/*", "--glob", "!__ignored_tests__/*"]
+);
+const tierCallerFiles = rg(
+  "resolveWorkspaceTier",
+  ["src"],
+  ["--glob", "*.ts", "--glob", "!*.test.*", "--glob", "!__tests__/*", "--glob", "!__ignored_tests__/*"]
+);
+const claimAndTierOverlap = claimToTierFiles.filter(f => tierCallerFiles.includes(f));
+gate("DC-17", "No file calls both claimWorkspaceId and resolveWorkspaceTier (claimed→tier poisoning)", claimAndTierOverlap, [
+  // Dead middleware — allowlisted because tierEnforcement() is unwired and throws at runtime if called.
+  // Remove if/when dead middleware is deleted.
+  "src/middleware/tier-enforcement.ts",
+  "src/middleware/rate-limit.ts",
+]);
+
 // ─── report ───────────────────────────────────────────────────────────────────
 
 console.log("\n╔════════════════════════════════════════════════════════════╗");
-console.log("║         A7.7 PREVENTION GATES — SCAN REPORT               ║");
+console.log("║       A7.7 PREVENTION GATES — SCAN REPORT (17 gates)      ║");
 console.log("╚════════════════════════════════════════════════════════════╝\n");
 
 let failures = 0;

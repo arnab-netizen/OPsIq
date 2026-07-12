@@ -33,6 +33,7 @@ import {
   AppError,
 } from "@/infra/errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { type ClaimedWorkspaceId, claimWorkspaceId } from "@/lib/workspace-identity";
 
 // Global enforcement state
 const requestCircuitBreaker = new CircuitBreaker({
@@ -167,8 +168,13 @@ export async function enforceRequest<T>(
     }
 
     // 5. MANDATORY: Create runtime context
+    // x-workspace-id is read as UNTRUSTED_DIAGNOSTIC_ONLY — used for correlation logging,
+    // never for auth decisions, DB scoping, or capability checks.
+    // Only reachable via disabled submit-external route. AUTHORITATIVE_HEADER_USE_VIOLATION
+    // if requireWorkspaceInEnforcedContext() result is treated as verified identity.
     correlation_id = requestContext.generateCorrelationId();
-    const workspace_id = req.headers.get("x-workspace-id") || undefined;
+    const workspace_claim: ClaimedWorkspaceId | null = claimWorkspaceId(req.headers.get("x-workspace-id"));
+    const workspace_id: string | undefined = workspace_claim ?? undefined;
     const execution_id = req.headers.get("x-execution-id") || undefined;
 
     // Validate required context
@@ -380,9 +386,13 @@ export function getEnforcedContext(operation: string): EnforcedRequestContext {
 }
 
 /**
- * MANDATORY: Verify workspace in enforced context
+ * Returns the workspace claim from the enforced context for DIAGNOSTIC/LOGGING use only.
+ * The returned ClaimedWorkspaceId is NOT verified by DB membership — it is the raw
+ * x-workspace-id header value, format-validated. Do NOT use for auth decisions, DB scoping,
+ * tier lookup, idempotency keying, audit attribution, or capability checks.
+ * Only reachable via the permanently-disabled submit-external route.
  */
-export function requireWorkspaceInEnforcedContext(operation: string): string {
+export function requireWorkspaceInEnforcedContext(operation: string): ClaimedWorkspaceId {
   const ctx = getEnforcedContext(operation);
   if (!ctx.workspace_id) {
     throw createValidationError(
@@ -390,7 +400,7 @@ export function requireWorkspaceInEnforcedContext(operation: string): string {
       requestContext.createErrorContext(),
     );
   }
-  return ctx.workspace_id;
+  return ctx.workspace_id as ClaimedWorkspaceId;
 }
 
 /**
