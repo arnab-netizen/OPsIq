@@ -127,7 +127,13 @@ export async function getOwnerHome(
   const where = { businessId: selectedBusinessId, workspaceId };
   const latest = { orderBy: { sequenceNumber: "desc" as const }, include: spineCycleInclude };
 
-  const [finance, recovery, cashflow, sales, operations, sop, marketing, strategy, allFinanceVers] = await Promise.all([
+  // For domains where verification success triggers re-diagnosis (creating a new cycle),
+  // verifications must be queried directly across ALL cycles — not through the newest
+  // cycle's action chain — because the old cycle's actions hold the actual verification
+  // records and are invisible from the newest cycle. Affected domains: finance, sales,
+  // operations, sop, strategy (cashflow and marketing do not trigger re-diagnosis).
+  const [finance, recovery, cashflow, sales, operations, sop, marketing, strategy,
+    allFinanceVers, allSalesVers, allOperationsVers, allSopVers, allStrategyVers] = await Promise.all([
     db.ownerFinanceCycle.findFirst({ where, ...latest }),
     db.recoveryCycle.findFirst({
       where,
@@ -144,10 +150,27 @@ export async function getOwnerHome(
     db.ownerSopCycle.findFirst({ where, ...latest }),
     db.ownerMarketingCycle.findFirst({ where, ...latest }),
     db.ownerStrategyCycle.findFirst({ where, ...latest }),
-    // Query finance verifications directly across ALL cycles — a successful verification
-    // triggers re-diagnosis which creates a new cycle, making cycle-bound queries miss
-    // verifications that belong to the previous cycle's actions.
     db.ownerFinanceVerification.findMany({
+      where,
+      include: { action: { select: { title: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.ownerSalesVerification.findMany({
+      where,
+      include: { action: { select: { title: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.ownerOperationsVerification.findMany({
+      where,
+      include: { action: { select: { title: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.ownerSopVerification.findMany({
+      where,
+      include: { action: { select: { title: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.ownerStrategyVerification.findMany({
       where,
       include: { action: { select: { title: true } } },
       orderBy: { createdAt: "desc" },
@@ -191,19 +214,49 @@ export async function getOwnerHome(
     domainScores.push(salesCycleToDomainScore(sales));
     for (const a of sales.actions) actions.push(salesActionRowToOwnerAction(a));
     for (const f of sales.findings) findings.push(rowToFinding(f, "sales"));
-    verifications.push(...flattenVerifications(sales, "sales"));
+    for (const v of allSalesVers) {
+      verifications.push({
+        domain: "sales",
+        actionTitle: v.action.title,
+        metric: v.verificationMetric,
+        beforeValue: v.beforeValue ?? null,
+        afterValue: v.afterValue ?? null,
+        status: v.status,
+        verifiedAt: v.createdAt instanceof Date ? v.createdAt : new Date(v.createdAt),
+      });
+    }
   }
   if (operations) {
     domainScores.push(operationsCycleToDomainScore(operations));
     for (const a of operations.actions) actions.push(operationsActionRowToOwnerAction(a));
     for (const f of operations.findings) findings.push(rowToFinding(f, "operations"));
-    verifications.push(...flattenVerifications(operations, "operations"));
+    for (const v of allOperationsVers) {
+      verifications.push({
+        domain: "operations",
+        actionTitle: v.action.title,
+        metric: v.verificationMetric,
+        beforeValue: v.beforeValue ?? null,
+        afterValue: v.afterValue ?? null,
+        status: v.status,
+        verifiedAt: v.createdAt instanceof Date ? v.createdAt : new Date(v.createdAt),
+      });
+    }
   }
   if (sop) {
     domainScores.push(sopCycleToDomainScore(sop));
     for (const a of sop.actions) actions.push(sopActionRowToOwnerAction(a));
     for (const f of sop.findings) findings.push(rowToFinding(f, "sop"));
-    verifications.push(...flattenVerifications(sop, "sop"));
+    for (const v of allSopVers) {
+      verifications.push({
+        domain: "sop",
+        actionTitle: v.action.title,
+        metric: v.verificationMetric,
+        beforeValue: v.beforeValue ?? null,
+        afterValue: v.afterValue ?? null,
+        status: v.status,
+        verifiedAt: v.createdAt instanceof Date ? v.createdAt : new Date(v.createdAt),
+      });
+    }
   }
   if (marketing) {
     domainScores.push(marketingCycleToDomainScore(marketing));
@@ -215,7 +268,17 @@ export async function getOwnerHome(
     domainScores.push(strategyCycleToDomainScore(strategy));
     for (const a of strategy.actions) actions.push(strategyActionRowToOwnerAction(a));
     for (const f of strategy.findings) findings.push(rowToFinding(f, "strategy"));
-    verifications.push(...flattenVerifications(strategy, "strategy"));
+    for (const v of allStrategyVers) {
+      verifications.push({
+        domain: "strategy",
+        actionTitle: v.action.title,
+        metric: v.verificationMetric,
+        beforeValue: v.beforeValue ?? null,
+        afterValue: v.afterValue ?? null,
+        status: v.status,
+        verifiedAt: v.createdAt instanceof Date ? v.createdAt : new Date(v.createdAt),
+      });
+    }
   }
 
   if (domainScores.length === 0) {
