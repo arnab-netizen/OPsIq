@@ -336,8 +336,8 @@ the canonical LANE_B test step used a hardcoded list of 57 files, silently omitt
 | Files omitted | 122 `.db.test.ts` files across scenarios, security, owner-mode, behavioral-validation, services/owner-budget, services/external-systems, src/services, api, middleware, owner-strategy, phase-e, and more |
 | Root cause | Manifest was constructed incrementally; no enforcement gate existed to prevent omissions |
 | Additional MISNAMED_DB_TEST | `src/__tests__/phase-3-db-smoke-verification.test.ts` → `src/__tests__/phase-3-db-smoke-verification.db.test.ts` (4th instance of MISNAMED_DB_TEST defect class; file was in hardcoded list but lacked `.db.test.ts` suffix) |
-| Fix — execution | Replaced hardcoded 57-file list with glob `'src/**/*.db.test.ts'` in both LANE_B and LANE_A steps |
-| Fix — prevention | Added check #6 to `scripts/ci-governance-check.mjs`: `db-verification.yml` must contain `'src/**/*.db.test.ts'` glob; fails CI if replaced with hardcoded list |
+| Fix — execution | Replaced hardcoded 57-file list with vitest substring filter `'.db.test.ts'` in both LANE_B and LANE_A steps (vitest CLI uses substring matching; `.db.test.ts` matches all and only DB test files) |
+| Fix — prevention | Added check #6 to `scripts/ci-governance-check.mjs`: `db-verification.yml` must contain `'.db.test.ts'` filter; fails CI if replaced with hardcoded list |
 | Fix — timeout | LANE_B: 30 min → 60 min; LANE_A: 20 min → 45 min (proportional to 3× coverage increase) |
 | DB test count before | 57 (hardcoded, incomplete) |
 | DB test count after | 180 (all `.db.test.ts` files, glob-discovered) |
