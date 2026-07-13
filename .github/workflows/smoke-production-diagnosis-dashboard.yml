@@ -7,9 +7,6 @@ on:
         description: "Base URL to test (default: production)"
         required: false
         default: "https://o-ps-iq.vercel.app"
-  schedule:
-    # Daily at 2:45 AM UTC (staggered from signup smoke)
-    - cron: "45 2 * * *"
 
 jobs:
   smoke-test:

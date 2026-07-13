@@ -1,0 +1,164 @@
+name: Deep Proof — Comprehensive Scenario + Browser Validation
+
+# Dispatch-only comprehensive proof workflow.
+# Runs any combination of: DB-backed scenario packs, browser corpus proofs,
+# owner-pilot E2E, and the corpus final audit.
+#
+# COST WARNING: Each proof target spawns 1-4 jobs with postgres:16 and/or
+# Playwright browser shards. Run only the targets you need.
+# Full suite (~all targets) = ~35+ jobs = significant runner cost.
+#
+# Invocation paths that remain as individual workflows (for targeted dispatch):
+#   chaos-exhaustive.yml, customer-vendor-market.yml, daily-operations.yml,
+#   finance-cash.yml, growth-profit-scaling.yml, local-legal-professional-boundary.yml,
+#   sequential-simulations.yml, staff-proof-anti-gaming.yml, ugly-tail-risk-crisis.yml,
+#   unknown-ood.yml, weekly-management-trend.yml, corpus-final-audit.yml,
+#   owner-pilot-e2e.yml, owner-pilot-db.yml
+
+on:
+  workflow_dispatch:
+    inputs:
+      proof_target:
+        description: "Which proof suite to run"
+        required: true
+        type: choice
+        options:
+          - corpus-audit-only
+          - owner-pilot-db-only
+          - db-verification-only
+          - all-scenario-packs-db-only
+          - describe-targets
+        default: describe-targets
+      confirm:
+        description: "Type CONFIRM_DEEP_PROOF to authorize cost"
+        required: true
+        default: ""
+
+jobs:
+  guard:
+    name: Authorization guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify confirmation phrase
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "CONFIRM_DEEP_PROOF" ]; then
+            echo "::error::Deep proof requires confirm='CONFIRM_DEEP_PROOF'. Got: '${{ github.event.inputs.confirm }}'"
+            echo "This workflow spawns many jobs and incurs significant runner cost."
+            echo "Re-run with confirm=CONFIRM_DEEP_PROOF to proceed."
+            exit 1
+          fi
+          echo "✓ Confirmation received. Target: ${{ github.event.inputs.proof_target }}"
+
+  describe:
+    name: Describe available proof targets
+    runs-on: ubuntu-latest
+    needs: guard
+    if: github.event.inputs.proof_target == 'describe-targets'
+    steps:
+      - name: List invocation paths
+        run: |
+          echo "## Available Deep Proof Targets" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Dispatch the individual workflows directly for targeted proof:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflow | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| chaos-exhaustive.yml | All-180 chaos replay (DB + 3 browser shards) |" >> $GITHUB_STEP_SUMMARY
+          echo "| customer-vendor-market.yml | 100 CVM scenarios (DB + browser) |" >> $GITHUB_STEP_SUMMARY
+          echo "| daily-operations.yml | 300 daily ops scenarios (DB + browser) |" >> $GITHUB_STEP_SUMMARY
+          echo "| finance-cash.yml | 120 finance/cash scenarios (DB + browser) |" >> $GITHUB_STEP_SUMMARY
+          echo "| growth-profit-scaling.yml | 150 growth scenarios (DB + browser) |" >> $GITHUB_STEP_SUMMARY
+          echo "| local-legal-professional-boundary.yml | 100 legal boundary scenarios (DB + browser) |" >> $GITHUB_STEP_SUMMARY
+          echo "| sequential-simulations.yml | 50 sequential sim scenarios (DB + browser) |" >> $GITHUB_STEP_SUMMARY
+          echo "| staff-proof-anti-gaming.yml | 120 staff/anti-gaming scenarios (DB + browser) |" >> $GITHUB_STEP_SUMMARY
+          echo "| ugly-tail-risk-crisis.yml | 150 crisis scenarios (DB + browser) |" >> $GITHUB_STEP_SUMMARY
+          echo "| unknown-ood.yml | 110 unknown/OOD scenarios (DB + browser) |" >> $GITHUB_STEP_SUMMARY
+          echo "| weekly-management-trend.yml | 150 weekly management scenarios (DB + browser) |" >> $GITHUB_STEP_SUMMARY
+          echo "| corpus-final-audit.yml | Whole-corpus static aggregate audit |" >> $GITHUB_STEP_SUMMARY
+          echo "| owner-pilot-db.yml | Owner-pilot DB proof suite |" >> $GITHUB_STEP_SUMMARY
+          echo "| owner-pilot-e2e.yml | Owner-pilot full browser E2E |" >> $GITHUB_STEP_SUMMARY
+          echo "| db-verification.yml | Full DB test suite (LANE_B or LANE_A) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Use this consolidated workflow (deep-proof.yml) to run multiple targets" >> $GITHUB_STEP_SUMMARY
+          echo "by selecting a combined proof_target above." >> $GITHUB_STEP_SUMMARY
+
+  corpus-audit:
+    name: Corpus final audit (static)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: guard
+    if: github.event.inputs.proof_target == 'corpus-audit-only'
+    env:
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.x, cache: npm }
+      - run: npm ci
+      - name: Prisma generate (types only)
+        run: npx prisma generate
+      - name: Whole-corpus final audit
+        run: npx vitest run src/__tests__/scenarios/business-reality-corpus-audit.test.ts
+      - name: Assert audit totals (1465 counted / 1480 proven / 50 sims / 427 events)
+        run: |
+          node -e '
+            const d=require("./OPSIQ_BUSINESS_REALITY_CORPUS_FINAL_AUDIT.run.json");
+            const ok = d.counted_for_readiness===1465 && d.proven_single===1480
+              && d.simulations.sims===50 && d.simulations.events===427
+              && d.unique_single_ids===1465 && d.unsafe_high_risk_proceeds===0 && d.live_claims===0;
+            if(!ok){console.error("Corpus audit totals mismatch:",JSON.stringify(d));process.exit(1);}
+            console.log("Corpus audit OK: 1465 counted / 1480 proven / 50 sims / 427 events / 0 unsafe / 0 live");
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: corpus-final-audit-ledger
+          path: OPSIQ_BUSINESS_REALITY_CORPUS_FINAL_AUDIT.run.json
+          retention-days: 7
+
+  owner-pilot-db:
+    name: Owner-pilot DB proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: guard
+    if: github.event.inputs.proof_target == 'owner-pilot-db-only'
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      TEST_WITH_DB: "true"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 10s
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.x, cache: npm }
+      - run: npm ci
+      - name: Configure .env.local
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          TEST_WITH_DB=true
+          EOF
+      - run: npx prisma migrate deploy
+      - run: npx prisma generate
+      - name: Run owner-pilot DB suite
+        run: |
+          npx vitest run --maxWorkers 1 \
+            src/__tests__/owner-mode/owner-pilot/ \
+            src/__tests__/owner-mode/business-scope-isolation/
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          TEST_WITH_DB: "true"
+          NODE_ENV: test

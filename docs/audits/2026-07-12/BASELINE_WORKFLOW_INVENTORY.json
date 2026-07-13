@@ -1,0 +1,116 @@
+{
+  "audit_date": "2026-07-12",
+  "total_workflows": 75,
+  "categories": {
+    "scenario_packs_pr_triggered": {
+      "count": 11,
+      "files": [
+        "chaos-exhaustive.yml",
+        "customer-vendor-market.yml",
+        "daily-operations.yml",
+        "finance-cash.yml",
+        "growth-profit-scaling.yml",
+        "local-legal-professional-boundary.yml",
+        "sequential-simulations.yml",
+        "staff-proof-anti-gaming.yml",
+        "ugly-tail-risk-crisis.yml",
+        "unknown-ood.yml",
+        "weekly-management-trend.yml"
+      ],
+      "estimated_jobs_per_pr": 34,
+      "action": "REMOVE_PR_TRIGGER"
+    },
+    "overlapping_core_ci": {
+      "count": 3,
+      "files": ["ci.yml", "ci-cd-foundations.yml", "mvp-readiness.yml"],
+      "action": "CONSOLIDATE"
+    },
+    "broad_push_triggers": {
+      "count": 7,
+      "files": [
+        "db-verification.yml",
+        "phase-d-verification.yml",
+        "p2c-db-verification.yml",
+        "p2b-db-verification.yml",
+        "smoke-production-dashboard.yml",
+        "stripe-simulation.yml",
+        "smoke-production-signup-dashboard.yml"
+      ],
+      "action": "REMOVE_PUSH_OR_CRON"
+    },
+    "dangerous_no_branch_filter": {
+      "count": 1,
+      "files": ["b12-s3-db-verification.yml"],
+      "action": "REMOVE_PUSH_ADD_DISPATCH"
+    },
+    "closed_branch_push": {
+      "count": 5,
+      "files": [
+        "b02-s2-integration.yml",
+        "b02-s3-db-verification.yml",
+        "b05-s1-db-verification.yml",
+        "b12-business-condition-profile-verification.yml",
+        "phase-1-db-tests.yml"
+      ],
+      "closed_branches": [
+        "claude/execution-audit-phase-a-ulmljq",
+        "claude/fix-actorid-authcontext-BKuip"
+      ],
+      "action": "REMOVE_PUSH_TRIGGER"
+    },
+    "cron_scheduled": {
+      "count": 2,
+      "files": [
+        "smoke-production-signup-dashboard.yml",
+        "smoke-production-diagnosis-dashboard.yml"
+      ],
+      "schedules": ["15 2 * * *", "45 2 * * *"],
+      "action": "REMOVE_CRON"
+    },
+    "pr_trigger_with_specific_branch": {
+      "count": 3,
+      "files": [
+        "owner-pilot-db.yml",
+        "owner-pilot-e2e.yml",
+        "phase-3-slice-2-truth-pass.yml"
+      ],
+      "action": "REMOVE_PR_TRIGGER_KEEP_BRANCH_DISPATCH"
+    },
+    "path_triggered_cheap_keep": {
+      "count": 3,
+      "files": [
+        "owner-real-world-simulation.yml",
+        "owner-real-world-smb-cases.yml",
+        "owner-mode-holdout.yml"
+      ],
+      "action": "RETAIN_PATH_TRIGGERED"
+    },
+    "already_dispatch_only": {
+      "count": 27,
+      "includes": [
+        "11 module runtime proof workflows",
+        "9 module migration workflows",
+        "migrate-production.yml",
+        "migrate-staging.yml",
+        "migrate-neon-test.yml",
+        "reset-staging-db.yml",
+        "seed-staging.yml",
+        "resolve-failed-migration.yml",
+        "deploy-staging.yml",
+        "smoke-production-login.yml",
+        "ai-live-smoke.yml",
+        "manual-runtime-validation.yml"
+      ],
+      "action": "RETAIN_DISPATCH_ONLY"
+    },
+    "new_files_created": {
+      "count": 5,
+      "files": [
+        "main-integration.yml",
+        "deep-proof.yml",
+        "module-runtime-proof.yml",
+        "module-migrate.yml"
+      ]
+    }
+  }
+}

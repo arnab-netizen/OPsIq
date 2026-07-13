@@ -7,8 +7,6 @@ name: Ugly / Tail-Risk / Crisis Pack (DB + Browser + Mobile)
 # does NOT modify any existing workflow.
 
 on:
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:

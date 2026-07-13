@@ -7,8 +7,6 @@ name: Exhaustive Chaos Replay (DB + Browser)
 # Does NOT replace owner-pilot-e2e; additive lane.
 
 on:
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:

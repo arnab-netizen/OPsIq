@@ -4,19 +4,6 @@ on:
   push:
     branches:
       - claude/verify-execution-md-h8jCt
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'src/services/event-emitter.ts'
-      - 'src/services/recommendation.ts'
-      - 'src/__tests__/phase-3-event-emitter-integration.test.ts'
-      - 'prisma/migrations/20260507_add_canonical_event/**'
-      - 'prisma/schema.prisma'
-      # Event-sourcing honesty classification (Gate 10). execution.md no longer
-      # carries this status — it is now the Owner Cheat-Code roadmap.
-      - 'docs/phase-3-slice-2-classification.md'
-      - '.github/workflows/phase-3-slice-2-truth-pass.yml'
   workflow_dispatch:
 
 jobs:

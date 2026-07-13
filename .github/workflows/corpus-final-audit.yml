@@ -8,8 +8,6 @@ name: Business-Reality Corpus Final Audit (Step 8)
 # scenarios in its own CI lane. Additive lane; does NOT modify any existing workflow.
 
 on:
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:

@@ -1,0 +1,35 @@
+{
+  "audit_date": "2026-07-12",
+  "baseline": {
+    "reported_spend_usd": 333.47,
+    "budget_usd": 170.00,
+    "overrun_usd": 163.47,
+    "overrun_pct": 96.2
+  },
+  "primary_cost_drivers": [
+    {"driver": "11 scenario packs on PRs", "jobs_per_pr": 34, "prs_per_month": 12, "estimated_monthly_usd": 82},
+    {"driver": "ci-cd-foundations.yml automatic triggers", "estimated_monthly_usd": 20},
+    {"driver": "mvp-readiness.yml automatic triggers + postgres", "estimated_monthly_usd": 25},
+    {"driver": "ci.yml push to feature/claude branches", "estimated_monthly_usd": 13},
+    {"driver": "phase-d + p2c + db-verification push triggers", "estimated_monthly_usd": 17},
+    {"driver": "smoke + stripe push/cron triggers", "estimated_monthly_usd": 9},
+    {"driver": "p2b push trigger", "estimated_monthly_usd": 2},
+    {"driver": "owner-pilot E2E on PRs", "estimated_monthly_usd": 15},
+    {"driver": "corpus-final-audit on PRs", "estimated_monthly_usd": 2}
+  ],
+  "post_remediation_projection": {
+    "pr_gate_monthly_usd": 2.88,
+    "main_integration_monthly_usd": 7.20,
+    "db_verification_pr_path_monthly_usd": 0.72,
+    "path_triggered_monthly_usd": 0.24,
+    "manual_dispatches_monthly_usd": 1.20,
+    "total_projected_monthly_usd": 12.24
+  },
+  "targets": {
+    "routine_monthly_usd": 0,
+    "exceptional_max_usd": 10,
+    "hard_budget_usd": 20,
+    "meets_hard_budget": true,
+    "reduction_pct": 96.3
+  }
+}

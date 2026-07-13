@@ -7,15 +7,6 @@ name: B05-S1 Fact Review Service DB Verification
 on:
   workflow_dispatch:
     description: 'Verify B05-S1 fact review service (LANE_B postgres:16 service container)'
-  push:
-    branches:
-      - claude/execution-audit-phase-a-ulmljq
-    paths:
-      - .github/workflows/b05-s1-db-verification.yml
-      - src/services/data-review/**
-      - src/__tests__/services/data-review/**
-      - src/domain/constants/audit-events.ts
-      - prisma/**
 
 jobs:
   b05-s1-db-verification:

@@ -7,8 +7,6 @@ name: Finance / Cash / Capital Allocation Pack (DB + Browser + Mobile)
 # existing workflow.
 
 on:
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:

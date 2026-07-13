@@ -1,8 +1,6 @@
 name: Smoke - Production Dashboard
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       base_url:

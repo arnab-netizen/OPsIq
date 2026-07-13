@@ -1,0 +1,95 @@
+name: Module Migration — Consolidated Entry Point
+
+# Dispatch-only consolidated entry point for module migration workflows.
+# Each module has its own individual migration workflow with a confirmation
+# phrase guard and environment protection. This workflow documents them.
+#
+# Individual module migration workflows (use these directly):
+#   module-1-owner-recovery-migrate.yml   (environment: staging or production)
+#   module-2-owner-baseline-migrate.yml
+#   module-3-owner-growth-migrate.yml
+#   module-4-owner-operations-migrate.yml
+#   module-5-owner-team-migrate.yml
+#   module-6-owner-cashflow-migrate.yml
+#   module-7-owner-finance-migrate.yml
+#   module-8-owner-sales-migrate.yml
+#   module-9-owner-marketing-migrate.yml
+#   module-10-data-intake-migrate.yml
+#
+# For production migrations use: migrate-production.yml
+# For staging migrations use: migrate-staging.yml
+# For Neon test DB: migrate-neon-test.yml
+#
+# WARNING: Module migrations touch the production schema. Always run
+# migrate-staging.yml first and verify before running a module migration
+# against production.
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: "Which module migration to run (dispatch the individual workflow)"
+        required: true
+        type: choice
+        options:
+          - list-migrations
+          - module-1-owner-recovery
+          - module-2-owner-baseline
+          - module-3-owner-growth
+          - module-4-owner-operations
+          - module-5-owner-team
+          - module-6-owner-cashflow
+          - module-7-owner-finance
+          - module-8-owner-sales
+          - module-9-owner-marketing
+          - module-10-data-intake
+        default: list-migrations
+
+jobs:
+  list:
+    name: List module migration workflows
+    runs-on: ubuntu-latest
+    if: github.event.inputs.module == 'list-migrations'
+    steps:
+      - name: Migration workflow directory
+        run: |
+          echo "## Module Migration Workflows" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Each module migration workflow has environment protection and a" >> $GITHUB_STEP_SUMMARY
+          echo "confirmation phrase guard. Dispatch them individually:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflow | Environment |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| module-1-owner-recovery-migrate.yml | staging / production |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-2-owner-baseline-migrate.yml | staging / production |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-3-owner-growth-migrate.yml | staging / production |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-4-owner-operations-migrate.yml | staging / production |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-5-owner-team-migrate.yml | staging / production |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-6-owner-cashflow-migrate.yml | staging / production |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-7-owner-finance-migrate.yml | staging / production |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-8-owner-sales-migrate.yml | staging / production |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-9-owner-marketing-migrate.yml | staging / production |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-10-data-intake-migrate.yml | staging / production |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Pre-migration checklist:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Run migrate-staging.yml first" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify staging health" >> $GITHUB_STEP_SUMMARY
+          echo "3. Backup production DB" >> $GITHUB_STEP_SUMMARY
+          echo "4. Run the module migration with explicit confirmation phrase" >> $GITHUB_STEP_SUMMARY
+
+  redirect:
+    name: Redirect to individual migration workflow
+    runs-on: ubuntu-latest
+    if: github.event.inputs.module != 'list-migrations'
+    steps:
+      - name: Instructions
+        run: |
+          MODULE="${{ github.event.inputs.module }}"
+          echo "To run the ${MODULE} migration, dispatch the individual workflow:"
+          echo "  .github/workflows/${MODULE}-migrate.yml"
+          echo ""
+          echo "The individual workflow has environment protection (requires approval"
+          echo "from an environment reviewer) and a confirmation phrase guard."
+          echo "This consolidated workflow cannot bypass either safeguard."
+          echo ""
+          echo "This is by design: each module migration is a controlled operator action."

@@ -7,8 +7,6 @@ name: Staff / Proof / Anti-Gaming Pack (DB + Browser + Mobile)
 # modify unknown-ood.yml, chaos-exhaustive.yml, or owner-pilot-e2e.
 
 on:
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:

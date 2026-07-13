@@ -7,8 +7,6 @@ name: Weekly Management / Trend Pack (DB + Browser + Mobile)
 # lane; does NOT modify any existing workflow.
 
 on:
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:

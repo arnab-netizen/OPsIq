@@ -2,9 +2,6 @@ name: Phase 1 Database Tests
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - claude/fix-actorid-authcontext-BKuip
 
 jobs:
   db-tests:

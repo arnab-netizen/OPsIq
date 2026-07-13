@@ -1,0 +1,89 @@
+name: Module Runtime Proof — Consolidated Entry Point
+
+# Dispatch-only consolidated entry point for module runtime proofs.
+# Each module has its own individual workflow with a confirmation phrase guard
+# and a concurrency lock. This workflow documents those individual workflows
+# and provides a single dispatch entry point for running a specific module proof.
+#
+# Individual module workflows (preferred for single-module runs):
+#   module-1-owner-recovery-runtime-proof.yml  (RUN_OWNER_RECOVERY_RUNTIME_PROOF)
+#   module-2-owner-baseline-runtime-proof.yml  (RUN_OWNER_BASELINE_RUNTIME_PROOF)
+#   module-3-owner-growth-runtime-proof.yml    (RUN_OWNER_GROWTH_RUNTIME_PROOF)
+#   module-4-owner-operations-runtime-proof.yml (RUN_OWNER_OPERATIONS_RUNTIME_PROOF)
+#   module-5-owner-team-runtime-proof.yml      (RUN_OWNER_TEAM_RUNTIME_PROOF)
+#   module-6-owner-cashflow-runtime-proof.yml  (RUN_OWNER_CASHFLOW_RUNTIME_PROOF)
+#   module-7-owner-finance-runtime-proof.yml   (RUN_OWNER_FINANCE_RUNTIME_PROOF)
+#   module-8-owner-sales-runtime-proof.yml     (RUN_OWNER_SALES_RUNTIME_PROOF)
+#   module-9-owner-marketing-runtime-proof.yml (RUN_OWNER_MARKETING_RUNTIME_PROOF)
+#   module-10-data-intake-runtime-proof.yml    (RUN_DATA_INTAKE_RUNTIME_PROOF)
+#   module-12-owner-home-runtime-proof.yml     (RUN_OWNER_HOME_RUNTIME_PROOF)
+#
+# COST WARNING: Each module proof requires postgres:16 and runs a DB-backed
+# test suite. Use individual workflows for targeted runs.
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: "Which module to prove (run the individual workflow for the confirmation phrase guard)"
+        required: true
+        type: choice
+        options:
+          - list-modules
+          - module-1-owner-recovery
+          - module-2-owner-baseline
+          - module-3-owner-growth
+          - module-4-owner-operations
+          - module-5-owner-team
+          - module-6-owner-cashflow
+          - module-7-owner-finance
+          - module-8-owner-sales
+          - module-9-owner-marketing
+          - module-10-data-intake
+          - module-12-owner-home
+        default: list-modules
+
+jobs:
+  list:
+    name: List module proof workflows
+    runs-on: ubuntu-latest
+    if: github.event.inputs.module == 'list-modules'
+    steps:
+      - name: Module proof directory
+        run: |
+          echo "## Module Runtime Proof Workflows" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Dispatch each individual workflow directly — each requires its own" >> $GITHUB_STEP_SUMMARY
+          echo "confirmation phrase to prevent accidental execution:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflow | Confirmation Phrase |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| module-1-owner-recovery-runtime-proof.yml | RUN_OWNER_RECOVERY_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-2-owner-baseline-runtime-proof.yml | RUN_OWNER_BASELINE_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-3-owner-growth-runtime-proof.yml | RUN_OWNER_GROWTH_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-4-owner-operations-runtime-proof.yml | RUN_OWNER_OPERATIONS_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-5-owner-team-runtime-proof.yml | RUN_OWNER_TEAM_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-6-owner-cashflow-runtime-proof.yml | RUN_OWNER_CASHFLOW_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-7-owner-finance-runtime-proof.yml | RUN_OWNER_FINANCE_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-8-owner-sales-runtime-proof.yml | RUN_OWNER_SALES_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-9-owner-marketing-runtime-proof.yml | RUN_OWNER_MARKETING_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-10-data-intake-runtime-proof.yml | RUN_DATA_INTAKE_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+          echo "| module-12-owner-home-runtime-proof.yml | RUN_OWNER_HOME_RUNTIME_PROOF |" >> $GITHUB_STEP_SUMMARY
+
+  redirect:
+    name: Redirect to individual module workflow
+    runs-on: ubuntu-latest
+    if: github.event.inputs.module != 'list-modules'
+    steps:
+      - name: Instructions
+        run: |
+          MODULE="${{ github.event.inputs.module }}"
+          echo "To run the ${MODULE} proof, dispatch the individual workflow:"
+          echo "  .github/workflows/${MODULE}-runtime-proof.yml"
+          echo ""
+          echo "The individual workflow has a confirmation phrase guard that prevents"
+          echo "accidental execution. This consolidated workflow cannot bypass it."
+          echo ""
+          echo "Navigate to: Actions → ${MODULE}-runtime-proof → Run workflow"
+          echo ""
+          echo "This is by design: each module proof is an intentional operator action."

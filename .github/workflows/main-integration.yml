@@ -1,0 +1,139 @@
+name: Main Integration
+
+# Full integration suite — runs on push to main only.
+# PR static + non-DB checks are handled by ci.yml (the required PR gate).
+# Scenario packs and browser proof are dispatch-only (deep-proof.yml).
+# Target: <40 runner-minutes, single postgres:16 job.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: main-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-suite:
+    name: Full DB Integration Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+
+    env:
+      TEST_WITH_DB: "true"
+      NODE_OPTIONS: "--max-old-space-size=4096"
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+          POSTGRES_INITDB_ARGS: "-c log_min_messages=warning"
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            echo "npm ci failed (attempt $i); retrying in $((i*10))s..."
+            sleep $((i*10))
+          done
+
+      - name: Configure .env.local for CI
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          TEST_WITH_DB=true
+          EOF
+          echo "✓ .env.local configured for CI PostgreSQL service"
+
+      - name: Governance compliance scan
+        run: npm run governance:scan:strict
+        continue-on-error: false
+
+      - name: Auth route governance scan (blocking)
+        run: npm run governance:scan:auth
+        continue-on-error: false
+
+      - name: TypeScript type checking
+        run: npx tsc --noEmit
+        continue-on-error: false
+
+      - name: Prisma schema validation
+        run: npx prisma validate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+        continue-on-error: false
+
+      - name: Prisma database migration
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+        continue-on-error: false
+
+      - name: Regenerate Prisma client after migrations
+        run: npx prisma generate
+        continue-on-error: false
+
+      - name: Wrapped handlers ratchet (prevent new violations)
+        run: npm run audit:wrapped-handlers:ratchet
+        continue-on-error: false
+
+      - name: Run full test suite (blocking; quarantine excluded)
+        # Full suite including DB tests. Quarantined files excluded from this blocking lane.
+        # DB tests require TEST_WITH_DB=true and the postgres service above.
+        timeout-minutes: 45
+        run: |
+          EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
+          echo "Quarantined (excluded from blocking lane): $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") file(s)"
+          npx vitest run --maxWorkers 1 $EXCLUDES
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          TEST_WITH_DB: "true"
+          NODE_ENV: test
+        continue-on-error: false
+
+      - name: Run quarantined pre-existing failing tests (non-blocking)
+        # Visibility lane: runs ONLY the quarantined files so their status stays
+        # observable. Non-blocking — tracked under FULL_SUITE_TEST_DEBT_RECOVERY.
+        continue-on-error: true
+        run: |
+          FILES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>f.path).join(' '))")
+          echo "Running $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") quarantined file(s) (non-blocking):"
+          echo "$FILES" | tr ' ' '\n'
+          npx vitest run --maxWorkers 1 $FILES
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          TEST_WITH_DB: "true"
+          NODE_ENV: test
+
+      - name: Upload coverage (if generated)
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/coverage-final.json
+          fail_ci_if_error: false
