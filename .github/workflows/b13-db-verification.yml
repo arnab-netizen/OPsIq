@@ -89,7 +89,7 @@ jobs:
 
       - name: Run sync-manager service tests
         if: ${{ inputs.run_sync_manager_tests == 'true' }}
-        run: npm test -- src/__tests__/services/external-systems/sync-manager.service.test.ts --run
+        run: npm test -- src/__tests__/services/external-systems/sync-manager.service.db.test.ts --run
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/opsiq_test"
           TEST_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/opsiq_test"
