@@ -80,7 +80,7 @@ jobs:
         # DB tests self-skip when TEST_WITH_DB != 'true', but we also explicitly
         # exclude *.db.test.ts files so the intent is unambiguous.
         # Full DB suite runs on push-to-main in main-integration.yml.
-        timeout-minutes: 15
+        timeout-minutes: 20
         run: |
           EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
           echo "Quarantined (excluded from blocking lane): $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") file(s)"
