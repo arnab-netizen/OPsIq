@@ -2,7 +2,9 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { UnauthorizedError } from "@/infra/errors";
 import { runScenario } from "@/services/scenario/engine";
 import { resolveServerRole } from "@/services/auth/server-role";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { randomUUID } from "crypto";
 
 export const POST = withCanonicalEnforcement(
@@ -38,22 +40,26 @@ export const POST = withCanonicalEnforcement(
 
   // Log audit event for scenario analysis
   const scenarioId = randomUUID();
-  await logAuditEvent({
-    eventName: "ANALYZE",
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.SCENARIO_ANALYZED,
     entityType: "Scenario",
     entityId: scenarioId,
     actorId,
-    role,
-    before: null,
-    after: {
-      baseRevenue,
-      baseCost,
-      deltaRevenue,
-      deltaCost,
-      result,
+    actorType: "user",
+    workspaceId: ctx.verifiedWorkspaceId,
+    payload: {
+      role,
+      after: {
+        baseRevenue,
+        baseCost,
+        deltaRevenue,
+        deltaCost,
+        result,
+      },
     },
   }).catch((auditError) => {
-    console.error(`Audit logging failed: ${auditError}`);
+    const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+    console.error(`Audit logging failed: ${governed.operatorMessage}`);
   });
 
   return result;

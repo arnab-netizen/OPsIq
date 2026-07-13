@@ -71,5 +71,30 @@ export async function recordFinanceVerification(
     },
   });
 
+  // On verified success, trigger re-diagnosis to capture improved business state.
+  if (result.reachedTarget) {
+    try {
+      const latestSnapshot = await db.ownerFinancialSnapshot.findFirst({
+        where: { businessId: action.businessId, workspaceId },
+        orderBy: { periodEnd: "desc" },
+        select: { id: true },
+      });
+      if (latestSnapshot) {
+        const { runFinanceDiagnosis } = await import("./diagnosis.service");
+        const newCycle = await runFinanceDiagnosis(action.businessId, latestSnapshot.id, actorId, workspaceId);
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.OWNER_FINANCE_VERIFICATION_REASSESSMENT_TRIGGERED,
+          actorId,
+          workspaceId,
+          entityType: "OwnerFinanceCycle",
+          entityId: newCycle.id,
+          payload: { trigger: "verification_success", triggerVerificationId: verification.id },
+        });
+      }
+    } catch (_err) {
+      // Re-diagnosis failure must not fail the verification record — advisory only.
+    }
+  }
+
   return { verification, result };
 }

@@ -11,15 +11,12 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { resolveServerRole } from "@/services/auth/server-role";
 import { recordOperatorOverride } from "@/services/override/operator-override.service";
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const body = await ctx.request!.json();
     const { operatorItemId, overriddenAction, reason, riskAcknowledged } = body ?? {};
-
-    const role = await resolveServerRole();
 
     return recordOperatorOverride({
       operatorItemId,
@@ -28,7 +25,6 @@ export const POST = withCanonicalEnforcement(
       riskAcknowledged,
       workspaceId: ctx.verifiedWorkspaceId,
       actorId: ctx.verifiedActorId,
-      role,
     });
   },
   { requireCapabilities: [CAPABILITIES.OVERRIDE_DECIDE], requireWorkspace: true },

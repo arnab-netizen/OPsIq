@@ -6,6 +6,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
+import {
+  type ClaimedWorkspaceId,
+  type VerifiedWorkspaceId,
+  claimWorkspaceId,
+  claimedIdForLog,
+} from "@/lib/workspace-identity";
 
 interface TokenBucket {
   tokens: number;
@@ -69,10 +75,12 @@ function getIpBucket(ip: string): TokenBucket {
 
 /**
  * Check and consume tokens from workspace bucket.
+ * Requires VerifiedWorkspaceId — caller must have proven DB membership before calling.
+ * The one live caller (actions/route.ts) passes ctx.verifiedWorkspaceId (safe).
  * Returns { allowed: boolean, remaining: number, retryAfter?: number }
  */
 export function checkWorkspaceRateLimit(
-  workspaceId: string,
+  workspaceId: VerifiedWorkspaceId,
   tier: SubscriptionTier,
   tokens: number = 1
 ): { allowed: boolean; remaining: number; retryAfter?: number } {
@@ -161,19 +169,27 @@ export function checkIpRateLimit(
  */
 export function rateLimitEnforcement() {
   return async (request: NextRequest, response: NextResponse) => {
-    // Get workspace ID from header
-    const workspaceId = request.headers.get("x-workspace-id");
-    // BILL-01: tier resolved SERVER-SIDE (never from a client x-tier header). Fails safe to "free".
-    const tier: SubscriptionTier = workspaceId
-      ? await (await import("@/services/entitlement.service")).resolveWorkspaceTier(workspaceId)
+    // DEAD MIDDLEWARE — not wired in production.
+    // x-workspace-id read is typed as ClaimedWorkspaceId (untrusted claim).
+    // If wired, this constitutes RATE_LIMIT_EVASION_RISK + TIER_ENFORCEMENT_VIOLATION:
+    // resolveWorkspaceTier would DB-query keyed on an unverified caller claim.
+    // Wire with VerifiedWorkspaceId from withCanonicalEnforcement context instead.
+    const claimedId: ClaimedWorkspaceId | null = claimWorkspaceId(request.headers.get("x-workspace-id"));
+    // BILL-01: tier must be resolved SERVER-SIDE from verified workspace; this path is dead.
+    const tier: SubscriptionTier = claimedId
+      ? await (await import("@/services/entitlement.service")).resolveWorkspaceTier(claimedId)  // WOULD BE UNSAFE
       : "free";
 
     // Get client IP
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
 
-    // Check workspace rate limit (only if workspace exists)
-    if (workspaceId) {
-      const wsLimit = checkWorkspaceRateLimit(workspaceId, tier);
+    // Check workspace rate limit (only if workspace claim present — DEAD PATH)
+    // checkWorkspaceRateLimit requires VerifiedWorkspaceId; dead middleware cannot call it safely
+    if (claimedId) {
+      // Intentional compile-time barrier: cannot pass ClaimedWorkspaceId to checkWorkspaceRateLimit.
+      // Left as commented reference to document what would need to change if this were wired.
+      // const wsLimit = checkWorkspaceRateLimit(claimedId, tier); // TYPE ERROR — ClaimedWorkspaceId ≠ VerifiedWorkspaceId
+      const wsLimit = { allowed: false, remaining: 0, retryAfter: 60 }; // dead path stub
       if (!wsLimit.allowed) {
         return new NextResponse(
           JSON.stringify({

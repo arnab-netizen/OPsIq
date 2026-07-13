@@ -4,7 +4,9 @@ import { getItems } from "@/services/operator/store";
 import { calculateValue } from "@/services/value/tracker";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { canView } from "@/services/auth/access";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -21,23 +23,24 @@ export const GET = withCanonicalEnforcement(
 
     // Get actor ID from verified context
     const actorId = ctx.verifiedActorId;
+    const workspaceId = ctx.verifiedWorkspaceId;
 
   // Fetch all items
-  const items = await getItems();
+  const items = await getItems(workspaceId);
 
   // Compute value metrics
   const metrics = calculateValue(items);
 
   // Log audit event for viewing value metrics
-  await logAuditEvent({
-    eventName: "VALUE_VIEWED",
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.VALUE_VIEWED,
     entityType: "Value",
     entityId: "system",
     actorId,
-    role,
-    before: null,
-    after: null,
-    metadata: {
+    actorType: "user",
+    workspaceId,
+    payload: {
+      role,
       totalExpected: metrics.totalExpected,
       totalActual: metrics.totalActual,
       totalDelta: metrics.totalDelta,
@@ -46,7 +49,8 @@ export const GET = withCanonicalEnforcement(
       itemsAnalyzed: metrics.itemsAnalyzed,
     },
   }).catch((auditError) => {
-    console.error(`Audit logging failed: ${auditError}`);
+    const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+    console.error(`Audit logging failed: ${governed.operatorMessage}`);
   });
 
   return metrics;

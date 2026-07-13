@@ -191,7 +191,7 @@ describe("Error Handler Integration", () => {
 
       const request = new NextRequest("http://localhost/api/test", {
         headers: {
-          "x-workspace-id": "ws-123",
+          "x-workspace-id": "00000000-0000-0000-0000-000000000123",
         },
       });
 
@@ -227,7 +227,7 @@ describe("Error Handler Integration", () => {
       request = new NextRequest("http://localhost/api/test", {
         headers: {
           authorization: "Bearer token123",
-          "x-workspace-id": "ws-123",
+          "x-workspace-id": "00000000-0000-0000-0000-000000000123",
         },
       });
       response = await wrapped(request);

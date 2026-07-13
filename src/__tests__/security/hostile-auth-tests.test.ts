@@ -223,9 +223,11 @@ describe("Hostile Auth Tests", () => {
       // GET /api/health uses withEnforcement(..., { bypass_health_check: true })
       // No withAuth call → request succeeds without credentials
       const result = await healthGET({});
-      expect(result).toMatchObject({ status: expect.any(String) });
+      expect(result).toBeInstanceOf(Response);
+      const json = await (result as Response).json();
+      expect(json).toMatchObject({ status: expect.any(String) });
       // Must not be an auth rejection
-      expect((result as Record<string, unknown>)).not.toMatchObject({ error: expect.stringContaining("Unauthorized") });
+      expect(json).not.toMatchObject({ error: expect.stringContaining("Unauthorized") });
     });
 
     test("readiness endpoint has no auth enforcement — returns Response", async () => {

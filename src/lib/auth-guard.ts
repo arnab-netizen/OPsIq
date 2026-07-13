@@ -10,6 +10,7 @@ import type { CapabilityName } from "@/domain/constants/capabilities";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { checkShadowRead } from "@/lib/runtime-shadow-read-enforcer";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import type { VerifiedWorkspaceId } from "@/lib/workspace-identity";
 
 /**
  * PHASE A: Auth Guard Transition (Legacy Code)
@@ -235,7 +236,9 @@ export function canonicalizeAuthContext(
     verifiedActorId: userId,
     verifiedActorType: "user",
     verifiedActor: authContext.session.user,
-    verifiedWorkspaceId: workspaceId,
+    // LEGACY BRIDGE: workspaceId here is caller-supplied (used in tests/migration helpers).
+    // No DB membership proof. Type cast is explicit — callers must ensure the value is safe.
+    verifiedWorkspaceId: workspaceId as unknown as VerifiedWorkspaceId,
     verifiedCapabilities: capabilities,
     verifiedSessionSnapshot: {
       snapshotId: `snapshot-${userId}-${Date.now()}`,

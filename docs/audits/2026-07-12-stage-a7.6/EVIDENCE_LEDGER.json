@@ -1,0 +1,219 @@
+{
+  "audit": "Stage A7.6 — Systemic Root-Cause Elimination & Architectural Invariant Closure",
+  "date": "2026-07-12",
+  "branch": "claude/phase-6f-governance-findings-5gkiec",
+  "baseline": "origin/main",
+  "defect_classes": {
+    "DC-A7.6-I1A": {
+      "name": "Workspace ID from x-workspace-id HTTP header",
+      "severity": "CRITICAL",
+      "instances_found": 12,
+      "instances_fixed": 3,
+      "instances_deferred": 9,
+      "fixed": [
+        "src/app/api/engagements/[engagementId]/actions/route.ts:8",
+        "src/app/api/engagements/[engagementId]/findings/route.ts:9",
+        "src/app/api/engagements/[engagementId]/recommendations/route.ts:8"
+      ],
+      "deferred": [
+        "src/app/api/engagements/[engagementId]/experiments/route.ts (6 methods)",
+        "src/app/api/engagements/[engagementId]/shock-events/route.ts",
+        "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+        "src/app/api/engagements/[engagementId]/pricing-tiers/route.ts",
+        "src/app/api/execute/route.ts"
+      ],
+      "deferred_reason": "Deferred routes use enforceWorkspaceScoping or withAuth; fix requires DC-A7.6-I12 migration first",
+      "fix_applied": "Replace ctx.request!.headers.get(\"x-workspace-id\") || \"\" with ctx.verifiedWorkspaceId"
+    },
+    "DC-A7.6-I1B": {
+      "name": "Workspace ID from broken requireWorkspaceContext() in context.ts",
+      "severity": "CRITICAL",
+      "instances_found": 7,
+      "instances_fixed": 2,
+      "instances_deferred": 5,
+      "root_cause_file": "src/services/workspace/context.ts",
+      "root_cause_line": "const workspaceId = session.user.id; // temporary: use user ID as workspace",
+      "fixed": [
+        "src/app/api/governance/alerts/route.ts",
+        "src/app/api/observability/summary/route.ts"
+      ],
+      "deferred": [
+        "src/app/api/metrics/control-effectiveness/route.ts",
+        "src/app/api/metrics/decision-latency/route.ts",
+        "src/app/api/run/route.ts",
+        "src/services/operator/store.ts (4 call sites)",
+        "src/services/audit/audit-log.ts (fallback path)"
+      ],
+      "deferred_reason": "Deferred callers use withAuth/withEnforcementFull; fix requires DC-A7.6-I12 + DC-A7.6-I20 first",
+      "fix_applied": "Remove requireWorkspaceContext() import and call; use ctx.verifiedWorkspaceId"
+    },
+    "DC-A7.6-I1C": {
+      "name": "Actor identity accepted from request body",
+      "severity": "HIGH",
+      "instances_found": 7,
+      "instances_fixed": 7,
+      "instances_deferred": 0,
+      "fixed": [
+        {
+          "file": "src/app/api/owner/learning-rejections/route.ts",
+          "field_removed": "rejectedBy"
+        },
+        {
+          "file": "src/app/api/owner/learning-candidates/[candidateId]/promote/route.ts",
+          "field_removed": "approvedBy"
+        },
+        {
+          "file": "src/app/api/owner/learning-consent/route.ts",
+          "field_removed": "consentBy"
+        },
+        {
+          "file": "src/app/api/owner/learning-harm-events/route.ts",
+          "field_removed": "detectedBy"
+        },
+        {
+          "file": "src/app/api/owner/learning-attribution-reviews/route.ts",
+          "field_removed": "reviewedBy"
+        },
+        {
+          "file": "src/app/api/owner/learning-privacy/route.ts",
+          "field_removed": "appliedBy"
+        },
+        {
+          "file": "src/app/api/owner/learning-retention/route.ts",
+          "field_removed": "appliedBy"
+        }
+      ],
+      "fix_applied": "Remove actor field from Zod schema; replace body.xxx with ctx.verifiedActorId in service call"
+    },
+    "DC-A7.6-I12": {
+      "name": "Duplicate auth wrapper patterns (3 competing wrappers)",
+      "severity": "HIGH",
+      "instances_found": 3,
+      "status": "DEFERRED",
+      "canonical": {
+        "wrapper": "withCanonicalEnforcement",
+        "routes": 274
+      },
+      "legacy": [
+        {
+          "wrapper": "enforceWorkspaceScoping",
+          "routes": 39
+        },
+        {
+          "wrapper": "withAuth/withEnforcementFull/none",
+          "routes": 40
+        }
+      ],
+      "deferred_reason": "Requires systematic auth pattern migration across 79 routes with regression testing"
+    },
+    "DC-A7.6-I13": {
+      "name": "Duplicate state machine implementations (9 independent impls)",
+      "severity": "MEDIUM",
+      "status": "DEFERRED",
+      "instances": [
+        "src/services/governance/state-machine.ts::ALLOWED_TRANSITIONS",
+        "src/services/decision/status-management.ts::canTransitionTo",
+        "src/services/decision/transaction-layer.ts::canTransitionTo (lambda)",
+        "src/services/decision/transaction-lifecycle.ts::validTransitions",
+        "src/services/outcome/verification-approval.service.ts::ALLOWED_TRANSITIONS",
+        "src/domain/action-tracking.ts::ACTION_STATUS_TRANSITIONS",
+        "src/domain/evidence-capture.ts::EVIDENCE_STATUS_TRANSITIONS",
+        "src/domain/action-assignment.ts::PROOF_TRANSITIONS",
+        "src/domain/recommendation-verification.ts::VERIFICATION_STATUS_TRANSITIONS"
+      ],
+      "deferred_reason": "Requires designing unified StateTransitionRegistry, cross-domain refactor"
+    },
+    "DC-A7.6-I16A": {
+      "name": "Direct auditEvent.create bypasses (skips hash chain)",
+      "severity": "HIGH",
+      "status": "DEFERRED",
+      "instances_found": "20+",
+      "sample_files": [
+        "src/services/ai/ledger-persistence.ts:146",
+        "src/services/business-condition/business-condition-profile.service.ts:102,207",
+        "src/services/owner-mode/external-opportunity-intake.service.ts:159",
+        "src/services/owner-mode/process-execution-bridge.service.ts:107,214,360",
+        "src/services/owner-mode/reassessment-event.service.ts:133",
+        "src/services/owner-mode/opportunity-execution.service.ts:95",
+        "src/services/owner-mode/validation-outcome.service.ts:95",
+        "src/services/controlled-learning-retention.service.ts:64",
+        "src/services/execution/complaint-rework.service.ts:109,182,251",
+        "src/services/execution/escalation.service.ts:107,170,233",
+        "src/services/execution/delegated-task.service.ts:136,156"
+      ],
+      "deferred_reason": "Requires per-service migration to emitAuditEvent; 20+ files, 40+ call sites"
+    },
+    "DC-A7.6-I16B": {
+      "name": "Two competing audit writing functions",
+      "severity": "HIGH",
+      "status": "DEFERRED",
+      "canonical": "src/infra/audit.ts::emitAuditEvent (hash-chained)",
+      "broken": "src/services/audit/audit-log.ts::logAuditEvent (falls back to broken context.ts, no hash chain)",
+      "deferred_reason": "Requires consolidation after I16A migration complete"
+    },
+    "DC-A7.6-I5-DC06": {
+      "name": "Missing permission strings in hasPermission() — 4 decision routes permanently inaccessible",
+      "severity": "CRITICAL",
+      "status": "FIXED",
+      "instances_found": 4,
+      "instances_fixed": 4,
+      "root_cause_file": "src/middleware/workspace-enforcement.ts",
+      "root_cause": "hasPermission() permission map lacked 'execute', 'record_outcome', 'fail_decision', 'verify_outcome' — every call returned false for ALL roles including admin, making 4 decision state transitions permanently inaccessible to all users",
+      "affected_routes": [
+        "src/app/api/decisions/[decisionId]/execute/route.ts:42",
+        "src/app/api/decisions/[decisionId]/record-outcome/route.ts:57",
+        "src/app/api/decisions/[decisionId]/fail/route.ts:53",
+        "src/app/api/decisions/[decisionId]/verify/route.ts:56"
+      ],
+      "fix_applied": "Added 'execute', 'record_outcome', 'fail_decision', 'verify_outcome' to admin array; 'execute', 'record_outcome', 'fail_decision' to operator array; 'verify_outcome' to reviewer array. Introduced WorkspaceAction union type so future callers with unregistered strings fail at compile time.",
+      "prevention": "WorkspaceAction TypeScript union type enforces compile-time exhaustiveness — any future hasPermission() call with an unregistered string will produce a TypeScript error"
+    },
+    "DC-A7.6-I20": {
+      "name": "Three competing requireWorkspaceContext implementations",
+      "severity": "CRITICAL",
+      "status": "DEFERRED",
+      "implementations": [
+        {
+          "file": "src/services/workspace/context.ts",
+          "status": "BROKEN",
+          "bug": "Returns session.user.id as workspaceId (acknowledged temporary placeholder never removed)",
+          "callers": "7 production callers"
+        },
+        {
+          "file": "src/services/workspace/activation-context.ts",
+          "status": "CORRECT",
+          "bug": "None — does real db.workspaceMembership.findFirst lookup",
+          "callers": "0 production callers (only ignored test files)"
+        },
+        {
+          "file": "src/lib/service-auth.ts",
+          "status": "DIFFERENT PURPOSE",
+          "bug": "None — this validates a workspaceId parameter, does not resolve workspace",
+          "callers": "1 ignored test file"
+        }
+      ],
+      "deferred_reason": "context.ts deletion requires all 7 callers to migrate, which requires DC-A7.6-I12 completion"
+    }
+  },
+  "gates": {
+    "tsc_noEmit": "PASS",
+    "npm_run_build": "PASS",
+    "prisma_validate": "PASS",
+    "db_gates": "DB_BLOCKED (no DATABASE_URL)"
+  },
+  "files_changed": [
+    "src/app/api/engagements/[engagementId]/actions/route.ts",
+    "src/app/api/engagements/[engagementId]/findings/route.ts",
+    "src/app/api/engagements/[engagementId]/recommendations/route.ts",
+    "src/app/api/governance/alerts/route.ts",
+    "src/app/api/observability/summary/route.ts",
+    "src/app/api/owner/learning-rejections/route.ts",
+    "src/app/api/owner/learning-candidates/[candidateId]/promote/route.ts",
+    "src/app/api/owner/learning-consent/route.ts",
+    "src/app/api/owner/learning-harm-events/route.ts",
+    "src/app/api/owner/learning-attribution-reviews/route.ts",
+    "src/app/api/owner/learning-privacy/route.ts",
+    "src/app/api/owner/learning-retention/route.ts",
+    "src/middleware/workspace-enforcement.ts"
+  ]
+}

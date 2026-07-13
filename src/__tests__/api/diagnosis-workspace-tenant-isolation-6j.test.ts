@@ -100,6 +100,33 @@ vi.mock("@/domain/constants/capabilities", () => ({
   CAPABILITIES: { DIAGNOSIS_READ: "diagnosis_read" },
 }));
 
+vi.mock("@/lib/canonical-route-enforcement", () => ({
+  withCanonicalEnforcement:
+    (handler: (ctx: unknown) => unknown) =>
+    async (req: { headers: { get: (k: string) => string | null }; json: () => Promise<Record<string, unknown>> }) => {
+      const authResult = await mocks.withAuth(req);
+      const userId: string = authResult.session.user.id;
+      const body = await req.json();
+      const workspaceId = body.workspaceId as string;
+      const membership = await mocks.dbMembershipFindFirst({
+        where: { workspaceId, userId, isActive: true },
+        select: { role: true },
+      });
+      if (!membership) {
+        class ForbiddenError extends Error {
+          constructor(msg: string) { super(msg); this.name = "ForbiddenError"; }
+        }
+        throw new ForbiddenError("Not a member of this workspace");
+      }
+      return handler({
+        verifiedWorkspaceId: workspaceId,
+        verifiedActorId: userId,
+        verifiedActorType: "user",
+        request: req,
+      });
+    },
+}));
+
 // ─── Route imports (after mocks) ─────────────────────────────────────────────
 
 import { POST as maturityPOST } from "@/app/api/diagnosis/maturity/route";

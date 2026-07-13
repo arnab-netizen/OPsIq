@@ -14,7 +14,6 @@ export const runtime = "nodejs";
 
 const rejectSchema = z.object({
   candidateId: z.string().min(1),
-  rejectedBy: z.string().min(1),
   rejectedAt: z.string().min(1).transform((s) => new Date(s)),
   rejectionReason: z.string().min(1),
   rejectionCode: z.string().min(1),
@@ -34,7 +33,7 @@ export const POST = withCanonicalEnforcement(
     const result = await rejectCandidateFinal(db as any, {
       workspaceId: ctx.verifiedWorkspaceId,
       candidateId: body.candidateId,
-      rejectedBy: body.rejectedBy,
+      rejectedBy: ctx.verifiedActorId,
       rejectedAt: body.rejectedAt,
       rejectionReason: body.rejectionReason,
       rejectionCode: body.rejectionCode,

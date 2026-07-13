@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/infra/logger";
+import { type ClaimedWorkspaceId, claimWorkspaceId } from "@/lib/workspace-identity";
 
 export function createWorkspaceValidationMiddleware() {
   return async (
@@ -19,31 +20,20 @@ export function createWorkspaceValidationMiddleware() {
       return next(request);
     }
 
-    // Get workspace ID from headers (format validation only)
-    const workspaceId = request.headers.get("x-workspace-id");
+    // Read x-workspace-id as an UNTRUSTED CLAIM only — format validation, not membership proof
+    const claimedId: ClaimedWorkspaceId | null = claimWorkspaceId(request.headers.get("x-workspace-id"));
 
-    if (!workspaceId) {
-      logger.warn("Request missing workspaceId header", { path });
+    if (!claimedId) {
+      logger.warn("Request missing or malformed workspaceId header", { path });
       return NextResponse.json(
-        { error: "Workspace ID is required (x-workspace-id header)" },
+        { error: "Workspace ID is required (x-workspace-id header, UUID format)" },
         { status: 400 }
       );
     }
 
-    // Validate workspace ID format (UUID)
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(workspaceId)) {
-      logger.warn("Invalid workspaceId format", { workspaceId });
-      return NextResponse.json(
-        { error: "Invalid workspace ID format" },
-        { status: 400 }
-      );
-    }
-
-    // Add to request headers for use in handlers
+    // Add format-valid marker; NOT a membership or auth proof
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-workspace-id-validated", "true");
+    requestHeaders.set("x-workspace-id-format-valid", "true");
 
     const response = await next(
       new NextRequest(request.nextUrl, {

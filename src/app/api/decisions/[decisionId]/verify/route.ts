@@ -1,8 +1,6 @@
-import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
-import { UnauthorizedError, ValidationError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { UnauthorizedError, ValidationError, ForbiddenError } from "@/infra/errors";
+import { hasPermission } from "@/middleware/workspace-enforcement";
 import { logger } from "@/infra/logger";
 import { approveOutcomeVerification } from "@/services/outcome/verification-approval.service";
 import {
@@ -10,6 +8,7 @@ import {
   recordIdempotencyResponse,
   recordIdempotencyError,
 } from "@/services/idempotency";
+import { db } from "@/lib/db";
 import { z } from "zod";
 
 const VerifyOutcomeSchema = z.object({
@@ -17,51 +16,38 @@ const VerifyOutcomeSchema = z.object({
   reason: z.string().min(5, "Reason must be at least 5 characters"),
 });
 
-type VerifyOutcomeInput = z.infer<typeof VerifyOutcomeSchema>;
-
 /**
- * POST /api/decisions/[id]/verify
+ * POST /api/decisions/[decisionId]/verify
  *
  * Approve or dispute outcome verification (admin only)
  * State transitions:
  *   unverified → verified | disputed
  *   disputed → verified
  *   verified → disputed
- *
- * Returns: 200 on success, 400 on validation error, 409 on invalid transition
  */
-export const POST = withEnforcementFull(
-  async (request: NextRequest, ctx, params) => {
-    const { session } = await withAuth();
-    if (!session?.user?.id) {
-      throw new UnauthorizedError("Unauthorized");
-    }
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const actorId = ctx.verifiedActorId;
+    const decisionId = params.decisionId; // FIX: was params.id (bug — path param is [decisionId])
 
-    const userId = session.user.id;
-    const decisionId = params.id;
-
-    // Get workspace ID from query
-    const workspaceId = request.nextUrl.searchParams.get("workspaceId");
-    if (!workspaceId) {
-      throw new ValidationError("Workspace ID required");
-    }
-
-    // Enforce workspace scoping
-    const membership = await enforceWorkspaceScoping(request, workspaceId);
+    // Canonical wrapper verified workspace membership; re-fetch role for hasPermission check
+    const membership = await db.workspaceMembership.findFirst({
+      where: { workspaceId, userId: actorId },
+      select: { role: true },
+    });
     if (!membership) {
-      throw new UnauthorizedError("Unauthorized or invalid workspace");
+      throw new UnauthorizedError("Workspace membership not found");
     }
 
-    // Check admin permission to verify outcomes
     if (!hasPermission(membership.role, "verify_outcome")) {
-      throw new UnauthorizedError("Insufficient permissions to verify outcome (admin only)");
+      throw new ForbiddenError("Insufficient permissions to verify outcome (admin only)");
     }
 
-    // Parse and validate input
-    const body = await request.json();
+    const body = ctx.request ? await ctx.request.json() : {};
     const verificationInput = VerifyOutcomeSchema.parse(body);
 
-    const idempotencyKey = request.headers.get("idempotency-key");
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {
       throw new ValidationError("idempotency-key header is required");
     }
@@ -69,7 +55,7 @@ export const POST = withEnforcementFull(
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "verifyOutcome",
-      actorId: userId,
+      actorId,
       workspaceId,
       payload: { decisionId, workspaceId, verificationStatus: verificationInput.verificationStatus },
     });
@@ -82,18 +68,17 @@ export const POST = withEnforcementFull(
     }
 
     try {
-      // Approve/verify outcome
       const result = await approveOutcomeVerification(
         decisionId,
         workspaceId,
         verificationInput,
-        userId
+        actorId
       );
 
       logger.info("Outcome verified via API", {
         decisionId,
         workspaceId,
-        userId,
+        userId: actorId,
         verificationStatus: verificationInput.verificationStatus,
       });
 
@@ -113,10 +98,8 @@ export const POST = withEnforcementFull(
         error instanceof Error ? error : new Error(String(error)),
         workspaceId
       );
-      if (error instanceof ValidationError) {
-        throw error;
-      }
       throw error;
     }
-  }
+  },
+  { requireWorkspace: true }
 );

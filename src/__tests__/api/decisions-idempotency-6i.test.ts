@@ -33,7 +33,7 @@ const mocks = vi.hoisted(() => ({
   dbOperatorItemCreate: vi.fn(),
   dbOperatorItemFindFirst: vi.fn(),
   // audit
-  logAuditEvent: vi.fn(),
+  emitAuditEvent: vi.fn(),
   // intake data builder
   buildIntakeOperatorItemData: vi.fn(),
   // workspace enforcement
@@ -86,8 +86,8 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/services/audit/audit-log", () => ({
-  logAuditEvent: mocks.logAuditEvent,
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: mocks.emitAuditEvent,
 }));
 
 vi.mock("@/app/api/decisions/intake/intake-data", () => ({
@@ -156,18 +156,22 @@ import { POST as closePOST } from "@/app/api/decisions/[decisionId]/close/route"
 function makeIntakeRequest(overrides: {
   idempotencyKey?: string | null;
   title?: string;
-  workspaceId?: string | null;
+  workspaceId?: string;
 } = {}) {
-  const { idempotencyKey = "idem-key-intake-1", title = "Reduce churn rate", workspaceId = null } = overrides;
+  const { idempotencyKey = "idem-key-intake-1", title = "Reduce churn rate", workspaceId = "ws-1" } = overrides;
   return {
-    headers: {
-      get: (k: string) => {
-        if (k === "idempotency-key") return idempotencyKey;
-        return null;
+    verifiedWorkspaceId: workspaceId,
+    verifiedActorId: "actor-1",
+    verifiedActorType: "user" as const,
+    request: {
+      headers: {
+        get: (k: string) => {
+          if (k === "idempotency-key") return idempotencyKey;
+          return null;
+        },
       },
+      json: () => Promise.resolve({ title, risk: "medium", confidence: 0.5 }),
     },
-    nextUrl: { searchParams: { get: () => workspaceId } },
-    json: () => Promise.resolve({ title, risk: "medium", confidence: 0.5 }),
   };
 }
 
@@ -184,15 +188,19 @@ function makeCreateRequest(overrides: {
     contentType = "application/json",
   } = overrides;
   return {
-    headers: {
-      get: (k: string) => {
-        if (k === "idempotency-key") return idempotencyKey;
-        if (k === "x-workspace-id") return workspaceId;
-        if (k === "content-type") return contentType;
-        return null;
+    verifiedWorkspaceId: workspaceId,
+    verifiedActorId: "actor-1",
+    verifiedActorType: "user" as const,
+    request: {
+      headers: {
+        get: (k: string) => {
+          if (k === "idempotency-key") return idempotencyKey;
+          if (k === "content-type") return contentType;
+          return null;
+        },
       },
+      json: () => Promise.resolve({ title }),
     },
-    json: () => Promise.resolve({ title }),
   };
 }
 
@@ -258,7 +266,7 @@ beforeEach(() => {
   mocks.buildIntakeOperatorItemData.mockReturnValue({ title: "Reduce churn rate" });
 
   // Audit
-  mocks.logAuditEvent.mockResolvedValue(undefined);
+  mocks.emitAuditEvent.mockResolvedValue(undefined);
 
   // Idempotency defaults: new request
   mocks.checkIdempotencyKey.mockResolvedValue({ isNew: true, cachedResponse: null });
@@ -316,18 +324,18 @@ describe("POST /api/decisions/intake — idempotency (Phase 6I)", () => {
     expect(mocks.dbOperatorItemCreate).not.toHaveBeenCalled();
   });
 
-  it("workspace ambiguity: uses oldest membership (orderBy createdAt asc)", async () => {
-    // Proves findFirst is called with orderBy — mock receives the call and we verify
+  it("workspace scoping: checkIdempotencyKey is called with the verified workspaceId", async () => {
+    // Proves that the route passes verifiedWorkspaceId to the idempotency layer
     await intakePOST(makeIntakeRequest() as never);
-    expect(mocks.dbWorkspaceMembershipFindFirst).toHaveBeenCalledWith(
+    expect(mocks.checkIdempotencyKey).toHaveBeenCalledWith(
       expect.objectContaining({
-        orderBy: { createdAt: "asc" },
+        workspaceId: "ws-1",
       })
     );
   });
 
-  it("recordIdempotencyError called and error propagates when logAuditEvent fails", async () => {
-    mocks.logAuditEvent.mockRejectedValue(new Error("audit write failed"));
+  it("recordIdempotencyError called and error propagates when emitAuditEvent fails", async () => {
+    mocks.emitAuditEvent.mockRejectedValue(new Error("audit write failed"));
 
     await expect(intakePOST(makeIntakeRequest() as never)).rejects.toThrow("audit write failed");
     expect(mocks.recordIdempotencyError).toHaveBeenCalledOnce();

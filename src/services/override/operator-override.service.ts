@@ -27,7 +27,6 @@ export interface OperatorOverrideInput {
   riskAcknowledged: boolean;
   workspaceId: string;
   actorId: string;
-  role: string | null;
 }
 
 export interface OperatorOverrideResult {

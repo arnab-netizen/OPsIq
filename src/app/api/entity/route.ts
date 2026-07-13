@@ -2,9 +2,9 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { UnauthorizedError } from "@/infra/errors";
 import { createEntity, getEntities } from "@/services/entity/store";
 import { resolveServerRole } from "@/services/auth/server-role";
-import { getSession } from "@/services/auth";
 import { canEdit } from "@/services/auth/access";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { randomUUID } from "crypto";
 
 export const GET = withCanonicalEnforcement(
@@ -54,14 +54,17 @@ export const POST = withCanonicalEnforcement(
     createEntity(entity);
 
     // Log audit event (fail-closed if audit fails)
-    await logAuditEvent({
-      eventName: "CREATE",
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ENTITY_CREATED,
       entityType: "Entity",
       entityId,
       actorId,
-      role,
-      before: null,
-      after: entity,
+      actorType: "user",
+      workspaceId: ctx.verifiedWorkspaceId,
+      payload: {
+        role,
+        after: entity,
+      },
     });
 
     return entity;

@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { classifyError, type ClassifiedError } from "@/infra/error-tracking";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { claimWorkspaceId } from "@/lib/workspace-identity";
 
 /**
  * Type for a route handler function
@@ -110,8 +111,11 @@ export function withErrorHandling(
       }
 
       if (options?.requireWorkspace) {
-        const workspaceId = request.headers.get("x-workspace-id");
-        if (!workspaceId) {
+        // DEAD MIDDLEWARE — not wired in production.
+        // Header read is an UNTRUSTED_PREAUTH_HINT: presence check only, value discarded.
+        // No auth, membership, or scope decisions are made from this claim.
+        const claimed = claimWorkspaceId(request.headers.get("x-workspace-id"));
+        if (!claimed) {
           const classified = classifyError(
             new Error("Forbidden - Missing workspace ID"),
             { missing: "x-workspace-id header" }

@@ -1,5 +1,5 @@
 import { getSession } from "@/services/auth";
-import { requireWorkspaceContext } from "@/services/workspace/context";
+import { db } from "@/lib/db";
 import { InboxClient } from "./inbox-client";
 
 export const dynamic = "force-dynamic";
@@ -16,11 +16,16 @@ export default async function DashboardInboxPage() {
     throw new Error("Unauthorized: Authentication required");
   }
 
-  // Enforce workspace context
-  const workspace = await requireWorkspaceContext();
-  if (!workspace?.workspaceId) {
+  // Resolve workspace from DB membership (fail closed)
+  const membership = await db.workspaceMembership.findFirst({
+    where: { userId: session.user.id, isActive: true },
+    select: { workspaceId: true },
+    orderBy: { addedAt: "desc" },
+  });
+
+  if (!membership?.workspaceId) {
     throw new Error("Unauthorized: Workspace context required");
   }
 
-  return <InboxClient workspaceId={workspace.workspaceId} />;
+  return <InboxClient workspaceId={membership.workspaceId} />;
 }

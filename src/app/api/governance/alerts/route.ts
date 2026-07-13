@@ -1,16 +1,15 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { evaluateGovernanceAlerts } from "@/services/governance/alerts";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import type { NextRequest } from "next/server";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  // Get workspace context (fail closed if missing)
-  const workspace = await requireWorkspaceContext();
-
+  const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
 
   // Get period parameter from query
@@ -20,15 +19,15 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
 
   // Get governance metrics and observability summary
   const metrics = await calculateGovernanceMetrics({
-    workspaceId: workspace.workspaceId,
+    workspaceId,
     days: period === "last7d" ? 7 : 1,
   });
 
-  const summary = await getObservabilitySummary(workspace.workspaceId);
+  const summary = await getObservabilitySummary(workspaceId);
 
   // Evaluate governance alerts against real metrics and summary
   const alerts = evaluateGovernanceAlerts(
-    workspace.workspaceId,
+    workspaceId,
     metrics,
     summary,
     undefined,
@@ -36,15 +35,14 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   );
 
   // Log audit event for alerts access
-  await logAuditEvent({
-    eventName: "GOVERNANCE_ALERTS_ACCESSED",
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.GOVERNANCE_ALERTS_ACCESSED,
     entityType: "GovernanceAlerts",
-    entityId: workspace.workspaceId,
+    entityId: workspaceId,
     actorId: userId,
-    role: null,
-    before: null,
-    after: null,
-    metadata: {
+    actorType: "user",
+    workspaceId,
+    payload: {
       action: "view_governance_alerts",
       period,
       alertCount: alerts.period.alertCount,
@@ -52,8 +50,8 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       warningCount: alerts.period.warningCount,
     },
   }).catch((auditError) => {
-    // Log but don't fail on audit error - observability only
-    console.error(`Audit logging failed: ${auditError}`);
+    const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+    console.error(`Audit logging failed: ${governed.operatorMessage}`);
   });
 
   return alerts;

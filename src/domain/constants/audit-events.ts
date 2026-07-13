@@ -314,18 +314,27 @@ export const AUDIT_EVENTS = {
   OWNER_SALES_SNAPSHOT_RECORDED: "owner.sales_snapshot_recorded",
   OWNER_SALES_DIAGNOSIS_RUN: "owner.sales_diagnosis_run",
   OWNER_SALES_ACTION_UPDATED: "owner.sales_action_updated",
+  OWNER_SALES_ACTION_COMPLETED: "owner.sales_action_completed",
+  OWNER_SALES_REASSESSMENT_TRIGGERED: "owner.sales_reassessment_triggered",
   OWNER_SALES_OUTCOME_VERIFIED: "owner.sales_outcome_verified",
+  OWNER_SALES_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.sales_verification_reassessment_triggered",
 
   // Owner Operations (Module 4)
   OWNER_OPERATIONS_SNAPSHOT_RECORDED: "owner.operations_snapshot_recorded",
   OWNER_OPERATIONS_DIAGNOSIS_RUN: "owner.operations_diagnosis_run",
   OWNER_OPERATIONS_ACTION_UPDATED: "owner.operations_action_updated",
+  OWNER_OPERATIONS_ACTION_COMPLETED: "owner.operations_action_completed",
+  OWNER_OPERATIONS_REASSESSMENT_TRIGGERED: "owner.operations_reassessment_triggered",
   OWNER_OPERATIONS_OUTCOME_VERIFIED: "owner.operations_outcome_verified",
+  OWNER_OPERATIONS_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.operations_verification_reassessment_triggered",
 
   OWNER_SOP_SNAPSHOT_RECORDED: "owner.sop_snapshot_recorded",
   OWNER_SOP_DIAGNOSIS_RUN: "owner.sop_diagnosis_run",
   OWNER_SOP_ACTION_UPDATED: "owner.sop_action_updated",
+  OWNER_SOP_ACTION_COMPLETED: "owner.sop_action_completed",
+  OWNER_SOP_REASSESSMENT_TRIGGERED: "owner.sop_reassessment_triggered",
   OWNER_SOP_OUTCOME_VERIFIED: "owner.sop_outcome_verified",
+  OWNER_SOP_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.sop_verification_reassessment_triggered",
 
   OWNER_MARKETING_SNAPSHOT_RECORDED: "owner.marketing_snapshot_recorded",
   OWNER_MARKETING_DIAGNOSIS_RUN: "owner.marketing_diagnosis_run",
@@ -335,7 +344,13 @@ export const AUDIT_EVENTS = {
   OWNER_STRATEGY_SNAPSHOT_RECORDED: "owner.strategy_snapshot_recorded",
   OWNER_STRATEGY_DIAGNOSIS_RUN: "owner.strategy_diagnosis_run",
   OWNER_STRATEGY_ACTION_UPDATED: "owner.strategy_action_updated",
+  OWNER_STRATEGY_ACTION_COMPLETED: "owner.strategy_action_completed",
+  OWNER_STRATEGY_REASSESSMENT_TRIGGERED: "owner.strategy_reassessment_triggered",
   OWNER_STRATEGY_OUTCOME_VERIFIED: "owner.strategy_outcome_verified",
+  OWNER_STRATEGY_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.strategy_verification_reassessment_triggered",
+
+  // Finance domain — verification-triggered reassessment (separate from action-completion trigger)
+  OWNER_FINANCE_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.finance_verification_reassessment_triggered",
 
   OWNER_DATA_INTAKE_RECORDED: "owner.data_intake_recorded",
   OWNER_DATA_INTAKE_CONFIRMED: "owner.data_intake_confirmed",
@@ -401,6 +416,51 @@ export const AUDIT_EVENTS = {
 
   // Personalized SOP / workflow engine (Slice 16)
   SOP_VERSION_APPROVED: "sop.version_approved",
+
+  // Owner Vendor / Procurement Risk (Module #14)
+  OWNER_VENDOR_RISK_ASSESSED: "owner.vendor_risk_assessed",
+
+  // Owner Progress / Review (Workflow 7 — businessId-scoped, no engagementId required)
+  OWNER_BUSINESS_REVIEW_GENERATED: "owner.business_review_generated",
+
+  // Owner Tender / Application Pack (Module A5)
+  OWNER_TENDER_APPLICATION_PACK_GENERATED: "owner.tender_application_pack_generated",
+
+  // Decision engine — auth / permission failures
+  AUTH_FAILED: "auth.failed",
+  PERMISSION_DENIED: "auth.permission_denied",
+
+  // Decision engine — input and dependency validation
+  INPUT_VALIDATION_FAILED: "validation.input_failed",
+  DEPENDENCY_VALIDATION_BLOCKED: "validation.dependency_blocked",
+
+  // Decision engine — control layer
+  DECISION_GATE_BLOCKED: "decision.gate_blocked",
+  HIGH_IMPACT_APPROVAL_GRANTED: "decision.high_impact_approval_granted",
+  HIGH_IMPACT_APPROVAL_DENIED: "decision.high_impact_approval_denied",
+  GUARDRAILS_BLOCKED: "decision.guardrails_blocked",
+  RUN_APPROVED: "run.approved",
+
+  // Decision lifecycle
+  DECISION_INTAKE: "decision.intake",
+  DECISION_EVALUATED: "decision.evaluated",
+
+  // Operator item lifecycle
+  OPERATOR_ITEM_COMPLETED: "operator_item.completed",
+
+  // Entity management
+  ENTITY_CREATED: "entity.created",
+
+  // Analytics / observability reads
+  VALUE_VIEWED: "analytics.value_viewed",
+  MYDAY_VIEWED: "operator.myday_viewed",
+  GOVERNANCE_METRICS_ACCESSED: "governance.metrics_accessed",
+  GOVERNANCE_ALERTS_ACCESSED: "governance.alerts_accessed",
+  CONTROL_EFFECTIVENESS_ACCESSED: "metrics.control_effectiveness_accessed",
+  DECISION_LATENCY_ACCESSED: "metrics.decision_latency_accessed",
+  OBSERVABILITY_SUMMARY_ACCESSED: "observability.summary_accessed",
+  SCENARIO_ANALYZED: "scenario.analyzed",
+  CALIBRATION_VIEWED: "calibration.viewed",
 
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",

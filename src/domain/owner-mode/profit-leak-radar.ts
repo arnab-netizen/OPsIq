@@ -473,3 +473,96 @@ export function identifyProfitLeaks(s: ProfitLeakSignals): ProfitLeakAnalysis {
 export const CASH_MARGIN_LEAKS: ReadonlySet<ProfitLeakType> = new Set<ProfitLeakType>([
   "CASH_RISK_GROWTH", "DISCOUNT_LEAK", "PRICING_UNDERCHARGE", "LOW_MARGIN_B2B",
 ]);
+
+// ── Simplified high-level API ─────────────────────────────────────────────────
+
+const DOMAIN_TO_CATEGORY: Readonly<Record<string, string>> = {
+  profitability: "margin",
+  pricing: "pricing",
+  cash: "cash",
+  customer: "customer",
+  quality: "quality",
+  execution: "operations",
+  staff: "operations",
+  operations: "operations",
+  capacity: "capacity",
+  evidence: "evidence",
+};
+
+export interface SimpleProfitLeakInput {
+  workspaceId: string;
+  businessId?: string;
+  revenue?: number;
+  /** Gross margin as a percentage (0–100). */
+  grossMarginPct?: number;
+  /** Waste/rework rate as a fraction (0–1). */
+  wasteRate?: number;
+  /** Price deviation from standard as a percentage (0–100). */
+  priceDeviationPct?: number;
+  inventoryTurnoverDays?: number;
+  /** Customer retention rate as a fraction (0–1). */
+  customerRetentionRate?: number;
+}
+
+export interface SimpleProfitLeak {
+  leakType: ProfitLeakType;
+  category: string;
+  severity: LeakSeverity;
+  estimatedLeakage: number;
+}
+
+export interface DetectProfitLeaksResult {
+  leaks: SimpleProfitLeak[];
+  totalEstimatedLeakage: number;
+}
+
+/**
+ * Simplified profit-leak detection from common business KPIs.
+ * Maps flat operational inputs to `ProfitLeakSignals`, runs `identifyProfitLeaks`,
+ * and returns a simplified result with per-leak category labels and an estimated
+ * total leakage figure. Pure: no DB, no side effects.
+ */
+export function detectProfitLeaks(input: SimpleProfitLeakInput): DetectProfitLeaksResult {
+  const revenue = input.revenue ?? 0;
+  const marginPct = input.grossMarginPct != null ? input.grossMarginPct / 100 : null;
+  const lowMargin = input.grossMarginPct != null && input.grossMarginPct < 25;
+  const marginUnsafe = input.grossMarginPct != null && input.grossMarginPct < 20;
+  const discountLeak = input.priceDeviationPct != null && input.priceDeviationPct > 15;
+  // Map wasteRate to rework count; >10% waste rate triggers rework signal (≥3 to fire)
+  const reworkCount =
+    input.wasteRate != null && input.wasteRate > 0.1
+      ? Math.max(3, Math.round(input.wasteRate * 20))
+      : 0;
+
+  const signals: ProfitLeakSignals = {
+    workspaceId: input.workspaceId,
+    revenue: revenue > 0 ? revenue : null,
+    marginPct,
+    marginSafe: input.grossMarginPct != null ? !marginUnsafe : null,
+    discountLeak,
+    lowMarginB2BAccount: lowMargin,
+    reworkCount,
+    evaluatedAt: new Date().toISOString(),
+  };
+
+  const analysis = identifyProfitLeaks(signals);
+
+  const TIER_MULTIPLIER: Record<string, number> = {
+    HIGH: 0.05, MEDIUM: 0.02, LOW: 0.01, NEEDS_DATA: 0,
+  };
+
+  let totalEstimatedLeakage = 0;
+  const leaks: SimpleProfitLeak[] = analysis.leaks.filter((leak) => leak.leakType !== "DATA_INSUFFICIENT").map((leak) => {
+    const category = DOMAIN_TO_CATEGORY[leak.domain] ?? leak.domain;
+    const tierLeakage =
+      revenue > 0 ? (TIER_MULTIPLIER[leak.estimatedImpact.tier] ?? 0) * revenue : 0;
+    const estimatedLeakage =
+      leak.estimatedImpact.rangeHigh != null
+        ? leak.estimatedImpact.rangeHigh
+        : tierLeakage;
+    totalEstimatedLeakage += estimatedLeakage;
+    return { leakType: leak.leakType, category, severity: leak.severity, estimatedLeakage };
+  });
+
+  return { leaks, totalEstimatedLeakage };
+}

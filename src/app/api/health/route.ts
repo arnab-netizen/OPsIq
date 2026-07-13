@@ -1,4 +1,4 @@
-import { withEnforcement } from "@/lib/enforced-route";
+import { NextResponse } from "next/server";
 import { db, getDbInstance } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { classifyError, reportError } from "@/infra/error-tracking";
@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 let lastCleanupTime = 0;
 let applicationStartTime = Date.now();
 
-export const GET = withEnforcement(async (ctx) => {
+export async function GET(): Promise<NextResponse> {
   // Ensure database is initialized before any operations
   try {
     await getDbInstance();
@@ -95,11 +95,11 @@ export const GET = withEnforcement(async (ctx) => {
 
   logger.debug("Health check executed", { status: overallStatus });
 
-  return {
+  return NextResponse.json({
     status: overallStatus,
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version ?? "0.1.0",
     environment: process.env.NODE_ENV ?? "unknown",
     checks,
-  };
-}, { bypass_health_check: true });
+  });
+}

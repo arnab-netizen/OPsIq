@@ -1,17 +1,15 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { ForbiddenError, ValidationError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { hasInternalAccess } from "@/policies/capability-check";
 import {
   createShockEvent,
   listShockEventsForEngagement,
 } from "@/services/shock-event";
 import { assertEngagementAccess } from "@/lib/visibility";
-import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
 
 const createShockEventSchema = z.object({
   description: z.string().min(1),
@@ -19,95 +17,67 @@ const createShockEventSchema = z.object({
   detectedAt: z.string().datetime(),
 });
 
-export const GET = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const actorId = ctx.verifiedActorId;
+    const { engagementId } = params;
+    parseOrThrow(uuidSchema, engagementId);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    await assertEngagementAccess(actorId, engagementId, workspaceId);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+    const events = await listShockEventsForEngagement(engagementId, actorId, workspaceId);
+    return { events };
+  },
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
+);
 
-  const { engagementId } = params;
-  parseOrThrow(uuidSchema, engagementId);
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const actorId = ctx.verifiedActorId;
+    const { engagementId } = params;
 
-  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
+    // internalOnly: only internal users may create shock events
+    if (!ctx.policy || !hasInternalAccess(ctx.policy)) {
+      throw new ForbiddenError("Internal access required to create shock events");
+    }
 
-  const events = await listShockEventsForEngagement(engagementId, session.user.id, workspaceId);
-  return Response.json({ events });
-});
+    parseOrThrow(uuidSchema, engagementId);
+    await assertEngagementAccess(actorId, engagementId, workspaceId);
 
-export const POST = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_UPDATE,
-    internalOnly: true,
-  });
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new ValidationError("idempotency-key header required");
+    }
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const body = ctx.request ? await ctx.request.json() : {};
+    const validated = createShockEventSchema.parse(body);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const { engagementId } = params;
-  parseOrThrow(uuidSchema, engagementId);
-
-  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
-
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    return Response.json(
-      { error: "idempotency-key header required" },
-      { status: 400 }
-    );
-  }
-
-  const body = await parseRequestBody(request, createShockEventSchema);
-
-  // Check idempotency
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "createShockEvent",
-    actorId: session.user.id,
-    payload: { engagementId, ...body },
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
-      status: idempotencyCheck.cachedResponse.status,
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "createShockEvent",
+      actorId,
+      payload: { engagementId, ...validated },
     });
-  }
 
-  try {
-    const result = await createShockEvent(
-      { engagementId, ...body },
-      canonicalizeAuthContext({ session, policy }, workspaceId)
-    );
-    await recordIdempotencyResponse(idempotencyKey, 201, result);
-    return Response.json(result, { status: 201 });
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    throw error;
-  }
-});
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+
+    try {
+      const result = await createShockEvent(
+        { engagementId, ...validated },
+        ctx,
+        workspaceId
+      );
+      await recordIdempotencyResponse(idempotencyKey, 201, result);
+      return result;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
+    }
+  },
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE] }
+);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { PrivateModeRole } from '@/domain/private-mode/role-config';
 import { PrivateModeRoleAccessService } from '@/services/private-mode/role-access.service';
+import { type ClaimedWorkspaceId, claimWorkspaceId } from '@/lib/workspace-identity';
 
 /**
  * Private mode gate middleware.
@@ -86,24 +87,30 @@ export async function getPrivateModeAccess(
 ): Promise<{
   hasAccess: boolean;
   role: PrivateModeRole | null;
-  workspaceId: string | null;
+  workspaceId: ClaimedWorkspaceId | null;
   userId: string | null;
 }> {
+  // DEAD MIDDLEWARE — not wired in production.
+  // Both x-user-id and x-workspace-id are caller-controlled claims.
+  // The role IS DB-derived (safe), but the DB lookup is keyed on unverified identity.
+  // Classification: UNPROVEN_IDENTITY_FOR_DB_LOOKUP — fails closed when resolver absent.
+  // If this were wired, the withCanonicalEnforcement context must provide verified identity
+  // rather than these headers.
   const userId = request.headers.get('x-user-id');
-  const workspaceId = request.headers.get('x-workspace-id');
+  const claimedId: ClaimedWorkspaceId | null = claimWorkspaceId(request.headers.get('x-workspace-id'));
 
   // Fail closed on incomplete identity or when no DB resolver is wired.
   // The role is NEVER derived from a client header.
-  if (!userId || !workspaceId || !deps.resolveRole) {
-    return { hasAccess: false, role: null, workspaceId, userId };
+  if (!userId || !claimedId || !deps.resolveRole) {
+    return { hasAccess: false, role: null, workspaceId: claimedId, userId };
   }
 
-  const role = await deps.resolveRole(workspaceId, userId);
+  const role = await deps.resolveRole(claimedId, userId);
 
   return {
     hasAccess: role !== null,
     role,
-    workspaceId,
+    workspaceId: claimedId,
     userId,
   };
 }

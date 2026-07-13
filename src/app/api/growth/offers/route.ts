@@ -1,12 +1,8 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { withAuth } from "@/lib/auth-guard";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { OfferEngine } from "@/services/growth/offer-engine";
+import { ValidationError } from "@/infra/errors";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
 
 const createOfferSchema = z.object({
   name: z.string().min(1, "Offer name is required"),
@@ -19,78 +15,31 @@ const createOfferSchema = z.object({
   maxUses: z.number().positive().optional(),
 });
 
-const effectivePriceSchema = z.object({
-  basePrice: z.number().positive(),
-  discountPercent: z.number().min(0).max(100),
-});
-
-const recordPerformanceSchema = z.object({
-  offerId: z.string().min(1),
-  conversions: z.number().nonnegative(),
-  revenue: z.number().nonnegative(),
-  baselineConversions: z.number().nonnegative(),
-  baselineRevenue: z.number().nonnegative(),
-  productionCost: z.number().nonnegative(),
-});
-
 /**
  * POST /api/growth/offers
  *
  * Create a new offer (workspace-scoped)
  * Wire: OfferEngine.createOffer()
  */
-export const POST = withEnforcementFull(async (request) => {
-  const { session } = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_UPDATE,
-  });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  try {
-    const body = await request.json();
+    const body = ctx.request ? await ctx.request.json() : {};
     const validated = createOfferSchema.parse(body);
 
     const result = OfferEngine.createOffer(workspaceId, validated);
 
     if (result.error) {
-      return Response.json({ error: result.error }, { status: 400 });
+      throw new ValidationError(result.error);
     }
 
-    return Response.json(result.offer, { status: 201 });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return Response.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error) {
-      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
-    }
-
-    return Response.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-});
+    return result.offer;
+  },
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE] }
+);
 
 /**
- * POST /api/growth/offers/effective-price
- *
  * Calculate effective price with discount
  * Wire: OfferEngine.calculateEffectivePrice()
  */
@@ -107,8 +56,6 @@ export async function calculateEffectivePriceHandler(
 }
 
 /**
- * POST /api/growth/offers/performance
- *
  * Record offer performance metrics
  * Wire: OfferEngine.recordPerformance()
  */
@@ -137,8 +84,6 @@ export async function recordPerformanceHandler(
 }
 
 /**
- * POST /api/growth/offers/compare
- *
  * Compare multiple offers
  * Wire: OfferEngine.compareOffers()
  */

@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { type VerifiedWorkspaceId, asVerifiedWorkspaceId } from "@/lib/workspace-identity";
 import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
 import { getSessionFact, getPolicyContextFact } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
@@ -58,8 +59,8 @@ export interface CanonicalAuthContext {
   verifiedActorType: "user" | "service";
   verifiedActor: AuthenticatedUser;
 
-  // Verified workspace (if workspace-scoped route)
-  verifiedWorkspaceId: string;
+  // Verified workspace (if workspace-scoped route) — VerifiedWorkspaceId brand proves DB membership proof
+  verifiedWorkspaceId: VerifiedWorkspaceId;
 
   // Verified capabilities (if capability-scoped route)
   verifiedCapabilities: Set<string>;
@@ -339,7 +340,7 @@ export function withCanonicalEnforcement(
       // STEP 1.5: RESOLVE WORKSPACE ID FROM MEMBERSHIP (FAIL-CLOSED)
       // ========================================
 
-      let workspaceId: string | undefined = undefined;
+      let workspaceId: VerifiedWorkspaceId | undefined = undefined;
 
       // Workspace ID MUST be server-derived from authenticated user's workspace membership
       // It is NEVER trusted from request headers
@@ -390,7 +391,7 @@ export function withCanonicalEnforcement(
             );
           }
 
-          workspaceId = membership.workspaceId;
+          workspaceId = asVerifiedWorkspaceId(membership.workspaceId);
           traceManager.recordStage("WORKSPACE_EXTRACTED", "success", workspaceId);
         } catch (error) {
           // If error is already ClassifiedApiError, throw it

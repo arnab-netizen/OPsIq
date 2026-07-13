@@ -1,15 +1,13 @@
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { runSystem } from "@/services/system/run";
 import { createBaseline } from "@/services/onboarding/basic";
 import { generateOperatorItems } from "@/services/operator/generate";
 import { addItems, addBlockedDecision } from "@/services/operator/store";
-import { resolveServerRole, getSession } from "@/services/auth/server-role";
+import { resolveServerRole } from "@/services/auth/server-role";
 import { canEdit, resolveApprovalGrant } from "@/services/auth/access";
-import { requireWorkspaceContext } from "@/services/workspace/context";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { createDecisionResult } from "@/services/explanation/generate";
 import { createIntegrityPayload } from "@/services/integrity/hash";
 import { createSignaturePayload } from "@/services/integrity/sign";
@@ -43,8 +41,7 @@ function addIntegrity(
   };
 }
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  await withAuth();
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   let decisionResult: DecisionResult | null = null;
   let workspace;
   let userId: string | null = null;
@@ -54,8 +51,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Track execution of control layer validations for bypass prevention
   const executedValidations: string[] = ["variable_registry"];
 
-  // Get workspace context early (fail closed if missing)
-  workspace = await requireWorkspaceContext();
+  // Get workspace context from canonical auth
+  workspace = { workspaceId: ctx.verifiedWorkspaceId };
 
     // Initialize logger once workspace is available
     logger = createEventLogger("api_run", workspace.workspaceId);
@@ -75,26 +72,22 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       // Ignore lifecycle recording errors - observability only
     });
 
-    // Get session for user identity
-    const { session } = await withAuth();
-    userId = session?.user.id ?? null;
+    // Get user identity from canonical auth
+    userId = ctx.verifiedActorId;
 
     // Enforce server-side auth
     const role = await resolveServerRole();
     if (!role) {
       // Log AUTH_FAILED audit event
-      await logAuditEvent({
-        eventName: "AUTH_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.AUTH_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: null,
-        role: null,
-        before: null,
-        after: null,
-        metadata: {
+        actorType: "user",
+        workspaceId: workspace?.workspaceId,
+        payload: {
           reason: "Session not found or invalid",
         },
-        workspaceId: workspace?.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -107,19 +100,17 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
     if (!canEdit(role)) {
       // Log PERMISSION_DENIED audit event
-      await logAuditEvent({
-        eventName: "PERMISSION_DENIED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.PERMISSION_DENIED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: null,
-        metadata: {
-          reason: "User role lacks edit permission",
-          role: role,
-        },
+        actorId: userId || undefined,
+        actorType: "user",
         workspaceId: workspace.workspaceId,
+        payload: {
+          reason: "User role lacks edit permission",
+          role,
+        },
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -143,8 +134,16 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     });
 
     // 1. Parse body
-    const body = await request.json();
+    const body = await ctx.request!.json();
     const { revenue, cost, currency, confidence, revenueChange, costChange, fxRates, recommendationId } = body;
+
+    // 1-dedup. In-process duplicate detection (5-second window, in-memory).
+    // Provides basic protection against accidental double-submissions within the same
+    // server process. Not a substitute for DB-backed idempotency (DB_BLOCKED).
+    const requestHash = getRequestHash(workspace.workspaceId, { revenue, cost, currency, confidence, revenueChange, costChange, recommendationId });
+    if (isDuplicateRequest(requestHash)) {
+      throw new Error("Duplicate request detected — identical run submitted within the deduplication window. Please wait before resubmitting.");
+    }
 
     // Capture inputs snapshot for replay
     const inputsSnapshot = {
@@ -183,15 +182,16 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       );
 
       // Log INPUT_VALIDATION_FAILED audit event
-      await logAuditEvent({
-        eventName: "INPUT_VALIDATION_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INPUT_VALIDATION_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           reason: "Missing or invalid financial inputs",
           expectedFields: ["revenue", "cost"],
           providedFields: {
@@ -199,7 +199,6 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
             cost: typeof cost,
           },
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -235,20 +234,20 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       );
 
       // Log INPUT_VALIDATION_FAILED audit event
-      await logAuditEvent({
-        eventName: "INPUT_VALIDATION_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INPUT_VALIDATION_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           reason: "Missing or invalid confidence value",
           expectedFields: ["confidence"],
           providedType: typeof confidence,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -284,15 +283,16 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       );
 
       // Log INPUT_VALIDATION_FAILED audit event
-      await logAuditEvent({
-        eventName: "INPUT_VALIDATION_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INPUT_VALIDATION_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           reason: "Missing or invalid revenue/cost change values",
           expectedFields: ["revenueChange", "costChange"],
           providedFields: {
@@ -300,7 +300,6 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
             costChange: typeof costChange,
           },
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -340,21 +339,21 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       );
 
       // Log INPUT_VALIDATION_FAILED audit event
-      await logAuditEvent({
-        eventName: "INPUT_VALIDATION_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INPUT_VALIDATION_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           reason: "Missing FX rate for non-base currency",
           currency: inputCurrency,
           baseCurrency: "INR",
           providedFxRates: Object.keys(fxRatesInput),
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -409,20 +408,20 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       );
 
       // Log INPUT_VALIDATION_FAILED audit event
-      await logAuditEvent({
-        eventName: "INPUT_VALIDATION_FAILED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INPUT_VALIDATION_FAILED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           reason: "Input normalization/validation failed",
           errorMessage: errorMsg,
           inputCurrency,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -525,15 +524,16 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       );
 
       // Log DEPENDENCY_VALIDATION_BLOCKED audit event
-      await logAuditEvent({
-        eventName: "DEPENDENCY_VALIDATION_BLOCKED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.DEPENDENCY_VALIDATION_BLOCKED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           blockStage: "dependency_validation",
           blockReason: depValidation.error.details,
           variable: depValidation.error.variable,
@@ -541,7 +541,6 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           expectedImpact,
           confidence: normalizedMetrics.confidence,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -636,15 +635,16 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       );
 
       // Log DECISION_GATE_BLOCKED audit event
-      await logAuditEvent({
-        eventName: "DECISION_GATE_BLOCKED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.DECISION_GATE_BLOCKED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           blockStage: "decision_gate",
           blockReason: gateResult.reason || "Decision gate validation failed",
           missingVariables: gateResult.missingVariables,
@@ -653,7 +653,6 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           expectedImpact,
           confidence: normalizedMetrics.confidence,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -874,27 +873,26 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     // Audit trail: no financial-block override without a record of who granted
     // it, and a record of any unauthorized self-approval attempt that was denied.
     if (isHighImpact && approvalRequested) {
-      await logAuditEvent({
+      await emitAuditEvent({
         eventName: approverAuthorized
-          ? "HIGH_IMPACT_APPROVAL_GRANTED"
-          : "HIGH_IMPACT_APPROVAL_DENIED",
+          ? AUDIT_EVENTS.HIGH_IMPACT_APPROVAL_GRANTED
+          : AUDIT_EVENTS.HIGH_IMPACT_APPROVAL_DENIED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: {
-          expectedImpact: result.impact.impactExpected,
-          threshold: HIGH_IMPACT_APPROVAL_THRESHOLD,
-          approverAuthorized,
-        },
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: {
+            expectedImpact: result.impact.impactExpected,
+            threshold: HIGH_IMPACT_APPROVAL_THRESHOLD,
+            approverAuthorized,
+          },
           reason: approverAuthorized
             ? "High-impact decision approved by an authorized approver"
             : "High-impact approval flag ignored: actor role is not authorized to approve",
-          role,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(
@@ -965,15 +963,16 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       );
 
       // Log GUARDRAILS_BLOCKED audit event
-      await logAuditEvent({
-        eventName: "GUARDRAILS_BLOCKED",
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.GUARDRAILS_BLOCKED,
         entityType: "Decision",
         entityId: "system-run",
-        actorId: userId || null,
-        role,
-        before: null,
-        after: decisionResult,
-        metadata: {
+        actorId: userId || undefined,
+        actorType: "user",
+        workspaceId: workspace.workspaceId,
+        payload: {
+          role,
+          after: decisionResult,
           blockStage: "guardrails",
           blockReason: guardrailsResult.violations.map((v) => v.message).join("; "),
           violations: guardrailsResult.violations.map((v) => ({
@@ -988,7 +987,6 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           expectedImpact: result.impact.impactExpected,
           confidence: normalizedMetrics.confidence,
         },
-        workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) {
           const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
@@ -1058,15 +1056,16 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     const actorId = userId;
 
     // 11. Log audit event for run execution (fail-closed)
-    await logAuditEvent({
-      eventName: "RUN_APPROVED",
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.RUN_APPROVED,
       entityType: "Decision",
       entityId: "system-run",
       actorId,
-      role,
-      before: null,
-      after: decisionResult,
-      metadata: {
+      actorType: "user",
+      workspaceId: workspace.workspaceId,
+      payload: {
+        role,
+        after: decisionResult,
         inputRevenue: revenue,
         inputCost: cost,
         inputCurrency: inputCurrency,
@@ -1074,7 +1073,6 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         confidence: normalizedMetrics.confidence,
         problemType,
       },
-      workspaceId: workspace.workspaceId,
     }).catch((auditError) => {
       if (logger) logger.error(`Audit logging failed: ${auditError}`);
       throw auditError;
@@ -1151,4 +1149,4 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     }
 
   return responsePayload;
-});
+}, { requireWorkspace: true });

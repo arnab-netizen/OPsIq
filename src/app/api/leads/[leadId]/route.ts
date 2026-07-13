@@ -1,16 +1,12 @@
-import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { ForbiddenError, ValidationError } from "@/infra/errors";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getLeadById, updateLead, linkLeadToEngagement } from "@/services/lead";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import { LEAD_STATUSES } from "@/domain/constants/statuses";
-import type { NextRequest } from "next/server";
 
 const updateLeadSchema = z.object({
   companyName: z.string().min(1).optional(),
@@ -38,9 +34,9 @@ export const GET = withCanonicalEnforcement(
     parseOrThrow(uuidSchema, leadId);
 
     const lead = await getLeadById(leadId, workspaceId);
-    return Response.json(lead);
+    return lead;
   },
-  { requireWorkspace: true, requireCapabilities: ['LEAD_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.LEAD_VIEW] }
 );
 
 export const PATCH = withCanonicalEnforcement(
@@ -53,7 +49,7 @@ export const PATCH = withCanonicalEnforcement(
     await updateLead(leadId, body, ctx, workspaceId);
 
     const updated = await getLeadById(leadId, workspaceId);
-    return Response.json(updated);
+    return updated;
   },
   {
     requireCapabilities: [CAPABILITIES.LEAD_UPDATE],
@@ -61,69 +57,54 @@ export const PATCH = withCanonicalEnforcement(
   }
 );
 
-export const POST = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
-    capability: CAPABILITIES.LEAD_UPDATE,
-    internalOnly: true,
-  });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    if (!ctx.policy || !hasInternalAccess(ctx.policy)) {
+      throw new ForbiddenError("Internal access required");
+    }
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const { leadId } = params;
+    parseOrThrow(uuidSchema, leadId);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new ValidationError("idempotency-key header required");
+    }
 
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    return Response.json(
-      { error: "idempotency-key header required" },
-      { status: 400 }
-    );
-  }
+    const body = await parseRequestBody(ctx.request!, linkLeadSchema);
 
-  const { leadId } = params;
-  parseOrThrow(uuidSchema, leadId);
-
-  const body = await parseRequestBody(request, linkLeadSchema);
-
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "linkLeadToEngagement",
-    actorId: session.user.id,
-    payload: { leadId, engagementId: body.engagementId, clientId: body.clientId },
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
-      status: idempotencyCheck.cachedResponse.status,
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "linkLeadToEngagement",
+      actorId: ctx.verifiedActorId,
+      payload: { leadId, engagementId: body.engagementId, clientId: body.clientId },
     });
-  }
 
-  try {
-    await linkLeadToEngagement(
-      leadId,
-      body.engagementId,
-      body.clientId,
-      session.user.id,
-      workspaceId
-    );
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
 
-    const updated = await getLeadById(leadId, workspaceId);
-    await recordIdempotencyResponse(idempotencyKey, 200, updated);
-    return Response.json(updated);
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    throw error;
+    try {
+      await linkLeadToEngagement(
+        leadId,
+        body.engagementId,
+        body.clientId,
+        ctx.verifiedActorId,
+        workspaceId
+      );
+
+      const updated = await getLeadById(leadId, workspaceId);
+      await recordIdempotencyResponse(idempotencyKey, 200, updated);
+      return updated;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
+    }
+  },
+  {
+    requireCapabilities: [CAPABILITIES.LEAD_UPDATE],
+    requireWorkspace: true,
   }
-});
+);

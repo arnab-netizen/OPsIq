@@ -1,10 +1,8 @@
-import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
-import { ValidationError, UnauthorizedError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { ValidationError } from "@/infra/errors";
 import { db } from "@/lib/db";
-import { logAuditEvent } from "@/services/audit/audit-log";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { buildIntakeOperatorItemData } from "./intake-data";
 import {
   checkIdempotencyKey,
@@ -26,117 +24,79 @@ const IntakeSchema = z.object({
  *
  * Simple decision intake endpoint.
  * Accepts minimal fields and auto-creates pending decision.
- *
- * Future: webhook, email parser, CSV upload will use this.
  */
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  const { session } = await withAuth();
-  if (!session?.user?.id) {
-    throw new UnauthorizedError("Unauthorized");
-  }
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const actorId = ctx.verifiedActorId;
 
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    throw new ValidationError("idempotency-key header is required");
-  }
-
-  const userId = session.user.id;
-
-  // Get workspace ID from query param
-  let workspaceId: string;
-  const queryWorkspaceId = request.nextUrl.searchParams.get("workspaceId");
-
-  // If no workspace specified, use user's oldest active workspace (deterministic for multi-workspace users)
-  if (!queryWorkspaceId) {
-    const membership = await db.workspaceMembership.findFirst({
-      where: {
-        userId,
-        isActive: true,
-      },
-      orderBy: { createdAt: "asc" },
-    });
-
-    if (!membership) {
-      throw new Error("No active workspace found");
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new ValidationError("idempotency-key header is required");
     }
 
-    workspaceId = membership.workspaceId;
-  } else {
-    // Verify user is member of specified workspace
-    const membership = await enforceWorkspaceScoping(request, queryWorkspaceId);
-    if (!membership) {
-      throw new UnauthorizedError("Unauthorized or invalid workspace");
-    }
-    workspaceId = queryWorkspaceId;
-  }
+    const body = ctx.request ? await ctx.request.json() : {};
+    const input = IntakeSchema.parse(body);
 
-  // Parse and validate input
-  const body = await request.json();
-  const input = IntakeSchema.parse(body);
-
-  // Idempotency check — deduplicates network retries before any DB mutation
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "intakeDecision",
-    actorId: userId,
-    workspaceId,
-    payload: { title: input.title, workspaceId },
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return idempotencyCheck.cachedResponse.body;
-  }
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
-    throw idempotencyCheck.cachedError;
-  }
-
-  try {
-    // Create decision
-    const decision = await db.operatorItem.create({
-      data: buildIntakeOperatorItemData(input, workspaceId, userId),
-    });
-
-    // Log intake event — fail-closed: audit failure aborts the route handler
-    await logAuditEvent({
-      eventName: "DECISION_INTAKE",
-      entityType: "Decision",
-      entityId: decision.id,
-      actorId: userId,
-      role: null,
-      before: null,
-      after: {
-        id: decision.id,
-        status: "pending",
-        title: input.title,
-      },
-      metadata: {
-        action: "intake_decision",
-        source: "api",
-        confidence: input.confidence,
-        risk: input.risk,
-        createdAt: new Date().toISOString(),
-      },
-      workspaceId,
-    });
-
-    const responseBody = {
-      decisionId: decision.id,
-      status: "pending" as const,
-      createdAt: decision.createdAt instanceof Date
-        ? decision.createdAt.toISOString()
-        : decision.createdAt,
-    };
-
-    await recordIdempotencyResponse(idempotencyKey, 200, responseBody, workspaceId);
-
-    return responseBody;
-  } catch (error) {
-    await recordIdempotencyError(
+    const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
-      error instanceof Error ? error : new Error(String(error)),
-      workspaceId
-    );
-    throw error;
-  }
-});
+      operationName: "intakeDecision",
+      actorId,
+      workspaceId,
+      payload: { title: input.title, workspaceId },
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+      throw idempotencyCheck.cachedError;
+    }
+
+    try {
+      const decision = await db.operatorItem.create({
+        data: buildIntakeOperatorItemData(input, workspaceId, actorId),
+      });
+
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.DECISION_INTAKE,
+        entityType: "Decision",
+        entityId: decision.id,
+        actorId,
+        actorType: "user",
+        workspaceId,
+        payload: {
+          after: {
+            id: decision.id,
+            status: "pending",
+            title: input.title,
+          },
+          action: "intake_decision",
+          source: "api",
+          confidence: input.confidence,
+          risk: input.risk,
+          createdAt: new Date().toISOString(),
+        },
+      });
+
+      const responseBody = {
+        decisionId: decision.id,
+        status: "pending" as const,
+        createdAt: decision.createdAt instanceof Date
+          ? decision.createdAt.toISOString()
+          : decision.createdAt,
+      };
+
+      await recordIdempotencyResponse(idempotencyKey, 200, responseBody, workspaceId);
+      return responseBody;
+    } catch (error) {
+      await recordIdempotencyError(
+        idempotencyKey,
+        error instanceof Error ? error : new Error(String(error)),
+        workspaceId
+      );
+      throw error;
+    }
+  },
+  { requireWorkspace: true }
+);

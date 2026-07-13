@@ -44,17 +44,17 @@ describe("cross-tenant workspace-header hardening (GAP-TEN-02)", () => {
     }
   });
 
-  describe("withAuth webhook routes verify membership of the header workspace", () => {
+  describe("webhook routes verify membership via canonical enforcement", () => {
     const webhookRoutes = [
       "webhooks/subscribe/route.ts",
       "webhooks/[id]/test/route.ts",
     ];
     for (const rel of webhookRoutes) {
-      it(`${rel} calls enforceWorkspaceScoping before using the workspace`, () => {
+      it(`${rel} uses withCanonicalEnforcement and ctx.verifiedWorkspaceId`, () => {
         const content = read(rel);
-        expect(content).toContain("enforceWorkspaceScoping");
-        // Membership must be checked (null → reject).
-        expect(content).toMatch(/if \(!membership\)/);
+        expect(content).toContain("withCanonicalEnforcement");
+        // Workspace must be derived from the verified canonical context, not raw headers.
+        expect(content).toContain("ctx.verifiedWorkspaceId");
       });
     }
   });
