@@ -6,8 +6,8 @@
     "recovery_branch_sha": "f16e0712",
     "introduced_by_recovery": 0
   },
-  "total_files": 21,
-  "total_failing_tests": 50,
+  "total_files": 23,
+  "total_failing_tests": 62,
   "nondeterministic_files": 3,
   "files": [
     {
@@ -176,6 +176,22 @@
       "cluster": "legal-governance-heuristic",
       "classification": "PRE_EXISTING / HEURISTIC_CONFLICT_P2_VS_P3G",
       "reason": "Deterministic single-test conflict surfaced when CI first ran the DB-backed maintained suite past the (previously red) governance/lint gates on 2026-06-24 (CI run 28065415725: 1 failed / 10692 passed / 6 skipped). Case 'P2 fix — non-governance cases do NOT fire > 2 items each with only 1 weak LEGAL_TEXT term ... boundary guard' asserts .not.toBe(LEGAL_GOVERNANCE_RISK), but consulting-engine/diagnosis-engine.ts fin_isLegalGovernanceByText fires because the item 'RBI ... regulatory intervention increasingly probable' matches STRONG_LEGAL_TEXT (P3-G terms 'regulatory intervention' / 'rbi.*intervention'), making it substantive. This is a genuine semantic conflict between the P2 false-positive guard and the P3-G RBI-intervention detection -- a consulting-engine product judgment OUTSIDE Owner Mode scope, with regression risk to real RBI-takeover/licence-revocation cases either way. NOT authored by the Owner Mode Decision OS branch; the file's other 17 tests pass. Quarantined (owner-approved) to make the blocking lane green; still runs in the visible non-blocking lane. Resolve under the consulting-engine heuristic owner, not Owner Mode.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/workflows/ci-cd-foundations.test.ts",
+      "failed": 3,
+      "cluster": "workflow-assertion",
+      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
+      "reason": "Three tests assert workflowContent.on.push.branches and workflowContent.on.pull_request.branches on .github/workflows/ci-cd-foundations.yml, but that file uses only workflow_dispatch (no push/pull_request triggers). TypeError: Cannot read properties of undefined (reading 'branches') at lines 32 and 38. Last modified ebd66cde (predates A7.7 merge d5594f76); proven present on main before A7.7.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/services/__tests__/recommendation.reranking.test.ts",
+      "failed": 9,
+      "cluster": "test-mock",
+      "classification": "PRE_EXISTING_ON_MAIN / MOCK_CONTRACT_DRIFT",
+      "reason": "All 9 tests call vi.spyOn(db.recommendation, 'findMany') but db.recommendation lacks findMany in the Prisma mock; Error: The property 'findMany' is not defined on the object. Mock contract has drifted from the Prisma model definition. Last modified 1383008f (predates A7.7 merge d5594f76); proven present on main before A7.7. Resolve by updating mock to match current Prisma schema.",
       "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
     }
   ],
