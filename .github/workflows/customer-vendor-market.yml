@@ -7,8 +7,6 @@ name: Customer / Vendor / Market Pack (DB + Browser + Mobile)
 # fraudulent refund / falsified vendor credential are blocked. Additive lane; does NOT modify any existing workflow.
 
 on:
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:

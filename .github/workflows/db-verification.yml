@@ -29,17 +29,6 @@ on:
         options:
           - 'false'
           - 'true'
-  push:
-    branches:
-      - main
-      - 'claude/**'
-    paths:
-      - .github/workflows/db-verification.yml
-      - prisma/**
-      - 'src/__tests__/**/*.db.test.ts'
-      - src/__tests__/phase-3-db-smoke-verification.test.ts
-      - package.json
-      - package-lock.json
   pull_request:
     branches:
       - main

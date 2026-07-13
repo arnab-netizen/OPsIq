@@ -6,8 +6,6 @@ name: Unknown / OOD Pack (DB + Browser + Mobile)
 # unknown-unknowns. Additive lane; does NOT modify chaos-exhaustive.yml or owner-pilot-e2e.
 
 on:
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:

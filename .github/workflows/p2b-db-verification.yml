@@ -8,20 +8,6 @@ name: P2B Database Verification
 on:
   workflow_dispatch:
     description: 'Verify P2B database-backed tests (42 tests)'
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/p2b-db-verification.yml
-      - src/__tests__/p2b/**
-      - src/services/audit/**
-      - src/services/entitlement.service.ts
-      - src/services/outcome/**
-      - src/services/decisions/**
-      - src/services/operator/**
-      - src/app/api/operator/**
-      - src/app/api/decisions/**
-      - prisma/**
 
 jobs:
   p2b-db-verification:

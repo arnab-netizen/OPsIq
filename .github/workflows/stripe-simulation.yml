@@ -1,16 +1,6 @@
 name: Stripe Simulation Tests
 
 on:
-  push:
-    branches:
-      - main
-      - claude/**
-    paths:
-      - 'src/tests/stripe-sim/**'
-      - 'src/services/webhook.service.ts'
-      - 'src/app/api/webhooks/stripe/**'
-      - 'prisma/schema.prisma'
-      - '.github/workflows/stripe-simulation.yml'
   workflow_dispatch:
 
 jobs:

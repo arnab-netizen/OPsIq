@@ -1,14 +1,6 @@
 name: CI/CD Foundations - Phase 13 Slice 1
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - main
-      - develop
   workflow_dispatch:
 
 concurrency:

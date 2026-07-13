@@ -7,17 +7,6 @@ name: B12 Business Condition Profile Verification
 on:
   workflow_dispatch:
     description: 'Verify B12 business condition profile service (LANE_B postgres:16 service container)'
-  push:
-    branches:
-      - claude/execution-audit-phase-a-ulmljq
-    paths:
-      - .github/workflows/b12-business-condition-profile-verification.yml
-      - src/domain/business-facts/business-condition-profile.ts
-      - src/__tests__/business-facts/business-condition-profile.test.ts
-      - src/services/business-condition/**
-      - src/__tests__/services/business-condition/**
-      - prisma/migrations/20260614200257_b12_add_business_condition_fields/**
-      - prisma/schema.prisma
 
 jobs:
   b12-db-verification:

@@ -7,8 +7,6 @@ name: Growth / Profit / Scaling Pack (DB + Browser + Mobile)
 # boundaries or gamed numbers are blocked. Additive lane; does NOT modify any existing workflow.
 
 on:
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:

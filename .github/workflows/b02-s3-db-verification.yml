@@ -9,16 +9,6 @@ name: B02-S3 File Intake Persistence Bridge DB Verification
 on:
   workflow_dispatch:
     description: 'Verify B02-S3 file-intake persistence bridge (LANE_B postgres:16 service container)'
-  push:
-    branches:
-      - claude/execution-audit-phase-a-ulmljq
-    paths:
-      - .github/workflows/b02-s3-db-verification.yml
-      - src/services/file-intake/**
-      - src/services/owner-intake/**
-      - src/domain/file-intake/**
-      - src/__tests__/services/file-intake/**
-      - prisma/**
 
 jobs:
   b02-s3-db-verification:

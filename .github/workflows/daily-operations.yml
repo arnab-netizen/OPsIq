@@ -7,8 +7,6 @@ name: Daily Operations Pack (DB + Browser + Mobile)
 # unknown-ood.yml, staff-proof-anti-gaming.yml, chaos-exhaustive.yml, or owner-pilot-e2e.
 
 on:
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:

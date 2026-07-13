@@ -8,15 +8,6 @@ name: B02-S2 File Intake Integration Tests
 on:
   workflow_dispatch:
     description: 'Verify B02-S2 integration with PostgreSQL service container'
-  push:
-    branches:
-      - claude/execution-audit-phase-a-ulmljq
-    paths:
-      - .github/workflows/b02-s2-integration.yml
-      - src/domain/file-intake/**
-      - src/domain/business-facts/**
-      - src/__tests__/domain/file-intake/**
-      - prisma/schema.prisma
 
 jobs:
   b02-s2-integration:

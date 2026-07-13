@@ -1,42 +1,27 @@
 name: CI - Build & Test
 
+# PR gate only — runs on pull_request to main.
+# Push to main is handled by main-integration.yml (full DB suite).
+# Scenario packs and browser proof are dispatch-only (deep-proof.yml).
+# Target: <15 runner-minutes per PR, zero postgres service, zero browser shards.
+
 on:
-  push:
-    branches: [main, "feature/**", "claude/**"]
   pull_request:
     branches: [main]
+
+concurrency:
+  group: ci-pr-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    # The maintained suite runs serially (--maxWorkers 1) over a large repo, on top
-    # of install + build + migrate. 30 min was too tight and the job was killed
-    # mid-suite; give it headroom so a slow (not hung) run completes.
-    timeout-minutes: 55
+    timeout-minutes: 25
 
     env:
-      TEST_WITH_DB: "true"
-      # Raise the Node heap for the whole job. `next build`'s TypeScript pass and
-      # the large test suite intermittently hit the default ~2 GB limit
-      # (FATAL: heap out of memory / SIGABRT). 4 GB removes that flake.
+      TEST_WITH_DB: "false"
       NODE_OPTIONS: "--max-old-space-size=4096"
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: opsiq_test
-          POSTGRES_INITDB_ARGS: "-c log_min_messages=warning"
-        options: >-
-          --health-cmd "pg_isready -U postgres -d opsiq_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-          --health-start-period 10s
-        ports:
-          - 5432:5432
+      SKIP_ENV_VALIDATION: "true"
 
     strategy:
       matrix:
@@ -55,28 +40,12 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        # Retry npm ci: the registry occasionally drops the connection
-        # (npm error code ECONNRESET) and fails the whole shard on a transient
-        # network blip. Up to 3 attempts with backoff.
         run: |
           for i in 1 2 3; do
             npm ci && break
             echo "npm ci failed (attempt $i); retrying in $((i*10))s..."
             sleep $((i*10))
           done
-
-      - name: Configure .env.local for CI
-        # prisma.config.ts loads .env.local with override: true, so the tracked
-        # placeholder .env.local would otherwise replace the workflow DATABASE_URL
-        # (REPLACE_POOLED_HOST). Write the CI PostgreSQL service URL before Prisma
-        # runs, mirroring the phase-d/p2b/p2c verification workflows.
-        run: |
-          cat > .env.local <<'EOF'
-          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
-          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
-          TEST_WITH_DB=true
-          EOF
-          echo "✓ .env.local configured for CI PostgreSQL service"
 
       - name: Governance compliance scan
         run: npm run governance:scan:strict
@@ -91,73 +60,31 @@ jobs:
         continue-on-error: false
 
       - name: Prisma schema validation
+        # prisma validate checks schema syntax only — no DB connectivity required.
         run: npx prisma validate
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-        continue-on-error: false
-
-      - name: Prisma database migration
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-        continue-on-error: false
-
-      - name: Regenerate Prisma client after migrations
-        run: npx prisma generate
-        continue-on-error: false
-
-      - name: Build project
-        run: npm run build
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          NODE_ENV: test
         continue-on-error: false
 
       - name: Wrapped handlers ratchet (prevent new violations)
         run: npm run audit:wrapped-handlers:ratchet
         continue-on-error: false
 
-      - name: Run maintained test suite (blocking; quarantine excluded)
-        # Blocking gate: runs the full suite EXCEPT the files listed in
-        # .claude/test-quarantine.json (proven pre-existing failures, identical on
-        # main). Any failure in a non-quarantined test fails CI. Phase D / P2B / P2C
-        # coverage is unaffected (no protected file is quarantined).
-        # Step-level timeout: a genuinely hung test fails this step fast instead of
-        # silently eating the whole job budget; comfortably above the normal run.
-        timeout-minutes: 40
+      - name: CI workflow governance check (prevent trigger regressions)
+        run: node scripts/ci-governance-check.mjs
+        continue-on-error: false
+
+      - name: Run non-DB test suite (blocking; DB tests and quarantine excluded)
+        # DB tests self-skip when TEST_WITH_DB != 'true', but we also explicitly
+        # exclude *.db.test.ts files so the intent is unambiguous.
+        # Full DB suite runs on push-to-main in main-integration.yml.
+        timeout-minutes: 15
         run: |
           EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
           echo "Quarantined (excluded from blocking lane): $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") file(s)"
-          npx vitest run --maxWorkers 1 $EXCLUDES
+          npx vitest run --maxWorkers 1 --exclude '**/*.db.test.ts' $EXCLUDES
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          TEST_WITH_DB: "true"
+          TEST_WITH_DB: "false"
           NODE_ENV: test
         continue-on-error: false
-
-      - name: Run quarantined pre-existing failing tests (non-blocking)
-        # Visibility lane: runs ONLY the quarantined files so their status stays
-        # observable in CI. Non-blocking (continue-on-error) — tracked under
-        # FULL_SUITE_TEST_DEBT_RECOVERY. Not deleted, not skipped, not rewritten.
-        continue-on-error: true
-        run: |
-          FILES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>f.path).join(' '))")
-          echo "Running $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") quarantined file(s) (non-blocking):"
-          echo "$FILES" | tr ' ' '\n'
-          npx vitest run --maxWorkers 1 $FILES
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          TEST_WITH_DB: "true"
-          NODE_ENV: test
-
-      - name: Upload coverage (if generated)
-        if: always()
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./coverage/coverage-final.json
-          fail_ci_if_error: false
 
   lint:
     runs-on: ubuntu-latest
@@ -178,7 +105,6 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        # Retry npm ci on transient registry ECONNRESET (see build-and-test).
         run: |
           for i in 1 2 3; do
             npm ci && break

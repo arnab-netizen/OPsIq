@@ -1,28 +1,7 @@
 name: P2C Database Verification
 
 on:
-  push:
-    branches: [main, "p2c-**", "claude/**"]
-    paths:
-      - .github/workflows/p2c-db-verification.yml
-      - src/__tests__/p2c/**
-      - src/services/business-condition.ts
-      - src/domain/business-condition/**
-      - src/app/api/engagements/[engagementId]/condition/route.ts
-      - prisma/**
-      - package.json
-      - package-lock.json
-  pull_request:
-    branches: [main]
-    paths:
-      - .github/workflows/p2c-db-verification.yml
-      - src/__tests__/p2c/**
-      - src/services/business-condition.ts
-      - src/domain/business-condition/**
-      - src/app/api/engagements/[engagementId]/condition/route.ts
-      - prisma/**
-      - package.json
-      - package-lock.json
+  workflow_dispatch:
 
 jobs:
   p2c-verify:
