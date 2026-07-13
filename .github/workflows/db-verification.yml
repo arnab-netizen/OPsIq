@@ -42,7 +42,7 @@ jobs:
     name: 'LANE_B — Local Postgres (throwaway)'
     if: github.event_name != 'workflow_dispatch' || github.event.inputs.use_neon_secrets != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     services:
       postgres:
@@ -116,65 +116,7 @@ jobs:
         run: |
           mkdir -p artifacts/db-verification
           set +e
-          npm test -- --run \
-            src/__tests__/founder-recovery/db-persistence.db.test.ts \
-            src/__tests__/owner-cashflow/services.db.test.ts \
-            src/__tests__/owner-condition/business-condition.db.test.ts \
-            src/__tests__/owner-finance/persistence.db.test.ts \
-            src/__tests__/owner-finance/services.db.test.ts \
-            src/__tests__/owner-home/services.db.test.ts \
-            src/__tests__/owner-intake/services.db.test.ts \
-            src/__tests__/owner-marketing/services.db.test.ts \
-            src/__tests__/owner-operations/services.db.test.ts \
-            src/__tests__/owner-portfolio/services.db.test.ts \
-            src/__tests__/owner-sales/services.db.test.ts \
-            src/__tests__/owner-sop/services.db.test.ts \
-            src/__tests__/owner-strategy/services.db.test.ts \
-            src/__tests__/owner-trust/services.db.test.ts \
-            src/__tests__/services/benchmark/case-library.service.db.test.ts \
-            src/__tests__/services/benchmark/public-dataset.service.db.test.ts \
-            src/__tests__/services/business-condition/business-condition-profile.service.db.test.ts \
-            src/__tests__/services/data-review/fact-review.service.db.test.ts \
-            src/__tests__/services/external-systems/import-persistence.service.db.test.ts \
-            src/__tests__/services/file-intake/persist-file-intake.service.db.test.ts \
-            src/__tests__/services/private-mode/role-access.service.db.test.ts \
-            src/__tests__/phase-3-db-smoke-verification.test.ts \
-            src/__tests__/domain/owner-mode/controlled-learning-candidate.db.test.ts \
-            src/__tests__/api/owner/controlled-learning-admission.db.test.ts \
-            src/__tests__/execution/bottleneck-correction-routing-simulation.db.test.ts \
-            src/__tests__/execution/sop-checklist-correction-simulation.db.test.ts \
-            src/__tests__/execution/staff-training-assignment-simulation.db.test.ts \
-            src/__tests__/execution/sop-training-effectiveness-simulation.db.test.ts \
-            src/__tests__/execution/owner-workload-reduction-simulation.db.test.ts \
-            src/__tests__/execution/approval-threshold-policy-simulation.db.test.ts \
-            src/__tests__/execution/system-capability-gap-detector-simulation.db.test.ts \
-            src/__tests__/execution/cash-profit-protection-simulation.db.test.ts \
-            src/__tests__/execution/external-opportunity-intelligence-simulation.db.test.ts \
-            src/__tests__/execution/opportunity-validation-experiment-simulation.db.test.ts \
-            src/__tests__/execution/opportunity-portfolio-capital-allocation-simulation.db.test.ts \
-            src/__tests__/execution/external-opportunity-intake-simulation.db.test.ts \
-            src/__tests__/execution/validation-outcome-persistence-simulation.db.test.ts \
-            src/__tests__/execution/opportunity-execution-delegation-simulation.db.test.ts \
-            src/__tests__/execution/multi-actor-throughput-simulation.db.test.ts \
-            src/__tests__/execution/full-adversarial-real-business-simulation.db.test.ts \
-            src/__tests__/execution/process-correction-execution-bridge.db.test.ts \
-            src/__tests__/execution/process-execution-affordances.db.test.ts \
-            src/__tests__/execution/workload-capability-sop-training-bridge.db.test.ts \
-            src/__tests__/execution/adjudication-authorization-cross-scope.db.test.ts \
-            src/__tests__/execution/effectiveness-sop-adherence-classification.db.test.ts \
-            src/__tests__/execution/public-online-real-business-end-to-end.db.test.ts \
-            src/__tests__/execution/raw-free-text-public-signal-end-to-end.db.test.ts \
-            src/__tests__/execution/conflicting-public-signal-end-to-end.db.test.ts \
-            src/__tests__/execution/multi-signal-volume-prioritisation.db.test.ts \
-            src/__tests__/execution/owner-cockpit-decision-coherence.db.test.ts \
-            src/__tests__/execution/worst-case-business-survival-recovery.db.test.ts \
-            src/__tests__/execution/recovery-execution-milestone-proof.db.test.ts \
-            src/__tests__/execution/owner-recovery-status-read.db.test.ts \
-            src/__tests__/execution/owner-public-signals-read.db.test.ts \
-            src/__tests__/execution/private-owner-shadow-pilot-pack.db.test.ts \
-            src/__tests__/execution/real-public-business-shadow-run.db.test.ts \
-            src/__tests__/execution/long-running-business-timeline.db.test.ts \
-            src/__tests__/execution/cross-module-consistency-decision-memory.db.test.ts \
+          npm test -- --run 'src/**/*.db.test.ts' \
             2>&1 | tee artifacts/db-verification/lane-b-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
@@ -221,7 +163,7 @@ jobs:
     name: 'LANE_A — Neon Secrets (status + tests, no deploy)'
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.use_neon_secrets == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
@@ -294,65 +236,7 @@ jobs:
         run: |
           mkdir -p artifacts/db-verification
           set +e
-          npm test -- --run \
-            src/__tests__/founder-recovery/db-persistence.db.test.ts \
-            src/__tests__/owner-cashflow/services.db.test.ts \
-            src/__tests__/owner-condition/business-condition.db.test.ts \
-            src/__tests__/owner-finance/persistence.db.test.ts \
-            src/__tests__/owner-finance/services.db.test.ts \
-            src/__tests__/owner-home/services.db.test.ts \
-            src/__tests__/owner-intake/services.db.test.ts \
-            src/__tests__/owner-marketing/services.db.test.ts \
-            src/__tests__/owner-operations/services.db.test.ts \
-            src/__tests__/owner-portfolio/services.db.test.ts \
-            src/__tests__/owner-sales/services.db.test.ts \
-            src/__tests__/owner-sop/services.db.test.ts \
-            src/__tests__/owner-strategy/services.db.test.ts \
-            src/__tests__/owner-trust/services.db.test.ts \
-            src/__tests__/services/benchmark/case-library.service.db.test.ts \
-            src/__tests__/services/benchmark/public-dataset.service.db.test.ts \
-            src/__tests__/services/business-condition/business-condition-profile.service.db.test.ts \
-            src/__tests__/services/data-review/fact-review.service.db.test.ts \
-            src/__tests__/services/external-systems/import-persistence.service.db.test.ts \
-            src/__tests__/services/file-intake/persist-file-intake.service.db.test.ts \
-            src/__tests__/services/private-mode/role-access.service.db.test.ts \
-            src/__tests__/phase-3-db-smoke-verification.test.ts \
-            src/__tests__/domain/owner-mode/controlled-learning-candidate.db.test.ts \
-            src/__tests__/api/owner/controlled-learning-admission.db.test.ts \
-            src/__tests__/execution/bottleneck-correction-routing-simulation.db.test.ts \
-            src/__tests__/execution/sop-checklist-correction-simulation.db.test.ts \
-            src/__tests__/execution/staff-training-assignment-simulation.db.test.ts \
-            src/__tests__/execution/sop-training-effectiveness-simulation.db.test.ts \
-            src/__tests__/execution/owner-workload-reduction-simulation.db.test.ts \
-            src/__tests__/execution/approval-threshold-policy-simulation.db.test.ts \
-            src/__tests__/execution/system-capability-gap-detector-simulation.db.test.ts \
-            src/__tests__/execution/cash-profit-protection-simulation.db.test.ts \
-            src/__tests__/execution/external-opportunity-intelligence-simulation.db.test.ts \
-            src/__tests__/execution/opportunity-validation-experiment-simulation.db.test.ts \
-            src/__tests__/execution/opportunity-portfolio-capital-allocation-simulation.db.test.ts \
-            src/__tests__/execution/external-opportunity-intake-simulation.db.test.ts \
-            src/__tests__/execution/validation-outcome-persistence-simulation.db.test.ts \
-            src/__tests__/execution/opportunity-execution-delegation-simulation.db.test.ts \
-            src/__tests__/execution/multi-actor-throughput-simulation.db.test.ts \
-            src/__tests__/execution/full-adversarial-real-business-simulation.db.test.ts \
-            src/__tests__/execution/process-correction-execution-bridge.db.test.ts \
-            src/__tests__/execution/process-execution-affordances.db.test.ts \
-            src/__tests__/execution/workload-capability-sop-training-bridge.db.test.ts \
-            src/__tests__/execution/adjudication-authorization-cross-scope.db.test.ts \
-            src/__tests__/execution/effectiveness-sop-adherence-classification.db.test.ts \
-            src/__tests__/execution/public-online-real-business-end-to-end.db.test.ts \
-            src/__tests__/execution/raw-free-text-public-signal-end-to-end.db.test.ts \
-            src/__tests__/execution/conflicting-public-signal-end-to-end.db.test.ts \
-            src/__tests__/execution/multi-signal-volume-prioritisation.db.test.ts \
-            src/__tests__/execution/owner-cockpit-decision-coherence.db.test.ts \
-            src/__tests__/execution/worst-case-business-survival-recovery.db.test.ts \
-            src/__tests__/execution/recovery-execution-milestone-proof.db.test.ts \
-            src/__tests__/execution/owner-recovery-status-read.db.test.ts \
-            src/__tests__/execution/owner-public-signals-read.db.test.ts \
-            src/__tests__/execution/private-owner-shadow-pilot-pack.db.test.ts \
-            src/__tests__/execution/real-public-business-shadow-run.db.test.ts \
-            src/__tests__/execution/long-running-business-timeline.db.test.ts \
-            src/__tests__/execution/cross-module-consistency-decision-memory.db.test.ts \
+          npm test -- --run 'src/**/*.db.test.ts' \
             2>&1 | tee artifacts/db-verification/lane-a-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e

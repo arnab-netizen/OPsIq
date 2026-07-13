@@ -323,6 +323,30 @@ defect unrelated to A7.7 business-logic changes.
 
 ---
 
+## LANE_B Manifest Completeness Fix
+
+During owner merge authorization review, a second structural defect was identified in `db-verification.yml`:
+the canonical LANE_B test step used a hardcoded list of 57 files, silently omitting 122 of 179 total
+`.db.test.ts` files (including all 3 recently renamed external-systems files).
+
+| Field | Value |
+|-------|-------|
+| Defect class | LANE_B_MANIFEST_INCOMPLETE — hardcoded file list covered 57/179 (32%) of DB tests |
+| Affected workflow | `.github/workflows/db-verification.yml` steps: "Run full DB test suite" (LANE_B) and "Run full DB test suite (Neon TEST_DATABASE_URL)" (LANE_A) |
+| Files omitted | 122 `.db.test.ts` files across scenarios, security, owner-mode, behavioral-validation, services/owner-budget, services/external-systems, src/services, api, middleware, owner-strategy, phase-e, and more |
+| Root cause | Manifest was constructed incrementally; no enforcement gate existed to prevent omissions |
+| Additional MISNAMED_DB_TEST | `src/__tests__/phase-3-db-smoke-verification.test.ts` → `src/__tests__/phase-3-db-smoke-verification.db.test.ts` (4th instance of MISNAMED_DB_TEST defect class; file was in hardcoded list but lacked `.db.test.ts` suffix) |
+| Fix — execution | Replaced hardcoded 57-file list with glob `'src/**/*.db.test.ts'` in both LANE_B and LANE_A steps |
+| Fix — prevention | Added check #6 to `scripts/ci-governance-check.mjs`: `db-verification.yml` must contain `'src/**/*.db.test.ts'` glob; fails CI if replaced with hardcoded list |
+| Fix — timeout | LANE_B: 30 min → 60 min; LANE_A: 20 min → 45 min (proportional to 3× coverage increase) |
+| DB test count before | 57 (hardcoded, incomplete) |
+| DB test count after | 180 (all `.db.test.ts` files, glob-discovered) |
+| Test assertions changed | 0 |
+| Quarantine entries added | 0 |
+| Conditional skips added | 0 |
+
+---
+
 ## Working-Tree Status
 
 `CLEAN` — verified by `git status --short` (no output) on main at `d5594f76`
