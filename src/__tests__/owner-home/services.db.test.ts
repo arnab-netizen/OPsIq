@@ -190,6 +190,7 @@ describe("[db] Owner Home service", () => {
     expect(cycle.actions.length).toBeGreaterThan(0);
     const action = cycle.actions[0];
 
+    await updateSalesAction(action.id, { status: "assigned" }, actor, workspaceId);
     await updateSalesAction(action.id, { status: "in_progress" }, actor, workspaceId);
     await recordSalesVerification(
       action.id,
@@ -217,6 +218,7 @@ describe("[db] Owner Home service", () => {
     expect(cycle.actions.length).toBeGreaterThan(0);
     const action = cycle.actions[0];
 
+    await updateOperationsAction(action.id, { status: "assigned" }, actor, workspaceId);
     await updateOperationsAction(action.id, { status: "in_progress" }, actor, workspaceId);
     await recordOperationsVerification(
       action.id,
@@ -244,6 +246,7 @@ describe("[db] Owner Home service", () => {
     expect(cycle.actions.length).toBeGreaterThan(0);
     const action = cycle.actions[0];
 
+    await updateSopAction(action.id, { status: "assigned" }, actor, workspaceId);
     await updateSopAction(action.id, { status: "in_progress" }, actor, workspaceId);
     await recordSopVerification(
       action.id,
@@ -271,6 +274,7 @@ describe("[db] Owner Home service", () => {
     expect(cycle.actions.length).toBeGreaterThan(0);
     const action = cycle.actions[0];
 
+    await updateStrategyAction(action.id, { status: "assigned" }, actor, workspaceId);
     await updateStrategyAction(action.id, { status: "in_progress" }, actor, workspaceId);
     await recordStrategyVerification(
       action.id,
