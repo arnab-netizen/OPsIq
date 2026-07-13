@@ -124,8 +124,8 @@ for (const workflow of PUSH_BANNED_OVERLAPPING) {
 //    (hardcoded per-file lists silently omit new *.db.test.ts files)
 const dbVerifyContent = readWorkflow('db-verification.yml');
 if (dbVerifyContent) {
-  const hasGlob = dbVerifyContent.includes("'src/**/*.db.test.ts'");
-  check(hasGlob, "db-verification.yml must use glob 'src/**/*.db.test.ts' for LANE_B/LANE_A test execution — hardcoded file lists omit newly added DB tests");
+  const hasGlob = dbVerifyContent.includes("'.db.test.ts'");
+  check(hasGlob, "db-verification.yml must use filter '.db.test.ts' for LANE_B/LANE_A test execution — hardcoded file lists omit newly added DB tests");
 }
 
 // Summary

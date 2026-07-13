@@ -116,7 +116,7 @@ jobs:
         run: |
           mkdir -p artifacts/db-verification
           set +e
-          npm test -- --run 'src/**/*.db.test.ts' \
+          npm test -- '.db.test.ts' \
             2>&1 | tee artifacts/db-verification/lane-b-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
@@ -236,7 +236,7 @@ jobs:
         run: |
           mkdir -p artifacts/db-verification
           set +e
-          npm test -- --run 'src/**/*.db.test.ts' \
+          npm test -- '.db.test.ts' \
             2>&1 | tee artifacts/db-verification/lane-a-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
