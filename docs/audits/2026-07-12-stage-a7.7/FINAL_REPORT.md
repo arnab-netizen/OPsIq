@@ -298,6 +298,31 @@ before the merge.
 
 ---
 
+## Post-Merge Test Classification Fix
+
+During PR #228 (Stage A7.7 closure documentation), CI revealed a pre-existing test classification
+defect unrelated to A7.7 business-logic changes.
+
+| Field | Value |
+|-------|-------|
+| Original file | `src/__tests__/services/external-systems/token-lifecycle.service.test.ts` |
+| Final file | `src/__tests__/services/external-systems/token-lifecycle.service.db.test.ts` |
+| Defect class | MISNAMED_DB_TEST — file lacked `.db.test.ts` suffix |
+| Introduced | PR #176 (commit `ebd66cde`), predates A7.7 merge |
+| CI symptom | 21 tests failed with `ECONNREFUSED` (no PostgreSQL in LANE_A) |
+| DB dependency proven | `beforeEach` calls `prisma.workspace.upsert()`, `prisma.externalProvider.upsert()`, `prisma.externalConnection.upsert()`; `afterEach` calls corresponding `deleteMany()` — zero mocking |
+| Fix | `git mv` rename only — no test logic, no assertions, no test count changed |
+| Quarantine entries added | 0 |
+| Conditional skips added | 0 |
+| References updated | `.github/workflows/b13-db-verification.yml` line 85 (hardcoded path) |
+| LANE_A result after fix | Excludes renamed file via `--exclude '**/*.db.test.ts'`; ECONNREFUSED errors absent |
+| LANE_B result after fix | `b13-db-verification.yml` discovers `token-lifecycle.service.db.test.ts`; all 21 tests run against real PostgreSQL |
+| Test count before | 21 |
+| Test count after | 21 |
+| Assertions changed | 0 |
+
+---
+
 ## Working-Tree Status
 
 `CLEAN` — verified by `git status --short` (no output) on main at `d5594f76`
