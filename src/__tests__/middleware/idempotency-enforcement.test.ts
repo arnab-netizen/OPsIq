@@ -229,7 +229,7 @@ describe("Idempotency Enforcement Middleware", () => {
         method: "POST",
         headers: {
           "Idempotency-Key": "key-1",
-          "x-workspace-id": "ws-1",
+          "x-workspace-id": "00000000-0000-0000-0000-000000000001",
         },
         body: JSON.stringify({ title: "Test" }),
       });
@@ -241,7 +241,7 @@ describe("Idempotency Enforcement Middleware", () => {
         method: "POST",
         headers: {
           "Idempotency-Key": "key-1",
-          "x-workspace-id": "ws-2",
+          "x-workspace-id": "00000000-0000-0000-0000-000000000002",
         },
         body: JSON.stringify({ title: "Test" }),
       });

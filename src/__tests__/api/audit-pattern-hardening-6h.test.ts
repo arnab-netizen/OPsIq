@@ -146,9 +146,13 @@ import { POST as operatorPOST } from "@/app/api/operator/route";
 
 function makeIntakeRequest(body: Record<string, unknown> = {}) {
   return {
-    headers: { get: (k: string) => (k === "idempotency-key" ? "idem-key-intake-1" : null) },
-    nextUrl: { searchParams: { get: () => null } },
-    json: () => Promise.resolve({ title: "Cut supplier lead time", risk: "medium", confidence: 0.5, ...body }),
+    verifiedWorkspaceId: "ws-1",
+    verifiedActorId: "actor-1",
+    verifiedActorType: "user" as const,
+    request: {
+      headers: { get: (k: string) => (k === "idempotency-key" ? "idem-key-intake-1" : null) },
+      json: () => Promise.resolve({ title: "Cut supplier lead time", risk: "medium", confidence: 0.5, ...body }),
+    },
   };
 }
 

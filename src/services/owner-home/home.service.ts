@@ -127,7 +127,7 @@ export async function getOwnerHome(
   const where = { businessId: selectedBusinessId, workspaceId };
   const latest = { orderBy: { sequenceNumber: "desc" as const }, include: spineCycleInclude };
 
-  const [finance, recovery, cashflow, sales, operations, sop, marketing, strategy] = await Promise.all([
+  const [finance, recovery, cashflow, sales, operations, sop, marketing, strategy, allFinanceVers] = await Promise.all([
     db.ownerFinanceCycle.findFirst({ where, ...latest }),
     db.recoveryCycle.findFirst({
       where,
@@ -144,6 +144,14 @@ export async function getOwnerHome(
     db.ownerSopCycle.findFirst({ where, ...latest }),
     db.ownerMarketingCycle.findFirst({ where, ...latest }),
     db.ownerStrategyCycle.findFirst({ where, ...latest }),
+    // Query finance verifications directly across ALL cycles — a successful verification
+    // triggers re-diagnosis which creates a new cycle, making cycle-bound queries miss
+    // verifications that belong to the previous cycle's actions.
+    db.ownerFinanceVerification.findMany({
+      where,
+      include: { action: { select: { title: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   const domainScores: DomainScore[] = [];
@@ -155,7 +163,17 @@ export async function getOwnerHome(
     domainScores.push(financeCycleToDomainScore(finance));
     for (const a of finance.actions) actions.push(financeActionRowToOwnerAction(a));
     for (const f of finance.findings) findings.push(rowToFinding(f, "finance"));
-    verifications.push(...flattenVerifications(finance, "finance"));
+    for (const v of allFinanceVers) {
+      verifications.push({
+        domain: "finance",
+        actionTitle: v.action.title,
+        metric: v.verificationMetric,
+        beforeValue: v.beforeValue ?? null,
+        afterValue: v.afterValue ?? null,
+        status: v.status,
+        verifiedAt: v.createdAt instanceof Date ? v.createdAt : new Date(v.createdAt),
+      });
+    }
   }
   if (recovery) {
     domainScores.push(recoveryCycleToDomainScore(recovery, recovery.snapshot));

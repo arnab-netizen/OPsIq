@@ -38,7 +38,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
     it('IGNORES a spoofed x-private-mode-role header when no DB resolver is wired (fail closed)', async () => {
       const request = createRequest({
         'x-user-id': 'user-123',
-        'x-workspace-id': 'ws-456',
+        'x-workspace-id': '00000000-0000-0000-0000-000000000456',
         'x-private-mode-role': 'OWNER', // spoofed
       });
 
@@ -47,13 +47,13 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
       expect(access.hasAccess).toBe(false);
       expect(access.role).toBeNull();
       expect(access.userId).toBe('user-123');
-      expect(access.workspaceId).toBe('ws-456');
+      expect(access.workspaceId).toBe('00000000-0000-0000-0000-000000000456');
     });
 
     it('IGNORES a spoofed header even with a resolver when the DB has no grant', async () => {
       const request = createRequest({
         'x-user-id': 'user-123',
-        'x-workspace-id': 'ws-456',
+        'x-workspace-id': '00000000-0000-0000-0000-000000000456',
         'x-private-mode-role': 'OWNER', // spoofed
       });
 
@@ -66,12 +66,12 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
     it('grants the DB role for an authorized user', async () => {
       const request = createRequest({
         'x-user-id': 'user-123',
-        'x-workspace-id': 'ws-456',
+        'x-workspace-id': '00000000-0000-0000-0000-000000000456',
       });
 
       const access = await getPrivateModeAccess(
         request,
-        stubDeps({ 'ws-456:user-123': 'OWNER' }),
+        stubDeps({ '00000000-0000-0000-0000-000000000456:user-123': 'OWNER' }),
       );
 
       expect(access.hasAccess).toBe(true);
@@ -91,7 +91,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
   });
 
   describe('enforcePrivateModeGate', () => {
-    const identity = { 'x-user-id': 'user-1', 'x-workspace-id': 'ws-1' };
+    const identity = { 'x-user-id': 'user-1', 'x-workspace-id': '00000000-0000-0000-0000-000000000001' };
 
     it('should allow access when private mode not required', async () => {
       const request = createRequest({});
@@ -121,7 +121,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
       const result = await enforcePrivateModeGate(
         request,
         { required: true },
-        stubDeps({ 'ws-1:user-1': 'CONSULTANT' }),
+        stubDeps({ '00000000-0000-0000-0000-000000000001:user-1': 'CONSULTANT' }),
       );
 
       expect(result).toBeNull(); // null = continue
@@ -133,7 +133,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
       const result = await enforcePrivateModeGate(
         request,
         { required: true, requiredRole: 'OWNER' },
-        stubDeps({ 'ws-1:user-1': 'CONSULTANT' }),
+        stubDeps({ '00000000-0000-0000-0000-000000000001:user-1': 'CONSULTANT' }),
       );
 
       expect(result).not.toBeNull();
@@ -145,7 +145,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
       const result = await enforcePrivateModeGate(
         request,
         { required: true, requiredRole: 'OWNER' },
-        stubDeps({ 'ws-1:user-1': 'OWNER' }),
+        stubDeps({ '00000000-0000-0000-0000-000000000001:user-1': 'OWNER' }),
       );
 
       expect(result).toBeNull();
@@ -166,7 +166,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
       const result = await enforcePrivateModeGate(
         request,
         { required: true, requiredFeatures: ['caseSimulationRunner'] },
-        stubDeps({ 'ws-1:user-1': 'CONSULTANT' }),
+        stubDeps({ '00000000-0000-0000-0000-000000000001:user-1': 'CONSULTANT' }),
       );
 
       expect(result).toBeNull();
@@ -176,11 +176,11 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
   describe('Workspace / tenant isolation', () => {
     it('does not grant access using a grant from a different workspace', async () => {
       // DB grant exists for ws-A, but request is scoped to ws-B.
-      const request = createRequest({ 'x-user-id': 'user-1', 'x-workspace-id': 'ws-B' });
+      const request = createRequest({ 'x-user-id': 'user-1', 'x-workspace-id': '0000000b-0000-0000-0000-000000000000' });
       const result = await enforcePrivateModeGate(
         request,
         { required: true },
-        stubDeps({ 'ws-A:user-1': 'OWNER' }),
+        stubDeps({ '0000000a-0000-0000-0000-000000000000:user-1': 'OWNER' }),
       );
 
       expect(result).not.toBeNull();
@@ -216,7 +216,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
         privateModeAccess: {
           findFirst: async (args: { where: Record<string, unknown> }) => {
             if (
-              args.where.workspaceId === 'ws-1' &&
+              args.where.workspaceId === '00000000-0000-0000-0000-000000000001' &&
               args.where.userId === 'user-1' &&
               args.where.approvalStatus === 'approved' &&
               args.where.revokedAt === null
@@ -230,8 +230,8 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const resolve = createPrismaPrivateModeResolver(fakePrisma as any);
 
-      expect(await resolve('ws-1', 'user-1')).toBe('OWNER');
-      expect(await resolve('ws-1', 'someone-else')).toBeNull();
+      expect(await resolve('00000000-0000-0000-0000-000000000001', 'user-1')).toBe('OWNER');
+      expect(await resolve('00000000-0000-0000-0000-000000000001', 'someone-else')).toBeNull();
     });
   });
 
@@ -259,7 +259,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
   });
 
   describe('Acceptance Gates (Protocol §34)', () => {
-    const identity = { 'x-user-id': 'user-1', 'x-workspace-id': 'ws-1' };
+    const identity = { 'x-user-id': 'user-1', 'x-workspace-id': '00000000-0000-0000-0000-000000000001' };
 
     it('should gate private mode admin features behind OWNER role (DB-sourced)', async () => {
       // DB role is CONSULTANT; admin gate requires OWNER.
@@ -267,7 +267,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
       const result = await enforcePrivateModeGate(
         request,
         PRIVATE_ADMIN_GATE,
-        stubDeps({ 'ws-1:user-1': 'CONSULTANT' }),
+        stubDeps({ '00000000-0000-0000-0000-000000000001:user-1': 'CONSULTANT' }),
       );
 
       expect(result).not.toBeNull();
@@ -279,7 +279,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
       const result = await enforcePrivateModeGate(
         request,
         PRIVATE_ADMIN_GATE,
-        stubDeps({ 'ws-1:user-1': 'OWNER' }),
+        stubDeps({ '00000000-0000-0000-0000-000000000001:user-1': 'OWNER' }),
       );
 
       expect(result).toBeNull();
@@ -304,14 +304,14 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
   });
 
   describe('Role access isolation (DB-sourced)', () => {
-    const identity = { 'x-user-id': 'user-1', 'x-workspace-id': 'ws-1' };
+    const identity = { 'x-user-id': 'user-1', 'x-workspace-id': '00000000-0000-0000-0000-000000000001' };
 
     it('should prevent CONSULTANT from accessing OWNER-only features', async () => {
       const request = createRequest(identity);
       const result = await enforcePrivateModeGate(
         request,
         { required: true, requiredRole: 'OWNER' },
-        stubDeps({ 'ws-1:user-1': 'CONSULTANT' }),
+        stubDeps({ '00000000-0000-0000-0000-000000000001:user-1': 'CONSULTANT' }),
       );
 
       expect(result).not.toBeNull();
@@ -323,7 +323,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
       const result = await enforcePrivateModeGate(
         request,
         { required: true, requiredRole: 'OWNER' },
-        stubDeps({ 'ws-1:user-1': 'ANALYST' }),
+        stubDeps({ '00000000-0000-0000-0000-000000000001:user-1': 'ANALYST' }),
       );
 
       expect(result).not.toBeNull();
@@ -335,7 +335,7 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
         const result = await enforcePrivateModeGate(
           request,
           { required: true },
-          stubDeps({ 'ws-1:user-1': role }),
+          stubDeps({ '00000000-0000-0000-0000-000000000001:user-1': role }),
         );
 
         expect(result).toBeNull();

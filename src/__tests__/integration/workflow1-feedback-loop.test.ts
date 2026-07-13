@@ -121,6 +121,7 @@ function makeDbMock(): DbMock {
 let db: DbMock;
 
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   get db() {
     return db;
   },

@@ -197,14 +197,14 @@ describe("PHASE I10.2: API Route Wrapping", () => {
 
       const req = new NextRequest(new URL("http://localhost:3000/api/test"), {
         headers: {
-          "x-workspace-id": "workspace-123",
+          "x-workspace-id": "00000000-0000-0000-0000-000000000123",
         },
       });
       const context = { params: Promise.resolve({}) };
       const response = await handler(req, context);
 
       const data = await response.json();
-      expect(data.workspace).toBe("workspace-123");
+      expect(data.workspace).toBe("00000000-0000-0000-0000-000000000123");
     });
 
     it("should preserve HTTP method in context", async () => {
