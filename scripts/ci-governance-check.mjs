@@ -120,9 +120,17 @@ for (const workflow of PUSH_BANNED_OVERLAPPING) {
   }
 }
 
+// 6. db-verification.yml must use canonical glob for DB test execution
+//    (hardcoded per-file lists silently omit new *.db.test.ts files)
+const dbVerifyContent = readWorkflow('db-verification.yml');
+if (dbVerifyContent) {
+  const hasGlob = dbVerifyContent.includes("'src/**/*.db.test.ts'");
+  check(hasGlob, "db-verification.yml must use glob 'src/**/*.db.test.ts' for LANE_B/LANE_A test execution — hardcoded file lists omit newly added DB tests");
+}
+
 // Summary
 if (violations === 0) {
-  console.log(`✓ CI governance check passed (${SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 2} rules checked)`);
+  console.log(`✓ CI governance check passed (${SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 3} rules checked)`);
   process.exit(0);
 } else {
   console.error(`\n✗ CI governance check FAILED: ${violations} violation(s)`);
