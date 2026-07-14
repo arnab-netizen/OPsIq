@@ -1,70 +1,53 @@
 /**
- * Unit Tests: Acquisition Engine Service
+ * Unit Tests: Acquisition Engine Service (non-DB paths)
  *
- * Tests acquisition metrics, ROI, channel ranking, and forecasting.
- * Validates workspace scoping and fail-closed behavior.
+ * Tests validation errors, conversion analysis, ROI calculation, channel ranking,
+ * and forecasting. Validates workspace scoping and fail-closed behavior.
+ *
+ * DB-backed paths (recordMetrics success, listMetrics) are covered in the DB test file.
+ * Validation-only paths for recordMetrics (errors thrown before DB touch) are tested here.
  */
 
 import { describe, it, expect } from "vitest";
 import { AcquisitionEngine } from "@/services/growth/acquisition-engine";
 import { AcquisitionChannel } from "@/domain/growth/growth-engines";
+import { ValidationError } from "@/infra/errors";
 
 describe("Acquisition Engine Service", () => {
   const workspaceId = "ws-test-1";
   const otherWorkspaceId = "ws-other";
 
-  describe("Record Metrics", () => {
-    it("should record valid acquisition metrics with workspace scoping", () => {
-      const data = {
-        channel: AcquisitionChannel.PAID_SEARCH,
-        month: "2026-05",
-        leads: 150,
-        qualifiedLeads: 45,
-        conversions: 10,
-        costPerLead: 10,
-        costPerAcquisition: 150,
-        targetCPA: 200,
-      };
-
-      const result = AcquisitionEngine.recordMetrics(workspaceId, data);
-
-      expect(result.error).toBeNull();
-      expect(result.metrics).toBeDefined();
-      expect(result.metrics?.channel).toBe(AcquisitionChannel.PAID_SEARCH);
-      expect(result.metrics?.leads).toBe(150);
+  describe("recordMetrics — validation paths (no DB required)", () => {
+    it("rejects empty workspaceId with ValidationError", async () => {
+      await expect(
+        AcquisitionEngine.recordMetrics("", "actor-1", {
+          channel: AcquisitionChannel.ORGANIC,
+          month: "2026-05",
+          leads: 100,
+          conversions: 5,
+          costPerLead: 0,
+          costPerAcquisition: 0,
+          targetCPA: 0,
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should fail without workspace ID", () => {
-      const data = {
-        channel: AcquisitionChannel.ORGANIC,
-        month: "2026-05",
-        leads: 100,
-        costPerAcquisition: 0,
-      };
-
-      const result = AcquisitionEngine.recordMetrics("", data);
-
-      expect(result.error).toBeDefined();
-      expect(result.metrics).toBeNull();
-      expect(result.error).toContain("Workspace ID");
-    });
-
-    it("should fail with invalid metrics data", () => {
-      const data = {
-        channel: AcquisitionChannel.ORGANIC,
-        month: "May 2026", // Invalid format
-        leads: -100, // Invalid: negative
-        costPerAcquisition: 50,
-      };
-
-      const result = AcquisitionEngine.recordMetrics(workspaceId, data);
-
-      expect(result.error).toBeDefined();
-      expect(result.metrics).toBeNull();
+    it("rejects invalid month format with ValidationError", async () => {
+      await expect(
+        AcquisitionEngine.recordMetrics(workspaceId, "actor-1", {
+          channel: AcquisitionChannel.ORGANIC,
+          month: "May 2026",
+          leads: 100,
+          conversions: 5,
+          costPerLead: 0,
+          costPerAcquisition: 0,
+          targetCPA: 0,
+        })
+      ).rejects.toThrow(ValidationError);
     });
   });
 
-  describe("Analyze Conversion", () => {
+  describe("analyzeConversion", () => {
     const metrics = {
       channel: AcquisitionChannel.PAID_SEARCH,
       month: "2026-05",
@@ -76,35 +59,39 @@ describe("Acquisition Engine Service", () => {
       targetCPA: 150,
     };
 
-    it("should calculate conversion rates", () => {
+    it("calculates conversion rates correctly", () => {
       const result = AcquisitionEngine.analyzeConversion(workspaceId, metrics);
 
-      expect(result.leadToQualifiedRate).toBe(0.3); // 30/100
-      expect(result.qualifiedToConversionRate).toBe(0.2); // 6/30
-      expect(result.leadToConversionRate).toBe(0.06); // 6/100
+      expect(result.leadToQualifiedRate).toBe(0.3);
+      expect(result.qualifiedToConversionRate).toBe(0.2);
+      expect(result.leadToConversionRate).toBe(0.06);
     });
 
-    it("should classify efficiency", () => {
-      // High efficiency: >15% conversion
-      const highMetrics = { ...metrics, conversions: 20 };
-      const highResult = AcquisitionEngine.analyzeConversion(workspaceId, highMetrics);
-      expect(highResult.efficiency).toBe("HIGH");
-
-      // Low efficiency: <5% conversion
-      const lowMetrics = { ...metrics, conversions: 2 };
-      const lowResult = AcquisitionEngine.analyzeConversion(workspaceId, lowMetrics);
-      expect(lowResult.efficiency).toBe("LOW");
+    it("classifies HIGH efficiency for >15% lead-to-conversion", () => {
+      const result = AcquisitionEngine.analyzeConversion(workspaceId, { ...metrics, conversions: 20 });
+      expect(result.efficiency).toBe("HIGH");
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("classifies LOW efficiency for <5% lead-to-conversion", () => {
+      const result = AcquisitionEngine.analyzeConversion(workspaceId, { ...metrics, conversions: 2 });
+      expect(result.efficiency).toBe("LOW");
+    });
+
+    it("returns fail-closed zeros for missing workspaceId", () => {
       const result = AcquisitionEngine.analyzeConversion("", metrics);
+      expect(result.leadToQualifiedRate).toBe(0);
+      expect(result.efficiency).toBe("LOW");
+    });
 
+    it("returns fail-closed zeros when metrics.workspaceId mismatches caller (cross-workspace block)", () => {
+      const metricsWithWs = { ...metrics, workspaceId };
+      const result = AcquisitionEngine.analyzeConversion(otherWorkspaceId, metricsWithWs);
       expect(result.leadToQualifiedRate).toBe(0);
       expect(result.efficiency).toBe("LOW");
     });
   });
 
-  describe("Calculate ROI", () => {
+  describe("calculateROI", () => {
     const metrics = {
       channel: AcquisitionChannel.PAID_SEARCH,
       month: "2026-05",
@@ -116,44 +103,41 @@ describe("Acquisition Engine Service", () => {
       targetCPA: 150,
     };
 
-    it("should calculate profitable ROI", () => {
-      const ltv = 5000; // High lifetime value
-      const result = AcquisitionEngine.calculateROI(workspaceId, metrics, ltv);
-
-      // Revenue = 10 × 5000 = 50000, Cost = 10 × 100 = 1000
-      // ROI = (50000 - 1000) / 1000 = 4900%
+    it("calculates profitable ROI for high LTV", () => {
+      const result = AcquisitionEngine.calculateROI(workspaceId, metrics, 5000);
+      // Revenue = 10 × 5000 = 50000, Cost = 10 × 100 = 1000 → ROI = 4900%
       expect(result.roi).toBeGreaterThan(100);
       expect(result.status).toBe("PROFITABLE");
       expect(result.roi_ratio).toBeGreaterThan(1);
     });
 
-    it("should calculate unprofitable ROI", () => {
-      const ltv = 100; // Low lifetime value
-      const result = AcquisitionEngine.calculateROI(workspaceId, metrics, ltv);
-
-      // Revenue = 10 × 100 = 1000, Cost = 10 × 100 = 1000
-      // ROI = 0%
+    it("calculates unprofitable ROI for low LTV", () => {
+      const result = AcquisitionEngine.calculateROI(workspaceId, metrics, 100);
+      // Revenue = Cost = 1000 → ROI = 0%
       expect(result.roi).toBeLessThanOrEqual(0);
       expect(result.status).toBe("UNPROFITABLE");
     });
 
-    it("should calculate payback period in days", () => {
-      const ltv = 1000;
-      const result = AcquisitionEngine.calculateROI(workspaceId, metrics, ltv);
-
+    it("returns a positive payback period in days", () => {
+      const result = AcquisitionEngine.calculateROI(workspaceId, metrics, 1000);
       expect(result.paybackDays).toBeGreaterThan(0);
       expect(result.paybackDays).toBeLessThan(999);
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns fail-closed zeros for missing workspaceId", () => {
       const result = AcquisitionEngine.calculateROI("", metrics, 5000);
-
       expect(result.roi).toBe(0);
       expect(result.status).toBe("UNPROFITABLE");
     });
+
+    it("returns fail-closed zeros when metrics.workspaceId mismatches caller (cross-workspace block)", () => {
+      const metricsWithWs = { ...metrics, workspaceId };
+      const result = AcquisitionEngine.calculateROI(otherWorkspaceId, metricsWithWs, 5000);
+      expect(result.roi_ratio).toBe(0);
+    });
   });
 
-  describe("Rank Channels", () => {
+  describe("rankChannels", () => {
     const channelMetrics = new Map([
       [
         AcquisitionChannel.PAID_SEARCH,
@@ -196,30 +180,43 @@ describe("Acquisition Engine Service", () => {
       ],
     ]);
 
-    it("should rank channels by efficiency", () => {
+    it("returns all channels ranked with sequential ranks", () => {
       const result = AcquisitionEngine.rankChannels(workspaceId, channelMetrics);
-
       expect(result.length).toBe(3);
       expect(result[0].rank).toBe(1);
       expect(result[1].rank).toBe(2);
       expect(result[2].rank).toBe(3);
     });
 
-    it("should prefer lower cost per lead", () => {
+    it("ranks ORGANIC first (zero cost per qualified lead)", () => {
       const result = AcquisitionEngine.rankChannels(workspaceId, channelMetrics);
-
-      // Organic should rank first (zero cost)
       expect(result[0].channel).toBe(AcquisitionChannel.ORGANIC);
     });
 
-    it("should fail-closed without workspace ID", () => {
-      const result = AcquisitionEngine.rankChannels("", channelMetrics);
+    it("returns empty array for missing workspaceId", () => {
+      expect(AcquisitionEngine.rankChannels("", channelMetrics)).toEqual([]);
+    });
 
-      expect(result).toEqual([]);
+    it("filters out metrics with explicitly mismatched workspaceId (cross-workspace block)", () => {
+      const metricsWithOtherWs = new Map([
+        [AcquisitionChannel.PAID_SEARCH, {
+          workspaceId, // belongs to workspaceId
+          channel: AcquisitionChannel.PAID_SEARCH,
+          month: "2026-05",
+          leads: 100,
+          qualifiedLeads: 30,
+          conversions: 10,
+          costPerLead: 10,
+          costPerAcquisition: 100,
+          targetCPA: 150,
+        }],
+      ]);
+      const wrongWs = AcquisitionEngine.rankChannels(otherWorkspaceId, metricsWithOtherWs);
+      expect(wrongWs.length).toBe(0);
     });
   });
 
-  describe("Optimize Budget Allocation", () => {
+  describe("optimizeBudgetAllocation", () => {
     const channelMetrics = new Map([
       [
         AcquisitionChannel.PAID_SEARCH,
@@ -249,36 +246,22 @@ describe("Acquisition Engine Service", () => {
       ],
     ]);
 
-    it("should allocate budget based on efficiency", () => {
-      const totalBudget = 10000;
-      const result = AcquisitionEngine.optimizeBudgetAllocation(
-        workspaceId,
-        channelMetrics,
-        totalBudget,
-        50
-      );
-
+    it("allocates 50% of budget to the top-ranked channel (ORGANIC)", () => {
+      const result = AcquisitionEngine.optimizeBudgetAllocation(workspaceId, channelMetrics, 10000, 50);
       expect(result.size).toBe(2);
-
-      // Top channel should get 50%
-      const topAllocation = result.get(AcquisitionChannel.ORGANIC);
-      expect(topAllocation).toBe(5000); // 50% of 10000
+      expect(result.get(AcquisitionChannel.ORGANIC)).toBe(5000);
     });
 
-    it("should fail-closed without workspace ID", () => {
-      const result = AcquisitionEngine.optimizeBudgetAllocation("", channelMetrics, 10000, 50);
-
-      expect(result.size).toBe(0);
+    it("returns empty map for missing workspaceId", () => {
+      expect(AcquisitionEngine.optimizeBudgetAllocation("", channelMetrics, 10000, 50).size).toBe(0);
     });
 
-    it("should fail-closed with zero budget", () => {
-      const result = AcquisitionEngine.optimizeBudgetAllocation(workspaceId, channelMetrics, 0, 50);
-
-      expect(result.size).toBe(0);
+    it("returns empty map for zero budget", () => {
+      expect(AcquisitionEngine.optimizeBudgetAllocation(workspaceId, channelMetrics, 0, 50).size).toBe(0);
     });
   });
 
-  describe("Forecast Acquisition", () => {
+  describe("forecastAcquisition", () => {
     const historicalMetrics = [
       {
         channel: AcquisitionChannel.PAID_SEARCH,
@@ -302,74 +285,39 @@ describe("Acquisition Engine Service", () => {
       },
     ];
 
-    it("should forecast acquisition with growth rate", () => {
+    it("forecasts leads and conversions above historical average with 10% growth", () => {
       const result = AcquisitionEngine.forecastAcquisition(workspaceId, historicalMetrics, 0.1);
-
       expect(result.projectedLeads).toBeGreaterThan(105);
       expect(result.projectedConversions).toBeGreaterThan(10);
       expect(result.projectedCost).toBeGreaterThan(0);
     });
 
-    it("should calculate confidence based on historical data", () => {
+    it("calculates confidence based on historical data volume", () => {
       const result = AcquisitionEngine.forecastAcquisition(workspaceId, historicalMetrics, 0.1);
-
       expect(result.confidence).toBeGreaterThan(0.5);
       expect(result.confidence).toBeLessThanOrEqual(0.9);
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns fail-closed zeros for missing workspaceId", () => {
       const result = AcquisitionEngine.forecastAcquisition("", historicalMetrics, 0.1);
-
       expect(result.projectedLeads).toBe(0);
       expect(result.confidence).toBe(0);
     });
 
-    it("should fail-closed with empty historical data", () => {
+    it("returns fail-closed zeros for empty historical data", () => {
       const result = AcquisitionEngine.forecastAcquisition(workspaceId, [], 0.1);
-
       expect(result.projectedLeads).toBe(0);
       expect(result.confidence).toBe(0);
     });
-  });
 
-  describe("Tenant Safety", () => {
-    const metrics = {
-      channel: AcquisitionChannel.PAID_SEARCH,
-      month: "2026-05",
-      leads: 100,
-      qualifiedLeads: 30,
-      conversions: 10,
-      costPerLead: 10,
-      costPerAcquisition: 100,
-      targetCPA: 150,
-    };
-
-    it("should prevent cross-workspace metric analysis", () => {
-      const correctWs = AcquisitionEngine.analyzeConversion(workspaceId, metrics);
-      const wrongWs = AcquisitionEngine.analyzeConversion(otherWorkspaceId, metrics);
-
-      expect(correctWs.leadToQualifiedRate).toBeGreaterThan(0);
-      expect(wrongWs.leadToQualifiedRate).toBe(0);
-    });
-
-    it("should enforce workspace in ROI calculation", () => {
-      const correctWs = AcquisitionEngine.calculateROI(workspaceId, metrics, 5000);
-      const wrongWs = AcquisitionEngine.calculateROI(otherWorkspaceId, metrics, 5000);
-
-      expect(correctWs.roi_ratio).toBeGreaterThan(0);
-      expect(wrongWs.roi_ratio).toBe(0);
-    });
-
-    it("should enforce workspace in channel ranking", () => {
-      const channelMetrics = new Map([
-        [AcquisitionChannel.PAID_SEARCH, metrics],
-      ]);
-
-      const correctWs = AcquisitionEngine.rankChannels(workspaceId, channelMetrics);
-      const wrongWs = AcquisitionEngine.rankChannels(otherWorkspaceId, channelMetrics);
-
-      expect(correctWs.length).toBeGreaterThan(0);
-      expect(wrongWs.length).toBe(0);
+    it("returns fail-closed zeros when any metric has a mismatched workspaceId", () => {
+      const metricsWithWrongWs = historicalMetrics.map((m) => ({
+        ...m,
+        workspaceId: otherWorkspaceId,
+      }));
+      const result = AcquisitionEngine.forecastAcquisition(workspaceId, metricsWithWrongWs, 0.1);
+      expect(result.projectedLeads).toBe(0);
+      expect(result.confidence).toBe(0);
     });
   });
 });

@@ -471,6 +471,8 @@ export const AUDIT_EVENTS = {
 
   // Growth: retention cohort persistence (replaces BUILT_VOLATILE in-memory Map)
   RETENTION_COHORT_RECORDED: "growth.retention_cohort_recorded",
+  ACQUISITION_METRICS_RECORDED: "growth.acquisition_metrics_recorded",
+  PRICE_TIER_CREATED: "growth.price_tier_created",
 
   // Private deployment
   PRIVATE_MODE_ENTITLEMENT_ACTIVE: "private_mode.entitlement_active",

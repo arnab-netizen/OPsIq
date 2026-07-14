@@ -4749,6 +4749,68 @@ model BehavioralLearningArtifact {
   @@map("behavioral_learning_artifacts")
 }
 
+// ─── Growth: Acquisition Metrics Persistence ─────────────────────────────────
+// Replaces the BUILT_VOLATILE in-memory Map in AcquisitionEngine.
+// Each row stores one channel-month acquisition snapshot.
+// workspaceId is an indexed plain UUID (matches Workspace.id from canonical context).
+model AcquisitionMetricsRecord {
+  id                 String   @id @db.Uuid
+  workspaceId        String   @db.Uuid @map("workspace_id")
+  channel            String   // AcquisitionChannel enum value
+  month              String   // YYYY-MM
+  leads              Int      @default(0)
+  qualifiedLeads     Int?     @map("qualified_leads")
+  conversions        Int      @default(0)
+  costPerLead        Float    @default(0) @map("cost_per_lead")
+  costPerAcquisition Float    @default(0) @map("cost_per_acquisition")
+  targetCPA          Float    @default(0) @map("target_cpa")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, channel, month])
+  @@map("acquisition_metrics_records")
+}
+
+// ─── Growth: Price Tier Persistence ──────────────────────────────────────────
+// Replaces the BUILT_VOLATILE in-memory Map in PricingEngine.
+// Implements plan-required schema: currency, unit of measure, effective dates,
+// version history (append-only via supersededById), variable/allocated costs,
+// customer segment, channel, quantity breaks, discount structure, approval status,
+// provenance. Derived margin is computed at read time — NOT stored.
+model GrowthPriceTier {
+  id                String    @id @db.Uuid
+  workspaceId       String    @db.Uuid @map("workspace_id")
+  name              String
+  currency          String    @default("USD")
+  unitOfMeasure     String    @default("seat") @map("unit_of_measure")
+  entryPrice        Float     @map("entry_price")
+  maxPrice          Float     @map("max_price")
+  variableCost      Float?    @map("variable_cost")
+  allocatedCost     Float?    @map("allocated_cost")
+  customerSegment   String?   @map("customer_segment")
+  channel           String?
+  quantityBreaks    Json?     @map("quantity_breaks")
+  discountStructure Json?     @map("discount_structure")
+  features          Json      @default("[]")
+  status            String    @default("DRAFT")
+  approvalStatus    String    @default("pending_approval") @map("approval_status")
+  approvedBy        String?   @map("approved_by") @db.Uuid
+  approvedAt        DateTime? @map("approved_at")
+  provenance        String?
+  effectiveFrom     DateTime? @map("effective_from")
+  effectiveTo       DateTime? @map("effective_to")
+  version           Int       @default(1)
+  supersededById    String?   @map("superseded_by_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, approvalStatus])
+  @@index([workspaceId, status])
+  @@map("growth_price_tiers")
+}
+
 // ─── Growth: Retention Cohort Persistence ────────────────────────────────────
 // Replaces the BUILT_VOLATILE in-memory Map in RetentionEngine.
 // Each row stores one cohort's observed retention curve and average monthly churn.
