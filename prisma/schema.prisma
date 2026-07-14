@@ -4811,6 +4811,53 @@ model GrowthPriceTier {
   @@map("growth_price_tiers")
 }
 
+// ─── Growth: Sales Deal Persistence ──────────────────────────────────────────
+// Replaces the BUILT_VOLATILE in-memory Map in SalesPipelineEngine.
+// Each row represents one sales deal with its current pipeline stage.
+// workspaceId is an indexed plain UUID (matches Workspace.id from canonical context).
+model SalesDealRecord {
+  id                String    @id @db.Uuid
+  workspaceId       String    @db.Uuid @map("workspace_id")
+  companyName       String    @map("company_name")
+  stage             String
+  value             Float
+  currency          String    @default("USD")
+  probability       Float     @default(0)
+  expectedCloseDate DateTime  @map("expected_close_date")
+  owner             String?
+  notes             String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, stage])
+  @@map("sales_deal_records")
+}
+
+// ─── Growth: Revenue Stream Persistence ──────────────────────────────────────
+// Replaces the BUILT_VOLATILE in-memory creation in RevenueEngine.
+// Each row stores one revenue stream definition for a workspace.
+// workspaceId is an indexed plain UUID (matches Workspace.id from canonical context).
+model RevenueStreamRecord {
+  id             String    @id @db.Uuid
+  workspaceId    String    @db.Uuid @map("workspace_id")
+  name           String
+  model          String    @default("SUBSCRIPTION")
+  billingCycle   String    @default("MONTHLY") @map("billing_cycle")
+  basePrice      Float     @map("base_price")
+  currency       String    @default("USD")
+  volume         Float?
+  volumeUnit     String?   @map("volume_unit")
+  activationDate DateTime? @map("activation_date")
+  status         String    @default("DRAFT")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@map("revenue_stream_records")
+}
+
 // ─── Growth: Retention Cohort Persistence ────────────────────────────────────
 // Replaces the BUILT_VOLATILE in-memory Map in RetentionEngine.
 // Each row stores one cohort's observed retention curve and average monthly churn.

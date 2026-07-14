@@ -1,6 +1,6 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
+import { parseRequestBody } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { SalesPipelineEngine } from "@/services/growth/sales-pipeline-engine";
 import { DealStage } from "@/domain/growth/growth-engines";
@@ -8,123 +8,35 @@ import { z } from "zod/v4";
 
 const recordDealSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
-  stage: z.nativeEnum(DealStage),
-  value: z.number().positive("Deal value must be positive"),
-  currency: z.string().length(3, "Currency must be 3-letter code"),
+  stage: z.nativeEnum(DealStage).optional(),
+  value: z.number().nonnegative("Deal value must be non-negative"),
+  currency: z.string().length(3, "Currency must be 3-letter code").optional(),
   probability: z.number().min(0).max(1, "Probability must be 0-1").optional(),
-  expectedCloseDate: z.coerce.date(),
+  expectedCloseDate: z.coerce.date().optional(),
   owner: z.string().optional(),
   notes: z.string().optional(),
 });
 
-const progressDealSchema = z.object({
-  dealId: z.string().min(1, "Deal ID is required"),
-  newStage: z.nativeEnum(DealStage),
-});
-
-const calculateMetricsSchema = z.object({
-  deals: z.array(z.object({
-    id: z.string(),
-    companyName: z.string(),
-    stage: z.nativeEnum(DealStage),
-    value: z.number(),
-    currency: z.string(),
-    probability: z.number().min(0).max(1),
-    expectedCloseDate: z.coerce.date(),
-    owner: z.string().optional(),
-    notes: z.string().optional(),
-  })),
-});
-
 /**
- * POST /api/growth/sales-pipeline/deals
- *
- * Record a sales deal (workspace-scoped)
- * Wire: SalesPipelineEngine.recordDeal()
+ * GET /api/growth/sales-pipeline — list persisted deals for the workspace.
+ * POST /api/growth/sales-pipeline — record a new sales deal.
  */
-export const POST = withCanonicalEnforcement(
+export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
-
-    try {
-      const body = await ctx.request?.json() || {};
-      const validated = recordDealSchema.parse(body);
-
-      const result = SalesPipelineEngine.recordDeal(workspaceId, validated);
-
-      if (result.error) {
-        return canonicalJson({ error: result.error }, { status: 400 });
-      }
-
-      return canonicalJson(result.deal, { status: 201 });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return canonicalJson(
-          { error: "Validation error", details: error.issues },
-          { status: 400 }
-        );
-      }
-      if (error instanceof Error) {
-        return canonicalJson({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
-      }
-      return canonicalJson({ error: "Internal server error" }, { status: 500 });
-    }
+    return SalesPipelineEngine.listDeals(ctx.verifiedWorkspaceId);
   },
-  {
-    requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE],
-    requireWorkspace: true,
-  }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
 );
 
-/**
- * POST /api/growth/sales-pipeline/progress
- *
- * Progress a deal to next stage
- * Wire: SalesPipelineEngine.progressDeal()
- */
-export async function progressDealHandler(
-  workspaceId: string,
-  dealId: string,
-  newStage: DealStage
-): Promise<any> {
-  if (!workspaceId) {
-    return { error: "Workspace ID required" };
-  }
-
-  return SalesPipelineEngine.progressDeal(workspaceId, dealId, newStage);
-}
-
-/**
- * POST /api/growth/sales-pipeline/metrics
- *
- * Calculate pipeline metrics for deals
- * Wire: SalesPipelineEngine.calculatePipelineMetrics()
- */
-export async function calculateMetricsHandler(
-  workspaceId: string,
-  deals: any[]
-): Promise<any> {
-  if (!workspaceId) {
-    return { error: "Workspace ID required" };
-  }
-
-  return SalesPipelineEngine.calculatePipelineMetrics(workspaceId, deals);
-}
-
-/**
- * POST /api/growth/sales-pipeline/forecast
- *
- * Forecast pipeline revenue
- * Wire: SalesPipelineEngine.forecastPipelineRevenue()
- */
-export async function forecastRevenueHandler(
-  workspaceId: string,
-  deals: any[],
-  months?: number
-): Promise<any> {
-  if (!workspaceId) {
-    return { error: "Workspace ID required" };
-  }
-
-  return SalesPipelineEngine.forecastPipelineRevenue(workspaceId, deals, months);
-}
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const body = await parseRequestBody(ctx.request!, recordDealSchema);
+    const deal = await SalesPipelineEngine.recordDeal(
+      ctx.verifiedWorkspaceId,
+      ctx.verifiedActorId,
+      body
+    );
+    return canonicalJson(deal, { status: 201 });
+  },
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE] }
+);
