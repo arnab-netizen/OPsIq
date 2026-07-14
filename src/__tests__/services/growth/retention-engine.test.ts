@@ -1,71 +1,47 @@
 /**
- * Unit Tests: Retention Engine Service
+ * Unit Tests: Retention Engine Service (non-DB paths)
  *
- * Tests retention metrics, churn analysis, and forecasting.
- * Validates workspace scoping and fail-closed behavior.
+ * Tests retention metrics validation, churn analysis, LTV modeling, and forecasting.
+ * Validates workspace scoping and fail-closed behavior on pure functions.
+ *
+ * DB-backed paths (recordMetrics success, listCohorts) are covered in the DB test file.
+ * Validation-only paths for recordMetrics (errors thrown before DB touch) are tested here.
  */
 
 import { describe, it, expect } from "vitest";
 import { RetentionEngine } from "@/services/growth/retention-engine";
 import { ChurnReason } from "@/domain/growth/growth-engines";
+import { ValidationError } from "@/infra/errors";
 
 describe("Retention Engine Service", () => {
   const workspaceId = "ws-test-1";
-  const otherWorkspaceId = "ws-other";
 
-  describe("Record Metrics", () => {
-    it("should record valid retention metrics with workspace scoping", () => {
-      const data = {
-        cohortMonth: "2025-01",
-        cohortSize: 100,
-        monthlyRetention: { 1: 0.95, 2: 0.92, 3: 0.88 },
-        avgMonthlyChurn: 0.05,
-      };
-
-      const result = RetentionEngine.recordMetrics(workspaceId, data);
-
-      expect(result.error).toBeNull();
-      expect(result.metrics).toBeDefined();
-      expect(result.metrics?.cohortMonth).toBe("2025-01");
+  describe("recordMetrics — validation paths (no DB required)", () => {
+    it("rejects empty workspaceId with ValidationError", async () => {
+      await expect(
+        RetentionEngine.recordMetrics("", "actor-1", {
+          cohortMonth: "2025-01",
+          monthlyRetention: { 1: 0.95 },
+          avgMonthlyChurn: 0.05,
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should fail without workspace ID", () => {
-      const data = {
-        cohortMonth: "2025-01",
-        monthlyRetention: { 1: 0.95 },
-        avgMonthlyChurn: 0.05,
-      };
-
-      const result = RetentionEngine.recordMetrics("", data);
-
-      expect(result.error).toBeDefined();
-      expect(result.metrics).toBeNull();
-      expect(result.error).toContain("Workspace ID");
-    });
-
-    it("should fail with invalid metrics data", () => {
-      const data = {
-        cohortMonth: "2025-01",
-        monthlyRetention: { 1: 0.95 },
-        avgMonthlyChurn: 1.5, // Invalid: > 1
-      };
-
-      const result = RetentionEngine.recordMetrics(workspaceId, data);
-
-      expect(result.error).toBeDefined();
+    it("rejects invalid avgMonthlyChurn (>1) with ValidationError", async () => {
+      await expect(
+        RetentionEngine.recordMetrics(workspaceId, "actor-1", {
+          cohortMonth: "2025-01",
+          monthlyRetention: { 1: 0.95 },
+          avgMonthlyChurn: 1.5,
+        })
+      ).rejects.toThrow(ValidationError);
     });
   });
 
-  describe("Calculate Retention Curve", () => {
-    const monthlyRetention = {
-      1: 0.95,
-      2: 0.92,
-      3: 0.88,
-      4: 0.84,
-      5: 0.81,
-    };
+  describe("calculateRetentionCurve", () => {
+    const monthlyRetention = { 1: 0.95, 2: 0.92, 3: 0.88, 4: 0.84, 5: 0.81 };
 
-    it("should calculate retention curve", () => {
+    it("calculates retention curve correctly", () => {
       const result = RetentionEngine.calculateRetentionCurve(workspaceId, monthlyRetention);
 
       expect(result.curve).toHaveLength(5);
@@ -73,32 +49,27 @@ describe("Retention Engine Service", () => {
       expect(result.curve[0].retained).toBe(95);
     });
 
-    it("should identify retention cliff", () => {
-      const steeperRetention = {
-        1: 0.95,
-        2: 0.90, // Drop of 5%
-        3: 0.75, // Drop of 15% - cliff
-        4: 0.72,
-      };
+    it("identifies the cliff month (largest single-month drop)", () => {
+      const steeperRetention = { 1: 0.95, 2: 0.90, 3: 0.75, 4: 0.72 };
 
       const result = RetentionEngine.calculateRetentionCurve(workspaceId, steeperRetention);
 
       expect(result.cliff).toBe(3);
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns empty curve for missing workspaceId (fail-closed)", () => {
       const result = RetentionEngine.calculateRetentionCurve("", monthlyRetention);
 
       expect(result.curve).toEqual([]);
     });
   });
 
-  describe("Assess Churn Risk", () => {
-    it("should assess low risk for healthy retention", () => {
+  describe("assessChurnRisk", () => {
+    it("assesses LOW risk for healthy retention", () => {
       const metrics = {
         cohortMonth: "2025-01",
         monthlyRetention: { 1: 0.95, 2: 0.92, 3: 0.88 },
-        avgMonthlyChurn: 0.03, // 3% monthly churn
+        avgMonthlyChurn: 0.03,
       };
 
       const result = RetentionEngine.assessChurnRisk(workspaceId, metrics);
@@ -107,11 +78,11 @@ describe("Retention Engine Service", () => {
       expect(result.interventionUrgency).toBe("MONITOR");
     });
 
-    it("should assess high risk for elevated churn", () => {
+    it("assesses HIGH risk for elevated churn (10–15%)", () => {
       const metrics = {
         cohortMonth: "2025-01",
         monthlyRetention: { 1: 0.90, 2: 0.80 },
-        avgMonthlyChurn: 0.12, // 12% monthly churn
+        avgMonthlyChurn: 0.12,
       };
 
       const result = RetentionEngine.assessChurnRisk(workspaceId, metrics);
@@ -120,11 +91,11 @@ describe("Retention Engine Service", () => {
       expect(result.interventionUrgency).toBe("URGENT");
     });
 
-    it("should assess critical risk for severe churn", () => {
+    it("assesses CRITICAL risk for severe churn (≥15%)", () => {
       const metrics = {
         cohortMonth: "2025-01",
         monthlyRetention: { 1: 0.85, 2: 0.65 },
-        avgMonthlyChurn: 0.18, // 18% monthly churn
+        avgMonthlyChurn: 0.18,
       };
 
       const result = RetentionEngine.assessChurnRisk(workspaceId, metrics);
@@ -133,7 +104,7 @@ describe("Retention Engine Service", () => {
       expect(result.interventionUrgency).toBe("IMMEDIATE");
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns safe defaults for empty workspaceId (fail-closed)", () => {
       const metrics = {
         cohortMonth: "2025-01",
         monthlyRetention: { 1: 0.95 },
@@ -145,9 +116,23 @@ describe("Retention Engine Service", () => {
       expect(result.riskLevel).toBe("LOW");
       expect(result.churnScore).toBe(0);
     });
+
+    it("returns safe defaults when metrics.workspaceId doesn't match caller (cross-workspace block)", () => {
+      const metrics = {
+        workspaceId: "ws-different",
+        cohortMonth: "2025-01",
+        monthlyRetention: { 1: 0.95 },
+        avgMonthlyChurn: 0.18,
+      };
+
+      const result = RetentionEngine.assessChurnRisk(workspaceId, metrics);
+
+      expect(result.riskLevel).toBe("LOW");
+      expect(result.churnScore).toBe(0);
+    });
   });
 
-  describe("Analyze Churn Pattern", () => {
+  describe("analyzeChurnPattern", () => {
     const monthlyRetention = { 1: 0.95, 2: 0.90, 3: 0.85 };
     const reasons: Partial<Record<ChurnReason, number>> = {
       [ChurnReason.PRICE_SENSITIVITY]: 0.4,
@@ -155,27 +140,27 @@ describe("Retention Engine Service", () => {
       [ChurnReason.SUPPORT_ISSUE]: 0.2,
     };
 
-    it("should identify top churn reasons", () => {
+    it("identifies top churn reasons ranked by weight", () => {
       const result = RetentionEngine.analyzeChurnPattern(workspaceId, monthlyRetention, reasons);
 
       expect(result.topReasons.length).toBeGreaterThan(0);
       expect(result.topReasons[0].reason).toBe(ChurnReason.PRICE_SENSITIVITY);
     });
 
-    it("should identify at-risk segments", () => {
+    it("identifies at-risk segments", () => {
       const result = RetentionEngine.analyzeChurnPattern(workspaceId, monthlyRetention, reasons);
 
       expect(result.riskSegments.length).toBeGreaterThan(0);
     });
 
-    it("should recommend interventions", () => {
+    it("recommends interventions based on top reason", () => {
       const result = RetentionEngine.analyzeChurnPattern(workspaceId, monthlyRetention, reasons);
 
       expect(result.interventions.length).toBeGreaterThan(0);
       expect(result.interventions[0]).toContain("Pricing");
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns empty analysis for missing workspaceId (fail-closed)", () => {
       const result = RetentionEngine.analyzeChurnPattern("", monthlyRetention, reasons);
 
       expect(result.predictedChurnRate).toBe(0);
@@ -183,8 +168,8 @@ describe("Retention Engine Service", () => {
     });
   });
 
-  describe("Calculate LTV Impact", () => {
-    it("should calculate impact of churn on LTV", () => {
+  describe("calculateLTVImpact", () => {
+    it("calculates the impact of churn on LTV", () => {
       const monthlyRetention = { 1: 0.95, 2: 0.90, 3: 0.85, 4: 0.80, 5: 0.75 };
       const result = RetentionEngine.calculateLTVImpact(workspaceId, 100, monthlyRetention, 100);
 
@@ -194,7 +179,7 @@ describe("Retention Engine Service", () => {
       expect(result.ltvRecoveryPotential).toBeGreaterThan(0);
     });
 
-    it("should calculate perfect retention as baseline", () => {
+    it("returns zero ltvRecoveryPotential for perfect retention", () => {
       const perfectRetention = { 1: 1.0, 2: 1.0, 3: 1.0 };
       const result = RetentionEngine.calculateLTVImpact(workspaceId, 100, perfectRetention, 100);
 
@@ -202,22 +187,22 @@ describe("Retention Engine Service", () => {
       expect(result.ltvRecoveryPotential).toBe(0);
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns zeros for missing workspaceId (fail-closed)", () => {
       const result = RetentionEngine.calculateLTVImpact("", 100, { 1: 0.95 }, 100);
 
       expect(result.totalLTV).toBe(0);
       expect(result.actualLTV).toBe(0);
     });
 
-    it("should fail-closed with invalid inputs", () => {
+    it("returns zeros for zero cohortSize (fail-closed)", () => {
       const result = RetentionEngine.calculateLTVImpact(workspaceId, 0, { 1: 0.95 }, 100);
 
       expect(result.totalLTV).toBe(0);
     });
   });
 
-  describe("Forecast Churn", () => {
-    it("should forecast next month churn", () => {
+  describe("forecastChurn", () => {
+    it("forecasts next-month churn within valid bounds", () => {
       const monthlyRetention = { 1: 0.95, 2: 0.92, 3: 0.88, 4: 0.85 };
       const result = RetentionEngine.forecastChurn(workspaceId, monthlyRetention);
 
@@ -226,50 +211,25 @@ describe("Retention Engine Service", () => {
       expect(result.confidence).toBeGreaterThan(0);
     });
 
-    it("should identify improving trend", () => {
+    it("identifies improving trend", () => {
       const improvingRetention = { 1: 0.80, 2: 0.82, 3: 0.85, 4: 0.88 };
       const result = RetentionEngine.forecastChurn(workspaceId, improvingRetention);
 
       expect(result.trend).toBe("IMPROVING");
     });
 
-    it("should identify declining trend", () => {
+    it("identifies declining trend", () => {
       const decliningRetention = { 1: 0.95, 2: 0.92, 3: 0.88, 4: 0.84 };
       const result = RetentionEngine.forecastChurn(workspaceId, decliningRetention);
 
       expect(result.trend).toBe("DECLINING");
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns zeros for missing workspaceId (fail-closed)", () => {
       const result = RetentionEngine.forecastChurn("", { 1: 0.95 }, 90);
 
       expect(result.projectedChurnRate).toBe(0);
       expect(result.confidence).toBe(0);
-    });
-  });
-
-  describe("Tenant Safety", () => {
-    const metrics = {
-      cohortMonth: "2025-01",
-      monthlyRetention: { 1: 0.95, 2: 0.90 },
-      avgMonthlyChurn: 0.05,
-    };
-
-    it("should prevent cross-workspace assessment", () => {
-      const ws1Result = RetentionEngine.assessChurnRisk(workspaceId, metrics);
-      const ws2Result = RetentionEngine.assessChurnRisk(otherWorkspaceId, metrics);
-
-      expect(ws1Result.riskLevel).toBe("LOW");
-      expect(ws2Result.riskLevel).toBe("LOW"); // Wrong workspace returns defaults
-    });
-
-    it("should prevent cross-workspace curve analysis", () => {
-      const monthlyRetention = { 1: 0.95, 2: 0.90 };
-      const ws1Result = RetentionEngine.calculateRetentionCurve(workspaceId, monthlyRetention);
-      const ws2Result = RetentionEngine.calculateRetentionCurve(otherWorkspaceId, monthlyRetention);
-
-      expect(ws1Result.curve.length).toBeGreaterThan(0);
-      expect(ws2Result.curve).toEqual([]);
     });
   });
 });

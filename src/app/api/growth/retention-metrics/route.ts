@@ -1,89 +1,45 @@
+/**
+ * POST /api/growth/retention-metrics — record a retention cohort (workspace-scoped, DB-backed).
+ * GET  /api/growth/retention-metrics — list persisted cohorts for the workspace.
+ */
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { RetentionEngine } from "@/services/growth/retention-engine";
-import { ValidationError } from "@/infra/errors";
+import { canonicalJson } from "@/lib/canonical-json-response";
+import { parseRequestBody } from "@/lib/validation";
 import { z } from "zod/v4";
-import { isProductionRuntime, demoOnlyBlockedResponse } from "@/lib/demo-write-guard";
 
 const recordMetricsSchema = z.object({
   cohortMonth: z.string().regex(/^\d{4}-\d{2}$/, "Cohort month must be YYYY-MM format"),
-  cohortSize: z.number().positive("Cohort size must be positive"),
-  monthlyRetention: z.record(z.string(), z.number().min(0).max(1, "Retention rates must be 0-1")),
-  avgMonthlyChurn: z.number().min(0).max(1, "Average monthly churn must be 0-1"),
+  cohortSize: z.number().int().positive("Cohort size must be a positive integer").optional(),
+  monthlyRetention: z.record(z.string(), z.number().min(0).max(1, "Retention rates must be 0–1")),
+  avgMonthlyChurn: z.number().min(0).max(1, "Average monthly churn must be 0–1"),
 });
 
-/**
- * POST /api/growth/retention-metrics
- *
- * Record retention metrics for a cohort (workspace-scoped).
- *
- * DEMO-ONLY / NON-PERSISTENT: RetentionEngine stores metrics/churn in in-memory
- * Maps (lost on restart, not multi-instance safe, no audit event). This route is
- * therefore blocked in production (503 NOT_PERSISTED_DEMO_ONLY) until durable,
- * tenant-scoped, audited persistence is added.
- * Wire: RetentionEngine.recordMetrics()
- */
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    return RetentionEngine.listCohorts(ctx.verifiedWorkspaceId);
+  },
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
+);
+
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const body = await parseRequestBody(ctx.request!, recordMetricsSchema);
 
-    // Fail closed in production: this write is backed only by in-memory Maps.
-    if (isProductionRuntime()) {
-      return demoOnlyBlockedResponse("retention-metrics");
-    }
-
-    const body = ctx.request ? await ctx.request.json() : {};
-    const validated = recordMetricsSchema.parse(body);
-
-    // Convert monthlyRetention keys from string to number for service call
     const monthlyRetention: Record<number, number> = {};
-    Object.entries(validated.monthlyRetention).forEach(([key, value]) => {
+    Object.entries(body.monthlyRetention).forEach(([key, value]) => {
       monthlyRetention[parseInt(key, 10)] = value;
     });
 
-    const result = RetentionEngine.recordMetrics(workspaceId, {
-      cohortMonth: validated.cohortMonth,
-      cohortSize: validated.cohortSize,
+    const metrics = await RetentionEngine.recordMetrics(ctx.verifiedWorkspaceId, ctx.verifiedActorId, {
+      cohortMonth: body.cohortMonth,
+      cohortSize: body.cohortSize,
       monthlyRetention,
-      avgMonthlyChurn: validated.avgMonthlyChurn,
+      avgMonthlyChurn: body.avgMonthlyChurn,
     });
 
-    if (result.error) {
-      throw new ValidationError(result.error);
-    }
-
-    return result.metrics;
+    return canonicalJson(metrics, { status: 201 });
   },
   { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE] }
 );
-
-/**
- * Assess churn risk for retention metrics
- * Wire: RetentionEngine.assessChurnRisk()
- */
-export async function assessChurnRiskHandler(
-  workspaceId: string,
-  metrics: any
-): Promise<any> {
-  if (!workspaceId) {
-    return { error: "Workspace ID required" };
-  }
-
-  return RetentionEngine.assessChurnRisk(workspaceId, metrics);
-}
-
-/**
- * Forecast churn for upcoming periods
- * Wire: RetentionEngine.forecastChurn()
- */
-export async function forecastChurnHandler(
-  workspaceId: string,
-  monthlyRetention: Record<number, number>,
-  trendDays?: number
-): Promise<any> {
-  if (!workspaceId) {
-    return { error: "Workspace ID required" };
-  }
-
-  return RetentionEngine.forecastChurn(workspaceId, monthlyRetention, trendDays);
-}

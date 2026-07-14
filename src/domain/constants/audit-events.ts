@@ -469,6 +469,9 @@ export const AUDIT_EVENTS = {
   // Owner action outcome tracking (Capability 5 — Measure outcomes)
   OWNER_ACTION_OUTCOME_RECORDED: "owner.action_outcome_recorded",
 
+  // Growth: retention cohort persistence (replaces BUILT_VOLATILE in-memory Map)
+  RETENTION_COHORT_RECORDED: "growth.retention_cohort_recorded",
+
   // Private deployment
   PRIVATE_MODE_ENTITLEMENT_ACTIVE: "private_mode.entitlement_active",
   PRIVATE_OWNER_SEED_EXECUTED: "private_mode.owner_seed_executed",

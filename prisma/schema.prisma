@@ -4748,3 +4748,22 @@ model BehavioralLearningArtifact {
   @@index([sourceCaseId])
   @@map("behavioral_learning_artifacts")
 }
+
+// ─── Growth: Retention Cohort Persistence ────────────────────────────────────
+// Replaces the BUILT_VOLATILE in-memory Map in RetentionEngine.
+// Each row stores one cohort's observed retention curve and average monthly churn.
+// workspaceId is an indexed plain UUID (matches Workspace.id from canonical context).
+model RetentionCohort {
+  id               String   @id @db.Uuid
+  workspaceId      String   @db.Uuid @map("workspace_id")
+  cohortMonth      String   @map("cohort_month") // YYYY-MM
+  cohortSize       Int?     @map("cohort_size")
+  monthlyRetention Json     @map("monthly_retention") // Record<number, number> — month → retention rate 0–1
+  avgMonthlyChurn  Float    @default(0) @map("avg_monthly_churn") // 0–1
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, cohortMonth])
+  @@map("retention_cohorts")
+}
