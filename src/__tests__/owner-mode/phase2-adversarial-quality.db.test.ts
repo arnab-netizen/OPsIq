@@ -85,19 +85,21 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Phase 2 — adversarial quality inva
 
     // Scenario 1: stale finance/cashflow data — periodEnd 70 days ago
     await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.stale, userId, now: NOW, periodEnd: STALE_PERIOD_END });
-    // Scenario 2: cash crisis — deeply negative cash (fresh data timestamps)
-    await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.cashCrisis, userId, now: NOW, cashInHand: -50000 });
-    // Scenario 3: contradictory signals — negative cash but default revenue = +320k
-    await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.contradict, userId, now: NOW, cashInHand: -12000 });
-    // Scenario 4: infeasible growth — 110% capacity (seed default) + negative cash
-    await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.fullLoad, userId, now: NOW, cashInHand: -20000 });
+    // Scenario 2: cash crisis — deeply negative cash; skip compliance/proof so cash_survival (rank 2)
+    // is not overridden by compliance_block (rank 0) from the seeded expired compliance item.
+    await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.cashCrisis, userId, now: NOW, cashInHand: -50000, skipComplianceAndProof: true });
+    // Scenario 3: contradictory signals — negative cash but default revenue = +320k; same reason.
+    await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.contradict, userId, now: NOW, cashInHand: -12000, skipComplianceAndProof: true });
+    // Scenario 4: infeasible growth — 110% capacity (seed default) + negative cash; same reason.
+    await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.fullLoad, userId, now: NOW, cashInHand: -20000, skipComplianceAndProof: true });
     // Scenario 5: multi-domain red — mildly negative cash
     await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.multiRed, userId, now: NOW, cashInHand: -5000 });
   });
 
   afterAll(async () => {
+    const skipCPBizIds = new Set([BIZ.cashCrisis, BIZ.contradict, BIZ.fullLoad]);
     for (const businessId of Object.values(BIZ)) {
-      await cleanupOwnerDbCase(prisma, { workspaceId: wsMain, businessId, userId, now: NOW });
+      await cleanupOwnerDbCase(prisma, { workspaceId: wsMain, businessId, userId, now: NOW, skipComplianceAndProof: skipCPBizIds.has(businessId) });
     }
   });
 

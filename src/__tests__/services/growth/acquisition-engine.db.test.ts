@@ -35,6 +35,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] AcquisitionEngine — DB persistence
 
   afterAll(async () => {
     await db.acquisitionMetricsRecord.deleteMany({ where: { workspaceId: testWs } });
+    await db.auditEvent.deleteMany({ where: { actorId: actor } });
     await db.user.delete({ where: { id: actor } });
   });
 

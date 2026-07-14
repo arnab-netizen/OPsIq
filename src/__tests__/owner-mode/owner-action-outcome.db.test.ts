@@ -70,6 +70,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Capability 5 — OwnerActionOutcome 
     await db.ownerActionOutcome.deleteMany({ where: { workspaceId: testWs } });
     await db.ownerBusiness.deleteMany({ where: { workspaceId: testWs } });
     await db.clientAccount.delete({ where: { id: testWs } });
+    await db.auditEvent.deleteMany({ where: { actorId: actor } });
     await db.user.delete({ where: { id: actor } });
   });
 

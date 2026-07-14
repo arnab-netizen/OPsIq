@@ -16,6 +16,10 @@ export interface OwnerDbCaseIds {
   periodEnd?: Date;
   /** override cash to flip the cash-risk signal between runs. */
   cashInHand?: number;
+  /** When true, skips seeding ownerComplianceItem and proof records.
+   *  Use for scenarios that must test cash/capacity constraint dominance
+   *  without compliance_block (rank 0) overriding the intended dominant constraint. */
+  skipComplianceAndProof?: boolean;
 }
 
 // Deterministic, VALID uuid from (businessId, label) — scoped to the business so two seeded cases in
@@ -67,17 +71,19 @@ export async function seedOwnerDbCase(db: PrismaClient, ids: OwnerDbCaseIds): Pr
     create: { id: rid(businessId, "cap1"), workspaceId, businessId, currentRevenue: 320000, safeUtilization: 0.7, resources: {}, bottleneckUtilization: 1.1, growthCapacityRevenue: 0, availableBuffer: -20000, expansionTriggered: false, growthSafe: false, createdAt: periodEnd },
   });
 
-  await db.ownerComplianceItem.upsert({
-    where: { id: rid(businessId, "cmp1") },
-    update: {},
-    create: { id: rid(businessId, "cmp1"), workspaceId, businessId, kind: "trade_licence", name: "Trade licence", status: "active", expiresAt: new Date(now.getTime() - 5 * 86_400_000), createdByUserId: userId },
-  });
+  if (!ids.skipComplianceAndProof) {
+    await db.ownerComplianceItem.upsert({
+      where: { id: rid(businessId, "cmp1") },
+      update: {},
+      create: { id: rid(businessId, "cmp1"), workspaceId, businessId, kind: "trade_licence", name: "Trade licence", status: "active", expiresAt: new Date(now.getTime() - 5 * 86_400_000), createdByUserId: userId },
+    });
 
-  await db.proof.upsert({
-    where: { id: rid(businessId, "prf1") },
-    update: {},
-    create: { id: rid(businessId, "prf1"), workspaceId, businessId, proofType: "delivery", status: "REQUIRED", duplicateFlagged: true },
-  });
+    await db.proof.upsert({
+      where: { id: rid(businessId, "prf1") },
+      update: {},
+      create: { id: rid(businessId, "prf1"), workspaceId, businessId, proofType: "delivery", status: "REQUIRED", duplicateFlagged: true },
+    });
+  }
 
   await db.ownerWorkloadSnapshot.upsert({
     where: { id: rid(businessId, "wl1") },
@@ -113,8 +119,10 @@ export async function cleanupOwnerDbCase(db: PrismaClient, ids: OwnerDbCaseIds):
   await db.behavioralLearningArtifact.deleteMany({ where: { id: rid(businessId, "art1") } });
   await db.ownerStandingInstruction.deleteMany({ where: { id: rid(businessId, "si1") } });
   await db.ownerWorkloadSnapshot.deleteMany({ where: { id: rid(businessId, "wl1") } });
-  await db.proof.deleteMany({ where: { id: rid(businessId, "prf1") } });
-  await db.ownerComplianceItem.deleteMany({ where: { id: rid(businessId, "cmp1") } });
+  if (!ids.skipComplianceAndProof) {
+    await db.proof.deleteMany({ where: { id: rid(businessId, "prf1") } });
+    await db.ownerComplianceItem.deleteMany({ where: { id: rid(businessId, "cmp1") } });
+  }
   await db.ownerCapacitySnapshot.deleteMany({ where: { id: rid(businessId, "cap1") } });
   await db.ownerWorkingCapitalItem.deleteMany({ where: { workspaceId, businessId } });
   await db.ownerFinancialSnapshot.deleteMany({ where: { id: rid(businessId, "fin1") } });

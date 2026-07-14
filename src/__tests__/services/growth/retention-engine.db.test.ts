@@ -34,6 +34,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] RetentionEngine — DB persistence",
 
   afterAll(async () => {
     await db.retentionCohort.deleteMany({ where: { workspaceId: testWs } });
+    await db.auditEvent.deleteMany({ where: { actorId: actor } });
     await db.user.delete({ where: { id: actor } });
   });
 

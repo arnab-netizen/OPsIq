@@ -34,6 +34,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] PricingEngine — DB persistence", (
 
   afterAll(async () => {
     await db.growthPriceTier.deleteMany({ where: { workspaceId: testWs } });
+    await db.auditEvent.deleteMany({ where: { actorId: actor } });
     await db.user.delete({ where: { id: actor } });
   });
 

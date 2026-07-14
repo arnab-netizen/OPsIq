@@ -35,6 +35,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] SalesPipelineEngine — DB persisten
 
   afterAll(async () => {
     await db.salesDealRecord.deleteMany({ where: { workspaceId: testWs } });
+    await db.auditEvent.deleteMany({ where: { actorId: actor } });
     await db.user.delete({ where: { id: actor } });
   });
 
