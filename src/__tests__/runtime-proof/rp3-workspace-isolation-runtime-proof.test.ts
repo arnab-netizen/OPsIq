@@ -128,34 +128,14 @@ describe("Phase RP3: Workspace Isolation Runtime Proof", () => {
   });
 
   afterEach(async () => {
-    try {
-      await db.canonicalEvent.deleteMany({
-        where: {
-          workspaceId: { in: [ws1Id, ws2Id] },
-        },
-      });
-      await db.recommendation.deleteMany({
-        where: {
-          workspaceId: { in: [ws1Id, ws2Id] },
-        },
-      });
-      await db.engagement.deleteMany({
-        where: {
-          workspaceId: { in: [ws1Id, ws2Id] },
-        },
-      });
-      await db.workspace.deleteMany({
-        where: { id: { in: [ws1Id, ws2Id] } },
-      });
-      await db.clientAccount.deleteMany({
-        where: { id: { in: [client1Id, client2Id] } },
-      });
-      await db.user.deleteMany({
-        where: { id: { in: [user1Id, user2Id] } },
-      });
-    } catch (error) {
-      // Ignore cleanup errors
-    }
+    // canonical_events is append-only (trigger prevents DELETE) — skip, workspace has no FK back to it
+    const wsFilter = { workspaceId: { in: [ws1Id, ws2Id] } };
+    try { await db.recommendation.deleteMany({ where: wsFilter }); } catch { /* best-effort */ }
+    try { await db.engagement.deleteMany({ where: wsFilter }); } catch { /* best-effort */ }
+    try { await db.workspace.deleteMany({ where: { id: { in: [ws1Id, ws2Id] } } }); } catch { /* best-effort */ }
+    try { await db.clientAccount.deleteMany({ where: { id: { in: [client1Id, client2Id] } } }); } catch { /* best-effort */ }
+    try { await db.auditEvent.deleteMany({ where: { actorId: { in: [user1Id, user2Id] } } }); } catch { /* best-effort */ }
+    try { await db.user.deleteMany({ where: { id: { in: [user1Id, user2Id] } } }); } catch { /* best-effort */ }
   });
 
   describe("Event Stream Isolation", () => {

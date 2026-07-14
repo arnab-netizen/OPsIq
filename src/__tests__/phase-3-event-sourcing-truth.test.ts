@@ -21,15 +21,11 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
     actorId = uuidv4();
 
     // Pre-cleanup in case prior test failed
-    try {
-      await db.recommendation.deleteMany({ where: { workspaceId } });
-      await db.canonicalEvent.deleteMany({ where: { workspaceId } });
-      await db.snapshotData.deleteMany({ where: { workspaceId } });
-      await db.engagement.deleteMany({ where: { workspaceId } });
-      await db.workspace.deleteMany({ where: { id: workspaceId } });
-    } catch (error) {
-      // Ignore cleanup errors on first run
-    }
+    // canonical_events is append-only (trigger prevents DELETE) — skip, workspace has no FK back to it
+    try { await db.recommendation.deleteMany({ where: { workspaceId } }); } catch { /* first-run no-op */ }
+    try { await db.snapshotData.deleteMany({ where: { workspaceId } }); } catch { /* first-run no-op */ }
+    try { await db.engagement.deleteMany({ where: { workspaceId } }); } catch { /* first-run no-op */ }
+    try { await db.workspace.deleteMany({ where: { id: workspaceId } }); } catch { /* first-run no-op */ }
 
     // Create test workspace
     await db.workspace.create({
@@ -69,17 +65,11 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
   });
 
   afterEach(async () => {
-    // Cleanup (required to prevent test data accumulation)
-    try {
-      await db.recommendation.deleteMany({ where: { workspaceId } });
-      await db.canonicalEvent.deleteMany({ where: { workspaceId } });
-      await db.snapshotData.deleteMany({ where: { workspaceId } });
-      await db.engagement.deleteMany({ where: { workspaceId } });
-      await db.workspace.deleteMany({ where: { id: workspaceId } });
-    } catch (error) {
-      console.error("Cleanup error:", error);
-      // Don't fail test on cleanup error
-    }
+    // canonical_events is append-only (trigger prevents DELETE) — skip, workspace has no FK back to it
+    try { await db.recommendation.deleteMany({ where: { workspaceId } }); } catch { /* best-effort */ }
+    try { await db.snapshotData.deleteMany({ where: { workspaceId } }); } catch { /* best-effort */ }
+    try { await db.engagement.deleteMany({ where: { workspaceId } }); } catch { /* best-effort */ }
+    try { await db.workspace.deleteMany({ where: { id: workspaceId } }); } catch { /* best-effort */ }
   });
 
   describe("Requirement 1: Projection rebuilds solely from CanonicalEvent", () => {
