@@ -205,7 +205,7 @@ export class SalesPipelineEngine {
       };
     }
 
-    const scopedDeals = deals.filter(d => !d.workspaceId || d.workspaceId === workspaceId);
+    const scopedDeals = deals.filter(d => d.workspaceId === workspaceId);
 
     const dealsByStage: Record<DealStage, number> = {
       [DealStage.PROSPECT]: 0,
@@ -263,7 +263,7 @@ export class SalesPipelineEngine {
       return { forecastByMonth: {}, totalForecast: 0, confidence: 0 };
     }
 
-    const scopedDeals = deals.filter(d => !d.workspaceId || d.workspaceId === workspaceId);
+    const scopedDeals = deals.filter(d => d.workspaceId === workspaceId);
 
     const forecastByMonth: Record<number, number> = {};
     let totalForecast = 0;
@@ -372,7 +372,7 @@ export class SalesPipelineEngine {
       return { highValueEarlyStageDeals: [], atRiskDeals: [], closingDeals: [] };
     }
 
-    const scopedDeals = deals.filter(d => !d.workspaceId || d.workspaceId === workspaceId);
+    const scopedDeals = deals.filter(d => d.workspaceId === workspaceId);
 
     const highValueEarlyStageDeals = scopedDeals.filter(
       (d) =>

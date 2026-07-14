@@ -142,6 +142,7 @@ describe("Acquisition Engine Service", () => {
       [
         AcquisitionChannel.PAID_SEARCH,
         {
+          workspaceId,
           channel: AcquisitionChannel.PAID_SEARCH,
           month: "2026-05",
           leads: 100,
@@ -155,6 +156,7 @@ describe("Acquisition Engine Service", () => {
       [
         AcquisitionChannel.ORGANIC,
         {
+          workspaceId,
           channel: AcquisitionChannel.ORGANIC,
           month: "2026-05",
           leads: 50,
@@ -168,6 +170,7 @@ describe("Acquisition Engine Service", () => {
       [
         AcquisitionChannel.PARTNER,
         {
+          workspaceId,
           channel: AcquisitionChannel.PARTNER,
           month: "2026-05",
           leads: 20,
@@ -221,6 +224,7 @@ describe("Acquisition Engine Service", () => {
       [
         AcquisitionChannel.PAID_SEARCH,
         {
+          workspaceId,
           channel: AcquisitionChannel.PAID_SEARCH,
           month: "2026-05",
           leads: 100,
@@ -234,6 +238,7 @@ describe("Acquisition Engine Service", () => {
       [
         AcquisitionChannel.ORGANIC,
         {
+          workspaceId,
           channel: AcquisitionChannel.ORGANIC,
           month: "2026-05",
           leads: 50,

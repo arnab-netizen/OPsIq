@@ -227,7 +227,7 @@ export class AcquisitionEngine {
     if (!workspaceId) return [];
 
     const rankings = Array.from(channelMetrics.entries())
-      .filter(([, m]) => !m.workspaceId || m.workspaceId === workspaceId)
+      .filter(([, m]) => m.workspaceId === workspaceId)
       .map(([channel, metrics]) => {
         const qualifiedLeads = metrics.qualifiedLeads ?? 0;
         const cpuScore = qualifiedLeads > 0 ? metrics.costPerLead : Infinity;

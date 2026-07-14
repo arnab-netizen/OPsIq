@@ -238,20 +238,21 @@ export class OfferEngine {
       };
     }
 
-    const activeOffers = offers.filter((o) => o.status === "ACTIVE");
-    const averageDiscount = offers.length > 0
+    const scopedOffers = offers.filter((o) => o.workspaceId === workspaceId);
+    const activeOffers = scopedOffers.filter((o) => o.status === "ACTIVE");
+    const averageDiscount = scopedOffers.length > 0
       ? Math.round(
-          offers.reduce((sum, o) => sum + (o.discountPercent || 0), 0) / offers.length
+          scopedOffers.reduce((sum, o) => sum + (o.discountPercent || 0), 0) / scopedOffers.length
         )
       : 0;
 
     // Identify performers (in production, would use actual conversion/revenue data)
-    const bestPerformer = offers[0] || null;
-    const worstPerformer = offers[offers.length - 1] || null;
+    const bestPerformer = scopedOffers[0] || null;
+    const worstPerformer = scopedOffers[scopedOffers.length - 1] || null;
 
     // Generate recommendations
     const recommendations: string[] = [];
-    if (offers.length > 5) {
+    if (scopedOffers.length > 5) {
       recommendations.push("Consider consolidating offers to reduce complexity.");
     }
     if (averageDiscount > 50) {
@@ -334,19 +335,20 @@ export class OfferEngine {
       };
     }
 
+    const scopedOffers = offers.filter((o) => o.workspaceId === workspaceId);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     const monthFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const expiringToday = offers.filter(
+    const expiringToday = scopedOffers.filter(
       (o) =>
         o.validUntil &&
         o.validUntil.getTime() === today.getTime() &&
         o.status !== "EXPIRED"
     );
 
-    const expiringThisWeek = offers.filter(
+    const expiringThisWeek = scopedOffers.filter(
       (o) =>
         o.validUntil &&
         o.validUntil.getTime() > today.getTime() &&
@@ -354,7 +356,7 @@ export class OfferEngine {
         o.status !== "EXPIRED"
     );
 
-    const expiringThisMonth = offers.filter(
+    const expiringThisMonth = scopedOffers.filter(
       (o) =>
         o.validUntil &&
         o.validUntil.getTime() > weekFromNow.getTime() &&
