@@ -114,15 +114,12 @@ describe("Phase RP6: TRUE Concurrency Stress Testing (Independent Connections)",
   });
 
   afterEach(async () => {
-    try {
-      await db.canonicalEvent.deleteMany({ where: { workspaceId } });
-      await db.engagement.deleteMany({ where: { workspaceId } });
-      await db.workspace.deleteMany({ where: { id: workspaceId } });
-      await db.clientAccount.deleteMany({ where: { id: clientId } });
-      await db.user.deleteMany({ where: { id: userId } });
-    } catch (error) {
-      // Ignore cleanup errors
-    }
+    // canonical_events is append-only (trigger prevents DELETE) — skip, workspace has no FK back to it
+    try { await db.engagement.deleteMany({ where: { workspaceId } }); } catch { /* best-effort */ }
+    try { await db.workspace.deleteMany({ where: { id: workspaceId } }); } catch { /* best-effort */ }
+    try { await db.clientAccount.deleteMany({ where: { id: clientId } }); } catch { /* best-effort */ }
+    try { await db.auditEvent.deleteMany({ where: { actorId: userId } }); } catch { /* best-effort */ }
+    try { await db.user.deleteMany({ where: { id: userId } }); } catch { /* best-effort */ }
   });
 
   describe("A. SAME AGGREGATE STORM - 100 Concurrent Writes", () => {

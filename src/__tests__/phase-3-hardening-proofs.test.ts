@@ -40,8 +40,7 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
     try {
       await db.recommendation.deleteMany({ where: { workspaceId } });
       await db.recommendation.deleteMany({ where: { workspaceId: workspaceId2 } });
-      await db.canonicalEvent.deleteMany({ where: { workspaceId } });
-      await db.canonicalEvent.deleteMany({ where: { workspaceId: workspaceId2 } });
+      // canonical_events is append-only (trigger prevents DELETE) — skip, workspace has no FK back to it
       await db.snapshotData.deleteMany({ where: { workspaceId } });
       await db.snapshotData.deleteMany({ where: { workspaceId: workspaceId2 } });
       await db.engagement.deleteMany({ where: { workspaceId } });

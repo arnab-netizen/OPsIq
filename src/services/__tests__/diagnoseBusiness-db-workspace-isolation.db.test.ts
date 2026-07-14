@@ -98,7 +98,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
           await db.evidence.deleteMany({ where: { engagementId: { in: engagementIds } } });
           await db.businessConditionProfile.deleteMany({ where: { engagementId: { in: engagementIds } } });
         }
-        await db.canonicalEvent.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
+        // canonical_events is append-only (trigger prevents DELETE) — skip, workspace has no FK back to it
         await db.auditEvent.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
         if (engagementIds.length) {
           await db.engagement.deleteMany({ where: { id: { in: engagementIds } } });

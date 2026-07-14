@@ -26,6 +26,9 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
       await db.engagement.deleteMany({
         where: { id: testEngagementId },
       });
+      await db.snapshotData.deleteMany({
+        where: { workspaceId: testWorkspaceId },
+      });
       await db.workspace.deleteMany({
         where: { id: testWorkspaceId },
       });
