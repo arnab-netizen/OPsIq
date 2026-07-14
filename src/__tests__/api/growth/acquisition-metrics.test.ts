@@ -346,11 +346,13 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
     });
 
     it("should prevent cross-workspace analysis", () => {
-      const ws1Analysis = AcquisitionEngine.analyzeConversion("ws-1", metricsInput);
-      const ws2Analysis = AcquisitionEngine.analyzeConversion("ws-2", metricsInput);
+      const metricsWithWs = { ...metricsInput, workspaceId: "ws-1" };
+      const ws1Analysis = AcquisitionEngine.analyzeConversion("ws-1", metricsWithWs);
+      const ws2Analysis = AcquisitionEngine.analyzeConversion("ws-2", metricsWithWs);
 
-      expect(ws1Analysis.efficiency).toBeDefined();
-      expect(ws2Analysis.efficiency).toBeDefined();
+      expect(ws1Analysis.leadToQualifiedRate).toBeGreaterThan(0);
+      expect(ws2Analysis.leadToQualifiedRate).toBe(0);
+      expect(ws2Analysis.efficiency).toBe("LOW");
     });
   });
 });

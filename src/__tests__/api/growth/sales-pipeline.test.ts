@@ -445,7 +445,9 @@ describe("Sales Pipeline API Route - Service Integration", () => {
       const ws2Result = SalesPipelineEngine.calculatePipelineMetrics("ws-2", deals);
 
       expect(ws1Result.workspaceId).toBe("ws-1");
+      expect(ws1Result.totalPipeline).toBeGreaterThan(0);
       expect(ws2Result.workspaceId).toBe("ws-2");
+      expect(ws2Result.totalPipeline).toBe(0);
     });
   });
 });

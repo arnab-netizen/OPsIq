@@ -310,7 +310,7 @@ describe("Sales Pipeline Engine Service", () => {
   });
 
   describe("calculatePipelineMetrics — cross-workspace isolation", () => {
-    it("metrics computed on passed deals only; workspaceId tags the result", () => {
+    it("deals tagged to ws-1 are excluded from ws-2 pipeline computation", () => {
       const deals = [
         {
           id: "deal-1",
@@ -329,7 +329,8 @@ describe("Sales Pipeline Engine Service", () => {
 
       expect(ws1.workspaceId).toBe(workspaceId);
       expect(ws2.workspaceId).toBe(otherWorkspaceId);
-      expect(ws1.totalPipeline).toBe(ws2.totalPipeline);
+      expect(ws1.totalPipeline).toBeGreaterThan(0);
+      expect(ws2.totalPipeline).toBe(0);
     });
   });
 });

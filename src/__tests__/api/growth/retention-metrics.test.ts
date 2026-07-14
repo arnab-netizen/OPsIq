@@ -295,11 +295,14 @@ describe("Retention Metrics API Route - Service Integration", () => {
     });
 
     it("should prevent cross-workspace risk assessment", () => {
-      const ws1Analysis = RetentionEngine.assessChurnRisk("ws-1", metricsInput);
-      const ws2Analysis = RetentionEngine.assessChurnRisk("ws-2", metricsInput);
+      const metricsWithWs = { ...metricsInput, workspaceId: "ws-1" };
+      const ws1Analysis = RetentionEngine.assessChurnRisk("ws-1", metricsWithWs);
+      const ws2Analysis = RetentionEngine.assessChurnRisk("ws-2", metricsWithWs);
 
       expect(ws1Analysis.riskLevel).toBe("LOW");
-      expect(ws2Analysis.riskLevel).toBe("LOW");
+      expect(ws1Analysis.churnScore).toBeGreaterThan(0);
+      expect(ws2Analysis.churnScore).toBe(0);
+      expect(ws2Analysis.atRiskPercent).toBe(0);
     });
   });
 });

@@ -205,6 +205,8 @@ export class SalesPipelineEngine {
       };
     }
 
+    const scopedDeals = deals.filter(d => !d.workspaceId || d.workspaceId === workspaceId);
+
     const dealsByStage: Record<DealStage, number> = {
       [DealStage.PROSPECT]: 0,
       [DealStage.QUALIFIED]: 0,
@@ -218,7 +220,7 @@ export class SalesPipelineEngine {
     let closedWonCount = 0;
     let closedLostCount = 0;
 
-    deals.forEach((deal) => {
+    scopedDeals.forEach((deal) => {
       if (Object.prototype.hasOwnProperty.call(dealsByStage, deal.stage)) {
         dealsByStage[deal.stage]++;
       }
@@ -229,8 +231,8 @@ export class SalesPipelineEngine {
 
     const totalClosed = closedWonCount + closedLostCount;
     const winRate = totalClosed > 0 ? closedWonCount / totalClosed : 0;
-    const avgDealSize = deals.length > 0
-      ? deals.reduce((sum, d) => sum + d.value, 0) / deals.length
+    const avgDealSize = scopedDeals.length > 0
+      ? scopedDeals.reduce((sum, d) => sum + d.value, 0) / scopedDeals.length
       : 0;
 
     return {
@@ -261,12 +263,14 @@ export class SalesPipelineEngine {
       return { forecastByMonth: {}, totalForecast: 0, confidence: 0 };
     }
 
+    const scopedDeals = deals.filter(d => !d.workspaceId || d.workspaceId === workspaceId);
+
     const forecastByMonth: Record<number, number> = {};
     let totalForecast = 0;
 
     for (let month = 1; month <= months; month++) {
       let monthRevenue = 0;
-      deals.forEach((deal) => {
+      scopedDeals.forEach((deal) => {
         const closeDate = new Date(deal.expectedCloseDate);
         const monthsUntilClose = (closeDate.getTime() - Date.now()) / (30 * 24 * 60 * 60 * 1000);
         if (monthsUntilClose <= month && monthsUntilClose > month - 1) {
@@ -368,17 +372,19 @@ export class SalesPipelineEngine {
       return { highValueEarlyStageDeals: [], atRiskDeals: [], closingDeals: [] };
     }
 
-    const highValueEarlyStageDeals = deals.filter(
+    const scopedDeals = deals.filter(d => !d.workspaceId || d.workspaceId === workspaceId);
+
+    const highValueEarlyStageDeals = scopedDeals.filter(
       (d) =>
         (d.stage === DealStage.PROSPECT || d.stage === DealStage.QUALIFIED) &&
         d.value > 50000
     );
 
-    const atRiskDeals = deals.filter(
+    const atRiskDeals = scopedDeals.filter(
       (d) => d.probability !== undefined && d.probability < 0.2 && d.stage !== DealStage.CLOSED_LOST
     );
 
-    const closingDeals = deals.filter(
+    const closingDeals = scopedDeals.filter(
       (d) => d.stage === DealStage.NEGOTIATION || d.stage === DealStage.PROPOSAL
     );
 
