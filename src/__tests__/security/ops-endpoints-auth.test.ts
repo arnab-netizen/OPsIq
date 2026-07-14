@@ -12,8 +12,18 @@
  * ECONNREFUSED whenever a server was not running.)
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
+
+// The readiness route queries db.startupStatus and db.auditEvent.
+// Mock the DB so the route resolves without a live DB connection.
+vi.mock("@/lib/db", () => ({
+  db: {
+    startupStatus: { findFirst: vi.fn().mockResolvedValue(null) },
+    auditEvent: { findMany: vi.fn().mockResolvedValue([]) },
+  },
+}));
+
 import { GET as errorsGET } from "@/app/api/ops/errors/route";
 import { GET as metricsGET } from "@/app/api/ops/metrics/route";
 import { GET as readinessGET } from "@/app/api/ops/readiness/route";

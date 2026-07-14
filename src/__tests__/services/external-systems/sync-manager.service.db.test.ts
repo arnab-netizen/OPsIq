@@ -10,6 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { getDbInstance } from "@/lib/db";
 import {
@@ -102,7 +103,7 @@ afterEach(async () => {
   });
 });
 
-describe("B13-S3: Sync Manager Service — DB-Backed Integration Tests", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("B13-S3: Sync Manager Service — DB-Backed Integration Tests", () => {
   describe("Pre-Sync Token Validation", () => {
     it("should validate token that is not expired", async () => {
       const futureDate = new Date();

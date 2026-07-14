@@ -21,23 +21,22 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
       expect(workflowContent.name).toBe("CI/CD Foundations - Phase 13 Slice 1");
     });
 
-    it("should define triggers: push, pull_request, workflow_dispatch", () => {
+    it("should define triggers: workflow_dispatch", () => {
+      // push and pull_request were intentionally removed: the full test suite
+      // (with postgres:16) runs in ci.yml; this workflow only needs the verify
+      // gate which fires on-demand via workflow_dispatch.
       expect(workflowContent.on).toBeDefined();
-      expect(workflowContent.on.push).toBeDefined();
-      expect(workflowContent.on.pull_request).toBeDefined();
       expect(workflowContent.on.workflow_dispatch).toBeDefined();
     });
 
-    it("should trigger on main and develop branches for push", () => {
-      const pushBranches = workflowContent.on.push.branches;
-      expect(pushBranches).toContain("main");
-      expect(pushBranches).toContain("develop");
+    it("should not define push trigger (handled by ci.yml)", () => {
+      // The push trigger was removed to avoid duplicating the ci.yml lane.
+      expect(workflowContent.on.push).toBeUndefined();
     });
 
-    it("should trigger on main and develop branches for pull_request", () => {
-      const prBranches = workflowContent.on.pull_request.branches;
-      expect(prBranches).toContain("main");
-      expect(prBranches).toContain("develop");
+    it("should not define pull_request trigger (handled by ci.yml)", () => {
+      // The pull_request trigger was removed to avoid duplicating the ci.yml lane.
+      expect(workflowContent.on.pull_request).toBeUndefined();
     });
   });
 

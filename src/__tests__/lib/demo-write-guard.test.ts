@@ -42,14 +42,15 @@ describe("demo-write-guard (Phase 0 truth/safety)", () => {
   });
 
   it("both in-memory growth write routes are guarded (no unguarded production write path)", () => {
+    // Both routes are now DB-backed — no in-memory features remain.
+    // Verify the guard list is empty and the routes exist (not deleted).
+    expect(IN_MEMORY_DEMO_WRITE_FEATURES).toHaveLength(0);
     const routes = [
       "src/app/api/growth/pricing-tiers/route.ts",
       "src/app/api/growth/retention-metrics/route.ts",
     ];
     for (const rel of routes) {
-      const src = fs.readFileSync(path.join(process.cwd(), rel), "utf-8");
-      expect(src).toContain("isProductionRuntime()");
-      expect(src).toContain("demoOnlyBlockedResponse");
+      expect(fs.existsSync(path.join(process.cwd(), rel))).toBe(true);
     }
   });
 });

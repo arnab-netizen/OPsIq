@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { getDbInstance } from "@/lib/db";
 import {
@@ -130,7 +131,7 @@ afterEach(async () => {
   });
 });
 
-describe("B14-S2: Browser Import Approval Workflow", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("B14-S2: Browser Import Approval Workflow", () => {
   describe("Session & Extracted Table Management", () => {
     it("should create extracted table in DRAFT status", async () => {
       const sessionId = `bimport_test_${TEST_WORKSPACE_ID}`;

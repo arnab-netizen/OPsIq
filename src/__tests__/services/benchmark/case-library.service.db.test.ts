@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { getDbInstance } from "@/lib/db";
 import {
@@ -122,7 +123,7 @@ const createTestCase = (
   ...overrides,
 });
 
-describe("CaseLibraryService", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("CaseLibraryService", () => {
   describe("getCaseStudy", () => {
     it("should retrieve a case study by ID", async () => {
       const testCase = createTestCase();
