@@ -1,105 +1,42 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { ForbiddenError } from "@/infra/errors";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
+import { parseRequestBody } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { RevenueEngine } from "@/services/growth/revenue-engine";
-import { RevenueStream } from "@/domain/growth/growth-engines";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
 
 const createStreamSchema = z.object({
   name: z.string().min(1, "Stream name required"),
   basePrice: z.number().positive("Base price must be positive"),
-  currency: z.string().length(3, "Currency must be 3-letter code"),
+  currency: z.string().length(3, "Currency must be 3-letter code").optional(),
   model: z.string().optional(),
   billingCycle: z.string().optional(),
+  volume: z.number().nonnegative().optional(),
+  volumeUnit: z.string().optional(),
+  activationDate: z.coerce.date().optional(),
+  status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]).optional(),
 });
 
 /**
- * POST /api/growth/revenue-streams
- *
- * Create a new revenue stream (workspace-scoped)
- * Wire: RevenueEngine.createRevenueStream()
+ * GET  /api/growth/revenue-streams — list persisted revenue streams for the workspace.
+ * POST /api/growth/revenue-streams — create and persist a new revenue stream.
  */
-export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  const workspaceId = ctx.verifiedWorkspaceId;
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    return RevenueEngine.listStreams(ctx.verifiedWorkspaceId);
+  },
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true }
+);
 
-  try {
-    const body = await (ctx.request as NextRequest).json();
-    const validated = createStreamSchema.parse(body);
-
-    const result = RevenueEngine.createRevenueStream(workspaceId, validated as Partial<RevenueStream>);
-
-    if (result.error) {
-      return Response.json({ error: result.error }, { status: 400 });
-    }
-
-    return Response.json(result.stream, { status: 201 });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return Response.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Error) {
-      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
-    }
-
-    return Response.json(
-      { error: "Internal server error" },
-      { status: 500 }
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const body = await parseRequestBody(ctx.request!, createStreamSchema);
+    const stream = await RevenueEngine.persistStream(
+      ctx.verifiedWorkspaceId,
+      ctx.verifiedActorId,
+      body as any
     );
-  }
-}, { requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE], requireWorkspace: true });
-
-/**
- * GET /api/growth/revenue-streams/health
- *
- * Analyze revenue stream health (requires stream data in body)
- * Wire: RevenueEngine.analyzeStreamHealth()
- */
-export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  const workspaceId = ctx.verifiedWorkspaceId;
-
-  try {
-    // For demo: analyze a sample stream
-    // In production: would load actual stream from database
-    const sampleStream: RevenueStream = {
-      id: "rs-sample",
-      workspaceId,
-      name: "Sample Stream",
-      model: "SUBSCRIPTION" as any,
-      billingCycle: "MONTHLY" as any,
-      basePrice: 99,
-      currency: "USD",
-      activationDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const health = RevenueEngine.analyzeStreamHealth(workspaceId, sampleStream);
-
-    return Response.json({
-      streamId: sampleStream.id,
-      streamName: sampleStream.name,
-      health: {
-        isHealthy: health.isHealthy,
-        score: health.score,
-        factors: health.factors,
-      },
-    });
-  } catch (error) {
-    if (error instanceof Error) {
-      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
-    }
-
-    return Response.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}, { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true });
+    return canonicalJson(stream, { status: 201 });
+  },
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE], requireWorkspace: true }
+);

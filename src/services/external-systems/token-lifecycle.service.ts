@@ -17,6 +17,7 @@
 
 import { randomBytes } from "crypto";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { FeatureDisabledError } from "@/infra/errors";
 import {
   decryptOAuthToken,
   encryptOAuthToken,
@@ -182,9 +183,9 @@ export async function exchangeRefreshTokenForAccessToken(
   // - client_id: clientId
   // - client_secret: clientSecret
 
-  // For now, return contract structure
-  throw new Error(
-    `Token refresh for provider ${providerId} not implemented in this service layer`,
+  throw new FeatureDisabledError(
+    `Token refresh for provider ${providerId}`,
+    "Provider-specific token refresh not wired — connector unavailable until live refresh is implemented",
   );
 }
 

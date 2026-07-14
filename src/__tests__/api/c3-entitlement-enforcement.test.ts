@@ -7,11 +7,24 @@
  * CRITICAL: These tests verify plan-based entitlement enforcement, not role-based auth.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   assertCapability,
   trackUsage,
 } from "@/services/entitlement.service";
+
+// assertCapability calls resolveEntitlements which queries the DB.
+// Mock the DB models it accesses so tests run without a live DB connection.
+vi.mock("@/lib/db", () => ({
+  db: {
+    billingAccount: { findFirst: vi.fn().mockResolvedValue(null) },
+    subscription: { findFirst: vi.fn().mockResolvedValue(null) },
+    plan: { findUnique: vi.fn().mockResolvedValue(null) },
+    planCapability: { findMany: vi.fn().mockResolvedValue([]) },
+    billingUsage: { findMany: vi.fn().mockResolvedValue([]) },
+    usageRecord: { create: vi.fn().mockResolvedValue(undefined) },
+  },
+}));
 import type { CapabilityCheck } from "@/services/entitlement.service";
 import {
   getSubscriptionTier,

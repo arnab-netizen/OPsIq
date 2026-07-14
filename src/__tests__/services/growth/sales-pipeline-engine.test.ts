@@ -1,126 +1,81 @@
 /**
- * Unit Tests: Sales Pipeline Engine Service
+ * Unit Tests: Sales Pipeline Engine Service (non-DB paths)
  *
- * Tests sales deal tracking, pipeline metrics, and revenue forecasting.
+ * Tests validation errors, pipeline metrics, revenue forecasting,
+ * pipeline health analysis, and opportunity identification.
  * Validates workspace scoping and fail-closed behavior.
+ *
+ * DB-backed paths (recordDeal success, progressDeal success, listDeals) are
+ * covered in the DB test file.
+ * Validation-only paths for recordDeal/progressDeal (errors thrown before DB
+ * touch) are tested here.
  */
 
 import { describe, it, expect } from "vitest";
 import { SalesPipelineEngine } from "@/services/growth/sales-pipeline-engine";
 import { DealStage } from "@/domain/growth/growth-engines";
+import { ValidationError } from "@/infra/errors";
 
 describe("Sales Pipeline Engine Service", () => {
   const workspaceId = "ws-test-1";
   const otherWorkspaceId = "ws-other";
 
-  describe("Record Deal", () => {
-    it("should record valid sales deal with workspace scoping", () => {
-      const data = {
-        companyName: "Acme Corp",
-        stage: DealStage.QUALIFIED,
-        value: 100000,
-        currency: "USD",
-        probability: 0.5,
-        expectedCloseDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      };
-
-      const result = SalesPipelineEngine.recordDeal(workspaceId, data);
-
-      expect(result.error).toBeNull();
-      expect(result.deal).toBeDefined();
-      expect(result.deal?.companyName).toBe("Acme Corp");
-      expect(result.deal?.workspaceId).toBe(workspaceId);
+  describe("recordDeal — validation paths (no DB required)", () => {
+    it("rejects empty workspaceId with ValidationError", async () => {
+      await expect(
+        SalesPipelineEngine.recordDeal("", "actor-1", {
+          companyName: "Acme Corp",
+          stage: DealStage.QUALIFIED,
+          value: 100000,
+          currency: "USD",
+          probability: 0.5,
+          expectedCloseDate: new Date(),
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should fail without workspace ID", () => {
-      const data = {
-        companyName: "Acme Corp",
-        stage: DealStage.PROPOSAL,
-        value: 50000,
-        currency: "USD",
-      };
-
-      const result = SalesPipelineEngine.recordDeal("", data);
-
-      expect(result.error).toBeDefined();
-      expect(result.deal).toBeNull();
-      expect(result.error).toContain("Workspace ID");
+    it("rejects missing companyName with ValidationError", async () => {
+      await expect(
+        SalesPipelineEngine.recordDeal(workspaceId, "actor-1", {
+          companyName: "",
+          stage: DealStage.QUALIFIED,
+          value: 100000,
+          currency: "USD",
+          probability: 0.5,
+          expectedCloseDate: new Date(),
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should fail with invalid deal data", () => {
-      const data = {
-        companyName: "",
-        stage: "INVALID" as any,
-        value: -1000,
-        currency: "USD",
-      };
-
-      const result = SalesPipelineEngine.recordDeal(workspaceId, data);
-
-      expect(result.error).toBeDefined();
-    });
-
-    it("should apply default values for optional fields", () => {
-      const data = {
-        companyName: "Tech Startup",
-        value: 75000,
-        currency: "EUR",
-      };
-
-      const result = SalesPipelineEngine.recordDeal(workspaceId, data);
-
-      expect(result.deal?.stage).toBe(DealStage.PROSPECT);
-      expect(result.deal?.probability).toBe(0);
+    it("rejects negative deal value with ValidationError", async () => {
+      await expect(
+        SalesPipelineEngine.recordDeal(workspaceId, "actor-1", {
+          companyName: "Acme Corp",
+          stage: DealStage.QUALIFIED,
+          value: -1000,
+          currency: "USD",
+          probability: 0.5,
+          expectedCloseDate: new Date(),
+        })
+      ).rejects.toThrow(ValidationError);
     });
   });
 
-  describe("Progress Deal", () => {
-    it("should progress deal to new stage", () => {
-      const result = SalesPipelineEngine.progressDeal(
-        workspaceId,
-        "deal-123",
-        DealStage.PROPOSAL
-      );
-
-      expect(result.error).toBeNull();
-      expect(result.deal).toBeDefined();
-      expect(result.deal?.stage).toBe(DealStage.PROPOSAL);
-      expect(result.progressionNote).toBeDefined();
+  describe("progressDeal — validation paths (no DB required)", () => {
+    it("rejects empty workspaceId with ValidationError", async () => {
+      await expect(
+        SalesPipelineEngine.progressDeal("", "actor-1", "deal-123", DealStage.PROPOSAL)
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should update win probability on progression", () => {
-      const result = SalesPipelineEngine.progressDeal(
-        workspaceId,
-        "deal-456",
-        DealStage.NEGOTIATION
-      );
-
-      expect(result.deal?.probability).toBeGreaterThan(0.5);
-    });
-
-    it("should fail-closed without workspace ID", () => {
-      const result = SalesPipelineEngine.progressDeal(
-        "",
-        "deal-789",
-        DealStage.QUALIFIED
-      );
-
-      expect(result.error).toBeDefined();
-      expect(result.deal).toBeNull();
-    });
-
-    it("should require deal ID and new stage", () => {
-      const result = SalesPipelineEngine.progressDeal(
-        workspaceId,
-        "",
-        DealStage.PROPOSAL
-      );
-
-      expect(result.error).toBeDefined();
+    it("rejects empty dealId with ValidationError", async () => {
+      await expect(
+        SalesPipelineEngine.progressDeal(workspaceId, "actor-1", "", DealStage.PROPOSAL)
+      ).rejects.toThrow(ValidationError);
     });
   });
 
-  describe("Calculate Pipeline Metrics", () => {
+  describe("calculatePipelineMetrics", () => {
     const deals = [
       {
         id: "deal-1",
@@ -154,11 +109,8 @@ describe("Sales Pipeline Engine Service", () => {
       },
     ];
 
-    it("should calculate pipeline metrics correctly", () => {
-      const result = SalesPipelineEngine.calculatePipelineMetrics(
-        workspaceId,
-        deals
-      );
+    it("calculates pipeline metrics correctly", () => {
+      const result = SalesPipelineEngine.calculatePipelineMetrics(workspaceId, deals);
 
       expect(result.workspaceId).toBe(workspaceId);
       expect(result.totalPipeline).toBeGreaterThan(0);
@@ -166,28 +118,22 @@ describe("Sales Pipeline Engine Service", () => {
       expect(result.winRate).toBeDefined();
     });
 
-    it("should group deals by stage", () => {
-      const result = SalesPipelineEngine.calculatePipelineMetrics(
-        workspaceId,
-        deals
-      );
+    it("groups deals by stage", () => {
+      const result = SalesPipelineEngine.calculatePipelineMetrics(workspaceId, deals);
 
       expect(result.dealsByStage[DealStage.PROPOSAL]).toBeDefined();
       expect(result.dealsByStage[DealStage.QUALIFIED]).toBeDefined();
       expect(result.dealsByStage[DealStage.CLOSED_WON]).toBeDefined();
     });
 
-    it("should calculate win rate from closed deals", () => {
-      const result = SalesPipelineEngine.calculatePipelineMetrics(
-        workspaceId,
-        deals
-      );
+    it("calculates win rate from closed deals", () => {
+      const result = SalesPipelineEngine.calculatePipelineMetrics(workspaceId, deals);
 
       expect(result.winRate).toBeGreaterThan(0);
       expect(result.winRate).toBeLessThanOrEqual(1);
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns fail-closed zeros for missing workspaceId", () => {
       const result = SalesPipelineEngine.calculatePipelineMetrics("", deals);
 
       expect(result.totalPipeline).toBe(0);
@@ -195,7 +141,7 @@ describe("Sales Pipeline Engine Service", () => {
     });
   });
 
-  describe("Forecast Pipeline Revenue", () => {
+  describe("forecastPipelineRevenue", () => {
     const deals = [
       {
         id: "deal-1",
@@ -205,7 +151,7 @@ describe("Sales Pipeline Engine Service", () => {
         value: 100000,
         currency: "USD",
         probability: 0.8,
-        expectedCloseDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days
+        expectedCloseDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
       },
       {
         id: "deal-2",
@@ -215,16 +161,12 @@ describe("Sales Pipeline Engine Service", () => {
         value: 50000,
         currency: "USD",
         probability: 0.6,
-        expectedCloseDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000), // 45 days
+        expectedCloseDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000),
       },
     ];
 
-    it("should forecast revenue for multiple months", () => {
-      const result = SalesPipelineEngine.forecastPipelineRevenue(
-        workspaceId,
-        deals,
-        3
-      );
+    it("forecasts revenue for multiple months", () => {
+      const result = SalesPipelineEngine.forecastPipelineRevenue(workspaceId, deals, 3);
 
       expect(result.totalForecast).toBeGreaterThan(0);
       expect(result.forecastByMonth[1]).toBeDefined();
@@ -232,51 +174,30 @@ describe("Sales Pipeline Engine Service", () => {
       expect(result.forecastByMonth[3]).toBeDefined();
     });
 
-    it("should include only deals within forecast window", () => {
-      const result = SalesPipelineEngine.forecastPipelineRevenue(
-        workspaceId,
-        deals,
-        2
-      );
-
-      // Deal closing in 15 days should be in month 1
+    it("deal closing in 15 days appears in month 1", () => {
+      const result = SalesPipelineEngine.forecastPipelineRevenue(workspaceId, deals, 2);
       expect(result.forecastByMonth[1]).toBeGreaterThan(0);
     });
 
-    it("should reduce confidence with longer forecast horizon", () => {
-      const result1 = SalesPipelineEngine.forecastPipelineRevenue(
-        workspaceId,
-        deals,
-        1
-      );
-      const result2 = SalesPipelineEngine.forecastPipelineRevenue(
-        workspaceId,
-        deals,
-        6
-      );
-
-      expect(result1.confidence).toBeGreaterThan(result2.confidence);
+    it("reduces confidence with longer forecast horizon", () => {
+      const r1 = SalesPipelineEngine.forecastPipelineRevenue(workspaceId, deals, 1);
+      const r2 = SalesPipelineEngine.forecastPipelineRevenue(workspaceId, deals, 6);
+      expect(r1.confidence).toBeGreaterThan(r2.confidence);
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns fail-closed zeros for missing workspaceId", () => {
       const result = SalesPipelineEngine.forecastPipelineRevenue("", deals, 3);
-
       expect(result.totalForecast).toBe(0);
       expect(result.confidence).toBe(0);
     });
 
-    it("should fail-closed with empty deals", () => {
-      const result = SalesPipelineEngine.forecastPipelineRevenue(
-        workspaceId,
-        [],
-        3
-      );
-
+    it("returns fail-closed zeros for empty deals", () => {
+      const result = SalesPipelineEngine.forecastPipelineRevenue(workspaceId, [], 3);
       expect(result.totalForecast).toBe(0);
     });
   });
 
-  describe("Analyze Pipeline Health", () => {
+  describe("analyzePipelineHealth", () => {
     const healthyPipeline = {
       workspaceId,
       month: "2025-01",
@@ -294,78 +215,45 @@ describe("Sales Pipeline Engine Service", () => {
       salesCycle: 30,
     };
 
-    it("should calculate health score", () => {
-      const result = SalesPipelineEngine.analyzePipelineHealth(
-        workspaceId,
-        healthyPipeline
-      );
-
+    it("calculates health score between 0 and 100", () => {
+      const result = SalesPipelineEngine.analyzePipelineHealth(workspaceId, healthyPipeline);
       expect(result.healthScore).toBeGreaterThan(0);
       expect(result.healthScore).toBeLessThanOrEqual(100);
     });
 
-    it("should identify bottleneck stage", () => {
-      const result = SalesPipelineEngine.analyzePipelineHealth(
-        workspaceId,
-        healthyPipeline
-      );
-
+    it("identifies bottleneck stage", () => {
+      const result = SalesPipelineEngine.analyzePipelineHealth(workspaceId, healthyPipeline);
       expect(result.bottleneckStage).toBeDefined();
     });
 
-    it("should assess pipeline efficiency", () => {
-      const result = SalesPipelineEngine.analyzePipelineHealth(
-        workspaceId,
-        healthyPipeline
-      );
-
+    it("returns pipeline efficiency metric", () => {
+      const result = SalesPipelineEngine.analyzePipelineHealth(workspaceId, healthyPipeline);
       expect(result.metrics.pipelineEfficiency).toBeGreaterThan(0);
     });
 
-    it("should recommend improvements based on health", () => {
-      const unhealthyPipeline = {
-        ...healthyPipeline,
-        healthScore: 30,
-        winRate: 0.15,
-      };
-
-      const result = SalesPipelineEngine.analyzePipelineHealth(
-        workspaceId,
-        unhealthyPipeline
-      );
-
-      expect(result.recommendation).toBeDefined();
+    it("provides improvement recommendation for low win rate", () => {
+      const unhealthy = { ...healthyPipeline, winRate: 0.15 };
+      const result = SalesPipelineEngine.analyzePipelineHealth(workspaceId, unhealthy);
       expect(result.recommendation.toLowerCase()).toContain("improve");
     });
 
-    it("should fail-closed without workspace ID", () => {
-      const result = SalesPipelineEngine.analyzePipelineHealth(
-        "",
-        healthyPipeline
-      );
-
+    it("returns fail-closed zeros for missing workspaceId", () => {
+      const result = SalesPipelineEngine.analyzePipelineHealth("", healthyPipeline);
       expect(result.healthScore).toBe(0);
     });
 
-    it("should assess velocity from sales cycle", () => {
-      const fastPipeline = { ...healthyPipeline, salesCycle: 15 };
-      const slowPipeline = { ...healthyPipeline, salesCycle: 60 };
+    it("classifies FAST velocity when salesCycle < 20 days", () => {
+      const fast = { ...healthyPipeline, salesCycle: 15 };
+      expect(SalesPipelineEngine.analyzePipelineHealth(workspaceId, fast).metrics.dealVelocity).toBe("FAST");
+    });
 
-      const fastResult = SalesPipelineEngine.analyzePipelineHealth(
-        workspaceId,
-        fastPipeline
-      );
-      const slowResult = SalesPipelineEngine.analyzePipelineHealth(
-        workspaceId,
-        slowPipeline
-      );
-
-      expect(fastResult.metrics.dealVelocity).toBe("FAST");
-      expect(slowResult.metrics.dealVelocity).toBe("SLOW");
+    it("classifies SLOW velocity when salesCycle > 45 days", () => {
+      const slow = { ...healthyPipeline, salesCycle: 60 };
+      expect(SalesPipelineEngine.analyzePipelineHealth(workspaceId, slow).metrics.dealVelocity).toBe("SLOW");
     });
   });
 
-  describe("Identify Opportunities", () => {
+  describe("identifyOpportunities", () => {
     const deals = [
       {
         id: "deal-1",
@@ -399,64 +287,34 @@ describe("Sales Pipeline Engine Service", () => {
       },
     ];
 
-    it("should identify high-value early-stage deals", () => {
-      const result = SalesPipelineEngine.identifyOpportunities(
-        workspaceId,
-        deals
-      );
-
+    it("identifies high-value early-stage deals (>$50k in PROSPECT/QUALIFIED)", () => {
+      const result = SalesPipelineEngine.identifyOpportunities(workspaceId, deals);
       expect(result.highValueEarlyStageDeals.length).toBeGreaterThan(0);
     });
 
-    it("should identify deals at risk of churn", () => {
-      const result = SalesPipelineEngine.identifyOpportunities(
-        workspaceId,
-        deals
-      );
-
+    it("identifies at-risk deals (probability <20%)", () => {
+      const result = SalesPipelineEngine.identifyOpportunities(workspaceId, deals);
       expect(result.atRiskDeals.length).toBeGreaterThan(0);
     });
 
-    it("should identify deals closing soon", () => {
-      const result = SalesPipelineEngine.identifyOpportunities(
-        workspaceId,
-        deals
-      );
-
+    it("identifies deals closing soon (NEGOTIATION/PROPOSAL)", () => {
+      const result = SalesPipelineEngine.identifyOpportunities(workspaceId, deals);
       expect(result.closingDeals.length).toBeGreaterThan(0);
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns fail-closed empty arrays for missing workspaceId", () => {
       const result = SalesPipelineEngine.identifyOpportunities("", deals);
-
       expect(result.highValueEarlyStageDeals).toEqual([]);
       expect(result.atRiskDeals).toEqual([]);
     });
   });
 
-  describe("Tenant Safety", () => {
-    const deal = {
-      companyName: "Test Co",
-      stage: DealStage.QUALIFIED,
-      value: 100000,
-      currency: "USD",
-      probability: 0.5,
-      expectedCloseDate: new Date(),
-    };
-
-    it("should prevent cross-workspace deal recording", () => {
-      const ws1Result = SalesPipelineEngine.recordDeal(workspaceId, deal);
-      const ws2Result = SalesPipelineEngine.recordDeal(otherWorkspaceId, deal);
-
-      expect(ws1Result.deal?.workspaceId).toBe(workspaceId);
-      expect(ws2Result.deal?.workspaceId).toBe(otherWorkspaceId);
-    });
-
-    it("should prevent cross-workspace metrics calculation", () => {
+  describe("calculatePipelineMetrics — cross-workspace isolation", () => {
+    it("deals tagged to ws-1 are excluded from ws-2 pipeline computation", () => {
       const deals = [
         {
           id: "deal-1",
-          workspaceId: workspaceId,
+          workspaceId,
           companyName: "Company A",
           stage: DealStage.QUALIFIED,
           value: 100000,
@@ -466,17 +324,13 @@ describe("Sales Pipeline Engine Service", () => {
         },
       ];
 
-      const ws1Result = SalesPipelineEngine.calculatePipelineMetrics(
-        workspaceId,
-        deals
-      );
-      const ws2Result = SalesPipelineEngine.calculatePipelineMetrics(
-        otherWorkspaceId,
-        deals
-      );
+      const ws1 = SalesPipelineEngine.calculatePipelineMetrics(workspaceId, deals);
+      const ws2 = SalesPipelineEngine.calculatePipelineMetrics(otherWorkspaceId, deals);
 
-      expect(ws1Result.workspaceId).toBe(workspaceId);
-      expect(ws2Result.workspaceId).toBe(otherWorkspaceId);
+      expect(ws1.workspaceId).toBe(workspaceId);
+      expect(ws2.workspaceId).toBe(otherWorkspaceId);
+      expect(ws1.totalPipeline).toBeGreaterThan(0);
+      expect(ws2.totalPipeline).toBe(0);
     });
   });
 });

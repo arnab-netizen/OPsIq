@@ -1,131 +1,160 @@
 /**
- * Phase 9 Slice 4: Acquisition Engine Service
+ * Growth: Acquisition Engine Service
  *
- * Implements customer acquisition modeling, channel analysis, and ROI calculation.
- * Builds on growth-engines.ts domain contracts.
+ * Workspace-scoped customer acquisition modeling, channel analysis, and ROI calculation.
+ * Channel-month metrics are persisted to `acquisition_metrics_records` (DB-backed).
+ * All writes are workspace-scoped and audit-tracked.
  *
- * CRITICAL: Service operates on workspace-scoped data only.
- * All inputs must include workspaceId for tenant safety.
+ * Pure-function methods (analyzeConversion, calculateROI, rankChannels,
+ * optimizeBudgetAllocation, forecastAcquisition) have no side effects and operate
+ * on caller-supplied data.
+ * Only recordMetrics and listMetrics touch the DB.
  */
 
+import { randomUUID } from "crypto";
+import { db } from "@/lib/db";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
   AcquisitionMetrics,
-  ChannelPerformance,
   AcquisitionChannel,
   validateAcquisitionMetrics,
 } from "@/domain/growth/growth-engines";
+import { ValidationError } from "@/infra/errors";
 
-/**
- * Acquisition Engine Service with Workspace-Scoped Data Stores
- * CRITICAL FIX: Enforces workspace isolation on all data access
- */
 export class AcquisitionEngine {
-  // Workspace-scoped data stores (Map<workspaceId, DataArray>)
-  private static metricsStore = new Map<string, AcquisitionMetrics[]>();
-
   /**
-   * Create and validate acquisition metrics for a channel (workspace-scoped)
+   * Persist acquisition metrics for one channel-month (workspace-scoped, DB-backed).
+   * Throws ValidationError on invalid data or missing workspaceId.
+   * Emits ACQUISITION_METRICS_RECORDED audit event.
    */
-  static recordMetrics(
+  static async recordMetrics(
     workspaceId: string,
+    actorId: string,
     data: Partial<AcquisitionMetrics>
-  ): { metrics: AcquisitionMetrics | null; error: string | null } {
-    // Enforce workspace scoping FIRST (fail-closed)
-    if (!workspaceId || workspaceId.length === 0) {
-      return {
-        metrics: null,
-        error: "Workspace ID is required for acquisition metrics",
-      };
+  ): Promise<AcquisitionMetrics> {
+    if (!workspaceId) {
+      throw new ValidationError("Workspace ID is required for acquisition metrics");
     }
 
-    // Validate metrics data
     const validation = validateAcquisitionMetrics(data);
     if (!validation.valid) {
-      return {
-        metrics: null,
-        error: `Acquisition metrics validation failed: ${validation.errors.join("; ")}`,
-      };
+      throw new ValidationError(
+        `Acquisition metrics validation failed: ${validation.errors.join("; ")}`
+      );
     }
 
-    // Create metrics with workspace scoping
     const metrics: AcquisitionMetrics = {
       workspaceId,
-      channel: data.channel || AcquisitionChannel.ORGANIC,
-      month: data.month || new Date().toISOString().slice(0, 7),
-      leads: data.leads || 0,
-      qualifiedLeads: data.qualifiedLeads || 0,
-      conversions: data.conversions || 0,
-      costPerLead: data.costPerLead || 0,
-      costPerAcquisition: data.costPerAcquisition || 0,
-      targetCPA: data.targetCPA || 0,
+      channel: data.channel ?? AcquisitionChannel.ORGANIC,
+      month: data.month!,
+      leads: data.leads ?? 0,
+      qualifiedLeads: data.qualifiedLeads,
+      conversions: data.conversions ?? 0,
+      costPerLead: data.costPerLead ?? 0,
+      costPerAcquisition: data.costPerAcquisition ?? 0,
+      targetCPA: data.targetCPA ?? 0,
     };
 
-    // Store in workspace-scoped store
-    if (!this.metricsStore.has(workspaceId)) {
-      this.metricsStore.set(workspaceId, []);
-    }
-    this.metricsStore.get(workspaceId)!.push(metrics);
+    const id = randomUUID();
+    await db.acquisitionMetricsRecord.create({
+      data: {
+        id,
+        workspaceId,
+        channel: metrics.channel,
+        month: metrics.month,
+        leads: metrics.leads,
+        qualifiedLeads: metrics.qualifiedLeads ?? null,
+        conversions: metrics.conversions,
+        costPerLead: metrics.costPerLead,
+        costPerAcquisition: metrics.costPerAcquisition,
+        targetCPA: metrics.targetCPA,
+      },
+    });
 
-    return { metrics, error: null };
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ACQUISITION_METRICS_RECORDED,
+      actorId,
+      entityType: "acquisition_metrics_record",
+      entityId: id,
+      workspaceId,
+      payload: {
+        channel: metrics.channel,
+        month: metrics.month,
+        leads: metrics.leads,
+        conversions: metrics.conversions,
+      },
+      visibility: "internal",
+    });
+
+    return metrics;
   }
 
   /**
-   * Calculate conversion rate and efficiency metrics (workspace-scoped)
-   * CRITICAL: Verifies metrics belong to calling workspace
+   * List persisted acquisition metrics for a workspace (workspace-scoped read).
+   * Optionally filter by channel and/or month.
+   */
+  static async listMetrics(
+    workspaceId: string,
+    channel?: AcquisitionChannel,
+    month?: string
+  ): Promise<AcquisitionMetrics[]> {
+    if (!workspaceId) return [];
+
+    const rows = await db.acquisitionMetricsRecord.findMany({
+      where: {
+        workspaceId,
+        ...(channel ? { channel } : {}),
+        ...(month ? { month } : {}),
+      },
+      orderBy: [{ month: "desc" }, { channel: "asc" }],
+    });
+
+    return rows.map((r: typeof rows[number]) => ({
+      workspaceId: r.workspaceId,
+      channel: r.channel as AcquisitionChannel,
+      month: r.month,
+      leads: r.leads,
+      qualifiedLeads: r.qualifiedLeads ?? undefined,
+      conversions: r.conversions,
+      costPerLead: r.costPerLead,
+      costPerAcquisition: r.costPerAcquisition,
+      targetCPA: r.targetCPA,
+    }));
+  }
+
+  /**
+   * Calculate conversion rate and efficiency metrics.
+   * Pure function — no DB access.
+   * If metrics.workspaceId is set and doesn't match workspaceId, returns fail-closed zeros.
    */
   static analyzeConversion(
     workspaceId: string,
     metrics: AcquisitionMetrics
   ): {
-    leadToQualifiedRate: number; // 0-1
-    qualifiedToConversionRate: number; // 0-1
-    leadToConversionRate: number; // 0-1
+    leadToQualifiedRate: number;
+    qualifiedToConversionRate: number;
+    leadToConversionRate: number;
     efficiency: "HIGH" | "MEDIUM" | "LOW";
   } {
-    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
-      return {
-        leadToQualifiedRate: 0,
-        qualifiedToConversionRate: 0,
-        leadToConversionRate: 0,
-        efficiency: "LOW",
-      };
+      return { leadToQualifiedRate: 0, qualifiedToConversionRate: 0, leadToConversionRate: 0, efficiency: "LOW" };
     }
 
-    // Verify metrics belong to this workspace
-    // If metrics have workspaceId set, it must match calling workspace
     if (metrics.workspaceId && metrics.workspaceId !== workspaceId) {
-      return {
-        leadToQualifiedRate: 0,
-        qualifiedToConversionRate: 0,
-        leadToConversionRate: 0,
-        efficiency: "LOW",
-      };
+      return { leadToQualifiedRate: 0, qualifiedToConversionRate: 0, leadToConversionRate: 0, efficiency: "LOW" };
     }
 
-    // If metrics don't have workspaceId yet, claim them for this workspace
-    if (!metrics.workspaceId) {
-      metrics.workspaceId = workspaceId;
-      // Store with workspace so future calls from other workspaces can be detected
-      if (!this.metricsStore.has(workspaceId)) {
-        this.metricsStore.set(workspaceId, []);
-      }
-      if (!this.metricsStore.get(workspaceId)!.some((m) => m === metrics)) {
-        this.metricsStore.get(workspaceId)!.push(metrics);
-      }
-    }
-
-    const qualifiedLeads = metrics.qualifiedLeads || 0;
+    const qualifiedLeads = metrics.qualifiedLeads ?? 0;
     const leadToQualified = metrics.leads > 0 ? qualifiedLeads / metrics.leads : 0;
     const qualifiedToConversion = qualifiedLeads > 0 ? metrics.conversions / qualifiedLeads : 0;
     const leadToConversion = metrics.leads > 0 ? metrics.conversions / metrics.leads : 0;
 
-    // Efficiency benchmarks
     let efficiency: "HIGH" | "MEDIUM" | "LOW" = "LOW";
     if (leadToConversion > 0.15) {
-      efficiency = "HIGH"; // >15% overall conversion
+      efficiency = "HIGH";
     } else if (leadToConversion > 0.05) {
-      efficiency = "MEDIUM"; // 5-15% overall conversion
+      efficiency = "MEDIUM";
     }
 
     return {
@@ -137,71 +166,38 @@ export class AcquisitionEngine {
   }
 
   /**
-   * Calculate ROI for an acquisition channel (workspace-scoped)
-   * CRITICAL: Verifies metrics belong to calling workspace
+   * Calculate ROI for an acquisition channel.
+   * Pure function — no DB access.
+   * If metrics.workspaceId is set and doesn't match workspaceId, returns fail-closed zeros.
    */
   static calculateROI(
     workspaceId: string,
     metrics: AcquisitionMetrics,
     averageCustomerLifetimeValue: number
   ): {
-    roi: number; // percent
-    roi_ratio: number; // revenue/spend
-    paybackDays: number; // estimated
+    roi: number;
+    roi_ratio: number;
+    paybackDays: number;
     status: "PROFITABLE" | "BREAK_EVEN" | "UNPROFITABLE";
   } {
-    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
-      return {
-        roi: 0,
-        roi_ratio: 0,
-        paybackDays: 0,
-        status: "UNPROFITABLE",
-      };
+      return { roi: 0, roi_ratio: 0, paybackDays: 0, status: "UNPROFITABLE" };
     }
 
-    // Verify metrics belong to this workspace
-    // If metrics have workspaceId set, it must match calling workspace
     if (metrics.workspaceId && metrics.workspaceId !== workspaceId) {
-      return {
-        roi: 0,
-        roi_ratio: 0,
-        paybackDays: 0,
-        status: "UNPROFITABLE",
-      };
+      return { roi: 0, roi_ratio: 0, paybackDays: 0, status: "UNPROFITABLE" };
     }
 
-    // If metrics don't have workspaceId yet, claim them for this workspace
-    if (!metrics.workspaceId) {
-      metrics.workspaceId = workspaceId;
-      // Store with workspace so future calls from other workspaces can be detected
-      if (!this.metricsStore.has(workspaceId)) {
-        this.metricsStore.set(workspaceId, []);
-      }
-      if (!this.metricsStore.get(workspaceId)!.some((m) => m === metrics)) {
-        this.metricsStore.get(workspaceId)!.push(metrics);
-      }
-    }
-
-    // Total spend
     const totalSpend = metrics.costPerAcquisition * metrics.conversions;
-
-    // Total revenue (conversions × LTV)
     const totalRevenue = metrics.conversions * averageCustomerLifetimeValue;
-
-    // ROI = (Revenue - Cost) / Cost × 100
     const roi = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0;
-
-    // ROI ratio = Revenue / Cost
     const roi_ratio = totalSpend > 0 ? totalRevenue / totalSpend : 0;
-
-    // Payback = total spend / monthly revenue (simplified)
-    const monthlyRevenue = metrics.conversions > 0 ? totalRevenue / 1 : 1;
+    const monthlyRevenue = metrics.conversions > 0 ? totalRevenue : 1;
     const paybackDays = monthlyRevenue > 0 ? Math.ceil((totalSpend / monthlyRevenue) * 30) : 999;
 
     let status: "PROFITABLE" | "BREAK_EVEN" | "UNPROFITABLE" = "UNPROFITABLE";
     if (roi > 50) {
-      status = "PROFITABLE"; // >50% ROI is good
+      status = "PROFITABLE";
     } else if (roi > 0) {
       status = "BREAK_EVEN";
     }
@@ -215,74 +211,40 @@ export class AcquisitionEngine {
   }
 
   /**
-   * Compare channels and rank by efficiency - WORKSPACE-SCOPED
-   * CRITICAL: Returns empty if workspace doesn't own the data
+   * Compare channels and rank by efficiency.
+   * Pure function — no DB access.
+   * Metrics with a workspaceId set that doesn't match are filtered out.
    */
   static rankChannels(
     workspaceId: string,
     channelMetrics: Map<AcquisitionChannel, AcquisitionMetrics>
   ): Array<{
     channel: AcquisitionChannel;
-    cpuScore: number; // cost per useful (qualified) lead
+    cpuScore: number;
     efficiency: string;
     rank: number;
   }> {
-    // Fail-closed: return empty if workspace missing
-    if (!workspaceId) {
-      return [];
-    }
+    if (!workspaceId) return [];
 
-    const rankings = Array.from(channelMetrics.entries()).map(([channel, metrics]) => {
-      // Verify metrics belong to this workspace
-      // If metrics have workspaceId set, it must match
-      if (metrics.workspaceId && metrics.workspaceId !== workspaceId) {
-        return null;
-      }
+    const rankings = Array.from(channelMetrics.entries())
+      .filter(([, m]) => m.workspaceId === workspaceId)
+      .map(([channel, metrics]) => {
+        const qualifiedLeads = metrics.qualifiedLeads ?? 0;
+        const cpuScore = qualifiedLeads > 0 ? metrics.costPerLead : Infinity;
+        const conversion = this.analyzeConversion(workspaceId, metrics);
+        return { channel, cpuScore, efficiency: conversion.efficiency, rank: 0 };
+      });
 
-      // If metrics don't have workspaceId yet, claim them for this workspace
-      if (!metrics.workspaceId) {
-        metrics.workspaceId = workspaceId;
-        // Store with workspace
-        if (!this.metricsStore.has(workspaceId)) {
-          this.metricsStore.set(workspaceId, []);
-        }
-        if (!this.metricsStore.get(workspaceId)!.some((m) => m === metrics)) {
-          this.metricsStore.get(workspaceId)!.push(metrics);
-        }
-      }
+    if (rankings.length === 0) return [];
 
-      // Cost Per Useful (qualified) lead
-      const qualifiedLeads = metrics.qualifiedLeads || 0;
-      const cpuScore = qualifiedLeads > 0 ? metrics.costPerLead : Infinity;
-
-      const conversion = this.analyzeConversion(workspaceId, metrics);
-
-      return {
-        channel,
-        cpuScore,
-        efficiency: conversion.efficiency,
-        rank: 0,
-      };
-    }).filter((r) => r !== null) as Array<{ channel: AcquisitionChannel; cpuScore: number; efficiency: string; rank: number }>;
-
-    if (rankings.length === 0) {
-      return [];
-    }
-
-    // Sort by CPU score (lower is better)
     rankings.sort((a, b) => a.cpuScore - b.cpuScore);
-
-    // Assign ranks
-    rankings.forEach((item, index) => {
-      item.rank = index + 1;
-    });
-
+    rankings.forEach((item, index) => { item.rank = index + 1; });
     return rankings;
   }
 
   /**
-   * Calculate budget allocation across channels - WORKSPACE-SCOPED
-   * CRITICAL: Returns empty if workspace doesn't own the data
+   * Calculate budget allocation across channels.
+   * Pure function — no DB access.
    */
   static optimizeBudgetAllocation(
     workspaceId: string,
@@ -290,105 +252,58 @@ export class AcquisitionEngine {
     totalBudget: number,
     targetAcquisitions: number
   ): Map<AcquisitionChannel, number> {
-    // Fail-closed: return empty if workspace missing or invalid params
-    if (!workspaceId || totalBudget <= 0 || targetAcquisitions <= 0) {
-      return new Map();
-    }
+    if (!workspaceId || totalBudget <= 0 || targetAcquisitions <= 0) return new Map();
+
+    const rankings = this.rankChannels(workspaceId, channelMetrics);
+    if (rankings.length === 0) return new Map();
 
     const allocation = new Map<AcquisitionChannel, number>();
-
-    // Rank channels by efficiency (returns empty if workspace doesn't own data)
-    const rankings = this.rankChannels(workspaceId, channelMetrics);
-
-    if (rankings.length === 0) {
-      return allocation;
-    }
-
-    // Allocate budget: top 50% to best channel, 30% to 2nd, 20% to others
     const topChannel = rankings[0];
-    const allocation1 = totalBudget * 0.5;
-
     const channel2 = rankings.length > 1 ? rankings[1] : null;
-    const allocation2 = channel2 ? totalBudget * 0.3 : 0;
 
-    const otherAllocation = totalBudget * (channel2 ? 0.2 : 0.5);
+    allocation.set(topChannel.channel, totalBudget * 0.5);
+    if (channel2) allocation.set(channel2.channel, totalBudget * 0.3);
 
-    allocation.set(topChannel.channel, allocation1);
-
-    if (channel2) {
-      allocation.set(channel2.channel, allocation2);
-    }
-
-    // Distribute remaining to other channels equally
+    const remainingAllocation = channel2 ? totalBudget * 0.2 : totalBudget * 0.5;
     const otherChannels = rankings.slice(channel2 ? 2 : 1);
     if (otherChannels.length > 0) {
-      const perChannelAllocation = otherAllocation / otherChannels.length;
-      otherChannels.forEach((item) => {
-        allocation.set(item.channel, perChannelAllocation);
-      });
+      const perChannel = remainingAllocation / otherChannels.length;
+      otherChannels.forEach((item) => allocation.set(item.channel, perChannel));
     }
 
     return allocation;
   }
 
   /**
-   * Forecast acquisition for next month - WORKSPACE-SCOPED
-   * CRITICAL: Returns empty forecast if workspace doesn't own the data
+   * Forecast acquisition for next month based on historical trend.
+   * Pure function — no DB access.
+   * Metrics with a mismatched workspaceId are rejected (fail-closed).
    */
   static forecastAcquisition(
     workspaceId: string,
     historicalMetrics: AcquisitionMetrics[],
-    growthRate: number = 0.1 // 10% default growth
+    growthRate: number = 0.1
   ): {
     projectedLeads: number;
     projectedConversions: number;
     projectedCost: number;
     confidence: number;
   } {
-    // Fail-closed: return zero forecast if workspace or data missing
-    if (!workspaceId || historicalMetrics.length === 0) {
-      return {
-        projectedLeads: 0,
-        projectedConversions: 0,
-        projectedCost: 0,
-        confidence: 0,
-      };
-    }
+    const zero = { projectedLeads: 0, projectedConversions: 0, projectedCost: 0, confidence: 0 };
 
-    // Verify all metrics belong to this workspace or claim them
+    if (!workspaceId || historicalMetrics.length === 0) return zero;
+
     for (const m of historicalMetrics) {
-      // If metrics have workspaceId set, it must match
-      if (m.workspaceId && m.workspaceId !== workspaceId) {
-        return {
-          projectedLeads: 0,
-          projectedConversions: 0,
-          projectedCost: 0,
-          confidence: 0,
-        };
-      }
-      // If metrics don't have workspaceId yet, claim them
-      if (!m.workspaceId) {
-        m.workspaceId = workspaceId;
-        if (!this.metricsStore.has(workspaceId)) {
-          this.metricsStore.set(workspaceId, []);
-        }
-        if (!this.metricsStore.get(workspaceId)!.some((x) => x === m)) {
-          this.metricsStore.get(workspaceId)!.push(m);
-        }
-      }
+      if (m.workspaceId && m.workspaceId !== workspaceId) return zero;
     }
 
-    // Average historical metrics
-    const avgLeads = historicalMetrics.reduce((sum, m) => sum + m.leads, 0) / historicalMetrics.length;
-    const avgConversions = historicalMetrics.reduce((sum, m) => sum + m.conversions, 0) / historicalMetrics.length;
-    const avgCost = historicalMetrics.reduce((sum, m) => sum + m.costPerAcquisition, 0) / historicalMetrics.length;
+    const avgLeads = historicalMetrics.reduce((s, m) => s + m.leads, 0) / historicalMetrics.length;
+    const avgConversions = historicalMetrics.reduce((s, m) => s + m.conversions, 0) / historicalMetrics.length;
+    const avgCost = historicalMetrics.reduce((s, m) => s + m.costPerAcquisition, 0) / historicalMetrics.length;
 
-    // Apply growth rate
     const projectedLeads = avgLeads * (1 + growthRate);
     const projectedConversions = avgConversions * (1 + growthRate);
     const projectedCost = projectedConversions * avgCost;
-
-    // Confidence based on data age and consistency
     const confidence = Math.min(0.9, 0.5 + historicalMetrics.length * 0.1);
 
     return {

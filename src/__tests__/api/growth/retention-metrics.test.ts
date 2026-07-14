@@ -4,191 +4,182 @@
  * Validates route structure, error handling, and service integration
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RetentionEngine } from "@/services/growth/retention-engine";
+import { ValidationError } from "@/infra/errors";
+
+// RetentionEngine.recordMetrics is DB-backed; mock DB and audit so tests
+// run without a live database connection.
+vi.mock("@/lib/db", () => ({
+  db: {
+    retentionCohort: {
+      create: vi.fn().mockResolvedValue(undefined),
+    },
+  },
+}));
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe("Retention Metrics API Route - Service Integration", () => {
   const workspaceId = "ws-test-1";
+  const actorId = "actor-test-1";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   describe("Route Integration with RetentionEngine", () => {
-    it("should route POST request to RetentionEngine.recordMetrics", () => {
-      const result = RetentionEngine.recordMetrics(workspaceId, {
+    it("should route POST request to RetentionEngine.recordMetrics", async () => {
+      const metrics = await RetentionEngine.recordMetrics(workspaceId, actorId, {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95, 2: 0.92, 3: 0.88 },
         avgMonthlyChurn: 0.05,
       });
 
-      expect(result.error).toBeNull();
-      expect(result.metrics).toBeDefined();
-      expect(result.metrics?.cohortMonth).toBe("2025-01");
+      expect(metrics.cohortMonth).toBe("2025-01");
+      expect(metrics.workspaceId).toBe(workspaceId);
     });
 
-    it("should validate workspace enforcement in service call", () => {
-      const result = RetentionEngine.recordMetrics("", {
-        cohortMonth: "2025-01",
-        cohortSize: 100,
-        monthlyRetention: { 1: 0.95 },
-        avgMonthlyChurn: 0.05,
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.error).toContain("Workspace ID");
+    it("should validate workspace enforcement in service call", async () => {
+      await expect(
+        RetentionEngine.recordMetrics("", actorId, {
+          cohortMonth: "2025-01",
+          cohortSize: 100,
+          monthlyRetention: { 1: 0.95 },
+          avgMonthlyChurn: 0.05,
+        })
+      ).rejects.toThrow(/Workspace ID/);
     });
 
-    it("should validate input schema before service call", () => {
-      const result = RetentionEngine.recordMetrics(workspaceId, {
-        cohortMonth: "Jan 2025", // Invalid format
-        cohortSize: 100,
-        monthlyRetention: { 1: 0.95 },
-        avgMonthlyChurn: 1.5, // Invalid: > 1
-      });
-
-      expect(result.error).toBeDefined();
+    it("should validate input schema before service call", async () => {
+      await expect(
+        RetentionEngine.recordMetrics(workspaceId, actorId, {
+          cohortMonth: "Jan 2025", // Invalid format
+          cohortSize: 100,
+          monthlyRetention: { 1: 0.95 },
+          avgMonthlyChurn: 1.5, // Invalid: > 1
+        })
+      ).rejects.toThrow(ValidationError);
     });
   });
 
   describe("Route Authorization & Workspace Scoping", () => {
-    it("should enforce auth capability check (CAPABILITIES.ENGAGEMENT_UPDATE)", () => {
-      // Route uses withAuth with CAPABILITIES.ENGAGEMENT_UPDATE
-      // This ensures only users with update permission can record metrics
-      // Service enforces workspace scoping as prerequisite for auth checks
-      const result = RetentionEngine.recordMetrics(workspaceId, {
+    it("should enforce auth capability check (CAPABILITIES.ENGAGEMENT_UPDATE)", async () => {
+      const metrics = await RetentionEngine.recordMetrics(workspaceId, actorId, {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95 },
         avgMonthlyChurn: 0.05,
       });
 
-      expect(result.error).toBeNull();
-      expect(result.metrics?.workspaceId).toBe(workspaceId);
+      expect(metrics.workspaceId).toBe(workspaceId);
     });
 
-    it("should enforce workspace header validation", () => {
-      // Route checks x-workspace-id header exists
-      // Route uses enforceWorkspaceScoping middleware
-      // Service validates workspaceId is required and non-empty
-      const result = RetentionEngine.recordMetrics(workspaceId, {
+    it("should enforce workspace header validation", async () => {
+      const metrics = await RetentionEngine.recordMetrics(workspaceId, actorId, {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95, 2: 0.92 },
         avgMonthlyChurn: 0.05,
       });
 
-      expect(result.metrics).toBeDefined();
-      expect(result.metrics?.workspaceId).toBe(workspaceId);
-      expect(result.error).toBeNull();
+      expect(metrics.workspaceId).toBe(workspaceId);
     });
 
-    it("should scope all responses to workspace", () => {
-      const result = RetentionEngine.recordMetrics(workspaceId, {
+    it("should scope all responses to workspace", async () => {
+      const metrics = await RetentionEngine.recordMetrics(workspaceId, actorId, {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95, 2: 0.92 },
         avgMonthlyChurn: 0.05,
       });
 
-      expect(result.metrics).toBeDefined();
-      // Metrics are workspace-scoped via service call
+      expect(metrics.workspaceId).toBe(workspaceId);
     });
   });
 
   describe("Route Error Handling", () => {
-    it("should return 400 for missing workspace ID header", () => {
-      // Route returns: Response.json({ error: "Workspace ID required..." }, { status: 400 })
-      // Service validates empty workspace ID causes error response
-      const result = RetentionEngine.recordMetrics("", {
+    it("should return 400 for missing workspace ID header", async () => {
+      await expect(
+        RetentionEngine.recordMetrics("", actorId, {
+          cohortMonth: "2025-01",
+          cohortSize: 100,
+          monthlyRetention: { 1: 0.95 },
+          avgMonthlyChurn: 0.05,
+        })
+      ).rejects.toThrow(/Workspace ID/);
+    });
+
+    it("should return 403 for unauthorized workspace access", async () => {
+      const metrics = await RetentionEngine.recordMetrics("ws-1", actorId, {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95 },
         avgMonthlyChurn: 0.05,
       });
 
-      expect(result.error).toBeDefined();
-      expect(result.error).toContain("Workspace ID");
-      expect(result.metrics).toBeNull();
+      expect(metrics.workspaceId).toBe("ws-1");
     });
 
-    it("should return 403 for unauthorized workspace access", () => {
-      // Route returns: Response.json({ error: "Unauthorized" }, { status: 403 })
-      // from enforceWorkspaceScoping failure
-      // Service enforces workspace ownership on data access
-      const resultWs1 = RetentionEngine.recordMetrics("ws-1", {
+    it("should return 400 for Zod validation errors", async () => {
+      await expect(
+        RetentionEngine.recordMetrics(workspaceId, actorId, {
+          cohortMonth: "Invalid", // Invalid format (should be YYYY-MM)
+          cohortSize: 100,
+          monthlyRetention: { 1: 0.95 },
+          avgMonthlyChurn: 0.05,
+        })
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("should return 400 for service validation errors", async () => {
+      await expect(
+        RetentionEngine.recordMetrics(workspaceId, actorId, {
+          cohortMonth: "2025-01",
+          cohortSize: 100,
+          monthlyRetention: { 1: 0.95 },
+          avgMonthlyChurn: 1.5, // Invalid: > 1
+        })
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("should succeed for valid input", async () => {
+      const metrics = await RetentionEngine.recordMetrics(workspaceId, actorId, {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95 },
         avgMonthlyChurn: 0.05,
       });
 
-      expect(resultWs1.error).toBeNull();
-      expect(resultWs1.metrics?.workspaceId).toBe("ws-1");
-    });
-
-    it("should return 400 for Zod validation errors", () => {
-      // Route catches z.ZodError and returns 400 with details
-      // Service validates schema and returns error on validation failure
-      const result = RetentionEngine.recordMetrics(workspaceId, {
-        cohortMonth: "Invalid", // Invalid format (should be YYYY-MM)
-        cohortSize: 100,
-        monthlyRetention: { 1: 0.95 },
-        avgMonthlyChurn: 0.05,
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.metrics).toBeNull();
-    });
-
-    it("should return 400 for service validation errors", () => {
-      const result = RetentionEngine.recordMetrics(workspaceId, {
-        cohortMonth: "2025-01",
-        cohortSize: 100,
-        monthlyRetention: { 1: 0.95 },
-        avgMonthlyChurn: 1.5, // Invalid
-      });
-
-      expect(result.error).toBeDefined();
-    });
-
-    it("should return 500 for unexpected errors", () => {
-      // Route catches Error and returns 500
-      // Service returns structured error response with both error and metrics fields
-      const result = RetentionEngine.recordMetrics(workspaceId, {
-        cohortMonth: "2025-01",
-        cohortSize: 100,
-        monthlyRetention: { 1: 0.95 },
-        avgMonthlyChurn: 0.05,
-      });
-
-      expect(result).toBeDefined();
-      expect(typeof result.error === 'string' || result.error === null).toBe(true);
-      expect(result.metrics === null || typeof result.metrics === 'object').toBe(true);
+      expect(metrics).toBeDefined();
+      expect(metrics.workspaceId).toBe(workspaceId);
     });
   });
 
   describe("Route DTO Boundary (Response Safety)", () => {
-    it("should not expose internal fields in response", () => {
-      const result = RetentionEngine.recordMetrics(workspaceId, {
+    it("should not expose internal fields in response", async () => {
+      const metrics = await RetentionEngine.recordMetrics(workspaceId, actorId, {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95, 2: 0.92 },
         avgMonthlyChurn: 0.05,
       });
 
-      expect(result.metrics).toBeDefined();
-      const metrics = result.metrics!;
       expect(Object.keys(metrics)).not.toContain("_internal");
       expect(Object.keys(metrics)).not.toContain("_debug");
     });
 
-    it("should return complete public metrics structure", () => {
-      const result = RetentionEngine.recordMetrics(workspaceId, {
+    it("should return complete public metrics structure", async () => {
+      const metrics = await RetentionEngine.recordMetrics(workspaceId, actorId, {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95, 2: 0.92, 3: 0.88 },
         avgMonthlyChurn: 0.05,
       });
 
-      expect(result.metrics).toEqual(
+      expect(metrics).toEqual(
         expect.objectContaining({
           cohortMonth: "2025-01",
           cohortSize: 100,
@@ -200,55 +191,54 @@ describe("Retention Metrics API Route - Service Integration", () => {
   });
 
   describe("Route-Service Contract", () => {
-    it("should pass validated data to service", () => {
-      const schema = {
+    it("should pass validated data to service", async () => {
+      const input = {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95, 2: 0.92 },
         avgMonthlyChurn: 0.05,
       };
 
-      const result = RetentionEngine.recordMetrics(workspaceId, schema);
+      const metrics = await RetentionEngine.recordMetrics(workspaceId, actorId, input);
 
-      expect(result.metrics?.cohortMonth).toBe(schema.cohortMonth);
-      expect(result.metrics?.cohortSize).toBe(schema.cohortSize);
+      expect(metrics.cohortMonth).toBe(input.cohortMonth);
+      expect(metrics.cohortSize).toBe(input.cohortSize);
     });
 
-    it("should handle service error response", () => {
-      const result = RetentionEngine.recordMetrics(workspaceId, {
-        cohortMonth: "Invalid",
-        cohortSize: 100,
-        monthlyRetention: { 1: 0.95 },
-        avgMonthlyChurn: 0.05,
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.metrics).toBeNull();
+    it("should handle service error response on invalid month", async () => {
+      await expect(
+        RetentionEngine.recordMetrics(workspaceId, actorId, {
+          cohortMonth: "Invalid",
+          cohortSize: 100,
+          monthlyRetention: { 1: 0.95 },
+          avgMonthlyChurn: 0.05,
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should return service-created metrics on success", () => {
-      const result = RetentionEngine.recordMetrics(workspaceId, {
+    it("should return service-created metrics on success", async () => {
+      const metrics = await RetentionEngine.recordMetrics(workspaceId, actorId, {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95, 2: 0.92 },
         avgMonthlyChurn: 0.05,
       });
 
-      expect(result.error).toBeNull();
-      expect(result.metrics).toBeDefined();
+      expect(metrics.workspaceId).toBe(workspaceId);
+      expect(metrics.cohortMonth).toBe("2025-01");
     });
   });
 
   describe("Assess Churn Risk Handler", () => {
     it("should expose assessChurnRisk via handler", () => {
-      const metrics = {
+      const metricsInput = {
         cohortMonth: "2025-01",
         cohortSize: 100,
         monthlyRetention: { 1: 0.95, 2: 0.90 },
         avgMonthlyChurn: 0.05,
       };
 
-      const result = RetentionEngine.assessChurnRisk(workspaceId, metrics);
+      const result = RetentionEngine.assessChurnRisk(workspaceId, metricsInput);
 
       expect(result.riskLevel).toBeDefined();
       expect(result.churnScore).toBeDefined();
@@ -289,29 +279,30 @@ describe("Retention Metrics API Route - Service Integration", () => {
   });
 
   describe("Tenant Safety", () => {
-    const metrics = {
+    const metricsInput = {
       cohortMonth: "2025-01",
       cohortSize: 100,
       monthlyRetention: { 1: 0.95, 2: 0.90 },
       avgMonthlyChurn: 0.05,
     };
 
-    it("should prevent cross-workspace metric recording", () => {
-      const ws1Result = RetentionEngine.recordMetrics("ws-1", metrics);
-      const ws2Result = RetentionEngine.recordMetrics("ws-2", metrics);
+    it("should prevent cross-workspace metric recording", async () => {
+      const ws1Metrics = await RetentionEngine.recordMetrics("ws-1", actorId, metricsInput);
+      const ws2Metrics = await RetentionEngine.recordMetrics("ws-2", actorId, metricsInput);
 
-      expect(ws1Result.error).toBeNull();
-      expect(ws2Result.error).toBeNull();
-      // Both succeed, but are scoped to their respective workspaces
+      expect(ws1Metrics.workspaceId).toBe("ws-1");
+      expect(ws2Metrics.workspaceId).toBe("ws-2");
     });
 
     it("should prevent cross-workspace risk assessment", () => {
-      const ws1Analysis = RetentionEngine.assessChurnRisk("ws-1", metrics);
-      const ws2Analysis = RetentionEngine.assessChurnRisk("ws-2", metrics);
+      const metricsWithWs = { ...metricsInput, workspaceId: "ws-1" };
+      const ws1Analysis = RetentionEngine.assessChurnRisk("ws-1", metricsWithWs);
+      const ws2Analysis = RetentionEngine.assessChurnRisk("ws-2", metricsWithWs);
 
       expect(ws1Analysis.riskLevel).toBe("LOW");
-      expect(ws2Analysis.riskLevel).toBe("LOW");
-      // Both scoped to their workspaces independently
+      expect(ws1Analysis.churnScore).toBeGreaterThan(0);
+      expect(ws2Analysis.churnScore).toBe(0);
+      expect(ws2Analysis.atRiskPercent).toBe(0);
     });
   });
 });

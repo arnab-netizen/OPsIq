@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { PrismaClient } from '@/generated/prisma/client';
-import { PrivateModeRole } from '@/domain/private-mode/role-config';
+import { PrivateModeRole, hasRequiredFeatures } from '@/domain/private-mode/role-config';
+import type { PrivateModeFeatures } from '@/domain/private-mode/role-config';
 import { PrivateModeRoleAccessService } from '@/services/private-mode/role-access.service';
 import { type ClaimedWorkspaceId, claimWorkspaceId } from '@/lib/workspace-identity';
 
@@ -160,11 +161,10 @@ export async function enforcePrivateModeGate(
     );
   }
 
-  // Check feature requirements (in real impl, would use role-config)
-  if (options.requiredFeatures && options.requiredFeatures.length > 0) {
-    // For now, all approved roles get basic feature set
-    // In production, check against PrivateModeRole feature sets
-    if (!access.hasAccess) {
+  // Check feature requirements against the resolved role's feature set
+  if (options.requiredFeatures && options.requiredFeatures.length > 0 && access.role) {
+    const featureKeys = options.requiredFeatures as (keyof PrivateModeFeatures)[];
+    if (!hasRequiredFeatures(access.role, featureKeys)) {
       return NextResponse.json(
         {
           error: 'Required features not available',

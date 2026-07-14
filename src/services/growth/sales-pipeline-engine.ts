@@ -1,129 +1,198 @@
 /**
- * Phase 9 Slice 6: Sales Pipeline Engine Service
+ * Growth: Sales Pipeline Engine Service
  *
- * Implements sales pipeline management, deal tracking, and revenue forecasting.
- * Builds on growth-engines.ts domain contracts.
+ * Workspace-scoped sales deal management, pipeline metrics, and revenue forecasting.
+ * Deal records are persisted to `sales_deal_records` (DB-backed).
+ * All writes are workspace-scoped and audit-tracked.
  *
- * CRITICAL: Service operates on workspace-scoped data only.
- * All inputs must include workspaceId for tenant safety.
+ * Pure-function methods (calculatePipelineMetrics, forecastPipelineRevenue,
+ * analyzePipelineHealth, identifyOpportunities) are stateless and operate on
+ * caller-supplied deal arrays.
+ * Only recordDeal, progressDeal, and listDeals touch the DB.
  */
 
+import { randomUUID } from "crypto";
+import { db } from "@/lib/db";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
   SalesPipeline,
   SalesDeal,
   DealStage,
   validateSalesDeal,
 } from "@/domain/growth/growth-engines";
+import { ValidationError, NotFoundError } from "@/infra/errors";
 
-/**
- * Sales Pipeline Engine Service with Workspace-Scoped Data Stores
- * CRITICAL FIX: Enforces workspace isolation on all data access
- */
+export interface SalesDealRecord {
+  id: string;
+  workspaceId: string;
+  companyName: string;
+  stage: DealStage;
+  value: number;
+  currency: string;
+  probability: number;
+  expectedCloseDate: Date;
+  owner?: string | null;
+  notes?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+function mapRow(row: {
+  id: string;
+  workspaceId: string;
+  companyName: string;
+  stage: string;
+  value: number;
+  currency: string;
+  probability: number;
+  expectedCloseDate: Date;
+  owner: string | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): SalesDealRecord {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    companyName: row.companyName,
+    stage: row.stage as DealStage,
+    value: row.value,
+    currency: row.currency,
+    probability: row.probability,
+    expectedCloseDate: row.expectedCloseDate,
+    owner: row.owner,
+    notes: row.notes,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 export class SalesPipelineEngine {
-  // Workspace-scoped data stores (Map<workspaceId, DataArray>)
-  private static dealsStore = new Map<string, SalesDeal[]>();
-
   /**
-   * Track a sales deal through the pipeline (workspace-scoped)
+   * Persist a new sales deal (workspace-scoped, DB-backed).
+   * Throws ValidationError on invalid data or missing workspaceId.
+   * Emits SALES_DEAL_RECORDED audit event.
    */
-  static recordDeal(
+  static async recordDeal(
     workspaceId: string,
+    actorId: string,
     data: Partial<SalesDeal>
-  ): { deal: SalesDeal | null; error: string | null } {
-    // Enforce workspace scoping FIRST (fail-closed)
-    if (!workspaceId || workspaceId.length === 0) {
-      return {
-        deal: null,
-        error: "Workspace ID is required for sales deals",
-      };
+  ): Promise<SalesDealRecord> {
+    if (!workspaceId) {
+      throw new ValidationError("Workspace ID is required for sales deals");
     }
 
-    // Validate deal data
     const validation = validateSalesDeal(data);
     if (!validation.valid) {
-      return {
-        deal: null,
-        error: `Sales deal validation failed: ${validation.errors.join("; ")}`,
-      };
+      throw new ValidationError(
+        `Sales deal validation failed: ${validation.errors.join("; ")}`
+      );
     }
 
-    // Create deal with workspace scoping
-    const deal: SalesDeal = {
-      id: `deal-${Date.now()}`,
+    const id = randomUUID();
+    const row = await db.salesDealRecord.create({
+      data: {
+        id,
+        workspaceId,
+        companyName: data.companyName!,
+        stage: data.stage ?? DealStage.PROSPECT,
+        value: data.value!,
+        currency: data.currency ?? "USD",
+        probability: Math.min(1, Math.max(0, data.probability ?? 0)),
+        expectedCloseDate: data.expectedCloseDate ?? new Date(),
+        owner: data.owner ?? null,
+        notes: data.notes ?? null,
+      },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.SALES_DEAL_RECORDED,
+      actorId,
+      entityType: "sales_deal_record",
+      entityId: id,
       workspaceId,
-      companyName: data.companyName || "",
-      stage: data.stage || DealStage.PROSPECT,
-      value: data.value || 0,
-      currency: data.currency || "USD",
-      probability: Math.min(1, Math.max(0, data.probability || 0)),
-      expectedCloseDate: data.expectedCloseDate || new Date(),
-      owner: data.owner,
-      notes: data.notes,
-    };
+      payload: {
+        companyName: data.companyName,
+        stage: row.stage,
+        value: row.value,
+      },
+      visibility: "internal",
+    });
 
-    // Store in workspace-scoped store
-    if (!this.dealsStore.has(workspaceId)) {
-      this.dealsStore.set(workspaceId, []);
-    }
-    this.dealsStore.get(workspaceId)!.push(deal);
-
-    return { deal, error: null };
+    return mapRow(row);
   }
 
   /**
-   * Update deal stage (progression through pipeline)
+   * Update a deal's pipeline stage (workspace-scoped, DB-backed).
+   * Looks up the deal by id, verifies workspace ownership, updates stage.
+   * Throws ValidationError on missing params, NotFoundError if deal not found.
+   * Emits SALES_DEAL_STAGE_UPDATED audit event.
    */
-  static progressDeal(
+  static async progressDeal(
     workspaceId: string,
+    actorId: string,
     dealId: string,
     newStage: DealStage
-  ): {
-    deal: SalesDeal | null;
-    progressionNote: string;
-    error: string | null;
-  } {
+  ): Promise<{ deal: SalesDealRecord; progressionNote: string }> {
     if (!workspaceId) {
-      return {
-        deal: null,
-        progressionNote: "",
-        error: "Workspace ID is required",
-      };
+      throw new ValidationError("Workspace ID is required");
     }
-
     if (!dealId || !newStage) {
-      return {
-        deal: null,
-        progressionNote: "",
-        error: "Deal ID and new stage are required",
-      };
+      throw new ValidationError("Deal ID and new stage are required");
     }
 
-    // Simulate deal progression (in production, would update DB)
-    const deal: SalesDeal = {
-      id: dealId,
+    const existing = await db.salesDealRecord.findUnique({ where: { id: dealId } });
+    if (!existing || existing.workspaceId !== workspaceId) {
+      throw new NotFoundError("sales_deal_record", dealId);
+    }
+
+    const updated = await db.salesDealRecord.update({
+      where: { id: dealId },
+      data: {
+        stage: newStage,
+        probability: SalesPipelineEngine.calculateWinProbability(newStage),
+      },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.SALES_DEAL_STAGE_UPDATED,
+      actorId,
+      entityType: "sales_deal_record",
+      entityId: dealId,
       workspaceId,
-      companyName: `Company-${dealId}`,
-      stage: newStage,
-      value: 50000,
-      currency: "USD",
-      probability: this.calculateWinProbability(newStage),
-      expectedCloseDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days out
-    };
+      payload: { previousStage: existing.stage, newStage },
+      visibility: "internal",
+    });
 
-    const progressionNote = `Deal progressed from previous stage to ${newStage}. Win probability updated to ${deal.probability * 100}%.`;
-
-    return { deal, progressionNote, error: null };
+    const deal = mapRow(updated);
+    const progressionNote = `Deal progressed from ${existing.stage} to ${newStage}. Win probability updated to ${(deal.probability * 100).toFixed(0)}%.`;
+    return { deal, progressionNote };
   }
 
   /**
-   * Calculate pipeline metrics for a period - WORKSPACE-SCOPED
-   * CRITICAL: Returns empty if workspace doesn't own the data
+   * List persisted sales deals for a workspace (workspace-scoped read).
+   * Optionally filter by stage. Ordered newest first.
+   */
+  static async listDeals(
+    workspaceId: string,
+    stage?: DealStage
+  ): Promise<SalesDealRecord[]> {
+    const rows = await db.salesDealRecord.findMany({
+      where: { workspaceId, ...(stage ? { stage } : {}) },
+      orderBy: { createdAt: "desc" },
+    });
+    return rows.map(mapRow);
+  }
+
+  /**
+   * Calculate pipeline metrics from a caller-supplied deal array.
+   * Pure function — no DB access, no side effects.
    */
   static calculatePipelineMetrics(
     workspaceId: string,
     deals: SalesDeal[]
   ): SalesPipeline {
-    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
       return {
         workspaceId: "",
@@ -136,12 +205,8 @@ export class SalesPipelineEngine {
       };
     }
 
-    // Claim workspace entry if not present
-    if (!this.dealsStore.has(workspaceId)) {
-      this.dealsStore.set(workspaceId, []);
-    }
+    const scopedDeals = deals.filter(d => d.workspaceId === workspaceId);
 
-    // Group deals by stage
     const dealsByStage: Record<DealStage, number> = {
       [DealStage.PROSPECT]: 0,
       [DealStage.QUALIFIED]: 0,
@@ -154,31 +219,21 @@ export class SalesPipelineEngine {
     let totalPipeline = 0;
     let closedWonCount = 0;
     let closedLostCount = 0;
-    let totalValue = 0;
 
-    deals.forEach((deal) => {
-      if (dealsByStage.hasOwnProperty(deal.stage)) {
+    scopedDeals.forEach((deal) => {
+      if (Object.prototype.hasOwnProperty.call(dealsByStage, deal.stage)) {
         dealsByStage[deal.stage]++;
       }
-
-      const weightedValue = deal.value * (deal.probability || 0.5);
-      totalPipeline += weightedValue;
-
-      if (deal.stage === DealStage.CLOSED_WON) {
-        closedWonCount++;
-        totalValue += deal.value;
-      } else if (deal.stage === DealStage.CLOSED_LOST) {
-        closedLostCount++;
-      }
+      totalPipeline += deal.value * (deal.probability || 0.5);
+      if (deal.stage === DealStage.CLOSED_WON) closedWonCount++;
+      else if (deal.stage === DealStage.CLOSED_LOST) closedLostCount++;
     });
 
-    // Calculate metrics
-    const totalDeals = closedWonCount + closedLostCount;
-    const winRate = totalDeals > 0 ? closedWonCount / totalDeals : 0;
-    const avgDealSize = deals.length > 0 ? deals.reduce((sum, d) => sum + d.value, 0) / deals.length : 0;
-
-    // Estimate sales cycle (in production, track from creation to close)
-    const salesCycle = 30; // Default 30 days
+    const totalClosed = closedWonCount + closedLostCount;
+    const winRate = totalClosed > 0 ? closedWonCount / totalClosed : 0;
+    const avgDealSize = scopedDeals.length > 0
+      ? scopedDeals.reduce((sum, d) => sum + d.value, 0) / scopedDeals.length
+      : 0;
 
     return {
       workspaceId,
@@ -187,13 +242,13 @@ export class SalesPipelineEngine {
       dealsByStage,
       winRate: Math.round(winRate * 100) / 100,
       avgDealSize: Math.round(avgDealSize),
-      salesCycle,
+      salesCycle: 30,
     };
   }
 
   /**
-   * Forecast revenue realization from pipeline - WORKSPACE-SCOPED
-   * CRITICAL: Returns empty if workspace doesn't own the data
+   * Forecast revenue realization from pipeline.
+   * Pure function — no DB access, no side effects.
    */
   static forecastPipelineRevenue(
     workspaceId: string,
@@ -204,64 +259,44 @@ export class SalesPipelineEngine {
     totalForecast: number;
     confidence: number;
   } {
-    // Fail-closed: return empty if workspace or data missing
     if (!workspaceId || !deals || deals.length === 0) {
-      return {
-        forecastByMonth: {},
-        totalForecast: 0,
-        confidence: 0,
-      };
+      return { forecastByMonth: {}, totalForecast: 0, confidence: 0 };
     }
 
-    // Verify workspace owns this data
-    if (!this.dealsStore.has(workspaceId)) {
-      return {
-        forecastByMonth: {},
-        totalForecast: 0,
-        confidence: 0,
-      };
-    }
+    const scopedDeals = deals.filter(d => d.workspaceId === workspaceId);
 
     const forecastByMonth: Record<number, number> = {};
     let totalForecast = 0;
 
     for (let month = 1; month <= months; month++) {
       let monthRevenue = 0;
-
-      deals.forEach((deal) => {
+      scopedDeals.forEach((deal) => {
         const closeDate = new Date(deal.expectedCloseDate);
         const monthsUntilClose = (closeDate.getTime() - Date.now()) / (30 * 24 * 60 * 60 * 1000);
-
-        // Only include deals closing within forecast window
         if (monthsUntilClose <= month && monthsUntilClose > month - 1) {
-          const expectedRevenue = deal.value * (deal.probability || 0.5);
-          monthRevenue += expectedRevenue;
+          monthRevenue += deal.value * (deal.probability || 0.5);
         }
       });
-
       forecastByMonth[month] = Math.round(monthRevenue);
       totalForecast += monthRevenue;
     }
 
-    // Confidence decreases with forecast length
-    const confidence = Math.max(0.3, 1 - (months * 0.15));
-
     return {
       forecastByMonth,
       totalForecast: Math.round(totalForecast),
-      confidence,
+      confidence: Math.max(0.3, 1 - months * 0.15),
     };
   }
 
   /**
-   * Analyze pipeline health and identify bottlenecks - WORKSPACE-SCOPED
-   * CRITICAL: Returns empty if workspace doesn't own the data
+   * Analyze pipeline health and identify bottlenecks.
+   * Pure function — no DB access, no side effects.
    */
   static analyzePipelineHealth(
     workspaceId: string,
     pipeline: SalesPipeline
   ): {
-    healthScore: number; // 0-100
+    healthScore: number;
     bottleneckStage: string | null;
     recommendation: string;
     metrics: {
@@ -270,47 +305,36 @@ export class SalesPipelineEngine {
       dealVelocity: string;
     };
   } {
-    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
       return {
         healthScore: 0,
         bottleneckStage: null,
         recommendation: "Workspace ID is required",
-        metrics: {
-          pipelineEfficiency: 0,
-          stageConversion: 0,
-          dealVelocity: "UNKNOWN",
-        },
+        metrics: { pipelineEfficiency: 0, stageConversion: 0, dealVelocity: "UNKNOWN" },
       };
     }
 
-    // Calculate health score (0-100)
-    const winRateScore = pipeline.winRate * 50; // Win rate = 50% of score
-    const pipelineScore = Math.min(50, (pipeline.totalPipeline / 500000) * 50); // Size = 50% of score
+    const winRateScore = pipeline.winRate * 50;
+    const pipelineScore = Math.min(50, (pipeline.totalPipeline / 500000) * 50);
     const healthScore = Math.round(winRateScore + pipelineScore);
 
-    // Identify bottleneck
     const stageValues = Object.entries(pipeline.dealsByStage);
     const bottleneckStage = stageValues.reduce((prev, curr) =>
       (curr[1] || 0) > (prev[1] || 0) ? curr : prev
-    )[0] as DealStage | null;
+    )[0] as string | null;
 
-    // Pipeline efficiency = avg deal size / sales cycle days
     const pipelineEfficiency = pipeline.salesCycle > 0
       ? Math.round((pipeline.avgDealSize / pipeline.salesCycle) * 100) / 100
       : 0;
 
-    // Stage conversion rate
     const qualifiedCount = pipeline.dealsByStage[DealStage.QUALIFIED] || 0;
     const prospectCount = pipeline.dealsByStage[DealStage.PROSPECT] || 0;
-    const stageConversion = prospectCount > 0 ? (qualifiedCount / prospectCount) : 0;
+    const stageConversion = prospectCount > 0 ? qualifiedCount / prospectCount : 0;
 
-    // Velocity assessment
     let dealVelocity = "STABLE";
     if (pipeline.salesCycle < 20) dealVelocity = "FAST";
     else if (pipeline.salesCycle > 45) dealVelocity = "SLOW";
 
-    // Recommendation
     let recommendation = "Pipeline is healthy.";
     if (healthScore < 50) {
       recommendation = "Pipeline needs growth. Focus on prospecting.";
@@ -333,24 +357,8 @@ export class SalesPipelineEngine {
   }
 
   /**
-   * Calculate win probability based on deal stage
-   */
-  private static calculateWinProbability(stage: DealStage): number {
-    const probabilities: Record<DealStage, number> = {
-      [DealStage.PROSPECT]: 0.05,
-      [DealStage.QUALIFIED]: 0.25,
-      [DealStage.PROPOSAL]: 0.65,
-      [DealStage.NEGOTIATION]: 0.85,
-      [DealStage.CLOSED_WON]: 1.0,
-      [DealStage.CLOSED_LOST]: 0.0,
-    };
-
-    return probabilities[stage] || 0.5;
-  }
-
-  /**
-   * Identify opportunities in pipeline (deals with high value and early stage) - WORKSPACE-SCOPED
-   * CRITICAL: Returns empty if workspace doesn't own the data
+   * Identify opportunities in a caller-supplied deal array.
+   * Pure function — no DB access, no side effects.
    */
   static identifyOpportunities(
     workspaceId: string,
@@ -360,43 +368,38 @@ export class SalesPipelineEngine {
     atRiskDeals: SalesDeal[];
     closingDeals: SalesDeal[];
   } {
-    // Fail-closed: return empty if workspace or data missing
     if (!workspaceId || !deals || deals.length === 0) {
-      return {
-        highValueEarlyStageDeals: [],
-        atRiskDeals: [],
-        closingDeals: [],
-      };
+      return { highValueEarlyStageDeals: [], atRiskDeals: [], closingDeals: [] };
     }
 
-    // Verify workspace owns this data
-    if (!this.dealsStore.has(workspaceId)) {
-      return {
-        highValueEarlyStageDeals: [],
-        atRiskDeals: [],
-        closingDeals: [],
-      };
-    }
+    const scopedDeals = deals.filter(d => d.workspaceId === workspaceId);
 
-    const highValueEarlyStageDeals = deals.filter(
+    const highValueEarlyStageDeals = scopedDeals.filter(
       (d) =>
         (d.stage === DealStage.PROSPECT || d.stage === DealStage.QUALIFIED) &&
         d.value > 50000
     );
 
-    const atRiskDeals = deals.filter(
+    const atRiskDeals = scopedDeals.filter(
       (d) => d.probability !== undefined && d.probability < 0.2 && d.stage !== DealStage.CLOSED_LOST
     );
 
-    const closingDeals = deals.filter(
-      (d) =>
-        d.stage === DealStage.NEGOTIATION || d.stage === DealStage.PROPOSAL
+    const closingDeals = scopedDeals.filter(
+      (d) => d.stage === DealStage.NEGOTIATION || d.stage === DealStage.PROPOSAL
     );
 
-    return {
-      highValueEarlyStageDeals,
-      atRiskDeals,
-      closingDeals,
+    return { highValueEarlyStageDeals, atRiskDeals, closingDeals };
+  }
+
+  private static calculateWinProbability(stage: DealStage): number {
+    const probabilities: Record<DealStage, number> = {
+      [DealStage.PROSPECT]: 0.05,
+      [DealStage.QUALIFIED]: 0.25,
+      [DealStage.PROPOSAL]: 0.65,
+      [DealStage.NEGOTIATION]: 0.85,
+      [DealStage.CLOSED_WON]: 1.0,
+      [DealStage.CLOSED_LOST]: 0.0,
     };
+    return probabilities[stage] ?? 0.5;
   }
 }

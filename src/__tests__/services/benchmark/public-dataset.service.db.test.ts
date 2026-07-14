@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { getDbInstance } from "@/lib/db";
 import {
@@ -43,7 +44,7 @@ const createTestDataset = (overrides: Partial<PublicDataset> = {}): PublicDatase
   ...overrides,
 });
 
-describe("PublicDatasetService", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("PublicDatasetService", () => {
   describe("loadDataset", () => {
     it("should load a dataset by ID", async () => {
       const testDataset = createTestDataset();

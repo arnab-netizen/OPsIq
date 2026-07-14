@@ -8,6 +8,10 @@
  * All inputs must include workspaceId for tenant safety.
  */
 
+import { randomUUID } from "crypto";
+import { db } from "@/lib/db";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
   RevenueStream,
   RevenueForecast,
@@ -15,6 +19,23 @@ import {
   BillingCycle,
   validateRevenueStream,
 } from "@/domain/growth/growth-engines";
+import { ValidationError } from "@/infra/errors";
+
+export interface RevenueStreamRecord {
+  id: string;
+  workspaceId: string;
+  name: string;
+  model: string;
+  billingCycle: string;
+  basePrice: number;
+  currency: string;
+  volume?: number | null;
+  volumeUnit?: string | null;
+  activationDate?: Date | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 /**
  * Revenue Engine Service
@@ -22,21 +43,19 @@ import {
  */
 export class RevenueEngine {
   /**
-   * Create and validate a new revenue stream
+   * Persist a new revenue stream (workspace-scoped, DB-backed).
+   * Throws ValidationError on invalid data or missing workspaceId.
+   * Emits REVENUE_STREAM_CREATED audit event.
    */
-  static createRevenueStream(
+  static async persistStream(
     workspaceId: string,
+    actorId: string,
     data: Partial<RevenueStream>
-  ): { stream: RevenueStream | null; error: string | null } {
-    // Ensure workspace scoping first
-    if (!workspaceId || workspaceId.length === 0) {
-      return {
-        stream: null,
-        error: "Workspace ID is required for revenue stream creation",
-      };
+  ): Promise<RevenueStreamRecord> {
+    if (!workspaceId) {
+      throw new ValidationError("Workspace ID is required for revenue stream creation");
     }
 
-    // Apply defaults to validation data
     const validationData = {
       name: data.name,
       model: data.model || RevenueModel.SUBSCRIPTION,
@@ -44,19 +63,83 @@ export class RevenueEngine {
       basePrice: data.basePrice ?? 0,
       currency: data.currency || "USD",
     };
-
-    // Validate with defaults applied
     const validation = validateRevenueStream(validationData);
     if (!validation.valid) {
-      return {
-        stream: null,
-        error: `Revenue stream validation failed: ${validation.errors.join("; ")}`,
-      };
+      throw new ValidationError(
+        `Revenue stream validation failed: ${validation.errors.join("; ")}`
+      );
     }
 
-    // Create stream with workspace scoping and defaults
+    const id = randomUUID();
+    const row = await db.revenueStreamRecord.create({
+      data: {
+        id,
+        workspaceId,
+        name: data.name!,
+        model: (data.model || RevenueModel.SUBSCRIPTION) as string,
+        billingCycle: (data.billingCycle || BillingCycle.MONTHLY) as string,
+        basePrice: data.basePrice ?? 0,
+        currency: data.currency ?? "USD",
+        volume: data.volume ?? null,
+        volumeUnit: data.volumeUnit ?? null,
+        activationDate: data.activationDate ?? null,
+        status: data.status ?? "DRAFT",
+      },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.REVENUE_STREAM_CREATED,
+      actorId,
+      entityType: "revenue_stream_record",
+      entityId: id,
+      workspaceId,
+      payload: { name: row.name, model: row.model, basePrice: row.basePrice },
+      visibility: "internal",
+    });
+
+    return row;
+  }
+
+  /**
+   * List persisted revenue streams for a workspace (workspace-scoped read).
+   * Optionally filter by status. Ordered newest first.
+   */
+  static async listStreams(
+    workspaceId: string,
+    status?: string
+  ): Promise<RevenueStreamRecord[]> {
+    return db.revenueStreamRecord.findMany({
+      where: { workspaceId, ...(status ? { status } : {}) },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /**
+   * Create and validate a new revenue stream (in-memory, for validation only).
+   * Use persistStream() to write to DB.
+   */
+  static createRevenueStream(
+    workspaceId: string,
+    data: Partial<RevenueStream>
+  ): { stream: RevenueStream | null; error: string | null } {
+    if (!workspaceId || workspaceId.length === 0) {
+      return { stream: null, error: "Workspace ID is required for revenue stream creation" };
+    }
+
+    const validationData = {
+      name: data.name,
+      model: data.model || RevenueModel.SUBSCRIPTION,
+      billingCycle: data.billingCycle || BillingCycle.MONTHLY,
+      basePrice: data.basePrice ?? 0,
+      currency: data.currency || "USD",
+    };
+    const validation = validateRevenueStream(validationData);
+    if (!validation.valid) {
+      return { stream: null, error: `Revenue stream validation failed: ${validation.errors.join("; ")}` };
+    }
+
     const stream: RevenueStream = {
-      id: `rs-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: randomUUID(),
       workspaceId,
       name: data.name || "Unnamed Stream",
       model: data.model || RevenueModel.SUBSCRIPTION,

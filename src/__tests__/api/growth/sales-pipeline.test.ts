@@ -4,16 +4,76 @@
  * Validates route structure, error handling, and service integration
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SalesPipelineEngine } from "@/services/growth/sales-pipeline-engine";
 import { DealStage } from "@/domain/growth/growth-engines";
+import { ValidationError } from "@/infra/errors";
+
+// SalesPipelineEngine.recordDeal and progressDeal are DB-backed; mock DB and
+// audit so tests run without a live database connection.
+vi.mock("@/lib/db", () => ({
+  db: {
+    salesDealRecord: {
+      create: vi.fn().mockImplementation(async ({ data }) => ({
+        id: data.id,
+        workspaceId: data.workspaceId,
+        companyName: data.companyName,
+        stage: data.stage,
+        value: data.value,
+        currency: data.currency,
+        probability: data.probability,
+        expectedCloseDate: data.expectedCloseDate,
+        owner: data.owner ?? null,
+        notes: data.notes ?? null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })),
+      findUnique: vi.fn().mockImplementation(async ({ where }) => ({
+        id: where.id,
+        workspaceId: "ws-test-1",
+        companyName: "Test Corp",
+        stage: "QUALIFIED",
+        value: 50000,
+        currency: "USD",
+        probability: 0.15,
+        expectedCloseDate: new Date(),
+        owner: null,
+        notes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })),
+      update: vi.fn().mockImplementation(async ({ where, data }) => ({
+        id: where.id,
+        workspaceId: "ws-test-1",
+        companyName: "Test Corp",
+        stage: data.stage,
+        value: 50000,
+        currency: "USD",
+        probability: data.probability,
+        expectedCloseDate: new Date(),
+        owner: null,
+        notes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })),
+    },
+  },
+}));
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe("Sales Pipeline API Route - Service Integration", () => {
   const workspaceId = "ws-test-1";
+  const actorId = "actor-test-1";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   describe("Route Integration with SalesPipelineEngine", () => {
-    it("should route POST request to SalesPipelineEngine.recordDeal", () => {
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
+    it("should route POST request to SalesPipelineEngine.recordDeal", async () => {
+      const deal = await SalesPipelineEngine.recordDeal(workspaceId, actorId, {
         companyName: "Acme Corp",
         stage: DealStage.QUALIFIED,
         value: 100000,
@@ -22,42 +82,38 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         expectedCloseDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       });
 
-      expect(result.error).toBeNull();
-      expect(result.deal).toBeDefined();
-      expect(result.deal?.companyName).toBe("Acme Corp");
+      expect(deal.companyName).toBe("Acme Corp");
+      expect(deal.workspaceId).toBe(workspaceId);
     });
 
-    it("should validate workspace enforcement in service call", () => {
-      const result = SalesPipelineEngine.recordDeal("", {
-        companyName: "Test Corp",
-        stage: DealStage.PROPOSAL,
-        value: 50000,
-        currency: "USD",
-        expectedCloseDate: new Date(),
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.error).toContain("Workspace ID");
+    it("should validate workspace enforcement in service call", async () => {
+      await expect(
+        SalesPipelineEngine.recordDeal("", actorId, {
+          companyName: "Test Corp",
+          stage: DealStage.PROPOSAL,
+          value: 50000,
+          currency: "USD",
+          expectedCloseDate: new Date(),
+        })
+      ).rejects.toThrow(/Workspace ID/);
     });
 
-    it("should validate input schema before service call", () => {
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
-        companyName: "",
-        stage: "INVALID" as any,
-        value: -1000,
-        currency: "USD",
-        expectedCloseDate: new Date(),
-      });
-
-      expect(result.error).toBeDefined();
+    it("should validate input schema before service call", async () => {
+      await expect(
+        SalesPipelineEngine.recordDeal(workspaceId, actorId, {
+          companyName: "",
+          stage: "INVALID" as DealStage,
+          value: -1000,
+          currency: "USD",
+          expectedCloseDate: new Date(),
+        })
+      ).rejects.toThrow(ValidationError);
     });
   });
 
   describe("Route Authorization & Workspace Scoping", () => {
-    it("should enforce auth capability check (CAPABILITIES.ENGAGEMENT_UPDATE)", () => {
-      // Route uses withAuth with CAPABILITIES.ENGAGEMENT_UPDATE
-      // Service enforces workspace scoping as prerequisite for auth checks
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
+    it("should enforce auth capability check (CAPABILITIES.ENGAGEMENT_UPDATE)", async () => {
+      const deal = await SalesPipelineEngine.recordDeal(workspaceId, actorId, {
         companyName: "Auth Test Corp",
         stage: DealStage.QUALIFIED,
         value: 50000,
@@ -65,14 +121,11 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         expectedCloseDate: new Date(),
       });
 
-      expect(result.error).toBeNull();
-      expect(result.deal?.workspaceId).toBe(workspaceId);
+      expect(deal.workspaceId).toBe(workspaceId);
     });
 
-    it("should enforce workspace header validation", () => {
-      // Route checks x-workspace-id header exists
-      // Service validates workspaceId is required and non-empty
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
+    it("should enforce workspace header validation", async () => {
+      const deal = await SalesPipelineEngine.recordDeal(workspaceId, actorId, {
         companyName: "Header Corp",
         stage: DealStage.QUALIFIED,
         value: 50000,
@@ -80,13 +133,11 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         expectedCloseDate: new Date(),
       });
 
-      expect(result.deal).toBeDefined();
-      expect(result.deal?.workspaceId).toBe(workspaceId);
-      expect(result.error).toBeNull();
+      expect(deal.workspaceId).toBe(workspaceId);
     });
 
-    it("should scope all responses to workspace", () => {
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
+    it("should scope all responses to workspace", async () => {
+      const deal = await SalesPipelineEngine.recordDeal(workspaceId, actorId, {
         companyName: "Tech Corp",
         stage: DealStage.QUALIFIED,
         value: 75000,
@@ -94,33 +145,25 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         expectedCloseDate: new Date(),
       });
 
-      expect(result.deal).toBeDefined();
-      expect(result.deal?.workspaceId).toBe(workspaceId);
+      expect(deal.workspaceId).toBe(workspaceId);
     });
   });
 
   describe("Route Error Handling", () => {
-    it("should return 400 for missing workspace ID header", () => {
-      // Route returns: Response.json({ error: "Workspace ID required..." }, { status: 400 })
-      // Service validates empty workspace ID causes error response
-      const result = SalesPipelineEngine.recordDeal("", {
-        companyName: "No Workspace Corp",
-        stage: DealStage.QUALIFIED,
-        value: 50000,
-        currency: "USD",
-        expectedCloseDate: new Date(),
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.error).toContain("Workspace ID");
-      expect(result.deal).toBeNull();
+    it("should return 400 for missing workspace ID header", async () => {
+      await expect(
+        SalesPipelineEngine.recordDeal("", actorId, {
+          companyName: "No Workspace Corp",
+          stage: DealStage.QUALIFIED,
+          value: 50000,
+          currency: "USD",
+          expectedCloseDate: new Date(),
+        })
+      ).rejects.toThrow(/Workspace ID/);
     });
 
-    it("should return 403 for unauthorized workspace access", () => {
-      // Route returns: Response.json({ error: "Unauthorized" }, { status: 403 })
-      // from enforceWorkspaceScoping failure
-      // Service enforces workspace ownership on data access
-      const resultWs1 = SalesPipelineEngine.recordDeal("ws-1", {
+    it("should return 403 for unauthorized workspace access", async () => {
+      const deal = await SalesPipelineEngine.recordDeal("ws-1", actorId, {
         companyName: "Workspace 1 Corp",
         stage: DealStage.QUALIFIED,
         value: 50000,
@@ -128,41 +171,35 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         expectedCloseDate: new Date(),
       });
 
-      expect(resultWs1.error).toBeNull();
-      expect(resultWs1.deal?.workspaceId).toBe("ws-1");
+      expect(deal.workspaceId).toBe("ws-1");
     });
 
-    it("should return 400 for Zod validation errors", () => {
-      // Route catches z.ZodError and returns 400 with details
-      // Service validates schema and returns error on validation failure
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
-        companyName: "", // Invalid: empty company name
-        stage: DealStage.QUALIFIED,
-        value: 100000,
-        currency: "USD",
-        expectedCloseDate: new Date(),
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.deal).toBeNull();
+    it("should return 400 for Zod validation errors", async () => {
+      await expect(
+        SalesPipelineEngine.recordDeal(workspaceId, actorId, {
+          companyName: "", // Invalid: empty company name
+          stage: DealStage.QUALIFIED,
+          value: 100000,
+          currency: "USD",
+          expectedCloseDate: new Date(),
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should return 400 for service validation errors", () => {
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
-        companyName: "",
-        stage: DealStage.QUALIFIED,
-        value: 100000,
-        currency: "USD",
-        expectedCloseDate: new Date(),
-      });
-
-      expect(result.error).toBeDefined();
+    it("should return 400 for service validation errors", async () => {
+      await expect(
+        SalesPipelineEngine.recordDeal(workspaceId, actorId, {
+          companyName: "",
+          stage: DealStage.QUALIFIED,
+          value: 100000,
+          currency: "USD",
+          expectedCloseDate: new Date(),
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should return 500 for unexpected errors", () => {
-      // Route catches Error and returns 500
-      // Service returns structured error response with both error and deal fields
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
+    it("should succeed for valid input", async () => {
+      const deal = await SalesPipelineEngine.recordDeal(workspaceId, actorId, {
         companyName: "Error Test Corp",
         stage: DealStage.QUALIFIED,
         value: 100000,
@@ -170,15 +207,14 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         expectedCloseDate: new Date(),
       });
 
-      expect(result).toBeDefined();
-      expect(typeof result.error === 'string' || result.error === null).toBe(true);
-      expect(result.deal === null || typeof result.deal === 'object').toBe(true);
+      expect(deal).toBeDefined();
+      expect(deal.workspaceId).toBe(workspaceId);
     });
   });
 
   describe("Route DTO Boundary (Response Safety)", () => {
-    it("should not expose internal fields in response", () => {
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
+    it("should not expose internal fields in response", async () => {
+      const deal = await SalesPipelineEngine.recordDeal(workspaceId, actorId, {
         companyName: "Public Corp",
         stage: DealStage.PROPOSAL,
         value: 100000,
@@ -186,14 +222,12 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         expectedCloseDate: new Date(),
       });
 
-      expect(result.deal).toBeDefined();
-      const deal = result.deal!;
       expect(Object.keys(deal)).not.toContain("_internal");
       expect(Object.keys(deal)).not.toContain("_debug");
     });
 
-    it("should return complete public deal structure", () => {
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
+    it("should return complete public deal structure", async () => {
+      const deal = await SalesPipelineEngine.recordDeal(workspaceId, actorId, {
         companyName: "Complete Corp",
         stage: DealStage.PROPOSAL,
         value: 100000,
@@ -204,7 +238,7 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         notes: "Strategic account",
       });
 
-      expect(result.deal).toEqual(
+      expect(deal).toEqual(
         expect.objectContaining({
           companyName: "Complete Corp",
           stage: DealStage.PROPOSAL,
@@ -216,8 +250,8 @@ describe("Sales Pipeline API Route - Service Integration", () => {
   });
 
   describe("Route-Service Contract", () => {
-    it("should pass validated data to service", () => {
-      const schema = {
+    it("should pass validated data to service", async () => {
+      const input = {
         companyName: "Contract Corp",
         stage: DealStage.NEGOTIATION,
         value: 150000,
@@ -226,27 +260,26 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         expectedCloseDate: new Date(),
       };
 
-      const result = SalesPipelineEngine.recordDeal(workspaceId, schema);
+      const deal = await SalesPipelineEngine.recordDeal(workspaceId, actorId, input);
 
-      expect(result.deal?.companyName).toBe(schema.companyName);
-      expect(result.deal?.value).toBe(schema.value);
+      expect(deal.companyName).toBe(input.companyName);
+      expect(deal.value).toBe(input.value);
     });
 
-    it("should handle service error response", () => {
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
-        companyName: "",
-        stage: DealStage.QUALIFIED,
-        value: 100000,
-        currency: "USD",
-        expectedCloseDate: new Date(),
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.deal).toBeNull();
+    it("should handle service error response", async () => {
+      await expect(
+        SalesPipelineEngine.recordDeal(workspaceId, actorId, {
+          companyName: "",
+          stage: DealStage.QUALIFIED,
+          value: 100000,
+          currency: "USD",
+          expectedCloseDate: new Date(),
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should return service-created deal on success", () => {
-      const result = SalesPipelineEngine.recordDeal(workspaceId, {
+    it("should return service-created deal on success", async () => {
+      const deal = await SalesPipelineEngine.recordDeal(workspaceId, actorId, {
         companyName: "Success Corp",
         stage: DealStage.PROSPECT,
         value: 50000,
@@ -254,16 +287,16 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         expectedCloseDate: new Date(),
       });
 
-      expect(result.error).toBeNull();
-      expect(result.deal).toBeDefined();
-      expect(result.deal?.companyName).toBe("Success Corp");
+      expect(deal.workspaceId).toBe(workspaceId);
+      expect(deal.companyName).toBe("Success Corp");
     });
   });
 
   describe("Progress Deal Handler", () => {
-    it("should expose progressDeal via handler", () => {
-      const result = SalesPipelineEngine.progressDeal(
+    it("should expose progressDeal via handler", async () => {
+      const result = await SalesPipelineEngine.progressDeal(
         workspaceId,
+        actorId,
         "deal-123",
         DealStage.PROPOSAL
       );
@@ -272,15 +305,16 @@ describe("Sales Pipeline API Route - Service Integration", () => {
       expect(result.progressionNote).toBeDefined();
     });
 
-    it("should update deal stage and probability", () => {
-      const result = SalesPipelineEngine.progressDeal(
+    it("should update deal stage and probability", async () => {
+      const result = await SalesPipelineEngine.progressDeal(
         workspaceId,
+        actorId,
         "deal-456",
         DealStage.NEGOTIATION
       );
 
-      expect(result.deal?.stage).toBe(DealStage.NEGOTIATION);
-      expect(result.deal?.probability).toBeGreaterThan(0.5);
+      expect(result.deal.stage).toBe(DealStage.NEGOTIATION);
+      expect(result.deal.probability).toBeGreaterThan(0.5);
     });
   });
 
@@ -309,10 +343,7 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         },
       ];
 
-      const result = SalesPipelineEngine.calculatePipelineMetrics(
-        workspaceId,
-        deals
-      );
+      const result = SalesPipelineEngine.calculatePipelineMetrics(workspaceId, deals);
 
       expect(result.totalPipeline).toBeGreaterThan(0);
       expect(result.avgDealSize).toBeGreaterThan(0);
@@ -332,10 +363,7 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         },
       ];
 
-      const result = SalesPipelineEngine.calculatePipelineMetrics(
-        workspaceId,
-        deals
-      );
+      const result = SalesPipelineEngine.calculatePipelineMetrics(workspaceId, deals);
 
       expect(result.dealsByStage[DealStage.QUALIFIED]).toBeGreaterThan(0);
     });
@@ -356,11 +384,7 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         },
       ];
 
-      const result = SalesPipelineEngine.forecastPipelineRevenue(
-        workspaceId,
-        deals,
-        3
-      );
+      const result = SalesPipelineEngine.forecastPipelineRevenue(workspaceId, deals, 3);
 
       expect(result.totalForecast).toBeGreaterThanOrEqual(0);
       expect(result.confidence).toBeGreaterThan(0);
@@ -380,18 +404,14 @@ describe("Sales Pipeline API Route - Service Integration", () => {
         },
       ];
 
-      const result = SalesPipelineEngine.forecastPipelineRevenue(
-        workspaceId,
-        deals,
-        3
-      );
+      const result = SalesPipelineEngine.forecastPipelineRevenue(workspaceId, deals, 3);
 
       expect(Object.keys(result.forecastByMonth).length).toBeGreaterThan(0);
     });
   });
 
   describe("Tenant Safety", () => {
-    const deal = {
+    const dealInput = {
       companyName: "Tenant Test",
       stage: DealStage.QUALIFIED,
       value: 100000,
@@ -399,12 +419,12 @@ describe("Sales Pipeline API Route - Service Integration", () => {
       expectedCloseDate: new Date(),
     };
 
-    it("should prevent cross-workspace deal recording", () => {
-      const ws1Result = SalesPipelineEngine.recordDeal("ws-1", deal);
-      const ws2Result = SalesPipelineEngine.recordDeal("ws-2", deal);
+    it("should prevent cross-workspace deal recording", async () => {
+      const ws1Deal = await SalesPipelineEngine.recordDeal("ws-1", actorId, dealInput);
+      const ws2Deal = await SalesPipelineEngine.recordDeal("ws-2", actorId, dealInput);
 
-      expect(ws1Result.deal?.workspaceId).toBe("ws-1");
-      expect(ws2Result.deal?.workspaceId).toBe("ws-2");
+      expect(ws1Deal.workspaceId).toBe("ws-1");
+      expect(ws2Deal.workspaceId).toBe("ws-2");
     });
 
     it("should prevent cross-workspace metrics calculation", () => {
@@ -425,7 +445,9 @@ describe("Sales Pipeline API Route - Service Integration", () => {
       const ws2Result = SalesPipelineEngine.calculatePipelineMetrics("ws-2", deals);
 
       expect(ws1Result.workspaceId).toBe("ws-1");
+      expect(ws1Result.totalPipeline).toBeGreaterThan(0);
       expect(ws2Result.workspaceId).toBe("ws-2");
+      expect(ws2Result.totalPipeline).toBe(0);
     });
   });
 });

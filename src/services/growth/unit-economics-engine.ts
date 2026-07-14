@@ -1,24 +1,16 @@
 /**
- * Phase 9 Slice 8: Unit Economics Engine Service
+ * Unit Economics Engine Service
  *
- * Implements unit economics analysis, customer lifecycle metrics, and profitability modeling.
- * Integrates metrics from revenue, acquisition, and retention engines.
+ * Pure-function unit economics analysis: CAC, LTV, payback period,
+ * LTV:CAC ratio, contribution margin, break-even, and retention value.
+ * All methods are stateless — no in-memory store, no DB access.
+ * Callers supply all input data; results are computed deterministically.
  *
- * CRITICAL: Service operates on workspace-scoped data only.
- * All inputs must include workspaceId for tenant safety.
- */
-
-/**
- * Unit Economics Engine Service with Workspace-Scoped Data Stores
- * CRITICAL FIX: Enforces workspace isolation on all data access
+ * Workspace isolation: every method checks that workspaceId is non-empty.
+ * Cross-workspace blocking (metrics.workspaceId mismatch) is the caller's
+ * responsibility where the metric object carries a workspaceId field.
  */
 export class UnitEconomicsEngine {
-  // Workspace-scoped data stores (Map<workspaceId, DataArray>)
-  private static metricsStore = new Map<string, any[]>();
-  /**
-   * Calculate Customer Acquisition Cost (CAC) - WORKSPACE-SCOPED
-   * CRITICAL: Returns zero if workspace doesn't own the data
-   */
   static calculateCAC(
     workspaceId: string,
     totalAcquisitionSpend: number,
@@ -28,26 +20,12 @@ export class UnitEconomicsEngine {
     status: "HEALTHY" | "CONCERNING" | "CRITICAL";
     message: string;
   } {
-    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
-      return {
-        cac: 0,
-        status: "HEALTHY",
-        message: "Workspace ID is required",
-      };
-    }
-
-    // Claim workspace entry if not present
-    if (!this.metricsStore.has(workspaceId)) {
-      this.metricsStore.set(workspaceId, []);
+      return { cac: 0, status: "HEALTHY", message: "Workspace ID is required" };
     }
 
     if (newCustomersAcquired <= 0) {
-      return {
-        cac: 0,
-        status: "CRITICAL",
-        message: "No customers acquired",
-      };
+      return { cac: 0, status: "CRITICAL", message: "No customers acquired" };
     }
 
     const cac = Math.round(totalAcquisitionSpend / newCustomersAcquired);
@@ -68,10 +46,6 @@ export class UnitEconomicsEngine {
     return { cac, status, message };
   }
 
-  /**
-   * Calculate Customer Lifetime Value (LTV) - WORKSPACE-SCOPED
-   * CRITICAL: Returns zero if workspace doesn't own the data
-   */
   static calculateLTV(
     workspaceId: string,
     avgMonthlyRevenue: number,
@@ -83,48 +57,22 @@ export class UnitEconomicsEngine {
     lifespan: number;
     message: string;
   } {
-    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
-      return {
-        ltv: 0,
-        monthlyProfit: 0,
-        lifespan: 0,
-        message: "",
-      };
-    }
-
-    // Claim workspace entry if not present
-    if (!this.metricsStore.has(workspaceId)) {
-      this.metricsStore.set(workspaceId, []);
+      return { ltv: 0, monthlyProfit: 0, lifespan: 0, message: "" };
     }
 
     if (avgMonthlyChurn <= 0 || avgMonthlyChurn >= 1) {
-      return {
-        ltv: 0,
-        monthlyProfit: 0,
-        lifespan: 0,
-        message: "Invalid churn rate",
-      };
+      return { ltv: 0, monthlyProfit: 0, lifespan: 0, message: "Invalid churn rate" };
     }
 
-    // Monthly profit = revenue × margin
     const monthlyProfit = Math.round(avgMonthlyRevenue * grossMargin);
-
-    // Customer lifespan = 1 / churn rate (months)
     const lifespan = Math.round(1 / avgMonthlyChurn);
-
-    // LTV = monthly profit × lifespan
     const ltv = Math.round(monthlyProfit * lifespan);
-
     const message = `LTV of $${ltv} over ~${lifespan} months (${Math.round(avgMonthlyChurn * 100)}% monthly churn)`;
 
     return { ltv, monthlyProfit, lifespan, message };
   }
 
-  /**
-   * Calculate CAC Payback Period - WORKSPACE-SCOPED
-   * CRITICAL: Returns zero if workspace doesn't own the data
-   */
   static calculateCACPayback(
     workspaceId: string,
     cac: number,
@@ -134,34 +82,15 @@ export class UnitEconomicsEngine {
     paybackStatus: "EXCELLENT" | "GOOD" | "ACCEPTABLE" | "POOR";
     recommendation: string;
   } {
-    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
-      return {
-        paybackMonths: 0,
-        paybackStatus: "POOR",
-        recommendation: "Workspace ID is required",
-      };
-    }
-
-    // Verify workspace owns this data
-    if (!this.metricsStore.has(workspaceId)) {
-      return {
-        paybackMonths: 0,
-        paybackStatus: "POOR",
-        recommendation: "Workspace ID is required",
-      };
+      return { paybackMonths: 0, paybackStatus: "POOR", recommendation: "Workspace ID is required" };
     }
 
     if (monthlyProfit <= 0) {
-      return {
-        paybackMonths: Infinity,
-        paybackStatus: "POOR",
-        recommendation: "Business model is unprofitable",
-      };
+      return { paybackMonths: Infinity, paybackStatus: "POOR", recommendation: "Business model is unprofitable" };
     }
 
     const paybackMonths = Math.round((cac / monthlyProfit) * 100) / 100;
-
     let paybackStatus: "EXCELLENT" | "GOOD" | "ACCEPTABLE" | "POOR";
     let recommendation: string;
 
@@ -182,10 +111,6 @@ export class UnitEconomicsEngine {
     return { paybackMonths, paybackStatus, recommendation };
   }
 
-  /**
-   * Calculate LTV:CAC Ratio - WORKSPACE-SCOPED
-   * CRITICAL: Returns zero if workspace doesn't own the data
-   */
   static calculateLTVCACRatio(
     workspaceId: string,
     ltv: number,
@@ -195,34 +120,15 @@ export class UnitEconomicsEngine {
     health: "HEALTHY" | "AT_RISK" | "CRITICAL";
     recommendation: string;
   } {
-    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
-      return {
-        ratio: 0,
-        health: "CRITICAL",
-        recommendation: "Workspace ID is required",
-      };
-    }
-
-    // Verify workspace owns this data
-    if (!this.metricsStore.has(workspaceId)) {
-      return {
-        ratio: 0,
-        health: "CRITICAL",
-        recommendation: "Workspace ID is required",
-      };
+      return { ratio: 0, health: "CRITICAL", recommendation: "Workspace ID is required" };
     }
 
     if (cac <= 0) {
-      return {
-        ratio: Infinity,
-        health: "HEALTHY",
-        recommendation: "No acquisition cost",
-      };
+      return { ratio: Infinity, health: "HEALTHY", recommendation: "No acquisition cost" };
     }
 
     const ratio = Math.round((ltv / cac) * 100) / 100;
-
     let health: "HEALTHY" | "AT_RISK" | "CRITICAL";
     let recommendation: string;
 
@@ -240,10 +146,6 @@ export class UnitEconomicsEngine {
     return { ratio, health, recommendation };
   }
 
-  /**
-   * Calculate Contribution Margin and Contribution per Unit - WORKSPACE-SCOPED
-   * CRITICAL: Returns zero if workspace doesn't own the data
-   */
   static calculateContributionMetrics(
     workspaceId: string,
     revenuePerUnit: number,
@@ -252,24 +154,12 @@ export class UnitEconomicsEngine {
     unitsSoldPerMonth: number
   ): {
     contributionPerUnit: number;
-    contributionMargin: number; // 0-1
-    contributionRatio: number; // 0-1
+    contributionMargin: number;
+    contributionRatio: number;
     totalContribution: number;
     breakEvenUnits: number;
   } {
-    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
-      return {
-        contributionPerUnit: 0,
-        contributionMargin: 0,
-        contributionRatio: 0,
-        totalContribution: 0,
-        breakEvenUnits: 0,
-      };
-    }
-
-    // Verify workspace owns this data
-    if (!this.metricsStore.has(workspaceId)) {
       return {
         contributionPerUnit: 0,
         contributionMargin: 0,
@@ -281,10 +171,8 @@ export class UnitEconomicsEngine {
 
     const contributionPerUnit = revenuePerUnit - variableCostPerUnit;
     const contributionMargin = Math.round((contributionPerUnit / revenuePerUnit) * 100) / 100;
-    const contributionRatio = Math.round((contributionPerUnit / revenuePerUnit) * 100) / 100;
-
+    const contributionRatio = contributionMargin;
     const totalContribution = contributionPerUnit * unitsSoldPerMonth - fixedCostsPerMonth;
-
     const breakEvenUnits = fixedCostsPerMonth > 0
       ? Math.ceil(fixedCostsPerMonth / Math.max(contributionPerUnit, 1))
       : 0;
@@ -298,10 +186,6 @@ export class UnitEconomicsEngine {
     };
   }
 
-  /**
-   * Assess unit economics health - WORKSPACE-SCOPED
-   * CRITICAL: Returns empty if workspace doesn't own the data
-   */
   static assessUnitEconomicsHealth(
     workspaceId: string,
     ltv: number,
@@ -310,7 +194,7 @@ export class UnitEconomicsEngine {
     monthlyProfit: number
   ): {
     overallHealth: "STRONG" | "MODERATE" | "WEAK";
-    score: number; // 0-100
+    score: number;
     metrics: {
       ltvHealth: string;
       cacHealth: string;
@@ -319,36 +203,19 @@ export class UnitEconomicsEngine {
     };
     recommendations: string[];
   } {
-    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
       return {
         overallHealth: "WEAK",
         score: 0,
-        metrics: {
-          ltvHealth: "",
-          cacHealth: "",
-          paybackHealth: "",
-          profitabilityHealth: "",
-        },
+        metrics: { ltvHealth: "", cacHealth: "", paybackHealth: "", profitabilityHealth: "" },
         recommendations: [],
       };
     }
 
     let score = 0;
-    const metrics: {
-      ltvHealth: string;
-      cacHealth: string;
-      paybackHealth: string;
-      profitabilityHealth: string;
-    } = {
-      ltvHealth: "",
-      cacHealth: "",
-      paybackHealth: "",
-      profitabilityHealth: "",
-    };
+    const metrics = { ltvHealth: "", cacHealth: "", paybackHealth: "", profitabilityHealth: "" };
     const recommendations: string[] = [];
 
-    // LTV health (25 points)
     if (ltv >= cac * 3) {
       score += 25;
       metrics.ltvHealth = "STRONG";
@@ -359,7 +226,6 @@ export class UnitEconomicsEngine {
       metrics.ltvHealth = "WEAK";
     }
 
-    // CAC efficiency (25 points)
     if (cac < 500) {
       score += 12;
       metrics.cacHealth = "MODERATE";
@@ -371,7 +237,6 @@ export class UnitEconomicsEngine {
       recommendations.push("Review acquisition channels and reduce CAC");
     }
 
-    // Payback period (25 points)
     if (paybackMonths <= 3) {
       score += 25;
       metrics.paybackHealth = "EXCELLENT";
@@ -383,7 +248,6 @@ export class UnitEconomicsEngine {
       recommendations.push("Improve margins or reduce acquisition costs");
     }
 
-    // Profitability (25 points)
     if (monthlyProfit > 0) {
       score += 25;
       metrics.profitabilityHealth = "PROFITABLE";
@@ -396,19 +260,9 @@ export class UnitEconomicsEngine {
     }
 
     const overallHealth = score >= 75 ? "STRONG" : score >= 50 ? "MODERATE" : "WEAK";
-
-    return {
-      overallHealth,
-      score,
-      metrics,
-      recommendations,
-    };
+    return { overallHealth, score, metrics, recommendations };
   }
 
-  /**
-   * Calculate customer payback and retention value - WORKSPACE-SCOPED
-   * CRITICAL: Returns zero if workspace doesn't own the data
-   */
   static calculateRetentionValue(
     workspaceId: string,
     cac: number,
@@ -422,33 +276,13 @@ export class UnitEconomicsEngine {
     payoffPeriod: number;
     recommendation: string;
   } {
-    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
-      return {
-        currentLTV: 0,
-        improvedLTV: 0,
-        ltvGain: 0,
-        payoffPeriod: 0,
-        recommendation: "",
-      };
+      return { currentLTV: 0, improvedLTV: 0, ltvGain: 0, payoffPeriod: 0, recommendation: "" };
     }
 
-    // Verify workspace owns this data
-    if (!this.metricsStore.has(workspaceId)) {
-      return {
-        currentLTV: 0,
-        improvedLTV: 0,
-        ltvGain: 0,
-        payoffPeriod: 0,
-        recommendation: "",
-      };
-    }
-
-    // Current LTV
     const currentLifespan = monthlyChurnRate > 0 ? 1 / monthlyChurnRate : 0;
     const currentLTV = Math.round(monthlyProfit * currentLifespan);
 
-    // Improved LTV with better retention
     const improvedChurnRate = Math.max(0, monthlyChurnRate * (1 - retentionImprovementPercent / 100));
     const improvedLifespan = improvedChurnRate > 0 ? 1 / improvedChurnRate : 0;
     const improvedLTV = Math.round(monthlyProfit * improvedLifespan);
@@ -456,19 +290,13 @@ export class UnitEconomicsEngine {
     const ltvGain = improvedLTV - currentLTV;
     const payoffPeriod = cac > 0 ? Math.round(cac / (monthlyProfit || 1)) : 0;
 
-    let recommendation = "";
+    let recommendation: string;
     if (ltvGain > cac) {
       recommendation = `Reducing churn by ${retentionImprovementPercent}% gains $${ltvGain} LTV - pays back in ${payoffPeriod} months`;
     } else {
       recommendation = `Focus on acquisition efficiency - retention ROI is limited`;
     }
 
-    return {
-      currentLTV,
-      improvedLTV,
-      ltvGain,
-      payoffPeriod,
-      recommendation,
-    };
+    return { currentLTV, improvedLTV, ltvGain, payoffPeriod, recommendation };
   }
 }

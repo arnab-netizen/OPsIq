@@ -121,6 +121,22 @@ async function performStartupChecks(): Promise<void> {
     }
     logger.debug("✓ STARTUP: Configuration verified");
 
+    // Check 4: Private workspace ID validation (only when configured)
+    const privateWorkspaceId = process.env.OPSIQ_PRIVATE_WORKSPACE_ID;
+    if (privateWorkspaceId) {
+      logger.debug("STARTUP: Checking private workspace exists in DB...");
+      const privateWorkspaceExists = await checkPrivateWorkspaceExists(dbInstance, privateWorkspaceId);
+      if (!privateWorkspaceExists) {
+        // Fail readiness (not crash): the misconfiguration is surfaced as a startup
+        // failure so operators see it immediately, but the process is not killed.
+        throw new Error(
+          `OPSIQ_PRIVATE_WORKSPACE_ID is set to "${privateWorkspaceId}" but no matching workspace was found in the database. ` +
+          "Run scripts/seed-private-owner.ts to create it, or unset OPSIQ_PRIVATE_WORKSPACE_ID.",
+        );
+      }
+      logger.info("✓ STARTUP: Private workspace verified", { workspaceId: privateWorkspaceId });
+    }
+
     const duration = Date.now() - startTime;
     logger.info("✓ STARTUP: All checks passed", { duration_ms: duration });
     // NOTE: setStartupState(READY) is called in ensureStartupComplete(), not here
@@ -238,4 +254,21 @@ function checkConfiguration(logger: any): boolean {
   }
 
   return result.valid;
+}
+
+/**
+ * Verify that OPSIQ_PRIVATE_WORKSPACE_ID resolves to an existing workspace in the DB.
+ * Checks both the workspaces table (Workspace.id) and the client_accounts table
+ * (ClientAccount.id) — the private deployment uses the same UUID for both.
+ */
+async function checkPrivateWorkspaceExists(dbInstance: any, workspaceId: string): Promise<boolean> {
+  try {
+    const workspace = await dbInstance.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { id: true },
+    });
+    return workspace !== null;
+  } catch {
+    return false;
+  }
 }

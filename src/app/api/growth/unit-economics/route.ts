@@ -1,9 +1,9 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
+import { parseRequestBody } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { UnitEconomicsEngine } from "@/services/growth/unit-economics-engine";
 import { z } from "zod/v4";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const calculateCACSchema = z.object({
   totalAcquisitionSpend: z.number().nonnegative("Spend must be non-negative"),
@@ -21,6 +21,25 @@ const calculateCACPaybackSchema = z.object({
   monthlyProfit: z.number().nonnegative("Monthly profit must be non-negative"),
 });
 
+const calculateLTVCACSchema = z.object({
+  ltv: z.number().nonnegative(),
+  cac: z.number().nonnegative(),
+});
+
+const calculateContributionSchema = z.object({
+  revenuePerUnit: z.number().positive(),
+  variableCostPerUnit: z.number().nonnegative(),
+  fixedCostsPerMonth: z.number().nonnegative(),
+  unitsSoldPerMonth: z.number().nonnegative(),
+});
+
+const calculateRetentionValueSchema = z.object({
+  cac: z.number().nonnegative(),
+  monthlyProfit: z.number(),
+  monthlyChurnRate: z.number().min(0).max(1),
+  retentionImprovementPercent: z.number().min(0).max(100),
+});
+
 const assessHealthSchema = z.object({
   ltv: z.number().nonnegative(),
   cac: z.number().nonnegative(),
@@ -29,144 +48,85 @@ const assessHealthSchema = z.object({
 });
 
 /**
- * POST /api/growth/unit-economics/cac
+ * POST /api/growth/unit-economics
  *
- * Calculate customer acquisition cost (workspace-scoped)
- * Wire: UnitEconomicsEngine.calculateCAC()
+ * Dispatches to the appropriate UnitEconomicsEngine method based on the
+ * presence of discriminating body fields.
+ *
+ * Discriminator priority:
+ *   totalAcquisitionSpend  → calculateCAC
+ *   avgMonthlyRevenue      → calculateLTV
+ *   cac + monthlyProfit (no ltv) → calculateCACPayback
+ *   ltv + cac              → calculateLTVCACRatio
+ *   revenuePerUnit         → calculateContributionMetrics
+ *   monthlyChurnRate       → calculateRetentionValue
+ *   default                → assessUnitEconomicsHealth
  */
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
+    const body = await ctx.request!.json();
 
-    try {
-      const body = await ctx.request?.json() || {};
-      const request = ctx.request!;
-
-      // Route to appropriate handler based on path segment or body structure
-      const pathSegments = request.nextUrl.pathname.split("/");
-      const action = pathSegments[pathSegments.length - 1];
-
-      if (action === "cac" || body.totalAcquisitionSpend !== undefined) {
-        const validated = calculateCACSchema.parse(body);
-        const result = UnitEconomicsEngine.calculateCAC(
-          workspaceId,
-          validated.totalAcquisitionSpend,
-          validated.newCustomersAcquired
-        );
-        return canonicalJson(result, { status: 201 });
-      } else if (action === "ltv" || body.avgMonthlyRevenue !== undefined) {
-        const validated = calculateLTVSchema.parse(body);
-        const result = UnitEconomicsEngine.calculateLTV(
-          workspaceId,
-          validated.avgMonthlyRevenue,
-          validated.avgMonthlyChurn,
-          validated.grossMargin
-        );
-        return canonicalJson(result, { status: 201 });
-      } else if (action === "payback" || body.cac !== undefined) {
-        const validated = calculateCACPaybackSchema.parse(body);
-        const result = UnitEconomicsEngine.calculateCACPayback(
-          workspaceId,
-          validated.cac,
-          validated.monthlyProfit
-        );
-        return canonicalJson(result, { status: 201 });
-      } else {
-        const validated = assessHealthSchema.parse(body);
-        const result = UnitEconomicsEngine.assessUnitEconomicsHealth(
-          workspaceId,
-          validated.ltv,
-          validated.cac,
-          validated.paybackMonths,
-          validated.monthlyProfit
-        );
-        return canonicalJson(result, { status: 201 });
-      }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return canonicalJson(
-          { error: "Validation error", details: error.issues },
-          { status: 400 }
-        );
-      }
-      if (error instanceof Error) {
-        return canonicalJson({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
-      }
-      return canonicalJson({ error: "Internal server error" }, { status: 500 });
+    if (body.totalAcquisitionSpend !== undefined) {
+      const v = calculateCACSchema.parse(body);
+      return canonicalJson(
+        UnitEconomicsEngine.calculateCAC(workspaceId, v.totalAcquisitionSpend, v.newCustomersAcquired),
+        { status: 200 }
+      );
     }
+
+    if (body.avgMonthlyRevenue !== undefined) {
+      const v = calculateLTVSchema.parse(body);
+      return canonicalJson(
+        UnitEconomicsEngine.calculateLTV(workspaceId, v.avgMonthlyRevenue, v.avgMonthlyChurn, v.grossMargin),
+        { status: 200 }
+      );
+    }
+
+    if (body.revenuePerUnit !== undefined) {
+      const v = calculateContributionSchema.parse(body);
+      return canonicalJson(
+        UnitEconomicsEngine.calculateContributionMetrics(
+          workspaceId, v.revenuePerUnit, v.variableCostPerUnit, v.fixedCostsPerMonth, v.unitsSoldPerMonth
+        ),
+        { status: 200 }
+      );
+    }
+
+    if (body.monthlyChurnRate !== undefined) {
+      const v = calculateRetentionValueSchema.parse(body);
+      return canonicalJson(
+        UnitEconomicsEngine.calculateRetentionValue(
+          workspaceId, v.cac, v.monthlyProfit, v.monthlyChurnRate, v.retentionImprovementPercent
+        ),
+        { status: 200 }
+      );
+    }
+
+    if (body.ltv !== undefined && body.cac !== undefined && body.paybackMonths === undefined) {
+      const v = calculateLTVCACSchema.parse(body);
+      return canonicalJson(
+        UnitEconomicsEngine.calculateLTVCACRatio(workspaceId, v.ltv, v.cac),
+        { status: 200 }
+      );
+    }
+
+    if (body.cac !== undefined && body.monthlyProfit !== undefined && body.ltv === undefined) {
+      const v = calculateCACPaybackSchema.parse(body);
+      return canonicalJson(
+        UnitEconomicsEngine.calculateCACPayback(workspaceId, v.cac, v.monthlyProfit),
+        { status: 200 }
+      );
+    }
+
+    const v = assessHealthSchema.parse(body);
+    return canonicalJson(
+      UnitEconomicsEngine.assessUnitEconomicsHealth(workspaceId, v.ltv, v.cac, v.paybackMonths, v.monthlyProfit),
+      { status: 200 }
+    );
   },
   {
     requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE],
     requireWorkspace: true,
   }
 );
-
-/**
- * POST /api/growth/unit-economics/ratio
- *
- * Calculate LTV:CAC ratio
- * Wire: UnitEconomicsEngine.calculateLTVCACRatio()
- */
-export async function calculateLTVCACRatioHandler(
-  workspaceId: string,
-  ltv: number,
-  cac: number
-): Promise<any> {
-  if (!workspaceId) {
-    return { error: "Workspace ID required" };
-  }
-
-  return UnitEconomicsEngine.calculateLTVCACRatio(workspaceId, ltv, cac);
-}
-
-/**
- * POST /api/growth/unit-economics/contribution
- *
- * Calculate contribution metrics
- * Wire: UnitEconomicsEngine.calculateContributionMetrics()
- */
-export async function calculateContributionHandler(
-  workspaceId: string,
-  revenuePerUnit: number,
-  variableCostPerUnit: number,
-  fixedCostsPerMonth: number,
-  unitsSoldPerMonth: number
-): Promise<any> {
-  if (!workspaceId) {
-    return { error: "Workspace ID required" };
-  }
-
-  return UnitEconomicsEngine.calculateContributionMetrics(
-    workspaceId,
-    revenuePerUnit,
-    variableCostPerUnit,
-    fixedCostsPerMonth,
-    unitsSoldPerMonth
-  );
-}
-
-/**
- * POST /api/growth/unit-economics/retention-value
- *
- * Calculate retention value impact
- * Wire: UnitEconomicsEngine.calculateRetentionValue()
- */
-export async function calculateRetentionValueHandler(
-  workspaceId: string,
-  cac: number,
-  monthlyProfit: number,
-  monthlyChurnRate: number,
-  retentionImprovementPercent: number
-): Promise<any> {
-  if (!workspaceId) {
-    return { error: "Workspace ID required" };
-  }
-
-  return UnitEconomicsEngine.calculateRetentionValue(
-    workspaceId,
-    cac,
-    monthlyProfit,
-    monthlyChurnRate,
-    retentionImprovementPercent
-  );
-}

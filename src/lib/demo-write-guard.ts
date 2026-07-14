@@ -13,8 +13,10 @@
  * from silently accepting data that will vanish.
  */
 
-/** Features whose writes are backed only by non-durable in-memory storage. */
-export const IN_MEMORY_DEMO_WRITE_FEATURES = ["pricing-tiers", "retention-metrics"] as const;
+/** Features whose writes are backed only by non-durable in-memory storage.
+ * Empty: all growth write routes are now DB-backed with audit events.
+ */
+export const IN_MEMORY_DEMO_WRITE_FEATURES = [] as const;
 export type DemoWriteFeature = (typeof IN_MEMORY_DEMO_WRITE_FEATURES)[number];
 
 /** True only in a production runtime. */

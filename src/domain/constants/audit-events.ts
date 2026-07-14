@@ -465,6 +465,21 @@ export const AUDIT_EVENTS = {
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
+
+  // Owner action outcome tracking (Capability 5 — Measure outcomes)
+  OWNER_ACTION_OUTCOME_RECORDED: "owner.action_outcome_recorded",
+
+  // Growth: retention cohort persistence (replaces BUILT_VOLATILE in-memory Map)
+  RETENTION_COHORT_RECORDED: "growth.retention_cohort_recorded",
+  ACQUISITION_METRICS_RECORDED: "growth.acquisition_metrics_recorded",
+  PRICE_TIER_CREATED: "growth.price_tier_created",
+  SALES_DEAL_RECORDED: "growth.sales_deal_recorded",
+  SALES_DEAL_STAGE_UPDATED: "growth.sales_deal_stage_updated",
+  REVENUE_STREAM_CREATED: "growth.revenue_stream_created",
+
+  // Private deployment
+  PRIVATE_MODE_ENTITLEMENT_ACTIVE: "private_mode.entitlement_active",
+  PRIVATE_OWNER_SEED_EXECUTED: "private_mode.owner_seed_executed",
 } as const;
 
 export type AuditEventName =

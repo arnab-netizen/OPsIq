@@ -4748,3 +4748,131 @@ model BehavioralLearningArtifact {
   @@index([sourceCaseId])
   @@map("behavioral_learning_artifacts")
 }
+
+// ─── Growth: Acquisition Metrics Persistence ─────────────────────────────────
+// Replaces the BUILT_VOLATILE in-memory Map in AcquisitionEngine.
+// Each row stores one channel-month acquisition snapshot.
+// workspaceId is an indexed plain UUID (matches Workspace.id from canonical context).
+model AcquisitionMetricsRecord {
+  id                 String   @id @db.Uuid
+  workspaceId        String   @db.Uuid @map("workspace_id")
+  channel            String   // AcquisitionChannel enum value
+  month              String   // YYYY-MM
+  leads              Int      @default(0)
+  qualifiedLeads     Int?     @map("qualified_leads")
+  conversions        Int      @default(0)
+  costPerLead        Float    @default(0) @map("cost_per_lead")
+  costPerAcquisition Float    @default(0) @map("cost_per_acquisition")
+  targetCPA          Float    @default(0) @map("target_cpa")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, channel, month])
+  @@map("acquisition_metrics_records")
+}
+
+// ─── Growth: Price Tier Persistence ──────────────────────────────────────────
+// Replaces the BUILT_VOLATILE in-memory Map in PricingEngine.
+// Implements plan-required schema: currency, unit of measure, effective dates,
+// version history (append-only via supersededById), variable/allocated costs,
+// customer segment, channel, quantity breaks, discount structure, approval status,
+// provenance. Derived margin is computed at read time — NOT stored.
+model GrowthPriceTier {
+  id                String    @id @db.Uuid
+  workspaceId       String    @db.Uuid @map("workspace_id")
+  name              String
+  currency          String    @default("USD")
+  unitOfMeasure     String    @default("seat") @map("unit_of_measure")
+  entryPrice        Float     @map("entry_price")
+  maxPrice          Float     @map("max_price")
+  variableCost      Float?    @map("variable_cost")
+  allocatedCost     Float?    @map("allocated_cost")
+  customerSegment   String?   @map("customer_segment")
+  channel           String?
+  quantityBreaks    Json?     @map("quantity_breaks")
+  discountStructure Json?     @map("discount_structure")
+  features          Json      @default("[]")
+  status            String    @default("DRAFT")
+  approvalStatus    String    @default("pending_approval") @map("approval_status")
+  approvedBy        String?   @map("approved_by") @db.Uuid
+  approvedAt        DateTime? @map("approved_at")
+  provenance        String?
+  effectiveFrom     DateTime? @map("effective_from")
+  effectiveTo       DateTime? @map("effective_to")
+  version           Int       @default(1)
+  supersededById    String?   @map("superseded_by_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, approvalStatus])
+  @@index([workspaceId, status])
+  @@map("growth_price_tiers")
+}
+
+// ─── Growth: Sales Deal Persistence ──────────────────────────────────────────
+// Replaces the BUILT_VOLATILE in-memory Map in SalesPipelineEngine.
+// Each row represents one sales deal with its current pipeline stage.
+// workspaceId is an indexed plain UUID (matches Workspace.id from canonical context).
+model SalesDealRecord {
+  id                String    @id @db.Uuid
+  workspaceId       String    @db.Uuid @map("workspace_id")
+  companyName       String    @map("company_name")
+  stage             String
+  value             Float
+  currency          String    @default("USD")
+  probability       Float     @default(0)
+  expectedCloseDate DateTime  @map("expected_close_date")
+  owner             String?
+  notes             String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, stage])
+  @@map("sales_deal_records")
+}
+
+// ─── Growth: Revenue Stream Persistence ──────────────────────────────────────
+// Replaces the BUILT_VOLATILE in-memory creation in RevenueEngine.
+// Each row stores one revenue stream definition for a workspace.
+// workspaceId is an indexed plain UUID (matches Workspace.id from canonical context).
+model RevenueStreamRecord {
+  id             String    @id @db.Uuid
+  workspaceId    String    @db.Uuid @map("workspace_id")
+  name           String
+  model          String    @default("SUBSCRIPTION")
+  billingCycle   String    @default("MONTHLY") @map("billing_cycle")
+  basePrice      Float     @map("base_price")
+  currency       String    @default("USD")
+  volume         Float?
+  volumeUnit     String?   @map("volume_unit")
+  activationDate DateTime? @map("activation_date")
+  status         String    @default("DRAFT")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@map("revenue_stream_records")
+}
+
+// ─── Growth: Retention Cohort Persistence ────────────────────────────────────
+// Replaces the BUILT_VOLATILE in-memory Map in RetentionEngine.
+// Each row stores one cohort's observed retention curve and average monthly churn.
+// workspaceId is an indexed plain UUID (matches Workspace.id from canonical context).
+model RetentionCohort {
+  id               String   @id @db.Uuid
+  workspaceId      String   @db.Uuid @map("workspace_id")
+  cohortMonth      String   @map("cohort_month") // YYYY-MM
+  cohortSize       Int?     @map("cohort_size")
+  monthlyRetention Json     @map("monthly_retention") // Record<number, number> — month → retention rate 0–1
+  avgMonthlyChurn  Float    @default(0) @map("avg_monthly_churn") // 0–1
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, cohortMonth])
+  @@map("retention_cohorts")
+}

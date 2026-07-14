@@ -5,273 +5,261 @@
  * Full end-to-end testing requires auth context and database
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PricingEngine } from "@/services/growth/pricing-engine";
+import { ValidationError } from "@/infra/errors";
+
+// PricingEngine.createPriceTier is DB-backed; mock DB and audit so tests
+// run without a live database connection.
+vi.mock("@/lib/db", () => ({
+  db: {
+    growthPriceTier: {
+      create: vi.fn().mockImplementation(async ({ data }) => ({
+        id: data.id,
+        workspaceId: data.workspaceId,
+        name: data.name,
+        currency: data.currency ?? "USD",
+        unitOfMeasure: data.unitOfMeasure ?? "seat",
+        entryPrice: data.entryPrice,
+        maxPrice: data.maxPrice,
+        variableCost: data.variableCost ?? null,
+        allocatedCost: data.allocatedCost ?? null,
+        customerSegment: data.customerSegment ?? null,
+        channel: data.channel ?? null,
+        quantityBreaks: data.quantityBreaks ?? null,
+        discountStructure: data.discountStructure ?? null,
+        features: data.features ?? [],
+        status: data.status ?? "DRAFT",
+        approvalStatus: data.approvalStatus ?? "pending_approval",
+        approvedBy: null,
+        approvedAt: null,
+        provenance: data.provenance ?? null,
+        effectiveFrom: data.effectiveFrom ?? null,
+        effectiveTo: data.effectiveTo ?? null,
+        version: data.version ?? 1,
+        supersededById: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })),
+    },
+  },
+}));
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe("Pricing Tiers API Route - Service Integration", () => {
   const workspaceId = "ws-test-1";
+  const actorId = "actor-test-1";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   describe("Route Integration with PricingEngine", () => {
-    it("should route POST request to PricingEngine.createPriceTier", () => {
-      // Validates service is callable
-      const result = PricingEngine.createPriceTier(workspaceId, {
+    it("should route POST request to PricingEngine.createPriceTier", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
         name: "Test Tier",
         entryPrice: 99,
         maxPrice: 299,
-        targetMargin: 0.7,
         features: ["F1", "F2"],
       });
 
-      expect(result.error).toBeNull();
-      expect(result.tier).toBeDefined();
-      expect(result.tier?.workspaceId).toBe(workspaceId);
+      expect(tier.workspaceId).toBe(workspaceId);
+      expect(tier.name).toBe("Test Tier");
     });
 
-    it("should validate workspace enforcement in service call", () => {
-      // Route should enforce workspaceId before service call
-      const result = PricingEngine.createPriceTier("", {
-        name: "Test",
-        entryPrice: 99,
-        maxPrice: 299,
-        targetMargin: 0.7,
-        features: ["F1"],
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.error).toContain("Workspace ID");
+    it("should validate workspace enforcement in service call", async () => {
+      await expect(
+        PricingEngine.createPriceTier("", actorId, {
+          name: "Test",
+          entryPrice: 99,
+          maxPrice: 299,
+          features: ["F1"],
+        })
+      ).rejects.toThrow(/Workspace ID/);
     });
 
-    it("should validate input schema before service call", () => {
-      // Service should reject invalid data
-      const result = PricingEngine.createPriceTier(workspaceId, {
-        name: "",
-        entryPrice: -50,
-        maxPrice: 99,
-        targetMargin: 1.5,
-        features: [],
-      });
-
-      expect(result.error).toBeDefined();
+    it("should validate input schema before service call", async () => {
+      await expect(
+        PricingEngine.createPriceTier(workspaceId, actorId, {
+          name: "",
+          entryPrice: -50,
+          maxPrice: 99,
+          features: [],
+        })
+      ).rejects.toThrow(ValidationError);
     });
   });
 
   describe("Route Authorization & Workspace Scoping", () => {
-    it("should enforce auth capability check (CAPABILITIES.ENGAGEMENT_UPDATE)", () => {
-      // Route uses withAuth with CAPABILITIES.ENGAGEMENT_UPDATE
-      // This ensures only users with update permission can create tiers
-      // Validation happens in route handler before service call
-      // Service enforces workspace scoping as prerequisite for auth checks
-      const result = PricingEngine.createPriceTier(workspaceId, {
+    it("should enforce auth capability check (CAPABILITIES.ENGAGEMENT_UPDATE)", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
         name: "Auth Tier",
         entryPrice: 99,
         maxPrice: 299,
-        targetMargin: 0.7,
         features: ["F1"],
       });
 
-      expect(result.error).toBeNull();
-      expect(result.tier?.workspaceId).toBe(workspaceId);
+      expect(tier.workspaceId).toBe(workspaceId);
     });
 
-    it("should enforce workspace header validation", () => {
-      // Route checks x-workspace-id header exists
-      // Route uses enforceWorkspaceScoping middleware
-      // Service validates workspaceId is required and non-empty
-      const result = PricingEngine.createPriceTier(workspaceId, {
+    it("should enforce workspace header validation", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
         name: "Header Tier",
         entryPrice: 99,
         maxPrice: 299,
-        targetMargin: 0.7,
         features: ["F1"],
       });
 
-      expect(result.tier).toBeDefined();
-      expect(result.tier?.workspaceId).toBe(workspaceId);
-      expect(result.error).toBeNull();
+      expect(tier.workspaceId).toBe(workspaceId);
     });
 
-    it("should scope all responses to workspace", () => {
-      // Service returns tier with workspaceId set
-      const result = PricingEngine.createPriceTier(workspaceId, {
+    it("should scope all responses to workspace", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
         name: "Scoped Tier",
         entryPrice: 99,
         maxPrice: 299,
-        targetMargin: 0.7,
         features: ["F1"],
       });
 
-      expect(result.tier?.workspaceId).toBe(workspaceId);
+      expect(tier.workspaceId).toBe(workspaceId);
     });
   });
 
   describe("Route Error Handling", () => {
-    it("should return 400 for missing workspace ID header", () => {
-      // Route returns: Response.json({ error: "Workspace ID required..." }, { status: 400 })
-      // Service validates empty workspace ID causes error response
-      const result = PricingEngine.createPriceTier("", {
-        name: "No Workspace",
-        entryPrice: 99,
-        maxPrice: 299,
-        targetMargin: 0.7,
-        features: ["F1"],
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.error).toContain("Workspace ID");
-      expect(result.tier).toBeNull();
+    it("should return 400 for missing workspace ID header", async () => {
+      await expect(
+        PricingEngine.createPriceTier("", actorId, {
+          name: "No Workspace",
+          entryPrice: 99,
+          maxPrice: 299,
+          features: ["F1"],
+        })
+      ).rejects.toThrow(/Workspace ID/);
     });
 
-    it("should return 403 for unauthorized workspace access", () => {
-      // Route returns: Response.json({ error: "Unauthorized" }, { status: 403 })
-      // from enforceWorkspaceScoping failure
-      // Service enforces workspace ownership on data access
-      const resultWs1 = PricingEngine.createPriceTier("ws-1", {
+    it("should return 403 for unauthorized workspace access", async () => {
+      const tier = await PricingEngine.createPriceTier("ws-1", actorId, {
         name: "Workspace 1 Tier",
         entryPrice: 99,
         maxPrice: 299,
-        targetMargin: 0.7,
         features: ["F1"],
       });
 
-      expect(resultWs1.error).toBeNull();
-      expect(resultWs1.tier?.workspaceId).toBe("ws-1");
+      expect(tier.workspaceId).toBe("ws-1");
     });
 
-    it("should return 400 for Zod validation errors", () => {
-      // Route catches z.ZodError and returns 400 with details
-      // Service validates schema and returns error on validation failure
-      const result = PricingEngine.createPriceTier(workspaceId, {
-        name: "", // Invalid: empty name
-        entryPrice: 99,
-        maxPrice: 299,
-        targetMargin: 0.7,
-        features: ["F1"],
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.tier).toBeNull();
+    it("should return 400 for Zod validation errors", async () => {
+      await expect(
+        PricingEngine.createPriceTier(workspaceId, actorId, {
+          name: "", // Invalid: empty name
+          entryPrice: 99,
+          maxPrice: 299,
+          features: ["F1"],
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should return 400 for service validation errors", () => {
-      // Service returns validation details, route returns 400
-      const result = PricingEngine.createPriceTier(workspaceId, {
-        name: "",
-        entryPrice: 99,
-        maxPrice: 299,
-        targetMargin: 0.7,
-        features: ["F1"],
-      });
-
-      expect(result.error).toBeDefined();
+    it("should return 400 for service validation errors", async () => {
+      await expect(
+        PricingEngine.createPriceTier(workspaceId, actorId, {
+          name: "",
+          entryPrice: 99,
+          maxPrice: 299,
+          features: ["F1"],
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should return 500 for unexpected errors", () => {
-      // Route catches Error and returns 500
-      // Service returns structured error response with both error and tier fields
-      const result = PricingEngine.createPriceTier(workspaceId, {
-        name: "Error Test",
+    it("should succeed for valid input", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
+        name: "Valid Tier",
         entryPrice: 99,
         maxPrice: 299,
-        targetMargin: 0.7,
         features: ["F1"],
       });
 
-      expect(result).toBeDefined();
-      expect(typeof result.error === 'string' || result.error === null).toBe(true);
-      expect(result.tier === null || typeof result.tier === 'object').toBe(true);
+      expect(tier).toBeDefined();
+      expect(tier.workspaceId).toBe(workspaceId);
     });
   });
 
   describe("Route DTO Boundary (Response Safety)", () => {
-    it("should not expose internal fields in response", () => {
-      // Service creates tier with only public fields
-      const result = PricingEngine.createPriceTier(workspaceId, {
+    it("should not expose internal fields in response", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
         name: "Test",
         entryPrice: 99,
         maxPrice: 299,
-        targetMargin: 0.7,
         features: ["F1"],
       });
 
-      expect(result.tier).toBeDefined();
-      // Verify no internal fields
-      const tier = result.tier!;
       expect(Object.keys(tier)).not.toContain("_internal");
       expect(Object.keys(tier)).not.toContain("_debug");
     });
 
-    it("should return complete public tier structure", () => {
-      const result = PricingEngine.createPriceTier(workspaceId, {
+    it("should return complete public tier structure", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
         name: "Complete Tier",
         entryPrice: 99,
         maxPrice: 299,
-        targetMargin: 0.7,
         features: ["F1", "F2"],
       });
 
-      expect(result.tier).toEqual(
+      expect(tier).toEqual(
         expect.objectContaining({
           id: expect.any(String),
           workspaceId: workspaceId,
           name: "Complete Tier",
+          currency: "USD",
+          unitOfMeasure: "seat",
           entryPrice: 99,
           maxPrice: 299,
-          targetMargin: 0.7,
           features: ["F1", "F2"],
           status: "DRAFT",
-          activationDate: expect.any(Date),
+          approvalStatus: "pending_approval",
         })
       );
     });
   });
 
   describe("Route-Service Contract", () => {
-    it("should pass validated data to service", () => {
-      // Route validates with createTierSchema then calls service
-      // Service receives validated Partial<PriceTier>
-      const schema = {
+    it("should pass validated data to service", async () => {
+      const input = {
         name: "Integration Test",
         entryPrice: 149,
         maxPrice: 349,
-        targetMargin: 0.65,
         features: ["F1", "F2", "F3"],
       };
 
-      const result = PricingEngine.createPriceTier(workspaceId, schema);
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, input);
 
-      expect(result.tier?.name).toBe(schema.name);
-      expect(result.tier?.entryPrice).toBe(schema.entryPrice);
+      expect(tier.name).toBe(input.name);
+      expect(tier.entryPrice).toBe(input.entryPrice);
     });
 
-    it("should handle service error response", () => {
-      // Service returns: { tier: null, error: string }
-      // Route should convert to 400 response
-      const result = PricingEngine.createPriceTier(workspaceId, {
-        name: "",
-        entryPrice: 99,
-        maxPrice: 299,
-        targetMargin: 0.7,
-        features: ["F1"],
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.tier).toBeNull();
+    it("should handle service error response", async () => {
+      await expect(
+        PricingEngine.createPriceTier(workspaceId, actorId, {
+          name: "",
+          entryPrice: 99,
+          maxPrice: 299,
+          features: ["F1"],
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should return service-created tier on success", () => {
-      // Service returns: { stream: RevenueStream, error: null }
-      // Route should return as 201 JSON response
-      const result = PricingEngine.createPriceTier(workspaceId, {
+    it("should return service-created tier on success", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
         name: "Success Tier",
         entryPrice: 99,
         maxPrice: 299,
-        targetMargin: 0.7,
         features: ["F1"],
       });
 
-      expect(result.error).toBeNull();
-      expect(result.tier).toBeDefined();
-      expect(result.tier?.id).toMatch(/^pt-/);
+      expect(tier).toBeDefined();
+      expect(typeof tier.id).toBe("string");
+      expect(tier.workspaceId).toBe(workspaceId);
     });
   });
 });

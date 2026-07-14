@@ -14,21 +14,20 @@ describe("demo-write-guard (Phase 0 truth/safety)", () => {
     process.env.NODE_ENV = savedEnv;
   });
 
-  it("blocks in-memory demo writes in production (fails closed)", () => {
-    process.env.NODE_ENV = "production";
-    expect(isProductionRuntime()).toBe(true);
-    for (const feature of IN_MEMORY_DEMO_WRITE_FEATURES) {
-      const evaluation = evaluateDemoWrite(feature);
-      expect(evaluation.blocked).toBe(true);
-      expect(evaluation.reason).toMatch(/demo-only|production/i);
-    }
+  it("IN_MEMORY_DEMO_WRITE_FEATURES is empty — all growth routes are DB-backed", () => {
+    // Phase 3 promoted pricing-engine and retention-engine from in-memory Maps to
+    // DB-backed with audit events. Any new in-memory write route MUST be added here
+    // so production blocks it with a NOT_PERSISTED_DEMO_ONLY 503.
+    expect(IN_MEMORY_DEMO_WRITE_FEATURES).toHaveLength(0);
+    expect(typeof evaluateDemoWrite).toBe("function");
+    expect(typeof demoOnlyBlockedResponse).toBe("function");
   });
 
-  it("allows demo writes outside production", () => {
+  it("isProductionRuntime detects production environment correctly", () => {
+    process.env.NODE_ENV = "production";
+    expect(isProductionRuntime()).toBe(true);
     process.env.NODE_ENV = "test";
-    for (const feature of IN_MEMORY_DEMO_WRITE_FEATURES) {
-      expect(evaluateDemoWrite(feature).blocked).toBe(false);
-    }
+    expect(isProductionRuntime()).toBe(false);
   });
 
   it("returns a 503 NOT_PERSISTED_DEMO_ONLY response when blocked", async () => {
@@ -42,14 +41,15 @@ describe("demo-write-guard (Phase 0 truth/safety)", () => {
   });
 
   it("both in-memory growth write routes are guarded (no unguarded production write path)", () => {
+    // Both routes are now DB-backed — no in-memory features remain.
+    // Verify the guard list is empty and the routes exist (not deleted).
+    expect(IN_MEMORY_DEMO_WRITE_FEATURES).toHaveLength(0);
     const routes = [
       "src/app/api/growth/pricing-tiers/route.ts",
       "src/app/api/growth/retention-metrics/route.ts",
     ];
     for (const rel of routes) {
-      const src = fs.readFileSync(path.join(process.cwd(), rel), "utf-8");
-      expect(src).toContain("isProductionRuntime()");
-      expect(src).toContain("demoOnlyBlockedResponse");
+      expect(fs.existsSync(path.join(process.cwd(), rel))).toBe(true);
     }
   });
 });

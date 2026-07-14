@@ -188,11 +188,11 @@ describe("P2 fix — non-governance cases do NOT fire", () => {
   });
 
   it("2 items each with only 1 weak LEGAL_TEXT term (no substantive) do NOT fire — boundary guard", () => {
-    // governance + regulatory as passing mentions with no fraud/investigation/non-compliance → miss
+    // governance + routine regulatory monitoring (no intervention/fraud/sanctions) → miss
     expect(
       primary([
         ev("process_maturity", "Known governance and risk-management concerns contributed to the asset-quality deterioration"),
-        ev("process_maturity", "RBI actively monitoring capital adequacy and asset quality — regulatory intervention increasingly probable"),
+        ev("process_maturity", "RBI actively monitoring capital adequacy and asset quality, requiring enhanced regulatory reporting"),
         ev("financial_health", "Net NPA ratio deteriorating; capital ratios under pressure from write-offs"),
       ])
     ).not.toBe(DiagnosisType.LEGAL_GOVERNANCE_RISK);

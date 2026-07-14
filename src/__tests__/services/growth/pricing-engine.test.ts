@@ -1,86 +1,70 @@
 /**
- * Unit Tests: Pricing Engine Service
+ * Unit Tests: Pricing Engine Service (non-DB paths)
  *
- * Tests price tier creation, optimization, and strategy recommendations.
+ * Tests validation errors, price optimization, gap analysis, margin estimation,
+ * strategy recommendations, and bundle value.
  * Validates workspace scoping and fail-closed behavior.
+ *
+ * DB-backed paths (createPriceTier success, listTiers) are covered in the DB test file.
+ * Validation-only paths for createPriceTier (errors thrown before DB touch) are tested here.
  */
 
 import { describe, it, expect } from "vitest";
 import { PricingEngine } from "@/services/growth/pricing-engine";
 import { PricingStrategy } from "@/domain/growth/growth-engines";
+import { ValidationError } from "@/infra/errors";
 
 describe("Pricing Engine Service", () => {
   const workspaceId = "ws-test-1";
   const otherWorkspaceId = "ws-other";
 
-  describe("Create Price Tier", () => {
-    it("should create a valid price tier with workspace scoping", () => {
-      const data = {
-        name: "Professional",
-        entryPrice: 99,
-        maxPrice: 299,
-        targetMargin: 0.7,
-        features: ["Feature1", "Feature2"],
-      };
-
-      const result = PricingEngine.createPriceTier(workspaceId, data);
-
-      expect(result.error).toBeNull();
-      expect(result.tier).toBeDefined();
-      expect(result.tier?.workspaceId).toBe(workspaceId);
-      expect(result.tier?.name).toBe("Professional");
-      expect(result.tier?.entryPrice).toBe(99);
-      expect(result.tier?.maxPrice).toBe(299);
+  describe("createPriceTier — validation paths (no DB required)", () => {
+    it("rejects empty workspaceId with ValidationError", async () => {
+      await expect(
+        PricingEngine.createPriceTier("", "actor-1", {
+          name: "Pro",
+          entryPrice: 99,
+          maxPrice: 299,
+          features: ["Feature1"],
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should fail without workspace ID", () => {
-      const data = {
-        name: "Invalid Tier",
-        entryPrice: 99,
-        maxPrice: 299,
-        targetMargin: 0.7,
-        features: ["Feature1"],
-      };
-
-      const result = PricingEngine.createPriceTier("", data);
-
-      expect(result.error).toBeDefined();
-      expect(result.tier).toBeNull();
-      expect(result.error).toContain("Workspace ID");
+    it("rejects maxPrice < entryPrice with ValidationError", async () => {
+      await expect(
+        PricingEngine.createPriceTier(workspaceId, "actor-1", {
+          name: "Invalid",
+          entryPrice: 299,
+          maxPrice: 99,
+          features: ["Feature1"],
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should fail with invalid tier data", () => {
-      const data = {
-        name: "",
-        entryPrice: 299,
-        maxPrice: 99, // maxPrice < entryPrice
-        targetMargin: 0.7,
-        features: ["Feature1"],
-      };
-
-      const result = PricingEngine.createPriceTier(workspaceId, data);
-
-      expect(result.error).toBeDefined();
-      expect(result.tier).toBeNull();
+    it("rejects empty name with ValidationError", async () => {
+      await expect(
+        PricingEngine.createPriceTier(workspaceId, "actor-1", {
+          name: "",
+          entryPrice: 99,
+          maxPrice: 299,
+          features: ["Feature1"],
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should set default values for optional fields", () => {
-      const data = {
-        name: "Basic",
-        entryPrice: 49,
-        maxPrice: 99,
-        targetMargin: 0.5,
-        features: ["Feature1"],
-      };
-
-      const result = PricingEngine.createPriceTier(workspaceId, data);
-
-      expect(result.tier?.status).toBe("DRAFT");
-      expect(result.tier?.activationDate).toBeDefined();
+    it("rejects empty features array with ValidationError", async () => {
+      await expect(
+        PricingEngine.createPriceTier(workspaceId, "actor-1", {
+          name: "Pro",
+          entryPrice: 99,
+          maxPrice: 299,
+          features: [],
+        })
+      ).rejects.toThrow(ValidationError);
     });
   });
 
-  describe("Optimize Price", () => {
+  describe("optimizePrice", () => {
     const tier = {
       id: "pt-1",
       workspaceId,
@@ -93,43 +77,38 @@ describe("Pricing Engine Service", () => {
       status: "ACTIVE" as const,
     };
 
-    it("should recommend price increase with positive elasticity", () => {
+    it("recommends a price increase with low-elasticity (revenue impact positive)", () => {
       const result = PricingEngine.optimizePrice(workspaceId, tier, 100, -0.3);
-
       expect(result.recommendedPrice).toBeGreaterThanOrEqual(100);
       expect(result.confidence).toBeGreaterThan(0.5);
     });
 
-    it("should recommend price decrease with high negative elasticity", () => {
+    it("recommends a price decrease with high elasticity", () => {
       const result = PricingEngine.optimizePrice(workspaceId, tier, 100, -1.0);
-
       expect(result.recommendedPrice).toBeLessThanOrEqual(100);
       expect(result.confidence).toBeGreaterThan(0.5);
     });
 
-    it("should respect tier bounds when optimizing", () => {
+    it("respects tier bounds when recommending price", () => {
       const result = PricingEngine.optimizePrice(workspaceId, tier, 290, -0.3);
-
       expect(result.recommendedPrice).toBeLessThanOrEqual(tier.maxPrice);
       expect(result.recommendedPrice).toBeGreaterThanOrEqual(tier.entryPrice);
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns fail-closed (no change, zero confidence) for missing workspaceId", () => {
       const result = PricingEngine.optimizePrice("", tier, 100, -0.5);
-
       expect(result.recommendedPrice).toBe(100);
       expect(result.confidence).toBe(0);
     });
 
-    it("should reject workspace mismatch", () => {
+    it("returns fail-closed for workspace mismatch (cross-workspace block)", () => {
       const result = PricingEngine.optimizePrice(otherWorkspaceId, tier, 100, -0.5);
-
       expect(result.recommendedPrice).toBe(100);
       expect(result.confidence).toBe(0);
     });
   });
 
-  describe("Analyze Gaps", () => {
+  describe("analyzeGaps", () => {
     const tiers = [
       {
         id: "pt-1",
@@ -166,22 +145,19 @@ describe("Pricing Engine Service", () => {
       },
     ];
 
-    it("should detect price gaps between tiers", () => {
+    it("detects price gap between Starter and Professional tiers", () => {
       const result = PricingEngine.analyzeGaps(workspaceId, tiers);
-
       expect(result.gaps.length).toBeGreaterThan(0);
       expect(result.gaps[0].minPrice).toBe(49);
       expect(result.gaps[0].maxPrice).toBe(99);
     });
 
-    it("should filter to workspace scope only", () => {
+    it("filters to workspace scope — ignores otherWorkspaceId tiers", () => {
       const result = PricingEngine.analyzeGaps(workspaceId, tiers);
-
-      // Should only analyze workspace tiers, ignore otherWorkspaceId tier
       expect(result.gaps.length).toBe(1);
     });
 
-    it("should detect overlapping tier ranges", () => {
+    it("detects overlapping tier price ranges", () => {
       const overlappingTiers = [
         {
           id: "pt-1",
@@ -206,13 +182,11 @@ describe("Pricing Engine Service", () => {
           status: "ACTIVE" as const,
         },
       ];
-
       const result = PricingEngine.analyzeGaps(workspaceId, overlappingTiers);
-
       expect(result.overlaps.length).toBeGreaterThan(0);
     });
 
-    it("should exclude non-ACTIVE tiers", () => {
+    it("excludes non-ACTIVE tiers from gap analysis", () => {
       const mixedTiers = [
         ...tiers,
         {
@@ -227,15 +201,12 @@ describe("Pricing Engine Service", () => {
           status: "DRAFT" as const,
         },
       ];
-
       const result = PricingEngine.analyzeGaps(workspaceId, mixedTiers);
-
-      // Draft tier should be excluded
       expect(result.gaps.length).toBe(1); // Only gap between Starter and Professional
     });
   });
 
-  describe("Estimate Margin Impact", () => {
+  describe("estimateMarginImpact", () => {
     const tier = {
       id: "pt-1",
       workspaceId,
@@ -248,70 +219,62 @@ describe("Pricing Engine Service", () => {
       status: "ACTIVE" as const,
     };
 
-    it("should calculate margin impact of price increase", () => {
+    it("shows margin improves with price increase (same cost)", () => {
       const result = PricingEngine.estimateMarginImpact(workspaceId, tier, 120, 30);
-
       expect(result.newMargin).toBeGreaterThan(result.currentMargin);
       expect(result.marginChange).toBeGreaterThan(0);
     });
 
-    it("should calculate margin impact of price decrease", () => {
+    it("shows margin declines with price decrease (same cost)", () => {
       const result = PricingEngine.estimateMarginImpact(workspaceId, tier, 80, 30);
-
       expect(result.newMargin).toBeLessThan(result.currentMargin);
       expect(result.marginChange).toBeLessThan(0);
     });
 
-    it("should clamp margins between 0 and 1", () => {
-      const result = PricingEngine.estimateMarginImpact(workspaceId, tier, 100, 200); // COGS > price
-
+    it("clamps margins between 0 and 1 when COGS exceeds price", () => {
+      const result = PricingEngine.estimateMarginImpact(workspaceId, tier, 100, 200);
       expect(result.currentMargin).toBeGreaterThanOrEqual(0);
       expect(result.currentMargin).toBeLessThanOrEqual(1);
       expect(result.newMargin).toBeGreaterThanOrEqual(0);
       expect(result.newMargin).toBeLessThanOrEqual(1);
     });
 
-    it("should fail-closed without workspace ID", () => {
+    it("returns fail-closed zeros for missing workspaceId", () => {
       const result = PricingEngine.estimateMarginImpact("", tier, 120, 30);
+      expect(result.currentMargin).toBe(0);
+      expect(result.newMargin).toBe(0);
+    });
 
+    it("returns fail-closed zeros for workspace mismatch (cross-workspace block)", () => {
+      const result = PricingEngine.estimateMarginImpact(otherWorkspaceId, tier, 120, 30);
       expect(result.currentMargin).toBe(0);
       expect(result.newMargin).toBe(0);
     });
   });
 
-  describe("Recommend Strategy", () => {
-    it("should recommend PENETRATION when cost exceeds market price", () => {
-      const strategy = PricingEngine.recommendStrategy(workspaceId, 100, 0.5, 80);
-
-      expect(strategy).toBe(PricingStrategy.PENETRATION);
+  describe("recommendStrategy", () => {
+    it("recommends PENETRATION when cost-plus exceeds competitor price", () => {
+      expect(PricingEngine.recommendStrategy(workspaceId, 100, 0.5, 80)).toBe(PricingStrategy.PENETRATION);
     });
 
-    it("should recommend SKIMMING when market price is low", () => {
-      const strategy = PricingEngine.recommendStrategy(workspaceId, 200, 0.5, 50);
-
-      expect(strategy).toBe(PricingStrategy.SKIMMING);
+    it("recommends SKIMMING when market price >> cost with moderate margin target", () => {
+      expect(PricingEngine.recommendStrategy(workspaceId, 200, 0.5, 50)).toBe(PricingStrategy.SKIMMING);
     });
 
-    it("should recommend VALUE_BASED with high margin target", () => {
-      const strategy = PricingEngine.recommendStrategy(workspaceId, 150, 0.7, 50);
-
-      expect(strategy).toBe(PricingStrategy.VALUE_BASED);
+    it("recommends VALUE_BASED with high margin target (≥50%)", () => {
+      expect(PricingEngine.recommendStrategy(workspaceId, 150, 0.7, 50)).toBe(PricingStrategy.VALUE_BASED);
     });
 
-    it("should recommend COMPETITIVE as default", () => {
-      const strategy = PricingEngine.recommendStrategy(workspaceId, 100, 0.4, 40);
-
-      expect(strategy).toBe(PricingStrategy.COMPETITIVE);
+    it("recommends COMPETITIVE as default", () => {
+      expect(PricingEngine.recommendStrategy(workspaceId, 100, 0.4, 40)).toBe(PricingStrategy.COMPETITIVE);
     });
 
-    it("should fail-closed without workspace ID", () => {
-      const strategy = PricingEngine.recommendStrategy("", 100, 0.5, 40);
-
-      expect(strategy).toBe(PricingStrategy.COMPETITIVE);
+    it("returns COMPETITIVE as fail-closed default for missing workspaceId", () => {
+      expect(PricingEngine.recommendStrategy("", 100, 0.5, 40)).toBe(PricingStrategy.COMPETITIVE);
     });
   });
 
-  describe("Calculate Bundle Value", () => {
+  describe("calculateBundleValue", () => {
     const tier = {
       id: "pt-1",
       workspaceId,
@@ -324,76 +287,25 @@ describe("Pricing Engine Service", () => {
       status: "ACTIVE" as const,
     };
 
-    const featurePrices = {
-      Analytics: 50,
-      Support: 30,
-      API: 40,
-    };
+    const featurePrices = { Analytics: 50, Support: 30, API: 40 };
 
-    it("should calculate bundled value discount", () => {
+    it("calculates total bundle value and discount vs tier entry price", () => {
       const result = PricingEngine.calculateBundleValue(tier, featurePrices);
-
       expect(result.bundledValue).toBe(120); // 50 + 30 + 40
       expect(result.discount).toBeGreaterThan(0);
       expect(result.discount).toBeLessThan(100);
     });
 
-    it("should handle empty feature list", () => {
-      const emptyTier = { ...tier, features: [] };
-
-      const result = PricingEngine.calculateBundleValue(emptyTier, featurePrices);
-
+    it("returns zero for empty feature list", () => {
+      const result = PricingEngine.calculateBundleValue({ ...tier, features: [] }, featurePrices);
       expect(result.bundledValue).toBe(0);
       expect(result.discount).toBe(0);
     });
 
-    it("should handle missing feature prices", () => {
+    it("returns zero when feature prices are all missing", () => {
       const result = PricingEngine.calculateBundleValue(tier, {});
-
       expect(result.bundledValue).toBe(0);
       expect(result.discount).toBe(0);
-    });
-  });
-
-  describe("Tenant Safety", () => {
-    it("should prevent cross-workspace optimization", () => {
-      const tier = {
-        id: "pt-1",
-        workspaceId,
-        name: "Standard",
-        entryPrice: 99,
-        maxPrice: 299,
-        targetMargin: 0.6,
-        features: ["F1"],
-        activationDate: new Date(),
-        status: "ACTIVE" as const,
-      };
-
-      const correctWs = PricingEngine.optimizePrice(workspaceId, tier, 100, -0.5);
-      const wrongWs = PricingEngine.optimizePrice(otherWorkspaceId, tier, 100, -0.5);
-
-      expect(correctWs.confidence).toBeGreaterThan(0);
-      expect(wrongWs.confidence).toBe(0);
-    });
-
-    it("should enforce workspace in margin estimation", () => {
-      const tier = {
-        id: "pt-1",
-        workspaceId,
-        name: "Standard",
-        entryPrice: 99,
-        maxPrice: 299,
-        targetMargin: 0.6,
-        features: ["F1"],
-        activationDate: new Date(),
-        status: "ACTIVE" as const,
-      };
-
-      const correctWs = PricingEngine.estimateMarginImpact(workspaceId, tier, 120, 30);
-      const wrongWs = PricingEngine.estimateMarginImpact(otherWorkspaceId, tier, 120, 30);
-
-      expect(correctWs.currentMargin).toBeGreaterThan(0);
-      expect(wrongWs.currentMargin).toBe(0);
     });
   });
 });

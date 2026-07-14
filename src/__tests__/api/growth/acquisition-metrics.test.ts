@@ -4,17 +4,35 @@
  * Validates route structure, error handling, and service integration
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AcquisitionEngine } from "@/services/growth/acquisition-engine";
 import { AcquisitionChannel } from "@/domain/growth/growth-engines";
+import { ValidationError } from "@/infra/errors";
+
+// AcquisitionEngine.recordMetrics is DB-backed; mock DB and audit so tests
+// run without a live database connection.
+vi.mock("@/lib/db", () => ({
+  db: {
+    acquisitionMetricsRecord: {
+      create: vi.fn().mockResolvedValue(undefined),
+    },
+  },
+}));
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe("Acquisition Metrics API Route - Service Integration", () => {
   const workspaceId = "ws-test-1";
+  const actorId = "actor-test-1";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   describe("Route Integration with AcquisitionEngine", () => {
-    it("should route POST request to AcquisitionEngine.recordMetrics", () => {
-      // Validates service is callable
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
+    it("should route POST request to AcquisitionEngine.recordMetrics", async () => {
+      const metrics = await AcquisitionEngine.recordMetrics(workspaceId, actorId, {
         channel: AcquisitionChannel.PAID_SEARCH,
         month: "2026-05",
         leads: 150,
@@ -25,49 +43,42 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
         targetCPA: 200,
       });
 
-      expect(result.error).toBeNull();
-      expect(result.metrics).toBeDefined();
-      expect(result.metrics?.channel).toBe(AcquisitionChannel.PAID_SEARCH);
+      expect(metrics.channel).toBe(AcquisitionChannel.PAID_SEARCH);
+      expect(metrics.workspaceId).toBe(workspaceId);
     });
 
-    it("should validate workspace enforcement in service call", () => {
-      // Route should enforce workspaceId before service call
-      const result = AcquisitionEngine.recordMetrics("", {
-        channel: AcquisitionChannel.ORGANIC,
-        month: "2026-05",
-        leads: 100,
-        conversions: 10,
-        costPerLead: 0,
-        costPerAcquisition: 0,
-        targetCPA: 0,
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.error).toContain("Workspace ID");
+    it("should validate workspace enforcement in service call", async () => {
+      await expect(
+        AcquisitionEngine.recordMetrics("", actorId, {
+          channel: AcquisitionChannel.ORGANIC,
+          month: "2026-05",
+          leads: 100,
+          conversions: 10,
+          costPerLead: 0,
+          costPerAcquisition: 0,
+          targetCPA: 0,
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should validate input schema before service call", () => {
-      // Service should reject invalid data
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
-        channel: AcquisitionChannel.PAID_SEARCH,
-        month: "May 2026", // Invalid format
-        leads: -50, // Invalid: negative
-        conversions: 10,
-        costPerLead: 10,
-        costPerAcquisition: 100,
-        targetCPA: 150,
-      });
-
-      expect(result.error).toBeDefined();
+    it("should validate input schema before service call", async () => {
+      await expect(
+        AcquisitionEngine.recordMetrics(workspaceId, actorId, {
+          channel: AcquisitionChannel.PAID_SEARCH,
+          month: "May 2026", // Invalid format
+          leads: -50, // Invalid: negative
+          conversions: 10,
+          costPerLead: 10,
+          costPerAcquisition: 100,
+          targetCPA: 150,
+        })
+      ).rejects.toThrow(ValidationError);
     });
   });
 
   describe("Route Authorization & Workspace Scoping", () => {
-    it("should enforce auth capability check (CAPABILITIES.ENGAGEMENT_UPDATE)", () => {
-      // Route uses withAuth with CAPABILITIES.ENGAGEMENT_UPDATE
-      // This ensures only users with update permission can record metrics
-      // Service enforces workspace scoping as prerequisite for auth checks
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
+    it("should enforce auth capability check (CAPABILITIES.ENGAGEMENT_UPDATE)", async () => {
+      const metrics = await AcquisitionEngine.recordMetrics(workspaceId, actorId, {
         channel: AcquisitionChannel.PAID_SEARCH,
         month: "2026-05",
         leads: 100,
@@ -77,15 +88,11 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
         targetCPA: 150,
       });
 
-      expect(result.error).toBeNull();
-      expect(result.metrics?.workspaceId).toBe(workspaceId);
+      expect(metrics.workspaceId).toBe(workspaceId);
     });
 
-    it("should enforce workspace header validation", () => {
-      // Route checks x-workspace-id header exists
-      // Route uses enforceWorkspaceScoping middleware
-      // Service validates workspaceId is required and non-empty
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
+    it("should enforce workspace header validation", async () => {
+      const metrics = await AcquisitionEngine.recordMetrics(workspaceId, actorId, {
         channel: AcquisitionChannel.PAID_SEARCH,
         month: "2026-05",
         leads: 100,
@@ -95,14 +102,11 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
         targetCPA: 150,
       });
 
-      expect(result.metrics).toBeDefined();
-      expect(result.metrics?.workspaceId).toBe(workspaceId);
-      expect(result.error).toBeNull();
+      expect(metrics.workspaceId).toBe(workspaceId);
     });
 
-    it("should scope all responses to workspace", () => {
-      // Service returns metrics scoped to workspace
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
+    it("should scope all responses to workspace", async () => {
+      const metrics = await AcquisitionEngine.recordMetrics(workspaceId, actorId, {
         channel: AcquisitionChannel.PAID_SEARCH,
         month: "2026-05",
         leads: 100,
@@ -112,16 +116,27 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
         targetCPA: 150,
       });
 
-      expect(result.metrics).toBeDefined();
-      // Metrics are workspace-scoped via service call
+      expect(metrics.workspaceId).toBe(workspaceId);
     });
   });
 
   describe("Route Error Handling", () => {
-    it("should return 400 for missing workspace ID header", () => {
-      // Route returns: Response.json({ error: "Workspace ID required..." }, { status: 400 })
-      // Service validates empty workspace ID causes error response
-      const result = AcquisitionEngine.recordMetrics("", {
+    it("should return 400 for missing workspace ID header", async () => {
+      await expect(
+        AcquisitionEngine.recordMetrics("", actorId, {
+          channel: AcquisitionChannel.PAID_SEARCH,
+          month: "2026-05",
+          leads: 100,
+          conversions: 10,
+          costPerLead: 10,
+          costPerAcquisition: 100,
+          targetCPA: 150,
+        })
+      ).rejects.toThrow(/Workspace ID/);
+    });
+
+    it("should return 403 for unauthorized workspace access", async () => {
+      const metrics = await AcquisitionEngine.recordMetrics("ws-1", actorId, {
         channel: AcquisitionChannel.PAID_SEARCH,
         month: "2026-05",
         leads: 100,
@@ -131,16 +146,39 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
         targetCPA: 150,
       });
 
-      expect(result.error).toBeDefined();
-      expect(result.error).toContain("Workspace ID");
-      expect(result.metrics).toBeNull();
+      expect(metrics.workspaceId).toBe("ws-1");
     });
 
-    it("should return 403 for unauthorized workspace access", () => {
-      // Route returns: Response.json({ error: "Unauthorized" }, { status: 403 })
-      // from enforceWorkspaceScoping failure
-      // Service enforces workspace ownership on data access
-      const resultWs1 = AcquisitionEngine.recordMetrics("ws-1", {
+    it("should return 400 for Zod validation errors", async () => {
+      await expect(
+        AcquisitionEngine.recordMetrics(workspaceId, actorId, {
+          channel: AcquisitionChannel.PAID_SEARCH,
+          month: "InvalidMonth", // Invalid format
+          leads: 100,
+          conversions: 10,
+          costPerLead: 10,
+          costPerAcquisition: 100,
+          targetCPA: 150,
+        })
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("should return 400 for service validation errors", async () => {
+      await expect(
+        AcquisitionEngine.recordMetrics(workspaceId, actorId, {
+          channel: AcquisitionChannel.PAID_SEARCH,
+          month: "2026-05",
+          leads: 100,
+          conversions: 10,
+          costPerLead: 10,
+          costPerAcquisition: -100, // Invalid: negative cost
+          targetCPA: 150,
+        })
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("should succeed for valid input", async () => {
+      const metrics = await AcquisitionEngine.recordMetrics(workspaceId, actorId, {
         channel: AcquisitionChannel.PAID_SEARCH,
         month: "2026-05",
         leads: 100,
@@ -150,65 +188,14 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
         targetCPA: 150,
       });
 
-      expect(resultWs1.error).toBeNull();
-      expect(resultWs1.metrics?.workspaceId).toBe("ws-1");
-    });
-
-    it("should return 400 for Zod validation errors", () => {
-      // Route catches z.ZodError and returns 400 with details
-      // Service validates schema and returns error on validation failure
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
-        channel: AcquisitionChannel.PAID_SEARCH,
-        month: "InvalidMonth", // Invalid format (should be YYYY-MM)
-        leads: 100,
-        conversions: 10,
-        costPerLead: 10,
-        costPerAcquisition: 100,
-        targetCPA: 150,
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.metrics).toBeNull();
-    });
-
-    it("should return 400 for service validation errors", () => {
-      // Service returns validation details, route returns 400
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
-        channel: AcquisitionChannel.PAID_SEARCH,
-        month: "2026-05",
-        leads: -100, // Invalid
-        conversions: 10,
-        costPerLead: 10,
-        costPerAcquisition: 100,
-        targetCPA: 150,
-      });
-
-      expect(result.error).toBeDefined();
-    });
-
-    it("should return 500 for unexpected errors", () => {
-      // Route catches Error and returns 500
-      // Service returns structured error response with both error and metrics fields
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
-        channel: AcquisitionChannel.PAID_SEARCH,
-        month: "2026-05",
-        leads: 100,
-        conversions: 10,
-        costPerLead: 10,
-        costPerAcquisition: 100,
-        targetCPA: 150,
-      });
-
-      expect(result).toBeDefined();
-      expect(typeof result.error === 'string' || result.error === null).toBe(true);
-      expect(result.metrics === null || typeof result.metrics === 'object').toBe(true);
+      expect(metrics).toBeDefined();
+      expect(metrics.workspaceId).toBe(workspaceId);
     });
   });
 
   describe("Route DTO Boundary (Response Safety)", () => {
-    it("should not expose internal fields in response", () => {
-      // Service creates metrics with only public fields
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
+    it("should not expose internal fields in response", async () => {
+      const metrics = await AcquisitionEngine.recordMetrics(workspaceId, actorId, {
         channel: AcquisitionChannel.PAID_SEARCH,
         month: "2026-05",
         leads: 100,
@@ -218,15 +205,12 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
         targetCPA: 150,
       });
 
-      expect(result.metrics).toBeDefined();
-      // Verify no internal fields
-      const metrics = result.metrics!;
       expect(Object.keys(metrics)).not.toContain("_internal");
       expect(Object.keys(metrics)).not.toContain("_debug");
     });
 
-    it("should return complete public metrics structure", () => {
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
+    it("should return complete public metrics structure", async () => {
+      const metrics = await AcquisitionEngine.recordMetrics(workspaceId, actorId, {
         channel: AcquisitionChannel.PAID_SEARCH,
         month: "2026-05",
         leads: 100,
@@ -237,7 +221,7 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
         targetCPA: 150,
       });
 
-      expect(result.metrics).toEqual(
+      expect(metrics).toEqual(
         expect.objectContaining({
           channel: AcquisitionChannel.PAID_SEARCH,
           month: "2026-05",
@@ -253,9 +237,8 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
   });
 
   describe("Route-Service Contract", () => {
-    it("should pass validated data to service", () => {
-      // Route validates with recordMetricsSchema then calls service
-      const schema = {
+    it("should pass validated data to service", async () => {
+      const input = {
         channel: AcquisitionChannel.PAID_SEARCH,
         month: "2026-05",
         leads: 100,
@@ -266,33 +249,28 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
         targetCPA: 150,
       };
 
-      const result = AcquisitionEngine.recordMetrics(workspaceId, schema);
+      const metrics = await AcquisitionEngine.recordMetrics(workspaceId, actorId, input);
 
-      expect(result.metrics?.channel).toBe(schema.channel);
-      expect(result.metrics?.leads).toBe(schema.leads);
+      expect(metrics.channel).toBe(input.channel);
+      expect(metrics.leads).toBe(input.leads);
     });
 
-    it("should handle service error response", () => {
-      // Service returns: { metrics: null, error: string }
-      // Route should convert to 400 response
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
-        channel: AcquisitionChannel.PAID_SEARCH,
-        month: "Invalid",
-        leads: 100,
-        conversions: 10,
-        costPerLead: 10,
-        costPerAcquisition: 100,
-        targetCPA: 150,
-      });
-
-      expect(result.error).toBeDefined();
-      expect(result.metrics).toBeNull();
+    it("should handle service error response on invalid month", async () => {
+      await expect(
+        AcquisitionEngine.recordMetrics(workspaceId, actorId, {
+          channel: AcquisitionChannel.PAID_SEARCH,
+          month: "Invalid",
+          leads: 100,
+          conversions: 10,
+          costPerLead: 10,
+          costPerAcquisition: 100,
+          targetCPA: 150,
+        })
+      ).rejects.toThrow(ValidationError);
     });
 
-    it("should return service-created metrics on success", () => {
-      // Service returns: { metrics: AcquisitionMetrics, error: null }
-      // Route should return as 201 JSON response
-      const result = AcquisitionEngine.recordMetrics(workspaceId, {
+    it("should return service-created metrics on success", async () => {
+      const metrics = await AcquisitionEngine.recordMetrics(workspaceId, actorId, {
         channel: AcquisitionChannel.ORGANIC,
         month: "2026-05",
         leads: 50,
@@ -302,8 +280,8 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
         targetCPA: 0,
       });
 
-      expect(result.error).toBeNull();
-      expect(result.metrics).toBeDefined();
+      expect(metrics.workspaceId).toBe(workspaceId);
+      expect(metrics.channel).toBe(AcquisitionChannel.ORGANIC);
     });
   });
 
@@ -348,7 +326,7 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
   });
 
   describe("Tenant Safety", () => {
-    const metrics = {
+    const metricsInput = {
       channel: AcquisitionChannel.PAID_SEARCH,
       month: "2026-05",
       leads: 100,
@@ -359,21 +337,22 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
       targetCPA: 150,
     };
 
-    it("should prevent cross-workspace metric recording", () => {
-      const ws1Result = AcquisitionEngine.recordMetrics("ws-1", metrics);
-      const ws2Result = AcquisitionEngine.recordMetrics("ws-2", metrics);
+    it("should prevent cross-workspace metric recording", async () => {
+      const ws1Metrics = await AcquisitionEngine.recordMetrics("ws-1", actorId, metricsInput);
+      const ws2Metrics = await AcquisitionEngine.recordMetrics("ws-2", actorId, metricsInput);
 
-      expect(ws1Result.error).toBeNull();
-      expect(ws2Result.error).toBeNull();
-      // Both succeed, but are scoped to their respective workspaces
+      expect(ws1Metrics.workspaceId).toBe("ws-1");
+      expect(ws2Metrics.workspaceId).toBe("ws-2");
     });
 
     it("should prevent cross-workspace analysis", () => {
-      const ws1Analysis = AcquisitionEngine.analyzeConversion("ws-1", metrics);
-      const ws2Analysis = AcquisitionEngine.analyzeConversion("ws-2", metrics);
+      const metricsWithWs = { ...metricsInput, workspaceId: "ws-1" };
+      const ws1Analysis = AcquisitionEngine.analyzeConversion("ws-1", metricsWithWs);
+      const ws2Analysis = AcquisitionEngine.analyzeConversion("ws-2", metricsWithWs);
 
-      expect(ws1Analysis.efficiency).toBeDefined();
-      expect(ws2Analysis.efficiency).toBe("LOW"); // Wrong workspace returns defaults
+      expect(ws1Analysis.leadToQualifiedRate).toBeGreaterThan(0);
+      expect(ws2Analysis.leadToQualifiedRate).toBe(0);
+      expect(ws2Analysis.efficiency).toBe("LOW");
     });
   });
 });

@@ -185,10 +185,49 @@ export const TIER_CONFIGS: Record<SubscriptionTier, SubscriptionTierConfig> = {
 const subscriptionStore = new Map<string, SubscriptionTier>();
 const quotaStore = new Map<string, QuotaUsage>();
 
+// Once-per-process guard for the PRIVATE_MODE_ENTITLEMENT_ACTIVE audit event.
+// Prevents one event per request across serverless invocations that share the module.
+let _privateModeEntitlementEmitted = false;
+
+function emitPrivateModeEntitlementEvent(workspaceId: string): void {
+  if (_privateModeEntitlementEmitted) return;
+  _privateModeEntitlementEmitted = true;
+  // Fire-and-forget: non-blocking, best-effort. Audit failure must never block
+  // entitlement resolution. Dynamic import avoids circular-dependency at module load.
+  void (async () => {
+    try {
+      const { emitAuditEvent } = await import("@/infra/audit");
+      const { AUDIT_EVENTS } = await import("@/domain/constants/audit-events");
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.PRIVATE_MODE_ENTITLEMENT_ACTIVE,
+        workspaceId,
+        actorId: "system",
+        actorType: "system",
+        entityType: "workspace",
+        entityId: workspaceId,
+        payload: { tier: SubscriptionTier.ENTERPRISE, reason: "OPSIQ_PRIVATE_WORKSPACE_ID_MATCH" },
+        visibility: "internal",
+      });
+    } catch {
+      // Best-effort: do not let audit failure surface to callers
+    }
+  })();
+}
+
 /**
- * Get subscription tier for workspace
+ * Get subscription tier for workspace.
+ *
+ * Private deployment override: when OPSIQ_PRIVATE_WORKSPACE_ID is set and the
+ * requested workspaceId matches exactly, returns ENTERPRISE. Scoped to the ONE
+ * configured workspace — all other workspaces are unaffected. Never set this env
+ * var in multi-tenant production.
  */
 export function getSubscriptionTier(workspaceId: string): SubscriptionTier {
+  const privateWorkspaceId = process.env.OPSIQ_PRIVATE_WORKSPACE_ID;
+  if (privateWorkspaceId && workspaceId === privateWorkspaceId) {
+    emitPrivateModeEntitlementEvent(privateWorkspaceId);
+    return SubscriptionTier.ENTERPRISE;
+  }
   return subscriptionStore.get(workspaceId) || SubscriptionTier.FREE;
 }
 

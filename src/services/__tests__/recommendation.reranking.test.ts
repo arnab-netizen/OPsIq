@@ -2,6 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { reRankRecommendationsInEngagement } from "@/services/recommendation";
 import { db } from "@/lib/db";
 
+// db is a lazy Proxy — vi.spyOn cannot spy on undefined properties of a Proxy.
+// Module-mock replaces it with plain vi.fn() instances that vi.spyOn can target.
+vi.mock("@/lib/db", () => ({
+  db: {
+    recommendation: {
+      findMany: vi.fn(),
+      update: vi.fn(),
+    },
+  },
+}));
+
 vi.mock("@/infra/audit", () => ({
   emitAuditEvent: vi.fn().mockResolvedValue(undefined),
 }));
