@@ -465,6 +465,10 @@ export const AUDIT_EVENTS = {
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
+
+  // Private deployment
+  PRIVATE_MODE_ENTITLEMENT_ACTIVE: "private_mode.entitlement_active",
+  PRIVATE_OWNER_SEED_EXECUTED: "private_mode.owner_seed_executed",
 } as const;
 
 export type AuditEventName =

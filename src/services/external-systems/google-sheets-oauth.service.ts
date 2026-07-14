@@ -17,6 +17,7 @@
 
 import { generateOAuthState, validateCodeVerifier } from "./oauth-token.service";
 import type { ImportResult, ParsedRow } from "@/domain/external-systems/import-parser";
+import { FeatureDisabledError } from "@/infra/errors";
 
 export interface GoogleOAuthConfig {
   clientId: string;
@@ -130,8 +131,10 @@ export async function exchangeCodeForToken(
   // - redirect_uri: request.config.redirectUri
   // - code_verifier: request.codeVerifier
 
-  // For now, return contract structure
-  throw new Error("Token exchange not implemented in this service layer");
+  throw new FeatureDisabledError(
+    "Google Sheets OAuth token exchange",
+    "OAuth endpoint not configured — connector unavailable until credentials and token exchange are wired",
+  );
 }
 
 /**
@@ -145,8 +148,10 @@ export async function extractGoogleSheetData(
   // GET https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}
   // Authorization: Bearer {accessToken}
 
-  // For now, return contract structure
-  throw new Error("Sheet data extraction not implemented in this service layer");
+  throw new FeatureDisabledError(
+    "Google Sheets data extraction",
+    "Sheets API not wired — connector unavailable until the live API client is implemented",
+  );
 }
 
 /**
@@ -268,7 +273,10 @@ export async function refreshAccessToken(
   // - client_id: request.config.clientId
   // - client_secret: request.config.clientSecret
 
-  throw new Error("Token refresh not implemented in this service layer");
+  throw new FeatureDisabledError(
+    "Google Sheets token refresh",
+    "Token refresh not wired — connector unavailable until refresh flow is implemented",
+  );
 }
 
 /**
@@ -287,5 +295,8 @@ export async function revokeGoogleAccess(request: TokenRevocationRequest): Promi
   // In production, this would call:
   // POST https://oauth2.googleapis.com/revoke?token={accessToken}
 
-  throw new Error("Token revocation not implemented in this service layer");
+  throw new FeatureDisabledError(
+    "Google OAuth revocation",
+    "Token revocation not wired — connector unavailable until revocation flow is implemented",
+  );
 }
