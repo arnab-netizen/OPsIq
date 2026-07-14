@@ -466,6 +466,9 @@ export const AUDIT_EVENTS = {
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
 
+  // Owner action outcome tracking (Capability 5 — Measure outcomes)
+  OWNER_ACTION_OUTCOME_RECORDED: "owner.action_outcome_recorded",
+
   // Private deployment
   PRIVATE_MODE_ENTITLEMENT_ACTIVE: "private_mode.entitlement_active",
   PRIVATE_OWNER_SEED_EXECUTED: "private_mode.owner_seed_executed",
