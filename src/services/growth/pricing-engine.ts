@@ -74,9 +74,12 @@ export interface GrowthPriceTierRecord {
   supersededById: string | null;
   createdAt: Date;
   updatedAt: Date;
+  /** Gross margin fraction (0–1) computed at read time from entryPrice, variableCost, allocatedCost.
+   *  Null when neither cost field is present (margin unknown, not fabricated). */
+  computedMargin: number | null;
 }
 
-function mapRow(r: {
+type PriceTierRow = {
   id: string; workspaceId: string; name: string; currency: string;
   unitOfMeasure: string; entryPrice: number; maxPrice: number;
   variableCost: number | null; allocatedCost: number | null;
@@ -87,7 +90,16 @@ function mapRow(r: {
   effectiveFrom: Date | null; effectiveTo: Date | null;
   version: number; supersededById: string | null;
   createdAt: Date; updatedAt: Date;
-}): GrowthPriceTierRecord {
+};
+
+function computeMargin(entryPrice: number, variableCost: number | null, allocatedCost: number | null): number | null {
+  if (entryPrice <= 0) return null;
+  if (variableCost === null && allocatedCost === null) return null;
+  const totalCost = (variableCost ?? 0) + (allocatedCost ?? 0);
+  return Math.max(0, Math.min(1, (entryPrice - totalCost) / entryPrice));
+}
+
+function mapRow(r: PriceTierRow): GrowthPriceTierRecord {
   return {
     id: r.id,
     workspaceId: r.workspaceId,
@@ -114,6 +126,7 @@ function mapRow(r: {
     supersededById: r.supersededById,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
+    computedMargin: computeMargin(r.entryPrice, r.variableCost, r.allocatedCost),
   };
 }
 
@@ -207,6 +220,117 @@ export class PricingEngine {
     });
 
     return rows.map((r: typeof rows[number]) => mapRow(r));
+  }
+
+  /**
+   * Approve a price tier for operational use (workspace-scoped write).
+   * Sets approvalStatus=approved, records approvedBy/approvedAt, emits audit event.
+   * Throws ValidationError if tier not found in workspace.
+   */
+  static async approveTier(
+    workspaceId: string,
+    tierId: string,
+    actorId: string
+  ): Promise<GrowthPriceTierRecord> {
+    if (!workspaceId) throw new ValidationError("Workspace ID is required");
+    if (!tierId) throw new ValidationError("Tier ID is required");
+
+    const existing = await db.growthPriceTier.findFirst({ where: { id: tierId, workspaceId } });
+    if (!existing) throw new ValidationError("Price tier not found in this workspace");
+
+    const row = await db.growthPriceTier.update({
+      where: { id: tierId },
+      data: { approvalStatus: "approved", approvedBy: actorId, approvedAt: new Date() },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.PRICE_TIER_APPROVED,
+      actorId,
+      entityType: "growth_price_tier",
+      entityId: tierId,
+      workspaceId,
+      payload: { approvedBy: actorId, name: existing.name },
+      visibility: "internal",
+    });
+
+    return mapRow(row);
+  }
+
+  /**
+   * Create a new version of an existing tier (append-only versioning).
+   * Archives the old tier (status=ARCHIVED, supersededById=newId) and creates a new one.
+   * The new tier starts as DRAFT/pending_approval.
+   * Atomic: both mutations execute in a single DB transaction.
+   * Throws ValidationError if the old tier is not found in this workspace.
+   */
+  static async supersedeTier(
+    workspaceId: string,
+    oldTierId: string,
+    actorId: string,
+    data: CreatePriceTierInput
+  ): Promise<GrowthPriceTierRecord> {
+    if (!workspaceId) throw new ValidationError("Workspace ID is required");
+    if (!oldTierId) throw new ValidationError("Old tier ID is required");
+
+    const validation = validatePriceTier({
+      name: data.name,
+      entryPrice: data.entryPrice,
+      maxPrice: data.maxPrice,
+      targetMargin: 0.5,
+      features: data.features ?? [],
+    });
+    if (!validation.valid) {
+      throw new ValidationError(`Price tier validation failed: ${validation.errors.join("; ")}`);
+    }
+
+    const oldTier = await db.growthPriceTier.findFirst({ where: { id: oldTierId, workspaceId } });
+    if (!oldTier) throw new ValidationError("Price tier not found in this workspace");
+
+    const newId = randomUUID();
+    const newVersion = (oldTier.version ?? 1) + 1;
+
+    const [newRow] = await db.$transaction([
+      db.growthPriceTier.create({
+        data: {
+          id: newId,
+          workspaceId,
+          name: data.name,
+          currency: data.currency ?? (oldTier.currency as string),
+          unitOfMeasure: data.unitOfMeasure ?? (oldTier.unitOfMeasure as string),
+          entryPrice: data.entryPrice,
+          maxPrice: data.maxPrice,
+          variableCost: data.variableCost ?? null,
+          allocatedCost: data.allocatedCost ?? null,
+          customerSegment: data.customerSegment ?? null,
+          channel: data.channel ?? null,
+          quantityBreaks: data.quantityBreaks ? (data.quantityBreaks as object) : undefined,
+          discountStructure: data.discountStructure ? (data.discountStructure as object) : undefined,
+          features: (data.features ?? []) as object,
+          status: "DRAFT",
+          approvalStatus: "pending_approval",
+          provenance: data.provenance ?? null,
+          effectiveFrom: data.effectiveFrom ? new Date(data.effectiveFrom) : null,
+          effectiveTo: data.effectiveTo ? new Date(data.effectiveTo) : null,
+          version: newVersion,
+        },
+      }),
+      db.growthPriceTier.update({
+        where: { id: oldTierId },
+        data: { status: "ARCHIVED", supersededById: newId },
+      }),
+    ]);
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.PRICE_TIER_SUPERSEDED,
+      actorId,
+      entityType: "growth_price_tier",
+      entityId: oldTierId,
+      workspaceId,
+      payload: { newTierId: newId, newVersion, oldVersion: oldTier.version, name: oldTier.name },
+      visibility: "internal",
+    });
+
+    return mapRow(newRow as PriceTierRow);
   }
 
   /**

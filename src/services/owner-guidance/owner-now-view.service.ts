@@ -111,6 +111,13 @@ interface RetentionCohortRow {
   cohortMonth: string;
 }
 
+interface PriceTierRow {
+  entryPrice: number;
+  variableCost: number | null;
+  allocatedCost: number | null;
+  status: string;
+}
+
 interface GuidanceDb {
   ownerCashflowCycle: { findFirst(args: unknown): Promise<CycleRow | null> };
   ownerFinanceCycle: { findFirst(args: unknown): Promise<CycleRow | null> };
@@ -145,6 +152,14 @@ interface GuidanceDb {
    */
   retentionCohort?: {
     findMany(args: unknown): Promise<RetentionCohortRow[]>;
+  };
+  /**
+   * Optional — price tiers table (present on the live client).
+   * Used to derive avgActiveMargin for the profit-leak radar (0..1 fractional margin).
+   * When absent (DI unit test), marginPct stays null — honestly unknown, not fabricated.
+   */
+  growthPriceTier?: {
+    findMany(args: unknown): Promise<PriceTierRow[]>;
   };
 }
 
@@ -488,14 +503,14 @@ export async function assembleGuidanceContext(
   workspaceId: string,
   businessId: string | null,
   deps: GuidanceDeps
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null } }> {
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; avgActiveMargin: number | null }> {
   const scope = businessId ? { workspaceId, businessId } : { workspaceId };
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
   const overdueBefore = new Date(deps.now() - PROOF_OVERDUE_AGE_MS);
   const nowDate = new Date(deps.now());
 
-  const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts] = await Promise.all([
+  const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers] = await Promise.all([
     deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true } }),
     deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true } }),
     deps.db.ownerEmployeeWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overburdened: true, utilizationPct: true } }),
@@ -512,7 +527,22 @@ export async function assembleGuidanceContext(
     deps.db.retentionCohort
       ? deps.db.retentionCohort.findMany({ where: { workspaceId }, orderBy: { cohortMonth: "desc" }, take: 3, select: { avgMonthlyChurn: true, cohortMonth: true } })
       : Promise.resolve([] as RetentionCohortRow[]),
+    deps.db.growthPriceTier
+      ? deps.db.growthPriceTier.findMany({ where: { workspaceId, status: "ACTIVE" }, select: { entryPrice: true, variableCost: true, allocatedCost: true, status: true } })
+      : Promise.resolve([] as PriceTierRow[]),
   ]);
+
+  // Compute avgActiveMargin from ACTIVE tiers that have cost data (0..1 fractional, same unit as profit-leak-radar marginPct).
+  const tiersWithCost = activePriceTiers.filter(
+    (t) => t.entryPrice > 0 && (t.variableCost !== null || t.allocatedCost !== null)
+  );
+  const avgActiveMargin =
+    tiersWithCost.length > 0
+      ? tiersWithCost.reduce((sum, t) => {
+          const totalCost = (t.variableCost ?? 0) + (t.allocatedCost ?? 0);
+          return sum + Math.max(0, Math.min(1, (t.entryPrice - totalCost) / t.entryPrice));
+        }, 0) / tiersWithCost.length
+      : null;
 
   const ag = archetypeGuidance(business?.businessType);
   const cashState = cash?.cashflowState;
@@ -634,6 +664,7 @@ export async function assembleGuidanceContext(
       b2bRevenue: metric?.b2bRevenue ?? null, newCustomers: metric?.newCustomers ?? null,
       repeatCustomers: metric?.repeatCustomers ?? null,
     },
+    avgActiveMargin,
   };
 }
 
@@ -696,7 +727,7 @@ export async function getOwnerNowView(
   injected?: GuidanceDeps
 ): Promise<OwnerNowViewPayload> {
   const deps = injected ?? (await resolveDefaultDeps());
-  const { ctx, state, ag, raw } = await assembleGuidanceContext(workspaceId, businessId, deps);
+  const { ctx, state, ag, raw, avgActiveMargin } = await assembleGuidanceContext(workspaceId, businessId, deps);
 
   // Owner Workload Budget signals — concrete owner-decision surfaces (workspace-scoped).
   // opportunityApprovalsPending has no persisted queue yet (decisions are computed on demand),
@@ -798,7 +829,7 @@ export async function getOwnerNowView(
     workspaceId,
     revenue: raw.revenue,
     discountAmount: raw.discountAmount,
-    marginPct: null,
+    marginPct: avgActiveMargin,
     marginSafe: raw.finState ? SAFE_STATES.has(raw.finState) : null,
     b2bRevenue: raw.b2bRevenue,
     newCustomers: raw.newCustomers,
