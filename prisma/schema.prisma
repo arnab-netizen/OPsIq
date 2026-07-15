@@ -4588,21 +4588,69 @@ model BudgetAuthority {
 }
 
 model VendorRecord {
-  id             String    @id @db.Uuid
-  workspaceId    String    @map("workspace_id") @db.Uuid
-  businessId     String    @map("business_id") @db.Uuid
-  name           String
-  bankAccountRef String?   @map("bank_account_ref")
-  bankVerified   Boolean   @default(false) @map("bank_verified")
-  bankChangedAt  DateTime? @map("bank_changed_at")
-  relatedParty   Boolean   @default(false) @map("related_party")
-  createdBy      String?   @map("created_by") @db.Uuid
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  id                     String    @id @db.Uuid
+  workspaceId            String    @map("workspace_id") @db.Uuid
+  businessId             String    @map("business_id") @db.Uuid
+  name                   String
+  bankAccountRef         String?   @map("bank_account_ref")
+  bankVerified           Boolean   @default(false) @map("bank_verified")
+  bankChangedAt          DateTime? @map("bank_changed_at")
+  relatedParty           Boolean   @default(false) @map("related_party")
+  /** PENDING_REVIEW | APPROVED | SUSPENDED */
+  approvalStatus         String    @default("PENDING_REVIEW") @map("approval_status")
+  paymentTermsDays       Int?      @map("payment_terms_days")
+  switchingCostEstimate  Float?    @map("switching_cost_estimate")
+  replacementLeadTimeDays Int?     @map("replacement_lead_time_days")
+  createdBy              String?   @map("created_by") @db.Uuid
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   @@index([workspaceId])
   @@index([workspaceId, businessId])
   @@map("vendor_records")
+}
+
+// Append-only contract and price version history for a vendor.
+// Each new contract term creates a new row; records are never mutated after creation.
+model VendorContract {
+  id             String    @id @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  vendorId       String    @map("vendor_id") @db.Uuid
+  businessId     String    @map("business_id") @db.Uuid
+  contractRef    String?   @map("contract_ref")
+  startDate      DateTime  @map("start_date")
+  endDate        DateTime? @map("end_date")
+  pricePerUnit   Float?    @map("price_per_unit")
+  currency       String    @default("USD")
+  termsDaysNet   Int?      @map("terms_days_net")
+  scope          String?
+  notes          String?
+  createdBy      String?   @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId, vendorId])
+  @@index([workspaceId])
+  @@map("vendor_contracts")
+}
+
+// Per-delivery performance record for a vendor — accumulates on-time and quality data.
+model VendorDeliveryRecord {
+  id               String    @id @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  vendorId         String    @map("vendor_id") @db.Uuid
+  businessId       String    @map("business_id") @db.Uuid
+  expectedDate     DateTime  @map("expected_date")
+  actualDate       DateTime? @map("actual_date")
+  /** null = not yet inspected */
+  onTime           Boolean?  @map("on_time")
+  qualityAccepted  Boolean?  @map("quality_accepted")
+  notes            String?
+  createdBy        String?   @map("created_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId, vendorId])
+  @@index([workspaceId])
+  @@map("vendor_delivery_records")
 }
 
 model FundedInitiativeOutcome {

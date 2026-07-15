@@ -419,6 +419,10 @@ export const AUDIT_EVENTS = {
 
   // Owner Vendor / Procurement Risk (Module #14)
   OWNER_VENDOR_RISK_ASSESSED: "owner.vendor_risk_assessed",
+  OWNER_VENDOR_APPROVED: "owner.vendor_approved",
+  OWNER_VENDOR_SUSPENDED: "owner.vendor_suspended",
+  OWNER_VENDOR_CONTRACT_RECORDED: "owner.vendor_contract_recorded",
+  OWNER_VENDOR_DELIVERY_RECORDED: "owner.vendor_delivery_recorded",
 
   // Owner Progress / Review (Workflow 7 — businessId-scoped, no engagementId required)
   OWNER_BUSINESS_REVIEW_GENERATED: "owner.business_review_generated",
