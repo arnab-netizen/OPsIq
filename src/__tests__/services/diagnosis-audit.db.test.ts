@@ -76,11 +76,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
           await db.finding.deleteMany({
             where: { engagementId: { in: createdEngagementIds } },
           });
+          await db.businessConditionProfile.deleteMany({
+            where: { engagementId: { in: createdEngagementIds } },
+          });
         }
         await db.recommendation.deleteMany({ where: { workspaceId } });
+        await db.businessConditionProfile.deleteMany({ where: { workspaceId } });
         await db.engagement.deleteMany({ where: { workspaceId } });
         await db.clientAccount.deleteMany({ where: { workspaceId } });
         await db.workspace.deleteMany({ where: { id: workspaceId } });
+        await db.auditEvent.deleteMany({ where: { actorId: userId } });
         await db.user.deleteMany({ where: { id: userId } });
       } catch {
         // best-effort cleanup

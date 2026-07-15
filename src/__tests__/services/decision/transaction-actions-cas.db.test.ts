@@ -111,6 +111,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       try {
         await db.operatorItem.deleteMany({ where: { workspaceId } });
         await db.workspace.deleteMany({ where: { id: workspaceId } });
+        await db.auditEvent.deleteMany({ where: { actorId: userId } });
         await db.user.deleteMany({ where: { id: userId } });
       } catch {
         // best-effort cleanup

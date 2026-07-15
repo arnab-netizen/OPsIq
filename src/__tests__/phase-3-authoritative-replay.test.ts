@@ -72,15 +72,12 @@ describe("Phase 3: Authoritative Replay from Canonical Events", () => {
   });
 
   afterEach(async () => {
-    try {
-      await db.recommendation.deleteMany({ where: { workspaceId } });
-      await db.engagement.deleteMany({ where: { workspaceId } });
-      await db.workspace.deleteMany({ where: { id: workspaceId } });
-      await db.clientAccount.deleteMany({ where: { id: clientId } });
-      await db.user.deleteMany({ where: { id: userId } });
-    } catch (error) {
-      // Ignore cleanup errors
-    }
+    await db.recommendation.deleteMany({ where: { workspaceId } }).catch(() => {});
+    await db.snapshotData.deleteMany({ where: { workspaceId } }).catch(() => {});
+    await db.engagement.deleteMany({ where: { workspaceId } }).catch(() => {});
+    await db.workspace.deleteMany({ where: { id: workspaceId } }).catch(() => {});
+    await db.clientAccount.deleteMany({ where: { id: clientId } }).catch(() => {});
+    await db.user.deleteMany({ where: { id: userId } }).catch(() => {});
   });
 
   describe("CREATE → REPLAY authoritative proof", () => {
