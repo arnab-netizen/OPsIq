@@ -430,6 +430,10 @@ export const AUDIT_EVENTS = {
   WASTE_LEAKAGE_DISMISSED: "owner.waste_leakage_dismissed",
   WASTE_LEAKAGE_RECOVERY_VERIFIED: "owner.waste_leakage_recovery_verified",
 
+  // Phase 5: Owner Goal + Trajectory Engine
+  OWNER_GOAL_CREATED: "owner.goal_created",
+  OWNER_GOAL_ACHIEVED: "owner.goal_achieved",
+
   // Owner Progress / Review (Workflow 7 — businessId-scoped, no engagementId required)
   OWNER_BUSINESS_REVIEW_GENERATED: "owner.business_review_generated",
 

@@ -1642,6 +1642,46 @@ model StartupIdeaRecord {
   @@map("startup_idea_record")
 }
 
+// ─── Phase 5: Owner Goal + Trajectory Engine ─────────────────────────────────
+// Owner declares a financial goal; system computes trajectory and scores
+// recommendations by how many weeks each accelerates goal attainment.
+// workspaceId is a plain UUID matching Workspace.id (canonical context).
+model OwnerGoal {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId    String              @map("workspace_id") @db.Uuid
+  actorId        String              @map("actor_id") @db.Uuid
+  targetType     String              @map("target_type")      // PROFIT | REVENUE | NET_WORTH | MULTIPLE
+  targetAmount   Float               @map("target_amount")
+  targetCurrency String              @default("USD") @map("target_currency")
+  targetDate     DateTime            @map("target_date")
+  baselineAmount Float?              @map("baseline_amount")
+  baselineDate   DateTime?           @map("baseline_date")
+  status         String              @default("ACTIVE")       // ACTIVE | ACHIEVED | REVISED
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  milestones     OwnerGoalMilestone[]
+
+  @@index([workspaceId, status])
+  @@map("owner_goals")
+}
+
+model OwnerGoalMilestone {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  goalId      String    @map("goal_id") @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  description String
+  targetAmount Float?   @map("target_amount")
+  targetDate  DateTime  @map("target_date")
+  achievedAt  DateTime? @map("achieved_at")
+  status      String    @default("pending")  // pending | achieved | missed
+  createdAt   DateTime  @default(now()) @map("created_at")
+  goal        OwnerGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@index([workspaceId])
+  @@map("owner_goal_milestones")
+}
+
 // ─── Phase 4: Waste / Leakage Detection ──────────────────────────────────────
 // Persistent events for detected operational/financial/quality leakage.
 // Each event: detected → investigating → confirmed → recovering → verified.
