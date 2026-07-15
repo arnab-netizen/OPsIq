@@ -38,13 +38,25 @@ export class SnapshotOptimizationEngine {
     const stateString = this.stableStringify(state);
     const checksum = crypto.createHash("sha256").update(stateString).digest("hex");
 
-    const snapshot = await db.snapshotData.create({
-      data: {
+    const snapshot = await db.snapshotData.upsert({
+      where: {
+        aggregateId_aggregateType_workspaceId: {
+          aggregateId,
+          aggregateType,
+          workspaceId,
+        },
+      },
+      update: {
+        state,
+        eventNumber: lastEventNumber,
+        checksum,
+      },
+      create: {
         aggregateId,
         aggregateType,
         state,
         eventNumber: lastEventNumber,
-        checksum, // Store checksum for validation
+        checksum,
         workspaceId,
       },
     });
