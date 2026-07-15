@@ -88,10 +88,34 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] RetentionEngine — DB persistence",
     expect(march!.monthlyRetention[3]).toBeCloseTo(0.83, 5);
   });
 
+  it("recordMetrics upserts on same cohortMonth — second call updates, no duplicate row", async () => {
+    // First write
+    await RetentionEngine.recordMetrics(testWs, actor, {
+      cohortMonth: "2026-04",
+      cohortSize: 100,
+      monthlyRetention: { 1: 0.90 },
+      avgMonthlyChurn: 0.10,
+    });
+    // Second write — different values, same month
+    const updated = await RetentionEngine.recordMetrics(testWs, actor, {
+      cohortMonth: "2026-04",
+      cohortSize: 110,
+      monthlyRetention: { 1: 0.88, 2: 0.82 },
+      avgMonthlyChurn: 0.08,
+    });
+    expect(updated.avgMonthlyChurn).toBe(0.08);
+    expect(updated.cohortSize).toBe(110);
+
+    const cohorts = await RetentionEngine.listCohorts(testWs);
+    const aprilRows = cohorts.filter((c) => c.cohortMonth === "2026-04");
+    expect(aprilRows).toHaveLength(1); // exactly one row — upsert, not duplicate insert
+    expect(aprilRows[0].avgMonthlyChurn).toBe(0.08);
+  });
+
   it("recordMetrics throws ValidationError for empty workspaceId (no DB touch)", async () => {
     await expect(
       RetentionEngine.recordMetrics("", actor, {
-        cohortMonth: "2026-04",
+        cohortMonth: "2026-05",
         monthlyRetention: { 1: 0.95 },
         avgMonthlyChurn: 0.05,
       })

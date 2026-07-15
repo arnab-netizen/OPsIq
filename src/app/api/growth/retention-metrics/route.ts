@@ -7,6 +7,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { RetentionEngine } from "@/services/growth/retention-engine";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { parseRequestBody } from "@/lib/validation";
+export const dynamic = "force-dynamic";
 import { z } from "zod/v4";
 
 const recordMetricsSchema = z.object({
@@ -18,7 +19,8 @@ const recordMetricsSchema = z.object({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    return RetentionEngine.listCohorts(ctx.verifiedWorkspaceId);
+    const cohorts = await RetentionEngine.listCohorts(ctx.verifiedWorkspaceId);
+    return canonicalJson(cohorts, { status: 200 });
   },
   { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
 );

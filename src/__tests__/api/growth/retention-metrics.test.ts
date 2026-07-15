@@ -14,7 +14,7 @@ vi.mock("@/lib/db", () => ({
   getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     retentionCohort: {
-      create: vi.fn().mockResolvedValue(undefined),
+      upsert: vi.fn().mockResolvedValue({ id: "00000000-0000-0000-0000-000000000001" }),
     },
   },
 }));

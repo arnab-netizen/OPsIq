@@ -53,8 +53,14 @@ export class RetentionEngine {
     };
 
     const id = randomUUID();
-    await db.retentionCohort.create({
-      data: {
+    const row = await db.retentionCohort.upsert({
+      where: { workspaceId_cohortMonth: { workspaceId, cohortMonth: metrics.cohortMonth } },
+      update: {
+        cohortSize: metrics.cohortSize ?? null,
+        monthlyRetention: metrics.monthlyRetention as object,
+        avgMonthlyChurn: metrics.avgMonthlyChurn,
+      },
+      create: {
         id,
         workspaceId,
         cohortMonth: metrics.cohortMonth,
@@ -68,7 +74,7 @@ export class RetentionEngine {
       eventName: AUDIT_EVENTS.RETENTION_COHORT_RECORDED,
       actorId,
       entityType: "retention_cohort",
-      entityId: id,
+      entityId: row.id,
       workspaceId,
       payload: {
         cohortMonth: metrics.cohortMonth,
