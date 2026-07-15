@@ -434,6 +434,10 @@ export const AUDIT_EVENTS = {
   OWNER_GOAL_CREATED: "owner.goal_created",
   OWNER_GOAL_ACHIEVED: "owner.goal_achieved",
 
+  // Phase 6: Google Sheets Spreadsheet Allowlist
+  SPREADSHEET_ALLOWLIST_ADDED: "external.spreadsheet_allowlist_added",
+  SPREADSHEET_ALLOWLIST_REVOKED: "external.spreadsheet_allowlist_revoked",
+
   // Owner Progress / Review (Workflow 7 — businessId-scoped, no engagementId required)
   OWNER_BUSINESS_REVIEW_GENERATED: "owner.business_review_generated",
 

@@ -14,10 +14,15 @@ import {
   generateGoogleAuthorizationUrl,
   convertSheetRowsToImportFormat,
   validateGoogleOAuthCallback,
+  exchangeCodeForToken,
+  extractGoogleSheetData,
+  refreshAccessToken,
+  revokeGoogleAccess,
   type GoogleAuthorizationUrlInput,
   type GoogleSheetData,
   type GoogleOAuthCallbackRequest,
 } from "@/services/external-systems/google-sheets-oauth.service";
+import { ValidationError, UnauthorizedError, NotFoundError, TooManyRequestsError } from "@/infra/errors";
 
 const mockConfig = {
   clientId: "test-client-id.apps.googleusercontent.com",
@@ -364,6 +369,292 @@ describe("B13-S2: Google Sheets OAuth Integration", () => {
       result.parsedRows.forEach((row) => {
         expect(row.confidence).toBeGreaterThanOrEqual(0.9);
       });
+    });
+  });
+});
+
+// Helpers for fetch mocking
+function makeFetch(status: number, body: unknown): () => Promise<Response> {
+  return () =>
+    Promise.resolve({
+      ok: status >= 200 && status < 300,
+      status,
+      json: () => Promise.resolve(body),
+    } as unknown as Response);
+}
+
+const VALID_SPREADSHEET_ID = "1BxiMVs0XRA5nFMon9QV6-xH03ywWD3e";
+
+describe("Phase 6 — HTTP connector implementations", () => {
+  describe("exchangeCodeForToken", () => {
+    it("returns accessToken and refreshToken on 200", async () => {
+      const fetchImpl = makeFetch(200, {
+        access_token: "ya29.access",
+        refresh_token: "1//refresh",
+        expires_in: 3600,
+        token_type: "Bearer",
+      });
+
+      const result = await exchangeCodeForToken({
+        config: mockConfig,
+        code: "auth-code-123",
+        codeVerifier: "verifier-abc",
+        fetchImpl,
+      });
+
+      expect(result.accessToken).toBe("ya29.access");
+      expect(result.refreshToken).toBe("1//refresh");
+      expect(result.expiresIn).toBe(3600);
+      expect(result.tokenType).toBe("Bearer");
+    });
+
+    it("posts to the Google OAuth token endpoint (not a user-supplied URL)", async () => {
+      let capturedUrl = "";
+      const fetchImpl = (url: string) => {
+        capturedUrl = url;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ access_token: "t", expires_in: 3600, token_type: "Bearer" }),
+        } as unknown as Response);
+      };
+
+      await exchangeCodeForToken({ config: mockConfig, code: "c", codeVerifier: "v", fetchImpl });
+
+      expect(capturedUrl).toBe("https://oauth2.googleapis.com/token");
+    });
+
+    it("throws ValidationError on 400 from Google", async () => {
+      const fetchImpl = makeFetch(400, {
+        error: "invalid_grant",
+        error_description: "Code has already been used",
+      });
+
+      await expect(
+        exchangeCodeForToken({ config: mockConfig, code: "used-code", codeVerifier: "v", fetchImpl }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it("throws ValidationError on 401 from Google", async () => {
+      const fetchImpl = makeFetch(401, { error: "unauthorized_client" });
+
+      await expect(
+        exchangeCodeForToken({ config: mockConfig, code: "c", codeVerifier: "v", fetchImpl }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+  });
+
+  describe("extractGoogleSheetData", () => {
+    it("returns headers and rows on 200", async () => {
+      const fetchImpl = makeFetch(200, {
+        values: [
+          ["Deal ID", "Deal Name", "Amount"],
+          ["d1", "Big Deal", "50000"],
+          ["d2", "Small Deal", "5000"],
+        ],
+      });
+
+      const result = await extractGoogleSheetData({
+        accessToken: "ya29.token",
+        spreadsheetId: VALID_SPREADSHEET_ID,
+        sheetRange: "Sheet1!A:C",
+        fetchImpl,
+      });
+
+      expect(result.headers).toEqual(["Deal ID", "Deal Name", "Amount"]);
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0]["Deal ID"]).toBe("d1");
+      expect(result.spreadsheetId).toBe(VALID_SPREADSHEET_ID);
+    });
+
+    it("constructs URL from validated spreadsheetId (SSRF protection)", async () => {
+      let capturedUrl = "";
+      const fetchImpl = (url: string) => {
+        capturedUrl = url;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ values: [] }),
+        } as unknown as Response);
+      };
+
+      await extractGoogleSheetData({
+        accessToken: "token",
+        spreadsheetId: VALID_SPREADSHEET_ID,
+        fetchImpl,
+      });
+
+      expect(capturedUrl).toMatch(/^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\//);
+      expect(capturedUrl).toContain(VALID_SPREADSHEET_ID);
+      // URL must NOT contain any user-controlled host or protocol
+      expect(capturedUrl).not.toContain("http://");
+    });
+
+    it("rejects spreadsheetId that looks like a URL (SSRF protection)", async () => {
+      await expect(
+        extractGoogleSheetData({
+          accessToken: "token",
+          spreadsheetId: "https://evil.com/path",
+          fetchImpl: makeFetch(200, {}),
+        }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it("rejects spreadsheetId with path traversal characters", async () => {
+      await expect(
+        extractGoogleSheetData({
+          accessToken: "token",
+          spreadsheetId: "../../etc/passwd",
+          fetchImpl: makeFetch(200, {}),
+        }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it("rejects sheetRange with forbidden characters", async () => {
+      await expect(
+        extractGoogleSheetData({
+          accessToken: "token",
+          spreadsheetId: VALID_SPREADSHEET_ID,
+          sheetRange: "Sheet1!A:Z/../../../evil",
+          fetchImpl: makeFetch(200, {}),
+        }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it("returns empty data when Google returns no values", async () => {
+      const result = await extractGoogleSheetData({
+        accessToken: "token",
+        spreadsheetId: VALID_SPREADSHEET_ID,
+        fetchImpl: makeFetch(200, {}),
+      });
+
+      expect(result.headers).toHaveLength(0);
+      expect(result.rows).toHaveLength(0);
+    });
+
+    it("throws UnauthorizedError on 401", async () => {
+      await expect(
+        extractGoogleSheetData({
+          accessToken: "expired",
+          spreadsheetId: VALID_SPREADSHEET_ID,
+          fetchImpl: makeFetch(401, { error: "UNAUTHENTICATED" }),
+        }),
+      ).rejects.toBeInstanceOf(UnauthorizedError);
+    });
+
+    it("throws UnauthorizedError on 403", async () => {
+      await expect(
+        extractGoogleSheetData({
+          accessToken: "token",
+          spreadsheetId: VALID_SPREADSHEET_ID,
+          fetchImpl: makeFetch(403, { error: "PERMISSION_DENIED" }),
+        }),
+      ).rejects.toBeInstanceOf(UnauthorizedError);
+    });
+
+    it("throws NotFoundError on 404", async () => {
+      await expect(
+        extractGoogleSheetData({
+          accessToken: "token",
+          spreadsheetId: VALID_SPREADSHEET_ID,
+          fetchImpl: makeFetch(404, { error: "NOT_FOUND" }),
+        }),
+      ).rejects.toBeInstanceOf(NotFoundError);
+    });
+
+    it("throws TooManyRequestsError on 429", async () => {
+      await expect(
+        extractGoogleSheetData({
+          accessToken: "token",
+          spreadsheetId: VALID_SPREADSHEET_ID,
+          fetchImpl: makeFetch(429, { error: "RESOURCE_EXHAUSTED" }),
+        }),
+      ).rejects.toBeInstanceOf(TooManyRequestsError);
+    });
+  });
+
+  describe("refreshAccessToken", () => {
+    it("returns new accessToken on 200", async () => {
+      const fetchImpl = makeFetch(200, {
+        access_token: "ya29.new-access",
+        expires_in: 3600,
+        token_type: "Bearer",
+      });
+
+      const result = await refreshAccessToken({
+        config: mockConfig,
+        refreshToken: "1//refresh",
+        fetchImpl,
+      });
+
+      expect(result.accessToken).toBe("ya29.new-access");
+      expect(result.expiresIn).toBe(3600);
+    });
+
+    it("posts to the Google OAuth token endpoint", async () => {
+      let capturedUrl = "";
+      let capturedBody = "";
+      const fetchImpl = (url: string, init?: RequestInit) => {
+        capturedUrl = url;
+        capturedBody = (init?.body as string) ?? "";
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ access_token: "t", expires_in: 3600, token_type: "Bearer" }),
+        } as unknown as Response);
+      };
+
+      await refreshAccessToken({ config: mockConfig, refreshToken: "rt", fetchImpl });
+
+      expect(capturedUrl).toBe("https://oauth2.googleapis.com/token");
+      expect(capturedBody).toContain("grant_type=refresh_token");
+      expect(capturedBody).toContain("refresh_token=rt");
+    });
+
+    it("throws ValidationError on 400 (invalid/expired refresh token)", async () => {
+      const fetchImpl = makeFetch(400, {
+        error: "invalid_grant",
+        error_description: "Token has been expired or revoked",
+      });
+
+      await expect(
+        refreshAccessToken({ config: mockConfig, refreshToken: "expired-rt", fetchImpl }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+  });
+
+  describe("revokeGoogleAccess", () => {
+    it("resolves without error on 200", async () => {
+      await expect(
+        revokeGoogleAccess({
+          config: mockConfig,
+          accessToken: "ya29.access",
+          fetchImpl: makeFetch(200, {}),
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it("resolves without error on 400 (token already revoked)", async () => {
+      // Google returns 400 when token is already invalid — treated as success
+      await expect(
+        revokeGoogleAccess({
+          config: mockConfig,
+          accessToken: "already-revoked",
+          fetchImpl: makeFetch(400, { error: "invalid_token" }),
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it("posts to the Google revocation endpoint", async () => {
+      let capturedUrl = "";
+      const fetchImpl = (url: string) => {
+        capturedUrl = url;
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) } as unknown as Response);
+      };
+
+      await revokeGoogleAccess({ config: mockConfig, accessToken: "t", fetchImpl });
+
+      expect(capturedUrl).toBe("https://oauth2.googleapis.com/revoke");
     });
   });
 });

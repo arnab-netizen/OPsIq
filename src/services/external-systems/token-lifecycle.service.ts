@@ -25,6 +25,9 @@ import {
   type OAuthToken,
   type EncryptedOAuthToken,
 } from "./oauth-token.service";
+import { refreshAccessToken } from "./google-sheets-oauth.service";
+
+type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 export interface StoredOAuthToken extends OAuthToken {
   connectionId: string;
@@ -167,21 +170,30 @@ export async function getValidOAuthToken(
 }
 
 /**
- * Contract: Exchange refresh token for new access token.
- * Actual implementation calls provider's token endpoint.
+ * Exchange refresh token for new access token.
+ * Google: POST https://oauth2.googleapis.com/token (via refreshAccessToken).
+ * Other providers: FeatureDisabledError until wired.
  */
 export async function exchangeRefreshTokenForAccessToken(
   providerId: string,
   refreshToken: string,
   clientId: string,
   clientSecret: string,
+  opts?: { fetchImpl?: FetchLike },
 ): Promise<TokenRefreshResponse> {
-  // In production, this would call provider's token endpoint
-  // POST https://provider.oauth/token with:
-  // - grant_type: "refresh_token"
-  // - refresh_token: refreshToken
-  // - client_id: clientId
-  // - client_secret: clientSecret
+  if (providerId === "google" || providerId === "google_sheets") {
+    const result = await refreshAccessToken({
+      config: { clientId, clientSecret, redirectUri: "" },
+      refreshToken,
+      fetchImpl: opts?.fetchImpl,
+    });
+    return {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      expiresIn: result.expiresIn,
+      tokenType: result.tokenType,
+    };
+  }
 
   throw new FeatureDisabledError(
     `Token refresh for provider ${providerId}`,

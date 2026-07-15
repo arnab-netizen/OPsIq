@@ -5,13 +5,18 @@
  * 1. resolvePrivateModeRole returns null for users with no approved record
  * 2. enforcePrivateModeGate fixed feature check (was a dead branch)
  * 3. getSubscriptionTier workspace-scoped env var override (no bleed-through)
- * 4. Connector stubs throw FeatureDisabledError (not generic Error)
+ * 4. Phase 6 connectors replaced stubs with live HTTP; unsupported providers still FeatureDisabledError
  *
  * No DB required — all DB calls are mocked via vi.mock.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { FeatureDisabledError } from "@/infra/errors";
+import {
+  FeatureDisabledError,
+  ValidationError,
+  ServiceUnavailableError,
+  UnauthorizedError,
+} from "@/infra/errors";
 
 // Valid UUIDs for test identities (claimWorkspaceId requires UUID format)
 const WS_1 = "11111111-1111-1111-1111-111111111111";
@@ -245,88 +250,150 @@ describe("getSubscriptionTier — OPSIQ_PRIVATE_WORKSPACE_ID override", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. Connector stubs — FeatureDisabledError contract
+// 4. Phase 6 Connector — live HTTP implementations (stubs replaced)
+//
+// Phase 1 replaced generic Error stubs with typed FeatureDisabledError.
+// Phase 6 replaced FeatureDisabledError stubs with real HTTP implementations.
+// These tests verify the Phase 6 contract: functions make real fetch calls
+// and throw typed domain errors (ValidationError, UnauthorizedError, etc.)
+// not FeatureDisabledError. Unsupported providers still throw FeatureDisabledError.
 // ---------------------------------------------------------------------------
 
-describe("Connector stubs — typed FeatureDisabledError (not generic Error)", () => {
-  it("exchangeCodeForToken throws FeatureDisabledError with code=FEATURE_DISABLED, status=501", async () => {
+describe("Phase 6 Connector — live HTTP implementations (FeatureDisabledError stubs replaced)", () => {
+  const makeMockFetch = (status: number, body: unknown) =>
+    vi.fn().mockResolvedValue({
+      ok: status >= 200 && status < 300,
+      status,
+      json: () => Promise.resolve(body),
+      text: () => Promise.resolve(JSON.stringify(body)),
+    });
+
+  it("exchangeCodeForToken makes real HTTP call — throws ValidationError on 401, not FeatureDisabledError", async () => {
     const { exchangeCodeForToken } = await import(
       "@/services/external-systems/google-sheets-oauth.service"
     );
-    await expect(exchangeCodeForToken({} as never)).rejects.toBeInstanceOf(FeatureDisabledError);
-    try {
-      await exchangeCodeForToken({} as never);
-    } catch (err) {
-      const e = err as FeatureDisabledError;
-      expect(e.code).toBe("FEATURE_DISABLED");
-      expect(e.statusCode).toBe(501);
-      expect(e.name).toBe("FeatureDisabledError");
-    }
+    const mockFetch = makeMockFetch(401, { error_description: "invalid_grant" });
+    await expect(
+      exchangeCodeForToken({
+        config: { clientId: "cid", clientSecret: "csec", redirectUri: "https://app/callback" },
+        code: "auth-code",
+        codeVerifier: "verifier",
+        fetchImpl: mockFetch,
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      exchangeCodeForToken({
+        config: { clientId: "cid", clientSecret: "csec", redirectUri: "https://app/callback" },
+        code: "auth-code",
+        codeVerifier: "verifier",
+        fetchImpl: makeMockFetch(401, { error_description: "invalid_grant" }),
+      }),
+    ).rejects.not.toBeInstanceOf(FeatureDisabledError);
   });
 
-  it("extractGoogleSheetData throws FeatureDisabledError", async () => {
+  it("extractGoogleSheetData makes real HTTP call — throws UnauthorizedError on 401, not FeatureDisabledError", async () => {
     const { extractGoogleSheetData } = await import(
       "@/services/external-systems/google-sheets-oauth.service"
     );
-    await expect(extractGoogleSheetData({} as never)).rejects.toBeInstanceOf(FeatureDisabledError);
-    try {
-      await extractGoogleSheetData({} as never);
-    } catch (err) {
-      expect((err as FeatureDisabledError).statusCode).toBe(501);
-      expect((err as FeatureDisabledError).code).toBe("FEATURE_DISABLED");
-    }
+    const mockFetch = makeMockFetch(401, {});
+    await expect(
+      extractGoogleSheetData({
+        accessToken: "Bearer test-token",
+        spreadsheetId: "1BxiMVs0XRA5nFMon9QV6-xH03ywWD3e",
+        sheetRange: "Sheet1!A1:Z100",
+        fetchImpl: mockFetch,
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedError);
+    await expect(
+      extractGoogleSheetData({
+        accessToken: "Bearer test-token",
+        spreadsheetId: "1BxiMVs0XRA5nFMon9QV6-xH03ywWD3e",
+        sheetRange: "Sheet1!A1:Z100",
+        fetchImpl: makeMockFetch(401, {}),
+      }),
+    ).rejects.not.toBeInstanceOf(FeatureDisabledError);
   });
 
-  it("refreshAccessToken throws FeatureDisabledError", async () => {
+  it("refreshAccessToken makes real HTTP call — throws ValidationError on 400, not FeatureDisabledError", async () => {
     const { refreshAccessToken } = await import(
       "@/services/external-systems/google-sheets-oauth.service"
     );
-    await expect(refreshAccessToken({} as never)).rejects.toBeInstanceOf(FeatureDisabledError);
-    try {
-      await refreshAccessToken({} as never);
-    } catch (err) {
-      expect((err as FeatureDisabledError).statusCode).toBe(501);
-    }
+    const mockFetch = makeMockFetch(400, { error_description: "token_expired" });
+    await expect(
+      refreshAccessToken({
+        config: { clientId: "cid", clientSecret: "csec", redirectUri: "" },
+        refreshToken: "expired-refresh-token",
+        fetchImpl: mockFetch,
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      refreshAccessToken({
+        config: { clientId: "cid", clientSecret: "csec", redirectUri: "" },
+        refreshToken: "expired-refresh-token",
+        fetchImpl: makeMockFetch(400, { error_description: "token_expired" }),
+      }),
+    ).rejects.not.toBeInstanceOf(FeatureDisabledError);
   });
 
-  it("revokeGoogleAccess throws FeatureDisabledError", async () => {
+  it("revokeGoogleAccess makes real HTTP call — 400 treated as success; 500 throws ServiceUnavailableError", async () => {
     const { revokeGoogleAccess } = await import(
       "@/services/external-systems/google-sheets-oauth.service"
     );
-    await expect(revokeGoogleAccess({} as never)).rejects.toBeInstanceOf(FeatureDisabledError);
-    try {
-      await revokeGoogleAccess({} as never);
-    } catch (err) {
-      expect((err as FeatureDisabledError).statusCode).toBe(501);
-    }
+    // 400 = token already invalid per Google docs → treated as success, must not throw
+    await expect(
+      revokeGoogleAccess({
+        config: { clientId: "cid", clientSecret: "csec", redirectUri: "" },
+        accessToken: "already-revoked-token",
+        fetchImpl: makeMockFetch(400, {}),
+      }),
+    ).resolves.toBeUndefined();
+    // 500 → ServiceUnavailableError, not FeatureDisabledError
+    await expect(
+      revokeGoogleAccess({
+        config: { clientId: "cid", clientSecret: "csec", redirectUri: "" },
+        accessToken: "some-token",
+        fetchImpl: makeMockFetch(500, {}),
+      }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableError);
+    await expect(
+      revokeGoogleAccess({
+        config: { clientId: "cid", clientSecret: "csec", redirectUri: "" },
+        accessToken: "some-token",
+        fetchImpl: makeMockFetch(500, {}),
+      }),
+    ).rejects.not.toBeInstanceOf(FeatureDisabledError);
   });
 
-  it("exchangeRefreshTokenForAccessToken throws FeatureDisabledError with provider in message", async () => {
+  it("exchangeRefreshTokenForAccessToken dispatches to Google for google/google_sheets — not FeatureDisabledError", async () => {
+    const { exchangeRefreshTokenForAccessToken } = await import(
+      "@/services/external-systems/token-lifecycle.service"
+    );
+    // Both google and google_sheets dispatch to real OAuth refresh — 500 → ServiceUnavailableError
+    await expect(
+      exchangeRefreshTokenForAccessToken("google_sheets", "refresh-tok", "cid", "csec", {
+        fetchImpl: makeMockFetch(500, {}),
+      }),
+    ).rejects.not.toBeInstanceOf(FeatureDisabledError);
+    await expect(
+      exchangeRefreshTokenForAccessToken("google", "refresh-tok", "cid", "csec", {
+        fetchImpl: makeMockFetch(500, {}),
+      }),
+    ).rejects.not.toBeInstanceOf(FeatureDisabledError);
+  });
+
+  it("exchangeRefreshTokenForAccessToken still throws FeatureDisabledError for unsupported providers", async () => {
     const { exchangeRefreshTokenForAccessToken } = await import(
       "@/services/external-systems/token-lifecycle.service"
     );
     await expect(
-      exchangeRefreshTokenForAccessToken("google_sheets", "tok", "refresh-tok", "cid", "csec"),
+      exchangeRefreshTokenForAccessToken("stripe", "refresh-tok", "cid", "csec"),
     ).rejects.toBeInstanceOf(FeatureDisabledError);
     try {
-      await exchangeRefreshTokenForAccessToken("google_sheets", "tok", "refresh-tok", "cid", "csec");
+      await exchangeRefreshTokenForAccessToken("salesforce", "refresh-tok", "cid", "csec");
     } catch (err) {
       const e = err as FeatureDisabledError;
-      expect(e.statusCode).toBe(501);
       expect(e.code).toBe("FEATURE_DISABLED");
-      expect(e.message).toContain("google_sheets");
-    }
-  });
-
-  it("FeatureDisabledError is non-retryable — client retry will never succeed while feature is off", async () => {
-    const { revokeGoogleAccess } = await import(
-      "@/services/external-systems/google-sheets-oauth.service"
-    );
-    try {
-      await revokeGoogleAccess({} as never);
-    } catch (err) {
-      expect(err).toBeInstanceOf(FeatureDisabledError);
-      const e = err as FeatureDisabledError;
+      expect(e.statusCode).toBe(501);
       expect(e.telemetry?.retryable).toBe(false);
     }
   });

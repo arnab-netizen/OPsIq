@@ -1228,12 +1228,13 @@ model Workspace {
   recommendationsLegacy RecommendationLegacy[]      @ignore
   snapshotDatas         SnapshotData[]
   workspaceMemberships  WorkspaceMembership[]
-  externalConnections   ExternalConnection[]
-  connectionConsents    ExternalConnectionConsent[]
-  browserImportSessions BrowserImportSession[]
-  browserImportConsents BrowserImportConsent[]
-  clientAccounts        ClientAccount[]
-  leadRecords           LeadRecord[]
+  externalConnections      ExternalConnection[]
+  connectionConsents       ExternalConnectionConsent[]
+  browserImportSessions    BrowserImportSession[]
+  browserImportConsents    BrowserImportConsent[]
+  spreadsheetAllowlist     ExternalSpreadsheetAllowlist[]
+  clientAccounts           ClientAccount[]
+  leadRecords              LeadRecord[]
 
   @@map("workspaces")
 }
@@ -3358,6 +3359,26 @@ model ExternalSyncJob {
   @@index([connectionId])
   @@index([status])
   @@map("external_sync_jobs")
+}
+
+// Phase 6: Google Sheets Spreadsheet Allowlist
+// Owner must explicitly allow each spreadsheet before it can be imported.
+model ExternalSpreadsheetAllowlist {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  spreadsheetId String    @map("spreadsheet_id")
+  name          String
+  addedBy       String    @map("added_by") @db.Uuid
+  revokedAt     DateTime? @map("revoked_at")
+  revokedBy     String?   @map("revoked_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, spreadsheetId])
+  @@index([workspaceId])
+  @@map("external_spreadsheet_allowlist")
 }
 
 // B14: Browser-Assisted Import (Restricted Fallback)
