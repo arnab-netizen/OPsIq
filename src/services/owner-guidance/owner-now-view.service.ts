@@ -106,6 +106,11 @@ interface EscalationSelectRow {
   resolvedAt: Date | null;
 }
 
+interface RetentionCohortRow {
+  avgMonthlyChurn: number;
+  cohortMonth: string;
+}
+
 interface GuidanceDb {
   ownerCashflowCycle: { findFirst(args: unknown): Promise<CycleRow | null> };
   ownerFinanceCycle: { findFirst(args: unknown): Promise<CycleRow | null> };
@@ -132,6 +137,14 @@ interface GuidanceDb {
   ownerGuidanceSnapshot: {
     findFirst(args: unknown): Promise<GuidanceSnapshotRow | null>;
     create(args: { data: Record<string, unknown> }): Promise<unknown>;
+  };
+  /**
+   * Optional — retention cohorts table (present on the live client).
+   * Used to derive churn risk from DB-persisted cohort data rather than the metric snapshot ratio.
+   * When absent (DI unit test), churnRiskScore falls back to the metric-based repeat-customer ratio.
+   */
+  retentionCohort?: {
+    findMany(args: unknown): Promise<RetentionCohortRow[]>;
   };
 }
 
@@ -482,7 +495,7 @@ export async function assembleGuidanceContext(
   const overdueBefore = new Date(deps.now() - PROOF_OVERDUE_AGE_MS);
   const nowDate = new Date(deps.now());
 
-  const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen] = await Promise.all([
+  const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts] = await Promise.all([
     deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true } }),
     deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true } }),
     deps.db.ownerEmployeeWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overburdened: true, utilizationPct: true } }),
@@ -496,6 +509,9 @@ export async function assembleGuidanceContext(
     safeCount(deps.db.proof.count({ where: { workspaceId, status: { in: OVERDUE_PROOF_STATUSES }, createdAt: { lt: overdueBefore } } })),
     safeCount(deps.db.ownerActionOutcome.count({ where: { workspaceId, OR: [{ outcomeStatus: OPEN_OUTCOME_STATUS }, { measurementPeriodEnd: { lt: nowDate } }] } })),
     safeCount(deps.db.ownerReassessmentEvent.count({ where: { workspaceId, status: "pending" } })),
+    deps.db.retentionCohort
+      ? deps.db.retentionCohort.findMany({ where: { workspaceId }, orderBy: { cohortMonth: "desc" }, take: 3, select: { avgMonthlyChurn: true, cohortMonth: true } })
+      : Promise.resolve([] as RetentionCohortRow[]),
   ]);
 
   const ag = archetypeGuidance(business?.businessType);
@@ -507,13 +523,17 @@ export async function assembleGuidanceContext(
   const capacityGrowthSafe = cap?.growthSafe === true;
   const supplierRiskScore = supplier?.riskScore ?? 0;
   const supplierRiskHigh = supplierRiskScore >= 0.5;
-  const growthGatePassed = cashSafe && capacityGrowthSafe && !supplierRiskHigh;
 
   const complaints = Math.round(metric?.complaintCount ?? 0);
   const rework = Math.round(metric?.rewashCount ?? 0);
   const newC = metric?.newCustomers ?? 0;
   const repeatC = metric?.repeatCustomers ?? 0;
-  const churnRiskScore = newC + repeatC > 0 ? Math.max(0, 1 - repeatC / (newC + repeatC)) : 0;
+  const metricChurnRate = newC + repeatC > 0 ? Math.max(0, 1 - repeatC / (newC + repeatC)) : 0;
+  // Prefer DB-persisted cohort churn (scaled to 0–1 risk score) over the metric snapshot ratio.
+  const cohortAvgChurn = latestCohorts[0]?.avgMonthlyChurn ?? null;
+  const churnRiskScore = cohortAvgChurn !== null ? Math.min(1, cohortAvgChurn * 5) : metricChurnRate;
+  const retentionRiskHigh = churnRiskScore >= 0.5;
+  const growthGatePassed = cashSafe && capacityGrowthSafe && !supplierRiskHigh && !retentionRiskHigh;
   const outcomeChecksDue = outcomeOpen + reassessOpen;
 
   const confScore =

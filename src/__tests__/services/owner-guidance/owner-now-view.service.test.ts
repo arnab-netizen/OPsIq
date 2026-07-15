@@ -169,3 +169,50 @@ describe("[module41] full payload + persistence", () => {
     await expect(getOwnerNowView("ws1", "biz1", deps)).rejects.toThrow("connection reset");
   });
 });
+
+describe("[module41] retention cohort → growth gate cross-domain wiring", () => {
+  it("cohort avgMonthlyChurn=0.10 → churnRiskScore=0.50 → retentionRiskHigh → growthGatePassed=false", async () => {
+    const { deps } = fakeDeps(healthy);
+    deps.db.retentionCohort = {
+      findMany: async () => [{ avgMonthlyChurn: 0.10, cohortMonth: "2026-06" }],
+    };
+    const { ctx, state } = await assembleGuidanceContext("ws1", "biz1", deps);
+    expect(state.churnRiskScore).toBeCloseTo(0.50, 5);
+    expect(ctx.growthGatePassed).toBe(false);
+    expect(ctx.issues.some((i) => i.id === "churn")).toBe(true);
+  });
+
+  it("cohort avgMonthlyChurn=0.03 → churnRiskScore=0.15 → retentionRiskHigh=false → healthy state stays GROWTH_READY", async () => {
+    const { deps } = fakeDeps(healthy);
+    deps.db.retentionCohort = {
+      findMany: async () => [{ avgMonthlyChurn: 0.03, cohortMonth: "2026-06" }],
+    };
+    const { ctx, state } = await assembleGuidanceContext("ws1", "biz1", deps);
+    expect(state.churnRiskScore).toBeCloseTo(0.15, 5);
+    expect(ctx.growthGatePassed).toBe(true); // healthy fixture: cashSafe=true, capacityGrowthSafe=true, supplierRiskHigh=false
+    expect(ctx.issues.some((i) => i.id === "churn")).toBe(false);
+  });
+
+  it("absent retentionCohort → falls back to metric-based repeat-customer ratio", async () => {
+    const { deps } = fakeDeps({
+      ...healthy,
+      metric: { complaintCount: 0, rewashCount: 0, refundAmount: 0, newCustomers: 10, repeatCustomers: 30, revenue: 100000 },
+    });
+    // retentionCohort not provided → deps.db.retentionCohort is undefined
+    const { state } = await assembleGuidanceContext("ws1", "biz1", deps);
+    // metricChurnRate = 1 - 30/40 = 0.25
+    expect(state.churnRiskScore).toBeCloseTo(0.25, 5);
+  });
+
+  it("cohort avgMonthlyChurn=0.15 (CRITICAL) → churnRiskScore=0.75 → churn issue HIGH severity", async () => {
+    const { deps } = fakeDeps(healthy);
+    deps.db.retentionCohort = {
+      findMany: async () => [{ avgMonthlyChurn: 0.15, cohortMonth: "2026-06" }],
+    };
+    const { ctx } = await assembleGuidanceContext("ws1", "biz1", deps);
+    expect(ctx.growthGatePassed).toBe(false);
+    const churnIssue = ctx.issues.find((i) => i.id === "churn");
+    expect(churnIssue).toBeDefined();
+    expect(churnIssue?.severity).toBe("HIGH"); // churnRiskScore=0.75 >= 0.6
+  });
+});
