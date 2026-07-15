@@ -49,11 +49,12 @@ const wsOther = randomUUID(); // never seeded — proves cross-workspace isolati
 
 // One business per scenario, co-seeded in wsMain (proves no intra-workspace bleed-through).
 const BIZ = {
-  stale:      randomUUID(), // scenario 1: 70-day-old data → stale finance_cash
-  cashCrisis: randomUUID(), // scenario 2: cashInHand = -50000
-  contradict: randomUUID(), // scenario 3: cashInHand = -12000, revenue = +320k
-  fullLoad:   randomUUID(), // scenario 4: capacity 110%, cashInHand = -20000
-  multiRed:   randomUUID(), // scenario 5: cashInHand = -5000 → multiple red domains
+  stale:        randomUUID(), // scenario 1: 70-day-old data → stale finance_cash
+  cashCrisis:   randomUUID(), // scenario 2: cashInHand = -50000
+  contradict:   randomUUID(), // scenario 3: cashInHand = -12000, revenue = +320k
+  fullLoad:     randomUUID(), // scenario 4: capacity 110%, cashInHand = -20000
+  multiRed:     randomUUID(), // scenario 5: cashInHand = -5000 → multiple red domains
+  financeBlock: randomUUID(), // scenario 8: capacity SAFE but cashInHand = -35000 → Finance→Growth cross-domain
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -94,10 +95,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Phase 2 — adversarial quality inva
     await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.fullLoad, userId, now: NOW, cashInHand: -20000, skipComplianceAndProof: true });
     // Scenario 5: multi-domain red — mildly negative cash
     await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.multiRed, userId, now: NOW, cashInHand: -5000 });
+    // Scenario 8: Finance→Growth cross-domain gate — capacity IS safe (growthSafe=true, 60% utilization)
+    // but cash is negative → Finance veto must block growth scale independently of capacity state.
+    await seedOwnerDbCase(prisma, { workspaceId: wsMain, businessId: BIZ.financeBlock, userId, now: NOW, cashInHand: -35000, capacityGrowthSafe: true, skipComplianceAndProof: true });
   });
 
   afterAll(async () => {
-    const skipCPBizIds = new Set([BIZ.cashCrisis, BIZ.contradict, BIZ.fullLoad]);
+    const skipCPBizIds = new Set([BIZ.cashCrisis, BIZ.contradict, BIZ.fullLoad, BIZ.financeBlock]);
     for (const businessId of Object.values(BIZ)) {
       await cleanupOwnerDbCase(prisma, { workspaceId: wsMain, businessId, userId, now: NOW, skipComplianceAndProof: skipCPBizIds.has(businessId) });
     }
@@ -214,5 +218,27 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Phase 2 — adversarial quality inva
     expect(v.doNotDo).toHaveLength(0);   // not-found view has no doNotDo
     expect(v.redDomains).toHaveLength(0); // not-found view has no red domains
     expect(v.growth.scaleAllowed).toBe(false); // not-found is always false (conservative)
+  });
+
+  // ─── 8. Finance→Growth cross-domain gate ─────────────────────────────────
+  // Capacity is seeded as growth-safe (60% utilization, growthSafe=true, availableBuffer>0).
+  // Only Finance is in crisis (cashInHand = -35000). Proves the Finance constraint dominates
+  // and blocks growth scale independently of capacity state — the cross-domain gate is Finance-led.
+
+  it("Finance→Growth cross-domain: capacity safe but cash crisis → growth.scaleAllowed is false", async () => {
+    const v = await plan(BIZ.financeBlock);
+    expect(v.found).toBe(true);
+    expect(v.growth.scaleAllowed).toBe(false);
+  });
+
+  it("Finance→Growth cross-domain: dominant constraint is cash_survival (not capacity_feasibility)", async () => {
+    const v = await plan(BIZ.financeBlock);
+    expect(v.dominantConstraint).toBe("cash_survival");
+    expect(v.dominantConstraint).not.toBe("capacity_feasibility");
+  });
+
+  it("Finance→Growth cross-domain: growth is blocked with non-empty blockedBy (reason surfaced)", async () => {
+    const v = await plan(BIZ.financeBlock);
+    expect(v.growth.blockedBy.length).toBeGreaterThan(0);
   });
 });

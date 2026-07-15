@@ -20,6 +20,10 @@ export interface OwnerDbCaseIds {
    *  Use for scenarios that must test cash/capacity constraint dominance
    *  without compliance_block (rank 0) overriding the intended dominant constraint. */
   skipComplianceAndProof?: boolean;
+  /** Override capacity to "growth-safe" state (bottleneckUtilization=0.6, growthSafe=true).
+   *  Default seeds over-capacity (bottleneckUtilization=1.1, growthSafe=false).
+   *  Use to isolate Finance→Growth cross-domain tests from capacity constraints. */
+  capacityGrowthSafe?: boolean;
 }
 
 // Deterministic, VALID uuid from (businessId, label) — scoped to the business so two seeded cases in
@@ -65,10 +69,19 @@ export async function seedOwnerDbCase(db: PrismaClient, ids: OwnerDbCaseIds): Pr
     create: { id: rid(businessId, "wc1"), workspaceId, businessId, kind: "receivable", counterparty: "Hotel client", amount: 240000, dueDate: new Date(now.getTime() - 10 * 86_400_000), status: "open" },
   });
 
+  const capacitySafe = ids.capacityGrowthSafe ?? false;
   await db.ownerCapacitySnapshot.upsert({
     where: { id: rid(businessId, "cap1") },
     update: {},
-    create: { id: rid(businessId, "cap1"), workspaceId, businessId, currentRevenue: 320000, safeUtilization: 0.7, resources: {}, bottleneckUtilization: 1.1, growthCapacityRevenue: 0, availableBuffer: -20000, expansionTriggered: false, growthSafe: false, createdAt: periodEnd },
+    create: {
+      id: rid(businessId, "cap1"), workspaceId, businessId, currentRevenue: 320000, safeUtilization: 0.7, resources: {},
+      bottleneckUtilization: capacitySafe ? 0.6 : 1.1,
+      growthCapacityRevenue: capacitySafe ? 80000 : 0,
+      availableBuffer: capacitySafe ? 40000 : -20000,
+      expansionTriggered: false,
+      growthSafe: capacitySafe,
+      createdAt: periodEnd,
+    },
   });
 
   if (!ids.skipComplianceAndProof) {
