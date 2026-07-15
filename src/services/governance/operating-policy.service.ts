@@ -440,6 +440,16 @@ export async function evaluateCrossDomainConflicts(
         });
         continue;
       }
+      // Propagate activeOverride when ALLOW is due to an owner override
+      if (capacityResult.activeOverride) {
+        results.push({
+          candidateId: candidate.id,
+          decision: "ALLOW",
+          policyKey: capacityResult.policyKey,
+          activeOverride: capacityResult.activeOverride,
+        });
+        continue;
+      }
     }
 
     // High-cost expenditures checked for payback period
@@ -462,6 +472,16 @@ export async function evaluateCrossDomainConflicts(
           blockReason: paybackResult.blockReason,
           warningMessage: paybackResult.message,
           overridePath: paybackResult.overridePath,
+          activeOverride: paybackResult.activeOverride,
+        });
+        continue;
+      }
+      // Propagate activeOverride when ALLOW is due to an owner override
+      if (paybackResult.activeOverride) {
+        results.push({
+          candidateId: candidate.id,
+          decision: "ALLOW",
+          policyKey: paybackResult.policyKey,
           activeOverride: paybackResult.activeOverride,
         });
         continue;
