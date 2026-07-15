@@ -1593,6 +1593,56 @@ model StartupStatus {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Capability 13 — Startup / New Business Mode
+// Persists startup validation sessions and per-idea evaluation results.
+// Workspace-scoped. Ideas are Cascade-deleted with their session.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A persisted startup validation session — stores the intake, full validation
+/// result, and the recommended idea (if any). Status: ACTIVE | COMPLETED | ABANDONED.
+model OwnerStartupSession {
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String              @map("workspace_id") @db.Uuid
+  actorId          String              @map("actor_id") @db.Uuid
+  sessionLabel     String?             @map("session_label")
+  intake           Json
+  status           String              @default("ACTIVE")
+  /// Full StartupValidationResult persisted as JSON.
+  validationResult Json?               @map("validation_result")
+  /// Name of the recommended idea (or null when none qualified).
+  recommendedName  String?             @map("recommended_name")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  ideas            StartupIdeaRecord[]
+
+  @@index([workspaceId, status])
+  @@map("owner_startup_session")
+}
+
+/// Per-idea evaluation record within a startup session.
+model StartupIdeaRecord {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId         String              @map("session_id") @db.Uuid
+  workspaceId       String              @map("workspace_id") @db.Uuid
+  name              String
+  industry          String
+  accepted          Boolean             @default(false)
+  capitalSufficient Boolean?            @map("capital_sufficient")
+  capitalGap        Float?              @map("capital_gap")
+  monthlyProfit     Float?              @map("monthly_profit")
+  riskAdjustedScore Float?             @map("risk_adjusted_score")
+  reasons           Json                @default("[]")
+  warnings          Json                @default("[]")
+  createdAt         DateTime            @default(now()) @map("created_at")
+
+  session           OwnerStartupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, sessionId])
+  @@map("startup_idea_record")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Founder / Owner-Only Real-Business Recovery Mode
 // Self-contained models (relations only among themselves). Workspace isolation
 // is enforced at the service layer via the workspace_id scalar. These models
