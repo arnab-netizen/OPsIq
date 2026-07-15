@@ -12,6 +12,7 @@ import { ValidationError } from "@/infra/errors";
 // SalesPipelineEngine.recordDeal and progressDeal are DB-backed; mock DB and
 // audit so tests run without a live database connection.
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     salesDealRecord: {
       create: vi.fn().mockImplementation(async ({ data }) => ({

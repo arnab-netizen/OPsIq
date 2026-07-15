@@ -12,6 +12,7 @@ import * as demoEngagementRoute from "@/app/api/internal/demo-engagement-proof/r
 
 // Mock database
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     user: {
       findUnique: vi.fn(),

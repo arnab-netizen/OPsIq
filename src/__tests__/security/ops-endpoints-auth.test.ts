@@ -18,6 +18,7 @@ import { NextRequest } from "next/server";
 // The readiness route queries db.startupStatus and db.auditEvent.
 // Mock the DB so the route resolves without a live DB connection.
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     startupStatus: { findFirst: vi.fn().mockResolvedValue(null) },
     auditEvent: { findMany: vi.fn().mockResolvedValue([]) },

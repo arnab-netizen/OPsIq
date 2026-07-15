@@ -12,6 +12,7 @@ import { ValidationError } from "@/infra/errors";
 // AcquisitionEngine.recordMetrics is DB-backed; mock DB and audit so tests
 // run without a live database connection.
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     acquisitionMetricsRecord: {
       create: vi.fn().mockResolvedValue(undefined),

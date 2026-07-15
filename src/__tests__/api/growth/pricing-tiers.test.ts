@@ -12,6 +12,7 @@ import { ValidationError } from "@/infra/errors";
 // PricingEngine.createPriceTier is DB-backed; mock DB and audit so tests
 // run without a live database connection.
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     growthPriceTier: {
       create: vi.fn().mockImplementation(async ({ data }) => ({

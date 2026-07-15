@@ -16,6 +16,7 @@ import {
 // assertCapability calls resolveEntitlements which queries the DB.
 // Mock the DB models it accesses so tests run without a live DB connection.
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     billingAccount: { findFirst: vi.fn().mockResolvedValue(null) },
     subscription: { findFirst: vi.fn().mockResolvedValue(null) },
