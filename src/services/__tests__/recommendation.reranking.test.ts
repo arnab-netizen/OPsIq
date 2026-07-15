@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 // db is a lazy Proxy — vi.spyOn cannot spy on undefined properties of a Proxy.
 // Module-mock replaces it with plain vi.fn() instances that vi.spyOn can target.
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     recommendation: {
       findMany: vi.fn(),

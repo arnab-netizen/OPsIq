@@ -11,6 +11,7 @@ import { ValidationError } from "@/infra/errors";
 // RetentionEngine.recordMetrics is DB-backed; mock DB and audit so tests
 // run without a live database connection.
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     retentionCohort: {
       create: vi.fn().mockResolvedValue(undefined),

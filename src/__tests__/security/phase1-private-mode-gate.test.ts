@@ -36,7 +36,7 @@ vi.mock("@/services/private-mode/role-access.service", () => {
 });
 
 // Mock db so PrismaClient resolution in private-mode-enforcement doesn't hit real DB
-vi.mock("@/lib/db", () => ({ db: {} }));
+vi.mock("@/lib/db", () => ({ getDbInstance: vi.fn().mockResolvedValue(undefined), db: {} }));
 
 // Mock canonical-route-enforcement so withPrivateModeEnforcement is testable without
 // a full Next.js request lifecycle. The test calls resolvePrivateModeRole directly.

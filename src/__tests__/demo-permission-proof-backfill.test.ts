@@ -13,6 +13,7 @@ import { SHOULD_RUN_DB_TESTS } from '@/__tests__/test-helpers/db-test-gate';
 
 // Mock database
 vi.mock('@/lib/db', () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     user: {
       findUnique: vi.fn(),

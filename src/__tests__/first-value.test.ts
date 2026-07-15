@@ -4,6 +4,7 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 // Mock db and service-auth before importing the service
 vi.mock("@/lib/db", () => ({
+  getDbInstance: vi.fn().mockResolvedValue(undefined),
   db: {
     workspace: {
       findUniqueOrThrow: vi.fn(),
