@@ -211,6 +211,10 @@ export interface GuidanceDeps {
   validationOutcomes?: (workspaceId: string) => Promise<ValidationOutcomeView[]>;
   /** Optional — persisted opportunity execution-task statuses (PASS 12). Absent on a fake-DI test. */
   executionTasks?: (workspaceId: string) => Promise<Map<string, PersistedTaskStatus>>;
+  /** Optional — active owner goal trajectory (Phase 5). Absent on a fake-DI test → null. */
+  goalTrajectoryFn?: (workspaceId: string) => Promise<{ trajectory: { confidence: string; trajectoryMiss: boolean; projectedMonthsToGoal: number | null; gapToClose: number } } | null>;
+  /** Optional — active operating policies for this workspace (Phase 7). Absent on a fake-DI test → null. */
+  policyListFn?: (workspaceId: string) => Promise<Array<{ policyKey: string; isActive: boolean }>>;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
@@ -225,6 +229,8 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { getActiveExternalOpportunitySignals } = await import("@/services/owner-mode/external-opportunity-intake.service");
   const { getActiveValidationOutcomes } = await import("@/services/owner-mode/validation-outcome.service");
   const { getPersistedExecutionTasks } = await import("@/services/owner-mode/opportunity-execution.service");
+  const { computeActiveGoalTrajectory } = await import("@/services/owner-strategy/goal.service");
+  const { listPolicies } = await import("@/services/governance/operating-policy.service");
   return {
     db: db as unknown as GuidanceDb,
     uuid: () => randomUUID(),
@@ -238,6 +244,8 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
     complaintRework: (workspaceId: string) => getComplaintReworkLinks(workspaceId),
     reusedHash: (workspaceId: string) => getReusedHashFindings(workspaceId),
     proofRiskAdjudications: (workspaceId: string) => getProofRiskAdjudications(workspaceId),
+    goalTrajectoryFn: (workspaceId: string) => computeActiveGoalTrajectory(workspaceId),
+    policyListFn: (workspaceId: string) => listPolicies(workspaceId),
   };
 }
 
@@ -420,6 +428,21 @@ export interface OwnerNowViewPayload {
    * in the DI context (unit tests) or when no deals have been recorded.
    */
   salesPipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null;
+  /**
+   * Goal Trajectory — current owner goal progress and trajectory confidence. Null when no active goal
+   * exists or when fewer than 3 metric snapshots are available for a meaningful projection.
+   */
+  goalTrajectory: {
+    confidence: string;
+    trajectoryMiss: boolean;
+    projectedMonthsToGoal: number | null;
+    gapToClose: number;
+  } | null;
+  /**
+   * Operating Policy Summary — counts of active governed policies for this workspace.
+   * Null when no policies have been seeded (new workspace before first policy evaluation).
+   */
+  operatingPolicySummary: { activePolicies: number; policyKeys: string[] } | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -1367,6 +1390,32 @@ export async function getOwnerNowView(
       )
     : null;
 
+  // Goal Trajectory — computed from the active owner goal + trailing financial snapshots.
+  // Only available on the live path (goalTrajectoryFn provided by resolveDefaultDeps).
+  // Absent on fake-DI unit tests → null (no fabrication).
+  const goalTrajectoryRaw = typeof deps.goalTrajectoryFn === "function"
+    ? await deps.goalTrajectoryFn(workspaceId).catch(() => null)
+    : null;
+  const goalTrajectory = goalTrajectoryRaw
+    ? {
+        confidence: goalTrajectoryRaw.trajectory.confidence,
+        trajectoryMiss: goalTrajectoryRaw.trajectory.trajectoryMiss,
+        projectedMonthsToGoal: goalTrajectoryRaw.trajectory.projectedMonthsToGoal,
+        gapToClose: goalTrajectoryRaw.trajectory.gapToClose,
+      }
+    : null;
+
+  // Operating Policy Summary — surface active policy keys from the workspace's policy registry.
+  // Only available on the live path (policyListFn provided by resolveDefaultDeps).
+  // Absent on fake-DI unit tests → null (no fabrication).
+  const allPolicies = typeof deps.policyListFn === "function"
+    ? await deps.policyListFn(workspaceId).catch(() => [])
+    : [];
+  const activePolicies = allPolicies.filter((p) => p.isActive);
+  const operatingPolicySummary = activePolicies.length > 0
+    ? { activePolicies: activePolicies.length, policyKeys: activePolicies.map((p) => p.policyKey) }
+    : null;
+
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
@@ -1386,7 +1435,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalTrajectory, operatingPolicySummary };
 }
 
 /**

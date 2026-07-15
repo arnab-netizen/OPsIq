@@ -438,6 +438,12 @@ export const AUDIT_EVENTS = {
   SPREADSHEET_ALLOWLIST_ADDED: "external.spreadsheet_allowlist_added",
   SPREADSHEET_ALLOWLIST_REVOKED: "external.spreadsheet_allowlist_revoked",
 
+  // Phase 7: Governed Operating Policy Registry
+  OPERATING_POLICY_CREATED: "governance.operating_policy_created",
+  OPERATING_POLICY_UPDATED: "governance.operating_policy_updated",
+  OPERATING_POLICY_OVERRIDE_CREATED: "governance.operating_policy_override_created",
+  OPERATING_POLICY_OVERRIDE_REVOKED: "governance.operating_policy_override_revoked",
+
   // Owner Progress / Review (Workflow 7 — businessId-scoped, no engagementId required)
   OWNER_BUSINESS_REVIEW_GENERATED: "owner.business_review_generated",
 

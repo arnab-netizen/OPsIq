@@ -1233,6 +1233,8 @@ model Workspace {
   browserImportSessions    BrowserImportSession[]
   browserImportConsents    BrowserImportConsent[]
   spreadsheetAllowlist     ExternalSpreadsheetAllowlist[]
+  operatingPolicies        OperatingPolicy[]
+  policyOverrides          OperatingPolicyOverride[]
   clientAccounts           ClientAccount[]
   leadRecords              LeadRecord[]
 
@@ -5082,4 +5084,60 @@ model RetentionCohort {
   @@index([workspaceId])
   @@index([workspaceId, cohortMonth])
   @@map("retention_cohorts")
+}
+
+// Phase 7: Governed Operating Policy Registry
+// Owner-configurable per-workspace policies that gate expenditure and growth decisions.
+// Policy evaluation returns ALLOW / WARN / BLOCK with explanation and override path.
+// Every policy change emits an audit event (transactionally atomic).
+model OperatingPolicy {
+  id                         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId                String    @map("workspace_id") @db.Uuid
+  /// Stable machine key, e.g. "high_cost_low_payback" or "growth_before_capacity".
+  policyKey                  String    @map("policy_key")
+  category                   String    // COST_CONTROL | GROWTH_GATING | CASH_PROTECTION | CAPACITY_PROTECTION
+  description                String
+  threshold                  Float
+  thresholdUnit              String    @map("threshold_unit") // MONTHS | PERCENT | CURRENCY_GBP
+  /// false = warn only; true = hard block (no action without explicit override).
+  hardBlock                  Boolean   @default(false) @map("hard_block")
+  /// Minimum role that may create an override: OWNER | ADMIN.
+  overrideAuthorityRole      String    @map("override_authority_role")
+  overrideReasonRequired     Boolean   @default(true) @map("override_reason_required")
+  /// Minutes until an override auto-expires. null = override never expires (use with care).
+  expiryAfterOverrideMinutes Int?      @map("expiry_after_override_minutes")
+  isActive                   Boolean   @default(true) @map("is_active")
+  createdBy                  String    @map("created_by") @db.Uuid
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
+
+  workspace Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  overrides OperatingPolicyOverride[]
+
+  @@unique([workspaceId, policyKey])
+  @@index([workspaceId, isActive])
+  @@map("operating_policies")
+}
+
+/// Time-limited owner override of an OperatingPolicy.
+/// Allows an owner to proceed past a WARN/BLOCK for a stated reason, within a configured time window.
+model OperatingPolicyOverride {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  policyId     String    @map("policy_id") @db.Uuid
+  workspaceId  String    @map("workspace_id") @db.Uuid
+  overriddenBy String    @map("overridden_by") @db.Uuid
+  reason       String
+  /// JSON snapshot of the evaluation context that triggered the override.
+  context      Json      @default("{}")
+  expiresAt    DateTime? @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  revokedBy    String?   @map("revoked_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  policy    OperatingPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([policyId])
+  @@index([workspaceId, expiresAt])
+  @@map("operating_policy_overrides")
 }
