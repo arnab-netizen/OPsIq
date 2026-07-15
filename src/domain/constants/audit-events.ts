@@ -424,6 +424,12 @@ export const AUDIT_EVENTS = {
   OWNER_VENDOR_CONTRACT_RECORDED: "owner.vendor_contract_recorded",
   OWNER_VENDOR_DELIVERY_RECORDED: "owner.vendor_delivery_recorded",
 
+  // Phase 4: Waste / Leakage Detection
+  WASTE_LEAKAGE_DETECTED: "owner.waste_leakage_detected",
+  WASTE_LEAKAGE_CONFIRMED: "owner.waste_leakage_confirmed",
+  WASTE_LEAKAGE_DISMISSED: "owner.waste_leakage_dismissed",
+  WASTE_LEAKAGE_RECOVERY_VERIFIED: "owner.waste_leakage_recovery_verified",
+
   // Owner Progress / Review (Workflow 7 — businessId-scoped, no engagementId required)
   OWNER_BUSINESS_REVIEW_GENERATED: "owner.business_review_generated",
 

@@ -1642,6 +1642,39 @@ model StartupIdeaRecord {
   @@map("startup_idea_record")
 }
 
+// ─── Phase 4: Waste / Leakage Detection ──────────────────────────────────────
+// Persistent events for detected operational/financial/quality leakage.
+// Each event: detected → investigating → confirmed → recovering → verified.
+// Recovery savings are recorded only after owner verification.
+// workspaceId is a plain UUID matching Workspace.id (canonical context).
+model WasteLeakageEvent {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  category             String    // DISCOUNT_LEAK | REWORK | OVERDUE_PAYMENT | UNDERPRICING | IDLE_CAPACITY | SUPPLIER_OVERCHARGE | OTHER
+  source               String    // finance | operations | quality | supplier | sales
+  amount               Float?    // estimated monetary impact in workspace currency; null when unknown
+  currency             String    @default("USD")
+  evidenceId           String?   @map("evidence_id") @db.Uuid  // optional link to proof record
+  detectedAt           DateTime  @map("detected_at")
+  status               String    @default("detected")  // detected | investigating | confirmed | recovering | verified | dismissed
+  materialityThreshold Float?    @map("materiality_threshold")  // owner-configured minimum to act on
+  confidenceLevel      String    @default("LOW") @map("confidence_level")  // LOW | MEDIUM | HIGH
+  recoveryAmount       Float?    @map("recovery_amount")  // actual savings once verified
+  verifiedAt           DateTime? @map("verified_at")
+  verifiedBy           String?   @map("verified_by") @db.Uuid
+  dismissalReason      String?   @map("dismissal_reason")
+  recurrenceCount      Int       @default(0) @map("recurrence_count")
+  description          String?
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, category])
+  @@index([workspaceId, detectedAt])
+  @@map("waste_leakage_events")
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Founder / Owner-Only Real-Business Recovery Mode
 // Self-contained models (relations only among themselves). Workspace isolation
