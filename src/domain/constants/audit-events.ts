@@ -473,6 +473,8 @@ export const AUDIT_EVENTS = {
   RETENTION_COHORT_RECORDED: "growth.retention_cohort_recorded",
   ACQUISITION_METRICS_RECORDED: "growth.acquisition_metrics_recorded",
   PRICE_TIER_CREATED: "growth.price_tier_created",
+  PRICE_TIER_APPROVED: "growth.price_tier_approved",
+  PRICE_TIER_SUPERSEDED: "growth.price_tier_superseded",
   SALES_DEAL_RECORDED: "growth.sales_deal_recorded",
   SALES_DEAL_STAGE_UPDATED: "growth.sales_deal_stage_updated",
   REVENUE_STREAM_CREATED: "growth.revenue_stream_created",
