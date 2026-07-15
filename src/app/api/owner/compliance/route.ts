@@ -20,6 +20,13 @@ const schema = z.object({
   name: z.string().trim().min(1),
   reference: z.string().optional(),
   expiresAt: z.string().datetime().optional(),
+  jurisdiction: z.string().max(200).optional(),
+  legalBasis: z.string().max(500).optional(),
+  obligationOwner: z.string().max(200).optional(),
+  evidenceValidityDays: z.number().int().min(1).max(3650).optional(),
+  recurrenceMonths: z.number().int().min(1).max(120).optional(),
+  penaltyDescription: z.string().max(500).optional(),
+  provenanceSource: z.enum(["owner_input", "professional_input", "authoritative_document"]).optional(),
 });
 
 export const POST = withCanonicalEnforcement(

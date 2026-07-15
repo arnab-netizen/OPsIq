@@ -1318,17 +1318,31 @@ model OwnerApprovalMemory {
 /// Jarvis 360 Slice 14 — compliance item (licence/permit/insurance/tax) with expiry,
 /// so OpsIQ can flag professional-review boundaries without giving definitive advice.
 model OwnerComplianceItem {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId String    @map("workspace_id") @db.Uuid
-  businessId  String?   @map("business_id") @db.Uuid
-  kind        String
-  name        String
-  reference   String?
-  expiresAt   DateTime? @map("expires_at")
-  status      String    @default("active")
-  createdByUserId String @map("created_by_user_id") @db.Uuid
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  businessId           String?   @map("business_id") @db.Uuid
+  kind                 String
+  name                 String
+  reference            String?
+  expiresAt            DateTime? @map("expires_at")
+  status               String    @default("active")
+  createdByUserId      String    @map("created_by_user_id") @db.Uuid
+  /// Where this obligation applies (e.g. "England and Wales", "UK", "Federal").
+  jurisdiction         String?
+  /// The specific law, regulation, or contract clause that creates this obligation.
+  legalBasis           String?   @map("legal_basis")
+  /// Who inside the business is responsible for maintaining this obligation.
+  obligationOwner      String?   @map("obligation_owner")
+  /// How many days the evidence/certificate is valid after issue.
+  evidenceValidityDays Int?      @map("evidence_validity_days")
+  /// Recurrence period in months (null = one-off).
+  recurrenceMonths     Int?      @map("recurrence_months")
+  /// Consequence of non-compliance (description, NOT legal advice).
+  penaltyDescription   String?   @map("penalty_description")
+  /// Provenance: "owner_input" | "professional_input" | "authoritative_document".
+  provenanceSource     String?   @map("provenance_source")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   @@index([workspaceId, kind])
   @@map("owner_compliance_item")
