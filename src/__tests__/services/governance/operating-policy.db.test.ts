@@ -98,7 +98,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     it("seeding emits audit events for each created policy", async () => {
       const events = await db.auditEvent.findMany({
         where: { workspaceId, eventName: AUDIT_EVENTS.OPERATING_POLICY_CREATED },
-        orderBy: { createdAt: "asc" },
+        orderBy: { occurredAt: "asc" },
       });
       expect(events.length).toBeGreaterThanOrEqual(2);
       expect(events.every((e) => e.actorId === userId)).toBe(true);
@@ -133,7 +133,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
       const event = await db.auditEvent.findFirst({
         where: { workspaceId, eventName: AUDIT_EVENTS.OPERATING_POLICY_UPDATED },
-        orderBy: { createdAt: "desc" },
+        orderBy: { occurredAt: "desc" },
       });
       expect(event).not.toBeNull();
       expect(event?.actorId).toBe(userId);
@@ -215,7 +215,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       // Audit event created
       const event = await db.auditEvent.findFirst({
         where: { workspaceId, eventName: AUDIT_EVENTS.OPERATING_POLICY_OVERRIDE_CREATED },
-        orderBy: { createdAt: "desc" },
+        orderBy: { occurredAt: "desc" },
       });
       expect(event).not.toBeNull();
       expect(event?.actorId).toBe(userId);
@@ -264,7 +264,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
       const event = await db.auditEvent.findFirst({
         where: { workspaceId, eventName: AUDIT_EVENTS.OPERATING_POLICY_OVERRIDE_REVOKED },
-        orderBy: { createdAt: "desc" },
+        orderBy: { occurredAt: "desc" },
       });
       expect(event).not.toBeNull();
     });
