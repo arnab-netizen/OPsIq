@@ -419,6 +419,30 @@ export const AUDIT_EVENTS = {
 
   // Owner Vendor / Procurement Risk (Module #14)
   OWNER_VENDOR_RISK_ASSESSED: "owner.vendor_risk_assessed",
+  OWNER_VENDOR_APPROVED: "owner.vendor_approved",
+  OWNER_VENDOR_SUSPENDED: "owner.vendor_suspended",
+  OWNER_VENDOR_CONTRACT_RECORDED: "owner.vendor_contract_recorded",
+  OWNER_VENDOR_DELIVERY_RECORDED: "owner.vendor_delivery_recorded",
+
+  // Phase 4: Waste / Leakage Detection
+  WASTE_LEAKAGE_DETECTED: "owner.waste_leakage_detected",
+  WASTE_LEAKAGE_CONFIRMED: "owner.waste_leakage_confirmed",
+  WASTE_LEAKAGE_DISMISSED: "owner.waste_leakage_dismissed",
+  WASTE_LEAKAGE_RECOVERY_VERIFIED: "owner.waste_leakage_recovery_verified",
+
+  // Phase 5: Owner Goal + Trajectory Engine
+  OWNER_GOAL_CREATED: "owner.goal_created",
+  OWNER_GOAL_ACHIEVED: "owner.goal_achieved",
+
+  // Phase 6: Google Sheets Spreadsheet Allowlist
+  SPREADSHEET_ALLOWLIST_ADDED: "external.spreadsheet_allowlist_added",
+  SPREADSHEET_ALLOWLIST_REVOKED: "external.spreadsheet_allowlist_revoked",
+
+  // Phase 7: Governed Operating Policy Registry
+  OPERATING_POLICY_CREATED: "governance.operating_policy_created",
+  OPERATING_POLICY_UPDATED: "governance.operating_policy_updated",
+  OPERATING_POLICY_OVERRIDE_CREATED: "governance.operating_policy_override_created",
+  OPERATING_POLICY_OVERRIDE_REVOKED: "governance.operating_policy_override_revoked",
 
   // Owner Progress / Review (Workflow 7 — businessId-scoped, no engagementId required)
   OWNER_BUSINESS_REVIEW_GENERATED: "owner.business_review_generated",

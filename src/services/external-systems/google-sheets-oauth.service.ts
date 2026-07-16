@@ -1,5 +1,5 @@
 /**
- * B13-S2: Google Sheets OAuth Integration Service
+ * Phase 6: Google Sheets OAuth Integration Service
  *
  * Implements OAuth2 authorization code flow for Google Sheets API.
  * Handles:
@@ -13,11 +13,26 @@
  * - State tokens prevent CSRF
  * - Tokens encrypted and never exposed to frontend
  * - Server-side token use only
+ * - SSRF: all outbound URLs are constructed from validated IDs against hardcoded Google hosts
+ * - spreadsheetId validated against Google's alphanumeric-hyphen-underscore format
+ * - sheetRange validated before URL construction — no user-controlled path components
  */
 
-import { generateOAuthState, validateCodeVerifier } from "./oauth-token.service";
+import { generateOAuthState } from "./oauth-token.service";
 import type { ImportResult, ParsedRow } from "@/domain/external-systems/import-parser";
-import { FeatureDisabledError } from "@/infra/errors";
+import {
+  ValidationError,
+  UnauthorizedError,
+  NotFoundError,
+  TooManyRequestsError,
+  ServiceUnavailableError,
+} from "@/infra/errors";
+
+// Hardcoded Google API hosts — never substituted from user input (SSRF protection)
+const GOOGLE_OAUTH_HOST = "https://oauth2.googleapis.com";
+const GOOGLE_SHEETS_HOST = "https://sheets.googleapis.com";
+
+type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 export interface GoogleOAuthConfig {
   clientId: string;
@@ -48,6 +63,31 @@ export interface GoogleSheetsImportRequest {
   spreadsheetId: string;
   sheetRange?: string; // e.g., "Sheet1!A:Z"
   headersRow?: number; // default 1
+  fetchImpl?: FetchLike;
+}
+
+/**
+ * Google Sheets spreadsheet IDs are alphanumeric plus hyphens and underscores.
+ * Rejecting anything else prevents SSRF via path traversal in the constructed URL.
+ */
+function validateSpreadsheetId(id: string): void {
+  if (!/^[a-zA-Z0-9_-]{10,}$/.test(id)) {
+    throw new ValidationError(
+      "Invalid spreadsheet ID format — must be alphanumeric, hyphens, or underscores (min 10 chars)",
+    );
+  }
+}
+
+/**
+ * Sheet ranges like "Sheet1!A:Z" or "A1:Z100".
+ * Allows letters, digits, exclamation, colon, apostrophe — no slashes or dots.
+ */
+function validateSheetRange(range: string): void {
+  if (!/^[A-Za-z0-9!'%:_ ]+$/.test(range)) {
+    throw new ValidationError(
+      "Invalid sheet range format — only letters, digits, !, :, ', space are permitted",
+    );
+  }
 }
 
 /**
@@ -99,12 +139,13 @@ export function generateGoogleAuthorizationUrl(
 
 /**
  * Exchange authorization code for access token.
- * This is a backend-only operation.
+ * Backend-only operation.
  */
 export interface TokenExchangeRequest {
   config: GoogleOAuthConfig;
   code: string;
   codeVerifier: string;
+  fetchImpl?: FetchLike;
 }
 
 export interface TokenExchangeResponse {
@@ -115,43 +156,123 @@ export interface TokenExchangeResponse {
 }
 
 /**
- * Contract: exchange authorization code for access token.
- * Actual implementation would call Google token endpoint.
- * For testing purposes, this shows the signature.
+ * Exchange authorization code for access + refresh tokens.
+ * Calls POST https://oauth2.googleapis.com/token (hardcoded — SSRF safe).
+ * Returns 400/401 from Google as ValidationError; 5xx as ServiceUnavailableError.
  */
 export async function exchangeCodeForToken(
   request: TokenExchangeRequest,
 ): Promise<TokenExchangeResponse> {
-  // In production, this would call:
-  // POST https://oauth2.googleapis.com/token with:
-  // - grant_type: "authorization_code"
-  // - code: request.code
-  // - client_id: request.config.clientId
-  // - client_secret: request.config.clientSecret
-  // - redirect_uri: request.config.redirectUri
-  // - code_verifier: request.codeVerifier
+  const doFetch = request.fetchImpl ?? fetch;
 
-  throw new FeatureDisabledError(
-    "Google Sheets OAuth token exchange",
-    "OAuth endpoint not configured — connector unavailable until credentials and token exchange are wired",
-  );
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: request.code,
+    client_id: request.config.clientId,
+    client_secret: request.config.clientSecret,
+    redirect_uri: request.config.redirectUri,
+    code_verifier: request.codeVerifier,
+  });
+
+  const response = await doFetch(`${GOOGLE_OAUTH_HOST}/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const description: string = (errData as any).error_description ?? "Token exchange rejected";
+    if (response.status === 400 || response.status === 401) {
+      throw new ValidationError(description);
+    }
+    throw new ServiceUnavailableError(
+      "SYSTEM_DEGRADED",
+      `Google OAuth token exchange failed with status ${response.status}`,
+    );
+  }
+
+  const data = (await response.json()) as any;
+  return {
+    accessToken: data.access_token as string,
+    refreshToken: data.refresh_token as string | undefined,
+    expiresIn: data.expires_in as number,
+    tokenType: (data.token_type as string) ?? "Bearer",
+  };
 }
 
 /**
  * Extract data from Google Sheet and convert to import format.
- * Maps Sheet rows to B12 import format for consistency.
+ * URL constructed from validated spreadsheetId and range — never from user-supplied URL (SSRF safe).
  */
 export async function extractGoogleSheetData(
   request: GoogleSheetsImportRequest,
 ): Promise<GoogleSheetData> {
-  // In production, this would call Google Sheets API:
-  // GET https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}
-  // Authorization: Bearer {accessToken}
+  validateSpreadsheetId(request.spreadsheetId);
 
-  throw new FeatureDisabledError(
-    "Google Sheets data extraction",
-    "Sheets API not wired — connector unavailable until the live API client is implemented",
-  );
+  const range = request.sheetRange ?? "A:ZZ";
+  validateSheetRange(range);
+
+  const doFetch = request.fetchImpl ?? fetch;
+  const encodedRange = encodeURIComponent(range);
+  const url = `${GOOGLE_SHEETS_HOST}/v4/spreadsheets/${request.spreadsheetId}/values/${encodedRange}`;
+
+  const response = await doFetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${request.accessToken}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new UnauthorizedError(
+        "Google Sheets access denied — token may be expired or revoked",
+      );
+    }
+    if (response.status === 404) {
+      throw new NotFoundError("Spreadsheet", request.spreadsheetId);
+    }
+    if (response.status === 429) {
+      throw new TooManyRequestsError("Google Sheets API quota exceeded — retry after backoff");
+    }
+    throw new ServiceUnavailableError(
+      "SYSTEM_DEGRADED",
+      `Google Sheets API returned ${response.status}`,
+    );
+  }
+
+  const data = (await response.json()) as any;
+  const values: string[][] = data.values ?? [];
+
+  if (values.length === 0) {
+    return {
+      spreadsheetId: request.spreadsheetId,
+      sheetTitle: range.split("!")[0] ?? "Sheet1",
+      headers: [],
+      rows: [],
+    };
+  }
+
+  const headersRowIndex = (request.headersRow ?? 1) - 1;
+  const headers: string[] = (values[headersRowIndex] ?? []) as string[];
+  const dataRows = values.slice(headersRowIndex + 1);
+
+  const rows = dataRows.map((row) => {
+    const record: Record<string, string> = {};
+    headers.forEach((header, i) => {
+      record[header] = row[i] ?? "";
+    });
+    return record;
+  });
+
+  return {
+    spreadsheetId: request.spreadsheetId,
+    sheetTitle: range.split("!")[0] ?? "Sheet1",
+    headers,
+    rows,
+  };
 }
 
 /**
@@ -215,13 +336,12 @@ export interface OAuthCallbackValidation {
 }
 
 /**
- * Contract: validate OAuth callback from Google.
+ * Validate OAuth callback from Google.
  */
 export function validateGoogleOAuthCallback(
   callback: GoogleOAuthCallbackRequest,
   storedState: string,
 ): OAuthCallbackValidation {
-  // Check for errors returned by Google
   if (callback.error) {
     return {
       valid: false,
@@ -229,7 +349,6 @@ export function validateGoogleOAuthCallback(
     };
   }
 
-  // Validate state (CSRF check)
   if (callback.state !== storedState) {
     return {
       valid: false,
@@ -237,7 +356,6 @@ export function validateGoogleOAuthCallback(
     };
   }
 
-  // Validate authorization code format
   if (!callback.code || typeof callback.code !== "string") {
     return {
       valid: false,
@@ -258,25 +376,50 @@ export function validateGoogleOAuthCallback(
 export interface TokenRefreshRequest {
   config: GoogleOAuthConfig;
   refreshToken: string;
+  fetchImpl?: FetchLike;
 }
 
 /**
- * Contract: refresh access token.
+ * Refresh access token via POST https://oauth2.googleapis.com/token (hardcoded — SSRF safe).
+ * Google may or may not rotate the refresh token on each refresh.
  */
 export async function refreshAccessToken(
   request: TokenRefreshRequest,
 ): Promise<TokenExchangeResponse> {
-  // In production, this would call:
-  // POST https://oauth2.googleapis.com/token with:
-  // - grant_type: "refresh_token"
-  // - refresh_token: request.refreshToken
-  // - client_id: request.config.clientId
-  // - client_secret: request.config.clientSecret
+  const doFetch = request.fetchImpl ?? fetch;
 
-  throw new FeatureDisabledError(
-    "Google Sheets token refresh",
-    "Token refresh not wired — connector unavailable until refresh flow is implemented",
-  );
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: request.refreshToken,
+    client_id: request.config.clientId,
+    client_secret: request.config.clientSecret,
+  });
+
+  const response = await doFetch(`${GOOGLE_OAUTH_HOST}/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const description: string = (errData as any).error_description ?? "Refresh rejected";
+    if (response.status === 400 || response.status === 401) {
+      throw new ValidationError(`${description} — re-authorization may be required`);
+    }
+    throw new ServiceUnavailableError(
+      "SYSTEM_DEGRADED",
+      `Google OAuth token refresh failed with status ${response.status}`,
+    );
+  }
+
+  const data = (await response.json()) as any;
+  return {
+    accessToken: data.access_token as string,
+    refreshToken: data.refresh_token as string | undefined,
+    expiresIn: data.expires_in as number,
+    tokenType: (data.token_type as string) ?? "Bearer",
+  };
 }
 
 /**
@@ -286,17 +429,29 @@ export async function refreshAccessToken(
 export interface TokenRevocationRequest {
   config: GoogleOAuthConfig;
   accessToken: string;
+  fetchImpl?: FetchLike;
 }
 
 /**
- * Contract: revoke access token.
+ * Revoke access token via POST https://oauth2.googleapis.com/revoke (hardcoded — SSRF safe).
+ * Per Google docs, HTTP 400 on revoke means token was already invalid — treated as success.
  */
 export async function revokeGoogleAccess(request: TokenRevocationRequest): Promise<void> {
-  // In production, this would call:
-  // POST https://oauth2.googleapis.com/revoke?token={accessToken}
+  const doFetch = request.fetchImpl ?? fetch;
 
-  throw new FeatureDisabledError(
-    "Google OAuth revocation",
-    "Token revocation not wired — connector unavailable until revocation flow is implemented",
-  );
+  const body = new URLSearchParams({ token: request.accessToken });
+
+  const response = await doFetch(`${GOOGLE_OAUTH_HOST}/revoke`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  // 400 = token already invalid/revoked — treat as success per Google's docs
+  if (!response.ok && response.status !== 400) {
+    throw new ServiceUnavailableError(
+      "SYSTEM_DEGRADED",
+      `Google OAuth revocation failed with status ${response.status}`,
+    );
+  }
 }

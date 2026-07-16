@@ -20,6 +20,7 @@
 
 import { randomBytes } from "crypto";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { FeatureDisabledError } from "@/infra/errors";
 
 export interface BrowserImportSessionStart {
   workspaceId: string;
@@ -100,49 +101,12 @@ export async function startBrowserImportSession(
   prisma: PrismaClient,
   request: BrowserImportSessionStart,
 ): Promise<BrowserImportSession> {
-  // Verify workspace and provider exist
-  const connection = await prisma.externalConnection.findFirst({
-    where: {
-      workspaceId: request.workspaceId,
-      providerId: request.providerId,
-    },
-  });
-
-  if (!connection) {
-    throw new Error("Provider not configured for this workspace");
-  }
-
-  // Check if browser import is enabled for this provider
-  const provider = await prisma.externalProvider.findUnique({
-    where: { id: request.providerId },
-  });
-
-  if (!provider) {
-    throw new Error("Provider not found");
-  }
-
-  // Create session
-  const sessionId = `bimport_${randomBytes(12).toString("hex")}`;
-  const now = new Date();
-
-  // Note: Using browser_import_sessions table (will be created in migration)
-  const session = {
-    id: sessionId,
-    workspaceId: request.workspaceId,
-    providerId: request.providerId,
-    userId: request.userId,
-    status: "active" as const,
-    startedAt: now,
-    userAgent: request.userAgent,
-    ipAddress: request.ipAddress,
-  };
-
-  // Create initial event
-  const eventId = `bievent_${randomBytes(12).toString("hex")}`;
-
-  // Log session start
-  // Note: These will be persisted via Prisma when tables are created
-  return session;
+  void prisma; void request;
+  throw new FeatureDisabledError(
+    "Browser-assisted import session management",
+    "BROWSER_IMPORT_UNAVAILABLE",
+    "Browser import session persistence requires DB schema migration (browser_import_sessions table). Feature is not yet operational.",
+  );
 }
 
 /**
@@ -213,11 +177,12 @@ export async function completeBrowserImportSession(
   sessionId: string,
   workspaceId: string,
 ): Promise<void> {
-  // Verify session belongs to workspace
-  // Note: Will verify via Prisma once tables are created
-
-  // Mark all extracted tables as ready for review
-  // Note: Tables will remain in DRAFT status until owner explicitly approves
+  void prisma; void sessionId; void workspaceId;
+  throw new FeatureDisabledError(
+    "Browser import session completion",
+    "BROWSER_IMPORT_UNAVAILABLE",
+    "Browser import session persistence requires DB schema migration. Feature is not yet operational.",
+  );
 }
 
 /**
@@ -230,9 +195,12 @@ export async function abandonBrowserImportSession(
   workspaceId: string,
   failureReason: string,
 ): Promise<void> {
-  // Mark session as abandoned
-  // Clean up any partial extracted tables (keep in DRAFT but mark with failure reason)
-  // Log the failure for compliance review
+  void prisma; void sessionId; void workspaceId; void failureReason;
+  throw new FeatureDisabledError(
+    "Browser import session abandonment",
+    "BROWSER_IMPORT_UNAVAILABLE",
+    "Browser import session persistence requires DB schema migration. Feature is not yet operational.",
+  );
 }
 
 /**
@@ -245,26 +213,12 @@ export async function recordExtractedTable(
   workspaceId: string,
   table: Omit<BrowserExtractedTable, "id" | "status" | "createdAt">,
 ): Promise<BrowserExtractedTable> {
-  // Verify session is active
-  // Verify workspace isolation
-  // Create extracted table in DRAFT status
-  // Log extraction event
-
-  const tableId = `betable_${randomBytes(12).toString("hex")}`;
-  const now = new Date();
-
-  return {
-    id: tableId,
-    sessionId,
-    tableName: table.tableName,
-    columnHeaders: table.columnHeaders,
-    dataRows: table.dataRows,
-    extractionMethod: table.extractionMethod,
-    confidence: table.confidence,
-    recordCount: table.recordCount,
-    status: "draft",
-    createdAt: now,
-  };
+  void prisma; void sessionId; void workspaceId; void table;
+  throw new FeatureDisabledError(
+    "Browser import extracted-table recording",
+    "BROWSER_IMPORT_UNAVAILABLE",
+    "Browser import table persistence requires DB schema migration. Feature is not yet operational.",
+  );
 }
 
 /**
@@ -277,11 +231,12 @@ export async function approveBrowserExtractedTable(
   workspaceId: string,
   approverUserId: string,
 ): Promise<void> {
-  // Verify table belongs to workspace
-  // Verify approver has permission
-  // Mark as APPROVED
-  // Log approval with user and timestamp
-  // Make available for B12 import pipeline
+  void prisma; void tableId; void workspaceId; void approverUserId;
+  throw new FeatureDisabledError(
+    "Browser import table approval",
+    "BROWSER_IMPORT_UNAVAILABLE",
+    "Browser import table approval requires DB schema migration. Feature is not yet operational.",
+  );
 }
 
 /**
@@ -294,8 +249,12 @@ export async function rejectBrowserExtractedTable(
   workspaceId: string,
   rejectionReason: string,
 ): Promise<void> {
-  // Mark as REJECTED with reason
-  // Log rejection
+  void prisma; void tableId; void workspaceId; void rejectionReason;
+  throw new FeatureDisabledError(
+    "Browser import table rejection",
+    "BROWSER_IMPORT_UNAVAILABLE",
+    "Browser import table rejection requires DB schema migration. Feature is not yet operational.",
+  );
 }
 
 /**
@@ -367,5 +326,10 @@ export async function getSessionHistory(
   // Retrieve session, events, tables, and consent records
   // Return complete audit trail
 
-  throw new Error("Not yet implemented - requires DB tables");
+  void prisma; void sessionId; void workspaceId;
+  throw new FeatureDisabledError(
+    "Browser import session history",
+    "BROWSER_IMPORT_UNAVAILABLE",
+    "Browser import audit trail requires DB schema migration (browser_import_sessions table). Feature is not yet operational.",
+  );
 }

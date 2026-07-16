@@ -206,11 +206,12 @@ describe('ADDENDUM F: Mocked Load Tests', () => {
     });
 
     it('should simulate errors', () => {
-      const requests = Array.from({ length: 100 }, () => simulateRequest('read'));
+      // n=500 makes P(0 errors at 5% rate) ≈ 5e-12; upper bound keeps same ~20% ceiling as before
+      const requests = Array.from({ length: 500 }, () => simulateRequest('read'));
       const errorCount = requests.filter((r) => !r.success).length;
 
       expect(errorCount).toBeGreaterThan(0);
-      expect(errorCount).toBeLessThan(20); // ~5% error rate
+      expect(errorCount).toBeLessThan(100); // ~5% error rate, ceiling at 20%
     });
   });
 

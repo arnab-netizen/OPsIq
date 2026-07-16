@@ -42,6 +42,14 @@ export interface RecordComplianceItemInput {
   reference?: string | null;
   expiresAt?: Date | null;
   actorId: string;
+  jurisdiction?: string | null;
+  legalBasis?: string | null;
+  obligationOwner?: string | null;
+  evidenceValidityDays?: number | null;
+  recurrenceMonths?: number | null;
+  penaltyDescription?: string | null;
+  /** "owner_input" | "professional_input" | "authoritative_document" */
+  provenanceSource?: string | null;
 }
 
 export async function recordComplianceItem(input: RecordComplianceItemInput, injected?: ComplianceDeps): Promise<string> {
@@ -57,6 +65,13 @@ export async function recordComplianceItem(input: RecordComplianceItemInput, inj
       expiresAt: input.expiresAt ?? null,
       status: "active",
       createdByUserId: input.actorId,
+      jurisdiction: input.jurisdiction ?? null,
+      legalBasis: input.legalBasis ?? null,
+      obligationOwner: input.obligationOwner ?? null,
+      evidenceValidityDays: input.evidenceValidityDays ?? null,
+      recurrenceMonths: input.recurrenceMonths ?? null,
+      penaltyDescription: input.penaltyDescription ?? null,
+      provenanceSource: input.provenanceSource ?? null,
       updatedAt: now,
     },
   });
