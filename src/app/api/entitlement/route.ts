@@ -12,23 +12,11 @@ import {
   getSubscriptionTier,
   getTierConfig,
   hasCapability,
-  hasFeature,
-  canCreateAction,
-  canCreateDecision,
-  canCreateExperiment,
-  canExportData,
-  hasApiAccess,
-  getQuotaUsage,
   Capability,
-  SubscriptionTier,
 } from "@/services/entitlement";
 
 const CheckCapabilitySchema = z.object({
   capability: z.nativeEnum(Capability),
-});
-
-const GetQuotaSchema = z.object({
-  period: z.string().regex(/^\d{4}-\d{2}$/), // YYYY-MM format
 });
 
 /**

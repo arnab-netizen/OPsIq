@@ -1,7 +1,6 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
-import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export interface WorkspacePlan {

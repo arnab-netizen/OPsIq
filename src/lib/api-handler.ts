@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { createLogger } from "@/infra/logger";
-import { errorToResponse, AppError, toAppError } from "@/infra/errors";
+import { errorToResponse, toAppError } from "@/infra/errors";
 
 export type ApiHandler = (
   request: Request,

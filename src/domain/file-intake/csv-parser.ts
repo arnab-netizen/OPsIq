@@ -22,16 +22,6 @@ const DEFAULT_CONFIG: FileUploadConfig = {
 // Formula Injection Detection
 // ============================================================================
 
-/** Patterns that indicate formula injection attempts */
-const FORMULA_INJECTION_PATTERNS = [
-  /^=/,      // Excel formula
-  /^@/,      // Excel macro
-  /^\+/,     // Unary plus (can be formula in some contexts)
-  /^-/,      // Unary minus (can be formula in some contexts)
-  /^\|/,     // Pipe (command separator in some apps)
-  /^;/,      // Semicolon (command separator in some apps)
-];
-
 /**
  * Detect if a cell value looks like a formula injection attempt.
  * Returns code indicating the injection type, or undefined if safe.

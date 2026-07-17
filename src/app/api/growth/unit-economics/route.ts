@@ -1,6 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
-import { parseRequestBody } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { UnitEconomicsEngine } from "@/services/growth/unit-economics-engine";
 import { z } from "zod/v4";

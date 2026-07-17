@@ -22,7 +22,7 @@ export async function computeDecisionConfidence(input: {
   }
 
   // Fetch engagement and related data in parallel
-  const [engagement, findings, recommendations, actions, condition] =
+  const [engagement, findings, recommendations, actions, _condition] =
     await Promise.all([
       db.engagement.findFirst({
         where: { id: engagementId, workspaceId },

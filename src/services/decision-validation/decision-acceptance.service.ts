@@ -4,7 +4,7 @@ import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { validateDecisionForAcceptance, type DecisionAcceptanceInput, type DecisionRejectionInput } from "./human-decision-validator";
+import { validateDecisionForAcceptance } from "./human-decision-validator";
 
 export interface VerifiedAcceptanceInput {
   decisionId: string;

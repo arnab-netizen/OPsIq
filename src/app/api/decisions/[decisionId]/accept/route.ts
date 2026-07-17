@@ -1,5 +1,4 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { acceptDecision, type VerifiedAcceptanceInput } from "@/services/decision-validation/decision-acceptance.service";
 import { logger } from "@/infra/logger";
 import { ValidationError } from "@/infra/errors";

@@ -86,9 +86,6 @@ const FIELD_CATEGORY_OVERRIDE: Record<string, FactCategoryKey> = {
 
 const FINANCIAL_CATEGORIES = new Set<FactCategoryKey>(["financials", "debt", "cash"]);
 
-/** Row-metadata field names that are consumed, not emitted as facts. */
-const METADATA_FIELDS = new Set(["periodStart", "periodEnd", "currency"]);
-
 export function mapIntakeSourceToExtractionMethod(source: IntakeSource): ExtractionMethod {
   return SOURCE_TO_METHOD[source];
 }
@@ -162,7 +159,6 @@ function convertIntakeResult(input: IntakeConversionInput, now: Date): Conversio
 
   const byCategory = emptyCategories();
   const missingData: MissingData[] = [];
-  const specByName = new Map(fieldSpecs.map((f) => [f.name, f]));
   const emittableFields = fieldSpecs.filter((f) => f.type === "number" || f.type === "currency");
 
   let minStart: string | null = null;

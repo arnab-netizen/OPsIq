@@ -1,4 +1,3 @@
-import { db } from "@/lib/db";
 
 /**
  * Workspace-scoped Prisma wrappers - ENFORCED usage for all workspace-owned models
@@ -59,7 +58,6 @@ export async function secureFindMany<T extends { workspaceId: string }>(
   }
 
   // Inject workspaceId into WHERE clause
-  const scopedWhere = { ...where, workspaceId };
 
   // This is a template - actual implementation would dispatch to correct model
   return [] as any;
@@ -83,7 +81,6 @@ export async function secureFindFirst<T extends { workspaceId: string }>(
   }
 
   // Inject workspaceId into WHERE clause
-  const scopedWhere = { ...where, workspaceId };
 
   return null as any;
 }
@@ -106,7 +103,6 @@ export async function secureUpdate<T extends { workspaceId: string }>(
   }
 
   // Verify workspace ownership by adding to WHERE clause
-  const scopedWhere = { ...where, workspaceId };
 
   return {} as any;
 }
@@ -125,7 +121,6 @@ export async function secureUpdateMany<T>(
   }
 
   // Inject workspaceId into WHERE clause
-  const scopedWhere = { ...where, workspaceId };
 
   return { count: 0 };
 }
@@ -147,7 +142,6 @@ export async function secureDelete<T extends { workspaceId: string }>(
   }
 
   // Verify workspace ownership
-  const scopedWhere = { ...where, workspaceId };
 
   return {} as any;
 }
@@ -165,7 +159,6 @@ export async function secureDeleteMany(
   }
 
   // Inject workspaceId into WHERE clause
-  const scopedWhere = { ...where, workspaceId };
 
   return { count: 0 };
 }
@@ -183,7 +176,6 @@ export async function secureCount(
   }
 
   // Inject workspaceId into WHERE clause
-  const scopedWhere = { ...where, workspaceId };
 
   return 0;
 }
@@ -212,7 +204,6 @@ export async function secureGroupBy<T>(
   }
 
   // Inject workspaceId into WHERE clause
-  const scopedWhere = { ...where, workspaceId };
 
   return [] as any;
 }

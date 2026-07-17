@@ -8,9 +8,6 @@ import { reRankRecommendationsInEngagement } from "@/services/recommendation";
 import { checkEngagementEscalations } from "@/services/escalation";
 import { computeNextReviewDate } from "@/services/engagement";
 import {
-  INTERVENTION_MODES,
-  INTERVENTION_PHASES,
-  BUSINESS_CONDITION_RATINGS,
   type InterventionMode,
   type InterventionPhase,
   type BusinessConditionRating,
@@ -20,8 +17,6 @@ import {
 let requestKeyCounter = 0;
 const requestDebounceMap = new Map<string, Set<string>>();
 const reEvaluationInProgress = new Set<string>();
-const processedCorrelationIds = new Set<string>();
-
 export const SIGNIFICANT_CHANGE_TYPES = [
   "new_critical_evidence",
   "kpi_deterioration",
@@ -445,7 +440,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
   // Database-backed idempotency using correlationId
   let idempotencyKey: string | undefined;
   if (event.correlationId) {
-    const { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } = await import(
+    const { checkIdempotencyKey, recordIdempotencyResponse: _recordIdempotencyResponse, recordIdempotencyError: _recordIdempotencyError } = await import(
       "@/services/idempotency"
     );
 

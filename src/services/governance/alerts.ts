@@ -52,8 +52,6 @@ export function evaluateGovernanceAlerts(
 ): GovernanceAlerts {
   const alerts: GovernanceAlert[] = [];
   const summaryPeriod = summary.period[period];
-  const metricsData = metrics.summary;
-
   // Calculate total events for error rate
   const totalEvents = summaryPeriod.lifecycleCounts.reduce((sum, c) => sum + c.count, 0);
   const errorRate =

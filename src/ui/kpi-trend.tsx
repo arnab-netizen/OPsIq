@@ -23,7 +23,7 @@ interface KPITrendProps {
 }
 
 export function KPITrend({ kpis }: KPITrendProps) {
-  const [withSnapshots, setWithSnapshots] = useState<KPI[]>([]);
+  const [_withSnapshots, setWithSnapshots] = useState<KPI[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

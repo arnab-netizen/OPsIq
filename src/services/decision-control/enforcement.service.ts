@@ -215,7 +215,6 @@ export async function getDailyControl(
   const requiredActions = validControls
     .filter((c) => c.isBlocked || c.requiresOverride)
     .map((c) => {
-      const metric = summary.metrics.find((m) => m.decisionId === c.decisionId);
       return {
         decisionId: c.decisionId,
         problem: c.problem,

@@ -8,13 +8,12 @@
  * - Computing dataset statistics
  */
 
-import type { PrismaClient, PublicDataset as PrismaPublicDataset, DatasetCalculation as PrismaDatasetCalculation, CalculationLog as PrismaCalculationLog } from "@/generated/prisma/client";
+import type { PrismaClient, PublicDataset as PrismaPublicDataset, DatasetCalculation as PrismaDatasetCalculation } from "@/generated/prisma/client";
 import {
   validateCalculationTest,
   isCalculationDeterministic,
   type PublicDataset,
   type CalculationTest,
-  type CalculationLog,
   type DatasetStatistics,
 } from "@/domain/benchmark/public-dataset";
 

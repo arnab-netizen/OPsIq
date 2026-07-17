@@ -16,7 +16,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     // Dynamic import in Node context only
     const { ensureStartupComplete } = await import("@/infra/startup-orchestrator");
-    const { getStartupState, StartupState } = await import("@/infra/startup-state");
+    const { getStartupState, StartupState: _StartupState } = await import("@/infra/startup-state");
 
     try {
       console.log("🚀 [INSTRUMENTATION] Triggering startup checks...");

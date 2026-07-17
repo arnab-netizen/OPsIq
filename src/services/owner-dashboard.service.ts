@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { NotFoundError, ForbiddenError } from "@/infra/errors";
+import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { requireCapabilityForService } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";

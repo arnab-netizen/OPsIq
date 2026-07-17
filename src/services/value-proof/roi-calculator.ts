@@ -59,11 +59,6 @@ export function calculateROI(input: ROIInput): ROICalculation {
   const grossProfit = valueRecovered - interventionCost;
   const baseROI = (grossProfit / interventionCost) * 100;
 
-  // Time discount factor
-  // Delay costs money: 10% per month (simple, not compounded)
-  const timeDiscount = Math.max(0, 1 - (timeToValue * 0.1));
-  const timeDiscountFactor = Math.max(0.5, timeDiscount); // Floor at 50%
-
   // Human reality adjustments
   let successProbability = baseSuccess;
   let executionRiskMultiplier = 1.0;

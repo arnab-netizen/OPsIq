@@ -6,9 +6,6 @@ import {
   RiskProfile,
   CapitalSensitivity,
   GrowthMode,
-  ExecutionComplexity,
-  StrategyType,
-  DecisionConstraints,
 } from "@/domain/diagnostic/archetype";
 
 export interface DataSufficiencyCheck {

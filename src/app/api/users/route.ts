@@ -1,5 +1,4 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createUser, listUsers } from "@/services/user";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { withIdempotency } from "@/infra/idempotency";
@@ -48,7 +47,7 @@ export const POST = withCanonicalEnforcement(
 
     const body = await parseRequestBody(ctx.request!, createUserSchema);
 
-    const { isNew, result } = await withIdempotency(
+    const { isNew: _isNew, result } = await withIdempotency(
       idempotencyKey,
       "user.create",
       async () => createUser(body, ctx, workspaceId),

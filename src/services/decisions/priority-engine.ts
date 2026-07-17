@@ -1,7 +1,6 @@
 import {
   Recommendation,
   Constraint,
-  ConstraintType,
   CredibilityBreakdown,
 } from "../../domain/decisions/recommendation-contracts";
 

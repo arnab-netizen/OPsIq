@@ -110,15 +110,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const clientOnlyRoles = ["client_user", "client_stakeholder"];
     hasAdminRole = roleAssignments.some((r: any) => !clientOnlyRoles.includes(r.role));
 
-    // 6. Reconstruct service where clause
-    const visibilityFilter = hasAdminRole
-      ? { visibility: { in: ["internal", "client_visible"] } }
-      : { visibility: "client_visible" };
-    const serviceWhereClause = {
-      workspaceId,
-      ...visibilityFilter,
-    };
-
     // 7. Call listEngagements service (same as /api/engagements does)
     let serviceResult: any = null;
     let serviceError = null;

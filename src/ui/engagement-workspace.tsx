@@ -1,13 +1,12 @@
 "use client";
 import { classifyOperatorError, type ErrorGovernanceContext } from "@/lib/operator-error-governance";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Badge, Button } from "@/ui/primitives";
 import { FindingsManager } from "@/ui/findings-manager";
 import { RecommendationsManager } from "@/ui/recommendations-manager";
 import { ActionCenter } from "@/ui/action-center";
-import { KPITrend } from "@/ui/kpi-trend";
 import { ExecutionCertaintyCard } from "@/ui/execution-certainty-card";
 
 interface EngagementWorkspaceProps {
@@ -28,22 +27,6 @@ const STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destr
   archived: "muted",
 };
 
-const SEVERITY_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  critical: "destructive",
-  high: "warning",
-  medium: "default",
-  low: "muted",
-};
-
-const ACTION_STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  open: "warning",
-  in_progress: "warning",
-  completed: "success",
-  assigned: "default",
-  blocked: "destructive",
-  verified: "success",
-  cancelled: "muted",
-};
 
 export function EngagementWorkspace({
   engagement,
@@ -57,7 +40,7 @@ export function EngagementWorkspace({
   const [findings, setFindings] = useState(initialFindings);
   const [recommendations, setRecommendations] = useState(initialRecommendations);
   const [actions, setActions] = useState(initialActions);
-  const [kpis, setKPIs] = useState(initialKPIs);
+  const [_kpis, setKPIs] = useState(initialKPIs);
   const [evidence, setEvidence] = useState(initialEvidence);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

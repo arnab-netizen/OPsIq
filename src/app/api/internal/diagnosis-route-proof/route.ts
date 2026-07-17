@@ -15,7 +15,6 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     // Simulate the diagnosis route's context checks
     const sessionFound = !!ctx.session;
-    const userFound = !!ctx.verifiedActorId;
     const verifiedWorkspaceIdPresent = !!ctx.verifiedWorkspaceId;
     const verifiedWorkspaceIdType = ctx.verifiedWorkspaceId ? typeof ctx.verifiedWorkspaceId : "missing";
     const verifiedWorkspaceIdLength = ctx.verifiedWorkspaceId ? String(ctx.verifiedWorkspaceId).length : 0;

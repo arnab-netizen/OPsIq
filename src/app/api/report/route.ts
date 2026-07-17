@@ -1,5 +1,4 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { generateReport } from "@/services/report/engine";
 import { UnauthorizedError, BadRequestError } from "@/infra/errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";

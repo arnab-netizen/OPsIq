@@ -4,7 +4,7 @@ import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { calculateExecutionCertainty, type ExecutionCertaintyResult } from "./execution-certainty";
-import { generateBusinessImpact, type BusinessImpactResult } from "./business-impact/business-impact.service";
+import { generateBusinessImpact } from "./business-impact/business-impact.service";
 
 // ─── Report Types ──────────────────────────────────────────────────────────
 

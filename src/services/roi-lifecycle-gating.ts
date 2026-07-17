@@ -19,8 +19,6 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   DecisionState,
-  isTerminalState,
-  TERMINAL_STATES,
 } from "@/domain/decision-lifecycle";
 import { ValidationError, NotFoundError, ConflictError } from "@/infra/errors";
 

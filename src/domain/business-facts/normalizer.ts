@@ -21,7 +21,6 @@
  *
  * Pure function, no DB, no I/O. Deterministic over fact + context.
  */
-import { z } from "zod";
 import type { BusinessFact, TaxBasis, GrossNet } from "./contract";
 
 // --- Unit conversion table --------------------------------------------------

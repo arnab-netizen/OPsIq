@@ -28,7 +28,6 @@ export class ScenariosEngine {
       impactValue,
       probability,
       riskScore,
-      timeToResultDays,
       dependencyCount,
       bottleneckImpactPercent = 0,
     } = dimensions;

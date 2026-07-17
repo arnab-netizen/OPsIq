@@ -10,8 +10,6 @@ import { assessReadiness } from "./readiness-engine";
 import { analyzeCompressionNeeds } from "./compression-engine";
 import { calculateThroughputMetrics, detectBurnoutRisk } from "./operator-throughput";
 import { detectBlocker } from "./blocker-engine";
-import { verifyCompletion } from "./verification-engine";
-import { assessRecoveryNeeds } from "./recovery-engine";
 import { assessTimeline } from "./timeline-engine";
 import { assessPriorityStability, shouldBlockReordering } from "./priority-stabilizer";
 import { conductRealityAudit } from "./reality-audit";

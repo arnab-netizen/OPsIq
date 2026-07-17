@@ -11,8 +11,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMetrics, getActiveRequests } from "@/infra/structured-logger";
 import {
   getActiveTraces,
-  getTraceHistory,
-  getTracesWithError,
   getSlowRequests,
 } from "@/infra/request-tracer";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -29,7 +27,6 @@ export async function GET(request: NextRequest) {
   try {
     const metrics = getMetrics();
     const activeTraces = getActiveTraces();
-    const recentErrors = getTracesWithError();
     const slowRequests = getSlowRequests(1000);
 
     return NextResponse.json({

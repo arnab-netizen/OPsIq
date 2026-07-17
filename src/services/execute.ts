@@ -1,4 +1,3 @@
-import { db } from "@/lib/db";
 import type { CanonicalAuthContext, ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { createClient } from "@/services/client-account";

@@ -38,8 +38,8 @@ export async function simulateWebhookDelivery(
 ): Promise<DeliveryResult> {
   const {
     delayMs = 0,
-    duplicate = false,
-    outOfOrder = false,
+    duplicate: _duplicate = false,
+    outOfOrder: _outOfOrder = false,
     retryCount = 0,
     simulateTimeout = false,
     oldTimestamp = false,

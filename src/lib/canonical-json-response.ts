@@ -73,7 +73,7 @@ export function isCanonicalJsonResponse(value: unknown): value is CanonicalJsonR
       return false;
     }
     // All header values must be strings
-    for (const [key, value] of Object.entries(obj.headers)) {
+    for (const [_key, value] of Object.entries(obj.headers)) {
       if (typeof value !== "string") {
         return false;
       }

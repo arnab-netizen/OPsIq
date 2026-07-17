@@ -17,7 +17,6 @@ export function calculateBaselineMetrics(input: BaselineInput): BaselineMetrics 
     baselineCost,
     revenueChange,
     costChange,
-    expectedImpact,
   } = input;
 
   // Baseline value: Net of baseline revenue and cost

@@ -14,14 +14,13 @@
  *
  * Pure function, no DB, no I/O, no LLM. Deterministic over contract input only.
  */
-import { z } from "zod";
 import {
   type BusinessFact,
   type BusinessFactsContract,
   type Contradiction,
   CONTRADICTION_STATUSES,
 } from "./contract";
-import { sourceEvidenceLevel, compareEvidenceLevels } from "./evidence-hierarchy";
+import { sourceEvidenceLevel } from "./evidence-hierarchy";
 
 // --- Conflict severity classification ----------------------------------------
 

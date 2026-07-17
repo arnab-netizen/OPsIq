@@ -134,8 +134,6 @@ class RuntimeHealthSystem {
   }
 
   async checkSystemHealth(): Promise<SystemHealth> {
-    const start = Date.now();
-
     const [dbHealth, queueHealth] = await Promise.all([
       this.checkDBHealth(),
       this.checkQueueHealth(),

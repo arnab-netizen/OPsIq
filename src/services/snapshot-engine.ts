@@ -1,4 +1,3 @@
-import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { EventReplayEngine } from "@/services/event-replay-engine";
 

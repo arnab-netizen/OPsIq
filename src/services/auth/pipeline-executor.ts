@@ -22,10 +22,6 @@
 
 import {
   UnauthorizedError,
-  ForbiddenError,
-  ServiceUnavailableError,
-  BadRequestError,
-  TooManyRequestsError,
   emitTelemetry,
   emitAudit,
 } from "@/infra/errors";

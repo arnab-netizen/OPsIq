@@ -1,4 +1,3 @@
-import { ActionState } from "./action";
 import { ExecutionSchedule } from "./sequencer";
 import { CapacityCheckResult } from "./capacity";
 import { ExecutionJob } from "./job";

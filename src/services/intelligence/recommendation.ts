@@ -5,7 +5,6 @@ import { getVariableRegistry } from "@/services/control/variable-registry";
 import { ScenarioComparison } from "@/services/control/scenario-comparison";
 import {
   isDataSufficient,
-  getPatternsByProblemType,
   VariableWithConfidence,
 } from "@/services/control/recommendation";
 
@@ -34,11 +33,6 @@ export interface ActionRecommendation {
   learningApplied?: boolean;
   /** How many prior realized failures for this problem type were found in the workspace history. */
   priorFailureCount?: number;
-}
-
-interface ActionFrequency {
-  action: string;
-  count: number;
 }
 
 function getMostFrequentAction(items: OperatorItem[]): string | null {

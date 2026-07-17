@@ -23,9 +23,17 @@ export async function parseRequestBody<T>(
     throw new ValidationError("Invalid JSON in request body");
   }
 
-  // Reject unknown fields for object schemas
-  if (typeof body === "object" && body !== null && !Array.isArray(body)) {
-    const schemaKeys = schema instanceof z.ZodObject ? Object.keys(schema.shape) : [];
+  // Reject unknown fields for simple ZodObject schemas only.
+  // Discriminated unions and other composite schemas handle unknown-field rejection
+  // via parseOrThrow (Zod's own schema validation). Applying this guard to
+  // non-ZodObject schemas produces schemaKeys=[] which falsely rejects all fields.
+  if (
+    typeof body === "object" &&
+    body !== null &&
+    !Array.isArray(body) &&
+    schema instanceof z.ZodObject
+  ) {
+    const schemaKeys = Object.keys(schema.shape);
     const bodyKeys = Object.keys(body as Record<string, unknown>);
     const unknownKeys = bodyKeys.filter((key) => !schemaKeys.includes(key));
     if (unknownKeys.length > 0) {

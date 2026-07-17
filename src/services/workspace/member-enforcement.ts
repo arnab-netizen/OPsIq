@@ -6,13 +6,11 @@
  * Prevents cross-workspace access and privilege escalation.
  */
 
-import { z } from "zod";
 import {
   WorkspaceMembership,
   WorkspaceMembershipSchema,
   WorkspaceRole,
   RoleCapabilities,
-  canActorPerformAction,
   canChangeRole,
 } from "@/domain/workspace/isolation-contracts";
 

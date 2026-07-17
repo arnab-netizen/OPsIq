@@ -15,11 +15,7 @@ import {
   UnauthorizedError,
   ForbiddenError,
   ServiceUnavailableError,
-  type Layer1ErrorCode,
-  type Layer2ErrorCode,
-  type Layer3ErrorCode,
   type InfrastructureErrorCode,
-  type TelemetryMetadata,
   type AuditClass,
 } from "@/infra/errors";
 

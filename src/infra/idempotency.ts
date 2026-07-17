@@ -76,7 +76,6 @@ export function checkIdempotency(params: {
   endpoint: string;
   config?: IdempotencyConfig;
 }): IdempotencyCheckResult {
-  const config = params.config || DEFAULT_CONFIG;
   const cacheKey = generateCacheKey(params.key, params.workspaceId, params.userId, params.endpoint);
 
   // Check if we have a cached response

@@ -16,8 +16,6 @@
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
   planAdjudication,
-  AdjudicationOutcome,
-  type AdjudicationPlan,
 } from "@/domain/execution/proof-risk-adjudication";
 import type { ReassessmentTrigger } from "@/services/owner-mode/reassessment-event.service";
 

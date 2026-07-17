@@ -26,7 +26,7 @@ export function DecisionInboxTable() {
         const res = await fetch("/api/governance/metrics?days=1");
         if (!res.ok) throw new Error("Failed to fetch decisions");
 
-        const data = await res.json();
+        await res.json();
         // Extract decisions from metrics response
         // Note: This assumes the API returns decision list or we need a separate endpoint
         setDecisions([]);

@@ -13,7 +13,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import type { UserRoleAssignment } from "@/generated/prisma/client";
-import { ROLES } from "@/domain/constants/roles";
 import { getCapabilitiesForRole } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { logger } from "@/infra/logger";

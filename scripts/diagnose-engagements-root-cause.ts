@@ -23,8 +23,6 @@ import * as http from "http";
 
 const DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY || "demo-key-12345";
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
-const DEMO_USER_EMAIL = "operator@demo.local";
-const DEMO_ENGAGEMENT_CODE = "ENG-001";
 
 interface FetchOptions {
   method?: string;

@@ -1,5 +1,5 @@
 "use client";
-import { classifyOperatorError, type ErrorGovernanceContext } from "@/lib/operator-error-governance";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 import { useState } from "react";
 

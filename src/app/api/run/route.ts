@@ -1,7 +1,6 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
 import { runSystem } from "@/services/system/run";
-import { createBaseline } from "@/services/onboarding/basic";
 import { generateOperatorItems } from "@/services/operator/generate";
 import { addItems, addBlockedDecision } from "@/services/operator/store";
 import { resolveServerRole } from "@/services/auth/server-role";
@@ -17,8 +16,8 @@ import { DecisionResult } from "@/domain/decision/types";
 import { createEventLogger } from "@/lib/observability/log";
 import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import { normalizeDecisionInput, validateNormalizedMetrics } from "@/lib/decision/run";
-import { evaluateDecisionGate, gateResultToPayload } from "@/services/control/decision-gate";
-import { evaluateGuardrails, formatGuardrailViolations, HIGH_IMPACT_APPROVAL_THRESHOLD } from "@/services/control/guardrails";
+import { evaluateDecisionGate } from "@/services/control/decision-gate";
+import { evaluateGuardrails, HIGH_IMPACT_APPROVAL_THRESHOLD } from "@/services/control/guardrails";
 import { validateDependencies } from "@/services/control/variable-registry";
 import { enforceControlLayer } from "@/services/control/enforcement";
 import { recordLifecycleStage } from "@/services/lifecycle/decision-lifecycle";
@@ -457,11 +456,6 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     });
 
     // 3. Create baseline using normalized values (all in INR/base currency)
-    const baseline = createBaseline(
-      normalizedMetrics.baselineRevenue,
-      normalizedMetrics.baselineCost
-    );
-
     // 4. Build inputMetrics using normalized values (baseAmount)
     const inputMetrics: Record<string, number> = {
       baselineRevenue: normalizedMetrics.baselineRevenue,

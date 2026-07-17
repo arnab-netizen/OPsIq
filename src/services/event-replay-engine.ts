@@ -105,10 +105,6 @@ export class EventReplayEngine {
     }
 
     const lastEvent = events.length > 0 ? events[events.length - 1] : undefined;
-    const firstEvent = usedSnapshot
-      ? (state.createdAt as Date)
-      : events[0]?.occurredAt || new Date();
-
     logger.info("EventReplayEngine: Aggregate replayed", {
       aggregateId,
       aggregateType,

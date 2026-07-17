@@ -1,6 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   addMember,
@@ -11,7 +10,6 @@ import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import { ROLES } from "@/domain/constants/roles";
-import type { NextRequest } from "next/server";
 
 const roleValues = Object.values(ROLES) as [string, ...string[]];
 

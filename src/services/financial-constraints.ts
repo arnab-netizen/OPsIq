@@ -17,11 +17,9 @@ import {
   MarginPressure,
   SurvivalMetrics,
   assessSurvivalIntelligence,
-  SurvivalAssessmentInput,
 } from "@/domain/survival/survival-intelligence";
 import {
   Financials,
-  FinancialHealth,
 } from "@/domain/business-condition/business-condition";
 import { z } from "zod";
 

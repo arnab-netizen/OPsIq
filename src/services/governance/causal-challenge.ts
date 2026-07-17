@@ -78,63 +78,6 @@ const ARCHETYPE_DIMENSIONS: Record<string, Set<string>> = {
   strategic_capex_risk: new Set(["financial_health", "market_position"]),
 };
 
-/**
- * Causal domains the three operational archetypes CANNOT represent. Category-
- * based stems (general business vocabulary, not probe-specific phrasings).
- */
-const OUT_OF_MODEL_CAUSE_STEMS: string[] = [
-  // market / strategic / competitive
-  "competitor", "competition", "free tier", "market share", "substitute",
-  // financial-structural
-  "negative margin", "negative unit", "insolven", "runway", "cash burn", "below cost",
-  // legal / regulatory
-  "regulation", "regulatory", "banned", "ban on", "lawsuit", "compliance ban",
-  // people / key-person
-  "resigned", "quit", "key person", "key-person", "sole ", "founder", "only master", "left the",
-  // external / macro
-  "recession", "macro", "demand collapse", "demand fell", "pandemic", "seasonal",
-  "temporary surge", "supply chain", "disruption", "overproduction",
-  // integrity / systems
-  "fraud", "theft", "shrinkage", "embezzle", "double-charged", "overcharged",
-  "billing bug", "billing-system", "system bug",
-  // capital allocation
-  "capex", "factory investment", "build a new factory", "major investment",
-];
-
-/** Adverse-polarity tokens for evidence findings. */
-const ADVERSE_STEMS: string[] = [
-  "down ", "drop", "fell", "falling", "decline", "declin", "negative", "loss",
-  "losing", "shrinkage", "fraud", "theft", "stolen", "banned", "refund", "collapse",
-  "deficit", "below cost", "disrupt", "overproduc", "plummet", "worsen", "deteriorat",
-];
-
-/** Benign-polarity guard tokens. */
-const BENIGN_STEMS: string[] = [
-  "healthy", "positive", "stable", "strong", "growing", "grew", "improv", "up sharply",
-  "unchanged", "flat",
-];
-
-function hasStem(text: string, stems: string[]): boolean {
-  const t = text.toLowerCase();
-  return stems.some((s) => t.includes(s));
-}
-
-function numericAdverse(ev: CausalEvidence): boolean {
-  if (!ev.supportingData) return false;
-  return Object.values(ev.supportingData).some(
-    (v) => typeof v === "number" && v < 0
-  );
-}
-
-/** Is this finding adverse (and not dominated by a benign signal)? */
-function isAdverseFinding(ev: CausalEvidence): boolean {
-  const adverse = hasStem(ev.finding, ADVERSE_STEMS) || numericAdverse(ev);
-  if (!adverse) return false;
-  // A clearly-benign, non-numeric-negative finding is not adverse.
-  const benign = hasStem(ev.finding, BENIGN_STEMS) && !numericAdverse(ev);
-  return !benign;
-}
-
 // ─── Adverse-off-archetype NARROWING (this slice; out-of-model arm untouched) ──
 // The blanket rule "any off-home adverse evidence ⇒ abstain" over-abstained cases
 // whose committed diagnosis is correct and whose off-home adverse signal is merely a

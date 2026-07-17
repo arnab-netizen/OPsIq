@@ -100,11 +100,6 @@ const ALERT_VARIANTS: Record<string, "default" | "success" | "warning" | "destru
   critical: "destructive",
 };
 
-const DECISION_STATUS_COLORS: Record<string, string> = {
-  healthy: "text-green-600",
-  warning: "text-yellow-600",
-  critical: "text-red-600",
-};
 
 export function GovernanceMetricsDashboard() {
   const [metrics, setMetrics] = useState<GovernanceMetrics | null>(null);

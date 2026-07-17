@@ -6,7 +6,6 @@
 
 import type {
   LearningObservation,
-  LessonLearned,
   RuleChangeCandidate,
   PromotionStatus,
 } from "@/domain/benchmark/learning-observation";

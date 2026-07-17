@@ -271,7 +271,7 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
   // Build block reasons by stage
   const blockReasonsByStage: BlockReasonByStage[] = Object.entries(blockReasons)
     .map(([key, data]) => {
-      const [stage, reason] = key.split(":");
+      const [stage, _reason] = key.split(":");
       const avgConf =
         data.confidences.length > 0
           ? data.confidences.reduce((a, b) => a + b, 0) / data.confidences.length

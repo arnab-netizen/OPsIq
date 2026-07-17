@@ -11,14 +11,6 @@ const globalForPrisma = globalThis as unknown as {
  * - neon.tech or neon.database in hostname
  * - typically include sslmode=require
  */
-function isNeonEndpoint(databaseUrl: string): boolean {
-  return (
-    databaseUrl.includes("neon.tech") ||
-    databaseUrl.includes("neon.database") ||
-    (databaseUrl.includes("sslmode=require") && databaseUrl.includes("?"))
-  );
-}
-
 async function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
 

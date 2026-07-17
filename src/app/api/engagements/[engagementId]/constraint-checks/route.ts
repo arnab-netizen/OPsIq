@@ -1,7 +1,6 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { ConstraintEnforcer } from "@/services/decision-core/constraint-enforcer";
-import { ValidationError } from "@/infra/errors";
 import { z } from "zod/v4";
 
 const constraintCheckSchema = z.object({

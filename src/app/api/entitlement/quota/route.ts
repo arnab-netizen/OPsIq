@@ -6,7 +6,6 @@
 
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { UnauthorizedError } from "@/infra/errors";
 import { z } from "zod";
 import {
   getQuotaUsage,

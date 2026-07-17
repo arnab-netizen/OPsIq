@@ -31,7 +31,6 @@
  */
 
 import type { AuditEventName } from "@/domain/constants/audit-events";
-import type { TelemetryClass } from "@/infra/telemetry-contracts";
 
 /**
  * Audit stratification tier

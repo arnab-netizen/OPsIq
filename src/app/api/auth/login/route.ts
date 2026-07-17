@@ -32,7 +32,6 @@ export const POST = async (request: NextRequest) => {
 
     // Extract idempotency key for session deduplication
     stage = "headers";
-    const idempotencyKey = request.headers.get("idempotency-key");
     const ip = request.headers.get("x-forwarded-for") ?? "unknown";
     console.log("[LOGIN] HEADERS_READ");
 

@@ -1,9 +1,8 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { ForbiddenError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { validateEvidence } from "@/services/evidence";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
-import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
+import { checkIdempotencyKey, recordIdempotencyResponse } from "@/services/idempotency";
 import { validateEvidenceSchema } from "@/domain/validation/evidence";
 import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";

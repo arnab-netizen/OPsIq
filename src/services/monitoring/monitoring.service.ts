@@ -3,7 +3,6 @@ import {
   HealthProbeType,
   HealthStatus,
   MetricPoint,
-  MetricsRegistry,
   ReadinessCheck,
   LivenessCheck,
   StartupCheck,

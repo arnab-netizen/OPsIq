@@ -142,8 +142,6 @@ export interface CredibilityGraphAnalysis {
 }
 
 // Concern thresholds — repetition required; one event is not a pattern.
-const WEAK_THRESHOLD = 3;
-const REJECTED_THRESHOLD = 2;
 const REUSED_THRESHOLD = 2;
 const STALE_THRESHOLD = 2;
 const UNRELIABLE_THRESHOLD = 4; // combined weak+rejected+reused

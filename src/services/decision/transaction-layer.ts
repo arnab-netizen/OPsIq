@@ -6,7 +6,6 @@
 
 import {
   getDecisionDetail,
-  getDecisionSummary,
 } from "@/services/decision/transaction-detail";
 import {
   executeDecisionAction,
@@ -74,7 +73,7 @@ export async function executeDecisionTransaction(
   }
 
   // Execute the action
-  const result = await executeDecisionAction(
+  await executeDecisionAction(
     decisionId,
     workspaceId,
     userId,

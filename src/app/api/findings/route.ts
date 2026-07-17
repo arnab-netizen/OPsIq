@@ -1,14 +1,12 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createFinding } from "@/services/findings";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import {
-  FINDING_STATUSES,
   FINDING_SEVERITIES,
   FINDING_IMPACTS,
 } from "@/domain/constants/statuses";

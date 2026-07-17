@@ -1,6 +1,5 @@
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { logger } from "@/infra/logger";
-import { db } from "@/lib/db";
 
 export type ActionType = "email" | "webhook" | "task";
 

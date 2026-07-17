@@ -16,7 +16,6 @@ import type { PolicyContext } from "@/policies/capability-check";
 import type { CapabilityName } from "@/domain/constants/capabilities";
 import { hasCapability } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { ROLES, type RoleName } from "@/domain/constants/roles";
 
 /**
  * Canonical capability set: All capabilities an actor can exercise.

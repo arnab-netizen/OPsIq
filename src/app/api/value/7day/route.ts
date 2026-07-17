@@ -1,5 +1,4 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 
 interface SevenDayImpact {
@@ -122,7 +121,6 @@ export const GET = withCanonicalEnforcement(
     const netImpact = totalGain - totalLoss;
     const approvedCount = approvedItems.length;
     const blockedCount = blockedItems.length;
-    const totalDecisions = approvedCount + blockedCount;
     const successRate =
       approvedCount > 0 ? (successCount / approvedCount) * 100 : 0;
     const avgConfidenceApproved =

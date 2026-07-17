@@ -7,7 +7,6 @@
 
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
-import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   Webhook,

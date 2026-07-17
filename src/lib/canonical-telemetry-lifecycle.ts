@@ -400,20 +400,6 @@ export class CanonicalTelemetryLifecycle {
 export function enforceNoLegacyTelemetry(): void {
   const forbiddenModules = ["src/services/auth.ts", "src/lib/auth-guard.ts"];
 
-  const warningMessage = `
-PHASE C ENFORCEMENT:
-Legacy auth helpers must NOT emit telemetry.
-If you see this warning, legacy helpers are still calling logger.*.
-
-Required fixes:
-1. Remove all logger.* calls from src/services/auth.ts
-2. Remove all logger.* calls from src/lib/auth-guard.ts
-3. All telemetry must emit from canonical wrapper only
-4. Use CanonicalTelemetryLifecycle for all auth events
-
-Legacy helpers must become pure data providers only.
-`;
-
   // This is a compile-time check - mark forbidden modules
   forbiddenModules.forEach((mod) => {
     // Documentation only - actual enforcement happens in code review

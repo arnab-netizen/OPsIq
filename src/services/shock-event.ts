@@ -7,7 +7,6 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { SHOCK_EVENT_TYPES, RISK_SEVERITIES } from "@/domain/constants/statuses";
-import { withVersionCheck, withVersionIncrement } from "@/lib/optimistic-lock";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { detectShockFromCurrentState } from "@/services/shock-detection";
 import type { ShockEventType } from "@/domain/constants/statuses";

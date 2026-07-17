@@ -1,12 +1,11 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import type { NextRequest } from "next/server";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { diagnoseBusiness, validateBusinessProblem } from "@/services/diagnosis";
 import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { z } from "zod/v4";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { UnauthorizedError } from "@/infra/errors";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 const diagnosisSchema = z.object({

@@ -42,11 +42,6 @@ const PRIORITY_VARIANTS: Record<string, "default" | "success" | "warning" | "des
 
 const STATUS_OPTIONS = ["pending", "approved", "rejected"];
 
-const STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  pending: "muted",
-  approved: "success",
-  rejected: "destructive",
-};
 
 export function RecommendationsManager({
   recommendations,

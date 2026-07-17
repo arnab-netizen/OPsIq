@@ -124,7 +124,6 @@ export function calculateHistoricalAccuracyScore(performance: HistoricalPerforma
   }
 
   const successRate = (performance.successfulDecisions / performance.totalDecisions) * 100;
-  const consistencyFactor = performance.consistencyScore / 100;
   const outcomeConsistency = Math.max(0, 100 - performance.outcomeVariance);
 
   const score = successRate * 0.5 + performance.consistencyScore * 0.3 + outcomeConsistency * 0.2;

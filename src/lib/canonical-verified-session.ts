@@ -8,7 +8,7 @@
  * Replay-deterministic.
  */
 
-import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
+import type { SessionInfo } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
 import type { CapabilityName } from "@/domain/constants/capabilities";
 

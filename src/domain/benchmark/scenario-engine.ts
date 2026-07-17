@@ -12,7 +12,6 @@ import type {
   SyntheticScenario,
   ScenarioRunResult,
   ScenarioType,
-  BusinessMetrics,
   RiskFlag,
 } from "./synthetic-scenario";
 import {

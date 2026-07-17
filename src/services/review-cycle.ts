@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { NotFoundError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 

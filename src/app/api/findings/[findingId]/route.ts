@@ -1,5 +1,4 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext, type ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
-import { canonicalJson } from "@/lib/canonical-json-response";
 import { hasInternalAccess } from "@/policies/capability-check";
 
 import { CAPABILITIES } from "@/domain/constants/capabilities";

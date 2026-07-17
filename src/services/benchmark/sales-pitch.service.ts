@@ -4,12 +4,11 @@
  * Generates compliant pitch templates for multiple channels
  */
 
-import type { SalesPitch, PitchContext } from "@/domain/benchmark/sales-pitch";
+import type { SalesPitch } from "@/domain/benchmark/sales-pitch";
 import {
   validateSalesPitch,
   checkComplianceStandards,
   scorePitch,
-  validateObjectionHandler,
 } from "@/domain/benchmark/sales-pitch";
 
 /**

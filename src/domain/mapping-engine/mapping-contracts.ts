@@ -235,7 +235,6 @@ export function applyFieldMapping(
   sourceRecord: Record<string, unknown>,
   mappingRules: FieldMappingRule[],
 ): Omit<TransformationResult, "transformationTimeMs" | "mappingId" | "appliedRules"> {
-  const startTime = Date.now();
   const errors: TransformationError[] = [];
   const warnings: TransformationResult["warnings"] = [];
   const transformedRecord: Record<string, unknown> = {};
@@ -448,7 +447,6 @@ export function detectSchemaAlignment(
   similarityThreshold: number = 0.7,
 ): SchemaAlignmentSuggestion[] {
   const suggestions: SchemaAlignmentSuggestion[] = [];
-  const sourceFields = sourceProfile.fields.map(f => f.fieldName.toLowerCase());
   const targetFields = targetProfile.fields.map(f => ({ name: f.fieldName, lowerName: f.fieldName.toLowerCase() }));
 
   for (const sourceField of sourceProfile.fields) {

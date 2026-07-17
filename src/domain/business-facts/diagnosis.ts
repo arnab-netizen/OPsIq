@@ -15,7 +15,6 @@
  * Pure function, no DB, no I/O. Deterministic over facts + evidence only.
  */
 
-import type { BusinessFact, BusinessFactsContract } from "./contract";
 
 // --- Diagnosis structure ---
 

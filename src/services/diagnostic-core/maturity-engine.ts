@@ -5,7 +5,6 @@ import {
   ExecutionCapabilities,
   MaturityAnalysis,
   ExecutionComplexity,
-  DecisionHorizon,
   StrategyType,
 } from "@/domain/diagnostic/maturity";
 

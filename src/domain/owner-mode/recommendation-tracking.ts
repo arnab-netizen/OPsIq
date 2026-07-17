@@ -162,7 +162,6 @@ export function validateRecommendation(
   }
 
   // REC-RULE-6: if diagnosisValidation provided and not valid, cap confidence at 40
-  const diagnosisValid = diagnosisValidation ? diagnosisValidation.valid : true;
   let effectiveConfidenceScore = input.confidenceScore;
   if (diagnosisValidation && !diagnosisValidation.valid) {
     effectiveConfidenceScore = Math.min(effectiveConfidenceScore, 40);
