@@ -106,6 +106,7 @@ vi.mock("@/lib/db", () => ({
     delegatedTask: { findMany: mocks.delegatedTaskFindMany },
     ownerDataIntake: {},
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/services/owner-mode/owner-manual-entry.service", () => ({
