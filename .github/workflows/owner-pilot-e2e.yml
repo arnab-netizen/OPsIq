@@ -8,7 +8,7 @@ name: Owner Pilot Browser + Mobile E2E
 
 on:
   push:
-    branches: ["claude/opsiq-owner-pilot-readiness-isow0m", "claude/opsiq-ai-supervisor-minimal-audit"]
+    branches: ["claude/opsiq-owner-pilot-readiness-isow0m", "claude/opsiq-ai-supervisor-minimal-audit", "claude/opsiq-completion-roadmap-omaxc2"]
   workflow_dispatch:
 
 jobs:
