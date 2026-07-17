@@ -126,7 +126,7 @@
     "committed": "3628a355",
     "workflow7_classification": "COMPLETE"
   },
-  "current_branch": "claude/phase-6f-governance-findings-5gkiec",
+  "current_branch": "claude/private-build-setup-e0i0e9",
   "stage_a6_workflow2": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "INTEGRATION_DEFECT_FIX",
@@ -2862,12 +2862,12 @@
     "corrective_actions_done": [
       "A: auth-governance-scanner updated (withEnforcementFull \u2192 withCanonicalEnforcement guidance)",
       "B: context.ts deleted; validateWorkspaceAccess removed from store.ts (was broken: compared workspaceId vs userId)",
-      "D: DC-19 gate added (19/19 gates all pass)"
+      "C: governance:scan:a77 already wired into ci.yml at line 58-60 (blocking, continue-on-error: false) \u2014 was completed in a prior session; recorded now",
+      "D: DC-19 gate added (19/19 gates all pass)",
+      "E: noUnusedLocals enabled in tsconfig.json; 343 TS6133/6192/6196 errors resolved across 218 files; commit 07ade423 on claude/private-build-setup-e0i0e9; tsc 0 errors, 826 passed 1 pre-existing fail, lint 2888 below 3247 baseline"
     ],
     "corrective_actions_pending": [
-      "C: Wire governance:scan:a77 into .github/workflows/ci.yml",
-      "E: Enable noUnusedLocals in tsconfig.json",
-      "F: Merge branch to main; verify CI green with postgres:16"
+      "F: Merge branch to main; verify CI green with postgres:16 \u2014 requires PR CI green on exact SHA + owner exact-SHA authorization"
     ],
     "deliverables": [
       "docs/audits/2026-07-12-historical-closure-reconciliation/BASELINE.md",
