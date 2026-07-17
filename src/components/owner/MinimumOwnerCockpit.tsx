@@ -75,6 +75,8 @@ export interface MinimumOwnerCockpitProps {
   publicSignals?: OwnerPublicSignalsResponse | null;
   /** Read-only derived business condition signals from the now-view. Rendered as a collapsed risk panel. */
   businessCondition?: DerivedBusinessConditionSignals | null;
+  /** When true, the confidence score for the source data was capped — signals may be stale. */
+  dataFreshnessWeak?: boolean | null;
   /** When provided, the cockpit becomes interactive; the server re-checks every action. */
   onAction?: (taskKey: string, action: string, input: CockpitActionInput) => void;
   busy?: boolean;
@@ -177,7 +179,7 @@ const CONDITION_FIELD_ORDER: (keyof DerivedBusinessConditionSignals)[] = [
   "executionCapacityLevel", "processMaturityLevel", "managementMaturityLevel", "moralFragilityLevel",
 ];
 
-function BusinessConditionSection({ condition }: { condition: DerivedBusinessConditionSignals }) {
+function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition: DerivedBusinessConditionSignals; dataFreshnessWeak?: boolean | null }) {
   const knownFields = CONDITION_FIELD_ORDER.filter((k) => condition[k] !== "unknown");
   const unknownCount = CONDITION_FIELD_ORDER.length - knownFields.length;
   const worstLevel = CONDITION_FIELD_ORDER
@@ -209,6 +211,11 @@ function BusinessConditionSection({ condition }: { condition: DerivedBusinessCon
         {unknownCount > 0 && (
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }} data-testid="cockpit-condition-missing">
             {unknownCount} dimension{unknownCount > 1 ? "s" : ""} need more data to assess.
+          </p>
+        )}
+        {dataFreshnessWeak && (
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#b45309", fontStyle: "italic" }} data-testid="cockpit-condition-stale">
+            Data confidence is low — some signals may be stale. Update cashflow and workload records for a fresh assessment.
           </p>
         )}
       </div>
@@ -259,7 +266,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, onAction, busy = false }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -515,7 +522,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
 
       {/* Business condition — read-only, derived risk-dimension panel (Phase 1 Reality Engine). */}
-      {businessCondition && <BusinessConditionSection condition={businessCondition} />}
+      {businessCondition && <BusinessConditionSection condition={businessCondition} dataFreshnessWeak={dataFreshnessWeak} />}
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
       <details data-testid="cockpit-proof-drawer" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>

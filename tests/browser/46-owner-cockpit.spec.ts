@@ -108,6 +108,29 @@ test.describe("46 — owner cockpit UI (desktop, one login)", () => {
     expect(text).not.toMatch(/[$£€]\s?\d|win probability|live internet intelligence|ai found this online|the market proves/);
   });
 
+  test("the business condition section renders (Phase 1 Reality Engine) — collapsed by default", async () => {
+    if (!(await page.locator('[data-testid="owner-cockpit"], [data-testid="cockpit-clean"]').count())) return;
+    const bcGroup = page.locator('[data-testid="cockpit-business-condition-group"]');
+    if (!(await bcGroup.count())) return; // section absent only if API unavailable
+    await expect(bcGroup).toBeVisible();
+    // Collapsed by default — owner must opt in to see details
+    expect(await bcGroup.evaluate((n) => (n as HTMLDetailsElement).open)).toBe(false);
+    await bcGroup.locator("summary").click();
+    expect(await bcGroup.evaluate((n) => (n as HTMLDetailsElement).open)).toBe(true);
+    // Either a nodata message OR at least one derived field renders — never raw DB field names or undefined
+    const hasNoData = (await page.locator('[data-testid="cockpit-condition-nodata"]').count()) > 0;
+    if (!hasNoData) {
+      // At least one known dimension should be visible
+      const conditionCells = page.locator('[data-testid^="cockpit-condition-cash"],'
+        + '[data-testid^="cockpit-condition-margin"],'
+        + '[data-testid^="cockpit-condition-execution"]');
+      expect(await conditionCells.count()).toBeGreaterThan(0);
+    }
+    // No "undefined" text anywhere in the section
+    const text = await bcGroup.innerText();
+    expect(text).not.toMatch(/\bundefined\b/i);
+  });
+
   test("the primary owner navigation points to the canonical /owner/cockpit (route consolidation)", async () => {
     // The sidebar owner entry is the canonical cockpit.
     await expect(page.locator('a[href="/owner/cockpit"]').first()).toBeVisible();
