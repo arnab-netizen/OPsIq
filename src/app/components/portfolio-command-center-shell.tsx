@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { z } from "zod";
 
 // ============================================================================
@@ -149,11 +149,6 @@ export function generateMockPortfolioView(): PortfolioView {
   const criticalCount = mockEngagements.filter(
     (e) => e.impactLevel === "critical"
   ).length;
-  const totalRevenueAtRisk = mockEngagements.reduce(
-    (sum, e) => sum + e.revenueAtRisk,
-    0
-  );
-
   let portfolioRisk: "minimal" | "low" | "moderate" | "high" | "critical" =
     "minimal";
   if (criticalCount >= 3) portfolioRisk = "critical";

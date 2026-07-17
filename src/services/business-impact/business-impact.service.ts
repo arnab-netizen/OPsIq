@@ -114,8 +114,6 @@ export async function generateBusinessImpact(
   const drift = await detectExecutionDrift(engagementId, workspaceId);
 
   // Calculate timeline to failure based on business condition
-  const now = new Date();
-  const engagementStartDate = engagement.startDate || new Date();
   const timelineDays =
     condition && condition.severityScore > 7
       ? Math.max(

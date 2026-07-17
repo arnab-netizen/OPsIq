@@ -7,7 +7,6 @@
  */
 
 import { setStartupStatus, getStartupStatus } from "@/services/startup-status";
-import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 let startupPromise: Promise<void> | null = null;

@@ -5,7 +5,6 @@ import {
   FrictionImpactAnalysis,
   getFrictionDelay,
   getFrictionCategory,
-  FRICTION_DELAYS,
 } from "@/domain/execution/friction";
 
 export class FrictionModel {

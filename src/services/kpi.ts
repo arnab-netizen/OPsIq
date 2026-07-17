@@ -5,8 +5,6 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
-import { triggerReEvaluation } from "@/services/re-evaluation";
-import { assertEngagementAccess } from "@/lib/visibility";
 import { withIdempotency } from "@/infra/idempotency";
 import { requireServiceContext } from "@/lib/service-auth";
 
@@ -193,7 +191,7 @@ export async function updateKPIValue(
           // Create snapshot of the new value
           const newValue = input.currentValue ?? kpi.currentValue;
           // KPISnapshot has no workspaceId column — it is scoped via its kpi → engagement. Do not write it.
-          const snapshot = await tx.kPISnapshot.create({
+          await tx.kPISnapshot.create({
             data: {
               id: randomUUID(),
               kpiId,

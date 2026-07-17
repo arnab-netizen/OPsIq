@@ -13,7 +13,6 @@
  */
 
 import { z } from "zod";
-import { Financials, FinancialHealth } from "../business-condition/business-condition";
 
 /**
  * Survival status: comprehensive assessment of business viability

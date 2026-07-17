@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   classifyOperatorError,
-  type ErrorGovernanceContext,
 } from "@/lib/operator-error-governance";
 import { Modal } from "@/ui/primitives/modal";
 import { Button } from "@/ui/primitives/button";

@@ -106,7 +106,7 @@ const handleSignup = async (request: NextRequest) => {
       Date.now() + getSessionDurationMs()
     );
 
-    const session = await db.session.create({
+    await db.session.create({
       data: {
         id: sessionId,
         userId: user.id,

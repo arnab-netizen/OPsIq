@@ -161,12 +161,6 @@ export function generateBidApplicationPack(
   const eligibilityOwnerActions = buildEligibilityOwnerActions(candidate);
   const economicsOwnerActions = buildEconomicsOwnerActions(candidate);
 
-  const allOwnerActions = [
-    ...eligibilityOwnerActions,
-    ...economicsOwnerActions,
-    ...(candidate.missingData ?? []).map((d) => `Collect missing data: ${d}`),
-  ];
-
   return {
     workspaceId: candidate.workspaceId,
     cover: {

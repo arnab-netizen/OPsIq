@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { z } from 'zod';
 
 // ============================================================================
@@ -197,7 +197,7 @@ export function SelfServeOnboardingShell({
   const steps = generateOnboardingSteps();
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [workspaceForm, setWorkspaceForm] = useState(generateMockWorkspaceForm());
-  const [teamMembers, setTeamMembers] = useState(generateMockTeamMembers(3));
+  const [teamMembers, _setTeamMembers] = useState(generateMockTeamMembers(3));
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
 
   const progress: OnboardingProgress = {

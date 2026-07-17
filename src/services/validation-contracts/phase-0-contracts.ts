@@ -3,7 +3,6 @@
  * Consolidated contracts for recommendation validation
  */
 
-import { logger } from "@/infra/logger";
 
 /**
  * RollbackRequirementPolicy: Enforce rollback capability

@@ -50,8 +50,6 @@ const HEALTH_CHECK_CACHE_TTL = 10000; // 10 seconds
 
 // Readiness state
 let isReadyState = false;
-let readyStateChangedAt: Date | null = null;
-
 /**
  * Get application uptime in milliseconds
  */
@@ -183,7 +181,6 @@ export function getHealthCheck(version?: string): HealthCheckResult {
  */
 export function setReadiness(ready: boolean): void {
   isReadyState = ready;
-  readyStateChangedAt = new Date();
 }
 
 /**

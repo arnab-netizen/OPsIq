@@ -3,7 +3,6 @@
  * Production-grade JSON logging with correlation IDs and secret redaction
  */
 
-import { NextRequest } from "next/server";
 
 interface LogContext {
   request_id: string;
@@ -51,36 +50,6 @@ const metrics = {
   dbLatencies: [] as number[],
   requestLatencies: [] as number[],
 };
-
-// Secret patterns to redact
-const SECRET_PATTERNS = [
-  /password["\s:=]+([^\s",}]+)/gi,
-  /authorization["\s:=]+([^\s",}]+)/gi,
-  /token["\s:=]+([^\s",}]+)/gi,
-  /secret["\s:=]+([^\s",}]+)/gi,
-  /api[_-]key["\s:=]+([^\s",}]+)/gi,
-];
-
-function redactSecrets(value: any): any {
-  if (typeof value !== "string") return value;
-
-  let redacted = value;
-  for (const pattern of SECRET_PATTERNS) {
-    redacted = redacted.replace(pattern, (match, secret) => {
-      return match.replace(secret, "[REDACTED]");
-    });
-  }
-  return redacted;
-}
-
-function serializePayload(payload: any): string {
-  try {
-    const serialized = JSON.stringify(payload);
-    return redactSecrets(serialized);
-  } catch {
-    return "[SERIALIZATION_ERROR]";
-  }
-}
 
 function payloadHash(payload: any): string {
   try {

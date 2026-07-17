@@ -12,7 +12,6 @@
  */
 
 import { AsyncLocalStorage } from "async_hooks";
-import { CanonicalExecutionTraceManager } from "@/lib/canonical-execution-trace";
 
 export type ReentryClassification =
   | "SAFE"

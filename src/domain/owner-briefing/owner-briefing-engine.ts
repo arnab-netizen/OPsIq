@@ -280,7 +280,6 @@ export function summarizeRisks(
   const criticalRisks = records.filter((r) => r.riskLevel === "critical");
   const highRisks = records.filter((r) => r.riskLevel === "high");
 
-  const allRisks = records.flatMap((r) => r.risks || []);
   const avgRiskScore = records.length > 0 ? records.filter((r) => r.impact).reduce((sum, r) => sum + (r.impact || 0), 0) / records.length / 100 : 0;
 
   // Extract top risks

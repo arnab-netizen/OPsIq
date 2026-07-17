@@ -10,7 +10,6 @@ import {
   type ClaimedWorkspaceId,
   type VerifiedWorkspaceId,
   claimWorkspaceId,
-  claimedIdForLog,
 } from "@/lib/workspace-identity";
 
 interface TokenBucket {
@@ -27,21 +26,6 @@ const store: RateLimitStore = {
   workspace: new Map(),
   ip: new Map(),
 };
-
-/**
- * Calculate available tokens based on elapsed time.
- * Refill rate is determined by limits (tokens per second).
- */
-function calculateTokens(
-  lastBucket: TokenBucket,
-  capacity: number,
-  refillRate: number // tokens per second
-): number {
-  const now = Date.now();
-  const elapsed = (now - lastBucket.lastRefill) / 1000; // seconds
-  const tokensAdded = elapsed * refillRate;
-  return Math.min(capacity, lastBucket.tokens + tokensAdded);
-}
 
 /**
  * Get or create token bucket for workspace.

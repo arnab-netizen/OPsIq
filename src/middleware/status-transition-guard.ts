@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { isValidTransition } from "@/services/decision/status-management";
 

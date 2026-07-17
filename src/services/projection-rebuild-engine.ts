@@ -143,47 +143,6 @@ export class ProjectionRebuildEngine {
   }
 
   /**
-   * Apply event to projection state (fold logic)
-   */
-  private static applyEventToProjection(
-    state: Record<string, unknown>,
-    event: {
-      eventType: string;
-      payload: Record<string, unknown>;
-      eventNumber: number;
-    }
-  ): Record<string, unknown> {
-    // projection.created event
-    if (event.eventType === "recommendation.created") {
-      return {
-        ...state,
-        engagementId: event.payload.engagementId as string,
-        title: event.payload.title as string,
-        description: event.payload.description as string,
-        priority: event.payload.priority as string,
-        evidenceValidationScore: event.payload.evidenceValidationScore
-          ? Math.round(
-              (typeof event.payload.evidenceValidationScore === "string"
-                ? parseFloat(event.payload.evidenceValidationScore)
-                : (event.payload.evidenceValidationScore as number)) * 100
-            )
-          : undefined,
-        reliabilityLevel: event.payload.reliabilityLevel as string | undefined,
-        kpiHealthScore: event.payload.kpiHealthScore
-          ? Math.round(
-              (typeof event.payload.kpiHealthScore === "string"
-                ? parseFloat(event.payload.kpiHealthScore)
-                : (event.payload.kpiHealthScore as number)) * 100
-            )
-          : undefined,
-        kpiRiskLevel: event.payload.kpiRiskLevel as string | undefined,
-      };
-    }
-
-    return state;
-  }
-
-  /**
    * Verify projection parity: replay equals live projection
    * Truth check: Replayed state matches database projection
    */

@@ -6,7 +6,6 @@ import { createContact, getContactsForClient } from "@/services/client-contact";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
 
 const createContactSchema = z.object({
   name: z.string().min(1),

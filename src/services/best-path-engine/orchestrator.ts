@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from "uuid";
 import { logger } from "@/infra/logger";
 import {
   DecisionPath,
-  PathScoring,
   BestPathAnalysis,
   PathReasoning,
   ConstraintSummary,
@@ -241,7 +240,6 @@ export class BestPathOrchestrator {
     path: DecisionPath,
     diagnosticData: Record<string, unknown>
   ): number {
-    const actionCount = path.actions?.length || 0;
     const durationFeasibility = Math.max(
       0,
       100 - (path.estimatedDuration || 0) / 1000

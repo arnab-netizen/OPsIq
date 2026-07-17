@@ -6,8 +6,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { NotFoundError } from "@/infra/errors";
-import { recordResult, analyzeOutcome, ExperimentLifecycleError } from "@/services/experiment/experiment-lifecycle.service";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { recordResult, analyzeOutcome } from "@/services/experiment/experiment-lifecycle.service";
 import { z } from "zod/v4";
 import type { Experiment } from "@/domain/experiment/experiment";
 

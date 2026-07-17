@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
+import { NotFoundError, ValidationError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";

@@ -1,7 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createEvidence, listEvidence } from "@/services/evidence";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";

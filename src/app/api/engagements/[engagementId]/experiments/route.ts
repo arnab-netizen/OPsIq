@@ -8,10 +8,8 @@
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   createExperiment,
-  ExperimentLifecycleError,
 } from "@/services/experiment/experiment-lifecycle.service";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";

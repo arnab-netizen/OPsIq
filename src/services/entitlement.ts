@@ -6,7 +6,6 @@
  * Mock-backed for non-DB environments.
  */
 
-import { z } from "zod";
 
 export enum SubscriptionTier {
   FREE = "free",
@@ -481,7 +480,6 @@ function getPeriod(): string {
  */
 export function resetQuota(workspaceId?: string): void {
   if (workspaceId) {
-    const period = getPeriod();
     const keysToDelete: string[] = [];
     quotaStore.forEach((_, key) => {
       if (key.startsWith(`${workspaceId}:`)) {

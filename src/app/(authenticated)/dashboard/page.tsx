@@ -23,30 +23,11 @@ const HEALTH_VARIANTS: Record<string, "default" | "success" | "warning" | "destr
   unknown: "muted",
 };
 
-const STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  draft: "muted",
-  active: "success",
-  paused: "warning",
-  completed: "default",
-  cancelled: "destructive",
-  archived: "muted",
-};
-
 const SEVERITY_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   low: "muted",
   medium: "warning",
   high: "warning",
   critical: "destructive",
-};
-
-const STATUS_BADGE_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  open: "warning",
-  in_progress: "warning",
-  completed: "success",
-  deferred: "muted",
-  resolved: "success",
-  active: "success",
-  blocked: "destructive",
 };
 
 async function fetchEngagements() {

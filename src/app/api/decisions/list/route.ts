@@ -5,7 +5,6 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
-    const userId = ctx.verifiedActorId;
 
     // Get filter from query params
     const status = ctx.request?.nextUrl.searchParams.get("status");

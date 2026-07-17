@@ -4,7 +4,7 @@
  */
 
 import { ensureStartupComplete } from "@/infra/startup-orchestrator";
-import { isStartupComplete, getStartupError } from "@/infra/startup-state";
+import { isStartupComplete } from "@/infra/startup-state";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const dynamic = "force-dynamic";

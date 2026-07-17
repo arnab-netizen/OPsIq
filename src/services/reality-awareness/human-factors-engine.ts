@@ -12,16 +12,13 @@ import {
   HumanFactorAssessment,
   HumanFactorProfile,
   HumanExecutionContext,
-  HUMAN_FACTORS,
   HumanFactorKey,
   HUMAN_FACTOR_LABELS,
-  HUMAN_FACTOR_DESCRIPTIONS,
   calculateHumanRiskScore,
   identifyCriticalFactors,
   validateHumanFactorProfile,
   prioritizeFactorsForIntervention,
   SeverityLevel,
-  SEVERITY_SCORES,
 } from "@/domain/reality/human-factors-model";
 
 import {

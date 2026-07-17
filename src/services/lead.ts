@@ -8,7 +8,6 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import type { LeadStatus } from "@/domain/constants/statuses";
-import { LEAD_STATUSES } from "@/domain/constants/statuses";
 import {
   optimisticUpdate,
   withVersionCheck,

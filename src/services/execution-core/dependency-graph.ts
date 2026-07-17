@@ -335,42 +335,6 @@ export class DependencyGraphBuilder {
   }
 
   /**
-   * Find longest path starting from action_id
-   */
-  private findLongestPath(
-    action_id: string,
-    execution_order: string[],
-    dependency_map: Record<string, string[]>,
-    visited: Set<string> = new Set()
-  ): string[] {
-    // Prevent infinite recursion in case of cycles
-    if (visited.has(action_id)) {
-      return [action_id];
-    }
-
-    visited.add(action_id);
-    const downstream = dependency_map[action_id] || [];
-
-    if (downstream.length === 0) {
-      return [action_id];
-    }
-
-    let longest: string[] = [action_id];
-    for (const next_action of downstream) {
-      const next_visited = new Set(visited);
-      const path = [
-        action_id,
-        ...this.findLongestPath(next_action, execution_order, dependency_map, next_visited),
-      ];
-      if (path.length > longest.length) {
-        longest = path;
-      }
-    }
-
-    return longest;
-  }
-
-  /**
    * Get downstream impact for specific action
    */
   getDownstreamImpact(

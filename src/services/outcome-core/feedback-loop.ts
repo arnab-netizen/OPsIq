@@ -1,6 +1,5 @@
 import { logger } from "@/infra/logger";
 import { FeedbackAction, FeedbackLoopInput, FeedbackLoopResult } from "@/domain/outcome/feedback";
-import { ReplanTrigger } from "@/domain/outcome/variance";
 
 export class FeedbackLoop {
   /**

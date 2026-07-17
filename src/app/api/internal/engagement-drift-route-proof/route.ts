@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { detectExecutionDrift } from "@/services/execution-drift/execution-drift.service";
-import { logger } from "@/infra/logger";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 interface DiagnosticResult {

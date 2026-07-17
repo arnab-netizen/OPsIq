@@ -1,11 +1,9 @@
 import { db } from "@/lib/db";
-import type { CanonicalAuthContext, ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
-import { hasInternalAccess } from "@/policies/capability-check";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { ValidationError } from "@/infra/errors";
 import { assessCondition } from "@/services/business-condition";
-import { logger } from "@/infra/logger";
 import { randomUUID } from "crypto";
 import type { InterventionPhase } from "@/domain/constants/statuses";
 import { DataValidationEngine } from "@/engines/DataValidationEngine";
@@ -108,12 +106,6 @@ function detectDataIssues(input: BusinessProblemInput): string[] {
   return issues;
 }
 
-function calculateConfidence(input: BusinessProblemInput, issues: string[]): "low" | "medium" | "high" {
-  if (issues.length >= 2) return "low";
-  if (issues.length === 1) return "medium";
-  return "high";
-}
-
 function calculateBusinessImpact(input: BusinessProblemInput): { monthlyLoss: number; riskLevel: "severe" | "moderate" } | null {
   if (!input.monthlyRevenue || !input.monthlyCosts) return null;
 
@@ -155,53 +147,6 @@ export function validateBusinessProblem(input: BusinessProblemInput): void {
 }
 
 // ─── Diagnosis Rules ───────────────────────────────────────────────────────
-
-function determinePrimaryCategory(mainIssue: string): string {
-  const categoryMap: Record<string, string> = {
-    low_sales: "revenue_generation",
-    high_costs: "cost_control",
-    cash_flow: "cash_flow_stability",
-    customer_retention: "customer_retention",
-    operations: "operational_efficiency",
-    unclear: "general_business_recovery",
-  };
-  return categoryMap[mainIssue] || "general_business_recovery";
-}
-
-function calculateSeverity(input: BusinessProblemInput): "low" | "medium" | "high" | "critical" {
-  // Rule: costs > 125% of revenue → critical
-  if (input.monthlyCosts && input.monthlyRevenue && input.monthlyCosts > input.monthlyRevenue * 1.25) {
-    return "critical";
-  }
-
-  // Rule: costs > revenue → high
-  if (input.monthlyCosts && input.monthlyRevenue && input.monthlyCosts > input.monthlyRevenue) {
-    return "high";
-  }
-
-  // Rule: low_sales with 0 or no customers → high
-  if (input.mainIssue === "low_sales" && (!input.customerCount || input.customerCount === 0)) {
-    return "high";
-  }
-
-  // Rule: cash_flow or high_costs main issue → high by default
-  if (input.mainIssue === "cash_flow" || input.mainIssue === "high_costs") {
-    return "high";
-  }
-
-  // Default
-  return "medium";
-}
-
-function determineInterventionPhase(severity: string): InterventionPhase {
-  const phaseMap: Record<string, InterventionPhase> = {
-    critical: "triage",
-    high: "stabilization",
-    medium: "recovery",
-    low: "growth",
-  };
-  return phaseMap[severity] || "triage";
-}
 
 function generateDiagnosisSummary(input: BusinessProblemInput, category: string, severity: string): string {
   const baseMsg = `${input.businessName} (${input.businessType}) faces a ${severity} ${category.replace(/_/g, " ")} issue.`;
@@ -701,16 +646,6 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
   // Use the verified auth context passed to diagnose function
   await assessCondition(conditionInput, authContext);
 
-  // Construct ServiceAuthEnvelope for service calls
-  const authEnvelope: ServiceAuthEnvelope = {
-    verifiedActorId: authContext.verifiedActorId,
-    verifiedActorType: authContext.verifiedActorType,
-    verifiedWorkspaceId: authContext.verifiedWorkspaceId,
-    verifiedCapabilities: authContext.verifiedCapabilities,
-    hasInternalAccess: authContext.policy ? hasInternalAccess(authContext.policy) : false,
-    verifiedActor: authContext.verifiedActor,
-  };
-
   // Atomic transaction: create all value-path records together
   // All IDs and timestamps prepared before entering transaction
   const transactionResult = await db.$transaction(async (tx: any): Promise<DiagnosisTransactionResult> => {
@@ -821,7 +756,6 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
   });
 
   const {
-    createdEvidenceItems,
     createdFindings,
     createdRecommendations,
     createdActions,

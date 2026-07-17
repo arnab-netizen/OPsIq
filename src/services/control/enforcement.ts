@@ -10,8 +10,6 @@ import { validateDependencies } from "@/services/control/variable-registry";
 import { isDataSufficient } from "@/services/control/recommendation";
 import { evaluateDecisionGate } from "@/services/control/decision-gate";
 import { evaluateGuardrails } from "@/services/control/guardrails";
-import { compareScenarios } from "@/services/control/scenario-comparison";
-import { DecisionResult } from "@/domain/decision/types";
 import { ScenarioComparison } from "@/services/control/scenario-comparison";
 
 export interface ControlLayerBypassError {

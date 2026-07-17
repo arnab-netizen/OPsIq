@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { MonitoringService } from "@/services/monitoring/monitoring.service";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";

@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { BadRequestError } from "@/infra/errors";
 import * as bcrypt from "bcryptjs";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
@@ -82,7 +81,7 @@ export const GET = async (request: NextRequest) => {
 
     // STEP 2: User table accessibility
     try {
-      const count = await db.user.count();
+      await db.user.count();
       result.user_table_accessible = true;
     } catch (e) {
       result.first_failing_step = "user_table_access";
@@ -94,7 +93,7 @@ export const GET = async (request: NextRequest) => {
 
     // STEP 3: Workspace table accessibility
     try {
-      const count = await db.workspace.count();
+      await db.workspace.count();
       result.workspace_table_accessible = true;
     } catch (e) {
       result.first_failing_step = "workspace_table_access";
@@ -106,7 +105,7 @@ export const GET = async (request: NextRequest) => {
 
     // STEP 4: WorkspaceMembership table accessibility
     try {
-      const count = await db.workspaceMembership.count();
+      await db.workspaceMembership.count();
       result.membership_table_accessible = true;
     } catch (e) {
       result.first_failing_step = "membership_table_access";
@@ -118,7 +117,7 @@ export const GET = async (request: NextRequest) => {
 
     // STEP 5: Session table accessibility
     try {
-      const count = await db.session.count();
+      await db.session.count();
       result.session_table_accessible = true;
     } catch (e) {
       result.first_failing_step = "session_table_access";
@@ -130,7 +129,7 @@ export const GET = async (request: NextRequest) => {
 
     // STEP 6: Audit table accessibility
     try {
-      const count = await db.auditEvent.count();
+      await db.auditEvent.count();
       result.audit_table_accessible = true;
     } catch (e) {
       result.audit_table_accessible = false;

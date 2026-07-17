@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { detectExecutionDrift } from "../execution-drift/execution-drift.service";
-import { calculateImpactDelta } from "../business-impact/impact-delta.service";
 import { computeDecisionConfidence } from "../decision-confidence/decision-confidence.service";
 import { captureDecisionSnapshot, type DecisionInput } from "../decision-determinism.service";
 

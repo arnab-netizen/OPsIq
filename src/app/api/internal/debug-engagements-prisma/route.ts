@@ -7,7 +7,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { extractSafePrismaError } from "@/infra/classified-error";
 import { logger } from "@/infra/logger";
 import { listEngagements } from "@/services/engagement";
@@ -61,9 +60,6 @@ export const GET = async (req: NextRequest) => {
 
     // Check if error is a ClassifiedApiError with safeDetails
     const classifiedError = error as any;
-    const hasServiceVersion = classifiedError.safeDetails?.engagementsServiceVersion;
-    const hasRouteVersion = classifiedError.safeDetails?.routeVersion;
-
     return NextResponse.json({
       status: "error",
       errorName: error instanceof Error ? error.name : "unknown",

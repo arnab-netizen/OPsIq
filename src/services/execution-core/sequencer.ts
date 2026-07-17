@@ -165,7 +165,6 @@ export class ExecutionSequencer {
       }
 
       // Check capacity per owner
-      const available_hours = owner_available_hours_per_day[owner] || 8;
       const total_effort = owner_steps.reduce((sum, s) => sum + s.effort_hours, 0);
 
       // Estimate working days needed (assume 8-hour workday if not specified)

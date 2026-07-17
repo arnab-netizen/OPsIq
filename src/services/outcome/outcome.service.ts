@@ -68,7 +68,7 @@ export async function recordOutcome(
 ): Promise<ActionOutcome> {
   // Idempotency check
   if (idempotencyKey && actorId) {
-    const { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } = await import(
+    const { checkIdempotencyKey, recordIdempotencyResponse: _recordIdempotencyResponse, recordIdempotencyError: _recordIdempotencyError } = await import(
       "@/services/idempotency"
     );
 
@@ -121,8 +121,6 @@ export async function recordOutcome(
   // Get previous snapshot if exists
   let predictedImpactLevel = "unknown";
   let predictedConfidence = 50;
-  let predictedLossINR: number | null = null;
-
   // SCHEMA fix: Action has no `outcomeSnapshot` column (only `metadata Json?`); the
   // previous code wrote/read a non-existent field and threw at runtime. Persist the
   // outcome snapshot under metadata.outcomeSnapshot instead.
@@ -138,9 +136,6 @@ export async function recordOutcome(
     }
     if (typeof snapshot.predictedConfidence === "number") {
       predictedConfidence = snapshot.predictedConfidence;
-    }
-    if (typeof snapshot.predictedLossINR === "number") {
-      predictedLossINR = snapshot.predictedLossINR;
     }
   }
 
@@ -304,7 +299,7 @@ export async function getEngagementOutcomes(engagementId: string, workspaceId: s
   });
 
   // Get engagement context for financial calculations
-  const [engagement, condition] = await Promise.all([
+  const [_engagement, condition] = await Promise.all([
     db.engagement.findUnique({ where: { id: engagementId, workspaceId } }),
     db.businessConditionProfile.findFirst({
       where: { engagementId, isCurrent: true, workspaceId },

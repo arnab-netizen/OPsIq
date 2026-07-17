@@ -34,13 +34,6 @@ const SEVERITY_VARIANTS: Record<string, "default" | "success" | "warning" | "des
   low: "muted",
 };
 
-const STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  identified: "muted",
-  validated: "warning",
-  prioritized: "warning",
-  resolved: "success",
-  dismissed: "muted",
-};
 
 export function FindingsManager({
   findings,
@@ -51,7 +44,7 @@ export function FindingsManager({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [updating, setUpdating] = useState<string | null>(null);
   const [createMode, setCreateMode] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [_editingId, _setEditingId] = useState<string | null>(null);
 
   // Form state for create/edit
   const [formData, setFormData] = useState({

@@ -6,8 +6,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { NotFoundError } from "@/infra/errors";
-import { startExperiment, ExperimentLifecycleError } from "@/services/experiment/experiment-lifecycle.service";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { startExperiment } from "@/services/experiment/experiment-lifecycle.service";
 import type { Experiment } from "@/domain/experiment/experiment";
 
 const experimentStore = new Map<string, Experiment>();

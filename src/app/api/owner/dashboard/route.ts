@@ -168,7 +168,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     const payload = await buildOwnerDashboardPayload(ctx, workspaceId, userId);
 
     // Emit audit event for dashboard view
-    const { db } = await import("@/lib/db");
+    const { db: _db } = await import("@/lib/db");
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OWNER_DASHBOARD_VIEWED,
       workspaceId,

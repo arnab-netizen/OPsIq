@@ -9,13 +9,11 @@
 
 import {
   AuditEvent,
-  AuditTrailQuery,
   validateAuditEvent,
 } from "@/domain/event-audit/event-audit-contracts";
 import {
   AuditTrailFilter,
   AuditTrailPage,
-  AuditTrailQueryParams,
   AuditStatistics,
   validateAuditTrailQuery,
   formatAuditEventForExport,

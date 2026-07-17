@@ -109,10 +109,6 @@ export async function getWorkspaceThresholds(
   }
 }
 
-interface ThresholdUpdate {
-  [key: string]: number;
-}
-
 export async function updateWorkspaceThresholds(
   workspaceId: string,
   updates: Partial<ThresholdConfig>,

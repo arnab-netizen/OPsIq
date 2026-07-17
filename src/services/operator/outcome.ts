@@ -6,11 +6,6 @@
  * Positive delta = better than expected, Negative delta = worse than expected
  */
 
-interface OutcomeDeltaInput {
-  expectedImpact: number | null;
-  actualOutcome: number | null;
-}
-
 interface OutcomeDeltaResult {
   delta: number | null;
   valid: boolean;

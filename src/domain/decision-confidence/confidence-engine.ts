@@ -137,7 +137,6 @@ export function calculateHistoricalAccuracyConfidence(history: DecisionHistory):
   }
 
   const successRate = (history.successfulDecisions / history.totalDecisions) * 100;
-  const consistencyFactor = history.consistencyScore / 100;
   const outcomeConsistency = Math.max(0, 100 - history.outcomeVariance);
 
   const score = successRate * 0.5 + history.consistencyScore * 0.3 + outcomeConsistency * 0.2;

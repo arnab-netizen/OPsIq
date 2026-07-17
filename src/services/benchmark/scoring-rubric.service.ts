@@ -14,7 +14,6 @@ import {
   RUBRIC_DEFINITIONS,
   scoreRecommendation,
   scoreMultipleRecommendations,
-  checkFailGates,
   validateScoringResult,
 } from "@/domain/benchmark/scoring-rubric";
 

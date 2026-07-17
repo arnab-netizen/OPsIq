@@ -17,7 +17,7 @@
 import type { CapabilityName } from "@/domain/constants/capabilities";
 import type { SessionInfo } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
-import { hasCapability, highestRole, hasInternalAccess } from "@/policies/capability-check";
+import { hasCapability, hasInternalAccess } from "@/policies/capability-check";
 import { resolveCanonicalCapabilities } from "@/lib/canonical-capability-resolver";
 import type { VerifiedWorkspaceId } from "@/lib/workspace-identity";
 

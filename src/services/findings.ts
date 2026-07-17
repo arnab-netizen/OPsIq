@@ -5,17 +5,8 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import {
-  FINDING_STATUSES,
-} from "@/domain/constants/statuses";
 import { triggerReEvaluation } from "@/services/re-evaluation";
-import { withIdempotency } from "@/infra/idempotency";
-import { logger } from "@/infra/logger";
-import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { randomUUID } from "crypto";
-import type {
-  FindingStatus,
-} from "@/domain/constants/statuses";
 
 export interface CreateFindingInput {
   engagementId: string;
@@ -135,15 +126,6 @@ export async function createFinding(
       `Invalid impact area: ${input.impactArea}. Must be one of: ${validImpacts.join(", ")}`
     );
   }
-
-  // Infer finding type from impact area
-  const findingTypeMap: Record<string, string> = {
-    revenue: "market",
-    cost: "operational",
-    execution: "operational",
-    risk: "technical",
-  };
-  const findingType = findingTypeMap[input.impactArea] || "technical";
 
   const finding = await db.finding.create({
     data: {
@@ -449,12 +431,10 @@ export async function linkEvidenceToFinding(
   maybeAuth?: ServiceAuthEnvelope
 ): Promise<{ id?: string; findingId: string; evidenceId: string }> {
   // Handle both calling conventions
-  let linkType: string | undefined;
   let auth: ServiceAuthEnvelope;
 
   if (typeof authOrLinkType === "string" && maybeAuth) {
     // New signature: linkEvidenceToFinding(findingId, evidenceId, linkType, auth)
-    linkType = authOrLinkType;
     auth = maybeAuth;
   } else if (typeof authOrLinkType === "object") {
     // Signature: linkEvidenceToFinding(findingId, evidenceId, auth)

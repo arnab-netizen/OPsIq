@@ -17,7 +17,7 @@ import { initializeInterventionState } from "@/services/intervention-state";
 import { computeEngagementHealth, enforceEngagementHealth } from "@/services/engagement-health";
 import { logger } from "@/infra/logger";
 import type { EngagementStatus, InterventionMode } from "@/domain/constants/statuses";
-import { ENGAGEMENT_STATUSES, INTERVENTION_MODES } from "@/domain/constants/statuses";
+import { INTERVENTION_MODES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import { assertCapability } from "@/services/entitlement.service";

@@ -32,8 +32,6 @@ export function assessTimeline(
   let total_estimated_days = 0;
 
   // Sequential estimate (worst case)
-  const total_sequential = estimated_duration_per_execution.reduce((a, b) => a + b, 0) / 60 / 8; // Convert minutes to days
-
   // Parallel estimate (best case if no dependencies)
   const parallel_days = (estimated_duration_per_execution.reduce((a, b) => a + b, 0) / 60 / 8) / Math.min(parallel_capability, execution_ids.length);
 

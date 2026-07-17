@@ -10,7 +10,6 @@
  */
 
 import { logger } from "@/infra/logger";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export type CriticalReadinessStatus = "READY" | "DEGRADED_NON_BLOCKING" | "FAILED_CRITICAL";
 

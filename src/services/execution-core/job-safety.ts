@@ -4,7 +4,6 @@ import {
   ExecutionJob,
   JobStatus,
   RetryPolicy,
-  JobExecutionResult,
   IdempotencyCheckResult,
   DEFAULT_RETRY_POLICY,
 } from "@/domain/execution/job";

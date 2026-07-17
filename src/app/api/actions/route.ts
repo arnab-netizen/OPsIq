@@ -1,8 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { canonicalJson } from "@/lib/canonical-json-response";
 import { checkWorkspaceRateLimit } from "@/middleware/rate-limit";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createAction, listActions } from "@/services/action";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { withIdempotency } from "@/infra/idempotency";
@@ -67,7 +65,7 @@ export const POST = withCanonicalEnforcement(
 
     const body = await parseRequestBody(ctx.request!, createActionSchema);
 
-    const { isNew, result } = await withIdempotency(
+    const { isNew: _isNew, result } = await withIdempotency(
       idempotencyKey,
       "action.create",
       async () => createAction(body, ctx, workspaceId),

@@ -45,13 +45,11 @@ export function detectFollowThroughRisks(
   context: FollowThroughContext
 ): FollowThroughIndicators {
   // Validate context
-  const teamSize = Math.max(1, context.teamSize || 1);
   const workloadPercent = Math.max(0, Math.min(100, context.currentWorkloadPercent || 75));
 
   let completionRate = 0.95; // Start optimistic
   let avgDelay = 0;
   let partialRate = 0;
-  let changeOrders = 0;
   let regressions = 0;
 
   // Analyze historical outcomes
@@ -72,22 +70,6 @@ export function detectFollowThroughRisks(
     });
     avgDelay = delays.reduce((a, b) => a + b, 0) / delays.length;
   }
-
-  // Team experience factor
-  const experienceMultiplier: Record<string, number> = {
-    junior: 1.5,
-    mid: 1.0,
-    senior: 0.7,
-    mixed: 1.1,
-  };
-
-  // Manager attention impacts follow-through
-  const managerMultiplier: Record<string, number> = {
-    low: 1.5,
-    medium: 1.0,
-    high: 0.8,
-    intensive: 0.6,
-  };
 
   // Workload impact
   const overcommitmentFactor = 1 + (workloadPercent - 70) / 100;

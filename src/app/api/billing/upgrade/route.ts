@@ -35,8 +35,6 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
   }
 
   // Authenticate (canonical enforcement wrapper ensures valid authenticated user)
-  const userId = ctx.verifiedSessionSnapshot.actorId;
-
   // Get workspaceId from verified context
   const workspaceId = ctx.verifiedWorkspaceId;
 

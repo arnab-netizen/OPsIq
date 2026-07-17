@@ -1,5 +1,4 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
 import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";

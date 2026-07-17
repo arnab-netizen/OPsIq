@@ -1,5 +1,5 @@
 import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { z, ZodError } from "zod/v4";
+import { ZodError } from "zod/v4";
 import { logger } from "@/infra/logger";
 import {
   decisionRequestContractSchema,

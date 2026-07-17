@@ -35,14 +35,6 @@ interface ActionData {
   blockerCount: number;
 }
 
-interface EngagementData {
-  id: string;
-  name: string;
-  status: string;
-  kpis: { onTrack: number; total: number };
-  actions: { completed: number; total: number };
-}
-
 interface HealthDataSnapshot {
   engagementId: string;
   status: "critical" | "at_risk" | "healthy" | "improving";
@@ -222,10 +214,6 @@ function determineOverallHealth(healthy: number, atRisk: number, critical: numbe
     return HealthStatus.IMPROVING;
   }
   return HealthStatus.HEALTHY;
-}
-
-function mapHealthStatus(status: string): "critical" | "at_risk" | "healthy" | "improving" {
-  return status as "critical" | "at_risk" | "healthy" | "improving";
 }
 
 function generateHealthRecommendation(status: string): string {

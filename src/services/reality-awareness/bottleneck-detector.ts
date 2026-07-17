@@ -5,7 +5,7 @@
  * Analyzes decision approval patterns, involvement frequency, and concentration risk.
  */
 
-import { HumanFactorAssessment, SeverityLevel, SEVERITY_LEVELS } from "@/domain/reality/human-factors-model";
+import { HumanFactorAssessment, SeverityLevel } from "@/domain/reality/human-factors-model";
 
 export interface BottleneckIndicators {
   ownerApprovalDelayDays: number; // Historical average for approval decisions

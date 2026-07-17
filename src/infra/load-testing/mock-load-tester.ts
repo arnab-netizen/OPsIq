@@ -262,7 +262,6 @@ export function executeLoadTest(config: LoadTestConfig): LoadTestResult {
   const totalBytes = requests.reduce((sum, r) => sum + r.responseSize, 0);
 
   // Create metric snapshots at intervals
-  const snapshotInterval = Math.max(1000, Math.ceil(config.duration / 10));
   const metricSnapshots: LoadTestMetrics[] = [];
 
   for (let i = 0; i < requests.length; i += Math.ceil(requests.length / 10)) {

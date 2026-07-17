@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ValidationError } from "@/infra/errors";
 
 export function requireIdempotencyKey(request: NextRequest, method: string): string {

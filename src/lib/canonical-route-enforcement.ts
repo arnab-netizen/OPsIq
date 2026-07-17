@@ -27,7 +27,6 @@ import type { PolicyContext } from "@/policies/capability-check";
 import { hasInternalAccess } from "@/policies/capability-check";
 import type { CapabilityName } from "@/domain/constants/capabilities";
 import { buildAuthState, evaluateAuthState, translateAuthDecisionToResponse } from "@/lib/canonical-auth-facts";
-import type { AuthDecision } from "@/lib/canonical-auth-facts";
 import { CanonicalTelemetryLifecycle } from "@/lib/canonical-telemetry-lifecycle";
 import { CanonicalExecutionTraceManager } from "@/lib/canonical-execution-trace";
 import { CanonicalVerifiedSessionBuilder } from "@/lib/canonical-verified-session";
@@ -35,7 +34,6 @@ import {
   classifyExecution,
   pushExecutionContext,
   popExecutionContext,
-  type ReentryClassification,
 } from "@/lib/execution-reentry-detector";
 import {
   initializeEnforcerForRequest,

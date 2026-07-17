@@ -6,12 +6,10 @@
  */
 
 import { randomUUID } from "crypto";
-import { z } from "zod";
 import {
   EvidenceRecord,
   Finding,
   FindingSchema,
-  detectContradictions,
   calculateEvidenceReliability,
 } from "@/domain/evidence/evidence";
 

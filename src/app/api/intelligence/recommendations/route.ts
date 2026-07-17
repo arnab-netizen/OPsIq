@@ -1,5 +1,4 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { generateRecommendation, generateMultipleRecommendations } from "@/services/intelligence/recommendation";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
 import { validateDependencies } from "@/services/control/variable-registry";

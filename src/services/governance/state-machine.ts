@@ -2,7 +2,6 @@ import {
   RecommendationState,
   StateTransition,
   ALLOWED_TRANSITIONS,
-  StateTransitionSchema,
 } from "../../domain/governance/governance-contracts";
 
 /**

@@ -11,8 +11,7 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
-import { getBusiness } from "@/services/founder-recovery/business.service";
+import { NotFoundError, ValidationError } from "@/infra/errors";
 
 export interface FactReviewAction {
   action: "approved" | "corrected" | "rejected" | "marked_unknown";

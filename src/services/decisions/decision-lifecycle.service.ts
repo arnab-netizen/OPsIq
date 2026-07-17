@@ -10,7 +10,6 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
-import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { captureOutcomeVerificationMetadata } from "@/services/outcome/verification";
 import { classifyOutcome } from "@/services/operator/outcome-classifier";
 import {
@@ -18,7 +17,6 @@ import {
   requireTransitionAllowed,
   requireExecutable,
   requireOutcomeRecordable,
-  requireTerminalOutcome,
   isTerminalState,
 } from "@/domain/decision-lifecycle";
 import {
@@ -252,7 +250,7 @@ export async function executeDecision(
 ): Promise<{ id: string; status: string }> {
   // Idempotency check
   if (idempotencyKey) {
-    const { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } = await import(
+    const { checkIdempotencyKey, recordIdempotencyResponse: _recordIdempotencyResponse, recordIdempotencyError: _recordIdempotencyError } = await import(
       "@/services/idempotency"
     );
 

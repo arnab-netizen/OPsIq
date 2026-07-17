@@ -3,11 +3,9 @@ import {
   CapacityCheckResult,
   CapacityCheckInput,
   ConcurrencyCheckResult,
-  ConcurrencyLimit,
   OwnerCapacity,
   CapacityAllocation,
   DEFAULT_HOURS_PER_WEEK,
-  DEFAULT_HOURS_PER_DAY,
   DEFAULT_MAX_CONCURRENT_ACTIONS,
 } from "@/domain/execution/capacity";
 
@@ -18,9 +16,6 @@ export class CapacityController {
   checkCapacity(input: CapacityCheckInput): CapacityCheckResult {
     const available_hours_per_week =
       input.available_hours_per_week || DEFAULT_HOURS_PER_WEEK;
-    const available_hours_per_day =
-      input.available_hours_per_day || DEFAULT_HOURS_PER_DAY;
-
     // Calculate currently allocated hours
     const current_allocations = input.current_allocations || [];
     const allocated_hours = current_allocations
@@ -91,11 +86,6 @@ export class CapacityController {
     available_hours_per_week: number = DEFAULT_HOURS_PER_WEEK
   ): OwnerCapacity {
     const owner_allocations = allocations.filter((a) => a.owner === owner);
-    const allocated_hours = owner_allocations.reduce(
-      (sum, a) => sum + a.effort_hours,
-      0
-    );
-
     return {
       owner,
       available_hours_per_week,

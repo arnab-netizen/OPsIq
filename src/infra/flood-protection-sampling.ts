@@ -35,8 +35,6 @@ interface SamplingBucket {
  */
 export class AdaptiveSamplingController {
   private escalationState: EscalationState = "NORMAL";
-  private escalationChangedAt: number = Date.now();
-
   // Rolling-window counters (memory-bounded)
   private buckets: SamplingBucket[] = [];
   private readonly BUCKET_WINDOW_MS = 1000; // 1-second buckets
@@ -310,7 +308,6 @@ export class AdaptiveSamplingController {
    */
   public reset(): void {
     this.escalationState = "NORMAL";
-    this.escalationChangedAt = Date.now();
     this.buckets = [];
     this.lastEscalationChange = 0;
     this.lastIncidentEmitted = {};

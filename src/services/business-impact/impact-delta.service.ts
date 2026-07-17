@@ -1,8 +1,6 @@
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
-import { generateBusinessImpact, type BusinessImpactResult } from "./business-impact.service";
-import { detectExecutionDrift } from "@/services/execution-drift/execution-drift.service";
-import { calculateExecutionCertainty } from "@/services/execution-certainty";
+import { generateBusinessImpact } from "./business-impact.service";
 
 export interface ImpactDeltaScenario {
   impactLevel: "low" | "medium" | "high" | "critical" | "existential";

@@ -12,7 +12,6 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { executionEnforcer } from "@/runtime/enforcement/execution-enforcer";
 import { runtimeMetricsCollector } from "@/runtime/metrics/runtime-metrics";
 import {
-  queueDurabilityEngine,
   QueueJob,
 } from "@/runtime/queue/queue-durability";
 import { createInfrastructureError } from "@/runtime/runtime-errors";

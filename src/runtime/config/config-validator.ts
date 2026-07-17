@@ -5,8 +5,6 @@
  * App must refuse unsafe startup.
  */
 
-import { z } from "zod";
-
 export interface ValidationError {
   field: string;
   message: string;
@@ -18,42 +16,6 @@ export interface ConfigValidationResult {
   errors: ValidationError[];
   warnings: ValidationError[];
 }
-
-const RuntimeConfigSchema = z.object({
-  // Core
-  NODE_ENV: z.enum(["development", "production", "test"]).default("production"),
-  PORT: z.coerce.number().int().positive().default(3000),
-
-  // Database
-  DATABASE_URL: z.string().url().optional(),
-
-  // Queue
-  QUEUE_URL: z.string().url().optional(),
-
-  // Security
-  JWT_SECRET: z.string().min(32).optional(),
-  ENCRYPTION_KEY: z.string().min(32).optional(),
-
-  // Services
-  STRIPE_API_KEY: z.string().optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),
-
-  // Observability
-  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
-  ENABLE_STRUCTURED_LOGGING: z.string().default("true").transform((v) => v === "true"),
-
-  // Limits
-  MAX_CONCURRENT_REQUESTS: z.coerce.number().int().positive().default(100),
-  MAX_QUEUE_SIZE: z.coerce.number().int().positive().default(1000),
-  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
-
-  // Health
-  HEALTH_CHECK_INTERVAL_MS: z.coerce.number().int().positive().default(10000),
-
-  // Deployment
-  DEPLOYMENT_ID: z.string().optional(),
-  DEPLOYMENT_TIMESTAMP: z.string().optional(),
-});
 
 class ConfigValidator {
   validateStartup(): ConfigValidationResult {

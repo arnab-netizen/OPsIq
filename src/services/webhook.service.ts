@@ -546,7 +546,7 @@ async function handleCheckoutSessionCompleted(event: StripeCheckoutSessionEvent)
     }
 
     // Validate plan and price ID
-    const priceId = await validatePlanAndGetPriceId(billingAccount.subscription.planId);
+    await validatePlanAndGetPriceId(billingAccount.subscription.planId);
 
     // Update subscription within transaction
     const updatedSubscription = await db.subscription.update({

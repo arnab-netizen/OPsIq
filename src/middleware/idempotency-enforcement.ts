@@ -221,7 +221,7 @@ export function withIdempotencyEnforcement(
     pendingOperations.set(scopedKey, operationPromise);
 
     // Create pending record
-    const record = await store.create(
+    await store.create(
       scopedKey,
       newRequest.url,
       payloadHash,

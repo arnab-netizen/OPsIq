@@ -4,7 +4,7 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
-import { NotFoundError, ConflictError, ValidationError } from "@/infra/errors";
+import { NotFoundError, ValidationError } from "@/infra/errors";
 import {
   optimisticUpdate,
   withVersionCheck,
@@ -198,8 +198,6 @@ export async function archiveClient(
 
 export async function getClientById(clientId: string, workspaceId: string, hasInternalAccess: boolean = false) {
   enforceWorkspaceId(workspaceId, "getClientById", "client_account");
-
-  const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
 
   // Scoped by workspaceId (DEC-TEN-01) — findFirst because {id, workspaceId} is not a
   // Prisma unique. `clientContacts` is the real relation name (was `contacts`); ClientContact

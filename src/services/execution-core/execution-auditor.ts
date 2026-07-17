@@ -3,7 +3,6 @@ import { logger } from "@/infra/logger";
 import {
   ExecutionAuditEvent,
   AuditEventInput,
-  AuditEventFilter,
   AuditEventQuery,
   AuditEventQueryResult,
   ExecutionOutcome,

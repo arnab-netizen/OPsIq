@@ -157,8 +157,6 @@ export class FunnelAnalyzer {
     // Analyze timings for bottlenecks
     stageTimings.forEach((timings, stage) => {
       const avgDelay = timings.reduce((a, b) => a + b, 0) / timings.length;
-      const maxDelay = Math.max(...timings);
-
       if (avgDelay > 86400000) {
         // More than 1 day average
         bottlenecks.push({

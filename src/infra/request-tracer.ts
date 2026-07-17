@@ -37,7 +37,6 @@ const completedTraces: RequestTrace[] = [];
 
 export class RequestTracer {
   private correlation_id: string;
-  private request_id: string;
   private trace: RequestTrace;
   private currentSpan?: TraceSpan;
   private logger: StructuredLogger;
@@ -50,7 +49,6 @@ export class RequestTracer {
     logger: StructuredLogger
   ) {
     this.correlation_id = correlation_id;
-    this.request_id = request_id;
     this.logger = logger;
 
     this.trace = {
@@ -130,7 +128,7 @@ export class RequestTracer {
     payload: any,
     start_latency?: number
   ): void {
-    const span_id = this.startSpan(`mutation:${type}`, {
+    this.startSpan(`mutation:${type}`, {
       mutation_type: type,
       idempotency_key,
     });

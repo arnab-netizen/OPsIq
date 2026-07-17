@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
 export interface DecisionValidationResult {

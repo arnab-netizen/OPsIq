@@ -35,7 +35,7 @@ export async function runCycle(
   actorId: string,
   workspaceId: string
 ) {
-  const business = await getBusiness(businessId, workspaceId);
+  await getBusiness(businessId, workspaceId);
   const snapshotRow = await getSnapshot(snapshotId, workspaceId);
   if (snapshotRow.businessId !== businessId) {
     throw new NotFoundError("OwnerMetricSnapshot", snapshotId);

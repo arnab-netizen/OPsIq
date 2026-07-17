@@ -2,7 +2,6 @@ import { createHash } from "crypto";
 import { DecisionResult } from "@/domain/decision/types";
 import {
   signDecisionAsymmetric,
-  AsymmetricSignaturePayload,
 } from "./asymmetric";
 
 const ENGINE_VERSION = "v1.0.0";

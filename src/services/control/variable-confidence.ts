@@ -6,7 +6,7 @@
  * All assessments are deterministic and fail-closed.
  */
 
-import { VariableDefinition, getRequiredVariables } from "./variable-registry";
+import { VariableDefinition } from "./variable-registry";
 
 export interface VariableState {
   key: string;

@@ -13,8 +13,6 @@
  * Exits 0 if all gates pass. Exits 1 if any gate fails.
  */
 
-import * as fs from "fs";
-import * as path from "path";
 import * as child_process from "child_process";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -380,11 +378,6 @@ gate("DC-11", "No new enforceWorkspaceScoping implementations", wsEnforceDefs, [
 
 // ─── gate 12: unregistered permission action strings ──────────────────────────
 
-const unregisteredPermActions = rgLines(
-  'hasPermission\\(.*["\'][a-z_]+["\']',
-  ["src"],
-  ["--glob", "*.ts", "--glob", "!*.test.*", "--glob", "!__tests__/*"]
-);
 // This is complex to check statically; flag as informational
 gate("DC-12", "All hasPermission() calls use WorkspaceAction union (checked at build time by TS)", [], []);
 

@@ -216,10 +216,7 @@ export function getGlobalMutationSpy(): MutationSpy {
  * Wraps Prisma client to detect mutations
  */
 export function hookDatabaseMutations(prismaClient: any): void {
-  const spy = getGlobalMutationSpy();
-
   const originalCreate = prismaClient.$executeRaw?.bind(prismaClient);
-  const originalUpdate = prismaClient.$executeRaw?.bind(prismaClient);
 
   // Simple hook: record all mutations
   // Real implementation would be more sophisticated
@@ -296,15 +293,6 @@ export function scanForPreAuthMutationViolations(code: string): {
   violations: { line: number; pattern: string; description: string }[];
 } {
   const violations: { line: number; pattern: string; description: string }[] = [];
-
-  // Pattern 1: Database write before auth check
-  const dbWriteBeforeAuthPattern = /(\w+)\.create\(|(\w+)\.update\(|(\w+)\.delete\(.*?\n.*?(?!.*auth|.*Auth)/g;
-
-  // Pattern 2: API call before auth check
-  const apiCallBeforeAuthPattern = /fetch\(|axios\.|\.post\(|\.put\(.*?\n.*?(?!.*auth|.*Auth)/g;
-
-  // Pattern 3: Queue emission before auth check
-  const queueEmitBeforeAuthPattern = /\.emit\(|\.publish\(|\.send\(.*?\n.*?(?!.*auth|.*Auth)/g;
 
   // Simple line-by-line scan (real implementation would use AST)
   const lines = code.split("\n");

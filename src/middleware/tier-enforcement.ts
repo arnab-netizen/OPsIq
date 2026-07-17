@@ -22,14 +22,6 @@ const quotaStore: Map<
 > = new Map();
 
 /**
- * Get month start timestamp (UTC).
- */
-function getMonthStart(): number {
-  const now = new Date();
-  return new Date(now.getUTCFullYear(), now.getUTCMonth(), 1).getTime();
-}
-
-/**
  * Get next month start timestamp (UTC).
  */
 function getNextMonthStart(): number {

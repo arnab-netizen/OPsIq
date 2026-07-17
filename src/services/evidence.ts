@@ -15,7 +15,6 @@ import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import type { EvidenceStatus } from "@/domain/constants/statuses";
-import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import { EventEmitterService } from "@/services/event-emitter";

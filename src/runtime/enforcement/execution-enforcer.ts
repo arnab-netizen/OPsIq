@@ -17,7 +17,6 @@ import { runtimeMetricsCollector } from "../metrics/runtime-metrics";
 import { runtimeHealthSystem } from "../health/health-system";
 import {
   createExecutionBlockedError,
-  createInfrastructureError,
 } from "../runtime-errors";
 
 export type ExecutionEventType =

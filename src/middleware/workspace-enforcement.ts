@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/services/auth";
 import { ForbiddenError } from "@/infra/errors";

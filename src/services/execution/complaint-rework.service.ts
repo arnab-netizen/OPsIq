@@ -14,7 +14,6 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
   planRecordEvent,
   buildComplaintReworkAnalysis,
-  OperationalEventType,
   type ComplaintReworkAnalysis,
   type OperationalEventRow,
   type LinkedProofRow,

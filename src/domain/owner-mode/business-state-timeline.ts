@@ -126,7 +126,6 @@ export interface BusinessTrendAnalysisResult {
   worseningMetrics: BusinessMetricName[];
 }
 
-const MIN_NOTES_LENGTH = 10;
 const MIN_METRICS_COUNT = 1;
 
 // BSTL-RULE-1: periodLabel must be provided
