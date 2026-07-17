@@ -11,6 +11,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { validateOwnerDashboardConfig, ActionQueuePriority, HealthStatus, OwnerDashboardConfig } from "@/domain/owner-mode/owner-dashboard";
 import { z } from "zod/v4";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 const configUpdateSchema = z.object({
   showCompletedActions: z.boolean().optional(),
@@ -88,7 +89,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       }
     );
   }
-}, { requireWorkspace: true, requireCapabilities: ["OWNER_VIEW"] });
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_VIEW] });
 
 export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   if (!ctx.request) {
@@ -179,4 +180,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       }
     );
   }
-}, { requireWorkspace: true, requireCapabilities: ["OWNER_MANAGE"] });
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_MANAGE] });

@@ -177,7 +177,7 @@ describe("PHASE G: Empirical Discipline Layer", () => {
       business_scope: ["SAAS"],
       segment_scope: ["ENTERPRISE"],
       maturity_scope: ["MATURE", "SCALING"],
-      expiry_date: new Date("2026-08-15"),
+      expiry_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days — always > 30-day stale threshold
       validation_status: "VALID",
       contradiction_refs: [],
       evidence_refs: ["evidence-123"],
