@@ -27,6 +27,7 @@ jobs:
       # This lane runs many real logins from one CI IP across its serial owner spec suite; raise the login rate-limit
       # ceiling for CI only (production default stays 10; the override is clamped to >= 10 so it can never weaken it).
       LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "200"
+      NODE_OPTIONS: "--max-old-space-size=4096"
     services:
       postgres:
         image: postgres:16
