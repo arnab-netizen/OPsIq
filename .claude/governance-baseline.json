@@ -51,7 +51,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/internal/debug-engagements-prisma/route.ts",
-      "line": 54,
+      "line": 53,
       "severity": "error",
       "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
       "reason": "internal diagnostic route; server-side error string, not operator-rendered"
@@ -69,7 +69,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/internal/engagements-api-runtime-trace/route.ts",
-      "line": 133,
+      "line": 124,
       "severity": "error",
       "code": "serviceError = error instanceof Error ? error.message : String(error);",
       "reason": "internal diagnostic route; server-side error string, not operator-rendered"
@@ -78,7 +78,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/internal/engagements-api-runtime-trace/route.ts",
-      "line": 212,
+      "line": 203,
       "severity": "error",
       "code": "message: error instanceof Error ? error.message : String(error),",
       "reason": "internal diagnostic route; server-side error string, not operator-rendered"
@@ -114,7 +114,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/internal/signup-proof/route.ts",
-      "line": 169,
+      "line": 168,
       "severity": "error",
       "code": "result.safe_error_message = error instanceof Error ? error.message : \"Unknown error\";",
       "reason": "internal diagnostic route; server-side error string, not operator-rendered"
@@ -168,7 +168,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/infra/critical-readiness.ts",
-      "line": 66,
+      "line": 65,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error);",
       "reason": "infra error classification/logging; not operator-rendered"
@@ -177,7 +177,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/infra/critical-readiness.ts",
-      "line": 83,
+      "line": 82,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error);",
       "reason": "infra error classification/logging; not operator-rendered"
@@ -186,7 +186,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/infra/critical-readiness.ts",
-      "line": 94,
+      "line": 93,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error);",
       "reason": "infra error classification/logging; not operator-rendered"
@@ -195,7 +195,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/infra/critical-readiness.ts",
-      "line": 117,
+      "line": 116,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error),",
       "reason": "infra error classification/logging; not operator-rendered"
@@ -204,7 +204,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 402,
+      "line": 400,
       "severity": "error",
       "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -213,7 +213,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 735,
+      "line": 733,
       "severity": "error",
       "code": "const errorMessage = error instanceof Error ? error.message : String(error);",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -222,7 +222,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 752,
+      "line": 750,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error),",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -231,7 +231,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 818,
+      "line": 816,
       "severity": "error",
       "code": "errorMessage: error instanceof Error ? error.message : String(error),",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
