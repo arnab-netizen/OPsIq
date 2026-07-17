@@ -1,5 +1,5 @@
 /**
- * DELETE /api/owner/policies/:policyId/overrides/:overrideId — revoke an active policy override.
+ * DELETE /api/owner/policies/:policyKey/overrides/:overrideId — revoke an active policy override.
  *
  * Idempotent: revoking an already-revoked override returns 200 without error.
  * Requires OWNER_MANAGE capability.
