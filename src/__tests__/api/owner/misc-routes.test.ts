@@ -99,7 +99,7 @@ vi.mock("@/lib/canonical-route-enforcement", () => ({
   },
 }));
 
-vi.mock("@/lib/db", () => ({ db: {} }));
+vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
 
 vi.mock("@/services/founder-recovery/business.service", () => ({
   listBusinesses: mocks.listBusinesses,

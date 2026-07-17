@@ -1,6 +1,6 @@
 #!/usr/bin/env npx ts-node
 /**
- * A7.7 Prevention Gates — 19 recurrence-prevention checks
+ * A7.7 Prevention Gates — 20 recurrence-prevention checks
  *
  * Run: npx ts-node scripts/a77-prevention-gates.ts
  * CI:  npm run governance:scan:a77
@@ -131,6 +131,7 @@ const ALLOWLISTS: Record<string, string[]> = {
     "src/services/owner-mode/process-execution-bridge.service.ts",
     "src/services/owner-mode/reassessment-event.service.ts",
     "src/services/owner-mode/validation-outcome.service.ts",
+    "src/services/governance/operating-policy.service.ts", // Phase 7 Governed Operating Policy Registry — direct audit writes for policy governance events
   ],
 
   // DC-06: logAuditEvent callers — migration complete (A7.7 Batch 14)
@@ -468,6 +469,45 @@ const rawAuditErrorLog = rgLines(
 );
 gate("DC-18", "No raw auditError in console.error (use classifyOperatorError for sanitization)", rawAuditErrorLog, []);
 
+// ─── gate 20: vi.mock("@/lib/db") factories must export getDbInstance ─────────
+// vitest.setup.ts:29 dynamically imports getDbInstance from "@/lib/db" when
+// TEST_WITH_DB=true. Any vi.mock factory that omits getDbInstance causes the
+// entire test file to fail in Main Integration (TEST_WITH_DB=true) while
+// silently passing LANE_A (TEST_WITH_DB=false). This is the Class F defect
+// (root cause of PR #237 post-merge Main Integration failure, 2026-07-17).
+// Correct factory: vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }))
+
+const TEST_FILE_GLOBS = [
+  "--glob", "*.test.ts",
+  "--glob", "*.test.tsx",
+  "--glob", "*.spec.ts",
+  "--glob", "*.spec.tsx",
+];
+// __ignored_tests__ files are excluded from vitest and are not subject to
+// the Main Integration contract — filter them in JS since rg glob exclusions
+// are unreliable when combined with positive glob includes.
+const isIgnoredTestPath = (f: string) =>
+  normalize(f).includes("__ignored_tests__");
+const dbMockFiles = rg(
+  'vi\\.mock\\(["\']@/lib/db["\']',
+  ["src"],
+  TEST_FILE_GLOBS
+).filter((f) => !isIgnoredTestPath(f));
+const filesWithGetDbInstance = new Set(
+  rg("getDbInstance", ["src"], TEST_FILE_GLOBS)
+    .filter((f) => !isIgnoredTestPath(f))
+    .map(normalize)
+);
+const missingGetDbInstance = dbMockFiles.filter(
+  (f) => !filesWithGetDbInstance.has(normalize(f))
+);
+gate(
+  "DC-20",
+  "All vi.mock('@/lib/db') factories must export getDbInstance (vitest.setup.ts contract)",
+  missingGetDbInstance,
+  [] // No exceptions: every db mock factory requires getDbInstance
+);
+
 // ─── gate 19: .catch() on emitAuditEvent in write-path handlers ──────────────
 // Post-mutation audit calls must be fail-closed. Only read-path (GET) handlers
 // may use .catch() on emitAuditEvent (fail-open intentional for read paths).
@@ -494,7 +534,7 @@ gate("DC-19", "No .catch() on emitAuditEvent in write-path handlers (fail-closed
 // ─── report ───────────────────────────────────────────────────────────────────
 
 console.log("\n╔════════════════════════════════════════════════════════════╗");
-console.log("║       A7.7 PREVENTION GATES — SCAN REPORT (19 gates)      ║");
+console.log("║       A7.7 PREVENTION GATES — SCAN REPORT (20 gates)      ║");
 console.log("╚════════════════════════════════════════════════════════════╝\n");
 
 let failures = 0;
