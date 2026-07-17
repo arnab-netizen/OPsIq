@@ -117,15 +117,12 @@ test.describe("46 — owner cockpit UI (desktop, one login)", () => {
     expect(await bcGroup.evaluate((n) => (n as HTMLDetailsElement).open)).toBe(false);
     await bcGroup.locator("summary").click();
     expect(await bcGroup.evaluate((n) => (n as HTMLDetailsElement).open)).toBe(true);
-    // Either a nodata message OR at least one derived field renders — never raw DB field names or undefined
-    const hasNoData = (await page.locator('[data-testid="cockpit-condition-nodata"]').count()) > 0;
-    if (!hasNoData) {
-      // At least one known dimension should be visible
-      const conditionCells = page.locator('[data-testid^="cockpit-condition-cash"],'
-        + '[data-testid^="cockpit-condition-margin"],'
-        + '[data-testid^="cockpit-condition-execution"]');
-      expect(await conditionCells.count()).toBeGreaterThan(0);
-    }
+    // Phase 1 Reality Engine proof: seed-e2e-business-condition.ts seeds cashflowState=CRITICAL for this
+    // workspace → cashPressureLevel must derive to "CRITICAL" and render in the BC panel.
+    // If this cell is absent, the seed failed or the derivation regressed — the test must fail.
+    const cashCell = page.locator('[data-testid="cockpit-condition-cashPressureLevel"]');
+    await expect(cashCell).toBeVisible({ timeout: 5000 });
+    await expect(cashCell).toContainText(/critical/i);
     // No "undefined" text anywhere in the section
     const text = await bcGroup.innerText();
     expect(text).not.toMatch(/\bundefined\b/i);

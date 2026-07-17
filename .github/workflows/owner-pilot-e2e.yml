@@ -73,6 +73,7 @@ jobs:
           npx tsx scripts/seed-e2e-owner-pilot.ts
           npx tsx scripts/seed-e2e-proof-risk.ts
           npx tsx scripts/seed-e2e-opportunity.ts
+          npx tsx scripts/seed-e2e-business-condition.ts
       - name: Start app
         run: |
           PORT=3001 npm run start > /tmp/app.log 2>&1 &
