@@ -266,6 +266,163 @@ export async function getEffectiveBusinessConditionProfile(
 }
 
 /**
+ * Phase 1 — Reality Engine: pure signal derivation.
+ *
+ * Maps the snapshot scalars that assembleGuidanceContext already reads into the 11
+ * risk-dimension strings stored on BusinessConditionProfile. No DB query — pure
+ * deterministic mapping so callers can derive inline without a second round-trip.
+ *
+ * When a source signal is genuinely absent (zero across the board with no financial data),
+ * the field stays "unknown" — never fabricated.
+ */
+
+const CONDITION_STATE_TO_PRESSURE: Record<string, string> = {
+  INSOLVENT_RISK: "CRITICAL",
+  CRITICAL: "CRITICAL",
+  AT_RISK: "HIGH",
+  WATCH: "MEDIUM",
+  SAFE: "LOW",
+};
+
+export interface BusinessConditionSignalInputs {
+  cashState?: string | null;
+  finState?: string | null;
+  cashRunwayDays: number;
+  supplierInventoryRiskScore: number;
+  ownerLoadPct: number;
+  staffOverloadPct: number;
+  ownerOverloaded: boolean;
+  staffOverloaded: boolean;
+  capacityUtilizationPct: number;
+  complaintsCount: number;
+  reworkCount: number;
+  overdueProofCount: number;
+  outcomeChecksDue: number;
+  churnRiskScore: number;
+  growthReadinessTier: string;
+}
+
+export interface DerivedBusinessConditionSignals {
+  cashPressureLevel: string;
+  marginPressureLevel: string;
+  clientConcentrationRisk: string;
+  ownerDependencyRisk: string;
+  keyPersonDependencyRisk: string;
+  processMaturityLevel: string;
+  managementMaturityLevel: string;
+  executionCapacityLevel: string;
+  moralFragilityLevel: string;
+  resilienceLevel: string;
+  growthReadinessLevel: string;
+}
+
+export function deriveBusinessConditionSignals(
+  input: BusinessConditionSignalInputs,
+): DerivedBusinessConditionSignals {
+  const {
+    cashState, finState, cashRunwayDays, supplierInventoryRiskScore,
+    ownerLoadPct, staffOverloadPct, ownerOverloaded, staffOverloaded,
+    capacityUtilizationPct, complaintsCount, reworkCount, overdueProofCount,
+    outcomeChecksDue, churnRiskScore, growthReadinessTier,
+  } = input;
+
+  const hasFinancialData = cashState != null || finState != null;
+
+  const cashPressureLevel = cashState
+    ? (CONDITION_STATE_TO_PRESSURE[cashState] ?? "unknown")
+    : "unknown";
+
+  const marginPressureLevel = finState
+    ? (CONDITION_STATE_TO_PRESSURE[finState] ?? "unknown")
+    : "unknown";
+
+  // Client concentration proxy: churn risk score. High churn → repeat-customer base is thin →
+  // likely high concentration on new-client acquisition.
+  const clientConcentrationRisk =
+    churnRiskScore >= 0.7 ? "HIGH"
+    : churnRiskScore >= 0.4 ? "MEDIUM"
+    : churnRiskScore >= 0.1 ? "LOW"
+    : "unknown";
+
+  // Owner dependency: bottleneck flag is the primary signal; daily load % is secondary.
+  const ownerDependencyRisk =
+    ownerOverloaded ? "HIGH"
+    : ownerLoadPct >= 0.85 ? "HIGH"
+    : ownerLoadPct >= 0.55 ? "MEDIUM"
+    : ownerLoadPct > 0 ? "LOW"
+    : "unknown";
+
+  // Key-person dependency: staff utilisation is the proxy for single-point-of-failure risk.
+  const keyPersonDependencyRisk =
+    staffOverloaded ? "HIGH"
+    : staffOverloadPct >= 0.9 ? "HIGH"
+    : staffOverloadPct >= 0.65 ? "MEDIUM"
+    : staffOverloadPct > 0 ? "LOW"
+    : "unknown";
+
+  // Process maturity: inverted defect count. More complaints/rework → lower maturity.
+  const processMaturityLevel =
+    complaintsCount >= 5 || reworkCount >= 5 ? "LOW"
+    : complaintsCount >= 2 || reworkCount >= 2 ? "MEDIUM"
+    : hasFinancialData ? "HIGH"
+    : "unknown";
+
+  // Management maturity: governance compliance proxy. Overdue proofs + unresolved outcome checks.
+  const managementMaturityLevel =
+    overdueProofCount >= 3 || outcomeChecksDue >= 5 ? "LOW"
+    : overdueProofCount >= 1 || outcomeChecksDue >= 2 ? "MEDIUM"
+    : hasFinancialData ? "HIGH"
+    : "unknown";
+
+  // Execution capacity: headroom remaining (inverted utilisation).
+  const executionCapacityLevel =
+    capacityUtilizationPct >= 95 ? "CRITICAL"
+    : capacityUtilizationPct >= 85 ? "LOW"
+    : capacityUtilizationPct >= 65 ? "MEDIUM"
+    : capacityUtilizationPct > 0 ? "HIGH"
+    : "unknown";
+
+  // Morale fragility: staff overload + churn together signal a fragile culture.
+  const moralFragilityLevel =
+    staffOverloaded && churnRiskScore >= 0.5 ? "HIGH"
+    : staffOverloaded || churnRiskScore >= 0.5 ? "MEDIUM"
+    : churnRiskScore >= 0.2 || staffOverloadPct > 0 ? "LOW"
+    : "unknown";
+
+  // Resilience: composite of three independent dimensions — cash runway, supply stability, staffing headroom.
+  const cashResil: number | null = cashRunwayDays >= 60 ? 1 : cashRunwayDays >= 30 ? 0.5 : cashRunwayDays > 0 ? 0 : null;
+  const supplResil = supplierInventoryRiskScore <= 0.25 ? 1 : supplierInventoryRiskScore <= 0.5 ? 0.5 : 0;
+  const staffResil = !staffOverloaded && !ownerOverloaded ? 1 : staffOverloaded && ownerOverloaded ? 0 : 0.5;
+  const resilienceScore = cashResil === null ? null : (cashResil + supplResil + staffResil) / 3;
+  const resilienceLevel =
+    resilienceScore === null ? "unknown"
+    : resilienceScore >= 0.75 ? "HIGH"
+    : resilienceScore >= 0.45 ? "MEDIUM"
+    : "LOW";
+
+  // Growth readiness: the growth gate result is the authoritative signal.
+  const growthReadinessLevel =
+    growthReadinessTier === "GROWTH_READY" ? "HIGH"
+    : cashPressureLevel === "CRITICAL" ? "BLOCKED"
+    : cashRunwayDays > 0 ? "LOW"
+    : "unknown";
+
+  return {
+    cashPressureLevel,
+    marginPressureLevel,
+    clientConcentrationRisk,
+    ownerDependencyRisk,
+    keyPersonDependencyRisk,
+    processMaturityLevel,
+    managementMaturityLevel,
+    executionCapacityLevel,
+    moralFragilityLevel,
+    resilienceLevel,
+    growthReadinessLevel,
+  };
+}
+
+/**
  * B12-S3: Get profile history for engagement (all versions).
  * Enforces workspace isolation.
  */

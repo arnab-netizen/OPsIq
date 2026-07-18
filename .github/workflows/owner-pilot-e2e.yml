@@ -8,7 +8,7 @@ name: Owner Pilot Browser + Mobile E2E
 
 on:
   push:
-    branches: ["claude/opsiq-owner-pilot-readiness-isow0m", "claude/opsiq-ai-supervisor-minimal-audit"]
+    branches: ["claude/opsiq-owner-pilot-readiness-isow0m", "claude/opsiq-ai-supervisor-minimal-audit", "claude/opsiq-completion-roadmap-omaxc2"]
   workflow_dispatch:
 
 jobs:
@@ -27,6 +27,7 @@ jobs:
       # This lane runs many real logins from one CI IP across its serial owner spec suite; raise the login rate-limit
       # ceiling for CI only (production default stays 10; the override is clamped to >= 10 so it can never weaken it).
       LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "200"
+      NODE_OPTIONS: "--max-old-space-size=4096"
     services:
       postgres:
         image: postgres:16
@@ -73,6 +74,7 @@ jobs:
           npx tsx scripts/seed-e2e-owner-pilot.ts
           npx tsx scripts/seed-e2e-proof-risk.ts
           npx tsx scripts/seed-e2e-opportunity.ts
+          npx tsx scripts/seed-e2e-business-condition.ts
       - name: Start app
         run: |
           PORT=3001 npm run start > /tmp/app.log 2>&1 &

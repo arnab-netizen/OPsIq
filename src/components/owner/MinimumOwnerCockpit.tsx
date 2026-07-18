@@ -20,6 +20,7 @@ import { Badge } from "@/ui/primitives";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
+import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -72,6 +73,10 @@ export interface MinimumOwnerCockpitProps {
   recovery?: OwnerRecoveryStatusResponse | null;
   /** Read-only public-signal ("Outside signals") projection (PASS 39). Rendered as a collapsed low-load section. */
   publicSignals?: OwnerPublicSignalsResponse | null;
+  /** Read-only derived business condition signals from the now-view. Rendered as a collapsed risk panel. */
+  businessCondition?: DerivedBusinessConditionSignals | null;
+  /** When true, the confidence score for the source data was capped — signals may be stale. */
+  dataFreshnessWeak?: boolean | null;
   /** When provided, the cockpit becomes interactive; the server re-checks every action. */
   onAction?: (taskKey: string, action: string, input: CockpitActionInput) => void;
   busy?: boolean;
@@ -143,6 +148,81 @@ function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsRespons
   );
 }
 
+const RISK_VARIANT = (level: string): "destructive" | "warning" | "default" | "muted" =>
+  level === "CRITICAL" || level === "HIGH" ? "destructive"
+  : level === "MEDIUM" ? "warning"
+  : level === "LOW" || level === "HIGH" ? "default"
+  : "muted";
+
+const RISK_LEVEL_LABEL: Record<string, string> = {
+  CRITICAL: "Critical", HIGH: "High", MEDIUM: "Medium", LOW: "Low",
+  BLOCKED: "Blocked", HIGH_GROWTH: "Growth-ready", unknown: "—",
+};
+
+const CONDITION_FIELD_LABEL: Record<keyof DerivedBusinessConditionSignals, string> = {
+  cashPressureLevel: "Cash pressure",
+  marginPressureLevel: "Margin pressure",
+  clientConcentrationRisk: "Client concentration",
+  ownerDependencyRisk: "Owner dependency",
+  keyPersonDependencyRisk: "Key-person dependency",
+  processMaturityLevel: "Process maturity",
+  managementMaturityLevel: "Management maturity",
+  executionCapacityLevel: "Execution capacity",
+  moralFragilityLevel: "Morale fragility",
+  resilienceLevel: "Resilience",
+  growthReadinessLevel: "Growth readiness",
+};
+
+const CONDITION_FIELD_ORDER: (keyof DerivedBusinessConditionSignals)[] = [
+  "cashPressureLevel", "marginPressureLevel", "resilienceLevel", "growthReadinessLevel",
+  "ownerDependencyRisk", "keyPersonDependencyRisk", "clientConcentrationRisk",
+  "executionCapacityLevel", "processMaturityLevel", "managementMaturityLevel", "moralFragilityLevel",
+];
+
+function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition: DerivedBusinessConditionSignals; dataFreshnessWeak?: boolean | null }) {
+  const knownFields = CONDITION_FIELD_ORDER.filter((k) => condition[k] !== "unknown");
+  const unknownCount = CONDITION_FIELD_ORDER.length - knownFields.length;
+  const worstLevel = CONDITION_FIELD_ORDER
+    .map((k) => condition[k])
+    .reduce<string>((worst, level) => {
+      const rank: Record<string, number> = { CRITICAL: 4, BLOCKED: 3, HIGH: 3, MEDIUM: 2, LOW: 1, unknown: 0 };
+      return (rank[level] ?? 0) > (rank[worst] ?? 0) ? level : worst;
+    }, "LOW");
+
+  return (
+    <details data-testid="cockpit-business-condition-group" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+        Business condition
+        <span style={{ fontWeight: 400, color: "#6b7280" }}> — highest risk: {RISK_LEVEL_LABEL[worstLevel] ?? worstLevel}</span>
+      </summary>
+      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+        {knownFields.length === 0 ? (
+          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-condition-nodata">No business condition data available yet — add cashflow and workload records to enable this panel.</p>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "4px 12px" }}>
+            {knownFields.map((k) => (
+              <span key={k} style={{ display: "flex", gap: 6, alignItems: "center" }} data-testid={`cockpit-condition-${k}`}>
+                <Badge variant={RISK_VARIANT(condition[k])}>{RISK_LEVEL_LABEL[condition[k]] ?? condition[k]}</Badge>
+                <span style={{ color: "#374151" }}>{CONDITION_FIELD_LABEL[k]}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        {unknownCount > 0 && (
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }} data-testid="cockpit-condition-missing">
+            {unknownCount} dimension{unknownCount > 1 ? "s" : ""} need more data to assess.
+          </p>
+        )}
+        {dataFreshnessWeak && (
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#b45309", fontStyle: "italic" }} data-testid="cockpit-condition-stale">
+            Data confidence is low — some signals may be stale. Update cashflow and workload records for a fresh assessment.
+          </p>
+        )}
+      </div>
+    </details>
+  );
+}
+
 /** Read-only recovery status — a concise, collapsed summary (PASS 37). NOT a second cockpit. */
 function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }) {
   const inProgress = recovery.recoveryStatus !== "NONE";
@@ -186,7 +266,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, onAction, busy = false }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -440,6 +520,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* Outside signals — read-only, collapsed low-load public-signal summary (PASS 39). */}
       {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
+
+      {/* Business condition — read-only, derived risk-dimension panel (Phase 1 Reality Engine). */}
+      {businessCondition && <BusinessConditionSection condition={businessCondition} dataFreshnessWeak={dataFreshnessWeak} />}
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
       <details data-testid="cockpit-proof-drawer" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>

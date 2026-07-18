@@ -67,6 +67,7 @@ import type { OperationalEventAgingSummary } from "@/domain/execution/operationa
 import type { ReusedHashAnalysis } from "@/domain/execution/reused-hash-precheck";
 import { clearsFinding, isFindingSuppressed, AdjudicationSourceType } from "@/domain/execution/proof-risk-adjudication";
 import type { ProofRiskAdjudicationView } from "@/services/execution/proof-risk-adjudication.service";
+import { deriveBusinessConditionSignals, type DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -443,6 +444,12 @@ export interface OwnerNowViewPayload {
    * Null when no policies have been seeded (new workspace before first policy evaluation).
    */
   operatingPolicySummary: { activePolicies: number; policyKeys: string[] } | null;
+  /**
+   * Derived Business Condition Signals — the 11 risk-dimension fields derived from the
+   * snapshot data already read during Now View synthesis. Never "unknown" when the source
+   * records exist; "unknown" only when no supporting data is available for that dimension.
+   */
+  derivedBusinessCondition: DerivedBusinessConditionSignals | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -700,8 +707,8 @@ export async function assembleGuidanceContext(
     complaintsCount: complaints,
     reworkCount: rework,
     capacityUtilizationPct: cap ? cap.bottleneckUtilization * 100 : 0,
-    staffOverloadPct: emp?.utilizationPct ?? 0,
-    ownerLoadPct: own?.dailyLoadPct ?? 0,
+    staffOverloadPct: (emp?.utilizationPct ?? 0) / 100,
+    ownerLoadPct: (own?.dailyLoadPct ?? 0) / 100,
     churnRiskScore,
     supplierInventoryRiskScore: supplierRiskScore,
     overdueProofCount,
@@ -1416,6 +1423,26 @@ export async function getOwnerNowView(
     ? { activePolicies: activePolicies.length, policyKeys: activePolicies.map((p) => p.policyKey) }
     : null;
 
+  // Derive the 11 business-condition risk dimensions from snapshot data already in memory.
+  // Pure function — no extra DB query. Produces "unknown" only when the source record was absent.
+  const derivedBusinessCondition = deriveBusinessConditionSignals({
+    cashState: raw.cashState,
+    finState: raw.finState,
+    cashRunwayDays: state.cashRunwayDays,
+    supplierInventoryRiskScore: state.supplierInventoryRiskScore,
+    ownerLoadPct: state.ownerLoadPct,
+    staffOverloadPct: state.staffOverloadPct,
+    ownerOverloaded: ctx.ownerOverloaded,
+    staffOverloaded: ctx.staffOverloaded,
+    capacityUtilizationPct: state.capacityUtilizationPct,
+    complaintsCount: state.complaintsCount,
+    reworkCount: state.reworkCount,
+    overdueProofCount: state.overdueProofCount,
+    outcomeChecksDue: state.outcomeChecksDue,
+    churnRiskScore: state.churnRiskScore,
+    growthReadinessTier: state.growthReadinessTier,
+  });
+
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
@@ -1435,7 +1462,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalTrajectory, operatingPolicySummary };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalTrajectory, operatingPolicySummary, derivedBusinessCondition };
 }
 
 /**

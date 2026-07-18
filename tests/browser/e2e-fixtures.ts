@@ -24,3 +24,9 @@ export const E2E_WORKSPACE_ID = "20000000-0000-0000-0000-0000000000e2";
 /** A proof-required delegated task with NO accepted proof → completion is server-rejected. */
 export const E2E_PROOF_BLOCKED_TASK_ID = "40000000-0000-0000-0000-0000000000e2";
 export const E2E_PROOF_REQUIREMENT_ID = "41000000-0000-0000-0000-0000000000e2";
+
+/**
+ * Dedicated BC probe business in the E2E workspace. Seeded by seed-e2e-business-condition.ts
+ * with ownerCashflowCycle.cashflowState="CRITICAL" so spec 46 can assert cashPressureLevel=CRITICAL.
+ */
+export const E2E_BC_PROBE_BUSINESS_ID = "30000000-0000-0000-0000-0000000000bc";

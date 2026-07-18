@@ -56,8 +56,8 @@ vi.mock("@/services/governance/operating-policy.service", () => ({
 
 import { GET as listGet } from "@/app/api/owner/policies/route";
 import { GET as policyGet, PATCH as policyPatch } from "@/app/api/owner/policies/[policyKey]/route";
-import { POST as overridePost } from "@/app/api/owner/policies/[policyId]/overrides/route";
-import { DELETE as overrideDelete } from "@/app/api/owner/policies/[policyId]/overrides/[overrideId]/route";
+import { POST as overridePost } from "@/app/api/owner/policies/[policyKey]/overrides/route";
+import { DELETE as overrideDelete } from "@/app/api/owner/policies/[policyKey]/overrides/[overrideId]/route";
 import { NotFoundError } from "@/infra/errors";
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -172,11 +172,11 @@ describe("[policies] GET+PATCH /api/owner/policies/:policyKey — static enforce
   });
 });
 
-// ─── 3. Static enforcement — POST /api/owner/policies/:policyId/overrides ────
+// ─── 3. Static enforcement — POST /api/owner/policies/:policyKey/overrides ────
 
-describe("[policies] POST /api/owner/policies/:policyId/overrides — static enforcement", () => {
+describe("[policies] POST /api/owner/policies/:policyKey/overrides — static enforcement", () => {
   const src = fs.readFileSync(
-    path.resolve(__dirname, "../../../app/api/owner/policies/[policyId]/overrides/route.ts"),
+    path.resolve(__dirname, "../../../app/api/owner/policies/[policyKey]/overrides/route.ts"),
     "utf8"
   );
 
@@ -212,9 +212,9 @@ describe("[policies] POST /api/owner/policies/:policyId/overrides — static enf
 
 // ─── 4. Static enforcement — DELETE .../overrides/:overrideId ────────────────
 
-describe("[policies] DELETE /api/owner/policies/:policyId/overrides/:overrideId — static enforcement", () => {
+describe("[policies] DELETE /api/owner/policies/:policyKey/overrides/:overrideId — static enforcement", () => {
   const src = fs.readFileSync(
-    path.resolve(__dirname, "../../../app/api/owner/policies/[policyId]/overrides/[overrideId]/route.ts"),
+    path.resolve(__dirname, "../../../app/api/owner/policies/[policyKey]/overrides/[overrideId]/route.ts"),
     "utf8"
   );
 
@@ -389,9 +389,9 @@ describe("[policies] PATCH /api/owner/policies/:policyKey — handler", () => {
   });
 });
 
-// ─── 8. POST /api/owner/policies/:policyId/overrides — handler behaviour ─────
+// ─── 8. POST /api/owner/policies/:policyKey/overrides — handler behaviour ─────
 
-describe("[policies] POST /api/owner/policies/:policyId/overrides — handler", () => {
+describe("[policies] POST /api/owner/policies/:policyKey/overrides — handler", () => {
   const VALID_REASON = "Cash constraint prevents standard payback timeline this quarter";
 
   it("declares OWNER_MANAGE capability and requireWorkspace", () => {
@@ -401,19 +401,22 @@ describe("[policies] POST /api/owner/policies/:policyId/overrides — handler", 
   });
 
   it("returns overrideId wrapped in overrideId key with status 201", async () => {
+    mocks.getPolicy.mockResolvedValue(SAMPLE_POLICY);
     mocks.createOverride.mockResolvedValue("override-uuid-1");
-    const res = await overridePost(makeCtx({ reason: VALID_REASON }), { policyId: "pol-id-1" });
+    const res = await overridePost(makeCtx({ reason: VALID_REASON }), { policyKey: SAMPLE_POLICY.policyKey });
     const body = getBody(res);
     expect(body.overrideId).toBe("override-uuid-1");
     expect((res as CanonicalJsonResponse).status).toBe(201);
   });
 
-  it("calls createOverride with policyId from params, workspaceId and actorId from ctx", async () => {
+  it("calls createOverride with policy.id from getPolicy lookup, workspaceId and actorId from ctx", async () => {
+    mocks.getPolicy.mockResolvedValue(SAMPLE_POLICY);
     mocks.createOverride.mockResolvedValue("override-uuid-2");
-    await overridePost(makeCtx({ reason: VALID_REASON }, "ws-SPECIFIC"), { policyId: "pol-id-99" });
+    await overridePost(makeCtx({ reason: VALID_REASON }, "ws-SPECIFIC"), { policyKey: SAMPLE_POLICY.policyKey });
+    expect(mocks.getPolicy).toHaveBeenCalledWith("ws-SPECIFIC", SAMPLE_POLICY.policyKey);
     expect(mocks.createOverride).toHaveBeenCalledWith(
       expect.objectContaining({
-        policyId: "pol-id-99",
+        policyId: SAMPLE_POLICY.id,
         workspaceId: "ws-SPECIFIC",
         overriddenBy: ACTOR,
         reason: VALID_REASON,
@@ -423,54 +426,65 @@ describe("[policies] POST /api/owner/policies/:policyId/overrides — handler", 
 
   it("rejects reason shorter than 10 characters", async () => {
     await expect(
-      overridePost(makeCtx({ reason: "short" }), { policyId: "pol-id-1" })
+      overridePost(makeCtx({ reason: "short" }), { policyKey: SAMPLE_POLICY.policyKey })
     ).rejects.toThrow();
     expect(mocks.createOverride).not.toHaveBeenCalled();
   });
 
   it("rejects missing reason field", async () => {
     await expect(
-      overridePost(makeCtx({ context: { note: "no reason" } }), { policyId: "pol-id-1" })
+      overridePost(makeCtx({ context: { note: "no reason" } }), { policyKey: SAMPLE_POLICY.policyKey })
     ).rejects.toThrow();
     expect(mocks.createOverride).not.toHaveBeenCalled();
   });
 
   it("rejects reason exceeding 1000 characters", async () => {
     await expect(
-      overridePost(makeCtx({ reason: "x".repeat(1001) }), { policyId: "pol-id-1" })
+      overridePost(makeCtx({ reason: "x".repeat(1001) }), { policyKey: SAMPLE_POLICY.policyKey })
     ).rejects.toThrow();
     expect(mocks.createOverride).not.toHaveBeenCalled();
   });
 
   it("accepts valid reason with optional context record", async () => {
+    mocks.getPolicy.mockResolvedValue(SAMPLE_POLICY);
     mocks.createOverride.mockResolvedValue("override-with-ctx");
     await expect(
       overridePost(
         makeCtx({ reason: VALID_REASON, context: { approvedBy: "cfo", ticket: "FIN-123" } }),
-        { policyId: "pol-id-1" }
+        { policyKey: SAMPLE_POLICY.policyKey }
       )
     ).resolves.toBeDefined();
   });
 
   it("rejects unknown body fields", async () => {
     await expect(
-      overridePost(makeCtx({ reason: VALID_REASON, unauthorizedField: true }), { policyId: "pol-id-1" })
+      overridePost(makeCtx({ reason: VALID_REASON, unauthorizedField: true }), { policyKey: SAMPLE_POLICY.policyKey })
     ).rejects.toThrow();
   });
 
-  it("workspace isolation: workspaceId always from ctx, policyId from params only", async () => {
+  it("throws NotFoundError and does not call createOverride when policy key is not found", async () => {
+    mocks.getPolicy.mockResolvedValue(null);
+    await expect(
+      overridePost(makeCtx({ reason: VALID_REASON }), { policyKey: "nonexistent_key" })
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(mocks.createOverride).not.toHaveBeenCalled();
+  });
+
+  it("workspace isolation: workspaceId and policyKey from verified ctx, policyId from getPolicy lookup only", async () => {
+    mocks.getPolicy.mockResolvedValue(SAMPLE_POLICY);
     mocks.createOverride.mockResolvedValue("override-isolation");
-    await overridePost(makeCtx({ reason: VALID_REASON }, "ws-ISOLATED"), { policyId: "pol-id-isolated" });
+    await overridePost(makeCtx({ reason: VALID_REASON }, "ws-ISOLATED"), { policyKey: SAMPLE_POLICY.policyKey });
+    expect(mocks.getPolicy).toHaveBeenCalledWith("ws-ISOLATED", SAMPLE_POLICY.policyKey);
     const callArg = mocks.createOverride.mock.calls[0][0];
     expect(callArg.workspaceId).toBe("ws-ISOLATED");
-    expect(callArg.policyId).toBe("pol-id-isolated");
+    expect(callArg.policyId).toBe(SAMPLE_POLICY.id);
     expect(callArg.overriddenBy).toBe(ACTOR);
   });
 });
 
-// ─── 9. DELETE /api/owner/policies/:policyId/overrides/:overrideId ───────────
+// ─── 9. DELETE /api/owner/policies/:policyKey/overrides/:overrideId ──────────
 
-describe("[policies] DELETE /api/owner/policies/:policyId/overrides/:overrideId — handler", () => {
+describe("[policies] DELETE /api/owner/policies/:policyKey/overrides/:overrideId — handler", () => {
   it("declares OWNER_MANAGE capability and requireWorkspace", () => {
     const opts = (overrideDelete as unknown as { __options?: { requireCapabilities?: string[]; requireWorkspace?: boolean } }).__options;
     expect(opts?.requireCapabilities).toContain("owner:manage");
@@ -479,7 +493,7 @@ describe("[policies] DELETE /api/owner/policies/:policyId/overrides/:overrideId 
 
   it("returns { revoked: true } with status 200", async () => {
     mocks.revokeOverride.mockResolvedValue(undefined);
-    const res = await overrideDelete(makeCtx(), { policyId: "pol-id-1", overrideId: "ovr-uuid-1" });
+    const res = await overrideDelete(makeCtx(), { policyKey: SAMPLE_POLICY.policyKey, overrideId: "ovr-uuid-1" });
     const body = getBody(res);
     expect(body.revoked).toBe(true);
     expect((res as CanonicalJsonResponse).status).toBe(200);
@@ -487,20 +501,20 @@ describe("[policies] DELETE /api/owner/policies/:policyId/overrides/:overrideId 
 
   it("calls revokeOverride with overrideId from params, workspaceId and actorId from ctx", async () => {
     mocks.revokeOverride.mockResolvedValue(undefined);
-    await overrideDelete(makeCtx({}, "ws-SPECIFIC"), { policyId: "pol-id-1", overrideId: "ovr-to-revoke" });
+    await overrideDelete(makeCtx({}, "ws-SPECIFIC"), { policyKey: SAMPLE_POLICY.policyKey, overrideId: "ovr-to-revoke" });
     expect(mocks.revokeOverride).toHaveBeenCalledWith("ovr-to-revoke", "ws-SPECIFIC", ACTOR);
   });
 
   it("workspace isolation: workspaceId always from ctx, overrideId from params only", async () => {
     mocks.revokeOverride.mockResolvedValue(undefined);
-    await overrideDelete(makeCtx({}, "ws-REAL"), { policyId: "pol-id-1", overrideId: "ovr-A" });
+    await overrideDelete(makeCtx({}, "ws-REAL"), { policyKey: SAMPLE_POLICY.policyKey, overrideId: "ovr-A" });
     expect(mocks.revokeOverride).toHaveBeenCalledWith("ovr-A", "ws-REAL", ACTOR);
   });
 
   it("cross-workspace call uses caller workspace, not any other", async () => {
     mocks.revokeOverride.mockResolvedValue(undefined);
-    await overrideDelete(makeCtx({}, "ws-ALICE"), { policyId: "pol-id-1", overrideId: "ovr-B" });
-    await overrideDelete(makeCtx({}, "ws-BOB"), { policyId: "pol-id-1", overrideId: "ovr-B" });
+    await overrideDelete(makeCtx({}, "ws-ALICE"), { policyKey: SAMPLE_POLICY.policyKey, overrideId: "ovr-B" });
+    await overrideDelete(makeCtx({}, "ws-BOB"), { policyKey: SAMPLE_POLICY.policyKey, overrideId: "ovr-B" });
     expect(mocks.revokeOverride.mock.calls[0][1]).toBe("ws-ALICE");
     expect(mocks.revokeOverride.mock.calls[1][1]).toBe("ws-BOB");
   });

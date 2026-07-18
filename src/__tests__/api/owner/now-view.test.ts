@@ -38,12 +38,27 @@ function makeCtx(rawUrl: string, workspaceId = "ws-1") {
   } as const;
 }
 
+const DERIVED_BC_SAMPLE = {
+  cashPressureLevel: "CRITICAL",
+  marginPressureLevel: "HIGH",
+  clientConcentrationRisk: "MEDIUM",
+  ownerDependencyRisk: "HIGH",
+  keyPersonDependencyRisk: "MEDIUM",
+  processMaturityLevel: "LOW",
+  managementMaturityLevel: "LOW",
+  executionCapacityLevel: "CRITICAL",
+  moralFragilityLevel: "HIGH",
+  resilienceLevel: "LOW",
+  growthReadinessLevel: "BLOCKED",
+};
+
 const sample = {
-  view: { workspaceId: "ws-1", classification: "GUIDANCE_READY", topOwnerActions: [], actionsToAvoid: [] },
+  view: { workspaceId: "ws-1", classification: "GUIDANCE_READY", topOwnerActions: [], actionsToAvoid: [], confidenceCapped: false },
   whatChanged: [],
   beginnerExplanation: { whatToDoFirst: [], whatNotToDo: [] },
   stepByStep: [],
   generatedFromLiveData: true,
+  derivedBusinessCondition: DERIVED_BC_SAMPLE,
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -79,5 +94,31 @@ describe("[module41] GET /api/owner/now-view", () => {
     mocks.getOwnerNowView.mockResolvedValue(sample);
     await GET(makeCtx("https://x/api/owner/now-view", "ws-1"));
     expect(mocks.getOwnerNowView.mock.calls[0][1]).toBeNull();
+  });
+
+  it("serializes derivedBusinessCondition with all 11 canonical fields", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as typeof sample;
+    expect(res.derivedBusinessCondition).toBeDefined();
+    const bc = res.derivedBusinessCondition!;
+    const VALID_LEVELS = new Set(["LOW", "MEDIUM", "HIGH", "CRITICAL", "BLOCKED", "unknown"]);
+    const fields = [
+      "cashPressureLevel", "marginPressureLevel", "clientConcentrationRisk",
+      "ownerDependencyRisk", "keyPersonDependencyRisk", "processMaturityLevel",
+      "managementMaturityLevel", "executionCapacityLevel", "moralFragilityLevel",
+      "resilienceLevel", "growthReadinessLevel",
+    ] as const;
+    for (const f of fields) {
+      expect(bc).toHaveProperty(f);
+      expect(VALID_LEVELS.has(bc[f as keyof typeof bc] as string)).toBe(true);
+    }
+    expect(bc.cashPressureLevel).toBe("CRITICAL");
+    expect(bc.growthReadinessLevel).toBe("BLOCKED");
+  });
+
+  it("serializes null derivedBusinessCondition without crashing", async () => {
+    mocks.getOwnerNowView.mockResolvedValue({ ...sample, derivedBusinessCondition: null });
+    const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as { derivedBusinessCondition: null };
+    expect(res.derivedBusinessCondition).toBeNull();
   });
 });

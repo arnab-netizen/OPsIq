@@ -14,6 +14,7 @@ import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner
 import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
+import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -50,6 +51,8 @@ export default function OwnerCockpitPage() {
   const [avoid, setAvoid] = useState<string[]>([]);
   const [recovery, setRecovery] = useState<OwnerRecoveryStatusResponse | null>(null);
   const [publicSignals, setPublicSignals] = useState<OwnerPublicSignalsResponse | null>(null);
+  const [businessCondition, setBusinessCondition] = useState<DerivedBusinessConditionSignals | null>(null);
+  const [dataFreshnessWeak, setDataFreshnessWeak] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -63,6 +66,8 @@ export default function OwnerCockpitPage() {
       setBridge((data.processExecution as ProcessExecutionBridgeView) ?? null);
       const avoidList = (data?.view?.actionsToAvoid as AvoidItem[] | undefined) ?? [];
       setAvoid(avoidList.map((a) => a.avoid ?? "").filter(Boolean));
+      setBusinessCondition((data.derivedBusinessCondition as DerivedBusinessConditionSignals) ?? null);
+      setDataFreshnessWeak((data?.view as { confidenceCapped?: boolean } | undefined)?.confidenceCapped ?? false);
       // Read-only recovery status (best-effort; a failure here must not break the cockpit).
       const rec = await apiGet("/api/owner/recovery-status").catch(() => null);
       setRecovery(rec && typeof rec === "object" && "recoveryStatus" in rec ? (rec as OwnerRecoveryStatusResponse) : null);
@@ -116,7 +121,7 @@ export default function OwnerCockpitPage() {
         <Button onClick={() => void load()} disabled={busy}>Refresh</Button>
       </header>
       {message && <p data-testid="cockpit-message" style={{ margin: 0, fontSize: 13, color: "#374151" }}>{message}</p>}
-      <MinimumOwnerCockpit bridge={bridge} actionsToAvoid={avoid} recovery={recovery} publicSignals={publicSignals} onAction={onAction} busy={busy} />
+      <MinimumOwnerCockpit bridge={bridge} actionsToAvoid={avoid} recovery={recovery} publicSignals={publicSignals} businessCondition={businessCondition} dataFreshnessWeak={dataFreshnessWeak} onAction={onAction} busy={busy} />
     </main>
   );
 }
