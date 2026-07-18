@@ -592,16 +592,12 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         <div data-testid="cockpit-policy-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: 14, fontWeight: 600 }}>Operating policies</span>
-            {policyAttentionSignal.triggeredBlockCount > 0 && (
-              <span data-testid="cockpit-policy-triggered-blocks" style={{ fontSize: 12, color: "#b91c1c", fontWeight: 600 }}>
-                {policyAttentionSignal.triggeredBlockCount} blocked
-              </span>
-            )}
-            {policyAttentionSignal.triggeredWarningCount > 0 && (
-              <span data-testid="cockpit-policy-triggered-warnings" style={{ fontSize: 12, color: "#b45309" }}>
-                {policyAttentionSignal.triggeredWarningCount} warning{policyAttentionSignal.triggeredWarningCount > 1 ? "s" : ""}
-              </span>
-            )}
+            <span data-testid="cockpit-policy-triggered-blocks" style={{ fontSize: 12, color: policyAttentionSignal.triggeredBlockCount > 0 ? "#b91c1c" : "#6b7280", fontWeight: policyAttentionSignal.triggeredBlockCount > 0 ? 600 : 400 }}>
+              {policyAttentionSignal.triggeredBlockCount} blocked
+            </span>
+            <span data-testid="cockpit-policy-triggered-warnings" style={{ fontSize: 12, color: policyAttentionSignal.triggeredWarningCount > 0 ? "#b45309" : "#6b7280" }}>
+              {policyAttentionSignal.triggeredWarningCount} warning{policyAttentionSignal.triggeredWarningCount !== 1 ? "s" : ""}
+            </span>
           </div>
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
             {policyAttentionSignal.details.map((d, i) => (
