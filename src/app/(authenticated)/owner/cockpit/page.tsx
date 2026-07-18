@@ -15,7 +15,7 @@ import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntel
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
-import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem } from "@/services/owner-guidance/owner-now-view.service";
+import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, OwnerExecutionLifecycleView } from "@/services/owner-guidance/owner-now-view.service";
 import type { DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
@@ -63,6 +63,7 @@ export default function OwnerCockpitPage() {
   const [trendAlerts, setTrendAlerts] = useState<TrendAlert[] | null>(null);
   const [doNotRepeatAnnotation, setDoNotRepeatAnnotation] = useState<DoNotRepeatAnnotation | null>(null);
   const [activeEscalations, setActiveEscalations] = useState<EscalationAttentionItem[] | null>(null);
+  const [executionLifecycle, setExecutionLifecycle] = useState<OwnerExecutionLifecycleView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,6 +85,7 @@ export default function OwnerCockpitPage() {
       setTrendAlerts(Array.isArray(data.trendAlerts) ? (data.trendAlerts as TrendAlert[]) : null);
       setDoNotRepeatAnnotation((data.doNotRepeatAnnotation as DoNotRepeatAnnotation) ?? null);
       setActiveEscalations(Array.isArray(data.activeEscalations) ? (data.activeEscalations as EscalationAttentionItem[]) : null);
+      setExecutionLifecycle((data.executionLifecycle as OwnerExecutionLifecycleView) ?? null);
       // Read-only recovery status (best-effort; a failure here must not break the cockpit).
       const rec = await apiGet("/api/owner/recovery-status").catch(() => null);
       setRecovery(rec && typeof rec === "object" && "recoveryStatus" in rec ? (rec as OwnerRecoveryStatusResponse) : null);
@@ -107,6 +109,10 @@ export default function OwnerCockpitPage() {
       if (input.evidenceRefs?.length) body.evidenceRefs = input.evidenceRefs;
       if (input.reason) body.reason = input.reason;
       if (input.delegateToRole) body.delegateToRole = input.delegateToRole;
+      // Phase 3 action fields
+      if (input.progressPct != null) body.progressPct = input.progressPct;
+      if (input.stage) body.stage = input.stage;
+      if (input.outcomeStatus) body.outcomeStatus = input.outcomeStatus;
       const { ok, data } = await apiPost("/api/owner/process-execution", body);
       if (!ok) {
         setMessage(data?.error?.message || data?.error?.code || data?.error || "Action was not allowed.");
@@ -189,6 +195,7 @@ export default function OwnerCockpitPage() {
         onAction={onAction}
         onStartWork={onStartWork}
         onAcknowledgeEscalation={onAcknowledgeEscalation}
+        executionLifecycle={executionLifecycle}
         busy={busy}
       />
     </main>

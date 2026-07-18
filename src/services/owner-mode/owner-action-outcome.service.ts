@@ -64,6 +64,9 @@ export interface RecordOwnerActionOutcomeInput {
   evidenceQuality?: EvidenceQuality;
   externalEventFlag?: boolean;
   externalEventDescription?: string;
+  // Phase 3 — task linkage
+  taskKey?: string | null;
+  taskType?: "process_execution" | "delegated" | null;
 }
 
 export interface OwnerActionOutcomeRecord {
@@ -149,6 +152,8 @@ export async function recordOwnerActionOutcome(
       evidenceQuality: input.evidenceQuality ?? null,
       externalEventFlag: input.externalEventFlag ?? false,
       externalEventDescription: input.externalEventDescription ?? null,
+      taskKey: input.taskKey ?? null,
+      taskType: input.taskType ?? null,
     },
   });
 

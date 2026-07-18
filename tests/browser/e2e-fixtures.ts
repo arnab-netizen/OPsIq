@@ -44,3 +44,14 @@ export const E2E_ESCALATION_ID       = "50000000-0000-0000-0000-000000000001";
 
 /** OwnerCapacitySnapshot with bottleneckUtilization=0.92 to trigger growth_before_capacity policy. */
 export const E2E_ATTN_CAPACITY_ID    = "83000000-0000-0000-0000-000000000001";
+
+// ─── Phase 3 Execution Lifecycle fixtures (seed-e2e-phase3.ts) ──────────────
+
+/** OwnerBusiness for Phase 3 E2E: laundry/dry-cleaning, used in RECORD_OUTCOME. */
+export const E2E_PHASE3_BUSINESS_ID = "90000000-0000-0000-0000-000000000090";
+
+/** ProcessExecutionTask in PROPOSED status: used to test ACKNOWLEDGE → inExecution journey. */
+export const E2E_PHASE3_TASK_ID     = "91000000-0000-0000-0000-000000000091";
+
+/** Stable taskKey matching E2E_PHASE3_TASK_ID — used in data-testid assertions. */
+export const E2E_PHASE3_TASK_KEY    = "phase3_e2e_cash_flow_action";

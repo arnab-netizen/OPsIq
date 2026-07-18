@@ -26,6 +26,14 @@ interface TaskRow {
   requiredEvidence: string[]; evidenceRefs: string[]; completionCriteria: string; reassessmentTrigger: string;
   riskIfIgnored: string; ownerVisibleSummary: string; severity: string; priorityRank: number; notes: string | null;
   completedByUserId: string | null; completedByRole: string | null; completedAt: Date | null; reassessmentId: string | null;
+  // Phase 3 fields
+  outcomeId: string | null;
+  outcomeRecordedAt: Date | null;
+  acknowledgedAt: Date | null;
+  workStartedAt: Date | null;
+}
+interface ProgressDelegate {
+  create(a: { data: Record<string, unknown> }): Promise<{ id: string }>;
 }
 interface PETDelegate {
   findFirst(a: { where: Record<string, unknown>; select?: Record<string, boolean> }): Promise<TaskRow | null>;
@@ -37,9 +45,14 @@ interface AuditDelegate { create(a: { data: Record<string, unknown> }): Promise<
 interface OwnerBusinessDelegate {
   findFirst(a: { where: { id: string; workspaceId: string }; select?: { id: true } }): Promise<{ id: string } | null>;
 }
-interface PETTx { processExecutionTask: Pick<PETDelegate, "create" | "updateMany" | "findFirst">; auditEvent: AuditDelegate }
+interface PETTx {
+  processExecutionTask: Pick<PETDelegate, "create" | "updateMany" | "findFirst">;
+  processExecutionTaskProgress: ProgressDelegate;
+  auditEvent: AuditDelegate;
+}
 export interface ProcessBridgeDb extends PETTx {
   processExecutionTask: PETDelegate;
+  processExecutionTaskProgress: ProgressDelegate;
   /** Workspace-scoped business lookup — validates a supplied businessId belongs to the workspace (PASS 25). */
   ownerBusiness: OwnerBusinessDelegate;
   $transaction<T>(fn: (tx: PETTx) => Promise<T>): Promise<T>;
@@ -244,10 +257,12 @@ export async function completeProcessTask(
 
 export type ProcessExecutionAction =
   | "START" | "APPROVE" | "REJECT" | "DELEGATE" | "SUBMIT_EVIDENCE" | "COMPLETE"
-  | "REQUEST_REASSESSMENT" | "MARK_BLOCKED" | "REQUEST_MISSING_DATA";
+  | "REQUEST_REASSESSMENT" | "MARK_BLOCKED" | "REQUEST_MISSING_DATA"
+  // Phase 3
+  | "ACKNOWLEDGE" | "RECORD_PROGRESS" | "RECORD_OUTCOME" | "VERIFY_OUTCOME";
 
-/** Terminal statuses — no further transition is allowed. */
-const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["COMPLETED", "REJECTED"]);
+/** Terminal statuses — no further transition is allowed (except via early-exit paths). */
+const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["REJECTED", "OUTCOME_VERIFIED", "CANCELLED"]);
 /** Routes that can never be started/approved/completed/delegated (they are display/blocked, not tasks). */
 const NON_ACTIONABLE_ROUTES: ReadonlySet<ExecutionRoute> = new Set(["MONITOR_ONLY", "BLOCK_UNSAFE_ACTION"]);
 
@@ -262,9 +277,13 @@ export interface ProcessActionInput {
   reason?: string | null;
   delegateToRole?: "MANAGER" | "STAFF" | null;
   outcomeNotes?: string | null;
+  // Phase 3 fields
+  progressPct?: number | null;
+  stage?: string | null;
+  outcomeStatus?: string | null;
 }
 export type ProcessActionResult =
-  | { ok: true; taskId: string; status: string; reassessmentId?: string | null }
+  | { ok: true; taskId: string; status: string; reassessmentId?: string | null; outcomeId?: string | null; progressRecordId?: string | null; verificationClassification?: string | null }
   | { ok: false; reason: string; code: ProcessActionCode };
 
 /** True when this task's material decision is owner-only (owner-approval or an unsafe/never-auto action). */
@@ -292,6 +311,178 @@ export async function applyProcessExecutionAction(
   const task = await deps.db.processExecutionTask.findFirst({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey } });
   if (!task) return { ok: false, reason: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" };
   const route = task.executionRoute as ExecutionRoute;
+
+  // ── Phase 3: ACKNOWLEDGE ──────────────────────────────────────────────────
+  if (input.action === "ACKNOWLEDGE") {
+    // Idempotent: if already ACKNOWLEDGED or further along, succeed without mutation
+    const PAST_ACKNOWLEDGE: ReadonlySet<string> = new Set(["ACKNOWLEDGED", "IN_PROGRESS", "BLOCKED", "NEEDS_DATA", "COMPLETED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED", "APPROVED", "DELEGATED"]);
+    if (PAST_ACKNOWLEDGE.has(task.status)) {
+      return { ok: true, taskId: task.id, status: task.status };
+    }
+    if (task.status !== "PROPOSED") {
+      return { ok: false, reason: `Cannot acknowledge a task with status ${task.status}.`, code: "INVALID_TRANSITION" };
+    }
+    const now = deps.now();
+    await deps.db.$transaction(async (tx) => {
+      await tx.processExecutionTask.updateMany({
+        where: { workspaceId: input.workspaceId, taskKey: input.taskKey, status: "PROPOSED" },
+        data: { status: "ACKNOWLEDGED", acknowledgedAt: now, acknowledgedByUserId: input.actorId ?? null, updatedAt: now },
+      });
+      await tx.auditEvent.create({
+        data: {
+          id: deps.uuid(), workspaceId: input.workspaceId, eventName: AUDIT_EVENTS.OWNER_PROCESS_EXECUTION_TASK_ACKNOWLEDGED,
+          actorId: input.actorId ?? null, actorType: input.actorId ? "user" : "system",
+          entityType: "process_execution_task", entityId: task.id,
+          payload: { taskKey: input.taskKey, fromStatus: "PROPOSED", toStatus: "ACKNOWLEDGED" },
+          visibility: "internal", occurredAt: now,
+        },
+      });
+    });
+    return { ok: true, taskId: task.id, status: "ACKNOWLEDGED" };
+  }
+
+  // ── Phase 3: RECORD_PROGRESS ─────────────────────────────────────────────
+  if (input.action === "RECORD_PROGRESS") {
+    const NON_PROGRESS_STATUSES: ReadonlySet<string> = new Set(["PROPOSED", "REJECTED", "OUTCOME_VERIFIED", "CANCELLED"]);
+    if (NON_PROGRESS_STATUSES.has(task.status)) {
+      return { ok: false, reason: `Cannot record progress on a task with status ${task.status}.`, code: "INVALID_TRANSITION" };
+    }
+    const refs = (input.evidenceRefs ?? []).map((e) => e.trim()).filter(Boolean);
+    const now = deps.now();
+    let progressRecordId = "";
+    await deps.db.$transaction(async (tx) => {
+      const prog = await tx.processExecutionTaskProgress.create({
+        data: {
+          workspaceId: input.workspaceId,
+          taskId: task.id,
+          actorId: input.actorId ?? "system",
+          progressPct: input.progressPct ?? null,
+          stage: input.stage ?? null,
+          note: input.reason ?? null,
+          blockerActive: false,
+          createdAt: now,
+        },
+      });
+      progressRecordId = prog.id;
+      // Merge any new evidence refs into task
+      if (refs.length > 0) {
+        await tx.processExecutionTask.updateMany({
+          where: { workspaceId: input.workspaceId, taskKey: input.taskKey },
+          data: { evidenceRefs: [...task.evidenceRefs, ...refs], updatedAt: now },
+        });
+      }
+      await tx.auditEvent.create({
+        data: {
+          id: deps.uuid(), workspaceId: input.workspaceId, eventName: AUDIT_EVENTS.OWNER_PROCESS_EXECUTION_TASK_PROGRESS_RECORDED,
+          actorId: input.actorId ?? null, actorType: input.actorId ? "user" : "system",
+          entityType: "process_execution_task", entityId: task.id,
+          payload: { taskKey: input.taskKey, progressPct: input.progressPct ?? null, stage: input.stage ?? null, progressRecordId },
+          visibility: "internal", occurredAt: now,
+        },
+      });
+    });
+    return { ok: true, taskId: task.id, status: task.status, progressRecordId };
+  }
+
+  // ── Phase 3: RECORD_OUTCOME ──────────────────────────────────────────────
+  if (input.action === "RECORD_OUTCOME") {
+    if (task.status !== "COMPLETED") {
+      return { ok: false, reason: "RECORD_OUTCOME requires task status COMPLETED.", code: "INVALID_TRANSITION" };
+    }
+    // Idempotent: if outcome already recorded, return the existing outcomeId
+    if (task.outcomeId) {
+      return { ok: true, taskId: task.id, status: task.status, outcomeId: task.outcomeId };
+    }
+    if (!input.businessId || !input.businessId.trim()) {
+      return { ok: false, reason: "businessId is required to record an outcome.", code: "MISSING_INPUT" };
+    }
+    if (!(await businessInWorkspace(deps, input.workspaceId, input.businessId.trim()))) {
+      return { ok: false, reason: "That business is not in this workspace.", code: "WRONG_WORKSPACE" };
+    }
+    const { recordOwnerActionOutcome } = await import("@/services/owner-mode/owner-action-outcome.service");
+    const outcomeStatusInput = (input.outcomeStatus as import("@/services/owner-mode/owner-action-outcome.service").OutcomeStatus | null | undefined) ?? "worked";
+    const outcome = await recordOwnerActionOutcome(input.workspaceId, input.actorId ?? "system", {
+      businessId: input.businessId.trim(),
+      outcomeStatus: outcomeStatusInput,
+      ownerReportedResult: input.outcomeNotes ?? undefined,
+      evidenceQuality: (input.evidenceRefs ?? []).length > 0 ? "moderate" : "weak",
+      taskKey: input.taskKey,
+      taskType: "process_execution",
+    });
+    const now = deps.now();
+    await deps.db.$transaction(async (tx) => {
+      await tx.processExecutionTask.updateMany({
+        where: { workspaceId: input.workspaceId, taskKey: input.taskKey, outcomeId: null },
+        data: { status: "OUTCOME_RECORDED", outcomeId: outcome.id, outcomeRecordedAt: now, updatedAt: now },
+      });
+      await tx.auditEvent.create({
+        data: {
+          id: deps.uuid(), workspaceId: input.workspaceId, eventName: AUDIT_EVENTS.OWNER_PROCESS_EXECUTION_OUTCOME_RECORDED,
+          actorId: input.actorId ?? null, actorType: input.actorId ? "user" : "system",
+          entityType: "process_execution_task", entityId: task.id,
+          payload: { taskKey: input.taskKey, outcomeId: outcome.id, outcomeStatus: outcomeStatusInput, businessId: (input.businessId ?? "").trim() },
+          visibility: "internal", occurredAt: now,
+        },
+      });
+    });
+    return { ok: true, taskId: task.id, status: "OUTCOME_RECORDED", outcomeId: outcome.id };
+  }
+
+  // ── Phase 3: VERIFY_OUTCOME ──────────────────────────────────────────────
+  if (input.action === "VERIFY_OUTCOME") {
+    if (!["OUTCOME_RECORDED", "OUTCOME_DISPUTED"].includes(task.status)) {
+      return { ok: false, reason: "VERIFY_OUTCOME requires task status OUTCOME_RECORDED or OUTCOME_DISPUTED.", code: "INVALID_TRANSITION" };
+    }
+    if (!task.outcomeId) {
+      return { ok: false, reason: "No outcome has been recorded for this task. Use RECORD_OUTCOME first.", code: "MISSING_INPUT" };
+    }
+    const { verifyOwnerActionOutcome, triggerPostVerificationSideEffects } = await import("@/services/owner-mode/owner-outcome-verification.service");
+    let verificationClassification: string;
+    try {
+      const result = await verifyOwnerActionOutcome(input.workspaceId, task.outcomeId, input.actorId ?? "system", input.reason ?? null);
+      verificationClassification = result.verificationClassification;
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "statusCode" in err) {
+        const e = err as { statusCode: number; message: string; code: string };
+        if (e.statusCode === 409 && e.code === "OUTCOME_ALREADY_VERIFIED") {
+          return { ok: false, reason: e.message, code: "INVALID_TRANSITION" };
+        }
+        if (e.statusCode === 403) {
+          return { ok: false, reason: e.message, code: "UNAUTHORIZED" };
+        }
+        if (e.statusCode === 409 && e.code === "OBSERVATION_WINDOW_OPEN") {
+          return { ok: false, reason: e.message, code: "INVALID_TRANSITION" };
+        }
+      }
+      throw err;
+    }
+    const now = deps.now();
+    await deps.db.$transaction(async (tx) => {
+      await tx.processExecutionTask.updateMany({
+        where: { workspaceId: input.workspaceId, taskKey: input.taskKey },
+        data: { status: "OUTCOME_VERIFIED", updatedAt: now },
+      });
+      await tx.auditEvent.create({
+        data: {
+          id: deps.uuid(), workspaceId: input.workspaceId, eventName: AUDIT_EVENTS.OWNER_PROCESS_EXECUTION_OUTCOME_VERIFIED,
+          actorId: input.actorId ?? null, actorType: input.actorId ? "user" : "system",
+          entityType: "process_execution_task", entityId: task.id,
+          payload: { taskKey: input.taskKey, outcomeId: task.outcomeId, verificationClassification },
+          visibility: "internal", occurredAt: now,
+        },
+      });
+    });
+    // Best-effort post-verification side effects (reassessment + learning)
+    const businessId = input.businessId?.trim() ?? task.sourceFindingKey;
+    setImmediate(() => {
+      triggerPostVerificationSideEffects(
+        input.workspaceId, businessId, task.outcomeId!, input.taskKey,
+        verificationClassification as import("@/services/owner-mode/owner-outcome-verification.service").OwnerOutcomeVerificationClass,
+        input.actorId ?? "system"
+      ).catch((err) => console.error("[phase3] post-verification side effects failed", err));
+    });
+    return { ok: true, taskId: task.id, status: "OUTCOME_VERIFIED", verificationClassification };
+  }
 
   // COMPLETE reuses the evidence-gated completion path (owner-only + fake-completion guard + reassessment).
   if (input.action === "COMPLETE") {
@@ -322,8 +513,10 @@ export async function applyProcessExecutionAction(
 
   switch (input.action) {
     case "START":
-      if (!["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
-      nextStatus = "IN_PROGRESS"; break;
+      if (!["PROPOSED", "ACKNOWLEDGED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
+      nextStatus = "IN_PROGRESS";
+      if (!task.workStartedAt) data.workStartedAt = deps.now();
+      break;
     case "APPROVE":
       if (task.approvalLevel !== "OWNER_APPROVAL_REQUIRED") return { ok: false, reason: "Only an owner-approval task can be approved.", code: "INVALID_TRANSITION" };
       if (input.actorRole !== "owner") return { ok: false, reason: "This action cannot be automated — only the owner can approve it.", code: "OWNER_APPROVAL_REQUIRED" };

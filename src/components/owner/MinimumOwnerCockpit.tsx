@@ -21,7 +21,7 @@ import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
-import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation } from "@/services/owner-guidance/owner-now-view.service";
+import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem } from "@/services/owner-guidance/owner-now-view.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
 
@@ -42,6 +42,8 @@ const ROUTE_LABEL: Record<string, string> = {
 const ACTION_LABEL: Record<string, string> = {
   START: "Start", APPROVE: "Approve", DELEGATE: "Delegate", SUBMIT_EVIDENCE: "Submit evidence", COMPLETE: "Complete",
   REJECT: "Reject", MARK_BLOCKED: "Mark blocked", REQUEST_REASSESSMENT: "Request reassessment", REQUEST_MISSING_DATA: "Request missing data",
+  // Phase 3 actions
+  ACKNOWLEDGE: "Acknowledge", RECORD_PROGRESS: "Record progress", RECORD_OUTCOME: "Record outcome", VERIFY_OUTCOME: "Verify outcome",
 };
 const SEVERITY_VARIANT = (s: string): "destructive" | "warning" | "default" | "muted" =>
   s === "CRITICAL" || s === "HIGH" ? "destructive" : s === "MEDIUM" ? "warning" : "default";
@@ -66,7 +68,15 @@ export function allowedCockpitActions(r: BridgedRouteView): string[] {
   return out;
 }
 
-export interface CockpitActionInput { evidenceRefs?: string[]; reason?: string; delegateToRole?: "MANAGER" | "STAFF" }
+export interface CockpitActionInput {
+  evidenceRefs?: string[];
+  reason?: string;
+  delegateToRole?: "MANAGER" | "STAFF";
+  // Phase 3 additions
+  progressPct?: number | null;
+  stage?: string | null;
+  outcomeStatus?: string | null;
+}
 
 export interface MinimumOwnerCockpitProps {
   bridge: ProcessExecutionBridgeView | null;
@@ -99,6 +109,8 @@ export interface MinimumOwnerCockpitProps {
   onAcknowledgeEscalation?: (escalationId: string) => void;
   /** Called when the owner starts a process execution task (Phase 2 Signal F). */
   onStartWork?: (taskKey: string) => void;
+  /** Phase 3 — execution lifecycle view from the Now View (4-group: requiresDecision / inExecution / awaitingVerification / recentlyVerified). */
+  executionLifecycle?: OwnerExecutionLifecycleView | null;
 }
 
 const RECOVERY_STATUS_LABEL: Record<string, string> = {
@@ -198,6 +210,270 @@ const CONDITION_FIELD_ORDER: (keyof DerivedBusinessConditionSignals)[] = [
   "executionCapacityLevel", "processMaturityLevel", "managementMaturityLevel", "moralFragilityLevel",
 ];
 
+const VERIFICATION_CLASS_LABEL: Record<string, string> = {
+  SUCCESS: "Verified: Success",
+  PARTIAL_SUCCESS: "Verified: Partial success",
+  NO_MEASURABLE_IMPACT: "Verified: No measurable impact",
+  FAILURE: "Verified: Failure",
+  NEGATIVE_IMPACT: "Verified: Negative impact",
+  INCONCLUSIVE: "Verified: Inconclusive",
+  OBSERVATION_WINDOW_OPEN: "Observation window open",
+  INSUFFICIENT_EVIDENCE: "Insufficient evidence",
+};
+
+const VERIFICATION_CLASS_VARIANT = (c: string): "destructive" | "warning" | "default" | "muted" =>
+  c === "SUCCESS" ? "default"
+  : c === "FAILURE" || c === "NEGATIVE_IMPACT" ? "destructive"
+  : c === "PARTIAL_SUCCESS" ? "warning"
+  : "muted";
+
+const OUTCOME_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "worked", label: "Worked" },
+  { value: "partially_worked", label: "Partially worked" },
+  { value: "did_not_work", label: "Did not work" },
+  { value: "made_worse", label: "Made things worse" },
+  { value: "not_measurable", label: "Not measurable" },
+  { value: "too_early_to_judge", label: "Too early to judge" },
+  { value: "invalid_test", label: "Invalid test" },
+  { value: "executed_differently", label: "Executed differently" },
+  { value: "external_event_interference", label: "External event interference" },
+];
+
+/** Phase 3 — execution lifecycle section (collapsed by default). Renders 4 sub-groups server-driven by
+ *  can* booleans. No business logic: eligibility is server-computed in buildExecutionLifecycle. */
+function ExecutionLifecycleSection({
+  lifecycle,
+  onAction,
+  busy = false,
+}: {
+  lifecycle: OwnerExecutionLifecycleView;
+  onAction?: (taskKey: string, action: string, input: CockpitActionInput) => void;
+  busy?: boolean;
+}) {
+  const [pending, setPending] = useState<{ taskKey: string; action: string } | null>(null);
+  const [progressPct, setProgressPct] = useState("");
+  const [stage, setStage] = useState("");
+  const [outcomeStatus, setOutcomeStatus] = useState("worked");
+  const [reason, setReason] = useState("");
+
+  const resetForm = () => { setPending(null); setProgressPct(""); setStage(""); setOutcomeStatus("worked"); setReason(""); };
+
+  const submitPhase3 = (taskKey: string, action: string) => {
+    if (!onAction) return;
+    const input: CockpitActionInput = {};
+    if (action === "RECORD_PROGRESS") {
+      const pct = parseInt(progressPct, 10);
+      if (!isNaN(pct)) input.progressPct = pct;
+      if (stage.trim()) input.stage = stage.trim();
+      if (reason.trim()) input.reason = reason.trim();
+    } else if (action === "RECORD_OUTCOME") {
+      input.outcomeStatus = outcomeStatus;
+      if (reason.trim()) input.reason = reason.trim();
+    } else if (action === "VERIFY_OUTCOME") {
+      if (reason.trim()) input.reason = reason.trim();
+    }
+    onAction(taskKey, action, input);
+    resetForm();
+  };
+
+  const clickPhase3 = (taskKey: string, action: string) => {
+    if (!onAction) return;
+    if (action === "ACKNOWLEDGE") { onAction(taskKey, action, {}); return; }
+    resetForm();
+    setPending({ taskKey, action });
+  };
+
+  const renderItem = (item: ExecutionLifecycleItem, i: number, groupPrefix: string) => (
+    <li key={item.taskKey} data-testid={`${groupPrefix}-${i}`}
+      style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 6, paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <Badge variant={SEVERITY_VARIANT(item.severity)}>{item.severity}</Badge>
+        <span style={{ fontWeight: 600 }}>{item.ownerVisibleSummary}</span>
+        <span style={{ color: "#6b7280", fontSize: 12 }}>{item.status}</span>
+      </div>
+      {item.verificationClassification && (
+        <span data-testid={`cockpit-verification-classification-${item.taskKey}`}>
+          <Badge variant={VERIFICATION_CLASS_VARIANT(item.verificationClassification)}>
+            {VERIFICATION_CLASS_LABEL[item.verificationClassification] ?? item.verificationClassification}
+          </Badge>
+        </span>
+      )}
+      {item.progressPct !== null && (
+        <span style={{ fontSize: 12, color: "#6b7280" }}>Progress: {item.progressPct}%{item.blockerActive ? " — Blocked" : ""}</span>
+      )}
+      {item.expectedBenefit && (
+        <span style={{ fontSize: 12, color: "#374151" }}>Expected benefit: {item.expectedBenefit}</span>
+      )}
+      {!item.evidenceComplete && item.requiredEvidence.length > 0 && (
+        <span style={{ fontSize: 12, color: "#b45309" }}>Evidence needed: {item.requiredEvidence.join("; ")}</span>
+      )}
+      {onAction && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          {item.canAcknowledge && (
+            <button type="button" data-testid={`cockpit-action-ACKNOWLEDGE-${item.taskKey}`} disabled={busy}
+              aria-label={`Acknowledge: ${item.ownerVisibleSummary}`}
+              onClick={() => clickPhase3(item.taskKey, "ACKNOWLEDGE")}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #0369a1", background: "#0369a1", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              Acknowledge
+            </button>
+          )}
+          {item.canRecordProgress && (
+            <button type="button" data-testid={`cockpit-action-RECORD_PROGRESS-${item.taskKey}`} disabled={busy}
+              aria-label={`Record progress: ${item.ownerVisibleSummary}`}
+              onClick={() => clickPhase3(item.taskKey, "RECORD_PROGRESS")}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: busy ? "default" : "pointer" }}>
+              Record progress
+            </button>
+          )}
+          {item.canRecordOutcome && (
+            <button type="button" data-testid={`cockpit-action-RECORD_OUTCOME-${item.taskKey}`} disabled={busy}
+              aria-label={`Record outcome: ${item.ownerVisibleSummary}`}
+              onClick={() => clickPhase3(item.taskKey, "RECORD_OUTCOME")}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              Record outcome
+            </button>
+          )}
+          {item.canVerify && (
+            <button type="button" data-testid={`cockpit-action-VERIFY_OUTCOME-${item.taskKey}`} disabled={busy}
+              aria-label={`Verify outcome: ${item.ownerVisibleSummary}`}
+              onClick={() => clickPhase3(item.taskKey, "VERIFY_OUTCOME")}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #16a34a", background: "#16a34a", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              Verify outcome
+            </button>
+          )}
+        </div>
+      )}
+      {pending?.taskKey === item.taskKey && (
+        <div data-testid="cockpit-phase3-action-form" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 600 }}>{ACTION_LABEL[pending.action] ?? pending.action}</span>
+          {pending.action === "RECORD_PROGRESS" && (
+            <>
+              <label style={{ fontSize: 12, color: "#374151" }}>
+                Progress % (0–100, optional)
+                <input type="number" min={0} max={100} value={progressPct}
+                  onChange={(e) => setProgressPct(e.target.value)} data-testid="cockpit-progress-pct-input"
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }} />
+              </label>
+              <label style={{ fontSize: 12, color: "#374151" }}>
+                Stage label (optional)
+                <input type="text" value={stage}
+                  onChange={(e) => setStage(e.target.value)} data-testid="cockpit-stage-input"
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }} />
+              </label>
+              <label style={{ fontSize: 12, color: "#374151" }}>
+                Note (optional)
+                <input type="text" value={reason}
+                  onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }} />
+              </label>
+            </>
+          )}
+          {pending.action === "RECORD_OUTCOME" && (
+            <>
+              <label style={{ fontSize: 12, color: "#374151" }}>
+                Outcome
+                <select value={outcomeStatus} onChange={(e) => setOutcomeStatus(e.target.value)}
+                  data-testid="cockpit-outcome-status-select"
+                  style={{ display: "block", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }}>
+                  {OUTCOME_STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ fontSize: 12, color: "#374151" }}>
+                Outcome notes (optional)
+                <input type="text" value={reason}
+                  onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }} />
+              </label>
+            </>
+          )}
+          {pending.action === "VERIFY_OUTCOME" && (
+            <label style={{ fontSize: 12, color: "#374151" }}>
+              Verification notes (optional)
+              <input type="text" value={reason}
+                onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
+                style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }} />
+            </label>
+          )}
+          <div style={{ display: "flex", gap: 6 }}>
+            <button type="button" disabled={busy} data-testid="cockpit-phase3-confirm"
+              onClick={() => submitPhase3(item.taskKey, pending.action)}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              Confirm
+            </button>
+            <button type="button" data-testid="cockpit-phase3-cancel" onClick={resetForm}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer" }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+
+  const total = lifecycle.requiresDecision.length + lifecycle.inExecution.length + lifecycle.awaitingVerification.length;
+
+  return (
+    <details data-testid="cockpit-execution-lifecycle" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+        Execution lifecycle{total > 0 ? ` (${total} active)` : ""}
+        {lifecycle.totalPendingVerification > 0 && (
+          <span style={{ marginLeft: 8, fontSize: 12, padding: "1px 6px", borderRadius: 10, background: "#fef3c7", color: "#92400e" }}>
+            {lifecycle.totalPendingVerification} awaiting verification
+          </span>
+        )}
+      </summary>
+      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
+        <details data-testid="cockpit-requires-decision-group" open={lifecycle.requiresDecision.length > 0}
+          style={{ borderLeft: "3px solid #fef3c7", paddingLeft: 8 }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#92400e" }}>
+            Requires your decision ({lifecycle.requiresDecision.length})
+          </summary>
+          {lifecycle.requiresDecision.length === 0
+            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>No tasks awaiting your decision.</p>
+            : <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+                {lifecycle.requiresDecision.map((item, i) => renderItem(item, i, "cockpit-requires-decision"))}
+              </ul>}
+        </details>
+        <details data-testid="cockpit-in-execution-group" open={lifecycle.inExecution.length > 0}
+          style={{ borderLeft: "3px solid #dbeafe", paddingLeft: 8 }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#1d4ed8" }}>
+            In execution ({lifecycle.inExecution.length})
+          </summary>
+          {lifecycle.inExecution.length === 0
+            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>No tasks currently in execution.</p>
+            : <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+                {lifecycle.inExecution.map((item, i) => renderItem(item, i, "cockpit-in-execution"))}
+              </ul>}
+        </details>
+        <details data-testid="cockpit-awaiting-verification-group" open={lifecycle.awaitingVerification.length > 0}
+          style={{ borderLeft: "3px solid #fde68a", paddingLeft: 8 }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#b45309" }}>
+            Awaiting verification ({lifecycle.awaitingVerification.length})
+          </summary>
+          {lifecycle.awaitingVerification.length === 0
+            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>No tasks awaiting verification.</p>
+            : <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+                {lifecycle.awaitingVerification.map((item, i) => renderItem(item, i, "cockpit-awaiting-verification"))}
+              </ul>}
+        </details>
+        <details data-testid="cockpit-recently-verified-group"
+          style={{ borderLeft: "3px solid #d1fae5", paddingLeft: 8 }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#15803d" }}>
+            Recently verified ({lifecycle.recentlyVerified.length})
+          </summary>
+          {lifecycle.recentlyVerified.length === 0
+            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>No recently verified outcomes.</p>
+            : <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+                {lifecycle.recentlyVerified.map((item, i) => renderItem(item, i, "cockpit-recently-verified"))}
+              </ul>}
+        </details>
+      </div>
+    </details>
+  );
+}
+
 function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition: DerivedBusinessConditionSignals; dataFreshnessWeak?: boolean | null }) {
   const knownFields = CONDITION_FIELD_ORDER.filter((k) => condition[k] !== "unknown");
   const unknownCount = CONDITION_FIELD_ORDER.length - knownFields.length;
@@ -285,7 +561,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -303,6 +579,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             governed action is ready — nothing is invented to fill the space.
           </p>
         </div>
+        {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} />}
         {recovery && <RecoverySection recovery={recovery} />}
         {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
       </section>
@@ -692,6 +969,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* Business condition — read-only, derived risk-dimension panel (Phase 1 Reality Engine). */}
       {businessCondition && <BusinessConditionSection condition={businessCondition} dataFreshnessWeak={dataFreshnessWeak} />}
+
+      {/* Phase 3 — Execution lifecycle (collapsed by default). Server-computed can* booleans drive visibility. */}
+      {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} />}
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
       <details data-testid="cockpit-proof-drawer" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>

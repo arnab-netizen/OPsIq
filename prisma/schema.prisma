@@ -1298,17 +1298,21 @@ enum evidence_visibility {
 /// when workspace + scope + content hash match and the requested risk is the same
 /// or lower. A material change (different content hash) forces re-approval.
 model OwnerApprovalMemory {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId      String    @map("workspace_id") @db.Uuid
-  scope            String
-  contentHash      String    @map("content_hash")
-  version          Int       @default(1)
-  riskClass        String    @map("risk_class")
-  approvalStatus   String    @default("approved") @map("approval_status")
-  approvedByUserId String    @map("approved_by_user_id") @db.Uuid
-  validUntil       DateTime? @map("valid_until")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId            String    @map("workspace_id") @db.Uuid
+  scope                  String
+  contentHash            String    @map("content_hash")
+  version                Int       @default(1)
+  riskClass              String    @map("risk_class")
+  approvalStatus         String    @default("approved") @map("approval_status")
+  approvedByUserId       String    @map("approved_by_user_id") @db.Uuid
+  validUntil             DateTime? @map("valid_until")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  // Phase 3 — task binding for explicit per-task revocation
+  taskKey                String?   @map("task_key")
+  processExecutionTaskId String?   @map("process_execution_task_id") @db.Uuid
+  materialParameters     Json?     @map("material_parameters")
 
   @@unique([workspaceId, scope, contentHash])
   @@index([workspaceId, scope])
@@ -3715,12 +3719,28 @@ model OwnerActionOutcome {
   createdAt                DateTime      @default(now())
   updatedAt                DateTime      @updatedAt
   workspace                ClientAccount @relation("WorkspaceActionOutcomes", fields: [workspaceId], references: [id])
+  // Phase 3 — task linkage
+  taskKey                  String?       @map("task_key")
+  taskType                 String?       @map("task_type") // "process_execution" | "delegated"
+  // Phase 3 — verification
+  verificationStatus         String?     @map("verification_status") // unverified | observation_window_open | insufficient_evidence | verified | disputed
+  verificationClassification String?     @map("verification_classification") // SUCCESS | PARTIAL_SUCCESS | NO_MEASURABLE_IMPACT | FAILURE | NEGATIVE_IMPACT | INCONCLUSIVE | OBSERVATION_WINDOW_OPEN | INSUFFICIENT_EVIDENCE
+  verifiedByActorId          String?     @map("verified_by_actor_id") @db.Uuid
+  verifiedAt                 DateTime?   @map("verified_at")
+  observationWindowDays      Int?        @map("observation_window_days")
+  directCost                 Decimal?    @map("direct_cost") @db.Decimal(14, 2)
+  sideEffects                String?     @map("side_effects") @db.Text
+  verificationNotes          String?     @map("verification_notes") @db.Text
+  // Phase 3 — learning linkage
+  learningCandidateId        String?     @map("learning_candidate_id")
 
   @@index([workspaceId])
   @@index([businessId])
   @@index([recommendationId])
   @@index([actionId])
   @@index([outcomeStatus])
+  @@index([workspaceId, verificationClassification])
+  @@index([workspaceId, taskKey])
   @@map("owner_action_outcomes")
 }
 
@@ -4485,34 +4505,76 @@ model OpportunityExecutionTask {
 /// tasks can never be auto-completed; evidence-required routes cannot COMPLETE without evidence; a completed
 /// task links to the reassessment it triggered. UNIQUE (workspace_id, task_key) makes updates idempotent.
 model ProcessExecutionTask {
-  id                  String    @id @db.Uuid
-  workspaceId         String    @map("workspace_id") @db.Uuid
-  taskKey             String    @map("task_key")
-  sourceFamily        String    @map("source_family")
-  sourceFindingKey    String    @map("source_finding_key")
-  executionRoute      String    @map("execution_route")
-  actionOwner         String    @map("action_owner")
-  approvalLevel       String    @map("approval_level")
-  status              String    @default("PROPOSED")
-  requiredEvidence    String[]  @map("required_evidence")
-  evidenceRefs        String[]  @map("evidence_refs")
-  completionCriteria  String    @map("completion_criteria") @db.Text
-  reassessmentTrigger String    @map("reassessment_trigger") @db.Text
-  riskIfIgnored       String    @map("risk_if_ignored") @db.Text
-  ownerVisibleSummary String    @map("owner_visible_summary") @db.Text
-  severity            String
-  priorityRank        Int       @map("priority_rank")
-  notes               String?   @db.Text
-  completedByUserId   String?   @map("completed_by_user_id") @db.Uuid
-  completedByRole     String?   @map("completed_by_role")
-  completedAt         DateTime? @map("completed_at")
-  reassessmentId      String?   @map("reassessment_id") @db.Uuid
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @default(now()) @map("updated_at")
+  id                    String    @id @db.Uuid
+  workspaceId           String    @map("workspace_id") @db.Uuid
+  taskKey               String    @map("task_key")
+  sourceFamily          String    @map("source_family")
+  sourceFindingKey      String    @map("source_finding_key")
+  executionRoute        String    @map("execution_route")
+  actionOwner           String    @map("action_owner")
+  approvalLevel         String    @map("approval_level")
+  status                String    @default("PROPOSED")
+  requiredEvidence      String[]  @map("required_evidence")
+  evidenceRefs          String[]  @map("evidence_refs")
+  completionCriteria    String    @map("completion_criteria") @db.Text
+  reassessmentTrigger   String    @map("reassessment_trigger") @db.Text
+  riskIfIgnored         String    @map("risk_if_ignored") @db.Text
+  ownerVisibleSummary   String    @map("owner_visible_summary") @db.Text
+  severity              String
+  priorityRank          Int       @map("priority_rank")
+  notes                 String?   @db.Text
+  completedByUserId     String?   @map("completed_by_user_id") @db.Uuid
+  completedByRole       String?   @map("completed_by_role")
+  completedAt           DateTime? @map("completed_at")
+  reassessmentId        String?   @map("reassessment_id") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @default(now()) @map("updated_at")
+  // Phase 3 — lifecycle timestamps
+  workStartedAt         DateTime? @map("work_started_at")
+  acknowledgedByUserId  String?   @map("acknowledged_by_user_id") @db.Uuid
+  acknowledgedAt        DateTime? @map("acknowledged_at")
+  // Phase 3 — structured execution plan fields
+  expectedBenefit       String?   @map("expected_benefit") @db.Text
+  costEstimate          Decimal?  @map("cost_estimate") @db.Decimal(14, 2)
+  baselineMetricName    String?   @map("baseline_metric_name")
+  baselineValue         Float?    @map("baseline_value")
+  targetMetricName      String?   @map("target_metric_name")
+  targetValue           Float?    @map("target_value")
+  verificationWindowDays Int?     @map("verification_window_days")
+  stopCondition         String?   @map("stop_condition") @db.Text
+  rollbackCondition     String?   @map("rollback_condition") @db.Text
+  // Phase 3 — outcome linkage (cuid() on OwnerActionOutcome — no @db.Uuid)
+  outcomeId             String?   @map("outcome_id")
+  outcomeRecordedAt     DateTime? @map("outcome_recorded_at")
+  // Phase 3 — approval binding
+  approvalMemoryId      String?   @map("approval_memory_id") @db.Uuid
 
   @@unique([workspaceId, taskKey])
   @@index([workspaceId, status])
+  @@index([workspaceId, outcomeId])
   @@map("process_execution_tasks")
+}
+
+/// Phase 3 — Immutable structured progress history for a ProcessExecutionTask.
+/// Each progress update creates a new row. Rows are never mutated after creation.
+model ProcessExecutionTaskProgress {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  taskId        String    @map("task_id") @db.Uuid
+  actorId       String    @map("actor_id") @db.Uuid
+  progressPct   Int?      @map("progress_pct")
+  stage         String?
+  note          String?   @db.Text
+  evidenceRef   String?   @map("evidence_ref")
+  blockerActive Boolean   @default(false) @map("blocker_active")
+  blockerReason String?   @map("blocker_reason") @db.Text
+  nextStep      String?   @map("next_step") @db.Text
+  revisedDueAt  DateTime? @map("revised_due_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId, taskId])
+  @@index([workspaceId, taskId, createdAt])
+  @@map("process_execution_task_progress")
 }
 
 /// Minimal per-event operational complaint/rework record (one generic model handles both via
