@@ -85,9 +85,11 @@ async function main() {
   });
 
   // Period 2: revenue=10_200 (+2%), complaintCount=18 (+1700% → complaints_up_before_churn alert)
+  // discountAmount=1530 (15% of revenue) → DISCOUNT_LEAK fires with rangeLow=0, rangeHigh=1530
+  // which beats COMPLAINT_REVENUE_RISK's score (144 > 141) and makes cockpit-profit-leak-impact visible.
   await prisma.ownerMetricSnapshot.upsert({
     where: { businessId_periodStart_periodEnd: { businessId: E2E_ATTN_BUSINESS_ID, periodStart: P2_START, periodEnd: P2_END } },
-    update: { revenue: 10200, complaintCount: 18 },
+    update: { revenue: 10200, complaintCount: 18, discountAmount: 1530 },
     create: {
       id: SNAP_2_ID,
       businessId: E2E_ATTN_BUSINESS_ID,
@@ -98,6 +100,7 @@ async function main() {
       revenue: 10200,
       netProfit: 2040,
       complaintCount: 18,
+      discountAmount: 1530,
     },
   });
   console.log(`[seed-attn-engine] metric snapshots ${SNAP_1_ID}, ${SNAP_2_ID} upserted`);
