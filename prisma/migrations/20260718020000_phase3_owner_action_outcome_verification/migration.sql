@@ -15,8 +15,8 @@ ALTER TABLE "owner_action_outcomes"
     ADD COLUMN "verification_notes"          TEXT,
     ADD COLUMN "learning_candidate_id"       TEXT;
 
-CREATE INDEX "owner_action_outcomes_workspace_id_verification_classification_idx"
-    ON "owner_action_outcomes"("workspace_id", "verification_classification");
+CREATE INDEX "owner_action_outcomes_workspaceId_verification_classification_idx"
+    ON "owner_action_outcomes"("workspaceId", "verification_classification");
 
-CREATE INDEX "owner_action_outcomes_workspace_id_task_key_idx"
-    ON "owner_action_outcomes"("workspace_id", "task_key");
+CREATE INDEX "owner_action_outcomes_workspaceId_task_key_idx"
+    ON "owner_action_outcomes"("workspaceId", "task_key");
