@@ -61,7 +61,7 @@ function validateActionStatus(status: unknown): asserts status is ActionStatus {
   }
 }
 
-function validateActionTransition(fromStatus: ActionStatus, toStatus: ActionStatus): void {
+export function validateActionTransition(fromStatus: ActionStatus, toStatus: ActionStatus): void {
   const allowed = ACTION_TRANSITIONS[fromStatus];
   if (!allowed || !allowed.includes(toStatus)) {
     throw new ValidationError(

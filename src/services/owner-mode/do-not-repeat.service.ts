@@ -94,6 +94,66 @@ export async function enforceDoNotRepeatForPromotion(recommendationId: string, w
   }
 }
 
+// ─── Guidance-path DNR check (Now View) ─────────────────────────────────────
+
+export interface DoNotRepeatAnnotation {
+  blocked: boolean;
+  /** true when only a legacy-format key matched (scope:area vs scope:area:finding:id) */
+  legacyMatch: boolean;
+  priorActionSummary: string;
+  blockedReason: string;
+  changedContextCondition: string | null;
+  matchedScope: string;
+}
+
+/** Minimal DB interface needed by checkDoNotRepeatForGuidance — a subset of DnrDb. */
+export interface DnrGuidanceDb {
+  ownerDoNotRepeatRule?: {
+    findFirst(args: {
+      where: { workspaceId: string; memoryKey: { in: string[] }; blocksRepetition: boolean; active: boolean };
+      orderBy: { createdAt: "desc" };
+    }): Promise<{ memoryKey: string; summary: string; reason: string; changedContextExplanation: string | null; blocksRepetition: boolean } | null>;
+  };
+}
+
+/**
+ * Check whether the top guidance action for a workspace is blocked by an active
+ * do-not-repeat rule. Uses dual-key strategy: prefers new canonical key
+ * (scope:area:finding:id) but falls back to legacy key (scope:area).
+ * Returns null when no matching rule exists or the ownerDoNotRepeatRule table is unavailable.
+ */
+export async function checkDoNotRepeatForGuidance(
+  workspaceId: string,
+  impactArea: string | null | undefined,
+  findingId: string | null | undefined,
+  db: DnrGuidanceDb,
+): Promise<DoNotRepeatAnnotation | null> {
+  if (!db.ownerDoNotRepeatRule) return null;
+  const scopeKey = scopeKeyForImpactArea(impactArea);
+  if (!scopeKey) return null;
+
+  const newCanonicalKey = findingId ? `${scopeKey}:finding:${findingId}` : null;
+  const keysToSearch: string[] = newCanonicalKey ? [newCanonicalKey, scopeKey] : [scopeKey];
+
+  const rule = await db.ownerDoNotRepeatRule.findFirst({
+    where: { workspaceId, memoryKey: { in: keysToSearch }, blocksRepetition: true, active: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!rule) return null;
+
+  const legacyMatch = rule.memoryKey === scopeKey && newCanonicalKey !== null;
+
+  return {
+    blocked: true,
+    legacyMatch,
+    priorActionSummary: rule.summary,
+    blockedReason: rule.reason,
+    changedContextCondition: rule.changedContextExplanation,
+    matchedScope: rule.memoryKey,
+  };
+}
+
 export interface RecordDoNotRepeatInput {
   workspaceId: string;
   businessId: string;

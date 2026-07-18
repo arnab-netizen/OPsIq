@@ -126,6 +126,41 @@ export interface BusinessTrendAnalysisResult {
   worseningMetrics: BusinessMetricName[];
 }
 
+/**
+ * Minimum relative change magnitude required before a directional change qualifies as a meaningful
+ * alert. Values are fractions (0.03 = 3%). Metrics absent from this map use DEFAULT_ALERT_THRESHOLD.
+ * Applied inside detectTrendAlerts to suppress noise from rounding and small fluctuations.
+ */
+export const METRIC_ALERT_THRESHOLD: Partial<Record<BusinessMetricName, number>> = {
+  revenue: 0.03,
+  gross_profit: 0.03,
+  net_profit: 0.03,
+  cash_balance: 0.03,
+  cash_runway_days: 0.05,
+  debt: 0.03,
+  emi_burden: 0.03,
+  receivables: 0.05,
+  payables: 0.05,
+  leads: 0.05,
+  customer_count: 0.05,
+  marketing_spend: 0.05,
+  conversion_rate: 0.02,
+  repeat_customer_rate: 0.02,
+  churn: 0.01,
+  complaints: 0.01,
+  refunds: 0.01,
+  rework_rate: 0.01,
+  delivery_delay_rate: 0.01,
+  inventory: 0.05,
+  staff_count: 0.05,
+  staff_productivity: 0.02,
+  capacity_utilization: 0.02,
+  cost_per_lead: 0.03,
+  cost_per_acquisition: 0.03,
+  average_order_value: 0.03,
+};
+const DEFAULT_ALERT_THRESHOLD = 0.01;
+
 const MIN_METRICS_COUNT = 1;
 
 // BSTL-RULE-1: periodLabel must be provided
@@ -184,16 +219,24 @@ function detectTrendAlerts(
   const changed = (a: number | undefined, b: number | undefined) =>
     a !== undefined && b !== undefined;
 
+  // Returns true only when the magnitude of change meets the metric-specific threshold.
+  // Zero-baseline: if previous value is 0, the relative change is undefined — treat as no alert.
+  const meetsThreshold = (metric: BusinessMetricName, c: number, p: number): boolean => {
+    if (p === 0) return false;
+    const threshold = METRIC_ALERT_THRESHOLD[metric] ?? DEFAULT_ALERT_THRESHOLD;
+    return Math.abs((c - p) / Math.abs(p)) >= threshold;
+  };
+
   const isRising = (metric: BusinessMetricName) => {
     const c = get(metric, current);
     const p = get(metric, previous);
-    return changed(c, p) && c! > p!;
+    return changed(c, p) && c! > p! && meetsThreshold(metric, c!, p!);
   };
 
   const isFalling = (metric: BusinessMetricName) => {
     const c = get(metric, current);
     const p = get(metric, previous);
-    return changed(c, p) && c! < p!;
+    return changed(c, p) && c! < p! && meetsThreshold(metric, c!, p!);
   };
 
   // revenue rising but profit falling

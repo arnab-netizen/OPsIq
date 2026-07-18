@@ -69,6 +69,8 @@ export interface BridgedExecutionRoute {
   priorityRank: number;
   /** Persisted lifecycle status; PROPOSED until the owner acts. The caller overrides this from the DB. */
   status: string;
+  /** Whether the owner can start this task right now (actionable route + startable status). */
+  canStart: boolean;
 }
 
 export interface ProcessExecutionBridgeAnalysis {
@@ -80,6 +82,14 @@ export interface ProcessExecutionBridgeAnalysis {
 }
 
 const SEVERITY_RANK: Record<BridgedExecutionRoute["severity"], number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
+const NON_ACTIONABLE_ROUTES = new Set<ExecutionRoute>(["MONITOR_ONLY", "BLOCK_UNSAFE_ACTION"]);
+const STARTABLE_STATUSES = new Set<string>(["PROPOSED", "NEEDS_DATA", "BLOCKED"]);
+
+/** Whether the owner can start this route now — pure domain, no DB required. */
+export function computeCanStart(executionRoute: ExecutionRoute, status: string): boolean {
+  return !NON_ACTIONABLE_ROUTES.has(executionRoute) && STARTABLE_STATUSES.has(status);
+}
 
 /** Approval level → bridge approval, honestly. STAFF-floor operational work is safe/reversible (AUTO_ALLOWED).
  *  Exported so the PASS 23 expansion bridges (workload/capability/SOP/training/effectiveness) map approval the
@@ -168,6 +178,7 @@ function bridgeCorrection(c: ProcessCorrection): BridgedExecutionRoute {
     severity: c.severity,
     priorityRank: c.priorityRank,
     status: "PROPOSED",
+    canStart: computeCanStart(route, "PROPOSED"),
   };
 }
 
@@ -197,6 +208,7 @@ function bridgeCashSignal(s: CashProfitSignal, rank: number): BridgedExecutionRo
     severity: s.severity,
     priorityRank: 100 + rank, // cash signals rank after the top process corrections unless critical (see sort)
     status: "PROPOSED",
+    canStart: computeCanStart(route, "PROPOSED"),
   };
 }
 
@@ -245,6 +257,10 @@ export function buildProcessExecutionBridge(
   const routes = [...byKey.values()].sort(
     (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || a.priorityRank - b.priorityRank,
   );
+  // Recompute canStart after sort so any caller-applied status overrides take effect correctly.
+  for (const r of routes) {
+    r.canStart = computeCanStart(r.executionRoute, r.status);
+  }
   // The top action the owner acts on is the most severe ACTIONABLE route (monitor-only never leads).
   const topRoute = routes.find((r) => r.executionRoute !== "MONITOR_ONLY") ?? routes[0] ?? null;
 

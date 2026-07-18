@@ -24,6 +24,9 @@
  * cockpit panel handle the new families with zero new plumbing.
  */
 
+import {
+  computeCanStart,
+} from "./process-execution-bridge";
 import type {
   BridgedExecutionRoute, ExecutionRoute, BridgeActionOwner, BridgeApprovalLevel, BridgeSourceFamily,
 } from "./process-execution-bridge";
@@ -68,6 +71,7 @@ function mk(p: {
     reassessmentTrigger: p.reassess, riskIfIgnored: p.riskIfIgnored, ownerVisibleSummary: p.ownerVisibleSummary,
     notActionableReason: p.notActionableReason ?? null, evidenceRefs: p.evidenceRefs,
     severity: p.severity, priorityRank: p.priorityRank, status: "PROPOSED",
+    canStart: computeCanStart(p.executionRoute, "PROPOSED"),
   };
 }
 

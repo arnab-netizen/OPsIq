@@ -21,6 +21,9 @@ import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
+import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation } from "@/services/owner-guidance/owner-now-view.service";
+import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
+import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -80,6 +83,22 @@ export interface MinimumOwnerCockpitProps {
   /** When provided, the cockpit becomes interactive; the server re-checks every action. */
   onAction?: (taskKey: string, action: string, input: CockpitActionInput) => void;
   busy?: boolean;
+  /** Goal Attention Signal — 6-state owner goal DTO from the now-view (Phase 2). */
+  goalAttentionSignal?: GoalAttentionSignal | null;
+  /** Top profit leak finding from the now-view (Phase 2 Signal B). */
+  topProfitLeak?: ProfitLeakFinding | null;
+  /** Policy Attention Signal — triggered vs configured policy breakdown (Phase 2 Signal C). */
+  policyAttentionSignal?: PolicyAttentionSignal | null;
+  /** Trend alerts from the last two metric snapshots (Phase 2 Signal D). */
+  trendAlerts?: TrendAlert[] | null;
+  /** Do-not-repeat annotation for the top guidance action (Phase 2 Signal E). */
+  doNotRepeatAnnotation?: DoNotRepeatAnnotation | null;
+  /** Active escalations requiring owner acknowledgement (Phase 2 Signal G). */
+  activeEscalations?: EscalationAttentionItem[] | null;
+  /** Called when the owner acknowledges an escalation (Phase 2 Signal G). */
+  onAcknowledgeEscalation?: (escalationId: string) => void;
+  /** Called when the owner starts a process execution task (Phase 2 Signal F). */
+  onStartWork?: (taskKey: string) => void;
 }
 
 const RECOVERY_STATUS_LABEL: Record<string, string> = {
@@ -266,7 +285,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -450,6 +469,21 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         )}
         {terminal && <p data-testid="cockpit-terminal" style={{ margin: 0, fontSize: 12, color: "#16a34a" }}>This task is {top.status.toLowerCase()}.</p>}
 
+        {/* Start Work — dedicated button for canStart=true tasks (Phase 2 Signal F) */}
+        {top.canStart && onStartWork && (
+          <div style={{ marginTop: 4 }}>
+            <button
+              type="button"
+              data-testid={`cockpit-start-work-${top.taskKey}`}
+              disabled={busy}
+              onClick={() => onStartWork(top.taskKey)}
+              style={{ fontSize: 13, padding: "6px 14px", borderRadius: 6, border: "1px solid #0369a1", background: "#0369a1", color: "#fff", cursor: busy ? "default" : "pointer" }}
+            >
+              Start Work
+            </button>
+          </div>
+        )}
+
         {/* 6. Blocked / Not Allowed */}
         <div data-testid="cockpit-blocked" style={{ borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>Blocked / not allowed</span>
@@ -514,6 +548,145 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           </ul>
         )}
       </details>
+
+      {/* Goal Attention Signal — Phase 2 Signal A */}
+      {goalAttentionSignal && (
+        <div data-testid="cockpit-goal-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>Goal</span>
+            <span data-testid="cockpit-goal-state" data-cockpit-goal-state={goalAttentionSignal.state} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#fef2f2" : goalAttentionSignal.state === "ON_TRACK" ? "#f0fdf4" : "#fafafa", color: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#b91c1c" : goalAttentionSignal.state === "ON_TRACK" ? "#15803d" : "#6b7280" }}>
+              {goalAttentionSignal.state.replace(/_/g, " ")}
+            </span>
+            {goalAttentionSignal.goalTitle && <span style={{ fontSize: 13, color: "#374151" }}>{goalAttentionSignal.goalTitle}</span>}
+          </div>
+          {goalAttentionSignal.gapToClose !== null && (
+            <p data-testid="cockpit-goal-gap" style={{ margin: "6px 0 0", fontSize: 13, color: "#374151" }}>
+              Gap to close: {goalAttentionSignal.targetCurrency ?? ""} {goalAttentionSignal.gapToClose.toLocaleString()}
+            </p>
+          )}
+          <p data-testid="cockpit-goal-explanation" style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280", fontStyle: "italic" }}>{goalAttentionSignal.beginnerExplanation}</p>
+        </div>
+      )}
+
+      {/* Profit Leak — Phase 2 Signal B */}
+      {topProfitLeak && (
+        <div data-testid="cockpit-profit-leak-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>Profit leak detected</span>
+          <div style={{ marginTop: 6, fontSize: 13, display: "flex", flexDirection: "column", gap: 4 }}>
+            <span data-testid="cockpit-profit-leak-area" style={{ color: "#374151" }}>Area: {topProfitLeak.domain}</span>
+            {topProfitLeak.estimatedImpact.rangeLow !== undefined && (
+              <span data-testid="cockpit-profit-leak-impact" style={{ color: "#b91c1c" }}>
+                Estimated impact: {topProfitLeak.estimatedImpact.rangeLow.toLocaleString()}
+                {topProfitLeak.estimatedImpact.rangeHigh !== undefined ? ` – ${topProfitLeak.estimatedImpact.rangeHigh.toLocaleString()}` : ""}
+              </span>
+            )}
+            {topProfitLeak.ownerExplanation && (
+              <span style={{ color: "#6b7280", fontStyle: "italic" }}>{topProfitLeak.ownerExplanation}</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Policy Attention Signal — Phase 2 Signal C */}
+      {policyAttentionSignal && (
+        <div data-testid="cockpit-policy-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>Operating policies</span>
+            {policyAttentionSignal.triggeredBlockCount > 0 && (
+              <span data-testid="cockpit-policy-triggered-blocks" style={{ fontSize: 12, color: "#b91c1c", fontWeight: 600 }}>
+                {policyAttentionSignal.triggeredBlockCount} blocked
+              </span>
+            )}
+            {policyAttentionSignal.triggeredWarningCount > 0 && (
+              <span data-testid="cockpit-policy-triggered-warnings" style={{ fontSize: 12, color: "#b45309" }}>
+                {policyAttentionSignal.triggeredWarningCount} warning{policyAttentionSignal.triggeredWarningCount > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+          <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+            {policyAttentionSignal.details.map((d, i) => (
+              <li key={d.policyKey} data-testid={`cockpit-policy-detail-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center" }}>
+                <Badge variant={d.decision === "BLOCK" ? "destructive" : d.decision === "WARN" ? "warning" : "muted"}>{d.decision}</Badge>
+                <span style={{ color: "#374151" }}>{d.label}</span>
+                {d.hasActiveOverride && <span style={{ color: "#6b7280", fontSize: 12 }}>(override active)</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Trend Alerts — Phase 2 Signal D */}
+      <div data-testid="cockpit-trend-alerts-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+        <span style={{ fontSize: 14, fontWeight: 600 }}>Trend alerts</span>
+        {trendAlerts === null || trendAlerts === undefined ? (
+          <p data-testid="cockpit-trend-alerts-state" data-cockpit-trend-alerts-state="INSUFFICIENT_DATA" style={{ margin: "6px 0 0", fontSize: 13, color: "#6b7280" }}>
+            Not enough metric history yet for trend alerts. Record at least two periods.
+          </p>
+        ) : trendAlerts.length === 0 ? (
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#16a34a" }}>No trend alerts — metrics moving in a healthy direction.</p>
+        ) : (
+          <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+            {trendAlerts.map((alert, i) => (
+              <li key={alert.alertType} data-testid={`cockpit-trend-alert-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+                <Badge data-testid={`cockpit-trend-alert-${i}-severity`} variant={alert.severity === "critical" ? "destructive" : "warning"}>
+                  {alert.severity}
+                </Badge>
+                <span style={{ color: "#374151" }}>{alert.description}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Do-Not-Repeat Annotation — Phase 2 Signal E */}
+      {doNotRepeatAnnotation?.blocked && (
+        <div data-testid="cockpit-dnr-section" style={{ border: "1px solid #fef3c7", borderRadius: 8, padding: "10px 14px", background: "#fffbeb" }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>Do not repeat</span>
+          <p data-testid="cockpit-dnr-prior-action" style={{ margin: "6px 0 0", fontSize: 13, color: "#374151" }}>
+            {doNotRepeatAnnotation.priorActionSummary}
+          </p>
+          <p data-testid="cockpit-dnr-reason" style={{ margin: "4px 0 0", fontSize: 13, color: "#92400e" }}>
+            {doNotRepeatAnnotation.blockedReason}
+          </p>
+          {doNotRepeatAnnotation.changedContextCondition && (
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>
+              Allowed if: {doNotRepeatAnnotation.changedContextCondition}
+            </p>
+          )}
+          {doNotRepeatAnnotation.legacyMatch && (
+            <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>Matched by area scope (informational).</p>
+          )}
+        </div>
+      )}
+
+      {/* Active Escalations — Phase 2 Signal G */}
+      <div data-testid="cockpit-escalations-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+        <span style={{ fontSize: 14, fontWeight: 600 }}>Escalations</span>
+        {activeEscalations === null || activeEscalations === undefined ? (
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#6b7280" }}>Escalation data unavailable.</p>
+        ) : activeEscalations.length === 0 ? (
+          <p data-testid="cockpit-escalations-state" data-cockpit-escalations-state="NONE" style={{ margin: "6px 0 0", fontSize: 13, color: "#16a34a" }}>No open escalations.</p>
+        ) : (
+          <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+            {activeEscalations.map((esc) => (
+              <li key={esc.id} data-testid={`cockpit-escalation-${esc.id}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <Badge variant={esc.severity === "CRITICAL" ? "destructive" : "warning"}>{esc.severity}</Badge>
+                <span style={{ color: "#374151", flex: 1 }}>{esc.title}</span>
+                {onAcknowledgeEscalation && (
+                  <button
+                    type="button"
+                    data-testid={`cockpit-escalation-ack-${esc.id}`}
+                    onClick={() => onAcknowledgeEscalation(esc.id)}
+                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer" }}
+                  >
+                    Acknowledge
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {/* Recovery status — read-only, collapsed low-load summary (PASS 37). */}
       {recovery && <RecoverySection recovery={recovery} />}
