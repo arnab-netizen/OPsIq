@@ -30,3 +30,17 @@ export const E2E_PROOF_REQUIREMENT_ID = "41000000-0000-0000-0000-0000000000e2";
  * with ownerCashflowCycle.cashflowState="CRITICAL" so spec 46 can assert cashPressureLevel=CRITICAL.
  */
 export const E2E_BC_PROBE_BUSINESS_ID = "30000000-0000-0000-0000-0000000000bc";
+
+// ─── Phase 2 Attention Engine fixtures (seed-e2e-attention-engine.ts) ─────────
+
+/** OwnerBusiness created specifically for metric snapshots that drive goal + trend signals. */
+export const E2E_ATTN_BUSINESS_ID    = "80000000-0000-0000-0000-000000000001";
+
+/** OwnerGoal seeded AT_RISK: targetAmount=1_000_000 INR with slow revenue growth in snapshots. */
+export const E2E_GOAL_ID             = "40000000-0000-0000-0000-000000000001";
+
+/** OPEN escalation seeded for spec 53 (escalation acknowledge). */
+export const E2E_ESCALATION_ID       = "50000000-0000-0000-0000-000000000001";
+
+/** OwnerCapacitySnapshot with bottleneckUtilization=0.92 to trigger growth_before_capacity policy. */
+export const E2E_ATTN_CAPACITY_ID    = "83000000-0000-0000-0000-000000000001";

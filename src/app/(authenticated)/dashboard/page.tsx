@@ -36,7 +36,8 @@ async function fetchEngagements() {
     await authFetchInit()
   );
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.engagements ?? []);
 }
 
 async function fetchAllActions() {
@@ -45,7 +46,8 @@ async function fetchAllActions() {
     await authFetchInit()
   );
   if (!res.ok) return [];
-  const engagements = await res.json();
+  const data = await res.json();
+  const engagements: any[] = Array.isArray(data) ? data : (data.engagements ?? []);
 
   const allActions: any[] = [];
   for (const eng of engagements) {
@@ -67,7 +69,8 @@ async function fetchAllFindings() {
     await authFetchInit()
   );
   if (!res.ok) return [];
-  const engagements = await res.json();
+  const data = await res.json();
+  const engagements: any[] = Array.isArray(data) ? data : (data.engagements ?? []);
 
   const allFindings: any[] = [];
   for (const eng of engagements) {

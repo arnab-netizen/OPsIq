@@ -943,6 +943,7 @@ export interface BridgedRouteView {
   severity: string;
   priorityRank: number;
   status: string;
+  canStart?: boolean;
 }
 export interface ProcessExecutionBridgeView {
   routes: BridgedRouteView[];

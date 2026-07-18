@@ -47,7 +47,7 @@ import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type 
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
 import { buildCashProfitProtection, type CashProfitProtectionAnalysis, type CashRiskState } from "@/domain/owner-mode/cash-profit-protection";
-import { buildProcessExecutionBridge, type ProcessExecutionBridgeAnalysis } from "@/domain/owner-mode/process-execution-bridge";
+import { buildProcessExecutionBridge, computeCanStart, type ProcessExecutionBridgeAnalysis } from "@/domain/owner-mode/process-execution-bridge";
 import { buildBridgeExpansion } from "@/domain/owner-mode/process-execution-bridge-expansion";
 import { getPersistedProcessTasks } from "@/services/owner-mode/process-execution-bridge.service";
 import { buildExternalOpportunityIntelligence, type ExternalOpportunityAnalysis, type RawOpportunitySignal } from "@/domain/owner-mode/external-opportunity-intelligence";
@@ -68,6 +68,9 @@ import type { ReusedHashAnalysis } from "@/domain/execution/reused-hash-precheck
 import { clearsFinding, isFindingSuppressed, AdjudicationSourceType } from "@/domain/execution/proof-risk-adjudication";
 import type { ProofRiskAdjudicationView } from "@/services/execution/proof-risk-adjudication.service";
 import { deriveBusinessConditionSignals, type DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
+import { analyzeBusinessTrend, type TrendAlert, type BusinessMetricName, type MetricDataPoint } from "@/domain/owner-mode/business-state-timeline";
+import { checkDoNotRepeatForGuidance, type DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
+export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -125,13 +128,32 @@ interface SalesDealRow {
   stage: string;
 }
 
+interface MetricSnapshotForTrend {
+  periodEnd: Date;
+  revenue: number | null;
+  grossProfit: number | null;
+  netProfit: number | null;
+  newCustomers: number | null;
+  averageOrderValue: number | null;
+  refundAmount: number | null;
+  rewashCount: number | null;
+  complaintCount: number | null;
+  receivables: number | null;
+  marketingSpend: number | null;
+  staffProductivity: number | null;
+}
+
 interface GuidanceDb {
   ownerCashflowCycle: { findFirst(args: unknown): Promise<CycleRow | null> };
   ownerFinanceCycle: { findFirst(args: unknown): Promise<CycleRow | null> };
   ownerEmployeeWorkloadSnapshot: { findFirst(args: unknown): Promise<EmployeeRow | null> };
   ownerWorkloadSnapshot: { findFirst(args: unknown): Promise<OwnerRow | null> };
   ownerCapacitySnapshot: { findFirst(args: unknown): Promise<CapacityRow | null> };
-  ownerMetricSnapshot: { findFirst(args: unknown): Promise<MetricRow | null> };
+  ownerMetricSnapshot: {
+    findFirst(args: unknown): Promise<MetricRow | null>;
+    /** Optional — for trend analysis; present on the live client. */
+    findMany?(args: { where: Record<string, unknown>; select: Record<string, boolean>; orderBy: Record<string, unknown>; take: number }): Promise<MetricSnapshotForTrend[]>;
+  };
   ownerSupplierInventorySnapshot: { findFirst(args: unknown): Promise<SupplierRow | null> };
   ownerBusiness: { findFirst(args: unknown): Promise<BusinessRow | null> };
   proof: {
@@ -176,6 +198,13 @@ interface GuidanceDb {
   salesDealRecord?: {
     findMany(args: unknown): Promise<SalesDealRow[]>;
   };
+  /** Optional — do-not-repeat rules; present on the live client. */
+  ownerDoNotRepeatRule?: {
+    findFirst(args: {
+      where: { workspaceId: string; memoryKey: { in: string[] }; blocksRepetition: boolean; active: boolean };
+      orderBy: { createdAt: "desc" };
+    }): Promise<{ memoryKey: string; summary: string; reason: string; changedContextExplanation: string | null; blocksRepetition: boolean } | null>;
+  };
 }
 
 export interface GuidanceDeps {
@@ -213,9 +242,23 @@ export interface GuidanceDeps {
   /** Optional — persisted opportunity execution-task statuses (PASS 12). Absent on a fake-DI test. */
   executionTasks?: (workspaceId: string) => Promise<Map<string, PersistedTaskStatus>>;
   /** Optional — active owner goal trajectory (Phase 5). Absent on a fake-DI test → null. */
-  goalTrajectoryFn?: (workspaceId: string) => Promise<{ trajectory: { confidence: string; trajectoryMiss: boolean; projectedMonthsToGoal: number | null; gapToClose: number } } | null>;
+  goalTrajectoryFn?: (workspaceId: string) => Promise<{
+    goal: { targetType: string; targetAmount: number; targetCurrency: string; targetDate: Date };
+    trajectory: {
+      confidence: string;
+      confidenceRationale: string;
+      trajectoryMiss: boolean;
+      projectedMonthsToGoal: number | null;
+      currentTrajectoryDate: Date | null;
+      gapToClose: number;
+      requiredMonthlyImprovement: number;
+      assumptions: string[];
+    };
+  } | null>;
   /** Optional — active operating policies for this workspace (Phase 7). Absent on a fake-DI test → null. */
-  policyListFn?: (workspaceId: string) => Promise<Array<{ policyKey: string; isActive: boolean }>>;
+  policyListFn?: (workspaceId: string) => Promise<Array<{ policyKey: string; isActive: boolean; hardBlock: boolean }>>;
+  /** Optional — evaluate a single policy against a live measurement (Phase 7). Absent on a fake-DI test → null. */
+  policyEvalFn?: (workspaceId: string, policyKey: string, value: number, unit: string) => Promise<{ decision: "ALLOW" | "WARN" | "BLOCK"; activeOverride?: { overriddenBy: string; reason: string; expiresAt: Date | null } | null }>;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
@@ -231,7 +274,7 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { getActiveValidationOutcomes } = await import("@/services/owner-mode/validation-outcome.service");
   const { getPersistedExecutionTasks } = await import("@/services/owner-mode/opportunity-execution.service");
   const { computeActiveGoalTrajectory } = await import("@/services/owner-strategy/goal.service");
-  const { listPolicies } = await import("@/services/governance/operating-policy.service");
+  const { listPolicies, evaluatePolicy } = await import("@/services/governance/operating-policy.service");
   return {
     db: db as unknown as GuidanceDb,
     uuid: () => randomUUID(),
@@ -247,6 +290,7 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
     proofRiskAdjudications: (workspaceId: string) => getProofRiskAdjudications(workspaceId),
     goalTrajectoryFn: (workspaceId: string) => computeActiveGoalTrajectory(workspaceId),
     policyListFn: (workspaceId: string) => listPolicies(workspaceId),
+    policyEvalFn: (workspaceId: string, policyKey: string, value: number, unit: string) => evaluatePolicy(workspaceId, policyKey, value, unit),
   };
 }
 
@@ -283,6 +327,77 @@ function cashSeverity(state: string | undefined): BusinessIssue["severity"] {
 function countSeverity(n: number, hi: number, med: number): BusinessIssue["severity"] {
   return n >= hi ? "HIGH" : n >= med ? "MEDIUM" : "LOW";
 }
+
+// ─── Phase 2 attention signal types ─────────────────────────────────────────
+
+export interface GoalAttentionSignal {
+  state: "NO_GOAL" | "INSUFFICIENT_DATA" | "STALE" | "ON_TRACK" | "AT_RISK" | "NO_GROWTH";
+  goalTitle: string | null;
+  targetAmount: number | null;
+  targetCurrency: string | null;
+  targetDateIso: string | null;
+  gapToClose: number | null;
+  projectedMonthsToGoal: number | null;
+  currentTrajectoryDateIso: string | null;
+  requiredMonthlyImprovement: number | null;
+  confidence: "LOW" | "MEDIUM" | "HIGH" | null;
+  trajectoryMiss: boolean | null;
+  assumptions: string[];
+  beginnerExplanation: string;
+}
+
+export interface ActivePolicyDetail {
+  policyKey: string;
+  label: string;
+  hardBlock: boolean;
+  isCurrentlyTriggered: boolean;
+  hasActiveOverride: boolean;
+  decision: "ALLOW" | "WARN" | "BLOCK";
+  overrideReason: string | null;
+}
+
+export interface PolicyAttentionSignal {
+  configuredHardBlockCount: number;
+  configuredWarningCount: number;
+  triggeredBlockCount: number;
+  triggeredWarningCount: number;
+  activeOverrideCount: number;
+  details: ActivePolicyDetail[];
+}
+
+export interface EscalationAttentionItem {
+  id: string;
+  title: string;
+  severity: string;
+  status: "OPEN";
+  raisedAtIso: string;
+  dueAtIso: string | null;
+}
+
+const GOAL_TYPE_LABEL: Record<string, string> = {
+  PROFIT: "profit target",
+  REVENUE: "revenue target",
+  NET_WORTH: "net worth target",
+  MULTIPLE: "business multiple",
+};
+
+const POLICY_LABEL: Record<string, string> = {
+  growth_before_capacity: "Growth before capacity",
+  high_cost_low_payback: "Cost vs payback",
+};
+
+const ISSUE_CATEGORY_TO_IMPACT_AREA: Record<string, string> = {
+  CASH_DANGER: "cash",
+  CUSTOMER_SERVICE_FAILURE: "operations",
+  OVERLOAD: "management",
+  PROFIT_LEAK: "finance",
+  CAPACITY_BOTTLENECK: "operations",
+  COMPLIANCE_SAFETY_RISK: "compliance",
+  BLOCKED_EXECUTION: "operations",
+  PENDING_PROOF_OUTCOME: "governance",
+  GROWTH_OPPORTUNITY: "growth",
+  PROCESS_IMPROVEMENT: "operations",
+};
 
 export interface GuidanceStep {
   issueId: string;
@@ -430,20 +545,31 @@ export interface OwnerNowViewPayload {
    */
   salesPipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null;
   /**
-   * Goal Trajectory — current owner goal progress and trajectory confidence. Null when no active goal
-   * exists or when fewer than 3 metric snapshots are available for a meaningful projection.
+   * Goal Attention Signal — owner-facing 6-state DTO derived from the active goal + trajectory.
+   * Null when goalTrajectoryFn is unavailable (fake-DI tests).
    */
-  goalTrajectory: {
-    confidence: string;
-    trajectoryMiss: boolean;
-    projectedMonthsToGoal: number | null;
-    gapToClose: number;
-  } | null;
+  goalAttentionSignal: GoalAttentionSignal | null;
   /**
-   * Operating Policy Summary — counts of active governed policies for this workspace.
-   * Null when no policies have been seeded (new workspace before first policy evaluation).
+   * Policy Attention Signal — triggered vs configured breakdown across all workspace policies.
+   * Null when policyListFn/policyEvalFn are unavailable (fake-DI tests).
    */
-  operatingPolicySummary: { activePolicies: number; policyKeys: string[] } | null;
+  policyAttentionSignal: PolicyAttentionSignal | null;
+  /**
+   * Trend Alerts — pairwise directional metric alerts from the last two metric snapshots.
+   * null = insufficient history (fewer than 2 snapshots or duplicate period timestamps);
+   * [] = valid pair but no alert thresholds exceeded.
+   */
+  trendAlerts: TrendAlert[] | null;
+  /**
+   * Do-Not-Repeat Annotation — whether the top priority guidance action is blocked by an
+   * active do-not-repeat rule. Null when no matching rule exists.
+   */
+  doNotRepeatAnnotation: DoNotRepeatAnnotation | null;
+  /**
+   * Active Escalations — open escalations requiring owner attention (OPEN status only, max 5).
+   * null = escalation table unavailable; [] = no open escalations.
+   */
+  activeEscalations: EscalationAttentionItem[] | null;
   /**
    * Derived Business Condition Signals — the 11 risk-dimension fields derived from the
    * snapshot data already read during Now View synthesis. Never "unknown" when the source
@@ -1278,7 +1404,10 @@ export async function getOwnerNowView(
         const statusByKey = new Map(persisted.map((t) => [t.taskKey, t.status]));
         for (const r of processExecution.routes) {
           const s = statusByKey.get(r.taskKey);
-          if (s) r.status = s;
+          if (s) {
+            r.status = s;
+            r.canStart = computeCanStart(r.executionRoute, s);
+          }
         }
         const TERMINAL = new Set(["COMPLETED", "REJECTED"]);
         processExecution.topRoute =
@@ -1397,30 +1526,180 @@ export async function getOwnerNowView(
       )
     : null;
 
-  // Goal Trajectory — computed from the active owner goal + trailing financial snapshots.
-  // Only available on the live path (goalTrajectoryFn provided by resolveDefaultDeps).
-  // Absent on fake-DI unit tests → null (no fabrication).
-  const goalTrajectoryRaw = typeof deps.goalTrajectoryFn === "function"
-    ? await deps.goalTrajectoryFn(workspaceId).catch(() => null)
+  // Goal Attention Signal — full 6-state owner DTO derived from the active goal + trajectory.
+  // Only available on the live path (goalTrajectoryFn present). Absent on fake-DI unit tests → null.
+  // When function is present but returns null: NO_GOAL state (workspace has no active goal set).
+  const hasGoalFn = typeof deps.goalTrajectoryFn === "function";
+  const goalTrajectoryRaw = hasGoalFn
+    ? await deps.goalTrajectoryFn!(workspaceId).catch(() => null)
     : null;
-  const goalTrajectory = goalTrajectoryRaw
-    ? {
-        confidence: goalTrajectoryRaw.trajectory.confidence,
-        trajectoryMiss: goalTrajectoryRaw.trajectory.trajectoryMiss,
-        projectedMonthsToGoal: goalTrajectoryRaw.trajectory.projectedMonthsToGoal,
-        gapToClose: goalTrajectoryRaw.trajectory.gapToClose,
-      }
-    : null;
+  let goalAttentionSignal: GoalAttentionSignal | null = null;
+  if (hasGoalFn && !goalTrajectoryRaw) {
+    goalAttentionSignal = {
+      state: "NO_GOAL",
+      goalTitle: null,
+      targetAmount: null,
+      targetCurrency: null,
+      targetDateIso: null,
+      gapToClose: null,
+      projectedMonthsToGoal: null,
+      currentTrajectoryDateIso: null,
+      requiredMonthlyImprovement: null,
+      confidence: null,
+      trajectoryMiss: null,
+      assumptions: [],
+      beginnerExplanation: "No active goal is set. Add a goal to track your progress.",
+    };
+  }
+  if (goalTrajectoryRaw) {
+    const { goal, trajectory } = goalTrajectoryRaw;
+    const goalTitle = GOAL_TYPE_LABEL[goal.targetType] ?? goal.targetType.toLowerCase().replace(/_/g, " ");
+    const ownerMonths = (goal.targetDate.getTime() - Date.now()) / (30.44 * 24 * 60 * 60 * 1000);
 
-  // Operating Policy Summary — surface active policy keys from the workspace's policy registry.
-  // Only available on the live path (policyListFn provided by resolveDefaultDeps).
+    let goalState: GoalAttentionSignal["state"];
+    let beginnerExplanation: string;
+
+    if (trajectory.confidence === "LOW") {
+      goalState = "INSUFFICIENT_DATA";
+      beginnerExplanation = "Not enough data yet to project your goal. Keep recording results.";
+    } else if (trajectory.confidence === "MEDIUM" && trajectory.confidenceRationale.includes("days old")) {
+      goalState = "STALE";
+      beginnerExplanation = "Your last result was recorded more than 60 days ago. Update your numbers to get a fresh projection.";
+    } else if (trajectory.projectedMonthsToGoal === null) {
+      goalState = "NO_GROWTH";
+      beginnerExplanation = "At the current rate, your goal cannot be reached. Growth needs to turn positive.";
+    } else if (trajectory.trajectoryMiss) {
+      goalState = "AT_RISK";
+      const behindMonths = trajectory.projectedMonthsToGoal - Math.max(0, ownerMonths);
+      beginnerExplanation = `Your goal may slip. At the current rate you are ${Math.round(behindMonths)} months behind schedule.`;
+    } else {
+      goalState = "ON_TRACK";
+      beginnerExplanation = `You are on pace to reach your ${goalTitle} in about ${trajectory.projectedMonthsToGoal} months.`;
+    }
+
+    goalAttentionSignal = {
+      state: goalState,
+      goalTitle,
+      targetAmount: goal.targetAmount,
+      targetCurrency: goal.targetCurrency,
+      targetDateIso: goal.targetDate.toISOString(),
+      gapToClose: trajectory.gapToClose,
+      projectedMonthsToGoal: trajectory.projectedMonthsToGoal,
+      currentTrajectoryDateIso: trajectory.currentTrajectoryDate?.toISOString() ?? null,
+      requiredMonthlyImprovement: trajectory.requiredMonthlyImprovement,
+      confidence: trajectory.confidence as "LOW" | "MEDIUM" | "HIGH",
+      trajectoryMiss: trajectory.trajectoryMiss,
+      assumptions: trajectory.assumptions,
+      beginnerExplanation,
+    };
+  }
+
+  // Policy Attention Signal — triggered vs configured breakdown using live measurements.
+  // Only available on the live path (policyListFn + policyEvalFn provided by resolveDefaultDeps).
   // Absent on fake-DI unit tests → null (no fabrication).
-  const allPolicies = typeof deps.policyListFn === "function"
-    ? await deps.policyListFn(workspaceId).catch(() => [])
-    : [];
-  const activePolicies = allPolicies.filter((p) => p.isActive);
-  const operatingPolicySummary = activePolicies.length > 0
-    ? { activePolicies: activePolicies.length, policyKeys: activePolicies.map((p) => p.policyKey) }
+  let policyAttentionSignal: PolicyAttentionSignal | null = null;
+  if (typeof deps.policyListFn === "function" && typeof deps.policyEvalFn === "function") {
+    const allPolicies = await deps.policyListFn(workspaceId).catch(() => [] as Array<{ policyKey: string; isActive: boolean; hardBlock: boolean }>);
+    const activePolicies = allPolicies.filter((p) => p.isActive);
+    if (activePolicies.length > 0) {
+      const policyDetails: ActivePolicyDetail[] = await Promise.all(
+        activePolicies.map(async (p) => {
+          const measurement = p.policyKey === "growth_before_capacity" ? state.capacityUtilizationPct : 0;
+          const unit = p.policyKey === "growth_before_capacity" ? "%" : " months";
+          const evalResult = await deps.policyEvalFn!(workspaceId, p.policyKey, measurement, unit).catch(
+            () => ({ decision: "ALLOW" as const, activeOverride: null }),
+          );
+          return {
+            policyKey: p.policyKey,
+            label: POLICY_LABEL[p.policyKey] ?? p.policyKey,
+            hardBlock: p.hardBlock,
+            isCurrentlyTriggered: evalResult.decision !== "ALLOW",
+            hasActiveOverride: Boolean(evalResult.activeOverride),
+            decision: evalResult.decision,
+            overrideReason: evalResult.activeOverride?.reason ?? null,
+          };
+        }),
+      );
+      policyAttentionSignal = {
+        configuredHardBlockCount: activePolicies.filter((p) => p.hardBlock).length,
+        configuredWarningCount: activePolicies.filter((p) => !p.hardBlock).length,
+        triggeredBlockCount: policyDetails.filter((d) => d.decision === "BLOCK").length,
+        triggeredWarningCount: policyDetails.filter((d) => d.decision === "WARN").length,
+        activeOverrideCount: policyDetails.filter((d) => d.hasActiveOverride).length,
+        details: policyDetails,
+      };
+    }
+  }
+
+  // Trend Alerts — pairwise directional alerts from the last two ownerMetricSnapshot periods.
+  // Null when fewer than 2 snapshots are available or period timestamps are identical.
+  let trendAlerts: TrendAlert[] | null = null;
+  if (deps.db.ownerMetricSnapshot.findMany) {
+    const snapshots = await deps.db.ownerMetricSnapshot.findMany({
+      where: { workspaceId },
+      select: {
+        periodEnd: true, revenue: true, grossProfit: true, netProfit: true,
+        newCustomers: true, averageOrderValue: true, refundAmount: true, rewashCount: true,
+        complaintCount: true, receivables: true, marketingSpend: true, staffProductivity: true,
+      },
+      orderBy: { periodEnd: "desc" },
+      take: 2,
+    }).catch(() => [] as MetricSnapshotForTrend[]);
+
+    if (snapshots.length >= 2 && snapshots[0].periodEnd.getTime() !== snapshots[1].periodEnd.getTime()) {
+      const toMetricPoints = (s: MetricSnapshotForTrend): MetricDataPoint[] => {
+        const pairs: Array<[BusinessMetricName, number | null]> = [
+          ["revenue", s.revenue],
+          ["gross_profit", s.grossProfit],
+          ["net_profit", s.netProfit],
+          ["customer_count", s.newCustomers],
+          ["average_order_value", s.averageOrderValue],
+          ["refunds", s.refundAmount],
+          ["rework_rate", s.rewashCount],
+          ["complaints", s.complaintCount],
+          ["receivables", s.receivables],
+          ["marketing_spend", s.marketingSpend],
+          ["staff_productivity", s.staffProductivity],
+        ];
+        return pairs
+          .filter((p): p is [BusinessMetricName, number] => p[1] !== null)
+          .map(([metricName, value]) => ({ metricName, value, periodLabel: s.periodEnd.toISOString().slice(0, 7) }));
+      };
+      const currentPeriod = toMetricPoints(snapshots[0]);
+      const previousPeriod = toMetricPoints(snapshots[1]);
+      if (currentPeriod.length > 0 && previousPeriod.length > 0) {
+        const trendResult = analyzeBusinessTrend({
+          workspaceId,
+          businessId: businessId ?? "",
+          currentPeriod,
+          previousPeriod,
+        });
+        trendAlerts = trendResult.valid ? trendResult.trendAlerts : null;
+      }
+    }
+  }
+
+  // Active Escalations — open escalations requiring owner attention (OPEN status only, max 5).
+  // Null when escalation table is unavailable (fake-DI tests).
+  const openEscalationRows = deps.db.escalation?.findMany
+    ? await deps.db.escalation.findMany({
+        where: { workspaceId, status: "OPEN" },
+        select: { id: true, assignedTarget: true, severity: true, status: true, createdAt: true, dueAt: true },
+      }).catch(() => null)
+    : null;
+  const activeEscalations: EscalationAttentionItem[] | null = openEscalationRows
+    ? openEscalationRows
+        .filter((e) => e.status === "OPEN")
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, 5)
+        .map((e) => ({
+          id: e.id,
+          title: e.assignedTarget ?? "Escalation",
+          severity: e.severity,
+          status: "OPEN" as const,
+          raisedAtIso: e.createdAt.toISOString(),
+          dueAtIso: e.dueAt?.toISOString() ?? null,
+        }))
     : null;
 
   // Derive the 11 business-condition risk dimensions from snapshot data already in memory.
@@ -1447,6 +1726,13 @@ export async function getOwnerNowView(
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
 
+  // Do-Not-Repeat Annotation — check if the top priority guidance action is blocked by a DNR rule.
+  const topActionCategory = view.topOwnerActions[0]?.category;
+  const topActionImpactArea = topActionCategory ? (ISSUE_CATEGORY_TO_IMPACT_AREA[topActionCategory] ?? null) : null;
+  const doNotRepeatAnnotation: DoNotRepeatAnnotation | null = topActionImpactArea
+    ? await checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
+    : null;
+
   await deps.db.ownerGuidanceSnapshot.create({
     data: {
       id: deps.uuid(), workspaceId, businessId: businessId ?? null,
@@ -1462,7 +1748,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalTrajectory, operatingPolicySummary, derivedBusinessCondition };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalAttentionSignal, policyAttentionSignal, trendAlerts, doNotRepeatAnnotation, activeEscalations, derivedBusinessCondition };
 }
 
 /**
