@@ -53,7 +53,7 @@ const PRIMARY_ACTIONS = ["APPROVE", "COMPLETE", "START"] as const;
 /** Interactive actions valid for a route, mirroring the server guardrails so the UI never OFFERS an
  *  impossible/unsafe transition. The server still re-checks every one. */
 export function allowedCockpitActions(r: BridgedRouteView): string[] {
-  const terminal = r.status === "COMPLETED" || r.status === "REJECTED";
+  const terminal = r.status === "COMPLETED" || r.status === "REJECTED" || r.status === "OUTCOME_RECORDED" || r.status === "OUTCOME_DISPUTED" || r.status === "OUTCOME_VERIFIED";
   const nonActionable = r.executionRoute === "MONITOR_ONLY" || r.executionRoute === "BLOCK_UNSAFE_ACTION";
   const ownerOnly = r.approvalLevel === "OWNER_APPROVAL_REQUIRED" || r.approvalLevel === "NEVER_AUTO";
   if (nonActionable) return terminal ? [] : ["REQUEST_MISSING_DATA", "REQUEST_REASSESSMENT"];
@@ -627,7 +627,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
     else submit(action);
   };
 
-  const terminal = top.status === "COMPLETED" || top.status === "REJECTED";
+  const terminal = top.status === "COMPLETED" || top.status === "REJECTED" || top.status === "OUTCOME_RECORDED" || top.status === "OUTCOME_DISPUTED" || top.status === "OUTCOME_VERIFIED";
 
   return (
     <section data-testid="owner-cockpit" data-execution-route={top.executionRoute}

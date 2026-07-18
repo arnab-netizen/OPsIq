@@ -133,6 +133,15 @@ export class ObservationWindowOpenError extends Error {
   }
 }
 
+export class InsufficientEvidenceError extends Error {
+  readonly code = "INSUFFICIENT_EVIDENCE";
+  readonly statusCode = 409;
+  constructor() {
+    super("Cannot verify outcome: insufficient evidence or owner-reported result");
+    this.name = "InsufficientEvidenceError";
+  }
+}
+
 // ─── 1. Pure classification function ────────────────────────────────────────
 
 /**
@@ -330,6 +339,22 @@ export async function verifyOwnerActionOutcome(
 
     // 4. Classify
     const verificationClassification = classifyOutcomeVerification(outcome, task, now);
+
+    // 4a. Guard: non-terminal classifications must not write to DB or transition the task.
+    // Throwing here causes applyProcessExecutionAction to return INVALID_TRANSITION without
+    // updating the task status, preserving the ability to verify once the window closes.
+    if (!TERMINAL_VERIFIED_CLASSES.has(verificationClassification)) {
+      if (verificationClassification === "OBSERVATION_WINDOW_OPEN") {
+        let remainingDays = 0;
+        if (outcome.observationWindowDays != null && outcome.measurementPeriodEnd != null) {
+          const remainingMs = outcome.measurementPeriodEnd.getTime() - now.getTime();
+          remainingDays = Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+        }
+        throw new ObservationWindowOpenError(remainingDays);
+      }
+      // INSUFFICIENT_EVIDENCE: cannot write a terminal classification; reject without writing
+      throw new InsufficientEvidenceError();
+    }
 
     // 5. Separation-of-duty (use task's completedByUserId as the recorder)
     const recorderActorId = task?.completedByUserId ?? null;

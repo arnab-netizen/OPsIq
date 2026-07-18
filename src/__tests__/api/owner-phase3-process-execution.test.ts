@@ -263,6 +263,18 @@ describe("applyProcessExecutionAction — Phase 3 action dispatch", () => {
     expect((result as { verificationClassification?: string }).verificationClassification).toBe("SUCCESS");
   });
 
+  it("RECORD_OUTCOME returns MISSING_INPUT when outcomeStatus is not provided", async () => {
+    const db = makeDb({ status: "COMPLETED", outcomeId: null });
+    const result = await applyProcessExecutionAction(
+      { workspaceId: "ws-1", actorId: "u1", actorRole: "owner", taskKey: "task_cash", action: "RECORD_OUTCOME",
+        businessId: "biz-1", evidenceRefs: undefined, reason: null, delegateToRole: null, outcomeNotes: null,
+        progressPct: null, stage: null, outcomeStatus: null },
+      { db: db as any, uuid: () => "test-uuid", now: () => new Date() }
+    );
+    expect(result.ok).toBe(false);
+    expect((result as { code?: string }).code).toBe("MISSING_INPUT");
+  });
+
   it("VERIFY_OUTCOME returns NOT_FOUND_OR_FORBIDDEN for cross-workspace task", async () => {
     const db = makeDb({ status: "OUTCOME_RECORDED", outcomeId: "outcome-cuid-1", workspaceId: "ws-OTHER" });
     // Simulate what the DB WHERE clause does: ws-1 query finds nothing for a task owned by ws-OTHER

@@ -1576,7 +1576,7 @@ export async function getOwnerNowView(
             r.canStart = computeCanStart(r.executionRoute, s);
           }
         }
-        const TERMINAL = new Set(["COMPLETED", "REJECTED"]);
+        const TERMINAL = new Set(["COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"]);
         processExecution.topRoute =
           processExecution.routes.find((r) => r.executionRoute !== "MONITOR_ONLY" && !TERMINAL.has(r.status)) ??
           processExecution.topRoute;

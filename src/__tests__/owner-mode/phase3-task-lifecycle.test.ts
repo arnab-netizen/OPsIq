@@ -37,6 +37,10 @@ vi.mock("@/services/owner-mode/owner-outcome-verification.service", () => ({
   OutcomeNotFoundError: class OutcomeNotFoundError extends Error {},
   OutcomeAlreadyVerifiedError: class OutcomeAlreadyVerifiedError extends Error {},
   SeparationOfDutyViolationError: class SeparationOfDutyViolationError extends Error {},
+  InsufficientEvidenceError: class InsufficientEvidenceError extends Error {
+    readonly code = "INSUFFICIENT_EVIDENCE";
+    readonly statusCode = 409;
+  },
 }));
 
 // ── Minimal ProcessBridgeDb mock ─────────────────────────────────────────────
@@ -95,6 +99,7 @@ function baseTask(over: Record<string, unknown> = {}) {
 }
 
 import { applyProcessExecutionAction } from "@/services/owner-mode/process-execution-bridge.service";
+import * as VerifService from "@/services/owner-mode/owner-outcome-verification.service";
 
 // ── ACKNOWLEDGE ──────────────────────────────────────────────────────────────
 
@@ -335,5 +340,50 @@ describe("VERIFY_OUTCOME action", () => {
 
     expect(result.ok).toBe(false);
     expect((result as { code?: string }).code).toBe("INVALID_TRANSITION");
+  });
+
+  it("returns INVALID_TRANSITION when verifyOwnerActionOutcome throws InsufficientEvidenceError", async () => {
+    const db = makeDb();
+    (db.processExecutionTask.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      baseTask({ status: "OUTCOME_RECORDED", outcomeId: "outcome-cuid-1" })
+    );
+    vi.mocked(VerifService.verifyOwnerActionOutcome).mockRejectedValueOnce(
+      Object.assign(new Error("Cannot verify outcome: insufficient evidence or owner-reported result"), {
+        statusCode: 409, code: "INSUFFICIENT_EVIDENCE",
+      })
+    );
+
+    const result = await applyProcessExecutionAction(
+      { workspaceId: "ws-1", actorId: "user-verifier", actorRole: "owner", taskKey: "task_cash", action: "VERIFY_OUTCOME",
+        businessId: null, evidenceRefs: undefined, reason: null, delegateToRole: null, outcomeNotes: null,
+        progressPct: null, stage: null, outcomeStatus: null },
+      { db: db as any, uuid: () => "test-uuid", now: () => new Date() }
+    );
+
+    expect(result.ok).toBe(false);
+    expect((result as { code?: string }).code).toBe("INVALID_TRANSITION");
+  });
+});
+
+// ── Fix E regression: RECORD_OUTCOME requires explicit outcomeStatus ──────────
+
+describe("RECORD_OUTCOME missing outcomeStatus", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns MISSING_INPUT when outcomeStatus is not provided", async () => {
+    const db = makeDb();
+    (db.processExecutionTask.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      baseTask({ status: "COMPLETED", outcomeId: null })
+    );
+
+    const result = await applyProcessExecutionAction(
+      { workspaceId: "ws-1", actorId: "user-1", actorRole: "owner", taskKey: "task_cash", action: "RECORD_OUTCOME",
+        businessId: "biz-1", evidenceRefs: undefined, reason: null, delegateToRole: null, outcomeNotes: null,
+        progressPct: null, stage: null, outcomeStatus: null },
+      { db: db as any, uuid: () => "test-uuid", now: () => new Date() }
+    );
+
+    expect(result.ok).toBe(false);
+    expect((result as { code?: string }).code).toBe("MISSING_INPUT");
   });
 });

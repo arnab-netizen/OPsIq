@@ -207,8 +207,11 @@ export async function completeProcessTask(
   }
   const evidenceRefs = (input.evidenceRefs ?? []).map((e) => e.trim()).filter(Boolean);
   const notesEmpty = !input.outcomeNotes || !input.outcomeNotes.trim();
-  if (EVIDENCE_REQUIRED_ROUTES.has(route) && evidenceRefs.length === 0) {
-    return { ok: false, reason: "This task requires completion evidence — it cannot be completed without it.", code: "EVIDENCE_REQUIRED" };
+  if (EVIDENCE_REQUIRED_ROUTES.has(route)) {
+    const minRequired = task.requiredEvidence.length > 0 ? task.requiredEvidence.length : 1;
+    if (evidenceRefs.length < minRequired) {
+      return { ok: false, reason: "This task requires completion evidence — it cannot be completed without it.", code: "EVIDENCE_REQUIRED" };
+    }
   }
   // Fake-completion guard (verification-engine): claimed complete but no evidence and no notes (kpi unknown here).
   if (detectFakeCompletion(true, evidenceRefs.length > 0, false, notesEmpty) && EVIDENCE_REQUIRED_ROUTES.has(route)) {
@@ -399,8 +402,11 @@ export async function applyProcessExecutionAction(
     if (!(await businessInWorkspace(deps, input.workspaceId, input.businessId.trim()))) {
       return { ok: false, reason: "That business is not in this workspace.", code: "WRONG_WORKSPACE" };
     }
+    if (!input.outcomeStatus) {
+      return { ok: false, reason: "outcomeStatus is required for RECORD_OUTCOME — specify the actual outcome (e.g. 'worked', 'partially_worked', 'did_not_work').", code: "MISSING_INPUT" };
+    }
     const { recordOwnerActionOutcome } = await import("@/services/owner-mode/owner-action-outcome.service");
-    const outcomeStatusInput = (input.outcomeStatus as import("@/services/owner-mode/owner-action-outcome.service").OutcomeStatus | null | undefined) ?? "worked";
+    const outcomeStatusInput = input.outcomeStatus as import("@/services/owner-mode/owner-action-outcome.service").OutcomeStatus;
     const outcome = await recordOwnerActionOutcome(input.workspaceId, input.actorId ?? "system", {
       businessId: input.businessId.trim(),
       outcomeStatus: outcomeStatusInput,
@@ -451,6 +457,9 @@ export async function applyProcessExecutionAction(
           return { ok: false, reason: e.message, code: "UNAUTHORIZED" };
         }
         if (e.statusCode === 409 && e.code === "OBSERVATION_WINDOW_OPEN") {
+          return { ok: false, reason: e.message, code: "INVALID_TRANSITION" };
+        }
+        if (e.statusCode === 409 && e.code === "INSUFFICIENT_EVIDENCE") {
           return { ok: false, reason: e.message, code: "INVALID_TRANSITION" };
         }
       }
