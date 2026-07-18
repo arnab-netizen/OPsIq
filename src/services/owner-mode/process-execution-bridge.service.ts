@@ -450,6 +450,9 @@ export async function applyProcessExecutionAction(
     } catch (err: unknown) {
       if (err && typeof err === "object" && "statusCode" in err) {
         const e = err as { statusCode: number; message: string; code: string };
+        if (e.statusCode === 404) {
+          return { ok: false, reason: e.message, code: "NOT_FOUND_OR_FORBIDDEN" };
+        }
         if (e.statusCode === 409 && e.code === "OUTCOME_ALREADY_VERIFIED") {
           return { ok: false, reason: e.message, code: "INVALID_TRANSITION" };
         }
