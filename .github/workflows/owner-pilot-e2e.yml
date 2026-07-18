@@ -8,7 +8,7 @@ name: Owner Pilot Browser + Mobile E2E
 
 on:
   push:
-    branches: ["claude/opsiq-owner-pilot-readiness-isow0m", "claude/opsiq-ai-supervisor-minimal-audit", "claude/opsiq-completion-roadmap-omaxc2"]
+    branches: ["claude/opsiq-owner-pilot-readiness-isow0m", "claude/opsiq-ai-supervisor-minimal-audit", "claude/opsiq-completion-roadmap-omaxc2", "claude/phase-2-owner-attention-engine"]
   workflow_dispatch:
 
 jobs:
@@ -75,6 +75,7 @@ jobs:
           npx tsx scripts/seed-e2e-proof-risk.ts
           npx tsx scripts/seed-e2e-opportunity.ts
           npx tsx scripts/seed-e2e-business-condition.ts
+          npx tsx scripts/seed-e2e-attention-engine.ts
       - name: Start app
         run: |
           PORT=3001 npm run start > /tmp/app.log 2>&1 &
@@ -104,6 +105,8 @@ jobs:
           tests/browser/49-real-public-business-shadow-run.spec.ts
           tests/browser/50-owner-self-use-readiness.spec.ts
           tests/browser/51-owner-manual-entry.spec.ts
+          tests/browser/52-owner-attention-start-work.spec.ts
+          tests/browser/53-owner-attention-escalation.spec.ts
           --project=chromium
       - name: Print Playwright failures + app log
         if: always()
