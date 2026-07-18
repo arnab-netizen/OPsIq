@@ -61,9 +61,13 @@ async function seedMetricSnapshot(workspaceId: string, data: {
   periodEnd: Date; revenue: number; grossProfit: number; netProfit: number;
   complaintCount?: number;
 }) {
+  const bizId = randomUUID();
+  await db.ownerBusiness.create({
+    data: { id: bizId, workspaceId, name: "Test business", businessType: "retail" },
+  });
   return db.ownerMetricSnapshot.create({
     data: {
-      id: randomUUID(), workspaceId,
+      id: randomUUID(), workspaceId, businessId: bizId,
       periodStart: new Date(data.periodEnd.getTime() - 90 * 24 * 60 * 60 * 1000),
       periodEnd: data.periodEnd,
       revenue: data.revenue, grossProfit: data.grossProfit, netProfit: data.netProfit,
@@ -78,6 +82,7 @@ async function seedMetricSnapshot(workspaceId: string, data: {
 afterAll(async () => {
   if (!SHOULD_RUN_DB_TESTS) return;
   await db.ownerMetricSnapshot.deleteMany({ where: { workspaceId: { in: ALL_WORKSPACES } } });
+  await db.ownerBusiness.deleteMany({ where: { workspaceId: { in: ALL_WORKSPACES } } });
   await db.ownerDoNotRepeatRule.deleteMany({ where: { workspaceId: { in: ALL_WORKSPACES } } });
   await db.escalation.deleteMany({ where: { workspaceId: { in: ALL_WORKSPACES } } });
   await db.auditEvent.deleteMany({ where: { workspaceId: { in: ALL_WORKSPACES } } });
@@ -255,18 +260,6 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db][phase2] Attention Engine — Escalat
 });
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db][phase2] Attention Engine — Start Work FSM", () => {
-  let engagementId: string;
-  let actionId: string;
-
-  beforeAll(async () => {
-    if (!SHOULD_RUN_DB_TESTS) return;
-    engagementId = randomUUID();
-    actionId = randomUUID();
-    await db.engagement.create({
-      data: { id: engagementId, workspaceId: WS_ACTION_START, title: "Test engagement", status: "active", code: `ENG-TEST-${randomUUID().slice(0, 8)}` },
-    });
-  });
-
   it("test 13: assigned → in_progress FSM transition is valid (validateActionTransition)", () => {
     expect(() => validateActionTransition("assigned" as ActionStatus, "in_progress" as ActionStatus)).not.toThrow();
   });
