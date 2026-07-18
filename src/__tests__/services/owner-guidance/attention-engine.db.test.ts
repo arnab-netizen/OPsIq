@@ -68,6 +68,7 @@ async function seedMetricSnapshot(workspaceId: string, data: {
       periodEnd: data.periodEnd,
       revenue: data.revenue, grossProfit: data.grossProfit, netProfit: data.netProfit,
       complaintCount: data.complaintCount ?? 0,
+      currency: "USD",
     },
   });
 }
@@ -217,15 +218,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db][phase2] Attention Engine — Escalat
     await db.escalation.create({
       data: {
         id: randomUUID(), workspaceId: WS_ESC_OPEN,
+        category: "customer_complaint",
         assignedTarget: "Floor manager", severity: "HIGH", status: "OPEN",
-        createdAt: new Date("2026-07-10"), triggeredAt: new Date("2026-07-10"),
+        createdAt: new Date("2026-07-10"),
       },
     });
     await db.escalation.create({
       data: {
         id: randomUUID(), workspaceId: WS_ESC_OPEN,
+        category: "customer_complaint",
         assignedTarget: "Supervisor", severity: "LOW", status: "ACKNOWLEDGED",
-        createdAt: new Date("2026-07-08"), triggeredAt: new Date("2026-07-08"),
+        createdAt: new Date("2026-07-08"),
         acknowledgedAt: new Date("2026-07-09"),
       },
     });
@@ -240,8 +243,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db][phase2] Attention Engine — Escalat
     await db.escalation.create({
       data: {
         id: randomUUID(), workspaceId: WS_ESC_ISOLATION_B,
+        category: "customer_complaint",
         assignedTarget: "Other workspace", severity: "CRITICAL", status: "OPEN",
-        createdAt: new Date("2026-07-10"), triggeredAt: new Date("2026-07-10"),
+        createdAt: new Date("2026-07-10"),
       },
     });
     const payloadA = await getOwnerNowView(WS_ESC_ISOLATION_A, null);
@@ -259,7 +263,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db][phase2] Attention Engine — Start W
     engagementId = randomUUID();
     actionId = randomUUID();
     await db.engagement.create({
-      data: { id: engagementId, workspaceId: WS_ACTION_START, title: "Test engagement", status: "active" },
+      data: { id: engagementId, workspaceId: WS_ACTION_START, title: "Test engagement", status: "active", code: `ENG-TEST-${randomUUID().slice(0, 8)}` },
     });
   });
 

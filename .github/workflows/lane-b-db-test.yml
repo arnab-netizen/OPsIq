@@ -120,6 +120,7 @@ jobs:
 
       - name: Run DB-backed tests (exact command)
         run: |
+          set -o pipefail
           echo "Executing: npm test -- \"${{ github.event.inputs.test_pattern }}\" --run"
           npm test -- "${{ github.event.inputs.test_pattern }}" --run 2>&1 | tee test-output.log
           exit_code=$?
