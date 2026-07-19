@@ -35,7 +35,7 @@ import { createArbitrationOverride, getLatestOverride } from "@/services/owner-m
 import { runGoalArbitration } from "@/services/owner-mode/goal-arbitration.service";
 import { createKPIOwnership, updateKPIOwnership } from "@/services/owner-mode/kpi-ownership.service";
 import { createResourcePool, allocateResource } from "@/services/owner-mode/resource-pool.service";
-import { createObjective } from "@/services/owner-mode/business-objective.service";
+import { createObjective, addDependency } from "@/services/owner-mode/business-objective.service";
 
 // ── Fixed identifiers ─────────────────────────────────────────────────────────
 
@@ -187,25 +187,18 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         objectiveType: "STRATEGIC",
       });
 
-      // Link A → blocks B
-      await db.businessObjective.update({
-        where: { id: objB.id },
-        data: { blockedBy: { connect: { id: objA.id } } },
-      });
+      // Link A → blocks B via service (upsert — idempotent)
+      await addDependency(ws, actorId, objA.id, objB.id);
 
-      // Attempting the same connect again is a no-op in Prisma (handled by relation middleware)
-      // But the underlying _BlockedBy table must not have duplicate rows
-      await db.businessObjective.update({
-        where: { id: objB.id },
-        data: { blockedBy: { connect: { id: objA.id } } },
-      });
+      // Second call must be idempotent — upsert, not a second row
+      await addDependency(ws, actorId, objA.id, objB.id);
 
       const refreshed = await db.businessObjective.findUnique({
         where: { id: objB.id },
-        include: { blockedBy: { select: { id: true } } },
+        include: { blockedBy: { select: { blockingId: true } } },
       });
-      // Must still be exactly 1 reference (not 2)
-      const blockerIds = refreshed?.blockedBy.map((b: { id: string }) => b.id) ?? [];
+      // Must still be exactly 1 dependency row (not 2)
+      const blockerIds = refreshed?.blockedBy.map((b: { blockingId: string }) => b.blockingId) ?? [];
       expect(blockerIds.filter((id: string) => id === objA.id)).toHaveLength(1);
     });
 
@@ -227,14 +220,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         objectiveType: "REVENUE",
         priorityScore: 65,
       });
-      // A blocks B and B blocks A (cycle)
-      await db.businessObjective.update({
-        where: { id: cycleB.id },
-        data: { blockedBy: { connect: { id: cycleA.id } } },
+      // A blocks B and B blocks A (cycle) — bypass addDependency's cycle guard to
+      // simulate a corrupt/pre-existing cycle arriving from the DB, then prove arbitration
+      // terminates safely rather than looping.
+      await db.businessObjectiveDependency.create({
+        data: { workspaceId: ws, blockingId: cycleA.id, blockedId: cycleB.id, depType: "DEPENDS_ON" },
       });
-      await db.businessObjective.update({
-        where: { id: cycleA.id },
-        data: { blockedBy: { connect: { id: cycleB.id } } },
+      await db.businessObjectiveDependency.create({
+        data: { workspaceId: ws, blockingId: cycleB.id, blockedId: cycleA.id, depType: "DEPENDS_ON" },
       });
 
       // runGoalArbitration must complete (not hang) and either:
@@ -247,13 +240,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(result.arbitrationRecordId.length).toBeGreaterThan(0);
 
       // Clean up cycle after test
-      await db.businessObjective.update({
-        where: { id: cycleB.id },
-        data: { blockedBy: { disconnect: { id: cycleA.id } } },
+      await db.businessObjectiveDependency.deleteMany({
+        where: { workspaceId: ws, blockingId: cycleA.id, blockedId: cycleB.id },
       });
-      await db.businessObjective.update({
-        where: { id: cycleA.id },
-        data: { blockedBy: { disconnect: { id: cycleB.id } } },
+      await db.businessObjectiveDependency.deleteMany({
+        where: { workspaceId: ws, blockingId: cycleB.id, blockedId: cycleA.id },
       });
     });
 
