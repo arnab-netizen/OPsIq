@@ -15,9 +15,35 @@ import type { Prisma } from "@/generated/prisma/client";
 export type ReviewCadence = "DAILY" | "WEEKLY" | "FORTNIGHTLY" | "MONTHLY" | "QUARTERLY";
 const VALID_CADENCES: ReviewCadence[] = ["DAILY", "WEEKLY", "FORTNIGHTLY", "MONTHLY", "QUARTERLY"];
 
+export type KPIDirection = "HIGHER_IS_BETTER" | "LOWER_IS_BETTER";
+export type KPITrend = "IMPROVING" | "STABLE" | "DECLINING";
+export type KPIConfidenceLevel = "very_high" | "high" | "moderate" | "low" | "very_low";
+
+const VALID_DIRECTIONS: KPIDirection[] = ["HIGHER_IS_BETTER", "LOWER_IS_BETTER"];
+const VALID_TRENDS: KPITrend[] = ["IMPROVING", "STABLE", "DECLINING"];
+const VALID_CONFIDENCE_LEVELS: KPIConfidenceLevel[] = ["very_high", "high", "moderate", "low", "very_low"];
+
 function validateCadence(c: string): asserts c is ReviewCadence {
   if (!VALID_CADENCES.includes(c as ReviewCadence)) {
     throw new ValidationError(`Invalid reviewCadence: ${c}. Must be one of ${VALID_CADENCES.join(", ")}`);
+  }
+}
+
+function validateDirection(d: string): asserts d is KPIDirection {
+  if (!VALID_DIRECTIONS.includes(d as KPIDirection)) {
+    throw new ValidationError(`Invalid direction: ${d}. Must be one of ${VALID_DIRECTIONS.join(", ")}`);
+  }
+}
+
+function validateTrend(t: string): asserts t is KPITrend {
+  if (!VALID_TRENDS.includes(t as KPITrend)) {
+    throw new ValidationError(`Invalid trend: ${t}. Must be one of ${VALID_TRENDS.join(", ")}`);
+  }
+}
+
+function validateConfidenceLevel(c: string): asserts c is KPIConfidenceLevel {
+  if (!VALID_CONFIDENCE_LEVELS.includes(c as KPIConfidenceLevel)) {
+    throw new ValidationError(`Invalid confidenceLevel: ${c}. Must be one of ${VALID_CONFIDENCE_LEVELS.join(", ")}`);
   }
 }
 
@@ -30,7 +56,11 @@ export interface CreateKPIOwnershipInput {
   reviewCadence: ReviewCadence;
   targetValue?: number | null;
   currentValue?: number | null;
+  baselineValue?: number | null;
   unit?: string | null;
+  direction?: KPIDirection | null;
+  trend?: KPITrend | null;
+  confidenceLevel?: KPIConfidenceLevel | null;
   linkedObjectiveId?: string | null;
 }
 
@@ -43,13 +73,20 @@ export interface UpdateKPIOwnershipInput {
   reviewCadence?: ReviewCadence;
   targetValue?: number | null;
   currentValue?: number | null;
+  baselineValue?: number | null;
   unit?: string | null;
+  direction?: KPIDirection | null;
+  trend?: KPITrend | null;
+  confidenceLevel?: KPIConfidenceLevel | null;
   linkedObjectiveId?: string | null;
   lastReviewedAt?: Date | null;
 }
 
 export async function createKPIOwnership(input: CreateKPIOwnershipInput) {
   validateCadence(input.reviewCadence);
+  if (input.direction) validateDirection(input.direction);
+  if (input.trend) validateTrend(input.trend);
+  if (input.confidenceLevel) validateConfidenceLevel(input.confidenceLevel);
 
   if (input.metricName.trim().length === 0) {
     throw new ValidationError("metricName cannot be empty");
@@ -69,7 +106,11 @@ export async function createKPIOwnership(input: CreateKPIOwnershipInput) {
         reviewCadence: input.reviewCadence,
         targetValue: input.targetValue ?? null,
         currentValue: input.currentValue ?? null,
+        baselineValue: input.baselineValue ?? null,
         unit: input.unit ?? null,
+        direction: input.direction ?? null,
+        trend: input.trend ?? null,
+        confidenceLevel: input.confidenceLevel ?? null,
         linkedObjectiveId: input.linkedObjectiveId ?? null,
       },
       update: {
@@ -78,7 +119,11 @@ export async function createKPIOwnership(input: CreateKPIOwnershipInput) {
         reviewCadence: input.reviewCadence,
         targetValue: input.targetValue ?? null,
         currentValue: input.currentValue ?? null,
+        baselineValue: input.baselineValue ?? null,
         unit: input.unit ?? null,
+        direction: input.direction ?? null,
+        trend: input.trend ?? null,
+        confidenceLevel: input.confidenceLevel ?? null,
         linkedObjectiveId: input.linkedObjectiveId ?? null,
       },
     });
@@ -101,6 +146,9 @@ export async function createKPIOwnership(input: CreateKPIOwnershipInput) {
 
 export async function updateKPIOwnership(input: UpdateKPIOwnershipInput) {
   if (input.reviewCadence) validateCadence(input.reviewCadence);
+  if (input.direction) validateDirection(input.direction);
+  if (input.trend) validateTrend(input.trend);
+  if (input.confidenceLevel) validateConfidenceLevel(input.confidenceLevel);
 
   const existing = await db.kPIOwnershipRecord.findFirst({
     where: { id: input.recordId, workspaceId: input.workspaceId },
@@ -118,7 +166,11 @@ export async function updateKPIOwnership(input: UpdateKPIOwnershipInput) {
         ...(input.reviewCadence !== undefined ? { reviewCadence: input.reviewCadence } : {}),
         ...(input.targetValue !== undefined ? { targetValue: input.targetValue } : {}),
         ...(input.currentValue !== undefined ? { currentValue: input.currentValue } : {}),
+        ...(input.baselineValue !== undefined ? { baselineValue: input.baselineValue } : {}),
         ...(input.unit !== undefined ? { unit: input.unit } : {}),
+        ...(input.direction !== undefined ? { direction: input.direction } : {}),
+        ...(input.trend !== undefined ? { trend: input.trend } : {}),
+        ...(input.confidenceLevel !== undefined ? { confidenceLevel: input.confidenceLevel } : {}),
         ...(input.linkedObjectiveId !== undefined ? { linkedObjectiveId: input.linkedObjectiveId } : {}),
         ...(input.lastReviewedAt !== undefined ? { lastReviewedAt: input.lastReviewedAt } : {}),
       },

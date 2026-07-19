@@ -12,6 +12,7 @@
 import {
   E2E_WORKSPACE_ID,
   E2E_PHASE4_OBJECTIVE_ID,
+  E2E_PHASE4_OBJECTIVE2_ID,
   E2E_PHASE4_RISK_ID,
   E2E_OWNER,
 } from "../tests/browser/e2e-fixtures";
@@ -51,7 +52,28 @@ async function main() {
     },
   });
 
-  // ─── 2. BusinessRiskEntry ─────────────────────────────────────────────────────
+  // ─── 2. Second BusinessObjective (COMPLIANCE) ────────────────────────────────
+  await (prisma as any).businessObjective.upsert({
+    where: { id: E2E_PHASE4_OBJECTIVE2_ID },
+    create: {
+      id: E2E_PHASE4_OBJECTIVE2_ID,
+      workspaceId: E2E_WORKSPACE_ID,
+      title: "GDPR compliance remediation",
+      objectiveType: "COMPLIANCE",
+      status: "ACTIVE",
+      priorityScore: 90,
+      createdBy: E2E_OWNER.userId,
+      createdAt: new Date("2026-07-05T00:00:00Z"),
+      updatedAt: new Date("2026-07-05T00:00:00Z"),
+    },
+    update: {
+      status: "ACTIVE",
+      priorityScore: 90,
+      updatedAt: new Date(),
+    },
+  });
+
+  // ─── 3. BusinessRiskEntry ─────────────────────────────────────────────────────
   await (prisma as any).businessRiskEntry.upsert({
     where: { id: E2E_PHASE4_RISK_ID },
     create: {

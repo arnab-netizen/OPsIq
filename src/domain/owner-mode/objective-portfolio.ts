@@ -11,11 +11,11 @@
  * Pure — no DB, no I/O.
  */
 
-import type { ObjectiveType, ObjectiveStatus, TimeHorizon } from "./objective-arbitration";
+import type { ObjectiveType, ObjectiveStatus, TimeHorizon, PortfolioDecision } from "./objective-arbitration";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 // Re-export for consumers that import from this module
-export type { ObjectiveType, ObjectiveStatus, TimeHorizon };
+export type { ObjectiveType, ObjectiveStatus, TimeHorizon, PortfolioDecision };
 
 export interface ObjectivePortfolioInput {
   objectiveId: string;
@@ -52,6 +52,8 @@ export interface ObjectivePortfolioItem {
   recommendedAction: string | null;
   canStart: boolean; // false when has blocking dependencies
   isLeaf: boolean; // no children
+  portfolioDecision: PortfolioDecision;
+  portfolioRationale: string;
 }
 
 export interface ObjectivePortfolioView {
@@ -135,12 +137,74 @@ export function scoreObjectiveHealth(obj: ObjectivePortfolioInput): {
   return { healthStatus, healthScore: score, atRiskReasons: reasons, recommendedAction };
 }
 
+/** Derive portfolio decision from health score and objective attributes. */
+function derivePortfolioDecision(obj: ObjectivePortfolioInput, healthScore: number): {
+  decision: PortfolioDecision;
+  rationale: string;
+} {
+  // ESCALATE: blocked AND imminent deadline
+  if (obj.hasBlockingDependencies && obj.deadlineDaysRemaining !== null && obj.deadlineDaysRemaining <= 14) {
+    return { decision: "ESCALATE", rationale: `Blocked with ${obj.deadlineDaysRemaining}d until deadline — escalate to resolve blocker` };
+  }
+  // CANCEL: negligible progress + far past deadline + resources exhausted
+  if (
+    obj.progressPct < 10 &&
+    obj.deadlineDaysRemaining !== null &&
+    obj.deadlineDaysRemaining < -30 &&
+    obj.resourceBudgetUsedPct >= 80
+  ) {
+    return { decision: "CANCEL", rationale: "Negligible progress far past deadline with exhausted budget" };
+  }
+  // SPLIT: high-priority leaf consuming resources with low progress
+  if (obj.childCount === 0 && obj.priorityScore >= 80 && obj.resourceBudgetUsedPct >= 70 && obj.progressPct < 30) {
+    return { decision: "SPLIT", rationale: "High-priority objective consuming significant resources with low progress — split into sub-objectives" };
+  }
+  // DELAY: distant deadline and low urgency
+  if (obj.deadlineDaysRemaining !== null && obj.deadlineDaysRemaining > 90 && healthScore > 50) {
+    return { decision: "DELAY", rationale: "Deadline is distant — defer to focus on more pressing objectives" };
+  }
+  // EXECUTE_NOW: feasible, unblocked, moderate-to-high urgency
+  return { decision: "EXECUTE_NOW", rationale: "Feasible and unblocked — proceed now" };
+}
+
 /** Build the full single-workspace objective portfolio view. */
 export function buildObjectivePortfolio(
   objectives: ObjectivePortfolioInput[],
 ): ObjectivePortfolioView {
-  const items: ObjectivePortfolioItem[] = objectives.map((obj) => {
-    const { healthStatus, healthScore, atRiskReasons, recommendedAction } = scoreObjectiveHealth(obj);
+  // Pass 1: compute health scores
+  const scoredObjectives = objectives.map((obj) => ({
+    obj,
+    ...scoreObjectiveHealth(obj),
+  }));
+
+  // Pass 2: MERGE detection — pairs of same-type objectives both struggling
+  const typeGroups = new Map<string, typeof scoredObjectives>();
+  for (const s of scoredObjectives) {
+    const g = typeGroups.get(s.obj.objectiveType) ?? [];
+    g.push(s);
+    typeGroups.set(s.obj.objectiveType, g);
+  }
+  const mergeTargets = new Set<string>();
+  for (const group of typeGroups.values()) {
+    const struggling = group.filter((s) => s.healthScore <= 60 && !s.obj.hasBlockingDependencies);
+    if (struggling.length >= 2) {
+      struggling.slice(0, 2).forEach((s) => mergeTargets.add(s.obj.objectiveId));
+    }
+  }
+
+  const items: ObjectivePortfolioItem[] = scoredObjectives.map(({ obj, healthStatus, healthScore, atRiskReasons, recommendedAction }) => {
+    let portfolioDecision: PortfolioDecision;
+    let portfolioRationale: string;
+
+    if (mergeTargets.has(obj.objectiveId) && !obj.hasBlockingDependencies) {
+      portfolioDecision = "MERGE";
+      portfolioRationale = "Same-type objective struggling alongside another — merge to consolidate resources";
+    } else {
+      const derived = derivePortfolioDecision(obj, healthScore);
+      portfolioDecision = derived.decision;
+      portfolioRationale = derived.rationale;
+    }
+
     return {
       objectiveId: obj.objectiveId,
       parentId: obj.parentId,
@@ -156,6 +220,8 @@ export function buildObjectivePortfolio(
       recommendedAction,
       canStart: !obj.hasBlockingDependencies,
       isLeaf: obj.childCount === 0,
+      portfolioDecision,
+      portfolioRationale,
     };
   });
 

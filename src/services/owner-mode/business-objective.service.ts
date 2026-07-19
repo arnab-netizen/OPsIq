@@ -213,16 +213,45 @@ export async function listObjectives(
   });
 }
 
+/** Detect if adding edge blockingId→blockedId would introduce a cycle via DFS. */
+async function wouldCreateCycle(
+  workspaceId: string,
+  blockingId: string,
+  blockedId: string,
+): Promise<boolean> {
+  // Starting from blockedId, check if blockingId is reachable (i.e. blockedId already depends on blockingId)
+  const visited = new Set<string>();
+  const queue: string[] = [blockedId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (current === blockingId) return true;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const outgoing = await db.businessObjectiveDependency.findMany({
+      where: { workspaceId, blockingId: current },
+      select: { blockedId: true },
+    });
+    for (const edge of outgoing) queue.push(edge.blockedId);
+  }
+  return false;
+}
+
+const VALID_DEP_TYPES = ["DEPENDS_ON", "BLOCKS", "ENABLES", "PARALLEL", "MUTUALLY_EXCLUSIVE", "PREREQUISITE"] as const;
+
 export async function addDependency(
   workspaceId: string,
   actorId: string,
   blockingId: string,
   blockedId: string,
-  depType: string = "PREREQUISITE",
+  depType: string = "DEPENDS_ON",
   note?: string,
 ) {
   if (blockingId === blockedId) {
     throw new ValidationError("An objective cannot depend on itself");
+  }
+
+  if (!VALID_DEP_TYPES.includes(depType as (typeof VALID_DEP_TYPES)[number])) {
+    throw new ValidationError(`Invalid depType: ${depType}. Must be one of ${VALID_DEP_TYPES.join(", ")}`);
   }
 
   // Verify both objectives belong to this workspace
@@ -233,6 +262,13 @@ export async function addDependency(
 
   if (!blocking) throw new NotFoundError("BusinessObjective", blockingId);
   if (!blocked) throw new NotFoundError("BusinessObjective", blockedId);
+
+  // Cycle detection: enforce at service boundary before any write
+  if (await wouldCreateCycle(workspaceId, blockingId, blockedId)) {
+    throw new ValidationError(
+      `Adding dependency ${blockingId}→${blockedId} would create a cycle in the dependency graph`,
+    );
+  }
 
   return db.businessObjectiveDependency.upsert({
     where: { workspaceId_blockingId_blockedId: { workspaceId, blockingId, blockedId } },

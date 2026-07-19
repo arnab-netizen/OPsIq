@@ -527,6 +527,15 @@ function BusinessOperatingSystemSection({ bos }: { bos: BusinessOperatingSystemV
             {bos.latestArbitration.dominantConstraint ? ` · Dominant constraint: ${bos.latestArbitration.dominantConstraint}` : ""}
           </p>
         )}
+        {bos.latestArbitrationOverride && (
+          <div
+            data-testid="cockpit-bos-override-indicator"
+            style={{ fontSize: 12, color: "#92400e", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 4, padding: "4px 8px" }}
+          >
+            <strong>Owner override active:</strong> {bos.latestArbitrationOverride.decision}
+            {" — "}{bos.latestArbitrationOverride.overrideRationale}
+          </div>
+        )}
         {bos.totalActiveObjectives === 0 && (
           <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-bos-empty">No active objectives — add objectives via the business operating system to enable this view.</p>
         )}

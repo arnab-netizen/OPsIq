@@ -538,6 +538,11 @@ export const AUDIT_EVENTS = {
   OWNER_EXPLAINABILITY_RECORD_CREATED: "owner.explainability_record_created",
   OWNER_OPERATING_MEMORY_UPDATED: "owner.operating_memory_updated",
   OWNER_COST_ATTRIBUTED_TO_OBJECTIVE: "owner.cost_attributed_to_objective",
+
+  // Phase 4 deepening — arbitration override + memory versioning
+  OWNER_ARBITRATION_OVERRIDDEN: "owner.arbitration_overridden",
+  OWNER_OPERATING_MEMORY_VERSIONED: "owner.operating_memory_versioned",
+  OWNER_KPI_BASELINE_SET: "owner.kpi_baseline_set",
 } as const;
 
 export type AuditEventName =

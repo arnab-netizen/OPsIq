@@ -5279,6 +5279,7 @@ model GoalArbitrationRecord {
   arbitrationResult   Json     @map("arbitration_result")    // full ArbitrationResult JSON
   dominantConstraint  String?  @map("dominant_constraint")   // GateConstraint value if any blocked
   resourceConflict    Json?    @map("resource_conflict")     // { poolId, shortage } if resource-driven
+  portfolioDecisions  Json?    @map("portfolio_decisions")   // PortfolioDecision[] — EXECUTE_NOW|DELAY|CANCEL|MERGE|SPLIT|ESCALATE per objective
   actorId             String   @map("actor_id") @db.Uuid
   arbitratedAt        DateTime @default(now()) @map("arbitrated_at")
 
@@ -5368,7 +5369,11 @@ model KPIOwnershipRecord {
   reviewCadence   String    @map("review_cadence")   // DAILY | WEEKLY | MONTHLY | QUARTERLY
   targetValue     Float?    @map("target_value")
   currentValue    Float?    @map("current_value")
+  baselineValue   Float?    @map("baseline_value")   // value at baseline measurement
   unit            String?
+  direction       String?                             // HIGHER_IS_BETTER | LOWER_IS_BETTER
+  trend           String?                             // IMPROVING | STABLE | DECLINING
+  confidenceLevel String?   @map("confidence_level") // very_high | high | moderate | low | very_low
   linkedObjectiveId String? @map("linked_objective_id") @db.Uuid
   lastReviewedAt  DateTime? @map("last_reviewed_at")
   createdAt       DateTime  @default(now()) @map("created_at")
@@ -5437,23 +5442,44 @@ model ExplainabilityRecord {
   @@map("explainability_records")
 }
 
-/// Unified operating memory entry — thin aggregate over all memory sources.
-/// Written when a significant memory event is created (approval, DNR, learning, etc.).
-/// Read-only aggregation view; source-of-truth remains in the original models.
+/// Append-only operating memory entry. Each write creates a new version;
+/// the prior version's supersededById is set to the new entry's id.
+/// Source-of-truth remains in the originating model; this is a queryable index.
 model OperatingMemoryEntry {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  memoryType  String   @map("memory_type")   // APPROVAL | DNR | LEARNING | SOP | CONSTRAINT | GOAL_ARBITRATION | RISK | OUTCOME
-  sourceModel String   @map("source_model")  // the originating model name, e.g. "OwnerApprovalMemory"
-  sourceId    String   @map("source_id")     // PK of the source record
-  key         String                         // stable lookup key for dedup
-  summary     String   @db.Text             // human-readable one-liner
-  data        Json     @default("{}")        // JSON snapshot of relevant fields
-  validUntil  DateTime? @map("valid_until")  // null = permanent
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  memoryType     String    @map("memory_type")   // APPROVAL | DNR | LEARNING | SOP | CONSTRAINT | GOAL_ARBITRATION | RISK | OUTCOME
+  sourceModel    String    @map("source_model")  // the originating model name, e.g. "OwnerApprovalMemory"
+  sourceId       String    @map("source_id")     // PK of the source record
+  version        Int       @default(1)           // monotonically increasing per (workspace, type, source)
+  key            String                         // stable lookup key
+  summary        String    @db.Text             // human-readable one-liner
+  data           Json      @default("{}")        // JSON snapshot of relevant fields
+  validUntil     DateTime? @map("valid_until")   // null = permanent
+  supersededById String?   @map("superseded_by_id") @db.Uuid  // set when a newer version supersedes this
+  supersededAt   DateTime? @map("superseded_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
-  @@unique([workspaceId, memoryType, sourceId])
+  @@unique([workspaceId, memoryType, sourceId, version])
   @@index([workspaceId, memoryType])
   @@index([workspaceId, key])
   @@map("operating_memory_entries")
+}
+
+/// Owner's explicit override of the system's goal arbitration recommendation.
+/// Persisted separately from GoalArbitrationRecord to preserve the system's rationale.
+/// The UI must show both the system recommendation and the owner's override.
+model OwnerArbitrationOverride {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String   @map("workspace_id") @db.Uuid
+  actorId             String   @map("actor_id") @db.Uuid
+  overriddenRecordId  String   @map("overridden_record_id") @db.Uuid  // FK → GoalArbitrationRecord.id
+  overrideObjectiveId String?  @map("override_objective_id") @db.Uuid  // which objective the owner chose instead
+  overrideRationale   String   @map("override_rationale") @db.Text
+  decision            String   @default("EXECUTE_NOW")                  // PortfolioDecision value
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId, overriddenRecordId])
+  @@index([workspaceId, createdAt])
+  @@map("owner_arbitration_overrides")
 }

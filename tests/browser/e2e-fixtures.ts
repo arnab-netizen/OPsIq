@@ -61,5 +61,8 @@ export const E2E_PHASE3_TASK_KEY    = "phase3_e2e_cash_flow_action";
 /** BusinessObjective seeded as ACTIVE for Phase 4 cockpit BOS panel assertions. */
 export const E2E_PHASE4_OBJECTIVE_ID = "a0000000-0000-0000-0000-000000000401";
 
+/** Second BusinessObjective — COMPLIANCE type for arbitration multi-candidate testing. */
+export const E2E_PHASE4_OBJECTIVE2_ID = "a0000000-0000-0000-0000-000000000402";
+
 /** BusinessRiskEntry seeded with high severity for Phase 4 BOS panel risk row. */
 export const E2E_PHASE4_RISK_ID      = "a1000000-0000-0000-0000-000000000401";

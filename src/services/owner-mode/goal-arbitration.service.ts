@@ -41,6 +41,7 @@ export interface RunGoalArbitrationResult {
   dominantConstraint: string | null;
   resourceConflict: { objectiveId: string; reason: string }[] | null;
   totalCandidates: number;
+  portfolioDecisions: { objectiveId: string; decision: string; rationale: string }[];
 }
 
 export async function runGoalArbitration(
@@ -74,6 +75,23 @@ export async function runGoalArbitration(
     allocations.map((a: (typeof allocations)[number]): [string, number] => [a.objectiveId, a._sum.allocationAmount ?? 0]),
   );
 
+  // Fetch risk scores for resource conflict detection
+  // severity is a numeric 0-100 score (likelihood × impact / 100); ≥70 = critical, ≥50 = high
+  const risks = await db.businessRiskEntry.findMany({
+    where: {
+      workspaceId,
+      status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING"] },
+      severity: { gte: 50 },
+    },
+    select: { linkedObjectiveId: true, severity: true },
+  });
+
+  const highRiskObjectiveIds = new Set(
+    risks
+      .filter((r: { linkedObjectiveId: string | null; severity: number }) => r.linkedObjectiveId !== null)
+      .map((r: { linkedObjectiveId: string | null; severity: number }) => r.linkedObjectiveId as string),
+  );
+
   const candidates: ObjectiveCandidate[] = objectives.map((obj: (typeof objectives)[number]) => {
     const daysLeft = deadlineDaysRemaining(obj.deadline);
     const allocated: number = (allocationByObjective.get(obj.id) ?? 0) as number;
@@ -86,6 +104,30 @@ export async function runGoalArbitration(
         ? Math.min(100, Math.round(((obj.currentValue ?? 0) / obj.targetValue) * 100))
         : 0;
 
+    // Resource availability: remaining pool fraction
+    const resourceAvailabilityRatio = totalCapacity > 0
+      ? Math.max(0, Math.min(1, (totalCapacity - allocated) / totalCapacity))
+      : null;
+
+    // Operational risk from risk entries (severity≥70=critical→0.9, severity≥50=high→0.6, absent→null→0.3 default)
+    const hasHighRisk = highRiskObjectiveIds.has(obj.id);
+    const severeRisk = risks.find(
+      (r: { linkedObjectiveId: string | null; severity: number }) =>
+        r.linkedObjectiveId === obj.id && r.severity >= 70,
+    );
+    const operationalRisk = severeRisk ? 0.9 : hasHighRisk ? 0.6 : null;
+
+    // Estimated ROI: derived from objective type when not explicit
+    // COMPLIANCE always high (0.9), REVENUE/COST_REDUCTION high (0.8), others neutral (null → 0.5)
+    const estimatedROI =
+      (obj.objectiveType as ObjectiveType) === "COMPLIANCE" ? 4.5
+      : (obj.objectiveType as ObjectiveType) === "REVENUE" ? 4.0
+      : (obj.objectiveType as ObjectiveType) === "COST_REDUCTION" ? 3.5
+      : null;
+
+    // Count children from _count
+    const childCount = (obj as typeof obj & { _count: { children: number } })._count.children;
+
     return {
       objectiveId: obj.id,
       objectiveType: obj.objectiveType as ObjectiveType,
@@ -97,19 +139,59 @@ export async function runGoalArbitration(
       linkedGoalAligned: obj.linkedGoalId !== null,
       timeHorizon: timeHorizonFromDays(daysLeft),
       deadlineDaysRemaining: daysLeft,
-      confidence: 0.7, // default; can be enriched from DecisionConfidenceRecord
+      confidence: 0.7, // default; enriched from DecisionConfidenceRecord when available
       reversible: obj.objectiveType !== "COMPLIANCE",
+      estimatedROI,
+      resourceAvailabilityRatio,
+      operationalRisk,
+      childCount,
     };
   });
 
   const result = arbitrateObjectives(candidates);
+
+  // Find the winner candidate to pass dimension scores to explainability
+  const winnerCandidate = result.candidates.find(
+    (c) => c.objectiveId === result.winnerObjectiveId,
+  ) ?? null;
+
+  const winnerPortfolioDecision = winnerCandidate?.portfolioDecision ?? null;
+  const winnerPortfolioRationale = winnerCandidate?.portfolioRationale ?? null;
 
   const explanation = explainGoalArbitration({
     winnerObjectiveId: result.winnerObjectiveId,
     dominantConstraint: result.dominantConstraint,
     totalCandidates: candidates.length,
     confidence: result.winnerObjectiveId ? 0.75 : 0.4,
+    winnerDimensions: winnerCandidate
+      ? {
+          urgencyScore: winnerCandidate.urgencyScore,
+          typeWeight: winnerCandidate.typeWeight,
+          dim_roi: winnerCandidate.dim_roi,
+          ownerPriorityNorm: winnerCandidate.riskOfInaction,
+          hasBlockingDependencies: winnerCandidate.blockedBy.length > 0,
+          dim_resourceAvailability: winnerCandidate.dim_resourceAvailability,
+          resourceBudgetUsedPct: candidates.find((c) => c.objectiveId === winnerCandidate.objectiveId)?.resourceBudgetUsedPct ?? null,
+          dim_cashImpact: winnerCandidate.dim_cashImpact,
+          dim_operationalRisk: winnerCandidate.dim_operationalRisk,
+          dim_customerImpact: winnerCandidate.dim_customerImpact,
+          dim_regulatoryWeight: winnerCandidate.dim_regulatoryWeight,
+          reversible: winnerCandidate.reversible,
+          confidence: winnerCandidate.confidence,
+        }
+      : null,
+    portfolioDecision: winnerPortfolioDecision,
+    portfolioRationale: winnerPortfolioRationale,
   });
+
+  // Build portfolio decisions map for persistence
+  const portfolioDecisions = result.candidates.map((c) => ({
+    objectiveId: c.objectiveId,
+    decision: c.portfolioDecision,
+    rationale: c.portfolioRationale,
+    riskOfAction: c.riskOfAction,
+    riskOfInaction: c.riskOfInaction,
+  }));
 
   const record = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const arbitrationRecord = await tx.goalArbitrationRecord.create({
@@ -122,6 +204,7 @@ export async function runGoalArbitration(
         resourceConflict: result.resourceConflict !== null
             ? result.resourceConflict as unknown as Prisma.InputJsonValue
             : Prisma.JsonNull,
+        portfolioDecisions: portfolioDecisions as unknown as Prisma.InputJsonValue,
         actorId,
       },
     });
@@ -158,6 +241,11 @@ export async function runGoalArbitration(
     dominantConstraint: result.dominantConstraint,
     resourceConflict: result.resourceConflict,
     totalCandidates: candidates.length,
+    portfolioDecisions: portfolioDecisions.map((pd) => ({
+      objectiveId: pd.objectiveId,
+      decision: pd.decision,
+      rationale: pd.rationale,
+    })),
   };
 }
 

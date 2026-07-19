@@ -223,4 +223,112 @@ test.describe("55 — Phase 4 Business Operating System cockpit panel", () => {
     );
     expect(found).toBe(true);
   });
+
+  // ── 16. POST /api/owner/goal-arbitration runs arbitration ────────────────────
+
+  let capturedArbitrationRecordId: string | null = null;
+
+  test("16. POST /api/owner/goal-arbitration runs and returns arbitrationRecordId + portfolioDecisions", async () => {
+    const response = await page.request.post("/api/owner/goal-arbitration");
+    expect(response.status()).toBe(201);
+    const body = await response.json();
+    expect(body).toHaveProperty("arbitrationRecordId");
+    expect(typeof body.arbitrationRecordId).toBe("string");
+    expect(body).toHaveProperty("portfolioDecisions");
+    expect(Array.isArray(body.portfolioDecisions)).toBe(true);
+    // Store for subsequent tests
+    capturedArbitrationRecordId = body.arbitrationRecordId;
+  });
+
+  // ── 17. GET /api/owner/goal-arbitration returns the recorded arbitration ──────
+
+  test("17. GET /api/owner/goal-arbitration returns record with portfolioDecisions", async () => {
+    const response = await page.request.get("/api/owner/goal-arbitration");
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body).toHaveProperty("record");
+    if (body.record) {
+      expect(body.record).toHaveProperty("portfolioDecisions");
+      // portfolioDecisions may be {} (Prisma.JsonNull) or array
+      expect(body.record).toHaveProperty("winnerObjectiveId");
+    }
+  });
+
+  // ── 18. POST /api/owner/override-arbitration creates an owner override ────────
+
+  let capturedOverrideId: string | null = null;
+
+  test("18. POST /api/owner/override-arbitration creates override with rationale (separate from system record)", async () => {
+    if (!capturedArbitrationRecordId) {
+      console.warn("[spec-55] No arbitration record ID captured — skipping override test");
+      return;
+    }
+    const response = await page.request.post("/api/owner/override-arbitration", {
+      data: {
+        overriddenRecordId: capturedArbitrationRecordId,
+        overrideRationale: "Owner manual override: compliance objective takes priority this quarter",
+        decision: "EXECUTE_NOW",
+      },
+    });
+    expect(response.status()).toBe(201);
+    const body = await response.json();
+    expect(body).toHaveProperty("override");
+    expect(body.override).toHaveProperty("id");
+    expect(body.override.decision).toBe("EXECUTE_NOW");
+    expect(body.override.overrideRationale).toBe(
+      "Owner manual override: compliance objective takes priority this quarter",
+    );
+    capturedOverrideId = body.override.id;
+  });
+
+  // ── 19. GET /api/owner/override-arbitration shows override separate from system ─
+
+  test("19. GET /api/owner/override-arbitration?recordId shows override alongside system recommendation", async () => {
+    if (!capturedArbitrationRecordId) return;
+    const response = await page.request.get(
+      `/api/owner/override-arbitration?recordId=${capturedArbitrationRecordId}`,
+    );
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body).toHaveProperty("override");
+    if (body.override) {
+      expect(body.override.overriddenRecordId).toBe(capturedArbitrationRecordId);
+      expect(body.override.decision).toBe("EXECUTE_NOW");
+      // System record is NOT replaced — the override is a separate entity
+      expect(body.override).toHaveProperty("actorId");
+    }
+  });
+
+  // ── 20. Operating memory append-only: re-upsert creates new version ───────────
+
+  test("20. POST /api/owner/operating-memory creates entry and re-POST creates new version (append-only)", async () => {
+    const upsertPayload = {
+      action: "UPSERT",
+      memoryType: "active_constraint",
+      sourceId: "e2e-phase4-constraint-001",
+      content: "Cash flow constraint version 1",
+      confidence: 0.8,
+    };
+    const r1 = await page.request.post("/api/owner/operating-memory", { data: upsertPayload });
+    expect(r1.status()).toBe(201);
+    const b1 = await r1.json();
+    expect(b1).toHaveProperty("entry");
+    const v1 = b1.entry.version;
+    expect(typeof v1).toBe("number");
+
+    // Re-upsert with updated content — should create a NEW version row, not mutate existing
+    const r2 = await page.request.post("/api/owner/operating-memory", {
+      data: { ...upsertPayload, content: "Cash flow constraint version 2 (updated)" },
+    });
+    expect(r2.status()).toBe(201);
+    const b2 = await r2.json();
+    expect(b2.entry.version).toBeGreaterThan(v1);
+    // Confirm original is superseded: GET returns only active (non-superseded) entries
+    const listResp = await page.request.get("/api/owner/operating-memory");
+    const listBody = await listResp.json();
+    const activeConstraints = (listBody.entries as Array<{ memoryType: string; sourceId: string; version: number }>)
+      .filter((e) => e.memoryType === "active_constraint" && e.sourceId === "e2e-phase4-constraint-001");
+    expect(activeConstraints.length).toBe(1);
+    expect(activeConstraints[0].version).toBe(b2.entry.version);
+  });
 });

@@ -658,6 +658,13 @@ export interface BusinessOperatingSystemView {
     dominantConstraint: string | null;
     arbitratedAt: string;
   } | null;
+  /** Owner override on the latest arbitration, if any. Shown alongside (not instead of) system recommendation. */
+  latestArbitrationOverride: {
+    decision: string;
+    overrideRationale: string;
+    actorId: string;
+    createdAt: string;
+  } | null;
   topRisks: BusinessOperatingSystemRiskSummary[];
   activeConstraintCount: number;
   kpiCount: number;
@@ -1157,22 +1164,30 @@ async function buildBusinessOperatingSystem(
       ? Math.min(100, Math.round((totalAllocated / totalCapacity) * 100))
       : null;
 
-    // 3. Top risks by severity
-    const topRisks: Array<{ id: string; title: string; severity: number; status: string; riskCategory: string }> =
+    // 3. Top risks by severity (active risks: IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED)
+    const topRisks: Array<{ id: string; title: string; severity: number; status: string; category: string }> =
       await dbAny.businessRiskEntry.findMany({
-        where: { workspaceId, status: { in: ["OPEN", "MONITORING"] } },
+        where: { workspaceId, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING", "ACCEPTED"] } },
         orderBy: { severity: "desc" },
         take: 3,
-        select: { id: true, title: true, severity: true, status: true, riskCategory: true },
+        select: { id: true, title: true, severity: true, status: true, category: true },
       });
 
-    // 4. Latest goal arbitration
-    const latestArb: { winnerObjectiveId: string | null; dominantConstraint: string | null; arbitratedAt: Date } | null =
+    // 4. Latest goal arbitration + its owner override (if any)
+    const latestArb: { id: string; winnerObjectiveId: string | null; dominantConstraint: string | null; arbitratedAt: Date } | null =
       await dbAny.goalArbitrationRecord.findFirst({
         where: { workspaceId },
         orderBy: { arbitratedAt: "desc" },
-        select: { winnerObjectiveId: true, dominantConstraint: true, arbitratedAt: true },
+        select: { id: true, winnerObjectiveId: true, dominantConstraint: true, arbitratedAt: true },
       });
+    const latestOverride: { decision: string; overrideRationale: string; actorId: string; createdAt: Date } | null =
+      latestArb
+        ? await dbAny.ownerArbitrationOverride.findFirst({
+            where: { workspaceId, overriddenRecordId: latestArb.id },
+            orderBy: { createdAt: "desc" },
+            select: { decision: true, overrideRationale: true, actorId: true, createdAt: true },
+          })
+        : null;
 
     // 5. Active constraint count
     const activeConstraintCount: number = await dbAny.constraintResolutionRecord.count({
@@ -1251,12 +1266,18 @@ async function buildBusinessOperatingSystem(
         dominantConstraint: latestArb.dominantConstraint,
         arbitratedAt: latestArb.arbitratedAt.toISOString(),
       } : null,
+      latestArbitrationOverride: latestOverride ? {
+        decision: latestOverride.decision,
+        overrideRationale: latestOverride.overrideRationale,
+        actorId: latestOverride.actorId,
+        createdAt: latestOverride.createdAt.toISOString(),
+      } : null,
       topRisks: topRisks.map((r) => ({
         riskId: r.id,
         title: r.title,
         severity: r.severity,
         status: r.status,
-        riskCategory: r.riskCategory,
+        riskCategory: r.category,
       })),
       activeConstraintCount,
       kpiCount,
