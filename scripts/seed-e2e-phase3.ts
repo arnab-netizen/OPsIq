@@ -5,14 +5,13 @@
  * so E2E_WORKSPACE_ID / E2E_OWNER.userId already exist.
  *
  * Creates:
- *  1. OwnerBusiness (E2E_PHASE3_BUSINESS_ID) — required for RECORD_OUTCOME businessId
- *  2. ProcessExecutionTask (E2E_PHASE3_TASK_ID) — PROPOSED, seeded for ACKNOWLEDGE journey
+ *  1. ProcessExecutionTask (E2E_PHASE3_TASK_ID) — PROPOSED, seeded for ACKNOWLEDGE journey
+ *     Uses E2E_WORKSPACE_ID from seed-e2e-owner.ts (no separate OwnerBusiness needed — the
+ *     archetype business created by seed-e2e-owner.ts is the workspace's primary business).
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
-  E2E_OWNER,
   E2E_WORKSPACE_ID,
-  E2E_PHASE3_BUSINESS_ID,
   E2E_PHASE3_TASK_ID,
   E2E_PHASE3_TASK_KEY,
 } from "../tests/browser/e2e-fixtures";
@@ -28,24 +27,7 @@ async function main() {
   const pool = new Pool({ connectionString: databaseUrl });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) }) as PrismaClientType;
 
-  // ─── 1. OwnerBusiness ────────────────────────────────────────────────────────
-
-  await prisma.ownerBusiness.upsert({
-    where: { id: E2E_PHASE3_BUSINESS_ID },
-    update: { name: "Phase 3 E2E Laundry Business" },
-    create: {
-      id: E2E_PHASE3_BUSINESS_ID,
-      workspaceId: E2E_WORKSPACE_ID,
-      name: "Phase 3 E2E Laundry Business",
-      businessType: "laundry_dry_cleaning",
-      location: "Kolkata",
-      currency: "INR",
-      createdBy: E2E_OWNER.userId,
-    },
-  });
-  console.log(`[seed-phase3] business ${E2E_PHASE3_BUSINESS_ID} upserted`);
-
-  // ─── 2. ProcessExecutionTask (PROPOSED) ──────────────────────────────────────
+  // ─── 1. ProcessExecutionTask (PROPOSED) ──────────────────────────────────────
   // Upsert by (workspaceId, taskKey) unique constraint.
 
   const existing = await (prisma as any).processExecutionTask.findFirst({

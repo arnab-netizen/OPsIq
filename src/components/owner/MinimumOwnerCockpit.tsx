@@ -415,7 +415,7 @@ function ExecutionLifecycleSection({
   const total = lifecycle.requiresDecision.length + lifecycle.inExecution.length + lifecycle.awaitingVerification.length;
 
   return (
-    <details data-testid="cockpit-execution-lifecycle" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+    <details data-testid="cockpit-execution-lifecycle" open={total > 0} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
       <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
         Execution lifecycle{total > 0 ? ` (${total} active)` : ""}
         {lifecycle.totalPendingVerification > 0 && (
