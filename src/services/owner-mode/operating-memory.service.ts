@@ -13,33 +13,16 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
 
-export type MemoryType =
-  | "APPROVAL"       // source: OwnerApprovalMemory
-  | "DO_NOT_REPEAT"  // source: OwnerDoNotRepeatRule
-  | "SELF_EVALUATION"// source: OwnerSelfEvaluationRecord
-  | "SOP"            // source: SOPDocument
-  | "CONSTRAINT"     // source: ConstraintResolutionRecord
-  | "RISK"           // source: BusinessRiskEntry
-  | "KPI_OWNERSHIP"  // source: KPIOwnershipRecord
-  | "OBJECTIVE";     // source: BusinessObjective
-
-const VALID_MEMORY_TYPES: MemoryType[] = [
-  "APPROVAL", "DO_NOT_REPEAT", "SELF_EVALUATION", "SOP", "CONSTRAINT", "RISK", "KPI_OWNERSHIP", "OBJECTIVE",
-];
-
-function validateMemoryType(t: string): asserts t is MemoryType {
-  if (!VALID_MEMORY_TYPES.includes(t as MemoryType)) {
-    throw new ValidationError(`Invalid memoryType: ${t}`);
-  }
-}
+// Documented well-known values (stored as plain strings in the DB; any string is accepted):
+// APPROVAL | DO_NOT_REPEAT | SELF_EVALUATION | SOP | CONSTRAINT | RISK | KPI_OWNERSHIP | OBJECTIVE
+export type MemoryType = string;
 
 export interface WriteMemoryEntryInput {
   workspaceId: string;
   actorId: string;
-  memoryType: MemoryType;
+  memoryType: string;
   sourceModel: string;
   sourceId: string;
   key: string;
@@ -54,15 +37,6 @@ export interface WriteMemoryEntryInput {
  * Returns the new entry.
  */
 export async function writeMemoryEntry(input: WriteMemoryEntryInput) {
-  validateMemoryType(input.memoryType);
-
-  if (input.summary.trim().length === 0) {
-    throw new ValidationError("summary cannot be empty");
-  }
-  if (input.key.trim().length === 0) {
-    throw new ValidationError("key cannot be empty");
-  }
-
   return db.$transaction(async (tx: Prisma.TransactionClient) => {
     // Find current (non-superseded) entry for this source, if any
     const existing = await tx.operatingMemoryEntry.findFirst({
@@ -135,7 +109,7 @@ export const upsertMemoryEntry = writeMemoryEntry;
  */
 export async function getMemoryEntries(
   workspaceId: string,
-  opts: { memoryType?: MemoryType; key?: string } = {},
+  opts: { memoryType?: string; key?: string } = {},
 ) {
   return db.operatingMemoryEntry.findMany({
     where: {
@@ -155,7 +129,7 @@ export async function getMemoryEntries(
  */
 export async function getMemoryHistory(
   workspaceId: string,
-  memoryType: MemoryType,
+  memoryType: string,
   sourceId: string,
 ) {
   return db.operatingMemoryEntry.findMany({
@@ -170,7 +144,7 @@ export async function getMemoryHistory(
  */
 export async function expireMemoryEntry(
   workspaceId: string,
-  memoryType: MemoryType,
+  memoryType: string,
   sourceId: string,
 ) {
   return db.operatingMemoryEntry.updateMany({

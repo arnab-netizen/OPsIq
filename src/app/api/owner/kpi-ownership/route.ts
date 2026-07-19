@@ -32,8 +32,8 @@ const schema = z.object({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const records = await listKPIOwnership(ctx.verifiedWorkspaceId);
-    return canonicalJson({ records }, { status: 200 });
+    const kpis = await listKPIOwnership(ctx.verifiedWorkspaceId);
+    return canonicalJson({ kpis }, { status: 200 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
 );

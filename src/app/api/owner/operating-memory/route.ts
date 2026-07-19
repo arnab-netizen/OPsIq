@@ -16,18 +16,15 @@ import { upsertMemoryEntry, getMemoryEntries, expireMemoryEntry } from "@/servic
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const MEMORY_TYPES = [
-  "APPROVAL", "DO_NOT_REPEAT", "SELF_EVALUATION", "SOP",
-  "CONSTRAINT", "RISK", "KPI_OWNERSHIP", "OBJECTIVE",
-] as const;
-
 const schema = z.object({
   action: z.enum(["UPSERT", "EXPIRE"]).default("UPSERT"),
-  memoryType: z.enum(MEMORY_TYPES),
+  memoryType: z.string().trim().min(1).max(100),
   sourceModel: z.string().trim().min(1).max(200).optional(),
   sourceId: z.string().trim().min(1).max(200),
   key: z.string().trim().min(1).max(200).optional(),
   summary: z.string().trim().min(1).max(1000).optional(),
+  content: z.string().trim().max(2000).optional(),
+  confidence: z.number().min(0).max(1).optional(),
   data: z.record(z.string(), z.unknown()).optional(),
   validUntil: z.string().datetime().nullish(),
 });
@@ -38,7 +35,7 @@ export const GET = withCanonicalEnforcement(
     const memoryType = url.searchParams.get("memoryType");
     const key = url.searchParams.get("key");
     const entries = await getMemoryEntries(ctx.verifiedWorkspaceId, {
-      memoryType: memoryType as (typeof MEMORY_TYPES)[number] | undefined ?? undefined,
+      memoryType: memoryType ?? undefined,
       key: key ?? undefined,
     });
     return canonicalJson({ entries }, { status: 200 });
@@ -57,22 +54,27 @@ export const POST = withCanonicalEnforcement(
       return canonicalJson({ ok: true }, { status: 200 });
     }
 
-    if (!input.sourceModel || !input.key || !input.summary) {
-      return canonicalJson({ error: "sourceModel, key, and summary required for UPSERT" }, { status: 400 });
-    }
+    const effectiveSummary = input.summary || input.content || input.sourceId;
+    const effectiveKey = input.key || input.sourceId;
+    const effectiveSourceModel = input.sourceModel || input.memoryType;
+    const effectiveData: Record<string, unknown> = {
+      ...(input.data ?? {}),
+      ...(input.content !== undefined ? { content: input.content } : {}),
+      ...(input.confidence !== undefined ? { confidence: input.confidence } : {}),
+    };
 
     const entry = await upsertMemoryEntry({
       workspaceId,
       actorId,
       memoryType: input.memoryType,
-      sourceModel: input.sourceModel,
+      sourceModel: effectiveSourceModel,
       sourceId: input.sourceId,
-      key: input.key,
-      summary: input.summary,
-      data: input.data,
+      key: effectiveKey,
+      summary: effectiveSummary,
+      data: effectiveData,
       validUntil: input.validUntil ? new Date(input.validUntil) : null,
     });
-    return canonicalJson({ entry }, { status: 200 });
+    return canonicalJson({ entry }, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
 );
