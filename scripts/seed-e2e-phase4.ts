@@ -109,7 +109,7 @@ async function main() {
       workspaceId: E2E_WORKSPACE_ID,
       idempotencyKey: "e2e-phase4-opportunity-001",
       dedupeKey: "e2e-phase4-opportunity-001",
-      rawSignalType: "TENDER",
+      rawSignalType: "GOVERNMENT_TENDER",
       sourceName: "Government Procurement Portal",
       rawDescription: "E2E Phase 4: Municipal laundry services contract — 3-year fixed-price",
       extractedBusinessNeed: "Recurring revenue contract for laundry services",
