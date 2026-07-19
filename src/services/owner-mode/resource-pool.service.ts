@@ -47,6 +47,7 @@ export interface AllocateResourceInput {
   objectiveId: string;
   allocationAmount: number;
   priority?: number;
+  idempotencyKey?: string | null;
 }
 
 export async function createResourcePool(input: CreateResourcePoolInput) {
@@ -94,31 +95,49 @@ export async function allocateResource(input: AllocateResourceInput) {
     throw new ValidationError("allocationAmount must be positive");
   }
 
-  const pool = await db.resourcePool.findFirst({
-    where: { id: input.poolId, workspaceId: input.workspaceId, isActive: true },
-  });
-  if (!pool) throw new NotFoundError("ResourcePool", input.poolId);
-
-  // Verify objective belongs to workspace
-  const objective = await db.businessObjective.findFirst({
-    where: { id: input.objectiveId, workspaceId: input.workspaceId },
-  });
-  if (!objective) throw new NotFoundError("BusinessObjective", input.objectiveId);
-
-  // Check current active allocation for this pool
-  const existing = await db.resourceAllocation.aggregate({
-    where: { poolId: input.poolId, workspaceId: input.workspaceId, status: "ALLOCATED" },
-    _sum: { allocationAmount: true },
-  });
-
-  const totalAllocated = existing._sum.allocationAmount ?? 0;
-  if (totalAllocated + input.allocationAmount > pool.totalCapacity) {
-    throw new ConflictError(
-      `Allocation would exceed pool capacity. Available: ${pool.totalCapacity - totalAllocated} ${pool.unit}`,
-    );
-  }
+  type PoolRow = { id: string; total_capacity: number; unit: string };
 
   return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Idempotency: if an allocation with this key already exists, return it.
+    if (input.idempotencyKey) {
+      const dup = await tx.resourceAllocation.findUnique({
+        where: { idempotencyKey: input.idempotencyKey },
+      });
+      if (dup) return dup;
+    }
+
+    // Lock the pool row FOR UPDATE — prevents concurrent over-allocation
+    // between the capacity check and the allocation insert.
+    const pools = await tx.$queryRaw<PoolRow[]>`
+      SELECT id, total_capacity, unit
+      FROM "resource_pools"
+      WHERE id = ${input.poolId}::uuid
+        AND workspace_id = ${input.workspaceId}::uuid
+        AND is_active = true
+      FOR UPDATE
+    `;
+    if (!pools[0]) throw new NotFoundError("ResourcePool", input.poolId);
+    const pool = pools[0];
+
+    // Verify objective belongs to workspace inside same tx
+    const objective = await tx.businessObjective.findFirst({
+      where: { id: input.objectiveId, workspaceId: input.workspaceId },
+    });
+    if (!objective) throw new NotFoundError("BusinessObjective", input.objectiveId);
+
+    // Aggregate existing allocations while pool row is locked
+    const agg = await tx.resourceAllocation.aggregate({
+      where: { poolId: input.poolId, workspaceId: input.workspaceId, status: "ALLOCATED" },
+      _sum: { allocationAmount: true },
+    });
+    const totalAllocated = agg._sum.allocationAmount ?? 0;
+
+    if (totalAllocated + input.allocationAmount > pool.total_capacity) {
+      throw new ConflictError(
+        `Allocation would exceed pool capacity. Available: ${pool.total_capacity - totalAllocated} ${pool.unit}`,
+      );
+    }
+
     const allocation = await tx.resourceAllocation.create({
       data: {
         workspaceId: input.workspaceId,
@@ -128,6 +147,7 @@ export async function allocateResource(input: AllocateResourceInput) {
         priority: input.priority ?? 50,
         status: "ALLOCATED",
         allocatedBy: input.actorId,
+        ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
       },
     });
 
@@ -163,6 +183,10 @@ export async function releaseAllocation(
   if (!allocation) throw new NotFoundError("ResourceAllocation", allocationId);
   if (allocation.status !== "ALLOCATED") {
     throw new ValidationError(`Allocation is already ${allocation.status}`);
+  }
+
+  if (allocation.allocationAmount < 0) {
+    throw new ValidationError("Allocation has negative amount — cannot release");
   }
 
   return db.$transaction(async (tx: Prisma.TransactionClient) => {

@@ -147,6 +147,35 @@ export default function OwnerCockpitPage() {
     }
   }, [load]);
 
+  const onBosAction = useCallback(async (action: string, payload: Record<string, unknown>) => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      let result: { ok: boolean; data: unknown };
+      if (action === "run-arbitration") {
+        result = await apiPost("/api/owner/goal-arbitration", {});
+      } else if (action === "override") {
+        result = await apiPost("/api/owner/override-arbitration", payload);
+      } else if (action === "constraint") {
+        result = await apiPost("/api/owner/constraints", payload);
+      } else {
+        setMessage(`Unknown BOS action: ${action}`);
+        return;
+      }
+      if (!result.ok) {
+        const d = result.data as Record<string, unknown>;
+        setMessage((d?.error as Record<string, unknown>)?.message as string || String(d?.error) || "Action failed.");
+      } else {
+        setMessage(`${action === "run-arbitration" ? "Arbitration complete" : action === "override" ? "Override recorded" : "Constraint updated"}.`);
+        await load();
+      }
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "BOS action failed");
+    } finally {
+      setBusy(false);
+    }
+  }, [load]);
+
   const onAcknowledgeEscalation = useCallback(async (escalationId: string) => {
     setBusy(true);
     setMessage(null);
@@ -199,6 +228,7 @@ export default function OwnerCockpitPage() {
         onAcknowledgeEscalation={onAcknowledgeEscalation}
         executionLifecycle={executionLifecycle}
         businessOperatingSystem={businessOperatingSystem}
+        onBosAction={onBosAction}
         busy={busy}
       />
     </main>

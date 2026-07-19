@@ -637,6 +637,22 @@ export interface BusinessOperatingSystemObjectiveSummary {
   status: string;
   priorityScore: number;
   health: ObjectiveHealthStatus;
+  /** System-recommended portfolio decision from latest arbitration (null if not yet arbitrated). */
+  portfolioDecision: string | null;
+  portfolioRationale: string | null;
+  /** Whether an owner override exists for this objective's arbitration record. */
+  hasOverride: boolean;
+  /** INTERNAL_OBJECTIVE or EXTERNAL_OPPORTUNITY (from latest arbitration portfolioDecisions). */
+  candidateType: "INTERNAL_OBJECTIVE" | "EXTERNAL_OPPORTUNITY";
+}
+
+export interface BusinessOperatingSystemConstraintSummary {
+  constraintId: string;
+  title: string;
+  constraintType: string;
+  bindingScore: number;
+  status: string;
+  remediationAction: string | null;
 }
 
 export interface BusinessOperatingSystemRiskSummary {
@@ -666,6 +682,8 @@ export interface BusinessOperatingSystemView {
     createdAt: string;
   } | null;
   topRisks: BusinessOperatingSystemRiskSummary[];
+  /** Top active constraints by bindingScore — for cockpit constraint list. */
+  activeConstraints: BusinessOperatingSystemConstraintSummary[];
   activeConstraintCount: number;
   kpiCount: number;
   costAttributionCoverage: number | null;
@@ -1173,12 +1191,12 @@ async function buildBusinessOperatingSystem(
         select: { id: true, title: true, severity: true, status: true, category: true },
       });
 
-    // 4. Latest goal arbitration + its owner override (if any)
-    const latestArb: { id: string; winnerObjectiveId: string | null; dominantConstraint: string | null; arbitratedAt: Date } | null =
+    // 4. Latest goal arbitration + its owner override (if any) + portfolioDecisions JSON
+    const latestArb: { id: string; winnerObjectiveId: string | null; dominantConstraint: string | null; arbitratedAt: Date; portfolioDecisions: unknown } | null =
       await dbAny.goalArbitrationRecord.findFirst({
         where: { workspaceId },
         orderBy: { arbitratedAt: "desc" },
-        select: { id: true, winnerObjectiveId: true, dominantConstraint: true, arbitratedAt: true },
+        select: { id: true, winnerObjectiveId: true, dominantConstraint: true, arbitratedAt: true, portfolioDecisions: true },
       });
     const latestOverride: { decision: string; overrideRationale: string; actorId: string; createdAt: Date } | null =
       latestArb
@@ -1189,10 +1207,28 @@ async function buildBusinessOperatingSystem(
           })
         : null;
 
-    // 5. Active constraint count
+    // Build a lookup: objectiveId → { decision, rationale, candidateType } from latest arbitration
+    type PdRow = { objectiveId: string; decision: string; rationale: string; candidateType?: string };
+    const portfolioDecisionMap = new Map<string, PdRow>();
+    if (latestArb?.portfolioDecisions && Array.isArray(latestArb.portfolioDecisions)) {
+      for (const pd of latestArb.portfolioDecisions as PdRow[]) {
+        if (pd?.objectiveId) portfolioDecisionMap.set(pd.objectiveId, pd);
+      }
+    }
+
+    // 5. Active constraints (top 5 by bindingScore) + count
+    const activeConstraintRows: Array<{
+      id: string; title: string; constraintType: string; bindingScore: number;
+      status: string; remediationAction: string | null;
+    }> = await dbAny.constraintResolutionRecord.findMany({
+      where: { workspaceId, status: "ACTIVE" },
+      orderBy: { bindingScore: "desc" },
+      take: 5,
+      select: { id: true, title: true, constraintType: true, bindingScore: true, status: true, remediationAction: true },
+    }).catch(() => [] as typeof activeConstraintRows);
     const activeConstraintCount: number = await dbAny.constraintResolutionRecord.count({
       where: { workspaceId, status: "ACTIVE" },
-    });
+    }).catch(() => 0);
 
     // 6. KPI ownership count
     const kpiCount: number = await dbAny.kPIOwnershipRecord.count({ where: { workspaceId } });
@@ -1241,14 +1277,21 @@ async function buildBusinessOperatingSystem(
       .filter((i) => i.status === "ACTIVE")
       .sort((a, b) => (a.healthScore !== b.healthScore ? a.healthScore - b.healthScore : b.priorityScore - a.priorityScore))
       .slice(0, 5)
-      .map((i) => ({
-        objectiveId: i.objectiveId,
-        title: i.title,
-        objectiveType: i.objectiveType,
-        status: i.status,
-        priorityScore: i.priorityScore,
-        health: i.healthStatus,
-      }));
+      .map((i) => {
+        const pd = portfolioDecisionMap.get(i.objectiveId);
+        return {
+          objectiveId: i.objectiveId,
+          title: i.title,
+          objectiveType: i.objectiveType,
+          status: i.status,
+          priorityScore: i.priorityScore,
+          health: i.healthStatus,
+          portfolioDecision: pd?.decision ?? null,
+          portfolioRationale: pd?.rationale ?? null,
+          hasOverride: latestOverride !== null && latestArb?.winnerObjectiveId === i.objectiveId,
+          candidateType: (pd?.candidateType as "INTERNAL_OBJECTIVE" | "EXTERNAL_OPPORTUNITY") ?? "INTERNAL_OBJECTIVE",
+        };
+      });
 
     return {
       totalActiveObjectives: portfolio.totalActive,
@@ -1278,6 +1321,14 @@ async function buildBusinessOperatingSystem(
         severity: r.severity,
         status: r.status,
         riskCategory: r.category,
+      })),
+      activeConstraints: activeConstraintRows.map((c) => ({
+        constraintId: c.id,
+        title: c.title,
+        constraintType: c.constraintType,
+        bindingScore: c.bindingScore,
+        status: c.status,
+        remediationAction: c.remediationAction,
       })),
       activeConstraintCount,
       kpiCount,

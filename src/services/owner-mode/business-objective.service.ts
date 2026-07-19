@@ -11,7 +11,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { AuditEventName } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 
 export type ObjectiveType =
   | "REVENUE"
@@ -213,8 +213,11 @@ export async function listObjectives(
   });
 }
 
-/** Detect if adding edge blockingId→blockedId would introduce a cycle via DFS. */
+/** Detect if adding edge blockingId→blockedId would introduce a cycle via DFS.
+ *  Must be called inside a Serializable transaction to prevent concurrent insertions
+ *  from racing past the cycle check on a stale graph snapshot. */
 async function wouldCreateCycle(
+  tx: Prisma.TransactionClient,
   workspaceId: string,
   blockingId: string,
   blockedId: string,
@@ -227,7 +230,7 @@ async function wouldCreateCycle(
     if (current === blockingId) return true;
     if (visited.has(current)) continue;
     visited.add(current);
-    const outgoing = await db.businessObjectiveDependency.findMany({
+    const outgoing = await tx.businessObjectiveDependency.findMany({
       where: { workspaceId, blockingId: current },
       select: { blockedId: true },
     });
@@ -263,18 +266,24 @@ export async function addDependency(
   if (!blocking) throw new NotFoundError("BusinessObjective", blockingId);
   if (!blocked) throw new NotFoundError("BusinessObjective", blockedId);
 
-  // Cycle detection: enforce at service boundary before any write
-  if (await wouldCreateCycle(workspaceId, blockingId, blockedId)) {
-    throw new ValidationError(
-      `Adding dependency ${blockingId}→${blockedId} would create a cycle in the dependency graph`,
-    );
-  }
+  // Cycle detection inside a Serializable transaction — prevents concurrent insertions
+  // from racing past the DFS on a stale snapshot of the dependency graph.
+  return db.$transaction(
+    async (tx: Prisma.TransactionClient) => {
+      if (await wouldCreateCycle(tx, workspaceId, blockingId, blockedId)) {
+        throw new ValidationError(
+          `Adding dependency ${blockingId}→${blockedId} would create a cycle in the dependency graph`,
+        );
+      }
 
-  return db.businessObjectiveDependency.upsert({
-    where: { workspaceId_blockingId_blockedId: { workspaceId, blockingId, blockedId } },
-    create: { workspaceId, blockingId, blockedId, depType, note: note ?? null },
-    update: { depType, note: note ?? null },
-  });
+      return tx.businessObjectiveDependency.upsert({
+        where: { workspaceId_blockingId_blockedId: { workspaceId, blockingId, blockedId } },
+        create: { workspaceId, blockingId, blockedId, depType, note: note ?? null },
+        update: { depType, note: note ?? null },
+      });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
 }
 
 export async function removeDependency(

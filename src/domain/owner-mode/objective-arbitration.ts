@@ -111,6 +111,20 @@ export interface ObjectiveCandidate {
   childCount?: number;
 }
 
+/**
+ * Per-dimension metadata distinguishing measured values from defaults/unknowns.
+ * "null rawValue" means the dimension was not supplied by the caller — the score
+ * is an explicit default, NOT a measured neutral.
+ */
+export interface DimensionMeta {
+  score: number;
+  rawValue: number | null;
+  isKnown: boolean;
+  source: "measured" | "derived" | "default";
+  confidence: number;
+  missingReason?: string;
+}
+
 export interface ObjectiveArbitrationItem extends ArbitrationCandidate {
   objectiveId: string;
   objectiveType: ObjectiveType;
@@ -125,6 +139,8 @@ export interface ObjectiveArbitrationItem extends ArbitrationCandidate {
   dim_regulatoryWeight: number;
   dim_operationalRisk: number;
   dim_resourceAvailability: number;
+  /** Per-dimension metadata — distinguishes measured 0.5 from "unknown defaulted to 0.5". */
+  dimensionScores: Record<string, DimensionMeta>;
   portfolioDecision: PortfolioDecision;
   portfolioRationale: string;
 }
@@ -137,24 +153,34 @@ export interface ObjectiveArbitrationResult {
   resourceConflict: { objectiveId: string; reason: string }[] | null;
 }
 
-/** Compute ROI score (0..1). Unknown ROI treated as 0.5 (neutral — missing-data safe). */
-function scoreROI(estimatedROI: number | null | undefined): number {
-  if (estimatedROI == null) return 0.5; // explicitly unknown → neutral
-  if (estimatedROI <= 0) return 0.1;   // no return or loss
-  if (estimatedROI >= 5) return 1.0;   // ≥5× return → maximum score
-  return Math.min(1.0, estimatedROI / 5);
+/** Compute ROI dimension metadata. Unknown ROI is tracked as a default — not measured neutral. */
+function scoreROI(estimatedROI: number | null | undefined): DimensionMeta {
+  if (estimatedROI == null) {
+    return { score: 0.5, rawValue: null, isKnown: false, source: "default", confidence: 0.3,
+      missingReason: "estimatedROI not supplied — defaulted to neutral 0.5" };
+  }
+  const score = estimatedROI <= 0 ? 0.1 : estimatedROI >= 5 ? 1.0 : Math.min(1.0, estimatedROI / 5);
+  return { score, rawValue: estimatedROI, isKnown: true, source: "measured", confidence: 0.8 };
 }
 
-/** Resource availability (0..1). Unknown → 0.5 (neutral). */
-function scoreResourceAvailability(ratio: number | null | undefined): number {
-  if (ratio == null) return 0.5;
-  return Math.max(0, Math.min(1.0, ratio));
+/** Resource availability dimension metadata. Unknown ratio tracked as default. */
+function scoreResourceAvailability(ratio: number | null | undefined): DimensionMeta {
+  if (ratio == null) {
+    return { score: 0.5, rawValue: null, isKnown: false, source: "default", confidence: 0.3,
+      missingReason: "resourceAvailabilityRatio not supplied — defaulted to moderate 0.5" };
+  }
+  const score = Math.max(0, Math.min(1.0, ratio));
+  return { score, rawValue: ratio, isKnown: true, source: "measured", confidence: 0.9 };
 }
 
-/** Operational risk (0..1 raw). Higher risk = higher riskOfAction penalty. */
-function resolveOperationalRisk(risk: number | null | undefined): number {
-  if (risk == null) return 0.3; // unknown → moderate default (explicit missing-data handling)
-  return Math.max(0, Math.min(1.0, risk));
+/** Operational risk dimension metadata. Unknown risk tracked as default. */
+function resolveOperationalRisk(risk: number | null | undefined): DimensionMeta {
+  if (risk == null) {
+    return { score: 0.3, rawValue: null, isKnown: false, source: "default", confidence: 0.3,
+      missingReason: "operationalRisk not supplied — defaulted to moderate 0.3" };
+  }
+  const score = Math.max(0, Math.min(1.0, risk));
+  return { score, rawValue: risk, isKnown: true, source: "measured", confidence: 0.8 };
 }
 
 /** Convert an ObjectiveCandidate to ArbitrationCandidate for the base arbitrate(). */
@@ -173,38 +199,42 @@ function toArbitrationCandidate(obj: ObjectiveCandidate): ObjectiveArbitrationIt
   }
   const urgencyScore = Math.min(1.0, timeUrgency * urgencyMultiplier);
 
-  // Dim 3: ROI
-  const dim_roi = scoreROI(obj.estimatedROI);
+  // Dim 3: ROI — returns DimensionMeta to distinguish measured vs default
+  const roiMeta = scoreROI(obj.estimatedROI);
 
   // Dim 4: owner priority (normalised 0..1)
   const priorityNorm = Math.max(0, Math.min(100, obj.priorityScore)) / 100;
 
-  // Dim 6: resource availability
-  const dim_resourceAvailability = scoreResourceAvailability(obj.resourceAvailabilityRatio);
+  // Dim 6: resource availability — returns DimensionMeta
+  const resourceAvailMeta = scoreResourceAvailability(obj.resourceAvailabilityRatio);
 
   // Dim 7: execution cost (high usage = high cost risk)
   const resourceBudgetOverrun = obj.resourceBudgetUsedPct >= 95;
 
-  // Dim 8: cash impact modifier
+  // Dim 8: cash impact modifier (type-derived, always known)
   const dim_cashImpact = CASH_IMPACT_MODIFIER[obj.objectiveType];
 
-  // Dim 9: operational risk
-  const dim_operationalRisk = resolveOperationalRisk(obj.operationalRisk);
+  // Dim 9: operational risk — returns DimensionMeta
+  const operationalRiskMeta = resolveOperationalRisk(obj.operationalRisk);
 
-  // Dim 10: customer impact
+  // Dim 10: customer impact (type-derived, always known)
   const dim_customerImpact = CUSTOMER_IMPACT_MODIFIER[obj.objectiveType];
 
-  // Dim 11: regulatory weight
+  // Dim 11: regulatory weight (type-derived, always known)
   const dim_regulatoryWeight = REGULATORY_WEIGHT[obj.objectiveType];
 
   // Dim 12: reversibility (already in ArbitrationCandidate)
   // Dim 13: evidence confidence (already in ArbitrationCandidate)
 
+  // Count unknown dimensions — confidence penalty when multiple dimensions are estimated
+  const unknownCount = [roiMeta, resourceAvailMeta, operationalRiskMeta].filter((m) => !m.isKnown).length;
+  const adjustedConfidence = Math.max(0.1, obj.confidence - unknownCount * 0.1);
+
   // Compose riskOfAction: operational risk + resource overrun + irreversibility + low confidence
-  const baseActionRisk = dim_operationalRisk * 0.4
+  const baseActionRisk = operationalRiskMeta.score * 0.4
     + (resourceBudgetOverrun ? 0.25 : (obj.resourceBudgetUsedPct / 100) * 0.15)
     + (!obj.reversible ? 0.20 : 0)
-    + (1 - obj.confidence) * 0.25;
+    + (1 - adjustedConfidence) * 0.25;
   const riskOfAction = Math.max(0, Math.min(1.0, parseFloat(baseActionRisk.toFixed(3))));
 
   // Compose riskOfInaction: urgency + type weight + cash/regulatory impact + priority
@@ -215,6 +245,20 @@ function toArbitrationCandidate(obj: ObjectiveCandidate): ObjectiveArbitrationIt
     + dim_customerImpact * 0.05
     + priorityNorm * 0.10;
   const riskOfInaction = Math.max(0, Math.min(1.0, parseFloat(baseInactionRisk.toFixed(3))));
+
+  // Build dimensionScores map for explainability
+  const dimensionScores: Record<string, DimensionMeta> = {
+    roi: roiMeta,
+    resourceAvailability: resourceAvailMeta,
+    operationalRisk: operationalRiskMeta,
+    urgency: { score: urgencyScore, rawValue: obj.deadlineDaysRemaining, isKnown: true, source: "derived", confidence: 0.9 },
+    typeWeight: { score: typeWeight, rawValue: typeWeight, isKnown: true, source: "derived", confidence: 1.0 },
+    cashImpact: { score: dim_cashImpact, rawValue: dim_cashImpact, isKnown: true, source: "derived", confidence: 1.0 },
+    customerImpact: { score: dim_customerImpact, rawValue: dim_customerImpact, isKnown: true, source: "derived", confidence: 1.0 },
+    regulatoryWeight: { score: dim_regulatoryWeight, rawValue: dim_regulatoryWeight, isKnown: true, source: "derived", confidence: 1.0 },
+    ownerPriority: { score: priorityNorm, rawValue: obj.priorityScore, isKnown: true, source: "measured", confidence: 0.9 },
+    confidence: { score: adjustedConfidence, rawValue: obj.confidence, isKnown: true, source: "measured", confidence: 1.0 },
+  };
 
   // Portfolio decision (see computePortfolioDecision below — placeholder for now, set after all candidates computed)
   const portfolioDecision: PortfolioDecision = "EXECUTE_NOW"; // overridden in computePortfolioDecisions
@@ -228,18 +272,19 @@ function toArbitrationCandidate(obj: ObjectiveCandidate): ObjectiveArbitrationIt
     progressPct: obj.progressPct,
     typeWeight,
     urgencyScore,
-    dim_roi,
+    dim_roi: roiMeta.score,
     dim_cashImpact,
     dim_customerImpact,
     dim_regulatoryWeight,
-    dim_operationalRisk,
-    dim_resourceAvailability,
+    dim_operationalRisk: operationalRiskMeta.score,
+    dim_resourceAvailability: resourceAvailMeta.score,
+    dimensionScores,
     portfolioDecision,
     portfolioRationale,
     blockedBy: obj.hasBlockingDependencies ? ["capacity"] : [],
     riskOfAction,
     riskOfInaction,
-    confidence: obj.confidence,
+    confidence: adjustedConfidence,
     ownerGoalAligned: obj.linkedGoalAligned,
     reversible: obj.reversible,
   };

@@ -5321,6 +5321,7 @@ model ResourceAllocation {
   allocatedBy      String   @map("allocated_by") @db.Uuid
   allocatedAt      DateTime @default(now()) @map("allocated_at")
   releasedAt       DateTime? @map("released_at")
+  idempotencyKey   String?   @unique @map("idempotency_key")
 
   pool ResourcePool @relation(fields: [poolId], references: [id], onDelete: Cascade)
 

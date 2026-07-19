@@ -35,13 +35,39 @@ function timeHorizonFromDays(days: number | null): TimeHorizon {
   return "LONG_TERM";
 }
 
+export type CandidateType = "INTERNAL_OBJECTIVE" | "EXTERNAL_OPPORTUNITY";
+
 export interface RunGoalArbitrationResult {
   arbitrationRecordId: string;
   winnerObjectiveId: string | null;
   dominantConstraint: string | null;
   resourceConflict: { objectiveId: string; reason: string }[] | null;
   totalCandidates: number;
-  portfolioDecisions: { objectiveId: string; decision: string; rationale: string }[];
+  portfolioDecisions: { objectiveId: string; decision: string; rationale: string; candidateType: CandidateType }[];
+}
+
+function sourceQualityToConfidence(q: string): number {
+  if (q === "HIGH" || q === "VERIFIED") return 0.85;
+  if (q === "MODERATE") return 0.65;
+  if (q === "LOW") return 0.4;
+  return 0.2; // UNKNOWN
+}
+
+function ownerWorkloadToAvailability(band: string): number {
+  if (band === "LOW") return 0.85;
+  if (band === "MODERATE") return 0.6;
+  if (band === "HIGH") return 0.3;
+  if (band === "VERY_HIGH") return 0.1;
+  return 0.5;
+}
+
+function rawSignalTypeToObjectiveType(rawType: string): ObjectiveType {
+  const upper = rawType.toUpperCase();
+  if (upper.includes("TENDER") || upper.includes("PROCUREMENT") || upper.includes("REVENUE")) return "REVENUE";
+  if (upper.includes("COMPLIANCE") || upper.includes("REGULATORY")) return "COMPLIANCE";
+  if (upper.includes("GROWTH") || upper.includes("EXPANSION")) return "GROWTH";
+  if (upper.includes("COST") || upper.includes("SAVING")) return "COST_REDUCTION";
+  return "STRATEGIC";
 }
 
 export async function runGoalArbitration(
@@ -54,6 +80,17 @@ export async function runGoalArbitration(
     include: {
       blockedBy: { select: { id: true } },
       _count: { select: { children: true } },
+    },
+  });
+
+  // Fetch active CANDIDATE opportunity signals for unified portfolio arbitration
+  const dbAny = db as unknown as Record<string, { findMany: (opts: unknown) => Promise<unknown[]> }>;
+  const opportunitySignals = await dbAny.externalOpportunitySignal.findMany({
+    where: { workspaceId, status: "ACTIVE", initialStatus: "CANDIDATE" },
+    select: {
+      id: true, rawSignalType: true, tenderOrProcurementValue: true, deadlineAt: true,
+      estimatedCashExposure: true, sourceQuality: true, ownerWorkloadBand: true,
+      missingData: true, relevanceBand: true,
     },
   });
 
@@ -91,6 +128,9 @@ export async function runGoalArbitration(
       .filter((r: { linkedObjectiveId: string | null; severity: number }) => r.linkedObjectiveId !== null)
       .map((r: { linkedObjectiveId: string | null; severity: number }) => r.linkedObjectiveId as string),
   );
+
+  // Build a set of internal objective candidate IDs for tagging portfolio decisions
+  const internalObjectiveIds = new Set(objectives.map((o: { id: string }) => o.id));
 
   const candidates: ObjectiveCandidate[] = objectives.map((obj: (typeof objectives)[number]) => {
     const daysLeft = deadlineDaysRemaining(obj.deadline);
@@ -148,6 +188,43 @@ export async function runGoalArbitration(
     };
   });
 
+  // Map opportunity signals to ObjectiveCandidate and append to unified pool
+  type OpportunityRow = {
+    id: string; rawSignalType: string; tenderOrProcurementValue: number | null;
+    deadlineAt: Date | null; estimatedCashExposure: number | null;
+    sourceQuality: string; ownerWorkloadBand: string; missingData: string[];
+    relevanceBand: string;
+  };
+  for (const sig of opportunitySignals as OpportunityRow[]) {
+    const daysLeft = deadlineDaysRemaining(sig.deadlineAt);
+    const confidence = sourceQualityToConfidence(sig.sourceQuality);
+    const resourceAvailabilityRatio = ownerWorkloadToAvailability(sig.ownerWorkloadBand);
+    const estimatedROI = sig.tenderOrProcurementValue && sig.estimatedCashExposure && sig.estimatedCashExposure > 0
+      ? Math.min(10, sig.tenderOrProcurementValue / sig.estimatedCashExposure)
+      : sig.tenderOrProcurementValue ? 2.5 // moderate default when no cost benchmark
+      : null;
+    const operationalRisk = sig.missingData.length > 3 ? 0.7 : sig.missingData.length > 0 ? 0.4 : 0.2;
+
+    candidates.push({
+      objectiveId: sig.id,
+      objectiveType: rawSignalTypeToObjectiveType(sig.rawSignalType),
+      status: "ACTIVE",
+      priorityScore: sig.relevanceBand === "HIGH" ? 75 : sig.relevanceBand === "LOW" ? 25 : 50,
+      progressPct: 0,
+      resourceBudgetUsedPct: 0,
+      hasBlockingDependencies: false,
+      linkedGoalAligned: false,
+      timeHorizon: timeHorizonFromDays(daysLeft),
+      deadlineDaysRemaining: daysLeft,
+      confidence,
+      reversible: true, // tender bid can be withdrawn before commitment
+      estimatedROI,
+      resourceAvailabilityRatio,
+      operationalRisk,
+      childCount: 0,
+    });
+  }
+
   const result = arbitrateObjectives(candidates);
 
   // Find the winner candidate to pass dimension scores to explainability
@@ -184,13 +261,14 @@ export async function runGoalArbitration(
     portfolioRationale: winnerPortfolioRationale,
   });
 
-  // Build portfolio decisions map for persistence
+  // Build portfolio decisions map for persistence (internal objectives + external opportunities unified)
   const portfolioDecisions = result.candidates.map((c) => ({
     objectiveId: c.objectiveId,
     decision: c.portfolioDecision,
     rationale: c.portfolioRationale,
     riskOfAction: c.riskOfAction,
     riskOfInaction: c.riskOfInaction,
+    candidateType: (internalObjectiveIds.has(c.objectiveId) ? "INTERNAL_OBJECTIVE" : "EXTERNAL_OPPORTUNITY") as CandidateType,
   }));
 
   const record = await db.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -245,6 +323,7 @@ export async function runGoalArbitration(
       objectiveId: pd.objectiveId,
       decision: pd.decision,
       rationale: pd.rationale,
+      candidateType: pd.candidateType,
     })),
   };
 }

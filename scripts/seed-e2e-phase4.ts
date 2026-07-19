@@ -6,7 +6,11 @@
  *
  * Creates:
  *  1. BusinessObjective (ACTIVE, REVENUE type, high priority)
- *  2. BusinessRiskEntry (high severity, FINANCIAL category)
+ *  2. Second BusinessObjective (ACTIVE, COMPLIANCE type)
+ *  3. BusinessRiskEntry (high severity, FINANCIAL category)
+ *  4. ExternalOpportunitySignal (ACTIVE, CANDIDATE — for external portfolio candidate UI)
+ *  5. ConstraintResolutionRecord (ACTIVE, high bindingScore — for constraint UI testing)
+ *  6. ResourcePool (active — for BOS pools display)
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
@@ -14,6 +18,9 @@ import {
   E2E_PHASE4_OBJECTIVE_ID,
   E2E_PHASE4_OBJECTIVE2_ID,
   E2E_PHASE4_RISK_ID,
+  E2E_PHASE4_OPPORTUNITY_ID,
+  E2E_PHASE4_CONSTRAINT_ID,
+  E2E_PHASE4_POOL_ID,
   E2E_OWNER,
 } from "../tests/browser/e2e-fixtures";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -28,7 +35,7 @@ async function main() {
   const pool = new Pool({ connectionString: databaseUrl });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) }) as PrismaClientType;
 
-  // ─── 1. BusinessObjective ─────────────────────────────────────────────────────
+  // ─── 1. BusinessObjective (REVENUE) ──────────────────────────────────────────
   await (prisma as any).businessObjective.upsert({
     where: { id: E2E_PHASE4_OBJECTIVE_ID },
     create: {
@@ -90,6 +97,88 @@ async function main() {
     },
     update: {
       status: "IDENTIFIED",
+      updatedAt: new Date(),
+    },
+  });
+
+  // ─── 4. ExternalOpportunitySignal (for external candidate in arbitration) ────
+  await (prisma as any).externalOpportunitySignal.upsert({
+    where: { id: E2E_PHASE4_OPPORTUNITY_ID },
+    create: {
+      id: E2E_PHASE4_OPPORTUNITY_ID,
+      workspaceId: E2E_WORKSPACE_ID,
+      idempotencyKey: "e2e-phase4-opportunity-001",
+      dedupeKey: "e2e-phase4-opportunity-001",
+      rawSignalType: "TENDER",
+      sourceName: "Government Procurement Portal",
+      rawDescription: "E2E Phase 4: Municipal laundry services contract — 3-year fixed-price",
+      extractedBusinessNeed: "Recurring revenue contract for laundry services",
+      estimatedCashExposure: 120000.0,
+      cashExposureBand: "HIGH",
+      relevanceBand: "HIGH",
+      ownerWorkloadBand: "MODERATE",
+      hasUnitEconomics: true,
+      sourceQuality: "VERIFIED",
+      requiredDocuments: ["Company registration", "Insurance certificate"],
+      missingDocuments: [],
+      evidenceRefs: [],
+      missingData: [],
+      initialStatus: "CANDIDATE",
+      classification: "REVENUE_OPPORTUNITY",
+      status: "ACTIVE",
+      discoveredAt: new Date("2026-07-10T00:00:00Z"),
+      submittedAt: new Date("2026-07-10T00:00:00Z"),
+      createdAt: new Date("2026-07-10T00:00:00Z"),
+      updatedAt: new Date("2026-07-10T00:00:00Z"),
+    },
+    update: {
+      status: "ACTIVE",
+      initialStatus: "CANDIDATE",
+      updatedAt: new Date(),
+    },
+  });
+
+  // ─── 5. ConstraintResolutionRecord (for constraint UI testing) ────────────────
+  await (prisma as any).constraintResolutionRecord.upsert({
+    where: { id: E2E_PHASE4_CONSTRAINT_ID },
+    create: {
+      id: E2E_PHASE4_CONSTRAINT_ID,
+      workspaceId: E2E_WORKSPACE_ID,
+      constraintType: "CASH_FLOW",
+      constraintSource: "INTERNAL",
+      title: "Cash flow binding constraint — collection lag above threshold",
+      bindingScore: 78.0,
+      remediationAction: "Accelerate invoice follow-up process; target 15-day collection",
+      status: "ACTIVE",
+      linkedObjectiveId: E2E_PHASE4_OBJECTIVE_ID,
+      identifiedAt: new Date("2026-07-01T00:00:00Z"),
+      updatedAt: new Date("2026-07-01T00:00:00Z"),
+    },
+    update: {
+      status: "ACTIVE",
+      bindingScore: 78.0,
+      updatedAt: new Date(),
+    },
+  });
+
+  // ─── 6. ResourcePool (for BOS pool display) ──────────────────────────────────
+  await (prisma as any).resourcePool.upsert({
+    where: { id: E2E_PHASE4_POOL_ID },
+    create: {
+      id: E2E_PHASE4_POOL_ID,
+      workspaceId: E2E_WORKSPACE_ID,
+      resourceType: "BUDGET",
+      label: "Q3 Operations Budget",
+      totalCapacity: 50000.0,
+      unit: "USD",
+      periodStart: new Date("2026-07-01T00:00:00Z"),
+      periodEnd: new Date("2026-09-30T00:00:00Z"),
+      isActive: true,
+      createdAt: new Date("2026-07-01T00:00:00Z"),
+      updatedAt: new Date("2026-07-01T00:00:00Z"),
+    },
+    update: {
+      isActive: true,
       updatedAt: new Date(),
     },
   });

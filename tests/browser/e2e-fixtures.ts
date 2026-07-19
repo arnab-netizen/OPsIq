@@ -66,3 +66,12 @@ export const E2E_PHASE4_OBJECTIVE2_ID = "a0000000-0000-0000-0000-000000000402";
 
 /** BusinessRiskEntry seeded with high severity for Phase 4 BOS panel risk row. */
 export const E2E_PHASE4_RISK_ID      = "a1000000-0000-0000-0000-000000000401";
+
+/** ExternalOpportunitySignal seeded as ACTIVE/CANDIDATE for arbitration external-candidate testing. */
+export const E2E_PHASE4_OPPORTUNITY_ID = "a2000000-0000-0000-0000-000000000401";
+
+/** ConstraintResolutionRecord seeded as ACTIVE with high bindingScore for constraint UI testing. */
+export const E2E_PHASE4_CONSTRAINT_ID  = "a3000000-0000-0000-0000-000000000401";
+
+/** ResourcePool seeded as active for Phase 4 BOS panel resource-pools display. */
+export const E2E_PHASE4_POOL_ID        = "a4000000-0000-0000-0000-000000000401";
