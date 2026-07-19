@@ -24,8 +24,8 @@ export const GET = withCanonicalEnforcement(
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const result = await runGoalArbitration(ctx.verifiedWorkspaceId, ctx.verifiedActorId);
-    return canonicalJson({ result }, { status: 200 });
+    const { arbitrationRecordId, portfolioDecisions } = await runGoalArbitration(ctx.verifiedWorkspaceId, ctx.verifiedActorId);
+    return canonicalJson({ arbitrationRecordId, portfolioDecisions }, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
 );
