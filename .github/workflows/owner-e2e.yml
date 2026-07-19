@@ -25,6 +25,9 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://localhost:3001
       BASE_URL: http://localhost:3001
       TEST_WITH_DB: "true"
+      # next build TypeScript check hits the default ~2 GB heap limit (FATAL: heap out of
+      # memory / SIGABRT). Mirrors the fix already present in ci.yml and all other E2E workflows.
+      NODE_OPTIONS: "--max-old-space-size=4096"
     services:
       postgres:
         image: postgres:16
