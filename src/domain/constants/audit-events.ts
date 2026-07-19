@@ -516,6 +516,33 @@ export const AUDIT_EVENTS = {
   // Private deployment
   PRIVATE_MODE_ENTITLEMENT_ACTIVE: "private_mode.entitlement_active",
   PRIVATE_OWNER_SEED_EXECUTED: "private_mode.owner_seed_executed",
+
+  // Phase 4 — Owner Business Operating System
+  OWNER_OBJECTIVE_CREATED: "owner.objective_created",
+  OWNER_OBJECTIVE_UPDATED: "owner.objective_updated",
+  OWNER_OBJECTIVE_ACHIEVED: "owner.objective_achieved",
+  OWNER_OBJECTIVE_ABANDONED: "owner.objective_abandoned",
+  OWNER_GOAL_ARBITRATION_RECORDED: "owner.goal_arbitration_recorded",
+  OWNER_RESOURCE_POOL_CREATED: "owner.resource_pool_created",
+  OWNER_RESOURCE_ALLOCATED: "owner.resource_allocated",
+  OWNER_RESOURCE_RELEASED: "owner.resource_released",
+  OWNER_BUSINESS_RISK_IDENTIFIED: "owner.business_risk_identified",
+  OWNER_BUSINESS_RISK_STATUS_CHANGED: "owner.business_risk_status_changed",
+  OWNER_BUSINESS_RISK_RESOLVED: "owner.business_risk_resolved",
+  OWNER_KPI_OWNERSHIP_ASSIGNED: "owner.kpi_ownership_assigned",
+  OWNER_KPI_REVIEWED: "owner.kpi_reviewed",
+  OWNER_DECISION_CONFIDENCE_RECORDED: "owner.decision_confidence_recorded",
+  OWNER_CONSTRAINT_IDENTIFIED: "owner.constraint_identified",
+  OWNER_CONSTRAINT_RESOLVED: "owner.constraint_resolved",
+  OWNER_CONSTRAINT_ACCEPTED: "owner.constraint_accepted",
+  OWNER_EXPLAINABILITY_RECORD_CREATED: "owner.explainability_record_created",
+  OWNER_OPERATING_MEMORY_UPDATED: "owner.operating_memory_updated",
+  OWNER_COST_ATTRIBUTED_TO_OBJECTIVE: "owner.cost_attributed_to_objective",
+
+  // Phase 4 deepening — arbitration override + memory versioning
+  OWNER_ARBITRATION_OVERRIDDEN: "owner.arbitration_overridden",
+  OWNER_OPERATING_MEMORY_VERSIONED: "owner.operating_memory_versioned",
+  OWNER_KPI_BASELINE_SET: "owner.kpi_baseline_set",
 } as const;
 
 export type AuditEventName =

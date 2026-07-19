@@ -21,7 +21,7 @@ import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
-import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem } from "@/services/owner-guidance/owner-now-view.service";
+import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
 
@@ -111,6 +111,10 @@ export interface MinimumOwnerCockpitProps {
   onStartWork?: (taskKey: string) => void;
   /** Phase 3 — execution lifecycle view from the Now View (4-group: requiresDecision / inExecution / awaitingVerification / recentlyVerified). */
   executionLifecycle?: OwnerExecutionLifecycleView | null;
+  /** Phase 4 — Business Operating System summary (objectives, risks, resources, arbitration). */
+  businessOperatingSystem?: BusinessOperatingSystemView | null;
+  /** Phase 4 — BOS action: run-arbitration | override | resolve-constraint | accept-constraint. */
+  onBosAction?: (action: string, payload: Record<string, unknown>) => Promise<void>;
 }
 
 const RECOVERY_STATUS_LABEL: Record<string, string> = {
@@ -474,6 +478,278 @@ function ExecutionLifecycleSection({
   );
 }
 
+const PORTFOLIO_DECISION_LABEL: Record<string, string> = {
+  EXECUTE_NOW: "SYSTEM RECOMMENDATION",
+  DELAY: "SYSTEM: DELAY",
+  CANCEL: "SYSTEM: CANCEL",
+  MERGE: "SYSTEM: MERGE",
+  SPLIT: "SYSTEM: SPLIT",
+  ESCALATE: "BINDING CONSTRAINT",
+};
+const PORTFOLIO_DECISION_COLOR: Record<string, string> = {
+  EXECUTE_NOW: "#16a34a", DELAY: "#b45309", CANCEL: "#dc2626",
+  MERGE: "#7c3aed", SPLIT: "#0284c7", ESCALATE: "#b91c1c",
+};
+
+function BusinessOperatingSystemSection({
+  bos,
+  onBosAction,
+  busy,
+}: {
+  bos: BusinessOperatingSystemView;
+  onBosAction?: (action: string, payload: Record<string, unknown>) => Promise<void>;
+  busy?: boolean;
+}) {
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [overrideDecision, setOverrideDecision] = useState("EXECUTE_NOW");
+  const [overrideRationale, setOverrideRationale] = useState("");
+  const [overrideSubmitting, setOverrideSubmitting] = useState(false);
+
+  const healthColor = (h: string) => h === "ON_TRACK" ? "#16a34a" : h === "AT_RISK" ? "#b45309" : h === "BLOCKED" ? "#dc2626" : "#6b7280";
+
+  const handleRunArbitration = async () => {
+    if (!onBosAction) return;
+    await onBosAction("run-arbitration", {});
+  };
+
+  const handleSubmitOverride = async () => {
+    if (!onBosAction || !bos.latestArbitration) return;
+    if (overrideRationale.trim().length < 10) return;
+    setOverrideSubmitting(true);
+    try {
+      await onBosAction("override", {
+        overriddenRecordId: bos.latestArbitration.winnerObjectiveId ?? "",
+        overrideRationale: overrideRationale.trim(),
+        decision: overrideDecision,
+      });
+      setOverrideOpen(false);
+      setOverrideRationale("");
+    } finally {
+      setOverrideSubmitting(false);
+    }
+  };
+
+  const handleConstraintAction = async (constraintId: string, action: "RESOLVE" | "ACCEPT") => {
+    if (!onBosAction) return;
+    await onBosAction("constraint", { recordId: constraintId, action });
+  };
+
+  return (
+    <details open data-testid="cockpit-bos-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+        Business Operating System
+        <span style={{ fontWeight: 400, color: "#6b7280" }}> — {bos.totalActiveObjectives} active objective{bos.totalActiveObjectives !== 1 ? "s" : ""}</span>
+      </summary>
+      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+        {/* Health counts */}
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }} data-testid="cockpit-bos-health-counts">
+          {bos.objectiveHealthCounts.ON_TRACK > 0 && <span style={{ color: "#16a34a" }}>{bos.objectiveHealthCounts.ON_TRACK} on track</span>}
+          {bos.objectiveHealthCounts.AT_RISK > 0 && <span style={{ color: "#b45309" }}>{bos.objectiveHealthCounts.AT_RISK} at risk</span>}
+          {bos.objectiveHealthCounts.BLOCKED > 0 && <span style={{ color: "#dc2626" }}>{bos.objectiveHealthCounts.BLOCKED} blocked</span>}
+          {bos.objectiveHealthCounts.CRITICAL > 0 && <span style={{ color: "#7f1d1d" }}>{bos.objectiveHealthCounts.CRITICAL} critical</span>}
+        </div>
+
+        {/* Run Arbitration */}
+        {onBosAction && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              data-testid="cockpit-bos-run-arbitration"
+              onClick={() => void handleRunArbitration()}
+              disabled={busy || overrideSubmitting}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #6b7280", cursor: "pointer", background: "#f9fafb" }}
+            >
+              Run arbitration
+            </button>
+            {bos.latestArbitration && (
+              <span style={{ fontSize: 11, color: "#6b7280" }}>
+                Last: {new Date(bos.latestArbitration.arbitratedAt).toLocaleDateString()}
+                {bos.latestArbitration.dominantConstraint ? ` · ${bos.latestArbitration.dominantConstraint}` : ""}
+              </span>
+            )}
+          </div>
+        )}
+        {!onBosAction && bos.latestArbitration && (
+          <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }} data-testid="cockpit-bos-arbitration">
+            Last arbitration: {new Date(bos.latestArbitration.arbitratedAt).toLocaleDateString()}
+            {bos.latestArbitration.dominantConstraint ? ` · Dominant constraint: ${bos.latestArbitration.dominantConstraint}` : ""}
+          </p>
+        )}
+
+        {/* Top objectives with portfolio decisions */}
+        {bos.topObjectives.length > 0 && (
+          <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+            {bos.topObjectives.map((o) => (
+              <li key={o.objectiveId} data-testid={`cockpit-bos-objective-${o.objectiveId}`} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: healthColor(o.health), flexShrink: 0, display: "inline-block" }} />
+                  <span style={{ flex: 1 }}>{o.title}</span>
+                  <span style={{ color: "#6b7280", fontSize: 12 }}>{o.objectiveType}</span>
+                  {o.candidateType === "EXTERNAL_OPPORTUNITY" && (
+                    <Badge variant="default" data-testid={`cockpit-bos-candidate-type-${o.objectiveId}`}>External</Badge>
+                  )}
+                </div>
+                {o.portfolioDecision && (
+                  <div style={{ display: "flex", gap: 6, paddingLeft: 16 }}>
+                    <span
+                      data-testid={`cockpit-bos-portfolio-decision-${o.objectiveId}`}
+                      style={{ fontSize: 11, color: PORTFOLIO_DECISION_COLOR[o.portfolioDecision] ?? "#6b7280", fontWeight: 600 }}
+                    >
+                      {o.hasOverride ? "OWNER OVERRIDE" : (PORTFOLIO_DECISION_LABEL[o.portfolioDecision] ?? o.portfolioDecision)}
+                    </span>
+                    {o.portfolioRationale && (
+                      <span
+                        data-testid={`cockpit-bos-portfolio-rationale-${o.objectiveId}`}
+                        style={{ fontSize: 11, color: "#6b7280" }}
+                      >
+                        — {o.portfolioRationale}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* System summary row */}
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", color: "#6b7280", fontSize: 12 }}>
+          <span data-testid="cockpit-bos-pools">{bos.activePoolCount} resource pool{bos.activePoolCount !== 1 ? "s" : ""}{bos.resourceUtilizationPct !== null ? ` · ${bos.resourceUtilizationPct}% utilized` : ""}</span>
+          <span data-testid="cockpit-bos-constraints">{bos.activeConstraintCount} active constraint{bos.activeConstraintCount !== 1 ? "s" : ""}</span>
+          <span data-testid="cockpit-bos-kpis">{bos.kpiCount} KPI{bos.kpiCount !== 1 ? "s" : ""} tracked</span>
+          {bos.costAttributionCoverage !== null && <span data-testid="cockpit-bos-attribution">{bos.costAttributionCoverage}% cost attributed</span>}
+        </div>
+
+        {/* Active constraints with resolve/accept */}
+        {bos.activeConstraints && bos.activeConstraints.length > 0 && (
+          <div data-testid="cockpit-bos-constraint-list">
+            <strong style={{ fontSize: 12 }}>Binding constraints:</strong>
+            <ul style={{ margin: "4px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+              {bos.activeConstraints.map((c) => (
+                <li key={c.constraintId} data-testid={`cockpit-bos-constraint-${c.constraintId}`} style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Badge variant="warning" data-testid={`cockpit-bos-constraint-badge-${c.constraintId}`}>BINDING CONSTRAINT</Badge>
+                  <span style={{ flex: 1 }}>{c.title}</span>
+                  {onBosAction && (
+                    <>
+                      <button
+                        data-testid={`cockpit-bos-resolve-constraint-${c.constraintId}`}
+                        onClick={() => void handleConstraintAction(c.constraintId, "RESOLVE")}
+                        disabled={busy}
+                        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, border: "1px solid #6b7280", cursor: "pointer", background: "#f9fafb" }}
+                      >
+                        Resolve
+                      </button>
+                      <button
+                        data-testid={`cockpit-bos-accept-constraint-${c.constraintId}`}
+                        onClick={() => void handleConstraintAction(c.constraintId, "ACCEPT")}
+                        disabled={busy}
+                        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, border: "1px solid #6b7280", cursor: "pointer", background: "#f9fafb" }}
+                      >
+                        Accept
+                      </button>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Top risks */}
+        {bos.topRisks.length > 0 && (
+          <div data-testid="cockpit-bos-risks">
+            <strong style={{ fontSize: 12 }}>Top risks:</strong>
+            <ul style={{ margin: "4px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 2 }}>
+              {bos.topRisks.map((r) => (
+                <li key={r.riskId} data-testid={`cockpit-bos-risk-${r.riskId}`} style={{ fontSize: 12, color: "#374151" }}>
+                  <Badge variant={r.severity >= 50 ? "destructive" : r.severity >= 25 ? "warning" : "muted"}>{r.severity}</Badge>
+                  {" "}{r.title}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Override indicator (system rec stays visible alongside) */}
+        {bos.latestArbitrationOverride && (
+          <div
+            data-testid="cockpit-bos-override-indicator"
+            style={{ fontSize: 12, color: "#92400e", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 4, padding: "4px 8px" }}
+          >
+            <strong>OWNER OVERRIDE:</strong> {bos.latestArbitrationOverride.decision}
+            {" — "}{bos.latestArbitrationOverride.overrideRationale}
+          </div>
+        )}
+
+        {/* Override form */}
+        {onBosAction && bos.latestArbitration && (
+          <div>
+            {!overrideOpen ? (
+              <button
+                data-testid="cockpit-bos-override-open"
+                onClick={() => setOverrideOpen(true)}
+                style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #b45309", color: "#b45309", cursor: "pointer", background: "transparent" }}
+              >
+                Record owner override
+              </button>
+            ) : (
+              <div data-testid="cockpit-bos-override-form" style={{ display: "flex", flexDirection: "column", gap: 6, border: "1px solid #e5e7eb", borderRadius: 6, padding: 10 }}>
+                <label style={{ fontSize: 12, fontWeight: 600 }}>
+                  Decision
+                  <select
+                    data-testid="cockpit-bos-override-decision"
+                    value={overrideDecision}
+                    onChange={(e) => setOverrideDecision(e.target.value)}
+                    style={{ marginLeft: 8, fontSize: 12 }}
+                  >
+                    <option value="EXECUTE_NOW">Execute now</option>
+                    <option value="DELAY">Delay</option>
+                    <option value="CANCEL">Cancel</option>
+                    <option value="MERGE">Merge</option>
+                    <option value="SPLIT">Split</option>
+                    <option value="ESCALATE">Escalate</option>
+                  </select>
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600 }}>
+                  Rationale (required, min 10 chars)
+                  <textarea
+                    data-testid="cockpit-bos-override-rationale"
+                    value={overrideRationale}
+                    onChange={(e) => setOverrideRationale(e.target.value)}
+                    rows={3}
+                    style={{ display: "block", width: "100%", marginTop: 4, fontSize: 12, fontFamily: "inherit", padding: 6, borderRadius: 4, border: "1px solid #d1d5db", resize: "vertical" }}
+                    placeholder="Why are you overriding the system recommendation?"
+                  />
+                </label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    data-testid="cockpit-bos-override-submit"
+                    onClick={() => void handleSubmitOverride()}
+                    disabled={overrideSubmitting || overrideRationale.trim().length < 10}
+                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "none", background: "#b45309", color: "#fff", cursor: "pointer" }}
+                  >
+                    {overrideSubmitting ? "Saving…" : "Submit override"}
+                  </button>
+                  <button
+                    data-testid="cockpit-bos-override-cancel"
+                    onClick={() => { setOverrideOpen(false); setOverrideRationale(""); }}
+                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #6b7280", cursor: "pointer", background: "transparent" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {bos.totalActiveObjectives === 0 && (
+          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-bos-empty">No active objectives — add objectives via the business operating system to enable this view.</p>
+        )}
+      </div>
+    </details>
+  );
+}
+
 function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition: DerivedBusinessConditionSignals; dataFreshnessWeak?: boolean | null }) {
   const knownFields = CONDITION_FIELD_ORDER.filter((k) => condition[k] !== "unknown");
   const unknownCount = CONDITION_FIELD_ORDER.length - knownFields.length;
@@ -561,7 +837,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -580,6 +856,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           </p>
         </div>
         {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} />}
+        {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} onBosAction={onBosAction} busy={busy} />}
         {recovery && <RecoverySection recovery={recovery} />}
         {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
       </section>
@@ -972,6 +1249,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* Phase 3 — Execution lifecycle (collapsed by default). Server-computed can* booleans drive visibility. */}
       {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} />}
+
+      {/* Phase 4 — Business Operating System summary (collapsed, read-only). */}
+      {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} />}
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
       <details data-testid="cockpit-proof-drawer" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>

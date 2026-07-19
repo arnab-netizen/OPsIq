@@ -70,6 +70,7 @@ import type { ProofRiskAdjudicationView } from "@/services/execution/proof-risk-
 import { deriveBusinessConditionSignals, type DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
 import { analyzeBusinessTrend, type TrendAlert, type BusinessMetricName, type MetricDataPoint } from "@/domain/owner-mode/business-state-timeline";
 import { checkDoNotRepeatForGuidance, type DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
+import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -582,6 +583,12 @@ export interface OwnerNowViewPayload {
    * Null when unavailable (DB error or table missing). Never null when tasks exist.
    */
   executionLifecycle: OwnerExecutionLifecycleView | null;
+  /**
+   * Phase 4 — Business Operating System summary: objective portfolio health, resource
+   * utilization, top risks, latest goal arbitration, constraint + KPI counts, and cost
+   * attribution coverage. Null when unavailable (DB error or no Phase 4 data yet).
+   */
+  businessOperatingSystem: BusinessOperatingSystemView | null;
 }
 
 // ── Phase 3: Execution Lifecycle types ──────────────────────────────────────
@@ -619,6 +626,67 @@ export interface OwnerExecutionLifecycleView {
   awaitingVerification: ExecutionLifecycleItem[];
   recentlyVerified: ExecutionLifecycleItem[];
   totalPendingVerification: number;
+}
+
+// ── Phase 4: Business Operating System types ─────────────────────────────────
+
+export interface BusinessOperatingSystemObjectiveSummary {
+  objectiveId: string;
+  title: string;
+  objectiveType: string;
+  status: string;
+  priorityScore: number;
+  health: ObjectiveHealthStatus;
+  /** System-recommended portfolio decision from latest arbitration (null if not yet arbitrated). */
+  portfolioDecision: string | null;
+  portfolioRationale: string | null;
+  /** Whether an owner override exists for this objective's arbitration record. */
+  hasOverride: boolean;
+  /** INTERNAL_OBJECTIVE or EXTERNAL_OPPORTUNITY (from latest arbitration portfolioDecisions). */
+  candidateType: "INTERNAL_OBJECTIVE" | "EXTERNAL_OPPORTUNITY";
+}
+
+export interface BusinessOperatingSystemConstraintSummary {
+  constraintId: string;
+  title: string;
+  constraintType: string;
+  bindingScore: number;
+  status: string;
+  remediationAction: string | null;
+}
+
+export interface BusinessOperatingSystemRiskSummary {
+  riskId: string;
+  title: string;
+  severity: number;
+  status: string;
+  riskCategory: string;
+}
+
+export interface BusinessOperatingSystemView {
+  totalActiveObjectives: number;
+  objectiveHealthCounts: { ON_TRACK: number; AT_RISK: number; BLOCKED: number; CRITICAL: number };
+  topObjectives: BusinessOperatingSystemObjectiveSummary[];
+  activePoolCount: number;
+  resourceUtilizationPct: number | null;
+  latestArbitration: {
+    winnerObjectiveId: string | null;
+    dominantConstraint: string | null;
+    arbitratedAt: string;
+  } | null;
+  /** Owner override on the latest arbitration, if any. Shown alongside (not instead of) system recommendation. */
+  latestArbitrationOverride: {
+    decision: string;
+    overrideRationale: string;
+    actorId: string;
+    createdAt: string;
+  } | null;
+  topRisks: BusinessOperatingSystemRiskSummary[];
+  /** Top active constraints by bindingScore — for cockpit constraint list. */
+  activeConstraints: BusinessOperatingSystemConstraintSummary[];
+  activeConstraintCount: number;
+  kpiCount: number;
+  costAttributionCoverage: number | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -1072,6 +1140,204 @@ export async function queryExecutionLifecycle(
   db: GuidanceDeps["db"]
 ): Promise<OwnerExecutionLifecycleView | null> {
   return buildExecutionLifecycle(workspaceId, db);
+}
+
+// ── Phase 4: Business Operating System summary ───────────────────────────────
+
+async function buildBusinessOperatingSystem(
+  workspaceId: string,
+  db: GuidanceDeps["db"],
+): Promise<BusinessOperatingSystemView | null> {
+  try {
+    const dbAny = db as any;
+    const now = Date.now();
+
+    // 1. Active business objectives with blocking dependencies and child counts
+    const rawObjectives: Array<{
+      id: string; title: string; objectiveType: string; status: string;
+      priorityScore: number; targetValue: number | null; currentValue: number | null;
+      deadline: Date | null; linkedGoalId: string | null; parentId: string | null;
+      blockedBy: { id: string }[]; _count: { children: number };
+    }> = await dbAny.businessObjective.findMany({
+      where: { workspaceId, status: "ACTIVE" },
+      include: { blockedBy: { select: { id: true } }, _count: { select: { children: true } } },
+    });
+
+    // 2. Resource pool utilization
+    const pools: Array<{ id: string; totalCapacity: number }> = await dbAny.resourcePool.findMany({
+      where: { workspaceId, isActive: true },
+      select: { id: true, totalCapacity: true },
+    });
+    const poolIds = pools.map((p) => p.id);
+    const totalCapacity = pools.reduce((s, p) => s + p.totalCapacity, 0);
+    let totalAllocated = 0;
+    if (poolIds.length > 0) {
+      const aggResult = await dbAny.resourceAllocation.aggregate({
+        where: { workspaceId, poolId: { in: poolIds }, status: "ALLOCATED" },
+        _sum: { allocationAmount: true },
+      });
+      totalAllocated = Number(aggResult._sum?.allocationAmount ?? 0);
+    }
+    const resourceUtilizationPct = totalCapacity > 0
+      ? Math.min(100, Math.round((totalAllocated / totalCapacity) * 100))
+      : null;
+
+    // 3. Top risks by severity (active risks: IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED)
+    const topRisks: Array<{ id: string; title: string; severity: number; status: string; category: string }> =
+      await dbAny.businessRiskEntry.findMany({
+        where: { workspaceId, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING", "ACCEPTED"] } },
+        orderBy: { severity: "desc" },
+        take: 3,
+        select: { id: true, title: true, severity: true, status: true, category: true },
+      });
+
+    // 4. Latest goal arbitration + its owner override (if any) + portfolioDecisions JSON
+    const latestArb: { id: string; winnerObjectiveId: string | null; dominantConstraint: string | null; arbitratedAt: Date; portfolioDecisions: unknown } | null =
+      await dbAny.goalArbitrationRecord.findFirst({
+        where: { workspaceId },
+        orderBy: { arbitratedAt: "desc" },
+        select: { id: true, winnerObjectiveId: true, dominantConstraint: true, arbitratedAt: true, portfolioDecisions: true },
+      });
+    const latestOverride: { decision: string; overrideRationale: string; actorId: string; createdAt: Date } | null =
+      latestArb
+        ? await dbAny.ownerArbitrationOverride.findFirst({
+            where: { workspaceId, overriddenRecordId: latestArb.id },
+            orderBy: { createdAt: "desc" },
+            select: { decision: true, overrideRationale: true, actorId: true, createdAt: true },
+          })
+        : null;
+
+    // Build a lookup: objectiveId → { decision, rationale, candidateType } from latest arbitration
+    type PdRow = { objectiveId: string; decision: string; rationale: string; candidateType?: string };
+    const portfolioDecisionMap = new Map<string, PdRow>();
+    if (latestArb?.portfolioDecisions && Array.isArray(latestArb.portfolioDecisions)) {
+      for (const pd of latestArb.portfolioDecisions as PdRow[]) {
+        if (pd?.objectiveId) portfolioDecisionMap.set(pd.objectiveId, pd);
+      }
+    }
+
+    // 5. Active constraints (top 5 by bindingScore) + count
+    const activeConstraintRows: Array<{
+      id: string; title: string; constraintType: string; bindingScore: number;
+      status: string; remediationAction: string | null;
+    }> = await dbAny.constraintResolutionRecord.findMany({
+      where: { workspaceId, status: "ACTIVE" },
+      orderBy: { bindingScore: "desc" },
+      take: 5,
+      select: { id: true, title: true, constraintType: true, bindingScore: true, status: true, remediationAction: true },
+    }).catch(() => [] as typeof activeConstraintRows);
+    const activeConstraintCount: number = await dbAny.constraintResolutionRecord.count({
+      where: { workspaceId, status: "ACTIVE" },
+    }).catch(() => 0);
+
+    // 6. KPI ownership count
+    const kpiCount: number = await dbAny.kPIOwnershipRecord.count({ where: { workspaceId } });
+
+    // 7. Cost attribution coverage (% of spend entries linked to an objective)
+    const [totalSpend, linkedSpend] = await Promise.all([
+      dbAny.spendEntry.count({ where: { workspaceId } }),
+      dbAny.spendEntry.count({
+        where: { workspaceId, linkedObjectiveId: { not: null } },
+      }),
+    ]);
+    const costAttributionCoverage = totalSpend > 0
+      ? Math.round(((linkedSpend as number) / (totalSpend as number)) * 100)
+      : null;
+
+    // Build portfolio view from raw objectives
+    const portfolioInputs = rawObjectives.map((obj) => {
+      const daysRemaining = obj.deadline
+        ? Math.round((obj.deadline.getTime() - now) / 86_400_000)
+        : null;
+      const progressPct = obj.targetValue && obj.currentValue !== null
+        ? Math.min(100, Math.round(((obj.currentValue ?? 0) / obj.targetValue) * 100))
+        : 0;
+      return {
+        objectiveId: obj.id,
+        parentId: obj.parentId,
+        title: obj.title,
+        objectiveType: obj.objectiveType as ObjectiveType,
+        status: "ACTIVE" as const,
+        priorityScore: obj.priorityScore,
+        targetValue: obj.targetValue,
+        currentValue: obj.currentValue,
+        progressPct,
+        deadlineDaysRemaining: daysRemaining,
+        linkedGoalAligned: obj.linkedGoalId !== null,
+        hasBlockingDependencies: obj.blockedBy.length > 0,
+        resourceBudgetUsedPct: 0,
+        childCount: obj._count.children,
+        completedChildCount: 0,
+      };
+    });
+
+    const portfolio = buildObjectivePortfolio(portfolioInputs);
+
+    const topObjectives: BusinessOperatingSystemObjectiveSummary[] = portfolio.items
+      .filter((i) => i.status === "ACTIVE")
+      .sort((a, b) => (a.healthScore !== b.healthScore ? a.healthScore - b.healthScore : b.priorityScore - a.priorityScore))
+      .slice(0, 5)
+      .map((i) => {
+        const pd = portfolioDecisionMap.get(i.objectiveId);
+        return {
+          objectiveId: i.objectiveId,
+          title: i.title,
+          objectiveType: i.objectiveType,
+          status: i.status,
+          priorityScore: i.priorityScore,
+          health: i.healthStatus,
+          portfolioDecision: pd?.decision ?? null,
+          portfolioRationale: pd?.rationale ?? null,
+          hasOverride: latestOverride !== null && latestArb?.winnerObjectiveId === i.objectiveId,
+          candidateType: (pd?.candidateType as "INTERNAL_OBJECTIVE" | "EXTERNAL_OPPORTUNITY") ?? "INTERNAL_OBJECTIVE",
+        };
+      });
+
+    return {
+      totalActiveObjectives: portfolio.totalActive,
+      objectiveHealthCounts: {
+        ON_TRACK: portfolio.onTrackCount,
+        AT_RISK: portfolio.atRiskCount,
+        BLOCKED: portfolio.totalBlocked,
+        CRITICAL: portfolio.criticalCount,
+      },
+      topObjectives,
+      activePoolCount: pools.length,
+      resourceUtilizationPct,
+      latestArbitration: latestArb ? {
+        winnerObjectiveId: latestArb.winnerObjectiveId,
+        dominantConstraint: latestArb.dominantConstraint,
+        arbitratedAt: latestArb.arbitratedAt.toISOString(),
+      } : null,
+      latestArbitrationOverride: latestOverride ? {
+        decision: latestOverride.decision,
+        overrideRationale: latestOverride.overrideRationale,
+        actorId: latestOverride.actorId,
+        createdAt: latestOverride.createdAt.toISOString(),
+      } : null,
+      topRisks: topRisks.map((r) => ({
+        riskId: r.id,
+        title: r.title,
+        severity: r.severity,
+        status: r.status,
+        riskCategory: r.category,
+      })),
+      activeConstraints: activeConstraintRows.map((c) => ({
+        constraintId: c.id,
+        title: c.title,
+        constraintType: c.constraintType,
+        bindingScore: c.bindingScore,
+        status: c.status,
+        remediationAction: c.remediationAction,
+      })),
+      activeConstraintCount,
+      kpiCount,
+      costAttributionCoverage,
+    };
+  } catch (err) {
+    console.error("[phase4] buildBusinessOperatingSystem failed", err);
+    return null;
+  }
 }
 
 /** Produce the live Owner Now View: assemble, diff vs prior snapshot, run orchestrator, persist. */
@@ -1896,11 +2162,12 @@ export async function getOwnerNowView(
   // Do-Not-Repeat Annotation — check if the top priority guidance action is blocked by a DNR rule.
   const topActionCategory = view.topOwnerActions[0]?.category;
   const topActionImpactArea = topActionCategory ? (ISSUE_CATEGORY_TO_IMPACT_AREA[topActionCategory] ?? null) : null;
-  const [doNotRepeatAnnotation, executionLifecycle] = await Promise.all([
+  const [doNotRepeatAnnotation, executionLifecycle, businessOperatingSystem] = await Promise.all([
     topActionImpactArea
       ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
       : Promise.resolve(null),
     buildExecutionLifecycle(workspaceId, deps.db),
+    buildBusinessOperatingSystem(workspaceId, deps.db),
   ]);
 
   await deps.db.ownerGuidanceSnapshot.create({
@@ -1918,7 +2185,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalAttentionSignal, policyAttentionSignal, trendAlerts, doNotRepeatAnnotation, activeEscalations, derivedBusinessCondition, executionLifecycle };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalAttentionSignal, policyAttentionSignal, trendAlerts, doNotRepeatAnnotation, activeEscalations, derivedBusinessCondition, executionLifecycle, businessOperatingSystem };
 }
 
 /**

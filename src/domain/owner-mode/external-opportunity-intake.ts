@@ -272,7 +272,7 @@ function tenderFieldsFor(row: NormalizedIntakeRow, nowMs: number): TenderSignalF
  * tender fields so the engine's separate tender screen (owner-approval-mandatory) runs.
  */
 export function mapPersistedSignalToRaw(row: PersistedIntakeRow, nowMs: number): RawOpportunitySignal {
-  const map = INTAKE_MAP[row.rawSignalType];
+  const map = INTAKE_MAP[row.rawSignalType] ?? INTAKE_MAP["DATA_INSUFFICIENT"];
   const hasEvidence = row.evidenceRefs.length > 0 || row.sourceRef != null;
   const rawConfidence: OppConfidence =
     row.missingData.length > 0 || !row.extractedBusinessNeed ? "NEEDS_DATA" : hasEvidence ? "MEDIUM" : "LOW";

@@ -15,7 +15,7 @@ import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntel
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
-import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, OwnerExecutionLifecycleView } from "@/services/owner-guidance/owner-now-view.service";
+import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, OwnerExecutionLifecycleView, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
@@ -64,6 +64,7 @@ export default function OwnerCockpitPage() {
   const [doNotRepeatAnnotation, setDoNotRepeatAnnotation] = useState<DoNotRepeatAnnotation | null>(null);
   const [activeEscalations, setActiveEscalations] = useState<EscalationAttentionItem[] | null>(null);
   const [executionLifecycle, setExecutionLifecycle] = useState<OwnerExecutionLifecycleView | null>(null);
+  const [businessOperatingSystem, setBusinessOperatingSystem] = useState<BusinessOperatingSystemView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -86,6 +87,7 @@ export default function OwnerCockpitPage() {
       setDoNotRepeatAnnotation((data.doNotRepeatAnnotation as DoNotRepeatAnnotation) ?? null);
       setActiveEscalations(Array.isArray(data.activeEscalations) ? (data.activeEscalations as EscalationAttentionItem[]) : null);
       setExecutionLifecycle((data.executionLifecycle as OwnerExecutionLifecycleView) ?? null);
+      setBusinessOperatingSystem((data.businessOperatingSystem as BusinessOperatingSystemView) ?? null);
       // Read-only recovery status (best-effort; a failure here must not break the cockpit).
       const rec = await apiGet("/api/owner/recovery-status").catch(() => null);
       setRecovery(rec && typeof rec === "object" && "recoveryStatus" in rec ? (rec as OwnerRecoveryStatusResponse) : null);
@@ -145,6 +147,35 @@ export default function OwnerCockpitPage() {
     }
   }, [load]);
 
+  const onBosAction = useCallback(async (action: string, payload: Record<string, unknown>) => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      let result: { ok: boolean; data: unknown };
+      if (action === "run-arbitration") {
+        result = await apiPost("/api/owner/goal-arbitration", {});
+      } else if (action === "override") {
+        result = await apiPost("/api/owner/override-arbitration", payload);
+      } else if (action === "constraint") {
+        result = await apiPost("/api/owner/constraints", payload);
+      } else {
+        setMessage(`Unknown BOS action: ${action}`);
+        return;
+      }
+      if (!result.ok) {
+        const d = result.data as Record<string, unknown>;
+        setMessage((d?.error as Record<string, unknown>)?.message as string || String(d?.error) || "Action failed.");
+      } else {
+        setMessage(`${action === "run-arbitration" ? "Arbitration complete" : action === "override" ? "Override recorded" : "Constraint updated"}.`);
+        await load();
+      }
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "BOS action failed");
+    } finally {
+      setBusy(false);
+    }
+  }, [load]);
+
   const onAcknowledgeEscalation = useCallback(async (escalationId: string) => {
     setBusy(true);
     setMessage(null);
@@ -196,6 +227,8 @@ export default function OwnerCockpitPage() {
         onStartWork={onStartWork}
         onAcknowledgeEscalation={onAcknowledgeEscalation}
         executionLifecycle={executionLifecycle}
+        businessOperatingSystem={businessOperatingSystem}
+        onBosAction={onBosAction}
         busy={busy}
       />
     </main>
