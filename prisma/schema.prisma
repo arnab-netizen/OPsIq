@@ -4415,6 +4415,8 @@ model ExternalOpportunitySignal {
   initialStatus            String    @map("initial_status") // RAW | NEEDS_DATA | CANDIDATE | PARKED | REJECTED | DUPLICATE | IRRELEVANT
   classification           String    @map("classification")
   status                   String    @default("ACTIVE") @map("status") // ACTIVE | ARCHIVED
+  /// Phase 4: optional link to BusinessObjective this opportunity serves
+  linkedObjectiveId        String?   @map("linked_objective_id") @db.Uuid
   submittedAt              DateTime  @default(now()) @map("submitted_at")
   createdAt                DateTime  @default(now()) @map("created_at")
   updatedAt                DateTime  @default(now()) @map("updated_at")
@@ -4681,6 +4683,8 @@ model BudgetLine {
   voidedAt          DateTime? @map("voided_at")
   voidReason        String?   @map("void_reason")
   createdBy         String?   @map("created_by") @db.Uuid
+  /// Phase 4: optional link to BusinessObjective for cost-attribution
+  linkedObjectiveId String?   @map("linked_objective_id") @db.Uuid
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -4714,6 +4718,8 @@ model SpendEntry {
   riskLevel         String?   @map("risk_level")
   voidedAt          DateTime? @map("voided_at")
   voidReason        String?   @map("void_reason")
+  /// Phase 4: optional link to BusinessObjective for cost-attribution
+  linkedObjectiveId String?   @map("linked_objective_id") @db.Uuid
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -5202,4 +5208,252 @@ model OperatingPolicyOverride {
   @@index([policyId])
   @@index([workspaceId, expiresAt])
   @@map("operating_policy_overrides")
+}
+
+// ─── Phase 4: Business Operating System ──────────────────────────────────────
+// Connects existing engines into a unified BOS: objective hierarchy, goal
+// arbitration, resource intelligence, portfolio optimization, risk register,
+// KPI ownership, cost attribution, decision confidence evolution, constraint
+// lifecycle, explainability, and unified operating memory.
+// All additions are additive (nullable fields, new tables). No backfill.
+
+/// Structured business objective with parent/child hierarchy and resource budget.
+/// Distinct from OwnerGoal (single financial target) — a BusinessObjective is
+/// the building block of the goal arbitration and portfolio optimizer engines.
+model BusinessObjective {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid
+  parentId         String?  @map("parent_id") @db.Uuid
+  title            String
+  description      String?  @db.Text
+  objectiveType    String   @map("objective_type")   // REVENUE | COST_REDUCTION | QUALITY | COMPLIANCE | GROWTH | RESILIENCE | STRATEGIC
+  targetMetricName String?  @map("target_metric_name")
+  targetValue      Float?   @map("target_value")
+  currentValue     Float?   @map("current_value")
+  unit             String?
+  deadline         DateTime?
+  status           String   @default("ACTIVE")        // ACTIVE | PAUSED | ACHIEVED | ABANDONED
+  priorityScore    Float    @default(0) @map("priority_score")    // 0-100 computed by arbitration engine
+  resourceBudget   Json     @default("{}") @map("resource_budget")  // { budget?: number, timeHours?: number, staffCount?: number }
+  constraints      Json     @default("[]")            // array of GateConstraint strings that block this objective
+  ownerId          String?  @map("owner_id") @db.Uuid // userId responsible
+  linkedGoalId     String?  @map("linked_goal_id") @db.Uuid  // FK → OwnerGoal (optional)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  parent      BusinessObjective?   @relation("ObjectiveHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    BusinessObjective[]  @relation("ObjectiveHierarchy")
+  blockedBy   BusinessObjectiveDependency[] @relation("BlockedObjective")
+  blocks      BusinessObjectiveDependency[] @relation("BlockingObjective")
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, objectiveType])
+  @@index([workspaceId, parentId])
+  @@map("business_objectives")
+}
+
+/// Directed dependency edge: blockingId must be achieved/unblocked before blockedId can proceed.
+model BusinessObjectiveDependency {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  blockingId  String   @map("blocking_id") @db.Uuid    // prerequisite objective
+  blockedId   String   @map("blocked_id") @db.Uuid     // dependent objective
+  depType     String   @default("PREREQUISITE") @map("dep_type")  // PREREQUISITE | RESOURCE_CONFLICT | SEQUENCING
+  note        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  blocking BusinessObjective @relation("BlockingObjective", fields: [blockingId], references: [id], onDelete: Cascade)
+  blocked  BusinessObjective @relation("BlockedObjective",  fields: [blockedId],  references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, blockingId, blockedId])
+  @@index([workspaceId, blockedId])
+  @@map("business_objective_dependencies")
+}
+
+/// Persisted goal arbitration decision — records which objective won and why.
+model GoalArbitrationRecord {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String   @map("workspace_id") @db.Uuid
+  candidateIds        Json     @map("candidate_ids")          // string[] — all objective IDs considered
+  winnerObjectiveId   String?  @map("winner_objective_id") @db.Uuid
+  arbitrationResult   Json     @map("arbitration_result")    // full ArbitrationResult JSON
+  dominantConstraint  String?  @map("dominant_constraint")   // GateConstraint value if any blocked
+  resourceConflict    Json?    @map("resource_conflict")     // { poolId, shortage } if resource-driven
+  actorId             String   @map("actor_id") @db.Uuid
+  arbitratedAt        DateTime @default(now()) @map("arbitrated_at")
+
+  @@index([workspaceId, arbitratedAt])
+  @@index([workspaceId, winnerObjectiveId])
+  @@map("goal_arbitration_records")
+}
+
+/// Resource pool: a finite capacity of budget, time, staff, equipment, or owner attention.
+model ResourcePool {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  resourceType      String    @map("resource_type")   // BUDGET | TIME_HOURS | STAFF_CAPACITY | EQUIPMENT_CAPACITY | OWNER_ATTENTION
+  label             String                             // human-readable name, e.g. "Q3 Capex Budget"
+  totalCapacity     Float     @map("total_capacity")
+  unit              String                             // USD | hours | FTE | pct | units
+  periodStart       DateTime? @map("period_start")
+  periodEnd         DateTime? @map("period_end")
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  allocations ResourceAllocation[]
+
+  @@index([workspaceId, isActive])
+  @@index([workspaceId, resourceType])
+  @@map("resource_pools")
+}
+
+/// An allocation of resource pool capacity to a business objective.
+model ResourceAllocation {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid
+  poolId           String   @map("pool_id") @db.Uuid
+  objectiveId      String   @map("objective_id") @db.Uuid
+  allocationAmount Float    @map("allocation_amount")
+  priority         Int      @default(50)   // 0-100; higher priority allocations are protected when capacity is scarce
+  status           String   @default("ALLOCATED")  // ALLOCATED | RELEASED | EXPIRED | OVER_COMMITTED
+  allocatedBy      String   @map("allocated_by") @db.Uuid
+  allocatedAt      DateTime @default(now()) @map("allocated_at")
+  releasedAt       DateTime? @map("released_at")
+
+  pool ResourcePool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, poolId])
+  @@index([workspaceId, objectiveId])
+  @@index([workspaceId, status])
+  @@map("resource_allocations")
+}
+
+/// Business-level risk register — distinct from engagement Risk (which is client-scoped).
+/// Tracks operational, financial, market, compliance, execution, and strategic risks.
+model BusinessRiskEntry {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  riskCode         String    @map("risk_code")       // stable machine key, e.g. "key_person_dependency"
+  title            String
+  description      String?   @db.Text
+  category         String                              // OPERATIONAL | FINANCIAL | MARKET | COMPLIANCE | EXECUTION | STRATEGIC
+  likelihood       Int       @default(50)              // 0-100
+  impact           Int       @default(50)              // 0-100
+  severity         Int       @default(50)              // computed: Math.round(likelihood * impact / 100)
+  status           String    @default("IDENTIFIED")    // IDENTIFIED | MITIGATING | ACCEPTED | RESOLVED | TRANSFERRED
+  mitigationAction String?   @map("mitigation_action") @db.Text
+  residualRisk     Int?      @map("residual_risk")    // 0-100 after mitigation
+  linkedObjectiveId String?  @map("linked_objective_id") @db.Uuid
+  reviewedAt       DateTime? @map("reviewed_at")
+  identifiedBy     String    @map("identified_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, riskCode])
+  @@index([workspaceId, status])
+  @@index([workspaceId, category])
+  @@index([workspaceId, severity])
+  @@map("business_risk_entries")
+}
+
+/// Workspace-scoped KPI ownership — links a metric to an owner and review cadence.
+/// Complements engagement-scoped KPI; tracks who is accountable for each metric in the BOS.
+model KPIOwnershipRecord {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  metricName      String    @map("metric_name")      // stable slug, e.g. "cash_collection_lag_days"
+  metricLabel     String    @map("metric_label")     // human-readable
+  ownerUserId     String    @map("owner_user_id") @db.Uuid
+  reviewCadence   String    @map("review_cadence")   // DAILY | WEEKLY | MONTHLY | QUARTERLY
+  targetValue     Float?    @map("target_value")
+  currentValue    Float?    @map("current_value")
+  unit            String?
+  linkedObjectiveId String? @map("linked_objective_id") @db.Uuid
+  lastReviewedAt  DateTime? @map("last_reviewed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, metricName])
+  @@index([workspaceId, ownerUserId])
+  @@map("kpi_ownership_records")
+}
+
+/// Time-series record of decision confidence — enables confidence evolution tracking.
+/// Each time the confidence engine scores a decision type, a row is appended.
+model DecisionConfidenceRecord {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid
+  decisionRef      String   @map("decision_ref")      // stable key: e.g. "objective:uuid" or "intervention:key"
+  decisionType     String   @map("decision_type")     // OBJECTIVE | INTERVENTION | OUTCOME | RISK | RESOURCE
+  confidenceScore  Float    @map("confidence_score")  // 0-100
+  confidenceLevel  String   @map("confidence_level")  // very_high | high | moderate | low | very_low
+  evidenceCount    Int      @default(0) @map("evidence_count")
+  confidenceBasis  Json     @map("confidence_basis")  // { dataQuality, historicalAccuracy, executionCertainty }
+  recordedAt       DateTime @default(now()) @map("recorded_at")
+
+  @@index([workspaceId, decisionRef])
+  @@index([workspaceId, decisionType, recordedAt])
+  @@map("decision_confidence_records")
+}
+
+/// Lifecycle tracking for an identified operating constraint.
+/// Extends the stateless constraint-engine.ts with persistence and resolution tracking.
+model ConstraintResolutionRecord {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  constraintType    String    @map("constraint_type")    // from ConstraintType enum in constraint-engine.ts
+  constraintSource  String    @map("constraint_source")  // INTERNAL | EXTERNAL
+  title             String
+  bindingScore      Float     @map("binding_score")      // 0-100
+  remediationAction String?   @map("remediation_action") @db.Text
+  status            String    @default("ACTIVE")          // ACTIVE | REMEDIATING | RESOLVED | ACCEPTED
+  linkedObjectiveId String?   @map("linked_objective_id") @db.Uuid
+  identifiedAt      DateTime  @default(now()) @map("identified_at")
+  resolvedAt        DateTime? @map("resolved_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, constraintType])
+  @@map("constraint_resolution_records")
+}
+
+/// Structured explainability record for a BOS decision — queryable, auditable.
+/// Produced by the Explainability Layer for every material decision.
+model ExplainabilityRecord {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  decisionRef     String   @map("decision_ref")    // same stable key as DecisionConfidenceRecord
+  decisionType    String   @map("decision_type")
+  explanationText String   @map("explanation_text") @db.Text
+  factorsUsed     Json     @map("factors_used")    // array of { factor, value, weight, direction }
+  dataPoints      Json     @map("data_points")     // array of { metric, value, source }
+  confidence      Float
+  confidenceLevel String   @map("confidence_level")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId, decisionRef])
+  @@index([workspaceId, decisionType, createdAt])
+  @@map("explainability_records")
+}
+
+/// Unified operating memory entry — thin aggregate over all memory sources.
+/// Written when a significant memory event is created (approval, DNR, learning, etc.).
+/// Read-only aggregation view; source-of-truth remains in the original models.
+model OperatingMemoryEntry {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  memoryType  String   @map("memory_type")   // APPROVAL | DNR | LEARNING | SOP | CONSTRAINT | GOAL_ARBITRATION | RISK | OUTCOME
+  sourceModel String   @map("source_model")  // the originating model name, e.g. "OwnerApprovalMemory"
+  sourceId    String   @map("source_id")     // PK of the source record
+  key         String                         // stable lookup key for dedup
+  summary     String   @db.Text             // human-readable one-liner
+  data        Json     @default("{}")        // JSON snapshot of relevant fields
+  validUntil  DateTime? @map("valid_until")  // null = permanent
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@unique([workspaceId, memoryType, sourceId])
+  @@index([workspaceId, memoryType])
+  @@index([workspaceId, key])
+  @@map("operating_memory_entries")
 }

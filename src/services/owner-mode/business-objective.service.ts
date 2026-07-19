@@ -1,0 +1,254 @@
+/**
+ * Phase 4 — Business Objective service.
+ *
+ * CRUD + hierarchy queries for BusinessObjective.
+ * Workspace isolation enforced on all operations.
+ * All mutations emit atomic audit events.
+ */
+
+import { db } from "@/lib/db";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import type { AuditEventName } from "@/domain/constants/audit-events";
+import { NotFoundError, ValidationError } from "@/infra/errors";
+import type { Prisma } from "@/generated/prisma/client";
+
+export type ObjectiveType =
+  | "REVENUE"
+  | "COST_REDUCTION"
+  | "QUALITY"
+  | "COMPLIANCE"
+  | "GROWTH"
+  | "RESILIENCE"
+  | "STRATEGIC";
+
+const VALID_OBJECTIVE_TYPES: ObjectiveType[] = [
+  "REVENUE", "COST_REDUCTION", "QUALITY", "COMPLIANCE", "GROWTH", "RESILIENCE", "STRATEGIC",
+];
+
+export type ObjectiveStatus = "ACTIVE" | "PAUSED" | "COMPLETED" | "ABANDONED";
+const VALID_STATUSES: ObjectiveStatus[] = ["ACTIVE", "PAUSED", "COMPLETED", "ABANDONED"];
+
+export interface CreateObjectiveInput {
+  workspaceId: string;
+  actorId: string;
+  parentId?: string | null;
+  title: string;
+  description?: string | null;
+  objectiveType: ObjectiveType;
+  targetMetricName?: string | null;
+  targetValue?: number | null;
+  currentValue?: number | null;
+  unit?: string | null;
+  deadline?: Date | null;
+  priorityScore?: number;
+  resourceBudget?: Record<string, unknown>;
+  constraints?: unknown[];
+  ownerId?: string | null;
+  linkedGoalId?: string | null;
+}
+
+export interface UpdateObjectiveInput {
+  workspaceId: string;
+  objectiveId: string;
+  actorId: string;
+  title?: string;
+  description?: string | null;
+  objectiveType?: ObjectiveType;
+  status?: ObjectiveStatus;
+  targetValue?: number | null;
+  currentValue?: number | null;
+  deadline?: Date | null;
+  priorityScore?: number;
+  resourceBudget?: Record<string, unknown>;
+  constraints?: unknown[];
+  ownerId?: string | null;
+  linkedGoalId?: string | null;
+}
+
+function validateObjectiveType(t: string): asserts t is ObjectiveType {
+  if (!VALID_OBJECTIVE_TYPES.includes(t as ObjectiveType)) {
+    throw new ValidationError(`Invalid objectiveType: ${t}`);
+  }
+}
+
+function validateStatus(s: string): asserts s is ObjectiveStatus {
+  if (!VALID_STATUSES.includes(s as ObjectiveStatus)) {
+    throw new ValidationError(`Invalid status: ${s}`);
+  }
+}
+
+export async function createObjective(input: CreateObjectiveInput) {
+  validateObjectiveType(input.objectiveType);
+
+  if (input.title.trim().length === 0) {
+    throw new ValidationError("Objective title cannot be empty");
+  }
+
+  if (input.priorityScore !== undefined && (input.priorityScore < 0 || input.priorityScore > 100)) {
+    throw new ValidationError("priorityScore must be between 0 and 100");
+  }
+
+  const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const objective = await tx.businessObjective.create({
+      data: {
+        workspaceId: input.workspaceId,
+        parentId: input.parentId ?? null,
+        title: input.title.trim(),
+        description: input.description ?? null,
+        objectiveType: input.objectiveType,
+        targetMetricName: input.targetMetricName ?? null,
+        targetValue: input.targetValue ?? null,
+        currentValue: input.currentValue ?? null,
+        unit: input.unit ?? null,
+        deadline: input.deadline ?? null,
+        priorityScore: input.priorityScore ?? 50,
+        resourceBudget: (input.resourceBudget ?? {}) as Prisma.InputJsonValue,
+        constraints: (input.constraints ?? []) as Prisma.InputJsonValue,
+        ownerId: input.ownerId ?? null,
+        linkedGoalId: input.linkedGoalId ?? null,
+      },
+    });
+
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OWNER_OBJECTIVE_CREATED,
+        workspaceId: input.workspaceId,
+        actorId: input.actorId,
+        entityType: "BusinessObjective",
+        entityId: objective.id,
+        payload: { objectiveType: input.objectiveType, title: input.title },
+      },
+      tx,
+    );
+
+    return objective;
+  });
+
+  return result;
+}
+
+export async function updateObjective(input: UpdateObjectiveInput) {
+  if (input.objectiveType) validateObjectiveType(input.objectiveType);
+  if (input.status) validateStatus(input.status);
+
+  const existing = await db.businessObjective.findFirst({
+    where: { id: input.objectiveId, workspaceId: input.workspaceId },
+  });
+
+  if (!existing) throw new NotFoundError("BusinessObjective", input.objectiveId);
+
+  const terminalStatuses: ObjectiveStatus[] = ["COMPLETED", "ABANDONED"];
+  if (terminalStatuses.includes(existing.status as ObjectiveStatus) && input.status === undefined) {
+    throw new ValidationError(`Cannot update a ${existing.status} objective without providing new status`);
+  }
+
+  const updateData: Prisma.BusinessObjectiveUpdateInput = {};
+  if (input.title !== undefined) updateData.title = input.title.trim();
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.objectiveType !== undefined) updateData.objectiveType = input.objectiveType;
+  if (input.status !== undefined) updateData.status = input.status;
+  if (input.targetValue !== undefined) updateData.targetValue = input.targetValue;
+  if (input.currentValue !== undefined) updateData.currentValue = input.currentValue;
+  if (input.deadline !== undefined) updateData.deadline = input.deadline;
+  if (input.priorityScore !== undefined) updateData.priorityScore = input.priorityScore;
+  if (input.resourceBudget !== undefined) updateData.resourceBudget = input.resourceBudget as Prisma.InputJsonValue;
+  if (input.constraints !== undefined) updateData.constraints = input.constraints as Prisma.InputJsonValue;
+  if (input.ownerId !== undefined) updateData.ownerId = input.ownerId;
+  if (input.linkedGoalId !== undefined) updateData.linkedGoalId = input.linkedGoalId;
+
+  const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.businessObjective.update({
+      where: { id: input.objectiveId },
+      data: updateData,
+    });
+
+    let eventName: AuditEventName = AUDIT_EVENTS.OWNER_OBJECTIVE_UPDATED;
+    if (input.status === "COMPLETED") eventName = AUDIT_EVENTS.OWNER_OBJECTIVE_ACHIEVED;
+    if (input.status === "ABANDONED") eventName = AUDIT_EVENTS.OWNER_OBJECTIVE_ABANDONED;
+
+    await emitAuditEvent(
+      {
+        eventName,
+        workspaceId: input.workspaceId,
+        actorId: input.actorId,
+        entityType: "BusinessObjective",
+        entityId: input.objectiveId,
+        payload: { changes: Object.keys(updateData) },
+      },
+      tx,
+    );
+
+    return updated;
+  });
+
+  return result;
+}
+
+export async function getObjective(workspaceId: string, objectiveId: string) {
+  const obj = await db.businessObjective.findFirst({
+    where: { id: objectiveId, workspaceId },
+    include: {
+      children: { select: { id: true, title: true, status: true, priorityScore: true } },
+      parent: { select: { id: true, title: true } },
+      blockedBy: { include: { blocking: { select: { id: true, title: true, status: true } } } },
+    },
+  });
+  if (!obj) throw new NotFoundError("BusinessObjective", objectiveId);
+  return obj;
+}
+
+export async function listObjectives(
+  workspaceId: string,
+  opts: { status?: ObjectiveStatus; objectiveType?: ObjectiveType; parentId?: string | null } = {},
+) {
+  return db.businessObjective.findMany({
+    where: {
+      workspaceId,
+      ...(opts.status ? { status: opts.status } : {}),
+      ...(opts.objectiveType ? { objectiveType: opts.objectiveType } : {}),
+      ...(opts.parentId !== undefined ? { parentId: opts.parentId } : {}),
+    },
+    orderBy: [{ priorityScore: "desc" }, { createdAt: "desc" }],
+  });
+}
+
+export async function addDependency(
+  workspaceId: string,
+  actorId: string,
+  blockingId: string,
+  blockedId: string,
+  depType: string = "PREREQUISITE",
+  note?: string,
+) {
+  if (blockingId === blockedId) {
+    throw new ValidationError("An objective cannot depend on itself");
+  }
+
+  // Verify both objectives belong to this workspace
+  const [blocking, blocked] = await Promise.all([
+    db.businessObjective.findFirst({ where: { id: blockingId, workspaceId } }),
+    db.businessObjective.findFirst({ where: { id: blockedId, workspaceId } }),
+  ]);
+
+  if (!blocking) throw new NotFoundError("BusinessObjective", blockingId);
+  if (!blocked) throw new NotFoundError("BusinessObjective", blockedId);
+
+  return db.businessObjectiveDependency.upsert({
+    where: { workspaceId_blockingId_blockedId: { workspaceId, blockingId, blockedId } },
+    create: { workspaceId, blockingId, blockedId, depType, note: note ?? null },
+    update: { depType, note: note ?? null },
+  });
+}
+
+export async function removeDependency(
+  workspaceId: string,
+  blockingId: string,
+  blockedId: string,
+) {
+  const existing = await db.businessObjectiveDependency.findFirst({
+    where: { workspaceId, blockingId, blockedId },
+  });
+  if (!existing) return null;
+  return db.businessObjectiveDependency.delete({ where: { id: existing.id } });
+}

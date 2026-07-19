@@ -15,7 +15,7 @@ import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntel
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
-import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, OwnerExecutionLifecycleView } from "@/services/owner-guidance/owner-now-view.service";
+import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, OwnerExecutionLifecycleView, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
@@ -64,6 +64,7 @@ export default function OwnerCockpitPage() {
   const [doNotRepeatAnnotation, setDoNotRepeatAnnotation] = useState<DoNotRepeatAnnotation | null>(null);
   const [activeEscalations, setActiveEscalations] = useState<EscalationAttentionItem[] | null>(null);
   const [executionLifecycle, setExecutionLifecycle] = useState<OwnerExecutionLifecycleView | null>(null);
+  const [businessOperatingSystem, setBusinessOperatingSystem] = useState<BusinessOperatingSystemView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -86,6 +87,7 @@ export default function OwnerCockpitPage() {
       setDoNotRepeatAnnotation((data.doNotRepeatAnnotation as DoNotRepeatAnnotation) ?? null);
       setActiveEscalations(Array.isArray(data.activeEscalations) ? (data.activeEscalations as EscalationAttentionItem[]) : null);
       setExecutionLifecycle((data.executionLifecycle as OwnerExecutionLifecycleView) ?? null);
+      setBusinessOperatingSystem((data.businessOperatingSystem as BusinessOperatingSystemView) ?? null);
       // Read-only recovery status (best-effort; a failure here must not break the cockpit).
       const rec = await apiGet("/api/owner/recovery-status").catch(() => null);
       setRecovery(rec && typeof rec === "object" && "recoveryStatus" in rec ? (rec as OwnerRecoveryStatusResponse) : null);
@@ -196,6 +198,7 @@ export default function OwnerCockpitPage() {
         onStartWork={onStartWork}
         onAcknowledgeEscalation={onAcknowledgeEscalation}
         executionLifecycle={executionLifecycle}
+        businessOperatingSystem={businessOperatingSystem}
         busy={busy}
       />
     </main>

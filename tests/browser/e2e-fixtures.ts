@@ -55,3 +55,11 @@ export const E2E_PHASE3_TASK_ID     = "91000000-0000-0000-0000-000000000091";
 
 /** Stable taskKey matching E2E_PHASE3_TASK_ID — used in data-testid assertions. */
 export const E2E_PHASE3_TASK_KEY    = "phase3_e2e_cash_flow_action";
+
+// ─── Phase 4 Business Operating System fixtures (seed-e2e-phase4.ts) ─────────
+
+/** BusinessObjective seeded as ACTIVE for Phase 4 cockpit BOS panel assertions. */
+export const E2E_PHASE4_OBJECTIVE_ID = "a0000000-0000-0000-0000-000000000401";
+
+/** BusinessRiskEntry seeded with high severity for Phase 4 BOS panel risk row. */
+export const E2E_PHASE4_RISK_ID      = "a1000000-0000-0000-0000-000000000401";

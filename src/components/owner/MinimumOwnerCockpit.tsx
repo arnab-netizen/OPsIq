@@ -21,7 +21,7 @@ import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
-import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem } from "@/services/owner-guidance/owner-now-view.service";
+import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
 
@@ -111,6 +111,8 @@ export interface MinimumOwnerCockpitProps {
   onStartWork?: (taskKey: string) => void;
   /** Phase 3 — execution lifecycle view from the Now View (4-group: requiresDecision / inExecution / awaitingVerification / recentlyVerified). */
   executionLifecycle?: OwnerExecutionLifecycleView | null;
+  /** Phase 4 — Business Operating System summary (objectives, risks, resources, arbitration). */
+  businessOperatingSystem?: BusinessOperatingSystemView | null;
 }
 
 const RECOVERY_STATUS_LABEL: Record<string, string> = {
@@ -474,6 +476,65 @@ function ExecutionLifecycleSection({
   );
 }
 
+function BusinessOperatingSystemSection({ bos }: { bos: BusinessOperatingSystemView }) {
+  const healthColor = (h: string) => h === "ON_TRACK" ? "#16a34a" : h === "AT_RISK" ? "#b45309" : h === "BLOCKED" ? "#dc2626" : "#6b7280";
+  return (
+    <details data-testid="cockpit-bos-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+        Business Operating System
+        <span style={{ fontWeight: 400, color: "#6b7280" }}> — {bos.totalActiveObjectives} active objective{bos.totalActiveObjectives !== 1 ? "s" : ""}</span>
+      </summary>
+      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }} data-testid="cockpit-bos-health-counts">
+          {bos.objectiveHealthCounts.ON_TRACK > 0 && <span style={{ color: "#16a34a" }}>{bos.objectiveHealthCounts.ON_TRACK} on track</span>}
+          {bos.objectiveHealthCounts.AT_RISK > 0 && <span style={{ color: "#b45309" }}>{bos.objectiveHealthCounts.AT_RISK} at risk</span>}
+          {bos.objectiveHealthCounts.BLOCKED > 0 && <span style={{ color: "#dc2626" }}>{bos.objectiveHealthCounts.BLOCKED} blocked</span>}
+          {bos.objectiveHealthCounts.CRITICAL > 0 && <span style={{ color: "#7f1d1d" }}>{bos.objectiveHealthCounts.CRITICAL} critical</span>}
+        </div>
+        {bos.topObjectives.length > 0 && (
+          <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+            {bos.topObjectives.map((o) => (
+              <li key={o.objectiveId} data-testid={`cockpit-bos-objective-${o.objectiveId}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: healthColor(o.health), flexShrink: 0, display: "inline-block" }} />
+                <span style={{ flex: 1 }}>{o.title}</span>
+                <span style={{ color: "#6b7280", fontSize: 12 }}>{o.objectiveType}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", color: "#6b7280", fontSize: 12 }}>
+          <span data-testid="cockpit-bos-pools">{bos.activePoolCount} resource pool{bos.activePoolCount !== 1 ? "s" : ""}{bos.resourceUtilizationPct !== null ? ` · ${bos.resourceUtilizationPct}% utilized` : ""}</span>
+          <span data-testid="cockpit-bos-constraints">{bos.activeConstraintCount} active constraint{bos.activeConstraintCount !== 1 ? "s" : ""}</span>
+          <span data-testid="cockpit-bos-kpis">{bos.kpiCount} KPI{bos.kpiCount !== 1 ? "s" : ""} tracked</span>
+          {bos.costAttributionCoverage !== null && <span data-testid="cockpit-bos-attribution">{bos.costAttributionCoverage}% cost attributed</span>}
+        </div>
+        {bos.topRisks.length > 0 && (
+          <div data-testid="cockpit-bos-risks">
+            <strong style={{ fontSize: 12 }}>Top risks:</strong>
+            <ul style={{ margin: "4px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 2 }}>
+              {bos.topRisks.map((r) => (
+                <li key={r.riskId} data-testid={`cockpit-bos-risk-${r.riskId}`} style={{ fontSize: 12, color: "#374151" }}>
+                  <Badge variant={r.severity >= 50 ? "destructive" : r.severity >= 25 ? "warning" : "muted"}>{r.severity}</Badge>
+                  {" "}{r.title}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {bos.latestArbitration && (
+          <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }} data-testid="cockpit-bos-arbitration">
+            Last arbitration: {new Date(bos.latestArbitration.arbitratedAt).toLocaleDateString()}
+            {bos.latestArbitration.dominantConstraint ? ` · Dominant constraint: ${bos.latestArbitration.dominantConstraint}` : ""}
+          </p>
+        )}
+        {bos.totalActiveObjectives === 0 && (
+          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-bos-empty">No active objectives — add objectives via the business operating system to enable this view.</p>
+        )}
+      </div>
+    </details>
+  );
+}
+
 function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition: DerivedBusinessConditionSignals; dataFreshnessWeak?: boolean | null }) {
   const knownFields = CONDITION_FIELD_ORDER.filter((k) => condition[k] !== "unknown");
   const unknownCount = CONDITION_FIELD_ORDER.length - knownFields.length;
@@ -561,7 +622,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -580,6 +641,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           </p>
         </div>
         {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} />}
+        {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} />}
         {recovery && <RecoverySection recovery={recovery} />}
         {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
       </section>
@@ -972,6 +1034,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* Phase 3 — Execution lifecycle (collapsed by default). Server-computed can* booleans drive visibility. */}
       {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} />}
+
+      {/* Phase 4 — Business Operating System summary (collapsed, read-only). */}
+      {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} />}
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
       <details data-testid="cockpit-proof-drawer" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
