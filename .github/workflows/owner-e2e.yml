@@ -7,7 +7,9 @@ name: Owner Browser E2E (GAP-E2E-01)
 
 on:
   push:
-    branches: ["claude/full-repo-jarvis-db-blocker-closure"]
+    branches:
+      - "claude/full-repo-jarvis-db-blocker-closure"
+      - "claude/phase-3-execution-closure-plan-pid5a6"
   workflow_dispatch:
 
 jobs:
@@ -23,6 +25,12 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://localhost:3001
       BASE_URL: http://localhost:3001
       TEST_WITH_DB: "true"
+      # next build TypeScript check hits the default ~2 GB heap limit (FATAL: heap out of
+      # memory / SIGABRT). Mirrors the fix already present in ci.yml and all other E2E workflows.
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      # Running 7 specs generates >10 login attempts from localhost, tripping the rate limiter.
+      # CI-only ceiling; production default stays 10. Mirrors owner-pilot-e2e.yml.
+      LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "200"
     services:
       postgres:
         image: postgres:16
@@ -65,6 +73,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Seed loginable owner + archetype
         run: npx tsx scripts/seed-e2e-owner.ts
+      - name: Seed Phase 3 execution lifecycle fixtures
+        run: npx tsx scripts/seed-e2e-phase3.ts
       - name: Start app
         run: |
           PORT=3001 npm run start > /tmp/app.log 2>&1 &
@@ -77,9 +87,10 @@ jobs:
             sleep 2
           done
           if [ -z "$up" ]; then echo "app failed to start"; tail -80 /tmp/app.log; exit 1; fi
-      - name: Run owner-flow browser tests (A–F)
+      - name: Run owner-flow browser tests (A–F + Phase 3)
         # A: control center · B: server rejection · C: finance/budget safety ·
-        # D: indicators/opportunity · E: RBAC/workspace · F: legacy UI safety.
+        # D: indicators/opportunity · E: RBAC/workspace · F: legacy UI safety ·
+        # G: Phase 3 execution lifecycle loop.
         run: >-
           npx playwright test
           tests/browser/06-owner-control-center.spec.ts
@@ -88,6 +99,7 @@ jobs:
           tests/browser/09-owner-indicators.spec.ts
           tests/browser/10-rbac-workspace.spec.ts
           tests/browser/11-legacy-ui-safety.spec.ts
+          tests/browser/54-owner-phase3-execution-loop.spec.ts
           --project=chromium
       - name: Print Playwright failures + app log
         if: always()

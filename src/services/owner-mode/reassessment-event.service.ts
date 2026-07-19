@@ -22,7 +22,9 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 export type ReassessmentTrigger =
   | "failed_outcome" | "disputed_outcome" | "harmful_outcome" | "external_event_invalidation"
-  | "execution_invalidation" | "owner_dispute" | "evidence_retraction" | "new_contradicting_evidence";
+  | "execution_invalidation" | "owner_dispute" | "evidence_retraction" | "new_contradicting_evidence"
+  // Phase 3 — triggered after any terminal outcome verification (success or failure)
+  | "verified_outcome";
 
 /** Open (non-terminal) statuses — a reassessment in one of these is still an active dedupe target. */
 const OPEN_STATUSES = ["pending", "in_progress", "diagnosis_reopened", "corrective_action_issued", "blocked_awaiting_human_review"];

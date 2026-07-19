@@ -503,6 +503,16 @@ export const AUDIT_EVENTS = {
   SALES_DEAL_STAGE_UPDATED: "growth.sales_deal_stage_updated",
   REVENUE_STREAM_CREATED: "growth.revenue_stream_created",
 
+  // Phase 3 — Owner Execution and Outcome Closure Engine
+  OWNER_PROCESS_EXECUTION_TASK_ACKNOWLEDGED: "owner.process_execution_task_acknowledged",
+  OWNER_PROCESS_EXECUTION_TASK_PROGRESS_RECORDED: "owner.process_execution_task_progress_recorded",
+  OWNER_PROCESS_EXECUTION_OUTCOME_RECORDED: "owner.process_execution_outcome_recorded",
+  OWNER_PROCESS_EXECUTION_OUTCOME_VERIFIED: "owner.process_execution_outcome_verified",
+  OWNER_PROCESS_EXECUTION_OUTCOME_DISPUTED: "owner.process_execution_outcome_disputed",
+  OWNER_PROCESS_EXECUTION_OUTCOME_REOPENED: "owner.process_execution_outcome_reopened",
+  OWNER_PROCESS_EXECUTION_REASSESSMENT_TRIGGERED: "owner.process_execution_reassessment_triggered",
+  OWNER_PROCESS_EXECUTION_LEARNING_CANDIDATE_CREATED: "owner.process_execution_learning_candidate_created",
+
   // Private deployment
   PRIVATE_MODE_ENTITLEMENT_ACTIVE: "private_mode.entitlement_active",
   PRIVATE_OWNER_SEED_EXECUTED: "private_mode.owner_seed_executed",

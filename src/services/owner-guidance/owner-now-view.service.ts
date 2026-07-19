@@ -576,6 +576,49 @@ export interface OwnerNowViewPayload {
    * records exist; "unknown" only when no supporting data is available for that dimension.
    */
   derivedBusinessCondition: DerivedBusinessConditionSignals | null;
+  /**
+   * Phase 3 — Execution Lifecycle View: groups all ProcessExecutionTasks by phase so the
+   * cockpit can render the full owner execution loop (decision → execution → verification).
+   * Null when unavailable (DB error or table missing). Never null when tasks exist.
+   */
+  executionLifecycle: OwnerExecutionLifecycleView | null;
+}
+
+// ── Phase 3: Execution Lifecycle types ──────────────────────────────────────
+
+export interface ExecutionLifecycleItem {
+  taskId: string;
+  taskKey: string;
+  status: string;
+  ownerVisibleSummary: string;
+  severity: string;
+  assignedRole: string;
+  dueAt: string | null;
+  progressPct: number | null;
+  blockerActive: boolean;
+  outcomeId: string | null;
+  verificationClassification: string | null;
+  verificationClassificationLabel: string | null;
+  expectedBenefit: string | null;
+  baselineMetricName: string | null;
+  baselineValue: number | null;
+  targetValue: number | null;
+  requiredEvidence: string[];
+  evidenceRefs: string[];
+  evidenceComplete: boolean;
+  canAcknowledge: boolean;
+  canStart: boolean;
+  canRecordProgress: boolean;
+  canRecordOutcome: boolean;
+  canVerify: boolean;
+}
+
+export interface OwnerExecutionLifecycleView {
+  requiresDecision: ExecutionLifecycleItem[];
+  inExecution: ExecutionLifecycleItem[];
+  awaitingVerification: ExecutionLifecycleItem[];
+  recentlyVerified: ExecutionLifecycleItem[];
+  totalPendingVerification: number;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -905,6 +948,130 @@ function summarizeAdjudications(list: ProofRiskAdjudicationView[]): ProofRiskAdj
     latest: list.slice(0, 5),
     topActiveAction: topActive ? { outcome: topActive.outcome, sourceType: topActive.sourceType, recommendedNextAction: topActive.recommendedNextAction } : null,
   };
+}
+
+// ── Phase 3: Execution Lifecycle ────────────────────────────────────────────
+
+const VERIFICATION_CLASS_LABELS: Record<string, string> = {
+  SUCCESS: "Verified success",
+  PARTIAL_SUCCESS: "Partial success",
+  NO_MEASURABLE_IMPACT: "No measurable impact",
+  FAILURE: "Did not work",
+  NEGATIVE_IMPACT: "Made things worse",
+  INCONCLUSIVE: "Inconclusive",
+  OBSERVATION_WINDOW_OPEN: "Observation window open",
+  INSUFFICIENT_EVIDENCE: "Insufficient evidence",
+};
+
+const RECENTLY_VERIFIED_WINDOW_DAYS = 90;
+
+/**
+ * Build the execution lifecycle view for Phase 3. Grouped by stage:
+ *   requiresDecision  — PROPOSED tasks awaiting owner decision
+ *   inExecution       — ACKNOWLEDGED + IN_PROGRESS + BLOCKED + NEEDS_DATA
+ *   awaitingVerification — COMPLETED + OUTCOME_RECORDED + OUTCOME_DISPUTED
+ *   recentlyVerified  — OUTCOME_VERIFIED in last 90 days
+ *
+ * Wrapped in try/catch — returns null on any DB error so the Now View remains operational.
+ */
+async function buildExecutionLifecycle(
+  workspaceId: string,
+  db: GuidanceDeps["db"]
+): Promise<OwnerExecutionLifecycleView | null> {
+  try {
+    const cutoff = new Date(Date.now() - RECENTLY_VERIFIED_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const tasks = await (db as any).processExecutionTask.findMany({
+      where: {
+        workspaceId,
+        OR: [
+          { status: { in: ["PROPOSED", "ACKNOWLEDGED", "IN_PROGRESS", "BLOCKED", "NEEDS_DATA", "COMPLETED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED"] } },
+          { status: "OUTCOME_VERIFIED", updatedAt: { gte: cutoff } },
+        ],
+      },
+      orderBy: { priorityRank: "asc" },
+      take: 500,
+    });
+
+    // Fetch latest progress record per task (most recent createdAt)
+    const taskIds: string[] = tasks.map((t: { id: string }) => t.id);
+    const progressRows: Array<{ taskId: string; progressPct: number | null; blockerActive: boolean }> = taskIds.length > 0
+      ? await (db as any).processExecutionTaskProgress.findMany({
+          where: { taskId: { in: taskIds } },
+          orderBy: { createdAt: "desc" },
+          distinct: ["taskId"],
+          select: { taskId: true, progressPct: true, blockerActive: true },
+        })
+      : [];
+
+    const progressByTaskId = new Map(progressRows.map((p) => [p.taskId, p]));
+
+    function toItem(t: Record<string, unknown>): ExecutionLifecycleItem {
+      const status = t.status as string;
+      const prog = progressByTaskId.get(t.id as string);
+      const evidenceComplete = (t.evidenceRefs as string[]).length >= (t.requiredEvidence as string[]).length && (t.requiredEvidence as string[]).length > 0;
+      const vClass = (t.verificationClassification as string | null) ?? null;
+      return {
+        taskId: t.id as string,
+        taskKey: t.taskKey as string,
+        status,
+        ownerVisibleSummary: t.ownerVisibleSummary as string,
+        severity: t.severity as string,
+        assignedRole: t.actionOwner as string,
+        dueAt: null,
+        progressPct: prog?.progressPct ?? null,
+        blockerActive: prog?.blockerActive ?? false,
+        outcomeId: (t.outcomeId as string | null) ?? null,
+        verificationClassification: vClass,
+        verificationClassificationLabel: vClass ? (VERIFICATION_CLASS_LABELS[vClass] ?? vClass) : null,
+        expectedBenefit: (t.expectedBenefit as string | null) ?? null,
+        baselineMetricName: (t.baselineMetricName as string | null) ?? null,
+        baselineValue: (t.baselineValue as number | null) ?? null,
+        targetValue: (t.targetValue as number | null) ?? null,
+        requiredEvidence: t.requiredEvidence as string[],
+        evidenceRefs: t.evidenceRefs as string[],
+        evidenceComplete,
+        canAcknowledge: status === "PROPOSED",
+        canStart: ["PROPOSED", "ACKNOWLEDGED", "BLOCKED", "NEEDS_DATA"].includes(status),
+        canRecordProgress: ["ACKNOWLEDGED", "IN_PROGRESS", "BLOCKED"].includes(status),
+        canRecordOutcome: status === "COMPLETED",
+        canVerify: ["OUTCOME_RECORDED", "OUTCOME_DISPUTED"].includes(status),
+      };
+    }
+
+    const requiresDecision: ExecutionLifecycleItem[] = [];
+    const inExecution: ExecutionLifecycleItem[] = [];
+    const awaitingVerification: ExecutionLifecycleItem[] = [];
+    const recentlyVerified: ExecutionLifecycleItem[] = [];
+
+    for (const t of tasks) {
+      const item = toItem(t);
+      switch (t.status) {
+        case "PROPOSED": requiresDecision.push(item); break;
+        case "ACKNOWLEDGED": case "IN_PROGRESS": case "BLOCKED": case "NEEDS_DATA": inExecution.push(item); break;
+        case "COMPLETED": case "OUTCOME_RECORDED": case "OUTCOME_DISPUTED": awaitingVerification.push(item); break;
+        case "OUTCOME_VERIFIED": recentlyVerified.push(item); break;
+      }
+    }
+
+    return {
+      requiresDecision,
+      inExecution,
+      awaitingVerification,
+      recentlyVerified,
+      totalPendingVerification: awaitingVerification.length,
+    };
+  } catch (err) {
+    console.error("[phase3] buildExecutionLifecycle failed", err);
+    return null;
+  }
+}
+
+/** Direct export for DB tests: query Phase 3 execution lifecycle groups. */
+export async function queryExecutionLifecycle(
+  workspaceId: string,
+  db: GuidanceDeps["db"]
+): Promise<OwnerExecutionLifecycleView | null> {
+  return buildExecutionLifecycle(workspaceId, db);
 }
 
 /** Produce the live Owner Now View: assemble, diff vs prior snapshot, run orchestrator, persist. */
@@ -1409,7 +1576,7 @@ export async function getOwnerNowView(
             r.canStart = computeCanStart(r.executionRoute, s);
           }
         }
-        const TERMINAL = new Set(["COMPLETED", "REJECTED"]);
+        const TERMINAL = new Set(["COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"]);
         processExecution.topRoute =
           processExecution.routes.find((r) => r.executionRoute !== "MONITOR_ONLY" && !TERMINAL.has(r.status)) ??
           processExecution.topRoute;
@@ -1729,9 +1896,12 @@ export async function getOwnerNowView(
   // Do-Not-Repeat Annotation — check if the top priority guidance action is blocked by a DNR rule.
   const topActionCategory = view.topOwnerActions[0]?.category;
   const topActionImpactArea = topActionCategory ? (ISSUE_CATEGORY_TO_IMPACT_AREA[topActionCategory] ?? null) : null;
-  const doNotRepeatAnnotation: DoNotRepeatAnnotation | null = topActionImpactArea
-    ? await checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
-    : null;
+  const [doNotRepeatAnnotation, executionLifecycle] = await Promise.all([
+    topActionImpactArea
+      ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
+      : Promise.resolve(null),
+    buildExecutionLifecycle(workspaceId, deps.db),
+  ]);
 
   await deps.db.ownerGuidanceSnapshot.create({
     data: {
@@ -1748,7 +1918,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalAttentionSignal, policyAttentionSignal, trendAlerts, doNotRepeatAnnotation, activeEscalations, derivedBusinessCondition };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalAttentionSignal, policyAttentionSignal, trendAlerts, doNotRepeatAnnotation, activeEscalations, derivedBusinessCondition, executionLifecycle };
 }
 
 /**
