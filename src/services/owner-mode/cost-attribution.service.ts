@@ -70,11 +70,11 @@ export async function attributeSpendEntryToObjective(
   });
   if (!objective) throw new NotFoundError("BusinessObjective", objectiveId);
 
-  // Verify spend entry belongs to workspace (via BudgetLine → BudgetPeriod)
+  // Verify spend entry belongs to workspace
   const spendEntry = await db.spendEntry.findFirst({
     where: {
       id: spendEntryId,
-      budgetLine: { budgetPeriod: { workspaceId } },
+      workspaceId,
     },
   });
   if (!spendEntry) throw new NotFoundError("SpendEntry", spendEntryId);
@@ -102,16 +102,15 @@ export async function attributeSpendEntryToObjective(
 }
 
 export async function buildWorkspaceCostIntelligence(workspaceId: string) {
-  // Fetch all spend entries linked to objectives
+  // Fetch all spend entries for the workspace
   const spendEntries = await db.spendEntry.findMany({
-    where: { budgetLine: { budgetPeriod: { workspaceId } } },
+    where: { workspaceId },
     select: {
       id: true,
       amount: true,
       category: true,
       linkedObjectiveId: true,
       createdAt: true,
-      isVerified: true,
     },
   });
 
@@ -123,7 +122,7 @@ export async function buildWorkspaceCostIntelligence(workspaceId: string) {
     category: (e.category as CostCategory | null) ?? "OTHER",
     linkedObjectiveId: e.linkedObjectiveId ?? null,
     recordedAt: e.createdAt.toISOString(),
-    isVerified: e.isVerified ?? false,
+    isVerified: false,
   }));
 
   return buildCostIntelligence(costEntries);
@@ -149,7 +148,7 @@ export async function removeObjectiveAttribution(
   }
 
   const entry = await db.spendEntry.findFirst({
-    where: { id: entityId, budgetLine: { budgetPeriod: { workspaceId } } },
+    where: { id: entityId, workspaceId },
   });
   if (!entry) throw new NotFoundError("SpendEntry", entityId);
   if (!entry.linkedObjectiveId) throw new ValidationError("SpendEntry has no linked objective");

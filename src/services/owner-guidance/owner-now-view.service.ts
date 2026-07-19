@@ -1199,9 +1199,9 @@ async function buildBusinessOperatingSystem(
 
     // 7. Cost attribution coverage (% of spend entries linked to an objective)
     const [totalSpend, linkedSpend] = await Promise.all([
-      dbAny.spendEntry.count({ where: { budgetLine: { budgetPeriod: { workspaceId } } } }),
+      dbAny.spendEntry.count({ where: { workspaceId } }),
       dbAny.spendEntry.count({
-        where: { budgetLine: { budgetPeriod: { workspaceId } }, linkedObjectiveId: { not: null } },
+        where: { workspaceId, linkedObjectiveId: { not: null } },
       }),
     ]);
     const costAttributionCoverage = totalSpend > 0

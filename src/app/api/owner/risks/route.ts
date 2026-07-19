@@ -6,6 +6,7 @@
  *
  * Workspace isolation enforced via canonical auth. OWNER_MANAGE required.
  */
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
@@ -69,7 +70,7 @@ export const POST = withCanonicalEnforcement(
     if (!input.title || !input.category) {
       return canonicalJson({ error: "title and category required for CREATE" }, { status: 400 });
     }
-    const riskCode = input.riskCode ?? `RISK-${input.title.slice(0, 20).toUpperCase().replace(/\s+/g, "-")}`;
+    const riskCode = input.riskCode ?? `RISK-${randomUUID().split("-")[0].toUpperCase()}`;
     const risk = await createBusinessRisk({
       workspaceId,
       actorId,
