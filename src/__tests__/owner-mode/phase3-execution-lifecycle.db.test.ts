@@ -146,7 +146,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(start.ok).toBe(true);
       expect(start.status).toBe("IN_PROGRESS");
 
-      const complete = await action(key, "COMPLETE", { evidenceRefs: ["evidence://e2e-proof-1"] });
+      const complete = await action(key, "COMPLETE", { evidenceRefs: ["evidence://e2e-proof-1"], outcomeNotes: "Task completed successfully" });
       expect(complete.ok).toBe(true);
       expect(complete.status).toBe("COMPLETED");
 
