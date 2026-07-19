@@ -28,6 +28,9 @@ jobs:
       # next build TypeScript check hits the default ~2 GB heap limit (FATAL: heap out of
       # memory / SIGABRT). Mirrors the fix already present in ci.yml and all other E2E workflows.
       NODE_OPTIONS: "--max-old-space-size=4096"
+      # Running 7 specs generates >10 login attempts from localhost, tripping the rate limiter.
+      # CI-only ceiling; production default stays 10. Mirrors owner-pilot-e2e.yml.
+      LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "200"
     services:
       postgres:
         image: postgres:16
