@@ -479,7 +479,7 @@ function ExecutionLifecycleSection({
 function BusinessOperatingSystemSection({ bos }: { bos: BusinessOperatingSystemView }) {
   const healthColor = (h: string) => h === "ON_TRACK" ? "#16a34a" : h === "AT_RISK" ? "#b45309" : h === "BLOCKED" ? "#dc2626" : "#6b7280";
   return (
-    <details data-testid="cockpit-bos-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+    <details open data-testid="cockpit-bos-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
       <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
         Business Operating System
         <span style={{ fontWeight: 400, color: "#6b7280" }}> — {bos.totalActiveObjectives} active objective{bos.totalActiveObjectives !== 1 ? "s" : ""}</span>
