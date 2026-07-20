@@ -543,6 +543,24 @@ export const AUDIT_EVENTS = {
   OWNER_ARBITRATION_OVERRIDDEN: "owner.arbitration_overridden",
   OWNER_OPERATING_MEMORY_VERSIONED: "owner.operating_memory_versioned",
   OWNER_KPI_BASELINE_SET: "owner.kpi_baseline_set",
+
+  // Phase 5 — Startup Mode
+  STARTUP_SESSION_CREATED: "startup.session_created",
+  STARTUP_SESSION_STATUS_CHANGED: "startup.session_status_changed",
+  STARTUP_PROFILE_UPDATED: "startup.profile_updated",
+  STARTUP_IDEA_ADDED: "startup.idea_added",
+  STARTUP_IDEA_SCREENED: "startup.idea_screened",
+  STARTUP_HYPOTHESIS_GENERATED: "startup.hypothesis_generated",
+  STARTUP_EVIDENCE_RECORDED: "startup.evidence_recorded",
+  STARTUP_ECONOMIC_MODEL_BUILT: "startup.economic_model_built",
+  STARTUP_READINESS_ASSESSED: "startup.readiness_assessed",
+  STARTUP_ARBITRATION_RUN: "startup.arbitration_run",
+  STARTUP_OWNER_DECISION_RECORDED: "startup.owner_decision_recorded",
+  STARTUP_EXECUTION_BLUEPRINT_CREATED: "startup.execution_blueprint_created",
+  STARTUP_RESEARCH_PLAN_BUILT: "startup.research_plan_built",
+  STARTUP_RESEARCH_ACQUIRED: "startup.research_acquired",
+  STARTUP_HYPOTHESIS_RESULT_RECORDED: "startup.hypothesis_result_recorded",
+  STARTUP_OPERATING_MEMORY_WRITTEN: "startup.operating_memory_written",
 } as const;
 
 export type AuditEventName =
