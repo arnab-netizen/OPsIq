@@ -39,7 +39,6 @@ async function main() {
       entryPath: "HAVE_IDEA",
       profileVersion: 1,
       intake: { capitalAvailable: 50000, ownerHoursPerWeek: 20, riskTolerance: "MEDIUM", location: "Australia", cashReserveMonths: 6, minimumMonthlyIncome: 3000, skills: ["sales"] },
-      ideas: [],
     },
   });
 
