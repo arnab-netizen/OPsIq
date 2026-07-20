@@ -206,6 +206,21 @@ export default function OwnerCockpitPage() {
     <main style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <header style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
         <h1 style={{ margin: 0, fontSize: 22 }}>Your cockpit</h1>
+        <a
+          href="/owner/startup"
+          style={{
+            marginLeft: "auto",
+            fontSize: 13,
+            padding: "4px 12px",
+            border: "1px solid #6366f1",
+            borderRadius: 6,
+            color: "#6366f1",
+            textDecoration: "none",
+            fontWeight: 500,
+          }}
+        >
+          Startup Mode →
+        </a>
         <span style={{ fontSize: 13, color: "#6b7280" }}>One clear next step, with the proof and the safety limits.</span>
         <Button onClick={() => void load()} disabled={busy}>Refresh</Button>
       </header>
