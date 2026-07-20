@@ -1606,34 +1606,56 @@ model StartupStatus {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// A persisted startup validation session — stores the intake, full validation
-/// result, and the recommended idea (if any). Status: ACTIVE | COMPLETED | ABANDONED.
+/// result, and the recommended idea (if any).
+/// Phase 5: Extended with full lifecycle, structured profile, research plan linkage.
+/// status: DRAFT | CONTEXT_CAPTURE | DISCOVERY | IDEA_GENERATION | SCREENING |
+///         VALIDATION_PLANNED | VALIDATION_IN_PROGRESS | ECONOMICS_REVIEW |
+///         READINESS_REVIEW | OWNER_DECISION_REQUIRED | APPROVED |
+///         MODIFICATION_REQUIRED | ON_HOLD | REJECTED | EXECUTION_PLANNED
 model OwnerStartupSession {
   id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId      String              @map("workspace_id") @db.Uuid
   actorId          String              @map("actor_id") @db.Uuid
   sessionLabel     String?             @map("session_label")
+  sessionPurpose   String?             @map("session_purpose")
+  entryPath        String              @default("NEED_OPTIONS") @map("entry_path")  // HAVE_IDEA | NEED_OPTIONS
   intake           Json
-  status           String              @default("ACTIVE")
+  /// Phase 5: structured BusinessFitProfile with source/confidence metadata per field
+  profileData      Json?               @map("profile_data")
+  profileVersion   Int                 @default(1) @map("profile_version")
+  status           String              @default("DRAFT")
   /// Full StartupValidationResult persisted as JSON.
   validationResult Json?               @map("validation_result")
   /// Name of the recommended idea (or null when none qualified).
   recommendedName  String?             @map("recommended_name")
+  /// Phase 5: system recommendation snapshot (preserved independently of owner decision)
+  systemRecommendationSnapshot Json?   @map("system_recommendation_snapshot")
+  researchPlanId   String?             @map("research_plan_id") @db.Uuid
   createdAt        DateTime            @default(now()) @map("created_at")
   updatedAt        DateTime            @updatedAt @map("updated_at")
 
-  ideas            StartupIdeaRecord[]
+  ideas             StartupIdeaRecord[]
+  hypotheses        StartupHypothesis[]
+  evidenceRecords   StartupEvidenceRecord[]
+  researchPlan      StartupResearchPlan?
+  ownerDecisions    StartupOwnerDecision[]
 
   @@index([workspaceId, status])
   @@map("owner_startup_session")
 }
 
 /// Per-idea evaluation record within a startup session.
+/// Phase 5: Extended with versioning, screening lifecycle, hypothesis/model linkage.
 model StartupIdeaRecord {
   id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sessionId         String              @map("session_id") @db.Uuid
   workspaceId       String              @map("workspace_id") @db.Uuid
   name              String
   industry          String
+  description       String?             @db.Text
+  targetCustomer    String?             @map("target_customer")
+  valuePropSummary  String?             @map("value_prop_summary")
+  revenueModel      String?             @map("revenue_model")
   accepted          Boolean             @default(false)
   capitalSufficient Boolean?            @map("capital_sufficient")
   capitalGap        Float?              @map("capital_gap")
@@ -1641,11 +1663,31 @@ model StartupIdeaRecord {
   riskAdjustedScore Float?             @map("risk_adjusted_score")
   reasons           Json                @default("[]")
   warnings          Json                @default("[]")
+  /// Phase 5 screening fields
+  screeningStatus   String              @default("PENDING") @map("screening_status")
+  // PENDING | ADVANCE | ADVANCE_WITH_EVIDENCE_GAPS | VALIDATE_FIRST | MODIFY | HOLD | REJECT
+  screeningReasons  Json?               @map("screening_reasons")
+  screeningConstraints Json?            @map("screening_constraints")
+  evidenceRequired  Json?               @map("evidence_required")
+  modificationSuggestion String?        @map("modification_suggestion") @db.Text
+  whatCouldChange   String?             @map("what_could_change") @db.Text
+  version           Int                 @default(1)
+  supersededById    String?             @map("superseded_by_id") @db.Uuid
   createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
 
   session           OwnerStartupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  hypotheses        StartupHypothesis[]
+  evidenceRecords   StartupEvidenceRecord[]
+  businessModels    StartupBusinessModel[]
+  economicModels    StartupEconomicModel[]
+  marketSizings     StartupMarketSizing[]
+  readinessAssessments StartupReadinessAssessment[]
+  ownerDecisions    StartupOwnerDecision[]
+  validationPlans   StartupValidationPlan[]
 
   @@index([workspaceId, sessionId])
+  @@index([workspaceId, screeningStatus])
   @@map("startup_idea_record")
 }
 
@@ -5237,7 +5279,9 @@ model BusinessObjective {
   resourceBudget   Json     @default("{}") @map("resource_budget")  // { budget?: number, timeHours?: number, staffCount?: number }
   constraints      Json     @default("[]")            // array of GateConstraint strings that block this objective
   ownerId          String?  @map("owner_id") @db.Uuid // userId responsible
-  linkedGoalId     String?  @map("linked_goal_id") @db.Uuid  // FK → OwnerGoal (optional)
+  linkedGoalId          String?  @map("linked_goal_id") @db.Uuid  // FK → OwnerGoal (optional)
+  linkedStartupSessionId String? @map("linked_startup_session_id") @db.Uuid  // FK → OwnerStartupSession (Phase 5)
+  linkedStartupIdeaId   String?  @map("linked_startup_idea_id") @db.Uuid     // FK → StartupIdeaRecord (Phase 5)
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
@@ -5346,7 +5390,8 @@ model BusinessRiskEntry {
   status           String    @default("IDENTIFIED")    // IDENTIFIED | MITIGATING | ACCEPTED | RESOLVED | TRANSFERRED
   mitigationAction String?   @map("mitigation_action") @db.Text
   residualRisk     Int?      @map("residual_risk")    // 0-100 after mitigation
-  linkedObjectiveId String?  @map("linked_objective_id") @db.Uuid
+  linkedObjectiveId      String?  @map("linked_objective_id") @db.Uuid
+  linkedStartupSessionId String?  @map("linked_startup_session_id") @db.Uuid  // Phase 5
   reviewedAt       DateTime? @map("reviewed_at")
   identifiedBy     String    @map("identified_by") @db.Uuid
   createdAt        DateTime  @default(now()) @map("created_at")
@@ -5414,7 +5459,8 @@ model ConstraintResolutionRecord {
   bindingScore      Float     @map("binding_score")      // 0-100
   remediationAction String?   @map("remediation_action") @db.Text
   status            String    @default("ACTIVE")          // ACTIVE | REMEDIATING | RESOLVED | ACCEPTED
-  linkedObjectiveId String?   @map("linked_objective_id") @db.Uuid
+  linkedObjectiveId      String?   @map("linked_objective_id") @db.Uuid
+  linkedStartupSessionId String?   @map("linked_startup_session_id") @db.Uuid  // Phase 5
   identifiedAt      DateTime  @default(now()) @map("identified_at")
   resolvedAt        DateTime? @map("resolved_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
@@ -5483,4 +5529,382 @@ model OwnerArbitrationOverride {
   @@index([workspaceId, overriddenRecordId])
   @@index([workspaceId, createdAt])
   @@map("owner_arbitration_overrides")
+}
+
+// ─── Phase 5: Startup Mode — Zero-to-Validated Business Engine ───────────────
+// All models are workspace-scoped with standard workspace isolation indexes.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A testable hypothesis for a startup idea.
+/// hypothesisType: PROBLEM_EXISTENCE | PROBLEM_SEVERITY | CUSTOMER_SEGMENT |
+///   CUSTOMER_ACCESSIBILITY | WILLINGNESS_TO_PAY | SOLUTION_DESIRABILITY |
+///   SOLUTION_FEASIBILITY | DELIVERY_FEASIBILITY | ACQUISITION_FEASIBILITY |
+///   UNIT_ECONOMICS | RETENTION_POTENTIAL | REGULATORY_VIABILITY
+/// result: CONFIRMED | WEAKENED | REJECTED | INCONCLUSIVE | PENDING
+model StartupHypothesis {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  sessionId            String    @map("session_id") @db.Uuid
+  ideaId               String    @map("idea_id") @db.Uuid
+  statement            String    @db.Text
+  hypothesisType       String    @map("hypothesis_type")
+  evidenceCurrently    String?   @map("evidence_currently") @db.Text
+  confidenceBefore     Int       @default(0) @map("confidence_before")  // 0-100
+  falsificationCriteria String?  @map("falsification_criteria") @db.Text
+  validationMethod     String?   @map("validation_method")
+  sampleThreshold      String?   @map("sample_threshold")
+  expectedCostCents    Int?      @map("expected_cost_cents")
+  expectedDurationDays Int?      @map("expected_duration_days")
+  requiresOwnerApproval Boolean  @default(false) @map("requires_owner_approval")
+  priorityScore        Float     @default(0) @map("priority_score")  // DECISION_VALUE × UNCERTAINTY ÷ COST_TIME
+  result               String    @default("PENDING")   // CONFIRMED | WEAKENED | REJECTED | INCONCLUSIVE | PENDING
+  interpretation       String?   @db.Text
+  confidenceAfter      Int?      @map("confidence_after")   // 0-100
+  effectOnScore        Float?    @map("effect_on_score")
+  followUpAction       String?   @map("follow_up_action") @db.Text
+  validatedAt          DateTime? @map("validated_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  session  OwnerStartupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  idea     StartupIdeaRecord   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  experiments StartupExperiment[]
+
+  @@index([workspaceId, sessionId])
+  @@index([workspaceId, ideaId])
+  @@index([workspaceId, result])
+  @@map("startup_hypotheses")
+}
+
+/// Evidence record for a startup session.
+/// sourceType hierarchy: AUTHORITATIVE_PRIMARY | OFFICIAL_COMMERCIAL | VERIFIED_INSTITUTIONAL |
+///   REPUTABLE_SECONDARY | MARKETPLACE_OBSERVATION | CUSTOMER_GENERATED |
+///   OWNER_PROVIDED | SYSTEM_INFERENCE | UNVERIFIED
+/// evidenceType: DESK_RESEARCH | BEHAVIOURAL_EVIDENCE | DIRECT_CUSTOMER_EVIDENCE | TRANSACTIONAL_EVIDENCE
+model StartupEvidenceRecord {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId               String    @map("workspace_id") @db.Uuid
+  sessionId                 String    @map("session_id") @db.Uuid
+  ideaId                    String?   @map("idea_id") @db.Uuid
+  hypothesisId              String?   @map("hypothesis_id") @db.Uuid
+  idempotencyKey            String?   @unique @map("idempotency_key")  // hash of source+content for dedup
+  sourceType                String    @map("source_type")
+  evidenceType              String    @map("evidence_type")
+  sourceDescription         String    @map("source_description") @db.Text
+  retrievedAt               DateTime  @map("retrieved_at")
+  geography                 String?
+  customerSegment           String?   @map("customer_segment")
+  method                    String?
+  sampleContext             String?   @map("sample_context") @db.Text
+  observedResult            String    @map("observed_result") @db.Text
+  limitations               String?   @db.Text
+  reliabilityScore          Int       @default(50) @map("reliability_score")  // 0-100
+  confidence                Int       @default(50)  // 0-100
+  ownerVerified             Boolean   @default(false) @map("owner_verified")
+  verifiedAt                DateTime? @map("verified_at")
+  expiresAt                 DateTime? @map("expires_at")
+  currentVerificationRequired Boolean @default(false) @map("current_verification_required")
+  linkedAssumption          String?   @map("linked_assumption") @db.Text
+  createdAt                 DateTime  @default(now()) @map("created_at")
+
+  session  OwnerStartupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  idea     StartupIdeaRecord?  @relation(fields: [ideaId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, sessionId])
+  @@index([workspaceId, ideaId])
+  @@index([workspaceId, sourceType])
+  @@map("startup_evidence_records")
+}
+
+/// Validation plan for an idea — one per idea, governing experiments.
+model StartupValidationPlan {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  sessionId        String    @map("session_id") @db.Uuid
+  ideaId           String    @map("idea_id") @db.Uuid
+  passCriteria     String    @map("pass_criteria") @db.Text
+  failCriteria     String    @map("fail_criteria") @db.Text
+  safetyLimits     Json      @default("{}") @map("safety_limits")
+  spendingLimitCents Int?    @map("spending_limit_cents")
+  stopConditions   Json      @default("[]") @map("stop_conditions")
+  rollbackConditions Json    @default("[]") @map("rollback_conditions")
+  approvedByOwner  Boolean   @default(false) @map("approved_by_owner")
+  approvedAt       DateTime? @map("approved_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  idea        StartupIdeaRecord @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  experiments StartupExperiment[]
+
+  @@index([workspaceId, sessionId])
+  @@index([workspaceId, ideaId])
+  @@map("startup_validation_plans")
+}
+
+/// A single experiment within a validation plan.
+/// mechanism: CUSTOMER_INTERVIEW | SUPPLIER_QUOTE | LANDING_PAGE | WAITLIST |
+///   LETTER_OF_INTENT | PRE_ORDER | CONCIERGE | PROTOTYPE | PRICE_TEST |
+///   CHANNEL_TEST | UNIT_ECONOMICS_TEST | OPERATIONAL_SIMULATION | OWNER_ENTERED_EVIDENCE
+/// result: PASSED | FAILED | INCONCLUSIVE | NOT_YET_RUN
+model StartupExperiment {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  planId           String    @map("plan_id") @db.Uuid
+  hypothesisId     String?   @map("hypothesis_id") @db.Uuid
+  mechanism        String
+  instructions     String    @db.Text
+  script           String?   @db.Text
+  passCriteria     String    @map("pass_criteria") @db.Text
+  failCriteria     String    @map("fail_criteria") @db.Text
+  safetyLimitCents Int?      @map("safety_limit_cents")
+  result           String    @default("NOT_YET_RUN")
+  resultSummary    String?   @map("result_summary") @db.Text
+  executedAt       DateTime? @map("executed_at")
+  evidenceIds      Json      @default("[]") @map("evidence_ids")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  plan       StartupValidationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  hypothesis StartupHypothesis?    @relation(fields: [hypothesisId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, planId])
+  @@map("startup_experiments")
+}
+
+/// Structured business model for a startup idea — versioned.
+model StartupBusinessModel {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId               String    @map("workspace_id") @db.Uuid
+  sessionId                 String    @map("session_id") @db.Uuid
+  ideaId                    String    @map("idea_id") @db.Uuid
+  customerSegment           String    @map("customer_segment")
+  customerProblem           String    @map("customer_problem") @db.Text
+  valueProposition          String    @map("value_proposition") @db.Text
+  deliveryMethod            String    @map("delivery_method")
+  revenueModel              String    @map("revenue_model")
+  pricingHypothesis         String?   @map("pricing_hypothesis") @db.Text
+  costStructure             Json      @default("{}") @map("cost_structure")
+  acquisitionChannels       Json      @default("[]") @map("acquisition_channels")
+  fulfilmentProcess         String?   @map("fulfilment_process") @db.Text
+  suppliersAndDependencies  Json      @default("[]") @map("suppliers_and_dependencies")
+  keyCapabilities           Json      @default("[]") @map("key_capabilities")
+  keyMetrics                Json      @default("[]") @map("key_metrics")
+  retentionMechanism        String?   @map("retention_mechanism") @db.Text
+  workingCapitalCycle       String?   @map("working_capital_cycle") @db.Text
+  regulatoryRequirements    Json      @default("[]") @map("regulatory_requirements")
+  qualityControlRequirements Json     @default("[]") @map("quality_control_requirements")
+  failureModes              Json      @default("[]") @map("failure_modes")
+  defensibilityNotes        String?   @map("defensibility_notes") @db.Text
+  scaleConstraints          String?   @map("scale_constraints") @db.Text
+  version                   Int       @default(1)
+  supersededById            String?   @map("superseded_by_id") @db.Uuid
+  createdAt                 DateTime  @default(now()) @map("created_at")
+
+  idea StartupIdeaRecord @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, ideaId])
+  @@index([workspaceId, sessionId])
+  @@map("startup_business_models")
+}
+
+/// Deterministic startup economic model — versioned, safe integer cents arithmetic.
+/// economicClassification: ECONOMICALLY_VIABLE | POTENTIALLY_VIABLE |
+///   VIABLE_ONLY_IF_ASSUMPTIONS_HOLD | INSUFFICIENT_EVIDENCE |
+///   UNVIABLE | CASH_FLOW_UNSAFE | RESOURCE_INFEASIBLE
+model StartupEconomicModel {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId             String    @map("workspace_id") @db.Uuid
+  sessionId               String    @map("session_id") @db.Uuid
+  ideaId                  String    @map("idea_id") @db.Uuid
+  startupCostCents        BigInt?   @map("startup_cost_cents")
+  fixedMonthlyCostCents   BigInt?   @map("fixed_monthly_cost_cents")
+  variableUnitCostCents   BigInt?   @map("variable_unit_cost_cents")
+  pricePerUnitCents       BigInt?   @map("price_per_unit_cents")
+  grossContributionCents  BigInt?   @map("gross_contribution_cents")
+  grossMarginBps          Int?      @map("gross_margin_bps")   // basis points: 5000 = 50%
+  cacCents                BigInt?   @map("cac_cents")
+  deliveryCostCents       BigInt?   @map("delivery_cost_cents")
+  refundAllowanceCents    BigInt?   @map("refund_allowance_cents")
+  workingCapitalCents     BigInt?   @map("working_capital_cents")
+  paymentDelayDays        Int?      @map("payment_delay_days")
+  breakEvenVolume         Float?    @map("break_even_volume")
+  breakEvenMonths         Float?    @map("break_even_months")
+  cashRunwayMonths        Float?    @map("cash_runway_months")
+  minViableCapacity       Float?    @map("min_viable_capacity")
+  maxCurrentCapacity      Float?    @map("max_current_capacity")
+  ownerLabourHoursPerWeek Float?    @map("owner_labour_hours_per_week")
+  hiredLabourCostCents    BigInt?   @map("hired_labour_cost_cents")
+  sensitivityScenarios    Json      @default("{}") @map("sensitivity_scenarios")  // { down, expected, up }
+  economicClassification  String    @default("INSUFFICIENT_EVIDENCE") @map("economic_classification")
+  bindingCondition        String?   @map("binding_condition") @db.Text
+  unknownInputs           Json      @default("[]") @map("unknown_inputs")
+  version                 Int       @default(1)
+  supersededById          String?   @map("superseded_by_id") @db.Uuid
+  createdAt               DateTime  @default(now()) @map("created_at")
+
+  idea StartupIdeaRecord @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, ideaId])
+  @@index([workspaceId, sessionId])
+  @@map("startup_economic_models")
+}
+
+/// Bounded transparent market sizing — supports ranges, not false precision.
+/// sizingStatus: ESTIMATED | INSUFFICIENT_EVIDENCE
+model StartupMarketSizing {
+  id                            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId                   String    @map("workspace_id") @db.Uuid
+  sessionId                     String    @map("session_id") @db.Uuid
+  ideaId                        String    @map("idea_id") @db.Uuid
+  reachableMarketUnits          Float?    @map("reachable_market_units")
+  reachableMarketRevenueCents   BigInt?   @map("reachable_market_revenue_cents")
+  serviceableUnits              Float?    @map("serviceable_units")
+  serviceableRevenueCents       BigInt?   @map("serviceable_revenue_cents")
+  initialCustomerPool           Float?    @map("initial_customer_pool")
+  capacityLimitedRevenueCents   BigInt?   @map("capacity_limited_revenue_cents")
+  channelLimitedRevenueCents    BigInt?   @map("channel_limited_revenue_cents")
+  geographyLimitedRevenueCents  BigInt?   @map("geography_limited_revenue_cents")
+  formula                       String?   @db.Text
+  assumptions                   Json      @default("[]")
+  evidence                      Json      @default("[]")
+  confidence                    Int       @default(0)  // 0-100
+  rangeData                     Json      @default("{}") @map("range_data")  // { low, mid, high }
+  limitingFactor                String?   @map("limiting_factor") @db.Text
+  sizingStatus                  String    @default("INSUFFICIENT_EVIDENCE") @map("sizing_status")
+  version                       Int       @default(1)
+  createdAt                     DateTime  @default(now()) @map("created_at")
+
+  idea StartupIdeaRecord @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, ideaId])
+  @@index([workspaceId, sessionId])
+  @@map("startup_market_sizings")
+}
+
+/// Deterministic readiness assessment — hard gates, no critical failure hidden by averages.
+/// readinessStatus: READY_FOR_OWNER_GO_DECISION | READY_FOR_LIMITED_PILOT |
+///   MODIFICATION_REQUIRED | MORE_VALIDATION_REQUIRED | ON_HOLD | REJECT
+model StartupReadinessAssessment {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId               String    @map("workspace_id") @db.Uuid
+  sessionId                 String    @map("session_id") @db.Uuid
+  ideaId                    String    @map("idea_id") @db.Uuid
+  problemEvidenceScore      Int       @default(0) @map("problem_evidence_score")   // 0-100
+  customerEvidenceScore     Int       @default(0) @map("customer_evidence_score")
+  wtpEvidenceScore          Int       @default(0) @map("wtp_evidence_score")
+  solutionFeasibilityScore  Int       @default(0) @map("solution_feasibility_score")
+  deliveryFeasibilityScore  Int       @default(0) @map("delivery_feasibility_score")
+  acquisitionFeasibilityScore Int     @default(0) @map("acquisition_feasibility_score")
+  economicViabilityScore    Int       @default(0) @map("economic_viability_score")
+  cashSurvivalScore         Int       @default(0) @map("cash_survival_score")
+  resourceReadinessScore    Int       @default(0) @map("resource_readiness_score")
+  regulatoryReadinessScore  Int       @default(0) @map("regulatory_readiness_score")
+  riskReadinessScore        Int       @default(0) @map("risk_readiness_score")
+  ownerCapacityScore        Int       @default(0) @map("owner_capacity_score")
+  executionPlanScore        Int       @default(0) @map("execution_plan_score")
+  measurementPlanScore      Int       @default(0) @map("measurement_plan_score")
+  stopConditionsScore       Int       @default(0) @map("stop_conditions_score")
+  hardGateFailures          Json      @default("[]") @map("hard_gate_failures")
+  passedGates               Json      @default("[]") @map("passed_gates")
+  failedGates               Json      @default("[]") @map("failed_gates")
+  unknownGates              Json      @default("[]") @map("unknown_gates")
+  bindingConstraints        Json      @default("[]") @map("binding_constraints")
+  evidenceGaps              Json      @default("[]") @map("evidence_gaps")
+  safeNextStep              String    @map("safe_next_step") @db.Text
+  readinessStatus           String    @default("MORE_VALIDATION_REQUIRED") @map("readiness_status")
+  assessedAt                DateTime  @default(now()) @map("assessed_at")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+
+  idea StartupIdeaRecord @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, ideaId])
+  @@index([workspaceId, sessionId])
+  @@map("startup_readiness_assessments")
+}
+
+/// Owner decision on a startup idea — versioned, never overwrites prior decisions.
+/// System recommendation stored separately in OwnerStartupSession.systemRecommendationSnapshot.
+/// decisionType: GO | MODIFY | HOLD | REJECT | REQUEST_MORE_EVIDENCE
+model StartupOwnerDecision {
+  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId                 String    @map("workspace_id") @db.Uuid
+  sessionId                   String    @map("session_id") @db.Uuid
+  ideaId                      String?   @map("idea_id") @db.Uuid
+  decisionType                String    @map("decision_type")
+  rationale                   String?   @db.Text
+  actorId                     String    @map("actor_id") @db.Uuid
+  approvedScope               String?   @map("approved_scope") @db.Text
+  spendingLimitCents          BigInt?   @map("spending_limit_cents")
+  permittedActions            Json      @default("[]") @map("permitted_actions")
+  prohibitedActions           Json      @default("[]") @map("prohibited_actions")
+  validUntil                  DateTime? @map("valid_until")
+  reviewDate                  DateTime? @map("review_date")
+  materialAssumptions         Json      @default("[]") @map("material_assumptions")
+  linkedEvidenceVersion       Int?      @map("linked_evidence_version")
+  systemRecommendationSnapshot Json     @default("{}") @map("system_recommendation_snapshot")
+  supersededById              String?   @map("superseded_by_id") @db.Uuid
+  supersededAt                DateTime? @map("superseded_at")
+  createdAt                   DateTime  @default(now()) @map("created_at")
+
+  session OwnerStartupSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  idea    StartupIdeaRecord?   @relation(fields: [ideaId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, sessionId])
+  @@index([workspaceId, decisionType])
+  @@map("startup_owner_decisions")
+}
+
+/// Research plan for a startup session — governs evidence acquisition.
+model StartupResearchPlan {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  sessionId           String    @unique @map("session_id") @db.Uuid
+  evidenceDomains     Json      @default("[]") @map("evidence_domains")
+  completenessReport  Json      @default("{}") @map("completeness_report")
+  acquiredDomains     Json      @default("[]") @map("acquired_domains")
+  materialGaps        Json      @default("[]") @map("material_gaps")
+  approvedByOwner     Boolean   @default(false) @map("approved_by_owner")
+  approvedAt          DateTime? @map("approved_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  session      OwnerStartupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  acquisitions StartupResearchAcquisition[]
+
+  @@index([workspaceId])
+  @@map("startup_research_plans")
+}
+
+/// A single evidence-acquisition attempt within a research plan.
+/// status: PENDING | ACQUIRED | FAILED | REQUIRES_OWNER
+/// sourceType: mirrors StartupEvidenceRecord.sourceType hierarchy
+model StartupResearchAcquisition {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId             String    @map("workspace_id") @db.Uuid
+  researchPlanId          String    @map("research_plan_id") @db.Uuid
+  domain                  String
+  sourceUrl               String?   @map("source_url") @db.Text
+  sourceType              String    @map("source_type")
+  queryMethod             String    @map("query_method")
+  queryParams             Json      @default("{}") @map("query_params")
+  rawResult               String?   @map("raw_result") @db.Text
+  extractedFacts          Json      @default("[]") @map("extracted_facts")
+  retrievedAt             DateTime? @map("retrieved_at")
+  geography               String?
+  applicableDate          DateTime? @map("applicable_date")
+  reliabilityClassification String? @map("reliability_classification")
+  confidence              Int       @default(0)  // 0-100
+  limitations             String?   @db.Text
+  stalesnessRuleDays      Int?      @map("staleness_rule_days")
+  linkedAssumptions       Json      @default("[]") @map("linked_assumptions")
+  linkedDecisions         Json      @default("[]") @map("linked_decisions")
+  status                  String    @default("PENDING")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  researchPlan StartupResearchPlan @relation(fields: [researchPlanId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, researchPlanId])
+  @@index([workspaceId, domain, status])
+  @@map("startup_research_acquisitions")
 }
