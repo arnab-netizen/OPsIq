@@ -52,11 +52,9 @@ async function main() {
       sessionId: E2E_PHASE5_SESSION_ID,
       name: "Mobile Car Detailing",
       industry: "Automotive Services",
-      startupCostEstimate: 8000,
-      monthlyRevenueEstimate: 5000,
       version: 1,
       originType: "OWNER_ENTERED",
-      screeningStatus: "PENDING",
+      screeningStatus: "UNSCREENED",
     },
   });
 
