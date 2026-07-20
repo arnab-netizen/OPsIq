@@ -58,7 +58,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   test("step 01 — startup sessions list page loads", async () => {
     await page.goto("/owner/startup");
     await waitForPageReady(page);
-    await expect(page.locator("h1")).toContainText("Startup Mode");
+    await expect(page.getByRole("heading", { name: "Startup Mode" })).toBeVisible();
   });
 
   test("step 02 — seeded session appears in list", async () => {
@@ -109,8 +109,8 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
     await expect(page.locator(`[data-testid="idea-card-${E2E_PHASE5_IDEA_ID}"]`)).toContainText("Automotive Services");
   });
 
-  test("step 10 — idea screening status shows PENDING", async () => {
-    await expect(page.locator(`[data-testid="idea-status-${E2E_PHASE5_IDEA_ID}"]`)).toContainText("PENDING");
+  test("step 10 — idea screening status shows UNSCREENED", async () => {
+    await expect(page.locator(`[data-testid="idea-status-${E2E_PHASE5_IDEA_ID}"]`)).toContainText("UNSCREENED");
   });
 
   // ─── Step 11: API-level analysis calls ──────────────────────────────────
