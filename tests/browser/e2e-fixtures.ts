@@ -79,7 +79,7 @@ export const E2E_PHASE4_POOL_ID        = "a4000000-0000-0000-0000-000000000401";
 // ─── Phase 5 Startup Mode fixtures ───────────────────────────────────────────
 
 /** OwnerStartupSession seeded for Phase 5 E2E journey. */
-export const E2E_PHASE5_SESSION_ID     = "b0000000-0000-0000-0000-000000000501";
+export const E2E_PHASE5_SESSION_ID     = "b0000000-0000-4000-8000-000000000501";
 
 /** StartupIdeaRecord seeded for Phase 5 E2E journey. */
-export const E2E_PHASE5_IDEA_ID        = "b1000000-0000-0000-0000-000000000501";
+export const E2E_PHASE5_IDEA_ID        = "b1000000-0000-4000-8000-000000000501";
