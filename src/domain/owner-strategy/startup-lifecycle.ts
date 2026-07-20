@@ -2,6 +2,7 @@
  * Startup session lifecycle state machine — pure domain, no I/O.
  * Defines valid transitions and terminal states.
  */
+import { InvalidStateTransitionError } from "@/infra/errors";
 
 export type StartupSessionStatus =
   | "DRAFT"
@@ -54,9 +55,7 @@ export function assertValidTransition(
 ): void {
   const allowed = VALID_TRANSITIONS.get(from) ?? [];
   if (!allowed.includes(to)) {
-    throw new Error(
-      `Invalid startup session transition: ${from} → ${to}. Allowed from ${from}: [${allowed.join(", ")}]`
-    );
+    throw new InvalidStateTransitionError("OwnerStartupSession", from, to);
   }
 }
 

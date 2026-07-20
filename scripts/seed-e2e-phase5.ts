@@ -34,7 +34,10 @@ async function main() {
   // Schema optional with defaults: status (DRAFT), entryPath (HAVE_IDEA), profileVersion (0)
   await (prisma as any).ownerStartupSession.upsert({
     where: { id: E2E_PHASE5_SESSION_ID },
-    update: {},
+    update: {
+      status: "CONTEXT_CAPTURE",
+      sessionLabel: "E2E Phase 5 Test Session",
+    },
     create: {
       id: E2E_PHASE5_SESSION_ID,
       workspaceId: E2E_WORKSPACE_ID,
@@ -61,7 +64,9 @@ async function main() {
   //   screeningStatus (UNSCREENED), accepted (false), reasons ([]), warnings ([])
   await (prisma as any).startupIdeaRecord.upsert({
     where: { id: E2E_PHASE5_IDEA_ID },
-    update: {},
+    update: {
+      screeningStatus: "UNSCREENED",
+    },
     create: {
       id: E2E_PHASE5_IDEA_ID,
       sessionId: E2E_PHASE5_SESSION_ID,
