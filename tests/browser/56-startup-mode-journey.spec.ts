@@ -422,16 +422,41 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   // ─── Step 29: Lifecycle transition enforcement ───────────────────────────
 
   test("step 29 — valid lifecycle transition CONTEXT_CAPTURE → DISCOVERY succeeds", async () => {
+    // Create a fresh throw-away session so we don't mutate E2E_PHASE5_SESSION_ID
+    // (mutating it would cause step 04 to fail on Playwright retries).
+    const created = await page.request.post("/api/owner/startup/sessions", {
+      data: {
+        sessionLabel: "Lifecycle test session",
+        intake: { location: null, capitalAvailable: null, hoursPerWeekAvailable: null, riskTolerance: null, skills: [] },
+        ideas: [{ name: "Test Idea", industry: "General", structural: {} }],
+      },
+    });
+    expect(created.status()).toBe(201);
+    const { sessionId: lifecycleSessionId } = await created.json();
     const res = await page.request.patch(
-      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}`,
+      `/api/owner/startup/sessions/${lifecycleSessionId}`,
       { data: { status: "DISCOVERY" } }
     );
     expect(res.status()).toBe(200);
   });
 
   test("step 30 — invalid lifecycle transition DISCOVERY → APPROVED is rejected with 422", async () => {
+    // Use E2E_PHASE5_SESSION_ID which is already in DISCOVERY state (set by step 29 via lifecycle API above).
+    // We need any session in DISCOVERY — the seeded session is still in CONTEXT_CAPTURE so create another one.
+    const created = await page.request.post("/api/owner/startup/sessions", {
+      data: {
+        sessionLabel: "Lifecycle test session 2",
+        intake: { location: null, capitalAvailable: null, hoursPerWeekAvailable: null, riskTolerance: null, skills: [] },
+        ideas: [{ name: "Test Idea 2", industry: "General", structural: {} }],
+      },
+    });
+    expect(created.status()).toBe(201);
+    const { sessionId: lifecycleSessionId2 } = await created.json();
+    // Transition to DISCOVERY first
+    await page.request.patch(`/api/owner/startup/sessions/${lifecycleSessionId2}`, { data: { status: "DISCOVERY" } });
+    // Now attempt invalid DISCOVERY → APPROVED
     const res = await page.request.patch(
-      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}`,
+      `/api/owner/startup/sessions/${lifecycleSessionId2}`,
       { data: { status: "APPROVED" } }
     );
     expect(res.status()).toBe(422);

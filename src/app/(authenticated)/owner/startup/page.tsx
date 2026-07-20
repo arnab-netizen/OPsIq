@@ -57,15 +57,13 @@ export default function StartupModePage() {
         body: JSON.stringify({
           sessionLabel: label || null,
           intake: {
-            capitalAvailable: 0,
-            ownerHoursPerWeek: 0,
-            riskTolerance: "MEDIUM",
-            location: "",
-            cashReserveMonths: 0,
-            minimumMonthlyIncome: 0,
+            location: null,
+            capitalAvailable: null,
+            hoursPerWeekAvailable: null,
+            riskTolerance: null,
             skills: [],
           },
-          ideas: [{ name: "Placeholder", industry: "General", startupCostEstimate: 0, monthlyRevenueEstimate: 0 }],
+          ideas: [{ name: "Placeholder", industry: "General", structural: {} }],
         }),
       });
       const data = await res.json();
