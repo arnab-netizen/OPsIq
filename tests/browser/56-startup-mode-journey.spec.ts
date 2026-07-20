@@ -79,8 +79,10 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   // ─── Step 5: Navigate to session detail ─────────────────────────────────
 
   test("step 05 — navigate to session detail page", async () => {
-    await page.click(`[data-testid="startup-session-link-${E2E_PHASE5_SESSION_ID}"]`);
-    await waitForPageReady(page);
+    await Promise.all([
+      page.waitForURL(`**/${E2E_PHASE5_SESSION_ID}`),
+      page.click(`[data-testid="startup-session-link-${E2E_PHASE5_SESSION_ID}"]`),
+    ]);
     await expect(page.url()).toContain(E2E_PHASE5_SESSION_ID);
   });
 
