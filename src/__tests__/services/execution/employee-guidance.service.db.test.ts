@@ -21,7 +21,7 @@ function boundary(ws: string): ApprovedExecutionBoundary {
     ownerApprovedBy: "owner",
     approvedAt: now,
     validFrom: new Date("2026-06-20T00:00:00.000Z"),
-    validUntil: new Date("2026-07-20T00:00:00.000Z"),
+    validUntil: new Date("2030-12-31T00:00:00.000Z"),
     maxUses: null,
     allowedRoles: ["counter_staff"],
     forbiddenRoles: [],

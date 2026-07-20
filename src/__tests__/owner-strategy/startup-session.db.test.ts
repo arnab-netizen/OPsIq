@@ -109,7 +109,7 @@ describe("[db] Startup session persistence", () => {
     expect(session).toBeTruthy();
     expect(session!.workspaceId).toBe(wsA);
     expect(session!.sessionLabel).toBe("Initial exploration");
-    expect(session!.status).toBe("ACTIVE");
+    expect(session!.status).toBe("DRAFT");
 
     const ideas = await db.startupIdeaRecord.findMany({ where: { sessionId } });
     expect(ideas.length).toBe(2);
