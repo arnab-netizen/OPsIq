@@ -11,6 +11,7 @@ on:
       - "claude/full-repo-jarvis-db-blocker-closure"
       - "claude/phase-3-execution-closure-plan-pid5a6"
       - "claude/phase-4-owner-business-operating-system"
+      - "claude/phase-5-startup-mode-yry5gk"
   workflow_dispatch:
 
 jobs:
@@ -78,6 +79,8 @@ jobs:
         run: npx tsx scripts/seed-e2e-phase3.ts
       - name: Seed Phase 4 BOS fixtures
         run: npx tsx scripts/seed-e2e-phase4.ts
+      - name: Seed Phase 5 Startup Mode fixtures
+        run: npx tsx scripts/seed-e2e-phase5.ts
       - name: Start app
         run: |
           PORT=3001 npm run start > /tmp/app.log 2>&1 &
@@ -104,6 +107,7 @@ jobs:
           tests/browser/11-legacy-ui-safety.spec.ts
           tests/browser/54-owner-phase3-execution-loop.spec.ts
           tests/browser/55-owner-phase4-bos-panel.spec.ts
+          tests/browser/56-startup-mode-journey.spec.ts
           --project=chromium
       - name: Print Playwright failures + app log
         if: always()
