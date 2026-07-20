@@ -433,6 +433,13 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
     });
     expect(created.status()).toBe(201);
     const { sessionId: lifecycleSessionId } = await created.json();
+    // DRAFT → CONTEXT_CAPTURE first (required intermediate step)
+    const step1 = await page.request.patch(
+      `/api/owner/startup/sessions/${lifecycleSessionId}`,
+      { data: { status: "CONTEXT_CAPTURE" } }
+    );
+    expect(step1.status()).toBe(200);
+    // CONTEXT_CAPTURE → DISCOVERY
     const res = await page.request.patch(
       `/api/owner/startup/sessions/${lifecycleSessionId}`,
       { data: { status: "DISCOVERY" } }
@@ -452,7 +459,8 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
     });
     expect(created.status()).toBe(201);
     const { sessionId: lifecycleSessionId2 } = await created.json();
-    // Transition to DISCOVERY first
+    // Transition to DISCOVERY via required intermediate steps
+    await page.request.patch(`/api/owner/startup/sessions/${lifecycleSessionId2}`, { data: { status: "CONTEXT_CAPTURE" } });
     await page.request.patch(`/api/owner/startup/sessions/${lifecycleSessionId2}`, { data: { status: "DISCOVERY" } });
     // Now attempt invalid DISCOVERY → APPROVED
     const res = await page.request.patch(
