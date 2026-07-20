@@ -33,7 +33,6 @@ async function main() {
     create: {
       id: E2E_PHASE5_SESSION_ID,
       workspaceId: E2E_WORKSPACE_ID,
-      ownerId: E2E_OWNER.userId,
       actorId: E2E_OWNER.userId,
       sessionLabel: "E2E Phase 5 Test Session",
       status: "CONTEXT_CAPTURE",
