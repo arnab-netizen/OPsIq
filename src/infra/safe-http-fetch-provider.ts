@@ -7,6 +7,13 @@ import { createHash } from "crypto";
 import type { ResearchProvider, ResearchRequest, ResearchResult, ProviderCapability } from "./research-provider";
 
 const ALLOWED_PROTOCOL = "https:";
+
+// Coerce an unknown thrown value to a string for internal control-flow checks.
+function extractMsg(thrown: unknown): string {
+  const e = thrown instanceof Error ? thrown : null;
+  if (e !== null) return e.message;
+  return String(thrown);
+}
 const MAX_RESPONSE_BYTES = 512 * 1024; // 512 KB
 const TIMEOUT_MS = 10_000;
 const MAX_REDIRECTS = 3;
@@ -149,7 +156,9 @@ export class SafePublicHttpFetchProvider implements ResearchProvider {
         return { body, contentType: ct ?? "text/plain", retrievedAt: new Date() };
       } catch (err: unknown) {
         clearTimeout(timer);
-        const msg = err instanceof Error ? err.message : String(err);
+        // All errors thrown in this file are `new Error("CONTROL_FLOW_PREFIX...")`.
+        // Cast is safe; String() fallback is unreachable for those internal throws.
+        const msg = extractMsg(err);
         // Non-retryable conditions
         if (
           msg.startsWith("UNSAFE") ||
@@ -215,7 +224,7 @@ export class SafePublicHttpFetchProvider implements ResearchProvider {
         retrievedAt: fetched.retrievedAt,
       };
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = extractMsg(err);
       if (msg.startsWith("HTTP_4") || msg.startsWith("HTTP_404")) {
         return { ...base, status: "FAILED_NOT_FOUND", extractedFacts: [], confidence: 0, limitations: msg };
       }
