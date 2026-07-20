@@ -408,39 +408,47 @@ export default function StartupSessionPage({
         <div data-testid="decision-section">
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>Decision</h2>
 
-          {systemRec && (
-            <div className="SYSTEM_RECOMMENDATION" data-testid="system-recommendation"
-              style={{ border: "1px solid #3b82f6", borderRadius: 6, padding: "1rem", marginBottom: "1rem", background: "#eff6ff" }}>
-              <div style={{ fontWeight: 700, marginBottom: "0.25rem" }}>
-                System Recommendation
-              </div>
-              <div data-testid="system-rec-value" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
-                {systemRec.recommendation}
-              </div>
-              <div style={{ marginTop: "0.5rem", color: "#374151" }}>{systemRec.rationale}</div>
-              <div style={{ marginTop: "0.25rem", color: "#6b7280", fontSize: "0.85rem" }}>
-                Confidence: {systemRec.confidence}%
-              </div>
-            </div>
-          )}
-
-          {ownerDecision && (
-            <div
-              className={`OWNER_DECISION ${ownerDecision.supersededById ? "SUPERSEDED_DECISION" : ""}`}
-              data-testid="owner-decision"
-              style={{ border: "1px solid #10b981", borderRadius: 6, padding: "1rem", marginBottom: "1rem", background: "#ecfdf5" }}>
-              <div style={{ fontWeight: 700 }}>Owner Decision</div>
-              <div data-testid="owner-decision-type" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
-                {ownerDecision.decisionType}
-              </div>
-              {ownerDecision.rationale && <div style={{ marginTop: "0.5rem" }}>{ownerDecision.rationale}</div>}
-              {ownerDecision.supersededById && (
-                <div className="SUPERSEDED_DECISION" style={{ marginTop: "0.25rem", color: "#ef4444", fontSize: "0.8rem" }}>
-                  Superseded
+          <div className="SYSTEM_RECOMMENDATION system-recommendation-section" data-testid="system-recommendation-section">
+            {systemRec ? (
+              <div data-testid="system-recommendation"
+                style={{ border: "1px solid #3b82f6", borderRadius: 6, padding: "1rem", marginBottom: "1rem", background: "#eff6ff" }}>
+                <div style={{ fontWeight: 700, marginBottom: "0.25rem" }}>
+                  System Recommendation
                 </div>
-              )}
-            </div>
-          )}
+                <div data-testid="system-rec-value" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+                  {systemRec.recommendation}
+                </div>
+                <div style={{ marginTop: "0.5rem", color: "#374151" }}>{systemRec.rationale}</div>
+                <div style={{ marginTop: "0.25rem", color: "#6b7280", fontSize: "0.85rem" }}>
+                  Confidence: {systemRec.confidence}%
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: "#6b7280", fontStyle: "italic", marginBottom: "1rem" }}>No system recommendation yet.</p>
+            )}
+          </div>
+
+          <div className="OWNER_DECISION owner-decision-section" data-testid="owner-decision-section">
+            {ownerDecision ? (
+              <div
+                className={ownerDecision.supersededById ? "SUPERSEDED_DECISION" : ""}
+                data-testid="owner-decision"
+                style={{ border: "1px solid #10b981", borderRadius: 6, padding: "1rem", marginBottom: "1rem", background: "#ecfdf5" }}>
+                <div style={{ fontWeight: 700 }}>Owner Decision</div>
+                <div data-testid="owner-decision-type" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+                  {ownerDecision.decisionType}
+                </div>
+                {ownerDecision.rationale && <div style={{ marginTop: "0.5rem" }}>{ownerDecision.rationale}</div>}
+                {ownerDecision.supersededById && (
+                  <div className="SUPERSEDED_DECISION" style={{ marginTop: "0.25rem", color: "#ef4444", fontSize: "0.8rem" }}>
+                    Superseded
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p style={{ color: "#6b7280", fontStyle: "italic", marginBottom: "1rem" }}>No owner decision recorded yet.</p>
+            )}
+          </div>
 
           {session.status === "OWNER_DECISION_REQUIRED" && (
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
