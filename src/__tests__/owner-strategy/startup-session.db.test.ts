@@ -90,6 +90,7 @@ afterAll(async () => {
   await db.startupIdeaRecord.deleteMany({ where: { workspaceId: wsB } });
   await db.ownerStartupSession.deleteMany({ where: { workspaceId: wsA } });
   await db.ownerStartupSession.deleteMany({ where: { workspaceId: wsB } });
+  await db.auditEvent.deleteMany({ where: { actorId: actor } });
   await db.user.delete({ where: { id: actor } });
 });
 
