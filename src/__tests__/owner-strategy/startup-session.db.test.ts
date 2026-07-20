@@ -16,8 +16,13 @@ import {
   createStartupSession,
   getStartupSession,
   listStartupSessions,
+  updateContextProfile,
+  recordOwnerDecision,
+  recordEvidenceItem,
+  buildAndPersistEconomicModel,
 } from "@/services/owner-strategy/startup-session.service";
 import { NotFoundError } from "@/infra/errors";
+import type { EconomicInputs } from "@/domain/owner-strategy/startup-economics";
 import type { StartupIntake, StartupIdea } from "@/domain/owner-strategy/startup-mode.types";
 
 const actor = randomUUID();
@@ -219,5 +224,235 @@ describe("[db] Startup session persistence", () => {
 
     const session = await db.ownerStartupSession.findFirst({ where: { id: sessionId } });
     expect(session!.recommendedName).toBeNull();
+  });
+});
+
+describe("[db][concurrency] Startup session concurrent operations", () => {
+  it("[db] concurrent profile updates — only one wins with optimistic lock", async () => {
+    const sessionId = await createStartupSession({
+      workspaceId: wsA,
+      actorId: actor,
+      intake,
+      ideas: [viableIdea],
+    });
+
+    // First update establishes version=1 — succeeds
+    await updateContextProfile(wsA, sessionId, actor, { step: "first" }, "first update", 0);
+
+    // Second update with stale expectedVersion=0 should fail
+    await expect(
+      updateContextProfile(wsA, sessionId, actor, { step: "stale" }, "stale update", 0)
+    ).rejects.toThrow("CONCURRENCY_CONFLICT");
+
+    // Correct version=1 succeeds
+    const r = await updateContextProfile(wsA, sessionId, actor, { step: "second" }, "second update", 1);
+    expect(r.versionNumber).toBe(2);
+  });
+
+  it("[db] simultaneous profile updates — exactly one wins via updateMany optimistic lock", async () => {
+    const sessionId = await createStartupSession({
+      workspaceId: wsA,
+      actorId: actor,
+      intake,
+      ideas: [viableIdea],
+    });
+
+    // Fire two concurrent updates without specifying expectedVersion — race on DB row version
+    const results = await Promise.allSettled([
+      updateContextProfile(wsA, sessionId, actor, { racer: "A" }, "racer A"),
+      updateContextProfile(wsA, sessionId, actor, { racer: "B" }, "racer B"),
+    ]);
+
+    const succeeded = results.filter((r) => r.status === "fulfilled");
+    const failed = results.filter((r) => r.status === "rejected");
+
+    // Exactly one must win
+    expect(succeeded.length).toBe(1);
+    expect(failed.length).toBe(1);
+    const winner = succeeded[0] as PromiseFulfilledResult<{ versionId: string; versionNumber: number }>;
+    expect(winner.value.versionNumber).toBe(1);
+  });
+
+  it("[db] duplicate evidence submission is idempotent", async () => {
+    const sessionId = await createStartupSession({
+      workspaceId: wsA,
+      actorId: actor,
+      intake,
+      ideas: [viableIdea],
+    });
+
+    const key = `evidence-idem-${sessionId}`;
+    const id1 = await recordEvidenceItem(wsA, sessionId, actor, {
+      idempotencyKey: key,
+      sourceType: "OWNER_ENTERED",
+      evidenceType: "CUSTOMER_INTERVIEW",
+      observedResult: "Customer confirmed demand",
+    });
+    const id2 = await recordEvidenceItem(wsA, sessionId, actor, {
+      idempotencyKey: key,
+      sourceType: "OWNER_ENTERED",
+      evidenceType: "CUSTOMER_INTERVIEW",
+      observedResult: "Customer confirmed demand",
+    });
+
+    expect(id1).toBe(id2);
+
+    const count = await db.startupEvidenceRecord.count({ where: { sessionId, idempotencyKey: key } });
+    expect(count).toBe(1);
+  });
+
+  it("[db] concurrent owner decisions — supersession chain is consistent", async () => {
+    const sessionId = await createStartupSession({
+      workspaceId: wsA,
+      actorId: actor,
+      intake,
+      ideas: [viableIdea],
+    });
+
+    const d1 = await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "HOLD", rationale: "first" });
+    const d2 = await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "second" });
+
+    const first = await db.startupOwnerDecision.findFirst({ where: { id: d1 } });
+    const second = await db.startupOwnerDecision.findFirst({ where: { id: d2 } });
+
+    // First decision superseded by second
+    expect(first!.supersededById).toBe(d2);
+    // Second is active
+    expect(second!.supersededById).toBeNull();
+
+    const session = await db.ownerStartupSession.findFirst({ where: { id: sessionId } });
+    expect(session!.currentOwnerDecisionId).toBe(d2);
+  });
+
+  it("[db] economic model versions — sequential versioning is preserved", async () => {
+    const sessionId = await createStartupSession({
+      workspaceId: wsA,
+      actorId: actor,
+      intake,
+      ideas: [viableIdea],
+    });
+
+    const ideas = await db.startupIdeaRecord.findMany({ where: { sessionId } });
+    const ideaId = ideas[0].id;
+
+    const economicInputs: EconomicInputs = {
+      startupCostCents: 300000n,
+      fixedMonthlyCostCents: 100000n,
+      variableUnitCostCents: 1000n,
+      pricePerUnitCents: 5000n,
+      cacCents: 2000n,
+      workingCapitalCents: 50000n,
+      paymentDelayDays: 0,
+      ownerLabourHoursPerWeek: 40,
+      availableCapitalCents: 1000000n,
+      ownerMonthlyNeedCents: 200000n,
+    };
+
+    const m1 = await buildAndPersistEconomicModel(wsA, sessionId, ideaId, actor, economicInputs);
+    const m2 = await buildAndPersistEconomicModel(wsA, sessionId, ideaId, actor, economicInputs);
+
+    const model1 = await db.startupEconomicModel.findFirst({ where: { id: m1 } });
+    const model2 = await db.startupEconomicModel.findFirst({ where: { id: m2 } });
+
+    expect(model1!.versionNumber).toBe(1);
+    expect(model2!.versionNumber).toBe(2);
+    // First model superseded by second
+    expect(model1!.supersededById).toBe(m2);
+  });
+
+  it("[db] cross-workspace denial for getStartupSession", async () => {
+    const wsC = randomUUID();
+    const sessionId = await createStartupSession({
+      workspaceId: wsA,
+      actorId: actor,
+      intake,
+      ideas: [viableIdea],
+    });
+
+    await expect(getStartupSession(wsC, sessionId)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("[db] cross-workspace denial for updateContextProfile", async () => {
+    const wsC = randomUUID();
+    const sessionId = await createStartupSession({
+      workspaceId: wsA,
+      actorId: actor,
+      intake,
+      ideas: [viableIdea],
+    });
+
+    await expect(
+      updateContextProfile(wsC, sessionId, actor, { hack: true })
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("[db] audit events are rolled back when transaction fails", async () => {
+    const fakeSessionId = randomUUID();
+
+    // Attempt to record evidence for a non-existent session — transaction should roll back
+    // Evidence create will fail FK because session doesn't exist, so audit event is never written
+    const beforeCount = await db.auditEvent.count({ where: { actorId: actor } });
+
+    await expect(
+      recordEvidenceItem(wsA, fakeSessionId, actor, {
+        idempotencyKey: null,
+        sourceType: "OWNER_ENTERED",
+        evidenceType: "CUSTOMER_INTERVIEW",
+        observedResult: "This should fail",
+      })
+    ).rejects.toThrow();
+
+    const afterCount = await db.auditEvent.count({ where: { actorId: actor } });
+    expect(afterCount).toBe(beforeCount);
+  });
+
+  it("[db] concurrent evidence submissions with same idempotency key — only one record created", async () => {
+    const sessionId = await createStartupSession({
+      workspaceId: wsA,
+      actorId: actor,
+      intake,
+      ideas: [viableIdea],
+    });
+
+    const key = `concurrent-idem-${randomUUID()}`;
+    const results = await Promise.allSettled([
+      recordEvidenceItem(wsA, sessionId, actor, {
+        idempotencyKey: key,
+        sourceType: "OWNER_ENTERED",
+        evidenceType: "PRICING_OBSERVATION",
+        observedResult: "Price is $50",
+      }),
+      recordEvidenceItem(wsA, sessionId, actor, {
+        idempotencyKey: key,
+        sourceType: "OWNER_ENTERED",
+        evidenceType: "PRICING_OBSERVATION",
+        observedResult: "Price is $50",
+      }),
+    ]);
+
+    const ids = results
+      .filter((r) => r.status === "fulfilled")
+      .map((r) => (r as PromiseFulfilledResult<string>).value);
+
+    // All returned IDs must be the same (idempotency)
+    const unique = new Set(ids);
+    expect(unique.size).toBe(1);
+
+    const count = await db.startupEvidenceRecord.count({ where: { sessionId, idempotencyKey: key } });
+    expect(count).toBe(1);
+  });
+
+  it("[db] listing sessions never returns sessions from a different workspace", async () => {
+    const wsIsolated = randomUUID();
+    await createStartupSession({
+      workspaceId: wsA,
+      actorId: actor,
+      sessionLabel: "isolation-probe",
+      intake,
+      ideas: [viableIdea],
+    });
+
+    const isolatedSessions = await listStartupSessions(wsIsolated);
+    expect(isolatedSessions.every((s) => s.workspaceId !== wsA)).toBe(true);
   });
 });

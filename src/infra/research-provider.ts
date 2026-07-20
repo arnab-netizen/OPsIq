@@ -1,8 +1,19 @@
 /**
  * Research provider boundary — defines the contract for all external data acquisition.
- * Concrete implementations: StaticStubProvider (CI/test), HttpFetchProvider (production).
+ * Concrete implementations: StaticStubProvider (CI/test), SafePublicHttpFetchProvider (production).
  * No business logic here; this is pure I/O boundary.
  */
+
+export type ProviderCapability =
+  | "WEB_SEARCH"
+  | "PUBLIC_WEB_FETCH"
+  | "OFFICIAL_SOURCE_FETCH"
+  | "GOVERNMENT_PORTAL_LOOKUP"
+  | "MARKETPLACE_OBSERVATION"
+  | "CONNECTED_INTERNAL_DATA"
+  | "DOCUMENT_EXTRACTION";
+
+export type ProviderType = "STATIC_STUB" | "SAFE_HTTP_FETCH" | "CONNECTED_INTERNAL";
 
 export type AcquisitionStatus =
   | "ACQUIRED"
@@ -41,6 +52,10 @@ export interface ResearchProvider {
   readonly providerType: string;
   canHandle(domain: string): boolean;
   acquire(request: ResearchRequest): Promise<ResearchResult>;
+  search(query: string): Promise<{ title: string; url: string; snippet: string }[]>;
+  fetch(url: string): Promise<{ body: string; contentType: string; retrievedAt: Date }>;
+  healthCheck(): Promise<boolean>;
+  capabilities(): ProviderCapability[];
 }
 
 /**
@@ -59,7 +74,7 @@ export class StaticStubProvider implements ResearchProvider {
       reliabilityClassification: "INFERRED",
       confidence: 40,
       limitations: "Stub fixture — replace with live data in production",
-      retrievedAt: new Date("2026-01-01T00:00:00Z"),
+      retrievedAt: undefined, // resolved to new Date() at acquire time — not a fixed stub date
     },
     market_size: {
       status: "REQUIRES_OWNER",
@@ -103,8 +118,24 @@ export class StaticStubProvider implements ResearchProvider {
     },
   };
 
+  capabilities(): ProviderCapability[] {
+    return [];
+  }
+
   canHandle(_domain: string): boolean {
     return true; // Stub handles all domains — returns REQUIRES_OWNER for unknowns
+  }
+
+  async search(_query: string): Promise<{ title: string; url: string; snippet: string }[]> {
+    return [];
+  }
+
+  async fetch(_url: string): Promise<{ body: string; contentType: string; retrievedAt: Date }> {
+    return { body: "", contentType: "text/plain", retrievedAt: new Date() };
+  }
+
+  async healthCheck(): Promise<boolean> {
+    return true;
   }
 
   async acquire(request: ResearchRequest): Promise<ResearchResult> {
@@ -125,9 +156,17 @@ export class StaticStubProvider implements ResearchProvider {
   }
 }
 
-/** Registry — returns the appropriate provider for a domain in the current environment. */
+/** Registry — returns the appropriate provider for the current environment. Fail closed: unknown env → stub. */
 export function getResearchProvider(): ResearchProvider {
-  // Production: could switch on env to return an HttpFetchProvider.
-  // For now the stub is the only concrete implementation.
+  if (process.env.NODE_ENV === "test" || process.env.RESEARCH_PROVIDER === "stub") {
+    return new StaticStubProvider();
+  }
+  if (process.env.NODE_ENV === "production" || process.env.RESEARCH_PROVIDER === "http") {
+    // Lazy import to avoid pulling fetch-provider into test bundles
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { SafePublicHttpFetchProvider } = require("./safe-http-fetch-provider") as typeof import("./safe-http-fetch-provider");
+    return new SafePublicHttpFetchProvider();
+  }
+  // Development / staging: stub by default; set RESEARCH_PROVIDER=http to enable real fetching
   return new StaticStubProvider();
 }

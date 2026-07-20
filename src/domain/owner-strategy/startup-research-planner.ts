@@ -7,6 +7,15 @@
  */
 
 export type AcquisitionMode = "AUTO" | "REQUIRES_OWNER_APPROVAL" | "HUMAN_ONLY";
+
+export type OwnerTaskType =
+  | "OWNER_PRIVATE_FACT_REQUIRED"
+  | "OWNER_AUTHORIZATION_REQUIRED"
+  | "OWNER_CONNECTOR_REQUIRED"
+  | "OWNER_OUTREACH_APPROVAL_REQUIRED"
+  | "OWNER_PHYSICAL_ACTION_REQUIRED"
+  | "OWNER_PROFESSIONAL_ADVICE_REQUIRED"
+  | "OWNER_NEGOTIATION_REQUIRED";
 export type RetrievalCost = "FREE" | "LOW" | "MEDIUM" | "HIGH";
 export type ReliabilityLevel = "AUTHORITATIVE" | "OFFICIAL" | "FIELD" | "INFERRED" | "UNVERIFIED";
 
@@ -35,10 +44,33 @@ export interface ResearchPlanDraft {
 
 export interface MinimizedOwnerTask {
   domain: string;
+  taskType: OwnerTaskType;
   prompt: string;
   estimatedTimeMinutes: number;
   importance: "CRITICAL" | "IMPORTANT" | "OPTIONAL";
   alternatives: string[];
+  // What OpsIQ completed on its own before handing off to owner
+  completedByOpsIQ: string;
+  // Exact knowledge or action gap that only the owner can close
+  exactGap: string;
+  // Why software cannot complete this without the owner
+  whySoftwareCannotComplete: string;
+  // Prepared script or question set for the owner to use
+  preparedScript: string;
+  // Specific targets (suppliers, customers, authorities, advisors) to contact
+  targetShortlist: string[];
+  // Form for recording the evidence the owner collects
+  evidenceForm: string;
+  // What a passing result looks like
+  passCriteria: string;
+  // What a failing result looks like
+  failCriteria: string;
+  // Estimated out-of-pocket cost to the owner
+  estimatedCostLabel: string;
+  // Estimated owner effort in hours
+  ownerEffortHours: number;
+  // What happens next depending on the result
+  followUpLogic: string;
 }
 
 const STANDARD_DOMAINS: Omit<EvidenceDomain, "acquisitionMode">[] = [
@@ -143,19 +175,59 @@ export function buildResearchPlan(
   };
 }
 
+function classifyOwnerTaskType(domain: EvidenceDomain): OwnerTaskType {
+  if (domain.ownerApprovalRequired && domain.domain === "regulatory_requirements") {
+    return "OWNER_AUTHORIZATION_REQUIRED";
+  }
+  if (domain.domain === "customer_demand") {
+    return "OWNER_OUTREACH_APPROVAL_REQUIRED";
+  }
+  if (domain.domain === "supplier_availability") {
+    return "OWNER_NEGOTIATION_REQUIRED";
+  }
+  if (domain.domain === "delivery_cost_structure") {
+    return "OWNER_PRIVATE_FACT_REQUIRED";
+  }
+  if (domain.domain === "market_size") {
+    return "OWNER_PROFESSIONAL_ADVICE_REQUIRED";
+  }
+  if (domain.ownerApprovalRequired) {
+    return "OWNER_AUTHORIZATION_REQUIRED";
+  }
+  return "OWNER_PHYSICAL_ACTION_REQUIRED";
+}
+
 export function minimizeOwnerTasks(
   domains: EvidenceDomain[],
   autoAcquired: string[]
 ): MinimizedOwnerTask[] {
   const remaining = domains.filter((d) => !autoAcquired.includes(d.domain));
-  return remaining.map((d) => ({
-    domain: d.domain,
-    prompt: `Collect: ${d.requiredEvidence}. Best source: ${d.bestSource}. Fallback: ${d.fallbackSource}.`,
-    estimatedTimeMinutes:
+  return remaining.map((d) => {
+    const effortMinutes =
       d.retrievalCost === "FREE" ? 30
       : d.retrievalCost === "LOW" ? 60
-      : 120,
-    importance: d.decisionValue >= 85 ? "CRITICAL" : d.decisionValue >= 65 ? "IMPORTANT" : "OPTIONAL",
-    alternatives: [d.fallbackSource],
-  }));
+      : 120;
+    const taskType = classifyOwnerTaskType(d);
+    return {
+      domain: d.domain,
+      taskType,
+      prompt: `Collect: ${d.requiredEvidence}. Best source: ${d.bestSource}. Fallback: ${d.fallbackSource}.`,
+      estimatedTimeMinutes: effortMinutes,
+      importance: d.decisionValue >= 85 ? "CRITICAL" : d.decisionValue >= 65 ? "IMPORTANT" : "OPTIONAL",
+      alternatives: [d.fallbackSource],
+      completedByOpsIQ: `Identified evidence domain "${d.domain}", determined best source (${d.bestSource}), and confirmed OpsIQ cannot auto-acquire because: canAutoAcquire=${d.canAutoAcquire}.`,
+      exactGap: d.requiredEvidence,
+      whySoftwareCannotComplete: d.canAutoAcquire
+        ? `Owner approval required before acquisition.`
+        : `This evidence requires ${taskType === "OWNER_PHYSICAL_ACTION_REQUIRED" ? "physical presence or direct contact" : "privileged owner knowledge or authority"} that OpsIQ cannot substitute.`,
+      preparedScript: `1. Contact: ${d.bestSource}.\n2. Ask: "${d.requiredEvidence}"\n3. Record exact response, source name, date, and any caveats.`,
+      targetShortlist: [d.bestSource, d.fallbackSource],
+      evidenceForm: `Observed result: ___\nSource name: ___\nDate collected: ___\nLimitations: ___\nConfidence (0-100): ___`,
+      passCriteria: `Evidence is specific, sourced, and directly answers: "${d.requiredEvidence}"`,
+      failCriteria: `No usable data found or only unverifiable estimates available.`,
+      estimatedCostLabel: d.retrievalCost === "FREE" ? "$0" : d.retrievalCost === "LOW" ? "<$100" : "<$500",
+      ownerEffortHours: Math.round(effortMinutes / 60 * 10) / 10,
+      followUpLogic: `If PASS: mark domain acquired, advance to next evidence gap. If FAIL: escalate to fallback (${d.fallbackSource}) or mark as UNKNOWN_INPUT with implication for decision confidence.`,
+    };
+  });
 }

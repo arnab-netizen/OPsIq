@@ -3,7 +3,7 @@
  * Full lifecycle management for OwnerStartupSession.
  * All mutations emit audit events. Workspace isolation enforced on all operations.
  */
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
 import { db } from "@/lib/db";
 import { validateStartup } from "@/domain/owner-strategy/startup-mode";
 import type { StartupIntake, StartupIdea, IdeaEvaluation } from "@/domain/owner-strategy/startup-mode.types";
@@ -180,7 +180,8 @@ export async function updateContextProfile(
   sessionId: string,
   actorId: string,
   profileData: Record<string, unknown>,
-  changeRationale?: string
+  changeRationale?: string,
+  expectedVersion?: number
 ): Promise<{ versionId: string; versionNumber: number }> {
   const versionId = randomUUID();
 
@@ -190,6 +191,15 @@ export async function updateContextProfile(
       select: { id: true, profileVersion: true },
     });
     if (!session) throw new NotFoundError("OwnerStartupSession", sessionId);
+
+    // Optimistic locking: if caller supplied expectedVersion, confirm it matches current
+    if (expectedVersion !== undefined && session.profileVersion !== expectedVersion) {
+      const err = new Error(
+        `CONCURRENCY_CONFLICT: profile version mismatch — expected ${expectedVersion}, found ${session.profileVersion}`
+      );
+      (err as Error & { code: string }).code = "CONCURRENCY_CONFLICT";
+      throw err;
+    }
 
     const newVersion = session.profileVersion + 1;
 
@@ -205,14 +215,21 @@ export async function updateContextProfile(
       },
     });
 
-    await tx.ownerStartupSession.update({
-      where: { id: sessionId },
+    // Optimistic update — only modifies the row if profileVersion still matches
+    const updated = await tx.ownerStartupSession.updateMany({
+      where: { id: sessionId, profileVersion: session.profileVersion },
       data: {
         profileVersion: newVersion,
         currentProfileVersionId: versionId,
         updatedAt: new Date(),
       },
     });
+
+    if (updated.count === 0) {
+      const err = new Error("CONCURRENCY_CONFLICT: profile was modified by a concurrent request");
+      (err as Error & { code: string }).code = "CONCURRENCY_CONFLICT";
+      throw err;
+    }
 
     await emitAuditEvent({
       workspaceId,
@@ -688,6 +705,103 @@ export async function createSystemRecommendation(
   return recId;
 }
 
+// ─── Approval Package Hash ────────────────────────────────────────────────────
+
+/**
+ * Computes a server-side SHA-256 over the canonical approval package identifiers.
+ * Never accept from the client — always compute here before persisting.
+ */
+export function computeApprovalPackageHash(components: {
+  sessionId: string;
+  ideaId?: string | null;
+  profileVersionId?: string | null;
+  economicModelId?: string | null;
+  readinessId?: string | null;
+  systemRecId?: string | null;
+  businessModelId?: string | null;
+  marketSizingId?: string | null;
+  validationPlanId?: string | null;
+}): string {
+  const canonical = [
+    components.sessionId,
+    components.ideaId ?? "",
+    components.profileVersionId ?? "",
+    components.economicModelId ?? "",
+    components.readinessId ?? "",
+    components.systemRecId ?? "",
+    components.businessModelId ?? "",
+    components.marketSizingId ?? "",
+    components.validationPlanId ?? "",
+  ].join("|");
+  return createHash("sha256").update(canonical).digest("hex");
+}
+
+// ─── Stale-Reapproval Enforcement ────────────────────────────────────────────
+
+export interface StalenessCheckResult {
+  isStale: boolean;
+  changedInputs: string[];
+  originalHash: string | null;
+  currentHash: string;
+}
+
+export async function checkApprovalStaleness(
+  workspaceId: string,
+  sessionId: string,
+  currentComponents: Parameters<typeof computeApprovalPackageHash>[0]
+): Promise<StalenessCheckResult> {
+  const session = await db.ownerStartupSession.findFirst({
+    where: { id: sessionId, workspaceId },
+    select: { currentOwnerDecisionId: true },
+  });
+
+  const currentHash = computeApprovalPackageHash(currentComponents);
+
+  if (!session?.currentOwnerDecisionId) {
+    return { isStale: false, changedInputs: [], originalHash: null, currentHash };
+  }
+
+  const decision = await db.startupOwnerDecision.findFirst({
+    where: { id: session.currentOwnerDecisionId, decisionType: "GO" },
+    select: {
+      packageHashSha256: true,
+      linkedProfileVersionId: true,
+      linkedEconomicModelId: true,
+      linkedReadinessId: true,
+      linkedSystemRecId: true,
+    },
+  });
+
+  if (!decision || !decision.packageHashSha256) {
+    return { isStale: false, changedInputs: [], originalHash: null, currentHash };
+  }
+
+  if (decision.packageHashSha256 === currentHash) {
+    return { isStale: false, changedInputs: [], originalHash: decision.packageHashSha256, currentHash };
+  }
+
+  const changedInputs: string[] = [];
+  if (decision.linkedProfileVersionId !== (currentComponents.profileVersionId ?? null)) {
+    changedInputs.push("profile");
+  }
+  if (decision.linkedEconomicModelId !== (currentComponents.economicModelId ?? null)) {
+    changedInputs.push("economicModel");
+  }
+  if (decision.linkedReadinessId !== (currentComponents.readinessId ?? null)) {
+    changedInputs.push("readiness");
+  }
+  if (decision.linkedSystemRecId !== (currentComponents.systemRecId ?? null)) {
+    changedInputs.push("systemRecommendation");
+  }
+
+  return {
+    isStale: true,
+    changedInputs,
+    originalHash: decision.packageHashSha256,
+    currentHash,
+  };
+}
+
 // ─── Owner Decision ───────────────────────────────────────────────────────────
 
 export interface OwnerDecisionInput {
@@ -709,7 +823,7 @@ export interface OwnerDecisionInput {
   linkedBusinessModelId?: string | null;
   linkedMarketSizingId?: string | null;
   linkedValidationPlanId?: string | null;
-  packageHashSha256?: string | null;
+  // packageHashSha256 is always computed server-side — never accepted from the client
 }
 
 export async function recordOwnerDecision(
@@ -758,7 +872,17 @@ export async function recordOwnerDecision(
         linkedBusinessModelId: input.linkedBusinessModelId ?? null,
         linkedMarketSizingId: input.linkedMarketSizingId ?? null,
         linkedValidationPlanId: input.linkedValidationPlanId ?? null,
-        packageHashSha256: input.packageHashSha256 ?? null,
+        packageHashSha256: computeApprovalPackageHash({
+          sessionId,
+          ideaId: input.ideaId,
+          profileVersionId: input.linkedProfileVersionId,
+          economicModelId: input.linkedEconomicModelId,
+          readinessId: input.linkedReadinessId,
+          systemRecId: input.linkedSystemRecId,
+          businessModelId: input.linkedBusinessModelId,
+          marketSizingId: input.linkedMarketSizingId,
+          validationPlanId: input.linkedValidationPlanId,
+        }),
       },
     });
 

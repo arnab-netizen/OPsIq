@@ -120,7 +120,7 @@ describe("boundary binding", () => {
       ownerApprovedBy: "owner-1",
       approvedAt: NOW,
       validFrom: new Date("2026-06-20T00:00:00.000Z"),
-      validUntil: new Date("2026-07-20T00:00:00.000Z"),
+      validUntil: new Date(Date.now() + 4 * 365 * 24 * 60 * 60 * 1000),
       maxUses: null,
       allowedRoles: ["counter_staff"],
       forbiddenRoles: [],

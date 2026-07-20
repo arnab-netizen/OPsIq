@@ -9,6 +9,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
 import { createObjective } from "@/services/owner-mode/business-objective.service";
+import { checkApprovalStaleness } from "@/services/owner-strategy/startup-session.service";
 import { Prisma } from "@/generated/prisma/client";
 
 export interface BlueprintInput {
@@ -31,6 +32,9 @@ export interface BlueprintResult {
   taskIds: string[];
   kpiIds: string[];
   riskIds: string[];
+  resourceAllocationIds: string[];
+  constraintIds: string[];
+  outcomeIds: string[];
 }
 
 export async function createBlueprint(
@@ -38,6 +42,41 @@ export async function createBlueprint(
   actorId: string,
   input: BlueprintInput
 ): Promise<BlueprintResult> {
+  // Stale-reapproval guard: block blueprint if material inputs changed since GO
+  const ownerDecision = await db.startupOwnerDecision.findFirst({
+    where: { id: input.ownerDecisionId },
+    select: {
+      packageHashSha256: true,
+      linkedProfileVersionId: true,
+      linkedEconomicModelId: true,
+      linkedReadinessId: true,
+      linkedSystemRecId: true,
+      linkedBusinessModelId: true,
+      linkedMarketSizingId: true,
+      linkedValidationPlanId: true,
+      decisionType: true,
+    },
+  });
+  if (!ownerDecision) throw new NotFoundError("StartupOwnerDecision", input.ownerDecisionId);
+
+  const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, {
+    sessionId: input.sessionId,
+    ideaId: input.ideaId,
+    profileVersionId: ownerDecision.linkedProfileVersionId,
+    economicModelId: ownerDecision.linkedEconomicModelId,
+    readinessId: ownerDecision.linkedReadinessId,
+    systemRecId: ownerDecision.linkedSystemRecId,
+    businessModelId: ownerDecision.linkedBusinessModelId,
+    marketSizingId: ownerDecision.linkedMarketSizingId,
+    validationPlanId: ownerDecision.linkedValidationPlanId,
+  });
+
+  if (staleness.isStale) {
+    throw new ConflictError(
+      `STALE_REAPPROVAL_REQUIRED: approval package has changed since GO decision. Changed inputs: ${staleness.changedInputs.join(", ")}. Owner must re-approve before blueprint creation.`
+    );
+  }
+
   // Idempotency: check if blueprint already exists (non-superseded)
   const existing = await db.startupExecutionBlueprint.findFirst({
     where: {
@@ -67,6 +106,9 @@ export async function createBlueprint(
   const taskIds: string[] = [];
   const kpiIds: string[] = [];
   const riskIds: string[] = [];
+  const resourceAllocationIds: string[] = [];
+  const constraintIds: string[] = [];
+  const outcomeIds: string[] = [];
 
   // createObjective uses its own transaction internally — call outside the main tx
   const objective = await createObjective({
@@ -195,6 +237,64 @@ export async function createBlueprint(
       });
     }
 
+    // Link resource allocations to the startup objective
+    const resourcePool = await tx.resourcePool.findFirst({
+      where: { workspaceId, isActive: true },
+      select: { id: true },
+    });
+    if (resourcePool) {
+      const raId = randomUUID();
+      resourceAllocationIds.push(raId);
+      await tx.resourceAllocation.create({
+        data: {
+          id: raId,
+          workspaceId,
+          poolId: resourcePool.id,
+          objectiveId,
+          allocationAmount: 1,
+          priority: 70,
+          status: "ALLOCATED",
+          allocatedBy: actorId,
+          idempotencyKey: `blueprint_${blueprintId}_pool_${resourcePool.id}`,
+        },
+      });
+    }
+
+    // Record startup-specific constraints identified during validation
+    const constraintId = randomUUID();
+    constraintIds.push(constraintId);
+    await tx.constraintResolutionRecord.create({
+      data: {
+        id: constraintId,
+        workspaceId,
+        constraintType: "CAPITAL",
+        constraintSource: "INTERNAL",
+        title: `${idea.name}: startup capital constraint`,
+        bindingScore: 70,
+        remediationAction: "Validate capital sufficiency before first spend",
+        status: "ACTIVE",
+        linkedObjectiveId: objectiveId,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Record funded initiative expected outcome
+    const outcomeId = randomUUID();
+    outcomeIds.push(outcomeId);
+    await tx.fundedInitiativeOutcome.create({
+      data: {
+        id: outcomeId,
+        workspaceId,
+        businessId: workspaceId,
+        initiativeLabel: `${idea.name} startup launch`,
+        outcome: "PENDING",
+        nextStep: taskTitles[0] ?? "Validate first customer",
+        safeForLearning: true,
+        expectedImpact: input.targetValue ?? null,
+        createdBy: actorId,
+      },
+    });
+
     // Create blueprint record
     await tx.startupExecutionBlueprint.create({
       data: {
@@ -207,6 +307,9 @@ export async function createBlueprint(
         taskIds: taskIds as unknown as object,
         kpiIds: kpiIds as unknown as object,
         riskIds: riskIds as unknown as object,
+        resourceAllocationIds: resourceAllocationIds as unknown as object,
+        constraintIds: constraintIds as unknown as object,
+        outcomeIds: outcomeIds as unknown as object,
         blueprintStatus: "ACTIVE",
         createdBy: actorId,
       },
@@ -237,5 +340,5 @@ export async function createBlueprint(
     );
   });
 
-  return { blueprintId, objectiveId, taskIds, kpiIds, riskIds };
+  return { blueprintId, objectiveId, taskIds, kpiIds, riskIds, resourceAllocationIds, constraintIds, outcomeIds };
 }

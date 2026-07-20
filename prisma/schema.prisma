@@ -2072,10 +2072,13 @@ model StartupExecutionBlueprint {
   ideaId          String              @map("idea_id") @db.Uuid
   ownerDecisionId String              @map("owner_decision_id") @db.Uuid
   objectiveId     String?             @map("objective_id") @db.Uuid
-  taskIds         Json                @default("[]") @map("task_ids")
-  kpiIds          Json                @default("[]") @map("kpi_ids")
-  riskIds         Json                @default("[]") @map("risk_ids")
-  blueprintStatus String              @default("DRAFT") @map("blueprint_status")  // DRAFT | ACTIVE | SUPERSEDED
+  taskIds                Json                @default("[]") @map("task_ids")
+  kpiIds                 Json                @default("[]") @map("kpi_ids")
+  riskIds                Json                @default("[]") @map("risk_ids")
+  resourceAllocationIds  Json                @default("[]") @map("resource_allocation_ids")
+  constraintIds          Json                @default("[]") @map("constraint_ids")
+  outcomeIds             Json                @default("[]") @map("outcome_ids")
+  blueprintStatus        String              @default("DRAFT") @map("blueprint_status")  // DRAFT | ACTIVE | SUPERSEDED
   createdAt       DateTime            @default(now()) @map("created_at")
   createdBy       String              @map("created_by") @db.Uuid
 
