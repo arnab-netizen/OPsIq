@@ -51,22 +51,22 @@ describe("startup-lifecycle", () => {
   describe("assertValidTransition — invalid transitions throw", () => {
     // Scenario: DRAFT → APPROVED skips all intermediate steps
     it("DRAFT → APPROVED throws", () => {
-      expect(() => assertValidTransition("DRAFT", "APPROVED")).toThrow(/Invalid startup session transition/);
+      expect(() => assertValidTransition("DRAFT", "APPROVED")).toThrow(/Invalid state transition/);
     });
 
     it("REJECTED → DRAFT throws (terminal status has no outgoing transitions)", () => {
-      expect(() => assertValidTransition("REJECTED", "DRAFT")).toThrow(/Invalid startup session transition/);
+      expect(() => assertValidTransition("REJECTED", "DRAFT")).toThrow(/Invalid state transition/);
     });
 
     it("APPROVED → REJECTED throws (must go through OWNER_DECISION_REQUIRED)", () => {
-      expect(() => assertValidTransition("APPROVED", "REJECTED")).toThrow(/Invalid startup session transition/);
+      expect(() => assertValidTransition("APPROVED", "REJECTED")).toThrow(/Invalid state transition/);
     });
 
     it("DRAFT → SCREENING skips CONTEXT_CAPTURE and IDEA_GENERATION", () => {
-      expect(() => assertValidTransition("DRAFT", "SCREENING")).toThrow(/Invalid startup session transition/);
+      expect(() => assertValidTransition("DRAFT", "SCREENING")).toThrow(/Invalid state transition/);
     });
 
-    it("error message lists the allowed targets", () => {
+    it("error message contains the from and to states", () => {
       let message = "";
       try {
         assertValidTransition("DRAFT", "APPROVED");
@@ -75,7 +75,6 @@ describe("startup-lifecycle", () => {
       }
       expect(message).toContain("DRAFT");
       expect(message).toContain("APPROVED");
-      expect(message).toContain("CONTEXT_CAPTURE"); // the only allowed next step from DRAFT
     });
   });
 

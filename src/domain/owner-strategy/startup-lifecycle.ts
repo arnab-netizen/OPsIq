@@ -55,10 +55,7 @@ export function assertValidTransition(
 ): void {
   const allowed = VALID_TRANSITIONS.get(from) ?? [];
   if (!allowed.includes(to)) {
-    const err = new InvalidStateTransitionError("OwnerStartupSession", from, to);
-    const allowedList = allowed.length > 0 ? allowed.join(", ") : "none";
-    err.message = `Invalid startup session transition: ${from} → ${to}. Allowed from ${from}: [${allowedList}]`;
-    throw err;
+    throw new InvalidStateTransitionError("OwnerStartupSession", from, to);
   }
 }
 
