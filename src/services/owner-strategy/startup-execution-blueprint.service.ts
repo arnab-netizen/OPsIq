@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
-import { createObjective } from "@/services/owner-mode/business-objective.service";
+import { createObjectiveInTx } from "@/services/owner-mode/business-objective.service";
 import { checkApprovalStaleness } from "@/services/owner-strategy/startup-session.service";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -46,7 +46,7 @@ export async function createBlueprint(
   const ownerDecision = await db.startupOwnerDecision.findFirst({
     where: { id: input.ownerDecisionId },
     select: {
-      packageHashSha256: true,
+      linkedIdeaVersionId: true,
       linkedProfileVersionId: true,
       linkedEconomicModelId: true,
       linkedReadinessId: true,
@@ -59,9 +59,10 @@ export async function createBlueprint(
   });
   if (!ownerDecision) throw new NotFoundError("StartupOwnerDecision", input.ownerDecisionId);
 
+  // Pass versioned artifact IDs from the decision — checkApprovalStaleness queries current snapshots internally
   const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, {
-    sessionId: input.sessionId,
     ideaId: input.ideaId,
+    ideaVersionId: ownerDecision.linkedIdeaVersionId,
     profileVersionId: ownerDecision.linkedProfileVersionId,
     economicModelId: ownerDecision.linkedEconomicModelId,
     readinessId: ownerDecision.linkedReadinessId,
@@ -110,21 +111,25 @@ export async function createBlueprint(
   const constraintIds: string[] = [];
   const outcomeIds: string[] = [];
 
-  // createObjective uses its own transaction internally — call outside the main tx
-  const objective = await createObjective({
-    workspaceId,
-    actorId,
-    title: input.objectiveTitle,
-    description: input.objectiveDescription,
-    objectiveType: "GROWTH",
-    targetMetricName: input.targetMetricName,
-    targetValue: input.targetValue,
-    deadline: input.deadline,
-  });
-  const objectiveId = objective.id;
+  let capturedObjectiveId = "";
 
-  await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Link objective to startup
+  try {
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Create objective atomically inside the main transaction
+    const objective = await createObjectiveInTx(tx, {
+      workspaceId,
+      actorId,
+      title: input.objectiveTitle,
+      description: input.objectiveDescription,
+      objectiveType: "GROWTH",
+      targetMetricName: input.targetMetricName,
+      targetValue: input.targetValue,
+      deadline: input.deadline,
+    });
+    const objectiveId = objective.id;
+    capturedObjectiveId = objectiveId;
+
+    // Link objective to startup session + idea
     await tx.businessObjective.update({
       where: { id: objectiveId },
       data: {
@@ -339,6 +344,18 @@ export async function createBlueprint(
       tx
     );
   });
+  } catch (err: unknown) {
+    // P2002: unique constraint on (sessionId, ideaId, blueprintStatus) — concurrent blueprint race
+    if (
+      err instanceof Error &&
+      (err as { code?: string }).code === "P2002"
+    ) {
+      throw new ConflictError(
+        `Blueprint already exists for this idea — concurrent creation detected (blueprintId race on sessionId=${input.sessionId} ideaId=${input.ideaId})`
+      );
+    }
+    throw err;
+  }
 
-  return { blueprintId, objectiveId, taskIds, kpiIds, riskIds, resourceAllocationIds, constraintIds, outcomeIds };
+  return { blueprintId, objectiveId: capturedObjectiveId, taskIds, kpiIds, riskIds, resourceAllocationIds, constraintIds, outcomeIds };
 }

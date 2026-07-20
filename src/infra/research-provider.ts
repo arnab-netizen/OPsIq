@@ -156,17 +156,39 @@ export class StaticStubProvider implements ResearchProvider {
   }
 }
 
-/** Registry — returns the appropriate provider for the current environment. Fail closed: unknown env → stub. */
+/**
+ * Registry — returns the appropriate provider for the current environment.
+ * Fail-closed: unrecognised environments throw a configuration error rather than
+ * silently returning the CI stub, which would hide misconfiguration in production.
+ *
+ * Recognised modes:
+ *   NODE_ENV=test | RESEARCH_PROVIDER=stub  → StaticStubProvider (no network)
+ *   NODE_ENV=production | RESEARCH_PROVIDER=http → SafePublicHttpFetchProvider
+ *   NODE_ENV=development + RESEARCH_PROVIDER=stub → StaticStubProvider (explicit opt-in)
+ */
 export function getResearchProvider(): ResearchProvider {
-  if (process.env.NODE_ENV === "test" || process.env.RESEARCH_PROVIDER === "stub") {
+  const override = process.env.RESEARCH_PROVIDER;
+  const env = process.env.NODE_ENV;
+
+  if (override === "stub" || env === "test") {
     return new StaticStubProvider();
   }
-  if (process.env.NODE_ENV === "production" || process.env.RESEARCH_PROVIDER === "http") {
+  if (override === "http" || env === "production") {
     // Lazy import to avoid pulling fetch-provider into test bundles
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { SafePublicHttpFetchProvider } = require("./safe-http-fetch-provider") as typeof import("./safe-http-fetch-provider");
     return new SafePublicHttpFetchProvider();
   }
-  // Development / staging: stub by default; set RESEARCH_PROVIDER=http to enable real fetching
-  return new StaticStubProvider();
+  if (env === "development") {
+    // Development requires an explicit RESEARCH_PROVIDER=stub or RESEARCH_PROVIDER=http
+    throw new Error(
+      `RESEARCH_PROVIDER_CONFIG_ERROR: NODE_ENV=development requires explicit RESEARCH_PROVIDER env var (stub|http). ` +
+      `Set RESEARCH_PROVIDER=stub to use CI fixtures or RESEARCH_PROVIDER=http to enable live fetching.`
+    );
+  }
+  // Unknown environments (staging, preview, etc.) must configure RESEARCH_PROVIDER explicitly.
+  throw new Error(
+    `RESEARCH_PROVIDER_CONFIG_ERROR: unrecognised environment "${env ?? "(unset)"}". ` +
+    `Set RESEARCH_PROVIDER=stub or RESEARCH_PROVIDER=http explicitly.`
+  );
 }

@@ -705,15 +705,212 @@ export async function createSystemRecommendation(
   return recId;
 }
 
+// ─── Business Model Version ───────────────────────────────────────────────────
+
+export interface BusinessModelInput {
+  customerSegment: string;
+  customerProblem: string;
+  valueProposition: string;
+  deliveryMethod: string;
+  revenueModel: string;
+  pricingHypothesis: string;
+  costStructure?: Record<string, unknown>;
+  acquisitionChannels?: string[];
+  keyMetrics?: string[];
+  regulatoryRequirements?: string[];
+  failureModes?: string[];
+}
+
+export async function buildAndPersistBusinessModel(
+  workspaceId: string,
+  sessionId: string,
+  ideaId: string,
+  actorId: string,
+  input: BusinessModelInput
+): Promise<string> {
+  const modelId = randomUUID();
+
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const existing = await tx.startupBusinessModelVersion.findFirst({
+      where: { ideaId, workspaceId },
+      orderBy: { versionNumber: "desc" },
+      select: { versionNumber: true, id: true },
+    });
+    const newVersion = (existing?.versionNumber ?? 0) + 1;
+
+    if (existing) {
+      await tx.startupBusinessModelVersion.update({
+        where: { id: existing.id },
+        data: { supersededById: modelId },
+      });
+    }
+
+    await tx.startupBusinessModelVersion.create({
+      data: {
+        id: modelId,
+        workspaceId,
+        sessionId,
+        ideaId,
+        versionNumber: newVersion,
+        customerSegment: input.customerSegment,
+        customerProblem: input.customerProblem,
+        valueProposition: input.valueProposition,
+        deliveryMethod: input.deliveryMethod,
+        revenueModel: input.revenueModel,
+        pricingHypothesis: input.pricingHypothesis,
+        costStructure: (input.costStructure ?? {}) as unknown as object,
+        acquisitionChannels: (input.acquisitionChannels ?? []) as unknown as object,
+        keyMetrics: (input.keyMetrics ?? []) as unknown as object,
+        regulatoryRequirements: (input.regulatoryRequirements ?? []) as unknown as object,
+        failureModes: (input.failureModes ?? []) as unknown as object,
+        createdBy: actorId,
+      },
+    });
+
+    await emitAuditEvent({
+      workspaceId,
+      actorId,
+      eventName: AUDIT_EVENTS.STARTUP_BUSINESS_MODEL_BUILT,
+      payload: { sessionId, ideaId, modelId, versionNumber: newVersion },
+    }, tx);
+  });
+
+  return modelId;
+}
+
+// ─── Validation Plan ─────────────────────────────────────────────────────────
+
+export interface ValidationPlanInput {
+  passCriteria: string;
+  failCriteria: string;
+  spendingLimitCents?: bigint | null;
+  stopConditions?: string[];
+  safetyLimits?: Record<string, unknown>;
+}
+
+export async function buildAndPersistValidationPlan(
+  workspaceId: string,
+  sessionId: string,
+  ideaId: string,
+  actorId: string,
+  input: ValidationPlanInput
+): Promise<string> {
+  const planId = randomUUID();
+
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Validation plan is one-per-idea (unique on ideaId) — supersede if existing
+    const existing = await tx.startupValidationPlan.findFirst({
+      where: { ideaId, workspaceId },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await tx.startupValidationPlan.delete({ where: { id: existing.id } });
+    }
+
+    await tx.startupValidationPlan.create({
+      data: {
+        id: planId,
+        workspaceId,
+        sessionId,
+        ideaId,
+        passCriteria: input.passCriteria,
+        failCriteria: input.failCriteria,
+        spendingLimitCents: input.spendingLimitCents ?? null,
+        stopConditions: (input.stopConditions ?? []) as unknown as object,
+        safetyLimits: (input.safetyLimits ?? {}) as unknown as object,
+        approvedByOwner: false,
+      },
+    });
+
+    await emitAuditEvent({
+      workspaceId,
+      actorId,
+      eventName: AUDIT_EVENTS.STARTUP_VALIDATION_PLAN_CREATED,
+      payload: { sessionId, ideaId, planId },
+    }, tx);
+  });
+
+  return planId;
+}
+
+// ─── Market Sizing ────────────────────────────────────────────────────────────
+
+export interface MarketSizingInput {
+  reachableMarketUnits?: bigint | null;
+  reachableMarketRevenueCents?: bigint | null;
+  serviceableUnits?: bigint | null;
+  serviceableRevenueCents?: bigint | null;
+  initialCustomerPool?: number | null;
+  capacityLimitedRevenueCents?: bigint | null;
+  sizingStatus?: "ESTIMATED" | "INSUFFICIENT_EVIDENCE";
+  confidence?: number;
+  assumptions?: string[];
+  evidence?: string[];
+  sizingRange?: { low: number; mid: number; high: number };
+}
+
+export async function buildAndPersistMarketSizing(
+  workspaceId: string,
+  sessionId: string,
+  ideaId: string,
+  actorId: string,
+  input: MarketSizingInput
+): Promise<string> {
+  const sizingId = randomUUID();
+
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const existing = await tx.startupMarketSizing.findFirst({
+      where: { ideaId, workspaceId },
+      orderBy: { versionNumber: "desc" },
+      select: { versionNumber: true },
+    });
+    const newVersion = (existing?.versionNumber ?? 0) + 1;
+
+    await tx.startupMarketSizing.create({
+      data: {
+        id: sizingId,
+        workspaceId,
+        sessionId,
+        ideaId,
+        versionNumber: newVersion,
+        reachableMarketUnits: input.reachableMarketUnits ?? null,
+        reachableMarketRevenueCents: input.reachableMarketRevenueCents ?? null,
+        serviceableUnits: input.serviceableUnits ?? null,
+        serviceableRevenueCents: input.serviceableRevenueCents ?? null,
+        initialCustomerPool: input.initialCustomerPool ?? null,
+        capacityLimitedRevenueCents: input.capacityLimitedRevenueCents ?? null,
+        sizingStatus: input.sizingStatus ?? "ESTIMATED",
+        confidence: input.confidence ?? 50,
+        assumptions: (input.assumptions ?? []) as unknown as object,
+        evidence: (input.evidence ?? []) as unknown as object,
+        sizingRange: (input.sizingRange ?? {}) as unknown as object,
+        createdBy: actorId,
+      },
+    });
+
+    await emitAuditEvent({
+      workspaceId,
+      actorId,
+      eventName: AUDIT_EVENTS.STARTUP_MARKET_SIZING_BUILT,
+      payload: { sessionId, ideaId, sizingId, versionNumber: newVersion, sizingStatus: input.sizingStatus ?? "ESTIMATED" },
+    }, tx);
+  });
+
+  return sizingId;
+}
+
 // ─── Approval Package Hash ────────────────────────────────────────────────────
 
 /**
- * Computes a server-side SHA-256 over the canonical approval package identifiers.
- * Never accept from the client — always compute here before persisting.
+ * All 21 fields that constitute a complete approval package.
+ * Any change to any field after a GO decision makes the approval stale.
+ * Never accept packageHashSha256 from the client — always compute server-side.
  */
-export function computeApprovalPackageHash(components: {
+export interface ApprovalPackageComponents {
   sessionId: string;
   ideaId?: string | null;
+  ideaVersionId?: string | null;
   profileVersionId?: string | null;
   economicModelId?: string | null;
   readinessId?: string | null;
@@ -721,19 +918,75 @@ export function computeApprovalPackageHash(components: {
   businessModelId?: string | null;
   marketSizingId?: string | null;
   validationPlanId?: string | null;
-}): string {
-  const canonical = [
-    components.sessionId,
-    components.ideaId ?? "",
-    components.profileVersionId ?? "",
-    components.economicModelId ?? "",
-    components.readinessId ?? "",
-    components.systemRecId ?? "",
-    components.businessModelId ?? "",
-    components.marketSizingId ?? "",
-    components.validationPlanId ?? "",
-  ].join("|");
-  return createHash("sha256").update(canonical).digest("hex");
+  // Snapshot arrays — order-independent (sorted before hashing)
+  evidenceSnapshotIds?: string[];
+  riskSnapshotIds?: string[];
+  constraintSnapshotIds?: string[];
+  resourceSnapshotIds?: string[];
+  // Policy terms — if any term changes, reapproval required
+  spendingLimitCents?: bigint | string | null;
+  permittedActions?: string[];
+  prohibitedActions?: string[];
+  materialAssumptions?: string[];
+  validUntil?: Date | string | null;
+  reviewDate?: Date | string | null;
+}
+
+/** Canonical JSON SHA-256 over all 21 approval-package fields (algorithm version "v2"). */
+export function computeApprovalPackageHash(c: ApprovalPackageComponents): string {
+  const canonical = {
+    v: "2",
+    sessionId: c.sessionId,
+    ideaId: c.ideaId ?? null,
+    ideaVersionId: c.ideaVersionId ?? null,
+    profileVersionId: c.profileVersionId ?? null,
+    economicModelId: c.economicModelId ?? null,
+    readinessId: c.readinessId ?? null,
+    systemRecId: c.systemRecId ?? null,
+    businessModelId: c.businessModelId ?? null,
+    marketSizingId: c.marketSizingId ?? null,
+    validationPlanId: c.validationPlanId ?? null,
+    evidenceSnapshotIds: [...(c.evidenceSnapshotIds ?? [])].sort(),
+    riskSnapshotIds: [...(c.riskSnapshotIds ?? [])].sort(),
+    constraintSnapshotIds: [...(c.constraintSnapshotIds ?? [])].sort(),
+    resourceSnapshotIds: [...(c.resourceSnapshotIds ?? [])].sort(),
+    spendingLimitCents: c.spendingLimitCents != null ? String(c.spendingLimitCents) : null,
+    permittedActions: [...(c.permittedActions ?? [])].sort(),
+    prohibitedActions: [...(c.prohibitedActions ?? [])].sort(),
+    materialAssumptions: [...(c.materialAssumptions ?? [])].sort(),
+    validUntil: c.validUntil != null
+      ? (c.validUntil instanceof Date ? c.validUntil.toISOString() : String(c.validUntil))
+      : null,
+    reviewDate: c.reviewDate != null
+      ? (c.reviewDate instanceof Date ? c.reviewDate.toISOString() : String(c.reviewDate))
+      : null,
+  };
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
+/** Queries current snapshot IDs for a session — used by both decision recording and staleness checks. */
+async function queryCurrentSnapshotIds(workspaceId: string, sessionId: string) {
+  const [evidence, risks, constraints] = await Promise.all([
+    db.startupEvidenceRecord.findMany({
+      where: { sessionId, workspaceId },
+      select: { id: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    db.businessRiskEntry.findMany({
+      where: { linkedStartupSessionId: sessionId, workspaceId },
+      select: { id: true },
+    }),
+    db.constraintResolutionRecord.findMany({
+      where: { linkedStartupSessionId: sessionId, workspaceId },
+      select: { id: true },
+    }),
+  ]);
+  return {
+    evidenceSnapshotIds: evidence.map((r: { id: string }) => r.id),
+    riskSnapshotIds: risks.map((r: { id: string }) => r.id),
+    constraintSnapshotIds: constraints.map((r: { id: string }) => r.id),
+    resourceSnapshotIds: [] as string[], // ResourceAllocation has no direct session FK
+  };
 }
 
 // ─── Stale-Reapproval Enforcement ────────────────────────────────────────────
@@ -745,54 +998,111 @@ export interface StalenessCheckResult {
   currentHash: string;
 }
 
+/**
+ * Compares the current session state against the stored GO decision approval package.
+ * Self-contained: queries the DB for the current snapshot arrays.
+ * The caller supplies current versioned artifact IDs (what the session looks like now).
+ * Returns stale if: any artifact ID differs, any snapshot array differs, or the decision has expired.
+ */
 export async function checkApprovalStaleness(
   workspaceId: string,
   sessionId: string,
-  currentComponents: Parameters<typeof computeApprovalPackageHash>[0]
+  currentVersionedIds: {
+    ideaId?: string | null;
+    ideaVersionId?: string | null;
+    profileVersionId?: string | null;
+    economicModelId?: string | null;
+    readinessId?: string | null;
+    systemRecId?: string | null;
+    businessModelId?: string | null;
+    marketSizingId?: string | null;
+    validationPlanId?: string | null;
+  }
 ): Promise<StalenessCheckResult> {
   const session = await db.ownerStartupSession.findFirst({
     where: { id: sessionId, workspaceId },
     select: { currentOwnerDecisionId: true },
   });
 
-  const currentHash = computeApprovalPackageHash(currentComponents);
-
   if (!session?.currentOwnerDecisionId) {
-    return { isStale: false, changedInputs: [], originalHash: null, currentHash };
+    const noHash = computeApprovalPackageHash({ sessionId, ...currentVersionedIds });
+    return { isStale: false, changedInputs: [], originalHash: null, currentHash: noHash };
   }
 
   const decision = await db.startupOwnerDecision.findFirst({
     where: { id: session.currentOwnerDecisionId, decisionType: "GO" },
     select: {
       packageHashSha256: true,
+      linkedIdeaVersionId: true,
       linkedProfileVersionId: true,
       linkedEconomicModelId: true,
       linkedReadinessId: true,
       linkedSystemRecId: true,
+      linkedBusinessModelId: true,
+      linkedMarketSizingId: true,
+      linkedValidationPlanId: true,
+      evidenceSnapshotIds: true,
+      riskSnapshotIds: true,
+      constraintSnapshotIds: true,
+      resourceSnapshotIds: true,
+      spendingLimitCents: true,
+      permittedActions: true,
+      prohibitedActions: true,
+      materialAssumptions: true,
+      validUntil: true,
+      reviewDate: true,
     },
   });
 
   if (!decision || !decision.packageHashSha256) {
-    return { isStale: false, changedInputs: [], originalHash: null, currentHash };
+    const noDecHash = computeApprovalPackageHash({ sessionId, ...currentVersionedIds });
+    return { isStale: false, changedInputs: [], originalHash: null, currentHash: noDecHash };
   }
+
+  // Query current snapshot arrays from the DB
+  const currentSnapshots = await queryCurrentSnapshotIds(workspaceId, sessionId);
+
+  const currentComponents: ApprovalPackageComponents = {
+    sessionId,
+    ...currentVersionedIds,
+    ...currentSnapshots,
+    spendingLimitCents: decision.spendingLimitCents,
+    permittedActions: (decision.permittedActions as string[]) ?? [],
+    prohibitedActions: (decision.prohibitedActions as string[]) ?? [],
+    materialAssumptions: (decision.materialAssumptions as string[]) ?? [],
+    validUntil: decision.validUntil,
+    reviewDate: decision.reviewDate,
+  };
+
+  const currentHash = computeApprovalPackageHash(currentComponents);
 
   if (decision.packageHashSha256 === currentHash) {
     return { isStale: false, changedInputs: [], originalHash: decision.packageHashSha256, currentHash };
   }
 
+  // Build diff: identify which of 17 material inputs changed
   const changedInputs: string[] = [];
-  if (decision.linkedProfileVersionId !== (currentComponents.profileVersionId ?? null)) {
-    changedInputs.push("profile");
-  }
-  if (decision.linkedEconomicModelId !== (currentComponents.economicModelId ?? null)) {
-    changedInputs.push("economicModel");
-  }
-  if (decision.linkedReadinessId !== (currentComponents.readinessId ?? null)) {
-    changedInputs.push("readiness");
-  }
-  if (decision.linkedSystemRecId !== (currentComponents.systemRecId ?? null)) {
-    changedInputs.push("systemRecommendation");
-  }
+
+  const sortedJoin = (arr: unknown) => [...((arr as string[]) ?? [])].sort().join(",");
+
+  if ((decision.linkedIdeaVersionId ?? null) !== (currentVersionedIds.ideaVersionId ?? null)) changedInputs.push("ideaVersion");
+  if ((decision.linkedProfileVersionId ?? null) !== (currentVersionedIds.profileVersionId ?? null)) changedInputs.push("profile");
+  if ((decision.linkedEconomicModelId ?? null) !== (currentVersionedIds.economicModelId ?? null)) changedInputs.push("economicModel");
+  if ((decision.linkedReadinessId ?? null) !== (currentVersionedIds.readinessId ?? null)) changedInputs.push("readiness");
+  if ((decision.linkedSystemRecId ?? null) !== (currentVersionedIds.systemRecId ?? null)) changedInputs.push("systemRecommendation");
+  if ((decision.linkedBusinessModelId ?? null) !== (currentVersionedIds.businessModelId ?? null)) changedInputs.push("businessModel");
+  if ((decision.linkedMarketSizingId ?? null) !== (currentVersionedIds.marketSizingId ?? null)) changedInputs.push("marketSizing");
+  if ((decision.linkedValidationPlanId ?? null) !== (currentVersionedIds.validationPlanId ?? null)) changedInputs.push("validationPlan");
+  if (sortedJoin(decision.evidenceSnapshotIds) !== sortedJoin(currentSnapshots.evidenceSnapshotIds)) changedInputs.push("evidence");
+  if (sortedJoin(decision.riskSnapshotIds) !== sortedJoin(currentSnapshots.riskSnapshotIds)) changedInputs.push("risks");
+  if (sortedJoin(decision.constraintSnapshotIds) !== sortedJoin(currentSnapshots.constraintSnapshotIds)) changedInputs.push("constraints");
+  if (sortedJoin(decision.resourceSnapshotIds) !== sortedJoin(currentSnapshots.resourceSnapshotIds)) changedInputs.push("resources");
+  if (String(decision.spendingLimitCents ?? "") !== String(currentComponents.spendingLimitCents ?? "")) changedInputs.push("spendingLimit");
+  if (sortedJoin(decision.permittedActions) !== sortedJoin(currentComponents.permittedActions)) changedInputs.push("permittedActions");
+  if (sortedJoin(decision.prohibitedActions) !== sortedJoin(currentComponents.prohibitedActions)) changedInputs.push("prohibitedActions");
+  if (sortedJoin(decision.materialAssumptions) !== sortedJoin(currentComponents.materialAssumptions)) changedInputs.push("materialAssumptions");
+  // Check expiry: if validUntil is in the past, approval is stale regardless of content
+  if (decision.validUntil != null && decision.validUntil < new Date()) changedInputs.push("decisionExpired");
 
   return {
     isStale: true,
@@ -818,12 +1128,13 @@ export interface OwnerDecisionInput {
   linkedProfileVersionId?: string | null;
   linkedEconomicModelId?: string | null;
   linkedReadinessId?: string | null;
-  // Approval package completeness
+  // Versioned artifact completeness
   linkedIdeaVersionId?: string | null;
   linkedBusinessModelId?: string | null;
   linkedMarketSizingId?: string | null;
   linkedValidationPlanId?: string | null;
   // packageHashSha256 is always computed server-side — never accepted from the client
+  // Snapshot arrays are auto-captured from DB at decision time — not from client
 }
 
 export async function recordOwnerDecision(
@@ -833,6 +1144,32 @@ export async function recordOwnerDecision(
   input: OwnerDecisionInput
 ): Promise<string> {
   const decisionId = randomUUID();
+
+  // Capture current snapshot arrays outside the transaction (read-only queries)
+  const snapshots = await queryCurrentSnapshotIds(workspaceId, sessionId);
+
+  const packageHash = computeApprovalPackageHash({
+    sessionId,
+    ideaId: input.ideaId,
+    ideaVersionId: input.linkedIdeaVersionId,
+    profileVersionId: input.linkedProfileVersionId,
+    economicModelId: input.linkedEconomicModelId,
+    readinessId: input.linkedReadinessId,
+    systemRecId: input.linkedSystemRecId,
+    businessModelId: input.linkedBusinessModelId,
+    marketSizingId: input.linkedMarketSizingId,
+    validationPlanId: input.linkedValidationPlanId,
+    evidenceSnapshotIds: snapshots.evidenceSnapshotIds,
+    riskSnapshotIds: snapshots.riskSnapshotIds,
+    constraintSnapshotIds: snapshots.constraintSnapshotIds,
+    resourceSnapshotIds: snapshots.resourceSnapshotIds,
+    spendingLimitCents: input.spendingLimitCents,
+    permittedActions: input.permittedActions,
+    prohibitedActions: input.prohibitedActions,
+    materialAssumptions: input.materialAssumptions,
+    validUntil: input.validUntil,
+    reviewDate: input.reviewDate,
+  });
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
     // Supersede existing current decision
@@ -872,17 +1209,13 @@ export async function recordOwnerDecision(
         linkedBusinessModelId: input.linkedBusinessModelId ?? null,
         linkedMarketSizingId: input.linkedMarketSizingId ?? null,
         linkedValidationPlanId: input.linkedValidationPlanId ?? null,
-        packageHashSha256: computeApprovalPackageHash({
-          sessionId,
-          ideaId: input.ideaId,
-          profileVersionId: input.linkedProfileVersionId,
-          economicModelId: input.linkedEconomicModelId,
-          readinessId: input.linkedReadinessId,
-          systemRecId: input.linkedSystemRecId,
-          businessModelId: input.linkedBusinessModelId,
-          marketSizingId: input.linkedMarketSizingId,
-          validationPlanId: input.linkedValidationPlanId,
-        }),
+        evidenceSnapshotIds: snapshots.evidenceSnapshotIds as unknown as object,
+        riskSnapshotIds: snapshots.riskSnapshotIds as unknown as object,
+        constraintSnapshotIds: snapshots.constraintSnapshotIds as unknown as object,
+        resourceSnapshotIds: snapshots.resourceSnapshotIds as unknown as object,
+        hashVersion: 2,
+        policyVersion: "1",
+        packageHashSha256: packageHash,
       },
     });
 

@@ -3,7 +3,6 @@
  * Only fetches HTTPS URLs on the public internet. Never fetches private/loopback
  * addresses. Response bounded by size, timeout, and redirect limits.
  */
-import { createHash } from "crypto";
 import type { ResearchProvider, ResearchRequest, ResearchResult, ProviderCapability } from "./research-provider";
 
 const ALLOWED_PROTOCOL = "https:";
@@ -59,9 +58,11 @@ export class SafePublicHttpFetchProvider implements ResearchProvider {
     return ["PUBLIC_WEB_FETCH", "OFFICIAL_SOURCE_FETCH"];
   }
 
-  canHandle(domain: string): boolean {
-    // Only auto-acquire domains with public pricing or official data
-    return ["pricing_benchmarks"].includes(domain);
+  canHandle(_domain: string): boolean {
+    // No domain is auto-acquirable until a real source URL is configured.
+    // pricing_benchmarks previously pointed to a placeholder URL (research.opsiq.internal)
+    // that does not exist. That domain is reclassified as REQUIRES_OWNER.
+    return false;
   }
 
   async search(_query: string): Promise<{ title: string; url: string; snippet: string }[]> {
@@ -205,33 +206,15 @@ export class SafePublicHttpFetchProvider implements ResearchProvider {
       };
     }
 
-    // Construct a deterministic source URL placeholder (real production would use a configured URL)
-    const queryHash = createHash("sha256").update(request.query).digest("hex").slice(0, 8);
-    const sourceUrl = `https://research.opsiq.internal/pricing?q=${queryHash}`;
-
-    try {
-      const fetched = await this.fetch(sourceUrl);
-      return {
-        ...base,
-        status: "ACQUIRED",
-        sourceUrl,
-        sourceType: "HTTP_FETCH",
-        rawResult: fetched.body.slice(0, 2000),
-        extractedFacts: [{ rawExcerpt: fetched.body.slice(0, 500), fetchedAt: fetched.retrievedAt.toISOString() }],
-        reliabilityClassification: "OFFICIAL",
-        confidence: 60,
-        limitations: "Auto-acquired; manual verification recommended",
-        retrievedAt: fetched.retrievedAt,
-      };
-    } catch (err: unknown) {
-      const msg = extractMsg(err);
-      if (msg.startsWith("HTTP_4") || msg.startsWith("HTTP_404")) {
-        return { ...base, status: "FAILED_NOT_FOUND", extractedFacts: [], confidence: 0, limitations: msg };
-      }
-      if (msg.includes("AbortError") || msg.includes("timeout")) {
-        return { ...base, status: "FAILED_TIMEOUT", extractedFacts: [], confidence: 0, limitations: "Request timed out" };
-      }
-      return { ...base, status: "FAILED_PARSE_ERROR", extractedFacts: [], confidence: 0, limitations: msg };
-    }
+    // canHandle() returns false for all domains until a real source URL is configured.
+    // This path is only reached if the caller bypasses canHandle() — treat as REQUIRES_OWNER.
+    return {
+      ...base,
+      status: "REQUIRES_OWNER",
+      extractedFacts: [],
+      reliabilityClassification: "UNVERIFIED",
+      confidence: 0,
+      limitations: `Domain "${request.domain}" has no configured public source URL. Owner must supply evidence directly.`,
+    };
   }
 }

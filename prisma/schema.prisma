@@ -2005,7 +2005,13 @@ model StartupOwnerDecision {
   linkedBusinessModelId   String?             @map("linked_business_model_id") @db.Uuid
   linkedMarketSizingId    String?             @map("linked_market_sizing_id") @db.Uuid
   linkedValidationPlanId  String?             @map("linked_validation_plan_id") @db.Uuid
-  packageHashSha256       String?             @map("package_hash_sha256")  // SHA-256 of all linked artifact IDs — detects post-approval mutation
+  packageHashSha256       String?             @map("package_hash_sha256")  // SHA-256 of all 21 bound fields — detects any post-approval mutation
+  evidenceSnapshotIds     Json                @default("[]") @map("evidence_snapshot_ids")   // IDs of all evidence records at decision time
+  riskSnapshotIds         Json                @default("[]") @map("risk_snapshot_ids")        // IDs of all risk entries at decision time
+  constraintSnapshotIds   Json                @default("[]") @map("constraint_snapshot_ids")  // IDs of all constraint records at decision time
+  resourceSnapshotIds     Json                @default("[]") @map("resource_snapshot_ids")    // IDs of all resource allocations at decision time
+  hashVersion             Int                 @default(2) @map("hash_version")                // 1 = legacy pipe-delimited, 2 = canonical JSON v2
+  policyVersion           String              @default("1") @map("policy_version")             // version of approval policy rules applied
   supersededById          String?             @map("superseded_by_id") @db.Uuid
   createdAt               DateTime            @default(now()) @map("created_at")
 
