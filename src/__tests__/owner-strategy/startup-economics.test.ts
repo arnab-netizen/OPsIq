@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildEconomicModel,
   classifyEconomicViability,
+  buildPeriodCashFlow,
   type EconomicInputs,
 } from "../../domain/owner-strategy/startup-economics";
 
@@ -172,6 +173,61 @@ describe("startup-economics", () => {
     it("breakEvenVolume is a regular number (not bigint)", () => {
       const result = buildEconomicModel(viableInputs);
       expect(typeof result.breakEvenVolume).toBe("number");
+    });
+  });
+
+  // ── Period cash-flow model (Section 13) ──────────────────────────────────
+  describe("buildPeriodCashFlow", () => {
+    it("first period opening cash equals capitalAvailable minus startupCost", () => {
+      const result = buildPeriodCashFlow(viableInputs, 50);
+      // capitalAvailable 1_000_000 - startupCost 500_000 = 500_000
+      expect(result.periods[0].openingCashCents).toBe(BigInt(500_000));
+    });
+
+    it("detects break-even month when monthly revenue exceeds costs", () => {
+      // price 5000 * 50 = 250_000; varCost 2000 * 50 = 100_000; fixed 100_000; net = 50_000 > 0
+      const result = buildPeriodCashFlow(viableInputs, 50);
+      expect(result.firstBreakEvenMonth).toBe(1);
+      expect(result.sufficientData).toBe(true);
+    });
+
+    it("returns sufficientData=false and missingInputs when fixedMonthlyCostCents is null", () => {
+      const result = buildPeriodCashFlow({ ...viableInputs, fixedMonthlyCostCents: null }, 50);
+      expect(result.sufficientData).toBe(false);
+      expect(result.missingInputs).toContain("fixedMonthlyCostCents");
+      expect(result.periods[0].netCashMovementCents).toBeNull();
+    });
+
+    it("stops tracing after cash is exhausted", () => {
+      // $5 capital, burn $1 fixed/month, 0 revenue — exhausts in month 6
+      const sparseInputs: EconomicInputs = {
+        startupCostCents: BigInt(0),
+        fixedMonthlyCostCents: BigInt(100_000),
+        variableUnitCostCents: BigInt(0),
+        pricePerUnitCents: BigInt(0),
+        cacCents: null,
+        workingCapitalCents: null,
+        paymentDelayDays: null,
+        ownerLabourHoursPerWeek: null,
+        capitalAvailableCents: BigInt(500_000),
+        cashRunwayMonthsAvailable: null,
+      };
+      const result = buildPeriodCashFlow(sparseInputs, 0);
+      expect(result.firstExhaustionMonth).toBeDefined();
+      expect(result.periods.at(-1)!.cashExhausted).toBe(true);
+    });
+
+    it("all monetary period values are bigint when sufficient data", () => {
+      const result = buildPeriodCashFlow(viableInputs, 50);
+      const p = result.periods[0];
+      expect(typeof p.openingCashCents).toBe("bigint");
+      expect(typeof p.revenueCents).toBe("bigint");
+      expect(typeof p.closingCashCents).toBe("bigint");
+    });
+
+    it("horizonMonths controls maximum periods returned", () => {
+      const result = buildPeriodCashFlow(viableInputs, 50, 6);
+      expect(result.periods.length).toBeLessThanOrEqual(6);
     });
   });
 });

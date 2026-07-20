@@ -191,3 +191,91 @@ export function buildEconomicModel(inputs: EconomicInputs): EconomicModelResult 
 export function classifyEconomicViability(result: EconomicModelResult): EconomicClassification {
   return result.classification;
 }
+
+// ─── Period-level cash-flow model ────────────────────────────────────────────
+// Returns a month-by-month cashflow trace so the owner can see the burn path
+// to break-even or cash exhaustion without aggregated averages hiding it.
+
+export interface PeriodCashFlowEntry {
+  month: number;                  // 1-indexed
+  openingCashCents: bigint;
+  revenueCents: bigint | null;    // null when pricePerUnit or units unknown
+  variableCostCents: bigint | null;
+  fixedCostCents: bigint | null;
+  netCashMovementCents: bigint | null;
+  closingCashCents: bigint | null;
+  cumulativeProfitCents: bigint | null;
+  breakEvenReached: boolean;
+  cashExhausted: boolean;
+}
+
+export interface PeriodCashFlowResult {
+  periods: PeriodCashFlowEntry[];
+  firstBreakEvenMonth: number | null;
+  firstExhaustionMonth: number | null;
+  sufficientData: boolean;
+  missingInputs: string[];
+}
+
+/**
+ * Builds a monthly cash-flow trace for up to `horizonMonths` periods.
+ * Assumes constant monthly fixed cost, constant volume, and constant variable cost per unit.
+ * Production-safe: uses BigInt arithmetic throughout; no floating-point money.
+ */
+export function buildPeriodCashFlow(
+  inputs: EconomicInputs,
+  volumePerMonth: number,
+  horizonMonths = 24
+): PeriodCashFlowResult {
+  const missing: string[] = [];
+  if (inputs.fixedMonthlyCostCents == null) missing.push("fixedMonthlyCostCents");
+  if (inputs.pricePerUnitCents == null) missing.push("pricePerUnitCents");
+  if (inputs.variableUnitCostCents == null) missing.push("variableUnitCostCents");
+
+  const sufficientData = missing.length === 0;
+  const periods: PeriodCashFlowEntry[] = [];
+
+  const startupCost = inputs.startupCostCents ?? BigInt(0);
+  let cash: bigint = (inputs.capitalAvailableCents ?? BigInt(0)) - startupCost;
+  let cumProfit: bigint = BigInt(0);
+  let firstBreakEven: number | null = null;
+  let firstExhaustion: number | null = null;
+
+  const vol = BigInt(volumePerMonth);
+
+  for (let m = 1; m <= horizonMonths; m++) {
+    const opening = cash;
+    const revenue = sufficientData ? inputs.pricePerUnitCents! * vol : null;
+    const varCost = sufficientData ? inputs.variableUnitCostCents! * vol : null;
+    const fixedCost = inputs.fixedMonthlyCostCents ?? null;
+    const net = sufficientData ? revenue! - varCost! - fixedCost! : null;
+
+    if (net != null) {
+      cash += net;
+      cumProfit += net;
+    }
+
+    const breakEvenReached = net != null && net >= BigInt(0);
+    const cashExhausted = cash < BigInt(0);
+
+    if (breakEvenReached && firstBreakEven == null) firstBreakEven = m;
+    if (cashExhausted && firstExhaustion == null) firstExhaustion = m;
+
+    periods.push({
+      month: m,
+      openingCashCents: opening,
+      revenueCents: revenue,
+      variableCostCents: varCost,
+      fixedCostCents: fixedCost,
+      netCashMovementCents: net,
+      closingCashCents: sufficientData ? cash : null,
+      cumulativeProfitCents: sufficientData ? cumProfit : null,
+      breakEvenReached,
+      cashExhausted,
+    });
+
+    if (cashExhausted) break; // stop tracing after cash runs out
+  }
+
+  return { periods, firstBreakEvenMonth: firstBreakEven, firstExhaustionMonth: firstExhaustion, sufficientData, missingInputs: missing };
+}

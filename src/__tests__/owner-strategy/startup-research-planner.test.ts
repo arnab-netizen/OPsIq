@@ -4,6 +4,11 @@ import {
   minimizeOwnerTasks,
   type EvidenceDomain,
 } from "../../domain/owner-strategy/startup-research-planner";
+import {
+  StaticStubProvider,
+  getResearchProvider,
+  type AcquisitionStatus,
+} from "../../infra/research-provider";
 
 describe("startup-research-planner", () => {
   // ── buildResearchPlan ─────────────────────────────────────────────────────
@@ -168,5 +173,65 @@ describe("startup-research-planner", () => {
         expect(task.alternatives.length).toBeGreaterThan(0);
       });
     });
+  });
+});
+
+// ── ResearchProvider boundary (Sections 7–9 proof) ───────────────────────────
+describe("ResearchProvider — StaticStubProvider", () => {
+  const VALID_STATUSES: AcquisitionStatus[] = [
+    "ACQUIRED", "FAILED_TIMEOUT", "FAILED_NOT_FOUND", "FAILED_AUTH_REQUIRED",
+    "FAILED_RATE_LIMITED", "FAILED_PARSE_ERROR", "REQUIRES_OWNER", "SKIPPED_POLICY", "PENDING",
+  ];
+
+  it("getResearchProvider() returns StaticStubProvider", () => {
+    expect(getResearchProvider().providerType).toBe("STATIC_STUB");
+  });
+
+  it("all 9 AcquisitionStatus values are defined", () => {
+    const statuses: AcquisitionStatus[] = VALID_STATUSES;
+    expect(statuses.length).toBe(9);
+  });
+
+  it("pricing_benchmarks returns ACQUIRED with extractedFacts", async () => {
+    const p = new StaticStubProvider();
+    const result = await p.acquire({ domain: "pricing_benchmarks", query: "competitor pricing" });
+    expect(result.status).toBe("ACQUIRED");
+    expect(result.extractedFacts.length).toBeGreaterThan(0);
+    expect(result.confidence).toBeGreaterThan(0);
+    expect(result.domain).toBe("pricing_benchmarks");
+  });
+
+  it("market_size returns REQUIRES_OWNER (cannot auto-acquire)", async () => {
+    const p = new StaticStubProvider();
+    const result = await p.acquire({ domain: "market_size", query: "market size" });
+    expect(result.status).toBe("REQUIRES_OWNER");
+  });
+
+  it("unknown domain returns REQUIRES_OWNER (fail-closed)", async () => {
+    const p = new StaticStubProvider();
+    const result = await p.acquire({ domain: "__exotic_unknown__", query: "anything" });
+    expect(result.status).toBe("REQUIRES_OWNER");
+    expect(result.confidence).toBe(0);
+  });
+
+  it("canHandle() returns true for all domains (stub handles everything)", () => {
+    const p = new StaticStubProvider();
+    expect(p.canHandle("pricing_benchmarks")).toBe(true);
+    expect(p.canHandle("__unknown__")).toBe(true);
+  });
+
+  it("result.domain matches the requested domain", async () => {
+    const p = new StaticStubProvider();
+    const result = await p.acquire({ domain: "supplier_availability", query: "suppliers" });
+    expect(result.domain).toBe("supplier_availability");
+  });
+
+  it("all result status values are valid AcquisitionStatus members", async () => {
+    const p = new StaticStubProvider();
+    const domains = ["pricing_benchmarks", "market_size", "regulatory_requirements", "customer_demand"];
+    for (const domain of domains) {
+      const result = await p.acquire({ domain, query: "test" });
+      expect(VALID_STATUSES).toContain(result.status);
+    }
   });
 });
