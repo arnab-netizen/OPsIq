@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { use } from "react";
 
 interface IdeaRecord {
@@ -87,21 +87,18 @@ export default function StartupSessionPage({
   const [newIdeaIndustry, setNewIdeaIndustry] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const loadSession = useCallback(async () => {
+  async function loadSession() {
     try {
       const res = await fetch(`/api/owner/startup/sessions/${sessionId}`);
-      if (!res.ok) {
-        setPageMsg("Failed to load session");
-        return;
-      }
+      if (!res.ok) { setPageMsg("Failed to load session"); return; }
       const data = await res.json();
       setSession(data.session);
     } catch {
       setPageMsg("Network error loading session");
     }
-  }, [sessionId]);
+  }
 
-  const loadDecision = useCallback(async () => {
+  async function loadDecision() {
     try {
       const res = await fetch(`/api/owner/startup/sessions/${sessionId}/decision`);
       if (res.ok) {
@@ -112,12 +109,16 @@ export default function StartupSessionPage({
     } catch {
       // Non-fatal
     }
-  }, [sessionId]);
+  }
 
   useEffect(() => {
-    loadSession();
-    loadDecision();
-  }, [loadSession, loadDecision]);
+    async function load() {
+      await loadSession();
+      await loadDecision();
+    }
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   async function handleAddIdea(e: React.FormEvent) {
     e.preventDefault();
