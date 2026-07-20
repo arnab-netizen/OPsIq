@@ -41,6 +41,25 @@ interface SessionData {
   ideas: IdeaRecord[];
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Draft",
+  CONTEXT_CAPTURE: "Context Capture",
+  DISCOVERY: "Discovery",
+  IDEA_GENERATION: "Idea Generation",
+  SCREENING: "Screening",
+  VALIDATION_PLANNED: "Validation Planned",
+  VALIDATION_IN_PROGRESS: "Validation In Progress",
+  ECONOMICS_REVIEW: "Economics Review",
+  READINESS_REVIEW: "Readiness Review",
+  OWNER_DECISION_REQUIRED: "Decision Required",
+  APPROVED: "Approved",
+  MODIFICATION_REQUIRED: "Modification Required",
+  ON_HOLD: "On Hold",
+  REJECTED: "Rejected",
+  EXECUTION_PLANNED: "Execution Planned",
+  ACTIVE: "Active",
+};
+
 const SCREENING_STATUS_CLASS: Record<string, string> = {
   PASSED: "VALIDATED",
   CONDITIONALLY_PASSED: "UNTESTED_ASSUMPTION",
@@ -232,9 +251,9 @@ export default function StartupSessionPage({
         <div style={{ display: "flex", gap: "1rem", alignItems: "center", marginTop: "0.5rem" }}>
           <span
             className={`startup-status startup-status--${session.status.toLowerCase()}`}
-            data-testid="startup-session-status"
+            data-testid="session-status"
           >
-            Status: {session.status}
+            {STATUS_LABELS[session.status] ?? session.status}
           </span>
           <span data-testid="startup-profile-version">Profile v{session.profileVersion}</span>
         </div>
@@ -291,7 +310,7 @@ export default function StartupSessionPage({
       <div style={{ display: "flex", gap: "0", borderBottom: "2px solid #e5e7eb", marginBottom: "1.5rem" }}>
         {(["overview", "ideas", "evidence", "analysis", "decision", "blueprint"] as const).map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
-            data-testid={`startup-tab-${tab}`}
+            data-testid={`tab-${tab}`}
             style={{
               padding: "0.5rem 1rem",
               border: "none",
@@ -356,7 +375,7 @@ export default function StartupSessionPage({
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <span
                         className={`screening-badge ${SCREENING_STATUS_CLASS[idea.screeningStatus] ?? ""}`}
-                        data-testid={`screening-status-${idea.id}`}>
+                        data-testid={`idea-status-${idea.id}`}>
                         {idea.screeningStatus}
                       </span>
                     </div>
@@ -386,7 +405,7 @@ export default function StartupSessionPage({
       )}
 
       {activeTab === "decision" && (
-        <div data-testid="startup-tab-content-decision">
+        <div data-testid="decision-section">
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>Decision</h2>
 
           {systemRec && (
@@ -438,7 +457,7 @@ export default function StartupSessionPage({
       )}
 
       {activeTab === "blueprint" && (
-        <div data-testid="startup-tab-content-blueprint">
+        <div data-testid="blueprint-section">
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>Execution Blueprint</h2>
           {session.currentBlueprintId ? (
             <div data-testid="blueprint-exists">
@@ -453,7 +472,7 @@ export default function StartupSessionPage({
       )}
 
       {activeTab === "evidence" && (
-        <div data-testid="startup-tab-content-evidence">
+        <div data-testid="evidence-section">
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>Evidence</h2>
           <p>Record evidence via the API or use the analysis tab to run assessments.</p>
         </div>
