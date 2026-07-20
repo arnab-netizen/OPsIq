@@ -1659,6 +1659,8 @@ model StartupContextProfileVersion {
   versionNumber   Int      @map("version_number")
   profileData     Json     @map("profile_data")
   changeRationale String?  @map("change_rationale") @db.Text
+  supersededById  String?  @map("superseded_by_id") @db.Uuid
+  supersededAt    DateTime? @map("superseded_at")
   createdAt       DateTime @default(now()) @map("created_at")
 
   session         OwnerStartupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -1998,6 +2000,12 @@ model StartupOwnerDecision {
   linkedProfileVersionId  String?             @map("linked_profile_version_id") @db.Uuid
   linkedEconomicModelId   String?             @map("linked_economic_model_id") @db.Uuid
   linkedReadinessId       String?             @map("linked_readiness_id") @db.Uuid
+  // Approval package completeness — snapshot every versioned artifact at decision time
+  linkedIdeaVersionId     String?             @map("linked_idea_version_id") @db.Uuid
+  linkedBusinessModelId   String?             @map("linked_business_model_id") @db.Uuid
+  linkedMarketSizingId    String?             @map("linked_market_sizing_id") @db.Uuid
+  linkedValidationPlanId  String?             @map("linked_validation_plan_id") @db.Uuid
+  packageHashSha256       String?             @map("package_hash_sha256")  // SHA-256 of all linked artifact IDs — detects post-approval mutation
   supersededById          String?             @map("superseded_by_id") @db.Uuid
   createdAt               DateTime            @default(now()) @map("created_at")
 
@@ -2075,6 +2083,7 @@ model StartupExecutionBlueprint {
   idea            StartupIdeaRecord   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
   ownerDecision   StartupOwnerDecision @relation(fields: [ownerDecisionId], references: [id])
 
+  @@unique([sessionId, ideaId, blueprintStatus])
   @@index([workspaceId, sessionId])
   @@map("startup_execution_blueprint")
 }

@@ -10,6 +10,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   buildAndPersistResearchPlan,
   getOwnerResearchTasks,
+  executeAutoResearch,
 } from "@/services/owner-strategy/startup-session.service";
 import { db } from "@/lib/db";
 
@@ -43,7 +44,13 @@ export const POST = withCanonicalEnforcement(
       body.ideaName,
       body.industry
     );
-    return canonicalJson({ planId }, { status: 201 });
+    // Execute auto-acquirable domains immediately after plan creation
+    const autoResults = await executeAutoResearch(
+      ctx.verifiedWorkspaceId,
+      params.sessionId,
+      ctx.verifiedActorId
+    );
+    return canonicalJson({ planId, autoAcquisitions: autoResults }, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

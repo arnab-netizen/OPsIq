@@ -15,7 +15,8 @@ import { screenIdea, type BusinessFitProfile, type StartupIdeaInput } from "@/do
 import { generateHypotheses, prioritizeHypotheses, evaluateHypothesisResult } from "@/domain/owner-strategy/startup-hypothesis-engine";
 import { buildEconomicModel, type EconomicInputs } from "@/domain/owner-strategy/startup-economics";
 import { assessReadiness, type ReadinessInputs } from "@/domain/owner-strategy/startup-readiness";
-import { buildResearchPlan, minimizeOwnerTasks } from "@/domain/owner-strategy/startup-research-planner";
+import { buildResearchPlan, minimizeOwnerTasks, type EvidenceDomain } from "@/domain/owner-strategy/startup-research-planner";
+import { getResearchProvider, type AcquisitionStatus } from "@/infra/research-provider";
 import { writeMemoryEntry } from "@/services/owner-mode/operating-memory.service";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -703,6 +704,12 @@ export interface OwnerDecisionInput {
   linkedProfileVersionId?: string | null;
   linkedEconomicModelId?: string | null;
   linkedReadinessId?: string | null;
+  // Approval package completeness
+  linkedIdeaVersionId?: string | null;
+  linkedBusinessModelId?: string | null;
+  linkedMarketSizingId?: string | null;
+  linkedValidationPlanId?: string | null;
+  packageHashSha256?: string | null;
 }
 
 export async function recordOwnerDecision(
@@ -747,6 +754,11 @@ export async function recordOwnerDecision(
         linkedProfileVersionId: input.linkedProfileVersionId ?? null,
         linkedEconomicModelId: input.linkedEconomicModelId ?? null,
         linkedReadinessId: input.linkedReadinessId ?? null,
+        linkedIdeaVersionId: input.linkedIdeaVersionId ?? null,
+        linkedBusinessModelId: input.linkedBusinessModelId ?? null,
+        linkedMarketSizingId: input.linkedMarketSizingId ?? null,
+        linkedValidationPlanId: input.linkedValidationPlanId ?? null,
+        packageHashSha256: input.packageHashSha256 ?? null,
       },
     });
 
@@ -831,6 +843,62 @@ export async function buildAndPersistResearchPlan(
   });
 
   return planId;
+}
+
+export interface AutoResearchResult {
+  domain: string;
+  acquisitionId: string;
+  status: AcquisitionStatus;
+  confidence: number;
+}
+
+export async function executeAutoResearch(
+  workspaceId: string,
+  sessionId: string,
+  actorId: string
+): Promise<AutoResearchResult[]> {
+  const plan = await db.startupResearchPlan.findUnique({
+    where: { sessionId },
+    select: { id: true, evidenceDomains: true },
+  });
+  if (!plan) return [];
+
+  const provider = getResearchProvider();
+  const domains = plan.evidenceDomains as unknown as EvidenceDomain[];
+  const autoDomains = domains.filter((d) => d.canAutoAcquire && provider.canHandle(d.domain));
+
+  const results: AutoResearchResult[] = [];
+  for (const domain of autoDomains) {
+    const result = await provider.acquire({ domain: domain.domain, query: domain.requiredEvidence });
+    const acqId = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      const acq = await tx.startupResearchAcquisition.create({
+        data: {
+          workspaceId,
+          researchPlanId: plan.id,
+          domain: domain.domain,
+          sourceType: result.sourceType,
+          queryMethod: "AUTO_PROVIDER",
+          rawResult: result.rawResult ?? null,
+          extractedFacts: result.extractedFacts as unknown as object,
+          retrievedAt: result.retrievedAt ?? null,
+          reliabilityClassification: result.reliabilityClassification,
+          confidence: result.confidence,
+          limitations: result.limitations ?? null,
+          status: result.status,
+        },
+        select: { id: true },
+      });
+      await emitAuditEvent({
+        workspaceId,
+        actorId,
+        eventName: AUDIT_EVENTS.STARTUP_RESEARCH_ACQUIRED,
+        payload: { sessionId, domain: domain.domain, status: result.status, acquisitionId: acq.id },
+      }, tx);
+      return acq.id;
+    });
+    results.push({ domain: domain.domain, acquisitionId: acqId, status: result.status, confidence: result.confidence });
+  }
+  return results;
 }
 
 export async function getOwnerResearchTasks(

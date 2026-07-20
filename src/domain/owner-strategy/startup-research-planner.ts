@@ -1,6 +1,9 @@
 /**
  * Startup research planner — determines what evidence to acquire and how.
  * Pure domain: no I/O, no HTTP, no side effects.
+ *
+ * AcquisitionMode: AUTO means a ResearchProvider can acquire without owner intervention.
+ * Execution happens in the service layer via ResearchProvider (see src/infra/research-provider.ts).
  */
 
 export type AcquisitionMode = "AUTO" | "REQUIRES_OWNER_APPROVAL" | "HUMAN_ONLY";
@@ -90,9 +93,9 @@ const STANDARD_DOMAINS: Omit<EvidenceDomain, "acquisitionMode">[] = [
   {
     domain: "pricing_benchmarks",
     requiredEvidence: "What competitors or substitutes charge for similar solutions",
-    canAutoAcquire: false,
+    canAutoAcquire: true,  // ResearchProvider (StaticStubProvider / HttpFetchProvider) can fetch public pricing
     ownerApprovalRequired: false,
-    bestSource: "Competitor websites / price lists",
+    bestSource: "Competitor websites / public price lists",
     retrievalCost: "FREE",
     decisionValue: 75,
     reliability: "OFFICIAL",
