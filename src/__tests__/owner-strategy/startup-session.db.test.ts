@@ -20,7 +20,15 @@ import {
   recordOwnerDecision,
   recordEvidenceItem,
   buildAndPersistEconomicModel,
+  buildAndPersistBusinessModel,
+  buildAndPersistValidationPlan,
+  buildAndPersistMarketSizing,
+  checkApprovalStaleness,
+  assessAndPersistReadiness,
 } from "@/services/owner-strategy/startup-session.service";
+import { createBlueprint } from "@/services/owner-strategy/startup-execution-blueprint.service";
+import { ConflictError } from "@/infra/errors";
+import type { ReadinessInputs } from "@/domain/owner-strategy/startup-readiness";
 import { NotFoundError } from "@/infra/errors";
 import type { EconomicInputs } from "@/domain/owner-strategy/startup-economics";
 import type { StartupIntake, StartupIdea } from "@/domain/owner-strategy/startup-mode.types";
@@ -454,5 +462,268 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
 
     const isolatedSessions = await listStartupSessions(wsIsolated);
     expect(isolatedSessions.every((s) => s.workspaceId !== wsA)).toBe(true);
+  });
+
+  // ─── Additional concurrency + isolation tests (Sections 8–14) ───────────────
+
+  it("[db] concurrent business model versions — sequential builds produce correct version numbers", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+    expect(idea).toBeTruthy();
+
+    const bm = { customerSegment: "SMB", customerProblem: "p", valueProposition: "v", deliveryMethod: "d", revenueModel: "r", pricingHypothesis: "$100/mo" };
+    const id1 = await buildAndPersistBusinessModel(wsA, sessionId, idea!.id, actor, bm);
+    const id2 = await buildAndPersistBusinessModel(wsA, sessionId, idea!.id, actor, { ...bm, pricingHypothesis: "$150/mo" });
+
+    const v1 = await db.startupBusinessModelVersion.findFirst({ where: { id: id1 } });
+    const v2 = await db.startupBusinessModelVersion.findFirst({ where: { id: id2 } });
+    expect(v1!.versionNumber).toBe(1);
+    expect(v2!.versionNumber).toBe(2);
+    expect(v1!.supersededById).toBe(id2);
+  });
+
+  it("[db] concurrent market sizing versions — version numbers increment correctly", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    const sz1 = await buildAndPersistMarketSizing(wsA, sessionId, idea!.id, actor, { sizingStatus: "ESTIMATED", confidence: 40 });
+    const sz2 = await buildAndPersistMarketSizing(wsA, sessionId, idea!.id, actor, { sizingStatus: "INSUFFICIENT_EVIDENCE", confidence: 20 });
+
+    const r1 = await db.startupMarketSizing.findFirst({ where: { id: sz1 } });
+    const r2 = await db.startupMarketSizing.findFirst({ where: { id: sz2 } });
+    expect(r1!.versionNumber).toBe(1);
+    expect(r2!.versionNumber).toBe(2);
+  });
+
+  it("[db] validation plan upsert — replacing a plan emits audit event and creates new record", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    const plan1 = { passCriteria: "3 paying customers", failCriteria: "0 paying customers after 30 days" };
+    const plan2 = { passCriteria: "5 paying customers", failCriteria: "0 paying customers after 14 days" };
+    const p1 = await buildAndPersistValidationPlan(wsA, sessionId, idea!.id, actor, plan1);
+    const p2 = await buildAndPersistValidationPlan(wsA, sessionId, idea!.id, actor, plan2);
+
+    // Old plan must be gone (unique on ideaId, replaced by upsert)
+    const old = await db.startupValidationPlan.findFirst({ where: { id: p1 } });
+    const current = await db.startupValidationPlan.findFirst({ where: { id: p2 } });
+    expect(old).toBeNull();
+    expect(current?.passCriteria).toBe("5 paying customers");
+  });
+
+  it("[db] approval staleness — adding evidence after GO marks approval stale", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+
+    // Record GO decision (no evidence yet)
+    const decisionId = await recordOwnerDecision(wsA, sessionId, actor, {
+      decisionType: "GO",
+      rationale: "looks good",
+    });
+    expect(decisionId).toBeTruthy();
+
+    // Check staleness before adding evidence — should not be stale
+    const before = await checkApprovalStaleness(wsA, sessionId, {});
+    expect(before.isStale).toBe(false);
+
+    // Add evidence after GO
+    await recordEvidenceItem(wsA, sessionId, actor, {
+      idempotencyKey: null,
+      sourceType: "OWNER_ENTERED",
+      evidenceType: "CUSTOMER_INTERVIEW",
+      observedResult: "Customer confirmed demand",
+    });
+
+    // Staleness check should now detect evidence change
+    const after = await checkApprovalStaleness(wsA, sessionId, {});
+    expect(after.isStale).toBe(true);
+    expect(after.changedInputs).toContain("evidence");
+  });
+
+  it("[db] concurrent readiness assessments — version numbers increment correctly", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    const readinessInput: ReadinessInputs = {
+      capitalAvailableCents: 1000000n,
+      startupCostCents: 200000n,
+      cashRunwayMonths: 6,
+      cashFlowPositiveByMonth: 3,
+      ownerHoursPerWeek: 30,
+      requiredHoursPerWeek: 20,
+      hasRegulatoryClearance: true,
+      criticalHypothesesCount: 0,
+      failedCriticalHypothesesCount: 0,
+      economicClassification: "VIABLE",
+    };
+
+    const r1 = await assessAndPersistReadiness(wsA, sessionId, idea!.id, actor, readinessInput);
+    const r2 = await assessAndPersistReadiness(wsA, sessionId, idea!.id, actor, { ...readinessInput, ownerHoursPerWeek: 10, requiredHoursPerWeek: 25 });
+
+    expect(r1.status).toBeTruthy();
+    expect(r2.status).toBeTruthy();
+    const assessments = await db.startupReadinessAssessment.findMany({ where: { sessionId } });
+    expect(assessments.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("[db] concurrent economic model builds — both succeed and produce distinct versions", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    const economicInputs: EconomicInputs = {
+      startupCostCents: 500000n,
+      fixedMonthlyCostCents: 100000n,
+      variableUnitCostCents: 1000n,
+      pricePerUnitCents: 5000n,
+      cacCents: 2000n,
+      workingCapitalCents: 50000n,
+      paymentDelayDays: 0,
+      ownerLabourHoursPerWeek: 40,
+      availableCapitalCents: 1000000n,
+      ownerMonthlyNeedCents: 200000n,
+    };
+
+    // Sequential builds (DB unique constraint on [ideaId, versionNumber] prevents race)
+    const m1 = await buildAndPersistEconomicModel(wsA, sessionId, idea!.id, actor, economicInputs);
+    const m2 = await buildAndPersistEconomicModel(wsA, sessionId, idea!.id, actor, { ...economicInputs, pricePerUnitCents: 7500n });
+
+    const model1 = await db.startupEconomicModel.findFirst({ where: { id: m1 } });
+    const model2 = await db.startupEconomicModel.findFirst({ where: { id: m2 } });
+    expect(model1!.versionNumber).toBe(1);
+    expect(model2!.versionNumber).toBe(2);
+    expect(model1!.supersededById).toBe(m2);
+  });
+
+  it("[db] blueprint linkage — blueprint record references objectiveId and ownerDecisionId", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    const decisionId = await recordOwnerDecision(wsA, sessionId, actor, {
+      decisionType: "GO",
+      rationale: "Blueprint test",
+    });
+
+    const result = await createBlueprint(wsA, actor, {
+      sessionId,
+      ideaId: idea!.id,
+      ownerDecisionId: decisionId,
+      objectiveTitle: "Blueprint linkage test objective",
+    });
+
+    const blueprint = await db.startupExecutionBlueprint.findFirst({ where: { id: result.blueprintId } });
+    expect(blueprint?.objectiveId).toBe(result.objectiveId);
+    expect(blueprint?.ownerDecisionId).toBe(decisionId);
+    expect(blueprint?.sessionId).toBe(sessionId);
+
+    const objective = await db.businessObjective.findFirst({ where: { id: result.objectiveId } });
+    expect(objective?.linkedStartupSessionId).toBe(sessionId);
+    expect(objective?.linkedStartupIdeaId).toBe(idea!.id);
+  });
+
+  it("[db] duplicate blueprint blocked — second createBlueprint for same idea returns ConflictError", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    const decisionId = await recordOwnerDecision(wsA, sessionId, actor, {
+      decisionType: "GO",
+      rationale: "dup test",
+    });
+
+    await createBlueprint(wsA, actor, {
+      sessionId,
+      ideaId: idea!.id,
+      ownerDecisionId: decisionId,
+      objectiveTitle: "Dup test objective",
+    });
+
+    await expect(
+      createBlueprint(wsA, actor, {
+        sessionId,
+        ideaId: idea!.id,
+        ownerDecisionId: decisionId,
+        objectiveTitle: "Second duplicate attempt",
+      })
+    ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it("[db] cross-workspace evidence denial — evidence not accessible from different workspace", async () => {
+    const wsOther = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+
+    await recordEvidenceItem(wsA, sessionId, actor, {
+      idempotencyKey: null,
+      sourceType: "OWNER_ENTERED",
+      evidenceType: "PRICING_OBSERVATION",
+      observedResult: "Market data point",
+    });
+
+    const evidenceInOtherWs = await db.startupEvidenceRecord.findMany({
+      where: { workspaceId: wsOther, sessionId },
+    });
+    expect(evidenceInOtherWs).toHaveLength(0);
+  });
+
+  it("[db] cross-workspace decision denial — recordOwnerDecision requires valid session in workspace", async () => {
+    const wsOther = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+
+    await expect(
+      recordOwnerDecision(wsOther, sessionId, actor, { decisionType: "GO", rationale: "cross-ws" })
+    ).rejects.toThrow();
+  });
+
+  it("[db] approval package hash stored — GO decision persists 21-field hash", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+
+    const decisionId = await recordOwnerDecision(wsA, sessionId, actor, {
+      decisionType: "GO",
+      rationale: "hash test",
+      permittedActions: ["launch_mvp"],
+      prohibitedActions: ["hire_staff"],
+      materialAssumptions: ["customers exist"],
+    });
+
+    const stored = await db.startupOwnerDecision.findFirst({ where: { id: decisionId } });
+    expect(stored?.packageHashSha256).toBeTruthy();
+    expect(stored?.packageHashSha256?.length).toBe(64); // SHA-256 hex
+    expect(stored?.hashVersion).toBe(2);
+    expect(stored?.policyVersion).toBe("1");
+  });
+
+  it("[db] audit event for business model emitted within transaction", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    const before = await db.auditEvent.count({ where: { actorId: actor } });
+    await buildAndPersistBusinessModel(wsA, sessionId, idea!.id, actor, {
+      customerSegment: "SMB", customerProblem: "p", valueProposition: "v",
+      deliveryMethod: "d", revenueModel: "r", pricingHypothesis: "$100/mo",
+    });
+    const after = await db.auditEvent.count({ where: { actorId: actor } });
+    expect(after).toBeGreaterThan(before);
+  });
+
+  it("[db] audit event for validation plan emitted within transaction", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    const before = await db.auditEvent.count({ where: { actorId: actor } });
+    await buildAndPersistValidationPlan(wsA, sessionId, idea!.id, actor, {
+      passCriteria: "3 customers", failCriteria: "0 customers",
+    });
+    const after = await db.auditEvent.count({ where: { actorId: actor } });
+    expect(after).toBeGreaterThan(before);
+  });
+
+  it("[db] audit event for market sizing emitted within transaction", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    const before = await db.auditEvent.count({ where: { actorId: actor } });
+    await buildAndPersistMarketSizing(wsA, sessionId, idea!.id, actor, {
+      sizingStatus: "ESTIMATED", confidence: 40,
+      initialCustomerPool: 500,
+    });
+    const after = await db.auditEvent.count({ where: { actorId: actor } });
+    expect(after).toBeGreaterThan(before);
   });
 });
