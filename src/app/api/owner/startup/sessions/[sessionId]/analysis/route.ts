@@ -33,6 +33,22 @@ const baseSchema = z.object({
     "BUILD_SYSTEM_RECOMMENDATION",
   ]),
   ideaId: z.string().uuid().optional(),
+  // SCREEN
+  profile: z.record(z.string(), z.unknown()).optional(),
+  // GENERATE_HYPOTHESES
+  ideaName: z.string().optional(),
+  industry: z.string().optional(),
+  // BUILD_ECONOMIC_MODEL | ASSESS_READINESS
+  inputs: z.record(z.string(), z.unknown()).optional(),
+  // BUILD_SYSTEM_RECOMMENDATION
+  recommendation: z.string().optional(),
+  rationale: z.string().optional(),
+  confidence: z.number().optional(),
+  inputSnapshot: z.record(z.string(), z.unknown()).optional(),
+  // RECORD_HYPOTHESIS_RESULT
+  hypothesisId: z.string().uuid().optional(),
+  result: z.string().optional(),
+  resultSummary: z.string().optional(),
 });
 
 const profileSchema = z.object({
@@ -90,16 +106,17 @@ export const POST = withCanonicalEnforcement(
       case "BUILD_ECONOMIC_MODEL": {
         if (!ideaId) throw new ValidationError("ideaId required for BUILD_ECONOMIC_MODEL");
         const econSchema = z.object({
-          startupCostCents: z.number().nullable().optional(),
-          fixedMonthlyCostCents: z.number().nullable().optional(),
-          variableUnitCostCents: z.number().nullable().optional(),
-          pricePerUnitCents: z.number().nullable().optional(),
-          cacCents: z.number().nullable().optional(),
-          workingCapitalCents: z.number().nullable().optional(),
-          paymentDelayDays: z.number().nullable().optional(),
-          ownerLabourHoursPerWeek: z.number().nullable().optional(),
-          capitalAvailableCents: z.number().nullable().optional(),
-          cashRunwayMonthsAvailable: z.number().nullable().optional(),
+          startupCostCents: z.coerce.number().nullable().optional(),
+          fixedMonthlyCostCents: z.coerce.number().nullable().optional(),
+          variableUnitCostCents: z.coerce.number().nullable().optional(),
+          pricePerUnitCents: z.coerce.number().nullable().optional(),
+          cacCents: z.coerce.number().nullable().optional(),
+          workingCapitalCents: z.coerce.number().nullable().optional(),
+          paymentDelayDays: z.coerce.number().nullable().optional(),
+          ownerLabourHoursPerWeek: z.coerce.number().nullable().optional(),
+          capitalAvailableCents: z.coerce.number().nullable().optional(),
+          cashReserveMonths: z.coerce.number().nullable().optional(),
+          cashRunwayMonthsAvailable: z.coerce.number().nullable().optional(),
         });
         const econInputRaw = econSchema.parse(rawBody.inputs ?? {});
         const econInputs: EconomicInputs = {
@@ -140,10 +157,10 @@ export const POST = withCanonicalEnforcement(
           licenceRequired: z.boolean().nullable().optional(),
           licenceObtained: z.boolean().nullable().optional(),
           ownerHoursAvailable: z.number().nullable().optional(),
-          capitalAvailableCents: z.number().nullable().optional(),
-          startupCostCents: z.number().nullable().optional(),
-          criticalHypothesesPassed: z.number().default(0),
-          criticalHypothesesFailed: z.number().default(0),
+          capitalAvailableCents: z.coerce.number().nullable().optional(),
+          startupCostCents: z.coerce.number().nullable().optional(),
+          criticalHypothesesPassed: z.coerce.number().default(0),
+          criticalHypothesesFailed: z.coerce.number().default(0),
         });
         const readinessInputRaw = readinessSchema.parse(rawBody.inputs ?? {});
         const readinessInputs: ReadinessInputs = {
