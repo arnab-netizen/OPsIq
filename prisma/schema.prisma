@@ -5142,10 +5142,15 @@ model ProcessExecutionTask {
   outcomeRecordedAt     DateTime? @map("outcome_recorded_at")
   // Phase 3 — approval binding
   approvalMemoryId      String?   @map("approval_memory_id") @db.Uuid
+  // G3: Startup Mode link fields — populated for sourceFamily=STARTUP_MODE tasks; NULL for all other tasks
+  linkedStartupSessionId   String?  @map("linked_startup_session_id") @db.Uuid
+  linkedStartupBlueprintId String?  @map("linked_startup_blueprint_id") @db.Uuid
+  linkedStartupPlanId      String?  @map("linked_startup_plan_id") @db.Uuid
 
   @@unique([workspaceId, taskKey])
   @@index([workspaceId, status])
   @@index([workspaceId, outcomeId])
+  @@index([workspaceId, linkedStartupSessionId])
   @@map("process_execution_tasks")
 }
 

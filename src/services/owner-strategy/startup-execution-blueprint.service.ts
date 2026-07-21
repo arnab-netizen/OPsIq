@@ -142,6 +142,8 @@ export async function createBlueprint(
   let capturedObjectiveId = "";
   let capturedInitiativeId = "";
   const capturedVerificationWindowIds: string[] = [];
+  // G3: Generate plan ID upfront so tasks can be linked at creation time
+  const executionPlanId = randomUUID();
   let capturedExecutionPlanId = "";
 
   try {
@@ -199,6 +201,10 @@ export async function createBlueprint(
           severity: "MEDIUM",
           priorityRank: i + 1,
           updatedAt: new Date(),
+          // G3: Startup link fields — allow assertStartupExecutionAuthorization to gate START actions
+          linkedStartupSessionId: input.sessionId,
+          linkedStartupBlueprintId: blueprintId,
+          linkedStartupPlanId: executionPlanId,
         },
       });
     }
@@ -413,7 +419,6 @@ export async function createBlueprint(
     }
 
     // G-ExecutionPlan: Create StartupExecutionPlan linked to this initiative
-    const executionPlanId = randomUUID();
     capturedExecutionPlanId = executionPlanId;
     const taskSummaries = taskIds.map((tId, idx) => ({
       taskId: tId,

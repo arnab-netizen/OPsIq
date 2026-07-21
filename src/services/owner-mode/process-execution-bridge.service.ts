@@ -31,6 +31,10 @@ interface TaskRow {
   outcomeRecordedAt: Date | null;
   acknowledgedAt: Date | null;
   workStartedAt: Date | null;
+  // G3: Startup link fields
+  linkedStartupSessionId: string | null;
+  linkedStartupBlueprintId: string | null;
+  linkedStartupPlanId: string | null;
 }
 interface ProgressDelegate {
   create(a: { data: Record<string, unknown> }): Promise<{ id: string }>;
@@ -524,11 +528,38 @@ export async function applyProcessExecutionAction(
   const data: Record<string, unknown> = {};
 
   switch (input.action) {
-    case "START":
+    case "START": {
       if (!["PROPOSED", "ACKNOWLEDGED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
+      // G3: Startup execution gate — when this task belongs to the startup mode execution blueprint,
+      // assertStartupExecutionAuthorization must pass all 20 checks before the task may be started.
+      if (task.sourceFamily === "STARTUP_MODE" && task.linkedStartupSessionId && task.linkedStartupBlueprintId && task.linkedStartupPlanId) {
+        const { assertStartupExecutionAuthorization } = await import("@/services/owner-strategy/startup-session.service");
+        const planLookup = await (async () => {
+          const { db: rawDb } = await import("@/lib/db");
+          return rawDb.startupExecutionPlan.findFirst({
+            where: { id: task.linkedStartupPlanId!, workspaceId: input.workspaceId },
+            select: { ownerDecisionId: true, ideaId: true },
+          });
+        })();
+        if (!planLookup?.ownerDecisionId) {
+          return { ok: false, reason: "Startup execution plan not found — cannot authorize task start.", code: "NOT_FOUND_OR_FORBIDDEN" };
+        }
+        const authResult = await assertStartupExecutionAuthorization(input.workspaceId, {
+          sessionId: task.linkedStartupSessionId,
+          blueprintId: task.linkedStartupBlueprintId,
+          planId: task.linkedStartupPlanId,
+          ownerDecisionId: planLookup.ownerDecisionId,
+          ideaId: planLookup.ideaId,
+          actionType: "START_TASK",
+        });
+        if (!authResult.authorized) {
+          return { ok: false, reason: `Startup execution gate: ${authResult.violations.join("; ")}`, code: "UNAUTHORIZED" };
+        }
+      }
       nextStatus = "IN_PROGRESS";
       if (!task.workStartedAt) data.workStartedAt = deps.now();
       break;
+    }
     case "APPROVE":
       if (task.approvalLevel !== "OWNER_APPROVAL_REQUIRED") return { ok: false, reason: "Only an owner-approval task can be approved.", code: "INVALID_TRANSITION" };
       if (input.actorRole !== "owner") return { ok: false, reason: "This action cannot be automated — only the owner can approve it.", code: "OWNER_APPROVAL_REQUIRED" };
