@@ -1758,6 +1758,7 @@ model StartupEvidenceRecord {
   idempotencyKey              String?             @map("idempotency_key")
   sourceType                  String              @map("source_type")  // AUTHORITATIVE_PRIMARY | OFFICIAL_COMMERCIAL | FIELD_OBSERVATION | OWNER_DIRECT | SYSTEM_INFERENCE | UNVERIFIED
   evidenceType                String              @map("evidence_type")  // MARKET_SIZE | CUSTOMER_DEMAND | PRICING | DELIVERY | REGULATORY | SUPPLIER | ECONOMIC
+  materialClaim               String?             @map("material_claim")  // canonical claim this evidence supports — for conflict detection
   sourceName                  String?             @map("source_name")
   sourceUrl                   String?             @map("source_url")
   retrievedAt                 DateTime            @default(now()) @map("retrieved_at")
@@ -2155,6 +2156,32 @@ model StartupVerificationWindow {
   @@index([workspaceId, sessionId])
   @@index([workspaceId, endsAt])
   @@map("startup_verification_windows")
+}
+
+/// G-ExecutionPlan: Ordered execution plan derived from an approved initiative.
+/// Links Initiative → ordered list of tasks extracted from the blueprint.
+model StartupExecutionPlan {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  sessionId           String    @map("session_id") @db.Uuid
+  ideaId              String    @map("idea_id") @db.Uuid
+  initiativeId        String    @unique @map("initiative_id") @db.Uuid  // one plan per initiative
+  blueprintId         String    @map("blueprint_id") @db.Uuid
+  ownerDecisionId     String    @map("owner_decision_id") @db.Uuid
+  status              String    @default("DRAFT") @map("status")  // DRAFT | ACTIVE | PAUSED | COMPLETED | CANCELLED
+  planVersion         Int       @default(1) @map("plan_version")
+  tasks               Json      @default("[]") @map("tasks")  // ordered array of {taskId, label, sequenceOrder, dependsOn[], status}
+  milestones          Json      @default("[]") @map("milestones")  // [{label, targetDate, successCriteria}]
+  approvedAt          DateTime? @map("approved_at")
+  approvedBy          String?   @map("approved_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  createdBy           String    @map("created_by") @db.Uuid
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, sessionId])
+  @@index([workspaceId, ideaId])
+  @@index([workspaceId, blueprintId])
+  @@map("startup_execution_plans")
 }
 
 // ─── Phase 5: Owner Goal + Trajectory Engine ─────────────────────────────────

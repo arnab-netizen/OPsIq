@@ -37,6 +37,7 @@ export interface BlueprintResult {
   outcomeIds: string[];
   initiativeId: string;
   verificationWindowIds: string[];
+  executionPlanId: string;
 }
 
 export async function createBlueprint(
@@ -133,6 +134,7 @@ export async function createBlueprint(
   let capturedObjectiveId = "";
   let capturedInitiativeId = "";
   let capturedVerificationWindowIds: string[] = [];
+  let capturedExecutionPlanId = "";
 
   try {
     await db.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -365,6 +367,33 @@ export async function createBlueprint(
       },
     });
 
+    // G-ExecutionPlan: Create StartupExecutionPlan linked to this initiative
+    const executionPlanId = randomUUID();
+    capturedExecutionPlanId = executionPlanId;
+    const taskSummaries = taskIds.map((tId, idx) => ({
+      taskId: tId,
+      label: taskTitles[idx] ?? `Task ${idx + 1}`,
+      sequenceOrder: idx + 1,
+      dependsOn: idx > 0 ? [taskIds[idx - 1]] : [],
+      status: "PENDING",
+    }));
+    await tx.startupExecutionPlan.create({
+      data: {
+        id: executionPlanId,
+        workspaceId,
+        sessionId: input.sessionId,
+        ideaId: input.ideaId,
+        initiativeId,
+        blueprintId,
+        ownerDecisionId: input.ownerDecisionId,
+        status: "ACTIVE",
+        planVersion: 1,
+        tasks: taskSummaries as unknown as object,
+        milestones: [{ label: "Month 1 validation complete", targetDate: windowEnd.toISOString(), successCriteria: "First paying customer acquired" }] as unknown as object,
+        createdBy: actorId,
+      },
+    });
+
     // Create blueprint record
     await tx.startupExecutionBlueprint.create({
       data: {
@@ -410,6 +439,16 @@ export async function createBlueprint(
       },
       tx
     );
+
+    await emitAuditEvent(
+      {
+        workspaceId,
+        actorId,
+        eventName: AUDIT_EVENTS.STARTUP_EXECUTION_PLAN_CREATED,
+        payload: { executionPlanId, blueprintId, initiativeId, sessionId: input.sessionId, ideaId: input.ideaId, taskCount: taskIds.length },
+      },
+      tx
+    );
   });
   } catch (err: unknown) {
     // P2002: unique constraint on (sessionId, ideaId, blueprintStatus) — concurrent blueprint race
@@ -424,5 +463,5 @@ export async function createBlueprint(
     throw err;
   }
 
-  return { blueprintId, objectiveId: capturedObjectiveId, taskIds, kpiIds, riskIds, resourceAllocationIds, constraintIds, outcomeIds, initiativeId: capturedInitiativeId, verificationWindowIds: capturedVerificationWindowIds };
+  return { blueprintId, objectiveId: capturedObjectiveId, taskIds, kpiIds, riskIds, resourceAllocationIds, constraintIds, outcomeIds, initiativeId: capturedInitiativeId, verificationWindowIds: capturedVerificationWindowIds, executionPlanId: capturedExecutionPlanId };
 }

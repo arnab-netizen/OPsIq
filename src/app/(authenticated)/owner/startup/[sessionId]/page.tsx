@@ -81,6 +81,35 @@ export default function StartupSessionPage({
   const [activeTab, setActiveTab] = useState<
     "overview" | "ideas" | "evidence" | "analysis" | "decision" | "blueprint"
   >("overview");
+  const [arbitrationResult, setArbitrationResult] = useState<{
+    recommendedIdeaId: string | null;
+    recommendedIdeaName: string | null;
+    closestAlternativeId: string | null;
+    closestAlternativeName: string | null;
+    bindingConstraints: string[];
+    opportunityCost: string | null;
+    whatWouldChangeRanking: string;
+  } | null>(null);
+  const [explanation, setExplanation] = useState<{
+    recommendation: string;
+    rationale: string;
+    confidence: number;
+    confidenceLevel: string;
+    evidenceGaps: string[];
+    bindingConstraints: string[];
+    hardGateFailures: string[];
+  } | null>(null);
+  const [freshnessReport, setFreshnessReport] = useState<{
+    hasStale: boolean;
+    materialConflictCount: number;
+    freshnessList: { evidenceId: string; state: string }[];
+  } | null>(null);
+  const [blueprintDetail, setBlueprintDetail] = useState<{
+    initiativeId: string | null;
+    executionPlanId: string | null;
+    verificationWindowCount: number;
+    taskCount: number;
+  } | null>(null);
 
   // Form states
   const [newIdeaName, setNewIdeaName] = useState("");
@@ -111,10 +140,73 @@ export default function StartupSessionPage({
     }
   }
 
+  async function loadArbitration() {
+    try {
+      const res = await fetch(`/api/owner/startup/sessions/${sessionId}/arbitrate`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.recommendedIdeaId !== undefined) setArbitrationResult(data);
+      }
+    } catch { /* Non-fatal */ }
+  }
+
+  async function loadExplanation() {
+    try {
+      const res = await fetch(`/api/owner/startup/sessions/${sessionId}/explanation`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.recommendation !== undefined) setExplanation(data);
+      }
+    } catch { /* Non-fatal */ }
+  }
+
+  async function loadFreshness() {
+    try {
+      const res = await fetch(`/api/owner/startup/sessions/${sessionId}/evidence/freshness`);
+      if (res.ok) {
+        const data = await res.json();
+        setFreshnessReport(data);
+      }
+    } catch { /* Non-fatal */ }
+  }
+
+  async function loadBlueprintDetail(ideas: IdeaRecord[]) {
+    const approvedIdea = ideas.find((i) => i.accepted);
+    if (!approvedIdea) return;
+    try {
+      const res = await fetch(
+        `/api/owner/startup/sessions/${sessionId}/ideas/${approvedIdea.id}/execution-plan`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setBlueprintDetail({
+          initiativeId: data.initiativeId ?? null,
+          executionPlanId: data.executionPlanId ?? data.id ?? null,
+          verificationWindowCount: data.verificationWindowCount ?? 0,
+          taskCount: Array.isArray(data.tasks) ? data.tasks.length : (data.taskCount ?? 0),
+        });
+      }
+    } catch { /* Non-fatal */ }
+  }
+
   useEffect(() => {
     async function load() {
       await loadSession();
-      await loadDecision();
+      // loadSession sets session state; we need the ideas for blueprint detail
+      const res = await fetch(`/api/owner/startup/sessions/${sessionId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const ideas: IdeaRecord[] = data.session?.ideas ?? [];
+        await Promise.all([
+          loadDecision(),
+          loadArbitration(),
+          loadExplanation(),
+          loadFreshness(),
+          loadBlueprintDetail(ideas),
+        ]);
+      } else {
+        await Promise.all([loadDecision(), loadArbitration(), loadExplanation(), loadFreshness()]);
+      }
     }
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -470,7 +562,30 @@ export default function StartupSessionPage({
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>Execution Blueprint</h2>
           {session.currentBlueprintId ? (
             <div data-testid="blueprint-exists">
-              <p>Blueprint active: <code>{session.currentBlueprintId}</code></p>
+              <dl style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "1rem" }}>
+                <dt style={{ fontWeight: 600 }}>Blueprint ID</dt>
+                <dd><code data-testid="blueprint-id">{session.currentBlueprintId}</code></dd>
+                {blueprintDetail?.initiativeId && (
+                  <>
+                    <dt style={{ fontWeight: 600 }}>Initiative ID</dt>
+                    <dd><code data-testid="blueprint-initiative-id">{blueprintDetail.initiativeId}</code></dd>
+                  </>
+                )}
+                {blueprintDetail?.executionPlanId && (
+                  <>
+                    <dt style={{ fontWeight: 600 }}>Execution Plan ID</dt>
+                    <dd><code data-testid="blueprint-execution-plan-id">{blueprintDetail.executionPlanId}</code></dd>
+                  </>
+                )}
+                {blueprintDetail !== null && (
+                  <>
+                    <dt style={{ fontWeight: 600 }}>Tasks</dt>
+                    <dd data-testid="blueprint-task-count">{blueprintDetail.taskCount}</dd>
+                    <dt style={{ fontWeight: 600 }}>Verification Windows</dt>
+                    <dd data-testid="blueprint-verification-window-count">{blueprintDetail.verificationWindowCount}</dd>
+                  </>
+                )}
+              </dl>
             </div>
           ) : (
             <p data-testid="no-blueprint">
@@ -483,14 +598,118 @@ export default function StartupSessionPage({
       {activeTab === "evidence" && (
         <div data-testid="evidence-section">
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>Evidence</h2>
-          <p>Record evidence via the API or use the analysis tab to run assessments.</p>
+
+          {freshnessReport && (
+            <div data-testid="evidence-freshness-summary"
+              style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "1rem", marginBottom: "1rem" }}>
+              <div style={{ fontWeight: 700, marginBottom: "0.5rem" }}>Evidence Freshness</div>
+              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                <span
+                  className={freshnessReport.hasStale ? "EVIDENCE_REQUIRED" : "VALIDATED"}
+                  data-testid="freshness-stale-flag">
+                  {freshnessReport.hasStale ? "Stale evidence present" : "All evidence current"}
+                </span>
+                {freshnessReport.materialConflictCount > 0 && (
+                  <span className="BINDING_CONSTRAINT" data-testid="freshness-conflict-count">
+                    {freshnessReport.materialConflictCount} material conflict{freshnessReport.materialConflictCount !== 1 ? "s" : ""} detected
+                  </span>
+                )}
+              </div>
+              {freshnessReport.freshnessList.length > 0 && (
+                <div style={{ marginTop: "0.75rem" }}>
+                  {freshnessReport.freshnessList.map((item) => (
+                    <div key={item.evidenceId}
+                      data-testid={`freshness-item-${item.evidenceId}`}
+                      style={{ display: "flex", justifyContent: "space-between", padding: "0.25rem 0", borderBottom: "1px solid #f3f4f6" }}>
+                      <code style={{ fontSize: "0.8rem", color: "#6b7280" }}>{item.evidenceId}</code>
+                      <span className={
+                        item.state === "STALE" || item.state === "CURRENT_VERIFICATION_REQUIRED"
+                          ? "EVIDENCE_REQUIRED"
+                          : item.state === "NEARING_EXPIRY"
+                          ? "UNTESTED_ASSUMPTION"
+                          : "VALIDATED"
+                      } style={{ fontSize: "0.8rem" }}>
+                        {item.state}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <p style={{ color: "#6b7280", fontSize: "0.9rem" }}>Record evidence via the API or use the analysis tab to run assessments.</p>
         </div>
       )}
 
       {activeTab === "analysis" && (
         <div data-testid="startup-tab-content-analysis">
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>Analysis</h2>
-          <p>Use the ideas tab to screen ideas and generate hypotheses. Full economic and readiness analysis available via API.</p>
+
+          {/* Arbitration Winner */}
+          {arbitrationResult && (
+            <div data-testid="arbitration-result" className="SYSTEM_RECOMMENDATION"
+              style={{ border: "1px solid #3b82f6", borderRadius: 6, padding: "1rem", marginBottom: "1rem", background: "#eff6ff" }}>
+              <div style={{ fontWeight: 700, marginBottom: "0.5rem" }}>Idea Arbitration Result</div>
+              {arbitrationResult.recommendedIdeaId ? (
+                <>
+                  <div data-testid="arbitration-winner">
+                    <span className="VALIDATED" style={{ fontWeight: 600 }}>Recommended: </span>
+                    {arbitrationResult.recommendedIdeaName ?? arbitrationResult.recommendedIdeaId}
+                  </div>
+                  {arbitrationResult.closestAlternativeName && (
+                    <div style={{ color: "#6b7280", fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                      Closest alternative: {arbitrationResult.closestAlternativeName}
+                    </div>
+                  )}
+                  {arbitrationResult.opportunityCost && (
+                    <div style={{ color: "#92400e", fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                      Opportunity cost: {arbitrationResult.opportunityCost}
+                    </div>
+                  )}
+                  {arbitrationResult.bindingConstraints.length > 0 && (
+                    <div className="BINDING_CONSTRAINT" style={{ marginTop: "0.5rem" }}>
+                      <strong>Binding constraints:</strong> {arbitrationResult.bindingConstraints.join(", ")}
+                    </div>
+                  )}
+                  <div style={{ fontSize: "0.8rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                    {arbitrationResult.whatWouldChangeRanking}
+                  </div>
+                </>
+              ) : (
+                <div className="BINDING_CONSTRAINT" data-testid="no-arbitration-winner">
+                  No viable ideas — all rejected or blocked.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* System Explanation */}
+          {explanation && (
+            <div data-testid="explanation-panel" className="SYSTEM_RECOMMENDATION"
+              style={{ border: "1px solid #8b5cf6", borderRadius: 6, padding: "1rem", marginBottom: "1rem", background: "#f5f3ff" }}>
+              <div style={{ fontWeight: 700, marginBottom: "0.5rem" }}>System Explanation</div>
+              <div data-testid="explanation-recommendation" style={{ fontWeight: 600 }}>{explanation.recommendation}</div>
+              <div style={{ marginTop: "0.25rem", color: "#374151" }}>{explanation.rationale}</div>
+              <div style={{ marginTop: "0.25rem", fontSize: "0.85rem", color: "#6b7280" }}>
+                Confidence: {explanation.confidence}% ({explanation.confidenceLevel})
+              </div>
+              {explanation.evidenceGaps.length > 0 && (
+                <div className="EVIDENCE_REQUIRED" style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}>
+                  <strong>Evidence gaps:</strong> {explanation.evidenceGaps.join(", ")}
+                </div>
+              )}
+              {explanation.hardGateFailures.length > 0 && (
+                <div className="BINDING_CONSTRAINT" style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}>
+                  <strong>Hard gate failures:</strong> {explanation.hardGateFailures.join(", ")}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!arbitrationResult && !explanation && (
+            <p>Use the ideas tab to screen ideas and generate hypotheses. Full economic and readiness analysis available via API.</p>
+          )}
         </div>
       )}
     </div>

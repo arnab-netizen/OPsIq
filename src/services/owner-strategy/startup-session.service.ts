@@ -25,6 +25,15 @@ import { buildStartupExplanation, type StartupExplanationInputs, type StartupExp
 import { generateIdeasFromProfile, type GenerationProfile, type IdeaGenerationResult } from "@/domain/owner-strategy/startup-idea-generation";
 import { persistExplainabilityRecord } from "@/services/owner-mode/explainability.service";
 import type { DecisionExplainabilityType } from "@/domain/owner-mode/explainability";
+import {
+  classifyAllEvidence,
+  detectEvidenceConflicts,
+  hasStaleEvidence,
+  type EvidenceForEvaluation,
+  type FreshnessMeta,
+  type EvidenceConflict,
+} from "@/domain/owner-strategy/startup-evidence-evaluation";
+import { buildValidationPlan as buildValidationPlanDomain } from "@/domain/owner-strategy/startup-validation-planner";
 
 // ─── Legacy interface (backward compatible) ───────────────────────────────────
 
@@ -429,6 +438,13 @@ export async function recordHypothesisResult(
 ): Promise<void> {
   const hypothesis = await db.startupHypothesis.findFirst({
     where: { id: hypothesisId, workspaceId },
+    select: {
+      id: true,
+      hypothesisType: true,
+      requiresOwnerApproval: true,
+      confidenceBefore: true,
+      sessionId: true,
+    },
   });
   if (!hypothesis) throw new NotFoundError("StartupHypothesis", hypothesisId);
 
@@ -471,6 +487,11 @@ export async function recordHypothesisResult(
       data: { evaluation },
     });
   });
+
+  // Wire staleness propagation on failure outcomes (outside transaction — read-only + memory write)
+  if (result === "DISCONFIRMED" || result === "INCONCLUSIVE") {
+    await propagateHypothesisFailureToStaleness(workspaceId, hypothesis.sessionId, hypothesisId, actorId);
+  }
 }
 
 // ─── Evidence ─────────────────────────────────────────────────────────────────
@@ -481,6 +502,7 @@ export interface EvidenceInput {
   idempotencyKey?: string | null;
   sourceType: string;
   evidenceType: string;
+  materialClaim?: string | null;
   sourceName?: string | null;
   sourceUrl?: string | null;
   geography?: string | null;
@@ -521,6 +543,7 @@ export async function recordEvidenceItem(
         idempotencyKey: input.idempotencyKey ?? null,
         sourceType: input.sourceType,
         evidenceType: input.evidenceType,
+        materialClaim: input.materialClaim ?? null,
         sourceName: input.sourceName ?? null,
         sourceUrl: input.sourceUrl ?? null,
         geography: input.geography ?? null,
@@ -541,6 +564,47 @@ export async function recordEvidenceItem(
       payload: { sessionId, evidenceId, evidenceType: input.evidenceType },
     }, tx);
   });
+
+  // After persist: check conflicts among evidence for the same session (non-fatal — conflicts are surfaced, not blocking)
+  const allEvidence = await db.startupEvidenceRecord.findMany({
+    where: { workspaceId, sessionId },
+    select: {
+      id: true, sourceType: true, evidenceType: true, retrievedAt: true,
+      expiresAt: true, currentVerificationRequired: true, reliabilityScore: true,
+      confidence: true, observedResult: true, hypothesisId: true, materialClaim: true,
+    },
+  });
+  const now = new Date();
+  type EvidenceRow = (typeof allEvidence)[number];
+  const evidenceForEval: EvidenceForEvaluation[] = allEvidence.map((e: EvidenceRow) => ({
+    id: e.id,
+    sourceType: e.sourceType,
+    evidenceType: e.evidenceType,
+    retrievedAt: e.retrievedAt,
+    expiresAt: e.expiresAt ?? null,
+    currentVerificationRequired: e.currentVerificationRequired ?? false,
+    reliabilityScore: e.reliabilityScore ?? 50,
+    confidence: e.confidence ?? 50,
+    observedResult: e.observedResult,
+    hypothesisId: e.hypothesisId ?? null,
+    materialClaim: e.materialClaim ?? null,
+  }));
+  const freshnessList = classifyAllEvidence(evidenceForEval, now);
+  const conflicts = detectEvidenceConflicts(evidenceForEval, freshnessList);
+  const materialConflicts = conflicts.filter((c) => c.propagatesToReadiness);
+
+  if (materialConflicts.length > 0) {
+    await writeMemoryEntry({
+      workspaceId,
+      actorId,
+      memoryType: "STARTUP_EVIDENCE_CONFLICT",
+      sourceModel: "StartupEvidenceRecord",
+      sourceId: evidenceId,
+      key: `startup_evidence_conflict:${sessionId}:${evidenceId}`,
+      summary: `${materialConflicts.length} material evidence conflict(s) detected after recording evidence ${evidenceId}`,
+      data: { sessionId, conflicts: materialConflicts },
+    });
+  }
 
   return evidenceId;
 }
@@ -812,6 +876,36 @@ export async function buildAndPersistValidationPlan(
   actorId: string,
   input: ValidationPlanInput
 ): Promise<string> {
+  // Wire domain engine: derive plan structure from active hypotheses when available
+  const activeHypotheses = await db.startupHypothesis.findMany({
+    where: { ideaId, workspaceId, result: null },
+    select: { id: true, statement: true, hypothesisType: true, falsificationCriteria: true, confidenceBefore: true, expectedCostCents: true, expectedDurationDays: true, requiresOwnerApproval: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  let derivedSpendingLimit: bigint | null = input.spendingLimitCents ?? null;
+  let derivedStopConditions: string[] = input.stopConditions ?? [];
+  let derivedSafetyLimits: Record<string, unknown> = input.safetyLimits ?? {};
+
+  if (activeHypotheses.length > 0) {
+    type HypRow = (typeof activeHypotheses)[number];
+    const hypothesesForPlanning: import("@/domain/owner-strategy/startup-validation-planner").HypothesisForPlanning[] = activeHypotheses.map((h: HypRow) => ({
+      id: h.id,
+      statement: h.statement,
+      hypothesisType: h.hypothesisType,
+      confidenceBefore: h.confidenceBefore,
+      falsificationCriteria: h.falsificationCriteria,
+      requiresOwnerApproval: h.requiresOwnerApproval,
+      expectedCostCents: h.expectedCostCents ?? null,
+      expectedDurationDays: h.expectedDurationDays ?? null,
+    }));
+    const domainPlan = buildValidationPlanDomain(hypothesesForPlanning);
+    // Owner-supplied criteria override domain defaults; domain provides spending and safety guardrails
+    derivedSpendingLimit = input.spendingLimitCents ?? domainPlan.totalSpendingLimitCents;
+    derivedStopConditions = input.stopConditions?.length ? input.stopConditions : domainPlan.stopConditions;
+    derivedSafetyLimits = Object.keys(input.safetyLimits ?? {}).length > 0 ? (input.safetyLimits ?? {}) : domainPlan.safetyLimits;
+  }
+
   const planId = randomUUID();
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -833,9 +927,9 @@ export async function buildAndPersistValidationPlan(
         ideaId,
         passCriteria: input.passCriteria,
         failCriteria: input.failCriteria,
-        spendingLimitCents: input.spendingLimitCents ?? null,
-        stopConditions: (input.stopConditions ?? []) as unknown as object,
-        safetyLimits: (input.safetyLimits ?? {}) as unknown as object,
+        spendingLimitCents: derivedSpendingLimit ?? null,
+        stopConditions: (derivedStopConditions) as unknown as object,
+        safetyLimits: (derivedSafetyLimits) as unknown as object,
         approvedByOwner: false,
       },
     });
@@ -844,7 +938,7 @@ export async function buildAndPersistValidationPlan(
       workspaceId,
       actorId,
       eventName: AUDIT_EVENTS.STARTUP_VALIDATION_PLAN_CREATED,
-      payload: { sessionId, ideaId, planId },
+      payload: { sessionId, ideaId, planId, derivedFromHypotheses: activeHypotheses.length },
     }, tx);
   });
 
@@ -1613,6 +1707,118 @@ export async function generateIdeasForNeedOptionsPath(
   });
 
   return result;
+}
+
+// ─── Evidence Freshness Export ────────────────────────────────────────────────
+
+export interface SessionFreshnessReport {
+  freshnessList: FreshnessMeta[];
+  conflicts: EvidenceConflict[];
+  hasStale: boolean;
+  materialConflictCount: number;
+}
+
+export async function getEvidenceFreshnessForSession(
+  workspaceId: string,
+  sessionId: string
+): Promise<SessionFreshnessReport> {
+  const records = await db.startupEvidenceRecord.findMany({
+    where: { workspaceId, sessionId },
+    select: {
+      id: true, sourceType: true, evidenceType: true, retrievedAt: true,
+      expiresAt: true, currentVerificationRequired: true, reliabilityScore: true,
+      confidence: true, observedResult: true, hypothesisId: true, materialClaim: true,
+    },
+  });
+  const now = new Date();
+  type EvidenceRecordRow = (typeof records)[number];
+  const evidenceForEval: EvidenceForEvaluation[] = records.map((e: EvidenceRecordRow) => ({
+    id: e.id,
+    sourceType: e.sourceType,
+    evidenceType: e.evidenceType,
+    retrievedAt: e.retrievedAt,
+    expiresAt: e.expiresAt ?? null,
+    currentVerificationRequired: e.currentVerificationRequired ?? false,
+    reliabilityScore: e.reliabilityScore ?? 50,
+    confidence: e.confidence ?? 50,
+    observedResult: e.observedResult,
+    hypothesisId: e.hypothesisId ?? null,
+    materialClaim: e.materialClaim ?? null,
+  }));
+  const freshnessList = classifyAllEvidence(evidenceForEval, now);
+  const conflicts = detectEvidenceConflicts(evidenceForEval, freshnessList);
+  return {
+    freshnessList,
+    conflicts,
+    hasStale: hasStaleEvidence(freshnessList),
+    materialConflictCount: conflicts.filter((c) => c.propagatesToReadiness).length,
+  };
+}
+
+// ─── Idea Versioning / Revision ───────────────────────────────────────────────
+
+export interface IdeaRevisionInput {
+  name?: string;
+  industry?: string;
+  originData?: Record<string, unknown>;
+}
+
+/**
+ * Atomically creates a new idea version and supersedes the previous one.
+ * Uses SELECT FOR UPDATE to prevent concurrent revisions from branching the version chain.
+ */
+export async function reviseIdea(
+  workspaceId: string,
+  sessionId: string,
+  ideaId: string,
+  actorId: string,
+  revisions: IdeaRevisionInput
+): Promise<string> {
+  const newIdeaId = randomUUID();
+
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Lock the existing idea row to prevent concurrent revisions
+    const existing = await tx.$queryRaw<{ id: string; version: number; name: string; industry: string; origin_data: unknown; origin_type: string; superseded_by_id: string | null }[]>`
+      SELECT id, version, name, industry, origin_data, origin_type, superseded_by_id
+      FROM startup_idea_record
+      WHERE id = ${ideaId} AND workspace_id = ${workspaceId}
+      FOR UPDATE
+    `;
+    if (existing.length === 0) throw new NotFoundError("StartupIdeaRecord", ideaId);
+    const current = existing[0];
+    if (current.superseded_by_id != null) {
+      throw new ConflictError(`Idea ${ideaId} has already been superseded by ${current.superseded_by_id}`);
+    }
+
+    // Create new version
+    await tx.startupIdeaRecord.create({
+      data: {
+        id: newIdeaId,
+        workspaceId,
+        sessionId,
+        name: revisions.name ?? current.name,
+        industry: revisions.industry ?? current.industry,
+        version: current.version + 1,
+        originType: current.origin_type,
+        originData: (revisions.originData ?? (current.origin_data as Record<string, unknown> | null)) as object | undefined,
+      },
+    });
+
+    // Supersede previous version
+    await tx.startupIdeaRecord.update({
+      where: { id: ideaId },
+      data: { supersededById: newIdeaId },
+    });
+
+    await emitAuditEvent({
+      workspaceId,
+      actorId,
+      eventName: AUDIT_EVENTS.STARTUP_IDEA_ADDED,
+      payload: { sessionId, ideaId: newIdeaId, previousIdeaId: ideaId, version: current.version + 1 },
+    }, tx);
+  });
+
+  return newIdeaId;
 }
 
 // ─── G15: Hypothesis failure → approval staleness propagation ─────────────────
