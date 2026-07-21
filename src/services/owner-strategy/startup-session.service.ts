@@ -19,6 +19,12 @@ import { buildResearchPlan, minimizeOwnerTasks, type EvidenceDomain } from "@/do
 import { getResearchProvider, type AcquisitionStatus } from "@/infra/research-provider";
 import { writeMemoryEntry } from "@/services/owner-mode/operating-memory.service";
 import { Prisma } from "@/generated/prisma/client";
+import { estimateMarketSize, type MarketSizingInputs as DomainMarketSizingInputs } from "@/domain/owner-strategy/market-sizing";
+import { arbitrateStartupIdeas, type StartupIdeaForArbitration, type StartupArbitrationResult } from "@/domain/owner-strategy/startup-arbitration";
+import { buildStartupExplanation, type StartupExplanationInputs, type StartupExplanation } from "@/domain/owner-strategy/startup-explainability";
+import { generateIdeasFromProfile, type GenerationProfile, type IdeaGenerationResult } from "@/domain/owner-strategy/startup-idea-generation";
+import { persistExplainabilityRecord } from "@/services/owner-mode/explainability.service";
+import type { DecisionExplainabilityType } from "@/domain/owner-mode/explainability";
 
 // ─── Legacy interface (backward compatible) ───────────────────────────────────
 
@@ -150,6 +156,21 @@ export async function transitionSession(
   actorId: string,
   newStatus: StartupSessionStatus
 ): Promise<void> {
+  // G7/G9/G15: gate at EXECUTION_PLANNED — approval must exist and not be stale/expired
+  if (newStatus === "EXECUTION_PLANNED") {
+    const staleness = await checkApprovalStaleness(workspaceId, sessionId, {});
+    if (staleness.originalHash === null) {
+      throw new ConflictError(
+        "EXECUTION_BLOCKED: no GO owner decision found — owner must approve before execution can be planned"
+      );
+    }
+    if (staleness.isStale) {
+      throw new ConflictError(
+        `STALE_APPROVAL_BLOCKS_EXECUTION: approval package changed since GO decision. Changed: ${staleness.changedInputs.join(", ")}. Owner must re-approve.`
+      );
+    }
+  }
+
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const session = await tx.ownerStartupSession.findFirst({
       where: { id: sessionId, workspaceId },
@@ -896,6 +917,35 @@ export async function buildAndPersistMarketSizing(
   return sizingId;
 }
 
+// G18: Domain-engine-driven market sizing — runs estimateMarketSize() then persists result
+export async function buildMarketSizingFromDomainEngine(
+  workspaceId: string,
+  sessionId: string,
+  ideaId: string,
+  actorId: string,
+  domainInputs: DomainMarketSizingInputs
+): Promise<string> {
+  const result = estimateMarketSize(domainInputs);
+  const input: MarketSizingInput = {
+    reachableMarketUnits: result.reachableMarketUnits != null ? BigInt(Math.round(result.reachableMarketUnits)) : null,
+    reachableMarketRevenueCents: result.reachableMarketRevenueCents?.mid ?? null,
+    serviceableUnits: result.serviceableUnits != null ? BigInt(Math.round(result.serviceableUnits)) : null,
+    serviceableRevenueCents: result.serviceableRevenueCents?.mid ?? null,
+    initialCustomerPool: null,
+    capacityLimitedRevenueCents: result.capacityLimitedRevenueCents?.mid ?? null,
+    sizingStatus: result.status === "INSUFFICIENT_EVIDENCE_TO_ESTIMATE" ? "INSUFFICIENT_EVIDENCE" : "ESTIMATED",
+    confidence: result.confidence,
+    assumptions: result.assumptions,
+    evidence: domainInputs.evidenceIds ?? [],
+    sizingRange: result.reachableMarketRevenueCents ? {
+      low: Number(result.reachableMarketRevenueCents.low),
+      mid: Number(result.reachableMarketRevenueCents.mid),
+      high: Number(result.reachableMarketRevenueCents.high),
+    } : undefined,
+  };
+  return buildAndPersistMarketSizing(workspaceId, sessionId, ideaId, actorId, input);
+}
+
 // ─── Approval Package Hash ────────────────────────────────────────────────────
 
 /**
@@ -926,12 +976,18 @@ export interface ApprovalPackageComponents {
   materialAssumptions?: string[];
   validUntil?: Date | string | null;
   reviewDate?: Date | string | null;
+  // G10: algorithm version fields — included in canonical hash so changes to hash algorithm
+  // or policy rules invalidate existing approvals without content changes.
+  hashVersion?: number | null;
+  policyVersion?: string | null;
 }
 
-/** Canonical JSON SHA-256 over all 21 approval-package fields (algorithm version "v2"). */
+/** Canonical JSON SHA-256 over all 23 approval-package fields (algorithm version "v2"). */
 export function computeApprovalPackageHash(c: ApprovalPackageComponents): string {
   const canonical = {
     v: "2",
+    hashVersion: c.hashVersion ?? 2,
+    policyVersion: c.policyVersion ?? "1",
     sessionId: c.sessionId,
     ideaId: c.ideaId ?? null,
     ideaVersionId: c.ideaVersionId ?? null,
@@ -962,7 +1018,7 @@ export function computeApprovalPackageHash(c: ApprovalPackageComponents): string
 
 /** Queries current snapshot IDs for a session — used by both decision recording and staleness checks. */
 async function queryCurrentSnapshotIds(workspaceId: string, sessionId: string) {
-  const [evidence, risks, constraints] = await Promise.all([
+  const [evidence, risks, constraints, objectives] = await Promise.all([
     db.startupEvidenceRecord.findMany({
       where: { sessionId, workspaceId },
       select: { id: true },
@@ -976,12 +1032,25 @@ async function queryCurrentSnapshotIds(workspaceId: string, sessionId: string) {
       where: { linkedStartupSessionId: sessionId, workspaceId },
       select: { id: true },
     }),
+    // G6: ResourceAllocation has no direct session FK — query via BusinessObjective IDs
+    db.businessObjective.findMany({
+      where: { linkedStartupSessionId: sessionId, workspaceId },
+      select: { id: true },
+    }),
   ]);
+  const objectiveIds = objectives.map((o: { id: string }) => o.id);
+  const resourceAllocations = objectiveIds.length > 0
+    ? await db.resourceAllocation.findMany({
+        where: { objectiveId: { in: objectiveIds }, workspaceId },
+        select: { id: true },
+      })
+    : [];
+  const resourceSnapshotIds = resourceAllocations.map((r: { id: string }) => r.id);
   return {
     evidenceSnapshotIds: evidence.map((r: { id: string }) => r.id),
     riskSnapshotIds: risks.map((r: { id: string }) => r.id),
     constraintSnapshotIds: constraints.map((r: { id: string }) => r.id),
-    resourceSnapshotIds: [] as string[], // ResourceAllocation has no direct session FK
+    resourceSnapshotIds,
   };
 }
 
@@ -1374,4 +1443,201 @@ export async function getOwnerResearchTasks(
   const acquiredDomains = plan.acquisitions.map((a: { domain: string }) => a.domain);
   const domains = plan.evidenceDomains as unknown as Parameters<typeof minimizeOwnerTasks>[0];
   return minimizeOwnerTasks(domains, acquiredDomains);
+}
+
+// ─── G2: Idea Arbitration ─────────────────────────────────────────────────────
+
+export async function runIdeaArbitration(
+  workspaceId: string,
+  sessionId: string,
+  actorId: string
+): Promise<StartupArbitrationResult & { arbitrationRecordId: string }> {
+  const ideas = await db.startupIdeaRecord.findMany({
+    where: { sessionId, workspaceId, supersededById: null },
+    include: {
+      hypotheses: { select: { result: true } },
+      economicModels: { orderBy: { createdAt: "desc" }, select: { economicClassification: true, cashRunwayMonths: true, breakEvenMonths: true, grossMarginBps: true, supersededById: true }, take: 1 },
+      readinessAssessments: { orderBy: { assessedAt: "desc" }, select: { readinessStatus: true, hardGateFailures: true }, take: 1 },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const ideasForArbitration: StartupIdeaForArbitration[] = ideas.map((idea: {
+    id: string; name: string; accepted: boolean; screeningStatus: string;
+    hypotheses: { result: string | null }[];
+    economicModels: { economicClassification: string | null; cashRunwayMonths: number | null; breakEvenMonths: number | null; grossMarginBps: number | null; supersededById: string | null }[];
+    readinessAssessments: { readinessStatus: string; hardGateFailures: unknown }[];
+  }) => {
+    const econ = idea.economicModels[0] ?? null;
+    const readiness = idea.readinessAssessments[0] ?? null;
+    const totalHyp = idea.hypotheses.length;
+    const failedHyp = idea.hypotheses.filter((h) => h.result === "FAILED").length;
+    const hardGates = (readiness?.hardGateFailures as string[]) ?? [];
+    const regulatoryBlocked = hardGates.some((g: string) => g.startsWith("REGULATORY"));
+    const grossMarginBps = econ?.grossMarginBps ?? null;
+    const riskAdjustedScore = readiness ? (readiness.readinessStatus === "READY" ? 90 : readiness.readinessStatus === "CONDITIONALLY_READY" ? 60 : readiness.readinessStatus === "NOT_READY" ? 30 : 0) : null;
+    return {
+      id: idea.id,
+      name: idea.name,
+      accepted: idea.accepted,
+      screeningStatus: idea.screeningStatus,
+      riskAdjustedScore,
+      capitalSufficient: econ != null ? (grossMarginBps != null && grossMarginBps > 0) : null,
+      monthlyProfit: null,
+      economicClassification: econ?.economicClassification ?? null,
+      cashRunwayMonths: econ?.cashRunwayMonths ?? null,
+      breakEvenMonths: econ?.breakEvenMonths ?? null,
+      readinessStatus: readiness?.readinessStatus ?? null,
+      hypothesesFailed: failedHyp,
+      hypothesesTotal: totalHyp,
+      regulatoryBlocked,
+    };
+  });
+
+  const result = arbitrateStartupIdeas(ideasForArbitration);
+
+  const recordId = randomUUID();
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.goalArbitrationRecord.create({
+      data: {
+        id: recordId,
+        workspaceId,
+        actorId,
+        candidateIds: ideasForArbitration.map((i) => i.id) as unknown as object,
+        winnerObjectiveId: null,
+        arbitrationResult: result as unknown as object,
+        dominantConstraint: result.bindingConstraints[0] ?? null,
+      },
+    });
+    await emitAuditEvent({
+      workspaceId,
+      actorId,
+      eventName: AUDIT_EVENTS.STARTUP_ARBITRATION_RUN,
+      payload: { sessionId, arbitrationRecordId: recordId, recommendedIdeaId: result.recommendedIdeaId, ideaCount: ideasForArbitration.length },
+    }, tx);
+  });
+
+  return { ...result, arbitrationRecordId: recordId };
+}
+
+// ─── G3: Startup Explainability ───────────────────────────────────────────────
+
+export async function buildAndPersistStartupExplanation(
+  workspaceId: string,
+  sessionId: string,
+  ideaId: string | null,
+  actorId: string,
+  inputs: Omit<StartupExplanationInputs, "sessionId" | "ideaId">
+): Promise<{ explanationId: string; explanation: StartupExplanation }> {
+  const fullInputs: StartupExplanationInputs = { sessionId, ideaId, ...inputs };
+  const explanation = buildStartupExplanation(fullInputs);
+
+  // Adapt startup explanation to Phase 4 ExplainabilityRecord interface
+  const p4Factors = explanation.factorsUsed.map((f) => ({
+    name: f.factor,
+    weight: f.weight,
+    direction: f.direction as "POSITIVE" | "NEGATIVE" | "NEUTRAL",
+    value: f.value,
+    description: f.value,
+  }));
+  const p4DataPoints = explanation.dataPoints.map((d) => ({
+    label: d.metric,
+    observed: d.value,
+    expected: null,
+    freshness: "CURRENT" as const,
+    source: d.source,
+  }));
+
+  const persisted = await persistExplainabilityRecord(workspaceId, actorId, {
+    decisionRef: explanation.decisionRef,
+    decisionType: "STARTUP_SYSTEM_RECOMMENDATION" as unknown as DecisionExplainabilityType,
+    explanationText: explanation.rationale,
+    factorsUsed: p4Factors,
+    dataPoints: p4DataPoints,
+    confidence: explanation.confidence / 100, // Phase 4 uses 0..1, startup uses 0..100
+    confidenceLevel: (
+      explanation.confidenceLevel === "HIGH" ? "high"
+      : explanation.confidenceLevel === "MEDIUM" ? "moderate"
+      : explanation.confidenceLevel === "LOW" ? "low"
+      : "very_low"
+    ) as "very_high" | "high" | "moderate" | "low" | "very_low",
+  });
+
+  const explanationId = persisted.id;
+
+  await emitAuditEvent({
+    workspaceId,
+    actorId,
+    eventName: AUDIT_EVENTS.STARTUP_EXPLANATION_BUILT,
+    payload: { sessionId, ideaId, explanationId },
+  });
+
+  return { explanationId, explanation };
+}
+
+// ─── G1: NEED_OPTIONS Idea Generation ────────────────────────────────────────
+
+export async function generateIdeasForNeedOptionsPath(
+  workspaceId: string,
+  sessionId: string,
+  actorId: string,
+  profile: GenerationProfile
+): Promise<IdeaGenerationResult> {
+  const providerEnv = process.env["IDEA_GENERATION_PROVIDER"];
+  const providerConfigured = !!providerEnv && providerEnv.trim().length > 0;
+
+  // Fetch evidence linked to session — opportunity signals are workspace-scoped without session FK
+  const evidenceRecords = await db.startupEvidenceRecord.findMany({
+    where: { workspaceId, sessionId },
+    select: { id: true, evidenceType: true, observedResult: true },
+    take: 50,
+  });
+
+  const signalInputs: import("@/domain/owner-strategy/startup-idea-generation").OpportunitySignalForGeneration[] = [];
+  const evidenceInputs = evidenceRecords.map((e: { id: string; evidenceType: string; observedResult: string }) => ({
+    id: e.id,
+    evidenceType: e.evidenceType,
+    customerSegment: null,
+    observedResult: e.observedResult,
+    geography: null,
+  }));
+
+  const profileVersionId = randomUUID();
+  const result = generateIdeasFromProfile(profile, signalInputs, evidenceInputs, providerConfigured, profileVersionId);
+
+  await emitAuditEvent({
+    workspaceId,
+    actorId,
+    eventName: AUDIT_EVENTS.STARTUP_IDEAS_GENERATED,
+    payload: { sessionId, available: result.available, conceptCount: result.concepts.length, generationMethod: result.generationMethod },
+  });
+
+  return result;
+}
+
+// ─── G15: Hypothesis failure → approval staleness propagation ─────────────────
+// Called from recordHypothesisResult when a hypothesis result is FAILED or INVALIDATED.
+// Writes operating memory noting that reapproval is required if a GO decision exists.
+export async function propagateHypothesisFailureToStaleness(
+  workspaceId: string,
+  sessionId: string,
+  hypothesisId: string,
+  actorId: string
+): Promise<void> {
+  const session = await db.ownerStartupSession.findFirst({
+    where: { id: sessionId, workspaceId },
+    select: { currentOwnerDecisionId: true },
+  });
+  if (!session?.currentOwnerDecisionId) return;
+
+  await writeMemoryEntry({
+    workspaceId,
+    actorId,
+    memoryType: "STARTUP_FAILED_HYPOTHESIS",
+    sourceModel: "StartupHypothesis",
+    sourceId: hypothesisId,
+    key: `startup_hypothesis_failed:${hypothesisId}`,
+    summary: `Critical hypothesis failed — existing GO approval may be stale for session ${sessionId}`,
+    data: { sessionId, hypothesisId, currentOwnerDecisionId: session.currentOwnerDecisionId, requiresReapproval: true },
+  });
 }

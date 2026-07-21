@@ -35,6 +35,8 @@ export interface BlueprintResult {
   resourceAllocationIds: string[];
   constraintIds: string[];
   outcomeIds: string[];
+  initiativeId: string;
+  verificationWindowIds: string[];
 }
 
 export async function createBlueprint(
@@ -78,17 +80,34 @@ export async function createBlueprint(
     );
   }
 
-  // Idempotency: check if blueprint already exists (non-superseded)
+  // G16: Blueprint supersession policy — if a DRAFT or ACTIVE blueprint exists after reapproval,
+  // supersede it rather than blocking. If the existing blueprint is ACTIVE and has NOT gone
+  // through reapproval (staleness check did not pass), block as before.
   const existing = await db.startupExecutionBlueprint.findFirst({
     where: {
       sessionId: input.sessionId,
       ideaId: input.ideaId,
       blueprintStatus: { not: "SUPERSEDED" },
     },
-    select: { id: true },
+    select: { id: true, blueprintStatus: true, ownerDecisionId: true },
   });
   if (existing) {
-    throw new ConflictError(`Blueprint already exists for this idea (blueprintId: ${existing.id})`);
+    // Allow supersession only if the existing blueprint's decision differs from the current one
+    // (i.e. the owner re-approved, generating a new ownerDecisionId).
+    if (existing.ownerDecisionId === input.ownerDecisionId) {
+      throw new ConflictError(`Blueprint already exists for this idea (blueprintId: ${existing.id})`);
+    }
+    // Different decision = reapproval happened — mark old blueprint SUPERSEDED before creating new one
+    await db.startupExecutionBlueprint.update({
+      where: { id: existing.id },
+      data: { blueprintStatus: "SUPERSEDED" },
+    });
+    await emitAuditEvent({
+      workspaceId,
+      actorId,
+      eventName: AUDIT_EVENTS.STARTUP_BLUEPRINT_SUPERSEDED,
+      payload: { supersededBlueprintId: existing.id, newOwnerDecisionId: input.ownerDecisionId, sessionId: input.sessionId, ideaId: input.ideaId },
+    });
   }
 
   const session = await db.ownerStartupSession.findFirst({
@@ -112,6 +131,8 @@ export async function createBlueprint(
   const outcomeIds: string[] = [];
 
   let capturedObjectiveId = "";
+  let capturedInitiativeId = "";
+  let capturedVerificationWindowIds: string[] = [];
 
   try {
     await db.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -301,6 +322,49 @@ export async function createBlueprint(
       },
     });
 
+    // G12: Create governed Initiative record
+    const initiativeId = randomUUID();
+    await tx.startupInitiative.create({
+      data: {
+        id: initiativeId,
+        workspaceId,
+        sessionId: input.sessionId,
+        ideaId: input.ideaId,
+        objectiveId,
+        label: `${idea.name} startup launch`,
+        scope: input.objectiveDescription ?? `Launch and validate ${idea.name} as a new business`,
+        accountableOwnerId: actorId,
+        status: "ACTIVE",
+        budgetCents: null,
+        approvalDecisionId: input.ownerDecisionId,
+        createdBy: actorId,
+      },
+    });
+
+    // G13/G14: Create date-bounded VerificationWindow (30-day initial validation period)
+    capturedInitiativeId = initiativeId;
+    const windowId = randomUUID();
+    capturedVerificationWindowIds = [windowId];
+    const windowStart = new Date();
+    const windowEnd = new Date(windowStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+    await tx.startupVerificationWindow.create({
+      data: {
+        id: windowId,
+        workspaceId,
+        initiativeId,
+        sessionId: input.sessionId,
+        ideaId: input.ideaId,
+        windowLabel: `${idea.name} — Month 1 Validation`,
+        startsAt: windowStart,
+        endsAt: windowEnd,
+        successCriteria: (taskTitles.slice(0, 2).map((t) => `Complete: ${t}`)) as unknown as object,
+        failureCriteria: ["No paying customer acquired in 30 days", "Cash runway below 3 months"] as unknown as object,
+        metricsToMeasure: ["customer_count", "revenue", "cash_runway_months"] as unknown as object,
+        outcome: "PENDING",
+        createdBy: actorId,
+      },
+    });
+
     // Create blueprint record
     await tx.startupExecutionBlueprint.create({
       data: {
@@ -310,6 +374,8 @@ export async function createBlueprint(
         ideaId: input.ideaId,
         ownerDecisionId: input.ownerDecisionId,
         objectiveId,
+        initiativeId,
+        verificationWindowIds: [windowId] as unknown as object,
         taskIds: taskIds as unknown as object,
         kpiIds: kpiIds as unknown as object,
         riskIds: riskIds as unknown as object,
@@ -358,5 +424,5 @@ export async function createBlueprint(
     throw err;
   }
 
-  return { blueprintId, objectiveId: capturedObjectiveId, taskIds, kpiIds, riskIds, resourceAllocationIds, constraintIds, outcomeIds };
+  return { blueprintId, objectiveId: capturedObjectiveId, taskIds, kpiIds, riskIds, resourceAllocationIds, constraintIds, outcomeIds, initiativeId: capturedInitiativeId, verificationWindowIds: capturedVerificationWindowIds };
 }

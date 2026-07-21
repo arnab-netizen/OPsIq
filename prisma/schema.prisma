@@ -1644,6 +1644,7 @@ model OwnerStartupSession {
   ownerDecisions           StartupOwnerDecision[]
   researchPlan             StartupResearchPlan?
   executionBlueprints      StartupExecutionBlueprint[]
+  initiatives              StartupInitiative[]
 
   @@index([workspaceId, status])
   @@map("owner_startup_session")
@@ -1707,6 +1708,7 @@ model StartupIdeaRecord {
   systemRecommendations         StartupSystemRecommendation[]
   ownerDecisions                StartupOwnerDecision[]
   executionBlueprints           StartupExecutionBlueprint[]
+  initiatives                   StartupInitiative[]
 
   @@index([workspaceId, sessionId])
   @@index([workspaceId, screeningStatus])
@@ -2092,9 +2094,67 @@ model StartupExecutionBlueprint {
   idea            StartupIdeaRecord   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
   ownerDecision   StartupOwnerDecision @relation(fields: [ownerDecisionId], references: [id])
 
+  initiativeId             String?             @map("initiative_id") @db.Uuid
+  verificationWindowIds    Json                @default("[]") @map("verification_window_ids")
+
+  initiative      StartupInitiative?  @relation(fields: [initiativeId], references: [id], onDelete: SetNull)
+
   @@unique([sessionId, ideaId, blueprintStatus])
   @@index([workspaceId, sessionId])
   @@map("startup_execution_blueprint")
+}
+
+/// G12: Governed Initiative — tracks the funded work item with accountable owner, scope, budget, and approval reference.
+model StartupInitiative {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId            String   @map("workspace_id") @db.Uuid
+  sessionId              String   @map("session_id") @db.Uuid
+  ideaId                 String   @map("idea_id") @db.Uuid
+  objectiveId            String   @map("objective_id") @db.Uuid
+  label                  String                        // human-readable initiative name
+  scope                  String   @db.Text             // what is included/excluded
+  accountableOwnerId     String   @map("accountable_owner_id") @db.Uuid
+  status                 String   @default("ACTIVE") @map("status")  // ACTIVE | PAUSED | COMPLETED | CANCELLED | SUPERSEDED
+  budgetCents            BigInt?  @map("budget_cents")
+  approvalDecisionId     String?  @map("approval_decision_id") @db.Uuid  // FK → StartupOwnerDecision
+  approvalPackageHash    String?  @map("approval_package_hash")           // snapshot of hash at initiative creation
+  createdAt              DateTime @default(now()) @map("created_at")
+  createdBy              String   @map("created_by") @db.Uuid
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  session                OwnerStartupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  idea                   StartupIdeaRecord   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  blueprints             StartupExecutionBlueprint[]
+
+  @@index([workspaceId, sessionId])
+  @@index([workspaceId, ideaId])
+  @@index([workspaceId, status])
+  @@map("startup_initiatives")
+}
+
+/// G13/G14: Verification Window — date-bounded period during which initiative outcomes are measured.
+model StartupVerificationWindow {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId            String    @map("workspace_id") @db.Uuid
+  initiativeId           String    @map("initiative_id") @db.Uuid
+  sessionId              String    @map("session_id") @db.Uuid
+  ideaId                 String    @map("idea_id") @db.Uuid
+  windowLabel            String    @map("window_label")      // e.g. "Month 1 validation"
+  startsAt               DateTime  @map("starts_at")
+  endsAt                 DateTime  @map("ends_at")           // date-bounded — not open-ended
+  successCriteria        Json      @default("[]") @map("success_criteria")  // string[]
+  failureCriteria        Json      @default("[]") @map("failure_criteria")  // string[]
+  metricsToMeasure       Json      @default("[]") @map("metrics_to_measure")  // string[]
+  outcome                String?   @map("outcome")           // PASSED | FAILED | INCONCLUSIVE | PENDING
+  outcomeRecordedAt      DateTime? @map("outcome_recorded_at")
+  outcomeRecordedBy      String?   @map("outcome_recorded_by") @db.Uuid
+  createdAt              DateTime  @default(now()) @map("created_at")
+  createdBy              String    @map("created_by") @db.Uuid
+
+  @@index([workspaceId, initiativeId])
+  @@index([workspaceId, sessionId])
+  @@index([workspaceId, endsAt])
+  @@map("startup_verification_windows")
 }
 
 // ─── Phase 5: Owner Goal + Trajectory Engine ─────────────────────────────────

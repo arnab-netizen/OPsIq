@@ -50,6 +50,21 @@ function isAllowedContentType(ct: string | null): boolean {
   return ALLOWED_CONTENT_TYPES.some((a) => ct.toLowerCase().startsWith(a));
 }
 
+/**
+ * Known-URL map: domains where a real, stable public HTTPS source is available.
+ * Only government portals, central bank feeds, and official statistical agencies.
+ * Each URL must return machine-readable data or structured text.
+ * Do NOT add speculative or login-required URLs.
+ */
+const KNOWN_DOMAIN_URLS: Record<string, string> = {
+  // Central bank inflation data (JSON API — no auth required)
+  inflation_data: "https://api.data.gov.au/v0/dataset/consumer-price-index/latest",
+  // World Bank open data API — GDP/population indicators (public, no key required)
+  gdp_indicators: "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CD?format=json&per_page=1",
+  // BLS US employment stats (public JSON)
+  employment_stats: "https://api.bls.gov/publicAPI/v2/timeseries/data/LNS14000000",
+};
+
 export class SafePublicHttpFetchProvider implements ResearchProvider {
   readonly providerType = "SAFE_HTTP_FETCH";
   private readonly seenUrls = new Set<string>();
@@ -58,11 +73,10 @@ export class SafePublicHttpFetchProvider implements ResearchProvider {
     return ["PUBLIC_WEB_FETCH", "OFFICIAL_SOURCE_FETCH"];
   }
 
-  canHandle(_domain: string): boolean {
-    // No domain is auto-acquirable until a real source URL is configured.
-    // pricing_benchmarks previously pointed to a placeholder URL (research.opsiq.internal)
-    // that does not exist. That domain is reclassified as REQUIRES_OWNER.
-    return false;
+  canHandle(domain: string): boolean {
+    // Only domains with a known, validated public URL are auto-acquirable.
+    // All other domains require owner action.
+    return Object.prototype.hasOwnProperty.call(KNOWN_DOMAIN_URLS, domain);
   }
 
   async search(_query: string): Promise<{ title: string; url: string; snippet: string }[]> {
@@ -202,19 +216,43 @@ export class SafePublicHttpFetchProvider implements ResearchProvider {
         extractedFacts: [],
         reliabilityClassification: "UNVERIFIED",
         confidence: 0,
-        limitations: `Domain "${request.domain}" requires owner action — cannot auto-acquire`,
+        limitations: `Domain "${request.domain}" requires owner action — no known public source URL`,
       };
     }
 
-    // canHandle() returns false for all domains until a real source URL is configured.
-    // This path is only reached if the caller bypasses canHandle() — treat as REQUIRES_OWNER.
-    return {
-      ...base,
-      status: "REQUIRES_OWNER",
-      extractedFacts: [],
-      reliabilityClassification: "UNVERIFIED",
-      confidence: 0,
-      limitations: `Domain "${request.domain}" has no configured public source URL. Owner must supply evidence directly.`,
-    };
+    // Domain has a known public URL — attempt actual fetch
+    const sourceUrl = KNOWN_DOMAIN_URLS[request.domain]!;
+    try {
+      const fetched = await this.fetch(sourceUrl);
+      let extractedFacts: Record<string, unknown>[] = [];
+      try {
+        const parsed: unknown = JSON.parse(fetched.body);
+        if (Array.isArray(parsed)) {
+          extractedFacts = parsed.slice(0, 10) as Record<string, unknown>[];
+        } else if (parsed && typeof parsed === "object") {
+          extractedFacts = [parsed as Record<string, unknown>];
+        }
+      } catch {
+        extractedFacts = [{ raw: fetched.body.slice(0, 1000) }];
+      }
+      return {
+        ...base,
+        status: "ACQUIRED",
+        sourceUrl,
+        rawResult: fetched.body.slice(0, 4000),
+        extractedFacts,
+        confidence: 60,
+        limitations: "Auto-acquired from known public source; validate applicability to local market",
+      };
+    } catch {
+      return {
+        ...base,
+        status: "FAILED_NOT_FOUND",
+        sourceUrl,
+        extractedFacts: [],
+        confidence: 0,
+        limitations: "Auto-acquire failed: network error or unexpected response from known source",
+      };
+    }
   }
 }
