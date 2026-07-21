@@ -511,31 +511,31 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
 
   test("step 35 — profile version increments on update", async () => {
     const before = await page.request.get(
-      `/api/owner/startup/sessions/${sessionId}`
+      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}`
     );
     const v1 = (await before.json()).profileVersion as number;
 
-    await page.request.patch(`/api/owner/startup/sessions/${sessionId}/profile`, {
+    await page.request.patch(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/profile`, {
       data: { wealthGoalAnnualCents: 150_000_00, availableWeeklyHours: 30, expectedVersion: v1 },
     });
 
-    const after = await page.request.get(`/api/owner/startup/sessions/${sessionId}`);
+    const after = await page.request.get(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}`);
     const v2 = (await after.json()).profileVersion as number;
     expect(v2).toBe(v1 + 1);
   });
 
   test("step 36 — profile update is rejected with 409 when expectedVersion is stale", async () => {
-    const current = await page.request.get(`/api/owner/startup/sessions/${sessionId}`);
+    const current = await page.request.get(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}`);
     const v = (await current.json()).profileVersion as number;
 
-    const res = await page.request.patch(`/api/owner/startup/sessions/${sessionId}/profile`, {
+    const res = await page.request.patch(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/profile`, {
       data: { wealthGoalAnnualCents: 200_000_00, availableWeeklyHours: 20, expectedVersion: v - 1 },
     });
     expect(res.status()).toBe(409);
   });
 
   test("step 37 — research acquisition status reflects REQUIRES_OWNER for unacquirable domains", async () => {
-    const res = await page.request.get(`/api/owner/startup/sessions/${sessionId}/research`);
+    const res = await page.request.get(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/research`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const domains: Array<{ domain: string; status: string }> = body.acquisitions ?? [];
@@ -545,7 +545,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 38 — evidence source provenance badge visible on UI", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${sessionId}/evidence`);
+    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/evidence`);
     await page.waitForLoadState("networkidle");
     const badge = page.locator("[data-testid='source-type-badge']").first();
     // If evidence was recorded earlier it should have a provenance badge
@@ -557,7 +557,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 39 — evidence freshness indicator present for recorded evidence", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${sessionId}/evidence`);
+    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/evidence`);
     await page.waitForLoadState("networkidle");
     const fresh = page.locator("[data-testid='evidence-retrieved-at']").first();
     if (await fresh.count() > 0) {
@@ -567,7 +567,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 40 — owner task list shows only tasks that cannot be auto-acquired", async () => {
-    const res = await page.request.get(`/api/owner/startup/sessions/${sessionId}/research`);
+    const res = await page.request.get(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/research`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     const ownerTasks: unknown[] = body.ownerTasks ?? [];
@@ -580,18 +580,18 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
 
   test("step 41 — idea origin derivation field present on idea record", async () => {
     const res = await page.request.get(
-      `/api/owner/startup/sessions/${sessionId}/ideas/${ideaId}`
+      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}`
     );
     expect(res.status()).toBe(200);
     const body = await res.json();
     // Idea should have a name and sessionId linkage
     expect(body).toHaveProperty("name");
-    expect(body.sessionId).toBe(sessionId);
+    expect(body.sessionId).toBe(E2E_PHASE5_SESSION_ID);
   });
 
   test("step 42 — market sizing returns range (low / mid / high) not a single point estimate", async () => {
     const res = await page.request.get(
-      `/api/owner/startup/sessions/${sessionId}/ideas/${ideaId}/market-sizing`
+      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/market-sizing`
     );
     expect(res.status()).toBe(200);
     const body = await res.json();
@@ -604,7 +604,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
 
   test("step 43 — economic model returns period cash flow breakdown", async () => {
     const res = await page.request.get(
-      `/api/owner/startup/sessions/${sessionId}/ideas/${ideaId}/economics`
+      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/economics`
     );
     expect(res.status()).toBe(200);
     const body = await res.json();
@@ -614,7 +614,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 44 — arbitration response includes closestAlternative field", async () => {
-    const res = await page.request.get(`/api/owner/startup/sessions/${sessionId}/arbitrate`);
+    const res = await page.request.get(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/arbitrate`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     // closestAlternative may be null if only one idea exists — presence of the key matters
@@ -622,7 +622,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 45 — owner decision response exposes approvalPackageHashSha256", async () => {
-    const res = await page.request.get(`/api/owner/startup/sessions/${sessionId}/decision`);
+    const res = await page.request.get(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/decision`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     if (body.ownerDecision) {
@@ -634,7 +634,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
 
   test("step 46 — stale approval detected when evidence added after decision", async () => {
     // Record new evidence after the GO decision
-    const evRes = await page.request.post(`/api/owner/startup/sessions/${sessionId}/evidence`, {
+    const evRes = await page.request.post(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/evidence`, {
       data: {
         ideaId,
         sourceType: "AUTHORITATIVE_PRIMARY",
@@ -649,12 +649,12 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
     expect([200, 201]).toContain(evRes.status());
 
     // Now attempting to create a blueprint should be blocked with staleness error
-    const decisionRes = await page.request.get(`/api/owner/startup/sessions/${sessionId}/decision`);
+    const decisionRes = await page.request.get(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/decision`);
     const decisionBody = await decisionRes.json();
     const ownerDecisionId = decisionBody?.ownerDecision?.id;
 
     if (ownerDecisionId) {
-      const bpRes = await page.request.post(`/api/owner/startup/sessions/${sessionId}/blueprint`, {
+      const bpRes = await page.request.post(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/blueprint`, {
         data: {
           ideaId,
           ownerDecisionId,
@@ -668,7 +668,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
 
   test("step 47 — re-approve after stale detection unblocks blueprint creation", async () => {
     // Issue a fresh GO decision to reset staleness
-    const newDecisionRes = await page.request.post(`/api/owner/startup/sessions/${sessionId}/decision`, {
+    const newDecisionRes = await page.request.post(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/decision`, {
       data: {
         ideaId,
         decisionType: "GO",
@@ -681,7 +681,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 48 — blueprint chain counts match input counts", async () => {
-    const res = await page.request.get(`/api/owner/startup/sessions/${sessionId}/blueprint`);
+    const res = await page.request.get(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/blueprint`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     // Blueprint must carry taskIds, kpiIds, riskIds arrays
@@ -694,7 +694,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 49 — blueprint objectiveId links to a BusinessObjective record", async () => {
-    const bpRes = await page.request.get(`/api/owner/startup/sessions/${sessionId}/blueprint`);
+    const bpRes = await page.request.get(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/blueprint`);
     const bp = await bpRes.json();
     const objectiveId = bp.objectiveId as string;
     if (objectiveId) {
@@ -707,7 +707,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   test("step 50 — historical economic model versions accessible", async () => {
     // Build a second economic model to create v2
     const buildRes = await page.request.post(
-      `/api/owner/startup/sessions/${sessionId}/ideas/${ideaId}/economics`,
+      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/economics`,
       {
         data: {
           startupCostCents: 20_000_00,
@@ -723,7 +723,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
 
     // The GET endpoint should return the latest
     const getRes = await page.request.get(
-      `/api/owner/startup/sessions/${sessionId}/ideas/${ideaId}/economics`
+      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/economics`
     );
     expect(getRes.status()).toBe(200);
     const body = await getRes.json();
@@ -731,7 +731,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 51 — page reload preserves session data (persistence check)", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${sessionId}`);
+    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}`);
     await page.waitForLoadState("networkidle");
     const statusEl = page.locator("[data-testid='session-status']");
     await expect(statusEl).toBeVisible();
@@ -739,7 +739,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 52 — readiness panel renders gate outcomes without hiding hard failures", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${sessionId}/ideas/${ideaId}/readiness`);
+    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/readiness`);
     await page.waitForLoadState("networkidle");
     const hardFailBadge = page.locator("[data-testid='hard-gate-failure']").first();
     const passBadge = page.locator("[data-testid='passed-gate']").first();
@@ -750,7 +750,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 53 — hypothesis table shows UNTESTED_ASSUMPTION badge for new hypotheses", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${sessionId}/ideas/${ideaId}/hypotheses`);
+    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/hypotheses`);
     await page.waitForLoadState("networkidle");
     const badge = page.locator("[data-testid='hypothesis-status-badge']").first();
     if (await badge.count() > 0) {
@@ -761,7 +761,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 54 — business model page renders all required sections", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${sessionId}/ideas/${ideaId}/business-model`);
+    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/business-model`);
     await page.waitForLoadState("networkidle");
     // Expect the page to load without crashing
     expect(fatalErrors()).toHaveLength(0);
@@ -770,7 +770,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 55 — system recommendation and owner decision are visually distinct", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${sessionId}/decision`);
+    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/decision`);
     await page.waitForLoadState("networkidle");
     const sysRec = page.locator("[data-testid='system-recommendation']");
     const ownerDec = page.locator("[data-testid='owner-decision']");

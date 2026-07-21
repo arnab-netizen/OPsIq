@@ -616,18 +616,18 @@ export async function assessAndPersistReadiness(
       data: {
         id: assessmentId,
         workspaceId,
-        sessionId,
-        ideaId,
-        problemEvidenceScore: result.scores.problemEvidence,
-        customerEvidenceScore: result.scores.customerEvidence,
-        wtpEvidenceScore: result.scores.wtpEvidence,
-        solutionFeasibilityScore: result.scores.solutionFeasibility,
-        deliveryFeasibilityScore: result.scores.deliveryFeasibility,
-        economicViabilityScore: result.scores.economicViability,
-        cashSurvivalScore: result.scores.cashSurvival,
-        resourceReadinessScore: result.scores.resourceReadiness,
-        regulatoryReadinessScore: result.scores.regulatoryReadiness,
-        ownerCapacityScore: result.scores.ownerCapacity,
+        session: { connect: { id: sessionId } },
+        idea: { connect: { id: ideaId } },
+        problemEvidenceScore: Math.round(result.scores.problemEvidence ?? 0),
+        customerEvidenceScore: Math.round(result.scores.customerEvidence ?? 0),
+        wtpEvidenceScore: Math.round(result.scores.wtpEvidence ?? 0),
+        solutionFeasibilityScore: Math.round(result.scores.solutionFeasibility ?? 0),
+        deliveryFeasibilityScore: Math.round(result.scores.deliveryFeasibility ?? 0),
+        economicViabilityScore: Math.round(result.scores.economicViability ?? 0),
+        cashSurvivalScore: Math.round(result.scores.cashSurvival ?? 0),
+        resourceReadinessScore: Math.round(result.scores.resourceReadiness ?? 0),
+        regulatoryReadinessScore: Math.round(result.scores.regulatoryReadiness ?? 0),
+        ownerCapacityScore: Math.round(result.scores.ownerCapacity ?? 0),
         hardGateFailures: result.hardGateFailures as unknown as object,
         passedGates: result.passedGates as unknown as object,
         failedGates: result.failedGates as unknown as object,
@@ -1033,6 +1033,7 @@ export async function checkApprovalStaleness(
     where: { id: session.currentOwnerDecisionId, decisionType: "GO" },
     select: {
       packageHashSha256: true,
+      ideaId: true,
       linkedIdeaVersionId: true,
       linkedProfileVersionId: true,
       linkedEconomicModelId: true,
@@ -1062,9 +1063,15 @@ export async function checkApprovalStaleness(
   // Query current snapshot arrays from the DB
   const currentSnapshots = await queryCurrentSnapshotIds(workspaceId, sessionId);
 
+  // Destructure ideaId out of currentVersionedIds — it's an execution parameter and must
+  // not override the decision's own ideaId in the recomputed hash.
+  const { ideaId: _executionIdeaId, ...versionedIdsWithoutIdea } = currentVersionedIds;
   const currentComponents: ApprovalPackageComponents = {
     sessionId,
-    ...currentVersionedIds,
+    // Use the decision's own ideaId for hash recomputation so the hash stays
+    // stable regardless of which ideaId the caller passes.
+    ideaId: decision.ideaId,
+    ...versionedIdsWithoutIdea,
     ...currentSnapshots,
     spendingLimitCents: decision.spendingLimitCents,
     permittedActions: (decision.permittedActions as string[]) ?? [],
