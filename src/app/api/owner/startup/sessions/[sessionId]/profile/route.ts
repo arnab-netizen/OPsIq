@@ -37,6 +37,7 @@ export const GET = withCanonicalEnforcement(
 const patchSchema = z.object({
   profileData: z.record(z.string(), z.unknown()),
   changeRationale: z.string().optional(),
+  expectedVersion: z.number().int().optional(),
 });
 
 export const PATCH = withCanonicalEnforcement(
@@ -47,7 +48,8 @@ export const PATCH = withCanonicalEnforcement(
       params.sessionId,
       ctx.verifiedActorId,
       body.profileData,
-      body.changeRationale
+      body.changeRationale,
+      body.expectedVersion
     );
     return canonicalJson(result, { status: 200 });
   },

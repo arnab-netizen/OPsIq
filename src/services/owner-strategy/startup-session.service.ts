@@ -7,7 +7,7 @@ import { randomUUID, createHash } from "crypto";
 import { db } from "@/lib/db";
 import { validateStartup } from "@/domain/owner-strategy/startup-mode";
 import type { StartupIntake, StartupIdea, IdeaEvaluation } from "@/domain/owner-strategy/startup-mode.types";
-import { NotFoundError } from "@/infra/errors";
+import { NotFoundError, ConflictError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { assertValidTransition, type StartupSessionStatus } from "@/domain/owner-strategy/startup-lifecycle";
@@ -194,11 +194,9 @@ export async function updateContextProfile(
 
     // Optimistic locking: if caller supplied expectedVersion, confirm it matches current
     if (expectedVersion !== undefined && session.profileVersion !== expectedVersion) {
-      const err = new Error(
+      throw new ConflictError(
         `CONCURRENCY_CONFLICT: profile version mismatch — expected ${expectedVersion}, found ${session.profileVersion}`
       );
-      (err as Error & { code: string }).code = "CONCURRENCY_CONFLICT";
-      throw err;
     }
 
     const newVersion = session.profileVersion + 1;
@@ -226,9 +224,7 @@ export async function updateContextProfile(
     });
 
     if (updated.count === 0) {
-      const err = new Error("CONCURRENCY_CONFLICT: profile was modified by a concurrent request");
-      (err as Error & { code: string }).code = "CONCURRENCY_CONFLICT";
-      throw err;
+      throw new ConflictError("CONCURRENCY_CONFLICT: profile was modified by a concurrent request");
     }
 
     await emitAuditEvent({
@@ -618,16 +614,16 @@ export async function assessAndPersistReadiness(
         workspaceId,
         session: { connect: { id: sessionId } },
         idea: { connect: { id: ideaId } },
-        problemEvidenceScore: Math.round(result.scores.problemEvidence ?? 0),
-        customerEvidenceScore: Math.round(result.scores.customerEvidence ?? 0),
-        wtpEvidenceScore: Math.round(result.scores.wtpEvidence ?? 0),
-        solutionFeasibilityScore: Math.round(result.scores.solutionFeasibility ?? 0),
-        deliveryFeasibilityScore: Math.round(result.scores.deliveryFeasibility ?? 0),
-        economicViabilityScore: Math.round(result.scores.economicViability ?? 0),
-        cashSurvivalScore: Math.round(result.scores.cashSurvival ?? 0),
-        resourceReadinessScore: Math.round(result.scores.resourceReadiness ?? 0),
-        regulatoryReadinessScore: Math.round(result.scores.regulatoryReadiness ?? 0),
-        ownerCapacityScore: Math.round(result.scores.ownerCapacity ?? 0),
+        problemEvidenceScore: Math.round(result.scores.problemEvidence || 0),
+        customerEvidenceScore: Math.round(result.scores.customerEvidence || 0),
+        wtpEvidenceScore: Math.round(result.scores.wtpEvidence || 0),
+        solutionFeasibilityScore: Math.round(result.scores.solutionFeasibility || 0),
+        deliveryFeasibilityScore: Math.round(result.scores.deliveryFeasibility || 0),
+        economicViabilityScore: Math.round(result.scores.economicViability || 0),
+        cashSurvivalScore: Math.round(result.scores.cashSurvival || 0),
+        resourceReadinessScore: Math.round(result.scores.resourceReadiness || 0),
+        regulatoryReadinessScore: Math.round(result.scores.regulatoryReadiness || 0),
+        ownerCapacityScore: Math.round(result.scores.ownerCapacity || 0),
         hardGateFailures: result.hardGateFailures as unknown as object,
         passedGates: result.passedGates as unknown as object,
         failedGates: result.failedGates as unknown as object,
