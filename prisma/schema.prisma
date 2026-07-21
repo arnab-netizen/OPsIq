@@ -1645,6 +1645,7 @@ model OwnerStartupSession {
   researchPlan             StartupResearchPlan?
   executionBlueprints      StartupExecutionBlueprint[]
   initiatives              StartupInitiative[]
+  ideaGenerationBatches    StartupIdeaGenerationBatch[]
 
   @@index([workspaceId, status])
   @@map("owner_startup_session")
@@ -2172,6 +2173,13 @@ model StartupExecutionPlan {
   planVersion         Int       @default(1) @map("plan_version")
   tasks               Json      @default("[]") @map("tasks")  // ordered array of {taskId, label, sequenceOrder, dependsOn[], status}
   milestones          Json      @default("[]") @map("milestones")  // [{label, targetDate, successCriteria}]
+  // G4: Governance fields — execution boundaries
+  startDate           DateTime? @map("start_date")           // when execution may begin
+  targetDate          DateTime? @map("target_date")          // completion target
+  spendingLimitCents  BigInt?   @map("spending_limit_cents") // hard ceiling per plan
+  stopConditions      Json      @default("[]") @map("stop_conditions")     // string[] — conditions that must halt execution
+  rollbackConditions  Json      @default("[]") @map("rollback_conditions") // string[] — conditions triggering rollback
+  approvalPackageHash String?   @map("approval_package_hash")              // hash at plan creation — revalidated on every execution action
   approvedAt          DateTime? @map("approved_at")
   approvedBy          String?   @map("approved_by") @db.Uuid
   createdAt           DateTime  @default(now()) @map("created_at")
@@ -2182,6 +2190,55 @@ model StartupExecutionPlan {
   @@index([workspaceId, ideaId])
   @@index([workspaceId, blueprintId])
   @@map("startup_execution_plans")
+}
+
+/// G6: StartupIdeaGenerationBatch — persists NEED_OPTIONS generated candidates with full provenance.
+/// Candidates are not ideas until the owner accepts them — this record is the authoritative
+/// source for what the system proposed, preventing rediscovery without new evidence.
+model StartupIdeaGenerationBatch {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  sessionId        String    @map("session_id") @db.Uuid
+  generationMethod String    @map("generation_method")   // DOMAIN_HEURISTIC | PROVIDER | STATIC_STUB
+  providerStatus   String    @map("provider_status")     // NEED_OPTIONS_PROVIDER_AVAILABLE | NEED_OPTIONS_PRODUCTION_PROVIDER_UNAVAILABLE
+  profileSnapshot  Json      @default("{}") @map("profile_snapshot")   // GenerationProfile at generation time
+  evidenceCount    Int       @default(0) @map("evidence_count")
+  concepts         Json      @default("[]") @map("concepts")           // IdeaGenerationConcept[]
+  conceptCount     Int       @default(0) @map("concept_count")
+  available        Boolean   @default(false) @map("available")          // true if production provider used
+  createdBy        String    @map("created_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  session          OwnerStartupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  candidates       StartupIdeaCandidate[]
+
+  @@index([workspaceId, sessionId])
+  @@index([workspaceId, sessionId, createdAt(sort: Desc)])
+  @@map("startup_idea_generation_batches")
+}
+
+/// G6b: StartupIdeaCandidate — owner's accept/reject decision on a generated concept.
+/// Once accepted, creates a governed StartupIdeaRecord. Rejection with rationale prevents
+/// rediscovery of the same concept without new evidence.
+model StartupIdeaCandidate {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  sessionId           String    @map("session_id") @db.Uuid
+  batchId             String    @map("batch_id") @db.Uuid
+  conceptIndex        Int       @map("concept_index")       // index into batch.concepts[]
+  conceptSnapshot     Json      @default("{}") @map("concept_snapshot")   // IdeaGenerationConcept at decision time
+  decision            String    @map("decision")            // ACCEPTED | REJECTED | PENDING
+  rejectionRationale  String?   @db.Text @map("rejection_rationale")
+  acceptedIdeaId      String?   @map("accepted_idea_id") @db.Uuid   // FK → startup_idea_records.id when ACCEPTED
+  decidedBy           String    @map("decided_by") @db.Uuid
+  decidedAt           DateTime  @default(now()) @map("decided_at")
+
+  batch               StartupIdeaGenerationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, conceptIndex])
+  @@index([workspaceId, sessionId])
+  @@index([acceptedIdeaId])
+  @@map("startup_idea_candidates")
 }
 
 // ─── Phase 5: Owner Goal + Trajectory Engine ─────────────────────────────────
