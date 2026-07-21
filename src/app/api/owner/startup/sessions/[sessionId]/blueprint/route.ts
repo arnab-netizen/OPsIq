@@ -24,7 +24,14 @@ export const GET = withCanonicalEnforcement(
       },
     });
     if (!blueprint) throw new NotFoundError("StartupExecutionBlueprint", params.sessionId);
-    return canonicalJson({ blueprint }, { status: 200 });
+    // Expose arrays at top level for client convenience (blueprint object also included)
+    return canonicalJson({
+      blueprint,
+      objectiveId: blueprint.objectiveId ?? null,
+      taskIds: blueprint.taskIds,
+      kpiIds: blueprint.kpiIds,
+      riskIds: blueprint.riskIds,
+    }, { status: 200 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true }
 );

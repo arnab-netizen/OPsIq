@@ -75,7 +75,7 @@ export const POST = withCanonicalEnforcement(
         linkedReadinessId: body.linkedReadinessId ?? null,
       }
     );
-    return canonicalJson({ decisionId }, { status: 201 });
+    return canonicalJson({ decisionId, ownerDecisionId: decisionId }, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );
