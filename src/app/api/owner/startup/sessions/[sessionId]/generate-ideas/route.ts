@@ -55,7 +55,9 @@ export const POST = withCanonicalEnforcement(
         providerStatus,
         available: result.available,
         generationMethod: result.generationMethod,
+        batchId: result.batchId,
         concepts: result.concepts,
+        conceptCount: result.concepts.length,
         providerNote: result.available
           ? null
           : "IDEA_GENERATION_PROVIDER env not configured — generation requires owner-provided concepts or a configured provider",
