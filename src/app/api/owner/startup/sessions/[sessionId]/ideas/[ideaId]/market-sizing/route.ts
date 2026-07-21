@@ -8,7 +8,6 @@ import { canonicalJson } from "@/lib/canonical-json-response";
 import { parseRequestBody } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
-import { NotFoundError } from "@/infra/errors";
 import { buildAndPersistMarketSizing } from "@/services/owner-strategy/startup-session.service";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +19,11 @@ export const GET = withCanonicalEnforcement(
       where: { ideaId: params.ideaId, workspaceId: ctx.verifiedWorkspaceId },
       orderBy: { versionNumber: "desc" },
     });
-    if (!sizing) throw new NotFoundError("StartupMarketSizing", params.ideaId);
+    if (!sizing) {
+      // No sizing record yet — return empty state rather than 404.
+      // The spec guards `if (body.range)` so null is a valid wire response.
+      return canonicalJson({ sizing: null, range: null }, { status: 200 });
+    }
 
     // Expose sizingRange as `range` for the wire contract (low / mid / high)
     const { sizingRange, ...rest } = sizing as typeof sizing & { sizingRange: unknown };
