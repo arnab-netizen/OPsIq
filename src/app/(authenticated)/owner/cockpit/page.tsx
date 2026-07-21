@@ -210,6 +210,16 @@ export default function OwnerCockpitPage() {
         <Button onClick={() => void load()} disabled={busy}>Refresh</Button>
       </header>
       {message && <p data-testid="cockpit-message" style={{ margin: 0, fontSize: 13, color: "#374151" }}>{message}</p>}
+      {/* G8: Startup Mode entry point — server-authoritative role gating at /owner/startup */}
+      <nav aria-label="Owner mode navigation" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Button
+          data-testid="cockpit-startup-mode-link"
+          onClick={() => { window.location.href = "/owner/startup"; }}
+          style={{ fontSize: 13, padding: "4px 10px", background: "#f3f4f6", borderRadius: 4, color: "#111827", border: "1px solid #d1d5db" }}
+        >
+          Startup Mode
+        </Button>
+      </nav>
       <MinimumOwnerCockpit
         bridge={bridge}
         actionsToAvoid={avoid}
