@@ -26,6 +26,7 @@ import {
   E2E_OWNER,
   E2E_PHASE5_SESSION_ID,
   E2E_PHASE5_IDEA_ID,
+  E2E_WORKSPACE_ID,
 } from "./e2e-fixtures";
 
 const consoleErrors: string[] = [];
@@ -714,15 +715,41 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
     expect((body.riskIds as unknown[]).length).toBeGreaterThan(0);
   });
 
-  test("step 49 — blueprint objectiveId links to a BusinessObjective record", async () => {
+  test("step 49 — blueprint objectiveId links to a BusinessObjective record with full integrity", async () => {
+    // Step 1: Blueprint GET succeeds
     const bpRes = await page.request.get(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/blueprint`);
+    expect(bpRes.status()).toBe(200);
     const bp = await bpRes.json();
+
+    // Step 2: objectiveId is present and is a valid UUID
     const objectiveId = bp.objectiveId as string;
-    if (objectiveId) {
-      const objRes = await page.request.get(`/api/owner/objectives/${objectiveId}`);
-      // 200 = objective exists and is linked; 404 = not found (should not happen)
-      expect(objRes.status()).not.toBe(404);
-    }
+    expect(objectiveId).toBeTruthy();
+    expect(objectiveId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+
+    // Step 3: GET objective returns exactly 200 (not merely not-404)
+    const objRes = await page.request.get(`/api/owner/objectives/${objectiveId}`);
+    expect(objRes.status()).toBe(200);
+
+    const objBody = await objRes.json();
+    const obj = objBody.objective;
+
+    // Step 4: Returned objective id matches blueprint.objectiveId
+    expect(obj.id).toBe(objectiveId);
+
+    // Step 5: Objective belongs to the fixture workspace
+    expect(obj.workspaceId).toBe(E2E_WORKSPACE_ID);
+
+    // Step 6: Objective is linked to the fixture startup session
+    expect(obj.linkedStartupSessionId).toBe(E2E_PHASE5_SESSION_ID);
+
+    // Step 7: Objective is linked to the fixture startup idea
+    expect(obj.linkedStartupIdeaId).toBe(E2E_PHASE5_IDEA_ID);
+
+    // Step 8: Prove the objective persists after a synthetic reload (re-fetch same endpoint)
+    const reloadRes = await page.request.get(`/api/owner/objectives/${objectiveId}`);
+    expect(reloadRes.status()).toBe(200);
+    const reloaded = (await reloadRes.json()).objective;
+    expect(reloaded.id).toBe(objectiveId);
   });
 
   test("step 50 — historical economic model versions accessible", async () => {

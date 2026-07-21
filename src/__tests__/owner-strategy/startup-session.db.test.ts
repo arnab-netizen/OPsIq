@@ -726,4 +726,242 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
     const after = await db.auditEvent.count({ where: { actorId: actor } });
     expect(after).toBeGreaterThan(before);
   });
+
+  // ─── Section 5 supplementary DB tests: staleness, reapproval, objective ───
+
+  it("[db] stale profile version returns 409 and does not mutate the session", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+
+    // Advance to version 1
+    await updateContextProfile(wsA, sessionId, actor, { v: 1 }, "v1");
+    const before = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, select: { profileVersion: true } });
+
+    // Submit stale expectedVersion=0 — must throw ConflictError and leave version unchanged
+    await expect(
+      updateContextProfile(wsA, sessionId, actor, { v: 99 }, "stale", 0)
+    ).rejects.toMatchObject({ statusCode: 409 });
+
+    const after = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, select: { profileVersion: true } });
+    expect(after?.profileVersion).toBe(before?.profileVersion); // not mutated
+  });
+
+  it("[db] current profile version increments exactly once per update", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const r1 = await updateContextProfile(wsA, sessionId, actor, { a: 1 }, "first");
+    const r2 = await updateContextProfile(wsA, sessionId, actor, { a: 2 }, "second");
+    expect(r1.versionNumber).toBe(1);
+    expect(r2.versionNumber).toBe(2);
+    const stored = await db.ownerStartupSession.findFirst({ where: { id: sessionId } });
+    expect(stored?.profileVersion).toBe(2);
+  });
+
+  it("[db] duplicate idempotent evidence does not make approval stale", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idem = `idem-stale-test-${randomUUID()}`;
+
+    // Record evidence once
+    await recordEvidenceItem(wsA, sessionId, actor, {
+      idempotencyKey: idem,
+      sourceType: "OWNER_ENTERED",
+      evidenceType: "CUSTOMER_INTERVIEW",
+      observedResult: "Customer confirmed demand",
+    });
+
+    // GO decision — captures current evidence snapshot (one record)
+    await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "test" });
+
+    const before = await checkApprovalStaleness(wsA, sessionId, {});
+    expect(before.isStale).toBe(false);
+
+    // Submit same evidence again — idempotent, same DB row returned
+    await recordEvidenceItem(wsA, sessionId, actor, {
+      idempotencyKey: idem,
+      sourceType: "OWNER_ENTERED",
+      evidenceType: "CUSTOMER_INTERVIEW",
+      observedResult: "Customer confirmed demand",
+    });
+
+    // Approval must NOT become stale — same evidence set
+    const after = await checkApprovalStaleness(wsA, sessionId, {});
+    expect(after.isStale).toBe(false);
+  });
+
+  it("[db] stale blueprint creation returns 409 (ConflictError)", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    // GO decision — no evidence at this point
+    const decisionId = await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "go" });
+
+    // Add evidence AFTER the decision — makes approval stale
+    await recordEvidenceItem(wsA, sessionId, actor, {
+      idempotencyKey: null,
+      sourceType: "OWNER_ENTERED",
+      evidenceType: "CUSTOMER_INTERVIEW",
+      observedResult: "New post-decision finding",
+    });
+
+    // Blueprint creation with stale decision must throw ConflictError
+    await expect(
+      createBlueprint(wsA, actor, {
+        sessionId,
+        ideaId: idea!.id,
+        ownerDecisionId: decisionId,
+        objectiveTitle: "Stale blueprint attempt",
+      })
+    ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it("[db] stale blueprint creation creates no new BusinessObjective", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    const decisionId = await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "go" });
+
+    await recordEvidenceItem(wsA, sessionId, actor, {
+      idempotencyKey: null,
+      sourceType: "OWNER_ENTERED",
+      evidenceType: "CUSTOMER_INTERVIEW",
+      observedResult: "Stale evidence",
+    });
+
+    const objectivesBefore = await db.businessObjective.count({ where: { workspaceId: wsA, linkedStartupSessionId: sessionId } });
+
+    await expect(
+      createBlueprint(wsA, actor, {
+        sessionId,
+        ideaId: idea!.id,
+        ownerDecisionId: decisionId,
+        objectiveTitle: "Should not create objective",
+      })
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    const objectivesAfter = await db.businessObjective.count({ where: { workspaceId: wsA, linkedStartupSessionId: sessionId } });
+    expect(objectivesAfter).toBe(objectivesBefore); // rolled back — no orphan objective
+  });
+
+  it("[db] reapproval after staleness creates a new immutable decision with updated package hash", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+
+    // GO decision 1 — no evidence
+    const dec1Id = await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "v1" });
+
+    // Add new evidence → stale
+    await recordEvidenceItem(wsA, sessionId, actor, {
+      idempotencyKey: null,
+      sourceType: "OWNER_ENTERED",
+      evidenceType: "CUSTOMER_INTERVIEW",
+      observedResult: "New post-decision customer finding",
+    });
+
+    const stale = await checkApprovalStaleness(wsA, sessionId, {});
+    expect(stale.isStale).toBe(true);
+
+    // GO decision 2 — fresh with updated evidence snapshot
+    const dec2Id = await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "v2 reapproval" });
+    expect(dec2Id).not.toBe(dec1Id);
+
+    const dec1 = await db.startupOwnerDecision.findFirst({ where: { id: dec1Id } });
+    const dec2 = await db.startupOwnerDecision.findFirst({ where: { id: dec2Id } });
+
+    // Both decisions preserved (immutable history)
+    expect(dec1).toBeTruthy();
+    expect(dec2).toBeTruthy();
+
+    // Package hashes differ (evidence set changed)
+    expect(dec2?.packageHashSha256).not.toBe(dec1?.packageHashSha256);
+
+    // Session now points to the new decision
+    const session = await db.ownerStartupSession.findFirst({ where: { id: sessionId } });
+    expect(session?.currentOwnerDecisionId).toBe(dec2Id);
+  });
+
+  it("[db] blueprint succeeds after reapproval and returned objective is correctly linked", async () => {
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+
+    // GO decision 1
+    await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "v1" });
+
+    // Add evidence → stale
+    await recordEvidenceItem(wsA, sessionId, actor, {
+      idempotencyKey: null,
+      sourceType: "OWNER_ENTERED",
+      evidenceType: "CUSTOMER_INTERVIEW",
+      observedResult: "Staleness trigger",
+    });
+
+    // Reapprove — captures updated evidence
+    const dec2Id = await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "reapproval" });
+
+    const staleCheck = await checkApprovalStaleness(wsA, sessionId, {});
+    expect(staleCheck.isStale).toBe(false); // should be fresh now
+
+    // Blueprint creation must succeed
+    const result = await createBlueprint(wsA, actor, {
+      sessionId,
+      ideaId: idea!.id,
+      ownerDecisionId: dec2Id,
+      objectiveTitle: "Post-reapproval launch objective",
+    });
+
+    expect(result.blueprintId).toBeTruthy();
+    expect(result.objectiveId).toBeTruthy();
+
+    // Objective exists and is correctly linked
+    const objective = await db.businessObjective.findFirst({ where: { id: result.objectiveId } });
+    expect(objective).toBeTruthy();
+    expect(objective?.workspaceId).toBe(wsA);
+    expect(objective?.linkedStartupSessionId).toBe(sessionId);
+    expect(objective?.linkedStartupIdeaId).toBe(idea!.id);
+  });
+
+  it("[db] objective by-ID lookup is workspace-isolated", async () => {
+    const { getObjective } = await import("@/services/owner-mode/business-objective.service");
+
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+    const decisionId = await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "iso" });
+
+    const result = await createBlueprint(wsA, actor, {
+      sessionId,
+      ideaId: idea!.id,
+      ownerDecisionId: decisionId,
+      objectiveTitle: "Isolation test objective",
+    });
+
+    // getObjective with correct workspace → succeeds
+    const obj = await getObjective(wsA, result.objectiveId);
+    expect(obj.id).toBe(result.objectiveId);
+
+    // getObjective with wrong workspace → NotFoundError
+    await expect(getObjective(wsB, result.objectiveId)).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("[db] failed blueprint transaction creates no orphan objective", async () => {
+    // Create a blueprint, then verify the SECOND duplicate attempt leaves no new objectives
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, intake, ideas: [viableIdea] });
+    const idea = await db.startupIdeaRecord.findFirst({ where: { sessionId } });
+    const decisionId = await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "txn" });
+
+    // First blueprint — succeeds
+    await createBlueprint(wsA, actor, {
+      sessionId, ideaId: idea!.id, ownerDecisionId: decisionId,
+      objectiveTitle: "First blueprint",
+    });
+
+    const objectivesBefore = await db.businessObjective.count({ where: { workspaceId: wsA, linkedStartupSessionId: sessionId } });
+
+    // Second blueprint — fails with ConflictError (duplicate)
+    await expect(
+      createBlueprint(wsA, actor, {
+        sessionId, ideaId: idea!.id, ownerDecisionId: decisionId,
+        objectiveTitle: "Duplicate blueprint",
+      })
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    const objectivesAfter = await db.businessObjective.count({ where: { workspaceId: wsA, linkedStartupSessionId: sessionId } });
+    // Exactly one objective: from the first successful blueprint
+    expect(objectivesAfter).toBe(objectivesBefore);
+  });
 });
