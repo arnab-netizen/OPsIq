@@ -23,7 +23,6 @@ export const GET = withCanonicalEnforcement(
         evidenceRecords: { orderBy: { createdAt: "desc" } },
         validationPlan: true,
         businessModelVersions: { orderBy: { versionNumber: "desc" }, take: 1 },
-        economicModels: { orderBy: { versionNumber: "desc" }, take: 1 },
         readinessAssessments: { orderBy: { assessedAt: "desc" }, take: 1 },
         systemRecommendations: { orderBy: { createdAt: "desc" }, take: 1 },
         ownerDecisions: { orderBy: { createdAt: "desc" }, take: 1 },
