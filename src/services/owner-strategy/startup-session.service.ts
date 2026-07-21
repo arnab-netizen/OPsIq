@@ -491,6 +491,9 @@ export async function recordHypothesisResult(
   // Wire staleness propagation on failure outcomes (outside transaction — read-only + memory write)
   if (result === "DISCONFIRMED" || result === "INCONCLUSIVE") {
     await propagateHypothesisFailureToStaleness(workspaceId, hypothesis.sessionId, hypothesisId, actorId);
+    // Trigger readiness reassessment so the new readiness record's ID invalidates
+    // any existing GO approval hash via checkApprovalStaleness.
+    await reassessReadinessAfterHypothesisChange(workspaceId, hypothesis.sessionId, hypothesisId, actorId);
   }
 }
 
@@ -1846,4 +1849,92 @@ export async function propagateHypothesisFailureToStaleness(
     summary: `Critical hypothesis failed — existing GO approval may be stale for session ${sessionId}`,
     data: { sessionId, hypothesisId, currentOwnerDecisionId: session.currentOwnerDecisionId, requiresReapproval: true },
   });
+}
+
+/**
+ * After a hypothesis is DISCONFIRMED or INCONCLUSIVE, re-derive readiness from current DB state
+ * so the new assessment ID invalidates any stored GO approval hash.
+ * All inputs are queried from current DB records — no inputs passed by caller.
+ */
+async function reassessReadinessAfterHypothesisChange(
+  workspaceId: string,
+  sessionId: string,
+  _hypothesisId: string,
+  actorId: string
+): Promise<void> {
+  // Find the primary idea for this session (non-superseded, most recently updated)
+  const idea = await db.startupIdeaRecord.findFirst({
+    where: { workspaceId, sessionId, supersededById: null },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true, currentReadinessId: true, currentEconomicModelId: true,
+    },
+  });
+  if (!idea) return;
+
+  // Count hypothesis results for this idea
+  const hypotheses = await db.startupHypothesis.findMany({
+    where: { workspaceId, sessionId, ideaId: idea.id },
+    select: { result: true, requiresOwnerApproval: true, hypothesisType: true },
+  });
+  type HypRow = (typeof hypotheses)[number];
+  const critFailed = hypotheses.filter(
+    (h: HypRow) => h.result === "DISCONFIRMED" && (h.requiresOwnerApproval || h.hypothesisType === "DEMAND" || h.hypothesisType === "PRICING")
+  ).length;
+  const critPassed = hypotheses.filter(
+    (h: HypRow) => h.result === "CONFIRMED" && (h.requiresOwnerApproval || h.hypothesisType === "DEMAND" || h.hypothesisType === "PRICING")
+  ).length;
+
+  // Get economic model if any
+  let economicClassification: "VIABLE" | "MARGINAL" | "UNVIABLE" | "INSUFFICIENT_DATA" | null = null;
+  let cashRunwayMonths: number | null = null;
+  let breakEvenMonths: number | null = null;
+  if (idea.currentEconomicModelId) {
+    const econModel = await db.startupEconomicModel.findFirst({
+      where: { id: idea.currentEconomicModelId, workspaceId },
+      select: { economicClassification: true, cashRunwayMonths: true, breakEvenMonths: true },
+    });
+    if (econModel) {
+      economicClassification = econModel.economicClassification as typeof economicClassification;
+      cashRunwayMonths = econModel.cashRunwayMonths;
+      breakEvenMonths = econModel.breakEvenMonths;
+    }
+  }
+
+  // Count evidence by type
+  const evidence = await db.startupEvidenceRecord.findMany({
+    where: { workspaceId, sessionId, ideaId: idea.id },
+    select: { evidenceType: true },
+  });
+  type EvRow = (typeof evidence)[number];
+  const problemCount = evidence.filter((e: EvRow) => e.evidenceType === "PROBLEM_EVIDENCE").length;
+  const customerCount = evidence.filter((e: EvRow) => e.evidenceType === "CUSTOMER_DEMAND").length;
+  const wtpCount = evidence.filter((e: EvRow) => e.evidenceType === "WILLINGNESS_TO_PAY").length;
+
+  // Evaluate freshness + conflicts for gate 7 and 8
+  const { hasStale, materialConflictCount } = await getEvidenceFreshnessForSession(workspaceId, sessionId);
+
+  const inputs: ReadinessInputs = {
+    problemEvidenceCount: problemCount,
+    customerEvidenceCount: customerCount,
+    wtpEvidenceCount: wtpCount,
+    deliveryTrialCompleted: false,
+    acquisitionChannelTested: false,
+    economicClassification,
+    cashRunwayMonths,
+    breakEvenMonths,
+    supplierQuoteObtained: false,
+    regulatoryCheckCompleted: false,
+    licenceRequired: null,
+    licenceObtained: null,
+    ownerHoursAvailable: null,
+    capitalAvailableCents: null,
+    startupCostCents: null,
+    criticalHypothesesPassed: critPassed,
+    criticalHypothesesFailed: critFailed,
+    hasStaleMaterialEvidence: hasStale,
+    materialConflictCount,
+  };
+
+  await assessAndPersistReadiness(workspaceId, sessionId, idea.id, actorId, inputs);
 }

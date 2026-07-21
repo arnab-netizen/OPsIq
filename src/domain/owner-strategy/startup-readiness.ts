@@ -23,6 +23,12 @@ export interface ReadinessInputs {
   startupCostCents: bigint | null;
   criticalHypothesesPassed: number;
   criticalHypothesesFailed: number;
+  /** Stale material evidence is a hard gate — evidence can expire without a new write */
+  hasStaleMaterialEvidence?: boolean;
+  /** Material conflicts dispute a hard gate claim → block readiness */
+  materialConflictCount?: number;
+  /** Clock override for deterministic tests */
+  now?: Date;
 }
 
 export interface ReadinessAssessment {
@@ -146,6 +152,24 @@ export function assessReadiness(inputs: ReadinessInputs): ReadinessAssessment {
     failedGates.push("critical_hypotheses");
   } else if (inputs.criticalHypothesesPassed >= 3) {
     passedGates.push("critical_hypotheses");
+  }
+
+  // Gate 7: Stale material evidence — evidence can expire through time without a new write
+  if (inputs.hasStaleMaterialEvidence === true) {
+    hardGateFailures.push("STALE_MATERIAL_EVIDENCE: Material evidence has expired or requires current verification");
+    failedGates.push("evidence_freshness");
+  } else {
+    passedGates.push("evidence_freshness");
+  }
+
+  // Gate 8: Material evidence conflicts dispute a hard-gate claim
+  if ((inputs.materialConflictCount ?? 0) > 0) {
+    hardGateFailures.push(
+      `EVIDENCE_CONFLICT: ${inputs.materialConflictCount} material conflict(s) detected — claim disputed, launch unsafe`
+    );
+    failedGates.push("evidence_conflict");
+  } else {
+    passedGates.push("evidence_conflict");
   }
 
   // Gate 6: Break-even vs runway

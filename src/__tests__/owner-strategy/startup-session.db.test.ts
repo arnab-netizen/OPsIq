@@ -25,6 +25,8 @@ import {
   buildAndPersistMarketSizing,
   checkApprovalStaleness,
   assessAndPersistReadiness,
+  reviseIdea,
+  recordHypothesisResult,
 } from "@/services/owner-strategy/startup-session.service";
 import { createBlueprint } from "@/services/owner-strategy/startup-execution-blueprint.service";
 import { ConflictError } from "@/infra/errors";
@@ -963,5 +965,218 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
     const objectivesAfter = await db.businessObjective.count({ where: { workspaceId: wsA, linkedStartupSessionId: sessionId } });
     // Exactly one objective: from the first successful blueprint
     expect(objectivesAfter).toBe(objectivesBefore);
+  });
+});
+
+describe("[db][concurrency] reviseIdea — exactly one winner per concurrent revision", () => {
+  it("[db] two simultaneous revisions of the same idea — exactly one wins", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const sessionId = await createStartupSession(wsA, actor, { label: "Revision concurrency test" });
+    // Add initial idea
+    const ideaId = randomUUID();
+    await db.startupIdeaRecord.create({
+      data: {
+        id: ideaId, workspaceId: wsA, sessionId,
+        name: "Original Idea", industry: "FOOD",
+        screeningStatus: "UNSCREENED", version: 1,
+        createdBy: actor, updatedBy: actor,
+        screeningReasons: [], screeningConstraints: [], evidenceRequired: [],
+        accepted: false,
+      },
+    });
+
+    // Fire two concurrent revisions
+    const r1 = reviseIdea(wsA, sessionId, ideaId, actor, { name: "Revision A" }).catch((e: unknown) => e);
+    const r2 = reviseIdea(wsA, sessionId, ideaId, actor, { name: "Revision B" }).catch((e: unknown) => e);
+    const [res1, res2] = await Promise.all([r1, r2]);
+
+    // Exactly one must succeed (string = new ideaId) and one must fail (ConflictError)
+    const succeeded = [res1, res2].filter((r) => typeof r === "string");
+    const failed = [res1, res2].filter((r) => r instanceof ConflictError);
+    expect(succeeded).toHaveLength(1);
+    expect(failed).toHaveLength(1);
+
+    // The original idea must have exactly one supersededById (no branching)
+    const original = await db.startupIdeaRecord.findFirst({ where: { id: ideaId } });
+    expect(original?.supersededById).toBeTruthy();
+
+    // Exactly one current (non-superseded) version
+    const activeVersions = await db.startupIdeaRecord.findMany({
+      where: { workspaceId: wsA, sessionId, supersededById: null },
+    });
+    expect(activeVersions).toHaveLength(1);
+    expect(activeVersions[0].version).toBeGreaterThanOrEqual(2);
+  });
+
+  it("[db] revising an already-superseded idea returns ConflictError", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const sessionId = await createStartupSession(wsA, actor, { label: "Superseded revision test" });
+    const ideaId = randomUUID();
+    await db.startupIdeaRecord.create({
+      data: {
+        id: ideaId, workspaceId: wsA, sessionId,
+        name: "Already Superseded", industry: "TECH",
+        screeningStatus: "UNSCREENED", version: 1,
+        createdBy: actor, updatedBy: actor,
+        screeningReasons: [], screeningConstraints: [], evidenceRequired: [],
+        accepted: false,
+      },
+    });
+
+    // First revision — must succeed
+    const newId = await reviseIdea(wsA, sessionId, ideaId, actor, { name: "Revision 1" });
+    expect(typeof newId).toBe("string");
+
+    // Second revision of the same original idea (already superseded) — must fail
+    await expect(
+      reviseIdea(wsA, sessionId, ideaId, actor, { name: "Revision 2" })
+    ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it("[db] cross-workspace reviseIdea is denied", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const sessionId = await createStartupSession(wsA, actor, { label: "Cross-workspace revision test" });
+    const ideaId = randomUUID();
+    await db.startupIdeaRecord.create({
+      data: {
+        id: ideaId, workspaceId: wsA, sessionId,
+        name: "WsA Idea", industry: "RETAIL",
+        screeningStatus: "UNSCREENED", version: 1,
+        createdBy: actor, updatedBy: actor,
+        screeningReasons: [], screeningConstraints: [], evidenceRequired: [],
+        accepted: false,
+      },
+    });
+
+    // Attempt revision from wsB — must fail with NotFoundError (not ConflictError)
+    await expect(
+      reviseIdea(wsB, sessionId, ideaId, actor, { name: "Hacked Revision" })
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("[db] recordHypothesisResult — staleness and readiness propagation", () => {
+  it("[db] DISCONFIRMED hypothesis triggers reassessment creating a new readiness record", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const sessionId = await createStartupSession(wsA, actor, { label: "Hypothesis staleness test" });
+    const ideaId = randomUUID();
+    await db.startupIdeaRecord.create({
+      data: {
+        id: ideaId, workspaceId: wsA, sessionId,
+        name: "Hypothesis Test Idea", industry: "SERVICES",
+        screeningStatus: "PASSED", version: 1,
+        createdBy: actor, updatedBy: actor,
+        screeningReasons: [], screeningConstraints: [], evidenceRequired: [],
+        accepted: false,
+      },
+    });
+
+    // Create an initial readiness assessment
+    const baseReadiness = await assessAndPersistReadiness(wsA, sessionId, ideaId, actor, {
+      problemEvidenceCount: 3, customerEvidenceCount: 5, wtpEvidenceCount: 3,
+      deliveryTrialCompleted: false, acquisitionChannelTested: false,
+      economicClassification: "VIABLE", cashRunwayMonths: 12, breakEvenMonths: 6,
+      supplierQuoteObtained: false, regulatoryCheckCompleted: true,
+      licenceRequired: false, licenceObtained: null,
+      ownerHoursAvailable: 30, capitalAvailableCents: null, startupCostCents: null,
+      criticalHypothesesPassed: 2, criticalHypothesesFailed: 0,
+    });
+    expect(baseReadiness.status).toBe("CONDITIONALLY_READY");
+
+    // Get initial readinessId
+    const ideaBefore = await db.startupIdeaRecord.findFirst({ where: { id: ideaId } });
+    const readinessIdBefore = ideaBefore?.currentReadinessId;
+    expect(readinessIdBefore).toBeTruthy();
+
+    // Create a DEMAND hypothesis and record DISCONFIRMED result
+    const hypothesisId = randomUUID();
+    await db.startupHypothesis.create({
+      data: {
+        id: hypothesisId, workspaceId: wsA, sessionId, ideaId,
+        statement: "Customers will pay $50/month", hypothesisType: "DEMAND",
+        confidenceBefore: 60, falsificationCriteria: "<10% WTP",
+        requiresOwnerApproval: true, validationMethod: "CUSTOMER_INTERVIEW",
+        createdBy: actor,
+      },
+    });
+
+    await recordHypothesisResult(wsA, hypothesisId, actor, "DISCONFIRMED", "Customers declined to pay");
+
+    // Readiness record must have been replaced
+    const ideaAfter = await db.startupIdeaRecord.findFirst({ where: { id: ideaId } });
+    expect(ideaAfter?.currentReadinessId).not.toBe(readinessIdBefore);
+
+    // New readiness record must reflect the failed hypothesis
+    const newReadiness = await db.startupReadinessAssessment.findFirst({
+      where: { id: ideaAfter!.currentReadinessId! },
+    });
+    expect(newReadiness?.hardGateFailures).toBeTruthy();
+    const gateFailures = newReadiness?.hardGateFailures as string[];
+    expect(gateFailures.some((f: string) => f.includes("HYPOTHESIS_FAILED"))).toBe(true);
+    expect(newReadiness?.readinessStatus).toBe("BLOCKED");
+  });
+
+  it("[db] DISCONFIRMED hypothesis with existing GO decision — approval staleness detectable via changed readinessId", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const sessionId = await createStartupSession(wsA, actor, { label: "Approval staleness via hypothesis" });
+    const ideaId = randomUUID();
+    await db.startupIdeaRecord.create({
+      data: {
+        id: ideaId, workspaceId: wsA, sessionId,
+        name: "Approval Staleness Test", industry: "FOOD",
+        screeningStatus: "PASSED", version: 1,
+        createdBy: actor, updatedBy: actor,
+        screeningReasons: [], screeningConstraints: [], evidenceRequired: [],
+        accepted: false,
+      },
+    });
+
+    // Initial readiness
+    await assessAndPersistReadiness(wsA, sessionId, ideaId, actor, {
+      problemEvidenceCount: 5, customerEvidenceCount: 10, wtpEvidenceCount: 5,
+      deliveryTrialCompleted: true, acquisitionChannelTested: true,
+      economicClassification: "VIABLE", cashRunwayMonths: 18, breakEvenMonths: 4,
+      supplierQuoteObtained: true, regulatoryCheckCompleted: true,
+      licenceRequired: false, licenceObtained: null,
+      ownerHoursAvailable: 40, capitalAvailableCents: null, startupCostCents: null,
+      criticalHypothesesPassed: 3, criticalHypothesesFailed: 0,
+    });
+
+    // Capture readinessId for GO decision snapshot
+    const ideaAfterReadiness = await db.startupIdeaRecord.findFirst({ where: { id: ideaId } });
+    const readinessIdAtApproval = ideaAfterReadiness?.currentReadinessId ?? null;
+
+    // Record GO decision pointing to this readiness record
+    await recordOwnerDecision(wsA, sessionId, actor, {
+      decisionType: "GO",
+      linkedSystemRecId: null,
+      linkedReadinessId: readinessIdAtApproval,
+      linkedIdeaId: ideaId,
+    });
+
+    // Create a hypothesis and disconfirm it
+    const hypothesisId = randomUUID();
+    await db.startupHypothesis.create({
+      data: {
+        id: hypothesisId, workspaceId: wsA, sessionId, ideaId,
+        statement: "Supplier available at $5 unit cost", hypothesisType: "SUPPLY",
+        confidenceBefore: 70, falsificationCriteria: "No supplier found",
+        requiresOwnerApproval: true, validationMethod: "SUPPLIER_QUOTE",
+        createdBy: actor,
+      },
+    });
+    await recordHypothesisResult(wsA, hypothesisId, actor, "DISCONFIRMED", "Supplier unavailable at required price");
+
+    // Staleness check: the current readinessId must now differ from the GO snapshot
+    const ideaFinal = await db.startupIdeaRecord.findFirst({ where: { id: ideaId } });
+    const currentReadinessId = ideaFinal?.currentReadinessId;
+    expect(currentReadinessId).not.toBe(readinessIdAtApproval);
+
+    const staleness = await checkApprovalStaleness(wsA, sessionId, {
+      ideaId,
+      readinessId: currentReadinessId ?? null,
+    });
+    expect(staleness.isStale).toBe(true);
+    expect(staleness.changedInputs).toContain("readiness");
   });
 });

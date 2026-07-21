@@ -175,4 +175,61 @@ describe("startup-readiness", () => {
       expect(["NOT_READY", "CONDITIONALLY_READY"]).toContain(result.status);
     });
   });
+
+  describe("Gate 7 — stale material evidence blocks readiness", () => {
+    it("hasStaleMaterialEvidence=true produces BLOCKED status regardless of other passing gates", () => {
+      const result = assessReadiness({ ...readyInputs, hasStaleMaterialEvidence: true });
+      expect(result.status).toBe("BLOCKED");
+    });
+
+    it("hardGateFailures includes STALE_MATERIAL_EVIDENCE", () => {
+      const result = assessReadiness({ ...readyInputs, hasStaleMaterialEvidence: true });
+      expect(result.hardGateFailures.some((f) => f.includes("STALE_MATERIAL_EVIDENCE"))).toBe(true);
+    });
+
+    it("evidence_freshness appears in failedGates when stale", () => {
+      const result = assessReadiness({ ...readyInputs, hasStaleMaterialEvidence: true });
+      expect(result.failedGates).toContain("evidence_freshness");
+    });
+
+    it("hasStaleMaterialEvidence=false passes freshness gate normally", () => {
+      const result = assessReadiness({ ...readyInputs, hasStaleMaterialEvidence: false });
+      expect(result.passedGates).toContain("evidence_freshness");
+      expect(result.status).toBe("READY");
+    });
+
+    it("hasStaleMaterialEvidence omitted (undefined) passes freshness gate — opt-in behaviour", () => {
+      const result = assessReadiness({ ...readyInputs });
+      expect(result.passedGates).toContain("evidence_freshness");
+    });
+  });
+
+  describe("Gate 8 — material evidence conflicts block readiness", () => {
+    it("materialConflictCount > 0 produces BLOCKED status", () => {
+      const result = assessReadiness({ ...readyInputs, materialConflictCount: 2 });
+      expect(result.status).toBe("BLOCKED");
+    });
+
+    it("hardGateFailures includes EVIDENCE_CONFLICT with count", () => {
+      const result = assessReadiness({ ...readyInputs, materialConflictCount: 1 });
+      expect(result.hardGateFailures.some((f) => f.includes("EVIDENCE_CONFLICT"))).toBe(true);
+    });
+
+    it("evidence_conflict appears in failedGates when conflicts exist", () => {
+      const result = assessReadiness({ ...readyInputs, materialConflictCount: 3 });
+      expect(result.failedGates).toContain("evidence_conflict");
+    });
+
+    it("materialConflictCount = 0 passes conflict gate", () => {
+      const result = assessReadiness({ ...readyInputs, materialConflictCount: 0 });
+      expect(result.passedGates).toContain("evidence_conflict");
+    });
+
+    it("staleness and conflict compound — both gates fail simultaneously", () => {
+      const result = assessReadiness({ ...readyInputs, hasStaleMaterialEvidence: true, materialConflictCount: 2 });
+      expect(result.hardGateFailures.length).toBeGreaterThanOrEqual(2);
+      expect(result.failedGates).toContain("evidence_freshness");
+      expect(result.failedGates).toContain("evidence_conflict");
+    });
+  });
 });

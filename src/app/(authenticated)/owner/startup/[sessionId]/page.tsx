@@ -170,20 +170,40 @@ export default function StartupSessionPage({
     } catch { /* Non-fatal */ }
   }
 
-  async function loadBlueprintDetail(ideas: IdeaRecord[]) {
-    const approvedIdea = ideas.find((i) => i.accepted);
-    if (!approvedIdea) return;
+  async function loadBlueprintDetail(currentBlueprintId: string | null, ideas: IdeaRecord[]) {
+    if (!currentBlueprintId) return;
+    // Use canonical blueprint ID to derive execution plan — no client-side accepted heuristic
+    // Try GET /blueprint which returns the canonical blueprint details including initiativeId
     try {
-      const res = await fetch(
-        `/api/owner/startup/sessions/${sessionId}/ideas/${approvedIdea.id}/execution-plan`
-      );
-      if (res.ok) {
-        const data = await res.json();
+      const bpRes = await fetch(`/api/owner/startup/sessions/${sessionId}/blueprint`);
+      if (bpRes.ok) {
+        const bpData = await bpRes.json();
+        const initiativeId: string | null = bpData.initiativeId ?? null;
+        const ideaId: string | null = bpData.ideaId ?? ideas.find((i) => i.accepted)?.id ?? null;
+        // Load execution plan if we have ideaId
+        if (ideaId) {
+          try {
+            const epRes = await fetch(
+              `/api/owner/startup/sessions/${sessionId}/ideas/${ideaId}/execution-plan`
+            );
+            if (epRes.ok) {
+              const epData = await epRes.json();
+              setBlueprintDetail({
+                initiativeId: initiativeId ?? epData.initiativeId ?? null,
+                executionPlanId: epData.id ?? epData.executionPlanId ?? null,
+                verificationWindowCount: bpData.verificationWindowCount ?? epData.verificationWindowCount ?? 0,
+                taskCount: Array.isArray(epData.tasks) ? epData.tasks.length : (epData.taskCount ?? 0),
+              });
+              return;
+            }
+          } catch { /* Non-fatal inner */ }
+        }
+        // Blueprint exists but no execution plan yet
         setBlueprintDetail({
-          initiativeId: data.initiativeId ?? null,
-          executionPlanId: data.executionPlanId ?? data.id ?? null,
-          verificationWindowCount: data.verificationWindowCount ?? 0,
-          taskCount: Array.isArray(data.tasks) ? data.tasks.length : (data.taskCount ?? 0),
+          initiativeId,
+          executionPlanId: null,
+          verificationWindowCount: bpData.verificationWindowCount ?? 0,
+          taskCount: 0,
         });
       }
     } catch { /* Non-fatal */ }
@@ -191,21 +211,22 @@ export default function StartupSessionPage({
 
   useEffect(() => {
     async function load() {
-      await loadSession();
-      // loadSession sets session state; we need the ideas for blueprint detail
+      // Single fetch — get session + all parallel data in one round trip
       const res = await fetch(`/api/owner/startup/sessions/${sessionId}`);
       if (res.ok) {
         const data = await res.json();
+        setSession(data.session ?? null);
         const ideas: IdeaRecord[] = data.session?.ideas ?? [];
+        const blueprintId: string | null = data.session?.currentBlueprintId ?? null;
         await Promise.all([
           loadDecision(),
           loadArbitration(),
           loadExplanation(),
           loadFreshness(),
-          loadBlueprintDetail(ideas),
+          loadBlueprintDetail(blueprintId, ideas),
         ]);
       } else {
-        await Promise.all([loadDecision(), loadArbitration(), loadExplanation(), loadFreshness()]);
+        setPageMsg("Failed to load session");
       }
     }
     void load();
