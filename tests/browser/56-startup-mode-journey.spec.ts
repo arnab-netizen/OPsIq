@@ -657,7 +657,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
     // Record new evidence after the GO decision
     const evRes = await page.request.post(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/evidence`, {
       data: {
-        ideaId,
+        ideaId: E2E_PHASE5_IDEA_ID,
         sourceType: "AUTHORITATIVE_PRIMARY",
         evidenceType: "CUSTOMER_INTERVIEW",
         observedResult: "New post-decision customer finding",
@@ -677,7 +677,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
     if (ownerDecisionId) {
       const bpRes = await page.request.post(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/blueprint`, {
         data: {
-          ideaId,
+          ideaId: E2E_PHASE5_IDEA_ID,
           ownerDecisionId,
           objectiveTitle: "Should be blocked",
         },
@@ -691,7 +691,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
     // Issue a fresh GO decision to reset staleness
     const newDecisionRes = await page.request.post(`/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/decision`, {
       data: {
-        ideaId,
+        ideaId: E2E_PHASE5_IDEA_ID,
         decisionType: "GO",
         rationale: "Re-approved after new evidence",
       },
