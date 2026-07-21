@@ -1865,9 +1865,9 @@ async function reassessReadinessAfterHypothesisChange(
   // Find the primary idea for this session (non-superseded, most recently updated)
   const idea = await db.startupIdeaRecord.findFirst({
     where: { workspaceId, sessionId, supersededById: null },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { createdAt: "desc" },
     select: {
-      id: true, currentReadinessId: true, currentEconomicModelId: true,
+      id: true, currentReadinessId: true, currentEconomicModelVersionId: true,
     },
   });
   if (!idea) return;

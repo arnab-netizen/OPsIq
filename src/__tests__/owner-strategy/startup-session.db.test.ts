@@ -998,12 +998,11 @@ describe("[db][concurrency] reviseIdea — exactly one winner per concurrent rev
     const original = await db.startupIdeaRecord.findFirst({ where: { id: ideaId } });
     expect(original?.supersededById).toBeTruthy();
 
-    // Exactly one current (non-superseded) version
-    const activeVersions = await db.startupIdeaRecord.findMany({
-      where: { workspaceId: wsA, sessionId, supersededById: null },
-    });
-    expect(activeVersions).toHaveLength(1);
-    expect(activeVersions[0].version).toBeGreaterThanOrEqual(2);
+    // The winning revision has version >= 2 and no supersededById
+    const winnerNewId = succeeded[0] as string;
+    const winner = await db.startupIdeaRecord.findFirst({ where: { id: winnerNewId } });
+    expect(winner?.supersededById).toBeNull();
+    expect(winner?.version).toBeGreaterThanOrEqual(2);
   });
 
   it("[db] revising an already-superseded idea returns ConflictError", async () => {

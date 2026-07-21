@@ -190,6 +190,7 @@ export function assessReadiness(inputs: ReadinessInputs): ReadinessAssessment {
   if (inputs.problemEvidenceCount < 3) evidenceGaps.push("Insufficient problem evidence (need ≥3 records)");
   if (inputs.customerEvidenceCount < 5) evidenceGaps.push("Insufficient customer evidence (need ≥5 interviews)");
   if (inputs.wtpEvidenceCount < 3) evidenceGaps.push("Insufficient WTP evidence (need ≥3 signals)");
+  if (!inputs.supplierQuoteObtained) evidenceGaps.push("Supplier quote not obtained — cost and availability unconfirmed");
 
   // Status determination — hard gates override everything
   let status: ReadinessStatus;
