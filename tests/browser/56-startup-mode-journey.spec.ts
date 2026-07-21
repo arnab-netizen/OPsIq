@@ -659,7 +659,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
       data: {
         ideaId: E2E_PHASE5_IDEA_ID,
         sourceType: "AUTHORITATIVE_PRIMARY",
-        evidenceType: "CUSTOMER_INTERVIEW",
+        evidenceType: "CUSTOMER_DEMAND",
         observedResult: "New post-decision customer finding",
         reliabilityScore: 80,
         confidence: 75,
