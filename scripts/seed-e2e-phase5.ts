@@ -59,24 +59,32 @@ async function main() {
   });
 
   // ─── 2. StartupIdeaRecord ─────────────────────────────────────────────────
-  // Schema required (no default): sessionId, workspaceId, name, industry
-  // Schema optional with defaults: version (1), originType (OWNER_ENTERED),
-  //   screeningStatus (UNSCREENED), accepted (false), reasons ([]), warnings ([])
-  await (prisma as any).startupIdeaRecord.upsert({
-    where: { id: E2E_PHASE5_IDEA_ID },
-    update: {
-      screeningStatus: "UNSCREENED",
-    },
-    create: {
-      id: E2E_PHASE5_IDEA_ID,
-      sessionId: E2E_PHASE5_SESSION_ID,
-      workspaceId: E2E_WORKSPACE_ID,
-      name: "Mobile Car Detailing",
-      industry: "Automotive Services",
-      originType: "OWNER_ENTERED",
-      screeningStatus: "UNSCREENED",
-    },
-  });
+  // Use raw SQL for the upsert to guarantee field mapping correctness regardless
+  // of Prisma client generation state. The (prisma as any) cast bypasses type
+  // checks and can silently skip unknown fields.
+  await pool.query(
+    `INSERT INTO startup_idea_record (
+       id, session_id, workspace_id, name, industry, origin_type, screening_status, accepted, version
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     ON CONFLICT (id) DO UPDATE SET
+       screening_status = 'UNSCREENED',
+       screening_data = NULL,
+       accepted = false,
+       current_business_model_version_id = NULL,
+       current_economic_model_version_id = NULL,
+       current_readiness_id = NULL`,
+    [
+      E2E_PHASE5_IDEA_ID,
+      E2E_PHASE5_SESSION_ID,
+      E2E_WORKSPACE_ID,
+      "Mobile Car Detailing",
+      "Automotive Services",
+      "OWNER_ENTERED",
+      "UNSCREENED",
+      false,
+      1,
+    ]
+  );
 
   console.log("✅ Phase 5 E2E seed complete");
   await prisma.$disconnect();

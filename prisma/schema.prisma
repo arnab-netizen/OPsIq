@@ -5865,13 +5865,15 @@ model ConstraintResolutionRecord {
   bindingScore      Float     @map("binding_score")      // 0-100
   remediationAction String?   @map("remediation_action") @db.Text
   status            String    @default("ACTIVE")          // ACTIVE | REMEDIATING | RESOLVED | ACCEPTED
-  linkedObjectiveId String?   @map("linked_objective_id") @db.Uuid
-  identifiedAt      DateTime  @default(now()) @map("identified_at")
-  resolvedAt        DateTime? @map("resolved_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  linkedObjectiveId      String?   @map("linked_objective_id") @db.Uuid
+  linkedStartupSessionId String?   @map("linked_startup_session_id") @db.Uuid
+  identifiedAt           DateTime  @default(now()) @map("identified_at")
+  resolvedAt             DateTime? @map("resolved_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   @@index([workspaceId, status])
   @@index([workspaceId, constraintType])
+  @@index([workspaceId, linkedStartupSessionId])
   @@map("constraint_resolution_records")
 }
 

@@ -279,6 +279,7 @@ export async function createBlueprint(
         remediationAction: "Validate capital sufficiency before first spend",
         status: "ACTIVE",
         linkedObjectiveId: objectiveId,
+        linkedStartupSessionId: input.sessionId,
         updatedAt: new Date(),
       },
     });
