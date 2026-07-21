@@ -559,7 +559,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 38 — evidence source provenance badge visible on UI", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/evidence`);
+    await page.goto(`/owner/startup/${E2E_PHASE5_SESSION_ID}/evidence`);
     await page.waitForLoadState("networkidle");
     const badge = page.locator("[data-testid='source-type-badge']").first();
     // If evidence was recorded earlier it should have a provenance badge
@@ -571,7 +571,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 39 — evidence freshness indicator present for recorded evidence", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/evidence`);
+    await page.goto(`/owner/startup/${E2E_PHASE5_SESSION_ID}/evidence`);
     await page.waitForLoadState("networkidle");
     const fresh = page.locator("[data-testid='evidence-retrieved-at']").first();
     if (await fresh.count() > 0) {
@@ -745,7 +745,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 51 — page reload preserves session data (persistence check)", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}`);
+    await page.goto(`/owner/startup/${E2E_PHASE5_SESSION_ID}`);
     await page.waitForLoadState("networkidle");
     const statusEl = page.locator("[data-testid='session-status']");
     await expect(statusEl).toBeVisible();
@@ -753,7 +753,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 52 — readiness panel renders gate outcomes without hiding hard failures", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/readiness`);
+    await page.goto(`/owner/startup/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/readiness`);
     await page.waitForLoadState("networkidle");
     const hardFailBadge = page.locator("[data-testid='hard-gate-failure']").first();
     const passBadge = page.locator("[data-testid='passed-gate']").first();
@@ -764,7 +764,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 53 — hypothesis table shows UNTESTED_ASSUMPTION badge for new hypotheses", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/hypotheses`);
+    await page.goto(`/owner/startup/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/hypotheses`);
     await page.waitForLoadState("networkidle");
     const badge = page.locator("[data-testid='hypothesis-status-badge']").first();
     if (await badge.count() > 0) {
@@ -775,7 +775,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 54 — business model page renders all required sections", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/business-model`);
+    await page.goto(`/owner/startup/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/business-model`);
     await page.waitForLoadState("networkidle");
     // Expect the page to load without crashing
     expect(fatalErrors()).toHaveLength(0);
@@ -784,7 +784,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
   });
 
   test("step 55 — system recommendation and owner decision are visually distinct", async () => {
-    await page.goto(`${BASE_URL}/owner/startup/${E2E_PHASE5_SESSION_ID}/decision`);
+    await page.goto(`/owner/startup/${E2E_PHASE5_SESSION_ID}/decision`);
     await page.waitForLoadState("networkidle");
     const sysRec = page.locator("[data-testid='system-recommendation']");
     const ownerDec = page.locator("[data-testid='owner-decision']");
