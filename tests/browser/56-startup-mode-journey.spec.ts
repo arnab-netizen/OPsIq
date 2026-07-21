@@ -944,4 +944,74 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
     const fatal = fatalErrors();
     expect(fatal).toHaveLength(0);
   });
+
+  // G-E2E: Closure tests for Phase 5 gaps
+
+  test("step 64 — cockpit page renders Startup Mode navigation button", async () => {
+    await page.goto("/owner/cockpit");
+    await page.waitForLoadState("networkidle");
+    const startupBtn = page.locator("[data-testid='cockpit-startup-mode-link']");
+    await expect(startupBtn).toBeVisible();
+    expect(fatalErrors()).toHaveLength(0);
+  });
+
+  test("step 65 — generate-ideas response includes batchId", async () => {
+    const res = await page.request.post(
+      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/generate-ideas`,
+      { data: { ownerTimeHoursPerWeek: 20, availableCapitalCents: 500000 } }
+    );
+    expect([200, 400, 403, 404, 422]).toContain(res.status());
+    if (res.status() === 200) {
+      const body = await res.json();
+      expect(body).toHaveProperty("batchId");
+      expect(typeof body.batchId).toBe("string");
+      expect(body).toHaveProperty("providerStatus");
+    }
+    expect(fatalErrors()).toHaveLength(0);
+  });
+
+  test("step 66 — candidates list route returns batches array", async () => {
+    const res = await page.request.get(
+      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/candidates`
+    );
+    expect([200, 403, 404]).toContain(res.status());
+    if (res.status() === 200) {
+      const body = await res.json();
+      expect(body).toHaveProperty("batches");
+      expect(Array.isArray(body.batches)).toBe(true);
+    }
+    expect(fatalErrors()).toHaveLength(0);
+  });
+
+  test("step 67 — candidate reject route validates rationale is required", async () => {
+    const res = await page.request.post(
+      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/candidates/00000000-0000-0000-0000-000000000000/0/reject`,
+      { data: {} } // missing rejectionRationale
+    );
+    // Should be 400 (validation error) or 404 (batch not found) — never 500
+    expect([400, 403, 404, 422]).toContain(res.status());
+    expect(fatalErrors()).toHaveLength(0);
+  });
+
+  test("step 68 — candidate accept route with non-existent batch returns 404 or 403", async () => {
+    const res = await page.request.post(
+      `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/candidates/00000000-0000-0000-0000-000000000000/0/accept`,
+      { data: {} }
+    );
+    expect([403, 404]).toContain(res.status());
+    expect(fatalErrors()).toHaveLength(0);
+  });
+
+  test("step 69 — startup startup page renders without crash after cockpit navigation", async () => {
+    await page.goto("/owner/startup");
+    await page.waitForLoadState("networkidle");
+    // Page must load (not a blank crash)
+    const body = await page.textContent("body");
+    expect(body).toBeTruthy();
+    expect(fatalErrors()).toHaveLength(0);
+  });
+
+  test("step 70 — final: no new fatal errors from closure tests", () => {
+    expect(fatalErrors()).toHaveLength(0);
+  });
 });

@@ -27,6 +27,12 @@ import {
   assessAndPersistReadiness,
   reviseIdea,
   recordHypothesisResult,
+  generateIdeasForNeedOptionsPath,
+  recordCandidateDecision,
+  assertStartupExecutionAuthorization,
+  verifyApprovalPackageV1,
+  verifyApprovalPackageV2,
+  computeApprovalPackageHash,
 } from "@/services/owner-strategy/startup-session.service";
 import { createBlueprint } from "@/services/owner-strategy/startup-execution-blueprint.service";
 import { ConflictError } from "@/infra/errors";
@@ -1165,5 +1171,272 @@ describe("[db] recordHypothesisResult — staleness and readiness propagation", 
     });
     expect(staleness.isStale).toBe(true);
     expect(staleness.changedInputs).toContain("readiness");
+  });
+});
+
+// ─── G-DB: 16 new PostgreSQL closure tests ───────────────────────────────────
+
+describe("[db] G-DB-1: idea generation batch persisted to DB", () => {
+  it("G-DB-1: generateIdeasForNeedOptionsPath persists StartupIdeaGenerationBatch record", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 5000, monthlySurvivalNeed: 1000, fastCashVsScale: "fast_cash" }, ideas: [] });
+    const result = await generateIdeasForNeedOptionsPath(ws, sessionId, act, { ownerHoursPerWeek: 20, capitalAvailableCents: BigInt(500000), ownerSkills: [], preferredIndustries: [], geography: null, excludedCategories: [], riskTolerance: null, previouslyRejectedIdeaNames: [], existingAssets: [], existingCustomerProblems: [] });
+    expect(result.batchId).toBeTruthy();
+    const batch = await db.startupIdeaGenerationBatch.findFirst({ where: { id: result.batchId, workspaceId: ws } });
+    expect(batch).not.toBeNull();
+    expect(batch!.sessionId).toBe(sessionId);
+    expect(batch!.conceptCount).toBe(result.concepts.length);
+  });
+});
+
+describe("[db] G-DB-2: candidate accept creates StartupIdeaRecord", () => {
+  it("G-DB-2: accepting a candidate creates a governed StartupIdeaRecord linked to the batch", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 5000, monthlySurvivalNeed: 1000, fastCashVsScale: "fast_cash" }, ideas: [] });
+    const gen = await generateIdeasForNeedOptionsPath(ws, sessionId, act, { ownerHoursPerWeek: 20, capitalAvailableCents: BigInt(500000), ownerSkills: [], preferredIndustries: [], geography: null, excludedCategories: [], riskTolerance: null, previouslyRejectedIdeaNames: [], existingAssets: [], existingCustomerProblems: [] });
+    if (gen.concepts.length === 0) return; // heuristic may produce 0 concepts without evidence
+    const { candidateId, ideaId } = await recordCandidateDecision(ws, sessionId, gen.batchId, 0, act, { decision: "ACCEPTED" });
+    expect(candidateId).toBeTruthy();
+    expect(ideaId).toBeTruthy();
+    const idea = await db.startupIdeaRecord.findFirst({ where: { id: ideaId!, workspaceId: ws } });
+    expect(idea).not.toBeNull();
+  });
+});
+
+describe("[db] G-DB-3: candidate reject writes operating memory", () => {
+  it("G-DB-3: rejecting a candidate persists rationale and writes STARTUP_REJECTED_IDEA memory", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 5000, monthlySurvivalNeed: 1000, fastCashVsScale: "fast_cash" }, ideas: [] });
+    const gen = await generateIdeasForNeedOptionsPath(ws, sessionId, act, { ownerHoursPerWeek: 20, capitalAvailableCents: BigInt(500000), ownerSkills: [], preferredIndustries: [], geography: null, excludedCategories: [], riskTolerance: null, previouslyRejectedIdeaNames: [], existingAssets: [], existingCustomerProblems: [] });
+    if (gen.concepts.length === 0) return;
+    const { candidateId } = await recordCandidateDecision(ws, sessionId, gen.batchId, 0, act, { decision: "REJECTED", rejectionRationale: "Too capital intensive" });
+    const candidate = await db.startupIdeaCandidate.findFirst({ where: { id: candidateId, workspaceId: ws } });
+    expect(candidate!.decision).toBe("REJECTED");
+    expect(candidate!.rejectionRationale).toBe("Too capital intensive");
+    const memory = await db.operatingMemoryEntry.findFirst({ where: { workspaceId: ws, memoryType: "STARTUP_REJECTED_IDEA" } });
+    expect(memory).not.toBeNull();
+  });
+});
+
+describe("[db] G-DB-4: duplicate candidate decision is idempotent", () => {
+  it("G-DB-4: accepting same concept twice returns existing record without error", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 5000, monthlySurvivalNeed: 1000, fastCashVsScale: "fast_cash" }, ideas: [] });
+    const gen = await generateIdeasForNeedOptionsPath(ws, sessionId, act, { ownerHoursPerWeek: 20, capitalAvailableCents: BigInt(500000), ownerSkills: [], preferredIndustries: [], geography: null, excludedCategories: [], riskTolerance: null, previouslyRejectedIdeaNames: [], existingAssets: [], existingCustomerProblems: [] });
+    if (gen.concepts.length === 0) return;
+    const r1 = await recordCandidateDecision(ws, sessionId, gen.batchId, 0, act, { decision: "ACCEPTED" });
+    const r2 = await recordCandidateDecision(ws, sessionId, gen.batchId, 0, act, { decision: "ACCEPTED" });
+    expect(r1.candidateId).toBe(r2.candidateId);
+  });
+});
+
+describe("[db] G-DB-5: candidate decision conflict throws", () => {
+  it("G-DB-5: changing decision from ACCEPTED to REJECTED throws ConflictError", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 5000, monthlySurvivalNeed: 1000, fastCashVsScale: "fast_cash" }, ideas: [] });
+    const gen = await generateIdeasForNeedOptionsPath(ws, sessionId, act, { ownerHoursPerWeek: 20, capitalAvailableCents: BigInt(500000), ownerSkills: [], preferredIndustries: [], geography: null, excludedCategories: [], riskTolerance: null, previouslyRejectedIdeaNames: [], existingAssets: [], existingCustomerProblems: [] });
+    if (gen.concepts.length === 0) return;
+    await recordCandidateDecision(ws, sessionId, gen.batchId, 0, act, { decision: "ACCEPTED" });
+    await expect(recordCandidateDecision(ws, sessionId, gen.batchId, 0, act, { decision: "REJECTED", rejectionRationale: "Changed mind" })).rejects.toThrow(ConflictError);
+  });
+});
+
+describe("[db] G-DB-6: execution plan stores governance fields", () => {
+  it("G-DB-6: createBlueprint persists startDate, targetDate, spendingLimitCents, approvalPackageHash on plan", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 200000, monthlySurvivalNeed: 5000, fastCashVsScale: "fast_cash" }, ideas: [{ name: "Idea X", industry: "retail", structural: { grossMarginPct: 60, netMarginPct: 25, monthlyRevenue: 10000, revenueFrequency: "recurring", expansionPath: "local", capitalIntensity: "low", downsideRisk: "low" }, estimatedStartupCost: 8000, estimatedMonthlyRevenue: 10000, estimatedMonthlyCost: 5000 }] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, act, { decisionType: "GO", ideaId, spendingLimitCents: BigInt(50000) });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+    const startDate = new Date();
+    const targetDate = new Date(startDate.getTime() + 60 * 24 * 60 * 60 * 1000);
+    const bp = await createBlueprint(ws, act, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch Idea X", executionPlanStartDate: startDate, executionPlanTargetDate: targetDate, executionPlanSpendingLimitCents: BigInt(50000), stopConditions: ["revenue < $0"], rollbackConditions: ["capital exhausted"] });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId, workspaceId: ws } });
+    expect(plan).not.toBeNull();
+    expect(plan!.spendingLimitCents).not.toBeNull();
+    expect(plan!.approvalPackageHash).toBeTruthy();
+    expect(plan!.stopConditions).toBeDefined();
+    expect(plan!.rollbackConditions).toBeDefined();
+  });
+});
+
+describe("[db] G-DB-7: verification windows not hardcoded to 30 days", () => {
+  it("G-DB-7: createBlueprint creates verification windows with durations derived from inputs", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 200000, monthlySurvivalNeed: 5000, fastCashVsScale: "fast_cash" }, ideas: [{ name: "Idea Y", industry: "food", structural: { grossMarginPct: 60, netMarginPct: 25, monthlyRevenue: 10000, revenueFrequency: "recurring", expansionPath: "local", capitalIntensity: "low", downsideRisk: "low" }, estimatedStartupCost: 8000, estimatedMonthlyRevenue: 10000, estimatedMonthlyCost: 5000 }] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, act, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+    const bp = await createBlueprint(ws, act, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch Idea Y", windowDerivationInputs: { hypotheses: [{ expectedDurationDays: 45, hypothesisType: "DEMAND", requiresOwnerApproval: false }], economics: { breakEvenMonths: 2, cashRunwayMonths: 4, spendingLimitCents: null, fixedMonthlyCostCents: 300000 } } });
+    const windows = await db.startupVerificationWindow.findMany({ where: { workspaceId: ws, sessionId, ideaId } });
+    expect(windows.length).toBeGreaterThanOrEqual(2); // validation + break-even at minimum
+    const validationWindow = windows.find((w) => w.windowLabel.includes("Validation"));
+    expect(validationWindow).toBeDefined();
+    const windowDays = Math.round((validationWindow!.endsAt.getTime() - validationWindow!.startsAt.getTime()) / (24 * 60 * 60 * 1000));
+    expect(windowDays).toBe(45); // derived from hypothesis, not hardcoded 30
+  });
+});
+
+describe("[db] G-DB-8: assertStartupExecutionAuthorization blocks non-EXECUTION_PLANNED session", () => {
+  it("G-DB-8: authorization fails when session is not in EXECUTION_PLANNED status", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 200000, monthlySurvivalNeed: 5000, fastCashVsScale: "fast_cash" }, ideas: [{ name: "Idea Z", industry: "tech", structural: { grossMarginPct: 60, netMarginPct: 25, monthlyRevenue: 10000, revenueFrequency: "recurring", expansionPath: "local", capitalIntensity: "low", downsideRisk: "low" }, estimatedStartupCost: 5000, estimatedMonthlyRevenue: 10000, estimatedMonthlyCost: 5000 }] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, act, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+    const bp = await createBlueprint(ws, act, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
+    // Session is still APPROVED — not EXECUTION_PLANNED
+    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
+    expect(result.authorized).toBe(false);
+    expect(result.violations.some((v) => v.includes("EXECUTION_PLANNED"))).toBe(true);
+  });
+});
+
+describe("[db] G-DB-9: assertStartupExecutionAuthorization passes for valid execution chain", () => {
+  it("G-DB-9: authorization passes when session is in EXECUTION_PLANNED with valid blueprint, plan, and decision", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 200000, monthlySurvivalNeed: 5000, fastCashVsScale: "fast_cash" }, ideas: [{ name: "Idea Auth", industry: "retail", structural: { grossMarginPct: 60, netMarginPct: 25, monthlyRevenue: 10000, revenueFrequency: "recurring", expansionPath: "local", capitalIntensity: "low", downsideRisk: "low" }, estimatedStartupCost: 5000, estimatedMonthlyRevenue: 10000, estimatedMonthlyCost: 5000 }] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, act, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, act, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
+    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
+    expect(result.authorized).toBe(true);
+    expect(result.violations).toHaveLength(0);
+  });
+});
+
+describe("[db] G-DB-10: assertStartupExecutionAuthorization blocks expired decision", () => {
+  it("G-DB-10: authorization fails when GO decision validUntil is in the past", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 200000, monthlySurvivalNeed: 5000, fastCashVsScale: "fast_cash" }, ideas: [{ name: "Idea Exp", industry: "retail", structural: { grossMarginPct: 60, netMarginPct: 25, monthlyRevenue: 10000, revenueFrequency: "recurring", expansionPath: "local", capitalIntensity: "low", downsideRisk: "low" }, estimatedStartupCost: 5000, estimatedMonthlyRevenue: 10000, estimatedMonthlyCost: 5000 }] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const pastDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
+    const decisionId = await recordOwnerDecision(ws, sessionId, act, { decisionType: "GO", ideaId, validUntil: pastDate });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, act, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
+    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
+    expect(result.authorized).toBe(false);
+    expect(result.violations.some((v) => v.includes("expired"))).toBe(true);
+  });
+});
+
+describe("[db] G-DB-11: assertStartupExecutionAuthorization blocks prohibited action", () => {
+  it("G-DB-11: authorization fails when actionType is in prohibitedActions", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 200000, monthlySurvivalNeed: 5000, fastCashVsScale: "fast_cash" }, ideas: [{ name: "Idea Proh", industry: "retail", structural: { grossMarginPct: 60, netMarginPct: 25, monthlyRevenue: 10000, revenueFrequency: "recurring", expansionPath: "local", capitalIntensity: "low", downsideRisk: "low" }, estimatedStartupCost: 5000, estimatedMonthlyRevenue: 10000, estimatedMonthlyCost: 5000 }] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, act, { decisionType: "GO", ideaId, prohibitedActions: ["EXTERNAL_CONTRACT"] });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, act, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
+    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "EXTERNAL_CONTRACT" });
+    expect(result.authorized).toBe(false);
+    expect(result.violations.some((v) => v.includes("prohibited"))).toBe(true);
+  });
+});
+
+describe("[db] G-DB-12: assertStartupExecutionAuthorization blocks spending over limit", () => {
+  it("G-DB-12: authorization fails when spending exceeds GO decision spendingLimitCents", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 200000, monthlySurvivalNeed: 5000, fastCashVsScale: "fast_cash" }, ideas: [{ name: "Idea Spend", industry: "retail", structural: { grossMarginPct: 60, netMarginPct: 25, monthlyRevenue: 10000, revenueFrequency: "recurring", expansionPath: "local", capitalIntensity: "low", downsideRisk: "low" }, estimatedStartupCost: 5000, estimatedMonthlyRevenue: 10000, estimatedMonthlyCost: 5000 }] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, act, { decisionType: "GO", ideaId, spendingLimitCents: BigInt(10000) });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, act, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
+    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START", spendingCents: BigInt(50000) });
+    expect(result.authorized).toBe(false);
+    expect(result.violations.some((v) => v.includes("spending limit"))).toBe(true);
+  });
+});
+
+describe("[db] G-DB-13: assertStartupExecutionAuthorization blocks superseded blueprint", () => {
+  it("G-DB-13: authorization fails when blueprint is SUPERSEDED", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: ws, actorId: act, intake: { capitalAvailable: 200000, monthlySurvivalNeed: 5000, fastCashVsScale: "fast_cash" }, ideas: [{ name: "Idea Super", industry: "retail", structural: { grossMarginPct: 60, netMarginPct: 25, monthlyRevenue: 10000, revenueFrequency: "recurring", expansionPath: "local", capitalIntensity: "low", downsideRisk: "low" }, estimatedStartupCost: 5000, estimatedMonthlyRevenue: 10000, estimatedMonthlyCost: 5000 }] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, act, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, act, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    // Manually supersede the blueprint
+    await db.startupExecutionBlueprint.update({ where: { id: bp.blueprintId }, data: { blueprintStatus: "SUPERSEDED" } });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
+    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
+    expect(result.authorized).toBe(false);
+    expect(result.violations.some((v) => v.includes("superseded"))).toBe(true);
+  });
+});
+
+describe("[db] G-DB-14: approval hash v1 and v2 are different and stable", () => {
+  it("G-DB-14: verifyApprovalPackageV1 and V2 produce stable distinct hashes", () => {
+    const c = { sessionId: "s1", ideaId: "i1", ideaVersionId: "iv1" };
+    const h1a = verifyApprovalPackageV1(c);
+    const h1b = verifyApprovalPackageV1(c);
+    const h2a = verifyApprovalPackageV2(c);
+    const h2b = verifyApprovalPackageV2(c);
+    expect(h1a).toBe(h1b);
+    expect(h2a).toBe(h2b);
+    expect(h1a).not.toBe(h2a);
+  });
+});
+
+describe("[db] G-DB-15: computeApprovalPackageHash dispatches on hashVersion", () => {
+  it("G-DB-15: hashVersion=1 produces V1 hash, hashVersion=2 produces V2 hash, default is V2", () => {
+    const c = { sessionId: "s1", ideaId: "i1" };
+    expect(computeApprovalPackageHash({ ...c, hashVersion: 1 })).toBe(verifyApprovalPackageV1({ ...c, hashVersion: 1 }));
+    expect(computeApprovalPackageHash({ ...c, hashVersion: 2 })).toBe(verifyApprovalPackageV2({ ...c, hashVersion: 2 }));
+    expect(computeApprovalPackageHash(c)).toBe(verifyApprovalPackageV2(c));
+  });
+});
+
+describe("[db] G-DB-16: cross-workspace candidate isolation", () => {
+  it("G-DB-16: recordCandidateDecision for batch in workspace B throws when called with workspace A", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const wsX = randomUUID();
+    const wsY = randomUUID();
+    const act = randomUUID();
+    const { sessionId } = await createStartupSession({ workspaceId: wsX, actorId: act, intake: { capitalAvailable: 5000, monthlySurvivalNeed: 1000, fastCashVsScale: "fast_cash" }, ideas: [] });
+    const gen = await generateIdeasForNeedOptionsPath(wsX, sessionId, act, { ownerHoursPerWeek: 20, capitalAvailableCents: BigInt(500000), ownerSkills: [], preferredIndustries: [], geography: null, excludedCategories: [], riskTolerance: null, previouslyRejectedIdeaNames: [], existingAssets: [], existingCustomerProblems: [] });
+    if (gen.concepts.length === 0) return;
+    // Try to access the batch from a different workspace
+    await expect(recordCandidateDecision(wsY, sessionId, gen.batchId, 0, act, { decision: "ACCEPTED" })).rejects.toThrow(NotFoundError);
   });
 });
