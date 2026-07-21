@@ -1079,11 +1079,38 @@ export interface ApprovalPackageComponents {
   policyVersion?: string | null;
 }
 
-/** Canonical JSON SHA-256 over all 23 approval-package fields (algorithm version "v2"). */
-export function computeApprovalPackageHash(c: ApprovalPackageComponents): string {
+/**
+ * V1 hash — ID-only, no snapshot arrays, no policy terms.
+ * Only used to verify stored decisions that were created with hashVersion=1.
+ * Never used for new decisions (all new decisions use V2).
+ */
+export function verifyApprovalPackageV1(c: ApprovalPackageComponents): string {
+  const canonical = {
+    v: "1",
+    hashVersion: 1,
+    policyVersion: c.policyVersion ?? "1",
+    sessionId: c.sessionId,
+    ideaId: c.ideaId ?? null,
+    ideaVersionId: c.ideaVersionId ?? null,
+    profileVersionId: c.profileVersionId ?? null,
+    economicModelId: c.economicModelId ?? null,
+    readinessId: c.readinessId ?? null,
+    systemRecId: c.systemRecId ?? null,
+    businessModelId: c.businessModelId ?? null,
+    marketSizingId: c.marketSizingId ?? null,
+    validationPlanId: c.validationPlanId ?? null,
+  };
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
+/**
+ * V2 hash — full canonical form including snapshot arrays, policy terms, and algorithm version marker.
+ * All new decisions are hashed with V2. V2 is the default and only format for production writes.
+ */
+export function verifyApprovalPackageV2(c: ApprovalPackageComponents): string {
   const canonical = {
     v: "2",
-    hashVersion: c.hashVersion ?? 2,
+    hashVersion: 2,
     policyVersion: c.policyVersion ?? "1",
     sessionId: c.sessionId,
     ideaId: c.ideaId ?? null,
@@ -1111,6 +1138,17 @@ export function computeApprovalPackageHash(c: ApprovalPackageComponents): string
       : null,
   };
   return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
+/**
+ * Dispatcher: select hash algorithm by stored hashVersion.
+ * New records always use V2. Legacy records with hashVersion=1 use V1.
+ * Unknown or missing hashVersion defaults to V2 (current algorithm) — fail closed.
+ */
+export function computeApprovalPackageHash(c: ApprovalPackageComponents): string {
+  const version = c.hashVersion ?? 2;
+  if (version === 1) return verifyApprovalPackageV1(c);
+  return verifyApprovalPackageV2(c);
 }
 
 /** Queries current snapshot IDs for a session — used by both decision recording and staleness checks. */
@@ -1214,6 +1252,8 @@ export async function checkApprovalStaleness(
       materialAssumptions: true,
       validUntil: true,
       reviewDate: true,
+      hashVersion: true,
+      policyVersion: true,
     },
   });
 
@@ -1241,6 +1281,9 @@ export async function checkApprovalStaleness(
     materialAssumptions: (decision.materialAssumptions as string[]) ?? [],
     validUntil: decision.validUntil,
     reviewDate: decision.reviewDate,
+    // G10: use the stored hashVersion to dispatch the correct algorithm
+    hashVersion: decision.hashVersion ?? 2,
+    policyVersion: decision.policyVersion ?? "1",
   };
 
   const currentHash = computeApprovalPackageHash(currentComponents);
@@ -1674,12 +1717,14 @@ export async function buildAndPersistStartupExplanation(
 
 // ─── G1: NEED_OPTIONS Idea Generation ────────────────────────────────────────
 
+export type IdeaGenerationResultWithBatch = IdeaGenerationResult & { batchId: string };
+
 export async function generateIdeasForNeedOptionsPath(
   workspaceId: string,
   sessionId: string,
   actorId: string,
   profile: GenerationProfile
-): Promise<IdeaGenerationResult> {
+): Promise<IdeaGenerationResultWithBatch> {
   const providerEnv = process.env["IDEA_GENERATION_PROVIDER"];
   const providerConfigured = !!providerEnv && providerEnv.trim().length > 0;
 
@@ -1702,14 +1747,154 @@ export async function generateIdeasForNeedOptionsPath(
   const profileVersionId = randomUUID();
   const result = generateIdeasFromProfile(profile, signalInputs, evidenceInputs, providerConfigured, profileVersionId);
 
+  // G6: Persist generated candidates as a governed batch — prevents ephemeral candidates
+  const batchId = randomUUID();
+  await db.startupIdeaGenerationBatch.create({
+    data: {
+      id: batchId,
+      workspaceId,
+      sessionId,
+      generationMethod: result.generationMethod,
+      providerStatus: result.available
+        ? "NEED_OPTIONS_PROVIDER_AVAILABLE"
+        : "NEED_OPTIONS_PRODUCTION_PROVIDER_UNAVAILABLE",
+      profileSnapshot: profile as unknown as object,
+      evidenceCount: evidenceInputs.length,
+      concepts: result.concepts as unknown as object,
+      conceptCount: result.concepts.length,
+      available: result.available,
+      createdBy: actorId,
+    },
+  });
+
   await emitAuditEvent({
     workspaceId,
     actorId,
     eventName: AUDIT_EVENTS.STARTUP_IDEAS_GENERATED,
-    payload: { sessionId, available: result.available, conceptCount: result.concepts.length, generationMethod: result.generationMethod },
+    payload: {
+      sessionId,
+      batchId,
+      available: result.available,
+      conceptCount: result.concepts.length,
+      generationMethod: result.generationMethod,
+    },
   });
 
-  return result;
+  return { ...result, batchId };
+}
+
+// ─── G6b: Candidate Accept / Reject ──────────────────────────────────────────
+
+export interface CandidateDecisionInput {
+  decision: "ACCEPTED" | "REJECTED";
+  rejectionRationale?: string | null;
+}
+
+export async function recordCandidateDecision(
+  workspaceId: string,
+  sessionId: string,
+  batchId: string,
+  conceptIndex: number,
+  actorId: string,
+  input: CandidateDecisionInput
+): Promise<{ candidateId: string; ideaId: string | null }> {
+  // Verify batch belongs to session
+  const batch = await db.startupIdeaGenerationBatch.findFirst({
+    where: { id: batchId, workspaceId, sessionId },
+    select: { id: true, concepts: true },
+  });
+  if (!batch) throw new NotFoundError("StartupIdeaGenerationBatch", batchId);
+
+  const concepts = batch.concepts as Array<{ name?: string; industry?: string; summary?: string }>;
+  if (conceptIndex < 0 || conceptIndex >= concepts.length) {
+    throw new Error(`conceptIndex ${conceptIndex} out of bounds for batch (length ${concepts.length})`);
+  }
+
+  const concept = concepts[conceptIndex];
+
+  // Idempotency: if a decision already exists for this concept in this batch, return it
+  const existing = await db.startupIdeaCandidate.findUnique({
+    where: { batchId_conceptIndex: { batchId, conceptIndex } },
+    select: { id: true, decision: true, acceptedIdeaId: true },
+  });
+  if (existing) {
+    // If same decision, idempotent — return existing record
+    if (existing.decision === input.decision) {
+      return { candidateId: existing.id, ideaId: existing.acceptedIdeaId ?? null };
+    }
+    throw new ConflictError(
+      `Candidate already decided as ${existing.decision} — cannot change to ${input.decision}`
+    );
+  }
+
+  const candidateId = randomUUID();
+  let createdIdeaId: string | null = null;
+
+  if (input.decision === "ACCEPTED") {
+    // Create a governed StartupIdeaRecord from the accepted concept
+    const ideaId = randomUUID();
+    createdIdeaId = ideaId;
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.startupIdeaRecord.create({
+        data: {
+          id: ideaId,
+          workspaceId,
+          sessionId,
+          name: concept.name ?? "Accepted idea",
+          industry: concept.industry ?? "GENERAL",
+          version: 1,
+          screeningStatus: "PENDING",
+          originData: { source: "GENERATION_BATCH", batchId, conceptIndex, concept } as unknown as object,
+        },
+      });
+
+      await tx.startupIdeaCandidate.create({
+        data: {
+          id: candidateId,
+          workspaceId,
+          sessionId,
+          batchId,
+          conceptIndex,
+          conceptSnapshot: concept as unknown as object,
+          decision: "ACCEPTED",
+          acceptedIdeaId: ideaId,
+          decidedBy: actorId,
+        },
+      });
+
+      await emitAuditEvent({ workspaceId, actorId, eventName: AUDIT_EVENTS.STARTUP_IDEA_ADDED, payload: { sessionId, ideaId, source: "GENERATION_BATCH", batchId, conceptIndex } }, tx);
+    });
+  } else {
+    // REJECTED — persist with rationale to prevent rediscovery without new evidence
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.startupIdeaCandidate.create({
+        data: {
+          id: candidateId,
+          workspaceId,
+          sessionId,
+          batchId,
+          conceptIndex,
+          conceptSnapshot: concept as unknown as object,
+          decision: "REJECTED",
+          rejectionRationale: input.rejectionRationale ?? null,
+          decidedBy: actorId,
+        },
+      });
+
+      await writeMemoryEntry({
+        workspaceId,
+        actorId,
+        memoryType: "STARTUP_REJECTED_IDEA",
+        sourceModel: "StartupIdeaCandidate",
+        sourceId: candidateId,
+        key: `startup_rejected_candidate:${batchId}:${conceptIndex}`,
+        summary: `Candidate rejected: ${concept.name ?? "unnamed"} — ${input.rejectionRationale ?? "no rationale"}`,
+        data: { batchId, conceptIndex, conceptName: concept.name, rejectionRationale: input.rejectionRationale },
+      });
+    });
+  }
+
+  return { candidateId, ideaId: createdIdeaId };
 }
 
 // ─── Evidence Freshness Export ────────────────────────────────────────────────
@@ -1889,9 +2074,9 @@ async function reassessReadinessAfterHypothesisChange(
   let economicClassification: "VIABLE" | "MARGINAL" | "UNVIABLE" | "INSUFFICIENT_DATA" | null = null;
   let cashRunwayMonths: number | null = null;
   let breakEvenMonths: number | null = null;
-  if (idea.currentEconomicModelId) {
+  if (idea.currentEconomicModelVersionId) {
     const econModel = await db.startupEconomicModel.findFirst({
-      where: { id: idea.currentEconomicModelId, workspaceId },
+      where: { id: idea.currentEconomicModelVersionId, workspaceId },
       select: { economicClassification: true, cashRunwayMonths: true, breakEvenMonths: true },
     });
     if (econModel) {
@@ -1937,4 +2122,195 @@ async function reassessReadinessAfterHypothesisChange(
   };
 
   await assessAndPersistReadiness(workspaceId, sessionId, idea.id, actorId, inputs);
+}
+
+// ─── G2: Canonical Execution Authorization Gate ───────────────────────────────
+
+export interface ExecutionAuthorizationInput {
+  sessionId: string;
+  blueprintId: string;
+  planId: string;
+  ownerDecisionId: string;
+  ideaId: string;
+  /** The specific action being authorized — checked against permittedActions/prohibitedActions */
+  actionType: string;
+  /** Spending amount in cents for this action (if applicable) */
+  spendingCents?: bigint | null;
+}
+
+export interface ExecutionAuthorizationResult {
+  authorized: boolean;
+  violations: string[];
+  approvalPackageHash: string | null;
+  checkedAt: Date;
+}
+
+/**
+ * Canonical execution gate called before every task start, resource allocation,
+ * spending action, external action initiation, and outcome recording.
+ * Fails closed: any unknown or missing record → NOT authorized.
+ * All 20 checks are independent — all violations accumulated, not short-circuit.
+ */
+export async function assertStartupExecutionAuthorization(
+  workspaceId: string,
+  input: ExecutionAuthorizationInput
+): Promise<ExecutionAuthorizationResult> {
+  const violations: string[] = [];
+  const now = new Date();
+
+  // Load all required records in parallel
+  const [session, blueprint, plan, decision] = await Promise.all([
+    db.ownerStartupSession.findFirst({
+      where: { id: input.sessionId, workspaceId },
+      select: { id: true, status: true, currentOwnerDecisionId: true, currentBlueprintId: true },
+    }),
+    db.startupExecutionBlueprint.findFirst({
+      where: { id: input.blueprintId, workspaceId },
+      select: { id: true, blueprintStatus: true, ownerDecisionId: true, sessionId: true, ideaId: true },
+    }),
+    db.startupExecutionPlan.findFirst({
+      where: { id: input.planId, workspaceId },
+      select: {
+        id: true, status: true, spendingLimitCents: true, startDate: true, targetDate: true,
+        stopConditions: true, approvalPackageHash: true, blueprintId: true,
+      },
+    }),
+    db.startupOwnerDecision.findFirst({
+      where: { id: input.ownerDecisionId, workspaceId },
+      select: {
+        id: true, decisionType: true, validUntil: true, reviewDate: true,
+        spendingLimitCents: true, permittedActions: true, prohibitedActions: true,
+        packageHashSha256: true, supersededById: true, hashVersion: true, policyVersion: true,
+        linkedIdeaVersionId: true,
+      },
+    }),
+  ]);
+
+  // G2-1: Session must exist and be in workspace
+  if (!session) {
+    return {
+      authorized: false,
+      violations: ["Session not found or cross-workspace access denied"],
+      approvalPackageHash: null,
+      checkedAt: now,
+    };
+  }
+
+  // G2-2: Session must be in EXECUTION_PLANNED status
+  if (session.status !== "EXECUTION_PLANNED") {
+    violations.push(`Session status is ${session.status} — must be EXECUTION_PLANNED to authorize execution`);
+  }
+
+  // G2-3: Blueprint must exist and belong to this session/idea
+  if (!blueprint) {
+    violations.push("Execution blueprint not found");
+  } else {
+    if (blueprint.sessionId !== input.sessionId) violations.push("Blueprint belongs to a different session");
+    if (blueprint.ideaId !== input.ideaId) violations.push("Blueprint belongs to a different idea");
+    // G2-4: Blueprint must not be superseded
+    if (blueprint.blueprintStatus === "SUPERSEDED") violations.push("Blueprint has been superseded — reapproval required before execution");
+    if (blueprint.blueprintStatus !== "ACTIVE") violations.push(`Blueprint status is ${blueprint.blueprintStatus} — must be ACTIVE`);
+  }
+
+  // G2-5: Plan must exist and be active
+  if (!plan) {
+    violations.push("Execution plan not found");
+  } else {
+    if (plan.status !== "ACTIVE") violations.push(`Execution plan status is ${plan.status} — must be ACTIVE`);
+    // G2-6: Plan must reference the same blueprint
+    if (plan.blueprintId !== input.blueprintId) violations.push("Execution plan references a different blueprint");
+    // G2-7: Plan start date must not be in the future
+    if (plan.startDate && plan.startDate > now) {
+      violations.push(`Execution plan start date is in the future (${plan.startDate.toISOString()}) — execution not yet permitted`);
+    }
+    // G2-8: Plan target date must not have elapsed without plan completion
+    if (plan.targetDate && plan.targetDate < now && plan.status === "ACTIVE") {
+      violations.push(`Execution plan target date has elapsed (${plan.targetDate.toISOString()}) — plan requires review`);
+    }
+  }
+
+  // G2-9: Owner decision must exist and be a GO decision
+  if (!decision) {
+    violations.push("Owner decision not found");
+  } else {
+    if (decision.decisionType !== "GO") {
+      violations.push(`Owner decision type is ${decision.decisionType} — must be GO to authorize execution`);
+    }
+    // G2-10: Decision must not be superseded
+    if (decision.supersededById) {
+      violations.push("Owner decision has been superseded — new reapproval required");
+    }
+    // G2-11: Session's current decision must match the provided ownerDecisionId
+    if (session.currentOwnerDecisionId !== input.ownerDecisionId) {
+      violations.push("Provided ownerDecisionId is not the session's current GO decision");
+    }
+    // G2-12: Blueprint's decision must match
+    if (blueprint && blueprint.ownerDecisionId !== input.ownerDecisionId) {
+      violations.push("Blueprint was created under a different owner decision than currently provided");
+    }
+    // G2-13: Decision validity period
+    if (decision.validUntil && decision.validUntil < now) {
+      violations.push(`Owner decision expired at ${decision.validUntil.toISOString()} — reapproval required`);
+    }
+    // G2-14: Review date reminder (warning, not blocking — but emitted as violation for visibility)
+    if (decision.reviewDate && decision.reviewDate < now) {
+      violations.push(`Owner decision review date has elapsed (${decision.reviewDate.toISOString()}) — decision should be reviewed`);
+    }
+  }
+
+  // G2-15: Approval package hash must match current state (staleness check)
+  if (decision && session && violations.filter((v) => v.includes("superseded") || v.includes("not found")).length === 0) {
+    const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, {
+      ideaId: input.ideaId,
+      ideaVersionId: decision.linkedIdeaVersionId,
+    });
+    if (staleness.isStale) {
+      violations.push(
+        `Approval package is stale — changed inputs: ${staleness.changedInputs.join(", ")}. Reapproval required.`
+      );
+    }
+    // G2-16: Plan's stored approval hash must also match the decision hash (guards plan tampering)
+    if (plan?.approvalPackageHash && decision.packageHashSha256 && plan.approvalPackageHash !== decision.packageHashSha256) {
+      violations.push("Execution plan approval hash does not match current owner decision hash — plan must be re-issued");
+    }
+  }
+
+  // G2-17: Action must be in permitted list (if permittedActions is non-empty)
+  if (decision) {
+    const permitted = (decision.permittedActions as string[]) ?? [];
+    const prohibited = (decision.prohibitedActions as string[]) ?? [];
+    if (permitted.length > 0 && !permitted.includes(input.actionType) && !permitted.includes("*")) {
+      violations.push(`Action "${input.actionType}" is not in the permitted actions list for this GO decision`);
+    }
+    // G2-18: Action must not be in prohibited list
+    if (prohibited.includes(input.actionType)) {
+      violations.push(`Action "${input.actionType}" is explicitly prohibited by this GO decision`);
+    }
+  }
+
+  // G2-19: Spending limit check
+  if (input.spendingCents != null) {
+    if (decision?.spendingLimitCents && input.spendingCents > decision.spendingLimitCents) {
+      violations.push(
+        `Spending $${(Number(input.spendingCents) / 100).toFixed(2)} exceeds GO decision spending limit $${(Number(decision.spendingLimitCents) / 100).toFixed(2)}`
+      );
+    }
+    if (plan?.spendingLimitCents && input.spendingCents > plan.spendingLimitCents) {
+      violations.push(
+        `Spending $${(Number(input.spendingCents) / 100).toFixed(2)} exceeds execution plan spending limit $${(Number(plan.spendingLimitCents) / 100).toFixed(2)}`
+      );
+    }
+  }
+
+  // G2-20: Session's current blueprint must be the one we're authorizing against
+  if (session.currentBlueprintId && session.currentBlueprintId !== input.blueprintId) {
+    violations.push("Session's current blueprint differs from the provided blueprintId — use the current blueprint");
+  }
+
+  return {
+    authorized: violations.length === 0,
+    violations,
+    approvalPackageHash: decision?.packageHashSha256 ?? null,
+    checkedAt: now,
+  };
 }

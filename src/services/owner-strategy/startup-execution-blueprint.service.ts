@@ -10,6 +10,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
 import { createObjectiveInTx } from "@/services/owner-mode/business-objective.service";
 import { checkApprovalStaleness } from "@/services/owner-strategy/startup-session.service";
+import { deriveVerificationWindows, type DeriveWindowsInput } from "@/domain/owner-strategy/startup-verification-windows";
 import { Prisma } from "@/generated/prisma/client";
 
 export interface BlueprintInput {
@@ -24,6 +25,13 @@ export interface BlueprintInput {
   initialTaskTitles?: string[];
   kpiNames?: Array<{ metricName: string; metricLabel: string; reviewCadence: string }>;
   riskCodes?: Array<{ riskCode: string; title: string; category: string; likelihood: number; impact: number }>;
+  // G4/G5: inputs for derived verification windows and plan governance
+  executionPlanStartDate?: Date | null;
+  executionPlanTargetDate?: Date | null;
+  executionPlanSpendingLimitCents?: bigint | null;
+  stopConditions?: string[];
+  rollbackConditions?: string[];
+  windowDerivationInputs?: Partial<DeriveWindowsInput>;
 }
 
 export interface BlueprintResult {
@@ -133,7 +141,7 @@ export async function createBlueprint(
 
   let capturedObjectiveId = "";
   let capturedInitiativeId = "";
-  let capturedVerificationWindowIds: string[] = [];
+  const capturedVerificationWindowIds: string[] = [];
   let capturedExecutionPlanId = "";
 
   try {
@@ -343,29 +351,66 @@ export async function createBlueprint(
       },
     });
 
-    // G13/G14: Create date-bounded VerificationWindow (30-day initial validation period)
+    // G5: Derive verification windows from actual evidence inputs — no hardcoded 30-day placeholder
     capturedInitiativeId = initiativeId;
-    const windowId = randomUUID();
-    capturedVerificationWindowIds = [windowId];
     const windowStart = new Date();
-    const windowEnd = new Date(windowStart.getTime() + 30 * 24 * 60 * 60 * 1000);
-    await tx.startupVerificationWindow.create({
-      data: {
-        id: windowId,
-        workspaceId,
-        initiativeId,
-        sessionId: input.sessionId,
-        ideaId: input.ideaId,
-        windowLabel: `${idea.name} — Month 1 Validation`,
-        startsAt: windowStart,
-        endsAt: windowEnd,
-        successCriteria: (taskTitles.slice(0, 2).map((t) => `Complete: ${t}`)) as unknown as object,
-        failureCriteria: ["No paying customer acquired in 30 days", "Cash runway below 3 months"] as unknown as object,
-        metricsToMeasure: ["customer_count", "revenue", "cash_runway_months"] as unknown as object,
-        outcome: "PENDING",
-        createdBy: actorId,
-      },
-    });
+    const derivationInputs: DeriveWindowsInput = {
+      ideaName: idea.name,
+      hypotheses: input.windowDerivationInputs?.hypotheses ?? [],
+      economics: input.windowDerivationInputs?.economics ?? null,
+      kpis: (input.kpiNames ?? []).map((k) => ({ metricName: k.metricName, reviewCadence: k.reviewCadence })),
+      validationPlan: input.windowDerivationInputs?.validationPlan ?? null,
+      taskCount: taskTitles.length,
+      ownerDecisionSpendingLimitCents: ownerDecision.spendingLimitCents ?? null,
+    };
+    const derivedWindows = deriveVerificationWindows(derivationInputs);
+
+    for (const w of derivedWindows) {
+      const windowId = randomUUID();
+      capturedVerificationWindowIds.push(windowId);
+      const windowEnd = new Date(windowStart.getTime() + w.durationDays * 24 * 60 * 60 * 1000);
+      await tx.startupVerificationWindow.create({
+        data: {
+          id: windowId,
+          workspaceId,
+          initiativeId,
+          sessionId: input.sessionId,
+          ideaId: input.ideaId,
+          windowLabel: w.windowLabel,
+          startsAt: windowStart,
+          endsAt: windowEnd,
+          successCriteria: w.successCriteria as unknown as object,
+          failureCriteria: w.failureCriteria as unknown as object,
+          metricsToMeasure: w.metricsToMeasure as unknown as object,
+          outcome: "PENDING",
+          createdBy: actorId,
+        },
+      });
+    }
+
+    // Fallback: if no windows were derived (e.g., zero hypotheses, no economics), create a minimal window
+    if (derivedWindows.length === 0) {
+      const windowId = randomUUID();
+      capturedVerificationWindowIds.push(windowId);
+      const windowEnd = new Date(windowStart.getTime() + 14 * 24 * 60 * 60 * 1000);
+      await tx.startupVerificationWindow.create({
+        data: {
+          id: windowId,
+          workspaceId,
+          initiativeId,
+          sessionId: input.sessionId,
+          ideaId: input.ideaId,
+          windowLabel: `${idea.name} — Initial Review`,
+          startsAt: windowStart,
+          endsAt: windowEnd,
+          successCriteria: taskTitles.slice(0, 2).map((t) => `Complete: ${t}`) as unknown as object,
+          failureCriteria: ["No progress on first execution task within window"] as unknown as object,
+          metricsToMeasure: ["task_completion_count"] as unknown as object,
+          outcome: "PENDING",
+          createdBy: actorId,
+        },
+      });
+    }
 
     // G-ExecutionPlan: Create StartupExecutionPlan linked to this initiative
     const executionPlanId = randomUUID();
@@ -389,7 +434,16 @@ export async function createBlueprint(
         status: "ACTIVE",
         planVersion: 1,
         tasks: taskSummaries as unknown as object,
-        milestones: [{ label: "Month 1 validation complete", targetDate: windowEnd.toISOString(), successCriteria: "First paying customer acquired" }] as unknown as object,
+        milestones: capturedVerificationWindowIds.length > 0
+          ? capturedVerificationWindowIds.map((wId, i) => ({ label: `Verification window ${i + 1}`, windowId: wId }))
+          : [{ label: "Initial review" }],
+        // G4: Governance fields derived from approval decision and caller inputs
+        startDate: input.executionPlanStartDate ?? null,
+        targetDate: input.executionPlanTargetDate ?? input.deadline ?? null,
+        spendingLimitCents: input.executionPlanSpendingLimitCents ?? ownerDecision.spendingLimitCents ?? null,
+        stopConditions: (input.stopConditions ?? []) as unknown as object,
+        rollbackConditions: (input.rollbackConditions ?? []) as unknown as object,
+        approvalPackageHash: staleness.currentHash,
         createdBy: actorId,
       },
     });
@@ -404,7 +458,7 @@ export async function createBlueprint(
         ownerDecisionId: input.ownerDecisionId,
         objectiveId,
         initiativeId,
-        verificationWindowIds: [windowId] as unknown as object,
+        verificationWindowIds: capturedVerificationWindowIds as unknown as object,
         taskIds: taskIds as unknown as object,
         kpiIds: kpiIds as unknown as object,
         riskIds: riskIds as unknown as object,
