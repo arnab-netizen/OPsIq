@@ -979,8 +979,6 @@ describe("[db][concurrency] reviseIdea — exactly one winner per concurrent rev
         id: ideaId, workspaceId: wsA, sessionId,
         name: "Original Idea", industry: "FOOD",
         screeningStatus: "UNSCREENED", version: 1,
-        createdBy: actor, updatedBy: actor,
-        screeningReasons: [], screeningConstraints: [], evidenceRequired: [],
         accepted: false,
       },
     });
@@ -1017,8 +1015,6 @@ describe("[db][concurrency] reviseIdea — exactly one winner per concurrent rev
         id: ideaId, workspaceId: wsA, sessionId,
         name: "Already Superseded", industry: "TECH",
         screeningStatus: "UNSCREENED", version: 1,
-        createdBy: actor, updatedBy: actor,
-        screeningReasons: [], screeningConstraints: [], evidenceRequired: [],
         accepted: false,
       },
     });
@@ -1042,8 +1038,6 @@ describe("[db][concurrency] reviseIdea — exactly one winner per concurrent rev
         id: ideaId, workspaceId: wsA, sessionId,
         name: "WsA Idea", industry: "RETAIL",
         screeningStatus: "UNSCREENED", version: 1,
-        createdBy: actor, updatedBy: actor,
-        screeningReasons: [], screeningConstraints: [], evidenceRequired: [],
         accepted: false,
       },
     });
@@ -1065,8 +1059,6 @@ describe("[db] recordHypothesisResult — staleness and readiness propagation", 
         id: ideaId, workspaceId: wsA, sessionId,
         name: "Hypothesis Test Idea", industry: "SERVICES",
         screeningStatus: "PASSED", version: 1,
-        createdBy: actor, updatedBy: actor,
-        screeningReasons: [], screeningConstraints: [], evidenceRequired: [],
         accepted: false,
       },
     });
@@ -1096,7 +1088,6 @@ describe("[db] recordHypothesisResult — staleness and readiness propagation", 
         statement: "Customers will pay $50/month", hypothesisType: "DEMAND",
         confidenceBefore: 60, falsificationCriteria: "<10% WTP",
         requiresOwnerApproval: true, validationMethod: "CUSTOMER_INTERVIEW",
-        createdBy: actor,
       },
     });
 
@@ -1125,8 +1116,6 @@ describe("[db] recordHypothesisResult — staleness and readiness propagation", 
         id: ideaId, workspaceId: wsA, sessionId,
         name: "Approval Staleness Test", industry: "FOOD",
         screeningStatus: "PASSED", version: 1,
-        createdBy: actor, updatedBy: actor,
-        screeningReasons: [], screeningConstraints: [], evidenceRequired: [],
         accepted: false,
       },
     });
@@ -1162,7 +1151,6 @@ describe("[db] recordHypothesisResult — staleness and readiness propagation", 
         statement: "Supplier available at $5 unit cost", hypothesisType: "SUPPLY",
         confidenceBefore: 70, falsificationCriteria: "No supplier found",
         requiresOwnerApproval: true, validationMethod: "SUPPLIER_QUOTE",
-        createdBy: actor,
       },
     });
     await recordHypothesisResult(wsA, hypothesisId, actor, "DISCONFIRMED", "Supplier unavailable at required price");
