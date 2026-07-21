@@ -41,7 +41,7 @@ import {
   type RuntimeShadowReadEnforcer,
 } from "@/lib/runtime-shadow-read-enforcer";
 import { ClassifiedApiError, ensureClassification, hasClassification } from "@/infra/classified-error";
-import { isCanonicalJsonResponse } from "@/lib/canonical-json-response";
+import { isCanonicalJsonResponse, stringifyRouteResponse } from "@/lib/canonical-json-response";
 import { db } from "@/lib/db";
 
 /**
@@ -700,7 +700,7 @@ export function withCanonicalEnforcement(
 
       popExecutionContext(finalTrace.traceId);
 
-      return new NextResponse(JSON.stringify(responseBody), {
+      return new NextResponse(stringifyRouteResponse(responseBody), {
         status: responseStatus,
         headers: {
           ...responseHeaders,
@@ -859,7 +859,7 @@ export function withCanonicalEnforcement(
         }
       }
 
-      return new NextResponse(JSON.stringify(responseBody), {
+      return new NextResponse(stringifyRouteResponse(responseBody), {
         status: classifiedError.statusCode,
         headers: {
           "x-correlation-id": finalCorrelationId,
