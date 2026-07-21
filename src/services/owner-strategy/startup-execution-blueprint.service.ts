@@ -272,7 +272,6 @@ export async function createBlueprint(
           impact: risk.impact,
           severity: Math.round((risk.likelihood * risk.impact) / 100),
           linkedObjectiveId: objectiveId,
-          linkedStartupSessionId: input.sessionId,
           identifiedBy: actorId,
           updatedAt: new Date(),
         },
@@ -316,7 +315,6 @@ export async function createBlueprint(
         remediationAction: "Validate capital sufficiency before first spend",
         status: "ACTIVE",
         linkedObjectiveId: objectiveId,
-        linkedStartupSessionId: input.sessionId,
         updatedAt: new Date(),
       },
     });
