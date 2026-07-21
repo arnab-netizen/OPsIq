@@ -762,8 +762,6 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
           fixedMonthlyCostCents: 3_000_00,
           variableUnitCostCents: 10_00,
           pricePerUnitCents: 25_00,
-          breakEvenVolume: 200,
-          cashRunwayMonths: 12,
         },
       }
     );
@@ -775,7 +773,7 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
     );
     expect(getRes.status()).toBe(200);
     const body = await getRes.json();
-    expect(body.version).toBeGreaterThanOrEqual(1);
+    expect(body.versionNumber).toBeGreaterThanOrEqual(1);
   });
 
   test("step 51 — page reload preserves session data (persistence check)", async () => {
