@@ -29,7 +29,10 @@ export const GET = withCanonicalEnforcement(
       },
     });
     if (!idea) throw new NotFoundError("StartupIdeaRecord", params.ideaId);
-    return canonicalJson({ idea }, { status: 200 });
+    // BigInt fields (e.g. expectedCostCents, spendingLimitCents) cannot be
+    // serialised by JSON.stringify without a replacer. Convert to strings here.
+    const serialisable = JSON.parse(JSON.stringify(idea, (_k, v) => (typeof v === "bigint" ? v.toString() : v)));
+    return canonicalJson({ idea: serialisable }, { status: 200 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true }
 );
