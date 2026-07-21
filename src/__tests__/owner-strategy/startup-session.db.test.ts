@@ -971,7 +971,7 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
 describe("[db][concurrency] reviseIdea — exactly one winner per concurrent revision", () => {
   it("[db] two simultaneous revisions of the same idea — exactly one wins", async () => {
     if (!process.env["TEST_WITH_DB"]) return;
-    const sessionId = await createStartupSession(wsA, actor, { label: "Revision concurrency test" });
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, sessionLabel: "Revision concurrency test", intake, ideas: [viableIdea] });
     // Add initial idea
     const ideaId = randomUUID();
     await db.startupIdeaRecord.create({
@@ -1010,7 +1010,7 @@ describe("[db][concurrency] reviseIdea — exactly one winner per concurrent rev
 
   it("[db] revising an already-superseded idea returns ConflictError", async () => {
     if (!process.env["TEST_WITH_DB"]) return;
-    const sessionId = await createStartupSession(wsA, actor, { label: "Superseded revision test" });
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, sessionLabel: "Superseded revision test", intake, ideas: [viableIdea] });
     const ideaId = randomUUID();
     await db.startupIdeaRecord.create({
       data: {
@@ -1035,7 +1035,7 @@ describe("[db][concurrency] reviseIdea — exactly one winner per concurrent rev
 
   it("[db] cross-workspace reviseIdea is denied", async () => {
     if (!process.env["TEST_WITH_DB"]) return;
-    const sessionId = await createStartupSession(wsA, actor, { label: "Cross-workspace revision test" });
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, sessionLabel: "Cross-workspace revision test", intake, ideas: [viableIdea] });
     const ideaId = randomUUID();
     await db.startupIdeaRecord.create({
       data: {
@@ -1058,7 +1058,7 @@ describe("[db][concurrency] reviseIdea — exactly one winner per concurrent rev
 describe("[db] recordHypothesisResult — staleness and readiness propagation", () => {
   it("[db] DISCONFIRMED hypothesis triggers reassessment creating a new readiness record", async () => {
     if (!process.env["TEST_WITH_DB"]) return;
-    const sessionId = await createStartupSession(wsA, actor, { label: "Hypothesis staleness test" });
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, sessionLabel: "Hypothesis staleness test", intake, ideas: [viableIdea] });
     const ideaId = randomUUID();
     await db.startupIdeaRecord.create({
       data: {
@@ -1118,7 +1118,7 @@ describe("[db] recordHypothesisResult — staleness and readiness propagation", 
 
   it("[db] DISCONFIRMED hypothesis with existing GO decision — approval staleness detectable via changed readinessId", async () => {
     if (!process.env["TEST_WITH_DB"]) return;
-    const sessionId = await createStartupSession(wsA, actor, { label: "Approval staleness via hypothesis" });
+    const sessionId = await createStartupSession({ workspaceId: wsA, actorId: actor, sessionLabel: "Approval staleness via hypothesis", intake, ideas: [viableIdea] });
     const ideaId = randomUUID();
     await db.startupIdeaRecord.create({
       data: {

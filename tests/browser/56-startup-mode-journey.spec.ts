@@ -884,8 +884,8 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
       `/api/owner/startup/sessions/${E2E_PHASE5_SESSION_ID}/ideas/${E2E_PHASE5_IDEA_ID}/revise`,
       { data: { name: "E2E Revised Idea Name" } }
     );
-    // May be 200 or 409 if already superseded in a prior run — either is valid
-    if (res.status() === 200) {
+    // May be 200/201 (created) or 409 if already superseded in a prior run — either is valid
+    if (res.status() === 200 || res.status() === 201) {
       const body = await res.json();
       expect(body.newIdeaId).toBeTruthy();
       expect(body.previousIdeaId).toBe(E2E_PHASE5_IDEA_ID);
