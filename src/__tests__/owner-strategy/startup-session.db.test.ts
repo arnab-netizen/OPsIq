@@ -1740,7 +1740,9 @@ describe("[db] G-DB-35: foreign-workspace task reference isolation", () => {
     await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
     const bp = await createBlueprint(wsOwner, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
     const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
-    // Attempt to authorize from wrong workspace
-    await expect(assertStartupExecutionAuthorization(wsOther, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" })).rejects.toThrow(NotFoundError);
+    // Attempt to authorize from wrong workspace — returns unauthorized (not found/cross-workspace denial)
+    const result = await assertStartupExecutionAuthorization(wsOther, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
+    expect(result.authorized).toBe(false);
+    expect(result.violations.some((v) => v.toLowerCase().includes("cross-workspace") || v.toLowerCase().includes("not found") || v.toLowerCase().includes("workspace"))).toBe(true);
   });
 });
