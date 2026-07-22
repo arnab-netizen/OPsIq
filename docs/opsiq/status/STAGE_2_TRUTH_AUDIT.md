@@ -1319,3 +1319,106 @@ This appendix lists every material change from the initial audit commit `de60fa6
 ---
 
 *End of Reconciliation Appendix. Every change in this appendix is supported by direct code inspection evidence cited inline.*
+
+---
+
+## Amendment A — Stage 3 Slice 3.1 Completion (2026-07-22)
+
+**Amendment date:** 2026-07-22  
+**PR:** #244 — `claude/stage-3-1-g2-15-staleness-remediation`  
+**Final SHA:** `25bb055bc1fd8e2d42432ae919fa1d2dcbada88b`  
+**Status at amendment time:** CI in progress; TypeScript gate, Prisma validate, all governance scans: PASS
+
+---
+
+### A-01: MNEW-01 (G2-15) — COMPLETE
+
+| | Value |
+|---|---|
+| **Audit status** | PILOT_BLOCKER / NOT_STARTED |
+| **New status** | **COMPLETE** — implemented and regression-tested in PR #244 |
+| **Files changed** | `src/services/owner-strategy/startup-session.service.ts`, `src/services/owner-strategy/startup-execution-blueprint.service.ts`, `src/services/owner-mode/process-execution-bridge.service.ts` |
+| **Test file** | `src/__tests__/owner-strategy/startup-session.db.test.ts` — G-DB-49 through G-DB-55 added |
+
+**What was delivered (beyond the minimal fix):**
+
+The Stage 2 audit recommended "pass all 9 material IDs at both call sites". The actual implementation went further to close all related defects discovered during implementation:
+
+1. **`VersionedApprovalState` interface** — 9-field required TypeScript interface (`ideaId`, `ideaVersionId`, `profileVersionId`, `economicModelId`, `readinessId`, `systemRecId`, `businessModelId`, `marketSizingId`, `validationPlanId`). All 9 fields are now type-required; passing a partial object is a compile error.
+
+2. **`loadCanonicalCurrentApprovalState(sessionId, ideaId?, workspaceId, client?)` function** — Canonical builder that loads all 9 fields from authoritative DB records. **Fail-closed**: throws `NotFoundError("OwnerStartupSession", sessionId)` for missing/wrong-workspace session; throws `NotFoundError("StartupIdeaRecord", ideaId)` for missing/wrong-workspace idea. Never returns all-null for missing authoritative state.
+
+3. **`checkApprovalStaleness` signature extended** — now accepts `client: Prisma.TransactionClient | typeof db = db` parameter so staleness checks inside transactions use the transaction snapshot.
+
+4. **`assertStartupExecutionAuthorization` signature extended** — same `client` parameter; propagates to canonical state load and staleness check.
+
+5. **Pattern A optimistic concurrency (TOCTOU closure)** — PostgreSQL READ COMMITTED isolation allows concurrent changes between the staleness read and the guarded mutation. Pattern A closes this with:
+   - `transitionSession` (EXECUTION_PLANNED gate): `ownerStartupSession.updateMany` with `WHERE` on `status`, `currentOwnerDecisionId`, `currentProfileVersionId`, `currentSystemRecId`; if `count === 0` → `ConflictError`. Plus `startupIdeaRecord.findFirst` with `WHERE` on `currentEconomicModelVersionId`, `currentReadinessId`, `currentBusinessModelVersionId`; if null → `ConflictError`.
+   - `createBlueprint`: Same pair of guards inside the `$transaction` callback.
+
+6. **Bridge service discriminated-union pattern** — In `process-execution-bridge.service.ts`, the in-transaction fingerprint guard was restructured from outer-`let` mutation to `$transaction` returning `{ denied: true, violations, sessionId, actionType } | { denied: false }`. This closes a TypeScript CFA narrowing issue where the outer variable was narrowed to `null` after the async callback.
+
+7. **G2-3a supersession guard at all three execution gates** — `supersededById !== null` check added to `transitionSession`, `createBlueprint`, and `assertStartupExecutionAuthorization`.
+
+---
+
+### A-02: `ideaVersionId` correction
+
+| | Value |
+|---|---|
+| **Audit assertion** | MNEW-01 recommended passing `ideaVersionId` as one of 9 material IDs (populated from `decision.linkedIdeaVersionId`) |
+| **Correction** | `ideaVersionId` is **always null** in this implementation. `StartupIdeaRecord` has no UUID version field in the Prisma schema (only `createdAt`; no `updatedAt`, no `versionId`). Revision tracking for startup ideas uses `supersededById` exclusively (G2-3a guard). |
+| **Impact** | `VersionedApprovalState.ideaVersionId` is always `null`. The hash computation receives `ideaVersionId: null` at both call sites. This is correct and consistent — the stored approval hash was also computed with `ideaVersionId: null` (because `decision.linkedIdeaVersionId` was always null for the same reason). No staleness false-positive results. |
+| **Schema reference** | `prisma/schema.prisma` `StartupIdeaRecord` model — has `createdAt DateTime @default(now())`, no `updatedAt`, no version UUID field |
+
+---
+
+### A-03: Pilot blocker count correction
+
+| | Value |
+|---|---|
+| **Audit count** | 7 PILOT_BLOCKERs |
+| **New count** | **6 PILOT_BLOCKERs** (MNEW-01 resolved) |
+| **Remaining 6** | MNEW-02 (Alert model missing), M004 (mobile nav), M005 (risk register UI), M006 (compliance calendar UI), M007 (task management UI), middleware auth backstop |
+
+---
+
+### A-04: O01-NEW checklist update
+
+| | Value |
+|---|---|
+| **Audit status** | `[ ] O01-NEW: G2-15 staleness fix applied and regression test passing (MNEW-01) — NOT_STARTED` |
+| **New status** | `[x] O01-NEW: G2-15 staleness fix applied and regression test passing (MNEW-01) — COMPLETE (PR #244, SHA 25bb055b)` |
+
+---
+
+### A-05: G-DB regression tests added
+
+The following PostgreSQL proof tests were added to `src/__tests__/owner-strategy/startup-session.db.test.ts`:
+
+| Test ID | What it proves |
+|---|---|
+| G-DB-49 | Wrong-workspace `ideaId` in `loadCanonicalCurrentApprovalState` throws `NotFoundError("StartupIdeaRecord", ideaId)`, not all-null |
+| G-DB-50 | Superseded `ideaId` in `createBlueprint` throws `ConflictError` matching `/EXECUTION_BLOCKED/` |
+| G-DB-51 | `transitionSession` succeeds after reapproval with new non-superseded idea |
+| G-DB-52 | `createBlueprint` succeeds after reapproval with new idea |
+| G-DB-53 | `assertStartupExecutionAuthorization` passes after reapproval with new idea |
+| G-DB-54 | Profile change between staleness check and transition blocked by Pattern A guard (session stays `APPROVED`) |
+| G-DB-55 | Stale `createBlueprint` rejected — blueprint count unchanged, session `currentBlueprintId` unchanged |
+
+---
+
+### A-06: New defect classes closed (not in original audit scope)
+
+The following defect classes were not listed in the original Stage 2 audit but were closed during implementation:
+
+| Class | Defect | Resolution |
+|---|---|---|
+| TOCTOU race (READ COMMITTED) | Between staleness check and guarded mutation, a concurrent transaction can commit a profile/economic-model/readiness change that slips through without Pattern A guard | Closed by Pattern A `updateMany` + `findFirst` guards in both `transitionSession` and `createBlueprint` |
+| Fail-open wrong-workspace load | `loadCanonicalCurrentApprovalState` previously returned all-null for wrong-workspace session/idea, causing false FRESH verdict | Closed: throws `NotFoundError` for missing/wrong-workspace records |
+| TypeScript CFA narrowing | Outer `let txFingerprintDenied` not tracked by CFA after async callback → narrowed to `never` | Closed by discriminated-union return pattern from `$transaction` |
+| Transaction-client typing | `checkApprovalStaleness` and `assertStartupExecutionAuthorization` used root `db` even when called inside a transaction | Closed by `client: Prisma.TransactionClient | typeof db = db` parameter on both functions |
+
+---
+
+*End of Amendment A. All corrections in this amendment are supported by code inspection and CI evidence cited inline.*
