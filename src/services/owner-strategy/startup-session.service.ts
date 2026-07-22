@@ -1355,17 +1355,10 @@ export async function loadCanonicalCurrentApprovalState(
   });
 
   if (!session) {
-    return {
-      ideaId: ideaId ?? null,
-      ideaVersionId: null,
-      profileVersionId: null,
-      economicModelId: null,
-      readinessId: null,
-      systemRecId: null,
-      businessModelId: null,
-      marketSizingId: null,
-      validationPlanId: null,
-    };
+    // Throwing here rather than returning all-null avoids a silent fail-open:
+    // if the GO decision also stored all-null versioned IDs, an all-null hash would
+    // match the stored hash and report NOT STALE for a missing session.
+    throw new NotFoundError("OwnerStartupSession", sessionId);
   }
 
   let economicModelId: string | null = null;
@@ -2387,7 +2380,7 @@ export async function assertStartupExecutionAuthorization(
   const now = new Date();
 
   // Load all required records in parallel
-  const [session, blueprint, plan, decision] = await Promise.all([
+  const [session, blueprint, plan, decision, ideaRecord] = await Promise.all([
     db.ownerStartupSession.findFirst({
       where: { id: input.sessionId, workspaceId },
       select: { id: true, status: true, currentOwnerDecisionId: true, currentBlueprintId: true },
@@ -2411,6 +2404,10 @@ export async function assertStartupExecutionAuthorization(
         packageHashSha256: true, supersededById: true, hashVersion: true, policyVersion: true,
         linkedIdeaVersionId: true,
       },
+    }),
+    db.startupIdeaRecord.findFirst({
+      where: { id: input.ideaId, workspaceId },
+      select: { supersededById: true },
     }),
   ]);
 
@@ -2438,6 +2435,19 @@ export async function assertStartupExecutionAuthorization(
     // G2-4: Blueprint must not be superseded
     if (blueprint.blueprintStatus === "SUPERSEDED") violations.push("Blueprint has been superseded — reapproval required before execution");
     if (blueprint.blueprintStatus !== "ACTIVE") violations.push(`Blueprint status is ${blueprint.blueprintStatus} — must be ACTIVE`);
+  }
+
+  // G2-3a: Idea must not have been superseded by a revision
+  // reviseIdea() creates a new StartupIdeaRecord with a new ID and marks the old one
+  // supersededById. If the approved idea was later revised, the blueprint/decision were
+  // created for the OLD idea — execution must not proceed until the owner re-approves for
+  // the new idea version.
+  if (!ideaRecord) {
+    violations.push(`Idea ${input.ideaId} not found in this workspace`);
+  } else if (ideaRecord.supersededById) {
+    violations.push(
+      `Idea has been revised — this blueprint and decision were created for the superseded idea version. Reapproval for the new idea revision is required before execution.`
+    );
   }
 
   // G2-5: Plan must exist and be active

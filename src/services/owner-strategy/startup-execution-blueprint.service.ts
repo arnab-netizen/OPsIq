@@ -9,7 +9,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
 import { createObjectiveInTx } from "@/services/owner-mode/business-objective.service";
-import { checkApprovalStaleness, type VersionedApprovalState } from "@/services/owner-strategy/startup-session.service";
+import { checkApprovalStaleness, loadCanonicalCurrentApprovalState } from "@/services/owner-strategy/startup-session.service";
 import { deriveVerificationWindows, type DeriveWindowsInput } from "@/domain/owner-strategy/startup-verification-windows";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -56,33 +56,16 @@ export async function createBlueprint(
   // Stale-reapproval guard: block blueprint if material inputs changed since GO
   const ownerDecision = await db.startupOwnerDecision.findFirst({
     where: { id: input.ownerDecisionId },
-    select: {
-      linkedIdeaVersionId: true,
-      linkedProfileVersionId: true,
-      linkedEconomicModelId: true,
-      linkedReadinessId: true,
-      linkedSystemRecId: true,
-      linkedBusinessModelId: true,
-      linkedMarketSizingId: true,
-      linkedValidationPlanId: true,
-      decisionType: true,
-    },
+    select: { decisionType: true, spendingLimitCents: true },
   });
   if (!ownerDecision) throw new NotFoundError("StartupOwnerDecision", input.ownerDecisionId);
 
-  // Pass versioned artifact IDs from the decision — checkApprovalStaleness queries current snapshots internally
-  const decisionVersionedState: VersionedApprovalState = {
-    ideaId: input.ideaId,
-    ideaVersionId: ownerDecision.linkedIdeaVersionId,
-    profileVersionId: ownerDecision.linkedProfileVersionId,
-    economicModelId: ownerDecision.linkedEconomicModelId,
-    readinessId: ownerDecision.linkedReadinessId,
-    systemRecId: ownerDecision.linkedSystemRecId,
-    businessModelId: ownerDecision.linkedBusinessModelId,
-    marketSizingId: ownerDecision.linkedMarketSizingId,
-    validationPlanId: ownerDecision.linkedValidationPlanId,
-  };
-  const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, decisionVersionedState);
+  // Use canonical server-derived state rather than the decision's stored linked IDs.
+  // Passing the decision's own stored IDs would always match the stored hash for versioned
+  // artifacts (they are identical), making profile/readiness/economic-model updates invisible
+  // at blueprint-creation time.
+  const currentState = await loadCanonicalCurrentApprovalState(workspaceId, input.sessionId, input.ideaId);
+  const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, currentState);
 
   if (staleness.isStale) {
     throw new ConflictError(
