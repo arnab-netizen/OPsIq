@@ -47,7 +47,7 @@ vi.mock("@/services/owner-strategy/startup-session.service", () => ({
   recordCandidateDecision: mocks.recordCandidateDecision,
 }));
 
-vi.mock("@/lib/db", () => ({ db: mocks.db }));
+vi.mock("@/lib/db", () => ({ db: mocks.db, getDbInstance: vi.fn().mockResolvedValue(mocks.db) }));
 
 vi.mock("@/lib/validation", () => ({
   parseRequestBody: mocks.parseRequestBody,
