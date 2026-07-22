@@ -165,37 +165,6 @@ export async function transitionSession(
   actorId: string,
   newStatus: StartupSessionStatus
 ): Promise<void> {
-  // G7/G9/G15: gate at EXECUTION_PLANNED — approval must exist and not be stale/expired
-  if (newStatus === "EXECUTION_PLANNED") {
-    // Derive the ideaId from the current GO decision so all 9 material fields are compared,
-    // not just the 2 session-level fields. Without this, post-GO updates to economicModel,
-    // readiness, businessModel, marketSizing, or validationPlan are invisible at this gate.
-    const sessionRow = await db.ownerStartupSession.findFirst({
-      where: { id: sessionId, workspaceId },
-      select: { currentOwnerDecisionId: true },
-    });
-    let transitionIdeaId: string | null = null;
-    if (sessionRow?.currentOwnerDecisionId) {
-      const dec = await db.startupOwnerDecision.findFirst({
-        where: { id: sessionRow.currentOwnerDecisionId, workspaceId },
-        select: { ideaId: true },
-      });
-      transitionIdeaId = dec?.ideaId ?? null;
-    }
-    const currentState = await loadCanonicalCurrentApprovalState(workspaceId, sessionId, transitionIdeaId);
-    const staleness = await checkApprovalStaleness(workspaceId, sessionId, currentState);
-    if (staleness.originalHash === null) {
-      throw new ConflictError(
-        "EXECUTION_BLOCKED: no GO owner decision found — owner must approve before execution can be planned"
-      );
-    }
-    if (staleness.isStale) {
-      throw new ConflictError(
-        `STALE_APPROVAL_BLOCKS_EXECUTION: approval package changed since GO decision. Changed: ${staleness.changedInputs.join(", ")}. Owner must re-approve.`
-      );
-    }
-  }
-
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const session = await tx.ownerStartupSession.findFirst({
       where: { id: sessionId, workspaceId },
@@ -204,6 +173,48 @@ export async function transitionSession(
     if (!session) throw new NotFoundError("OwnerStartupSession", sessionId);
 
     assertValidTransition(session.status as StartupSessionStatus, newStatus);
+
+    // G7/G9/G15: gate at EXECUTION_PLANNED — inside the transaction so the staleness
+    // check and the status mutation share the same DB round-trip, closing the TOCTOU
+    // window between canonical-state read and the protected UPDATE.
+    if (newStatus === "EXECUTION_PLANNED") {
+      // Derive the ideaId from the current GO decision so all 9 material fields are compared,
+      // not just the 2 session-level fields (profileVersionId, systemRecId).
+      let transitionIdeaId: string | null = null;
+      if (session.currentOwnerDecisionId) {
+        const dec = await tx.startupOwnerDecision.findFirst({
+          where: { id: session.currentOwnerDecisionId, workspaceId },
+          select: { ideaId: true },
+        });
+        transitionIdeaId = dec?.ideaId ?? null;
+      }
+      const currentState = await loadCanonicalCurrentApprovalState(workspaceId, sessionId, transitionIdeaId, tx);
+      const staleness = await checkApprovalStaleness(workspaceId, sessionId, currentState, tx);
+      if (staleness.originalHash === null) {
+        throw new ConflictError(
+          "EXECUTION_BLOCKED: no GO owner decision found — owner must approve before execution can be planned"
+        );
+      }
+      if (staleness.isStale) {
+        throw new ConflictError(
+          `STALE_APPROVAL_BLOCKS_EXECUTION: approval package changed since GO decision. Changed: ${staleness.changedInputs.join(", ")}. Owner must re-approve.`
+        );
+      }
+      // G2-3a: block EXECUTION_PLANNED transition when the GO decision's idea has been revised.
+      // The staleness check alone does not catch this: if no material fields on the OLD idea
+      // changed, the hash still matches even though the active idea is now a different record.
+      if (transitionIdeaId) {
+        const ideaRevisionRow = await tx.startupIdeaRecord.findFirst({
+          where: { id: transitionIdeaId, workspaceId },
+          select: { supersededById: true },
+        });
+        if (ideaRevisionRow?.supersededById) {
+          throw new ConflictError(
+            `EXECUTION_BLOCKED: idea has been revised — the GO decision was recorded for the superseded idea revision. Reapproval for the new idea revision is required before execution can be planned.`
+          );
+        }
+      }
+    }
 
     await tx.ownerStartupSession.update({
       where: { id: sessionId },
@@ -1279,14 +1290,19 @@ export function computeApprovalPackageHash(c: ApprovalPackageComponents, v3State
  * R7: excludes records where originBlueprintId matches authorizedBlueprintId — blueprint-created
  * artifacts do not retroactively stale the approval that created them.
  */
-async function queryCurrentSnapshotIds(workspaceId: string, sessionId: string, authorizedBlueprintId?: string | null) {
+async function queryCurrentSnapshotIds(
+  workspaceId: string,
+  sessionId: string,
+  authorizedBlueprintId?: string | null,
+  client: typeof db = db
+) {
   const [evidence, risks, constraints, objectives] = await Promise.all([
-    db.startupEvidenceRecord.findMany({
+    client.startupEvidenceRecord.findMany({
       where: { sessionId, workspaceId },
       select: { id: true },
       orderBy: { createdAt: "asc" },
     }),
-    db.businessRiskEntry.findMany({
+    client.businessRiskEntry.findMany({
       where: {
         linkedStartupSessionId: sessionId,
         workspaceId,
@@ -1295,7 +1311,7 @@ async function queryCurrentSnapshotIds(workspaceId: string, sessionId: string, a
       },
       select: { id: true },
     }),
-    db.constraintResolutionRecord.findMany({
+    client.constraintResolutionRecord.findMany({
       where: {
         linkedStartupSessionId: sessionId,
         workspaceId,
@@ -1304,14 +1320,14 @@ async function queryCurrentSnapshotIds(workspaceId: string, sessionId: string, a
       select: { id: true },
     }),
     // G6: ResourceAllocation has no direct session FK — query via BusinessObjective IDs
-    db.businessObjective.findMany({
+    client.businessObjective.findMany({
       where: { linkedStartupSessionId: sessionId, workspaceId },
       select: { id: true },
     }),
   ]);
   const objectiveIds = objectives.map((o: { id: string }) => o.id);
   const resourceAllocations = objectiveIds.length > 0
-    ? await db.resourceAllocation.findMany({
+    ? await client.resourceAllocation.findMany({
         where: { objectiveId: { in: objectiveIds }, workspaceId },
         select: { id: true },
       })
@@ -1362,9 +1378,10 @@ export interface VersionedApprovalState {
 export async function loadCanonicalCurrentApprovalState(
   workspaceId: string,
   sessionId: string,
-  ideaId?: string | null
+  ideaId?: string | null,
+  client: typeof db = db
 ): Promise<VersionedApprovalState> {
-  const session = await db.ownerStartupSession.findFirst({
+  const session = await client.ownerStartupSession.findFirst({
     where: { id: sessionId, workspaceId },
     select: { currentProfileVersionId: true, currentSystemRecId: true },
   });
@@ -1384,7 +1401,7 @@ export async function loadCanonicalCurrentApprovalState(
 
   if (ideaId) {
     const [idea, latestMarketSizing, validationPlan] = await Promise.all([
-      db.startupIdeaRecord.findFirst({
+      client.startupIdeaRecord.findFirst({
         where: { id: ideaId, workspaceId },
         select: {
           currentEconomicModelVersionId: true,
@@ -1392,12 +1409,12 @@ export async function loadCanonicalCurrentApprovalState(
           currentBusinessModelVersionId: true,
         },
       }),
-      db.startupMarketSizing.findFirst({
+      client.startupMarketSizing.findFirst({
         where: { ideaId, workspaceId },
         select: { id: true },
         orderBy: { createdAt: "desc" },
       }),
-      db.startupValidationPlan.findFirst({
+      client.startupValidationPlan.findFirst({
         where: { ideaId, workspaceId },
         select: { id: true },
       }),
@@ -1435,9 +1452,10 @@ export async function loadCanonicalCurrentApprovalState(
 export async function checkApprovalStaleness(
   workspaceId: string,
   sessionId: string,
-  currentVersionedIds: VersionedApprovalState
+  currentVersionedIds: VersionedApprovalState,
+  client: typeof db = db
 ): Promise<StalenessCheckResult> {
-  const session = await db.ownerStartupSession.findFirst({
+  const session = await client.ownerStartupSession.findFirst({
     where: { id: sessionId, workspaceId },
     select: { currentOwnerDecisionId: true },
   });
@@ -1447,7 +1465,7 @@ export async function checkApprovalStaleness(
     return { isStale: false, changedInputs: [], originalHash: null, currentHash: noHash };
   }
 
-  const decision = await db.startupOwnerDecision.findFirst({
+  const decision = await client.startupOwnerDecision.findFirst({
     where: { id: session.currentOwnerDecisionId, decisionType: "GO" },
     select: {
       packageHashSha256: true,
@@ -1481,12 +1499,12 @@ export async function checkApprovalStaleness(
   }
 
   // R7: find the blueprint created under this decision so blueprint-created artifacts are excluded
-  const blueprintForDecision = await db.startupExecutionBlueprint.findFirst({
+  const blueprintForDecision = await client.startupExecutionBlueprint.findFirst({
     where: { ownerDecisionId: session.currentOwnerDecisionId, workspaceId },
     select: { id: true },
   });
   // Query current snapshot arrays from the DB — excluding blueprint-created artifacts (R7)
-  const currentSnapshots = await queryCurrentSnapshotIds(workspaceId, sessionId, blueprintForDecision?.id ?? null);
+  const currentSnapshots = await queryCurrentSnapshotIds(workspaceId, sessionId, blueprintForDecision?.id ?? null, client);
 
   // Destructure ideaId out of currentVersionedIds — it's an execution parameter and must
   // not override the decision's own ideaId in the recomputed hash.

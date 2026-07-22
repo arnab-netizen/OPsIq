@@ -2164,3 +2164,41 @@ describe("[db] G-DB-47: transitionSession EXECUTION_PLANNED gate catches idea-le
     ).rejects.toThrow(/STALE_APPROVAL_BLOCKS_EXECUTION/);
   });
 });
+
+describe("[db] G-DB-48: transitionSession EXECUTION_PLANNED is blocked when idea was revised after GO", () => {
+  it("G-DB-48: transitionSession to EXECUTION_PLANNED throws ConflictError when GO decision idea has been superseded", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+
+    // Record GO decision for the original idea
+    await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+
+    // Advance session to APPROVED (valid pre-state for EXECUTION_PLANNED transition)
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+
+    // Verify transition to EXECUTION_PLANNED succeeds BEFORE revision (baseline)
+    await expect(
+      transitionSession(ws, sessionId, actor, "EXECUTION_PLANNED")
+    ).resolves.toBeUndefined();
+
+    // Reset to APPROVED so we can test the post-revision case
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+
+    // Revise the idea — creates a new idea record and sets supersededById on the original
+    await reviseIdea(ws, sessionId, ideaId, actor, { name: "Revised idea for transition test" });
+
+    // transitionSession must now throw: the GO decision's idea has been revised (supersededById is set).
+    // Before the G2-3a fix in transitionSession, the staleness check alone would not catch this
+    // if no other material fields on the old idea changed — and the transition would silently proceed.
+    await expect(
+      transitionSession(ws, sessionId, actor, "EXECUTION_PLANNED")
+    ).rejects.toThrow(ConflictError);
+
+    await expect(
+      transitionSession(ws, sessionId, actor, "EXECUTION_PLANNED")
+    ).rejects.toThrow(/EXECUTION_BLOCKED/);
+  });
+});
