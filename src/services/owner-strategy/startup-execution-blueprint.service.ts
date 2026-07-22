@@ -9,7 +9,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
 import { createObjectiveInTx } from "@/services/owner-mode/business-objective.service";
-import { checkApprovalStaleness } from "@/services/owner-strategy/startup-session.service";
+import { checkApprovalStaleness, type VersionedApprovalState } from "@/services/owner-strategy/startup-session.service";
 import { deriveVerificationWindows, type DeriveWindowsInput } from "@/domain/owner-strategy/startup-verification-windows";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -71,7 +71,7 @@ export async function createBlueprint(
   if (!ownerDecision) throw new NotFoundError("StartupOwnerDecision", input.ownerDecisionId);
 
   // Pass versioned artifact IDs from the decision — checkApprovalStaleness queries current snapshots internally
-  const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, {
+  const decisionVersionedState: VersionedApprovalState = {
     ideaId: input.ideaId,
     ideaVersionId: ownerDecision.linkedIdeaVersionId,
     profileVersionId: ownerDecision.linkedProfileVersionId,
@@ -81,7 +81,8 @@ export async function createBlueprint(
     businessModelId: ownerDecision.linkedBusinessModelId,
     marketSizingId: ownerDecision.linkedMarketSizingId,
     validationPlanId: ownerDecision.linkedValidationPlanId,
-  });
+  };
+  const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, decisionVersionedState);
 
   if (staleness.isStale) {
     throw new ConflictError(

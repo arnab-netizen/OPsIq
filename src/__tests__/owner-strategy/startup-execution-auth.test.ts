@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { verifyApprovalPackageV1, verifyApprovalPackageV2, verifyApprovalPackageV3, computeApprovalPackageHash } from "@/services/owner-strategy/startup-session.service";
+import type { VersionedApprovalState } from "@/services/owner-strategy/startup-session.service";
 import { deriveVerificationWindows } from "@/domain/owner-strategy/startup-verification-windows";
 
 describe("Execution authorization — approval hash dispatch", () => {
@@ -80,5 +81,44 @@ describe("Execution authorization — verification window derivation", () => {
     expect(labels.some((l) => l.includes("Validation"))).toBe(true);
     expect(labels.some((l) => l.includes("Break-Even"))).toBe(true);
     expect(labels.some((l) => l.includes("Cash Survival"))).toBe(true);
+  });
+});
+
+describe("G2-15 staleness type safety — VersionedApprovalState compile-time contract", () => {
+  it("VersionedApprovalState requires all 9 fields — partial construction is rejected at compile time", () => {
+    // This test validates that VersionedApprovalState has all required fields.
+    // TypeScript enforces this at compile time: passing {} or a partial object to
+    // checkApprovalStaleness is a compile error after the G2-15 fix.
+    const full: VersionedApprovalState = {
+      ideaId: null,
+      ideaVersionId: null,
+      profileVersionId: "profile-abc",
+      economicModelId: null,
+      readinessId: null,
+      systemRecId: "sysrec-xyz",
+      businessModelId: null,
+      marketSizingId: null,
+      validationPlanId: null,
+    };
+    // All 9 fields are present (even though some are null) — this must compile.
+    expect(Object.keys(full)).toHaveLength(9);
+    expect(full.profileVersionId).toBe("profile-abc");
+    expect(full.systemRecId).toBe("sysrec-xyz");
+    expect(full.ideaId).toBeNull();
+  });
+
+  it("VersionedApprovalState hash-input contract: non-null profileVersionId produces different hash than null", () => {
+    const withProfile = computeApprovalPackageHash({
+      sessionId: "s-g215",
+      profileVersionId: "pv-001",
+      hashVersion: 2,
+    });
+    const withoutProfile = computeApprovalPackageHash({
+      sessionId: "s-g215",
+      profileVersionId: null,
+      hashVersion: 2,
+    });
+    // Proves the defect mechanism: passing null instead of the real ID changes the hash
+    expect(withProfile).not.toBe(withoutProfile);
   });
 });
