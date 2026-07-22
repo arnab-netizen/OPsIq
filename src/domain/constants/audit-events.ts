@@ -571,6 +571,9 @@ export const AUDIT_EVENTS = {
   STARTUP_EXECUTION_PLAN_CREATED: "startup.execution_plan_created",
   STARTUP_IDEA_REVISED: "startup.idea_revised",
   STARTUP_EVIDENCE_CONFLICT_DETECTED: "startup.evidence_conflict_detected",
+  STARTUP_EXECUTION_AUTHORIZATION_DENIED: "startup.execution_authorization_denied",
+  STARTUP_APPROVAL_BECAME_STALE: "startup.approval_became_stale",
+  STARTUP_EXECUTION_PLAN_SUPERSEDED: "startup.execution_plan_superseded",
 } as const;
 
 export type AuditEventName =
