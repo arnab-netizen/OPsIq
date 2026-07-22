@@ -20,15 +20,15 @@ describe("Execution authorization — approval hash dispatch", () => {
     expect(verifyApprovalPackageV2(base)).not.toBe(verifyApprovalPackageV2(withArrays));
   });
 
-  it("missing hashVersion defaults to v3 (current algorithm)", () => {
+  it("missing hashVersion defaults to v2 (current algorithm)", () => {
     const base = { sessionId: "s2", ideaId: "i2" };
-    expect(computeApprovalPackageHash(base)).toBe(verifyApprovalPackageV3(base));
+    expect(computeApprovalPackageHash(base)).toBe(verifyApprovalPackageV2(base));
   });
 
-  it("hashVersion=2 still dispatches to v2 algorithm (backward compat)", () => {
-    const c = { sessionId: "s2b", ideaId: "i2b", hashVersion: 2 as const };
-    expect(computeApprovalPackageHash(c)).toBe(verifyApprovalPackageV2(c));
-    expect(computeApprovalPackageHash(c)).not.toBe(verifyApprovalPackageV3(c));
+  it("hashVersion=3 dispatches to v3 algorithm (forward compat)", () => {
+    const c = { sessionId: "s2b", ideaId: "i2b", hashVersion: 3 as const };
+    expect(computeApprovalPackageHash(c)).toBe(verifyApprovalPackageV3(c));
+    expect(computeApprovalPackageHash(c)).not.toBe(verifyApprovalPackageV2(c));
   });
 
   it("hashVersion=1 dispatches to v1 algorithm", () => {

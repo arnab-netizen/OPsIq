@@ -1197,10 +1197,11 @@ export function verifyApprovalPackageV3(c: ApprovalPackageComponents, state?: Ap
 /**
  * Dispatcher: select hash algorithm by stored hashVersion.
  * New records always use V3. Legacy records with hashVersion=1 use V1, hashVersion=2 use V2.
- * Unknown or missing hashVersion defaults to V3 (current algorithm) — fail closed.
+ * Unknown or missing hashVersion defaults to V2 (current algorithm for new decisions).
+ * V3 requires explicit hashVersion: 3.
  */
 export function computeApprovalPackageHash(c: ApprovalPackageComponents, v3State?: ApprovalPackageV3State): string {
-  const version = c.hashVersion ?? 3;
+  const version = c.hashVersion ?? 2;
   if (version === 1) return verifyApprovalPackageV1(c);
   if (version === 2) return verifyApprovalPackageV2(c);
   return verifyApprovalPackageV3(c, v3State);
