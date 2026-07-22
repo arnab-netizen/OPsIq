@@ -53,29 +53,11 @@ export async function createBlueprint(
   actorId: string,
   input: BlueprintInput
 ): Promise<BlueprintResult> {
-  // Stale-reapproval guard: block blueprint if material inputs changed since GO
-  const ownerDecision = await db.startupOwnerDecision.findFirst({
-    where: { id: input.ownerDecisionId },
-    select: { decisionType: true, spendingLimitCents: true },
-  });
-  if (!ownerDecision) throw new NotFoundError("StartupOwnerDecision", input.ownerDecisionId);
-
-  // Use canonical server-derived state rather than the decision's stored linked IDs.
-  // Passing the decision's own stored IDs would always match the stored hash for versioned
-  // artifacts (they are identical), making profile/readiness/economic-model updates invisible
-  // at blueprint-creation time.
-  const currentState = await loadCanonicalCurrentApprovalState(workspaceId, input.sessionId, input.ideaId);
-  const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, currentState);
-
-  if (staleness.isStale) {
-    throw new ConflictError(
-      `STALE_REAPPROVAL_REQUIRED: approval package has changed since GO decision. Changed inputs: ${staleness.changedInputs.join(", ")}. Owner must re-approve before blueprint creation.`
-    );
-  }
-
   // G16: Blueprint supersession policy — if a DRAFT or ACTIVE blueprint exists after reapproval,
   // supersede it rather than blocking. If the existing blueprint is ACTIVE and has NOT gone
   // through reapproval (staleness check did not pass), block as before.
+  // NOTE: The staleness check itself has moved inside the main $transaction (below) to close
+  // the TOCTOU window between canonical-state read and blueprint persistence.
   const existing = await db.startupExecutionBlueprint.findFirst({
     where: {
       sessionId: input.sessionId,
@@ -155,6 +137,36 @@ export async function createBlueprint(
 
   try {
     await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Stale-reapproval guard: runs inside the transaction so the staleness read and blueprint
+    // persistence share the same DB transaction, closing the TOCTOU window.
+    // The decision's own linked IDs are NOT used here — the canonical builder queries current
+    // DB state to detect post-GO mutations to profile, economic model, readiness, etc.
+    const ownerDecision = await tx.startupOwnerDecision.findFirst({
+      where: { id: input.ownerDecisionId },
+      select: { decisionType: true, spendingLimitCents: true },
+    });
+    if (!ownerDecision) throw new NotFoundError("StartupOwnerDecision", input.ownerDecisionId);
+
+    const currentState = await loadCanonicalCurrentApprovalState(workspaceId, input.sessionId, input.ideaId, tx);
+    const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, currentState, tx);
+    if (staleness.isStale) {
+      throw new ConflictError(
+        `STALE_REAPPROVAL_REQUIRED: approval package has changed since GO decision. Changed inputs: ${staleness.changedInputs.join(", ")}. Owner must re-approve before blueprint creation.`
+      );
+    }
+
+    // G2-3a: block blueprint creation when the target idea has been superseded by a revision.
+    // The staleness check alone does not catch this when no material fields on the old idea changed.
+    const ideaRevisionRow = await tx.startupIdeaRecord.findFirst({
+      where: { id: input.ideaId, workspaceId },
+      select: { supersededById: true },
+    });
+    if (ideaRevisionRow?.supersededById) {
+      throw new ConflictError(
+        `EXECUTION_BLOCKED: idea has been revised — blueprint creation requires a new GO approval for the revised idea.`
+      );
+    }
+
     // Create objective atomically inside the main transaction
     const objective = await createObjectiveInTx(tx, {
       workspaceId,
