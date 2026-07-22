@@ -1502,7 +1502,8 @@ describe("[db] G-DB-21: business-model concurrency — versioned supersession", 
     const bm1Id = await buildAndPersistBusinessModel(ws, sessionId, ideaId, actor, bmInput);
     const bm2Id = await buildAndPersistBusinessModel(ws, sessionId, ideaId, actor, bmInput);
     expect(bm1Id).not.toBe(bm2Id);
-    const bm1 = await db.startupBusinessModel.findUnique({ where: { id: bm1Id } });
+    // Prisma model is startupBusinessModelVersion (not startupBusinessModel)
+    const bm1 = await db.startupBusinessModelVersion.findUnique({ where: { id: bm1Id } });
     expect(bm1?.supersededById).toBe(bm2Id);
   });
 });
@@ -1518,8 +1519,11 @@ describe("[db] G-DB-22: market-sizing concurrency — two calls produce versione
     const ms1Id = await buildAndPersistMarketSizing(ws, sessionId, ideaId, actor, {});
     const ms2Id = await buildAndPersistMarketSizing(ws, sessionId, ideaId, actor, {});
     expect(ms1Id).not.toBe(ms2Id);
+    // StartupMarketSizing has no supersededById — versioning is by versionNumber
     const ms1 = await db.startupMarketSizing.findUnique({ where: { id: ms1Id } });
-    expect(ms1?.supersededById).toBe(ms2Id);
+    const ms2 = await db.startupMarketSizing.findUnique({ where: { id: ms2Id } });
+    expect(ms1?.versionNumber).toBe(1);
+    expect(ms2?.versionNumber).toBe(2);
   });
 });
 
