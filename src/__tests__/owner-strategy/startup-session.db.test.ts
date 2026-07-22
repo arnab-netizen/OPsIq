@@ -1802,7 +1802,7 @@ describe("[db] G-DB-36: STARTUP_IDEA_REVISED audit event commits with revision t
     // Audit event payload contains both idea IDs
     const event = await db.auditEvent.findFirst({
       where: { eventName: AUDIT_EVENTS.STARTUP_IDEA_REVISED },
-      orderBy: { createdAt: "desc" },
+      orderBy: { occurredAt: "desc" },
     });
     const payload = event?.payload as Record<string, unknown>;
     expect(payload?.oldIdeaId).toBe(ideaId);
@@ -1852,7 +1852,7 @@ describe("[db] G-DB-37: STARTUP_EVIDENCE_CONFLICT_DETECTED emits for newly-intro
     // Audit event payload includes materialClaim and conflictingEvidenceIds
     const event = await db.auditEvent.findFirst({
       where: { eventName: AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED, workspaceId: ws },
-      orderBy: { createdAt: "desc" },
+      orderBy: { occurredAt: "desc" },
     });
     const payload = event?.payload as Record<string, unknown>;
     expect(payload?.materialClaim).toBe("DEMAND_EXISTS");
@@ -1901,7 +1901,7 @@ describe("[db] G-DB-39: STARTUP_APPROVAL_BECAME_STALE emits once on STALE_REAPPR
     // Verify payload contains decision ID and session IDs
     const event = await db.auditEvent.findFirst({
       where: { eventName: AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE, workspaceId: ws },
-      orderBy: { createdAt: "desc" },
+      orderBy: { occurredAt: "desc" },
     });
     const payload = event?.payload as Record<string, unknown>;
     expect(payload?.sessionId).toBe(sessionId);
