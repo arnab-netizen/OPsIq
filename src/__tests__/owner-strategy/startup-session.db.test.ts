@@ -2217,17 +2217,22 @@ describe("[db] G-DB-49: loadCanonicalCurrentApprovalState throws NotFoundError f
     const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
     const ideaId = sess!.ideas[0].id;
 
-    // Calling with wsB and the ideaId that belongs to wsA: the workspace-filtered findFirst
-    // returns null. Must throw NotFoundError rather than returning all-null.
+    // Create an idea belonging to wsB — it will not be found when looked up under wsA.
+    // Must throw NotFoundError("StartupIdeaRecord", ...) rather than returning all-null.
     // Returning all-null would fail-open: if the GO decision stored null idea-level fields,
     // the hash would match a cross-workspace idea's all-null output and report NOT STALE.
+    const sessionIdB = await createStartupSession({ workspaceId: wsB, actorId: actor, intake: { capitalAvailable: 5000, monthlySurvivalNeed: 1000, fastCashVsScale: "scale" }, ideas: [{ ...viableIdea, name: "wsB idea" }] });
+    const sessB = await db.ownerStartupSession.findFirst({ where: { id: sessionIdB }, include: { ideas: true } });
+    const ideaIdFromWsB = sessB!.ideas[0].id;
+
+    // Call with wsA (correct for session) but an idea that belongs to wsB → idea not found in wsA
     await expect(
-      loadCanonicalCurrentApprovalState(wsB, sessionId, ideaId)
+      loadCanonicalCurrentApprovalState(wsA, sessionId, ideaIdFromWsB)
     ).rejects.toThrow(NotFoundError);
 
     // Also verify the error is about the idea, not the session
     await expect(
-      loadCanonicalCurrentApprovalState(wsB, sessionId, ideaId)
+      loadCanonicalCurrentApprovalState(wsA, sessionId, ideaIdFromWsB)
     ).rejects.toThrow(/StartupIdeaRecord/);
 
     // Baseline: calling with the correct workspace and the correct ideaId succeeds
