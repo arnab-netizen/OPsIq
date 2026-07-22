@@ -167,7 +167,22 @@ export async function transitionSession(
 ): Promise<void> {
   // G7/G9/G15: gate at EXECUTION_PLANNED — approval must exist and not be stale/expired
   if (newStatus === "EXECUTION_PLANNED") {
-    const currentState = await loadCanonicalCurrentApprovalState(workspaceId, sessionId);
+    // Derive the ideaId from the current GO decision so all 9 material fields are compared,
+    // not just the 2 session-level fields. Without this, post-GO updates to economicModel,
+    // readiness, businessModel, marketSizing, or validationPlan are invisible at this gate.
+    const sessionRow = await db.ownerStartupSession.findFirst({
+      where: { id: sessionId, workspaceId },
+      select: { currentOwnerDecisionId: true },
+    });
+    let transitionIdeaId: string | null = null;
+    if (sessionRow?.currentOwnerDecisionId) {
+      const dec = await db.startupOwnerDecision.findFirst({
+        where: { id: sessionRow.currentOwnerDecisionId, workspaceId },
+        select: { ideaId: true },
+      });
+      transitionIdeaId = dec?.ideaId ?? null;
+    }
+    const currentState = await loadCanonicalCurrentApprovalState(workspaceId, sessionId, transitionIdeaId);
     const staleness = await checkApprovalStaleness(workspaceId, sessionId, currentState);
     if (staleness.originalHash === null) {
       throw new ConflictError(

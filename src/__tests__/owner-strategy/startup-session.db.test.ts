@@ -2102,3 +2102,65 @@ describe("[db] G-DB-46: blueprint call site uses canonical state — profile cha
     ).rejects.toThrow(ConflictError);
   });
 });
+
+describe("[db] G-DB-47: transitionSession EXECUTION_PLANNED gate catches idea-level staleness", () => {
+  it("G-DB-47: transitionSession to EXECUTION_PLANNED is blocked when economic model is updated after GO decision", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+
+    const economicInputs: EconomicInputs = {
+      startupCostCents: 300000n,
+      fixedMonthlyCostCents: 100000n,
+      variableUnitCostCents: 1000n,
+      pricePerUnitCents: 5000n,
+      cacCents: 2000n,
+      workingCapitalCents: 50000n,
+      paymentDelayDays: 0,
+      ownerLabourHoursPerWeek: 40,
+      availableCapitalCents: 1000000n,
+      ownerMonthlyNeedCents: 200000n,
+    };
+
+    // Build economic model v1 — sets idea.currentEconomicModelVersionId to v1
+    const economicModelV1 = await buildAndPersistEconomicModel(ws, sessionId, ideaId, actor, economicInputs);
+
+    // Record GO decision referencing economic model v1
+    await recordOwnerDecision(ws, sessionId, actor, {
+      decisionType: "GO",
+      ideaId,
+      linkedEconomicModelId: economicModelV1,
+    });
+
+    // Manually advance session to APPROVED (valid pre-state for EXECUTION_PLANNED transition)
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+
+    // Verify transition succeeds when nothing has changed (baseline)
+    // Reset to APPROVED after to test the stale path
+    await expect(
+      transitionSession(ws, sessionId, actor, "EXECUTION_PLANNED")
+    ).resolves.toBeUndefined();
+
+    // Reset session back to APPROVED so we can test the stale case
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+
+    // Build economic model v2 — updates idea.currentEconomicModelVersionId to v2
+    // This is the post-GO mutation that must be caught at the transition gate
+    await buildAndPersistEconomicModel(ws, sessionId, ideaId, actor, { ...economicInputs, pricePerUnitCents: 9000n });
+
+    // transitionSession must now throw: canonical builder returns v2 for economicModelId,
+    // but the stored hash was computed with v1 → STALE_APPROVAL_BLOCKS_EXECUTION.
+    // Before the G2-15 fix, calling loadCanonicalCurrentApprovalState without ideaId
+    // made the idea-level fields always null → hash matched null → no stale → silent pass.
+    await expect(
+      transitionSession(ws, sessionId, actor, "EXECUTION_PLANNED")
+    ).rejects.toThrow(ConflictError);
+
+    // Confirm the thrown error message specifically names the staleness reason
+    await expect(
+      transitionSession(ws, sessionId, actor, "EXECUTION_PLANNED")
+    ).rejects.toThrow(/STALE_APPROVAL_BLOCKS_EXECUTION/);
+  });
+});
