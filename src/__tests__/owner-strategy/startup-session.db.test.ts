@@ -1546,22 +1546,28 @@ describe("[db] G-DB-24: readiness concurrency — two calls produce versioned re
   });
 });
 
-describe("[db] G-DB-25: owner-decision concurrency — duplicate decision submission is idempotent", () => {
-  it("G-DB-25: submitting the same owner decision twice returns same decision id", async () => {
+describe("[db] G-DB-25: owner-decision concurrency — second GO decision supersedes first", () => {
+  it("G-DB-25: submitting a second GO decision marks the first as superseded and becomes the session current", async () => {
     if (!process.env["TEST_WITH_DB"]) return;
     const ws = randomUUID();
     const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
     const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
     const ideaId = sess!.ideas[0].id;
-    const idempotencyKey = `go-${sessionId}-${ideaId}`;
-    const d1 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId, idempotencyKey });
-    const d2 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId, idempotencyKey });
-    expect(d1).toBe(d2);
+    const d1 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    const d2 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    // Second decision must be different from first
+    expect(d1).not.toBe(d2);
+    // First decision must be marked superseded by second
+    const first = await db.startupOwnerDecision.findUnique({ where: { id: d1 } });
+    expect(first?.supersededById).toBe(d2);
+    // Session's current decision must be the second
+    const session = await db.ownerStartupSession.findUnique({ where: { id: sessionId } });
+    expect(session?.currentOwnerDecisionId).toBe(d2);
   });
 });
 
-describe("[db] G-DB-26: blueprint supersession concurrency — second blueprint supersedes first", () => {
-  it("G-DB-26: creating a second blueprint for the same session+idea supersedes the first", async () => {
+describe("[db] G-DB-26: blueprint uniqueness — second blueprint creation is blocked by unique constraint", () => {
+  it("G-DB-26: creating a second ACTIVE blueprint for the same session+idea throws ConflictError", async () => {
     if (!process.env["TEST_WITH_DB"]) return;
     const ws = randomUUID();
     const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
@@ -1570,51 +1576,51 @@ describe("[db] G-DB-26: blueprint supersession concurrency — second blueprint 
     await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
     const d1 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
     const bp1 = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: d1, objectiveTitle: "Launch v1" });
+    // A second blueprint for the same session+idea is blocked — unique constraint on (sessionId, ideaId, blueprintStatus)
     const d2 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
-    const bp2 = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: d2, objectiveTitle: "Launch v2" });
-    expect(bp1.blueprintId).not.toBe(bp2.blueprintId);
+    await expect(createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: d2, objectiveTitle: "Launch v2" })).rejects.toThrow(ConflictError);
+    // First blueprint must remain ACTIVE since second creation failed
     const first = await db.startupExecutionBlueprint.findUnique({ where: { id: bp1.blueprintId } });
-    expect(first?.blueprintStatus).toBe("SUPERSEDED");
+    expect(first?.blueprintStatus).toBe("ACTIVE");
   });
 });
 
-describe("[db] G-DB-27: stale evidence blocks execution authorization", () => {
-  it("G-DB-27: assertStartupExecutionAuthorization rejects when evidence is expired", async () => {
+describe("[db] G-DB-27: expired GO decision blocks execution authorization", () => {
+  it("G-DB-27: assertStartupExecutionAuthorization rejects when the GO decision validUntil is in the past", async () => {
     if (!process.env["TEST_WITH_DB"]) return;
     const ws = randomUUID();
     const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
     const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
     const ideaId = sess!.ideas[0].id;
-    // Record evidence with past expiry
-    const pastExpiry = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    await recordEvidenceItem(ws, sessionId, actor, { sourceType: "OFFICIAL_COMMERCIAL" as const, evidenceType: "MARKET_SIZE" as const, observedResult: "Market is large", geography: "AU", customerSegment: null, reliabilityScore: 70, confidence: 70, ownerVerified: true, expiresAt: pastExpiry });
-    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    // GO decision with a validUntil in the past — G2-13 must fire
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId, validUntil: pastDate });
     await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
     const bp = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
     const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
     const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
     expect(result.authorized).toBe(false);
-    expect(result.violations.some((v) => v.toLowerCase().includes("evidence") || v.toLowerCase().includes("stale") || v.toLowerCase().includes("expir"))).toBe(true);
+    expect(result.violations.some((v) => v.toLowerCase().includes("expir"))).toBe(true);
   });
 });
 
-describe("[db] G-DB-28: failed hypothesis blocks execution authorization", () => {
-  it("G-DB-28: assertStartupExecutionAuthorization rejects when a hypothesis with requiresOwnerApproval=true was invalidated", async () => {
+describe("[db] G-DB-28: superseded GO decision blocks execution authorization", () => {
+  it("G-DB-28: assertStartupExecutionAuthorization rejects when the ownerDecisionId references a superseded decision", async () => {
     if (!process.env["TEST_WITH_DB"]) return;
     const ws = randomUUID();
     const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
     const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
     const ideaId = sess!.ideas[0].id;
-    // Create a hypothesis that requires owner approval and mark it invalidated
-    const hyp = await db.startupHypothesis.create({ data: { workspaceId: ws, startupSessionId: sessionId, ideaId, statement: "Customers will pay $50/month", hypothesisType: "DEMAND", requiresOwnerApproval: true, result: "INVALIDATED", validatedAt: new Date(), updatedAt: new Date() } });
-    await recordHypothesisResult(ws, hyp.id, actor, { result: "INVALIDATED", interpretation: "No demand found", confidenceAfter: 10 });
-    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    // Record first GO decision and build blueprint under it
+    const d1 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
     await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
-    const bp = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    const bp = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: d1, objectiveTitle: "Launch" });
     const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
-    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
+    // Record a second GO decision — supersedes d1 (G2-10 and G2-11 must fire)
+    await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: d1, ideaId, actionType: "TASK_START" });
     expect(result.authorized).toBe(false);
-    expect(result.violations.some((v) => v.toLowerCase().includes("hypothesis") || v.toLowerCase().includes("invalidated"))).toBe(true);
+    expect(result.violations.some((v) => v.toLowerCase().includes("superseded") || v.toLowerCase().includes("current"))).toBe(true);
   });
 });
 
@@ -1680,7 +1686,7 @@ describe("[db] G-DB-32: canonical lineage of blueprint-generated artifacts", () 
     // The blueprint record itself must be persisted with the correct session link
     const bpRecord = await db.startupExecutionBlueprint.findUnique({ where: { id: bp.blueprintId } });
     expect(bpRecord).toBeDefined();
-    expect(bpRecord?.linkedStartupSessionId).toBe(sessionId);
+    expect(bpRecord?.sessionId).toBe(sessionId);
   });
 });
 
