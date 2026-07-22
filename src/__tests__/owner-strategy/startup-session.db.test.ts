@@ -2024,21 +2024,81 @@ describe("[db] G-DB-43: G2-15 regression — canonical builder detects genuine s
 });
 
 describe("[db] G-DB-44: G2-15 regression — loadCanonicalCurrentApprovalState workspace isolation", () => {
-  it("G-DB-44: loadCanonicalCurrentApprovalState for a session in workspace B returns all-null when queried with workspace A", async () => {
+  it("G-DB-44: loadCanonicalCurrentApprovalState throws NotFoundError when session not found in workspace (explicit unverifiable state)", async () => {
     if (!process.env["TEST_WITH_DB"]) return;
     const wsA = randomUUID();
     const wsB = randomUUID();
     const sessionId = await createStartupSession({ workspaceId: wsB, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
     await updateContextProfile(wsB, sessionId, actor, { step: "profile" }, "profile");
 
-    // Querying with wrong workspace returns all-null (session not found → safe default)
-    const stateWrongWs = await loadCanonicalCurrentApprovalState(wsA, sessionId);
-    expect(stateWrongWs.profileVersionId).toBeNull();
-    expect(stateWrongWs.systemRecId).toBeNull();
-    expect(stateWrongWs.economicModelId).toBeNull();
+    // Querying with wrong workspace throws NotFoundError rather than returning all-null.
+    // Returning all-null would silently fail-open: if the GO decision also stored all-null
+    // linked IDs (production case — API does not pass them), the hash would match a missing
+    // session's all-null output and report NOT STALE for a non-existent session.
+    await expect(loadCanonicalCurrentApprovalState(wsA, sessionId)).rejects.toThrow(NotFoundError);
 
     // Querying with correct workspace returns real values
     const stateCorrectWs = await loadCanonicalCurrentApprovalState(wsB, sessionId);
     expect(stateCorrectWs.profileVersionId).not.toBeNull();
+  });
+});
+
+describe("[db] G-DB-45: idea-revision blocks execution — G2-3a superseded-idea guard", () => {
+  it("G-DB-45: assertStartupExecutionAuthorization is unauthorized after idea is revised", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+
+    // Record GO, create blueprint while idea is current
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Pre-revision launch" });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
+
+    // Baseline: authorization succeeds before revision
+    const before = await assertStartupExecutionAuthorization(ws, {
+      sessionId, blueprintId: bp.blueprintId, planId: plan!.id,
+      ownerDecisionId: decisionId, ideaId, actionType: "TASK_START",
+    });
+    expect(before.authorized).toBe(true);
+
+    // Revise idea — old ideaId becomes superseded
+    await reviseIdea(ws, sessionId, ideaId, actor, { name: "Revised idea v2" });
+
+    // Authorization with old (superseded) ideaId must now be rejected
+    const after = await assertStartupExecutionAuthorization(ws, {
+      sessionId, blueprintId: bp.blueprintId, planId: plan!.id,
+      ownerDecisionId: decisionId, ideaId, actionType: "TASK_START",
+    });
+    expect(after.authorized).toBe(false);
+    expect(after.violations.some((v) => v.toLowerCase().includes("superseded") || v.toLowerCase().includes("revised"))).toBe(true);
+  });
+});
+
+describe("[db] G-DB-46: blueprint call site uses canonical state — profile change after GO blocks blueprint creation", () => {
+  it("G-DB-46: createBlueprint is blocked when profile is updated after the GO decision", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+
+    // Build profile v1, record GO decision referencing it
+    const { versionId: profileV1 } = await updateContextProfile(ws, sessionId, actor, { step: "v1" }, "baseline profile");
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId, linkedProfileVersionId: profileV1 });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+
+    // Update profile AFTER GO — this changes session.currentProfileVersionId
+    await updateContextProfile(ws, sessionId, actor, { step: "v2" }, "post-approval profile update");
+
+    // createBlueprint must throw because canonical builder returns the new profileVersionId,
+    // which differs from profileV1 stored in the decision hash → STALE_REAPPROVAL_REQUIRED.
+    // With the old blueprint call site (passing ownerDecision.linkedProfileVersionId = null),
+    // this would have been missed.
+    await expect(
+      createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Post-profile-change blueprint" })
+    ).rejects.toThrow(ConflictError);
   });
 });
