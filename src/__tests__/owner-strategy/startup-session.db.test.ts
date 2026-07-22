@@ -33,7 +33,9 @@ import {
   verifyApprovalPackageV1,
   verifyApprovalPackageV2,
   computeApprovalPackageHash,
+  transitionSession,
 } from "@/services/owner-strategy/startup-session.service";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { createBlueprint } from "@/services/owner-strategy/startup-execution-blueprint.service";
 import { ConflictError } from "@/infra/errors";
 import type { ReadinessInputs } from "@/domain/owner-strategy/startup-readiness";
@@ -1768,5 +1770,205 @@ describe("[db] G-DB-35: foreign-workspace task reference isolation", () => {
     const result = await assertStartupExecutionAuthorization(wsOther, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
     expect(result.authorized).toBe(false);
     expect(result.violations.some((v) => v.toLowerCase().includes("cross-workspace") || v.toLowerCase().includes("not found") || v.toLowerCase().includes("workspace"))).toBe(true);
+  });
+});
+
+// ─── G-DB-36–41: Audit event emitter DB proof ─────────────────────────────────
+
+describe("[db] G-DB-36: STARTUP_IDEA_REVISED audit event commits with revision transaction", () => {
+  it("G-DB-36: reviseIdea persists new idea and emits STARTUP_IDEA_REVISED in the same transaction", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+
+    const auditsBefore = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_IDEA_REVISED } });
+    const newIdeaId = await reviseIdea(ws, sessionId, ideaId, actor, { name: "Revised Idea v2" });
+    const auditsAfter = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_IDEA_REVISED } });
+
+    // Exactly one new STARTUP_IDEA_REVISED event
+    expect(auditsAfter - auditsBefore).toBe(1);
+
+    // New idea persisted with incremented version
+    const newIdea = await db.startupIdeaRecord.findUnique({ where: { id: newIdeaId } });
+    expect(newIdea?.name).toBe("Revised Idea v2");
+    expect(newIdea?.version).toBe(2);
+
+    // Old idea superseded
+    const oldIdea = await db.startupIdeaRecord.findUnique({ where: { id: ideaId } });
+    expect(oldIdea?.supersededById).toBe(newIdeaId);
+
+    // Audit event payload contains both idea IDs
+    const event = await db.auditEvent.findFirst({
+      where: { eventName: AUDIT_EVENTS.STARTUP_IDEA_REVISED },
+      orderBy: { createdAt: "desc" },
+    });
+    const payload = event?.payload as Record<string, unknown>;
+    expect(payload?.oldIdeaId).toBe(ideaId);
+    expect(payload?.newIdeaId).toBe(newIdeaId);
+    expect(payload?.oldVersion).toBe(1);
+    expect(payload?.newVersion).toBe(2);
+  });
+});
+
+describe("[db] G-DB-37: STARTUP_EVIDENCE_CONFLICT_DETECTED emits for newly-introduced material conflict", () => {
+  it("G-DB-37: recording conflicting evidence emits STARTUP_EVIDENCE_CONFLICT_DETECTED exactly once", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+
+    const auditsBefore = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED } });
+
+    // First evidence — no conflict yet
+    await recordEvidenceItem(ws, sessionId, actor, {
+      sourceType: "AUTHORITATIVE_PRIMARY",
+      evidenceType: "CUSTOMER_DEMAND",
+      observedResult: "High demand confirmed by 50 interviews",
+      materialClaim: "DEMAND_EXISTS",
+      reliabilityScore: 80,
+      confidence: 85,
+      geography: "AU",
+      customerSegment: "Homeowners",
+    });
+    const auditsAfterFirst = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED } });
+    expect(auditsAfterFirst - auditsBefore).toBe(0);
+
+    // Second evidence with same materialClaim but contradictory low confidence — triggers material conflict
+    await recordEvidenceItem(ws, sessionId, actor, {
+      sourceType: "OFFICIAL_COMMERCIAL",
+      evidenceType: "CUSTOMER_DEMAND",
+      observedResult: "No demand found in market study",
+      materialClaim: "DEMAND_EXISTS",
+      reliabilityScore: 75,
+      confidence: 20,
+      geography: "AU",
+      customerSegment: "Homeowners",
+    });
+    const auditsAfterSecond = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED } });
+    // Exactly one new conflict event for the second recording
+    expect(auditsAfterSecond - auditsBefore).toBe(1);
+
+    // Audit event payload includes materialClaim and conflictingEvidenceIds
+    const event = await db.auditEvent.findFirst({
+      where: { eventName: AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED, workspaceId: ws },
+      orderBy: { createdAt: "desc" },
+    });
+    const payload = event?.payload as Record<string, unknown>;
+    expect(payload?.materialClaim).toBe("DEMAND_EXISTS");
+    expect(Array.isArray(payload?.conflictingEvidenceIds)).toBe(true);
+    expect(payload?.propagatesToReadiness).toBe(true);
+  });
+});
+
+describe("[db] G-DB-38: STARTUP_EVIDENCE_CONFLICT_DETECTED does not re-emit for non-conflicting evidence", () => {
+  it("G-DB-38: recording evidence without a material conflict produces no STARTUP_EVIDENCE_CONFLICT_DETECTED event", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+
+    const auditsBefore = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED, workspaceId: ws } });
+
+    // Two evidence records on different materialClaims — no conflict
+    await recordEvidenceItem(ws, sessionId, actor, { sourceType: "AUTHORITATIVE_PRIMARY", evidenceType: "CUSTOMER_DEMAND", observedResult: "Demand confirmed", materialClaim: "DEMAND_CLAIM_A", reliabilityScore: 80, confidence: 80, geography: "AU", customerSegment: "Segment1" });
+    await recordEvidenceItem(ws, sessionId, actor, { sourceType: "OFFICIAL_COMMERCIAL", evidenceType: "SUPPLIER_AVAILABILITY", observedResult: "Supplier available", materialClaim: "SUPPLY_CLAIM_B", reliabilityScore: 70, confidence: 75, geography: "AU", customerSegment: "Segment1" });
+
+    const auditsAfter = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED, workspaceId: ws } });
+    expect(auditsAfter - auditsBefore).toBe(0);
+  });
+});
+
+describe("[db] G-DB-39: STARTUP_APPROVAL_BECAME_STALE emits once on STALE_REAPPROVAL_REQUIRED transition", () => {
+  it("G-DB-39: transitioning to STALE_REAPPROVAL_REQUIRED emits exactly one STARTUP_APPROVAL_BECAME_STALE event", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+
+    // Record a GO decision and set session to APPROVED
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+
+    const auditsBefore = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE, workspaceId: ws } });
+
+    // Transition to STALE_REAPPROVAL_REQUIRED — this is the authoritative write point
+    await transitionSession(ws, sessionId, actor, "STALE_REAPPROVAL_REQUIRED");
+
+    const auditsAfter = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE, workspaceId: ws } });
+    expect(auditsAfter - auditsBefore).toBe(1);
+
+    // Verify payload contains decision ID and session IDs
+    const event = await db.auditEvent.findFirst({
+      where: { eventName: AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE, workspaceId: ws },
+      orderBy: { createdAt: "desc" },
+    });
+    const payload = event?.payload as Record<string, unknown>;
+    expect(payload?.sessionId).toBe(sessionId);
+    expect(payload?.ownerDecisionId).toBe(decisionId);
+    expect(payload?.previousSessionStatus).toBe("APPROVED");
+    expect(payload?.resultingStatus).toBe("STALE_REAPPROVAL_REQUIRED");
+  });
+});
+
+describe("[db] G-DB-40: STARTUP_APPROVAL_BECAME_STALE does not re-emit on repeated transitions", () => {
+  it("G-DB-40: transitioning away from and back to a non-stale status does not produce duplicate stale events", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+
+    const auditsBefore = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE, workspaceId: ws } });
+
+    // First stale transition
+    await transitionSession(ws, sessionId, actor, "STALE_REAPPROVAL_REQUIRED");
+    const auditsAfterFirst = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE, workspaceId: ws } });
+    expect(auditsAfterFirst - auditsBefore).toBe(1);
+
+    // Move to OWNER_DECISION_REQUIRED (not a stale status)
+    await transitionSession(ws, sessionId, actor, "OWNER_DECISION_REQUIRED");
+
+    // Register another GO decision and go back to APPROVED
+    const sess2 = await db.ownerStartupSession.findFirst({ where: { id: sessionId } });
+    await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+
+    // Second stale transition — should emit exactly one more (total 2 from this workspace, not 3+)
+    await transitionSession(ws, sessionId, actor, "STALE_REAPPROVAL_REQUIRED");
+    const auditsAfterSecond = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE, workspaceId: ws } });
+    // 2 total = 1 per STALE_REAPPROVAL_REQUIRED transition, each emitted exactly once
+    expect(auditsAfterSecond - auditsBefore).toBe(2);
+    void sess2; // suppress unused warning
+  });
+});
+
+describe("[db] G-DB-41: cross-workspace isolation for new audit events", () => {
+  it("G-DB-41: STARTUP_IDEA_REVISED and STARTUP_APPROVAL_BECAME_STALE are workspace-scoped and cannot be read cross-workspace", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const wsA = randomUUID();
+    const wsB = randomUUID();
+
+    // Workspace A: revision
+    const sessionA = await createStartupSession({ workspaceId: wsA, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sessA = await db.ownerStartupSession.findFirst({ where: { id: sessionA }, include: { ideas: true } });
+    const ideaIdA = sessA!.ideas[0].id;
+    await reviseIdea(wsA, sessionA, ideaIdA, actor, { name: "WS-A Revised" });
+
+    // Workspace B: stale transition
+    const sessionB = await createStartupSession({ workspaceId: wsB, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sessB = await db.ownerStartupSession.findFirst({ where: { id: sessionB }, include: { ideas: true } });
+    const ideaIdB = sessB!.ideas[0].id;
+    await recordOwnerDecision(wsB, sessionB, actor, { decisionType: "GO", ideaId: ideaIdB });
+    await db.ownerStartupSession.update({ where: { id: sessionB }, data: { status: "APPROVED" } });
+    await transitionSession(wsB, sessionB, actor, "STALE_REAPPROVAL_REQUIRED");
+
+    // Workspace A events must not contain stale event; Workspace B events must not contain revision event
+    const revisedInB = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_IDEA_REVISED, workspaceId: wsB } });
+    const staleInA = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE, workspaceId: wsA } });
+    expect(revisedInB).toBe(0);
+    expect(staleInA).toBe(0);
   });
 });

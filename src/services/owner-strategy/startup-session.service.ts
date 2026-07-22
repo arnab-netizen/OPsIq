@@ -183,7 +183,7 @@ export async function transitionSession(
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const session = await tx.ownerStartupSession.findFirst({
       where: { id: sessionId, workspaceId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, currentOwnerDecisionId: true },
     });
     if (!session) throw new NotFoundError("OwnerStartupSession", sessionId);
 
@@ -200,6 +200,28 @@ export async function transitionSession(
       eventName: AUDIT_EVENTS.STARTUP_SESSION_STATUS_CHANGED,
       payload: { sessionId, from: session.status, to: newStatus },
     }, tx);
+
+    // Emit STARTUP_APPROVAL_BECAME_STALE exactly once: when the session transitions
+    // into STALE_REAPPROVAL_REQUIRED. This is the single canonical write point for
+    // this status, so the event fires at most once per stale transition.
+    if (newStatus === "STALE_REAPPROVAL_REQUIRED" && session.currentOwnerDecisionId) {
+      const decision = await tx.startupOwnerDecision.findFirst({
+        where: { id: session.currentOwnerDecisionId, workspaceId },
+        select: { packageHashSha256: true },
+      });
+      await emitAuditEvent({
+        workspaceId,
+        actorId,
+        eventName: AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE,
+        payload: {
+          sessionId,
+          ownerDecisionId: session.currentOwnerDecisionId,
+          approvalPackageHash: decision?.packageHashSha256 ?? null,
+          previousSessionStatus: session.status,
+          resultingStatus: newStatus,
+        },
+      }, tx);
+    }
   });
 }
 
@@ -597,6 +619,14 @@ export async function recordEvidenceItem(
   const materialConflicts = conflicts.filter((c) => c.propagatesToReadiness);
 
   if (materialConflicts.length > 0) {
+    // Deduplication: only emit the audit event for conflicts that were NOT already present
+    // before this evidence item was recorded. We identify "new" conflicts as those that
+    // reference the just-recorded evidenceId as one of the two conflicting evidence records.
+    const newConflicts = materialConflicts.filter(
+      (c) => c.evidenceA.id === evidenceId || c.evidenceB.id === evidenceId
+    );
+
+    // Persist the operating-memory entry for all material conflicts (non-audited, always safe to write)
     await writeMemoryEntry({
       workspaceId,
       actorId,
@@ -607,6 +637,27 @@ export async function recordEvidenceItem(
       summary: `${materialConflicts.length} material evidence conflict(s) detected after recording evidence ${evidenceId}`,
       data: { sessionId, conflicts: materialConflicts },
     });
+
+    // Emit the governed audit event only for conflicts first introduced by this evidence item
+    if (newConflicts.length > 0) {
+      await db.$transaction(async (tx: Prisma.TransactionClient) => {
+        for (const conflict of newConflicts) {
+          await emitAuditEvent({
+            workspaceId,
+            actorId,
+            eventName: AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED,
+            payload: {
+              sessionId,
+              materialClaim: conflict.materialClaim,
+              conflictingEvidenceIds: [conflict.evidenceA.id, conflict.evidenceB.id],
+              severity: conflict.severity,
+              propagatesToReadiness: conflict.propagatesToReadiness,
+              detectedAt: new Date().toISOString(),
+            },
+          }, tx);
+        }
+      });
+    }
   }
 
   return evidenceId;
@@ -2077,6 +2128,19 @@ export async function reviseIdea(
       actorId,
       eventName: AUDIT_EVENTS.STARTUP_IDEA_ADDED,
       payload: { sessionId, ideaId: newIdeaId, previousIdeaId: ideaId, version: current.version + 1 },
+    }, tx);
+
+    await emitAuditEvent({
+      workspaceId,
+      actorId,
+      eventName: AUDIT_EVENTS.STARTUP_IDEA_REVISED,
+      payload: {
+        sessionId,
+        oldIdeaId: ideaId,
+        newIdeaId,
+        oldVersion: current.version,
+        newVersion: current.version + 1,
+      },
     }, tx);
   });
 
