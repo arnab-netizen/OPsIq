@@ -167,7 +167,8 @@ export async function transitionSession(
 ): Promise<void> {
   // G7/G9/G15: gate at EXECUTION_PLANNED — approval must exist and not be stale/expired
   if (newStatus === "EXECUTION_PLANNED") {
-    const staleness = await checkApprovalStaleness(workspaceId, sessionId, {});
+    const currentState = await loadCanonicalCurrentApprovalState(workspaceId, sessionId);
+    const staleness = await checkApprovalStaleness(workspaceId, sessionId, currentState);
     if (staleness.originalHash === null) {
       throw new ConflictError(
         "EXECUTION_BLOCKED: no GO owner decision found — owner must approve before execution can be planned"
@@ -1319,25 +1320,114 @@ export interface StalenessCheckResult {
 }
 
 /**
+ * All 9 versioned artifact IDs compared in the staleness check.
+ * Every field is required and nullable — no Partial<...> at the execution-safety boundary.
+ * Callers must derive all values from the DB via loadCanonicalCurrentApprovalState
+ * or declare null explicitly for fields that genuinely do not exist yet.
+ */
+export interface VersionedApprovalState {
+  ideaId: string | null;
+  ideaVersionId: string | null;
+  profileVersionId: string | null;
+  economicModelId: string | null;
+  readinessId: string | null;
+  systemRecId: string | null;
+  businessModelId: string | null;
+  marketSizingId: string | null;
+  validationPlanId: string | null;
+}
+
+/**
+ * Loads the canonical current versioned artifact IDs for a session from the DB.
+ * Session-level: currentProfileVersionId, currentSystemRecId.
+ * Idea-level (when ideaId supplied): currentEconomicModelVersionId, currentReadinessId,
+ * currentBusinessModelVersionId, latest marketSizing and validationPlan IDs.
+ * ideaVersionId has no dedicated tracking pointer — always returns null.
+ */
+export async function loadCanonicalCurrentApprovalState(
+  workspaceId: string,
+  sessionId: string,
+  ideaId?: string | null
+): Promise<VersionedApprovalState> {
+  const session = await db.ownerStartupSession.findFirst({
+    where: { id: sessionId, workspaceId },
+    select: { currentProfileVersionId: true, currentSystemRecId: true },
+  });
+
+  if (!session) {
+    return {
+      ideaId: ideaId ?? null,
+      ideaVersionId: null,
+      profileVersionId: null,
+      economicModelId: null,
+      readinessId: null,
+      systemRecId: null,
+      businessModelId: null,
+      marketSizingId: null,
+      validationPlanId: null,
+    };
+  }
+
+  let economicModelId: string | null = null;
+  let readinessId: string | null = null;
+  let businessModelId: string | null = null;
+  let marketSizingId: string | null = null;
+  let validationPlanId: string | null = null;
+
+  if (ideaId) {
+    const [idea, latestMarketSizing, validationPlan] = await Promise.all([
+      db.startupIdeaRecord.findFirst({
+        where: { id: ideaId, workspaceId },
+        select: {
+          currentEconomicModelVersionId: true,
+          currentReadinessId: true,
+          currentBusinessModelVersionId: true,
+        },
+      }),
+      db.startupMarketSizing.findFirst({
+        where: { ideaId, workspaceId },
+        select: { id: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      db.startupValidationPlan.findFirst({
+        where: { ideaId, workspaceId },
+        select: { id: true },
+      }),
+    ]);
+
+    if (idea) {
+      economicModelId = idea.currentEconomicModelVersionId ?? null;
+      readinessId = idea.currentReadinessId ?? null;
+      businessModelId = idea.currentBusinessModelVersionId ?? null;
+    }
+    marketSizingId = latestMarketSizing?.id ?? null;
+    validationPlanId = validationPlan?.id ?? null;
+  }
+
+  return {
+    ideaId: ideaId ?? null,
+    ideaVersionId: null,
+    profileVersionId: session.currentProfileVersionId ?? null,
+    economicModelId,
+    readinessId,
+    systemRecId: session.currentSystemRecId ?? null,
+    businessModelId,
+    marketSizingId,
+    validationPlanId,
+  };
+}
+
+/**
  * Compares the current session state against the stored GO decision approval package.
  * Self-contained: queries the DB for the current snapshot arrays.
- * The caller supplies current versioned artifact IDs (what the session looks like now).
+ * The caller must supply all 9 versioned artifact IDs via VersionedApprovalState —
+ * use loadCanonicalCurrentApprovalState to derive them from the DB.
  * Returns stale if: any artifact ID differs, any snapshot array differs, or the decision has expired.
  */
 export async function checkApprovalStaleness(
   workspaceId: string,
   sessionId: string,
-  currentVersionedIds: {
-    ideaId?: string | null;
-    ideaVersionId?: string | null;
-    profileVersionId?: string | null;
-    economicModelId?: string | null;
-    readinessId?: string | null;
-    systemRecId?: string | null;
-    businessModelId?: string | null;
-    marketSizingId?: string | null;
-    validationPlanId?: string | null;
-  }
+  currentVersionedIds: VersionedApprovalState
 ): Promise<StalenessCheckResult> {
   const session = await db.ownerStartupSession.findFirst({
     where: { id: sessionId, workspaceId },
@@ -2398,10 +2488,8 @@ export async function assertStartupExecutionAuthorization(
 
   // G2-15: Approval package hash must match current state (staleness check)
   if (decision && session && violations.filter((v) => v.includes("superseded") || v.includes("not found")).length === 0) {
-    const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, {
-      ideaId: input.ideaId,
-      ideaVersionId: decision.linkedIdeaVersionId,
-    });
+    const currentState = await loadCanonicalCurrentApprovalState(workspaceId, input.sessionId, input.ideaId);
+    const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, currentState);
     if (staleness.isStale) {
       violations.push(
         `Approval package is stale — changed inputs: ${staleness.changedInputs.join(", ")}. Reapproval required.`

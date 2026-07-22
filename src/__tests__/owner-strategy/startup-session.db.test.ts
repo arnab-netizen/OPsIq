@@ -24,6 +24,7 @@ import {
   buildAndPersistValidationPlan,
   buildAndPersistMarketSizing,
   checkApprovalStaleness,
+  loadCanonicalCurrentApprovalState,
   assessAndPersistReadiness,
   reviseIdea,
   recordHypothesisResult,
@@ -42,7 +43,7 @@ import type { ReadinessInputs } from "@/domain/owner-strategy/startup-readiness"
 import { NotFoundError } from "@/infra/errors";
 import type { EconomicInputs } from "@/domain/owner-strategy/startup-economics";
 import type { StartupIntake, StartupIdea } from "@/domain/owner-strategy/startup-mode.types";
-import type { ApprovalPackageV3State } from "@/services/owner-strategy/startup-session.service";
+import type { ApprovalPackageV3State, VersionedApprovalState } from "@/services/owner-strategy/startup-session.service";
 
 const actor = randomUUID();
 const wsA = randomUUID();
@@ -533,7 +534,7 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
     expect(decisionId).toBeTruthy();
 
     // Check staleness before adding evidence — should not be stale
-    const before = await checkApprovalStaleness(wsA, sessionId, {});
+    const before = await checkApprovalStaleness(wsA, sessionId, await loadCanonicalCurrentApprovalState(wsA, sessionId));
     expect(before.isStale).toBe(false);
 
     // Add evidence after GO
@@ -545,7 +546,7 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
     });
 
     // Staleness check should now detect evidence change
-    const after = await checkApprovalStaleness(wsA, sessionId, {});
+    const after = await checkApprovalStaleness(wsA, sessionId, await loadCanonicalCurrentApprovalState(wsA, sessionId));
     expect(after.isStale).toBe(true);
     expect(after.changedInputs).toContain("evidence");
   });
@@ -781,7 +782,7 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
     // GO decision — captures current evidence snapshot (one record)
     await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "test" });
 
-    const before = await checkApprovalStaleness(wsA, sessionId, {});
+    const before = await checkApprovalStaleness(wsA, sessionId, await loadCanonicalCurrentApprovalState(wsA, sessionId));
     expect(before.isStale).toBe(false);
 
     // Submit same evidence again — idempotent, same DB row returned
@@ -793,7 +794,7 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
     });
 
     // Approval must NOT become stale — same evidence set
-    const after = await checkApprovalStaleness(wsA, sessionId, {});
+    const after = await checkApprovalStaleness(wsA, sessionId, await loadCanonicalCurrentApprovalState(wsA, sessionId));
     expect(after.isStale).toBe(false);
   });
 
@@ -865,7 +866,7 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
       observedResult: "New post-decision customer finding",
     });
 
-    const stale = await checkApprovalStaleness(wsA, sessionId, {});
+    const stale = await checkApprovalStaleness(wsA, sessionId, await loadCanonicalCurrentApprovalState(wsA, sessionId));
     expect(stale.isStale).toBe(true);
 
     // GO decision 2 — fresh with updated evidence snapshot
@@ -905,7 +906,7 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
     // Reapprove — captures updated evidence
     const dec2Id = await recordOwnerDecision(wsA, sessionId, actor, { decisionType: "GO", rationale: "reapproval" });
 
-    const staleCheck = await checkApprovalStaleness(wsA, sessionId, {});
+    const staleCheck = await checkApprovalStaleness(wsA, sessionId, await loadCanonicalCurrentApprovalState(wsA, sessionId));
     expect(staleCheck.isStale).toBe(false); // should be fresh now
 
     // Blueprint creation must succeed
@@ -1168,10 +1169,7 @@ describe("[db] recordHypothesisResult — staleness and readiness propagation", 
     const currentReadinessId = ideaFinal?.currentReadinessId;
     expect(currentReadinessId).not.toBe(readinessIdAtApproval);
 
-    const staleness = await checkApprovalStaleness(wsA, sessionId, {
-      ideaId,
-      readinessId: currentReadinessId ?? null,
-    });
+    const staleness = await checkApprovalStaleness(wsA, sessionId, await loadCanonicalCurrentApprovalState(wsA, sessionId, ideaId));
     expect(staleness.isStale).toBe(true);
     expect(staleness.changedInputs).toContain("readiness");
   });
@@ -1726,7 +1724,7 @@ describe("[db] G-DB-33: blueprint-generated artifacts do NOT retroactively stale
     await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
     const bp = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
     // The creation approval should still be valid after blueprint creation
-    const staleness = await checkApprovalStaleness(ws, sessionId, {});
+    const staleness = await checkApprovalStaleness(ws, sessionId, await loadCanonicalCurrentApprovalState(ws, sessionId, ideaId));
     expect(staleness.isStale).toBe(false);
   });
 });
@@ -1748,7 +1746,7 @@ describe("[db] G-DB-34: later material mutations DO stale execution approval", (
       ideaId,
     });
     // Approval should now be stale because evidence snapshot changed
-    const staleness = await checkApprovalStaleness(ws, sessionId, {});
+    const staleness = await checkApprovalStaleness(ws, sessionId, await loadCanonicalCurrentApprovalState(ws, sessionId, ideaId));
     expect(staleness.isStale).toBe(true);
     expect(staleness.changedInputs.length).toBeGreaterThan(0);
   });
@@ -1970,5 +1968,77 @@ describe("[db] G-DB-41: cross-workspace isolation for new audit events", () => {
     const staleInA = await db.auditEvent.count({ where: { eventName: AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE, workspaceId: wsA } });
     expect(revisedInB).toBe(0);
     expect(staleInA).toBe(0);
+  });
+});
+
+// ─── G-DB-42–44: G2-15 approval-staleness false-positive regression ───────────
+
+describe("[db] G-DB-42: G2-15 false-positive regression — canonical builder with non-null profileVersionId", () => {
+  it("G-DB-42: GO decision with non-null linkedProfileVersionId is NOT stale when session state is unchanged", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+
+    // Create a real profile version — sets session.currentProfileVersionId to a non-null UUID
+    const { versionId: profileVersionId } = await updateContextProfile(ws, sessionId, actor, { step: "baseline" }, "initial profile");
+
+    // Record GO decision referencing this profile version
+    await recordOwnerDecision(ws, sessionId, actor, {
+      decisionType: "GO",
+      linkedProfileVersionId: profileVersionId,
+    });
+
+    // Nothing has changed — canonical state should match the stored hash
+    const state = await loadCanonicalCurrentApprovalState(ws, sessionId);
+    expect(state.profileVersionId).toBe(profileVersionId);
+
+    const staleness = await checkApprovalStaleness(ws, sessionId, state);
+    // Must NOT be stale — this was the G2-15 false-positive before the fix
+    expect(staleness.isStale).toBe(false);
+    expect(staleness.changedInputs).toHaveLength(0);
+  });
+});
+
+describe("[db] G-DB-43: G2-15 regression — canonical builder detects genuine staleness after profile update", () => {
+  it("G-DB-43: GO decision with profileVersionId becomes stale after a new profile version is created", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+
+    // Create first profile version, record GO linked to it
+    const { versionId: v1 } = await updateContextProfile(ws, sessionId, actor, { step: "v1" }, "first profile");
+    await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", linkedProfileVersionId: v1 });
+
+    // Verify it is NOT stale before any change
+    const before = await checkApprovalStaleness(ws, sessionId, await loadCanonicalCurrentApprovalState(ws, sessionId));
+    expect(before.isStale).toBe(false);
+
+    // Now update the profile — session.currentProfileVersionId advances to v2
+    await updateContextProfile(ws, sessionId, actor, { step: "v2" }, "second profile update");
+
+    // Canonical state now has v2 for profileVersionId → stored hash used v1 → genuinely stale
+    const after = await checkApprovalStaleness(ws, sessionId, await loadCanonicalCurrentApprovalState(ws, sessionId));
+    expect(after.isStale).toBe(true);
+    expect(after.changedInputs).toContain("profile");
+  });
+});
+
+describe("[db] G-DB-44: G2-15 regression — loadCanonicalCurrentApprovalState workspace isolation", () => {
+  it("G-DB-44: loadCanonicalCurrentApprovalState for a session in workspace B returns all-null when queried with workspace A", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const wsA = randomUUID();
+    const wsB = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: wsB, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    await updateContextProfile(wsB, sessionId, actor, { step: "profile" }, "profile");
+
+    // Querying with wrong workspace returns all-null (session not found → safe default)
+    const stateWrongWs = await loadCanonicalCurrentApprovalState(wsA, sessionId);
+    expect(stateWrongWs.profileVersionId).toBeNull();
+    expect(stateWrongWs.systemRecId).toBeNull();
+    expect(stateWrongWs.economicModelId).toBeNull();
+
+    // Querying with correct workspace returns real values
+    const stateCorrectWs = await loadCanonicalCurrentApprovalState(wsB, sessionId);
+    expect(stateCorrectWs.profileVersionId).not.toBeNull();
   });
 });
