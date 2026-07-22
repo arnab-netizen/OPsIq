@@ -2169,7 +2169,8 @@ model StartupExecutionPlan {
   initiativeId        String    @unique @map("initiative_id") @db.Uuid  // one plan per initiative
   blueprintId         String    @map("blueprint_id") @db.Uuid
   ownerDecisionId     String    @map("owner_decision_id") @db.Uuid
-  status              String    @default("DRAFT") @map("status")  // DRAFT | ACTIVE | PAUSED | COMPLETED | CANCELLED
+  status              String    @default("DRAFT") @map("status")  // DRAFT | ACTIVE | PAUSED | COMPLETED | CANCELLED | SUPERSEDED
+  supersededById      String?   @map("superseded_by_id") @db.Uuid  // R8: points to the plan that replaced this one
   planVersion         Int       @default(1) @map("plan_version")
   tasks               Json      @default("[]") @map("tasks")  // ordered array of {taskId, label, sequenceOrder, dependsOn[], status}
   milestones          Json      @default("[]") @map("milestones")  // [{label, targetDate, successCriteria}]
@@ -5947,6 +5948,9 @@ model BusinessRiskEntry {
   residualRisk     Int?      @map("residual_risk")    // 0-100 after mitigation
   linkedObjectiveId      String?  @map("linked_objective_id") @db.Uuid
   linkedStartupSessionId String?  @map("linked_startup_session_id") @db.Uuid
+  // R7: provenance — distinguishes blueprint-created artifacts from independently-created records
+  originBlueprintId      String?  @map("origin_blueprint_id") @db.Uuid
+  originType             String?  @map("origin_type")  // BLUEPRINT_ARTIFACT | INDEPENDENT
   reviewedAt             DateTime? @map("reviewed_at")
   identifiedBy           String    @map("identified_by") @db.Uuid
   createdAt              DateTime  @default(now()) @map("created_at")
@@ -5956,6 +5960,7 @@ model BusinessRiskEntry {
   @@index([workspaceId, status])
   @@index([workspaceId, category])
   @@index([workspaceId, severity])
+  @@index([workspaceId, originBlueprintId])
   @@map("business_risk_entries")
 }
 
@@ -6016,6 +6021,9 @@ model ConstraintResolutionRecord {
   status            String    @default("ACTIVE")          // ACTIVE | REMEDIATING | RESOLVED | ACCEPTED
   linkedObjectiveId      String?   @map("linked_objective_id") @db.Uuid
   linkedStartupSessionId String?   @map("linked_startup_session_id") @db.Uuid
+  // R7: provenance — distinguishes blueprint-created artifacts from independently-created records
+  originBlueprintId      String?   @map("origin_blueprint_id") @db.Uuid
+  originType             String?   @map("origin_type")  // BLUEPRINT_ARTIFACT | INDEPENDENT
   identifiedAt           DateTime  @default(now()) @map("identified_at")
   resolvedAt             DateTime? @map("resolved_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
@@ -6023,6 +6031,7 @@ model ConstraintResolutionRecord {
   @@index([workspaceId, status])
   @@index([workspaceId, constraintType])
   @@index([workspaceId, linkedStartupSessionId])
+  @@index([workspaceId, originBlueprintId])
   @@map("constraint_resolution_records")
 }
 

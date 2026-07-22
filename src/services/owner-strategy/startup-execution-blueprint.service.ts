@@ -106,16 +106,39 @@ export async function createBlueprint(
     if (existing.ownerDecisionId === input.ownerDecisionId) {
       throw new ConflictError(`Blueprint already exists for this idea (blueprintId: ${existing.id})`);
     }
-    // Different decision = reapproval happened — mark old blueprint SUPERSEDED before creating new one
-    await db.startupExecutionBlueprint.update({
-      where: { id: existing.id },
-      data: { blueprintStatus: "SUPERSEDED" },
+    // Different decision = reapproval happened — mark old blueprint SUPERSEDED before creating new one.
+    // R8/R9: atomically supersede all plans and cancel all tasks linked to the old blueprint.
+    await db.$transaction(async (txSupersede: typeof db) => {
+      await txSupersede.startupExecutionBlueprint.update({
+        where: { id: existing.id },
+        data: { blueprintStatus: "SUPERSEDED" },
+      });
+      // R8: mark the old execution plan as SUPERSEDED so it cannot authorize further actions
+      await txSupersede.startupExecutionPlan.updateMany({
+        where: { blueprintId: existing.id, workspaceId, status: { in: ["DRAFT", "ACTIVE", "PAUSED"] } },
+        data: { status: "SUPERSEDED" },
+      });
+      // R9: cancel all non-terminal tasks linked to the old blueprint
+      await txSupersede.processExecutionTask.updateMany({
+        where: {
+          workspaceId,
+          linkedStartupBlueprintId: existing.id,
+          status: { notIn: ["COMPLETED", "CANCELLED", "REJECTED"] },
+        },
+        data: { status: "CANCELLED", notes: "Cancelled: blueprint superseded by reapproval" },
+      });
     });
     await emitAuditEvent({
       workspaceId,
       actorId,
       eventName: AUDIT_EVENTS.STARTUP_BLUEPRINT_SUPERSEDED,
       payload: { supersededBlueprintId: existing.id, newOwnerDecisionId: input.ownerDecisionId, sessionId: input.sessionId, ideaId: input.ideaId },
+    });
+    await emitAuditEvent({
+      workspaceId,
+      actorId,
+      eventName: AUDIT_EVENTS.STARTUP_EXECUTION_PLAN_SUPERSEDED,
+      payload: { supersededBlueprintId: existing.id, sessionId: input.sessionId, ideaId: input.ideaId },
     });
   }
 
@@ -272,6 +295,9 @@ export async function createBlueprint(
           impact: risk.impact,
           severity: Math.round((risk.likelihood * risk.impact) / 100),
           linkedObjectiveId: objectiveId,
+          linkedStartupSessionId: input.sessionId,
+          originBlueprintId: blueprintId,
+          originType: "BLUEPRINT_ARTIFACT",
           identifiedBy: actorId,
           updatedAt: new Date(),
         },
@@ -315,6 +341,9 @@ export async function createBlueprint(
         remediationAction: "Validate capital sufficiency before first spend",
         status: "ACTIVE",
         linkedObjectiveId: objectiveId,
+        linkedStartupSessionId: input.sessionId,
+        originBlueprintId: blueprintId,
+        originType: "BLUEPRINT_ARTIFACT",
         updatedAt: new Date(),
       },
     });
