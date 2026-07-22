@@ -169,7 +169,8 @@ export interface CompleteTaskInput {
 /** Owner-visible, non-leaky failure codes for governed execution actions (PASS 25). */
 export type ProcessActionCode =
   | "WRONG_WORKSPACE" | "OWNER_APPROVAL_REQUIRED" | "EVIDENCE_REQUIRED" | "INVALID_TRANSITION"
-  | "NEVER_AUTO" | "NOT_FOUND_OR_FORBIDDEN" | "UNAUTHORIZED" | "MISSING_INPUT";
+  | "NEVER_AUTO" | "NOT_FOUND_OR_FORBIDDEN" | "UNAUTHORIZED" | "MISSING_INPUT"
+  | "STARTUP_EXECUTION_LINKAGE_INVALID";
 
 export type CompleteTaskResult =
   | { ok: true; taskId: string; reassessmentId: string | null }
@@ -530,10 +531,13 @@ export async function applyProcessExecutionAction(
   switch (input.action) {
     case "START": {
       if (!["PROPOSED", "ACKNOWLEDGED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
-      // G3: Startup execution gate — when this task belongs to the startup mode execution blueprint,
-      // assertStartupExecutionAuthorization must pass all 20 checks before the task may be started.
-      if (task.sourceFamily === "STARTUP_MODE" && task.linkedStartupSessionId && task.linkedStartupBlueprintId && task.linkedStartupPlanId) {
-        const { assertStartupExecutionAuthorization } = await import("@/services/owner-strategy/startup-session.service");
+      // G3: Startup execution gate — every STARTUP_MODE task must have all three link fields populated.
+      // Missing links fail CLOSED — they indicate a misconfigured or bypassed blueprint creation.
+      if (task.sourceFamily === "STARTUP_MODE") {
+        if (!task.linkedStartupSessionId || !task.linkedStartupBlueprintId || !task.linkedStartupPlanId) {
+          return { ok: false, reason: "Startup task is missing required session, blueprint, or plan link — execution blocked.", code: "STARTUP_EXECUTION_LINKAGE_INVALID" };
+        }
+        const { assertStartupExecutionAuthorization, emitStartupAuthorizationDenied } = await import("@/services/owner-strategy/startup-session.service");
         const planLookup = await (async () => {
           const { db: rawDb } = await import("@/lib/db");
           return rawDb.startupExecutionPlan.findFirst({
@@ -553,6 +557,7 @@ export async function applyProcessExecutionAction(
           actionType: "START_TASK",
         });
         if (!authResult.authorized) {
+          await emitStartupAuthorizationDenied(input.workspaceId, task.linkedStartupSessionId, input.actorId ?? null, "START_TASK", authResult.violations);
           return { ok: false, reason: `Startup execution gate: ${authResult.violations.join("; ")}`, code: "UNAUTHORIZED" };
         }
       }
@@ -569,11 +574,39 @@ export async function applyProcessExecutionAction(
       if (isOwnerOnly(task) && input.actorRole !== "owner") return { ok: false, reason: "Only the owner can reject this owner-controlled task.", code: "OWNER_APPROVAL_REQUIRED" };
       if (!input.reason || !input.reason.trim()) return { ok: false, reason: "A reason is required to reject a task.", code: "MISSING_INPUT" };
       nextStatus = "REJECTED"; data.notes = input.reason.trim(); break;
-    case "DELEGATE":
+    case "DELEGATE": {
       if (isOwnerOnly(task)) return { ok: false, reason: "An owner-controlled (owner-approval / never-auto) task cannot be delegated.", code: "OWNER_APPROVAL_REQUIRED" };
       if (input.delegateToRole !== "MANAGER" && input.delegateToRole !== "STAFF") return { ok: false, reason: "Delegate target must be MANAGER or STAFF.", code: "MISSING_INPUT" };
       if (!["PROPOSED", "IN_PROGRESS"].includes(task.status)) return { ok: false, reason: `Cannot delegate a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
+      // Startup execution gate at DELEGATE boundary — same linkage and authorization check as START
+      if (task.sourceFamily === "STARTUP_MODE") {
+        if (!task.linkedStartupSessionId || !task.linkedStartupBlueprintId || !task.linkedStartupPlanId) {
+          return { ok: false, reason: "Startup task is missing required session, blueprint, or plan link — delegation blocked.", code: "STARTUP_EXECUTION_LINKAGE_INVALID" };
+        }
+        const { assertStartupExecutionAuthorization, emitStartupAuthorizationDenied } = await import("@/services/owner-strategy/startup-session.service");
+        const { db: rawDb } = await import("@/lib/db");
+        const planLookup = await rawDb.startupExecutionPlan.findFirst({
+          where: { id: task.linkedStartupPlanId!, workspaceId: input.workspaceId },
+          select: { ownerDecisionId: true, ideaId: true },
+        });
+        if (!planLookup?.ownerDecisionId) {
+          return { ok: false, reason: "Startup execution plan not found — cannot authorize delegation.", code: "NOT_FOUND_OR_FORBIDDEN" };
+        }
+        const authResult = await assertStartupExecutionAuthorization(input.workspaceId, {
+          sessionId: task.linkedStartupSessionId,
+          blueprintId: task.linkedStartupBlueprintId,
+          planId: task.linkedStartupPlanId,
+          ownerDecisionId: planLookup.ownerDecisionId,
+          ideaId: planLookup.ideaId,
+          actionType: "DELEGATE_TASK",
+        });
+        if (!authResult.authorized) {
+          await emitStartupAuthorizationDenied(input.workspaceId, task.linkedStartupSessionId, input.actorId ?? null, "DELEGATE_TASK", authResult.violations);
+          return { ok: false, reason: `Startup execution gate: ${authResult.violations.join("; ")}`, code: "UNAUTHORIZED" };
+        }
+      }
       nextStatus = "IN_PROGRESS"; data.actionOwner = input.delegateToRole; break;
+    }
     case "SUBMIT_EVIDENCE": {
       const refs = (input.evidenceRefs ?? []).map((e) => e.trim()).filter(Boolean);
       if (refs.length === 0) return { ok: false, reason: "No evidence supplied.", code: "EVIDENCE_REQUIRED" };
