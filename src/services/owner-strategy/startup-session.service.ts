@@ -216,10 +216,50 @@ export async function transitionSession(
       }
     }
 
-    await tx.ownerStartupSession.update({
-      where: { id: sessionId },
+    // Pattern A optimistic concurrency: incorporate all material pointer values read
+    // during the staleness check into the protected mutation WHERE clause. If any
+    // pointer changed between the canonical-state read and this UPDATE (due to a
+    // concurrent commit under READ COMMITTED), the UPDATE matches 0 rows and we
+    // throw ConflictError — preventing a stale transition from slipping through.
+    const sessionUpdateResult = await tx.ownerStartupSession.updateMany({
+      where: {
+        id: sessionId,
+        workspaceId,
+        status: session.status,                              // guard: status unchanged
+        currentOwnerDecisionId: session.currentOwnerDecisionId, // guard: decision unchanged
+        currentProfileVersionId: currentState.profileVersionId, // guard: profile unchanged
+        currentSystemRecId: currentState.systemRecId,           // guard: system rec unchanged
+      },
       data: { status: newStatus, updatedAt: new Date() },
     });
+    if (sessionUpdateResult.count === 0) {
+      throw new ConflictError(
+        `CONCURRENCY_CONFLICT: session state changed between staleness check and status transition — the operation was denied to prevent a stale transition. Retry the request.`
+      );
+    }
+
+    // Pattern A idea-level guard: verify idea material pointers haven't changed concurrently.
+    // A change to currentEconomicModelVersionId / currentReadinessId / currentBusinessModelVersionId
+    // on the idea row between our canonical-state read and the session updateMany would be a missed
+    // stale transition. We use a conditional updateMany on the idea row (touching updatedAt) as the
+    // atomic concurrency guard — if any pointer changed, count=0 and we abort.
+    if (transitionIdeaId) {
+      const ideaLockResult = await tx.startupIdeaRecord.updateMany({
+        where: {
+          id: transitionIdeaId,
+          workspaceId,
+          currentEconomicModelVersionId: currentState.economicModelId,
+          currentReadinessId: currentState.readinessId,
+          currentBusinessModelVersionId: currentState.businessModelId,
+        },
+        data: { updatedAt: new Date() },
+      });
+      if (ideaLockResult.count === 0) {
+        throw new ConflictError(
+          `CONCURRENCY_CONFLICT: idea material state changed between staleness check and status transition — the operation was denied to prevent a stale transition. Retry the request.`
+        );
+      }
+    }
 
     await emitAuditEvent({
       workspaceId,
@@ -1294,7 +1334,7 @@ async function queryCurrentSnapshotIds(
   workspaceId: string,
   sessionId: string,
   authorizedBlueprintId?: string | null,
-  client: typeof db = db
+  client: Prisma.TransactionClient | typeof db = db
 ) {
   const [evidence, risks, constraints, objectives] = await Promise.all([
     client.startupEvidenceRecord.findMany({
@@ -1373,13 +1413,23 @@ export interface VersionedApprovalState {
  * Session-level: currentProfileVersionId, currentSystemRecId.
  * Idea-level (when ideaId supplied): currentEconomicModelVersionId, currentReadinessId,
  * currentBusinessModelVersionId, latest marketSizing and validationPlan IDs.
- * ideaVersionId has no dedicated tracking pointer — always returns null.
+ *
+ * ideaVersionId — compatibility field, always null. StartupIdeaRecord tracks revisions
+ * via the supersededById pointer (a new record is created per revision, the old one is
+ * marked superseded). There is no UUID version-ID column on the idea row. Both the GO
+ * decision and the canonical state return null here, so the hash always matches on this
+ * field — revision detection relies exclusively on supersededById, NOT on ideaVersionId.
+ *
+ * Fail-closed: throws NotFoundError when session not found OR when ideaId is supplied
+ * but the idea is not found in the workspace. Returning all-null for a missing idea
+ * would silently fail-open: if the GO decision also stored all-null idea-level fields,
+ * the hash would match a non-existent idea's output and report NOT STALE.
  */
 export async function loadCanonicalCurrentApprovalState(
   workspaceId: string,
   sessionId: string,
   ideaId?: string | null,
-  client: typeof db = db
+  client: Prisma.TransactionClient | typeof db = db
 ): Promise<VersionedApprovalState> {
   const session = await client.ownerStartupSession.findFirst({
     where: { id: sessionId, workspaceId },
@@ -1420,11 +1470,15 @@ export async function loadCanonicalCurrentApprovalState(
       }),
     ]);
 
-    if (idea) {
-      economicModelId = idea.currentEconomicModelVersionId ?? null;
-      readinessId = idea.currentReadinessId ?? null;
-      businessModelId = idea.currentBusinessModelVersionId ?? null;
+    if (!idea) {
+      // ideaId was supplied but the idea is missing or belongs to a different workspace.
+      // Returning all-null here would fail-open: a GO decision stored with null idea-level
+      // fields would hash-match and report NOT STALE for a non-existent/cross-workspace idea.
+      throw new NotFoundError("StartupIdeaRecord", ideaId);
     }
+    economicModelId = idea.currentEconomicModelVersionId ?? null;
+    readinessId = idea.currentReadinessId ?? null;
+    businessModelId = idea.currentBusinessModelVersionId ?? null;
     marketSizingId = latestMarketSizing?.id ?? null;
     validationPlanId = validationPlan?.id ?? null;
   }
@@ -1453,7 +1507,7 @@ export async function checkApprovalStaleness(
   workspaceId: string,
   sessionId: string,
   currentVersionedIds: VersionedApprovalState,
-  client: typeof db = db
+  client: Prisma.TransactionClient | typeof db = db
 ): Promise<StalenessCheckResult> {
   const session = await client.ownerStartupSession.findFirst({
     where: { id: sessionId, workspaceId },
@@ -2404,32 +2458,37 @@ export interface ExecutionAuthorizationResult {
  * spending action, external action initiation, and outcome recording.
  * Fails closed: any unknown or missing record → NOT authorized.
  * All 20 checks are independent — all violations accumulated, not short-circuit.
+ *
+ * `client` — pass a Prisma.TransactionClient to run all reads inside the caller's
+ * mutation transaction, eliminating the TOCTOU gap between the authorization check
+ * and the protected DB write. Defaults to the shared db singleton for standalone calls.
  */
 export async function assertStartupExecutionAuthorization(
   workspaceId: string,
-  input: ExecutionAuthorizationInput
+  input: ExecutionAuthorizationInput,
+  client: Prisma.TransactionClient | typeof db = db
 ): Promise<ExecutionAuthorizationResult> {
   const violations: string[] = [];
   const now = new Date();
 
   // Load all required records in parallel
   const [session, blueprint, plan, decision, ideaRecord] = await Promise.all([
-    db.ownerStartupSession.findFirst({
+    client.ownerStartupSession.findFirst({
       where: { id: input.sessionId, workspaceId },
       select: { id: true, status: true, currentOwnerDecisionId: true, currentBlueprintId: true },
     }),
-    db.startupExecutionBlueprint.findFirst({
+    client.startupExecutionBlueprint.findFirst({
       where: { id: input.blueprintId, workspaceId },
       select: { id: true, blueprintStatus: true, ownerDecisionId: true, sessionId: true, ideaId: true },
     }),
-    db.startupExecutionPlan.findFirst({
+    client.startupExecutionPlan.findFirst({
       where: { id: input.planId, workspaceId },
       select: {
         id: true, status: true, spendingLimitCents: true, startDate: true, targetDate: true,
         stopConditions: true, approvalPackageHash: true, blueprintId: true,
       },
     }),
-    db.startupOwnerDecision.findFirst({
+    client.startupOwnerDecision.findFirst({
       where: { id: input.ownerDecisionId, workspaceId },
       select: {
         id: true, decisionType: true, validUntil: true, reviewDate: true,
@@ -2438,7 +2497,7 @@ export async function assertStartupExecutionAuthorization(
         linkedIdeaVersionId: true,
       },
     }),
-    db.startupIdeaRecord.findFirst({
+    client.startupIdeaRecord.findFirst({
       where: { id: input.ideaId, workspaceId },
       select: { supersededById: true },
     }),
@@ -2531,8 +2590,8 @@ export async function assertStartupExecutionAuthorization(
 
   // G2-15: Approval package hash must match current state (staleness check)
   if (decision && session && violations.filter((v) => v.includes("superseded") || v.includes("not found")).length === 0) {
-    const currentState = await loadCanonicalCurrentApprovalState(workspaceId, input.sessionId, input.ideaId);
-    const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, currentState);
+    const currentState = await loadCanonicalCurrentApprovalState(workspaceId, input.sessionId, input.ideaId, client);
+    const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, currentState, client);
     if (staleness.isStale) {
       violations.push(
         `Approval package is stale — changed inputs: ${staleness.changedInputs.join(", ")}. Reapproval required.`

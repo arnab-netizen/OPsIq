@@ -74,7 +74,7 @@ export async function createBlueprint(
     }
     // Different decision = reapproval happened — mark old blueprint SUPERSEDED before creating new one.
     // R8/R9: atomically supersede all plans and cancel all tasks linked to the old blueprint.
-    await db.$transaction(async (txSupersede: typeof db) => {
+    await db.$transaction(async (txSupersede: Prisma.TransactionClient) => {
       await txSupersede.startupExecutionBlueprint.update({
         where: { id: existing.id },
         data: { blueprintStatus: "SUPERSEDED" },
@@ -503,11 +503,45 @@ export async function createBlueprint(
       },
     });
 
-    // Update session current blueprint pointer
-    await tx.ownerStartupSession.update({
-      where: { id: input.sessionId },
+    // Pattern A optimistic concurrency: the session update incorporates the material pointer
+    // values read during the staleness check into the WHERE clause. If any pointer changed
+    // concurrently between the canonical-state read and this UPDATE (READ COMMITTED window),
+    // the UPDATE matches 0 rows and we throw ConflictError.
+    // currentState.profileVersionId and currentState.systemRecId were read from the session
+    // row inside this transaction; input.ownerDecisionId equals session.currentOwnerDecisionId
+    // (verified by checkApprovalStaleness above).
+    const sessionBpUpdateResult = await tx.ownerStartupSession.updateMany({
+      where: {
+        id: input.sessionId,
+        workspaceId,
+        currentOwnerDecisionId: input.ownerDecisionId,       // guard: decision unchanged
+        currentProfileVersionId: currentState.profileVersionId, // guard: profile unchanged
+        currentSystemRecId: currentState.systemRecId,           // guard: system rec unchanged
+      },
       data: { currentBlueprintId: blueprintId, updatedAt: new Date() },
     });
+    if (sessionBpUpdateResult.count === 0) {
+      throw new ConflictError(
+        `CONCURRENCY_CONFLICT: session state changed between staleness check and blueprint creation — the operation was denied to prevent a stale blueprint. Retry the request.`
+      );
+    }
+
+    // Pattern A idea-level guard: verify idea material pointers haven't changed concurrently.
+    const ideaBpLockResult = await tx.startupIdeaRecord.updateMany({
+      where: {
+        id: input.ideaId,
+        workspaceId,
+        currentEconomicModelVersionId: currentState.economicModelId,
+        currentReadinessId: currentState.readinessId,
+        currentBusinessModelVersionId: currentState.businessModelId,
+      },
+      data: { updatedAt: new Date() },
+    });
+    if (ideaBpLockResult.count === 0) {
+      throw new ConflictError(
+        `CONCURRENCY_CONFLICT: idea material state changed between staleness check and blueprint creation — the operation was denied to prevent a stale blueprint. Retry the request.`
+      );
+    }
 
     await emitAuditEvent(
       {
