@@ -25,7 +25,7 @@ describe("generateIdeasFromProfile", () => {
   it("returns available=false when provider is not configured", () => {
     const result = generateIdeasFromProfile(makeProfile(), [], [], false, "ver-1");
     expect(result.available).toBe(false);
-    expect(result.generationMethod).toBe("UNAVAILABLE");
+    expect(result.generationMethod).toBe("NEED_OPTIONS_UNAVAILABLE");
   });
 
   it("returns empty concepts when provider unavailable", () => {
@@ -35,11 +35,11 @@ describe("generateIdeasFromProfile", () => {
     expect(result.unavailabilityReason).toBeTruthy();
   });
 
-  it("uses DETERMINISTIC_PROFILE_BASED when provider is configured", () => {
+  it("uses NEED_OPTIONS_GOVERNED_HEURISTIC when provider is configured", () => {
     const signals = [{ id: "sig-1", signalType: "MARKET_GAP", industry: "CLEANING", summary: "High demand for cleaning services in local area", capitalRequirementCents: 100000n }];
     const result = generateIdeasFromProfile(makeProfile({ existingAssets: ["van", "equipment"] }), signals, [], true, "ver-1");
     expect(result.available).toBe(true);
-    expect(result.generationMethod).toBe("DETERMINISTIC_PROFILE_BASED");
+    expect(result.generationMethod).toBe("NEED_OPTIONS_GOVERNED_HEURISTIC");
   });
 
   it("returns at least one concept when signals or assets are provided", () => {

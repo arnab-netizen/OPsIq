@@ -69,7 +69,12 @@ export interface IdeaGenerationResult {
   profileVersion: string;
   evidenceIds: string[];
   signalIds: string[];
-  generationMethod: "DETERMINISTIC_PROFILE_BASED" | "PROVIDER_BASED" | "UNAVAILABLE";
+  /** Canonical NEED_OPTIONS capability classification */
+  generationMethod:
+    | "NEED_OPTIONS_GOVERNED_HEURISTIC"       // deterministic profile-based synthesis — no external provider
+    | "NEED_OPTIONS_PRODUCTION_GENERATION"    // live AI/provider call succeeded
+    | "NEED_OPTIONS_PROVIDER_BOUNDARY_ONLY"   // provider configured but call not made (rate limit, cost gate)
+    | "NEED_OPTIONS_UNAVAILABLE";             // no provider and no profile to synthesize from
 }
 
 /** Deterministic generation from profile + signals + evidence. */
@@ -194,7 +199,7 @@ export function generateIdeasFromProfile(
       profileVersion: profileVersionId,
       evidenceIds: evidence.map((e) => e.id),
       signalIds: signals.map((s) => s.id),
-      generationMethod: "UNAVAILABLE",
+      generationMethod: "NEED_OPTIONS_UNAVAILABLE",
     };
   }
 
@@ -221,6 +226,6 @@ export function generateIdeasFromProfile(
     profileVersion: profileVersionId,
     evidenceIds: evidence.map((e) => e.id),
     signalIds: signals.map((s) => s.id),
-    generationMethod: "DETERMINISTIC_PROFILE_BASED",
+    generationMethod: "NEED_OPTIONS_GOVERNED_HEURISTIC",
   };
 }

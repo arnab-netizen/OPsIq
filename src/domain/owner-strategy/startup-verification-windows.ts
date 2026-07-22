@@ -46,6 +46,14 @@ export interface DerivedVerificationWindow {
   failureCriteria: string[];
   metricsToMeasure: string[];
   derivationRationale: string;
+  /** true when timing evidence is insufficient — owner must verify before treating window as authoritative */
+  provisional: boolean;
+  /** evidence that must be acquired before this window can be closed */
+  evidenceRequired: string[];
+  /** condition that should trigger reassessment of this window */
+  reassessmentTrigger: string;
+  /** 0-100 confidence in window duration accuracy based on available evidence */
+  confidence: number;
 }
 
 const CADENCE_DAYS: Record<string, number> = {
@@ -106,6 +114,22 @@ export function deriveVerificationWindows(
     validationFailureCriteria.push(`Spending exceeds ${limitFormatted} before validation complete`);
   }
 
+  const hasTimingEvidence = input.hypotheses.length > 0 || input.kpis.length > 0 || input.validationPlan != null;
+  const validationProvisional = !hasTimingEvidence;
+  const validationConfidence = input.hypotheses.length > 0 && input.kpis.length > 0
+    ? 85
+    : input.hypotheses.length > 0
+    ? 70
+    : input.kpis.length > 0
+    ? 55
+    : 30;
+
+  const validationEvidenceRequired: string[] = [];
+  if (input.hypotheses.length === 0) validationEvidenceRequired.push("At least one testable hypothesis with expected duration");
+  if (input.kpis.length === 0) validationEvidenceRequired.push("At least one measurable KPI with review cadence");
+  // Only require validation plan when there is no other timing evidence at all
+  if (input.validationPlan == null && input.hypotheses.length === 0 && input.kpis.length === 0) validationEvidenceRequired.push("Validation plan with experiment count and stop conditions");
+
   windows.push({
     windowLabel: `${input.ideaName} — Validation Window`,
     durationDays: validationDays,
@@ -119,6 +143,10 @@ export function deriveVerificationWindows(
         : ["No evidence acquired within window period"],
     metricsToMeasure: input.kpis.map((k) => k.metricName),
     derivationRationale: `${validationDays}d = max(hypothesisDays=${maxHypothesisDays}, kpiCycleDays=${maxKpiCycleDays}, minDays=14)`,
+    provisional: validationProvisional,
+    evidenceRequired: validationEvidenceRequired,
+    reassessmentTrigger: "hypothesis_result_recorded_or_experiment_completed",
+    confidence: validationConfidence,
   });
 
   // Window 2: Break-even window — only if economics provided
@@ -155,6 +183,12 @@ export function deriveVerificationWindows(
       failureCriteria: beFailureCriteria,
       metricsToMeasure: ["revenue", "fixed_cost_coverage", "gross_margin", "cash_runway_months"],
       derivationRationale: `breakEvenMonths=${input.economics.breakEvenMonths} derived from economic model`,
+      provisional: input.economics.fixedMonthlyCostCents == null,
+      evidenceRequired: input.economics.fixedMonthlyCostCents == null
+        ? ["Fixed monthly cost evidence required to validate break-even projection"]
+        : [],
+      reassessmentTrigger: "break_even_achieved_or_missed_or_economic_model_updated",
+      confidence: input.economics.fixedMonthlyCostCents != null ? 75 : 50,
     });
   }
 
@@ -178,6 +212,10 @@ export function deriveVerificationWindows(
       ],
       metricsToMeasure: ["cash_balance", "burn_rate", "working_capital_days", "cash_runway_months"],
       derivationRationale: `cashRunwayMonths=${input.economics.cashRunwayMonths} — owner must monitor survival throughout`,
+      provisional: false,
+      evidenceRequired: ["Actual cash balance and monthly burn rate — must be updated as spending occurs"],
+      reassessmentTrigger: "cash_balance_drops_below_2_month_burn_or_revenue_injection_received",
+      confidence: 80,
     });
   }
 

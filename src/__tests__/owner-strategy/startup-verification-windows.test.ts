@@ -125,6 +125,36 @@ describe("deriveVerificationWindows", () => {
     });
   });
 
+  it("provisional=true and low confidence when no timing evidence", () => {
+    const windows = deriveVerificationWindows(BASE); // no hypotheses, no KPIs, no validation plan
+    expect(windows[0].provisional).toBe(true);
+    expect(windows[0].confidence).toBeLessThan(50);
+    expect(windows[0].evidenceRequired.length).toBeGreaterThan(0);
+  });
+
+  it("provisional=false and higher confidence when hypotheses and KPIs present", () => {
+    const input: DeriveWindowsInput = {
+      ...BASE,
+      hypotheses: [{ expectedDurationDays: 21, hypothesisType: "DEMAND", requiresOwnerApproval: false }],
+      kpis: [{ metricName: "revenue", reviewCadence: "WEEKLY" }],
+    };
+    const windows = deriveVerificationWindows(input);
+    expect(windows[0].provisional).toBe(false);
+    expect(windows[0].confidence).toBeGreaterThanOrEqual(70);
+    expect(windows[0].evidenceRequired.length).toBe(0);
+  });
+
+  it("reassessmentTrigger is present on every window", () => {
+    const input: DeriveWindowsInput = {
+      ...BASE,
+      economics: { breakEvenMonths: 3, cashRunwayMonths: 4, spendingLimitCents: null, fixedMonthlyCostCents: 100000 },
+    };
+    const windows = deriveVerificationWindows(input);
+    windows.forEach((w) => {
+      expect(w.reassessmentTrigger).toBeTruthy();
+    });
+  });
+
   it("quarterly KPI cadence drives longer validation window", () => {
     const input: DeriveWindowsInput = {
       ...BASE,

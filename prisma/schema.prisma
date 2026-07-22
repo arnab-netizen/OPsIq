@@ -2147,6 +2147,11 @@ model StartupVerificationWindow {
   successCriteria        Json      @default("[]") @map("success_criteria")  // string[]
   failureCriteria        Json      @default("[]") @map("failure_criteria")  // string[]
   metricsToMeasure       Json      @default("[]") @map("metrics_to_measure")  // string[]
+  derivationRationale    String?   @db.Text @map("derivation_rationale")   // how duration was derived
+  provisional            Boolean   @default(false) @map("provisional")     // true = insufficient timing evidence; owner must verify
+  evidenceRequired       Json      @default("[]") @map("evidence_required") // string[] — what must be acquired before window closes
+  reassessmentTrigger    String?   @map("reassessment_trigger")             // condition that should trigger window reassessment
+  confidence             Int?      @map("confidence")                       // 0-100 confidence in duration accuracy
   outcome                String?   @map("outcome")           // PASSED | FAILED | INCONCLUSIVE | PENDING
   outcomeRecordedAt      DateTime? @map("outcome_recorded_at")
   outcomeRecordedBy      String?   @map("outcome_recorded_by") @db.Uuid

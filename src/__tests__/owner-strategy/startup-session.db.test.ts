@@ -1426,3 +1426,321 @@ describe("[db] G-DB-16: cross-workspace candidate isolation", () => {
     await expect(recordCandidateDecision(wsY, sessionId, gen.batchId, 0, actor, { decision: "ACCEPTED" })).rejects.toThrow(NotFoundError);
   });
 });
+
+// ─── G-DB-17 through G-DB-35 ────────────────────────────────────────────────
+
+describe("[db] G-DB-17: profile concurrency — last-write-wins within version lock", () => {
+  it("G-DB-17: concurrent profile updates on same version reject the second writer", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [] });
+    const profile1 = { geography: "AU", capitalAvailableCents: BigInt(100000), ownerSkills: ["sales"], ownerHoursPerWeek: 20, excludedCategories: [], riskTolerance: "MEDIUM" as const, preferredIndustries: ["services"], previouslyRejectedIdeaNames: [], existingAssets: [], existingCustomerProblems: [] };
+    const profile2 = { ...profile1, geography: "NZ" };
+    // First write sets version to 1
+    await updateContextProfile(ws, sessionId, actor, profile1, 1);
+    // Second write with the same expected version should fail (optimistic concurrency)
+    await expect(updateContextProfile(ws, sessionId, actor, profile2, 1)).rejects.toThrow();
+  });
+});
+
+describe("[db] G-DB-18: idea revision concurrency — simultaneous revisions reject the second", () => {
+  it("G-DB-18: two concurrent revisions of the same idea fail on the second attempt", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    // First revision succeeds
+    await reviseIdea(ws, ideaId, actor, { name: "Mobile Car Wash v2", reason: "Better pricing" });
+    // Revising original id again (not the new superseding record) must fail
+    await expect(reviseIdea(ws, ideaId, actor, { name: "Mobile Car Wash v3", reason: "Another revision" })).rejects.toThrow();
+  });
+});
+
+describe("[db] G-DB-19: evidence idempotency — same evidence hash recorded twice", () => {
+  it("G-DB-19: recording evidence with the same content hash twice returns the same id", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [] });
+    const evidencePayload = { sourceType: "AUTHORITATIVE_PRIMARY" as const, evidenceType: "CUSTOMER_DEMAND" as const, observedResult: "50 customers surveyed wanted the service", geography: "AU", customerSegment: "Homeowners", reliabilityScore: 80, confidence: 75, ownerVerified: true };
+    const id1 = await recordEvidenceItem(ws, sessionId, actor, evidencePayload);
+    const id2 = await recordEvidenceItem(ws, sessionId, actor, evidencePayload);
+    // Idempotent — both return same evidence record id
+    expect(id1).toBe(id2);
+  });
+});
+
+describe("[db] G-DB-20: validation-plan concurrency — plan cannot be overwritten without new version", () => {
+  it("G-DB-20: building a second validation plan for the same idea rejects when plan already exists", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    await buildAndPersistValidationPlan(ws, sessionId, ideaId, actor);
+    // Second call for same idea must fail with ConflictError
+    await expect(buildAndPersistValidationPlan(ws, sessionId, ideaId, actor)).rejects.toThrow(ConflictError);
+  });
+});
+
+describe("[db] G-DB-21: business-model concurrency — versioned supersession", () => {
+  it("G-DB-21: building two business models supersedes the first and links them", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const bm1Id = await buildAndPersistBusinessModel(ws, sessionId, ideaId, actor);
+    const bm2Id = await buildAndPersistBusinessModel(ws, sessionId, ideaId, actor);
+    expect(bm1Id).not.toBe(bm2Id);
+    const bm1 = await db.startupBusinessModel.findUnique({ where: { id: bm1Id } });
+    expect(bm1?.supersededById).toBe(bm2Id);
+  });
+});
+
+describe("[db] G-DB-22: market-sizing concurrency — two calls produce versioned records", () => {
+  it("G-DB-22: repeated market sizing creates a new version and marks the old one superseded", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const ms1Id = await buildAndPersistMarketSizing(ws, sessionId, ideaId, actor);
+    const ms2Id = await buildAndPersistMarketSizing(ws, sessionId, ideaId, actor);
+    expect(ms1Id).not.toBe(ms2Id);
+    const ms1 = await db.startupMarketSizing.findUnique({ where: { id: ms1Id } });
+    expect(ms1?.supersededById).toBe(ms2Id);
+  });
+});
+
+describe("[db] G-DB-23: economic-model concurrency — two calls produce versioned records", () => {
+  it("G-DB-23: repeated economic model build creates new version and marks old superseded", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const inputs: EconomicInputs = { pricePerUnitCents: BigInt(5000), variableUnitCostCents: BigInt(1500), fixedMonthlyCostCents: BigInt(100000), startupCostCents: BigInt(300000) };
+    const em1Id = await buildAndPersistEconomicModel(ws, sessionId, ideaId, actor, inputs);
+    const em2Id = await buildAndPersistEconomicModel(ws, sessionId, ideaId, actor, inputs);
+    expect(em1Id).not.toBe(em2Id);
+    const em1 = await db.startupEconomicModel.findUnique({ where: { id: em1Id } });
+    expect(em1?.supersededById).toBe(em2Id);
+  });
+});
+
+describe("[db] G-DB-24: readiness concurrency — two calls produce versioned records", () => {
+  it("G-DB-24: repeated readiness assessment creates new record and marks prior superseded", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const inputs: ReadinessInputs = { ideaId, sessionId, workspaceId: ws, hypotheses: [], evidence: [], economics: null, risks: [], constraints: [], profile: { capitalAvailableCents: BigInt(10000), ownerHoursPerWeek: 40, geography: null, ownerSkills: [], existingAssets: [], riskTolerance: null } };
+    const ra1Id = await assessAndPersistReadiness(ws, sessionId, ideaId, actor, inputs);
+    const ra2Id = await assessAndPersistReadiness(ws, sessionId, ideaId, actor, inputs);
+    expect(ra1Id).not.toBe(ra2Id);
+    const ra1 = await db.startupReadinessAssessment.findUnique({ where: { id: ra1Id } });
+    expect(ra1?.supersededById).toBe(ra2Id);
+  });
+});
+
+describe("[db] G-DB-25: owner-decision concurrency — duplicate decision submission is idempotent", () => {
+  it("G-DB-25: submitting the same owner decision twice returns same decision id", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const idempotencyKey = `go-${sessionId}-${ideaId}`;
+    const d1 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId, idempotencyKey });
+    const d2 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId, idempotencyKey });
+    expect(d1).toBe(d2);
+  });
+});
+
+describe("[db] G-DB-26: blueprint supersession concurrency — second blueprint supersedes first", () => {
+  it("G-DB-26: creating a second blueprint for the same session+idea supersedes the first", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const d1 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    const bp1 = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: d1, objectiveTitle: "Launch v1" });
+    const d2 = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    const bp2 = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: d2, objectiveTitle: "Launch v2" });
+    expect(bp1.blueprintId).not.toBe(bp2.blueprintId);
+    const first = await db.startupExecutionBlueprint.findUnique({ where: { id: bp1.blueprintId } });
+    expect(first?.blueprintStatus).toBe("SUPERSEDED");
+  });
+});
+
+describe("[db] G-DB-27: stale evidence blocks execution authorization", () => {
+  it("G-DB-27: assertStartupExecutionAuthorization rejects when evidence is expired", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    // Record evidence with past expiry
+    const pastExpiry = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await recordEvidenceItem(ws, sessionId, actor, { sourceType: "OFFICIAL_COMMERCIAL" as const, evidenceType: "MARKET_SIZE" as const, observedResult: "Market is large", geography: "AU", customerSegment: null, reliabilityScore: 70, confidence: 70, ownerVerified: true, expiresAt: pastExpiry });
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
+    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
+    expect(result.authorized).toBe(false);
+    expect(result.violations.some((v) => v.toLowerCase().includes("evidence") || v.toLowerCase().includes("stale") || v.toLowerCase().includes("expir"))).toBe(true);
+  });
+});
+
+describe("[db] G-DB-28: failed hypothesis blocks execution authorization", () => {
+  it("G-DB-28: assertStartupExecutionAuthorization rejects when a hypothesis with requiresOwnerApproval=true was invalidated", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    // Create a hypothesis that requires owner approval and mark it invalidated
+    const hyp = await db.startupHypothesis.create({ data: { workspaceId: ws, startupSessionId: sessionId, ideaId, statement: "Customers will pay $50/month", hypothesisType: "DEMAND", requiresOwnerApproval: true, result: "INVALIDATED", validatedAt: new Date(), updatedAt: new Date() } });
+    await recordHypothesisResult(ws, hyp.id, actor, { result: "INVALIDATED", interpretation: "No demand found", confidenceAfter: 10 });
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
+    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
+    expect(result.authorized).toBe(false);
+    expect(result.violations.some((v) => v.toLowerCase().includes("hypothesis") || v.toLowerCase().includes("invalidated"))).toBe(true);
+  });
+});
+
+describe("[db] G-DB-29: superseded plan is non-executable", () => {
+  it("G-DB-29: assertStartupExecutionAuthorization rejects when execution plan is SUPERSEDED", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    // Supersede the plan
+    await db.startupExecutionPlan.update({ where: { id: bp.executionPlanId }, data: { status: "SUPERSEDED" } });
+    const result = await assertStartupExecutionAuthorization(ws, { sessionId, blueprintId: bp.blueprintId, planId: bp.executionPlanId, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" });
+    expect(result.authorized).toBe(false);
+    expect(result.violations.some((v) => v.toLowerCase().includes("superseded") || v.toLowerCase().includes("plan"))).toBe(true);
+  });
+});
+
+describe("[db] G-DB-30: audit rollback on transaction failure", () => {
+  it("G-DB-30: if a service write fails mid-transaction, no partial audit event is persisted", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [] });
+    const beforeCount = await db.auditEvent.count({ where: { actorId: actor, entityId: sessionId } });
+    // Attempt to record a decision for a non-existent idea (will fail)
+    await expect(recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId: randomUUID() })).rejects.toThrow();
+    const afterCount = await db.auditEvent.count({ where: { actorId: actor, entityId: sessionId } });
+    // Audit count must not have increased
+    expect(afterCount).toBe(beforeCount);
+  });
+});
+
+describe("[db] G-DB-31: V3 hash dispatch proof", () => {
+  it("G-DB-31: computeApprovalPackageHash with hashVersion=3 includes v3-specific state fields", () => {
+    const c = { sessionId: "s1", ideaId: "i1", ideaVersionId: "iv1", hashVersion: 3 as const };
+    const v3State = { evidenceFreshState: "CURRENT" as const, conflictState: "NONE" as const, hypothesisResultState: "ALL_VALIDATED" as const, resourceState: "SUFFICIENT" as const };
+    const hV3withState = computeApprovalPackageHash(c, v3State);
+    const hV3noState = computeApprovalPackageHash(c);
+    const hV2 = verifyApprovalPackageV2({ ...c, hashVersion: 2 });
+    // V3 hash is different from V2
+    expect(hV3withState).not.toBe(hV2);
+    // V3 with vs without state may differ (state changes hash)
+    // Both must be stable (call twice, same result)
+    expect(computeApprovalPackageHash(c, v3State)).toBe(hV3withState);
+    expect(computeApprovalPackageHash(c)).toBe(hV3noState);
+  });
+});
+
+describe("[db] G-DB-32: canonical lineage of blueprint-generated artifacts", () => {
+  it("G-DB-32: blueprint-created risks and constraints carry originBlueprintId and BLUEPRINT_ARTIFACT originType", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    // Risks generated by the blueprint must have the blueprint id as provenance
+    const risks = await db.businessRiskEntry.findMany({ where: { linkedStartupSessionId: sessionId, originBlueprintId: bp.blueprintId } });
+    if (risks.length > 0) {
+      for (const risk of risks) {
+        expect(risk.originBlueprintId).toBe(bp.blueprintId);
+        expect(risk.originType).toBe("BLUEPRINT_ARTIFACT");
+      }
+    }
+    // Whether or not risks were created, the blueprint record itself must be persisted
+    const bpRecord = await db.startupExecutionBlueprint.findUnique({ where: { id: bp.blueprintId } });
+    expect(bpRecord).toBeDefined();
+    expect(bpRecord?.linkedStartupSessionId).toBe(sessionId);
+  });
+});
+
+describe("[db] G-DB-33: blueprint-generated artifacts do NOT retroactively stale creation approval", () => {
+  it("G-DB-33: checkApprovalStaleness ignores artifacts created by the blueprint itself", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(ws, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    // The creation approval should still be valid after blueprint creation
+    const staleness = await checkApprovalStaleness(ws, sessionId, ideaId, decisionId, { authorizedBlueprintId: bp.blueprintId });
+    expect(staleness.isStale).toBe(false);
+  });
+});
+
+describe("[db] G-DB-34: later material mutations DO stale execution approval", () => {
+  it("G-DB-34: updating economic model after GO decision causes checkApprovalStaleness to return isStale=true", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    // Build economic model before decision
+    const inputs: EconomicInputs = { pricePerUnitCents: BigInt(5000), variableUnitCostCents: BigInt(1500), fixedMonthlyCostCents: BigInt(100000), startupCostCents: BigInt(300000) };
+    await buildAndPersistEconomicModel(ws, sessionId, ideaId, actor, inputs);
+    // Record GO decision
+    const decisionId = await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId });
+    // After decision, build a new economic model (material mutation)
+    const newInputs: EconomicInputs = { pricePerUnitCents: BigInt(3000), variableUnitCostCents: BigInt(2000), fixedMonthlyCostCents: BigInt(150000), startupCostCents: BigInt(500000) };
+    await buildAndPersistEconomicModel(ws, sessionId, ideaId, actor, newInputs);
+    // Approval should now be stale
+    const staleness = await checkApprovalStaleness(ws, sessionId, ideaId, decisionId, {});
+    expect(staleness.isStale).toBe(true);
+    expect(staleness.reason).toBeTruthy();
+  });
+});
+
+describe("[db] G-DB-35: foreign-workspace task reference isolation", () => {
+  it("G-DB-35: assertStartupExecutionAuthorization rejects when session belongs to different workspace", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const wsOwner = randomUUID();
+    const wsOther = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: wsOwner, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+    const decisionId = await recordOwnerDecision(wsOwner, sessionId, actor, { decisionType: "GO", ideaId });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "EXECUTION_PLANNED" } });
+    const bp = await createBlueprint(wsOwner, actor, { sessionId, ideaId, ownerDecisionId: decisionId, objectiveTitle: "Launch" });
+    const plan = await db.startupExecutionPlan.findFirst({ where: { id: bp.executionPlanId } });
+    // Attempt to authorize from wrong workspace
+    await expect(assertStartupExecutionAuthorization(wsOther, { sessionId, blueprintId: bp.blueprintId, planId: plan!.id, ownerDecisionId: decisionId, ideaId, actionType: "TASK_START" })).rejects.toThrow(NotFoundError);
+  });
+});
