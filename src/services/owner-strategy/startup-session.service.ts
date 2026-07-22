@@ -214,51 +214,54 @@ export async function transitionSession(
           );
         }
       }
-    }
 
-    // Pattern A optimistic concurrency: incorporate all material pointer values read
-    // during the staleness check into the protected mutation WHERE clause. If any
-    // pointer changed between the canonical-state read and this UPDATE (due to a
-    // concurrent commit under READ COMMITTED), the UPDATE matches 0 rows and we
-    // throw ConflictError — preventing a stale transition from slipping through.
-    const sessionUpdateResult = await tx.ownerStartupSession.updateMany({
-      where: {
-        id: sessionId,
-        workspaceId,
-        status: session.status,                              // guard: status unchanged
-        currentOwnerDecisionId: session.currentOwnerDecisionId, // guard: decision unchanged
-        currentProfileVersionId: currentState.profileVersionId, // guard: profile unchanged
-        currentSystemRecId: currentState.systemRecId,           // guard: system rec unchanged
-      },
-      data: { status: newStatus, updatedAt: new Date() },
-    });
-    if (sessionUpdateResult.count === 0) {
-      throw new ConflictError(
-        `CONCURRENCY_CONFLICT: session state changed between staleness check and status transition — the operation was denied to prevent a stale transition. Retry the request.`
-      );
-    }
-
-    // Pattern A idea-level guard: verify idea material pointers haven't changed concurrently.
-    // A change to currentEconomicModelVersionId / currentReadinessId / currentBusinessModelVersionId
-    // on the idea row between our canonical-state read and the session updateMany would be a missed
-    // stale transition. We use a conditional updateMany on the idea row (touching updatedAt) as the
-    // atomic concurrency guard — if any pointer changed, count=0 and we abort.
-    if (transitionIdeaId) {
-      const ideaLockResult = await tx.startupIdeaRecord.updateMany({
+      // Pattern A optimistic concurrency (EXECUTION_PLANNED only): incorporate all material
+      // pointer values verified by the staleness check into the UPDATE WHERE clause. Under
+      // READ COMMITTED, each statement starts a new snapshot; if any pointer changed between
+      // our canonical-state read and this UPDATE, count=0 → ConflictError.
+      const sessionUpdateResult = await tx.ownerStartupSession.updateMany({
         where: {
-          id: transitionIdeaId,
+          id: sessionId,
           workspaceId,
-          currentEconomicModelVersionId: currentState.economicModelId,
-          currentReadinessId: currentState.readinessId,
-          currentBusinessModelVersionId: currentState.businessModelId,
+          status: session.status,
+          currentOwnerDecisionId: session.currentOwnerDecisionId,
+          currentProfileVersionId: currentState.profileVersionId,
+          currentSystemRecId: currentState.systemRecId,
         },
-        data: { updatedAt: new Date() },
+        data: { status: newStatus },
       });
-      if (ideaLockResult.count === 0) {
+      if (sessionUpdateResult.count === 0) {
         throw new ConflictError(
-          `CONCURRENCY_CONFLICT: idea material state changed between staleness check and status transition — the operation was denied to prevent a stale transition. Retry the request.`
+          `CONCURRENCY_CONFLICT: session state changed between staleness check and status transition — the operation was denied to prevent a stale transition. Retry the request.`
         );
       }
+
+      // Idea-level concurrency guard: re-read the idea inside the same transaction to verify
+      // material pointers haven't changed since the canonical-state load. Under READ COMMITTED,
+      // this statement sees any commits that occurred after our earlier read, so a concurrent
+      // material-field update will cause findFirst to return null → ConflictError.
+      if (transitionIdeaId) {
+        const ideaStillCurrent = await tx.startupIdeaRecord.findFirst({
+          where: {
+            id: transitionIdeaId,
+            workspaceId,
+            currentEconomicModelVersionId: currentState.economicModelId,
+            currentReadinessId: currentState.readinessId,
+            currentBusinessModelVersionId: currentState.businessModelId,
+          },
+          select: { id: true },
+        });
+        if (!ideaStillCurrent) {
+          throw new ConflictError(
+            `CONCURRENCY_CONFLICT: idea material state changed between staleness check and status transition — the operation was denied to prevent a stale transition. Retry the request.`
+          );
+        }
+      }
+    } else {
+      await tx.ownerStartupSession.update({
+        where: { id: sessionId },
+        data: { status: newStatus },
+      });
     }
 
     await emitAuditEvent({

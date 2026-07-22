@@ -526,8 +526,12 @@ export async function createBlueprint(
       );
     }
 
-    // Pattern A idea-level guard: verify idea material pointers haven't changed concurrently.
-    const ideaBpLockResult = await tx.startupIdeaRecord.updateMany({
+    // Idea-level concurrency guard: re-read the idea inside the transaction to verify material
+    // pointers haven't changed since the canonical-state load. Under READ COMMITTED, this
+    // statement sees any commits that occurred after our earlier read; a concurrent update
+    // to the idea's material fields returns null here → ConflictError (StartupIdeaRecord
+    // has no updatedAt field so we use findFirst rather than updateMany).
+    const ideaBpStillCurrent = await tx.startupIdeaRecord.findFirst({
       where: {
         id: input.ideaId,
         workspaceId,
@@ -535,9 +539,9 @@ export async function createBlueprint(
         currentReadinessId: currentState.readinessId,
         currentBusinessModelVersionId: currentState.businessModelId,
       },
-      data: { updatedAt: new Date() },
+      select: { id: true },
     });
-    if (ideaBpLockResult.count === 0) {
+    if (!ideaBpStillCurrent) {
       throw new ConflictError(
         `CONCURRENCY_CONFLICT: idea material state changed between staleness check and blueprint creation — the operation was denied to prevent a stale blueprint. Retry the request.`
       );

@@ -660,56 +660,58 @@ export async function applyProcessExecutionAction(
   data.status = nextStatus;
   data.updatedAt = now;
 
-  // In-transaction fingerprint guard: runs inside the mutation transaction so the decision
-  // re-check and the task write are atomic. If the GO decision was superseded or its
-  // approval hash changed between the outer auth check and this transaction, the transaction
-  // aborts and we return UNAUTHORIZED — the task write never commits.
-  let txFingerprintDenied: { violations: string[]; sessionId: string; actionType: string } | null = null;
-  try {
-    await deps.db.$transaction(async (tx) => {
-      if (startupFingerprintDecisionId !== null && startupFingerprintSessionId !== null) {
-        const decisionNow = await tx.startupOwnerDecision.findFirst({
-          where: { id: startupFingerprintDecisionId, workspaceId: input.workspaceId },
-          select: { packageHashSha256: true, supersededById: true },
-        });
-        if (
-          !decisionNow
-          || decisionNow.supersededById !== null
-          || (startupFingerprintHash !== null && decisionNow.packageHashSha256 !== startupFingerprintHash)
-        ) {
-          txFingerprintDenied = {
-            violations: ["Startup authorization invalidated: GO decision was superseded or approval package changed concurrently — retry after reapproval"],
-            sessionId: startupFingerprintSessionId,
-            actionType: startupFingerprintAction ?? "UNKNOWN",
-          };
-          throw new Error("__STARTUP_FINGERPRINT_DENIED__");
-        }
-      }
-      await tx.processExecutionTask.updateMany({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey }, data });
-      await tx.auditEvent.create({
-        data: {
-          id: deps.uuid(), workspaceId: input.workspaceId, eventName: AUDIT_EVENTS.OWNER_PROCESS_EXECUTION_TASK_TRANSITIONED,
-          actorId: input.actorId ?? null, actorType: input.actorId ? "user" : "system",
-          entityType: "process_execution_task", entityId: task.id,
-          payload: { taskKey: input.taskKey, action: input.action, fromStatus: task.status, toStatus: nextStatus, actorRole: input.actorRole ?? null, delegateToRole: input.delegateToRole ?? null },
-          visibility: "internal", occurredAt: now,
-        },
+  // In-transaction fingerprint guard: re-checks the GO decision inside the same transaction
+  // as the task write. If the decision was superseded or its hash changed between the outer
+  // auth check and this transaction, the transaction returns a denial result (no mutations
+  // committed). Using a typed return value avoids outer-let mutation that TypeScript's CFA
+  // cannot track through async callbacks.
+  type TxResult =
+    | { denied: true; violations: string[]; sessionId: string; actionType: string }
+    | { denied: false };
+
+  const txResult = await deps.db.$transaction(async (tx) => {
+    if (startupFingerprintDecisionId !== null && startupFingerprintSessionId !== null) {
+      const decisionNow = await tx.startupOwnerDecision.findFirst({
+        where: { id: startupFingerprintDecisionId, workspaceId: input.workspaceId },
+        select: { packageHashSha256: true, supersededById: true },
       });
-    });
-  } catch (err) {
-    if (txFingerprintDenied) {
-      // Denial event is emitted outside the aborted transaction so it persists.
-      const { emitStartupAuthorizationDenied } = await import("@/services/owner-strategy/startup-session.service");
-      await emitStartupAuthorizationDenied(
-        input.workspaceId,
-        txFingerprintDenied.sessionId,
-        input.actorId ?? null,
-        txFingerprintDenied.actionType,
-        txFingerprintDenied.violations,
-      );
-      return { ok: false, reason: `Startup execution gate: ${txFingerprintDenied.violations.join("; ")}`, code: "UNAUTHORIZED" };
+      if (
+        !decisionNow
+        || decisionNow.supersededById !== null
+        || (startupFingerprintHash !== null && decisionNow.packageHashSha256 !== startupFingerprintHash)
+      ) {
+        return {
+          denied: true as const,
+          violations: ["Startup authorization invalidated: GO decision was superseded or approval package changed concurrently — retry after reapproval"],
+          sessionId: startupFingerprintSessionId,
+          actionType: startupFingerprintAction ?? "UNKNOWN",
+        } satisfies TxResult;
+      }
     }
-    throw err;
+    await tx.processExecutionTask.updateMany({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey }, data });
+    await tx.auditEvent.create({
+      data: {
+        id: deps.uuid(), workspaceId: input.workspaceId, eventName: AUDIT_EVENTS.OWNER_PROCESS_EXECUTION_TASK_TRANSITIONED,
+        actorId: input.actorId ?? null, actorType: input.actorId ? "user" : "system",
+        entityType: "process_execution_task", entityId: task.id,
+        payload: { taskKey: input.taskKey, action: input.action, fromStatus: task.status, toStatus: nextStatus, actorRole: input.actorRole ?? null, delegateToRole: input.delegateToRole ?? null },
+        visibility: "internal", occurredAt: now,
+      },
+    });
+    return { denied: false as const } satisfies TxResult;
+  });
+
+  if (txResult.denied) {
+    // Denial event emitted outside the transaction so it always persists.
+    const { emitStartupAuthorizationDenied } = await import("@/services/owner-strategy/startup-session.service");
+    await emitStartupAuthorizationDenied(
+      input.workspaceId,
+      txResult.sessionId,
+      input.actorId ?? null,
+      txResult.actionType,
+      txResult.violations,
+    );
+    return { ok: false, reason: `Startup execution gate: ${txResult.violations.join("; ")}`, code: "UNAUTHORIZED" };
   }
   return { ok: true, taskId: task.id, status: nextStatus };
 }
