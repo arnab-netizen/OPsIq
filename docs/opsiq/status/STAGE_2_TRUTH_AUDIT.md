@@ -19,8 +19,11 @@ OpsIQ is a governed business intervention and consulting operating system. It is
 - Manage business budgets, spending authority, vendor records, and 13-week cash forecasts
 - Track business risks and compliance obligations (backend only)
 - Support portfolio management across multiple businesses in one workspace
-- Handle Stripe billing and subscription management
+- Operate in private deployment mode (`OPSIQ_PRIVATE_WORKSPACE_ID` + `OPSIQ_PRIVATE_OWNER_USER_ID`) granting ENTERPRISE entitlement without any payment provider — Stripe not required for private owner pilot
 - Provide governed authentication with type-branded workspace isolation
+- Compute cross-domain BusinessConditionProfile from all 8 operational domains (wired but unproven against full 8-domain DB data)
+
+> **Billing scope note:** Stripe webhook handling is production-hardened but is SaaS-only infrastructure. The selected future billing provider for SaaS expansion is Lemon Squeezy — which has zero current implementation. Neither provider is required for the private owner pilot.
 
 **What OpsIQ cannot currently do:**
 - Send any notification via email, SMS, push, or webhook (email completely absent; other channels are stubs or in-memory simulators)
@@ -36,21 +39,22 @@ OpsIQ is a governed business intervention and consulting operating system. It is
 - Autonomously discover external business opportunities (human-submitted signals only)
 - Navigate at all on mobile (sidebar hidden below 768px with no alternative navigation)
 
-**Is it ready for real-business onboarding?** No. Eight PILOT_BLOCKER items must be resolved first.
+**Is it ready for real-business onboarding?** No. Seven PILOT_BLOCKER items must be resolved first (revised down from 8 after reconciliation: M008 removed — already implemented; M001/M002 downgraded — in-app alerts sufficient, B2C records not day-1; two new blockers added — Alert model missing from schema, G2-15 staleness false-positive).
 
 **Is it ready for live reliance?** No. The command surface works for advisory diagnosis. Transactional operations (notifications, task assignment via UI, customer management, procurement) are incomplete.
 
 **Is it ready for bounded execution?** The approval→execution chain for startup decisions is well-implemented. For general business operations, the execution layer exists but has no owner-facing UI for task management or workforce coordination.
 
 **Most serious gaps:**
-1. Complete absence of email delivery (no transport wired)
-2. No B2C customer records — "customer operations" is not a coherent domain
+1. Alert model (`db.alert`) absent from Prisma schema — all three `trigger*Alert` functions in `alert-service.ts` throw TypeError at runtime; in-app alerting is completely broken
+2. G2-15: `assertStartupExecutionAuthorization` passes only 2 of 9 material IDs to `checkApprovalStaleness()` — causes false-positive STALE detection blocking legitimate startup execution
 3. No mobile navigation (owners on phones cannot use the system)
 4. Risk register and compliance calendar are backend-complete with no owner UI
 5. Workforce task management has a complete backend FSM with no UI
-6. Marketing campaigns tracked as integer counts, no per-campaign records
-7. Sales pipeline (SalesDealRecord) is not integrated with the diagnostic engine
-8. Inventory management is aggregate-only (no SKU catalog)
+6. Complete absence of email delivery (no transport wired — PILOT_REQUIRED, not day-1 blocker for private active pilot)
+7. Marketing campaigns tracked as integer counts, no per-campaign records
+8. Sales pipeline (SalesDealRecord) is not integrated with the diagnostic engine
+9. Inventory management is aggregate-only (no SKU catalog)
 
 **Confidence and limitations:** This audit is based on direct code inspection, agent-assisted deep-dives across all 2,798 source files, 221 Prisma models, and all 85 owner API routes. Database tests (202 files) were verified to be present but could not be run locally (no PostgreSQL). CI evidence from run 29908691252 confirms the full DB suite passed on `cb8edd7b`. Production deployment accessibility was not verified.
 
@@ -69,6 +73,10 @@ OpsIQ is a governed business intervention and consulting operating system. It is
 | **Working tree** | CLEAN — nothing to commit |
 | **Ahead/behind origin/main** | 0/0 |
 | **Untracked files** | None |
+| **Private deployment mode** | `OPSIQ_PRIVATE_WORKSPACE_ID` + `OPSIQ_PRIVATE_OWNER_USER_ID` env vars → ENTERPRISE entitlement granted in `src/services/entitlement.ts:207`; Stripe not required |
+| **Private owner seed script** | `scripts/seed-private-owner.ts`; validated on startup by `src/infra/startup-orchestrator.ts:124-133` |
+| **Billing provider (SaaS, future)** | Lemon Squeezy — selected; zero implementation; only reference in codebase is AI output guardrail regex in `src/services/ai/validator.ts:40` |
+| **Stripe** | Production-hardened webhook handler (`src/services/webhook.service.ts`); ACTIVE_SAAS_ONLY — not required for private pilot; `syncEntitlementsForSubscription` hollow (emits audit event only, grants no capabilities) |
 | **Migration count** | 147 migrations (20260415–20260722) |
 | **Schema models** | 221 |
 | **Source files** | 2,798 TypeScript files |
@@ -108,7 +116,7 @@ OpsIQ is a governed business intervention and consulting operating system. It is
 
 | Capability | Class | Pilot | Impl evidence | Missing links |
 |---|---|---|---|---|
-| Business condition profile (cross-domain rollup) | PARTIAL | PILOT_BLOCKER | `src/services/owner-condition/business-condition.service.ts`; only Finance + Recovery domains wired; other 6 domains not yet integrated | Cashflow/Sales/Operations/Marketing/SOP/Strategy DomainScores not feeding buildBusinessConditionProfile |
+| Business condition profile (cross-domain rollup) | IMPLEMENTED_BUT_UNPROVEN | PILOT_REQUIRED | `src/services/owner-condition/business-condition.service.ts`; ALL 8 domain adapters wired at lines 453-484 via `Promise.all` querying all 8 cycle tables; each domain conditionally pushed to `domainScores` array | **Initial audit claim "only Finance + Recovery wired" was factually wrong** — see Reconciliation Appendix. False-confidence risk: if fewer than 8 domains have cycle data, `dataSufficiencyStatus` may read "sufficient" while computing from incomplete cross-domain picture; DB tests cover Finance domain only |
 | Owner cockpit (now-view) | PRODUCTION_READY | PILOT_REQUIRED | `src/services/owner-guidance/owner-now-view.service.ts` (2,509 lines); 8-step loop; gate blocking; do-not-repeat; escalation integration | Browser E2E not blocking on main push |
 | Owner home summary | PRODUCTION_READY | PILOT_REQUIRED | `src/domain/owner-home/summary.ts`; pure function; all data from real spine | — |
 | Cash position display | IMPLEMENTED_BUT_UNPROVEN | PILOT_BLOCKER | Via cashflow snapshot + cashflow danger on owner-home | No bank integration; manual entry only |
@@ -314,7 +322,7 @@ OpsIQ is a governed business intervention and consulting operating system. It is
 
 | Capability | Class | Pilot | Missing links |
 |---|---|---|---|
-| In-app alert records | PRODUCTION_READY | PILOT_REQUIRED | `src/services/alerts/alert-service.ts`; DB-backed; in_app channel | — |
+| In-app alert records | BROKEN_AT_RUNTIME | PILOT_BLOCKER | `src/services/alerts/alert-service.ts` calls `db.alert.create()`, `db.alert.findFirst()` etc. | **`Alert` model does NOT exist in Prisma schema** (221 models verified) — `triggerBlockedAlert`, `triggerThresholdBreachAlert`, `triggerExecutionFailureAlert` throw TypeError at runtime. `deliverEmailAlert()` is an explicit stub: `logger.info("Email alert delivered (stub)")`. This is the real day-1 blocker; add Alert model to schema first. |
 | Email notifications | MISSING | PILOT_BLOCKER | No transport anywhere — no Resend, SendGrid, SES, Postmark. Log stub only. | Completely absent |
 | SMS notifications | MISSING | POST_PILOT | Simulated (in-memory random success); no real provider | — |
 | Push notifications | MISSING | POST_PILOT | Simulated; no Firebase FCM or APNs | — |
@@ -329,7 +337,8 @@ OpsIQ is a governed business intervention and consulting operating system. It is
 |---|---|---|---|---|---|---|---|
 | AI (OpenAI) | IMPLEMENTED_BUT_UNPROVEN | `src/services/ai/openai-provider.ts` | Yes (gpt-4o-mini/gpt-4o) | `OPENAI_API_KEY` optional | Live smoke (manual only) | Fail-closed | Live smoke not in blocking CI |
 | AI (Anthropic) | IMPLEMENTED_BUT_UNPROVEN | `src/services/ai/anthropic-provider.ts` | Yes (claude-haiku-4-5/claude-sonnet-5) | `ANTHROPIC_API_KEY` optional | Live smoke (manual only) | Fail-closed | Live smoke not in blocking CI |
-| Stripe billing | PRODUCTION_READY | `src/services/webhook.service.ts` | Yes — 14-point hardening | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe sim test | Not verified | — |
+| Stripe billing | ACTIVE_SAAS_ONLY | `src/services/webhook.service.ts` | Yes — 14-point webhook hardening | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe sim test | Not verified | `syncEntitlementsForSubscription` is hollow (emits audit event only; grants no capabilities). Not required for private pilot — bypassed by `OPSIQ_PRIVATE_WORKSPACE_ID`. |
+| Lemon Squeezy | MISSING | None | No | None | None | None | Zero implementation. Selected future billing provider for SaaS expansion. Only codebase reference: AI output guardrail regex in `src/services/ai/validator.ts:40`. |
 | Google Sheets OAuth | IMPLEMENTED_BUT_UNPROVEN | `src/services/external-systems/google-sheets-oauth.service.ts` | Yes — full OAuth PKCE | `GOOGLE_CLIENT_ID`, etc. | Manual only | Self-classifies PLACEHOLDER_ONLY | No end-to-end integration test |
 | HubSpot CRM | EXPLICITLY_DEFERRED | CSV import template only | No | None | None | None | Live connector |
 | QuickBooks | EXPLICITLY_DEFERRED | CSV import template only | No | None | None | None | Live connector |
@@ -367,10 +376,10 @@ OpsIQ is a governed business intervention and consulting operating system. It is
 
 | Capability | Class | Pilot | Missing links |
 |---|---|---|---|
-| Audit trail (AuditEvent hash chain) | PRODUCTION_READY | PILOT_REQUIRED | `src/services/audit-trail.ts`; hash chain validation; chain start detection | workspaceId nullable on AuditEvent |
+| Audit trail (AuditEvent hash chain) | NOT_PRODUCTION_READY | PILOT_REQUIRED | `src/services/audit-trail.ts` emits events; `src/services/audit-event-hash-chain-validator.ts` attempts validation | **Schema has no `hash` column** — Prisma schema (221 models) has no `hash` field on `AuditEvent`. Emitter hashes `"${eventId}|${workspaceId}|${eventName}|${timestamp.toISOString()}"` but validator expects `{previousHash, eventType, payload, recordedAt}` — **incompatible algorithms**. Validator is never called in any production path. Audit events are stored; chain integrity is not enforced. |
 | Structured logging | PRODUCTION_READY | PILOT_REQUIRED | `src/logger.ts`; `classifyOperatorError` for sanitized error output | — |
 | Audit event emission on critical mutations | PRODUCTION_READY | PILOT_REQUIRED | DC-19 gate enforces: no `.catch()` on emitAuditEvent in write-path handlers | — |
-| Rate limiting | PRODUCTION_READY | PILOT_REQUIRED | Per-route and per-entity rate limits (e.g., 10 diagnoses/hour/business) | — |
+| Rate limiting | NOT_PRODUCTION_READY | PILOT_REQUIRED | `src/services/rate-limit.ts`: workspace middleware explicitly self-documents as "DEAD MIDDLEWARE — not wired in production"; `MockRateLimitStore` is in-process-only (resets on restart); only 4 routes apply any direct rate limiting | Rate limit enforcement is per-route only; no global workspace throttle in production |
 | Idempotency records | PRODUCTION_READY | PILOT_REQUIRED | `IdempotencyRecord` model; DB-backed dedup | — |
 | Health/readiness/liveness endpoints | PARTIAL | PILOT_REQUIRED | `/api/health`, `/api/readiness`, `/api/liveness` routes exist | Quarantined runtime proof tests fail without running server |
 | Background job dead-letter | PARTIAL | PILOT_REQUIRED | In-process queue has dead-letter; DB scheduler has dead-letter state | Queue state lost on process restart |
@@ -571,24 +580,28 @@ Confirmed missing after repository-wide search:
 
 ## Section H — Security and Execution-Safety Findings
 
-### H1 — CRITICAL: `canonicalizeAuthContext` emits `VerifiedWorkspaceId` without DB proof
+### H1 — LATENT_HIGH (downgraded from CRITICAL): `canonicalizeAuthContext` emits `VerifiedWorkspaceId` without DB proof
+**Reclassified by reconciliation:** Initial audit classified CRITICAL. Direct inspection confirms all 18 call sites are in `src/__tests__/phase-g/g6r-auth-bridge.test.ts` only. Zero production routes import or call this function.  
 **File:** `src/lib/auth-guard.ts:241`  
 **Code:** `verifiedWorkspaceId: workspaceId as unknown as VerifiedWorkspaceId`  
-**Risk:** If this bridge function is called with a user-controlled `workspaceId` value in any production path, the resulting context bypasses the DB membership proof. TypeScript nominal branding does not prevent this due to `as unknown as` cast.  
-**Current mitigation:** Documented as "LEGACY BRIDGE: test/migration helpers only." Not directly reachable from owner-mode API routes.  
-**Required fix:** Restrict import to test-only; add runtime assertion that this is never called in production; or delete and replace all callers with the canonical wrapper.
+**Risk:** If re-introduced into any production path, the resulting context bypasses DB membership proof. TypeScript nominal branding provides no protection against `as unknown as` cast.  
+**Current mitigation:** Test-only. Documented as "LEGACY BRIDGE: test/migration helpers only." Not reachable from any production route.  
+**Required fix:** Add governance gate blocking production imports of this function (M024); delete or annotate as `@test-only`.
 
-### H2 — HIGH: Dead middleware with header-based identity lookup still present
+### H2 — DEAD (downgraded from HIGH): Dead middleware with header-based identity lookup
+**Reclassified by reconciliation:** Initial audit classified HIGH. Direct inspection confirms the only production import is `import type { PrivateModeGateOptions }` in `src/lib/private-mode-enforcement.ts` — a TYPE-ONLY import with no runtime function calls. The runtime functions (`getPrivateModeAccess`, `privateModeGate`) are never invoked in any production code path.  
 **File:** `src/middleware/private-mode-gate.ts`  
 **Code:** `const userId = request.headers.get('x-user-id');`  
-**Risk:** DB lookup keyed on unverified `x-user-id` header. File is documented "DEAD MIDDLEWARE — not wired in production." If re-wired by accident, it creates an IDOR path.  
-**Required fix:** Delete the file.
+**Risk:** If re-wired, creates IDOR path. Currently unreachable.  
+**Required fix:** Delete the file (M019). Low urgency — dead code; no active attack surface.
 
-### H3 — HIGH: No middleware-level auth backstop
+### H3 — DEFENSE_IN_DEPTH_GAP (downgraded from HIGH): No middleware-level auth backstop
+**Reclassified by reconciliation:** Initial audit classified HIGH. Direct inspection of all 391 route files establishes that the 27 routes without `withCanonicalEnforcement` are each legitimately public: `/api/health`, `/api/liveness`, `/api/readiness` (public probes), auth routes (pre-authentication, must be unprotected), API-key-protected diagnostics (static key check in handler), Bearer-token-protected cron (HMAC/timing-safe compare), and permanently disabled endpoints. None serve owner business data.  
 **File:** `middleware.ts`  
-**Risk:** If any route handler omits `withCanonicalEnforcement`, that route is fully unauthenticated. Auth governance scanner catches missing wrappers at CI (regex-based) but provides no runtime safety net.  
-**Current mitigation:** 364 route files pass the auth scanner; A77 gates catch new violations.  
-**Required fix:** Consider adding a fail-closed middleware fallback for routes not in the allowlist.
+**Risk:** If a future route handler incorrectly omits `withCanonicalEnforcement` and is not caught by CI, it is fully unauthenticated with no runtime backstop.  
+**Current mitigation:** 364/391 route files use the canonical wrapper. Governance scanner ratchet prevents new unwrapped routes. A77 gates verify no new violations. 27 legitimately unwrapped routes are each justified.  
+**Residual gap:** No runtime fail-closed backstop if governance scanner is bypassed (e.g., vendored build without CI).  
+**Required fix:** Document the 27 legitimately unwrapped routes in a governance allowlist; consider adding middleware-level check against an allowlist for defense-in-depth. Not a blocking issue.
 
 ### H4 — HIGH: `workspaceId` naming inconsistency — stores `ClientAccount.id`
 **Affected models (16):** `OwnerInputRecord`, `OwnerInputQualityAssessment`, `OwnerActionOutcome`, `OwnerReassessmentEvent`, `PrivateModeAccess`, and all 13 `ControlledLearning*` models  
@@ -601,10 +614,13 @@ Confirmed missing after repository-wide search:
 **Risk:** Any user with an `Entity.id` can fetch that entity regardless of workspace. Cross-tenant data visibility.  
 **Required fix:** Add `workspaceId` to `Entity` and `EntityLink`; add workspace scoping to all entity queries.
 
-### H6 — MEDIUM: G2-15 staleness check passes incomplete ID set
-**File:** `src/services/owner-strategy/startup-session.service.ts` (assertStartupExecutionAuthorization, G2-15 check)  
-**Risk:** Only `ideaId` and `ideaVersionId` are passed to `checkApprovalStaleness()`; 7 other material inputs are left undefined (default to null in hash recomputation). If the stored decision recorded non-null values for those fields, the gate may produce a false-positive `STALE_APPROVAL` violation, blocking legitimate execution.  
-**Required fix:** Pass all material IDs to the staleness check, or explicitly document that the execution gate uses a partial staleness signal.
+### H6 — HIGH (escalated from MEDIUM): G2-15 staleness check passes incomplete ID set — PILOT_BLOCKER
+**Escalated by reconciliation:** Initial audit classified MEDIUM. This is an execution-safety defect in active production Phase 5 code with a confirmed false-positive trigger path.  
+**File:** `src/services/owner-strategy/startup-session.service.ts`  
+**Primary defect (line 2399-2414):** `assertStartupExecutionAuthorization` calls `checkApprovalStaleness(workspaceId, input.sessionId, { ideaId: input.ideaId, ideaVersionId: decision.linkedIdeaVersionId })` — passes only 2 of 9 material versioned IDs. The remaining 7 (`profileVersionId`, `economicModelId`, `readinessId`, `systemRecId`, `businessModelId`, `marketSizingId`, `validationPlanId`) default to null in hash recomputation.  
+**Secondary defect (line 170):** A separate `checkApprovalStaleness(workspaceId, sessionId, {})` call passes an EMPTY object — all 9 inputs null. This is a confirmed false-positive source.  
+**Consequence:** If the stored decision recorded non-null values for those 7 fields, the recomputed hash differs → false-positive `STALE_REAPPROVAL_REQUIRED` → execution gate blocks legitimate execution permanently until owner creates a new decision.  
+**Required fix (recommended as first implementation slice):** Pass all 9 material versioned IDs to both call sites. Existing DB test infrastructure (`startup-session.db.test.ts`) covers this code path; add a regression test for the false-positive scenario.
 
 ### H7 — MEDIUM: `FinancialBaseline.engagementId` nullable
 **Risk:** Rows with null `engagementId` have zero tenant context. No `workspaceId` fallback exists.  
@@ -758,16 +774,20 @@ Confirmed missing after repository-wide search:
 
 ### M-CRIT: Critical blocking items
 
+> **Reconciliation note:** Items MNEW-01 and MNEW-02 are new blockers discovered during hostile reconciliation. M001 and M002 are downgraded from PILOT_BLOCKER to PILOT_REQUIRED — see Reconciliation Appendix. M008 is removed — BusinessConditionProfile already wires all 8 domains per code inspection.
+
 | ID | Domain | Deficiency | Class | Pilot | Affected files | Approach | Tests required | Prevention |
 |---|---|---|---|---|---|---|---|---|
-| M001 | Notifications | Email delivery completely absent | MISSING | PILOT_BLOCKER | New: `src/lib/integrations/email-provider.ts`; update `src/services/alerts/alert-service.ts` | Choose provider (Resend recommended for Next.js); implement provider interface; wire to deliverEmailAlert(); add env var | Provider contract test; send-to-real-address smoke | DC gate: block new alert types without email wiring |
-| M002 | Customer Ops | No B2C customer records model | MISSING | PILOT_BLOCKER | New: `CustomerRecord` Prisma model + migration; new service + API routes + UI | Add `CustomerRecord` with workspaceId, businessId, name, email, phone, segment, lastPurchaseDate, ltv, tags. Wire to complaint and retention models | DB integration test; tenant isolation test | — |
-| M003 | Customer Ops | OperationalEvent has no customerId | MISSING | PILOT_BLOCKER | `prisma/schema.prisma`; `src/services/execution/complaint-rework.service.ts` | Add nullable `customerRecordId` FK to OperationalEvent; migrate; update service | DB test | — |
+| MNEW-01 | Execution Safety | G2-15: `checkApprovalStaleness` called with only 2 of 9 material IDs at `startup-session.service.ts:2399` and with empty object at line 170 — causes false-positive STALE blocking legitimate execution | IMPLEMENTATION_BUG | PILOT_BLOCKER | `src/services/owner-strategy/startup-session.service.ts:170,2399-2414` | Pass all 9 material IDs (`ideaId`, `ideaVersionId`, `profileVersionId`, `economicModelId`, `readinessId`, `systemRecId`, `businessModelId`, `marketSizingId`, `validationPlanId`) at both call sites | Add regression test for false-positive staleness scenario to `startup-session.db.test.ts` | **Recommended first implementation slice** |
+| MNEW-02 | Schema/Alerts | `Alert` model absent from Prisma schema — `alert-service.ts` calls `db.alert.create()` etc. → TypeError at runtime; all in-app alerting is broken | MISSING | PILOT_BLOCKER | `prisma/schema.prisma`; `src/services/alerts/alert-service.ts` | Add `Alert` model with workspaceId, businessId, alertType, severity, message, channel, status, acknowledgedAt; migrate; update service callers | DB integration test for alert creation + status update | Schema enforcement |
+| M001 | Notifications | Email delivery completely absent | MISSING | **PILOT_REQUIRED** *(downgraded from PILOT_BLOCKER — in-app alerts sufficient for private active pilot once MNEW-02 resolved; email becomes required for compliance notifications)* | New: `src/lib/integrations/email-provider.ts`; update `src/services/alerts/alert-service.ts` | Choose provider (Resend recommended for Next.js); implement provider interface; wire to deliverEmailAlert(); add env var | Provider contract test; send-to-real-address smoke | DC gate: block new alert types without email wiring |
+| M002 | Customer Ops | No B2C customer records model | MISSING | **PILOT_REQUIRED** *(downgraded from PILOT_BLOCKER — day-3 to day-10 need; owner can begin entering financial/operational data before B2C customer records exist)* | New: `CustomerRecord` Prisma model + migration; new service + API routes + UI | Add `CustomerRecord` with workspaceId, businessId, name, email, phone, segment, lastPurchaseDate, ltv, tags. Wire to complaint and retention models | DB integration test; tenant isolation test | — |
+| M003 | Customer Ops | OperationalEvent has no customerId | MISSING | PILOT_REQUIRED | `prisma/schema.prisma`; `src/services/execution/complaint-rework.service.ts` | Add nullable `customerRecordId` FK to OperationalEvent; migrate; update service | DB test | — |
 | M004 | UI/Mobile | No mobile navigation | MISSING | PILOT_BLOCKER | `src/ui/shell/app-shell.tsx` | Add hamburger button to AppHeader; implement slide-out drawer; replace `hidden md:block` with conditional rendering | Mobile rendering test (Playwright mobile emulation) | — |
 | M005 | Risk/Compliance | Risk register has no owner UI | MISSING | PILOT_BLOCKER | New: `src/app/(authenticated)/owner/risks/page.tsx` | Create risk register page: list by severity/category, create/edit form, status transitions | E2E test | — |
 | M006 | Risk/Compliance | Compliance calendar has no owner UI | MISSING | PILOT_BLOCKER | New: `src/app/(authenticated)/owner/compliance/page.tsx` | Compliance deadline calendar: list expiring items, add/edit items, 30-day warning banner | E2E test | — |
 | M007 | Workforce | Task management has no UI (owner or employee) | MISSING | PILOT_BLOCKER | New: `src/app/(authenticated)/owner/tasks/page.tsx`; `src/app/(authenticated)/employee/tasks/[taskId]/page.tsx` | Owner: create/assign/view tasks. Employee: view assigned tasks, submit proof, mark complete | E2E test for full task lifecycle | — |
-| M008 | Command Centre | Business condition profile only wires Finance + Recovery | PARTIAL | PILOT_BLOCKER | `src/services/owner-condition/business-condition.service.ts` | Add DomainScore construction from Cashflow, Sales, Operations, Marketing, SOP, Strategy cycles using the same spine pattern as Finance | Unit test for each domain mapping; integration test for 8-domain rollup | — |
+| ~~M008~~ | ~~Command Centre~~ | ~~Business condition profile only wires Finance + Recovery~~ | ~~REMOVED~~ | ~~REMOVED~~ | — | **REMOVED: All 8 domain DomainScore adapters are already wired at `business-condition.service.ts:453-484` via `Promise.all`. Initial audit claim was factually wrong. See Reconciliation Appendix.** | — | — |
 
 ### M-HIGH: High-priority items
 
@@ -813,40 +833,49 @@ Confirmed missing after repository-wide search:
 
 ---
 
-## Section N — Dependency-Ordered Execution Plan
+## Section N — Dependency-Ordered Execution Plan (Approved 12-Stage Sequence)
+
+> **Reconciliation correction:** The initial audit described a 7-stage plan. The approved sequence has 12 stages. Stages 1–2 are complete. The initial audit's "Stage 4" (onboarding/billing/consultant) incorrectly merged distinct stages and incorrectly positioned External Opportunity Finder and Wealth/Growth/Profit Engine as post-onboarding. The correct ordering is: complete Owner Mode domains first, then Opportunity Finder, then Growth Engine, then production providers, then adversarial simulation, then onboarding.
+
+**Stages 1–2: Complete**
+- Stage 1 (Phase 5 closure): COMPLETE — SHA `5bd24355` in ancestry
+- Stage 2 (Truth audit + reconciliation): COMPLETE — this document
+
+---
 
 ### Stage 3 — Core Business-Domain Completion
 
-**3A: Security and schema foundations (prerequisite for all Stage 3 work)**
+**3A: Execution-safety fixes (must be first — blocks production use)**
+- MNEW-01: G2-15 staleness fix (pass all 9 material IDs at both call sites in `startup-session.service.ts`)
+- MNEW-02: Add `Alert` model to Prisma schema; migrate; un-stub `deliverEmailAlert`
+
+**3B: Security and schema foundations (prerequisite for remaining Stage 3 work)**
 - M018: Add workspaceId to Entity/EntityLink
 - M019: Delete dead private-mode-gate middleware
-- M024: Canonicalize bridge guard
-- M025: Rename workspaceId columns that store ClientAccount.id
+- M024: Canonicalize bridge guard (governance gate on `canonicalizeAuthContext`)
+- M025: Rename workspaceId columns that store ClientAccount.id (16 models)
 - M036: Fix FinancialBaseline nullable engagementId
 
-**3B: Notification foundation (prerequisite for all alert-based features)**
-- M001: Email delivery transport (choose Resend or SES; implement provider; wire to alerts)
+**3C: Missing owner UI pages (prerequisite for owner daily use)**
+- M004: Mobile navigation (hamburger/drawer in AppShell)
+- M005: Risk register UI page (`/owner/risks`)
+- M006: Compliance calendar UI page (`/owner/compliance`)
+- M007: Task management UI (owner + employee pages)
+- M011: Vendor management UI page (`/owner/vendor`)
+- M021: Goals management UI page (`/owner/goals`)
 
-**3C: Customer operations domain**
+**3D: Notification foundation (depends on MNEW-02)**
+- M001: Email delivery transport (Resend or SES; wire to alert-service's `deliverEmailAlert`)
+
+**3E: Customer operations domain**
 - M002: CustomerRecord model + service + routes
 - M003: Link OperationalEvent to CustomerRecord
 - M028: Per-customer churn risk classification
 
-**3D: Missing owner UI pages**
-- M004: Mobile navigation (hamburger/drawer)
-- M005: Risk register UI page
-- M006: Compliance calendar UI page
-- M007: Task management UI (owner + employee)
-- M011: Vendor management UI page
-- M021: Goals management UI page
-
-**3E: Command centre completion**
-- M008: Wire all 8 domain DomainScores to BusinessConditionProfile
-
 **3F: Finance intelligence improvements**
-- M016: Period-over-period comparison
+- M016: Period-over-period comparison (cycle diff computation)
 - M017: Receivables/payables aging buckets
-- M039: Cash forecast sync with cashflow obligations
+- M039: Cash forecast sync with cashflow daily obligations
 
 **3G: Sales integration**
 - M009: SalesDealRecord → owner-sales diagnosis integration
@@ -866,97 +895,142 @@ Confirmed missing after repository-wide search:
 - M015: PurchaseOrder lifecycle + approval
 - M038: Inventory snapshot → PO trigger
 
-**3K: Notification wiring**
-- M020: Compliance deadline notifications (depends on M001, M006)
-- M032: CRITICAL state email alerts (depends on M001)
+**3K: Notification wiring (depends on M001, MNEW-02)**
+- M020: Compliance deadline notifications
+- M032: CRITICAL state email alerts
 
 **3L: Test debt closure**
 - M034: Wire browser E2E to main push CI
 - M035: Quarantine debt resolution (23 files)
-- Add DB integration tests for all domain cycles that currently lack them
+- Add DB integration tests for all 7 domain cycles that currently lack them (Cashflow, Sales, Operations, SOP, Marketing, Strategy, Recovery)
+
+---
 
 ### Stage 4 — External Opportunity Finder
 
-- Build autonomous opportunity signal ingestion from external sources (Government tender portals, trade directories)
-- Add opportunity classification pipeline with eligibility scoring
-- Add bid/no-bid recommendation with owner approval gate
-- Add application/proposal preparation workflow
-- Add submission boundary and result tracking
-- Prerequisite: Stage 3 complete (capacity, budget, and procurement must exist for capacity fit check)
+**Current state:** Substantially implemented — 9 domain files, 5 API routes, full operating layer, wired into now-view. Missing: dedicated UI pages and automated source ingestion.
+
+**Remaining work:**
+- Add dedicated `/owner/opportunities/` UI page: list signals, classification status, bid/no-bid recommendations, owner approval gate
+- Add `/owner/tender/` UI page: tender screening results, application pack preparation
+- Add owner approval gate for opportunity signals (no approval workflow currently wired)
+- Add application/proposal preparation workflow (currently stub: `bid-application-pack.ts` blocks submission)
+- Add result tracking UI: `OpportunityValidationOutcome` has no owner-facing page
+- Implement automated opportunity source ingestion from external sources (government tender portals, trade directories) — currently human-submitted only
+- Prerequisite: Stage 3 complete (capacity, budget, and procurement must exist for capacity-fit check in bid/no-bid logic)
+
+---
 
 ### Stage 5 — Wealth, Growth and Profit Engine
 
-- Wire growth engine outputs (revenue/pricing/acquisition/retention analysis) to OwnerAction pipeline
-- Add recommendation → approval → action → verification chain for growth recommendations
-- Implement controlled learning consuming engine (read rollout flags in recommendation service)
-- Add owner briefing API wiring (connect owner-briefing domain to live data sources)
-- Implement automated goal trajectory correction (M022)
-- Add portfolio capital allocation decision support
+**Current state:** Substantially implemented — 7 growth services with DB persistence, wealth path classifier, profit leak radar, working capital management, `/owner/wealth/` page exists. Missing: growth dashboard UI, recommendation→execution chain, controlled learning consumption.
+
+**Remaining work:**
+- Add `/owner/growth/` dashboard UI page (growth engine outputs not surfaced in dedicated page)
+- Wire growth engine outputs (revenue/pricing/acquisition/retention analysis) to OwnerAction pipeline — currently `IMPLEMENTED_BUT_UNPROVEN` with outputs not reaching action pipeline
+- Add recommendation → approval → action → verification chain for growth recommendations (startup domain chain complete; growth recommendations lack it)
+- Implement controlled learning consuming engine (M023): wire rollout flags from `ControlledLearning*` models into recommendation scoring — currently rollout flags are never read by any engine
+- Wire owner-briefing domain to live data sources (currently unconnected)
+- Implement automated goal trajectory correction (M022): off-track goals don't auto-generate corrective actions
+- Add portfolio capital allocation decision support (ResourcePool/ResourceAllocation service exists; no cross-business allocation UI)
+
+---
 
 ### Stage 6 — Production Providers and Pilot-Required Connectors
 
-- Email transport (M001) — must complete in Stage 3 as it blocks notifications
-- AI provider live smoke in blocking CI
-- Google Sheets connector (remove PLACEHOLDER_ONLY classification; add integration test)
-- Banking transaction import (minimum: CSV bank statement import)
-- QuickBooks accounting import (minimum: CSV P&L/balance sheet import)
-- Production monitoring (Sentry or Datadog — M033)
-- Scheduler daemon for daily compliance/goal/stale checks
-- DB-backed outbound webhook delivery
+- AI provider live smoke in blocking CI (currently manual-only)
+- Google Sheets connector: remove PLACEHOLDER_ONLY classification; add integration test (M030)
+- Banking transaction import: minimum CSV bank statement import
+- QuickBooks accounting import: minimum CSV P&L/balance sheet import (M031)
+- Production monitoring: Sentry or Datadog (M033)
+- Scheduler daemon: external daemon or Vercel cron for daily compliance/goal/stale checks (currently in-process only)
+- DB-backed outbound webhook delivery (currently MockWebhookStore in-memory)
 
-### Stage 7 — Adversarial Simulations
+---
 
-Based on discovered architecture, the following adversarial tests are required:
+### Stage 7 — Full Adversarial Simulation
+
+All adversarial tests must pass before any real-business data is entered:
 
 - **T001 Tenant isolation**: Create resources in workspace A; attempt to read via workspace B API token; verify 403 on all 85 owner routes
 - **T002 IDOR prevention**: Submit requests with manipulated businessId; verify service-layer ownership guard fires
-- **T003 Approval staleness**: Force 17 different material input changes; verify each triggers STALE_REAPPROVAL_REQUIRED
+- **T003 Approval staleness**: Force each of the 9 material input changes individually; verify each triggers STALE_REAPPROVAL_REQUIRED
 - **T004 Supersession ordering**: Concurrent approval attempts; verify exactly one succeeds; verify superseded record is not executable
 - **T005 Spending limit enforcement**: Submit startup execution task with cost > spending limit; verify G2-19 blocks
-- **T006 False-positive staleness (G2-15)**: Verify execution gate does not false-positive when only blueprint artifacts changed (R7)
-- **T007 Mobile navigation**: Playwright mobile emulation on all owner pages; verify navigation is accessible
-- **T008 Email delivery**: Verify email is sent on CRITICAL cash state; verify email is not sent for LOW state
-- **T009 Compliance deadline**: Insert OwnerComplianceItem expiring in 5 days; verify notification is triggered within 24h
-- **T010 Portfolio isolation**: Verify portfolio view only shows businesses belonging to the requesting workspace
-- **T011 Controlled learning harm gate**: Submit a candidate that triggers a CRITICAL harm event; verify rollout is blocked
-- **T012 Purchase order approval**: Submit PO exceeding standing limit; verify approval gate fires; verify executing without approval returns 403
+- **T006 Staleness non-regression (MNEW-01)**: Verify execution gate does not false-positive when only non-material artifacts changed; requires MNEW-01 fix to pass
+- **T007 Mobile navigation**: Playwright mobile emulation on all owner pages; verify navigation accessible and functional
+- **T008 Email delivery**: Verify email sent on CRITICAL cash state; verify not sent for LOW state
+- **T009 Compliance deadline notification**: Insert OwnerComplianceItem expiring in 5 days; verify notification triggered within 24h
+- **T010 Portfolio isolation**: Verify portfolio view only shows businesses belonging to requesting workspace
+- **T011 Controlled learning harm gate**: Submit candidate triggering CRITICAL harm event; verify rollout blocked
+- **T012 Purchase order approval**: Submit PO exceeding standing limit; verify approval gate fires; verify execution without approval returns 403
+- **T013 Alert runtime**: Trigger each `trigger*Alert` function; verify Alert record created in DB; verify no TypeError (requires MNEW-02 fix)
+- **T014 In-app notification delivery**: Trigger owner workflow that generates alert; verify alert appears in owner session
+
+---
+
+### Stages 8–12 — Onboarding Through Final Production Acceptance
+
+**Stage 8 — Real-Business Onboarding**  
+Entry gate: All 21 pilot gate items (O01–O21) pass. All Stage 3–7 work complete.  
+Activities: Seed private workspace with real business data (not demo seed). Complete owner onboarding flow. Verify all 8 domain diagnostic cycles complete at least one full snapshot → diagnosis → action → verification round with real data.
+
+**Stage 9 — Controlled Live Execution**  
+Entry gate: Stage 8 complete; at least 3 complete diagnostic cycles with verified positive outcomes across all 8 domains.  
+Activities: Owner begins executing system-generated recommendations in live business operations. Monitor execution outcomes. Capture `OwnerActionOutcome` records. Verify prior-failure learning activates correctly.
+
+**Stage 10 — Pilot-Driven Refinement**  
+Entry gate: Stage 9 complete; at least 5 execution outcomes captured.  
+Activities: Iterate on recommendation quality based on real outcome data. Address any Stage 9 discoveries. Refine alert thresholds, opportunity classification, and growth action prioritization using real pilot data.
+
+**Stage 11 — Multi-Business Proof**  
+Entry gate: Stage 10 complete; pilot business health demonstrably measurable.  
+Activities: Onboard a second real business in the same workspace. Verify portfolio comparison, cross-business goal arbitration, and capital allocation recommendation work with real multi-business data. Confirm tenant isolation under real load.
+
+**Stage 12 — Final Production Acceptance**  
+Entry gate: Stage 11 complete; all adversarial simulations (T001–T014) passing on production deployment.  
+Activities: Full production acceptance sign-off. All 24 owner UI pages verified on both desktop and mobile with real data. All notification channels verified. All 8 domain cycles verified in real business context. Lemon Squeezy billing integration (if SaaS expansion begins). Document production runbook.
 
 ---
 
 ## Section O — Pilot Entry Gate
 
-The following checklist must be fully satisfied before any real-business owner data is entered:
+The following checklist must be fully satisfied before any real-business owner data is entered. Status updated by reconciliation where evidence permits.
 
 **Authentication and security:**
-- [ ] O01: Production deployment serving `cb8edd7b` or later verified
-- [ ] O02: Production database migrations applied and verified
-- [ ] O03: Production authentication tested end-to-end (login → session → logout)
-- [ ] O04: IDOR prevention verified (T002 adversarial test passes)
-- [ ] O05: Tenant isolation verified (T001 adversarial test passes)
-- [ ] O06: Entity/EntityLink workspaceId added and verified (M018)
-- [ ] O07: Dead private-mode-gate middleware deleted (M019)
+- [ ] O01: Production deployment serving `cb8edd7b` or later verified — NOT_TESTED (production URL not accessible from audit environment)
+- [ ] O02: Production database migrations applied and verified — NOT_TESTED
+- [ ] O03: Production authentication tested end-to-end (login → session → logout) — NOT_TESTED
+- [ ] O04: IDOR prevention verified (T002 adversarial test passes) — NOT_TESTED
+- [ ] O05: Tenant isolation verified (T001 adversarial test passes) — NOT_TESTED
+- [ ] O06: Entity/EntityLink workspaceId added and verified (M018) — NOT_STARTED (requires schema migration)
+- [ ] O07: Dead private-mode-gate middleware deleted (M019) — NOT_STARTED (trivial 1-file delete)
+
+**Execution safety (new gate — added by reconciliation):**
+- [ ] O01-NEW: G2-15 staleness fix applied and regression test passing (MNEW-01) — NOT_STARTED (first implementation slice)
+- [ ] O02-NEW: Alert model in Prisma schema; `db.alert` calls no longer throw (MNEW-02) — NOT_STARTED
 
 **Owner core functionality:**
-- [ ] O08: Owner cockpit loads with real business data (no demo seed)
-- [ ] O09: Mobile navigation functional (M004)
-- [ ] O10: Finance, cashflow, sales, operations, marketing: snapshot → diagnosis → action → verification cycle verified end-to-end
-- [ ] O11: Business condition profile wires all 8 domains (M008)
-- [ ] O12: Owner-home shows accurate cross-domain health
+- [ ] O08: Owner cockpit loads with real business data (no demo seed) — NOT_TESTED
+- [ ] O09: Mobile navigation functional (M004) — FAIL (confirmed: `hidden md:block` in AppShell, no alternative navigation)
+- [ ] O10: Finance, cashflow, sales, operations, marketing: snapshot → diagnosis → action → verification cycle verified end-to-end — PARTIAL (desktop UI complete; no DB integration tests for Cashflow/Sales/Operations/SOP/Marketing/Strategy)
+- [ ] O11: Business condition profile produces 8-domain rollup with real data — NOT_TESTED (code wired; DB test covers Finance only)
+- [ ] O12: Owner-home shows accurate cross-domain health — NOT_TESTED
 
 **Customer and operational management:**
-- [ ] O13: B2C customer records implemented (M002)
-- [ ] O14: Complaints linked to customers (M003)
-- [ ] O15: Risk register UI accessible (M005)
-- [ ] O16: Compliance deadline calendar accessible (M006)
-- [ ] O17: Task management UI operational for owner and employees (M007)
+- [ ] O13: B2C customer records implemented (M002) — NOT_STARTED *(downgraded — day-3 to day-10 need; not required for initial data entry)*
+- [ ] O14: Complaints linked to customers (M003) — NOT_STARTED *(follows O13)*
+- [ ] O15: Risk register UI accessible (M005) — FAIL (no `/owner/risks` page exists)
+- [ ] O16: Compliance deadline calendar accessible (M006) — FAIL (no `/owner/compliance` page exists)
+- [ ] O17: Task management UI operational for owner and employees (M007) — FAIL (no `/owner/tasks` or `/employee/tasks` pages exist)
 
 **Notifications:**
-- [ ] O18: Email delivery operational — at minimum, owner receives alert on CRITICAL cash state (M001, M032)
-- [ ] O19: Compliance deadline email notification working (M020)
+- [ ] O18: In-app alerts functional — FAIL (Alert model absent from schema; `db.alert` calls throw TypeError at runtime — MNEW-02 required first)
+- [ ] O19: Email delivery operational — NOT_STARTED *(PILOT_REQUIRED, not day-1 gate; depends on O18 + M001)*
 
 **Data integrity:**
-- [ ] O20: Period-over-period comparison functional (M016)
-- [ ] O21: No quarantined tests in critical domain paths (M035 — at minimum, resolve db-contract and security-auth clusters)
+- [ ] O20: Period-over-period comparison functional (M016) — NOT_STARTED
+- [ ] O21: No quarantined tests in critical domain paths (M035 — at minimum, resolve db-contract and security-auth clusters) — FAIL (23 quarantined files, 62 failing tests)
 
 ---
 
@@ -968,9 +1042,9 @@ Owner can view diagnoses, findings, recommendations, and risk ratings. No mutati
 Status: Available now with current implementation for financial/operational domains.
 
 **Level 2 — Recommend**  
-*Entry: Level 1 active, BusinessConditionProfile wires all 8 domains (M008 complete)*  
+*Entry: Level 1 active, BusinessConditionProfile wires all 8 domains*  
 System can surface prioritized action recommendations across all domains. Owner sees ranked actions with evidence.  
-Status: Currently available for Finance + Recovery domains only; requires M008 for full scope.
+Status: All 8 domains ARE wired in `business-condition.service.ts:453-484`. Level 2 is available once all 8 domains have at least one complete diagnostic cycle with DB data. No code change required — only data.
 
 **Level 3 — Prepare actions**  
 *Entry: Level 2 active, approval workflow functional, customer records exist (M002), task UI exists (M007)*  
@@ -999,38 +1073,249 @@ Status: Infrastructure exists (`OwnerStandingInstruction`, `OwnerApprovalMemory`
 
 ---
 
-## Section Q — Final Stage 2 Verdict
+## Section Q — Final Stage 2 Verdict (Reconciled)
 
 ```
-STAGE_2_AUDIT_COMPLETE_READY_FOR_DEPENDENCY_ORDERED_REMEDIATION
+STAGE_2_RECONCILIATION_COMPLETE_AUTHORITATIVE_PLAN_READY
 ```
 
-This verdict means: the audit is complete, all material capabilities are classified, evidence is cited, and the dependency-ordered remediation plan is authoritative.
+This verdict supersedes the initial audit verdict `STAGE_2_AUDIT_COMPLETE_READY_FOR_DEPENDENCY_ORDERED_REMEDIATION`. The reconciliation amended material errors in classification, pilot blockers, security severity, provider scope, and stage sequence. See Section R for every material change.
 
 It does not mean OpsIQ is production-ready, pilot-ready, or operationally complete.
 
-**Classification totals:**
-- PRODUCTION_READY: 22 capabilities
-- IMPLEMENTED_BUT_UNPROVEN: 31 capabilities
-- PARTIAL: 24 capabilities
-- MISSING: 38 capabilities
+**Classification totals (reconciled):**
+- PRODUCTION_READY: 21 capabilities *(−1: Rate limiting downgraded; −1: Audit trail hash chain downgraded)*
+- IMPLEMENTED_BUT_UNPROVEN: 32 capabilities *(+1: BusinessConditionProfile upgraded from PARTIAL)*
+- PARTIAL: 23 capabilities *(−1: BusinessConditionProfile moved out)*
+- MISSING: 40 capabilities *(+1: Alert model; +1: Lemon Squeezy added)*
+- BROKEN_AT_RUNTIME: 1 item *(new category: alert-service.ts — Alert model absent from schema)*
 - DEAD_OR_DUPLICATED: 10 items
 - EXPLICITLY_DEFERRED: 7 items
+- ACTIVE_SAAS_ONLY: 1 item *(Stripe — reclassified from PRODUCTION_READY)*
 
-**Pilot blocker count: 8**
-- M001 Email delivery
-- M002 B2C customer records
-- M004 Mobile navigation
-- M005 Risk register UI
-- M006 Compliance calendar UI
-- M007 Task management UI
-- M008 Command centre 8-domain wiring
-- M018/H5 Entity/EntityLink workspace isolation
+**Pilot blocker count: 7** (revised from 8)
 
-**Pilot required count: 25+ additional items**
+Changes from initial audit:
+- **REMOVED:** M008 (BusinessConditionProfile 8-domain wiring) — code inspection proves all 8 domains already wired
+- **DOWNGRADED:** M001 Email delivery → PILOT_REQUIRED (in-app alerts sufficient for private active pilot once Alert model fixed)
+- **DOWNGRADED:** M002 B2C customer records → PILOT_REQUIRED (day-3 to day-10 need; not required for initial data entry)
+- **ADDED:** MNEW-01 G2-15 staleness false-positive — execution-safety defect in active Phase 5 code; blocks legitimate execution
+- **ADDED:** MNEW-02 Alert model missing from Prisma schema — all in-app alerting broken at runtime
 
-**No production business should onboard until all 8 PILOT_BLOCKER items (O01–O21 gate) are resolved.**
+**Current 7 PILOT_BLOCKERs:**
+1. MNEW-01: G2-15 staleness fix (`startup-session.service.ts:170,2399`) — **recommended first implementation slice**
+2. MNEW-02: Alert model missing from Prisma schema (`alert-service.ts` broken at runtime)
+3. M004: Mobile navigation (sidebar `hidden md:block`; no alternative)
+4. M005: Risk register UI (`/owner/risks` page absent)
+5. M006: Compliance calendar UI (`/owner/compliance` page absent)
+6. M007: Task management UI (no owner or employee task pages)
+7. M018/H5: Entity/EntityLink workspace isolation (in-memory store; no workspaceId; ACTIVE_HIGH cross-tenant read risk)
+
+**Pilot required count: 27+ additional items**
+
+**No production business should onboard until all 7 PILOT_BLOCKER items and pilot gate items O01–O21 (amended) are resolved.**
 
 ---
 
-*Document produced by automated forensic audit. All claims cite direct code evidence from SHA `cb8edd7b1f00a65d71fa7b45d4ee5ea29ee97d39`. No assumptions were made about capability from file names, documentation, or prior reports alone.*
+*Document initially produced by automated forensic audit (commit `de60fa61`). Reconciliation appendix (Section R) documents every material change from the initial audit. All claims cite direct code evidence from SHA `cb8edd7b1f00a65d71fa7b45d4ee5ea29ee97d39`. No assumptions were made about capability from file names, documentation, or prior reports alone.*
+
+---
+
+## Section R — Reconciliation Appendix
+
+**Reconciliation date:** 2026-07-22  
+**Base commit audited:** `de60fa61` (initial Stage 2 audit)  
+**Method:** Hostile re-examination — every material conclusion challenged by direct code inspection
+
+This appendix lists every material change from the initial audit commit `de60fa61`. For each item: old conclusion → new conclusion → reason → supporting evidence.
+
+---
+
+### R-01: BusinessConditionProfile classification
+
+| | Value |
+|---|---|
+| **Old conclusion** | PARTIAL / PILOT_BLOCKER — "only Finance + Recovery domains wired; other 6 domains not yet integrated" |
+| **New conclusion** | IMPLEMENTED_BUT_UNPROVEN / PILOT_REQUIRED — all 8 domain adapters wired |
+| **Reason** | Direct inspection of `business-condition.service.ts:453-484` proves all 8 domain cycle tables are queried via `Promise.all` and each conditionally pushed to `domainScores`. The initial audit inspected incorrectly or examined a stale view. |
+| **Supporting evidence** | Lines 453-484: `if (financeCycle) domainScores.push(...)`, `if (recoveryCycle)...`, `if (cashflowCycle)...`, `if (salesCycle)...`, `if (operationsCycle)...`, `if (sopCycle)...`, `if (marketingCycle)...`, `if (strategyCycle)...` |
+| **Consequence** | M008 removed from work register. PILOT_BLOCKER count −1. First implementation slice recommendation changed to G2-15 fix (MNEW-01). |
+| **Residual risk** | False-confidence: `dataSufficiencyStatus` may read "sufficient" when fewer than 8 domains have DB cycle data; existing DB test covers Finance domain only. |
+
+---
+
+### R-02: Stripe billing scope
+
+| | Value |
+|---|---|
+| **Old conclusion** | PRODUCTION_READY — listed in "What OpsIQ can currently do"; referenced in pilot plan (gate O17) and Stage 5 integration plan |
+| **New conclusion** | ACTIVE_SAAS_ONLY — not required for private owner pilot; bypassed by `OPSIQ_PRIVATE_WORKSPACE_ID` env var |
+| **Reason** | `src/services/entitlement.ts:207` checks `OPSIQ_PRIVATE_WORKSPACE_ID` first and returns ENTERPRISE tier unconditionally, bypassing all Stripe logic. `syncEntitlementsForSubscription` is hollow: emits audit event only, does not grant capabilities. The private owner pilot requires neither Stripe nor any payment provider. |
+| **Supporting evidence** | `src/services/entitlement.ts:207,219-228`; `src/infra/startup-orchestrator.ts:124-133`; `scripts/seed-private-owner.ts`; `.env.example` (Stripe documented as optional) |
+| **Consequence** | Stripe removed from "What OpsIQ can currently do" in Section A. Not listed in pilot gate O17. Stage sequence no longer includes billing activation as a required step before pilot. |
+
+---
+
+### R-03: Lemon Squeezy — selected billing provider, zero implementation
+
+| | Value |
+|---|---|
+| **Old conclusion** | Not mentioned in initial audit |
+| **New conclusion** | MISSING — selected future billing provider for SaaS expansion; zero implementation; only codebase reference is an AI output guardrail |
+| **Reason** | User confirmed Lemon Squeezy is the selected provider. Exhaustive codebase search: no `@lemonsqueezy/*` package in `package.json`, no Prisma models, no API routes, no service files. Only reference: `src/services/ai/validator.ts:40` — a regex that rejects AI outputs mentioning Lemon Squeezy as a scope violation. |
+| **Supporting evidence** | `grep -r "lemon" src/ --include="*.ts"` → single hit in `validator.ts:40`. `cat package.json | grep squeezy` → 0 results. |
+| **Consequence** | Added to Section B baseline and Section C.19 integration table as MISSING. Not in pilot scope. |
+
+---
+
+### R-04: Alert model missing from Prisma schema — broken at runtime
+
+| | Value |
+|---|---|
+| **Old conclusion** | In-app alert records: PRODUCTION_READY / PILOT_REQUIRED |
+| **New conclusion** | BROKEN_AT_RUNTIME / PILOT_BLOCKER — new blocker MNEW-02 |
+| **Reason** | `src/services/alerts/alert-service.ts` calls `db.alert.create()`, `db.alert.findFirst()`, `db.alert.findMany()`, `db.alert.update()`. The `Alert` model does not exist in Prisma schema (221 models verified by exhaustive review). All three `trigger*Alert` functions throw `TypeError: Cannot read properties of undefined` at runtime. |
+| **Supporting evidence** | `grep -r "db\.alert" src/` → multiple hits in `alert-service.ts`. `grep "^model Alert" prisma/schema.prisma` → 0 results. |
+| **Consequence** | New pilot blocker MNEW-02 added. Email delivery (M001) downgraded from PILOT_BLOCKER to PILOT_REQUIRED — the real day-1 blocker is the missing Alert model, not email transport. |
+
+---
+
+### R-05: Email delivery pilot priority
+
+| | Value |
+|---|---|
+| **Old conclusion** | M001 Email delivery — PILOT_BLOCKER (listed first in pilot blocker summary) |
+| **New conclusion** | M001 Email delivery — PILOT_REQUIRED (not day-1 blocker for private active pilot where owner uses system daily) |
+| **Reason** | For a private active pilot: (1) in-app alerts are sufficient for daily use once Alert model is fixed (MNEW-02); (2) the owner sees the system daily, reducing reliance on email for critical notifications; (3) email becomes PILOT_REQUIRED for compliance deadline notifications (M020) and as a backup escalation channel. The actual blocker is the missing Alert model (MNEW-02), not the email transport layer. |
+| **Consequence** | Pilot blocker count −1 for M001 reclassification. M001 remains high priority in Stage 3B. |
+
+---
+
+### R-06: B2C customer records pilot priority
+
+| | Value |
+|---|---|
+| **Old conclusion** | M002 B2C customer records — PILOT_BLOCKER |
+| **New conclusion** | M002 B2C customer records — PILOT_REQUIRED (day-3 to day-10 need) |
+| **Reason** | Owner Mode's first priority is operational diagnosis: financial snapshots, cashflow, sales, operations. B2C customer records are needed for complaint tracking and retention analysis but not for entering the first diagnostic data. For a private pilot with the owner's own businesses, the owner can begin with financial and operational data before B2C customer records are implemented. |
+| **Consequence** | Pilot blocker count −1. M002 remains high priority in Stage 3C. |
+
+---
+
+### R-07: G2-15 staleness false-positive — new pilot blocker
+
+| | Value |
+|---|---|
+| **Old conclusion** | H6 — MEDIUM: G2-15 staleness check passes incomplete ID set |
+| **New conclusion** | H6 — HIGH: New PILOT_BLOCKER (MNEW-01); recommended first implementation slice |
+| **Reason** | Two confirmed false-positive sources: (1) `startup-session.service.ts:2399` calls `checkApprovalStaleness` with only `ideaId` + `ideaVersionId` from 9 material fields; (2) line 170 calls with EMPTY object `{}`. If stored decision has non-null values for the 7 omitted fields, recomputed hash differs → false-positive STALE → execution gate blocks legitimate execution permanently. This is an execution-safety defect in active Phase 5 production code. |
+| **Supporting evidence** | `src/services/owner-strategy/startup-session.service.ts:170` (`checkApprovalStaleness(workspaceId, sessionId, {})`); lines 2399-2414 (only 2 of 9 IDs passed) |
+| **Consequence** | MNEW-01 added as PILOT_BLOCKER and recommended first implementation slice. H6 escalated from MEDIUM to HIGH. |
+
+---
+
+### R-08: H1 severity downgrade
+
+| | Value |
+|---|---|
+| **Old conclusion** | H1 — CRITICAL: `canonicalizeAuthContext` unsafe cast |
+| **New conclusion** | H1 — LATENT_HIGH: test-only; zero production callers |
+| **Reason** | All 18 call sites for `canonicalizeAuthContext` are in `src/__tests__/phase-g/g6r-auth-bridge.test.ts`. Zero production routes import or invoke this function. The unsafe cast cannot reach any production path in the current codebase. |
+| **Supporting evidence** | `grep -r "canonicalizeAuthContext" src/ --include="*.ts"` → 18 results, all in `g6r-auth-bridge.test.ts` |
+| **Consequence** | H1 severity downgraded. M024 (add governance gate) remains required to prevent future accidental production use, but is not a day-1 pilot blocker. |
+
+---
+
+### R-09: H2 severity downgrade
+
+| | Value |
+|---|---|
+| **Old conclusion** | H2 — HIGH: Dead middleware with header-based identity lookup |
+| **New conclusion** | H2 — DEAD: type-only import in production; runtime functions never called |
+| **Reason** | The only production import of `src/middleware/private-mode-gate.ts` is `import type { PrivateModeGateOptions }` in `src/lib/private-mode-enforcement.ts` — a TypeScript type-only import that emits no JavaScript. The runtime functions `getPrivateModeAccess` and `privateModeGate` are never called anywhere in production. |
+| **Supporting evidence** | `grep -r "private-mode-gate" src/ --include="*.ts"` → single hit: `import type { PrivateModeGateOptions }` in `private-mode-enforcement.ts` |
+| **Consequence** | H2 downgraded to DEAD. M019 (delete file) is low-urgency cleanup, not a pilot blocker. |
+
+---
+
+### R-10: H3 severity downgrade
+
+| | Value |
+|---|---|
+| **Old conclusion** | H3 — HIGH: No middleware-level auth backstop |
+| **New conclusion** | H3 — DEFENSE_IN_DEPTH_GAP: 27 legitimately unwrapped routes; governance compensates |
+| **Reason** | Direct inspection of all 391 route files establishes that the 27 routes without `withCanonicalEnforcement` are each legitimately public: health/liveness/readiness probes, pre-auth routes, API-key-protected diagnostics, Bearer-token-protected cron, HMAC-verified webhook, permanently disabled endpoints. None serve owner business data. The governance scanner ratchet prevents new unwrapped routes. |
+| **Supporting evidence** | `src/app/api/health/route.ts`, `src/app/api/auth/*/route.ts`, `src/app/api/internal/reassessment-scan/route.ts` (Bearer token), `src/app/api/webhooks/stripe/route.ts` (HMAC) |
+| **Consequence** | H3 downgraded from HIGH to DEFENSE_IN_DEPTH_GAP. Not a blocking issue; defense-in-depth improvement recommended post-pilot. |
+
+---
+
+### R-11: Rate limiting classification
+
+| | Value |
+|---|---|
+| **Old conclusion** | Rate limiting — PRODUCTION_READY |
+| **New conclusion** | Rate limiting — NOT_PRODUCTION_READY |
+| **Reason** | `src/services/rate-limit.ts`: workspace middleware explicitly self-documents "DEAD MIDDLEWARE — not wired in production". `MockRateLimitStore` is in-process-only (state lost on restart). Only 4 individual routes apply any rate limiting. No global workspace throttle exists in production. |
+| **Supporting evidence** | Comment in `src/services/rate-limit.ts`: "DEAD MIDDLEWARE"; `class MockRateLimitStore` in-memory implementation; grep for `rateLimitEnforcement` usage → 4 routes only |
+| **Consequence** | Classification corrected in Section C.21. |
+
+---
+
+### R-12: Audit trail hash chain classification
+
+| | Value |
+|---|---|
+| **Old conclusion** | Audit trail (AuditEvent hash chain) — PRODUCTION_READY |
+| **New conclusion** | Audit trail (AuditEvent hash chain) — NOT_PRODUCTION_READY |
+| **Reason** | Three independent failures: (1) Prisma schema has no `hash` column on `AuditEvent` — hash is never stored; (2) emitter and validator use incompatible hash inputs (emitter: `"${eventId}|${workspaceId}|${eventName}|${timestamp.toISOString()}"`, validator expects `{previousHash, eventType, payload, recordedAt}`); (3) validator (`audit-event-hash-chain-validator.ts`) is never called in any production path. |
+| **Supporting evidence** | `grep "hash" prisma/schema.prisma` → 0 results on AuditEvent model; `src/services/audit-event-hash-chain-validator.ts` — no production callers |
+| **Consequence** | Classification corrected in Section C.21. |
+
+---
+
+### R-13: Stage sequence correction
+
+| | Value |
+|---|---|
+| **Old conclusion** | 7-stage plan: Stage 3 = remediation, Stage 4 = onboarding/billing/consultant dashboard, Stage 5 = integration hardening, Stage 6 = pilot dry-run, Stage 7 = production authorization |
+| **New conclusion** | Approved 12-stage sequence: Stage 3 = core domain completion, Stage 4 = External Opportunity Finder, Stage 5 = Wealth/Growth/Profit Engine, Stage 6 = production providers, Stage 7 = adversarial simulation, Stages 8–12 = onboarding through final production acceptance |
+| **Reason** | The approved 12-stage sequence requires: Owner Mode domains completed first; then Opportunity Finder (already substantially implemented — needs UI pages and autonomous ingestion); then Growth Engine (already substantially implemented — needs growth dashboard and execution chain); then production providers; then adversarial simulation; then onboarding. The initial audit incorrectly merged Opportunity Finder and Growth Engine into a vague "Stage 4" and excluded adversarial simulation as a prerequisite to onboarding. |
+| **Consequence** | Section N completely rewritten with correct 12-stage structure. Stage 4 and Stage 5 now have specific work packages tied to the substantially-implemented but incomplete features already in the codebase. Stages 8–12 (onboarding through final production acceptance) added. |
+
+---
+
+### R-14: External Opportunity Finder — existing substantial implementation
+
+| | Value |
+|---|---|
+| **Old conclusion** | "Autonomous external opportunity finder — MISSING / POST_PILOT" (C.13) |
+| **New conclusion** | Human-submitted intake IMPLEMENTED_BUT_UNPROVEN; Stage 4 work package is UI pages + automated ingestion, not a greenfield build |
+| **Reason** | Codebase has: 9 domain files (`external-opportunity-intelligence.ts`, `opportunity-operating-layer.ts`, `opportunity-validation-experiment-engine.ts`, `opportunity-portfolio-capital-allocation.ts`, `bid-application-pack.ts`, others), 5 API routes (`/api/owner/opportunities/signals`, `/decide`, `/execution-task`, `/validation-outcome`, `/api/owner/tender/screen`, `/tender/application-pack`), full operating layer wired into now-view. Missing pieces: dedicated UI pages, automated source ingestion. |
+| **Consequence** | Stage 4 work package is smaller than greenfield — focused on UI pages and autonomous ingestion. Section N Stage 4 updated to reflect this. |
+
+---
+
+### R-15: Wealth/Growth/Profit Engine — existing substantial implementation
+
+| | Value |
+|---|---|
+| **Old conclusion** | No explicit Stage 5 work package in initial audit |
+| **New conclusion** | Substantially implemented — 7 growth services with DB persistence, wealth path classifier, profit leak radar; `/owner/wealth/` page exists; Stage 5 work package is growth dashboard UI + execution chain + controlled learning consumption |
+| **Reason** | Codebase has: `src/services/growth/` (7 service files: acquisition, pricing, retention, revenue, sales-pipeline, unit-economics, offer engines), `src/domain/owner-strategy/wealth-path.ts`, `src/domain/owner-mode/profit-leak-radar.ts`, `/owner/wealth/page.tsx`. Missing: `/owner/growth/` dashboard, growth→execution chain, controlled learning consuming. |
+| **Consequence** | Stage 5 work package defined specifically. Section N Stage 5 updated to reflect existing assets and remaining gaps. |
+
+---
+
+### R-16: First implementation slice recommendation
+
+| | Value |
+|---|---|
+| **Old conclusion** | M001 (M008 originally recommended but removed) — implied first slice was wire all 8 domains |
+| **New conclusion** | MNEW-01: G2-15 staleness bug fix — pass all 9 material versioned IDs to `checkApprovalStaleness()` at both call sites in `startup-session.service.ts` |
+| **Reason** | M008 (wire 8 domains) is already done — proven by code inspection. MNEW-01 is: (1) an execution-safety defect in existing production code; (2) a minimal code change (add 7 ID parameters at 2 call sites); (3) has high correctness impact (removes false-positive execution blocking); (4) has existing DB test infrastructure; (5) requires no new schema, no external dependencies; (6) is fully completable in one PR. |
+| **Consequence** | MNEW-01 marked as recommended first implementation slice. Work register reordered accordingly. |
+
+---
+
+*End of Reconciliation Appendix. Every change in this appendix is supported by direct code inspection evidence cited inline.*
