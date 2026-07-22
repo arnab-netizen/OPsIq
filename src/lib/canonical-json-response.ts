@@ -180,3 +180,26 @@ export function canonicalJson(
     headers: headers ? Object.freeze(headers) : undefined,
   };
 }
+
+/**
+ * CANONICAL JSON SERIALIZER
+ *
+ * Single canonical implementation for serializing route response bodies to JSON.
+ *
+ * Contract:
+ * - BigInt values are converted to decimal strings (e.g. 9007199254740993n → "9007199254740993").
+ *   This preserves precision above Number.MAX_SAFE_INTEGER which JS number cannot represent.
+ * - All other JSON-serializable types are unchanged: string, number, boolean, null, Date, Array, object.
+ * - undefined fields are dropped (standard JSON.stringify behaviour).
+ * - Circular references throw TypeError (standard JSON.stringify behaviour — not hidden).
+ * - The source value is not mutated.
+ *
+ * Wire contract for BigInt fields: decimal string.
+ * Clients must not coerce these strings to JS number without a BigInt or Decimal library
+ * when the value may exceed Number.MAX_SAFE_INTEGER (9007199254740991).
+ */
+export function stringifyRouteResponse(value: unknown): string {
+  return JSON.stringify(value, (_key, item) =>
+    typeof item === "bigint" ? item.toString() : item
+  );
+}

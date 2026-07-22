@@ -164,7 +164,7 @@ function boundary(over: Partial<ApprovedExecutionBoundaryDraft> = {}): ApprovedE
   return sealBoundary({
     boundaryId: "bnd-1", boundaryVersion: 1, supersedesBoundaryVersion: null, workspaceId: WS,
     recommendationId: "rec-1", approvedActionId: "act-1", ownerApprovedBy: OWNER_ID, approvedAt: NOW,
-    validFrom: new Date("2026-06-20"), validUntil: new Date("2026-07-20"), maxUses: null,
+    validFrom: new Date("2026-06-20"), validUntil: new Date(Date.now() + 4 * 365 * 24 * 60 * 60 * 1000), maxUses: null,
     allowedRoles: ["counter_staff"], forbiddenRoles: [], allowedActions: ["call_customer"], forbiddenActions: ["issue_refund"],
     allowedCustomerSegments: ["retail"], forbiddenCustomerSegments: [], allowedCommunicationChannels: ["whatsapp"], forbiddenCommunicationChannels: [],
     maxDiscount: 10, maxRefund: null, maxSpend: null, maxOvertime: null,

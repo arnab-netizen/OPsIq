@@ -78,6 +78,42 @@ function validateStatus(s: string): asserts s is ObjectiveStatus {
   }
 }
 
+async function _createObjectiveCore(tx: Prisma.TransactionClient, input: CreateObjectiveInput) {
+  const objective = await tx.businessObjective.create({
+    data: {
+      workspaceId: input.workspaceId,
+      parentId: input.parentId ?? null,
+      title: input.title.trim(),
+      description: input.description ?? null,
+      objectiveType: input.objectiveType,
+      targetMetricName: input.targetMetricName ?? null,
+      targetValue: input.targetValue ?? null,
+      currentValue: input.currentValue ?? null,
+      unit: input.unit ?? null,
+      deadline: input.deadline ?? null,
+      priorityScore: input.priorityScore ?? 50,
+      resourceBudget: (input.resourceBudget ?? {}) as Prisma.InputJsonValue,
+      constraints: (input.constraints ?? []) as Prisma.InputJsonValue,
+      ownerId: input.ownerId ?? null,
+      linkedGoalId: input.linkedGoalId ?? null,
+    },
+  });
+
+  await emitAuditEvent(
+    {
+      eventName: AUDIT_EVENTS.OWNER_OBJECTIVE_CREATED,
+      workspaceId: input.workspaceId,
+      actorId: input.actorId,
+      entityType: "BusinessObjective",
+      entityId: objective.id,
+      payload: { objectiveType: input.objectiveType, title: input.title },
+    },
+    tx,
+  );
+
+  return objective;
+}
+
 export async function createObjective(input: CreateObjectiveInput) {
   validateObjectiveType(input.objectiveType);
 
@@ -89,43 +125,17 @@ export async function createObjective(input: CreateObjectiveInput) {
     throw new ValidationError("priorityScore must be between 0 and 100");
   }
 
-  const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    const objective = await tx.businessObjective.create({
-      data: {
-        workspaceId: input.workspaceId,
-        parentId: input.parentId ?? null,
-        title: input.title.trim(),
-        description: input.description ?? null,
-        objectiveType: input.objectiveType,
-        targetMetricName: input.targetMetricName ?? null,
-        targetValue: input.targetValue ?? null,
-        currentValue: input.currentValue ?? null,
-        unit: input.unit ?? null,
-        deadline: input.deadline ?? null,
-        priorityScore: input.priorityScore ?? 50,
-        resourceBudget: (input.resourceBudget ?? {}) as Prisma.InputJsonValue,
-        constraints: (input.constraints ?? []) as Prisma.InputJsonValue,
-        ownerId: input.ownerId ?? null,
-        linkedGoalId: input.linkedGoalId ?? null,
-      },
-    });
+  return db.$transaction((tx: Prisma.TransactionClient) => _createObjectiveCore(tx, input));
+}
 
-    await emitAuditEvent(
-      {
-        eventName: AUDIT_EVENTS.OWNER_OBJECTIVE_CREATED,
-        workspaceId: input.workspaceId,
-        actorId: input.actorId,
-        entityType: "BusinessObjective",
-        entityId: objective.id,
-        payload: { objectiveType: input.objectiveType, title: input.title },
-      },
-      tx,
-    );
-
-    return objective;
-  });
-
-  return result;
+/** Use inside an existing Prisma transaction. Validates inputs before delegating to core. */
+export async function createObjectiveInTx(tx: Prisma.TransactionClient, input: CreateObjectiveInput) {
+  validateObjectiveType(input.objectiveType);
+  if (input.title.trim().length === 0) throw new ValidationError("Objective title cannot be empty");
+  if (input.priorityScore !== undefined && (input.priorityScore < 0 || input.priorityScore > 100)) {
+    throw new ValidationError("priorityScore must be between 0 and 100");
+  }
+  return _createObjectiveCore(tx, input);
 }
 
 export async function updateObjective(input: UpdateObjectiveInput) {
