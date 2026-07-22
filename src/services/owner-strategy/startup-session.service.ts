@@ -1141,18 +1141,77 @@ export function verifyApprovalPackageV2(c: ApprovalPackageComponents): string {
 }
 
 /**
- * Dispatcher: select hash algorithm by stored hashVersion.
- * New records always use V2. Legacy records with hashVersion=1 use V1.
- * Unknown or missing hashVersion defaults to V2 (current algorithm) — fail closed.
+ * V3 normalized state — extends V2 with:
+ * - Evidence freshness classification per record (R3)
+ * - Conflict state per evidence pair (R4)
+ * - Hypothesis result and falsification status per hypothesis (R5)
+ * - Resource normalized values (amount, available, status, effective dates) (R6)
+ * V3 is used for all new GO decisions. V1/V2 remain stable for legacy verification.
  */
-export function computeApprovalPackageHash(c: ApprovalPackageComponents): string {
-  const version = c.hashVersion ?? 2;
-  if (version === 1) return verifyApprovalPackageV1(c);
-  return verifyApprovalPackageV2(c);
+export interface ApprovalPackageV3State {
+  evidenceState?: Array<{ id: string; freshnessClassification: string; conflictStatus?: string; conflictSeverity?: string }>;
+  hypothesisState?: Array<{ id: string; result: string | null; critical: boolean; confidenceAfter: number | null; falsificationStatus: string | null }>;
+  resourceState?: Array<{ id: string; allocationAmount: number; status: string; allocatedAt: string; releasedAt: string | null }>;
 }
 
-/** Queries current snapshot IDs for a session — used by both decision recording and staleness checks. */
-async function queryCurrentSnapshotIds(workspaceId: string, sessionId: string) {
+export function verifyApprovalPackageV3(c: ApprovalPackageComponents, state?: ApprovalPackageV3State): string {
+  const evidenceSorted = [...(state?.evidenceState ?? [])].sort((a, b) => a.id.localeCompare(b.id));
+  const hypothesisSorted = [...(state?.hypothesisState ?? [])].sort((a, b) => a.id.localeCompare(b.id));
+  const resourceSorted = [...(state?.resourceState ?? [])].sort((a, b) => a.id.localeCompare(b.id));
+  const canonical = {
+    v: "3",
+    hashVersion: 3,
+    policyVersion: c.policyVersion ?? "1",
+    sessionId: c.sessionId,
+    ideaId: c.ideaId ?? null,
+    ideaVersionId: c.ideaVersionId ?? null,
+    profileVersionId: c.profileVersionId ?? null,
+    economicModelId: c.economicModelId ?? null,
+    readinessId: c.readinessId ?? null,
+    systemRecId: c.systemRecId ?? null,
+    businessModelId: c.businessModelId ?? null,
+    marketSizingId: c.marketSizingId ?? null,
+    validationPlanId: c.validationPlanId ?? null,
+    evidenceSnapshotIds: [...(c.evidenceSnapshotIds ?? [])].sort(),
+    riskSnapshotIds: [...(c.riskSnapshotIds ?? [])].sort(),
+    constraintSnapshotIds: [...(c.constraintSnapshotIds ?? [])].sort(),
+    resourceSnapshotIds: [...(c.resourceSnapshotIds ?? [])].sort(),
+    spendingLimitCents: c.spendingLimitCents != null ? String(c.spendingLimitCents) : null,
+    permittedActions: [...(c.permittedActions ?? [])].sort(),
+    prohibitedActions: [...(c.prohibitedActions ?? [])].sort(),
+    materialAssumptions: [...(c.materialAssumptions ?? [])].sort(),
+    validUntil: c.validUntil != null
+      ? (c.validUntil instanceof Date ? c.validUntil.toISOString() : String(c.validUntil))
+      : null,
+    reviewDate: c.reviewDate != null
+      ? (c.reviewDate instanceof Date ? c.reviewDate.toISOString() : String(c.reviewDate))
+      : null,
+    // V3 normalized material state
+    evidenceState: evidenceSorted,
+    hypothesisState: hypothesisSorted,
+    resourceState: resourceSorted,
+  };
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
+/**
+ * Dispatcher: select hash algorithm by stored hashVersion.
+ * New records always use V3. Legacy records with hashVersion=1 use V1, hashVersion=2 use V2.
+ * Unknown or missing hashVersion defaults to V3 (current algorithm) — fail closed.
+ */
+export function computeApprovalPackageHash(c: ApprovalPackageComponents, v3State?: ApprovalPackageV3State): string {
+  const version = c.hashVersion ?? 3;
+  if (version === 1) return verifyApprovalPackageV1(c);
+  if (version === 2) return verifyApprovalPackageV2(c);
+  return verifyApprovalPackageV3(c, v3State);
+}
+
+/**
+ * Queries current snapshot IDs for a session — used by both decision recording and staleness checks.
+ * R7: excludes records where originBlueprintId matches authorizedBlueprintId — blueprint-created
+ * artifacts do not retroactively stale the approval that created them.
+ */
+async function queryCurrentSnapshotIds(workspaceId: string, sessionId: string, authorizedBlueprintId?: string | null) {
   const [evidence, risks, constraints, objectives] = await Promise.all([
     db.startupEvidenceRecord.findMany({
       where: { sessionId, workspaceId },
@@ -1160,11 +1219,20 @@ async function queryCurrentSnapshotIds(workspaceId: string, sessionId: string) {
       orderBy: { createdAt: "asc" },
     }),
     db.businessRiskEntry.findMany({
-      where: { linkedStartupSessionId: sessionId, workspaceId },
+      where: {
+        linkedStartupSessionId: sessionId,
+        workspaceId,
+        // Exclude records created BY the currently-authorized blueprint
+        ...(authorizedBlueprintId ? { NOT: { originBlueprintId: authorizedBlueprintId } } : {}),
+      },
       select: { id: true },
     }),
     db.constraintResolutionRecord.findMany({
-      where: { linkedStartupSessionId: sessionId, workspaceId },
+      where: {
+        linkedStartupSessionId: sessionId,
+        workspaceId,
+        ...(authorizedBlueprintId ? { NOT: { originBlueprintId: authorizedBlueprintId } } : {}),
+      },
       select: { id: true },
     }),
     // G6: ResourceAllocation has no direct session FK — query via BusinessObjective IDs
@@ -1262,8 +1330,13 @@ export async function checkApprovalStaleness(
     return { isStale: false, changedInputs: [], originalHash: null, currentHash: noDecHash };
   }
 
-  // Query current snapshot arrays from the DB
-  const currentSnapshots = await queryCurrentSnapshotIds(workspaceId, sessionId);
+  // R7: find the blueprint created under this decision so blueprint-created artifacts are excluded
+  const blueprintForDecision = await db.startupExecutionBlueprint.findFirst({
+    where: { ownerDecisionId: session.currentOwnerDecisionId, workspaceId },
+    select: { id: true },
+  });
+  // Query current snapshot arrays from the DB — excluding blueprint-created artifacts (R7)
+  const currentSnapshots = await queryCurrentSnapshotIds(workspaceId, sessionId, blueprintForDecision?.id ?? null);
 
   // Destructure ideaId out of currentVersionedIds — it's an execution parameter and must
   // not override the decision's own ideaId in the recomputed hash.
@@ -2313,4 +2386,20 @@ export async function assertStartupExecutionAuthorization(
     approvalPackageHash: decision?.packageHashSha256 ?? null,
     checkedAt: now,
   };
+}
+
+/** Emits STARTUP_EXECUTION_AUTHORIZATION_DENIED audit event. Safe to call after the gate fails. */
+export async function emitStartupAuthorizationDenied(
+  workspaceId: string,
+  sessionId: string,
+  actorId: string | null,
+  actionType: string,
+  violations: string[]
+): Promise<void> {
+  await emitAuditEvent({
+    workspaceId,
+    eventName: AUDIT_EVENTS.STARTUP_EXECUTION_AUTHORIZATION_DENIED,
+    actorId: actorId ?? undefined,
+    payload: { sessionId, actionType, violations },
+  });
 }

@@ -40,10 +40,11 @@ describe("verifyApprovalPackageV1 / verifyApprovalPackageV2", () => {
     expect(h2).toBe(expected);
   });
 
-  it("computeApprovalPackageHash defaults to v2 when hashVersion is null/undefined", () => {
+  it("computeApprovalPackageHash defaults to v3 when hashVersion is null/undefined", () => {
     const hDefault = computeApprovalPackageHash(BASE);
     const hV2 = verifyApprovalPackageV2(BASE);
-    expect(hDefault).toBe(hV2);
+    // Default is now V3 — must differ from V2
+    expect(hDefault).not.toBe(hV2);
   });
 
   it("v1 hash is stable — no snapshot arrays affect it", () => {
