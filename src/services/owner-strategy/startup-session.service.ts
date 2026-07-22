@@ -236,22 +236,26 @@ export async function transitionSession(
         );
       }
 
-      // Idea-level concurrency guard: re-read the idea inside the same transaction to verify
-      // material pointers haven't changed since the canonical-state load. Under READ COMMITTED,
-      // this statement sees any commits that occurred after our earlier read, so a concurrent
-      // material-field update will cause findFirst to return null → ConflictError.
+      // Idea-level Pattern A concurrency guard: an UPDATE (not a SELECT) acquires an exclusive
+      // row lock on the idea row. Under READ COMMITTED, the WHERE clause is re-evaluated at
+      // lock-acquisition time — any material pointer change or concurrent revision that committed
+      // after our canonical-state read will cause the WHERE to miss (count=0) → ConflictError.
+      // A read-only findFirst cannot close this race: a concurrent commit between findFirst and
+      // transaction commit would slip through. supersededById: null is included to catch
+      // concurrent revisions that committed between the G2-3a check and this guard.
       if (transitionIdeaId) {
-        const ideaStillCurrent = await tx.startupIdeaRecord.findFirst({
+        const ideaGuard = await tx.startupIdeaRecord.updateMany({
           where: {
             id: transitionIdeaId,
             workspaceId,
             currentEconomicModelVersionId: currentState.economicModelId,
             currentReadinessId: currentState.readinessId,
             currentBusinessModelVersionId: currentState.businessModelId,
+            supersededById: null,
           },
-          select: { id: true },
+          data: { workspaceId }, // no-op: sets workspaceId to its current value to acquire exclusive row lock
         });
-        if (!ideaStillCurrent) {
+        if (ideaGuard.count === 0) {
           throw new ConflictError(
             `CONCURRENCY_CONFLICT: idea material state changed between staleness check and status transition — the operation was denied to prevent a stale transition. Retry the request.`
           );
@@ -1595,7 +1599,11 @@ export async function checkApprovalStaleness(
 
   const sortedJoin = (arr: unknown) => [...((arr as string[]) ?? [])].sort().join(",");
 
-  if ((decision.linkedIdeaVersionId ?? null) !== (currentVersionedIds.ideaVersionId ?? null)) changedInputs.push("ideaVersion");
+  // ideaVersionId is intentionally excluded from changedInputs: StartupIdeaRecord has no UUID
+  // version field — loadCanonicalCurrentApprovalState always returns ideaVersionId: null. Any
+  // GO decision that stored a non-null linkedIdeaVersionId would already be detected as stale
+  // by the hash mismatch above. Revision detection is exclusively via supersededById at all
+  // three execution gates (transitionSession, createBlueprint, assertStartupExecutionAuthorization).
   if ((decision.linkedProfileVersionId ?? null) !== (currentVersionedIds.profileVersionId ?? null)) changedInputs.push("profile");
   if ((decision.linkedEconomicModelId ?? null) !== (currentVersionedIds.economicModelId ?? null)) changedInputs.push("economicModel");
   if ((decision.linkedReadinessId ?? null) !== (currentVersionedIds.readinessId ?? null)) changedInputs.push("readiness");

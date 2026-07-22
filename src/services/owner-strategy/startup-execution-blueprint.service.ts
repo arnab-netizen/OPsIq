@@ -526,22 +526,24 @@ export async function createBlueprint(
       );
     }
 
-    // Idea-level concurrency guard: re-read the idea inside the transaction to verify material
-    // pointers haven't changed since the canonical-state load. Under READ COMMITTED, this
-    // statement sees any commits that occurred after our earlier read; a concurrent update
-    // to the idea's material fields returns null here → ConflictError (StartupIdeaRecord
-    // has no updatedAt field so we use findFirst rather than updateMany).
-    const ideaBpStillCurrent = await tx.startupIdeaRecord.findFirst({
+    // Idea-level Pattern A concurrency guard: UPDATE acquires exclusive row lock on the idea
+    // row. Under READ COMMITTED the WHERE clause is re-evaluated at lock-acquisition time —
+    // any material pointer change or concurrent revision after our canonical-state read causes
+    // count=0 → ConflictError, preventing a stale blueprint from being committed. supersededById:
+    // null is included to catch concurrent revisions that committed between the G2-3a check
+    // (earlier in this tx) and this lock-acquiring UPDATE.
+    const ideaBpGuard = await tx.startupIdeaRecord.updateMany({
       where: {
         id: input.ideaId,
         workspaceId,
         currentEconomicModelVersionId: currentState.economicModelId,
         currentReadinessId: currentState.readinessId,
         currentBusinessModelVersionId: currentState.businessModelId,
+        supersededById: null,
       },
-      select: { id: true },
+      data: { workspaceId }, // no-op: acquires exclusive row lock without changing any field
     });
-    if (!ideaBpStillCurrent) {
+    if (ideaBpGuard.count === 0) {
       throw new ConflictError(
         `CONCURRENCY_CONFLICT: idea material state changed between staleness check and blueprint creation — the operation was denied to prevent a stale blueprint. Retry the request.`
       );

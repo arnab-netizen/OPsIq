@@ -2412,16 +2412,15 @@ describe("[db] G-DB-54: Pattern A catches material state change between stalenes
 
     // Simulate a concurrent profile update BETWEEN the staleness check and the session update.
     // We simulate this by directly setting currentProfileVersionId to a different value in the DB
-    // before calling transitionSession. The Pattern A guard inside transitionSession includes
-    // currentProfileVersionId in the WHERE clause of the updateMany, so if it changed, count=0.
-    // The staleness check will also catch this (hash mismatch), but the Pattern A guard provides
-    // an additional atomic protection that closes the race even if staleness check passes.
+    // before calling transitionSession. The Pattern A session updateMany includes
+    // currentProfileVersionId in the WHERE clause, so if it changed, count=0 → ConflictError.
+    // The staleness check also catches this (hash mismatch), providing defense-in-depth.
     const { versionId: v2 } = await updateContextProfile(ws, sessionId, actor, { step: "v2" }, "profile v2");
     void v2; // v2 is captured to confirm the update happened
 
     // With v2 now current, transitionSession must be rejected. Either:
     //   (a) staleness check detects hash mismatch and throws ConflictError (STALE_APPROVAL_BLOCKS_EXECUTION), OR
-    //   (b) Pattern A guard detects that the WHERE condition on currentProfileVersionId=v1 no longer matches
+    //   (b) Pattern A session updateMany WHERE currentProfileVersionId=v1 no longer matches
     // In both cases the protected session update MUST NOT commit.
     await expect(
       transitionSession(ws, sessionId, actor, "EXECUTION_PLANNED")
@@ -2430,6 +2429,12 @@ describe("[db] G-DB-54: Pattern A catches material state change between stalenes
     // Assert the session status was NOT advanced — the transition was completely rolled back
     const sessionAfter = await db.ownerStartupSession.findFirst({ where: { id: sessionId } });
     expect(sessionAfter?.status).toBe("APPROVED");
+
+    // No success STARTUP_SESSION_STATUS_CHANGED event with to=EXECUTION_PLANNED must exist
+    const successEvents = await db.auditEvent.findMany({
+      where: { workspaceId: ws, eventName: AUDIT_EVENTS.STARTUP_SESSION_STATUS_CHANGED },
+    });
+    expect(successEvents.filter((e) => (e.payload as { to?: string }).to === "EXECUTION_PLANNED")).toHaveLength(0);
   });
 });
 
@@ -2477,7 +2482,71 @@ describe("[db] G-DB-55: denial leaves no protected side effects — ConflictErro
     const sessionAfter = await db.ownerStartupSession.findFirst({ where: { id: sessionId } });
     expect(sessionAfter?.currentBlueprintId).toBe(sessionBefore?.currentBlueprintId);
 
+    // Proof: no STARTUP_EXECUTION_BLUEPRINT_CREATED success audit event for the denied attempt
+    // (the blueprint creation tx rolled back entirely — no blueprint, objective, or plan committed)
+    const bpAuditEvents = await db.auditEvent.findMany({
+      where: { workspaceId: ws, eventName: AUDIT_EVENTS.STARTUP_EXECUTION_BLUEPRINT_CREATED },
+    });
+    // Only the baseline blueprint's audit event may exist; the rolled-back attempt must have no event
+    expect(bpAuditEvents).toHaveLength(1); // exactly the baseline event
+
+    // Proof: blueprint row count (non-SUPERSEDED) is 0 — baseline was superseded by dec2 attempt but
+    // no new blueprint was committed because the staleness check threw inside the tx
+    const activeBlueprintCount = await db.startupExecutionBlueprint.count({
+      where: { sessionId, workspaceId: ws, blueprintStatus: { not: "SUPERSEDED" } },
+    });
+    expect(activeBlueprintCount).toBe(0);
+
     void blueprintCountBefore;
     void baseline;
+  });
+});
+
+describe("[db] G-DB-56: Pattern A idea-level updateMany guard — idea material change blocks transition, no side effects", () => {
+  it("G-DB-56: transitionSession is denied and session unchanged when idea economic model changes after GO decision; no success audit event emitted", async () => {
+    if (!process.env["TEST_WITH_DB"]) return;
+    const ws = randomUUID();
+    const sessionId = await createStartupSession({ workspaceId: ws, actorId: actor, intake: { capitalAvailable: 10000, monthlySurvivalNeed: 2000, fastCashVsScale: "fast_cash" }, ideas: [viableIdea] });
+    const sess = await db.ownerStartupSession.findFirst({ where: { id: sessionId }, include: { ideas: true } });
+    const ideaId = sess!.ideas[0].id;
+
+    // Build economic model E1 and record GO linking E1
+    const economicInputs: EconomicInputs = {
+      startupCostCents: 300000n,
+      fixedMonthlyCostCents: 100000n,
+      variableUnitCostCents: 1000n,
+      pricePerUnitCents: 5000n,
+      cacCents: 2000n,
+      workingCapitalCents: 50000n,
+      paymentDelayDays: 0,
+      ownerLabourHoursPerWeek: 40,
+      availableCapitalCents: 1000000n,
+      ownerMonthlyNeedCents: 200000n,
+    };
+    const e1 = await buildAndPersistEconomicModel(ws, sessionId, ideaId, actor, economicInputs);
+    await recordOwnerDecision(ws, sessionId, actor, { decisionType: "GO", ideaId, linkedEconomicModelId: e1 });
+    await db.ownerStartupSession.update({ where: { id: sessionId }, data: { status: "APPROVED" } });
+
+    // Simulate concurrent idea-level material change: build a new economic model (E2)
+    // Now idea.currentEconomicModelVersionId = E2, but GO was approved with E1.
+    await buildAndPersistEconomicModel(ws, sessionId, ideaId, actor, economicInputs);
+
+    // transitionSession must be denied: staleness check detects economicModel mismatch AND
+    // Pattern A idea updateMany WHERE currentEconomicModelVersionId=E1 fails (count=0).
+    await expect(
+      transitionSession(ws, sessionId, actor, "EXECUTION_PLANNED")
+    ).rejects.toThrow(ConflictError);
+
+    // Session status must remain APPROVED — the denied transaction rolled back entirely
+    const sessionAfter = await db.ownerStartupSession.findFirst({ where: { id: sessionId } });
+    expect(sessionAfter?.status).toBe("APPROVED");
+
+    // No STARTUP_SESSION_STATUS_CHANGED event with to=EXECUTION_PLANNED must exist
+    const successEvents = await db.auditEvent.findMany({
+      where: { workspaceId: ws, eventName: AUDIT_EVENTS.STARTUP_SESSION_STATUS_CHANGED },
+    });
+    expect(successEvents.filter((e) => (e.payload as { to?: string }).to === "EXECUTION_PLANNED")).toHaveLength(0);
+
+    void e1;
   });
 });

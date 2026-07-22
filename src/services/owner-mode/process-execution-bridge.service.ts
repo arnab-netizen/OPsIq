@@ -51,13 +51,19 @@ interface OwnerBusinessDelegate {
 }
 /**
  * Minimal delegate for in-transaction approval fingerprint verification.
- * The SELECT is intentionally restricted to the two fields needed for the fingerprint guard.
+ * Exposes updateMany (Pattern A: acquires exclusive row lock) rather than findFirst (read-only).
+ * The WHERE fields are the only fields needed to close the concurrency race.
  */
 interface StartupDecisionFingerprintDelegate {
-  findFirst(a: {
-    where: { id: string; workspaceId: string };
-    select: { packageHashSha256: boolean; supersededById: boolean };
-  }): Promise<{ packageHashSha256: string | null; supersededById: string | null } | null>;
+  updateMany(a: {
+    where: {
+      id: string;
+      workspaceId: string;
+      supersededById: null;
+      packageHashSha256?: string;
+    };
+    data: { workspaceId: string };
+  }): Promise<{ count: number }>;
 }
 interface PETTx {
   processExecutionTask: Pick<PETDelegate, "create" | "updateMany" | "findFirst">;
@@ -671,15 +677,20 @@ export async function applyProcessExecutionAction(
 
   const txResult = await deps.db.$transaction(async (tx) => {
     if (startupFingerprintDecisionId !== null && startupFingerprintSessionId !== null) {
-      const decisionNow = await tx.startupOwnerDecision.findFirst({
-        where: { id: startupFingerprintDecisionId, workspaceId: input.workspaceId },
-        select: { packageHashSha256: true, supersededById: true },
+      // Pattern A: UPDATE (not SELECT) acquires exclusive row lock on the GO decision inside
+      // the task-mutation transaction. A concurrent supersession or hash change between the
+      // outer auth check and this transaction would cause count=0 → deny. A read-only findFirst
+      // cannot close this race; the UPDATE makes the check-and-lock atomic.
+      const decisionGuard = await tx.startupOwnerDecision.updateMany({
+        where: {
+          id: startupFingerprintDecisionId,
+          workspaceId: input.workspaceId,
+          supersededById: null,
+          ...(startupFingerprintHash !== null ? { packageHashSha256: startupFingerprintHash } : {}),
+        },
+        data: { workspaceId: input.workspaceId }, // no-op: acquires exclusive row lock
       });
-      if (
-        !decisionNow
-        || decisionNow.supersededById !== null
-        || (startupFingerprintHash !== null && decisionNow.packageHashSha256 !== startupFingerprintHash)
-      ) {
+      if (decisionGuard.count === 0) {
         return {
           denied: true as const,
           violations: ["Startup authorization invalidated: GO decision was superseded or approval package changed concurrently — retry after reapproval"],
