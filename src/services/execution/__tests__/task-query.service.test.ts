@@ -23,6 +23,7 @@ vi.mock("@/lib/db", () => ({
     proofRequirement: { findFirst: (...args: unknown[]) => mockFindFirst(...args) },
     taskStatusHistory: { findMany: (...args: unknown[]) => mockFindMany(...args) },
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 import { getTaskList, getTaskDetail } from "@/services/execution/task-query.service";
