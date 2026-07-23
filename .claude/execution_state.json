@@ -126,7 +126,7 @@
     "committed": "3628a355",
     "workflow7_classification": "COMPLETE"
   },
-  "current_branch": "claude/private-build-setup-e0i0e9",
+  "current_branch": "claude/opsiq-stage-3-7-loop-j6j6cf",
   "stage_a6_workflow2": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "INTEGRATION_DEFECT_FIX",
@@ -547,7 +547,7 @@
     "compilation": "\u2713 TypeScript compiles without errors",
     "committed": "591bbc58"
   },
-  "next_automatic_target": "A0 audit PARTIAL capabilities: #19 LLM/NLP Governed Analysis or #8 Customer Retention/Reactivation",
+  "next_automatic_target": "Priority #8: scan remaining wired routes for zero-test systems",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "UNKNOWN (timeout \u2014 not a blocker)",
@@ -1760,8 +1760,8 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "c47f0316 A7.7 Historical Reconciliation: defect-class closure register + corrective controls",
-  "pushed": false,
+  "last_commit": "7169f0ae fix(compliance+risks): harden spread order, extend review item fields, add route tests",
+  "pushed": true,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
@@ -2892,6 +2892,28 @@
     "open": 0,
     "gates_run": "npm run build (PASS), npx tsc --noEmit (PASS), governance:scan:auth (PASS), governance:scan:a77 19/19 (PASS)",
     "committed": "c47f0316",
+    "pushed": true
+  },
+  "stage_compliance_risks_route_tests": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ROUTE_TEST_COVERAGE + SECURITY_FIX",
+    "description": "Added 68 route-level tests for /api/owner/compliance (GET+POST) and /api/owner/risks (GET+POST CREATE+UPDATE). Fixed spread-order vulnerability in compliance route (workspaceId: ctx came before ...input \u2014 body override possible). Fixed ComplianceReviewItem missing fields.",
+    "files": [
+      "src/app/api/owner/compliance/route.ts",
+      "src/services/owner-mode/compliance.service.ts",
+      "src/__tests__/api/owner/compliance/route.test.ts",
+      "src/__tests__/api/owner/risks/route.test.ts"
+    ],
+    "root_causes_fixed": [
+      "RC-compliance-001: spread-order vulnerability in POST handler (ctx.verifiedWorkspaceId placed before ...input allowing body override)",
+      "RC-compliance-002: ComplianceReviewItem missing reference/status/jurisdiction/obligationOwner/penaltyDescription/createdAt fields",
+      "RC-risks-003: zero tests for /api/owner/risks route (GET, POST CREATE, POST UPDATE)"
+    ],
+    "test_coverage": "68 tests \u2014 36 compliance route, 32 risks route",
+    "workspace_enforcement": "verified: ctx.verifiedWorkspaceId used; injection guard test passes",
+    "auth_enforced": "OWNER_MANAGE (risks GET+POST), OWNER_VIEW (compliance GET), OWNER_MANAGE (compliance POST)",
+    "gates_run": "npx vitest run \u2192 68/68 pass; npx tsc --noEmit \u2192 clean; npm run build \u2192 clean",
+    "committed": "7169f0ae",
     "pushed": true
   }
 }
