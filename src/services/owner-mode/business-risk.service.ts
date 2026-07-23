@@ -189,6 +189,7 @@ export async function listBusinessRisks(
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.category ? { category: opts.category } : {}),
     },
+    include: { taskLinks: { select: { id: true, taskId: true, linkType: true, createdAt: true } } },
     orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
   });
 }
@@ -196,7 +197,135 @@ export async function listBusinessRisks(
 export async function getBusinessRisk(workspaceId: string, riskId: string) {
   const risk = await db.businessRiskEntry.findFirst({
     where: { id: riskId, workspaceId },
+    include: { taskLinks: { select: { id: true, taskId: true, linkType: true, linkedBy: true, createdAt: true } } },
   });
   if (!risk) throw new NotFoundError("BusinessRiskEntry", riskId);
   return risk;
+}
+
+// ─── Task linkage ─────────────────────────────────────────────────────────────
+
+export interface LinkRiskTaskInput {
+  workspaceId: string;
+  riskId: string;
+  taskId: string;
+  linkType?: "MITIGATION" | "EVIDENCE";
+  actorId: string;
+}
+
+export async function linkTaskToRisk(input: LinkRiskTaskInput) {
+  // Verify risk belongs to workspace
+  const risk = await db.businessRiskEntry.findFirst({
+    where: { id: input.riskId, workspaceId: input.workspaceId },
+    select: { id: true },
+  });
+  if (!risk) throw new NotFoundError("BusinessRiskEntry", input.riskId);
+
+  // Verify task belongs to workspace (cross-workspace guard)
+  const task = await db.delegatedTask.findFirst({
+    where: { id: input.taskId, workspaceId: input.workspaceId },
+    select: { id: true },
+  });
+  if (!task) throw new NotFoundError("DelegatedTask", input.taskId);
+
+  const link = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await (tx as unknown as { riskTaskLink: { upsert(a: unknown): Promise<unknown> } }).riskTaskLink.upsert({
+      where: { workspaceId_riskId_taskId: { workspaceId: input.workspaceId, riskId: input.riskId, taskId: input.taskId } },
+      create: {
+        workspaceId: input.workspaceId,
+        riskId: input.riskId,
+        taskId: input.taskId,
+        linkType: input.linkType ?? "MITIGATION",
+        linkedBy: input.actorId,
+      },
+      update: { linkType: input.linkType ?? "MITIGATION" },
+    });
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OWNER_RISK_TASK_LINKED,
+        workspaceId: input.workspaceId,
+        actorId: input.actorId,
+        entityType: "BusinessRiskEntry",
+        entityId: input.riskId,
+        payload: { taskId: input.taskId, linkType: input.linkType ?? "MITIGATION" },
+      },
+      tx,
+    );
+    return created;
+  });
+  return link;
+}
+
+// ─── Lifecycle transitions ────────────────────────────────────────────────────
+
+export interface ReviewRiskInput {
+  workspaceId: string;
+  riskId: string;
+  actorId: string;
+  newStatus: "MITIGATING" | "ACCEPTED" | "RESOLVED" | "CLOSED" | "ASSESSED";
+  residualRisk?: number | null;
+  acceptanceRationale?: string | null;
+  reviewNotes?: string | null;
+  reviewDueDate?: Date | null;
+}
+
+const VALID_REVIEW_TRANSITIONS: Record<string, string[]> = {
+  IDENTIFIED:  ["ASSESSED", "MITIGATING", "ACCEPTED", "CLOSED"],
+  ASSESSED:    ["MITIGATING", "ACCEPTED", "CLOSED"],
+  MITIGATING:  ["ASSESSED", "RESOLVED", "ACCEPTED", "CLOSED"],
+  ACCEPTED:    ["MITIGATING", "RESOLVED", "CLOSED"],
+  RESOLVED:    ["CLOSED", "IDENTIFIED"],
+  CLOSED:      [],
+  TRANSFERRED: ["CLOSED"],
+};
+
+export async function reviewRisk(input: ReviewRiskInput) {
+  const existing = await db.businessRiskEntry.findFirst({
+    where: { id: input.riskId, workspaceId: input.workspaceId },
+    select: { id: true, status: true, riskCode: true },
+  });
+  if (!existing) throw new NotFoundError("BusinessRiskEntry", input.riskId);
+
+  const allowed = VALID_REVIEW_TRANSITIONS[existing.status] ?? [];
+  if (!allowed.includes(input.newStatus)) {
+    throw new ValidationError(
+      `Illegal risk transition: ${existing.status} → ${input.newStatus}. Allowed: ${allowed.join(", ") || "none"}`
+    );
+  }
+
+  const now = new Date();
+  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.businessRiskEntry.update({
+      where: { id: input.riskId },
+      data: {
+        status: input.newStatus,
+        reviewedAt: now,
+        ...(input.residualRisk !== undefined ? { residualRisk: input.residualRisk } : {}),
+        ...(input.acceptanceRationale !== undefined ? { acceptanceRationale: input.acceptanceRationale } : {}),
+        ...(input.reviewDueDate !== undefined ? { reviewDueDate: input.reviewDueDate } : {}),
+      },
+    });
+
+    let eventName: AuditEventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_REVIEW_COMPLETED;
+    if (input.newStatus === "ACCEPTED") eventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_ACCEPTED;
+    else if (input.newStatus === "CLOSED" || input.newStatus === "RESOLVED") eventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_CLOSED;
+
+    await emitAuditEvent(
+      {
+        eventName,
+        workspaceId: input.workspaceId,
+        actorId: input.actorId,
+        entityType: "BusinessRiskEntry",
+        entityId: input.riskId,
+        payload: {
+          previousStatus: existing.status,
+          newStatus: input.newStatus,
+          residualRisk: input.residualRisk,
+          acceptanceRationale: input.acceptanceRationale,
+        },
+      },
+      tx,
+    );
+    return updated;
+  });
 }

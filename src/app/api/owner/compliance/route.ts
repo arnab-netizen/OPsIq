@@ -1,7 +1,7 @@
 /**
  * Jarvis 360 Slice 14 — compliance surface.
  * POST /api/owner/compliance — record a compliance item (licence/permit/insurance/tax).
- * GET  /api/owner/compliance — list items needing review (expired / expiring soon).
+ * GET  /api/owner/compliance — list all compliance items (optional ?status= filter).
  * OWNER_MANAGE (write) / OWNER_VIEW (read), workspace-scoped.
  */
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody } from "@/lib/validation";
-import { recordComplianceItem, getComplianceReviewItems } from "@/services/owner-mode/compliance.service";
+import { recordComplianceItem, getAllComplianceItems } from "@/services/owner-mode/compliance.service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -45,7 +45,9 @@ export const POST = withCanonicalEnforcement(
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const items = await getComplianceReviewItems(ctx.verifiedWorkspaceId);
+    const url = new URL(ctx.request!.url);
+    const status = url.searchParams.get("status") ?? undefined;
+    const items = await getAllComplianceItems(ctx.verifiedWorkspaceId, { status });
     return canonicalJson({ items }, { status: 200 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true }
