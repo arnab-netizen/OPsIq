@@ -33,7 +33,7 @@ export const POST = withCanonicalEnforcement(
       return canonicalJson({ link }, { status: 201 });
     } catch (err) {
       if (err instanceof NotFoundError) {
-        return canonicalJson({ error: err.message }, { status: 404 });
+        return canonicalJson({ error: "Risk or task not found" }, { status: 404 });
       }
       throw err;
     }

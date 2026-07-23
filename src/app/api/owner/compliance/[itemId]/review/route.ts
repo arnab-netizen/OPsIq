@@ -38,7 +38,7 @@ export const POST = withCanonicalEnforcement(
         return canonicalJson({ error: "Compliance item not found" }, { status: 404 });
       }
       if (err instanceof ValidationError) {
-        return canonicalJson({ error: err.message }, { status: 422 });
+        return canonicalJson({ error: "Invalid status transition" }, { status: 422 });
       }
       throw err;
     }
