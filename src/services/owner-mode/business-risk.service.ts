@@ -287,7 +287,10 @@ export interface ReviewRiskInput {
 }
 
 const CRITICAL_SEVERITY_THRESHOLD = 75;
-const RISK_TERMINAL_STATUSES = new Set(["MITIGATING", "ACCEPTED", "RESOLVED", "CLOSED"]);
+// Only RESOLVED and CLOSED unconditionally resolve alerts.
+// ACCEPTED resolves alerts only when acceptanceRationale is recorded (authorized acceptance).
+// MITIGATING, ASSESSED, IDENTIFIED remain active — mitigation underway ≠ remediation verified.
+const RISK_RESOLUTION_STATUSES = new Set(["RESOLVED", "CLOSED"]);
 
 const VALID_REVIEW_TRANSITIONS: Record<string, string[]> = {
   IDENTIFIED:  ["ASSESSED", "MITIGATING", "ACCEPTED", "CLOSED"],
@@ -353,8 +356,16 @@ export async function reviewRisk(input: ReviewRiskInput) {
   const effectiveReviewDueDate =
     input.reviewDueDate !== undefined ? input.reviewDueDate : existing.reviewDueDate;
 
-  if (RISK_TERMINAL_STATUSES.has(input.newStatus)) {
-    // Resolve any active critical or overdue alerts on terminal transition
+  // Alerts are resolved when:
+  //   - risk reaches RESOLVED or CLOSED (remediation verified / lifecycle complete)
+  //   - risk is ACCEPTED with an explicit rationale (owner-authorized acceptance)
+  // MITIGATING does NOT resolve alerts — work underway ≠ remediation verified.
+  const resolvesAlerts =
+    RISK_RESOLUTION_STATUSES.has(input.newStatus) ||
+    (input.newStatus === "ACCEPTED" && !!input.acceptanceRationale);
+
+  if (resolvesAlerts) {
+    // Resolve any active critical or overdue alerts
     const active = await db.alert.findMany({
       where: {
         workspaceId: input.workspaceId,
@@ -370,6 +381,8 @@ export async function reviewRisk(input: ReviewRiskInput) {
       }
     }
   } else {
+    // Non-resolving statuses (IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED w/o rationale):
+    // keep or create alerts as appropriate.
     const { createAlert } = await import("@/services/alerts/alert-service");
     if (existing.severity >= CRITICAL_SEVERITY_THRESHOLD) {
       await createAlert({
@@ -400,4 +413,69 @@ export async function reviewRisk(input: ReviewRiskInput) {
   }
 
   return result;
+}
+
+// ─── Overdue risk alert evaluation ───────────────────────────────────────────
+//
+// Called best-effort from the owner now-view on every load (and from any other
+// evaluation seam that has a valid actorId). Frequency: per owner now-view request.
+// Limitation: no background scheduler — alerts surface only when the view is loaded.
+
+export async function evaluateOverdueRiskAlerts(
+  workspaceId: string,
+  actorId: string,
+  now: Date = new Date(),
+): Promise<void> {
+  // Query non-terminal risks with reviewDueDate in the past (bounded at 500)
+  const overdueRisks = await db.businessRiskEntry.findMany({
+    where: {
+      workspaceId,
+      reviewDueDate: { lt: now },
+      status: { notIn: ["RESOLVED", "CLOSED"] },
+    },
+    select: { id: true, riskCode: true },
+    take: 500,
+  }).catch(() => [] as Array<{ id: string; riskCode: string }>);
+
+  if (overdueRisks.length > 0) {
+    const { createAlert } = await import("@/services/alerts/alert-service");
+    for (const risk of overdueRisks) {
+      await createAlert({
+        workspaceId,
+        userId: actorId,
+        type: "blocked",
+        channel: "in_app",
+        severity: "high",
+        message: `Risk review overdue: ${risk.riskCode}`,
+        entityType: "BusinessRiskEntry",
+        entityId: risk.id,
+        idempotencyKey: `risk_overdue_${risk.id}`,
+      }).catch(() => {});
+    }
+  }
+
+  // Resolve stale overdue alerts for risks that have since been resolved/closed
+  const resolvedRisks = await db.businessRiskEntry.findMany({
+    where: { workspaceId, status: { in: ["RESOLVED", "CLOSED"] } },
+    select: { id: true },
+    take: 500,
+  }).catch(() => [] as Array<{ id: string }>);
+
+  if (resolvedRisks.length > 0) {
+    const staleAlerts = await db.alert.findMany({
+      where: {
+        workspaceId,
+        idempotencyKey: { in: resolvedRisks.map((r: { id: string }) => `risk_overdue_${r.id}`) },
+        resolvedAt: null,
+      },
+      select: { id: true },
+    }).catch(() => [] as Array<{ id: string }>);
+
+    if (staleAlerts.length > 0) {
+      const { resolveAlert } = await import("@/services/alerts/alert-service");
+      for (const a of staleAlerts) {
+        await resolveAlert(a.id, workspaceId, actorId).catch(() => {});
+      }
+    }
+  }
 }

@@ -15,7 +15,7 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
     const businessId = url.searchParams.get("businessId");
-    return getOwnerNowView(ctx.verifiedWorkspaceId, businessId);
+    return getOwnerNowView(ctx.verifiedWorkspaceId, businessId, undefined, ctx.verifiedActorId);
   },
   { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true }
 );
