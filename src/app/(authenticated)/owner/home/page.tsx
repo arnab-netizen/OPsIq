@@ -10,6 +10,11 @@ import { Badge, Button, Select } from "@/ui/primitives";
 // every action carries its verification, insights tied to actions. Nothing invented —
 // "no data" / "unknown" surfaces are shown honestly.
 
+interface AlertSummary {
+  alerts: Array<{ id: string; message: string; severity: string; type: string }>;
+  unreadCount: number;
+}
+
 const DANGER_VARIANT: Record<string, "success" | "default" | "warning" | "destructive" | "muted"> = {
   unknown: "muted",
   none: "success",
@@ -65,6 +70,7 @@ export default function OwnerHomePage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [alertSummary, setAlertSummary] = useState<AlertSummary | null>(null);
 
   const load = useCallback(async (businessId?: string | null) => {
     setLoading(true);
@@ -74,6 +80,10 @@ export default function OwnerHomePage() {
       const res = await api(`/api/owner/home${qs}`);
       setData(res);
       setSelected(res.selectedBusinessId);
+      // Load alert summary (best-effort — must not break home if alerts API is down)
+      api("/api/owner/alerts?severity=critical&limit=3")
+        .then((d) => setAlertSummary({ alerts: d.alerts ?? [], unreadCount: d.unreadCount ?? 0 }))
+        .catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -118,6 +128,27 @@ export default function OwnerHomePage() {
           ))}
         </nav>
       </div>
+
+      {/* Alert summary — critical alerts and unread count */}
+      {alertSummary && (alertSummary.unreadCount > 0 || alertSummary.alerts.length > 0) && (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-sm font-semibold text-destructive">
+              {alertSummary.unreadCount > 0 ? `${alertSummary.unreadCount} unread alert${alertSummary.unreadCount === 1 ? "" : "s"}` : "Critical alerts"}
+            </span>
+            <Link href="/owner/alerts" className="text-xs underline text-destructive">View all →</Link>
+          </div>
+          {alertSummary.alerts.length > 0 && (
+            <ul className="space-y-1">
+              {alertSummary.alerts.map((a) => (
+                <li key={a.id} className="text-xs text-destructive truncate">
+                  · {a.message}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">

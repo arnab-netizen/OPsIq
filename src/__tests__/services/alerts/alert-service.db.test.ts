@@ -26,6 +26,7 @@ import {
   createAlert,
   getAlerts,
   markAlertAsRead,
+  resolveAlert,
   getUnreadAlertCount,
   triggerBlockedAlert,
   triggerThresholdBreachAlert,
@@ -54,7 +55,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Alert Service", () => {
   });
 
   afterAll(async () => {
+    // Delete in FK-safe order: alert rows → audit events (actor_id FK on users) → workspaces → users
     await db.alert.deleteMany({ where: { workspaceId: { in: [WS_A, WS_B] } } });
+    await db.auditEvent.deleteMany({ where: { workspaceId: { in: [WS_A, WS_B] } } });
     await db.workspace.deleteMany({ where: { id: { in: [WS_A, WS_B] } } });
     await db.user.deleteMany({ where: { id: { in: [USER_A, USER_B] } } });
   });
@@ -231,6 +234,35 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Alert Service", () => {
     const unreadIds = new Set(unread.map((a) => a.id));
     expect(unreadIds.has(alert.id)).toBe(false);
     unread.forEach((a) => expect(a.isRead).toBe(false));
+  });
+
+  it("13 — resolveAlert sets resolvedAt and marks isRead, emits audit", async () => {
+    const alert = await createAlert({
+      workspaceId: WS_A,
+      userId: USER_A,
+      type: "blocked",
+      channel: "in_app",
+      message: "Resolve test",
+    });
+    expect(alert.resolvedAt).toBeNull();
+
+    const resolved = await resolveAlert(alert.id, WS_A, USER_A);
+    expect(resolved.resolvedAt).toBeInstanceOf(Date);
+    expect(resolved.isRead).toBe(true);
+
+    const fromDb = await db.alert.findFirst({ where: { id: alert.id } });
+    expect(fromDb!.resolvedAt).toBeInstanceOf(Date);
+  });
+
+  it("14 — resolveAlert rejects wrong-workspace alert", async () => {
+    const alert = await createAlert({
+      workspaceId: WS_B,
+      userId: USER_B,
+      type: "blocked",
+      channel: "in_app",
+      message: "WS_B alert resolve from WS_A",
+    });
+    await expect(resolveAlert(alert.id, WS_A, USER_A)).rejects.toThrow("Alert not found");
   });
 
   it("12 — getAlerts severity filter", async () => {

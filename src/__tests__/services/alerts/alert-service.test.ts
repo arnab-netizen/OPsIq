@@ -49,6 +49,7 @@ import {
   triggerExecutionFailureAlert,
   getAlerts,
   getUnreadAlertCount,
+  resolveAlert,
 } from "@/services/alerts/alert-service";
 
 const mockDb = db as unknown as {
@@ -168,5 +169,28 @@ describe("Alert Service (unit)", () => {
     mockDb.alert.count.mockRejectedValue(new Error("DB down"));
     const count = await getUnreadAlertCount("ws-1", "u-1");
     expect(count).toBe(0);
+  });
+
+  it("8 — resolveAlert sets resolvedAt and marks as read", async () => {
+    const existing = makeAlert({ isRead: false, readAt: null });
+    mockDb.alert.findFirst.mockResolvedValue(existing);
+    const resolved = makeAlert({ resolvedAt: new Date(), isRead: true, readAt: new Date() });
+    mockDb.alert.update.mockResolvedValue(resolved);
+
+    const result = await resolveAlert("alert-1", "ws-1", "u-1");
+
+    expect(mockDb.alert.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "alert-1", workspaceId: "ws-1" },
+        data: expect.objectContaining({ resolvedAt: expect.any(Date) }),
+      })
+    );
+    expect(result.resolvedAt).not.toBeNull();
+    expect(result.isRead).toBe(true);
+  });
+
+  it("9 — resolveAlert throws when alert not found in workspace", async () => {
+    mockDb.alert.findFirst.mockResolvedValue(null);
+    await expect(resolveAlert("bad-id", "ws-1", "u-1")).rejects.toThrow("Alert not found");
   });
 });

@@ -263,6 +263,51 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
   });
 }
 
+export async function resolveAlert(
+  alertId: string,
+  workspaceId: string,
+  actorId: string
+): Promise<Alert> {
+  try {
+    const existingAlert = await db.alert.findFirst({
+      where: { id: alertId, workspaceId },
+    });
+
+    if (!existingAlert) {
+      throw new Error("Alert not found");
+    }
+
+    const alert = await db.alert.update({
+      where: { id: alertId, workspaceId },
+      data: { resolvedAt: new Date(), isRead: true, readAt: existingAlert.readAt ?? new Date() },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ALERT_UPDATED,
+      actorId,
+      entityType: "alert",
+      entityId: alertId,
+      workspaceId,
+      payload: { resolvedAt: alert.resolvedAt },
+      visibility: "internal",
+    }).catch((error) => {
+      logger.warn("Failed to emit audit event for alert resolution", {
+        alertId,
+        error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
+      });
+    });
+
+    logger.info("Alert resolved", { alertId, workspaceId });
+    return alert as unknown as Alert;
+  } catch (error) {
+    logger.error("Failed to resolve alert", {
+      alertId,
+      error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
+    });
+    throw error;
+  }
+}
+
 export async function getUnreadAlertCount(
   workspaceId: string,
   userId: string

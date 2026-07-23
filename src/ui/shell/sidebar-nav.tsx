@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface NavItem {
   label: string;
@@ -9,6 +10,8 @@ interface NavItem {
   icon: React.ReactNode;
   /** Only shown to users with the OWNER_VIEW capability. */
   requiresOwner?: boolean;
+  /** If true, show a live unread-alert badge next to the label. */
+  showAlertBadge?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -31,6 +34,17 @@ const NAV_ITEMS: NavItem[] = [
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+      </svg>
+    ),
+  },
+  {
+    label: "Alerts",
+    href: "/owner/alerts",
+    requiresOwner: true,
+    showAlertBadge: true,
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
       </svg>
     ),
   },
@@ -122,6 +136,17 @@ const NAV_ITEMS: NavItem[] = [
 
 export function SidebarNav({ canViewOwnerRecovery = false }: { canViewOwnerRecovery?: boolean }) {
   const pathname = usePathname();
+  const [unreadAlertCount, setUnreadAlertCount] = useState(0);
+
+  useEffect(() => {
+    if (!canViewOwnerRecovery) return;
+    fetch("/api/owner/alerts?limit=1")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { unreadCount?: number } | null) => {
+        if (d && typeof d.unreadCount === "number") setUnreadAlertCount(d.unreadCount);
+      })
+      .catch(() => {});
+  }, [canViewOwnerRecovery]);
 
   const visibleItems = NAV_ITEMS.filter(
     (item) => !item.requiresOwner || canViewOwnerRecovery
@@ -131,6 +156,7 @@ export function SidebarNav({ canViewOwnerRecovery = false }: { canViewOwnerRecov
     <nav className="flex flex-col gap-1 px-3 py-4">
       {visibleItems.map((item) => {
         const isActive = pathname.startsWith(item.href);
+        const badgeCount = item.showAlertBadge ? unreadAlertCount : 0;
         return (
           <Link
             key={item.href}
@@ -142,7 +168,12 @@ export function SidebarNav({ canViewOwnerRecovery = false }: { canViewOwnerRecov
             }`}
           >
             {item.icon}
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {badgeCount > 0 && (
+              <span className="inline-flex items-center justify-center rounded-full bg-destructive text-white text-xs font-bold px-1.5 py-0.5 min-w-[20px] leading-none">
+                {badgeCount > 99 ? "99+" : badgeCount}
+              </span>
+            )}
           </Link>
         );
       })}
