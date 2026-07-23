@@ -47,13 +47,13 @@ export const POST = withCanonicalEnforcement(
         return canonicalJson({ error: "Task not found." }, { status: 404 });
       }
       if (err instanceof ProofRequirementNotFoundError || err instanceof ProofNotFoundError) {
-        return canonicalJson({ error: err.message }, { status: 404 });
+        return canonicalJson({ error: "Proof requirement or proof not found." }, { status: 404 });
       }
       if (err instanceof ProofValidationError) {
-        return canonicalJson({ error: err.message, issues: err.issues }, { status: 422 });
+        return canonicalJson({ error: "Proof submission is invalid.", issues: err.issues }, { status: 422 });
       }
       if (err instanceof ProofTransitionNotAllowedError) {
-        return canonicalJson({ error: err.message }, { status: 422 });
+        return canonicalJson({ error: "Proof submission not allowed in current state." }, { status: 422 });
       }
       if (err instanceof ProofConflictError) {
         return canonicalJson({ error: "Concurrent submission; retry." }, { status: 409 });

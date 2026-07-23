@@ -15,6 +15,7 @@ import { useParams } from "next/navigation";
 import { Badge, Button } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
 import { ProofStatus, ProofType } from "@/domain/execution/proof";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface ProofDetail {
   id: string;
@@ -159,7 +160,7 @@ export default function TaskDetailPage() {
       const data = await apiFetch(`/api/owner/tasks/${taskId}`);
       setTask(data.task ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load task.");
+      setError(classifyOperatorError(err, { context: "load" }).operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -176,7 +177,7 @@ export default function TaskDetailPage() {
       setActionSuccess(`Status updated to ${STATUS_LABELS[to] ?? to}.`);
       await load();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to update status.");
+      setActionError(classifyOperatorError(err, { context: "action" }).operatorMessage);
     } finally {
       setActionLoading(false);
     }
@@ -198,7 +199,7 @@ export default function TaskDetailPage() {
       setSubmitProofType("");
       await load();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Proof submission failed.");
+      setActionError(classifyOperatorError(err, { context: "action" }).operatorMessage);
     } finally {
       setActionLoading(false);
     }
@@ -220,7 +221,7 @@ export default function TaskDetailPage() {
       setReviewReason("");
       await load();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Proof review failed.");
+      setActionError(classifyOperatorError(err, { context: "action" }).operatorMessage);
     } finally {
       setActionLoading(false);
     }

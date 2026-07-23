@@ -40,7 +40,7 @@ export const PATCH = withCanonicalEnforcement(
         return canonicalJson({ error: "Task not found." }, { status: 404 });
       }
       if (err instanceof TaskTransitionNotAllowedError) {
-        return canonicalJson({ error: err.message }, { status: 422 });
+        return canonicalJson({ error: "Transition not allowed for current task status." }, { status: 422 });
       }
       if (err instanceof TaskTransitionConflictError) {
         return canonicalJson({ error: "Concurrent update; retry." }, { status: 409 });

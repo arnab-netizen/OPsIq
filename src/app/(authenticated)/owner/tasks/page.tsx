@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface TaskListItem {
   id: string;
@@ -85,7 +86,7 @@ export default function OwnerTasksPage() {
       const data = await apiFetch(`/api/owner/tasks?${qs}`);
       setTasks(data.tasks ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tasks.");
+      setError(classifyOperatorError(err, { context: "load" }).operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -125,7 +126,7 @@ export default function OwnerTasksPage() {
 
       {/* Task list */}
       {loading && <p className="text-muted-foreground text-sm">Loading…</p>}
-      {error && <p className="text-destructive text-sm">{error}</p>}
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {!loading && !error && tasks.length === 0 && (
         <p className="text-muted-foreground text-sm">No tasks found.</p>

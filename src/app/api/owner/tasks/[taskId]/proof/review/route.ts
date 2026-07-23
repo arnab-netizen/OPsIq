@@ -52,16 +52,16 @@ export const POST = withCanonicalEnforcement(
       return canonicalJson({ status }, { status: 200 });
     } catch (err) {
       if (err instanceof TaskWorkflowNotFoundError || err instanceof ProofNotFoundError) {
-        return canonicalJson({ error: err.message }, { status: 404 });
+        return canonicalJson({ error: "Task or proof not found." }, { status: 404 });
       }
       if (err instanceof ProofSelfReviewError) {
-        return canonicalJson({ error: err.message, code: err.code }, { status: 403 });
+        return canonicalJson({ error: "Proof reviewer must differ from submitter.", code: err.code }, { status: 403 });
       }
       if (err instanceof ProofDuplicateRejectedError) {
-        return canonicalJson({ error: err.message, code: err.code }, { status: 422 });
+        return canonicalJson({ error: "Cannot accept a duplicate-flagged proof.", code: err.code }, { status: 422 });
       }
       if (err instanceof ProofTransitionNotAllowedError) {
-        return canonicalJson({ error: err.message }, { status: 422 });
+        return canonicalJson({ error: "Proof review not allowed in current state." }, { status: 422 });
       }
       if (err instanceof ProofConflictError) {
         return canonicalJson({ error: "Concurrent review; retry." }, { status: 409 });
