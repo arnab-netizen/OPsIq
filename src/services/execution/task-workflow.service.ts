@@ -220,6 +220,7 @@ export async function reviewProofForTask(command: ReviewProofCommand): Promise<P
 
   return reviewProof({
     proofId: proof.id,
+    taskId: command.taskId,
     workspaceId: command.workspaceId,
     fromStatus: proof.status as ProofStatus,
     to: command.to,

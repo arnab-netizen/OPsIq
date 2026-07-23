@@ -164,9 +164,9 @@ export async function submitProof(
         actorId: submission.submittedByUserId,
         actorType: "user",
         entityType: "proof",
-        entityId: command.proofId,
+        entityId: command.taskId,
         payload: {
-          taskId: command.taskId,
+          proofId: command.proofId,
           proofType: submission.proofType,
           duplicateFlagged,
         },
@@ -181,6 +181,7 @@ export async function submitProof(
 
 export interface ReviewProofCommand {
   proofId: string;
+  taskId: string;
   workspaceId: string;
   fromStatus: ProofStatus;
   to: ProofStatus;
@@ -248,8 +249,9 @@ export async function reviewProof(
         actorId: command.actorId,
         actorType: "user",
         entityType: "proof",
-        entityId: command.proofId,
+        entityId: command.taskId,
         payload: {
+          proofId: command.proofId,
           fromStatus: command.fromStatus,
           toStatus: command.to,
           reason: command.reason ?? null,
