@@ -120,7 +120,7 @@ export async function getTaskDetail(taskId: string, workspaceId: string): Promis
 
   if (!task) return null;
 
-  const [proof, proofRequirement, statusHistory] = await Promise.all([
+  const [proof, proofRequirement, rawStatusHistory] = await Promise.all([
     task.proofRequirementId
       ? db.proof.findFirst({
           where: { taskId, workspaceId },
@@ -152,17 +152,20 @@ export async function getTaskDetail(taskId: string, workspaceId: string): Promis
       : Promise.resolve(null),
     db.taskStatusHistory.findMany({
       where: { taskId, workspaceId },
-      orderBy: { occurredAt: "asc" },
+      orderBy: { createdAt: "asc" },
       select: {
         id: true,
         fromStatus: true,
         toStatus: true,
         actorId: true,
         actorRole: true,
-        occurredAt: true,
+        createdAt: true,
       },
     }),
   ]);
+
+  // TaskStatusHistory.createdAt maps to the occurredAt field expected by the API/UI contract
+  const statusHistory = rawStatusHistory.map(({ createdAt, ...rest }: { createdAt: Date; id: string; fromStatus: string | null; toStatus: string; actorId: string | null; actorRole: string | null }) => ({ ...rest, occurredAt: createdAt }));
 
   return {
     ...(task as TaskListItem),
