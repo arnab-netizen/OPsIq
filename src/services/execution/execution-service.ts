@@ -23,6 +23,7 @@ export async function executeDecision(
   }
 
   const now = new Date();
+  let concurrencyBlocked = false;
 
   try {
     const updated = await db.$transaction(async (tx: any) => {
@@ -41,7 +42,7 @@ export async function executeDecision(
       });
 
       if (result.count === 0) {
-        // Fire-and-forget: alert the owner that execution was blocked by a concurrency conflict.
+        concurrencyBlocked = true;
         triggerBlockedAlert(workspaceId, userId, decisionId, "concurrency conflict — another request is already executing this decision").catch(() => {});
         throw new Error("Execution lock acquired by another request: decision already transitioning");
       }
@@ -69,10 +70,8 @@ export async function executeDecision(
 
     return updated;
   } catch (error) {
-    // Fire-and-forget: alert on unrecoverable execution failure (not on expected concurrency blocks — those are handled above).
-    const isConcurrencyBlock = error instanceof Error && error.message.includes("concurrency conflict");
-    if (!isConcurrencyBlock) {
-      triggerExecutionFailureAlert(workspaceId, userId, decisionId, error instanceof Error ? error.message : "unknown error").catch(() => {});
+    if (!concurrencyBlocked) {
+      triggerExecutionFailureAlert(workspaceId, userId, decisionId, "execution failed").catch(() => {});
     }
     throw error;
   }
