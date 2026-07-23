@@ -93,8 +93,8 @@ export async function createBusinessRisk(input: CreateBusinessRiskInput) {
   const impact = clamp100(input.impact ?? 50);
   const severity = computeSeverity(likelihood, impact);
 
-  return db.$transaction(async (tx: Prisma.TransactionClient) => {
-    const risk = await tx.businessRiskEntry.create({
+  const risk = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.businessRiskEntry.create({
       data: {
         workspaceId: input.workspaceId,
         riskCode: input.riskCode.trim().toUpperCase(),
@@ -117,14 +117,31 @@ export async function createBusinessRisk(input: CreateBusinessRiskInput) {
         workspaceId: input.workspaceId,
         actorId: input.actorId,
         entityType: "BusinessRiskEntry",
-        entityId: risk.id,
-        payload: { riskCode: risk.riskCode, category: input.category, severity },
+        entityId: created.id,
+        payload: { riskCode: created.riskCode, category: input.category, severity },
       },
       tx,
     );
 
-    return risk;
+    return created;
   });
+
+  if (severity >= CRITICAL_SEVERITY_THRESHOLD) {
+    const { createAlert } = await import("@/services/alerts/alert-service");
+    await createAlert({
+      workspaceId: input.workspaceId,
+      userId: input.actorId,
+      type: "threshold_breach",
+      channel: "in_app",
+      severity: "critical",
+      message: `Critical risk identified: ${risk.riskCode}`,
+      entityType: "BusinessRiskEntry",
+      entityId: risk.id,
+      idempotencyKey: `risk_critical_${risk.id}`,
+    }).catch(() => {});
+  }
+
+  return risk;
 }
 
 export async function updateBusinessRisk(input: UpdateBusinessRiskInput) {
@@ -269,6 +286,9 @@ export interface ReviewRiskInput {
   reviewDueDate?: Date | null;
 }
 
+const CRITICAL_SEVERITY_THRESHOLD = 75;
+const RISK_TERMINAL_STATUSES = new Set(["MITIGATING", "ACCEPTED", "RESOLVED", "CLOSED"]);
+
 const VALID_REVIEW_TRANSITIONS: Record<string, string[]> = {
   IDENTIFIED:  ["ASSESSED", "MITIGATING", "ACCEPTED", "CLOSED"],
   ASSESSED:    ["MITIGATING", "ACCEPTED", "CLOSED"],
@@ -282,7 +302,7 @@ const VALID_REVIEW_TRANSITIONS: Record<string, string[]> = {
 export async function reviewRisk(input: ReviewRiskInput) {
   const existing = await db.businessRiskEntry.findFirst({
     where: { id: input.riskId, workspaceId: input.workspaceId },
-    select: { id: true, status: true, riskCode: true },
+    select: { id: true, status: true, riskCode: true, severity: true, reviewDueDate: true },
   });
   if (!existing) throw new NotFoundError("BusinessRiskEntry", input.riskId);
 
@@ -294,7 +314,7 @@ export async function reviewRisk(input: ReviewRiskInput) {
   }
 
   const now = new Date();
-  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+  const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const updated = await tx.businessRiskEntry.update({
       where: { id: input.riskId },
       data: {
@@ -328,4 +348,56 @@ export async function reviewRisk(input: ReviewRiskInput) {
     );
     return updated;
   });
+
+  // Post-transaction alert integration (best effort — risk is already committed)
+  const effectiveReviewDueDate =
+    input.reviewDueDate !== undefined ? input.reviewDueDate : existing.reviewDueDate;
+
+  if (RISK_TERMINAL_STATUSES.has(input.newStatus)) {
+    // Resolve any active critical or overdue alerts on terminal transition
+    const active = await db.alert.findMany({
+      where: {
+        workspaceId: input.workspaceId,
+        idempotencyKey: { in: [`risk_critical_${input.riskId}`, `risk_overdue_${input.riskId}`] },
+        resolvedAt: null,
+      },
+      select: { id: true },
+    }).catch(() => [] as Array<{ id: string }>);
+    if (active.length > 0) {
+      const { resolveAlert } = await import("@/services/alerts/alert-service");
+      for (const a of active) {
+        await resolveAlert(a.id, input.workspaceId, input.actorId).catch(() => {});
+      }
+    }
+  } else {
+    const { createAlert } = await import("@/services/alerts/alert-service");
+    if (existing.severity >= CRITICAL_SEVERITY_THRESHOLD) {
+      await createAlert({
+        workspaceId: input.workspaceId,
+        userId: input.actorId,
+        type: "threshold_breach",
+        channel: "in_app",
+        severity: "critical",
+        message: `Critical risk under review: ${existing.riskCode}`,
+        entityType: "BusinessRiskEntry",
+        entityId: input.riskId,
+        idempotencyKey: `risk_critical_${input.riskId}`,
+      }).catch(() => {});
+    }
+    if (effectiveReviewDueDate && effectiveReviewDueDate < now) {
+      await createAlert({
+        workspaceId: input.workspaceId,
+        userId: input.actorId,
+        type: "blocked",
+        channel: "in_app",
+        severity: "high",
+        message: `Risk review overdue: ${existing.riskCode}`,
+        entityType: "BusinessRiskEntry",
+        entityId: input.riskId,
+        idempotencyKey: `risk_overdue_${input.riskId}`,
+      }).catch(() => {});
+    }
+  }
+
+  return result;
 }

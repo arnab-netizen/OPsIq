@@ -475,6 +475,183 @@ describe("[db] Compliance — lifecycle transitions", () => {
   });
 });
 
+// ─── Risk alert integration ───────────────────────────────────────────────────
+
+describe("[db] Business Risk — alert integration", () => {
+  it("[db] critical risk (severity >= 75) creates a workspace-scoped threshold_breach alert", async () => {
+    const risk = await createBusinessRisk({
+      workspaceId: alertWorkspaceId,
+      actorId: actor,
+      riskCode: "R-CRIT1",
+      title: "Critical severity risk",
+      category: "FINANCIAL",
+      likelihood: 100,
+      impact: 100,
+    });
+
+    const alert = await db.alert.findFirst({
+      where: {
+        workspaceId: alertWorkspaceId,
+        entityId: risk.id,
+        type: "threshold_breach",
+        idempotencyKey: `risk_critical_${risk.id}`,
+      },
+    });
+    expect(alert).toBeTruthy();
+    expect(alert?.severity).toBe("critical");
+    expect(alert?.workspaceId).toBe(alertWorkspaceId);
+  });
+
+  it("[db] reviewing a critical risk does not duplicate the alert (idempotency)", async () => {
+    const risk = await createBusinessRisk({
+      workspaceId: alertWorkspaceId,
+      actorId: actor,
+      riskCode: "R-CRIT2",
+      title: "Idempotency test critical",
+      category: "OPERATIONAL",
+      likelihood: 100,
+      impact: 100,
+    });
+
+    // ASSESSED is non-terminal: alert re-attempted with same key → no duplicate
+    await reviewRisk({ workspaceId: alertWorkspaceId, riskId: risk.id, actorId: actor, newStatus: "ASSESSED" });
+
+    const alerts = await db.alert.findMany({
+      where: {
+        workspaceId: alertWorkspaceId,
+        entityId: risk.id,
+        idempotencyKey: `risk_critical_${risk.id}`,
+      },
+    });
+    expect(alerts.length).toBe(1);
+  });
+
+  it("[db] overdue non-terminal risk creates a blocked overdue alert", async () => {
+    const pastDate = new Date("2020-01-01T00:00:00Z");
+    const risk = await createBusinessRisk({
+      workspaceId: alertWorkspaceId,
+      actorId: actor,
+      riskCode: "R-ODUE1",
+      title: "Overdue risk",
+      category: "COMPLIANCE",
+    });
+
+    await reviewRisk({
+      workspaceId: alertWorkspaceId,
+      riskId: risk.id,
+      actorId: actor,
+      newStatus: "ASSESSED",
+      reviewDueDate: pastDate,
+    });
+
+    const alert = await db.alert.findFirst({
+      where: {
+        workspaceId: alertWorkspaceId,
+        entityId: risk.id,
+        type: "blocked",
+        idempotencyKey: `risk_overdue_${risk.id}`,
+      },
+    });
+    expect(alert).toBeTruthy();
+  });
+
+  it("[db] terminal risk status does not create overdue alert", async () => {
+    const pastDate = new Date("2020-01-01T00:00:00Z");
+    const risk = await createBusinessRisk({
+      workspaceId: alertWorkspaceId,
+      actorId: actor,
+      riskCode: "R-TERM1",
+      title: "Terminal no-overdue test",
+      category: "MARKET",
+    });
+
+    // CLOSED is terminal: resolve path taken, not overdue path
+    await reviewRisk({
+      workspaceId: alertWorkspaceId,
+      riskId: risk.id,
+      actorId: actor,
+      newStatus: "CLOSED",
+      reviewDueDate: pastDate,
+    });
+
+    const overdueAlert = await db.alert.findFirst({
+      where: {
+        workspaceId: alertWorkspaceId,
+        entityId: risk.id,
+        type: "blocked",
+        idempotencyKey: `risk_overdue_${risk.id}`,
+      },
+    });
+    expect(overdueAlert).toBeNull();
+  });
+
+  it("[db] risk alert is workspace-scoped — different workspace cannot see it", async () => {
+    const risk = await createBusinessRisk({
+      workspaceId: alertWorkspaceId,
+      actorId: actor,
+      riskCode: "R-SCOPE1",
+      title: "Workspace scope test",
+      category: "STRATEGIC",
+      likelihood: 100,
+      impact: 100,
+    });
+
+    const foreignAlert = await db.alert.findFirst({
+      where: { workspaceId: randomUUID(), entityId: risk.id },
+    });
+    expect(foreignAlert).toBeNull();
+  });
+
+  it("[db] reviewing critical risk to terminal status resolves active alert", async () => {
+    const risk = await createBusinessRisk({
+      workspaceId: alertWorkspaceId,
+      actorId: actor,
+      riskCode: "R-RSLV1",
+      title: "Alert resolution test",
+      category: "EXECUTION",
+      likelihood: 100,
+      impact: 100,
+    });
+
+    const alertBefore = await db.alert.findFirst({
+      where: { workspaceId: alertWorkspaceId, entityId: risk.id, idempotencyKey: `risk_critical_${risk.id}` },
+    });
+    expect(alertBefore?.resolvedAt).toBeNull();
+
+    await reviewRisk({ workspaceId: alertWorkspaceId, riskId: risk.id, actorId: actor, newStatus: "MITIGATING" });
+
+    const alertAfter = await db.alert.findFirst({
+      where: { workspaceId: alertWorkspaceId, entityId: risk.id, idempotencyKey: `risk_critical_${risk.id}` },
+    });
+    expect(alertAfter?.resolvedAt).toBeTruthy();
+  });
+
+  it("[db] risk record is correctly persisted independently of alert side effect", async () => {
+    const risk = await createBusinessRisk({
+      workspaceId: alertWorkspaceId,
+      actorId: actor,
+      riskCode: "R-INDEP1",
+      title: "Independence test",
+      category: "OPERATIONAL",
+      likelihood: 100,
+      impact: 100,
+    });
+
+    expect(risk.id).toBeTruthy();
+    expect(risk.status).toBe("IDENTIFIED");
+    expect(risk.severity).toBe(100);
+
+    const persisted = await db.businessRiskEntry.findFirst({ where: { id: risk.id } });
+    expect(persisted?.status).toBe("IDENTIFIED");
+    expect(persisted?.workspaceId).toBe(alertWorkspaceId);
+
+    const alert = await db.alert.findFirst({
+      where: { workspaceId: alertWorkspaceId, entityId: risk.id },
+    });
+    expect(alert?.entityId).toBe(risk.id);
+  });
+});
+
 // ─── Compliance task linkage ──────────────────────────────────────────────────
 
 describe("[db] Compliance — task linkage", () => {
