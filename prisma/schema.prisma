@@ -4730,6 +4730,8 @@ model DelegatedTask {
   expectedOutcomeId           String?   @map("expected_outcome_id") @db.Uuid
   financialBoundaryId         String?   @map("financial_boundary_id") @db.Uuid
   createdByUserId             String?   @map("created_by_user_id") @db.Uuid
+  // Traceability: optional link back to the OperatorItem (AI recommendation) that originated this task.
+  sourceOperatorItemId        String?   @map("source_operator_item_id") @db.Uuid
   createdAt                   DateTime  @default(now()) @map("created_at")
   updatedAt                   DateTime  @default(now()) @map("updated_at")
 
