@@ -42,7 +42,7 @@ describe("expiry helpers", () => {
   });
 });
 
-function makeDeps(rows: Array<{ id: string; kind: string; name: string; expiresAt: Date | null }>) {
+function makeDeps(rows: Array<{ id: string; kind: string; name: string; expiresAt: Date | null; createdAt?: Date }>) {
   const create = vi.fn(async () => ({ id: "c1" }));
   const deps: ComplianceDeps = { now: () => NOW, db: { ownerComplianceItem: { create, findMany: vi.fn(async () => rows) } } };
   return { deps, create };
@@ -57,10 +57,11 @@ describe("compliance service (DI)", () => {
     expect(emitAuditEvent).toHaveBeenCalledTimes(1);
   });
   it("lists expired and expiring-soon items for review", async () => {
+    const ts = new Date("2026-01-01Z");
     const { deps } = makeDeps([
-      { id: "a", kind: "licence", name: "L", expiresAt: new Date("2026-06-01Z") },
-      { id: "b", kind: "insurance", name: "I", expiresAt: new Date("2026-07-10Z") },
-      { id: "c", kind: "permit", name: "P", expiresAt: new Date("2027-01-01Z") },
+      { id: "a", kind: "licence", name: "L", expiresAt: new Date("2026-06-01Z"), createdAt: ts },
+      { id: "b", kind: "insurance", name: "I", expiresAt: new Date("2026-07-10Z"), createdAt: ts },
+      { id: "c", kind: "permit", name: "P", expiresAt: new Date("2027-01-01Z"), createdAt: ts },
     ]);
     const items = await getComplianceReviewItems("ws1", deps);
     expect(items.map((i) => i.id).sort()).toEqual(["a", "b"]);
