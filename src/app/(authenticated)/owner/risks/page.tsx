@@ -258,7 +258,7 @@ export default function RisksPage() {
       </div>
 
       {loading && <p className="text-muted-foreground text-sm">Loading…</p>}
-      {error && <p className="text-destructive text-sm">{error}</p>}
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {!loading && !error && visibleRisks.length === 0 && (
         <p className="text-muted-foreground text-sm">No risks found.</p>

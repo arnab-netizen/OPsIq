@@ -191,7 +191,7 @@ export default function CompliancePage() {
       )}
 
       {loading && <p className="text-muted-foreground text-sm">Loading…</p>}
-      {error && <p className="text-destructive text-sm">{error}</p>}
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {!loading && !error && items.length === 0 && (
         <p className="text-muted-foreground text-sm">
