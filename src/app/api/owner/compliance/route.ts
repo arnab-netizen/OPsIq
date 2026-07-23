@@ -33,9 +33,9 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const input = await parseRequestBody(ctx.request!, schema);
     const id = await recordComplianceItem({
+      ...input,
       workspaceId: ctx.verifiedWorkspaceId,
       actorId: ctx.verifiedActorId,
-      ...input,
       expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
     });
     return canonicalJson({ id }, { status: 201 });

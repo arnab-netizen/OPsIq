@@ -14,7 +14,13 @@ interface ComplianceRow {
   id: string;
   kind: string;
   name: string;
+  reference: string | null;
   expiresAt: Date | null;
+  status: string;
+  jurisdiction: string | null;
+  obligationOwner: string | null;
+  penaltyDescription: string | null;
+  createdAt: Date;
 }
 
 interface ComplianceDb {
@@ -91,7 +97,14 @@ export interface ComplianceReviewItem {
   id: string;
   kind: string;
   name: string;
+  reference: string | null;
+  expiresAt: string | null;
+  status: string;
+  jurisdiction: string | null;
+  obligationOwner: string | null;
+  penaltyDescription: string | null;
   state: "expired" | "expiring_soon";
+  createdAt: string;
 }
 
 /** List compliance items needing attention (expired or expiring soon). */
@@ -104,12 +117,38 @@ export async function getComplianceReviewItems(
   const now = (deps.now ?? (() => new Date()))();
   const rows = await deps.db.ownerComplianceItem.findMany({
     where: { workspaceId, status: "active" },
-    select: { id: true, kind: true, name: true, expiresAt: true },
+    select: {
+      id: true,
+      kind: true,
+      name: true,
+      reference: true,
+      expiresAt: true,
+      status: true,
+      jurisdiction: true,
+      obligationOwner: true,
+      penaltyDescription: true,
+      createdAt: true,
+    },
   });
   const out: ComplianceReviewItem[] = [];
   for (const r of rows) {
-    if (isExpired(r.expiresAt, now)) out.push({ id: r.id, kind: r.kind, name: r.name, state: "expired" });
-    else if (isExpiringSoon(r.expiresAt, now, windowDays)) out.push({ id: r.id, kind: r.kind, name: r.name, state: "expiring_soon" });
+    let state: "expired" | "expiring_soon" | null = null;
+    if (isExpired(r.expiresAt, now)) state = "expired";
+    else if (isExpiringSoon(r.expiresAt, now, windowDays)) state = "expiring_soon";
+    if (!state) continue;
+    out.push({
+      id: r.id,
+      kind: r.kind,
+      name: r.name,
+      reference: r.reference,
+      expiresAt: r.expiresAt ? r.expiresAt.toISOString() : null,
+      status: r.status,
+      jurisdiction: r.jurisdiction,
+      obligationOwner: r.obligationOwner,
+      penaltyDescription: r.penaltyDescription,
+      state,
+      createdAt: r.createdAt.toISOString(),
+    });
   }
   return out;
 }
