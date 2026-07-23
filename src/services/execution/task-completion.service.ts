@@ -223,3 +223,17 @@ export async function completeTask(command: CompleteTaskCommand, injected?: Task
     throw err;
   }
 }
+
+/**
+ * EH-14 — single authorised call-site for applyTaskTransition outside of completeTask.
+ * Non-completion state changes (e.g. ASSIGNED → IN_PROGRESS, → BLOCKED) must go through
+ * this wrapper so that applyTaskTransition(…) is never reached outside this file.
+ */
+export async function runTaskTransition(
+  task: DelegatedTask,
+  to: DelegatedTaskStatus,
+  actor: TaskActor,
+  actorId: string,
+): Promise<DelegatedTaskStatus> {
+  return applyTaskTransition({ task, to, actor, actorId });
+}

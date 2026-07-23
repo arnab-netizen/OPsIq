@@ -12,7 +12,8 @@ import { db } from "@/lib/db";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { DelegatedTaskStatus, TaskActorRole, type DelegatedTask, type TaskActor } from "@/domain/execution/delegated-task";
 import { ProofStatus, ProofType, type ProofActor, type ProofRequirement, type ProofSubmission } from "@/domain/execution/proof";
-import { applyTaskTransition, TaskTransitionNotAllowedError, TaskTransitionConflictError } from "@/services/execution/delegated-task.service";
+import { TaskTransitionNotAllowedError, TaskTransitionConflictError } from "@/services/execution/delegated-task.service";
+import { runTaskTransition } from "@/services/execution/task-completion.service";
 import { submitProof, reviewProof, ProofValidationError, ProofTransitionNotAllowedError, ProofSelfReviewError, ProofDuplicateRejectedError, ProofConflictError } from "@/services/execution/proof.service";
 
 export { TaskTransitionNotAllowedError, TaskTransitionConflictError };
@@ -100,12 +101,7 @@ export async function transitionTaskStatus(command: TransitionTaskCommand): Prom
     boundaryContentHash: row.boundaryContentHash,
   };
 
-  return applyTaskTransition({
-    task,
-    to: command.to,
-    actor: OWNER_TASK_ACTOR,
-    actorId: command.actorId,
-  });
+  return runTaskTransition(task, command.to, OWNER_TASK_ACTOR, command.actorId);
 }
 
 // ── Proof submission ──────────────────────────────────────────────────────────
