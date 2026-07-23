@@ -1140,6 +1140,7 @@ model User {
   workspaceMemberships            WorkspaceMembership[]
   approvalRequestsRequested       ApprovalRequest[]      @relation("approval_requests_requested_by")
   approvalRequestsAsApprover      ApprovalRequest[]      @relation("approval_requests_approver")
+  alerts                          Alert[]
 
   @@map("users")
 }
@@ -1237,6 +1238,7 @@ model Workspace {
   policyOverrides          OperatingPolicyOverride[]
   clientAccounts           ClientAccount[]
   leadRecords              LeadRecord[]
+  alerts                   Alert[]
 
   @@map("workspaces")
 }
@@ -1532,6 +1534,33 @@ model OwnerStandingInstruction {
   @@index([workspaceId, scope])
   @@index([workspaceId, businessId])
   @@map("owner_standing_instruction")
+}
+
+/// Stage 3 Slice 3.2 — owner-scoped, workspace-isolated in-app alert.
+/// Persists business condition, risk, and execution alerts for owner acknowledgement.
+model Alert {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  type           String
+  channel        String    @default("in_app")
+  message        String
+  entityType     String?   @map("entity_type")
+  entityId       String?   @map("entity_id") @db.Uuid
+  severity       String    @default("medium")
+  idempotencyKey String?   @map("idempotency_key")
+  isRead         Boolean   @default(false) @map("is_read")
+  readAt         DateTime? @map("read_at")
+  resolvedAt     DateTime? @map("resolved_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, idempotencyKey], map: "alert_workspace_idempotency_key")
+  @@index([workspaceId, userId, isRead])
+  @@index([workspaceId, createdAt])
+  @@map("alerts")
 }
 
 /// Jarvis 360 Slice 4 — owner attention event. Records each alert/approval/escalation
