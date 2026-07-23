@@ -35,7 +35,7 @@ vi.mock("@/lib/canonical-json-response", () => ({
 
 vi.mock("@/services/owner-mode/compliance.service", () => ({
   recordComplianceItem: vi.fn().mockResolvedValue("new-compliance-id"),
-  getComplianceReviewItems: vi.fn().mockResolvedValue([]),
+  getAllComplianceItems: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("@/lib/validation", () => ({
@@ -48,18 +48,18 @@ vi.mock("@/lib/validation", () => ({
 import { GET, POST } from "@/app/api/owner/compliance/route";
 import {
   recordComplianceItem,
-  getComplianceReviewItems,
+  getAllComplianceItems,
 } from "@/services/owner-mode/compliance.service";
 import { parseRequestBody } from "@/lib/validation";
 
 const WS = "a1b2c3d4-e5f6-4789-8abc-def012345678";
 const ACTOR = "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6";
 
-function makeCtx(body?: unknown, workspaceId = WS) {
+function makeCtx(body?: unknown, workspaceId = WS, url = "http://localhost/api/owner/compliance") {
   return {
     verifiedWorkspaceId: workspaceId,
     verifiedActorId: ACTOR,
-    request: { json: async () => body },
+    request: { json: async () => body, url },
   };
 }
 
@@ -145,7 +145,7 @@ describe("/api/owner/compliance — POST schema", () => {
 describe("GET /api/owner/compliance", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns items from getComplianceReviewItems", async () => {
+  it("returns items from getAllComplianceItems (full list)", async () => {
     const mockItems = [
       {
         id: "item-1",
@@ -161,7 +161,7 @@ describe("GET /api/owner/compliance", () => {
         createdAt: "2023-01-01T00:00:00.000Z",
       },
     ];
-    vi.mocked(getComplianceReviewItems).mockResolvedValueOnce(mockItems as never);
+    vi.mocked(getAllComplianceItems).mockResolvedValueOnce(mockItems as never);
 
     const ctx = makeCtx();
     const result = await GET(ctx as never);
@@ -169,33 +169,33 @@ describe("GET /api/owner/compliance", () => {
     expect(result).toMatchObject({ body: { items: mockItems }, status: 200 });
   });
 
-  it("calls getComplianceReviewItems with verifiedWorkspaceId only", async () => {
-    vi.mocked(getComplianceReviewItems).mockResolvedValueOnce([]);
+  it("calls getAllComplianceItems with verifiedWorkspaceId", async () => {
+    vi.mocked(getAllComplianceItems).mockResolvedValueOnce([]);
     const ctx = makeCtx(undefined, WS);
     await GET(ctx as never);
-    expect(getComplianceReviewItems).toHaveBeenCalledWith(WS);
+    expect(getAllComplianceItems).toHaveBeenCalledWith(WS, expect.any(Object));
   });
 
   it("workspace isolation: different workspaceIds produce isolated calls", async () => {
     const WS2 = "c2d3e4f5-a6b7-4c8d-9e0f-a1b2c3d4e5f6";
-    vi.mocked(getComplianceReviewItems).mockResolvedValue([]);
+    vi.mocked(getAllComplianceItems).mockResolvedValue([]);
 
     await GET(makeCtx(undefined, WS) as never);
     await GET(makeCtx(undefined, WS2) as never);
 
-    const calls = vi.mocked(getComplianceReviewItems).mock.calls;
+    const calls = vi.mocked(getAllComplianceItems).mock.calls;
     expect(calls[0][0]).toBe(WS);
     expect(calls[1][0]).toBe(WS2);
   });
 
   it("returns empty items when no review items exist", async () => {
-    vi.mocked(getComplianceReviewItems).mockResolvedValueOnce([]);
+    vi.mocked(getAllComplianceItems).mockResolvedValueOnce([]);
     const result = await GET(makeCtx() as never);
     expect(result).toMatchObject({ body: { items: [] }, status: 200 });
   });
 
   it("returns status 200", async () => {
-    vi.mocked(getComplianceReviewItems).mockResolvedValueOnce([]);
+    vi.mocked(getAllComplianceItems).mockResolvedValueOnce([]);
     const result = await GET(makeCtx() as never);
     expect(result.status).toBe(200);
   });
@@ -229,7 +229,7 @@ describe("GET /api/owner/compliance", () => {
         createdAt: "2022-01-01T00:00:00.000Z",
       },
     ];
-    vi.mocked(getComplianceReviewItems).mockResolvedValueOnce(mockItems as never);
+    vi.mocked(getAllComplianceItems).mockResolvedValueOnce(mockItems as never);
     const result = await GET(makeCtx() as never);
     expect(result.body.items).toHaveLength(2);
     expect(result.body.items[0].state).toBe("expiring_soon");
