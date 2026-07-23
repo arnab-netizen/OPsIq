@@ -7,6 +7,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 export type AlertType = "blocked" | "threshold_breach" | "execution_failure";
 export type AlertChannel = "in_app" | "email";
+export type AlertSeverity = "low" | "medium" | "high" | "critical";
 
 export interface CreateAlertInput {
   workspaceId: string;
@@ -16,6 +17,8 @@ export interface CreateAlertInput {
   message: string;
   entityType?: string;
   entityId?: string;
+  severity?: AlertSeverity;
+  idempotencyKey?: string;
 }
 
 export interface Alert {
@@ -25,48 +28,66 @@ export interface Alert {
   type: AlertType;
   channel: AlertChannel;
   message: string;
-  entityType?: string;
-  entityId?: string;
+  entityType?: string | null;
+  entityId?: string | null;
+  severity: AlertSeverity;
+  idempotencyKey?: string | null;
   isRead: boolean;
-  readAt?: Date;
+  readAt?: Date | null;
+  resolvedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export async function createAlert(input: CreateAlertInput): Promise<Alert> {
-  const { workspaceId, userId, type, channel, message, entityType, entityId } =
-    input;
+  const {
+    workspaceId,
+    userId,
+    type,
+    channel,
+    message,
+    entityType,
+    entityId,
+    severity = "medium",
+    idempotencyKey,
+  } = input;
 
-  // Enforce workspace isolation
   enforceWorkspaceId(workspaceId, "createAlert", "Alert");
 
   try {
-    const alert = await db.alert.create({
+    if (idempotencyKey) {
+      // If the same idempotency key already exists in this workspace, return it without creating a duplicate.
+      const existing = await db.alert.findFirst({
+        where: { workspaceId, idempotencyKey },
+      });
+      if (existing) {
+        return existing as unknown as Alert;
+      }
+    }
+
+    const created = await db.alert.create({
       data: {
         workspaceId,
         userId,
         type,
         channel,
         message,
-        entityType: entityType || null,
-        entityId: entityId || null,
+        entityType: entityType ?? null,
+        entityId: entityId ?? null,
+        severity,
+        idempotencyKey: idempotencyKey ?? null,
       },
     });
 
-    // Emit audit event
+    const alert = created as unknown as Alert;
+
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ALERT_CREATED,
       actorId: userId,
       entityType: "alert",
       entityId: alert.id,
       workspaceId,
-      payload: {
-        type,
-        channel,
-        message,
-        entityType: entityType || null,
-        entityId: entityId || null,
-      },
+      payload: { type, channel, message, severity, entityType: entityType ?? null, entityId: entityId ?? null },
       visibility: "internal",
     }).catch((error) => {
       logger.warn("Failed to emit audit event for alert creation", {
@@ -75,9 +96,8 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
       });
     });
 
-    // Deliver based on channel
     if (channel === "email") {
-      deliverEmailAlert(alert as any).catch((error) => {
+      deliverEmailAlert(alert).catch((error) => {
         logger.warn("Failed to deliver email alert", {
           alertId: alert.id,
           userId,
@@ -86,15 +106,8 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
       });
     }
 
-    logger.info("Alert created", {
-      alertId: alert.id,
-      type,
-      channel,
-      userId,
-      workspaceId,
-    });
-
-    return alert as Alert;
+    logger.info("Alert created", { alertId: alert.id, type, severity, channel, userId, workspaceId });
+    return alert;
   } catch (error) {
     logger.error("Failed to create alert", {
       workspaceId,
@@ -112,7 +125,6 @@ export async function markAlertAsRead(
   actorId: string
 ): Promise<Alert> {
   try {
-    // Verify alert exists and belongs to workspace
     const existingAlert = await db.alert.findFirst({
       where: { id: alertId, workspaceId },
     });
@@ -123,22 +135,16 @@ export async function markAlertAsRead(
 
     const alert = await db.alert.update({
       where: { id: alertId, workspaceId },
-      data: {
-        isRead: true,
-        readAt: new Date(),
-      },
+      data: { isRead: true, readAt: new Date() },
     });
 
-    // Emit audit event
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ALERT_UPDATED,
       actorId,
       entityType: "alert",
       entityId: alertId,
       workspaceId,
-      payload: {
-        isRead: true,
-      },
+      payload: { isRead: true },
       visibility: "internal",
     }).catch((error) => {
       logger.warn("Failed to emit audit event for alert update", {
@@ -148,7 +154,7 @@ export async function markAlertAsRead(
     });
 
     logger.info("Alert marked as read", { alertId, workspaceId });
-    return alert as Alert;
+    return alert as unknown as Alert;
   } catch (error) {
     logger.error("Failed to mark alert as read", {
       alertId,
@@ -164,9 +170,10 @@ export async function getAlerts(
   options: {
     unreadOnly?: boolean;
     limit?: number;
+    severity?: AlertSeverity;
   } = {}
 ): Promise<Alert[]> {
-  const { unreadOnly = false, limit = 50 } = options;
+  const { unreadOnly = false, limit = 50, severity } = options;
 
   try {
     const alerts = await db.alert.findMany({
@@ -174,14 +181,13 @@ export async function getAlerts(
         workspaceId,
         userId,
         ...(unreadOnly && { isRead: false }),
+        ...(severity && { severity }),
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
       take: limit,
     });
 
-    return alerts as Alert[];
+    return alerts as unknown as Alert[];
   } catch (error) {
     logger.error("Failed to fetch alerts", {
       workspaceId,
@@ -203,9 +209,11 @@ export async function triggerBlockedAlert(
     userId,
     type: "blocked",
     channel: "in_app",
+    severity: "high",
     message: `Decision execution blocked: ${reason}`,
     entityType: "OperatorItem",
     entityId: decisionId,
+    idempotencyKey: `blocked:${decisionId}`,
   });
 }
 
@@ -221,7 +229,9 @@ export async function triggerThresholdBreachAlert(
     userId,
     type: "threshold_breach",
     channel: "in_app",
+    severity: "medium",
     message: `Threshold breach: ${thresholdName} (current: ${currentValue}, threshold: ${threshold})`,
+    idempotencyKey: `threshold:${thresholdName}:${workspaceId}`,
   });
 }
 
@@ -236,15 +246,16 @@ export async function triggerExecutionFailureAlert(
     userId,
     type: "execution_failure",
     channel: "in_app",
+    severity: "critical",
     message: `Decision execution failed: ${failureReason}`,
     entityType: "OperatorItem",
     entityId: decisionId,
+    idempotencyKey: `failure:${decisionId}`,
   });
 }
 
 async function deliverEmailAlert(alert: Alert): Promise<void> {
-  // Email stub: log instead of actually sending
-  logger.info("Email alert delivered (stub)", {
+  logger.info("Email alert delivery (stub — transport not yet wired)", {
     alertId: alert.id,
     userId: alert.userId,
     type: alert.type,
@@ -252,19 +263,59 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
   });
 }
 
+export async function resolveAlert(
+  alertId: string,
+  workspaceId: string,
+  actorId: string
+): Promise<Alert> {
+  try {
+    const existingAlert = await db.alert.findFirst({
+      where: { id: alertId, workspaceId },
+    });
+
+    if (!existingAlert) {
+      throw new Error("Alert not found");
+    }
+
+    const alert = await db.alert.update({
+      where: { id: alertId, workspaceId },
+      data: { resolvedAt: new Date(), isRead: true, readAt: existingAlert.readAt ?? new Date() },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ALERT_UPDATED,
+      actorId,
+      entityType: "alert",
+      entityId: alertId,
+      workspaceId,
+      payload: { resolvedAt: alert.resolvedAt },
+      visibility: "internal",
+    }).catch((error) => {
+      logger.warn("Failed to emit audit event for alert resolution", {
+        alertId,
+        error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
+      });
+    });
+
+    logger.info("Alert resolved", { alertId, workspaceId });
+    return alert as unknown as Alert;
+  } catch (error) {
+    logger.error("Failed to resolve alert", {
+      alertId,
+      error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
+    });
+    throw error;
+  }
+}
+
 export async function getUnreadAlertCount(
   workspaceId: string,
   userId: string
 ): Promise<number> {
   try {
-    const count = await db.alert.count({
-      where: {
-        workspaceId,
-        userId,
-        isRead: false,
-      },
+    return await db.alert.count({
+      where: { workspaceId, userId, isRead: false },
     });
-    return count;
   } catch (error) {
     logger.error("Failed to get unread alert count", {
       workspaceId,

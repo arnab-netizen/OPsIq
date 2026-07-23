@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { triggerExecutionFailureAlert, triggerBlockedAlert } from "@/services/alerts/alert-service";
 
 export async function executeDecision(
   decisionId: string,
@@ -22,6 +23,7 @@ export async function executeDecision(
   }
 
   const now = new Date();
+  let concurrencyBlocked = false;
 
   try {
     const updated = await db.$transaction(async (tx: any) => {
@@ -40,6 +42,8 @@ export async function executeDecision(
       });
 
       if (result.count === 0) {
+        concurrencyBlocked = true;
+        triggerBlockedAlert(workspaceId, userId, decisionId, "concurrency conflict — another request is already executing this decision").catch(() => {});
         throw new Error("Execution lock acquired by another request: decision already transitioning");
       }
 
@@ -66,6 +70,9 @@ export async function executeDecision(
 
     return updated;
   } catch (error) {
+    if (!concurrencyBlocked) {
+      triggerExecutionFailureAlert(workspaceId, userId, decisionId, "execution failed").catch(() => {});
+    }
     throw error;
   }
 }
