@@ -9,7 +9,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
 import { createObjectiveInTx } from "@/services/owner-mode/business-objective.service";
-import { checkApprovalStaleness } from "@/services/owner-strategy/startup-session.service";
+import { checkApprovalStaleness, loadCanonicalCurrentApprovalState } from "@/services/owner-strategy/startup-session.service";
 import { deriveVerificationWindows, type DeriveWindowsInput } from "@/domain/owner-strategy/startup-verification-windows";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -53,45 +53,11 @@ export async function createBlueprint(
   actorId: string,
   input: BlueprintInput
 ): Promise<BlueprintResult> {
-  // Stale-reapproval guard: block blueprint if material inputs changed since GO
-  const ownerDecision = await db.startupOwnerDecision.findFirst({
-    where: { id: input.ownerDecisionId },
-    select: {
-      linkedIdeaVersionId: true,
-      linkedProfileVersionId: true,
-      linkedEconomicModelId: true,
-      linkedReadinessId: true,
-      linkedSystemRecId: true,
-      linkedBusinessModelId: true,
-      linkedMarketSizingId: true,
-      linkedValidationPlanId: true,
-      decisionType: true,
-    },
-  });
-  if (!ownerDecision) throw new NotFoundError("StartupOwnerDecision", input.ownerDecisionId);
-
-  // Pass versioned artifact IDs from the decision — checkApprovalStaleness queries current snapshots internally
-  const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, {
-    ideaId: input.ideaId,
-    ideaVersionId: ownerDecision.linkedIdeaVersionId,
-    profileVersionId: ownerDecision.linkedProfileVersionId,
-    economicModelId: ownerDecision.linkedEconomicModelId,
-    readinessId: ownerDecision.linkedReadinessId,
-    systemRecId: ownerDecision.linkedSystemRecId,
-    businessModelId: ownerDecision.linkedBusinessModelId,
-    marketSizingId: ownerDecision.linkedMarketSizingId,
-    validationPlanId: ownerDecision.linkedValidationPlanId,
-  });
-
-  if (staleness.isStale) {
-    throw new ConflictError(
-      `STALE_REAPPROVAL_REQUIRED: approval package has changed since GO decision. Changed inputs: ${staleness.changedInputs.join(", ")}. Owner must re-approve before blueprint creation.`
-    );
-  }
-
   // G16: Blueprint supersession policy — if a DRAFT or ACTIVE blueprint exists after reapproval,
   // supersede it rather than blocking. If the existing blueprint is ACTIVE and has NOT gone
   // through reapproval (staleness check did not pass), block as before.
+  // NOTE: The staleness check itself has moved inside the main $transaction (below) to close
+  // the TOCTOU window between canonical-state read and blueprint persistence.
   const existing = await db.startupExecutionBlueprint.findFirst({
     where: {
       sessionId: input.sessionId,
@@ -108,7 +74,7 @@ export async function createBlueprint(
     }
     // Different decision = reapproval happened — mark old blueprint SUPERSEDED before creating new one.
     // R8/R9: atomically supersede all plans and cancel all tasks linked to the old blueprint.
-    await db.$transaction(async (txSupersede: typeof db) => {
+    await db.$transaction(async (txSupersede: Prisma.TransactionClient) => {
       await txSupersede.startupExecutionBlueprint.update({
         where: { id: existing.id },
         data: { blueprintStatus: "SUPERSEDED" },
@@ -171,6 +137,36 @@ export async function createBlueprint(
 
   try {
     await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Stale-reapproval guard: runs inside the transaction so the staleness read and blueprint
+    // persistence share the same DB transaction, closing the TOCTOU window.
+    // The decision's own linked IDs are NOT used here — the canonical builder queries current
+    // DB state to detect post-GO mutations to profile, economic model, readiness, etc.
+    const ownerDecision = await tx.startupOwnerDecision.findFirst({
+      where: { id: input.ownerDecisionId },
+      select: { decisionType: true, spendingLimitCents: true },
+    });
+    if (!ownerDecision) throw new NotFoundError("StartupOwnerDecision", input.ownerDecisionId);
+
+    const currentState = await loadCanonicalCurrentApprovalState(workspaceId, input.sessionId, input.ideaId, tx);
+    const staleness = await checkApprovalStaleness(workspaceId, input.sessionId, currentState, tx);
+    if (staleness.isStale) {
+      throw new ConflictError(
+        `STALE_REAPPROVAL_REQUIRED: approval package has changed since GO decision. Changed inputs: ${staleness.changedInputs.join(", ")}. Owner must re-approve before blueprint creation.`
+      );
+    }
+
+    // G2-3a: block blueprint creation when the target idea has been superseded by a revision.
+    // The staleness check alone does not catch this when no material fields on the old idea changed.
+    const ideaRevisionRow = await tx.startupIdeaRecord.findFirst({
+      where: { id: input.ideaId, workspaceId },
+      select: { supersededById: true },
+    });
+    if (ideaRevisionRow?.supersededById) {
+      throw new ConflictError(
+        `EXECUTION_BLOCKED: idea has been revised — blueprint creation requires a new GO approval for the revised idea.`
+      );
+    }
+
     // Create objective atomically inside the main transaction
     const objective = await createObjectiveInTx(tx, {
       workspaceId,
@@ -507,11 +503,51 @@ export async function createBlueprint(
       },
     });
 
-    // Update session current blueprint pointer
-    await tx.ownerStartupSession.update({
-      where: { id: input.sessionId },
+    // Pattern A optimistic concurrency: the session update incorporates the material pointer
+    // values read during the staleness check into the WHERE clause. If any pointer changed
+    // concurrently between the canonical-state read and this UPDATE (READ COMMITTED window),
+    // the UPDATE matches 0 rows and we throw ConflictError.
+    // currentState.profileVersionId and currentState.systemRecId were read from the session
+    // row inside this transaction; input.ownerDecisionId equals session.currentOwnerDecisionId
+    // (verified by checkApprovalStaleness above).
+    const sessionBpUpdateResult = await tx.ownerStartupSession.updateMany({
+      where: {
+        id: input.sessionId,
+        workspaceId,
+        currentOwnerDecisionId: input.ownerDecisionId,       // guard: decision unchanged
+        currentProfileVersionId: currentState.profileVersionId, // guard: profile unchanged
+        currentSystemRecId: currentState.systemRecId,           // guard: system rec unchanged
+      },
       data: { currentBlueprintId: blueprintId, updatedAt: new Date() },
     });
+    if (sessionBpUpdateResult.count === 0) {
+      throw new ConflictError(
+        `CONCURRENCY_CONFLICT: session state changed between staleness check and blueprint creation — the operation was denied to prevent a stale blueprint. Retry the request.`
+      );
+    }
+
+    // Idea-level Pattern A concurrency guard: UPDATE acquires exclusive row lock on the idea
+    // row. Under READ COMMITTED the WHERE clause is re-evaluated at lock-acquisition time —
+    // any material pointer change or concurrent revision after our canonical-state read causes
+    // count=0 → ConflictError, preventing a stale blueprint from being committed. supersededById:
+    // null is included to catch concurrent revisions that committed between the G2-3a check
+    // (earlier in this tx) and this lock-acquiring UPDATE.
+    const ideaBpGuard = await tx.startupIdeaRecord.updateMany({
+      where: {
+        id: input.ideaId,
+        workspaceId,
+        currentEconomicModelVersionId: currentState.economicModelId,
+        currentReadinessId: currentState.readinessId,
+        currentBusinessModelVersionId: currentState.businessModelId,
+        supersededById: null,
+      },
+      data: { workspaceId }, // no-op: acquires exclusive row lock without changing any field
+    });
+    if (ideaBpGuard.count === 0) {
+      throw new ConflictError(
+        `CONCURRENCY_CONFLICT: idea material state changed between staleness check and blueprint creation — the operation was denied to prevent a stale blueprint. Retry the request.`
+      );
+    }
 
     await emitAuditEvent(
       {

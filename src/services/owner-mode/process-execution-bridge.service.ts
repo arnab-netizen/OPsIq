@@ -49,10 +49,32 @@ interface AuditDelegate { create(a: { data: Record<string, unknown> }): Promise<
 interface OwnerBusinessDelegate {
   findFirst(a: { where: { id: string; workspaceId: string }; select?: { id: true } }): Promise<{ id: string } | null>;
 }
+/**
+ * Minimal delegate for in-transaction approval fingerprint verification.
+ * Exposes updateMany (Pattern A: acquires exclusive row lock) rather than findFirst (read-only).
+ * The WHERE fields are the only fields needed to close the concurrency race.
+ */
+interface StartupDecisionFingerprintDelegate {
+  updateMany(a: {
+    where: {
+      id: string;
+      workspaceId: string;
+      supersededById: null;
+      packageHashSha256?: string;
+    };
+    data: { workspaceId: string };
+  }): Promise<{ count: number }>;
+}
 interface PETTx {
   processExecutionTask: Pick<PETDelegate, "create" | "updateMany" | "findFirst">;
   processExecutionTaskProgress: ProgressDelegate;
   auditEvent: AuditDelegate;
+  /**
+   * Used only by the startup execution fingerprint guard inside the mutation transaction.
+   * Provided by the Prisma tx client at runtime; test mocks should stub this when testing
+   * the STARTUP_MODE START/DELEGATE paths with full concurrency coverage.
+   */
+  startupOwnerDecision: StartupDecisionFingerprintDelegate;
 }
 export interface ProcessBridgeDb extends PETTx {
   processExecutionTask: PETDelegate;
@@ -528,6 +550,15 @@ export async function applyProcessExecutionAction(
   let nextStatus = task.status;
   const data: Record<string, unknown> = {};
 
+  // Fingerprint fields captured from the outer auth check for in-transaction re-verification.
+  // The outer check (G2-1..G2-20) provides the primary authorization gate. The fingerprint
+  // guard inside the mutation transaction closes the specific race where the GO decision is
+  // superseded or its approval package hash changes between the outer check and the DB write.
+  let startupFingerprintDecisionId: string | null = null;
+  let startupFingerprintHash: string | null = null;
+  let startupFingerprintSessionId: string | null = null;
+  let startupFingerprintAction: string | null = null;
+
   switch (input.action) {
     case "START": {
       if (!["PROPOSED", "ACKNOWLEDGED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
@@ -560,6 +591,11 @@ export async function applyProcessExecutionAction(
           await emitStartupAuthorizationDenied(input.workspaceId, task.linkedStartupSessionId, input.actorId ?? null, "START_TASK", authResult.violations);
           return { ok: false, reason: `Startup execution gate: ${authResult.violations.join("; ")}`, code: "UNAUTHORIZED" };
         }
+        // Capture fingerprint for in-transaction re-verification (closes the concurrency race).
+        startupFingerprintDecisionId = planLookup.ownerDecisionId;
+        startupFingerprintHash = authResult.approvalPackageHash;
+        startupFingerprintSessionId = task.linkedStartupSessionId;
+        startupFingerprintAction = "START_TASK";
       }
       nextStatus = "IN_PROGRESS";
       if (!task.workStartedAt) data.workStartedAt = deps.now();
@@ -604,6 +640,11 @@ export async function applyProcessExecutionAction(
           await emitStartupAuthorizationDenied(input.workspaceId, task.linkedStartupSessionId, input.actorId ?? null, "DELEGATE_TASK", authResult.violations);
           return { ok: false, reason: `Startup execution gate: ${authResult.violations.join("; ")}`, code: "UNAUTHORIZED" };
         }
+        // Capture fingerprint for in-transaction re-verification (closes the concurrency race).
+        startupFingerprintDecisionId = planLookup.ownerDecisionId;
+        startupFingerprintHash = authResult.approvalPackageHash;
+        startupFingerprintSessionId = task.linkedStartupSessionId;
+        startupFingerprintAction = "DELEGATE_TASK";
       }
       nextStatus = "IN_PROGRESS"; data.actionOwner = input.delegateToRole; break;
     }
@@ -624,7 +665,40 @@ export async function applyProcessExecutionAction(
   const now = deps.now();
   data.status = nextStatus;
   data.updatedAt = now;
-  await deps.db.$transaction(async (tx) => {
+
+  // In-transaction fingerprint guard: re-checks the GO decision inside the same transaction
+  // as the task write. If the decision was superseded or its hash changed between the outer
+  // auth check and this transaction, the transaction returns a denial result (no mutations
+  // committed). Using a typed return value avoids outer-let mutation that TypeScript's CFA
+  // cannot track through async callbacks.
+  type TxResult =
+    | { denied: true; violations: string[]; sessionId: string; actionType: string }
+    | { denied: false };
+
+  const txResult = await deps.db.$transaction(async (tx) => {
+    if (startupFingerprintDecisionId !== null && startupFingerprintSessionId !== null) {
+      // Pattern A: UPDATE (not SELECT) acquires exclusive row lock on the GO decision inside
+      // the task-mutation transaction. A concurrent supersession or hash change between the
+      // outer auth check and this transaction would cause count=0 → deny. A read-only findFirst
+      // cannot close this race; the UPDATE makes the check-and-lock atomic.
+      const decisionGuard = await tx.startupOwnerDecision.updateMany({
+        where: {
+          id: startupFingerprintDecisionId,
+          workspaceId: input.workspaceId,
+          supersededById: null,
+          ...(startupFingerprintHash !== null ? { packageHashSha256: startupFingerprintHash } : {}),
+        },
+        data: { workspaceId: input.workspaceId }, // no-op: acquires exclusive row lock
+      });
+      if (decisionGuard.count === 0) {
+        return {
+          denied: true as const,
+          violations: ["Startup authorization invalidated: GO decision was superseded or approval package changed concurrently — retry after reapproval"],
+          sessionId: startupFingerprintSessionId,
+          actionType: startupFingerprintAction ?? "UNKNOWN",
+        } satisfies TxResult;
+      }
+    }
     await tx.processExecutionTask.updateMany({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey }, data });
     await tx.auditEvent.create({
       data: {
@@ -635,6 +709,20 @@ export async function applyProcessExecutionAction(
         visibility: "internal", occurredAt: now,
       },
     });
+    return { denied: false as const } satisfies TxResult;
   });
+
+  if (txResult.denied) {
+    // Denial event emitted outside the transaction so it always persists.
+    const { emitStartupAuthorizationDenied } = await import("@/services/owner-strategy/startup-session.service");
+    await emitStartupAuthorizationDenied(
+      input.workspaceId,
+      txResult.sessionId,
+      input.actorId ?? null,
+      txResult.actionType,
+      txResult.violations,
+    );
+    return { ok: false, reason: `Startup execution gate: ${txResult.violations.join("; ")}`, code: "UNAUTHORIZED" };
+  }
   return { ok: true, taskId: task.id, status: nextStatus };
 }
