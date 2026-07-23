@@ -31,6 +31,8 @@ import { ValidationError } from "@/infra/errors";
 
 const actor = randomUUID();
 const ws = () => randomUUID();
+// Fixed workspace for tests that create alerts (alerts table has FK to workspaces)
+const alertWorkspaceId = randomUUID();
 
 beforeAll(async () => {
   await db.user.upsert({
@@ -40,6 +42,17 @@ beforeAll(async () => {
       id: actor,
       email: `risk-compliance-test-${actor}@example.com`,
       name: "Risk Compliance Test",
+      isActive: true,
+      updatedAt: new Date(),
+    },
+  });
+  await db.workspace.upsert({
+    where: { id: alertWorkspaceId },
+    update: {},
+    create: {
+      id: alertWorkspaceId,
+      name: "Alert Test Workspace",
+      slug: `alert-test-${alertWorkspaceId}`,
       isActive: true,
       updatedAt: new Date(),
     },
@@ -437,28 +450,26 @@ describe("[db] Compliance — lifecycle transitions", () => {
   });
 
   it("[db] breach alert is created when status changes to breached", async () => {
-    const workspaceId = ws();
-    const id = await recordComplianceItem({ workspaceId, actorId: actor, kind: "insurance", name: "Breach alert test" });
+    const id = await recordComplianceItem({ workspaceId: alertWorkspaceId, actorId: actor, kind: "insurance", name: "Breach alert test" });
 
-    await updateComplianceStatus({ workspaceId, itemId: id, actorId: actor, newStatus: "breached" });
+    await updateComplianceStatus({ workspaceId: alertWorkspaceId, itemId: id, actorId: actor, newStatus: "breached" });
 
     const alert = await db.alert.findFirst({
-      where: { workspaceId, entityId: id, type: "compliance" },
+      where: { workspaceId: alertWorkspaceId, entityId: id, type: "threshold_breach" },
     });
     expect(alert).toBeTruthy();
     expect(alert?.severity).toBe("critical");
   });
 
   it("[db] breach alert is idempotent — same item second breach does not create duplicate", async () => {
-    const workspaceId = ws();
-    const id = await recordComplianceItem({ workspaceId, actorId: actor, kind: "document", name: "Breach idempotency" });
+    const id = await recordComplianceItem({ workspaceId: alertWorkspaceId, actorId: actor, kind: "document", name: "Breach idempotency" });
 
-    await updateComplianceStatus({ workspaceId, itemId: id, actorId: actor, newStatus: "breached" });
-    await updateComplianceStatus({ workspaceId, itemId: id, actorId: actor, newStatus: "active" }); // reset
+    await updateComplianceStatus({ workspaceId: alertWorkspaceId, itemId: id, actorId: actor, newStatus: "breached" });
+    await updateComplianceStatus({ workspaceId: alertWorkspaceId, itemId: id, actorId: actor, newStatus: "active" }); // reset
     // Note: second breach may increment — idempotencyKey includes status, so a new breach key differs
 
     const alerts = await db.alert.findMany({
-      where: { workspaceId, entityId: id, type: "compliance" },
+      where: { workspaceId: alertWorkspaceId, entityId: id, type: "threshold_breach" },
     });
     expect(alerts.length).toBeGreaterThanOrEqual(1);
   });
