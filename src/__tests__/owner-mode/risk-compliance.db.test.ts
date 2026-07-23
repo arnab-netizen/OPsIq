@@ -216,7 +216,7 @@ describe("[db] Business Risk — lifecycle transitions", () => {
 
     const events = await db.auditEvent.findMany({
       where: { workspaceId, entityId: risk.id },
-      orderBy: { createdAt: "desc" },
+      orderBy: { occurredAt: "desc" },
     });
     expect(events.length).toBeGreaterThanOrEqual(2); // created + transition
     const transitionEvent = events.find((e) => e.eventName.includes("review_completed") || e.eventName.includes("status_changed"));
@@ -425,7 +425,7 @@ describe("[db] Compliance — lifecycle transitions", () => {
   });
 
   it("[db] breached → review_pending is a valid transition", async () => {
-    const workspaceId = ws();
+    const workspaceId = alertWorkspaceId;
     const id = await recordComplianceItem({ workspaceId, actorId: actor, kind: "permit", name: "Trans test 4" });
     await updateComplianceStatus({ workspaceId, itemId: id, actorId: actor, newStatus: "breached" });
 
@@ -442,7 +442,7 @@ describe("[db] Compliance — lifecycle transitions", () => {
 
     const events = await db.auditEvent.findMany({
       where: { workspaceId, entityId: id },
-      orderBy: { createdAt: "desc" },
+      orderBy: { occurredAt: "desc" },
     });
     expect(events.length).toBeGreaterThanOrEqual(2);
     const statusEvent = events.find((e) => e.eventName.includes("compliance_status_changed") || e.eventName.includes("compliance_review"));
