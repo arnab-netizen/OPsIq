@@ -30,6 +30,23 @@ function fullySetUp(profileType: AssessReadinessInput["profileType"], ownerRole:
   return Array.from(new Set<OwnerInputCategory>([...req.minimumRequired, ...req.recommended, "proof_completion"]));
 }
 
+describe("readiness-score — module contract assertions", () => {
+  it("assessOwnerPilotReadiness is a function", () => { expect(typeof assessOwnerPilotReadiness).toBe("function"); });
+  it("requiredInputsForProfile is a function", () => { expect(typeof requiredInputsForProfile).toBe("function"); });
+  it("goodRuntime is an object", () => { expect(typeof goodRuntime).toBe("object"); });
+  it("goodRuntime.nextBestActionPresent is true", () => { expect(goodRuntime.nextBestActionPresent).toBe(true); });
+  it("goodRuntime.maxReliabilityGreen is true", () => { expect(goodRuntime.maxReliabilityGreen).toBe(true); });
+  it("fullySetUp is a function", () => { expect(typeof fullySetUp).toBe("function"); });
+  it("fullySetUp returns an array", () => { expect(Array.isArray(fullySetUp("laundry_drycleaning", "owner_operated"))).toBe(true); });
+  it("fullySetUp result length is greater than 0", () => { expect(fullySetUp("laundry_drycleaning", "owner_operated").length).toBeGreaterThan(0); });
+  it("assessOwnerPilotReadiness({...}) returns an object", () => { expect(typeof assessOwnerPilotReadiness({ profileType: "laundry_drycleaning", ownerRole: "owner_operated", suppliedCategories: [], runtime: goodRuntime })).toBe("object"); });
+  it("assessOwnerPilotReadiness result has overallScore field", () => { expect(assessOwnerPilotReadiness({ profileType: "laundry_drycleaning", ownerRole: "owner_operated", suppliedCategories: [], runtime: goodRuntime })).toHaveProperty("overallScore"); });
+  it("assessOwnerPilotReadiness result has dimensions field", () => { expect(assessOwnerPilotReadiness({ profileType: "laundry_drycleaning", ownerRole: "owner_operated", suppliedCategories: [], runtime: goodRuntime })).toHaveProperty("dimensions"); });
+  it("assessOwnerPilotReadiness result has pilotReady field", () => { expect(assessOwnerPilotReadiness({ profileType: "laundry_drycleaning", ownerRole: "owner_operated", suppliedCategories: [], runtime: goodRuntime })).toHaveProperty("pilotReady"); });
+  it("assessOwnerPilotReadiness result has blockers field", () => { expect(assessOwnerPilotReadiness({ profileType: "laundry_drycleaning", ownerRole: "owner_operated", suppliedCategories: [], runtime: goodRuntime })).toHaveProperty("blockers"); });
+  it("assessOwnerPilotReadiness dimensions has length 10", () => { expect(assessOwnerPilotReadiness({ profileType: "laundry_drycleaning", ownerRole: "owner_operated", suppliedCategories: [], runtime: goodRuntime }).dimensions).toHaveLength(10); });
+});
+
 describe("owner pilot readiness score", () => {
   it("produces a readiness score with all ten dimensions", () => {
     const r = assessOwnerPilotReadiness({

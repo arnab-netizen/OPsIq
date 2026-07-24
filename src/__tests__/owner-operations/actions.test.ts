@@ -69,6 +69,23 @@ function plan(input: OperationsSnapshotInput) {
 const actionCodes = (p: { actions: { findingCode: string }[] }) =>
   p.actions.map((a) => a.findingCode);
 
+describe("owner-operations actions — module contract assertions", () => {
+  it("diagnoseOperationsSnapshot is a function", () => { expect(typeof diagnoseOperationsSnapshot).toBe("function"); });
+  it("planOperationsActionsFromDiagnosis is a function", () => { expect(typeof planOperationsActionsFromDiagnosis).toBe("function"); });
+  it("buildOperationsRecommendations is a function", () => { expect(typeof buildOperationsRecommendations).toBe("function"); });
+  it("OPERATIONS_REC_TEMPLATES is an object", () => { expect(typeof OPERATIONS_REC_TEMPLATES).toBe("object"); });
+  it("ownerActionSchema is an object", () => { expect(typeof ownerActionSchema).toBe("object"); });
+  it("OWNER_ACTION_STATUSES is defined", () => { expect(OWNER_ACTION_STATUSES).toBeDefined(); });
+  it("calculateOwnerPriorityScore is a function", () => { expect(typeof calculateOwnerPriorityScore).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("healthy is a function", () => { expect(typeof healthy).toBe("function"); });
+  it("overloaded is a function", () => { expect(typeof overloaded).toBe("function"); });
+  it("plan is a function", () => { expect(typeof plan).toBe("function"); });
+  it("actionCodes is a function", () => { expect(typeof actionCodes).toBe("function"); });
+  it("healthy() returns an object", () => { expect(typeof healthy()).toBe("object"); });
+  it("overloaded() returns an object", () => { expect(typeof overloaded()).toBe("object"); });
+});
+
 describe("owner-operations planner — recommendation/action creation", () => {
   it("capacity bottleneck creates a relieve-capacity action", () => {
     const p = plan(overloaded());

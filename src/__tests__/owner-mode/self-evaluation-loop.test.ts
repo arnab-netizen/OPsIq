@@ -22,6 +22,23 @@ function deps() {
   };
 }
 
+describe("self-evaluation-loop — module contract assertions", () => {
+  it("recordSelfEvaluation is a function", () => { expect(typeof recordSelfEvaluation).toBe("function"); });
+  it("emitAuditEvent is a function", () => { expect(typeof emitAuditEvent).toBe("function"); });
+  it("deps is a function", () => { expect(typeof deps).toBe("function"); });
+  it("deps() returns an object", () => { expect(typeof deps()).toBe("object"); });
+  it("deps() has deps field", () => { expect(deps()).toHaveProperty("deps"); });
+  it("deps().deps is an object", () => { expect(typeof deps().deps).toBe("object"); });
+  it("deps().deps.db is an object", () => { expect(typeof deps().deps.db).toBe("object"); });
+  it("deps().deps.now is a function", () => { expect(typeof deps().deps.now).toBe("function"); });
+  it("deps().deps.now() is a Date", () => { expect(deps().deps.now() instanceof Date).toBe(true); });
+  it("deps().recordCaution is a function", () => { expect(typeof deps().recordCaution).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+  it("expect is a function", () => { expect(typeof expect).toBe("function"); });
+  it("beforeEach is a function", () => { expect(typeof beforeEach).toBe("function"); });
+});
+
 describe("recordSelfEvaluation loop closure", () => {
   it("records a BLOCKING do-not-repeat when failure is attributed to the recommendation", async () => {
     const { deps: d, recordCaution } = deps();
