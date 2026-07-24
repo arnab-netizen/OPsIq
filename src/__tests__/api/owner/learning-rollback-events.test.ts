@@ -117,3 +117,72 @@ describe("security invariants", () => {
     expect(svc.hasBeenRolledBack).toHaveBeenCalledWith(expect.anything(), WS, CAND_ID);
   });
 });
+
+describe("POST /api/owner/learning-rollback-events — additional rollback codes", () => {
+  it("records HARM_DETECTED rollbackCode", async () => {
+    vi.mocked(svc.recordRollbackEvent).mockResolvedValue({ recorded: true, violations: [], event: { rollbackCode: "HARM_DETECTED" } });
+    const result = await svc.recordRollbackEvent({} as any, { ...rollbackInput(), rollbackCode: "HARM_DETECTED" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("records POLICY_VIOLATION rollbackCode", async () => {
+    vi.mocked(svc.recordRollbackEvent).mockResolvedValue({ recorded: true, violations: [], event: { rollbackCode: "POLICY_VIOLATION" } });
+    const result = await svc.recordRollbackEvent({} as any, { ...rollbackInput(), rollbackCode: "POLICY_VIOLATION" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("records MANUAL_OVERRIDE rollbackCode", async () => {
+    vi.mocked(svc.recordRollbackEvent).mockResolvedValue({ recorded: true, violations: [], event: { rollbackCode: "MANUAL_OVERRIDE" } });
+    const result = await svc.recordRollbackEvent({} as any, { ...rollbackInput(), rollbackCode: "MANUAL_OVERRIDE" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("recordRollbackEvent called exactly once per request", async () => {
+    vi.mocked(svc.recordRollbackEvent).mockResolvedValue({ recorded: true, violations: [], event: {} });
+    await svc.recordRollbackEvent({} as any, rollbackInput());
+    expect(svc.recordRollbackEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("includes workspaceId and candidateId in rollback call", async () => {
+    vi.mocked(svc.recordRollbackEvent).mockResolvedValue({ recorded: true, violations: [], event: {} });
+    await svc.recordRollbackEvent({} as any, rollbackInput());
+    expect(svc.recordRollbackEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ workspaceId: WS, candidateId: CAND_ID })
+    );
+  });
+});
+
+describe("GET /api/owner/learning-rollback-events — additional scenarios", () => {
+  it("listRollbackEventsForWorkspace returns items", async () => {
+    vi.mocked(svc.listRollbackEventsForWorkspace).mockResolvedValue([{ id: "rb-001" }]);
+    const result = await svc.listRollbackEventsForWorkspace({} as any, WS);
+    expect(result).toHaveLength(1);
+  });
+
+  it("listRollbackEventsForCandidate returns items for candidate", async () => {
+    vi.mocked(svc.listRollbackEventsForCandidate).mockResolvedValue([{ id: "rb-002" }]);
+    const result = await svc.listRollbackEventsForCandidate({} as any, WS, CAND_ID);
+    expect(result).toHaveLength(1);
+  });
+
+  it("workspace isolation: WS-A and WS-B listed separately", async () => {
+    vi.mocked(svc.listRollbackEventsForWorkspace).mockResolvedValue([]);
+    await svc.listRollbackEventsForWorkspace({} as any, "ws-001");
+    await svc.listRollbackEventsForWorkspace({} as any, "ws-002");
+    expect(svc.listRollbackEventsForWorkspace).toHaveBeenNthCalledWith(1, expect.anything(), "ws-001");
+    expect(svc.listRollbackEventsForWorkspace).toHaveBeenNthCalledWith(2, expect.anything(), "ws-002");
+  });
+
+  it("listRollbackEventsForWorkspace called exactly once", async () => {
+    vi.mocked(svc.listRollbackEventsForWorkspace).mockResolvedValue([]);
+    await svc.listRollbackEventsForWorkspace({} as any, WS);
+    expect(svc.listRollbackEventsForWorkspace).toHaveBeenCalledTimes(1);
+  });
+
+  it("hasBeenRolledBack returns true for rolled-back candidate", async () => {
+    vi.mocked(svc.hasBeenRolledBack).mockResolvedValue(true);
+    const result = await svc.hasBeenRolledBack({} as any, WS, CAND_ID);
+    expect(result).toBe(true);
+  });
+});

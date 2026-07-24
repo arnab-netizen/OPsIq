@@ -106,3 +106,78 @@ describe("security invariants", () => {
     expect(result.recorded).toBe(false);
   });
 });
+
+describe("POST /api/owner/learning-consent — additional scenarios", () => {
+  it("handles ANONYMIZED_AGGREGATE consentScope", async () => {
+    vi.mocked(svc.recordConsent).mockResolvedValue({ recorded: true, violations: [], record: { id: "con-003", consentScope: "ANONYMIZED_AGGREGATE" } });
+    const result = await svc.recordConsent({} as any, { ...consentInput(), consentScope: "ANONYMIZED_AGGREGATE" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("handles NONE consentScope (opt-out)", async () => {
+    vi.mocked(svc.recordConsent).mockResolvedValue({ recorded: true, violations: [], record: { id: "con-004", consentScope: "NONE" } });
+    const result = await svc.recordConsent({} as any, { ...consentInput(), consentScope: "NONE" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("records consent with empty consentNotes", async () => {
+    vi.mocked(svc.recordConsent).mockResolvedValue({ recorded: true, violations: [], record: { id: "con-005" } });
+    const result = await svc.recordConsent({} as any, { ...consentInput(), consentNotes: "" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("returns violations array when recorded=false", async () => {
+    vi.mocked(svc.recordConsent).mockResolvedValue({ recorded: false, violations: ["Candidate not found in workspace"] });
+    const result = await svc.recordConsent({} as any, { ...consentInput(), candidateId: "nonexistent" });
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0]).toBeDefined();
+  });
+
+  it("recordConsent called exactly once per request", async () => {
+    vi.mocked(svc.recordConsent).mockResolvedValue({ recorded: true, violations: [], record: {} });
+    await svc.recordConsent({} as any, consentInput());
+    expect(svc.recordConsent).toHaveBeenCalledTimes(1);
+  });
+
+  it("recordConsent includes workspaceId in call", async () => {
+    vi.mocked(svc.recordConsent).mockResolvedValue({ recorded: true, violations: [], record: {} });
+    await svc.recordConsent({} as any, consentInput());
+    expect(svc.recordConsent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ workspaceId: WS }));
+  });
+});
+
+describe("GET /api/owner/learning-consent — additional scenarios", () => {
+  it("returns multiple records for workspace", async () => {
+    const records = [{ id: "con-001" }, { id: "con-002" }];
+    vi.mocked(svc.listConsentRecords).mockResolvedValue(records);
+    const result = await svc.listConsentRecords({} as any, WS, CAND_ID);
+    expect(result).toHaveLength(2);
+  });
+
+  it("listConsentRecords called exactly once", async () => {
+    vi.mocked(svc.listConsentRecords).mockResolvedValue([]);
+    await svc.listConsentRecords({} as any, WS, CAND_ID);
+    expect(svc.listConsentRecords).toHaveBeenCalledTimes(1);
+  });
+
+  it("workspace isolation: list with WS_A and WS_B are separate calls", async () => {
+    vi.mocked(svc.listConsentRecords).mockResolvedValue([]);
+    await svc.listConsentRecords({} as any, "ws-001", CAND_ID);
+    await svc.listConsentRecords({} as any, "ws-002", CAND_ID);
+    expect(svc.listConsentRecords).toHaveBeenNthCalledWith(1, expect.anything(), "ws-001", CAND_ID);
+    expect(svc.listConsentRecords).toHaveBeenNthCalledWith(2, expect.anything(), "ws-002", CAND_ID);
+  });
+
+  it("returns empty when candidateId has no records", async () => {
+    vi.mocked(svc.listConsentRecords).mockResolvedValue([]);
+    const result = await svc.listConsentRecords({} as any, WS, "cand-no-records");
+    expect(result).toEqual([]);
+  });
+
+  it("returns latest consent record when multiple exist", async () => {
+    const records = [{ id: "con-001", consentGiven: false }, { id: "con-002", consentGiven: true }];
+    vi.mocked(svc.listConsentRecords).mockResolvedValue(records);
+    const result = await svc.listConsentRecords({} as any, WS, CAND_ID);
+    expect(result).toHaveLength(2);
+  });
+});

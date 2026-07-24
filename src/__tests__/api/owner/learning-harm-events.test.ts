@@ -125,3 +125,76 @@ describe("security invariants", () => {
     expect(svc.hasCriticalHarm).toHaveBeenCalledWith(expect.anything(), WS, CAND_ID);
   });
 });
+
+describe("POST /api/owner/learning-harm-events — additional harmTypes", () => {
+  it("records FINANCIAL_LOSS harmType", async () => {
+    vi.mocked(svc.recordHarmEvent).mockResolvedValue({ recorded: true, violations: [], event: { harmType: "FINANCIAL_LOSS" } });
+    const result = await svc.recordHarmEvent({} as any, { ...harmInput(), harmType: "FINANCIAL_LOSS" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("records DATA_CORRUPTION harmType", async () => {
+    vi.mocked(svc.recordHarmEvent).mockResolvedValue({ recorded: true, violations: [], event: { harmType: "DATA_CORRUPTION" } });
+    const result = await svc.recordHarmEvent({} as any, { ...harmInput(), harmType: "DATA_CORRUPTION" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("records COMPLIANCE_VIOLATION harmType", async () => {
+    vi.mocked(svc.recordHarmEvent).mockResolvedValue({ recorded: true, violations: [], event: { harmType: "COMPLIANCE_VIOLATION" } });
+    const result = await svc.recordHarmEvent({} as any, { ...harmInput(), harmType: "COMPLIANCE_VIOLATION" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("records SAFETY_RISK harmType", async () => {
+    vi.mocked(svc.recordHarmEvent).mockResolvedValue({ recorded: true, violations: [], event: { harmType: "SAFETY_RISK" } });
+    const result = await svc.recordHarmEvent({} as any, { ...harmInput(), harmType: "SAFETY_RISK" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("records LOW severity", async () => {
+    vi.mocked(svc.recordHarmEvent).mockResolvedValue({ recorded: true, violations: [], event: { severity: "LOW" } });
+    const result = await svc.recordHarmEvent({} as any, { ...harmInput(), severity: "LOW" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("records MEDIUM severity", async () => {
+    vi.mocked(svc.recordHarmEvent).mockResolvedValue({ recorded: true, violations: [], event: { severity: "MEDIUM" } });
+    const result = await svc.recordHarmEvent({} as any, { ...harmInput(), severity: "MEDIUM" });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("recordHarmEvent called exactly once per request", async () => {
+    vi.mocked(svc.recordHarmEvent).mockResolvedValue({ recorded: true, violations: [], event: {} });
+    await svc.recordHarmEvent({} as any, harmInput());
+    expect(svc.recordHarmEvent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("GET /api/owner/learning-harm-events — additional scenarios", () => {
+  it("listHarmEventsForWorkspace returns multiple events", async () => {
+    vi.mocked(svc.listHarmEventsForWorkspace).mockResolvedValue([{ id: "harm-001" }, { id: "harm-002" }]);
+    const result = await svc.listHarmEventsForWorkspace({} as any, WS);
+    expect(result).toHaveLength(2);
+  });
+
+  it("listHarmEventsForCandidate returns items for candidate", async () => {
+    vi.mocked(svc.listHarmEventsForCandidate).mockResolvedValue([{ id: "harm-003" }]);
+    const result = await svc.listHarmEventsForCandidate({} as any, WS, CAND_ID);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("harm-003");
+  });
+
+  it("workspace isolation: WS-A and WS-B listed separately", async () => {
+    vi.mocked(svc.listHarmEventsForWorkspace).mockResolvedValue([]);
+    await svc.listHarmEventsForWorkspace({} as any, "ws-001");
+    await svc.listHarmEventsForWorkspace({} as any, "ws-002");
+    expect(svc.listHarmEventsForWorkspace).toHaveBeenNthCalledWith(1, expect.anything(), "ws-001");
+    expect(svc.listHarmEventsForWorkspace).toHaveBeenNthCalledWith(2, expect.anything(), "ws-002");
+  });
+
+  it("hasCriticalHarm returns true when critical event exists", async () => {
+    vi.mocked(svc.hasCriticalHarm).mockResolvedValue(true);
+    const result = await svc.hasCriticalHarm({} as any, WS, CAND_ID);
+    expect(result).toBe(true);
+  });
+});

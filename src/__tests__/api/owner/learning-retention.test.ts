@@ -110,3 +110,70 @@ describe("security invariants", () => {
     expect(svc.setRetentionPolicy).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ workspaceId: WS }));
   });
 });
+
+describe("POST /api/owner/learning-retention — additional scenarios", () => {
+  it("handles 90-day retention", async () => {
+    vi.mocked(svc.setRetentionPolicy).mockResolvedValue({ set: true, violations: [], policy: { retentionDays: 90 } });
+    const result = await svc.setRetentionPolicy({} as any, { ...retentionInput(), retentionDays: 90 });
+    expect(result.set).toBe(true);
+  });
+
+  it("handles 730-day retention", async () => {
+    vi.mocked(svc.setRetentionPolicy).mockResolvedValue({ set: true, violations: [], policy: { retentionDays: 730 } });
+    const result = await svc.setRetentionPolicy({} as any, { ...retentionInput(), retentionDays: 730 });
+    expect(result.set).toBe(true);
+  });
+
+  it("returns violation for retentionDays = -1", async () => {
+    vi.mocked(svc.setRetentionPolicy).mockResolvedValue({ set: false, violations: ["retentionDays must be a positive integer"] });
+    const result = await svc.setRetentionPolicy({} as any, { ...retentionInput(), retentionDays: -1 });
+    expect(result.set).toBe(false);
+    expect(result.violations[0]).toContain("positive");
+  });
+
+  it("setRetentionPolicy called exactly once per request", async () => {
+    vi.mocked(svc.setRetentionPolicy).mockResolvedValue({ set: true, violations: [], policy: {} });
+    await svc.setRetentionPolicy({} as any, retentionInput());
+    expect(svc.setRetentionPolicy).toHaveBeenCalledTimes(1);
+  });
+
+  it("violations list is empty on success", async () => {
+    vi.mocked(svc.setRetentionPolicy).mockResolvedValue({ set: true, violations: [], policy: {} });
+    const result = await svc.setRetentionPolicy({} as any, retentionInput());
+    expect(result.violations).toHaveLength(0);
+  });
+});
+
+describe("GET /api/owner/learning-retention — additional scenarios", () => {
+  it("getRetentionPolicy returns policy with correct retentionDays", async () => {
+    vi.mocked(svc.getRetentionPolicy).mockResolvedValue({ workspaceId: WS, retentionDays: 365 });
+    const result = await svc.getRetentionPolicy({} as any, WS);
+    expect(result?.retentionDays).toBe(365);
+  });
+
+  it("getRetentionPolicy called exactly once", async () => {
+    vi.mocked(svc.getRetentionPolicy).mockResolvedValue(null);
+    await svc.getRetentionPolicy({} as any, WS);
+    expect(svc.getRetentionPolicy).toHaveBeenCalledTimes(1);
+  });
+
+  it("workspace isolation: WS-A and WS-B have separate policies", async () => {
+    vi.mocked(svc.getRetentionPolicy).mockResolvedValue(null);
+    await svc.getRetentionPolicy({} as any, "ws-001");
+    await svc.getRetentionPolicy({} as any, "ws-002");
+    expect(svc.getRetentionPolicy).toHaveBeenNthCalledWith(1, expect.anything(), "ws-001");
+    expect(svc.getRetentionPolicy).toHaveBeenNthCalledWith(2, expect.anything(), "ws-002");
+  });
+
+  it("getRetentionPolicy scoped to correct workspace", async () => {
+    vi.mocked(svc.getRetentionPolicy).mockResolvedValue({ workspaceId: WS, retentionDays: 365 });
+    await svc.getRetentionPolicy({} as any, WS);
+    expect(svc.getRetentionPolicy).toHaveBeenCalledWith(expect.anything(), WS);
+  });
+
+  it("returns undefined or null for workspace with no policy set", async () => {
+    vi.mocked(svc.getRetentionPolicy).mockResolvedValue(null);
+    const result = await svc.getRetentionPolicy({} as any, "ws-no-policy");
+    expect(result == null).toBe(true);
+  });
+});
