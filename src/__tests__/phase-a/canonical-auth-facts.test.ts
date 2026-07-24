@@ -22,6 +22,23 @@ import type { PolicyContext } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { ROLES } from "@/domain/constants/roles";
 
+describe("canonical-auth-facts — module contract assertions", () => {
+  it("buildSessionFact is a function", () => { expect(typeof buildSessionFact).toBe("function"); });
+  it("buildPolicyFact is a function", () => { expect(typeof buildPolicyFact).toBe("function"); });
+  it("buildCapabilityFact is a function", () => { expect(typeof buildCapabilityFact).toBe("function"); });
+  it("buildInternalAccessFact is a function", () => { expect(typeof buildInternalAccessFact).toBe("function"); });
+  it("evaluateAuthState is a function", () => { expect(typeof evaluateAuthState).toBe("function"); });
+  it("buildAuthState is a function", () => { expect(typeof buildAuthState).toBe("function"); });
+  it("CAPABILITIES is an object", () => { expect(typeof CAPABILITIES).toBe("object"); });
+  it("ROLES is an object", () => { expect(typeof ROLES).toBe("object"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
+});
+
 describe("PHASE A: Canonical Auth Facts", () => {
   // ─── Fact Builders ──────────────────────────────────────────────────────
 

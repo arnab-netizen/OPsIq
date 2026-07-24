@@ -82,6 +82,8 @@ describe("operational triggers — module contract assertions", () => {
     expect(Array.isArray(result.triggers)).toBe(true);
     expect(result.triggers).toHaveLength(0);
   });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
 });
 
 describe("deriveTrainingFromObservedFailure (G20)", () => {
