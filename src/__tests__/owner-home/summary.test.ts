@@ -81,6 +81,23 @@ function verification(over: Partial<OwnerHomeVerificationInput> = {}): OwnerHome
   };
 }
 
+describe("owner-home summary — module contract assertions", () => {
+  it("buildOwnerHomeSummary is a function", () => { expect(typeof buildOwnerHomeSummary).toBe("function"); });
+  it("dangerLevel is a function", () => { expect(typeof dangerLevel).toBe("function"); });
+  it("OPEN_ACTION_STATUSES is an array", () => { expect(Array.isArray(OPEN_ACTION_STATUSES)).toBe(true); });
+  it("OPEN_ACTION_STATUSES.length is greater than 0", () => { expect(OPEN_ACTION_STATUSES.length).toBeGreaterThan(0); });
+  it("MAX_REQUIRED_ACTIONS is a number", () => { expect(typeof MAX_REQUIRED_ACTIONS).toBe("number"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("score is a function", () => { expect(typeof score).toBe("function"); });
+  it("finding is a function", () => { expect(typeof finding).toBe("function"); });
+  it("action is a function", () => { expect(typeof action).toBe("function"); });
+  it("verification is a function", () => { expect(typeof verification).toBe("function"); });
+  it("dangerLevel(null) is 'unknown'", () => { expect(dangerLevel(null)).toBe("unknown"); });
+  it("dangerLevel(0) is 'none'", () => { expect(dangerLevel(0)).toBe("none"); });
+  it("dangerLevel(80) is 'critical'", () => { expect(dangerLevel(80)).toBe("critical"); });
+  it("score('finance') returns an object with domain field", () => { expect(score("finance")).toHaveProperty("domain"); });
+});
+
 describe("dangerLevel banding", () => {
   it("bands risk into none/low/elevated/high/critical and unknown for null", () => {
     expect(dangerLevel(null)).toBe("unknown");

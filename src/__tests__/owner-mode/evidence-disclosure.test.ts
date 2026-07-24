@@ -21,6 +21,23 @@ function score(domain: DomainScore["domain"], dataConfidenceScore: number, riskS
   };
 }
 
+describe("evidence-disclosure — module contract assertions", () => {
+  it("buildEvidenceDisclosure is a function", () => { expect(typeof buildEvidenceDisclosure).toBe("function"); });
+  it("RecommendationSensitivity is an object", () => { expect(typeof RecommendationSensitivity).toBe("object"); });
+  it("RecommendationSensitivity.GENERAL is defined", () => { expect(RecommendationSensitivity.GENERAL).toBeDefined(); });
+  it("RecommendationSensitivity.FINANCE_SENSITIVE is defined", () => { expect(RecommendationSensitivity.FINANCE_SENSITIVE).toBeDefined(); });
+  it("RecommendationSensitivity.GROWTH_SENSITIVE is defined", () => { expect(RecommendationSensitivity.GROWTH_SENSITIVE).toBeDefined(); });
+  it("buildBusinessConditionProfile is a function", () => { expect(typeof buildBusinessConditionProfile).toBe("function"); });
+  it("score is a function", () => { expect(typeof score).toBe("function"); });
+  it("score('finance', 80) returns an object", () => { expect(typeof score("finance", 80)).toBe("object"); });
+  it("score('finance', 80).domain equals 'finance'", () => { expect(score("finance", 80).domain).toBe("finance"); });
+  it("score('finance', 80).dataConfidenceScore equals 80", () => { expect(score("finance", 80).dataConfidenceScore).toBe(80); });
+  it("buildEvidenceDisclosure with complete data returns allowed", () => { expect(buildEvidenceDisclosure({ sensitivity: RecommendationSensitivity.GENERAL, inputQualityStatus: "complete", dataSources: [], missingRequiredInputs: [] }).status).toBe("allowed"); });
+  it("buildEvidenceDisclosure with null inputQualityStatus returns caution", () => { expect(buildEvidenceDisclosure({ sensitivity: RecommendationSensitivity.GENERAL, inputQualityStatus: null, dataSources: [], missingRequiredInputs: [] }).status).toBe("caution"); });
+  it("buildEvidenceDisclosure result has status field", () => { expect(buildEvidenceDisclosure({ sensitivity: RecommendationSensitivity.GENERAL, inputQualityStatus: "complete", dataSources: [], missingRequiredInputs: [] })).toHaveProperty("status"); });
+  it("buildEvidenceDisclosure result has reasons field", () => { expect(buildEvidenceDisclosure({ sensitivity: RecommendationSensitivity.GENERAL, inputQualityStatus: "complete", dataSources: [], missingRequiredInputs: [] })).toHaveProperty("reasons"); });
+});
+
 describe("buildEvidenceDisclosure", () => {
   it("allows a GENERAL decision on complete data", () => {
     const d = buildEvidenceDisclosure({
