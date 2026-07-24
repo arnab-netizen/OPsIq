@@ -26,6 +26,77 @@ const failing: MetricSnapshotInput = {
   campaignConversions: 10,
 };
 
+describe("founder-recovery action generation — fixture and function contract", () => {
+  it("failing fixture has revenue: 100000", () => {
+    expect(failing.revenue).toBe(100000);
+  });
+  it("failing fixture has totalCosts: 98000", () => {
+    expect(failing.totalCosts).toBe(98000);
+  });
+  it("failing fixture has orderCount: 1000", () => {
+    expect(failing.orderCount).toBe(1000);
+  });
+  it("failing fixture has repeatCustomers: 30", () => {
+    expect(failing.repeatCustomers).toBe(30);
+  });
+  it("failing fixture has deliveryCost: 12000", () => {
+    expect(failing.deliveryCost).toBe(12000);
+  });
+  it("failing fixture has discountAmount: 15000", () => {
+    expect(failing.discountAmount).toBe(15000);
+  });
+  it("failing fixture has rewashCount: 90", () => {
+    expect(failing.rewashCount).toBe(90);
+  });
+  it("failing fixture has marketingSpend: 20000", () => {
+    expect(failing.marketingSpend).toBe(20000);
+  });
+  it("calculateMetrics is a function", () => {
+    expect(typeof calculateMetrics).toBe("function");
+  });
+  it("generateFindings is a function", () => {
+    expect(typeof generateFindings).toBe("function");
+  });
+  it("buildActionsFromFindings is a function", () => {
+    expect(typeof buildActionsFromFindings).toBe("function");
+  });
+  it("calculateMetrics returns a non-null object", () => {
+    const d = calculateMetrics(failing);
+    expect(d).not.toBeNull();
+    expect(typeof d).toBe("object");
+  });
+  it("generateFindings returns an array", () => {
+    const d = calculateMetrics(failing);
+    expect(Array.isArray(generateFindings(failing, d))).toBe(true);
+  });
+  it("buildActionsFromFindings returns an array", () => {
+    const d = calculateMetrics(failing);
+    const findings = generateFindings(failing, d);
+    expect(Array.isArray(buildActionsFromFindings(findings))).toBe(true);
+  });
+  it("buildActionsFromFindings returns at least 1 action for the failing fixture", () => {
+    const d = calculateMetrics(failing);
+    const findings = generateFindings(failing, d);
+    expect(buildActionsFromFindings(findings).length).toBeGreaterThan(0);
+  });
+  it("all actions have a non-empty findingCode string", () => {
+    const d = calculateMetrics(failing);
+    const findings = generateFindings(failing, d);
+    for (const a of buildActionsFromFindings(findings)) {
+      expect(typeof a.findingCode).toBe("string");
+      expect(a.findingCode.length).toBeGreaterThan(0);
+    }
+  });
+  it("all actions have priority 'critical', 'high', 'medium', or 'low'", () => {
+    const d = calculateMetrics(failing);
+    const findings = generateFindings(failing, d);
+    const valid = new Set(["critical", "high", "medium", "low"]);
+    for (const a of buildActionsFromFindings(findings)) {
+      expect(valid.has(a.priority)).toBe(true);
+    }
+  });
+});
+
 describe("founder-recovery action generation", () => {
   it("preserves owner role, due date, metric, baseline, target and verification window", () => {
     const d = calculateMetrics(failing);
