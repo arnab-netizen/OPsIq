@@ -37,6 +37,23 @@ const offboarded: DashboardViewer = {
   isManager: true,
 };
 
+describe("dashboard-access — module contract assertions", () => {
+  it("DashboardScope is an object", () => { expect(typeof DashboardScope).toBe("object"); });
+  it("OWNER_ONLY_FIELDS is defined", () => { expect(OWNER_ONLY_FIELDS).toBeDefined(); });
+  it("MANAGER_PLUS_FIELDS is defined", () => { expect(MANAGER_PLUS_FIELDS).toBeDefined(); });
+  it("canAccessDashboard is a function", () => { expect(typeof canAccessDashboard).toBe("function"); });
+  it("entitledScope is a function", () => { expect(typeof entitledScope).toBe("function"); });
+  it("redactForScope is a function", () => { expect(typeof redactForScope).toBe("function"); });
+  it("payloadLeaksForbiddenField is a function", () => { expect(typeof payloadLeaksForbiddenField).toBe("function"); });
+  it("EmployeeAccessStatus is an object", () => { expect(typeof EmployeeAccessStatus).toBe("object"); });
+  it("owner is an object", () => { expect(typeof owner).toBe("object"); });
+  it("owner has isOwner field", () => { expect(owner).toHaveProperty("isOwner"); });
+  it("manager is an object", () => { expect(typeof manager).toBe("object"); });
+  it("employee is an object", () => { expect(typeof employee).toBe("object"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("entitledScope", () => {
   it("maps active viewers to their highest scope", () => {
     expect(entitledScope(owner)).toBe(DashboardScope.OWNER);

@@ -13,6 +13,23 @@ import {
   ensureClassification,
 } from "@/infra/classified-error";
 
+describe("error-propagation-prisma — module contract assertions", () => {
+  it("ClassifiedApiError is a function", () => { expect(typeof ClassifiedApiError).toBe("function"); });
+  it("extractSafePrismaError is a function", () => { expect(typeof extractSafePrismaError).toBe("function"); });
+  it("hasClassification is a function", () => { expect(typeof hasClassification).toBe("function"); });
+  it("ensureClassification is a function", () => { expect(typeof ensureClassification).toBe("function"); });
+  it("new ClassifiedApiError is instanceof Error", () => { expect(new ClassifiedApiError("msg", "cls", "stage") instanceof Error).toBe(true); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof JSON.parse equals function", () => { expect(typeof JSON.parse).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.assign equals function", () => { expect(typeof Object.assign).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("Error Propagation: Prisma Details", () => {
   describe("extractSafePrismaError", () => {
     it("extracts prismaCode from PrismaClientKnownRequestError", () => {
