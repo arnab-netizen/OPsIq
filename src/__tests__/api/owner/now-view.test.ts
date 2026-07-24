@@ -210,4 +210,10 @@ describe("[module41] GET /api/owner/now-view", () => {
     expect(Array.isArray(res.view.topOwnerActions)).toBe(true);
     expect(Array.isArray(res.view.actionsToAvoid)).toBe(true);
   });
+
+  it("generatedFromLiveData field is present in response view", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as typeof sample;
+    expect(res).toHaveProperty("generatedFromLiveData");
+  });
 });

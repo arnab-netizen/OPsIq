@@ -319,4 +319,17 @@ describe("PHASE G5: ROI Credibility System", () => {
       expect(result.validation_issues.some((i) => i.includes("NEGATIVE"))).toBe(true);
     });
   });
+
+  describe("G5.5: Result shape contract", () => {
+    it("validateROIProjection always returns is_valid boolean and validation_issues array", () => {
+      const roi = makeROI({
+        base_case_roi_percent: 100,
+        best_case_roi_percent: 150,
+        worst_case_roi_percent: 50,
+      });
+      const result = validateROIProjection(roi);
+      expect(typeof result.is_valid).toBe("boolean");
+      expect(Array.isArray(result.validation_issues)).toBe(true);
+    });
+  });
 });
