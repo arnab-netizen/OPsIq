@@ -43,6 +43,23 @@ const timing = (over: Partial<TimingSignal> = {}): TimingSignal => ({
   recommendedResponse: "Owner-review these jobs.", ownerActionRequired: true, evaluatedAt: AT, ...over,
 });
 
+describe("adjudication-queue — module contract assertions", () => {
+  it("buildAdjudicationQueue is a function", () => { expect(typeof buildAdjudicationQueue).toBe("function"); });
+  it("ADJUDICATION_OUTCOME_OPTIONS is an array", () => { expect(Array.isArray(ADJUDICATION_OUTCOME_OPTIONS)).toBe(true); });
+  it("AdjudicationSourceType is an object", () => { expect(typeof AdjudicationSourceType).toBe("object"); });
+  it("AdjudicationOutcome is an object", () => { expect(typeof AdjudicationOutcome).toBe("object"); });
+  it("AT is a string", () => { expect(typeof AT).toBe("string"); });
+  it("gaming is a function", () => { expect(typeof gaming).toBe("function"); });
+  it("credibility is a function", () => { expect(typeof credibility).toBe("function"); });
+  it("timing is a function", () => { expect(typeof timing).toBe("function"); });
+  it("gaming() returns an object", () => { expect(typeof gaming()).toBe("object"); });
+  it("credibility() returns an object", () => { expect(typeof credibility()).toBe("object"); });
+  it("timing() returns an object", () => { expect(typeof timing()).toBe("object"); });
+  it("buildAdjudicationQueue({}) returns an object", () => { expect(typeof buildAdjudicationQueue({})).toBe("object"); });
+  it("buildAdjudicationQueue({}) has items field", () => { expect(buildAdjudicationQueue({})).toHaveProperty("items"); });
+  it("buildAdjudicationQueue({}).items is an array", () => { expect(Array.isArray(buildAdjudicationQueue({}).items)).toBe(true); });
+});
+
 describe("adjudication-queue — read model", () => {
   it("renders a reused-proof finding as an adjudicable REUSED_HASH_FINDING item", () => {
     const { items, summary } = buildAdjudicationQueue({

@@ -19,6 +19,23 @@ const ev = (over: Partial<ReadinessEvidence>): ReadinessEvidence => ({ ...NONE, 
 // The evidence OpsIQ actually has today: simulation + DB/browser + full mobile, but NO live business data.
 const PROVEN_NO_LIVE = ev({ hasSimulationProof: true, hasDbBrowserProof: true, hasFullMobileProof: true });
 
+describe("pilot-readiness-policy — module contract assertions", () => {
+  it("assertReadinessClaim is a function", () => { expect(typeof assertReadinessClaim).toBe("function"); });
+  it("highestSupportedState is a function", () => { expect(typeof highestSupportedState).toBe("function"); });
+  it("canClaim is a function", () => { expect(typeof canClaim).toBe("function"); });
+  it("canClaimLiveOutcome is a function", () => { expect(typeof canClaimLiveOutcome).toBe("function"); });
+  it("NONE is an object", () => { expect(typeof NONE).toBe("object"); });
+  it("NONE.hasSimulationProof is false", () => { expect(NONE.hasSimulationProof).toBe(false); });
+  it("ev is a function", () => { expect(typeof ev).toBe("function"); });
+  it("PROVEN_NO_LIVE is an object", () => { expect(typeof PROVEN_NO_LIVE).toBe("object"); });
+  it("PROVEN_NO_LIVE.hasFullMobileProof is true", () => { expect(PROVEN_NO_LIVE.hasFullMobileProof).toBe(true); });
+  it("highestSupportedState(NONE) returns a string", () => { expect(typeof highestSupportedState(NONE)).toBe("string"); });
+  it("highestSupportedState(NONE) equals 'SIMULATION_PROVEN'", () => { expect(highestSupportedState(NONE)).toBe("SIMULATION_PROVEN"); });
+  it("highestSupportedState(PROVEN_NO_LIVE) equals 'FULL_MOBILE_PROVEN'", () => { expect(highestSupportedState(PROVEN_NO_LIVE)).toBe("FULL_MOBILE_PROVEN"); });
+  it("canClaimLiveOutcome(NONE) is false", () => { expect(canClaimLiveOutcome(NONE)).toBe(false); });
+  it("canClaimLiveOutcome(PROVEN_NO_LIVE) is false", () => { expect(canClaimLiveOutcome(PROVEN_NO_LIVE)).toBe(false); });
+});
+
 describe("pilot reality guardrail (§10)", () => {
   it("1. a simulation-only state cannot become LIVE_OUTCOME_PROVEN", () => {
     expect(assertReadinessClaim("LIVE_OUTCOME_PROVEN", ev({ hasSimulationProof: true })).allowed).toBe(false);
