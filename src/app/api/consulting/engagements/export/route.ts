@@ -41,8 +41,7 @@ export const GET = withCanonicalEnforcement(
       return canonicalJson({ export: exported }, { status: 200 });
     } catch (err) {
       if (err instanceof NotFoundError) {
-        const governed = classifyOperatorError(err, { context: "load" });
-        return canonicalJson({ error: governed.operatorMessage }, { status: 404 });
+        return canonicalJson({ error: classifyOperatorError(err, { context: "load" }).operatorMessage }, { status: 404 });
       }
       throw err;
     }
