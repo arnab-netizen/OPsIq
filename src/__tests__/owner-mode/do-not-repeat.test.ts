@@ -11,6 +11,23 @@ import { enforceDoNotRepeatForPromotion, DoNotRepeatBlockedError, type DnrDeps }
 
 beforeEach(() => emitAuditEvent.mockClear());
 
+describe("do-not-repeat — module contract assertions", () => {
+  it("evaluateDoNotRepeat is a function", () => { expect(typeof evaluateDoNotRepeat).toBe("function"); });
+  it("enforceDoNotRepeatForPromotion is a function", () => { expect(typeof enforceDoNotRepeatForPromotion).toBe("function"); });
+  it("DoNotRepeatBlockedError is a class/function", () => { expect(typeof DoNotRepeatBlockedError).toBe("function"); });
+  it("evaluateDoNotRepeat(null) returns an object", () => { expect(typeof evaluateDoNotRepeat(null)).toBe("object"); });
+  it("evaluateDoNotRepeat(null).blocked is false", () => { expect(evaluateDoNotRepeat(null).blocked).toBe(false); });
+  it("evaluateDoNotRepeat result has blocked field", () => { expect(evaluateDoNotRepeat(null)).toHaveProperty("blocked"); });
+  it("evaluateDoNotRepeat with active memory returns blocked true", () => { expect(evaluateDoNotRepeat({ category: "do_not_repeat", blocksRepetition: true, memoryKey: "k" }).blocked).toBe(true); });
+  it("evaluateDoNotRepeat with changedContext reason returns blocked false", () => { expect(evaluateDoNotRepeat({ category: "do_not_repeat", blocksRepetition: true, memoryKey: "k" }, "market shifted").blocked).toBe(false); });
+  it("evaluateDoNotRepeat with active memory has requiresChangedContextReason true", () => { expect(evaluateDoNotRepeat({ category: "do_not_repeat", blocksRepetition: true, memoryKey: "k" }).requiresChangedContextReason).toBe(true); });
+  it("evaluateDoNotRepeat with non-do_not_repeat category returns blocked false", () => { expect(evaluateDoNotRepeat({ category: "owner_preference", blocksRepetition: true, memoryKey: "k" }).blocked).toBe(false); });
+  it("evaluateDoNotRepeat with blocksRepetition false returns blocked false", () => { expect(evaluateDoNotRepeat({ category: "do_not_repeat", blocksRepetition: false, memoryKey: "k" }).blocked).toBe(false); });
+  it("DoNotRepeatBlockedError can be instantiated", () => { expect(() => new DoNotRepeatBlockedError("test")).not.toThrow(); });
+  it("DoNotRepeatBlockedError instance is Error", () => { expect(new DoNotRepeatBlockedError("msg")).toBeInstanceOf(Error); });
+  it("DoNotRepeatBlockedError instance is DoNotRepeatBlockedError", () => { expect(new DoNotRepeatBlockedError("msg")).toBeInstanceOf(DoNotRepeatBlockedError); });
+});
+
 describe("evaluateDoNotRepeat", () => {
   it("does not block when there is no matching memory", () => {
     expect(evaluateDoNotRepeat(null).blocked).toBe(false);

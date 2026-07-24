@@ -16,6 +16,23 @@ const daysBefore = (n: number) => new Date(ASOF.getTime() - n * 86_400_000).toIS
 const row = (metricType: string, value: number, daysOld = 1, archetype = "laundry"): ArchetypeMetricRow =>
   ({ archetype, metricType, value, metricDate: daysBefore(daysOld), sourceType: "MANUAL" });
 
+describe("archetype metrics — module contract assertions", () => {
+  it("deriveArchetypeSignalsFromMetrics is a function", () => { expect(typeof deriveArchetypeSignalsFromMetrics).toBe("function"); });
+  it("isValidMetricType is a function", () => { expect(typeof isValidMetricType).toBe("function"); });
+  it("ASOF is a Date", () => { expect(ASOF).toBeInstanceOf(Date); });
+  it("daysBefore is a function", () => { expect(typeof daysBefore).toBe("function"); });
+  it("row is a function", () => { expect(typeof row).toBe("function"); });
+  it("row('chemical_cost', 1) returns an object with metricType field", () => { expect(row("chemical_cost", 1)).toHaveProperty("metricType"); });
+  it("row('chemical_cost', 1).value is 1", () => { expect(row("chemical_cost", 1).value).toBe(1); });
+  it("isValidMetricType('chemical_cost') is true", () => { expect(isValidMetricType("chemical_cost")).toBe(true); });
+  it("isValidMetricType('totally_made_up') is false", () => { expect(isValidMetricType("totally_made_up")).toBe(false); });
+  it("deriveArchetypeSignalsFromMetrics('laundry', [], ASOF) returns an object", () => { expect(typeof deriveArchetypeSignalsFromMetrics("laundry", [], ASOF)).toBe("object"); });
+  it("deriveArchetypeSignalsFromMetrics with no metrics has used === 0", () => { expect(deriveArchetypeSignalsFromMetrics("laundry", [], ASOF).used).toBe(0); });
+  it("deriveArchetypeSignalsFromMetrics with no metrics has stale === false", () => { expect(deriveArchetypeSignalsFromMetrics("laundry", [], ASOF).stale).toBe(false); });
+  it("deriveArchetypeSignalsFromMetrics result has stale field", () => { expect(deriveArchetypeSignalsFromMetrics("laundry", [], ASOF)).toHaveProperty("stale"); });
+  it("deriveArchetypeSignalsFromMetrics result has used field", () => { expect(deriveArchetypeSignalsFromMetrics("laundry", [], ASOF)).toHaveProperty("used"); });
+});
+
 describe("isValidMetricType", () => {
   it("accepts known types and rejects unknown", () => {
     expect(isValidMetricType("chemical_cost")).toBe(true);
