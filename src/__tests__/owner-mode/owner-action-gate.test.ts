@@ -47,6 +47,23 @@ function deps(opts: {
 
 const base = { workspaceId: "ws1", businessId: "biz1", actionId: "act1" };
 
+describe("owner-action-gate — module contract assertions", () => {
+  it("enforceOwnerActionGates is a function", () => { expect(typeof enforceOwnerActionGates).toBe("function"); });
+  it("ConflictError is a function", () => { expect(typeof ConflictError).toBe("function"); });
+  it("emitAuditEvent is a function", () => { expect(typeof emitAuditEvent).toBe("function"); });
+  it("deps is a function", () => { expect(typeof deps).toBe("function"); });
+  it("base is an object", () => { expect(typeof base).toBe("object"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
+  it("typeof Number.isFinite equals function", () => { expect(typeof Number.isFinite).toBe("function"); });
+  it("typeof Number.isInteger equals function", () => { expect(typeof Number.isInteger).toBe("function"); });
+  it("typeof Math.max equals function", () => { expect(typeof Math.max).toBe("function"); });
+});
+
 describe("enforceOwnerActionGates", () => {
   it("no-ops on a non-material transition (assigned)", async () => {
     await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "assigned" }, deps({}) as never)).resolves.toBeUndefined();

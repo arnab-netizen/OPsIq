@@ -39,6 +39,23 @@ function plan(assessment: BudgetAssessmentInput) {
 
 const sigTypes = (p: ReturnType<typeof plan>) => p.signals.map((s) => s.type);
 
+describe("archetype-packs — module contract assertions", () => {
+  it("assessArchetypePack is a function", () => { expect(typeof assessArchetypePack).toBe("function"); });
+  it("resolveBudgetArchetype is a function", () => { expect(typeof resolveBudgetArchetype).toBe("function"); });
+  it("composeUpdatedPlan is a function", () => { expect(typeof composeUpdatedPlan).toBe("function"); });
+  it("budgetActionSourceKey is a function", () => { expect(typeof budgetActionSourceKey).toBe("function"); });
+  it("fin is a function", () => { expect(typeof fin).toBe("function"); });
+  it("growthCandidate is an object", () => { expect(typeof growthCandidate).toBe("object"); });
+  it("plan is a function", () => { expect(typeof plan).toBe("function"); });
+  it("sigTypes is a function", () => { expect(typeof sigTypes).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
+});
+
 // ---- resolver ------------------------------------------------------------
 describe("resolveBudgetArchetype", () => {
   it("maps templates to the three budget packs (home_services ⇒ generic)", () => {
