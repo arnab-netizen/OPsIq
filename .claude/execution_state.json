@@ -560,17 +560,25 @@
     "wiring_proof": {
       "caller": "src/app/api/owner/complaints/route.ts (POST, GET, PATCH)",
       "service": "src/services/owner-mode/customer-complaint.service.ts",
-      "workspace_enforcement": "✓ loadComplaint enforces workspaceId on every read; createComplaint/triage/recover/resolve/close/reopen all pass workspaceId",
-      "auth_enforced": "✓ CAPABILITIES.OWNER_MANAGE + requireWorkspace: true on all three handlers",
-      "dto_boundary": "✓ triageNotes and resolutionEvidenceId excluded from PublicComplaintDTO",
-      "audit_events": "✓ 7 audit events: complaint.created, complaint.triaged, complaint.recovery_action_added, complaint.resolved, complaint.closed, complaint.sla_breached, complaint.reopened",
-      "idempotency": "✓ createComplaint checks (workspaceId, idempotencyKey) before insert"
+      "workspace_enforcement": "\u2713 loadComplaint enforces workspaceId on every read; createComplaint/triage/recover/resolve/close/reopen all pass workspaceId",
+      "auth_enforced": "\u2713 CAPABILITIES.OWNER_MANAGE + requireWorkspace: true on all three handlers",
+      "dto_boundary": "\u2713 triageNotes and resolutionEvidenceId excluded from PublicComplaintDTO",
+      "audit_events": "\u2713 7 audit events: complaint.created, complaint.triaged, complaint.recovery_action_added, complaint.resolved, complaint.closed, complaint.sla_breached, complaint.reopened",
+      "idempotency": "\u2713 createComplaint checks (workspaceId, idempotencyKey) before insert"
     },
-    "schema_models": ["CustomerComplaint", "ComplaintRecoveryAction"],
-    "state_machine": "OPEN → TRIAGED → RECOVERING → RESOLVED → CLOSED; REOPENED from RESOLVED/CLOSED",
-    "sla_hours": { "LOW": 120, "MEDIUM": 48, "HIGH": 24, "CRITICAL": 4 },
+    "schema_models": [
+      "CustomerComplaint",
+      "ComplaintRecoveryAction"
+    ],
+    "state_machine": "OPEN \u2192 TRIAGED \u2192 RECOVERING \u2192 RESOLVED \u2192 CLOSED; REOPENED from RESOLVED/CLOSED",
+    "sla_hours": {
+      "LOW": 120,
+      "MEDIUM": 48,
+      "HIGH": 24,
+      "CRITICAL": 4
+    },
     "test_coverage": "70 tests covering: static enforcement (12), idempotency (5), DTO boundary (5), state machine valid (8), state machine invalid (6), severity validation (3), SLA computation (5+1), workspace isolation (5), audit events (7), SLA breach evaluator (4), listComplaints filters (5), addRecoveryAction (3)",
-    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 70/70 (✓), lint-ratchet PASS (2154 errors < 2155 baseline), recurrence scan 0 violations"
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), npm run build (\u2713), vitest 70/70 (\u2713), lint-ratchet PASS (2154 errors < 2155 baseline), recurrence scan 0 violations"
   },
   "bundle_3_6_owner_action_assignment": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -585,18 +593,20 @@
     "wiring_proof": {
       "caller": "src/app/api/owner/action-assignments/route.ts (POST, GET, PATCH)",
       "service": "src/services/owner-mode/owner-action-assignment-lifecycle.service.ts",
-      "workspace_enforcement": "✓ loadAssignment enforces workspaceId; assignAction/reassignAction/recordOutcome all pass workspaceId; listAssignments filters by workspaceId",
-      "auth_enforced": "✓ CAPABILITIES.OWNER_MANAGE + requireWorkspace: true on all three handlers",
-      "dto_boundary": "✓ assignedById, createdBy, updatedBy excluded from PublicAssignmentDTO",
-      "audit_events": "✓ 4 audit events: owner.action_assigned, owner.action_reassigned, owner.action_outcome_closed, owner.action_stall_detected",
-      "idempotency": "✓ assignAction checks (workspaceId, idempotencyKey) before insert"
+      "workspace_enforcement": "\u2713 loadAssignment enforces workspaceId; assignAction/reassignAction/recordOutcome all pass workspaceId; listAssignments filters by workspaceId",
+      "auth_enforced": "\u2713 CAPABILITIES.OWNER_MANAGE + requireWorkspace: true on all three handlers",
+      "dto_boundary": "\u2713 assignedById, createdBy, updatedBy excluded from PublicAssignmentDTO",
+      "audit_events": "\u2713 4 audit events: owner.action_assigned, owner.action_reassigned, owner.action_outcome_closed, owner.action_stall_detected",
+      "idempotency": "\u2713 assignAction checks (workspaceId, idempotencyKey) before insert"
     },
-    "schema_models": ["OwnerActionAssignment"],
-    "state_machine": "ASSIGNED → COMPLETED | FAILED | STALLED; STALLED → COMPLETED | FAILED",
+    "schema_models": [
+      "OwnerActionAssignment"
+    ],
+    "state_machine": "ASSIGNED \u2192 COMPLETED | FAILED | STALLED; STALLED \u2192 COMPLETED | FAILED",
     "bottleneck_score": "(stalled + failed) / max(totalAssigned, 1)",
-    "failed_signal_seam": "fireActionFailedSignal no-op stub — replaced by real reeval call when dashboard service supports it (Stage 4+)",
+    "failed_signal_seam": "fireActionFailedSignal no-op stub \u2014 replaced by real reeval call when dashboard service supports it (Stage 4+)",
     "test_coverage": "53 tests covering: static enforcement (11), assignAction idempotency (6), reassignAction (5), recordOutcome (6), evaluateStallDetection (5), listAssignments filters (6), getBottleneckSummary (4), DTO boundary (3), workspace isolation (5), priority validation (2)",
-    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 53/53 (✓), lint-ratchet PASS (2154 errors < 2155 baseline), recurrence scan 0 violations"
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), npm run build (\u2713), vitest 53/53 (\u2713), lint-ratchet PASS (2154 errors < 2155 baseline), recurrence scan 0 violations"
   },
   "bundle_3_7_approval_resolution": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -612,20 +622,23 @@
     "wiring_proof": {
       "caller": "src/app/api/owner/approval/route.ts (POST, GET, PATCH)",
       "service": "src/services/owner-mode/approval-resolution.service.ts",
-      "workspace_enforcement": "✓ loadApproval enforces workspaceId on every read; all write paths pass workspaceId",
-      "auth_enforced": "✓ CAPABILITIES.CONSULTING_APPROVE + requireWorkspace: true on all three handlers",
-      "dto_boundary": "✓ decidedById, createdBy, updatedBy, idempotencyKey excluded from PublicApprovalDTO; credibilityScore excluded from PublicEvidenceDTO",
-      "audit_events": "✓ 5 audit events: approval.created, approval.evidence_submitted, approval.decided, approval.appeal_initiated, approval.action_rescoped",
-      "idempotency": "✓ createApproval and initiateAppeal check (workspaceId, idempotencyKey) before insert"
+      "workspace_enforcement": "\u2713 loadApproval enforces workspaceId on every read; all write paths pass workspaceId",
+      "auth_enforced": "\u2713 CAPABILITIES.CONSULTING_APPROVE + requireWorkspace: true on all three handlers",
+      "dto_boundary": "\u2713 decidedById, createdBy, updatedBy, idempotencyKey excluded from PublicApprovalDTO; credibilityScore excluded from PublicEvidenceDTO",
+      "audit_events": "\u2713 5 audit events: approval.created, approval.evidence_submitted, approval.decided, approval.appeal_initiated, approval.action_rescoped",
+      "idempotency": "\u2713 createApproval and initiateAppeal check (workspaceId, idempotencyKey) before insert"
     },
-    "schema_models": ["OwnerApprovalRequest", "OwnerApprovalEvidence"],
-    "state_machine": "PENDING → APPROVED | REJECTED | DEFERRED; DEFERRED → APPROVED | REJECTED; immutable once APPROVED/REJECTED",
+    "schema_models": [
+      "OwnerApprovalRequest",
+      "OwnerApprovalEvidence"
+    ],
+    "state_machine": "PENDING \u2192 APPROVED | REJECTED | DEFERRED; DEFERRED \u2192 APPROVED | REJECTED; immutable once APPROVED/REJECTED",
     "evidence_chain": "append-only: submitEvidence blocked on APPROVED/REJECTED status",
-    "appeal_path": "initiateAppeal only from REJECTED → creates new OwnerApprovalRequest linked via appealOfId",
-    "rescope_seam": "fireRescopeSignal no-op stub — replaced by real rescope call when action service supports it (Stage 4+)",
+    "appeal_path": "initiateAppeal only from REJECTED \u2192 creates new OwnerApprovalRequest linked via appealOfId",
+    "rescope_seam": "fireRescopeSignal no-op stub \u2014 replaced by real rescope call when action service supports it (Stage 4+)",
     "capability_added": "CONSULTING_APPROVE: 'consulting:approve' added to capabilities.ts",
     "test_coverage": "58 tests covering: static enforcement (11), createApproval idempotency (5), submitEvidence (7), makeDecision immutability (9), initiateAppeal (5), listApprovals filters (5), DTO boundary (4), workspace isolation (5), audit events (7)",
-    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 58/58 (✓), lint-ratchet PASS (2154 errors < 2155 baseline), recurrence scan 0 violations"
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), npm run build (\u2713), vitest 58/58 (\u2713), lint-ratchet PASS (2154 errors < 2155 baseline), recurrence scan 0 violations"
   },
   "bundle_3_8_owner_onboarding": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -641,21 +654,23 @@
     "wiring_proof": {
       "caller": "src/app/api/owner/onboarding-lifecycle/route.ts (POST, GET, PATCH)",
       "service": "src/services/owner-mode/owner-onboarding-lifecycle.service.ts",
-      "workspace_enforcement": "✓ loadOnboarding enforces workspaceId on every read; all write paths pass workspaceId",
-      "auth_enforced": "✓ CAPABILITIES.OWNER_ONBOARD + requireWorkspace: true on all three handlers",
-      "dto_boundary": "✓ archetypeScore, completionKey, createdBy, updatedBy excluded from PublicOnboardingDTO",
-      "audit_events": "✓ 3 audit events: onboarding.started, onboarding.completed, onboarding.re_triggered",
-      "idempotency": "✓ startOnboarding checks @@unique workspaceId before insert; completeOnboarding idempotent via completionKey"
+      "workspace_enforcement": "\u2713 loadOnboarding enforces workspaceId on every read; all write paths pass workspaceId",
+      "auth_enforced": "\u2713 CAPABILITIES.OWNER_ONBOARD + requireWorkspace: true on all three handlers",
+      "dto_boundary": "\u2713 archetypeScore, completionKey, createdBy, updatedBy excluded from PublicOnboardingDTO",
+      "audit_events": "\u2713 3 audit events: onboarding.started, onboarding.completed, onboarding.re_triggered",
+      "idempotency": "\u2713 startOnboarding checks @@unique workspaceId before insert; completeOnboarding idempotent via completionKey"
     },
-    "schema_models": ["OwnerOnboarding"],
-    "state_machine": "IN_PROGRESS → COMPLETED (completeOnboarding); COMPLETED → RE_ONBOARDING (triggerReOnboarding); RE_ONBOARDING → COMPLETED (completeOnboarding again)",
-    "archetype_classification": "deterministic: SURVIVAL_MODE | TURNAROUND | STABILIZATION | GROWTH_READY based on revenueTrend, profitability, cashRunwayWeeks — no ML",
-    "onboarding_gate": "assertOnboardingComplete(workspaceId) throws ValidationError if not COMPLETED — available for other owner-mode routes to enforce",
+    "schema_models": [
+      "OwnerOnboarding"
+    ],
+    "state_machine": "IN_PROGRESS \u2192 COMPLETED (completeOnboarding); COMPLETED \u2192 RE_ONBOARDING (triggerReOnboarding); RE_ONBOARDING \u2192 COMPLETED (completeOnboarding again)",
+    "archetype_classification": "deterministic: SURVIVAL_MODE | TURNAROUND | STABILIZATION | GROWTH_READY based on revenueTrend, profitability, cashRunwayWeeks \u2014 no ML",
+    "onboarding_gate": "assertOnboardingComplete(workspaceId) throws ValidationError if not COMPLETED \u2014 available for other owner-mode routes to enforce",
     "action_queue": "top-5 achievable actions per archetype (morale-safe, no overwhelming scope)",
     "capability_added": "OWNER_ONBOARD: 'owner:onboard' added to capabilities.ts",
     "note": "Existing owner-onboarding.service.ts is a separate read-only computed-state service; lifecycle persistence uses new OwnerOnboarding Prisma model",
     "test_coverage": "62 tests covering: classifyArchetype pure function (10), buildInitialActionQueue (6), startOnboarding idempotency+validation (10), completeOnboarding archetype+idempotency (10), triggerReOnboarding state machine (7), assertOnboardingComplete gate (4), static enforcement (6), workspace isolation (4), audit events (4), route (1)",
-    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 62/62 (✓), lint-ratchet PASS (2154 errors < 2155 baseline)"
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), npm run build (\u2713), vitest 62/62 (\u2713), lint-ratchet PASS (2154 errors < 2155 baseline)"
   },
   "bundle_3_9_sop_process_intelligence": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -671,18 +686,21 @@
     "wiring_proof": {
       "caller": "src/app/api/owner/sop-intelligence/route.ts (POST, GET, PATCH)",
       "service": "src/services/owner-mode/sop-process-intelligence.service.ts",
-      "workspace_enforcement": "✓ workspaceId enforced on all reads and writes; idempotency checks use workspaceId+sopDocumentId+assignedTo constraint",
-      "auth_enforced": "✓ CAPABILITIES.SOP_MANAGE + requireWorkspace: true on all three handlers",
-      "dto_boundary": "✓ assignedBy excluded from PublicTrainingAssignmentDTO; complianceRate excluded from PublicNonComplianceAlertDTO",
-      "audit_events": "✓ 3 audit events: sop.training_assigned, sop.training_completed, sop.noncompliance_alert_created",
-      "idempotency": "✓ assignTraining checks @@unique(workspaceId, sopDocumentId, assignedTo); createNonComplianceAlert checks @@unique(workspaceId, sopDocumentId, alertWindow); recordTrainingCompletion returns existing if COMPLETED"
+      "workspace_enforcement": "\u2713 workspaceId enforced on all reads and writes; idempotency checks use workspaceId+sopDocumentId+assignedTo constraint",
+      "auth_enforced": "\u2713 CAPABILITIES.SOP_MANAGE + requireWorkspace: true on all three handlers",
+      "dto_boundary": "\u2713 assignedBy excluded from PublicTrainingAssignmentDTO; complianceRate excluded from PublicNonComplianceAlertDTO",
+      "audit_events": "\u2713 3 audit events: sop.training_assigned, sop.training_completed, sop.noncompliance_alert_created",
+      "idempotency": "\u2713 assignTraining checks @@unique(workspaceId, sopDocumentId, assignedTo); createNonComplianceAlert checks @@unique(workspaceId, sopDocumentId, alertWindow); recordTrainingCompletion returns existing if COMPLETED"
     },
-    "schema_models": ["OwnerSopTrainingAssignment", "OwnerSopNonComplianceAlert"],
+    "schema_models": [
+      "OwnerSopTrainingAssignment",
+      "OwnerSopNonComplianceAlert"
+    ],
     "compliance_logic": "calculateComplianceRate uses parallel count queries; threshold default 0.8; complianceRate=1.0 when no assignments",
-    "reassessment_seam": "fireComplianceReAssessmentSignal no-op stub — replaced by real call when business condition service supports it (Stage 4+)",
+    "reassessment_seam": "fireComplianceReAssessmentSignal no-op stub \u2014 replaced by real call when business condition service supports it (Stage 4+)",
     "capability_added": "SOP_MANAGE: 'sop:manage' added to capabilities.ts",
     "test_coverage": "38 tests covering: assignTraining idempotency (6), recordTrainingCompletion (7), calculateComplianceRate (5), createNonComplianceAlert (7), listTrainingAssignments (4), listNonComplianceAlerts (3), static enforcement (6)",
-    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 38/38 (✓), lint-ratchet PASS"
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), npm run build (\u2713), vitest 38/38 (\u2713), lint-ratchet PASS"
   },
   "bundle_3_10_adversarial_closure": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -691,12 +709,12 @@
       "src/__tests__/stage3-adversarial/stage3-adversarial-closure.test.ts"
     ],
     "coverage_dimensions": [
-      "workspace isolation — cross-bundle (10 tests): WS_B cannot access WS_A records in any Stage 3 service",
-      "concurrent mutation safety — idempotency proofs (9 tests): all idempotent operations proven via mock race",
-      "DTO leakage boundary — static verification (11 tests): all Stage 3 public DTOs exclude internal fields via regex",
+      "workspace isolation \u2014 cross-bundle (10 tests): WS_B cannot access WS_A records in any Stage 3 service",
+      "concurrent mutation safety \u2014 idempotency proofs (9 tests): all idempotent operations proven via mock race",
+      "DTO leakage boundary \u2014 static verification (11 tests): all Stage 3 public DTOs exclude internal fields via regex",
       "audit completeness (8 tests): every material Stage 3 mutation emits correct audit event name",
       "business condition re-evaluation chain (5 tests): REJECTED approval rescopeTriggered, archetype determinism, parallel count",
-      "auth capability boundary — static verification (10 tests): all 5 routes use withCanonicalEnforcement + requireWorkspace"
+      "auth capability boundary \u2014 static verification (10 tests): all 5 routes use withCanonicalEnforcement + requireWorkspace"
     ],
     "services_covered": [
       "customer-complaint.service",
@@ -706,7 +724,7 @@
       "sop-process-intelligence.service"
     ],
     "test_count": 53,
-    "gates_run": "npx tsc --noEmit (✓), npm run build (✓), lint-ratchet PASS, vitest 53/53 (✓)"
+    "gates_run": "npx tsc --noEmit (\u2713), npm run build (\u2713), lint-ratchet PASS, vitest 53/53 (\u2713)"
   },
   "bundle_4_1_stage3_signal_wiring": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -723,20 +741,20 @@
       "src/services/owner-mode/sop-process-intelligence.service.ts"
     ],
     "signal_mapping": {
-      "complaint_resolved": "routeComplaintResolutionSignal → verified_outcome (businessId nullable — skips when null)",
-      "action_failed": "routeActionFailureSignal → failed_outcome (businessId required on OwnerActionAssignment)",
-      "approval_rejected": "routeApprovalRejectionSignal → external_event_invalidation (businessId always present)",
-      "sop_noncompliance": "routeSopComplianceSignal → new_contradicting_evidence (always skips — SOP alerts lack businessId field; Stage 5+)"
+      "complaint_resolved": "routeComplaintResolutionSignal \u2192 verified_outcome (businessId nullable \u2014 skips when null)",
+      "action_failed": "routeActionFailureSignal \u2192 failed_outcome (businessId required on OwnerActionAssignment)",
+      "approval_rejected": "routeApprovalRejectionSignal \u2192 external_event_invalidation (businessId always present)",
+      "sop_noncompliance": "routeSopComplianceSignal \u2192 new_contradicting_evidence (always skips \u2014 SOP alerts lack businessId field; Stage 5+)"
     },
-    "workspace_enforcement": "✓ workspaceId and businessId propagated exactly from Stage 3 services through router to createReassessmentEvent",
-    "error_handling": "✓ All signal emissions wrapped in try/catch; failures never propagate to Stage 3 callers",
+    "workspace_enforcement": "\u2713 workspaceId and businessId propagated exactly from Stage 3 services through router to createReassessmentEvent",
+    "error_handling": "\u2713 All signal emissions wrapped in try/catch; failures never propagate to Stage 3 callers",
     "test_count": 44,
-    "gates_run": "npx tsc --noEmit (✓), npm run build (✓), npx prisma validate (✓), lint-ratchet PASS (0 errors on changed files), vitest 44/44 (✓)"
+    "gates_run": "npx tsc --noEmit (\u2713), npm run build (\u2713), npx prisma validate (\u2713), lint-ratchet PASS (0 errors on changed files), vitest 44/44 (\u2713)"
   },
   "bundle_4_2_owner_bcp": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "SERVICE_WITH_API_ROUTE",
-    "description": "Owner Business Condition Profile (BCP) — source of truth for all 4 OpsIQ dimensions: consulting_lifecycle_stage, business_condition, intervention_mode/phase, human_execution_reality. Full derivation engine, idempotent create, versioned re-evaluation, version history, DTO boundary enforcement (inputFactsJson excluded), workspace-scoped throughout, audit events on create and evaluate.",
+    "description": "Owner Business Condition Profile (BCP) \u2014 source of truth for all 4 OpsIQ dimensions: consulting_lifecycle_stage, business_condition, intervention_mode/phase, human_execution_reality. Full derivation engine, idempotent create, versioned re-evaluation, version history, DTO boundary enforcement (inputFactsJson excluded), workspace-scoped throughout, audit events on create and evaluate.",
     "files_created": [
       "prisma/schema.prisma (OwnerBusinessConditionProfile model)",
       "src/services/owner-mode/owner-bcp.service.ts",
@@ -747,24 +765,24 @@
       "src/domain/constants/audit-events.ts (OWNER_BCP_CREATED, OWNER_BCP_EVALUATED)"
     ],
     "four_dimensions_coverage": {
-      "consulting_lifecycle_stage": "✓ deriveConsultingLifecycleStage() + supplied override",
-      "business_condition": "✓ conditionCode + conditionSeverity + businessConditionScore from 4 domain health scores",
-      "intervention_mode_and_phase": "✓ deriveInterventionMode() + deriveInterventionPhase() + supplied override",
-      "human_execution_reality": "✓ humanExecutionRisk passed through from BcpInputFacts"
+      "consulting_lifecycle_stage": "\u2713 deriveConsultingLifecycleStage() + supplied override",
+      "business_condition": "\u2713 conditionCode + conditionSeverity + businessConditionScore from 4 domain health scores",
+      "intervention_mode_and_phase": "\u2713 deriveInterventionMode() + deriveInterventionPhase() + supplied override",
+      "human_execution_reality": "\u2713 humanExecutionRisk passed through from BcpInputFacts"
     },
-    "DTO_boundary": "✓ inputFactsJson and triggeredBy excluded from PublicBcpDTO — only returned as internal BcpRow",
-    "workspace_enforcement": "✓ workspaceId enforced in all DB queries + withCanonicalEnforcement middleware",
-    "auth_enforcement": "✓ CAPABILITIES.OWNER_MANAGE required on GET/POST/PATCH",
-    "audit_events": "✓ OWNER_BCP_CREATED on create, OWNER_BCP_EVALUATED on evaluate",
-    "idempotency": "✓ createConditionProfile returns existing isCurrent=true profile if present",
-    "version_snapshots": "✓ evaluateConditionProfile marks old isCurrent=false, creates new version",
+    "DTO_boundary": "\u2713 inputFactsJson and triggeredBy excluded from PublicBcpDTO \u2014 only returned as internal BcpRow",
+    "workspace_enforcement": "\u2713 workspaceId enforced in all DB queries + withCanonicalEnforcement middleware",
+    "auth_enforcement": "\u2713 CAPABILITIES.OWNER_MANAGE required on GET/POST/PATCH",
+    "audit_events": "\u2713 OWNER_BCP_CREATED on create, OWNER_BCP_EVALUATED on evaluate",
+    "idempotency": "\u2713 createConditionProfile returns existing isCurrent=true profile if present",
+    "version_snapshots": "\u2713 evaluateConditionProfile marks old isCurrent=false, creates new version",
     "test_count": 96,
-    "gates_run": "vitest 96/96 (✓), npx tsc --noEmit (✓), npm run build (✓), npx prisma validate (✓), lint-ratchet PASS (0 errors on changed files)"
+    "gates_run": "vitest 96/96 (\u2713), npx tsc --noEmit (\u2713), npm run build (\u2713), npx prisma validate (\u2713), lint-ratchet PASS (0 errors on changed files)"
   },
   "bundle_5_1_integration_fabric_contracts": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "DOMAIN_CONTRACT_ONLY",
-    "description": "Integration Fabric Contracts — ConnectorPublicDTO (no token fields enforced at type level), integration event Zod schemas, Event→BCP trigger mapping (pure function, all 10 event kinds covered), connector health severity + issue builders. INTEGRATION_MANAGE + INTEGRATION_VIEW capabilities added. 6 connector audit events added.",
+    "description": "Integration Fabric Contracts \u2014 ConnectorPublicDTO (no token fields enforced at type level), integration event Zod schemas, Event\u2192BCP trigger mapping (pure function, all 10 event kinds covered), connector health severity + issue builders. INTEGRATION_MANAGE + INTEGRATION_VIEW capabilities added. 6 connector audit events added.",
     "files_created": [
       "src/domain/integration-fabric/integration-contracts.ts",
       "src/__tests__/domain/integration-fabric/integration-contracts.test.ts"
@@ -773,11 +791,11 @@
       "src/domain/constants/capabilities.ts (INTEGRATION_MANAGE, INTEGRATION_VIEW)",
       "src/domain/constants/audit-events.ts (CONNECTOR_REGISTERED, CONNECTOR_DISCONNECTED, CONNECTOR_TOKEN_REFRESHED, CONNECTOR_REFRESH_FAILED, INTEGRATION_EVENT_INGESTED, INTEGRATION_EVENT_BCP_TRIGGERED)"
     ],
-    "token_boundary": "✓ ConnectorPublicDTO has no token fields; NoTokenFields type guard enforces at compile time",
-    "workspace_enforcement": "✓ IntegrationEventSchema.workspaceId required (not nullable); ConnectorPublicDTO carries workspaceId",
-    "bcp_trigger_mapping": "✓ 7 event kinds map to BCP triggers; 3 event kinds return null (no BCP relevance); all mapped kinds have non-empty descriptions",
+    "token_boundary": "\u2713 ConnectorPublicDTO has no token fields; NoTokenFields type guard enforces at compile time",
+    "workspace_enforcement": "\u2713 IntegrationEventSchema.workspaceId required (not nullable); ConnectorPublicDTO carries workspaceId",
+    "bcp_trigger_mapping": "\u2713 7 event kinds map to BCP triggers; 3 event kinds return null (no BCP relevance); all mapped kinds have non-empty descriptions",
     "test_count": 46,
-    "gates_run": "vitest 46/46 (✓), npx tsc --noEmit (✓), npx prisma validate (✓), lint-ratchet PASS"
+    "gates_run": "vitest 46/46 (\u2713), npx tsc --noEmit (\u2713), npx prisma validate (\u2713), lint-ratchet PASS"
   },
   "bundle_5_2_connector_registry": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -789,13 +807,13 @@
       "src/__tests__/services/integration-fabric/connector-registry.test.ts",
       "src/app/api/owner/connectors/route.ts"
     ],
-    "DTO_boundary": "✓ registeredBy, accessToken, encryptedAccessToken, encryptedRefreshToken never in any response",
-    "workspace_enforcement": "✓ All DB queries include workspaceId; withCanonicalEnforcement on all routes",
-    "auth_enforcement": "✓ CAPABILITIES.INTEGRATION_MANAGE required on GET/POST/PATCH",
-    "audit_events": "✓ CONNECTOR_REGISTERED, CONNECTOR_DISCONNECTED, CONNECTOR_TOKEN_REFRESHED, CONNECTOR_REFRESH_FAILED",
-    "idempotency": "✓ registerConnector returns existing if workspace+provider already registered",
+    "DTO_boundary": "\u2713 registeredBy, accessToken, encryptedAccessToken, encryptedRefreshToken never in any response",
+    "workspace_enforcement": "\u2713 All DB queries include workspaceId; withCanonicalEnforcement on all routes",
+    "auth_enforcement": "\u2713 CAPABILITIES.INTEGRATION_MANAGE required on GET/POST/PATCH",
+    "audit_events": "\u2713 CONNECTOR_REGISTERED, CONNECTOR_DISCONNECTED, CONNECTOR_TOKEN_REFRESHED, CONNECTOR_REFRESH_FAILED",
+    "idempotency": "\u2713 registerConnector returns existing if workspace+provider already registered",
     "test_count": 41,
-    "gates_run": "vitest 41/41 (✓), npx tsc --noEmit (✓), npx prisma validate (✓), lint-ratchet PASS"
+    "gates_run": "vitest 41/41 (\u2713), npx tsc --noEmit (\u2713), npx prisma validate (\u2713), lint-ratchet PASS"
   },
   "bundle_5_3_integration_event_ingestion": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -806,14 +824,14 @@
       "src/__tests__/services/integration-fabric/integration-event.test.ts",
       "src/app/api/owner/integration-events/route.ts"
     ],
-    "workspace_enforcement": "✓ Connector ownership verified (workspaceId in DB query); route overwrites body workspaceId with verifiedWorkspaceId",
-    "auth_enforcement": "✓ CAPABILITIES.INTEGRATION_MANAGE required",
-    "audit_events": "✓ INTEGRATION_EVENT_INGESTED always; INTEGRATION_EVENT_BCP_TRIGGERED when BCP re-eval fires",
-    "fire_and_forget": "✓ BCP re-evaluation errors never propagate to ingest caller",
+    "workspace_enforcement": "\u2713 Connector ownership verified (workspaceId in DB query); route overwrites body workspaceId with verifiedWorkspaceId",
+    "auth_enforcement": "\u2713 CAPABILITIES.INTEGRATION_MANAGE required",
+    "audit_events": "\u2713 INTEGRATION_EVENT_INGESTED always; INTEGRATION_EVENT_BCP_TRIGGERED when BCP re-eval fires",
+    "fire_and_forget": "\u2713 BCP re-evaluation errors never propagate to ingest caller",
     "test_count": 28,
-    "gates_run": "vitest 28/28 (✓), npx tsc --noEmit (✓), npx prisma validate (✓), lint-ratchet PASS"
+    "gates_run": "vitest 28/28 (\u2713), npx tsc --noEmit (\u2713), npx prisma validate (\u2713), lint-ratchet PASS"
   },
-  "next_automatic_target": "Bundle 5 complete — select next roadmap slice (Bundle 6 Consulting Mode or Bundle 7 Deployment Readiness)",
+  "next_automatic_target": "Bundle 5 complete \u2014 select next roadmap slice (Bundle 6 Consulting Mode or Bundle 7 Deployment Readiness)",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "UNKNOWN (timeout \u2014 not a blocker)",
@@ -3288,7 +3306,7 @@
   "bundle_6_consulting_mode": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "SERVICE_WITH_WIRING + DOMAIN_CONTRACT + API_ROUTES",
-    "description": "Consulting Mode engagement lifecycle — phase FSM (DISCOVERY→DIAGNOSIS→IMPLEMENTATION→REVIEW), client/consultant DTO boundary, evidence-chain finding creation, finding-required recommendation generation, consulting action assignment, critical-action closure gate, 4th OpsIQ dimension (humanFactors JSON), health computation",
+    "description": "Consulting Mode engagement lifecycle \u2014 phase FSM (DISCOVERY\u2192DIAGNOSIS\u2192IMPLEMENTATION\u2192REVIEW), client/consultant DTO boundary, evidence-chain finding creation, finding-required recommendation generation, consulting action assignment, critical-action closure gate, 4th OpsIQ dimension (humanFactors JSON), health computation",
     "files": [
       "prisma/schema.prisma (consultingPhase, consultantNotes, humanFactors fields added)",
       "src/domain/constants/capabilities.ts (CONSULTING_READ, CONSULTING_WRITE added)",
@@ -3298,17 +3316,17 @@
       "src/app/api/consulting/engagements/route.ts (NEW)",
       "src/__tests__/services/consulting/consulting-engagement.test.ts (NEW)"
     ],
-    "workspace_enforcement": "✓ All service methods enforce workspaceId parameter; route uses ctx.verifiedWorkspaceId exclusively",
-    "auth_enforced": "✓ GET requires CAPABILITIES.CONSULTING_READ; POST requires CAPABILITIES.CONSULTING_WRITE; requireWorkspace: true",
-    "DTO_boundary": "✓ toClientDTO() strips consultantNotes, assignedConsultantId, createdBy, full humanFactors (only summary fields exposed); toConsultantDTO() includes all fields",
+    "workspace_enforcement": "\u2713 All service methods enforce workspaceId parameter; route uses ctx.verifiedWorkspaceId exclusively",
+    "auth_enforced": "\u2713 GET requires CAPABILITIES.CONSULTING_READ; POST requires CAPABILITIES.CONSULTING_WRITE; requireWorkspace: true",
+    "DTO_boundary": "\u2713 toClientDTO() strips consultantNotes, assignedConsultantId, createdBy, full humanFactors (only summary fields exposed); toConsultantDTO() includes all fields",
     "audit_events": "8 events emitted: engagement_created, phase_advanced, finding_created, recommendation_generated, action_assigned, engagement_closed, health_updated, dimension_updated",
-    "four_opsiq_dimensions": "✓ consultingPhase (lifecycle stage) + BusinessConditionProfile relation (business_condition) + interventionMode/interventionPhase (intervention) + humanFactors JSON (human_execution_reality)",
-    "closure_gate": "✓ All critical-priority actions must be completed or cancelled before engagement closure",
-    "phase_fsm": "✓ Forward-only (DISCOVERY→DIAGNOSIS→IMPLEMENTATION→REVIEW), no skipping, no reversal, REVIEW is terminal",
-    "test_coverage": "63 tests — phase FSM (transitions, invalid transitions, terminal state), finding creation (evidence chain validation, workspace isolation), recommendation generation (finding validation), action assignment (consultingTarget, priority), closure gate (critical action blocking, happy path), DTO redaction (client vs consultant boundary), health computation (HEALTHY/AT_RISK/BLOCKED), audit event assertions (all 6 mutation paths)",
-    "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓), npx prisma generate (✓), npx vitest run consulting-engagement.test.ts (63/63 ✓)",
-    "compilation": "✓ TypeScript compiles without errors — EngagementRow extension pattern + toRow() cast used for new Prisma fields",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() mocked DB",
+    "four_opsiq_dimensions": "\u2713 consultingPhase (lifecycle stage) + BusinessConditionProfile relation (business_condition) + interventionMode/interventionPhase (intervention) + humanFactors JSON (human_execution_reality)",
+    "closure_gate": "\u2713 All critical-priority actions must be completed or cancelled before engagement closure",
+    "phase_fsm": "\u2713 Forward-only (DISCOVERY\u2192DIAGNOSIS\u2192IMPLEMENTATION\u2192REVIEW), no skipping, no reversal, REVIEW is terminal",
+    "test_coverage": "63 tests \u2014 phase FSM (transitions, invalid transitions, terminal state), finding creation (evidence chain validation, workspace isolation), recommendation generation (finding validation), action assignment (consultingTarget, priority), closure gate (critical action blocking, happy path), DTO redaction (client vs consultant boundary), health computation (HEALTHY/AT_RISK/BLOCKED), audit event assertions (all 6 mutation paths)",
+    "gates_run": "npm run build (\u2713), npx tsc --noEmit (\u2713), npx prisma validate (\u2713), npx prisma generate (\u2713), npx vitest run consulting-engagement.test.ts (63/63 \u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors \u2014 EngagementRow extension pattern + toRow() cast used for new Prisma fields",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() mocked DB",
     "committed": "a476e459"
   },
   "bundle_7_slice_1_adversarial_workspace_isolation": {
@@ -3331,13 +3349,13 @@
       "10. Audit events: all 6 mutations emit designated event; reads emit nothing"
     ],
     "root_causes_found_fixed": [
-      "vi.clearAllMocks() vs vi.resetAllMocks(): clearAllMocks does not reset mock return values between tests — changed to resetAllMocks()",
-      "Closure gate status comparison: service uses lowercase 'completed'/'cancelled' — test fixtures updated to match",
-      "Finding idempotency check: createConsultingFinding calls db.finding.findFirst before create — tests must mock findFirst→null to proceed to create path"
+      "vi.clearAllMocks() vs vi.resetAllMocks(): clearAllMocks does not reset mock return values between tests \u2014 changed to resetAllMocks()",
+      "Closure gate status comparison: service uses lowercase 'completed'/'cancelled' \u2014 test fixtures updated to match",
+      "Finding idempotency check: createConsultingFinding calls db.finding.findFirst before create \u2014 tests must mock findFirst\u2192null to proceed to create path"
     ],
     "test_coverage": "48 tests across 10 security dimensions",
     "gates_run": "npx vitest run (48/48 PASS), npx tsc --noEmit (0 errors), npm run build (clean)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.resetAllMocks() + hoisted mocks",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.resetAllMocks() + hoisted mocks",
     "committed": "74103d49"
   },
   "bundle_7_slice_3_audit_completeness": {
@@ -3348,33 +3366,33 @@
       "src/__tests__/api/bundle7-audit-completeness.test.ts (NEW)"
     ],
     "audit_event_coverage": {
-      "CONSULTING_ENGAGEMENT_CREATED": "✓ eventName, actorId, workspaceId, entityId, entityType=Engagement, payload={title,clientId,consultingPhase} verified",
-      "CONSULTING_PHASE_ADVANCED": "✓ all 3 valid transitions (→DIAGNOSIS, →IMPLEMENTATION, →REVIEW) verified; payload={from,to,rationale}; invalid skip emits nothing",
-      "CONSULTING_FINDING_CREATED": "✓ eventName, actorId, workspaceId, entityId=FINDING_ID, entityType=Finding, payload={engagementId,severity,title} verified; evidence gate failure → no emit",
-      "CONSULTING_RECOMMENDATION_GENERATED": "✓ eventName, actorId, workspaceId, entityId=REC_ID, entityType=Recommendation, payload={engagementId,findingId,priority,consultingTarget} verified; finding gate failure → no emit",
-      "CONSULTING_ACTION_ASSIGNED": "✓ eventName, actorId, workspaceId, entityId=ACTION_ID, entityType=Action, payload={engagementId,consultingTarget,priority,title} verified; CLIENT + CONSULTANT targets both verified",
-      "CONSULTING_ENGAGEMENT_CLOSED": "✓ eventName, actorId, workspaceId, entityId=ENG_ID, entityType=Engagement, payload={closureRationale,outcomeSummary,consultingPhase} verified; null outcomeSummary handled; blocked closure → no emit"
+      "CONSULTING_ENGAGEMENT_CREATED": "\u2713 eventName, actorId, workspaceId, entityId, entityType=Engagement, payload={title,clientId,consultingPhase} verified",
+      "CONSULTING_PHASE_ADVANCED": "\u2713 all 3 valid transitions (\u2192DIAGNOSIS, \u2192IMPLEMENTATION, \u2192REVIEW) verified; payload={from,to,rationale}; invalid skip emits nothing",
+      "CONSULTING_FINDING_CREATED": "\u2713 eventName, actorId, workspaceId, entityId=FINDING_ID, entityType=Finding, payload={engagementId,severity,title} verified; evidence gate failure \u2192 no emit",
+      "CONSULTING_RECOMMENDATION_GENERATED": "\u2713 eventName, actorId, workspaceId, entityId=REC_ID, entityType=Recommendation, payload={engagementId,findingId,priority,consultingTarget} verified; finding gate failure \u2192 no emit",
+      "CONSULTING_ACTION_ASSIGNED": "\u2713 eventName, actorId, workspaceId, entityId=ACTION_ID, entityType=Action, payload={engagementId,consultingTarget,priority,title} verified; CLIENT + CONSULTANT targets both verified",
+      "CONSULTING_ENGAGEMENT_CLOSED": "\u2713 eventName, actorId, workspaceId, entityId=ENG_ID, entityType=Engagement, payload={closureRationale,outcomeSummary,consultingPhase} verified; null outcomeSummary handled; blocked closure \u2192 no emit"
     },
     "read_paths_zero_emit_verified": [
-      "getConsultingEngagement (consultant view) — 0 events",
-      "getConsultingEngagement (client view) — 0 events",
-      "listConsultingEngagements (consultant view) — 0 events",
-      "listConsultingEngagements (empty) — 0 events",
-      "computeConsultingEngagementHealth (healthy) — 0 events",
-      "computeConsultingEngagementHealth (blocked) — 0 events",
-      "three consecutive reads — 0 events total"
+      "getConsultingEngagement (consultant view) \u2014 0 events",
+      "getConsultingEngagement (client view) \u2014 0 events",
+      "listConsultingEngagements (consultant view) \u2014 0 events",
+      "listConsultingEngagements (empty) \u2014 0 events",
+      "computeConsultingEngagementHealth (healthy) \u2014 0 events",
+      "computeConsultingEngagementHealth (blocked) \u2014 0 events",
+      "three consecutive reads \u2014 0 events total"
     ],
     "failure_paths_zero_emit_verified": [
-      "createConsultingEngagement: idempotent existing return → no emit",
-      "createConsultingFinding: idempotent existing return → no emit; evidence gate failure → no emit",
-      "generateConsultingRecommendation: idempotent existing return → no emit; finding gate failure → no emit",
-      "assignConsultingAction: engagement not found → no emit",
-      "advanceConsultingPhase: invalid transition → no emit",
-      "closeConsultingEngagement: already closed → no emit; not found → no emit; critical actions unresolved → no emit"
+      "createConsultingEngagement: idempotent existing return \u2192 no emit",
+      "createConsultingFinding: idempotent existing return \u2192 no emit; evidence gate failure \u2192 no emit",
+      "generateConsultingRecommendation: idempotent existing return \u2192 no emit; finding gate failure \u2192 no emit",
+      "assignConsultingAction: engagement not found \u2192 no emit",
+      "advanceConsultingPhase: invalid transition \u2192 no emit",
+      "closeConsultingEngagement: already closed \u2192 no emit; not found \u2192 no emit; critical actions unresolved \u2192 no emit"
     ],
-    "test_coverage": "46 tests — 8 mutation paths verified (added health_updated + dimension_updated in Slices 7-8), 3 read paths verified, all idempotent paths verified, all failure paths verified, entityType field correctness verified",
+    "test_coverage": "46 tests \u2014 8 mutation paths verified (added health_updated + dimension_updated in Slices 7-8), 3 read paths verified, all idempotent paths verified, all failure paths verified, entityType field correctness verified",
     "gates_run": "npx vitest run bundle7-audit-completeness.test.ts (46/46 PASS), all 8 Bundle 7 files (242/242 PASS)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() pattern",
     "committed": "d9141398",
     "pushed": true
   },
@@ -3386,28 +3404,28 @@
       "src/__tests__/api/bundle7-permission-matrix.test.ts (NEW)"
     ],
     "permission_matrix_coverage": {
-      "GET_declares_CONSULTING_READ": "✓ capturedDeclarations includes consulting:read in GET's requireCapabilities",
-      "POST_declares_CONSULTING_WRITE": "✓ capturedDeclarations includes consulting:write in POST's requireCapabilities",
-      "requireWorkspace_true_for_GET": "✓ requireWorkspace: true declared",
-      "requireWorkspace_true_for_POST": "✓ requireWorkspace: true declared",
-      "GET_does_not_declare_WRITE": "✓ consulting:write not in GET's requireCapabilities",
-      "POST_does_not_declare_READ": "✓ consulting:read not in POST's requireCapabilities",
-      "GET_deny_behavior": "✓ 403 returned; db not called (handler never runs)",
-      "GET_allow_behavior": "✓ 200 list, 200 single get, 200 with both caps",
-      "POST_deny_behavior": "✓ 403 returned; engagement.findFirst/create not called",
-      "POST_allow_behavior": "✓ 201 create, 200 advance_phase, 200 close",
-      "workspace_isolation_GET": "✓ verifiedWorkspaceId from ctx used in findMany, not query param",
-      "workspace_isolation_POST": "✓ verifiedWorkspaceId from ctx used in findFirst, not body workspaceId injection",
-      "validation_order": "✓ 422 for missing title (after cap check); 403 takes precedence over 422 when enforcement denies"
+      "GET_declares_CONSULTING_READ": "\u2713 capturedDeclarations includes consulting:read in GET's requireCapabilities",
+      "POST_declares_CONSULTING_WRITE": "\u2713 capturedDeclarations includes consulting:write in POST's requireCapabilities",
+      "requireWorkspace_true_for_GET": "\u2713 requireWorkspace: true declared",
+      "requireWorkspace_true_for_POST": "\u2713 requireWorkspace: true declared",
+      "GET_does_not_declare_WRITE": "\u2713 consulting:write not in GET's requireCapabilities",
+      "POST_does_not_declare_READ": "\u2713 consulting:read not in POST's requireCapabilities",
+      "GET_deny_behavior": "\u2713 403 returned; db not called (handler never runs)",
+      "GET_allow_behavior": "\u2713 200 list, 200 single get, 200 with both caps",
+      "POST_deny_behavior": "\u2713 403 returned; engagement.findFirst/create not called",
+      "POST_allow_behavior": "\u2713 201 create, 200 advance_phase, 200 close",
+      "workspace_isolation_GET": "\u2713 verifiedWorkspaceId from ctx used in findMany, not query param",
+      "workspace_isolation_POST": "\u2713 verifiedWorkspaceId from ctx used in findFirst, not body workspaceId injection",
+      "validation_order": "\u2713 422 for missing title (after cap check); 403 takes precedence over 422 when enforcement denies"
     },
     "root_causes_found_fixed": [
-      "CreateEngagementSchema requires clientId: z.string().uuid() — test bodies must use valid UUIDs not 'client-001'",
-      "AdvancePhaseSchema requires engagementId: z.string().uuid() — ENG_ID constant is not a UUID; use explicit UUID in test body",
-      "CloseEngagementSchema requires engagementId: z.string().uuid() — same fix"
+      "CreateEngagementSchema requires clientId: z.string().uuid() \u2014 test bodies must use valid UUIDs not 'client-001'",
+      "AdvancePhaseSchema requires engagementId: z.string().uuid() \u2014 ENG_ID constant is not a UUID; use explicit UUID in test body",
+      "CloseEngagementSchema requires engagementId: z.string().uuid() \u2014 same fix"
     ],
-    "test_coverage": "25 tests — declaration assertions (6), GET enforcement (5), POST enforcement (6), cross-capability isolation (3), workspace isolation (2), input validation order (3)",
+    "test_coverage": "25 tests \u2014 declaration assertions (6), GET enforcement (5), POST enforcement (6), cross-capability isolation (3), workspace isolation (2), input validation order (3)",
     "gates_run": "npx vitest run bundle7-permission-matrix.test.ts (25/25 PASS), full bundle run (175/175 PASS), npx tsc --noEmit (0 errors), npm run build (clean)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() pattern",
     "committed": "181ac09c",
     "pushed": true
   },
@@ -3419,35 +3437,35 @@
       "src/__tests__/api/bundle7-dto-leakage.test.ts (NEW)"
     ],
     "leakage_boundary_verified": {
-      "consultantNotes_absent_client_view": "✓ poison sentinel value never appears in ?view=client response",
-      "assignedConsultantId_absent_client_view": "✓ poison sentinel value never appears in ?view=client response",
-      "createdBy_absent_client_view": "✓ poison sentinel value never appears in ?view=client response",
-      "resistanceToChange_absent_client_humanFactors": "✓ restricted field stripped by toClientDTO",
-      "communicationBreakdownRisk_absent_client_humanFactors": "✓ restricted field stripped by toClientDTO",
-      "moraleFragility_absent_client_humanFactors": "✓ restricted field stripped by toClientDTO",
-      "managementCapabilityGap_absent_client_humanFactors": "✓ restricted field stripped by toClientDTO",
-      "accountabilityWeakness_absent_client_humanFactors": "✓ restricted field stripped by toClientDTO",
-      "ownerBottleneckRisk_present_client_view": "✓ allowed field present in client humanFactors",
-      "followThroughRisk_present_client_view": "✓ allowed field present in client humanFactors",
-      "keyPersonDependency_present_client_view": "✓ allowed field present in client humanFactors",
-      "all_internals_present_consultant_view": "✓ consultantNotes, assignedConsultantId, createdBy, all restricted humanFactors present",
-      "list_path_client_view": "✓ all list items strip internal fields",
-      "null_humanFactors_handled": "✓ null humanFactors returns null cleanly in both views"
+      "consultantNotes_absent_client_view": "\u2713 poison sentinel value never appears in ?view=client response",
+      "assignedConsultantId_absent_client_view": "\u2713 poison sentinel value never appears in ?view=client response",
+      "createdBy_absent_client_view": "\u2713 poison sentinel value never appears in ?view=client response",
+      "resistanceToChange_absent_client_humanFactors": "\u2713 restricted field stripped by toClientDTO",
+      "communicationBreakdownRisk_absent_client_humanFactors": "\u2713 restricted field stripped by toClientDTO",
+      "moraleFragility_absent_client_humanFactors": "\u2713 restricted field stripped by toClientDTO",
+      "managementCapabilityGap_absent_client_humanFactors": "\u2713 restricted field stripped by toClientDTO",
+      "accountabilityWeakness_absent_client_humanFactors": "\u2713 restricted field stripped by toClientDTO",
+      "ownerBottleneckRisk_present_client_view": "\u2713 allowed field present in client humanFactors",
+      "followThroughRisk_present_client_view": "\u2713 allowed field present in client humanFactors",
+      "keyPersonDependency_present_client_view": "\u2713 allowed field present in client humanFactors",
+      "all_internals_present_consultant_view": "\u2713 consultantNotes, assignedConsultantId, createdBy, all restricted humanFactors present",
+      "list_path_client_view": "\u2713 all list items strip internal fields",
+      "null_humanFactors_handled": "\u2713 null humanFactors returns null cleanly in both views"
     },
-    "test_coverage": "23 tests — client single GET (5), humanFactors restriction (8), client list (3), consultant view (5), null humanFactors (2)",
+    "test_coverage": "23 tests \u2014 client single GET (5), humanFactors restriction (8), client list (3), consultant view (5), null humanFactors (2)",
     "gates_run": "npx vitest run bundle7-dto-leakage (23/23 PASS), all 3 Bundle 7 files (87/87 PASS), npx tsc --noEmit (0 errors)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern with poison DB rows",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() pattern with poison DB rows",
     "committed": "c41b70de",
     "pushed": true
   },
   "bundle_7_slice_5_export_api": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "SERVICE_WITH_WIRING",
-    "description": "Bundle 7 Slice 5: Consulting engagement export API — GET /api/consulting/engagements/export aggregates engagement + findings + recommendations + actions into structured consultant-view export packet.",
+    "description": "Bundle 7 Slice 5: Consulting engagement export API \u2014 GET /api/consulting/engagements/export aggregates engagement + findings + recommendations + actions into structured consultant-view export packet.",
     "files": [
       "src/services/consulting/consulting-export.service.ts (NEW)",
       "src/app/api/consulting/engagements/export/route.ts (NEW)",
-      "src/__tests__/api/bundle7-export.test.ts (NEW — 27 tests)",
+      "src/__tests__/api/bundle7-export.test.ts (NEW \u2014 27 tests)",
       "src/domain/constants/audit-events.ts (CONSULTING_ENGAGEMENT_EXPORTED added)",
       "src/services/consulting/consulting-engagement.service.ts (metadata: {consultingTarget} added to recommendation create)"
     ],
@@ -3459,24 +3477,24 @@
       "workspace_enforcement": "ctx.verifiedWorkspaceId always used; URL workspaceId param injection blocked",
       "auth_enforcement": "CAPABILITIES.CONSULTING_READ required",
       "audit_event": "consulting.engagement_exported emitted with findingsCount/recommendationsCount/actionsCount",
-      "404_handling": "NotFoundError caught → 404",
-      "400_handling": "missing id → 400"
+      "404_handling": "NotFoundError caught \u2192 404",
+      "400_handling": "missing id \u2192 400"
     },
-    "test_coverage": "27 tests — capability declaration (2), input validation (3), export structure (4), findings (2), recommendations (3), actions (3), audit event (8), workspace isolation (2)",
+    "test_coverage": "27 tests \u2014 capability declaration (2), input validation (3), export structure (4), findings (2), recommendations (3), actions (3), audit event (8), workspace isolation (2)",
     "gates_run": "npx vitest run bundle7-export (27/27 PASS), all 5 Bundle 7 files (114/114 PASS), adversarial + service tests (111/111 PASS), npx tsc --noEmit (0 errors)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() pattern",
     "committed": "29f788bd",
     "pushed": true
   },
   "bundle_7_slice_7_health_mutation": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "SERVICE_WITH_WIRING",
-    "description": "Bundle 7 Slice 7: updateConsultingEngagementHealth — fills missing CONSULTING_HEALTH_UPDATED audit emission gap. Adds UpdateHealthSchema, updateConsultingEngagementHealth() service method (recompute + db.update + emitAuditEvent), POST ?action=update_health route case. 22 tests covering capability enforcement, input validation, HEALTHY/AT_RISK/BLOCKED results, audit service call args, workspace isolation, response shape.",
+    "description": "Bundle 7 Slice 7: updateConsultingEngagementHealth \u2014 fills missing CONSULTING_HEALTH_UPDATED audit emission gap. Adds UpdateHealthSchema, updateConsultingEngagementHealth() service method (recompute + db.update + emitAuditEvent), POST ?action=update_health route case. 22 tests covering capability enforcement, input validation, HEALTHY/AT_RISK/BLOCKED results, audit service call args, workspace isolation, response shape.",
     "files": [
       "src/domain/consulting/consulting-contracts.ts (UpdateHealthSchema added)",
       "src/services/consulting/consulting-engagement.service.ts (updateConsultingEngagementHealth added)",
       "src/app/api/consulting/engagements/route.ts (update_health case added)",
-      "src/__tests__/api/bundle7-health-mutation.test.ts (NEW — 22 tests)"
+      "src/__tests__/api/bundle7-health-mutation.test.ts (NEW \u2014 22 tests)"
     ],
     "wiring_proof": {
       "caller": "src/app/api/consulting/engagements/route.ts::POST?action=update_health",
@@ -3487,19 +3505,19 @@
       "auth_enforcement": "CAPABILITIES.CONSULTING_WRITE required",
       "audit_event": "CONSULTING_HEALTH_UPDATED emitted with status, reasons, counts, workspaceId"
     },
-    "test_coverage": "22 tests — capability enforcement (3), input validation (3), HEALTHY result (3), AT_RISK result (2), BLOCKED result (2), audit service call args (4), workspace isolation (2), response shape (3)",
+    "test_coverage": "22 tests \u2014 capability enforcement (3), input validation (3), HEALTHY result (3), AT_RISK result (2), BLOCKED result (2), audit service call args (4), workspace isolation (2), response shape (3)",
     "gates_run": "npx vitest run bundle7-health-mutation (22/22 PASS), all 7 Bundle 7 files (211/211 PASS), npx tsc --noEmit (0 errors), npm run build (PASS), npx prisma validate (PASS), governance scan (0 new findings in new files)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use wrapper mock pattern",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use wrapper mock pattern",
     "committed": "906f8640",
     "pushed": true
   },
   "bundle_7_slice_6_health_api": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "SERVICE_WITH_WIRING",
-    "description": "Bundle 7 Slice 6: Wire computeConsultingEngagementHealth to GET /api/consulting/engagements/health?id=<uuid>. Previously WIRED_NOT_CALLED — service method existed but had no API route. 27 tests covering capability declaration, input validation, HEALTHY/AT_RISK/BLOCKED status, workspace isolation, no audit event on read, and response shape.",
+    "description": "Bundle 7 Slice 6: Wire computeConsultingEngagementHealth to GET /api/consulting/engagements/health?id=<uuid>. Previously WIRED_NOT_CALLED \u2014 service method existed but had no API route. 27 tests covering capability declaration, input validation, HEALTHY/AT_RISK/BLOCKED status, workspace isolation, no audit event on read, and response shape.",
     "files": [
       "src/app/api/consulting/engagements/health/route.ts (NEW)",
-      "src/__tests__/api/bundle7-health.test.ts (NEW — 27 tests)"
+      "src/__tests__/api/bundle7-health.test.ts (NEW \u2014 27 tests)"
     ],
     "wiring_proof": {
       "caller": "src/app/api/consulting/engagements/health/route.ts::GET",
@@ -3508,25 +3526,25 @@
       "output": "JSON {health: {status, reasons, criticalFindingsUnresolved, criticalActionsUnresolved, overdueActions}}",
       "workspace_enforcement": "ctx.verifiedWorkspaceId always used; id from query param only",
       "auth_enforcement": "CAPABILITIES.CONSULTING_READ required",
-      "audit_event": "None — read-only computation per consulting audit policy",
-      "404_handling": "NotFoundError caught → classifyOperatorError inline → 404",
-      "400_handling": "missing id → 400"
+      "audit_event": "None \u2014 read-only computation per consulting audit policy",
+      "404_handling": "NotFoundError caught \u2192 classifyOperatorError inline \u2192 404",
+      "400_handling": "missing id \u2192 400"
     },
-    "test_coverage": "27 tests — capability declaration (2), input validation (4), HEALTHY (3), AT_RISK (3), BLOCKED (3), workspace isolation (4), no audit on read (5), response shape (3)",
+    "test_coverage": "27 tests \u2014 capability declaration (2), input validation (4), HEALTHY (3), AT_RISK (3), BLOCKED (3), workspace isolation (4), no audit on read (5), response shape (3)",
     "gates_run": "npx vitest run bundle7-health (27/27 PASS), all 6 Bundle 7 files (189/189 PASS), npx tsc --noEmit (0 errors), governance:scan:strict (0 new findings)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use wrapper mock + vi.resetAllMocks() pattern",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use wrapper mock + vi.resetAllMocks() pattern",
     "committed": "6897e0bd",
     "pushed": true
   },
   "bundle_7_slice_8_dimension_update": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "SERVICE_WITH_WIRING",
-    "description": "Bundle 7 Slice 8: updateConsultingEngagementDimensions — fills CONSULTING_DIMENSION_UPDATED audit emission gap. Root cause: CONSULTING_DIMENSION_UPDATED was defined in audit-events.ts but never emitted. Adds UpdateDimensionsSchema (engagementId + at least one of interventionMode|interventionPhase|humanFactors, Zod refine enforced), updateConsultingEngagementDimensions() service method (db.engagement.update + emitAuditEvent), POST ?action=update_dimensions route case. 24 tests covering capability enforcement, input validation, all dimension value sets, workspace isolation, service call args, response shape.",
+    "description": "Bundle 7 Slice 8: updateConsultingEngagementDimensions \u2014 fills CONSULTING_DIMENSION_UPDATED audit emission gap. Root cause: CONSULTING_DIMENSION_UPDATED was defined in audit-events.ts but never emitted. Adds UpdateDimensionsSchema (engagementId + at least one of interventionMode|interventionPhase|humanFactors, Zod refine enforced), updateConsultingEngagementDimensions() service method (db.engagement.update + emitAuditEvent), POST ?action=update_dimensions route case. 24 tests covering capability enforcement, input validation, all dimension value sets, workspace isolation, service call args, response shape.",
     "files": [
       "src/domain/consulting/consulting-contracts.ts (UpdateDimensionsSchema added)",
       "src/services/consulting/consulting-engagement.service.ts (updateConsultingEngagementDimensions added)",
       "src/app/api/consulting/engagements/route.ts (update_dimensions case added)",
-      "src/__tests__/api/bundle7-dimensions-mutation.test.ts (NEW — 24 tests)"
+      "src/__tests__/api/bundle7-dimensions-mutation.test.ts (NEW \u2014 24 tests)"
     ],
     "wiring_proof": {
       "caller": "src/app/api/consulting/engagements/route.ts::POST?action=update_dimensions",
@@ -3537,9 +3555,9 @@
       "auth_enforcement": "CAPABILITIES.CONSULTING_WRITE required",
       "audit_event": "CONSULTING_DIMENSION_UPDATED emitted with payload recording changed fields"
     },
-    "test_coverage": "24 tests — capability enforcement (3), input validation (4: missing id, no dimensions, invalid interventionMode, invalid interventionPhase), interventionMode update all 4 values, interventionPhase update all 4 values, humanFactors update, workspace isolation (2), service call args (3), response shape (2)",
+    "test_coverage": "24 tests \u2014 capability enforcement (3), input validation (4: missing id, no dimensions, invalid interventionMode, invalid interventionPhase), interventionMode update all 4 values, interventionPhase update all 4 values, humanFactors update, workspace isolation (2), service call args (3), response shape (2)",
     "gates_run": "npx vitest run bundle7-dimensions-mutation (24/24 PASS), all 8 Bundle 7 files (235/235 PASS), npx tsc --noEmit (0 errors)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
     "committed": "f9fda28e",
     "pushed": true
   },
@@ -3548,30 +3566,30 @@
     "classification": "NON_DB_MOCK_TEST_SUITE",
     "description": "Non-DB mock tests for risk and compliance detail routes. Covers GET /api/owner/risks/[riskId] and POST /api/owner/risks/[riskId]/review and POST /api/owner/risks/[riskId]/tasks (31 tests), and GET /api/owner/compliance/[itemId] and POST /api/owner/compliance/[itemId]/review (28 tests). Uses vi.hoisted() + wrapper mock pattern per canonical Bundle 7. All UUIDs use valid hex characters [0-9a-f] to pass z.string().uuid() validation.",
     "files": [
-      "src/__tests__/api/owner/risks/detail-routes.test.ts (NEW — 31 tests)",
-      "src/__tests__/api/owner/compliance/detail-routes.test.ts (NEW — 28 tests)"
+      "src/__tests__/api/owner/risks/detail-routes.test.ts (NEW \u2014 31 tests)",
+      "src/__tests__/api/owner/compliance/detail-routes.test.ts (NEW \u2014 28 tests)"
     ],
-    "test_coverage": "59 tests total — risks detail: capability declarations (6), GET handler (6), POST review (9), POST tasks (10); compliance detail: capability declarations (6), GET handler (6), POST review (12)",
+    "test_coverage": "59 tests total \u2014 risks detail: capability declarations (6), GET handler (6), POST review (9), POST tasks (10); compliance detail: capability declarations (6), GET handler (6), POST review (12)",
     "workspace_enforcement": "verified: workspaceId always from ctx.verifiedWorkspaceId; WS_B isolation tests pass",
     "auth_enforced": "owner:view (GET), owner:manage (POST review/tasks)",
     "gates_run": "npx vitest run detail-routes (59/59 PASS), npx tsc --noEmit (0 errors)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
     "committed": "f06ad80d",
     "pushed": true,
-    "next_automatic_target": "goal-arbitration route tests — 30/30 PASS"
+    "next_automatic_target": "goal-arbitration route tests \u2014 30/30 PASS"
   },
   "owner_goal_arbitration_route_tests": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "NON_DB_MOCK_TEST_SUITE",
     "description": "Non-DB mock tests for GET/POST /api/owner/goal-arbitration. Covers capability declarations (GET/POST both require owner:manage + requireWorkspace:true), GET returning record or null with workspaceId isolation, POST returning arbitrationRecordId+portfolioDecisions with workspaceId+actorId isolation, 403 enforcement denial, service call count assertions, cross-workspace call-pair checks. 30 tests total.",
     "files": [
-      "src/__tests__/api/owner/goal-arbitration/goal-arbitration.test.ts (NEW — 30 tests)"
+      "src/__tests__/api/owner/goal-arbitration/goal-arbitration.test.ts (NEW \u2014 30 tests)"
     ],
-    "test_coverage": "30 tests — capability declarations (6), GET handler (8), POST handler (11), workspace isolation (2 cross-call pair), 403 denial (2)",
+    "test_coverage": "30 tests \u2014 capability declarations (6), GET handler (8), POST handler (11), workspace isolation (2 cross-call pair), 403 denial (2)",
     "workspace_enforcement": "verified: verifiedWorkspaceId always passed to service; WS_A/WS_B isolation tests pass",
     "auth_enforced": "owner:manage (GET and POST)",
     "gates_run": "npx vitest run goal-arbitration (30/30 PASS), npx tsc --noEmit (0 errors)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
     "next_automatic_target": "Identify next service with <20 tests: operating-memory, owner-block-metrics, control-correlation"
   },
   "owner_operating_memory_route_tests": {
@@ -3579,27 +3597,27 @@
     "classification": "NON_DB_MOCK_TEST_SUITE",
     "description": "Non-DB mock tests for GET/POST /api/owner/operating-memory. Covers GET (getMemoryEntries with memoryType/key query params, workspaceId isolation), POST UPSERT (upsertMemoryEntry with workspaceId+actorId+memoryType+sourceId), POST EXPIRE (expireMemoryEntry with positional args), capability enforcement (owner:manage + requireWorkspace), 403 denial, cross-workspace call-pair isolation. 34 tests total.",
     "files": [
-      "src/__tests__/api/owner/operating-memory/operating-memory.test.ts (NEW — 34 tests)"
+      "src/__tests__/api/owner/operating-memory/operating-memory.test.ts (NEW \u2014 34 tests)"
     ],
-    "test_coverage": "34 tests — capability declarations (6), GET handler (9), POST UPSERT (8), POST EXPIRE (5), workspace isolation (2), service call exclusivity (various)",
+    "test_coverage": "34 tests \u2014 capability declarations (6), GET handler (9), POST UPSERT (8), POST EXPIRE (5), workspace isolation (2), service call exclusivity (various)",
     "workspace_enforcement": "verified: verifiedWorkspaceId always passed to service; WS_A/WS_B isolation tests pass",
     "auth_enforced": "owner:manage (GET and POST)",
     "gates_run": "npx vitest run operating-memory.test.ts (34/34 PASS)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
-    "next_automatic_target": "owner-block-metrics (5 tests — below 20 threshold), control-correlation (needs check)"
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "next_automatic_target": "owner-block-metrics (5 tests \u2014 below 20 threshold), control-correlation (needs check)"
   },
   "owner_kpi_ownership_route_tests": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "NON_DB_MOCK_TEST_SUITE",
     "description": "Non-DB mock tests for GET/POST /api/owner/kpi-ownership. Covers GET listKPIOwnership, POST UPSERT (createKPIOwnership with metricName/metricLabel/ownerUserId/reviewCadence), POST UPDATE (updateKPIOwnership with recordId), POST RECORD_REVIEW (updateKPIOwnership with lastReviewedAt), inline 400 guards (missing recordId, missing required UPSERT fields), capability enforcement, workspace and actor isolation. 32 tests total.",
     "files": [
-      "src/__tests__/api/owner/kpi-ownership/kpi-ownership.test.ts (NEW — 32 tests)"
+      "src/__tests__/api/owner/kpi-ownership/kpi-ownership.test.ts (NEW \u2014 32 tests)"
     ],
-    "test_coverage": "32 tests — capability declarations (6), GET (6), POST UPSERT (7), POST UPDATE (5), POST RECORD_REVIEW (4), workspace isolation (2), actor isolation (2)",
+    "test_coverage": "32 tests \u2014 capability declarations (6), GET (6), POST UPSERT (7), POST UPDATE (5), POST RECORD_REVIEW (4), workspace isolation (2), actor isolation (2)",
     "workspace_enforcement": "verified: verifiedWorkspaceId always passed to service; WS_A/WS_B isolation tests pass",
     "auth_enforced": "owner:manage (GET and POST)",
     "gates_run": "npx vitest run kpi-ownership.test.ts (32/32 PASS)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
     "next_automatic_target": "resource-pools route (0 dedicated route tests)"
   },
   "owner_resource_pools_route_tests": {
@@ -3607,13 +3625,28 @@
     "classification": "NON_DB_MOCK_TEST_SUITE",
     "description": "Non-DB mock tests for GET/POST /api/owner/resource-pools. Covers GET listResourcePools, POST CREATE_POOL (createResourcePool with resourceType/label/totalCapacity/unit), POST ALLOCATE (allocateResource with poolId/objectiveId/allocationAmount), POST RELEASE (releaseAllocation with positional workspaceId/actorId/allocationId args), inline 400 guards for missing required fields, capability enforcement, workspace and actor isolation. 33 tests total.",
     "files": [
-      "src/__tests__/api/owner/resource-pools/resource-pools.test.ts (NEW — 33 tests)"
+      "src/__tests__/api/owner/resource-pools/resource-pools.test.ts (NEW \u2014 33 tests)"
     ],
-    "test_coverage": "33 tests — capability declarations (6), GET (6), POST CREATE_POOL (6), POST ALLOCATE (6), POST RELEASE (6), workspace isolation (2), actor isolation (1)",
+    "test_coverage": "33 tests \u2014 capability declarations (6), GET (6), POST CREATE_POOL (6), POST ALLOCATE (6), POST RELEASE (6), workspace isolation (2), actor isolation (1)",
     "workspace_enforcement": "verified: verifiedWorkspaceId always passed to service; WS_A/WS_B isolation tests pass",
     "auth_enforced": "owner:manage (GET and POST)",
     "gates_run": "npx vitest run resource-pools.test.ts (33/33 PASS)",
-    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
     "next_automatic_target": "override-arbitration route (0 dedicated tests), cost-attribution/cost-intelligence routes"
+  },
+  "owner_override_arbitration_route_tests": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "NON_DB_MOCK_TEST_SUITE",
+    "description": "Non-DB mock tests for POST /api/owner/override-arbitration (createArbitrationOverride) and GET ?recordId=X (getLatestOverride) / GET (listOverrides). Covers all 6 decision enum values (EXECUTE_NOW/DELAY/CANCEL/MERGE/SPLIT/ESCALATE), workspace and actor isolation, capability enforcement, and handler routing (getLatestOverride vs listOverrides based on recordId presence). 28 tests total.",
+    "files": [
+      "src/__tests__/api/owner/override-arbitration/override-arbitration.test.ts (NEW \u2014 28 tests)"
+    ],
+    "test_coverage": "28 tests \u2014 capability declarations (6), GET getLatestOverride (5), GET listOverrides (5), POST createArbitrationOverride (10), workspace isolation (2)",
+    "workspace_enforcement": "verified: verifiedWorkspaceId always passed to service; WS_A/WS_B isolation tests pass",
+    "auth_enforced": "owner:manage (GET and POST)",
+    "gates_run": "npx vitest run override-arbitration.test.ts (28/28 PASS)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT \u2014 all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "committed": "955e1153",
+    "next_automatic_target": "cost-attribution/cost-intelligence routes (0 dedicated tests)"
   }
 }
