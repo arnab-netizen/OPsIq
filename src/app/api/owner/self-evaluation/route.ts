@@ -38,7 +38,7 @@ const schema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const input = await parseRequestBody(ctx.request!, schema);
-    const result = await recordSelfEvaluation({ workspaceId: ctx.verifiedWorkspaceId, actorId: ctx.verifiedActorId, ...input });
+    const result = await recordSelfEvaluation({ ...input, workspaceId: ctx.verifiedWorkspaceId, actorId: ctx.verifiedActorId });
     return canonicalJson(result, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }

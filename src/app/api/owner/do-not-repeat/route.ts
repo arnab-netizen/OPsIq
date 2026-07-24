@@ -24,7 +24,7 @@ const schema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const input = await parseRequestBody(ctx.request!, schema);
-    const id = await recordDoNotRepeat({ workspaceId: ctx.verifiedWorkspaceId, ...input });
+    const id = await recordDoNotRepeat({ ...input, workspaceId: ctx.verifiedWorkspaceId });
     return canonicalJson({ id }, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }

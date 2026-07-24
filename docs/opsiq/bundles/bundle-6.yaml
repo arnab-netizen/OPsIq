@@ -1,0 +1,54 @@
+id: bundle-6
+stage: 6
+name: Consulting Mode and Engagement Operations
+status: PENDING
+priority: 9
+
+description: |
+  Full consulting mode lifecycle: engagement creation, consulting phase
+  management, client-consultant boundary enforcement, finding and
+  recommendation management, consulting action assignment, and engagement
+  closure. All four OpsIQ dimensions modeled at engagement level.
+
+scope:
+  - Engagement creation (client + consultant + scope)
+  - Consulting phase transitions (DISCOVERY → DIAGNOSIS → IMPLEMENTATION → REVIEW)
+  - Finding creation and evidence linking
+  - Recommendation generation from findings
+  - Consulting action assignment (to client or consultant)
+  - Client-visible vs consultant-internal data boundary
+  - Engagement health scoring
+  - Engagement closure (requires evidence of all critical actions resolved)
+  - Consulting public DTO (no internal consultant notes in client view)
+
+acceptance_criteria:
+  - Consulting phase transitions are state-machine enforced
+  - Client cannot see consultant-internal notes or scoring
+  - Finding evidence is required before recommendation generation
+  - Engagement closure blocked until all critical actions resolved
+  - All four OpsIQ dimensions maintained at engagement level
+  - Auth: CONSULTING_WRITE for consultants, OWNER_READ for clients
+  - 50+ tests: phase FSM, client boundary, closure gate, dimension updates
+
+dependencies:
+  - bundle-5  # Integration Fabric (PENDING)
+
+post_merge_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+
+security:
+  workspace_enforcement: required
+  auth_capability: CONSULTING_WRITE
+  dto_redaction: required  # client vs consultant boundary
+  audit_events: required
+  idempotency: required_for_finding_creation
+  immutability: closed_engagements_are_immutable
+
+opsiq_dimensions:
+  - consulting_lifecycle_stage: engagement.phase
+  - business_condition: linked BCP at engagement start
+  - intervention_mode_and_phase: engagement.interventionMode + phase
+  - human_execution_reality: engagement.humanFactors

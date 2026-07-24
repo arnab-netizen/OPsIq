@@ -1,0 +1,119 @@
+name: Reusable PR Validation
+
+# Reusable workflow called by the main CI gate (ci.yml) and bundle-specific
+# verification workflows. Encapsulates the standard non-DB validation steps
+# so every PR gate uses the same scanning and type-check sequence.
+#
+# Usage from a caller workflow:
+#   jobs:
+#     validate:
+#       uses: ./.github/workflows/reusable-pr-validation.yml
+#       with:
+#         node_version: '20.x'
+#         run_bundle_validator: true
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: 'Node.js version'
+        required: false
+        default: '20.x'
+        type: string
+      run_bundle_validator:
+        description: 'Run bundle manifest + stage acceptance validator'
+        required: false
+        default: false
+        type: boolean
+      run_recurrence_scanners:
+        description: 'Run recurrence defect scanners'
+        required: false
+        default: true
+        type: boolean
+      test_pattern:
+        description: 'Vitest test pattern override (default: exclude *.db.test.ts)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  validate:
+    name: Non-DB Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      TEST_WITH_DB: "false"
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      SKIP_ENV_VALIDATION: "true"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            echo "npm ci failed (attempt $i); retrying in $((i*10))s..."
+            sleep $((i*10))
+          done
+
+      - name: Governance compliance scan
+        run: npm run governance:scan:strict
+        continue-on-error: false
+
+      - name: Auth route governance scan
+        run: npm run governance:scan:auth
+        continue-on-error: false
+
+      - name: A7.7 recurrence prevention gates
+        run: npm run governance:scan:a77
+        continue-on-error: false
+
+      - name: TypeScript type checking
+        run: npx tsc --noEmit
+        continue-on-error: false
+
+      - name: Prisma schema validation
+        run: npx prisma validate
+        continue-on-error: false
+
+      - name: Wrapped handlers ratchet
+        run: npm run audit:wrapped-handlers:ratchet
+        continue-on-error: false
+
+      - name: CI workflow governance check
+        run: node scripts/ci-governance-check.mjs
+        continue-on-error: false
+
+      - name: Recurrence defect scanners
+        if: inputs.run_recurrence_scanners
+        run: node scripts/scan-recurrence-defects.mjs
+        continue-on-error: false
+
+      - name: Bundle manifest validator
+        if: inputs.run_bundle_validator
+        run: node scripts/validate-bundle-manifests.mjs
+        continue-on-error: false
+
+      - name: Run non-DB test suite
+        run: |
+          if [ -n "${{ inputs.test_pattern }}" ]; then
+            npx vitest run --maxWorkers 1 ${{ inputs.test_pattern }}
+          else
+            EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
+            npx vitest run --maxWorkers 1 --exclude '**/*.db.test.ts' $EXCLUDES
+          fi
+        env:
+          TEST_WITH_DB: "false"
+          NODE_ENV: test
+        continue-on-error: false

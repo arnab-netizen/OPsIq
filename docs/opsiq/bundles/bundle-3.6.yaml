@@ -1,0 +1,49 @@
+id: bundle-3.6
+stage: 3
+name: Owner Action Assignment and Outcome Tracking
+status: PENDING
+priority: 2
+
+description: |
+  Full lifecycle for assigning actions to business owners, tracking execution
+  progress, recording outcomes, and triggering re-assessment on failure or
+  stall. Includes assignment accountability enforcement and stall detection.
+
+scope:
+  - Action assignment service (owner + deadline + priority)
+  - Assignment change audit (who changed, when, why)
+  - Outcome recording (COMPLETED / FAILED / STALLED)
+  - Stall detection evaluator (periodic, idempotent alert creation)
+  - Failed outcome → intervention phase re-assessment trigger
+  - Owner bottleneck metric tracking
+  - Action assignment public DTO (no internal scoring)
+
+acceptance_criteria:
+  - Assignment state machine enforced server-side (no silent promotion)
+  - Workspace enforcement on all read/write paths
+  - Auth: only workspace members with OWNER_MANAGE can reassign
+  - STALLED outcome triggers business condition re-evaluation
+  - Stall evaluator creates idempotent overdue alert per action
+  - Outcome recording emits audit event with actor + timestamp
+  - 40+ tests: state machine, stall detection, workspace isolation, auth
+
+dependencies:
+  - bundle-3.5  # Customer Complaint (PENDING)
+
+post_merge_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+
+security:
+  workspace_enforcement: required
+  auth_capability: OWNER_MANAGE
+  dto_redaction: required
+  audit_events: required
+  idempotency: required_for_stall_alert
+
+human_factors:
+  - owner_bottlenecking: stall detection must not require owner self-report
+  - follow_through_risk: deadline enforcement with escalation
+  - accountability_weakness: failed outcome must trigger re-assessment not silent close

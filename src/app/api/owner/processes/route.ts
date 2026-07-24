@@ -43,7 +43,7 @@ const reviewSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const input = await parseRequestBody(ctx.request!, registerSchema);
-    const id = await registerProcess({ workspaceId: ctx.verifiedWorkspaceId, actorId: ctx.verifiedActorId, ...input });
+    const id = await registerProcess({ ...input, workspaceId: ctx.verifiedWorkspaceId, actorId: ctx.verifiedActorId });
     return canonicalJson({ id }, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }

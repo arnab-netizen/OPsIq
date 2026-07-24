@@ -1,0 +1,49 @@
+id: bundle-3.5
+stage: 3
+name: Customer Complaint and Service Recovery
+status: PENDING
+priority: 1
+
+description: |
+  Full lifecycle for customer complaint intake, triage, service recovery actions,
+  and resolution tracking. Includes complaint severity classification, recovery
+  SLA enforcement, and audit trail for all state transitions.
+
+scope:
+  - Complaint intake API (POST /api/owner/complaint)
+  - Complaint triage service (severity, SLA assignment)
+  - Recovery action generation (linked to intervention phase)
+  - Resolution confirmation (evidence-backed)
+  - Complaint → business condition re-evaluation trigger
+  - Customer-visible complaint status (public DTO)
+  - Internal complaint audit trail
+
+acceptance_criteria:
+  - All complaint state transitions emit audit events
+  - Workspace enforcement on every read/write path
+  - Auth capability checked server-side (OWNER_MANAGE or CONSULTING_WRITE)
+  - Public DTO excludes internal severity scores and raw triage notes
+  - Complaint resolution triggers business condition re-evaluation
+  - Overdue SLA alerts created by evaluator (idempotent)
+  - 40+ tests covering state machine, SLA logic, workspace isolation
+
+dependencies:
+  - bundle-3.4  # Risk & Compliance lifecycle (CLOSED — post-merge green 502f9cda)
+
+post_merge_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+
+security:
+  workspace_enforcement: required
+  auth_capability: OWNER_MANAGE
+  dto_redaction: required
+  audit_events: required
+  idempotency: required_for_complaint_creation
+
+human_factors:
+  - owner_bottlenecking: complaint intake should not require owner approval to log
+  - accountability_weakness: SLA overdue alert must surface without manual trigger
+  - communication_breakdown: resolution confirmation must be evidence-backed not self-reported

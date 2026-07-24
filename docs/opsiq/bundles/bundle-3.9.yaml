@@ -1,0 +1,50 @@
+id: bundle-3.9
+stage: 3
+name: Process Intelligence and SOP Management
+status: PENDING
+priority: 5
+
+description: |
+  Full lifecycle for standard operating procedure (SOP) creation, versioning,
+  training assignment, compliance tracking, and effectiveness measurement.
+  Process failures trigger intervention re-assessment.
+
+scope:
+  - SOP document creation and versioning
+  - SOP training assignment to staff
+  - Training completion tracking (evidence-required)
+  - SOP compliance rate calculation
+  - Non-compliance alert creation (idempotent)
+  - SOP failure → process intelligence → intervention re-assessment
+  - SOP public DTO (no internal compliance scoring formula)
+
+acceptance_criteria:
+  - SOP versions are immutable once published (amendment creates new version)
+  - Training completion requires evidence (not self-attestation alone)
+  - Non-compliance alert is idempotent (same SOP + same window = one alert)
+  - Workspace enforcement on all read/write paths
+  - SOP compliance < threshold triggers business condition re-evaluation
+  - Auth: only workspace admins can publish SOPs
+  - 40+ tests: versioning, training, compliance, alert idempotency
+
+dependencies:
+  - bundle-3.8  # Owner Onboarding (PENDING)
+
+post_merge_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+
+security:
+  workspace_enforcement: required
+  auth_capability: CONSULTING_WRITE
+  dto_redaction: required  # exclude internal compliance formula
+  audit_events: required
+  idempotency: required_for_noncompliance_alert
+  immutability: published_sop_versions_are_immutable
+
+human_factors:
+  - management_capability: SOP publishing restricted to workspace admins
+  - follow_through_risk: training completion requires evidence not checkbox
+  - accountability_weakness: compliance below threshold triggers automatic alert

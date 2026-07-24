@@ -1,0 +1,48 @@
+id: bundle-3.10
+stage: 3
+name: Stage 3 Cross-Domain Adversarial Closure
+status: PENDING
+priority: 6
+
+description: |
+  Final Stage 3 hardening: cross-domain adversarial tests proving that all
+  Stage 3 bundles interact correctly under hostile conditions (concurrent
+  mutations, cross-workspace contamination attempts, stale state race
+  conditions, boundary violations). Stage 3 acceptance gate.
+
+scope:
+  - Cross-bundle workspace isolation tests (complaint ↔ action ↔ approval)
+  - Concurrent mutation safety tests (optimistic lock, idempotency)
+  - Business condition re-evaluation chain test (complaint → condition → action)
+  - Auth capability boundary tests (cross-workspace token reuse attempt)
+  - DTO leakage adversarial tests (internal fields in all public DTOs)
+  - Audit completeness test (every material mutation has audit event)
+  - Stage 3 acceptance gate script (blocks Stage 4 until all pass)
+
+acceptance_criteria:
+  - All cross-domain interactions preserve workspace isolation
+  - Concurrent mutations do not produce inconsistent state
+  - Re-evaluation chain fires correctly end-to-end
+  - No internal fields leak through any Stage 3 public DTO
+  - Every material mutation in Stage 3 has a corresponding audit event
+  - Stage 3 acceptance gate script exits 0 when all criteria met
+  - 50+ adversarial tests total
+
+dependencies:
+  - bundle-3.9  # Process Intelligence (PENDING)
+
+post_merge_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+
+security:
+  workspace_enforcement: required_adversarial
+  auth_capability: all_stage3_capabilities
+  dto_redaction: adversarial_boundary_test
+  audit_events: completeness_proof
+  idempotency: concurrent_safety_proof
+
+gates:
+  stage_acceptance: scripts/validate-stage-acceptance.mjs --stage 3

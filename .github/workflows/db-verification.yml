@@ -36,6 +36,12 @@ on:
       - prisma/**
       - 'src/__tests__/**/*.db.test.ts'
 
+# Cancel obsolete PR runs when a new push arrives — preserves one run per PR.
+# workflow_dispatch runs (LANE_A) are never cancelled (no github.ref grouping).
+concurrency:
+  group: db-verification-pr-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 # ─── LANE B ───────────────────────────────────────────────────────────────────
 jobs:
   lane-b-db-verify:

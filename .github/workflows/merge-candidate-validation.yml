@@ -1,0 +1,144 @@
+name: Merge Candidate Validation
+
+# Creates an ephemeral merge commit of the PR into main, validates it passes
+# all non-DB gates, and reports the merge-candidate SHA alongside the current
+# main SHA and the PR HEAD SHA. This proves the merged state — not just the
+# branch state — is clean before merge authorization.
+#
+# Triggered manually (workflow_dispatch) or by the bundle merge workflow.
+# NEVER triggered automatically on push — only on explicit invocation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_branch:
+        description: 'PR branch to validate (e.g., claude/bundle-3.5-abc123)'
+        required: true
+        type: string
+      pr_head_sha:
+        description: 'Exact HEAD SHA of the PR branch (for traceability)'
+        required: true
+        type: string
+      base_branch:
+        description: 'Base branch (default: main)'
+        required: false
+        default: 'main'
+        type: string
+      run_bundle_validator:
+        description: 'Also run bundle manifest + acceptance validator'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+concurrency:
+  group: merge-candidate-${{ github.event.inputs.pr_branch }}
+  cancel-in-progress: true
+
+jobs:
+  validate-merge-candidate:
+    name: Merge Candidate — Ephemeral Merge Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      TEST_WITH_DB: "false"
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      SKIP_ENV_VALIDATION: "true"
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.base_branch }}
+          fetch-depth: 0
+
+      - name: Record main SHA
+        id: main_sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Fetch PR branch
+        run: git fetch origin ${{ github.event.inputs.pr_branch }}
+
+      - name: Verify PR HEAD SHA matches input
+        run: |
+          ACTUAL=$(git rev-parse FETCH_HEAD)
+          EXPECTED="${{ github.event.inputs.pr_head_sha }}"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "❌ SHA MISMATCH — PR HEAD is $ACTUAL but input was $EXPECTED"
+            echo "This means the branch has moved since this run was triggered."
+            echo "Re-trigger with the current HEAD SHA."
+            exit 1
+          fi
+          echo "✓ PR HEAD SHA verified: $ACTUAL"
+
+      - name: Create ephemeral merge commit
+        id: merge_commit
+        run: |
+          git config user.email "ci-merge-candidate@opsiq.internal"
+          git config user.name "OpsIQ Merge Candidate CI"
+          git merge --no-ff FETCH_HEAD -m "chore(ci): ephemeral merge candidate test [NOT FOR PUSH]"
+          CANDIDATE_SHA=$(git rev-parse HEAD)
+          echo "candidate_sha=$CANDIDATE_SHA" >> $GITHUB_OUTPUT
+          echo "✓ Merge candidate SHA: $CANDIDATE_SHA"
+
+      - name: Report SHAs
+        run: |
+          echo "=== MERGE CANDIDATE VALIDATION ==="
+          echo "  Base (main) SHA:     ${{ steps.main_sha.outputs.sha }}"
+          echo "  PR HEAD SHA:         ${{ github.event.inputs.pr_head_sha }}"
+          echo "  Merge Candidate SHA: ${{ steps.merge_commit.outputs.candidate_sha }}"
+          echo "==================================="
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Governance compliance scan
+        run: npm run governance:scan:strict
+
+      - name: Auth route governance scan
+        run: npm run governance:scan:auth
+
+      - name: TypeScript type checking
+        run: npx tsc --noEmit
+
+      - name: Prisma schema validation
+        run: npx prisma validate
+
+      - name: Recurrence defect scanners
+        run: node scripts/scan-recurrence-defects.mjs
+
+      - name: Bundle manifest validator
+        if: github.event.inputs.run_bundle_validator == 'true'
+        run: node scripts/validate-bundle-manifests.mjs
+
+      - name: Run non-DB test suite on merge candidate
+        run: |
+          EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
+          npx vitest run --maxWorkers 1 --exclude '**/*.db.test.ts' $EXCLUDES
+        env:
+          TEST_WITH_DB: "false"
+          NODE_ENV: test
+
+      - name: Merge candidate result
+        if: always()
+        run: |
+          echo ""
+          echo "=== MERGE CANDIDATE RESULT ==="
+          echo "  Base (main) SHA:     ${{ steps.main_sha.outputs.sha }}"
+          echo "  PR HEAD SHA:         ${{ github.event.inputs.pr_head_sha }}"
+          echo "  Merge Candidate SHA: ${{ steps.merge_commit.outputs.candidate_sha }}"
+          echo "  Branch:              ${{ github.event.inputs.pr_branch }}"
+          echo "  Result:              ${{ job.status }}"
+          echo "=============================="
+          echo ""
+          echo "NOTE: This merge commit is ephemeral — it was NOT pushed to any remote."
+          echo "      Merge only if result=success and all SHA values are verified."
