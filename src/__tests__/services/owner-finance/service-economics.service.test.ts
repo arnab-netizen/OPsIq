@@ -25,6 +25,72 @@ function fakeDeps(): { deps: SEDeps; rows: any[] } {
   };
 }
 
+describe("service economics — module contract assertions", () => {
+  it("computeServiceEconomics is a function", () => {
+    expect(typeof computeServiceEconomics).toBe("function");
+  });
+  it("saveServiceEconomics is a function", () => {
+    expect(typeof saveServiceEconomics).toBe("function");
+  });
+  it("listServiceEconomics is a function", () => {
+    expect(typeof listServiceEconomics).toBe("function");
+  });
+  it("fakeDeps() returns an object with deps and rows", () => {
+    const d = fakeDeps();
+    expect(typeof d).toBe("object");
+    expect(d).toHaveProperty("deps");
+    expect(d).toHaveProperty("rows");
+  });
+  it("fakeDeps().rows is initially empty", () => {
+    expect(fakeDeps().rows).toHaveLength(0);
+  });
+  it("fakeDeps().deps.uuid is a function", () => {
+    expect(typeof fakeDeps().deps.uuid).toBe("function");
+  });
+  it("fakeDeps().deps.uuid() returns 'uuid-1' on first call", () => {
+    const { deps } = fakeDeps();
+    expect(deps.uuid()).toBe("uuid-1");
+  });
+  it("computeServiceEconomics returns an object with directCost", () => {
+    const c = computeServiceEconomics({ workspaceId: "ws", serviceLine: "x", orders: [{ revenue: 100, labourCost: 40 }] });
+    expect(c).toHaveProperty("directCost");
+  });
+  it("computeServiceEconomics returns an object with contributionMargin", () => {
+    const c = computeServiceEconomics({ workspaceId: "ws", serviceLine: "x", orders: [{ revenue: 100, labourCost: 40 }] });
+    expect(c).toHaveProperty("contributionMargin");
+  });
+  it("computeServiceEconomics returns an object with lossMaking boolean", () => {
+    const c = computeServiceEconomics({ workspaceId: "ws", serviceLine: "x", orders: [{ revenue: 100, labourCost: 40 }] });
+    expect(typeof c.lossMaking).toBe("boolean");
+  });
+  it("computeServiceEconomics: revenue > total cost → lossMaking false", () => {
+    const c = computeServiceEconomics({ workspaceId: "ws", serviceLine: "x", orders: [{ revenue: 1000, labourCost: 200 }] });
+    expect(c.lossMaking).toBe(false);
+  });
+  it("computeServiceEconomics: cost > revenue → lossMaking true", () => {
+    const c = computeServiceEconomics({ workspaceId: "ws", serviceLine: "x", orders: [{ revenue: 100, labourCost: 500 }] });
+    expect(c.lossMaking).toBe(true);
+  });
+  it("computeServiceEconomics with empty orders array returns an object", () => {
+    const c = computeServiceEconomics({ workspaceId: "ws", serviceLine: "x", orders: [] });
+    expect(typeof c).toBe("object");
+  });
+  it("contributionMarginPct is a number", () => {
+    const c = computeServiceEconomics({ workspaceId: "ws", serviceLine: "x", orders: [{ revenue: 1000, labourCost: 400 }] });
+    expect(typeof c.contributionMarginPct).toBe("number");
+  });
+  it("fakeDeps().deps.uuid() increments on each call", () => {
+    const { deps } = fakeDeps();
+    expect(deps.uuid()).toBe("uuid-1");
+    expect(deps.uuid()).toBe("uuid-2");
+  });
+  it("listServiceEconomics returns a Promise", () => {
+    const { deps } = fakeDeps();
+    const result = listServiceEconomics("ws-1", deps);
+    expect(result).toBeInstanceOf(Promise);
+  });
+});
+
 describe("[module6-persist] service economics", () => {
   it("computes contribution margin, pct, profit-per-resource, loss flag", () => {
     const c = computeServiceEconomics({

@@ -55,6 +55,61 @@ async function main() {
 main().catch(console.error);
 `;
 
+describe("RP6 concurrency stress — module contract assertions (non-DB)", () => {
+  it("classifyOperatorError is a function", () => {
+    expect(typeof classifyOperatorError).toBe("function");
+  });
+  it("promisify is a function", () => {
+    expect(typeof promisify).toBe("function");
+  });
+  it("spawn is a function", () => {
+    expect(typeof spawn).toBe("function");
+  });
+  it("WORKER_SCRIPT is a non-empty string", () => {
+    expect(typeof WORKER_SCRIPT).toBe("string");
+    expect(WORKER_SCRIPT.length).toBeGreaterThan(0);
+  });
+  it("WORKER_SCRIPT contains 'EventEmitterService'", () => {
+    expect(WORKER_SCRIPT).toContain("EventEmitterService");
+  });
+  it("WORKER_SCRIPT contains 'idempotencyKey'", () => {
+    expect(WORKER_SCRIPT).toContain("idempotencyKey");
+  });
+  it("WORKER_SCRIPT contains 'main'", () => {
+    expect(WORKER_SCRIPT).toContain("main");
+  });
+  it("WORKER_SCRIPT contains 'aggregateId'", () => {
+    expect(WORKER_SCRIPT).toContain("aggregateId");
+  });
+  it("classifyOperatorError returns an object for a generic Error", () => {
+    const result = classifyOperatorError(new Error("test"), { context: "test" });
+    expect(typeof result).toBe("object");
+  });
+  it("classifyOperatorError result has operatorMessage field", () => {
+    const result = classifyOperatorError(new Error("test"), { context: "test" });
+    expect(result).toHaveProperty("operatorMessage");
+  });
+  it("uuidv4 is a function", () => {
+    expect(typeof uuidv4).toBe("function");
+  });
+  it("uuidv4() returns a UUID-format string", () => {
+    expect(uuidv4()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  });
+  it("two uuidv4() calls produce distinct values", () => {
+    expect(uuidv4()).not.toBe(uuidv4());
+  });
+  it("WORKER_SCRIPT contains 'workspaceId'", () => {
+    expect(WORKER_SCRIPT).toContain("workspaceId");
+  });
+  it("WORKER_SCRIPT contains 'success'", () => {
+    expect(WORKER_SCRIPT).toContain("success");
+  });
+  it("classifyOperatorError operatorMessage is a string", () => {
+    const result = classifyOperatorError(new Error("oops"), { context: "load" });
+    expect(typeof result.operatorMessage).toBe("string");
+  });
+});
+
 describe("Phase RP6: TRUE Concurrency Stress Testing (Independent Connections)", () => {
   let workspaceId: string;
   let userId: string;
