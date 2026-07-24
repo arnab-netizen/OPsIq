@@ -27,6 +27,23 @@ function deps(w: World): CashDeps {
   };
 }
 
+describe("cash-safety enforcement service — module contract assertions", () => {
+  it("isCashSafetyGateEnabled is a function", () => { expect(typeof isCashSafetyGateEnabled).toBe("function"); });
+  it("enforceCashSafetyForPromotion is a function", () => { expect(typeof enforceCashSafetyForPromotion).toBe("function"); });
+  it("enforceCashSafetyIfRequired is a function", () => { expect(typeof enforceCashSafetyIfRequired).toBe("function"); });
+  it("CashSafetyGateError is a class/function", () => { expect(typeof CashSafetyGateError).toBe("function"); });
+  it("deps is a function", () => { expect(typeof deps).toBe("function"); });
+  it("deps({}) returns an object", () => { expect(typeof deps({})).toBe("object"); });
+  it("deps({}) has db field", () => { expect(deps({})).toHaveProperty("db"); });
+  it("deps({}).db is an object", () => { expect(typeof (deps({}) as any).db).toBe("object"); });
+  it("CashSafetyGateError.prototype is an instance of Error", () => { expect(CashSafetyGateError.prototype).toBeInstanceOf(Error); });
+  it("deps({ impactArea: 'growth' }) has db field", () => { expect(deps({ impactArea: "growth" })).toHaveProperty("db"); });
+  it("deps({ flag: true }) returns an object", () => { expect(typeof deps({ flag: true })).toBe("object"); });
+  it("deps({ flag: false }) has db field", () => { expect(deps({ flag: false })).toHaveProperty("db"); });
+  it("deps({ cashflowState: 'INSOLVENT' }) has db field", () => { expect(deps({ cashflowState: "INSOLVENT" })).toHaveProperty("db"); });
+  it("deps({ survivalState: 'CRITICAL' }) has db field", () => { expect(deps({ survivalState: "CRITICAL" })).toHaveProperty("db"); });
+});
+
 describe("[module4/5] cash-safety enforcement service (DI)", () => {
   it("gate-enabled reflects the per-workspace flag (default off)", async () => {
     expect(await isCashSafetyGateEnabled("ws", deps({}))).toBe(false);

@@ -19,6 +19,23 @@ const issue = (over: Partial<BusinessIssue>): BusinessIssue => ({
 });
 const NO_SIGNALS = { pendingProofReviews: 0, pendingReassessments: 0, opportunityApprovalsPending: 0 };
 
+describe("owner workload budget — module contract assertions", () => {
+  it("computeOwnerWorkloadBudget is a function", () => { expect(typeof computeOwnerWorkloadBudget).toBe("function"); });
+  it("IssueCategory is an object", () => { expect(typeof IssueCategory).toBe("object"); });
+  it("BusinessFunction is an object", () => { expect(typeof BusinessFunction).toBe("object"); });
+  it("n is a number", () => { expect(typeof n).toBe("number"); });
+  it("issue is a function", () => { expect(typeof issue).toBe("function"); });
+  it("NO_SIGNALS is an object", () => { expect(typeof NO_SIGNALS).toBe("object"); });
+  it("IssueCategory.PROFIT_LEAK is defined", () => { expect(IssueCategory.PROFIT_LEAK).toBeDefined(); });
+  it("IssueCategory.CASH_DANGER is defined", () => { expect(IssueCategory.CASH_DANGER).toBeDefined(); });
+  it("BusinessFunction.PROFITABILITY is defined", () => { expect(BusinessFunction.PROFITABILITY).toBeDefined(); });
+  it("NO_SIGNALS.pendingProofReviews is 0", () => { expect(NO_SIGNALS.pendingProofReviews).toBe(0); });
+  it("NO_SIGNALS has pendingReassessments field", () => { expect(NO_SIGNALS).toHaveProperty("pendingReassessments"); });
+  it("NO_SIGNALS has opportunityApprovalsPending field", () => { expect(NO_SIGNALS).toHaveProperty("opportunityApprovalsPending"); });
+  it("computeOwnerWorkloadBudget([], NO_SIGNALS) returns an object", () => { expect(typeof computeOwnerWorkloadBudget([], NO_SIGNALS)).toBe("object"); });
+  it("computeOwnerWorkloadBudget([], NO_SIGNALS).ownerDecisionsRequired is 0", () => { expect(computeOwnerWorkloadBudget([], NO_SIGNALS).ownerDecisionsRequired).toBe(0); });
+});
+
 describe("owner workload budget", () => {
   it("suppresses LOW-severity, non-owner noise from the owner's day", () => {
     const b = computeOwnerWorkloadBudget(

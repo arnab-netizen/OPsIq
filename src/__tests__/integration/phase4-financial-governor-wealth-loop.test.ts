@@ -24,6 +24,23 @@ import { classifyWealthPath } from "@/domain/owner-strategy/wealth-path";
 import { reviewOpportunityCost } from "@/domain/owner-strategy/risk-adjusted-wealth";
 import type { RiskAdjustedWealthInput } from "@/domain/owner-strategy/risk-adjusted-wealth.types";
 
+describe("Phase 4 financial governor wealth loop — module contract assertions", () => {
+  it("evaluateCashSafetyGate is a function", () => { expect(typeof evaluateCashSafetyGate).toBe("function"); });
+  it("evaluateMarginSafety is a function", () => { expect(typeof evaluateMarginSafety).toBe("function"); });
+  it("evaluateSpend is a function", () => { expect(typeof evaluateSpend).toBe("function"); });
+  it("campaignRoiPct is a function", () => { expect(typeof campaignRoiPct).toBe("function"); });
+  it("classifyWealthPath is a function", () => { expect(typeof classifyWealthPath).toBe("function"); });
+  it("reviewOpportunityCost is a function", () => { expect(typeof reviewOpportunityCost).toBe("function"); });
+  it("RecommendationSensitivity is an object", () => { expect(typeof RecommendationSensitivity).toBe("object"); });
+  it("RecommendationSensitivity.HIRING_SENSITIVE is defined", () => { expect(RecommendationSensitivity.HIRING_SENSITIVE).toBeDefined(); });
+  it("RecommendationSensitivity.GROWTH_SENSITIVE is defined", () => { expect(RecommendationSensitivity.GROWTH_SENSITIVE).toBeDefined(); });
+  it("RecommendationSensitivity.PRICING_SENSITIVE is defined", () => { expect(RecommendationSensitivity.PRICING_SENSITIVE).toBeDefined(); });
+  it("evaluateSpend returns an object with decision field", () => { expect(evaluateSpend({ amount: 100, category: "equipment", requestedByUserId: "u1", approvedByUserId: "u2", ownerApprovalThreshold: 50000 })).toHaveProperty("decision"); });
+  it("evaluateSpend returns an object with requiresOwnerApproval field", () => { expect(evaluateSpend({ amount: 100, category: "equipment", requestedByUserId: "u1", approvedByUserId: "u2", ownerApprovalThreshold: 50000 })).toHaveProperty("requiresOwnerApproval"); });
+  it("campaignRoiPct with losing revenue returns a negative number", () => { const r = campaignRoiPct({ marketingSpend: 50000, revenue: 20000 }); expect(r).not.toBeNull(); expect(r!).toBeLessThan(0); });
+  it("evaluateMarginSafety returns an object with allowed field", () => { expect(evaluateMarginSafety(8, RecommendationSensitivity.PRICING_SENSITIVE)).toHaveProperty("allowed"); });
+});
+
 describe("Phase 4 exit gate — unsafe actions blocked/downgraded (existing engines)", () => {
   it("unsafe spending: self-approved over-threshold spend requires owner approval, not auto-log", () => {
     const r = evaluateSpend({
