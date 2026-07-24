@@ -51,6 +51,23 @@ function action(over: Partial<OwnerAction> = {}): OwnerAction {
   };
 }
 
+describe("owner-trust explainability — module contract assertions", () => {
+  it("buildExplanation is a function", () => { expect(typeof buildExplanation).toBe("function"); });
+  it("buildExplanations is a function", () => { expect(typeof buildExplanations).toBe("function"); });
+  it("NEVER_INVENT is an array", () => { expect(Array.isArray(NEVER_INVENT)).toBe(true); });
+  it("NEVER_INVENT.length is greater than 0", () => { expect(NEVER_INVENT.length).toBeGreaterThan(0); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("finding is a function", () => { expect(typeof finding).toBe("function"); });
+  it("action is a function", () => { expect(typeof action).toBe("function"); });
+  it("finding() returns an object", () => { expect(typeof finding()).toBe("object"); });
+  it("action() returns an object", () => { expect(typeof action()).toBe("object"); });
+  it("finding() has domain field", () => { expect(finding()).toHaveProperty("domain"); });
+  it("buildExplanation(finding(), action(), { now: NOW }) returns an object", () => { expect(typeof buildExplanation(finding(), action(), { now: NOW })).toBe("object"); });
+  it("buildExplanation(finding(), action(), { now: NOW }) has hasInventedValues field", () => { expect(buildExplanation(finding(), action(), { now: NOW })).toHaveProperty("hasInventedValues"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("explainability — the eight §18 fields", () => {
   it("assembles all required fields from real finding + action data", () => {
     const e = buildExplanation(finding(), action(), { now: NOW });

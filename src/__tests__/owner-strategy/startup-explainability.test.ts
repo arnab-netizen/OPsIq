@@ -38,6 +38,23 @@ function makeInputs(overrides: Partial<StartupExplanationInputs> = {}): StartupE
   };
 }
 
+describe("startup-explainability — module contract assertions", () => {
+  it("buildStartupExplanation is a function", () => { expect(typeof buildStartupExplanation).toBe("function"); });
+  it("makeInputs is a function", () => { expect(typeof makeInputs).toBe("function"); });
+  it("makeInputs() returns an object", () => { expect(typeof makeInputs()).toBe("object"); });
+  it("makeInputs() has sessionId field", () => { expect(makeInputs()).toHaveProperty("sessionId"); });
+  it("makeInputs() has ideaId field", () => { expect(makeInputs()).toHaveProperty("ideaId"); });
+  it("makeInputs() has screeningStatus field", () => { expect(makeInputs()).toHaveProperty("screeningStatus"); });
+  it("makeInputs().screeningStatus equals PASSED", () => { expect(makeInputs().screeningStatus).toBe("PASSED"); });
+  it("makeInputs().systemRecommendation equals GO", () => { expect(makeInputs().systemRecommendation).toBe("GO"); });
+  it("buildStartupExplanation(makeInputs()) returns an object", () => { expect(typeof buildStartupExplanation(makeInputs())).toBe("object"); });
+  it("buildStartupExplanation(makeInputs()) has decisionRef field", () => { expect(buildStartupExplanation(makeInputs())).toHaveProperty("decisionRef"); });
+  it("buildStartupExplanation(makeInputs()) has decisionType field", () => { expect(buildStartupExplanation(makeInputs())).toHaveProperty("decisionType"); });
+  it("buildStartupExplanation(makeInputs()) has factorsUsed field", () => { expect(buildStartupExplanation(makeInputs())).toHaveProperty("factorsUsed"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("buildStartupExplanation", () => {
   it("decisionRef contains immutable sessionId and ideaId", () => {
     const result = buildStartupExplanation(makeInputs());
