@@ -194,6 +194,70 @@ const CONFLICTS: ConflictSpec[] = [
   { name: "20. franchise/brand rules vs local opportunity", expectedDominant: "below_margin", build: () => fromLibrary("franchise_rules_vs_local") },
 ];
 
+describe("AI supervisor — collective training static assertions", () => {
+  it("CONSTRAINT_LABEL has exactly 10 entries", () => {
+    expect(Object.keys(CONSTRAINT_LABEL)).toHaveLength(10);
+  });
+  it("CONSTRAINT_LABEL 'cash_survival' contains 'Cash'", () => {
+    expect(CONSTRAINT_LABEL.cash_survival).toContain("Cash");
+  });
+  it("CONSTRAINT_LABEL 'compliance_block' contains 'Compliance'", () => {
+    expect(CONSTRAINT_LABEL.compliance_block).toContain("Compliance");
+  });
+  it("CONSTRAINT_LABEL 'proof_fraud_block' contains 'Proof'", () => {
+    expect(CONSTRAINT_LABEL.proof_fraud_block).toContain("Proof");
+  });
+  it("CONSTRAINT_LABEL 'capacity_feasibility' contains 'Capacity'", () => {
+    expect(CONSTRAINT_LABEL.capacity_feasibility).toContain("Capacity");
+  });
+  it("CONSTRAINT_LABEL 'customer_quality' contains 'Customer'", () => {
+    expect(CONSTRAINT_LABEL.customer_quality).toContain("Customer");
+  });
+  it("CONSTRAINT_LABEL 'owner_workload' contains 'Owner'", () => {
+    expect(CONSTRAINT_LABEL.owner_workload).toContain("Owner");
+  });
+  it("CONSTRAINT_LABEL 'below_margin' contains 'margin' (case-insensitive)", () => {
+    expect(CONSTRAINT_LABEL.below_margin.toLowerCase()).toContain("margin");
+  });
+  it("CONSTRAINT_LABEL 'profitable_growth' is a non-empty string", () => {
+    expect(CONSTRAINT_LABEL.profitable_growth.length).toBeGreaterThan(0);
+  });
+  it("CONSTRAINT_LABEL 'efficiency_scaling' is a non-empty string", () => {
+    expect(CONSTRAINT_LABEL.efficiency_scaling.length).toBeGreaterThan(0);
+  });
+  it("CONSTRAINT_LABEL 'optimization' is a non-empty string", () => {
+    expect(CONSTRAINT_LABEL.optimization.length).toBeGreaterThan(0);
+  });
+  it("CONFLICTS has exactly 20 entries", () => {
+    expect(CONFLICTS).toHaveLength(20);
+  });
+  it("all CONFLICTS have a name string", () => {
+    for (const spec of CONFLICTS) {
+      expect(typeof spec.name).toBe("string");
+      expect(spec.name.length).toBeGreaterThan(0);
+    }
+  });
+  it("all CONFLICTS have a build function", () => {
+    for (const spec of CONFLICTS) {
+      expect(typeof spec.build).toBe("function");
+    }
+  });
+  it("CONFLICTS[0].expectedDominant is 'cash_survival'", () => {
+    expect(CONFLICTS[0].expectedDominant).toBe("cash_survival");
+  });
+  it("CONFLICTS[4].expectedDominant is 'below_margin' (sales growth vs margin)", () => {
+    expect(CONFLICTS[4].expectedDominant).toBe("below_margin");
+  });
+  it("CONFLICTS[5].expectedDominant is 'customer_quality' (customer quality vs acquisition)", () => {
+    expect(CONFLICTS[5].expectedDominant).toBe("customer_quality");
+  });
+  it("all CONFLICTS expectedDominant values are valid constraint keys", () => {
+    for (const spec of CONFLICTS) {
+      expect(spec.expectedDominant in CONSTRAINT_LABEL).toBe(true);
+    }
+  });
+});
+
 describe("AI supervisor — collective (cross-domain) conflict training", () => {
   for (const spec of CONFLICTS) {
     it(`[${spec.name}] supervisor resolves the conflict to the right priority and explains the rejection`, () => {

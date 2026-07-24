@@ -95,6 +95,74 @@ const owner: TaskActor = { role: TaskActorRole.OWNER, isAssignee: false, canAppr
 const employeeProof: ProofActor = { role: TaskActorRole.EMPLOYEE, isAssignee: true, canReviewProof: false };
 const ownerProof: ProofActor = { role: TaskActorRole.OWNER, isAssignee: false, canReviewProof: true };
 
+describe("[synthetic-e2e] governed execution loop — domain function contract assertions", () => {
+  it("planTaskTransition is a function", () => {
+    expect(typeof planTaskTransition).toBe("function");
+  });
+  it("gateEmployeeGuidance is a function", () => {
+    expect(typeof gateEmployeeGuidance).toBe("function");
+  });
+  it("assessOutcome is a function", () => {
+    expect(typeof assessOutcome).toBe("function");
+  });
+  it("assessImplementationQuality is a function", () => {
+    expect(typeof assessImplementationQuality).toBe("function");
+  });
+  it("assessProfitImpact is a function", () => {
+    expect(typeof assessProfitImpact).toBe("function");
+  });
+  it("determineLearningEligibility is a function", () => {
+    expect(typeof determineLearningEligibility).toBe("function");
+  });
+  it("isLearningEligible is a function", () => {
+    expect(typeof isLearningEligible).toBe("function");
+  });
+  it("isLearningEligible returns true for ELIGIBLE_VERIFIED_SUCCESS", () => {
+    expect(isLearningEligible(LearningEligibilityStatus.ELIGIBLE_VERIFIED_SUCCESS)).toBe(true);
+  });
+  it("isLearningEligible returns false for BLOCKED_OWNER_OVERRIDE_ONLY", () => {
+    expect(isLearningEligible(LearningEligibilityStatus.BLOCKED_OWNER_OVERRIDE_ONLY)).toBe(false);
+  });
+  it("planTaskTransition ASSIGNED→ACKNOWLEDGED for employee is allowed", () => {
+    expect(planTaskTransition(TS.ASSIGNED, TS.ACKNOWLEDGED, employee).allowed).toBe(true);
+  });
+  it("planTaskTransition COMPLETED_PENDING_REVIEW→APPROVED_COMPLETE for employee is denied", () => {
+    expect(planTaskTransition(TS.COMPLETED_PENDING_REVIEW, TS.APPROVED_COMPLETE, employee).allowed).toBe(false);
+  });
+  it("planTaskTransition COMPLETED_PENDING_REVIEW→APPROVED_COMPLETE for owner is allowed", () => {
+    expect(planTaskTransition(TS.COMPLETED_PENDING_REVIEW, TS.APPROVED_COMPLETE, owner).allowed).toBe(true);
+  });
+  it("gateEmployeeGuidance allows in-bounds action", () => {
+    const b = boundary();
+    const gate = gateEmployeeGuidance({ boundary: b, instruction: { action: "call_customer", role: "counter_staff", boundaryId: b.boundaryId, boundaryVersion: b.boundaryVersion, boundaryContentHash: b.contentHash }, now: NOW });
+    expect(gate.allowed).toBe(true);
+  });
+  it("gateEmployeeGuidance blocks forbidden action", () => {
+    const b = boundary();
+    const gate = gateEmployeeGuidance({ boundary: b, instruction: { action: "issue_refund", role: "counter_staff", boundaryId: b.boundaryId, boundaryVersion: b.boundaryVersion, boundaryContentHash: b.contentHash }, now: NOW });
+    expect(gate.allowed).toBe(false);
+  });
+  it("validateProofSubmission returns ok=true for valid PHOTO proof", () => {
+    const req = { proofType: ProofType.PHOTO, requiredFields: ["caption"], riskLevel: ProofRiskLevel.LOW };
+    const sub = { proofType: ProofType.PHOTO, fields: { caption: "done" }, submittedByUserId: "emp-1" };
+    expect(validateProofSubmission(req, sub).ok).toBe(true);
+  });
+  it("computeProofPrecheck returns PASS_PRELIMINARY for valid submission", () => {
+    const req = { proofType: ProofType.PHOTO, requiredFields: ["caption"], riskLevel: ProofRiskLevel.LOW };
+    const sub = { proofType: ProofType.PHOTO, fields: { caption: "done" }, submittedByUserId: "emp-1" };
+    expect(computeProofPrecheck(req, sub)).toBe(AiProofPrecheckOutcome.PASS_PRELIMINARY);
+  });
+  it("assessProfitImpact returns an object with a confidence field", () => {
+    const result = assessProfitImpact({ actualRevenue: 1000, laborCost: 200, materialCost: 100 });
+    expect(typeof result).toBe("object");
+    expect("confidence" in result).toBe(true);
+  });
+  it("sealBoundary returns an object with boundaryId matching input", () => {
+    const b = boundary();
+    expect(b.boundaryId).toBe("bnd-1");
+  });
+});
+
 describe("[synthetic-e2e] governed execution loop — happy path holds all gates", () => {
   it("boundary → guidance → task FSM → proof → assessment → learning eligible", () => {
     const b = boundary();
