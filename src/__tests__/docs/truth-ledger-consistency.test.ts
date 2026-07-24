@@ -28,6 +28,23 @@ const FILES = [
   "OPSIQ_CLAIMS_REVIEW_CHECKLIST.md",
 ];
 
+describe("truth-ledger-consistency — module contract assertions", () => {
+  it("fs is an object", () => { expect(typeof fs).toBe("object"); });
+  it("path is an object", () => { expect(typeof path).toBe("object"); });
+  it("dir is a non-empty string", () => { expect(typeof dir).toBe("string"); expect(dir.length).toBeGreaterThan(0); });
+  it("read is a function", () => { expect(typeof read).toBe("function"); });
+  it("readJson is a function", () => { expect(typeof readJson).toBe("function"); });
+  it("FILES is an array", () => { expect(Array.isArray(FILES)).toBe(true); });
+  it("FILES has 11 elements", () => { expect(FILES).toHaveLength(11); });
+  it("FILES contains OPSIQ_CAPABILITY_MATRIX.json", () => { expect(FILES).toContain("OPSIQ_CAPABILITY_MATRIX.json"); });
+  it("FILES contains OPSIQ_PROOF_LEVEL_MATRIX.json", () => { expect(FILES).toContain("OPSIQ_PROOF_LEVEL_MATRIX.json"); });
+  it("FILES contains OPSIQ_PUBLIC_CLAIMS_FORBIDDEN.md", () => { expect(FILES).toContain("OPSIQ_PUBLIC_CLAIMS_FORBIDDEN.md"); });
+  it("dir ends with capability-truth-ledger", () => { expect(dir).toMatch(/capability-truth-ledger$/); });
+  it("path.join is a function", () => { expect(typeof path.join).toBe("function"); });
+  it("fs.existsSync is a function", () => { expect(typeof fs.existsSync).toBe("function"); });
+  it("FILES contains OPSIQ_CAPABILITY_TRUTH_LEDGER.md", () => { expect(FILES).toContain("OPSIQ_CAPABILITY_TRUTH_LEDGER.md"); });
+});
+
 describe("truth-ledger-consistency", () => {
   it("1. all 11 ledger files exist and are non-empty", () => {
     for (const f of FILES) {

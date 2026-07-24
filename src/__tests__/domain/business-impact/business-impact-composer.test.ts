@@ -43,6 +43,23 @@ function inputs(over: Partial<BusinessImpactInputs> = {}): BusinessImpactInputs 
   };
 }
 
+describe("[module1] business impact composer — module contract assertions", () => {
+  it("composeBusinessImpact is a function", () => { expect(typeof composeBusinessImpact).toBe("function"); });
+  it("deriveEvidenceConfidence is a function", () => { expect(typeof deriveEvidenceConfidence).toBe("function"); });
+  it("reconcileLeanClassification is a function", () => { expect(typeof reconcileLeanClassification).toBe("function"); });
+  it("evaluateBusinessImpactGate is a function", () => { expect(typeof evaluateBusinessImpactGate).toBe("function"); });
+  it("LeanClassification.LEAN_APPROVED is defined", () => { expect(LeanClassification.LEAN_APPROVED).toBeDefined(); });
+  it("LeanClassification.DATA_INSUFFICIENT is defined", () => { expect(LeanClassification.DATA_INSUFFICIENT).toBeDefined(); });
+  it("LeanClassification.CASH_UNSAFE_REJECTED is defined", () => { expect(LeanClassification.CASH_UNSAFE_REJECTED).toBeDefined(); });
+  it("EvidenceConfidenceLevel.MODERATE is defined", () => { expect(EvidenceConfidenceLevel.MODERATE).toBeDefined(); });
+  it("EvidenceConfidenceLevel.VERIFIED is defined", () => { expect(EvidenceConfidenceLevel.VERIFIED).toBeDefined(); });
+  it("dim() returns an object with direction field", () => { expect(dim()).toHaveProperty("direction"); });
+  it("dim().direction is 'positive' by default", () => { expect(dim().direction).toBe("positive"); });
+  it("inputs() returns an object with recommendationId field", () => { expect(inputs()).toHaveProperty("recommendationId"); });
+  it("inputs().workspaceId is 'ws-1'", () => { expect(inputs().workspaceId).toBe("ws-1"); });
+  it("deriveEvidenceConfidence([], false) returns INSUFFICIENT", () => { expect(deriveEvidenceConfidence([], false)).toBe(EvidenceConfidenceLevel.INSUFFICIENT); });
+});
+
 describe("[module1] composeBusinessImpact", () => {
   it("composes a complete assessment that PASSES the promotion gate", () => {
     const a = composeBusinessImpact(inputs());

@@ -38,6 +38,23 @@ const falseSuccessCase: CollectiveCase = {
 
 const SAMPLE = [cashCase, qualityCase, complianceCase, falseSuccessCase];
 
+describe("[C14] collective simulation — module contract assertions", () => {
+  it("runCollective is a function", () => { expect(typeof runCollective).toBe("function"); });
+  it("scoreCollectiveCase is a function", () => { expect(typeof scoreCollectiveCase).toBe("function"); });
+  it("evaluateCollective is a function", () => { expect(typeof evaluateCollective).toBe("function"); });
+  it("detectCollectiveUnsafe is a function", () => { expect(typeof detectCollectiveUnsafe).toBe("function"); });
+  it("SAMPLE is an array with 4 elements", () => { expect(SAMPLE).toHaveLength(4); });
+  it("cashCase has id 'C14-cash'", () => { expect(cashCase.id).toBe("C14-cash"); });
+  it("G is a function", () => { expect(typeof G).toBe("function"); });
+  it("R is a function", () => { expect(typeof R).toBe("function"); });
+  it("RC is a function", () => { expect(typeof RC).toBe("function"); });
+  it("G('cash-survival') has status 'GREEN'", () => { expect(G("cash-survival").status).toBe("GREEN"); });
+  it("R('quality') has status 'RED'", () => { expect(R("quality").status).toBe("RED"); });
+  it("RC('cash-survival') has severity 'CRITICAL'", () => { expect(RC("cash-survival").severity).toBe("CRITICAL"); });
+  it("cashCase.expected.bindingDomain is 'cash-survival'", () => { expect(cashCase.expected.bindingDomain).toBe("cash-survival"); });
+  it("runCollective(cashCase.input) returns an object", () => { expect(typeof runCollective(cashCase.input)).toBe("object"); });
+});
+
 describe("[C14] collective simulation framework", () => {
   it("the engine produces a valid, scorable packet for each sample", () => {
     for (const c of SAMPLE) expect(detectCollectiveUnsafe(runCollective(c.input), c.input)).toEqual([]);

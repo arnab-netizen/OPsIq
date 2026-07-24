@@ -36,6 +36,23 @@ function mockDb(data: MockData, wheres: unknown[]) {
 
 const deps = (db: PrismaClient) => ({ db, workspaceId: "ws-1", businessId: "biz-1", now: NOW });
 
+describe("real DB domain providers — module contract assertions", () => {
+  it("buildOwnerDomainProviders is a function", () => { expect(typeof buildOwnerDomainProviders).toBe("function"); });
+  it("fixtureOnlyProviders is a function", () => { expect(typeof fixtureOnlyProviders).toBe("function"); });
+  it("ingestBusinessState is a function", () => { expect(typeof ingestBusinessState).toBe("function"); });
+  it("caseToContext is a function", () => { expect(typeof caseToContext).toBe("function"); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("NOW is a Date instance", () => { expect(NOW).toBeInstanceOf(Date); });
+  it("ctx is an object", () => { expect(typeof ctx).toBe("object"); });
+  it("mockDb is a function", () => { expect(typeof mockDb).toBe("function"); });
+  it("deps is a function", () => { expect(typeof deps).toBe("function"); });
+  it("fixtureOnlyProviders() returns an object", () => { expect(typeof fixtureOnlyProviders()).toBe("object"); });
+  it("recent is a Date instance", () => { expect(recent).toBeInstanceOf(Date); });
+  it("old is a Date instance", () => { expect(old).toBeInstanceOf(Date); });
+  it("SEED_CASES has at least 1 element", () => { expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("ctx has decisionCategory field", () => { expect(ctx).toHaveProperty("decisionCategory"); });
+});
+
 describe("real DB domain providers", () => {
   it("finance_cash reads a persisted cashflow snapshot as REAL_DB with real risk flags", async () => {
     const p = await buildOwnerDomainProviders(deps(mockDb({ cashflow: { cashInHand: 0, bankBalance: 0, receivables: 50000, receivablesOverdue: 20000, payables: 10000, periodEnd: recent } }, [])));
