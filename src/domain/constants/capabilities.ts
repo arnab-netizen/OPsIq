@@ -132,6 +132,10 @@ export const CAPABILITIES = {
 
   // Webhooks
   WEBHOOK_MANAGE: "webhook:manage",
+
+  // Integration Fabric (Bundle 5)
+  INTEGRATION_MANAGE: "integration:manage",
+  INTEGRATION_VIEW: "integration:view",
 } as const;
 
 export type CapabilityName =

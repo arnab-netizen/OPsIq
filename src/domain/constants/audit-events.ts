@@ -617,6 +617,14 @@ export const AUDIT_EVENTS = {
   // Bundle 4.2 — Owner Business Condition Profile
   OWNER_BCP_CREATED: "owner_bcp.created",
   OWNER_BCP_EVALUATED: "owner_bcp.evaluated",
+
+  // Bundle 5.1 — Integration Fabric
+  CONNECTOR_REGISTERED: "connector.registered",
+  CONNECTOR_DISCONNECTED: "connector.disconnected",
+  CONNECTOR_TOKEN_REFRESHED: "connector.token_refreshed",
+  CONNECTOR_REFRESH_FAILED: "connector.refresh_failed",
+  INTEGRATION_EVENT_INGESTED: "integration_event.ingested",
+  INTEGRATION_EVENT_BCP_TRIGGERED: "integration_event.bcp_triggered",
 } as const;
 
 export type AuditEventName =

@@ -761,7 +761,25 @@
     "test_count": 96,
     "gates_run": "vitest 96/96 (✓), npx tsc --noEmit (✓), npm run build (✓), npx prisma validate (✓), lint-ratchet PASS (0 errors on changed files)"
   },
-  "next_automatic_target": "Bundle 4.3 — identify next highest-priority Bundle 4+ slice",
+  "bundle_5_1_integration_fabric_contracts": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DOMAIN_CONTRACT_ONLY",
+    "description": "Integration Fabric Contracts — ConnectorPublicDTO (no token fields enforced at type level), integration event Zod schemas, Event→BCP trigger mapping (pure function, all 10 event kinds covered), connector health severity + issue builders. INTEGRATION_MANAGE + INTEGRATION_VIEW capabilities added. 6 connector audit events added.",
+    "files_created": [
+      "src/domain/integration-fabric/integration-contracts.ts",
+      "src/__tests__/domain/integration-fabric/integration-contracts.test.ts"
+    ],
+    "files_modified": [
+      "src/domain/constants/capabilities.ts (INTEGRATION_MANAGE, INTEGRATION_VIEW)",
+      "src/domain/constants/audit-events.ts (CONNECTOR_REGISTERED, CONNECTOR_DISCONNECTED, CONNECTOR_TOKEN_REFRESHED, CONNECTOR_REFRESH_FAILED, INTEGRATION_EVENT_INGESTED, INTEGRATION_EVENT_BCP_TRIGGERED)"
+    ],
+    "token_boundary": "✓ ConnectorPublicDTO has no token fields; NoTokenFields type guard enforces at compile time",
+    "workspace_enforcement": "✓ IntegrationEventSchema.workspaceId required (not nullable); ConnectorPublicDTO carries workspaceId",
+    "bcp_trigger_mapping": "✓ 7 event kinds map to BCP triggers; 3 event kinds return null (no BCP relevance); all mapped kinds have non-empty descriptions",
+    "test_count": 46,
+    "gates_run": "vitest 46/46 (✓), npx tsc --noEmit (✓), npx prisma validate (✓), lint-ratchet PASS"
+  },
+  "next_automatic_target": "Bundle 5.2 — connector registry service (workspace-scoped CRUD for ExternalConnection)",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "UNKNOWN (timeout \u2014 not a blocker)",
