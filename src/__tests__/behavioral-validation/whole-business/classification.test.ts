@@ -31,6 +31,7 @@ describe("whole-business classification — module contract assertions", () => {
   it("classification is non-empty string", () => {
     expect(classifyWholeBusiness({} as WholeBusinessGateInput).classification.length).toBeGreaterThan(0);
   });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
 });
 
 const allReadyExceptCriticalFloor: WholeBusinessGateInput = {

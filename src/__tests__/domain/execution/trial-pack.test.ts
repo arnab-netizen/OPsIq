@@ -51,6 +51,7 @@ describe("trial pack — module contract assertions", () => {
   it("buildProvisionalTrialOutput({}) result has provisionalRecommendations field", () => {
     expect(buildProvisionalTrialOutput({})).toHaveProperty("provisionalRecommendations");
   });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
 });
 
 describe("trial pack (Slice 24)", () => {

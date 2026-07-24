@@ -103,6 +103,7 @@ describe("recordValidationOutcome — module contract assertions", () => {
   it("makeDeps().deps.uuid() returns a string", () => {
     expect(typeof makeDeps().deps.uuid()).toBe("string");
   });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
 });
 
 describe("recordValidationOutcome", () => {
