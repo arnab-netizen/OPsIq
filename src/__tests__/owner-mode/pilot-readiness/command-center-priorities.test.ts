@@ -29,6 +29,25 @@ function input(over: Partial<PriorityStripInput> = {}): PriorityStripInput {
   };
 }
 
+describe("command-center priority strip — module contract assertions", () => {
+  it("buildPriorityCommandStrip is a function", () => { expect(typeof buildPriorityCommandStrip).toBe("function"); });
+  it("input() returns object with wbp field", () => { expect(input()).toHaveProperty("wbp"); });
+  it("input() returns object with readiness field", () => { expect(input()).toHaveProperty("readiness"); });
+  it("input().wbp.found is true by default", () => { expect(input().wbp.found).toBe(true); });
+  it("input().readiness.blockers is an array", () => { expect(Array.isArray(input().readiness.blockers)).toBe(true); });
+  it("buildPriorityCommandStrip(input()) returns an array", () => { expect(Array.isArray(buildPriorityCommandStrip(input()))).toBe(true); });
+  it("buildPriorityCommandStrip returns empty array when found=false", () => {
+    expect(buildPriorityCommandStrip(input({ wbp: { ...input().wbp, found: false } }))).toHaveLength(0);
+  });
+  it("buildPriorityCommandStrip returns at most 5 cards", () => { expect(buildPriorityCommandStrip(input()).length).toBeLessThanOrEqual(5); });
+  it("each card has whatIsWrong field", () => { for (const c of buildPriorityCommandStrip(input())) expect(c).toHaveProperty("whatIsWrong"); });
+  it("each card has severity field", () => { for (const c of buildPriorityCommandStrip(input())) expect(c).toHaveProperty("severity"); });
+  it("each card has id field", () => { for (const c of buildPriorityCommandStrip(input())) expect(c).toHaveProperty("id"); });
+  it("each card has nextStep field", () => { for (const c of buildPriorityCommandStrip(input())) expect(c).toHaveProperty("nextStep"); });
+  it("each card has confidenceNote field", () => { for (const c of buildPriorityCommandStrip(input())) expect(c).toHaveProperty("confidenceNote"); });
+  it("each card has owner field", () => { for (const c of buildPriorityCommandStrip(input())) expect(c).toHaveProperty("owner"); });
+});
+
 describe("command-center priority strip", () => {
   it("returns NO cards when the runtime plan is not found (no static fallback)", () => {
     const cards = buildPriorityCommandStrip(input({ wbp: { ...input().wbp, found: false } }));
