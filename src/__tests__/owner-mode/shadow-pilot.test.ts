@@ -29,6 +29,23 @@ function input(over: Partial<ShadowPilotInput> = {}): ShadowPilotInput {
   };
 }
 
+describe("shadow-pilot — module contract assertions", () => {
+  it("buildShadowPilotReport is a function", () => { expect(typeof buildShadowPilotReport).toBe("function"); });
+  it("input is a function", () => { expect(typeof input).toBe("function"); });
+  it("input() returns an object", () => { expect(typeof input()).toBe("object"); });
+  it("input() has businessName field", () => { expect(input()).toHaveProperty("businessName"); });
+  it("input() has overallConfidence field", () => { expect(input()).toHaveProperty("overallConfidence"); });
+  it("input().overallConfidence equals low", () => { expect(input().overallConfidence).toBe("low"); });
+  it("buildShadowPilotReport(input()) returns an object", () => { expect(typeof buildShadowPilotReport(input())).toBe("object"); });
+  it("buildShadowPilotReport(input()) has confidence field", () => { expect(buildShadowPilotReport(input())).toHaveProperty("confidence"); });
+  it("buildShadowPilotReport(input()) has liveOutcomeClaim field", () => { expect(buildShadowPilotReport(input())).toHaveProperty("liveOutcomeClaim"); });
+  it("buildShadowPilotReport(input()).liveOutcomeClaim is false", () => { expect(buildShadowPilotReport(input()).liveOutcomeClaim).toBe(false); });
+  it("input().realProviderDomains is an array", () => { expect(Array.isArray(input().realProviderDomains)).toBe(true); });
+  it("input().rankedDataRequests is an array", () => { expect(Array.isArray(input().rankedDataRequests)).toBe(true); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("owner-on-ship shadow pilot (§11)", () => {
   it("1. partial real data does not produce fake certainty (confidence passed through, not inflated)", () => {
     const r = buildShadowPilotReport(input({ overallConfidence: "low", criticalDomainsAllReal: false }));

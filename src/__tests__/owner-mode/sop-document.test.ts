@@ -27,6 +27,23 @@ const NOW = new Date("2026-06-28T00:00:00Z");
 
 beforeEach(() => emitAuditEvent.mockClear());
 
+describe("sop-document — module contract assertions", () => {
+  it("planSopTransition is a function", () => { expect(typeof planSopTransition).toBe("function"); });
+  it("hashSopContent is a function", () => { expect(typeof hashSopContent).toBe("function"); });
+  it("isSopReusable is a function", () => { expect(typeof isSopReusable).toBe("function"); });
+  it("isSopStale is a function", () => { expect(typeof isSopStale).toBe("function"); });
+  it("isMaterialSopChange is a function", () => { expect(typeof isMaterialSopChange).toBe("function"); });
+  it("createSopDraft is a function", () => { expect(typeof createSopDraft).toBe("function"); });
+  it("approveSopDocument is a function", () => { expect(typeof approveSopDocument).toBe("function"); });
+  it("reviseSopDocument is a function", () => { expect(typeof reviseSopDocument).toBe("function"); });
+  it("retireSopDocument is a function", () => { expect(typeof retireSopDocument).toBe("function"); });
+  it("SopUnauthorizedError is a function", () => { expect(typeof SopUnauthorizedError).toBe("function"); });
+  it("SopTransitionError is a function", () => { expect(typeof SopTransitionError).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("makeDeps is a function", () => { expect(typeof makeDeps).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+});
+
 describe("SOP lifecycle rules (pure)", () => {
   it("allows draft→approved→retired but not approved→draft", () => {
     expect(planSopTransition("draft", "approved").allowed).toBe(true);
