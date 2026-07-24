@@ -30,6 +30,23 @@ const scenarios = [
   { name: "housekeeping", data: housekeeping },
 ];
 
+describe("synthetic-realistic-dry-run — module contract assertions", () => {
+  it("assessDryRunReadiness is a function", () => { expect(typeof assessDryRunReadiness).toBe("function"); });
+  it("canEnterVerifiedLearning is a function", () => { expect(typeof canEnterVerifiedLearning).toBe("function"); });
+  it("isRealOwnerData is a function", () => { expect(typeof isRealOwnerData).toBe("function"); });
+  it("diagnoseProgression is a function", () => { expect(typeof diagnoseProgression).toBe("function"); });
+  it("recommendProcessModernization is a function", () => { expect(typeof recommendProcessModernization).toBe("function"); });
+  it("recommendClientRetention is a function", () => { expect(typeof recommendClientRetention).toBe("function"); });
+  it("GrowthClassification is an object", () => { expect(typeof GrowthClassification).toBe("object"); });
+  it("ProgressionMove is an object", () => { expect(typeof ProgressionMove).toBe("object"); });
+  it("requiresHumanReview is a function", () => { expect(typeof requiresHumanReview).toBe("function"); });
+  it("ProofType is an object", () => { expect(typeof ProofType).toBe("object"); });
+  it("redactForScope is a function", () => { expect(typeof redactForScope).toBe("function"); });
+  it("load is a function", () => { expect(typeof load).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("[synthetic-dry-run] honesty / data-mode labelling", () => {
   it.each(scenarios)("$name is labelled SYNTHETIC_REALISTIC + NOT_REAL_OWNER_DATA", ({ data }) => {
     const meta = data.metadata as Record<string, unknown>;

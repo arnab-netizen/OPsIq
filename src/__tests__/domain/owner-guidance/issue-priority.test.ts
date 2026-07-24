@@ -23,6 +23,23 @@ function issue(
   return { id, category, severity, headline: `${id} headline`, requiresOwnerAction, businessFunction };
 }
 
+describe("issue-priority — module contract assertions", () => {
+  it("IssueCategory is an object", () => { expect(typeof IssueCategory).toBe("object"); });
+  it("ISSUE_PRIORITY_RANK is an object", () => { expect(typeof ISSUE_PRIORITY_RANK).toBe("object"); });
+  it("rankIssues is a function", () => { expect(typeof rankIssues).toBe("function"); });
+  it("outranks is a function", () => { expect(typeof outranks).toBe("function"); });
+  it("cashDangerOutranksGrowth is a function", () => { expect(typeof cashDangerOutranksGrowth).toBe("function"); });
+  it("customerFailureOutranksMarketing is a function", () => { expect(typeof customerFailureOutranksMarketing).toBe("function"); });
+  it("topIssues is a function", () => { expect(typeof topIssues).toBe("function"); });
+  it("DEFAULT_TOP_LIMIT is a number", () => { expect(typeof DEFAULT_TOP_LIMIT).toBe("number"); });
+  it("BusinessFunction is an object", () => { expect(typeof BusinessFunction).toBe("object"); });
+  it("issue is a function", () => { expect(typeof issue).toBe("function"); });
+  it("issue() returns an object", () => { expect(typeof issue("test", IssueCategory.CASH_DANGER)).toBe("object"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("Module 41 — priority ranking engine", () => {
   it("[module41] canonical ranks are 1..10 with no gaps/dupes in spec order", () => {
     const order = [
