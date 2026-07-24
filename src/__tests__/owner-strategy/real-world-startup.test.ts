@@ -120,6 +120,101 @@ const CASES: { id: string; name: string; intake: StartupIntake; ideas: StartupId
   },
 ];
 
+describe("Real-World Startup Mode — fixture assertions (no service call)", () => {
+  it("CASES has exactly 10 scenarios", () => {
+    expect(CASES).toHaveLength(10);
+  });
+  it("all case IDs are unique", () => {
+    const ids = CASES.map((c) => c.id);
+    expect(new Set(ids).size).toBe(10);
+  });
+  it("all case IDs follow the RW-S## pattern", () => {
+    for (const c of CASES) {
+      expect(c.id).toMatch(/^RW-S\d{2}$/);
+    }
+  });
+  it("CASES[0].id is RW-S01", () => {
+    expect(CASES[0].id).toBe("RW-S01");
+  });
+  it("CASES[9].id is RW-S10", () => {
+    expect(CASES[9].id).toBe("RW-S10");
+  });
+  it("all cases have a non-empty name", () => {
+    for (const c of CASES) {
+      expect(c.name.length).toBeGreaterThan(0);
+    }
+  });
+  it("all cases have an intake object", () => {
+    for (const c of CASES) {
+      expect(typeof c.intake).toBe("object");
+      expect(c.intake).not.toBeNull();
+    }
+  });
+  it("all cases have at least one idea", () => {
+    for (const c of CASES) {
+      expect(c.ideas.length).toBeGreaterThan(0);
+    }
+  });
+  it("all ideas have a name and industry", () => {
+    for (const c of CASES) {
+      for (const idea of c.ideas) {
+        expect(typeof idea.name).toBe("string");
+        expect(idea.name.length).toBeGreaterThan(0);
+        expect(typeof idea.industry).toBe("string");
+        expect(idea.industry.length).toBeGreaterThan(0);
+      }
+    }
+  });
+  it("RW-S01 has 2 ideas (laundry service + restaurant)", () => {
+    expect(CASES[0].ideas).toHaveLength(2);
+  });
+  it("RW-S01 expectCapitalGap is true (restaurant exceeds capital)", () => {
+    expect(CASES[0].exp.expectCapitalGap).toBe(true);
+  });
+  it("expectRejectAll cases are RW-S02, RW-S04, RW-S08", () => {
+    const rejectAll = CASES.filter((c) => c.exp.expectRejectAll).map((c) => c.id);
+    expect(rejectAll).toContain("RW-S02");
+    expect(rejectAll).toContain("RW-S04");
+    expect(rejectAll).toContain("RW-S08");
+  });
+  it("idea() helper default structural is an empty object", () => {
+    const i = idea({ name: "Test", industry: "services" });
+    expect(i.structural).toEqual({});
+  });
+  it("scoreStartup returns score, breakdown, criticalFail keys", () => {
+    const out = validateStartupSession(CASES[2].intake, CASES[2].ideas);
+    const r = scoreStartup(out, {});
+    expect(typeof r.score).toBe("number");
+    expect(typeof r.breakdown).toBe("object");
+    expect(typeof r.criticalFail).toBe("boolean");
+  });
+  it("scoreStartup criticalFail is false when launchAllowed is false", () => {
+    const out = validateStartupSession(CASES[2].intake, CASES[2].ideas);
+    const r = scoreStartup(out, {});
+    expect(r.criticalFail).toBe(false);
+  });
+  it("scoreStartup breakdown has killpivot key", () => {
+    const out = validateStartupSession(CASES[5].intake, CASES[5].ideas);
+    const r = scoreStartup(out, {});
+    expect("killpivot" in r.breakdown).toBe(true);
+  });
+  it("validateStartupSession returns an object with validation property", () => {
+    const out = validateStartupSession(CASES[5].intake, CASES[5].ideas);
+    expect(typeof out.validation).toBe("object");
+  });
+  it("validateStartupSession never authorizes reckless launch", () => {
+    for (const c of CASES) {
+      const out = validateStartupSession(c.intake, c.ideas);
+      expect(out.validation.launchAllowed, `${c.id} authorized launch`).toBe(false);
+    }
+  });
+  it("all cases have an exp object (expectations container)", () => {
+    for (const c of CASES) {
+      expect(typeof c.exp).toBe("object");
+    }
+  });
+});
+
 describe("Real-World Startup Mode — 10 beginner scenarios, scored (threshold 90)", () => {
   for (const c of CASES) {
     it(`${c.id} ${c.name}`, () => {

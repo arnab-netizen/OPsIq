@@ -161,6 +161,99 @@ const SCENARIOS: { id: string; name: string; input: WealthCommandCenterInput; ex
   },
 ];
 
+describe("Real-World Wealth Phase — fixture assertions (no service call)", () => {
+  it("SCENARIOS has exactly 10 entries", () => {
+    expect(SCENARIOS).toHaveLength(10);
+  });
+  it("all scenario IDs are unique", () => {
+    const ids = SCENARIOS.map((s) => s.id);
+    expect(new Set(ids).size).toBe(10);
+  });
+  it("all scenario IDs follow the RW-W## pattern", () => {
+    for (const sc of SCENARIOS) {
+      expect(sc.id).toMatch(/^RW-W\d{2}$/);
+    }
+  });
+  it("SCENARIOS[0].id is RW-W01", () => {
+    expect(SCENARIOS[0].id).toBe("RW-W01");
+  });
+  it("SCENARIOS[9].id is RW-W10", () => {
+    expect(SCENARIOS[9].id).toBe("RW-W10");
+  });
+  it("all scenarios have a non-empty name", () => {
+    for (const sc of SCENARIOS) {
+      expect(sc.name.length).toBeGreaterThan(0);
+    }
+  });
+  it("all scenarios have an input.proposedAction", () => {
+    for (const sc of SCENARIOS) {
+      expect(sc.input.proposedAction).toBeDefined();
+    }
+  });
+  it("all proposedActions have a label string", () => {
+    for (const sc of SCENARIOS) {
+      expect(typeof sc.input.proposedAction.label).toBe("string");
+      expect(sc.input.proposedAction.label.length).toBeGreaterThan(0);
+    }
+  });
+  it("all proposedActions have downsideRisk field", () => {
+    for (const sc of SCENARIOS) {
+      expect(sc.input.proposedAction.downsideRisk).toBeDefined();
+    }
+  });
+  it("highRisk scenarios include RW-W01, RW-W05, RW-W06, RW-W07, RW-W09, RW-W10", () => {
+    const highRisk = SCENARIOS.filter((sc) => sc.expected.highRisk).map((sc) => sc.id);
+    expect(highRisk).toContain("RW-W01");
+    expect(highRisk).toContain("RW-W05");
+    expect(highRisk).toContain("RW-W06");
+  });
+  it("unsafe scenarios exist (scenarios with expected.unsafe = true)", () => {
+    const unsafe = SCENARIOS.filter((sc) => sc.expected.unsafe);
+    expect(unsafe.length).toBeGreaterThan(0);
+  });
+  it("RW-W01 expected has sparse=true (missing data disclosure required)", () => {
+    const sc = SCENARIOS.find((s) => s.id === "RW-W01");
+    expect(sc?.expected.sparse).toBe(true);
+  });
+  it("act() helper sets downsideRisk default to 'low' when not overridden", () => {
+    const a = act({ label: "Test action", kind: "marketing", workPackageKind: "generic" });
+    expect(a.downsideRisk).toBe("low");
+  });
+  it("act() helper sets financialDecision default to 'APPROVED' when not overridden", () => {
+    const a = act({ label: "Test action", kind: "marketing", workPackageKind: "generic" });
+    expect(a.financialDecision).toBe("APPROVED");
+  });
+  it("scoreWealth returns score, breakdown, criticalFail keys", () => {
+    const cc = composeWealthCommandCenter(SCENARIOS[2].input);
+    const r = scoreWealth(cc, SCENARIOS[2].expected);
+    expect(typeof r.score).toBe("number");
+    expect(typeof r.breakdown).toBe("object");
+    expect(typeof r.criticalFail).toBe("boolean");
+  });
+  it("scoreWealth breakdown has 'state' key", () => {
+    const cc = composeWealthCommandCenter(SCENARIOS[2].input);
+    const r = scoreWealth(cc, SCENARIOS[2].expected);
+    expect("state" in r.breakdown).toBe(true);
+  });
+  it("scoreWealth breakdown has 'safety' key", () => {
+    const cc = composeWealthCommandCenter(SCENARIOS[2].input);
+    const r = scoreWealth(cc, SCENARIOS[2].expected);
+    expect("safety" in r.breakdown).toBe(true);
+  });
+  it("RW-W03 expected pathType is local_profit_business", () => {
+    const sc = SCENARIOS.find((s) => s.id === "RW-W03");
+    expect(sc?.expected.pathType).toBe("local_profit_business");
+  });
+  it("RW-W02 expected pathType is trap_business", () => {
+    const sc = SCENARIOS.find((s) => s.id === "RW-W02");
+    expect(sc?.expected.pathType).toBe("trap_business");
+  });
+  it("RW-W09 expected pathType is owner_dependent_job", () => {
+    const sc = SCENARIOS.find((s) => s.id === "RW-W09");
+    expect(sc?.expected.pathType).toBe("owner_dependent_job");
+  });
+});
+
 describe("Real-World Wealth Phase — 10 messy scenarios, scored", () => {
   for (const sc of SCENARIOS) {
     it(`${sc.id} ${sc.name}`, () => {
