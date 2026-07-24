@@ -1,0 +1,49 @@
+id: bundle-3.8
+stage: 3
+name: Owner Onboarding and Archetype Seeding
+status: PENDING
+priority: 4
+
+description: |
+  Structured onboarding flow that captures business profile, seeds the business
+  condition profile, assigns intervention archetype, and generates the first
+  action queue. Onboarding completion gates subsequent owner mode operations.
+
+scope:
+  - Onboarding intake form (business facts, owner profile)
+  - Business condition profile seeding from intake
+  - Intervention archetype assignment (based on business condition)
+  - Initial action queue generation (top 5 priority actions)
+  - Onboarding completion gate (blocks owner mode until complete)
+  - Re-onboarding path (major business change triggers abbreviated re-run)
+  - Onboarding public DTO (no internal archetype scoring)
+
+acceptance_criteria:
+  - Onboarding completion is idempotent (re-submission returns same state)
+  - Business condition profile seeded from validated intake facts
+  - Archetype assignment uses governed classification (no ML shortcuts)
+  - Initial action queue uses priority engine with business condition input
+  - Onboarding gate enforced server-side on all owner mode reads
+  - Auth: only owner of workspace may complete own onboarding
+  - 40+ tests: intake validation, archetype assignment, gate enforcement
+
+dependencies:
+  - bundle-3.7  # Approval Resolution (PENDING)
+
+post_merge_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+
+security:
+  workspace_enforcement: required
+  auth_capability: OWNER_ONBOARD
+  dto_redaction: required  # exclude archetype scoring internals
+  audit_events: required
+  idempotency: required_for_onboarding_completion
+
+human_factors:
+  - key_person_dependency: onboarding must not block on external consultant approval
+  - resistance_to_change: abbreviated re-onboarding for change events
+  - morale_fragility: initial action queue must be achievable not overwhelming

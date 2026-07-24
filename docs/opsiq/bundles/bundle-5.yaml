@@ -1,0 +1,51 @@
+id: bundle-5
+stage: 5
+name: Integration Fabric and Connector Registry
+status: PENDING
+priority: 8
+
+description: |
+  Connector registry, OAuth token lifecycle, and integration event backbone.
+  Connectors are auth-isolated per workspace. Token storage is encrypted.
+  Integration events trigger governed re-evaluation (new data = re-assess BCP).
+  No live connector OAuth flows without explicit authorization per connector.
+
+scope:
+  - Connector registry (HubSpot, QuickBooks, Google, Slack — schema + contracts)
+  - OAuth token lifecycle (store, refresh, revoke — encrypted at rest)
+  - Integration event ingestion (validated schema, workspace-scoped)
+  - Event → BCP re-evaluation trigger (material data change)
+  - Connector health monitoring (token expiry, sync failure alerts)
+  - Connector public DTO (no token values in any response)
+  - Integration audit trail
+
+acceptance_criteria:
+  - OAuth tokens never appear in any API response or log
+  - Connector access is workspace-isolated (no cross-workspace token reuse)
+  - Integration events are schema-validated before processing
+  - Material data changes trigger BCP re-evaluation (governed, not immediate)
+  - Token refresh failure creates idempotent alert
+  - Auth: INTEGRATION_MANAGE capability required for connector operations
+  - 45+ tests: token lifecycle, event ingestion, workspace isolation, DTO
+
+dependencies:
+  - bundle-4  # Business Condition Profile (PENDING)
+
+post_merge_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+
+security:
+  workspace_enforcement: required
+  auth_capability: INTEGRATION_MANAGE
+  dto_redaction: required  # no token values
+  audit_events: required
+  encryption: oauth_tokens_encrypted_at_rest
+  idempotency: required_for_token_refresh_alert
+
+constraints:
+  - No live HubSpot/QuickBooks/Google/Slack OAuth without explicit per-connector authorization
+  - No Stripe integration (future billing uses Lemon Squeezy if authorized)
+  - No unrestricted bank payment execution

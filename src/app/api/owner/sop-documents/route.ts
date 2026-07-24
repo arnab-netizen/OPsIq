@@ -42,7 +42,7 @@ const patchSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const input = await parseRequestBody(ctx.request!, createSchema);
-    const id = await createSopDraft({ workspaceId: ctx.verifiedWorkspaceId, actorId: ctx.verifiedActorId, ...input });
+    const id = await createSopDraft({ ...input, workspaceId: ctx.verifiedWorkspaceId, actorId: ctx.verifiedActorId });
     return canonicalJson({ id }, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }

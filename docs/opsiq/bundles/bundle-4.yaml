@@ -1,0 +1,54 @@
+id: bundle-4
+stage: 4
+name: Business Condition Profile Operations
+status: PENDING
+priority: 7
+
+description: |
+  Full lifecycle for Business Condition Profile (BCP) creation, re-evaluation
+  triggers, historical versioning, and the governed re-evaluation pipeline.
+  BCP is the source of truth for intervention mode and recommendation priority.
+  All four OpsIQ dimensions must be maintained on every BCP update.
+
+scope:
+  - BCP creation from validated intake facts
+  - BCP re-evaluation triggers (evidence, KPI, blocker, shock event)
+  - BCP version history (immutable snapshots on each re-evaluation)
+  - Intervention mode derivation from BCP
+  - Intervention phase derivation from mode + evidence
+  - Recommendation priority update from BCP change
+  - Review cadence update from BCP change
+  - Health status update from BCP change
+  - BCP public DTO (no internal scoring weights)
+
+acceptance_criteria:
+  - Every BCP update creates a version snapshot (no silent mutation)
+  - All four OpsIQ dimensions updated on every BCP re-evaluation
+  - Intervention mode and phase derived from BCP (not from UI input)
+  - Re-evaluation is idempotent for same input facts
+  - Workspace enforcement on all read/write paths
+  - Auth: OWNER_MANAGE or CONSULTING_WRITE
+  - 50+ tests: version history, dimension updates, trigger routing
+
+dependencies:
+  - bundle-3.10  # Stage 3 Adversarial Closure (PENDING)
+
+post_merge_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+
+security:
+  workspace_enforcement: required
+  auth_capability: OWNER_MANAGE
+  dto_redaction: required  # exclude scoring weights
+  audit_events: required
+  idempotency: required_for_reeval
+  immutability: bcp_version_snapshots
+
+opsiq_dimensions:
+  - consulting_lifecycle_stage: derived from engagement + BCP
+  - business_condition: BCP.conditionCode
+  - intervention_mode_and_phase: derived from BCP
+  - human_execution_reality: modeled in BCP human-factors fields

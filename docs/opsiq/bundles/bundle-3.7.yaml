@@ -1,0 +1,50 @@
+id: bundle-3.7
+stage: 3
+name: Approval Resolution and Evidence Chain
+status: PENDING
+priority: 3
+
+description: |
+  Full lifecycle for approval requests, evidence submission, approval or rejection
+  decisions, and appeal handling. Evidence chain must be verifiable and tamper-evident.
+  Approval decisions are immutable once made; corrections require a new record.
+
+scope:
+  - Approval request creation (POST /api/owner/approval)
+  - Evidence submission (linked to approval, multi-evidence)
+  - Approval decision (APPROVED / REJECTED / DEFERRED)
+  - Appeal initiation (new approval cycle, links prior)
+  - Evidence credibility scoring (internal, not exposed in public DTO)
+  - Approval decision → action status update trigger
+  - Approval audit trail
+
+acceptance_criteria:
+  - Approval decisions are immutable (no silent mutation)
+  - Evidence chain is append-only (no deletion of submitted evidence)
+  - Workspace enforcement on all read/write paths
+  - Auth: approver must have CONSULTING_APPROVE capability
+  - REJECTED decision triggers action re-scoping recommendation
+  - Evidence credibility score excluded from public DTO
+  - 45+ tests: immutability, evidence chain, appeal, workspace isolation
+
+dependencies:
+  - bundle-3.6  # Action Assignment (PENDING)
+
+post_merge_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+
+security:
+  workspace_enforcement: required
+  auth_capability: CONSULTING_APPROVE
+  dto_redaction: required  # exclude credibility scores
+  audit_events: required
+  idempotency: required_for_approval_creation
+  immutability: approval_decisions_are_immutable
+
+human_factors:
+  - management_capability: approvers must have explicit capability, not just membership
+  - accountability_weakness: rejection must be recorded with rationale
+  - resistance_to_change: appeal path must exist but require new evidence

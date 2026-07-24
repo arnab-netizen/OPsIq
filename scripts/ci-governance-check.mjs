@@ -10,7 +10,7 @@
  *  5. ci-cd-foundations.yml and mvp-readiness.yml must NOT have push/PR automatic triggers
  */
 
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -109,10 +109,9 @@ for (const workflow of PUSH_BANNED_OVERLAPPING) {
   // Look for push: or pull_request: in the on: block (not inside comments)
   const lines = content.split('\n');
   let inOn = false;
-  let inJobs = false;
   for (const line of lines) {
-    if (/^on:/.test(line)) { inOn = true; inJobs = false; continue; }
-    if (/^jobs:/.test(line)) { inOn = false; inJobs = true; continue; }
+    if (/^on:/.test(line)) { inOn = true; continue; }
+    if (/^jobs:/.test(line)) { inOn = false; continue; }
     if (inOn && /^\s+(push|pull_request):/.test(line) && !line.trimStart().startsWith('#')) {
       const trigger = line.trim().replace(':', '');
       check(false, `${workflow} has an automatic '${trigger}:' trigger (must be dispatch-only — duplicates ci.yml)`);
@@ -128,9 +127,32 @@ if (dbVerifyContent) {
   check(hasGlob, "db-verification.yml must use filter '.db.test.ts' for LANE_B/LANE_A test execution — hardcoded file lists omit newly added DB tests");
 }
 
+// 7. reusable-pr-validation.yml must use workflow_call (not push/PR) to prevent accidental direct triggers
+const reusableContent = readWorkflow('reusable-pr-validation.yml');
+if (reusableContent) {
+  const hasWorkflowCall = /^\s+workflow_call:/m.test(reusableContent);
+  check(hasWorkflowCall, 'reusable-pr-validation.yml must use workflow_call trigger (not push/PR)');
+  const hasDirectPush = /^\s+push:/m.test(reusableContent);
+  const hasDirectPR = /^\s+pull_request:/m.test(reusableContent);
+  check(!hasDirectPush, 'reusable-pr-validation.yml must NOT have a push trigger (reusable only)');
+  check(!hasDirectPR, 'reusable-pr-validation.yml must NOT have a pull_request trigger (reusable only)');
+}
+
+// 8. merge-candidate-validation.yml must be dispatch-only (workflow_dispatch)
+const mergeCandidateContent = readWorkflow('merge-candidate-validation.yml');
+if (mergeCandidateContent) {
+  const hasDispatch = /^\s+workflow_dispatch:/m.test(mergeCandidateContent);
+  check(hasDispatch, 'merge-candidate-validation.yml must have workflow_dispatch trigger');
+  const hasDirectPush = /^\s+push:/m.test(mergeCandidateContent);
+  const hasDirectPR = /^\s+pull_request:/m.test(mergeCandidateContent);
+  check(!hasDirectPush, 'merge-candidate-validation.yml must NOT have a push trigger (dispatch-only)');
+  check(!hasDirectPR, 'merge-candidate-validation.yml must NOT have a pull_request trigger (dispatch-only)');
+}
+
 // Summary
+const rulesChecked = SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 5;
 if (violations === 0) {
-  console.log(`✓ CI governance check passed (${SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 3} rules checked)`);
+  console.log(`✓ CI governance check passed (${rulesChecked} rules checked)`);
   process.exit(0);
 } else {
   console.error(`\n✗ CI governance check FAILED: ${violations} violation(s)`);

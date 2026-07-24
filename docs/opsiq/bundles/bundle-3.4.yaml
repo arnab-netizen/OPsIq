@@ -1,0 +1,40 @@
+id: bundle-3.4
+stage: 3
+name: Risk and Compliance Full Lifecycle
+status: CLOSED
+
+description: |
+  Full lifecycle for business risk identification, assessment, mitigation tracking,
+  and compliance item management. Includes correct FSM semantics (MITIGATING is
+  active, not terminal), conditional ACCEPTED resolution, overdue evaluation seam
+  wired to owner now-view, and 13 PostgreSQL-backed DB tests.
+
+scope:
+  - BusinessRisk FSM (IDENTIFIED → ASSESSED → MITIGATING → RESOLVED/CLOSED)
+  - ACCEPTED resolution conditional on acceptanceRationale (non-empty)
+  - MITIGATING is active state — alerts must remain
+  - evaluateOverdueRiskAlerts wired fire-and-forget to getOwnerNowView
+  - Idempotent critical and overdue alert creation
+  - Cross-workspace isolation for alerts
+
+post_merge_evidence:
+  pr_sha: "375ec9497542dd3398016427a4ad503210e678f9"
+  merge_sha: "502f9cda632a895af1eb2c88e1b6f91546281baf"
+  main_integration_run: "30066323652"
+  db_verification_run: "30047121015"
+  verification_date: "2026-07-24"
+  defects_closed:
+    - "RISK_TERMINAL_STATUSES incorrectly included MITIGATING and unconditional ACCEPTED"
+    - "No active overdue evaluation seam — required manual reviewRisk call"
+    - "Test 9 used invalid FSM transition ASSESSED→RESOLVED (fixed to ASSESSED→MITIGATING→RESOLVED)"
+  tests_added: 13
+  gate_result: "post_merge_main_integration_completed_success"
+
+security:
+  workspace_enforcement: verified
+  auth_capability: OWNER_MANAGE
+  dto_redaction: verified
+  audit_events: verified
+  idempotency: verified
+
+dependencies: []

@@ -1,0 +1,54 @@
+id: bundle-7
+stage: 7
+name: Final Deployment Readiness and Stage Acceptance
+status: PENDING
+priority: 10
+
+description: |
+  Full deployment readiness audit, security hardening, performance verification,
+  and stage acceptance for all Stage 3-6 bundles. Final gate before production
+  readiness declaration. Includes tenant isolation proof, permission matrix
+  verification, and operational runbooks.
+
+scope:
+  - All-bundle workspace isolation adversarial test suite
+  - Permission matrix tests (every capability × every role)
+  - DTO leakage tests (every public endpoint)
+  - Audit completeness tests (every material operation)
+  - Performance baseline (p95 < 500ms on all owner-mode reads)
+  - DB index verification (no sequential scan on hot paths)
+  - Env var checklist and .env.example completeness
+  - Operational runbooks (deploy, rollback, DB migration, incident)
+  - Final improvement report (monetization, enterprise, UX gaps)
+
+acceptance_criteria:
+  - Zero workspace isolation failures in adversarial suite
+  - Zero capability boundary violations in permission matrix
+  - Zero internal field leakage in any public DTO
+  - Every material mutation has audit event (100% coverage)
+  - p95 < 500ms on /api/owner/now-view, /api/owner/dashboard
+  - No sequential scans on BusinessRisk, Alert, BusinessConditionProfile
+  - All env vars documented in .env.example
+  - Runbooks reviewed and executable
+  - Final improvement report created
+
+dependencies:
+  - bundle-6  # Consulting Mode (PENDING)
+
+post_merge_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+
+security:
+  workspace_enforcement: adversarial_proof_required
+  auth_capability: all_capabilities_matrix_tested
+  dto_redaction: all_endpoints_verified
+  audit_events: 100_percent_coverage_proven
+  performance: p95_500ms_verified
+
+gates:
+  completion_factory: scripts/validate-bundle-manifests.mjs
+  stage_acceptance: scripts/validate-stage-acceptance.mjs --stage all
+  deployment_readiness: scripts/deployment-preflight.mjs
