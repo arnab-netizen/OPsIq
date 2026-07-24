@@ -3587,5 +3587,19 @@
     "gates_run": "npx vitest run operating-memory.test.ts (34/34 PASS)",
     "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
     "next_automatic_target": "owner-block-metrics (5 tests — below 20 threshold), control-correlation (needs check)"
+  },
+  "owner_kpi_ownership_route_tests": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "NON_DB_MOCK_TEST_SUITE",
+    "description": "Non-DB mock tests for GET/POST /api/owner/kpi-ownership. Covers GET listKPIOwnership, POST UPSERT (createKPIOwnership with metricName/metricLabel/ownerUserId/reviewCadence), POST UPDATE (updateKPIOwnership with recordId), POST RECORD_REVIEW (updateKPIOwnership with lastReviewedAt), inline 400 guards (missing recordId, missing required UPSERT fields), capability enforcement, workspace and actor isolation. 32 tests total.",
+    "files": [
+      "src/__tests__/api/owner/kpi-ownership/kpi-ownership.test.ts (NEW — 32 tests)"
+    ],
+    "test_coverage": "32 tests — capability declarations (6), GET (6), POST UPSERT (7), POST UPDATE (5), POST RECORD_REVIEW (4), workspace isolation (2), actor isolation (2)",
+    "workspace_enforcement": "verified: verifiedWorkspaceId always passed to service; WS_A/WS_B isolation tests pass",
+    "auth_enforced": "owner:manage (GET and POST)",
+    "gates_run": "npx vitest run kpi-ownership.test.ts (32/32 PASS)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "next_automatic_target": "resource-pools route (0 dedicated route tests)"
   }
 }
