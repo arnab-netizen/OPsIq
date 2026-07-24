@@ -126,4 +126,23 @@ describe("Admin Billing Diagnostics API Route", () => {
       expect(content).not.toMatch(/error\.message/);
     });
   });
+
+  describe("additional static assertions", () => {
+    it("route file should exist on disk", () => {
+      expect(fs.existsSync(routePath)).toBe(true);
+    });
+
+    it("route file should import getBillingDiagnostic", () => {
+      expect(getRouteContent()).toContain("getBillingDiagnostic");
+    });
+
+    it("route file should import getBillingExportPacket", () => {
+      expect(getRouteContent()).toContain("getBillingExportPacket");
+    });
+
+    it("route file should reference CAPABILITIES constant for SYSTEM_ADMIN enforcement", () => {
+      const content = getRouteContent();
+      expect(content).toMatch(/CAPABILITIES/);
+    });
+  });
 });
