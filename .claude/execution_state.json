@@ -3309,6 +3309,35 @@
     "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓), npx prisma generate (✓), npx vitest run consulting-engagement.test.ts (63/63 ✓)",
     "compilation": "✓ TypeScript compiles without errors — EngagementRow extension pattern + toRow() cast used for new Prisma fields",
     "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() mocked DB",
+    "committed": "a476e459"
+  },
+  "bundle_7_slice_1_adversarial_workspace_isolation": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ADVERSARIAL_SECURITY_TEST_SUITE",
+    "description": "Bundle 7 Slice 1: 48-test adversarial suite proving consulting route workspace isolation, DTO leakage prevention, phase FSM enforcement, evidence/finding gates, closure gate, and audit event completeness. Covers 10 security dimensions with adversarial cross-tenant scenarios.",
+    "files": [
+      "src/__tests__/api/bundle7-consulting-route-adversarial.test.ts (NEW)"
+    ],
+    "security_dimensions_proven": [
+      "1. Workspace isolation: workspaceId always from service param, never body-injected",
+      "2. Cross-tenant isolation: WS_B cannot access WS_A engagement (NotFoundError)",
+      "3. DTO leakage (client view): consultantNotes, assignedConsultantId, createdBy never exposed",
+      "4. DTO leakage (humanFactors): only ownerBottleneckRisk, followThroughRisk, keyPersonDependency in client view",
+      "5. Consultant view: all internal fields present including full humanFactors",
+      "6. Phase FSM: forward-only, no skip, no reversal, REVIEW is terminal",
+      "7. Evidence gate: finding creation requires primaryEvidenceId from same engagement",
+      "8. Finding gate: recommendation requires validated finding in same engagement",
+      "9. Closure gate: critical actions (lowercase status) block closure; completed/cancelled allow",
+      "10. Audit events: all 6 mutations emit designated event; reads emit nothing"
+    ],
+    "root_causes_found_fixed": [
+      "vi.clearAllMocks() vs vi.resetAllMocks(): clearAllMocks does not reset mock return values between tests — changed to resetAllMocks()",
+      "Closure gate status comparison: service uses lowercase 'completed'/'cancelled' — test fixtures updated to match",
+      "Finding idempotency check: createConsultingFinding calls db.finding.findFirst before create — tests must mock findFirst→null to proceed to create path"
+    ],
+    "test_coverage": "48 tests across 10 security dimensions",
+    "gates_run": "npx vitest run (48/48 PASS), npx tsc --noEmit (0 errors), npm run build (clean)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.resetAllMocks() + hoisted mocks",
     "committed": "pending"
   }
 }
