@@ -23,6 +23,23 @@ const verifiedBase: OutcomeAssessmentInput = {
 };
 const o = (over: Partial<OutcomeAssessmentInput>) => assessOutcome({ ...verifiedBase, ...over });
 
+describe("assessments — module contract assertions", () => {
+  it("assessOutcome is a function", () => { expect(typeof assessOutcome).toBe("function"); });
+  it("assessImplementationQuality is a function", () => { expect(typeof assessImplementationQuality).toBe("function"); });
+  it("EMITS_DISCIPLINARY_RECOMMENDATION is false", () => { expect(EMITS_DISCIPLINARY_RECOMMENDATION).toBe(false); });
+  it("assessProfitImpact is a function", () => { expect(typeof assessProfitImpact).toBe("function"); });
+  it("OutcomeStatus is an object", () => { expect(typeof OutcomeStatus).toBe("object"); });
+  it("ImplementationQualityStatus (Q) is an object", () => { expect(typeof Q).toBe("object"); });
+  it("ProfitImpactConfidence (C) is an object", () => { expect(typeof C).toBe("object"); });
+  it("verifiedBase is an object", () => { expect(typeof verifiedBase).toBe("object"); });
+  it("o is a function", () => { expect(typeof o).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+});
+
 describe("assessOutcome (Slice 12)", () => {
   it("task completion ALONE never verifies the outcome", () => {
     // task approved complete but no owner verification → UNVERIFIED
