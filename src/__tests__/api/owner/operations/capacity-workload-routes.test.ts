@@ -31,6 +31,44 @@ describe("P0-A capacity ingestion route enforcement", () => {
     expect(capacitySrc).toContain("@/services/owner-operations/capacity-snapshot.service");
     expect(capacitySrc).toContain("saveCapacitySnapshot");
   });
+  it("uses canonicalJson for responses", () => {
+    expect(capacitySrc).toContain("canonicalJson");
+    expect(capacitySrc).toContain("@/lib/canonical-json-response");
+  });
+  it("GET calls listCapacitySnapshots", () => {
+    expect(capacitySrc).toContain("listCapacitySnapshots");
+  });
+  it("POST uses parseRequestBody for input validation", () => {
+    expect(capacitySrc).toContain("parseRequestBody");
+  });
+  it("POST passes workspaceId to saveCapacitySnapshot", () => {
+    expect(capacitySrc).toContain("workspaceId: ctx.verifiedWorkspaceId");
+  });
+  it("POST passes businessId to saveCapacitySnapshot", () => {
+    expect(capacitySrc).toContain("businessId: params.businessId");
+  });
+  it("POST returns status 201", () => {
+    expect(capacitySrc).toContain("status: 201");
+  });
+  it("GET returns snapshots wrapped in object with status 200", () => {
+    expect(capacitySrc).toContain("{ snapshots }");
+    expect(capacitySrc).toContain("status: 200");
+  });
+  it("schema validates resources array with at least one item", () => {
+    expect(capacitySrc).toContain("resources");
+    expect(capacitySrc).toContain("min(1");
+  });
+  it("schema validates currentRevenue as non-negative number", () => {
+    expect(capacitySrc).toContain("currentRevenue");
+    expect(capacitySrc).toContain("z.number().min(0)");
+  });
+  it("imports CAPABILITIES from domain constants", () => {
+    expect(capacitySrc).toContain("@/domain/constants/capabilities");
+    expect(capacitySrc).toContain("CAPABILITIES");
+  });
+  it("is force-dynamic", () => {
+    expect(capacitySrc).toContain('dynamic = "force-dynamic"');
+  });
 });
 
 describe("P0-A workload ingestion route enforcement", () => {
@@ -46,5 +84,43 @@ describe("P0-A workload ingestion route enforcement", () => {
     expect(workloadSrc).toContain("parseOrThrow(uuidSchema, params.businessId)");
     expect(workloadSrc).toContain("@/services/owner-operations/owner-workload-snapshot.service");
     expect(workloadSrc).toContain("saveOwnerWorkloadSnapshot");
+  });
+  it("uses canonicalJson for responses", () => {
+    expect(workloadSrc).toContain("canonicalJson");
+    expect(workloadSrc).toContain("@/lib/canonical-json-response");
+  });
+  it("GET calls listOwnerWorkloadSnapshots", () => {
+    expect(workloadSrc).toContain("listOwnerWorkloadSnapshots");
+  });
+  it("POST uses parseRequestBody for input validation", () => {
+    expect(workloadSrc).toContain("parseRequestBody");
+  });
+  it("POST passes workspaceId to saveOwnerWorkloadSnapshot", () => {
+    expect(workloadSrc).toContain("workspaceId: ctx.verifiedWorkspaceId");
+  });
+  it("POST passes businessId to saveOwnerWorkloadSnapshot", () => {
+    expect(workloadSrc).toContain("businessId: params.businessId");
+  });
+  it("POST returns status 201", () => {
+    expect(workloadSrc).toContain("status: 201");
+  });
+  it("GET returns snapshots wrapped in object with status 200", () => {
+    expect(workloadSrc).toContain("{ snapshots }");
+    expect(workloadSrc).toContain("status: 200");
+  });
+  it("schema validates ownerMinutesPerDay as non-negative number", () => {
+    expect(workloadSrc).toContain("ownerMinutesPerDay");
+    expect(workloadSrc).toContain("z.number().min(0)");
+  });
+  it("schema validates sustainableMinutesPerDay as positive number", () => {
+    expect(workloadSrc).toContain("sustainableMinutesPerDay");
+    expect(workloadSrc).toContain("z.number().gt(0)");
+  });
+  it("imports CAPABILITIES from domain constants", () => {
+    expect(workloadSrc).toContain("@/domain/constants/capabilities");
+    expect(workloadSrc).toContain("CAPABILITIES");
+  });
+  it("is force-dynamic", () => {
+    expect(workloadSrc).toContain('dynamic = "force-dynamic"');
   });
 });

@@ -91,6 +91,56 @@ describe("Decisions API — create service input validation (fail-closed, no DB 
       createDecision({ ...base, title: "T", verifiedWorkspaceId: "" })
     ).rejects.toThrow();
   });
+
+  it("rejects negative impact", async () => {
+    await expect(createDecision({ ...base, title: "T", impact: -1 })).rejects.toThrow(/impact must be a positive number/i);
+  });
+
+  it("rejects confidence < 0", async () => {
+    await expect(createDecision({ ...base, title: "T", confidence: -0.1 })).rejects.toThrow(/confidence must be between 0 and 1/i);
+  });
+
+  it("rejects missing verifiedActorId", async () => {
+    await expect(
+      createDecision({ ...base, title: "T", verifiedActorId: "" })
+    ).rejects.toThrow();
+  });
+
+  it("rejects type with only whitespace", async () => {
+    await expect(createDecision({ ...base, title: "T", type: "   " })).rejects.toThrow(/type is required/i);
+  });
+
+  it("rejects title that is only whitespace", async () => {
+    await expect(createDecision({ ...base, title: "\t\n " })).rejects.toThrow(/title is required/i);
+  });
+
+  it("rejects impact that is NaN", async () => {
+    await expect(createDecision({ ...base, title: "T", impact: NaN })).rejects.toThrow(/impact must be a positive number/i);
+  });
+
+  it("rejects confidence that is NaN", async () => {
+    await expect(createDecision({ ...base, title: "T", confidence: NaN })).rejects.toThrow(/confidence must be between 0 and 1/i);
+  });
+
+  it("rejects impact = Infinity", async () => {
+    await expect(createDecision({ ...base, title: "T", impact: Infinity })).rejects.toThrow();
+  });
+
+  it("rejects confidence = Infinity", async () => {
+    await expect(createDecision({ ...base, title: "T", confidence: Infinity })).rejects.toThrow();
+  });
+
+  it("rejects confidence = -Infinity", async () => {
+    await expect(createDecision({ ...base, title: "T", confidence: -Infinity })).rejects.toThrow();
+  });
+
+  it("rejects impact = -Infinity", async () => {
+    await expect(createDecision({ ...base, title: "T", impact: -Infinity })).rejects.toThrow();
+  });
+
+  it("rejects confidence exactly at 1.01 (boundary over)", async () => {
+    await expect(createDecision({ ...base, title: "T", confidence: 1.01 })).rejects.toThrow(/confidence must be between 0 and 1/i);
+  });
 });
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
