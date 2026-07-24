@@ -56,6 +56,69 @@ function cleanOutput() {
 
 beforeEach(() => clearAiCallLedger());
 
+describe("AI-3 prompt-injection defense — fixture and function contract assertions", () => {
+  it("ATTACKS is an array with exactly 5 entries", () => {
+    expect(Array.isArray(ATTACKS)).toBe(true);
+    expect(ATTACKS).toHaveLength(5);
+  });
+  it("all ATTACKS have non-empty name strings", () => {
+    for (const a of ATTACKS) expect(typeof a.name).toBe("string");
+    for (const a of ATTACKS) expect(a.name.length).toBeGreaterThan(0);
+  });
+  it("all ATTACKS have non-empty obeyText strings", () => {
+    for (const a of ATTACKS) expect(typeof a.obeyText).toBe("string");
+    for (const a of ATTACKS) expect(a.obeyText.length).toBeGreaterThan(0);
+  });
+  it("all ATTACKS have non-empty reject arrays", () => {
+    for (const a of ATTACKS) {
+      expect(Array.isArray(a.reject)).toBe(true);
+      expect(a.reject.length).toBeGreaterThan(0);
+    }
+  });
+  it("ATTACKS[0].name is 'approve a discount'", () => {
+    expect(ATTACKS[0].name).toBe("approve a discount");
+  });
+  it("ATTACKS[0].reject contains REJECTED_UNAUTHORIZED_ACTION", () => {
+    expect(ATTACKS[0].reject).toContain("REJECTED_UNAUTHORIZED_ACTION");
+  });
+  it("ATTACKS[2].name is 'delete the audit log'", () => {
+    expect(ATTACKS[2].name).toBe("delete the audit log");
+  });
+  it("ATTACKS[2].reject contains REJECTED_PROMPT_INJECTION", () => {
+    expect(ATTACKS[2].reject).toContain("REJECTED_PROMPT_INJECTION");
+  });
+  it("ATTACKS[3].reject contains REJECTED_WORKSPACE_SCOPE", () => {
+    expect(ATTACKS[3].reject).toContain("REJECTED_WORKSPACE_SCOPE");
+  });
+  it("ATTACKS[4].reject contains REJECTED_POLICY_VIOLATION", () => {
+    expect(ATTACKS[4].reject).toContain("REJECTED_POLICY_VIOLATION");
+  });
+  it("WS is the workspace sentinel string", () => {
+    expect(typeof WS).toBe("string");
+    expect(WS).toBe("ws-001");
+  });
+  it("CLOCK is a function returning an ISO date string", () => {
+    expect(typeof CLOCK).toBe("function");
+    expect(typeof CLOCK()).toBe("string");
+    expect(CLOCK()).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+  it("ctxWithInjection is a function", () => {
+    expect(typeof ctxWithInjection).toBe("function");
+  });
+  it("cleanOutput is a function", () => {
+    expect(typeof cleanOutput).toBe("function");
+  });
+  it("buildAiContext is a function", () => {
+    expect(typeof buildAiContext).toBe("function");
+  });
+  it("runMissingQuestionTask is a function", () => {
+    expect(typeof runMissingQuestionTask).toBe("function");
+  });
+  it("clearAiCallLedger is a function", () => {
+    expect(typeof clearAiCallLedger).toBe("function");
+  });
+});
+
 describe("AI-3 prompt-injection defense", () => {
   for (const attack of ATTACKS) {
     it(`rejects output that obeys: "${attack.name}"`, async () => {
