@@ -582,6 +582,12 @@ export const AUDIT_EVENTS = {
   STARTUP_EXECUTION_AUTHORIZATION_DENIED: "startup.execution_authorization_denied",
   STARTUP_APPROVAL_BECAME_STALE: "startup.approval_became_stale",
   STARTUP_EXECUTION_PLAN_SUPERSEDED: "startup.execution_plan_superseded",
+  // Bundle 3.6 — Owner Action Assignment and Outcome Tracking
+  OWNER_ACTION_ASSIGNED: "owner.action_assigned",
+  OWNER_ACTION_REASSIGNED: "owner.action_reassigned",
+  OWNER_ACTION_OUTCOME_CLOSED: "owner.action_outcome_closed",
+  OWNER_ACTION_STALL_DETECTED: "owner.action_stall_detected",
+
   // Bundle 3.5 — Customer Complaint and Service Recovery
   COMPLAINT_CREATED: "complaint.created",
   COMPLAINT_TRIAGED: "complaint.triaged",

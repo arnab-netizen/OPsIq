@@ -6247,3 +6247,32 @@ model ComplaintRecoveryAction {
   @@index([workspaceId, completedAt])
   @@map("complaint_recovery_actions")
 }
+
+model OwnerActionAssignment {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  businessId     String    @map("business_id") @db.Uuid
+  idempotencyKey String    @map("idempotency_key")
+  actionId       String    @map("action_id")
+  actionDomain   String    @map("action_domain")
+  assignedTo     String    @map("assigned_to")
+  assignedById   String    @map("assigned_by_id") @db.Uuid
+  priority       String    @default("MEDIUM")
+  dueAt          DateTime? @map("due_at")
+  status         String    @default("ASSIGNED")
+  stallDetected  Boolean   @default(false) @map("stall_detected")
+  outcomeNote    String?   @map("outcome_note") @db.Text
+  reassignReason String?   @map("reassign_reason") @db.Text
+  createdBy      String    @map("created_by") @db.Uuid
+  updatedBy      String?   @map("updated_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, idempotencyKey], map: "owner_action_assignments_ws_idem")
+  @@index([workspaceId, status])
+  @@index([workspaceId, businessId])
+  @@index([workspaceId, assignedTo])
+  @@index([workspaceId, dueAt])
+  @@index([workspaceId, stallDetected])
+  @@map("owner_action_assignments")
+}
