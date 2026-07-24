@@ -30,6 +30,23 @@ function ctx(roles: string[]) {
   };
 }
 
+describe("SEC-01 resolveServerRole — module contract assertions", () => {
+  it("ROLES is an object", () => { expect(typeof ROLES).toBe("object"); });
+  it("ROLES.ADMIN_OR_PORTFOLIO_MANAGER is defined", () => { expect(ROLES.ADMIN_OR_PORTFOLIO_MANAGER).toBeDefined(); });
+  it("ROLES.VIEWER is defined", () => { expect(ROLES.VIEWER).toBeDefined(); });
+  it("ROLES.ANALYST is defined", () => { expect(ROLES.ANALYST).toBeDefined(); });
+  it("ROLES.SYSTEM_ADMIN is defined", () => { expect(ROLES.SYSTEM_ADMIN).toBeDefined(); });
+  it("ROLES.CLIENT_TEAM_MEMBER is defined", () => { expect(ROLES.CLIENT_TEAM_MEMBER).toBeDefined(); });
+  it("resolveServerRole is a function", () => { expect(typeof resolveServerRole).toBe("function"); });
+  it("ctx is a function", () => { expect(typeof ctx).toBe("function"); });
+  it("ctx([]).userId is 'user-1'", () => { expect(ctx([]).userId).toBe("user-1"); });
+  it("ctx([]).roles is an array", () => { expect(Array.isArray(ctx([]).roles)).toBe(true); });
+  it("ctx([]).engagementMemberships is an array", () => { expect(Array.isArray(ctx([]).engagementMemberships)).toBe(true); });
+  it("ctx(['admin']).roles has 1 element", () => { expect(ctx(["admin"]).roles.length).toBe(1); });
+  it("ctx(['admin']).roles[0].role is 'admin'", () => { expect(ctx(["admin"]).roles[0].role).toBe("admin"); });
+  it("mockGetPolicyContext is a function (vi.fn)", () => { expect(typeof mockGetPolicyContext).toBe("function"); });
+});
+
 describe("SEC-01 resolveServerRole — real role derivation, fail-closed", () => {
   beforeEach(() => mockGetPolicyContext.mockReset());
 

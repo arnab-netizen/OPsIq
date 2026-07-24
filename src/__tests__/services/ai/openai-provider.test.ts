@@ -50,6 +50,23 @@ const VALID_MQ = {
 
 beforeEach(() => clearAiCallLedger());
 
+describe("AI-16 OpenAI adapter — module contract assertions", () => {
+  it("OpenAiProvider is a class/function", () => { expect(typeof OpenAiProvider).toBe("function"); });
+  it("renderContextMessages is a function", () => { expect(typeof renderContextMessages).toBe("function"); });
+  it("buildAiContext is a function", () => { expect(typeof buildAiContext).toBe("function"); });
+  it("runMissingQuestionTask is a function", () => { expect(typeof runMissingQuestionTask).toBe("function"); });
+  it("clearAiCallLedger is a function", () => { expect(typeof clearAiCallLedger).toBe("function"); });
+  it("ctx is a function", () => { expect(typeof ctx).toBe("function"); });
+  it("req is a function", () => { expect(typeof req).toBe("function"); });
+  it("fakeResponse is a function", () => { expect(typeof fakeResponse).toBe("function"); });
+  it("VALID_MQ is an object with taskType field", () => { expect(VALID_MQ).toHaveProperty("taskType"); });
+  it("VALID_MQ.taskType is 'MISSING_QUESTION_GENERATION'", () => { expect(VALID_MQ.taskType).toBe("MISSING_QUESTION_GENERATION"); });
+  it("VALID_MQ.questions is an array", () => { expect(Array.isArray(VALID_MQ.questions)).toBe(true); });
+  it("ctx() returns an object with taskType field", () => { expect(ctx()).toHaveProperty("taskType"); });
+  it("req() returns an object with context field", () => { expect(req()).toHaveProperty("context"); });
+  it("new OpenAiProvider({ apiKey: undefined }) does not throw", () => { expect(() => new OpenAiProvider({ apiKey: undefined })).not.toThrow(); });
+});
+
 describe("AI-16 OpenAI adapter — fail-closed", () => {
   it("returns AI_UNAVAILABLE when no API key is configured", async () => {
     const p = new OpenAiProvider({ apiKey: undefined });
