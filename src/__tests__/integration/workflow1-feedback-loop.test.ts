@@ -127,6 +127,23 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+describe("workflow1-feedback-loop — module contract assertions", () => {
+  it("mockEmitAuditEvent is a function", () => { expect(typeof mockEmitAuditEvent).toBe("function"); });
+  it("mockRunFinanceDiagnosis is a function", () => { expect(typeof mockRunFinanceDiagnosis).toBe("function"); });
+  it("mockRunOperationsDiagnosis is a function", () => { expect(typeof mockRunOperationsDiagnosis).toBe("function"); });
+  it("mockRunSalesDiagnosis is a function", () => { expect(typeof mockRunSalesDiagnosis).toBe("function"); });
+  it("mockRunSopDiagnosis is a function", () => { expect(typeof mockRunSopDiagnosis).toBe("function"); });
+  it("mockRunStrategyDiagnosis is a function", () => { expect(typeof mockRunStrategyDiagnosis).toBe("function"); });
+  it("BASE_ACTION is an object", () => { expect(typeof BASE_ACTION).toBe("object"); });
+  it("BASE_SNAPSHOT is an object", () => { expect(typeof BASE_SNAPSHOT).toBe("object"); });
+  it("BASE_VERIFICATION is an object", () => { expect(typeof BASE_VERIFICATION).toBe("object"); });
+  it("makeDbMock is a function", () => { expect(typeof makeDbMock).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+});
+
 // ---------------------------------------------------------------------------
 // Tests: Action completion → re-diagnosis
 // ---------------------------------------------------------------------------

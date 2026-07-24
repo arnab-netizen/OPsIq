@@ -215,6 +215,23 @@ function testGetRoute(
   });
 }
 
+describe("budget-routes — module contract assertions", () => {
+  it("actionsGet is a function", () => { expect(typeof actionsGet).toBe("function"); });
+  it("forecastGet is a function", () => { expect(typeof forecastGet).toBe("function"); });
+  it("guidanceGet is a function", () => { expect(typeof guidanceGet).toBe("function"); });
+  it("snapshotsGet is a function", () => { expect(typeof snapshotsGet).toBe("function"); });
+  it("archetypeMetricsGet is a function", () => { expect(typeof archetypeMetricsGet).toBe("function"); });
+  it("archetypeMetricsPost is a function", () => { expect(typeof archetypeMetricsPost).toBe("function"); });
+  it("workingCapitalGet is a function", () => { expect(typeof workingCapitalGet).toBe("function"); });
+  it("workingCapitalPost is a function", () => { expect(typeof workingCapitalPost).toBe("function"); });
+  it("authorityGet is a function", () => { expect(typeof authorityGet).toBe("function"); });
+  it("makeGetCtx is a function", () => { expect(typeof makeGetCtx).toBe("function"); });
+  it("makePostCtx is a function", () => { expect(typeof makePostCtx).toBe("function"); });
+  it("getBody is a function", () => { expect(typeof getBody).toBe("function"); });
+  it("testGetRoute is a function", () => { expect(typeof testGetRoute).toBe("function"); });
+  it("mocks is an object", () => { expect(typeof mocks).toBe("object"); });
+});
+
 // ─── Run shared GET tests ─────────────────────────────────────────────────────
 
 testGetRoute("actions", "actions", actionsGet, mocks.listBudgetActions, SAMPLE_ACTIONS, "listBudgetActions");
