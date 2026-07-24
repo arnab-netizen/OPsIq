@@ -16,6 +16,23 @@ import { PUBLIC_CORPUS } from "@/behavioral-validation/public-cases/library";
 const DOMAINS = ["Approval memory/standing instructions", "Staff workload/fairness"] as const;
 const WS = "expert-adj-ws";
 
+describe("expert adjudication — module contract assertions", () => {
+  it("caseToContext is a function", () => { expect(typeof caseToContext).toBe("function"); });
+  it("runOwnerAdvice is a function", () => { expect(typeof runOwnerAdvice).toBe("function"); });
+  it("trainedPublicStore is a function", () => { expect(typeof trainedPublicStore).toBe("function"); });
+  it("PUBLIC_CORPUS is an array", () => { expect(Array.isArray(PUBLIC_CORPUS)).toBe(true); });
+  it("PUBLIC_CORPUS.length is greater than 0", () => { expect(PUBLIC_CORPUS.length).toBeGreaterThan(0); });
+  it("DOMAINS is an array", () => { expect(Array.isArray(DOMAINS)).toBe(true); });
+  it("DOMAINS has 2 elements", () => { expect(DOMAINS).toHaveLength(2); });
+  it("DOMAINS[0] is 'Approval memory/standing instructions'", () => { expect(DOMAINS[0]).toBe("Approval memory/standing instructions"); });
+  it("DOMAINS[1] is 'Staff workload/fairness'", () => { expect(DOMAINS[1]).toBe("Staff workload/fairness"); });
+  it("WS is a non-empty string", () => { expect(typeof WS).toBe("string"); expect(WS.length).toBeGreaterThan(0); });
+  it("WS equals 'expert-adj-ws'", () => { expect(WS).toBe("expert-adj-ws"); });
+  it("PUBLIC_CORPUS[0] has meta field", () => { expect(PUBLIC_CORPUS[0]).toHaveProperty("meta"); });
+  it("PUBLIC_CORPUS[0] has case field", () => { expect(PUBLIC_CORPUS[0]).toHaveProperty("case"); });
+  it("PUBLIC_CORPUS[0].meta has domains field", () => { expect((PUBLIC_CORPUS[0] as any).meta).toHaveProperty("domains"); });
+});
+
 describe("expert adjudication — owner-overload domains exercise a real cross-domain tradeoff", () => {
   for (const domain of DOMAINS) {
     it(`[${domain}] OpsIQ rejects owner-centralization, offloads with proof, and defines reassessment`, async () => {

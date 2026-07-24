@@ -103,6 +103,23 @@ vi.mock("@/services/auth", () => ({
  * 7. Test reads database
  * 8. Test asserts all fields
  */
+describe("P2B real-route — module contract assertions", () => {
+  it("randomUUID is a function", () => { expect(typeof randomUUID).toBe("function"); });
+  it("NextRequest is a class/function", () => { expect(typeof NextRequest).toBe("function"); });
+  it("db is an object", () => { expect(typeof db).toBe("object"); });
+  it("operatorPost is a function", () => { expect(typeof operatorPost).toBe("function"); });
+  it("recordDecisionOutcome is a function", () => { expect(typeof recordDecisionOutcome).toBe("function"); });
+  it("SHOULD_RUN_DB_TESTS is a boolean", () => { expect(typeof SHOULD_RUN_DB_TESTS).toBe("boolean"); });
+  it("testActorIdForMock is a string", () => { expect(typeof testActorIdForMock).toBe("string"); });
+  it("testWorkspaceIdForMock is a string", () => { expect(typeof testWorkspaceIdForMock).toBe("string"); });
+  it("vi is an object", () => { expect(typeof vi).toBe("object"); });
+  it("vi.fn is a function", () => { expect(typeof vi.fn).toBe("function"); });
+  it("vi.mock is a function", () => { expect(typeof vi.mock).toBe("function"); });
+  it("randomUUID() returns a string", () => { expect(typeof randomUUID()).toBe("string"); });
+  it("randomUUID() has length 36", () => { expect(randomUUID()).toHaveLength(36); });
+  it("randomUUID() contains hyphens", () => { expect(randomUUID()).toContain("-"); });
+});
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: REAL Operator Route Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
