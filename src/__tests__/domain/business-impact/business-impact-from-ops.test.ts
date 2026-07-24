@@ -33,6 +33,60 @@ function opsDriven(over: Partial<OpsDrivenInputs> = {}): OpsDrivenInputs {
   };
 }
 
+describe("business impact from ops — module contract assertions", () => {
+  it("composeBusinessImpactFromOps is a function", () => {
+    expect(typeof composeBusinessImpactFromOps).toBe("function");
+  });
+  it("deriveOpsImpact is a function", () => {
+    expect(typeof deriveOpsImpact).toBe("function");
+  });
+  it("evaluateBusinessImpactGate is a function", () => {
+    expect(typeof evaluateBusinessImpactGate).toBe("function");
+  });
+  it("assessEmployeeWorkload is a function", () => {
+    expect(typeof assessEmployeeWorkload).toBe("function");
+  });
+  it("assessOwnerWorkload is a function", () => {
+    expect(typeof assessOwnerWorkload).toBe("function");
+  });
+  it("assessCapacity is a function", () => {
+    expect(typeof assessCapacity).toBe("function");
+  });
+  it("dim() returns an object with direction field", () => {
+    expect(dim()).toHaveProperty("direction");
+  });
+  it("dim() returns an object with magnitude field", () => {
+    expect(dim()).toHaveProperty("magnitude");
+  });
+  it("dim() returns an object with rationale field", () => {
+    expect(dim()).toHaveProperty("rationale");
+  });
+  it("healthyOps() returns an object with dataSufficient field", () => {
+    expect(healthyOps()).toHaveProperty("dataSufficient");
+  });
+  it("opsDriven() returns an object with recommendationId 'rec-1'", () => {
+    expect(opsDriven().recommendationId).toBe("rec-1");
+  });
+  it("LeanClassification.LEAN_APPROVED is defined", () => {
+    expect(LeanClassification.LEAN_APPROVED).toBeDefined();
+  });
+  it("EvidenceConfidenceLevel.MODERATE is defined", () => {
+    expect(EvidenceConfidenceLevel.MODERATE).toBeDefined();
+  });
+  it("deriveOpsImpact returns object with staffWorkloadImpact", () => {
+    expect(deriveOpsImpact(healthyOps())).toHaveProperty("staffWorkloadImpact");
+  });
+  it("evaluateBusinessImpactGate returns object with ok boolean", () => {
+    const a = composeBusinessImpactFromOps(opsDriven());
+    const g = evaluateBusinessImpactGate(a, { recommendationId: "rec-1", workspaceId: "ws-1" });
+    expect(typeof g.ok).toBe("boolean");
+  });
+  it("healthy ops passes the gate", () => {
+    const a = composeBusinessImpactFromOps(opsDriven());
+    expect(evaluateBusinessImpactGate(a, { recommendationId: "rec-1", workspaceId: "ws-1" }).ok).toBe(true);
+  });
+});
+
 describe("[stage3->m1] business impact from ops", () => {
   it("derives workload/capacity dimensions + lean classification from ops cores", () => {
     const d = deriveOpsImpact(healthyOps());
