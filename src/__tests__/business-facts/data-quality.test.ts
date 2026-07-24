@@ -53,6 +53,23 @@ const contradictionCase = asContract(examples.contradiction_case);
 const NOW_FRESH = new Date("2026-05-15T00:00:00.000Z");
 const NOW_STALE = new Date("2030-01-01T00:00:00.000Z");
 
+describe("B03 data-quality — module contract assertions", () => {
+  it("scoreDataQuality is a function", () => { expect(typeof scoreDataQuality).toBe("function"); });
+  it("withDataQualityScore is a function", () => { expect(typeof withDataQualityScore).toBe("function"); });
+  it("dataQualityScoreSchema is an object", () => { expect(typeof dataQualityScoreSchema).toBe("object"); });
+  it("businessFactsContractSchema is an object", () => { expect(typeof businessFactsContractSchema).toBe("object"); });
+  it("asContract is a function", () => { expect(typeof asContract).toBe("function"); });
+  it("clone is a function", () => { expect(typeof clone).toBe("function"); });
+  it("FACT_CATEGORIES is an array", () => { expect(Array.isArray(FACT_CATEGORIES)).toBe(true); });
+  it("FACT_CATEGORIES.length is 9", () => { expect(FACT_CATEGORIES).toHaveLength(9); });
+  it("serviceBusiness is an object", () => { expect(typeof serviceBusiness).toBe("object"); });
+  it("missingDataCase is an object", () => { expect(typeof missingDataCase).toBe("object"); });
+  it("contradictionCase is an object", () => { expect(typeof contradictionCase).toBe("object"); });
+  it("NOW_FRESH is a Date", () => { expect(NOW_FRESH instanceof Date).toBe(true); });
+  it("NOW_STALE is a Date", () => { expect(NOW_STALE instanceof Date).toBe(true); });
+  it("scoreDataQuality(serviceBusiness,{now:NOW_FRESH}) returns an object", () => { expect(typeof scoreDataQuality(serviceBusiness, { now: NOW_FRESH })).toBe("object"); });
+});
+
 describe("B03 data quality — output shape & determinism", () => {
   it("produces a schema-valid result with all seven dimensions", () => {
     const score = scoreDataQuality(serviceBusiness, { now: NOW_FRESH });

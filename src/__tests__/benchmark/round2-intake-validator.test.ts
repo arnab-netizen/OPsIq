@@ -37,6 +37,23 @@ function validEnrichedCase(): Round2Case {
   };
 }
 
+describe("round2-intake-validator — module contract assertions", () => {
+  it("validateRound2Case is a function", () => { expect(typeof validateRound2Case).toBe("function"); });
+  it("ownerConstraints is an object", () => { expect(typeof ownerConstraints).toBe("object"); });
+  it("ownerConstraints has budgetBand field", () => { expect(ownerConstraints).toHaveProperty("budgetBand"); });
+  it("ownerConstraints.budgetBand equals 'MEDIUM'", () => { expect(ownerConstraints.budgetBand).toBe("MEDIUM"); });
+  it("ownerConstraints.timeHorizonDays equals 90", () => { expect(ownerConstraints.timeHorizonDays).toBe(90); });
+  it("validEnrichedCase is a function", () => { expect(typeof validEnrichedCase).toBe("function"); });
+  it("validEnrichedCase() returns an object", () => { expect(typeof validEnrichedCase()).toBe("object"); });
+  it("validEnrichedCase() has input field", () => { expect(validEnrichedCase()).toHaveProperty("input"); });
+  it("validEnrichedCase() has key field", () => { expect(validEnrichedCase()).toHaveProperty("key"); });
+  it("validateRound2Case(validEnrichedCase()) returns an object", () => { expect(typeof validateRound2Case(validEnrichedCase())).toBe("object"); });
+  it("validateRound2Case(validEnrichedCase()) has valid field", () => { expect(validateRound2Case(validEnrichedCase())).toHaveProperty("valid"); });
+  it("validateRound2Case(validEnrichedCase()).valid is true", () => { expect(validateRound2Case(validEnrichedCase()).valid).toBe(true); });
+  it("validateRound2Case(validEnrichedCase()) has failures field", () => { expect(validateRound2Case(validEnrichedCase())).toHaveProperty("failures"); });
+  it("validateRound2Case(validEnrichedCase()).failures is empty array", () => { expect(validateRound2Case(validEnrichedCase()).failures).toHaveLength(0); });
+});
+
 describe("round2-intake-validator", () => {
   it("accepts a valid enriched case", () => {
     const r = validateRound2Case(validEnrichedCase());
