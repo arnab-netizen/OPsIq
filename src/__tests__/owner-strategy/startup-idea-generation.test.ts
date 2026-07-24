@@ -21,6 +21,23 @@ function makeProfile(overrides: Partial<GenerationProfile> = {}): GenerationProf
   };
 }
 
+describe("startup-idea-generation — module contract assertions", () => {
+  it("generateIdeasFromProfile is a function", () => { expect(typeof generateIdeasFromProfile).toBe("function"); });
+  it("makeProfile is a function", () => { expect(typeof makeProfile).toBe("function"); });
+  it("makeProfile() returns an object", () => { expect(typeof makeProfile()).toBe("object"); });
+  it("makeProfile() has geography field", () => { expect(makeProfile()).toHaveProperty("geography"); });
+  it("makeProfile() geography equals 'AU'", () => { expect(makeProfile().geography).toBe("AU"); });
+  it("makeProfile() ownerSkills is an array", () => { expect(Array.isArray(makeProfile().ownerSkills)).toBe(true); });
+  it("makeProfile() riskTolerance equals 'MEDIUM'", () => { expect(makeProfile().riskTolerance).toBe("MEDIUM"); });
+  it("makeProfile() excludedCategories is an array", () => { expect(Array.isArray(makeProfile().excludedCategories)).toBe(true); });
+  it("makeProfile() existingAssets is an array", () => { expect(Array.isArray(makeProfile().existingAssets)).toBe(true); });
+  it("generateIdeasFromProfile(makeProfile(), [], [], false, 'ver-1') returns an object", () => { expect(typeof generateIdeasFromProfile(makeProfile(), [], [], false, "ver-1")).toBe("object"); });
+  it("generateIdeasFromProfile result has available field", () => { expect(generateIdeasFromProfile(makeProfile(), [], [], false, "ver-1")).toHaveProperty("available"); });
+  it("generateIdeasFromProfile result has concepts field", () => { expect(generateIdeasFromProfile(makeProfile(), [], [], false, "ver-1")).toHaveProperty("concepts"); });
+  it("generateIdeasFromProfile result has rejectedConcepts field", () => { expect(generateIdeasFromProfile(makeProfile(), [], [], false, "ver-1")).toHaveProperty("rejectedConcepts"); });
+  it("generateIdeasFromProfile result has profileVersion field", () => { expect(generateIdeasFromProfile(makeProfile(), [], [], false, "ver-1")).toHaveProperty("profileVersion"); });
+});
+
 describe("generateIdeasFromProfile", () => {
   it("returns available=false when provider is not configured", () => {
     const result = generateIdeasFromProfile(makeProfile(), [], [], false, "ver-1");

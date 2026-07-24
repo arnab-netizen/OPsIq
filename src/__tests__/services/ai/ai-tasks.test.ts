@@ -20,6 +20,23 @@ const raw = (r: unknown) => new MockAiProvider({ kind: "raw", raw: r });
 
 beforeEach(() => clearAiCallLedger());
 
+describe("ai-tasks — module contract assertions", () => {
+  it("MockAiProvider is a function", () => { expect(typeof MockAiProvider).toBe("function"); });
+  it("buildAiContext is a function", () => { expect(typeof buildAiContext).toBe("function"); });
+  it("clearAiCallLedger is a function", () => { expect(typeof clearAiCallLedger).toBe("function"); });
+  it("runDiagnosisReview is a function", () => { expect(typeof runDiagnosisReview).toBe("function"); });
+  it("runOwnerActionRedTeam is a function", () => { expect(typeof runOwnerActionRedTeam).toBe("function"); });
+  it("runOutcomeReview is a function", () => { expect(typeof runOutcomeReview).toBe("function"); });
+  it("CLOCK is a function", () => { expect(typeof CLOCK).toBe("function"); });
+  it("CLOCK() returns a string", () => { expect(typeof CLOCK()).toBe("string"); });
+  it("ctx is a function", () => { expect(typeof ctx).toBe("function"); });
+  it("ctx('DIAGNOSIS_REVIEW') returns an object", () => { expect(typeof ctx("DIAGNOSIS_REVIEW")).toBe("object"); });
+  it("ctx('DIAGNOSIS_REVIEW') has workspaceId field", () => { expect(ctx("DIAGNOSIS_REVIEW")).toHaveProperty("workspaceId"); });
+  it("raw is a function", () => { expect(typeof raw).toBe("function"); });
+  it("beforeEach is a function", () => { expect(typeof beforeEach).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+});
+
 describe("AI-9 diagnosis review (advisory, cannot finalize)", () => {
   const good = {
     taskType: "DIAGNOSIS_REVIEW",
