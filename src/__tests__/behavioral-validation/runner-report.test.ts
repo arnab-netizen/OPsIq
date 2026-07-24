@@ -6,6 +6,25 @@ import { scoreAdvice } from "@/behavioral-validation/scorer";
 import { emptyAdvise } from "@/behavioral-validation/advisor";
 import { SEED_CASES } from "@/behavioral-validation/seed-cases";
 
+describe("validation runner — module contract assertions", () => {
+  it("runValidation is a function", () => { expect(typeof runValidation).toBe("function"); });
+  it("buildReport is a function", () => { expect(typeof buildReport).toBe("function"); });
+  it("classify is a function", () => { expect(typeof classify).toBe("function"); });
+  it("CLASSIFICATION_LADDER is an array", () => { expect(Array.isArray(CLASSIFICATION_LADDER)).toBe(true); });
+  it("classifyFailure is a function", () => { expect(typeof classifyFailure).toBe("function"); });
+  it("scoreAdvice is a function", () => { expect(typeof scoreAdvice).toBe("function"); });
+  it("emptyAdvise is a function", () => { expect(typeof emptyAdvise).toBe("function"); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("CLASSIFICATION_LADDER has at least 1 element", () => { expect(CLASSIFICATION_LADDER.length).toBeGreaterThan(0); });
+  it("CLASSIFICATION_LADDER contains BEHAVIORAL_HARNESS_VALIDATED_LEARNING_PROVEN", () => {
+    expect(CLASSIFICATION_LADDER).toContain("BEHAVIORAL_HARNESS_VALIDATED_LEARNING_PROVEN");
+  });
+  it("SEED_CASES has at least 1 element", () => { expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("emptyAdvise() returns an object", () => { expect(typeof emptyAdvise()).toBe("object"); });
+  it("SEED_CASES[0] has a flags field", () => { expect(SEED_CASES[0]).toHaveProperty("flags"); });
+  it("SEED_CASES[0].flags is an object", () => { expect(typeof SEED_CASES[0].flags).toBe("object"); });
+});
+
 describe("validation runner — three modes", () => {
   it("smoke runs 25 cases deterministically", async () => {
     const r1 = await runValidation("smoke");

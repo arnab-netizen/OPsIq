@@ -13,6 +13,23 @@ const good = (): EvidenceTrace => ({
   missingData: [], staleData: [], conflictingData: [], whatWouldChange: "runway > 45 days", canProceedNow: true,
 });
 
+describe("evidence-to-claim traceability — module contract assertions", () => {
+  it("validateEvidenceTrace is a function", () => { expect(typeof validateEvidenceTrace).toBe("function"); });
+  it("buildEvidenceTrace is a function", () => { expect(typeof buildEvidenceTrace).toBe("function"); });
+  it("effectiveConfidence is a function", () => { expect(typeof effectiveConfidence).toBe("function"); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("good() returns an object", () => { expect(typeof good()).toBe("object"); });
+  it("good() has claim field", () => { expect(good()).toHaveProperty("claim"); });
+  it("good() has evidence field", () => { expect(good()).toHaveProperty("evidence"); });
+  it("good() has confidence field", () => { expect(good()).toHaveProperty("confidence"); });
+  it("good().confidence is 'high'", () => { expect(good().confidence).toBe("high"); });
+  it("good().canProceedNow is true", () => { expect(good().canProceedNow).toBe(true); });
+  it("validateEvidenceTrace(good()) returns ok:true", () => { expect(validateEvidenceTrace(good()).ok).toBe(true); });
+  it("effectiveConfidence(good()) returns 'high'", () => { expect(effectiveConfidence(good())).toBe("high"); });
+  it("SEED_CASES has at least 1 element", () => { expect(SEED_CASES.length).toBeGreaterThan(0); });
+});
+
 describe("evidence-to-claim traceability", () => {
   it("a recommendation without an evidence trace fails", () => {
     const r = validateEvidenceTrace({ ...good(), evidence: [], references: [] });
