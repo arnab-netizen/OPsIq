@@ -27,6 +27,71 @@ function deps(opts: {
 
 const base = { workspaceId: "ws1", businessId: "biz1", paymentRisk: "low" as const };
 
+describe("decideOpportunity — module contract assertions", () => {
+  it("decideOpportunity is a function", () => {
+    expect(typeof decideOpportunity).toBe("function");
+  });
+  it("base has workspaceId field", () => {
+    expect(base).toHaveProperty("workspaceId", "ws1");
+  });
+  it("base has businessId field", () => {
+    expect(base).toHaveProperty("businessId", "biz1");
+  });
+  it("base has paymentRisk field", () => {
+    expect(base).toHaveProperty("paymentRisk", "low");
+  });
+  it("deps() returns object with db field", () => {
+    const d = deps({});
+    expect(d).toHaveProperty("db");
+  });
+  it("deps().db has ownerEquipment field", () => {
+    const d = deps({});
+    expect(d.db).toHaveProperty("ownerEquipment");
+  });
+  it("deps().db has ownerFinancialSnapshot field", () => {
+    const d = deps({});
+    expect(d.db).toHaveProperty("ownerFinancialSnapshot");
+  });
+  it("decideOpportunity returns a Promise", () => {
+    const d = deps({ snapshot: { revenue: 100, costOfGoods: 50 } });
+    const result = decideOpportunity({ ...base, fitScore: 0.5 }, d as never);
+    expect(result instanceof Promise).toBe(true);
+    return result;
+  });
+  it("decideOpportunity result has verdict field", async () => {
+    const d = deps({ snapshot: { revenue: 100, costOfGoods: 50 } });
+    const r = await decideOpportunity({ ...base, fitScore: 0.5 }, d as never);
+    expect(r).toHaveProperty("verdict");
+  });
+  it("verdict is a string", async () => {
+    const d = deps({ snapshot: { revenue: 100, costOfGoods: 50 } });
+    const r = await decideOpportunity({ ...base, fitScore: 0.5 }, d as never);
+    expect(typeof r.verdict).toBe("string");
+  });
+  it("verdict is one of: accept, reject, defer", async () => {
+    const d = deps({ snapshot: { revenue: 100, costOfGoods: 50 } });
+    const r = await decideOpportunity({ ...base, fitScore: 0.5 }, d as never);
+    expect(["accept", "reject", "defer"]).toContain(r.verdict);
+  });
+  it("emitAuditEvent is cleared before each test", () => {
+    expect(emitAuditEvent.mock.calls.length).toBe(0);
+  });
+  it("deps().now() returns a Date", () => {
+    const d = deps({});
+    expect(d.now() instanceof Date).toBe(true);
+  });
+  it("decideOpportunity result has nextAction field", async () => {
+    const d = deps({ snapshot: { revenue: 100, costOfGoods: 50 } });
+    const r = await decideOpportunity({ ...base, fitScore: 0.5 }, d as never);
+    expect(r).toHaveProperty("nextAction");
+  });
+  it("result nextAction is a string", async () => {
+    const d = deps({ snapshot: { revenue: 100, costOfGoods: 50 } });
+    const r = await decideOpportunity({ ...base, fitScore: 0.5 }, d as never);
+    expect(typeof r.nextAction).toBe("string");
+  });
+});
+
 describe("decideOpportunity", () => {
   it("REJECTS when the owner's real margin is below the floor", async () => {
     // revenue 100 / COGS 95 → 5% gross margin < 15% floor

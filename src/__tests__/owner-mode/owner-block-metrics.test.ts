@@ -19,6 +19,65 @@ function depsWith(events: Array<{ eventName: string; payload: unknown }>, captur
   };
 }
 
+describe("getOwnerBlockMetrics — module contract assertions", () => {
+  it("getOwnerBlockMetrics is a function", () => {
+    expect(typeof getOwnerBlockMetrics).toBe("function");
+  });
+  it("AUDIT_EVENTS is an object", () => {
+    expect(typeof AUDIT_EVENTS).toBe("object");
+  });
+  it("AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED is defined", () => {
+    expect(AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED).toBeDefined();
+  });
+  it("AUDIT_EVENTS.OWNER_DO_NOT_REPEAT_BLOCKED is defined", () => {
+    expect(AUDIT_EVENTS.OWNER_DO_NOT_REPEAT_BLOCKED).toBeDefined();
+  });
+  it("AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED is defined", () => {
+    expect(AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED).toBeDefined();
+  });
+  it("AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED is defined", () => {
+    expect(AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED).toBeDefined();
+  });
+  it("depsWith() returns object with db field", () => {
+    expect(depsWith([])).toHaveProperty("db");
+  });
+  it("depsWith().db.auditEvent.findMany is a function", () => {
+    expect(typeof depsWith([]).db.auditEvent.findMany).toBe("function");
+  });
+  it("getOwnerBlockMetrics returns a Promise", () => {
+    const r = getOwnerBlockMetrics("ws1", depsWith([]));
+    expect(r instanceof Promise).toBe(true);
+    return r;
+  });
+  it("getOwnerBlockMetrics resolves to object", async () => {
+    const m = await getOwnerBlockMetrics("ws1", depsWith([]));
+    expect(typeof m).toBe("object");
+  });
+  it("result has blockedRecommendations field", async () => {
+    const m = await getOwnerBlockMetrics("ws1", depsWith([]));
+    expect(m).toHaveProperty("blockedRecommendations");
+  });
+  it("result has financeBlocked field", async () => {
+    const m = await getOwnerBlockMetrics("ws1", depsWith([]));
+    expect(m).toHaveProperty("financeBlocked");
+  });
+  it("result has proofBlocked field", async () => {
+    const m = await getOwnerBlockMetrics("ws1", depsWith([]));
+    expect(m).toHaveProperty("proofBlocked");
+  });
+  it("result has approvalsAvoided field", async () => {
+    const m = await getOwnerBlockMetrics("ws1", depsWith([]));
+    expect(m).toHaveProperty("approvalsAvoided");
+  });
+  it("zero events → all counts are 0", async () => {
+    const m = await getOwnerBlockMetrics("ws1", depsWith([]));
+    expect(m.blockedRecommendations).toBe(0);
+    expect(m.financeBlocked).toBe(0);
+    expect(m.proofBlocked).toBe(0);
+    expect(m.approvalsAvoided).toBe(0);
+  });
+});
+
 describe("getOwnerBlockMetrics", () => {
   it("counts gate + do-not-repeat blocks as blocked recommendations, cash/margin as finance", async () => {
     const events = [

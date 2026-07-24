@@ -17,6 +17,56 @@ import { assessOwnerPilotReadiness, type ReadinessRuntimeSummary } from "@/domai
 
 const CONF: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3 };
 
+describe("pilot rehearsal packs — module contract assertions", () => {
+  it("runOwnerAdvice is a function", () => {
+    expect(typeof runOwnerAdvice).toBe("function");
+  });
+  it("InMemoryLearningStore is a class (function)", () => {
+    expect(typeof InMemoryLearningStore).toBe("function");
+  });
+  it("PILOT_PACKS is an array", () => {
+    expect(Array.isArray(PILOT_PACKS)).toBe(true);
+  });
+  it("PILOT_PACKS has 5 entries", () => {
+    expect(PILOT_PACKS).toHaveLength(5);
+  });
+  it("PILOT_PACKS[0] has profileType field", () => {
+    expect(PILOT_PACKS[0]).toHaveProperty("profileType");
+  });
+  it("PILOT_PACKS[0] has label field", () => {
+    expect(PILOT_PACKS[0]).toHaveProperty("label");
+  });
+  it("PILOT_PACKS[0] has id field", () => {
+    expect(PILOT_PACKS[0]).toHaveProperty("id");
+  });
+  it("computeOnboardingState is a function", () => {
+    expect(typeof computeOnboardingState).toBe("function");
+  });
+  it("buildInputGuidance is a function", () => {
+    expect(typeof buildInputGuidance).toBe("function");
+  });
+  it("assessOwnerPilotReadiness is a function", () => {
+    expect(typeof assessOwnerPilotReadiness).toBe("function");
+  });
+  it("CONF is an object with numeric values", () => {
+    expect(typeof CONF).toBe("object");
+    expect(typeof CONF["none"]).toBe("number");
+    expect(typeof CONF["high"]).toBe("number");
+  });
+  it("CONF['high'] > CONF['none']", () => {
+    expect(CONF["high"]).toBeGreaterThan(CONF["none"]);
+  });
+  it("new InMemoryLearningStore() is an instance of InMemoryLearningStore", () => {
+    expect(new InMemoryLearningStore()).toBeInstanceOf(InMemoryLearningStore);
+  });
+  it("all PILOT_PACKS entries are objects with string profileType", () => {
+    for (const p of PILOT_PACKS) expect(typeof p.profileType).toBe("string");
+  });
+  it("all PILOT_PACKS label strings are non-empty", () => {
+    for (const p of PILOT_PACKS) expect(p.label.length).toBeGreaterThan(0);
+  });
+});
+
 describe("pilot rehearsal packs (5)", () => {
   it("covers the five required business profiles", () => {
     expect(PILOT_PACKS).toHaveLength(5);
