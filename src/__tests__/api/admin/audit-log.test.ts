@@ -139,4 +139,105 @@ describe("Phase D1-A: GET /api/admin/audit-log", () => {
     expect(mocks.queryAuditLogForAdmin).toHaveBeenCalledTimes(1);
     expect(Object.keys(mocks)).toEqual(["queryAuditLogForAdmin"]);
   });
+
+  it("returns empty events array when no events exist", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue({ events: [], pagination: { limit: 100, cursor: null, nextCursor: null, hasMore: false } });
+    const res = (await GET(makeCtx("https://x/api/admin/audit-log"))) as typeof sampleResult;
+    expect(res.events).toHaveLength(0);
+  });
+
+  it("pagination object has hasMore boolean field", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/audit-log"))) as typeof sampleResult;
+    expect(res.pagination).toHaveProperty("hasMore");
+    expect(typeof res.pagination.hasMore).toBe("boolean");
+  });
+
+  it("pagination object has nextCursor field", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/audit-log"))) as typeof sampleResult;
+    expect(res.pagination).toHaveProperty("nextCursor");
+  });
+
+  it("pagination object has limit field", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/audit-log"))) as typeof sampleResult;
+    expect(res.pagination).toHaveProperty("limit");
+    expect(typeof res.pagination.limit).toBe("number");
+  });
+
+  it("event has all required fields: id, workspaceId, eventName, entityType, entityId, actorId, occurredAt", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/audit-log"))) as typeof sampleResult;
+    const event = res.events[0];
+    expect(event).toMatchObject({
+      id: expect.any(String),
+      workspaceId: expect.any(String),
+      eventName: expect.any(String),
+      entityType: expect.any(String),
+      entityId: expect.any(String),
+      actorId: expect.any(String),
+      occurredAt: expect.any(String),
+    });
+  });
+
+  it("queryAuditLogForAdmin called exactly once per request", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/audit-log"));
+    expect(mocks.queryAuditLogForAdmin).toHaveBeenCalledTimes(1);
+  });
+
+  it("workspace isolation: two separate workspace IDs produce separate service calls", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/audit-log", "ws-A"));
+    await GET(makeCtx("https://x/api/admin/audit-log", "ws-B"));
+    expect(mocks.queryAuditLogForAdmin).toHaveBeenCalledTimes(2);
+    expect(mocks.queryAuditLogForAdmin.mock.calls[0][0].workspaceId).toBe("ws-A");
+    expect(mocks.queryAuditLogForAdmin.mock.calls[1][0].workspaceId).toBe("ws-B");
+  });
+
+  it("sends cursor=null when no cursor param provided", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/audit-log", "ws-1"));
+    const callArg = mocks.queryAuditLogForAdmin.mock.calls[0][0];
+    expect(callArg.cursor).toBeNull();
+  });
+
+  it("forwards cursor query param to service", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/audit-log?cursor=next-page", "ws-1"));
+    const callArg = mocks.queryAuditLogForAdmin.mock.calls[0][0];
+    expect(callArg.cursor).toBe("next-page");
+  });
+
+  it("event actorType is a string field", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/audit-log"))) as typeof sampleResult;
+    expect(typeof res.events[0].actorType).toBe("string");
+  });
+
+  it("event visibility field is present", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/audit-log"))) as typeof sampleResult;
+    expect(res.events[0]).toHaveProperty("visibility");
+  });
+
+  it("requires workspace (requireWorkspace option is truthy)", () => {
+    const options = (GET as unknown as { __options?: { requireWorkspace?: boolean } }).__options;
+    expect(options?.requireWorkspace).toBeTruthy();
+  });
+
+  it("forwards entityType filter to service", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/audit-log?entityType=workspace", "ws-1"));
+    const callArg = mocks.queryAuditLogForAdmin.mock.calls[0][0];
+    expect(callArg.entityType).toBe("workspace");
+  });
+
+  it("forwards actorId filter to service", async () => {
+    mocks.queryAuditLogForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/audit-log?actorId=actor-99", "ws-1"));
+    const callArg = mocks.queryAuditLogForAdmin.mock.calls[0][0];
+    expect(callArg.actorId).toBe("actor-99");
+  });
 });

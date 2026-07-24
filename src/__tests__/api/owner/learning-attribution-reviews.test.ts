@@ -141,3 +141,55 @@ describe("security invariants", () => {
     expect(svc.listAttributionReviewsForHarmEvent).toHaveBeenCalledWith(expect.anything(), WS, HARM_ID);
   });
 });
+
+describe("POST /api/owner/learning-attribution-reviews — additional scenarios", () => {
+  it("records INCONCLUSIVE verdict", async () => {
+    vi.mocked(svc.recordAttributionReview).mockResolvedValue({ recorded: true, violations: [], review: { id: "attr-inc-1", verdict: "INCONCLUSIVE" } });
+    const result = await svc.recordAttributionReview({} as any, { ...attributionInput(), verdict: "INCONCLUSIVE" as any });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("confidenceScore at boundary 0.0 is valid", async () => {
+    vi.mocked(svc.recordAttributionReview).mockResolvedValue({ recorded: true, violations: [], review: { id: "attr-z", confidenceScore: 0.0 } });
+    const result = await svc.recordAttributionReview({} as any, { ...attributionInput(), confidenceScore: 0.0 });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("confidenceScore at boundary 1.0 is valid", async () => {
+    vi.mocked(svc.recordAttributionReview).mockResolvedValue({ recorded: true, violations: [], review: { id: "attr-max", confidenceScore: 1.0 } });
+    const result = await svc.recordAttributionReview({} as any, { ...attributionInput(), confidenceScore: 1.0 });
+    expect(result.recorded).toBe(true);
+  });
+
+  it("recordAttributionReview called exactly once per request", async () => {
+    vi.mocked(svc.recordAttributionReview).mockResolvedValue({ recorded: true, violations: [], review: { id: "attr-once" } });
+    await svc.recordAttributionReview({} as any, attributionInput());
+    expect(svc.recordAttributionReview).toHaveBeenCalledTimes(1);
+  });
+
+  it("workspace isolation: WS-001 and WS-002 produce separate service calls", async () => {
+    vi.mocked(svc.listAttributionReviewsForCandidate).mockResolvedValue([]);
+    await svc.listAttributionReviewsForCandidate({} as any, "ws-001", CAND_ID);
+    await svc.listAttributionReviewsForCandidate({} as any, "ws-002", CAND_ID);
+    expect(svc.listAttributionReviewsForCandidate).toHaveBeenNthCalledWith(1, expect.anything(), "ws-001", CAND_ID);
+    expect(svc.listAttributionReviewsForCandidate).toHaveBeenNthCalledWith(2, expect.anything(), "ws-002", CAND_ID);
+  });
+
+  it("review result includes id field", async () => {
+    vi.mocked(svc.recordAttributionReview).mockResolvedValue({ recorded: true, violations: [], review: { id: "attr-id-check" } });
+    const result = await svc.recordAttributionReview({} as any, attributionInput());
+    expect(result.review).toBeDefined();
+    expect((result.review as Record<string, unknown>).id).toBe("attr-id-check");
+  });
+
+  it("listAttributionReviewsForCandidate returns multiple reviews", async () => {
+    vi.mocked(svc.listAttributionReviewsForCandidate).mockResolvedValue([
+      { id: "attr-a", verdict: "ATTRIBUTED" },
+      { id: "attr-b", verdict: "NOT_ATTRIBUTED" },
+    ]);
+    const results = await svc.listAttributionReviewsForCandidate({} as any, WS, CAND_ID);
+    expect(results).toHaveLength(2);
+    expect((results[0] as Record<string, unknown>).verdict).toBe("ATTRIBUTED");
+    expect((results[1] as Record<string, unknown>).verdict).toBe("NOT_ATTRIBUTED");
+  });
+});

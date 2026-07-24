@@ -164,4 +164,64 @@ describe("Phase D1-D: POST /api/admin/workspaces/[id]/disable", () => {
     // The route's mocked surface contains no delete/notify/email functions.
     expect(Object.keys(mocks).some((k) => /delete|notify|email/i.test(k))).toBe(false);
   });
+
+  it("service called exactly once per non-cached request", async () => {
+    await POST(makeCtx("key-new"), { id: WORKSPACE_ID });
+    expect(mocks.disableWorkspaceForAdmin).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes workspaceId from path (not from actor context) to service", async () => {
+    await POST(makeCtx("key-2"), { id: WORKSPACE_ID });
+    const callArg = mocks.disableWorkspaceForAdmin.mock.calls[0][0];
+    expect(callArg.workspaceId).toBe(WORKSPACE_ID);
+  });
+
+  it("passes correct actorId to service", async () => {
+    await POST(makeCtx("key-3"), { id: WORKSPACE_ID });
+    const callArg = mocks.disableWorkspaceForAdmin.mock.calls[0][0];
+    expect(callArg.actorId).toBe("actor-1");
+  });
+
+  it("result body isActive is false (soft disable, not hard delete)", async () => {
+    const res = (await POST(makeCtx("key-4"), { id: WORKSPACE_ID })) as { status: number; body: typeof serviceResult };
+    expect(res.body.isActive).toBe(false);
+  });
+
+  it("result body status is 'disabled'", async () => {
+    const res = (await POST(makeCtx("key-5"), { id: WORKSPACE_ID })) as { status: number; body: typeof serviceResult };
+    expect(res.body.status).toBe("disabled");
+  });
+
+  it("idempotency check uses the actor's idempotency key from header", async () => {
+    await POST(makeCtx("unique-key-99"), { id: WORKSPACE_ID });
+    expect(mocks.checkIdempotencyKey).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: "unique-key-99" }));
+  });
+
+  it("records idempotency response with the returned service result", async () => {
+    await POST(makeCtx("record-key"), { id: WORKSPACE_ID });
+    const [recordedKey, recordedStatus, recordedBody] = mocks.recordIdempotencyResponse.mock.calls[0];
+    expect(recordedKey).toBe("record-key");
+    expect(recordedStatus).toBe(201);
+    expect(recordedBody).toMatchObject({ workspaceId: WORKSPACE_ID });
+  });
+
+  it("service not called when idempotency key is missing", async () => {
+    await POST(makeCtx(null), { id: WORKSPACE_ID }).catch(() => {});
+    expect(mocks.disableWorkspaceForAdmin).not.toHaveBeenCalled();
+  });
+
+  it("returns disabledAt as a string in the response body", async () => {
+    const res = (await POST(makeCtx("key-dat"), { id: WORKSPACE_ID })) as { body: typeof serviceResult };
+    expect(typeof res.body.disabledAt).toBe("string");
+  });
+
+  it("returns reason in the response body", async () => {
+    const res = (await POST(makeCtx("key-rsn"), { id: WORKSPACE_ID })) as { body: typeof serviceResult };
+    expect(res.body.reason).toBe("abuse");
+  });
+
+  it("declares SYSTEM_ADMIN without requiring workspace in context (admin access pattern)", () => {
+    const options = (POST as unknown as { __options?: { requireWorkspace?: boolean } }).__options;
+    expect(options?.requireWorkspace).toBeFalsy();
+  });
 });
