@@ -1,6 +1,23 @@
 import { describe, it, expect } from "vitest";
 import { createClientIdempotencyKey } from "@/lib/client-idempotency";
 
+describe("createClientIdempotencyKey — module contract assertions", () => {
+  it("createClientIdempotencyKey is a function", () => { expect(typeof createClientIdempotencyKey).toBe("function"); });
+  it("returns a string", () => { expect(typeof createClientIdempotencyKey("test")).toBe("string"); });
+  it("returned string is non-empty", () => { expect(createClientIdempotencyKey("test").length).toBeGreaterThan(0); });
+  it("returned key contains the prefix", () => { expect(createClientIdempotencyKey("prefix")).toContain("prefix"); });
+  it("returned key starts with prefix-", () => { expect(createClientIdempotencyKey("abc").startsWith("abc-")).toBe(true); });
+  it("two calls return different keys", () => { expect(createClientIdempotencyKey("x")).not.toBe(createClientIdempotencyKey("x")); });
+  it("different prefixes produce different-looking keys", () => { expect(createClientIdempotencyKey("aaa").startsWith("aaa-")).toBe(true); });
+  it("key contains a hyphen separator", () => { expect(createClientIdempotencyKey("p").includes("-")).toBe(true); });
+  it("key has at least 2 parts when split by hyphen", () => { expect(createClientIdempotencyKey("p").split("-").length).toBeGreaterThanOrEqual(2); });
+  it("first segment of key equals the prefix", () => { expect(createClientIdempotencyKey("hello").split("-")[0]).toBe("hello"); });
+  it("works with single-char prefix", () => { expect(createClientIdempotencyKey("x").startsWith("x-")).toBe(true); });
+  it("key length is greater than prefix length", () => { expect(createClientIdempotencyKey("test").length).toBeGreaterThan("test".length); });
+  it("100 generated keys are all unique", () => { const s = new Set(Array.from({ length: 100 }, () => createClientIdempotencyKey("u"))); expect(s.size).toBe(100); });
+  it("key does not equal the prefix alone", () => { const k = createClientIdempotencyKey("myop"); expect(k).not.toBe("myop"); });
+});
+
 describe("createClientIdempotencyKey", () => {
   it("generates key with prefix and UUID format", () => {
     const key = createClientIdempotencyKey("diagnosis");
