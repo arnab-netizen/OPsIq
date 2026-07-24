@@ -3407,6 +3407,35 @@
     "test_coverage": "25 tests — declaration assertions (6), GET enforcement (5), POST enforcement (6), cross-capability isolation (3), workspace isolation (2), input validation order (3)",
     "gates_run": "npx vitest run bundle7-permission-matrix.test.ts (25/25 PASS), full bundle run (175/175 PASS), npx tsc --noEmit (0 errors), npm run build (clean)",
     "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern",
+    "committed": "181ac09c",
+    "pushed": true
+  },
+  "bundle_7_slice_4_dto_leakage": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DTO_LEAKAGE_SCAN_TEST_SUITE",
+    "description": "Bundle 7 Slice 4: 23-test DTO leakage scan proving consulting GET endpoint never exposes internal consultant-only fields in client view and correctly includes them in consultant view.",
+    "files": [
+      "src/__tests__/api/bundle7-dto-leakage.test.ts (NEW)"
+    ],
+    "leakage_boundary_verified": {
+      "consultantNotes_absent_client_view": "✓ poison sentinel value never appears in ?view=client response",
+      "assignedConsultantId_absent_client_view": "✓ poison sentinel value never appears in ?view=client response",
+      "createdBy_absent_client_view": "✓ poison sentinel value never appears in ?view=client response",
+      "resistanceToChange_absent_client_humanFactors": "✓ restricted field stripped by toClientDTO",
+      "communicationBreakdownRisk_absent_client_humanFactors": "✓ restricted field stripped by toClientDTO",
+      "moraleFragility_absent_client_humanFactors": "✓ restricted field stripped by toClientDTO",
+      "managementCapabilityGap_absent_client_humanFactors": "✓ restricted field stripped by toClientDTO",
+      "accountabilityWeakness_absent_client_humanFactors": "✓ restricted field stripped by toClientDTO",
+      "ownerBottleneckRisk_present_client_view": "✓ allowed field present in client humanFactors",
+      "followThroughRisk_present_client_view": "✓ allowed field present in client humanFactors",
+      "keyPersonDependency_present_client_view": "✓ allowed field present in client humanFactors",
+      "all_internals_present_consultant_view": "✓ consultantNotes, assignedConsultantId, createdBy, all restricted humanFactors present",
+      "list_path_client_view": "✓ all list items strip internal fields",
+      "null_humanFactors_handled": "✓ null humanFactors returns null cleanly in both views"
+    },
+    "test_coverage": "23 tests — client single GET (5), humanFactors restriction (8), client list (3), consultant view (5), null humanFactors (2)",
+    "gates_run": "npx vitest run bundle7-dto-leakage (23/23 PASS), all 3 Bundle 7 files (87/87 PASS), npx tsc --noEmit (0 errors)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern with poison DB rows",
     "committed": "pending"
   }
 }
