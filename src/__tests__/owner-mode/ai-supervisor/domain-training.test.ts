@@ -233,6 +233,81 @@ const DOMAINS: DomainCase[] = [
   },
 ];
 
+describe("AI supervisor — domain training DOMAINS fixture assertions", () => {
+  it("DOMAINS has exactly 30 entries", () => {
+    expect(DOMAINS).toHaveLength(30);
+  });
+  it("all DOMAINS have a non-empty domain string", () => {
+    for (const d of DOMAINS) {
+      expect(typeof d.domain).toBe("string");
+      expect(d.domain.length).toBeGreaterThan(0);
+    }
+  });
+  it("all DOMAINS have a non-empty realDomainKey string", () => {
+    for (const d of DOMAINS) {
+      expect(typeof d.realDomainKey).toBe("string");
+      expect(d.realDomainKey.length).toBeGreaterThan(0);
+    }
+  });
+  it("all DOMAINS have a non-empty constraint string", () => {
+    for (const d of DOMAINS) {
+      expect(typeof d.constraint).toBe("string");
+      expect(d.constraint.length).toBeGreaterThan(0);
+    }
+  });
+  it("all DOMAINS have a non-empty label string", () => {
+    for (const d of DOMAINS) {
+      expect(typeof d.label).toBe("string");
+      expect(d.label.length).toBeGreaterThan(0);
+    }
+  });
+  it("all DOMAINS have a non-empty categories array", () => {
+    for (const d of DOMAINS) {
+      expect(Array.isArray(d.categories)).toBe(true);
+      expect(d.categories.length).toBeGreaterThan(0);
+    }
+  });
+  it("all DOMAINS have a pos object", () => {
+    for (const d of DOMAINS) {
+      expect(typeof d.pos).toBe("object");
+      expect(d.pos).not.toBeNull();
+    }
+  });
+  it("DOMAINS[0].domain contains 'finance'", () => {
+    expect(DOMAINS[0].domain).toContain("finance");
+  });
+  it("DOMAINS[0].constraint is 'cash_survival'", () => {
+    expect(DOMAINS[0].constraint).toBe("cash_survival");
+  });
+  it("EMERGENCY Set has exactly 3 entries", () => {
+    expect(EMERGENCY.size).toBe(3);
+  });
+  it("EMERGENCY contains 'compliance_block'", () => {
+    expect(EMERGENCY.has("compliance_block")).toBe(true);
+  });
+  it("EMERGENCY contains 'proof_fraud_block'", () => {
+    expect(EMERGENCY.has("proof_fraud_block")).toBe(true);
+  });
+  it("EMERGENCY contains 'cash_survival'", () => {
+    expect(EMERGENCY.has("cash_survival")).toBe(true);
+  });
+  it("HIGH_RISK_FINANCIAL Set has exactly 4 entries", () => {
+    expect(HIGH_RISK_FINANCIAL.size).toBe(4);
+  });
+  it("HIGH_RISK_FINANCIAL contains 'cash_survival'", () => {
+    expect(HIGH_RISK_FINANCIAL.has("cash_survival")).toBe(true);
+  });
+  it("DOMAINS with categories.includes('compliance') are at least 2", () => {
+    expect(DOMAINS.filter((d) => d.categories.includes("compliance")).length).toBeGreaterThanOrEqual(2);
+  });
+  it("DOMAINS with categories.includes('growth') are at least 2", () => {
+    expect(DOMAINS.filter((d) => d.categories.includes("growth")).length).toBeGreaterThanOrEqual(2);
+  });
+  it("base() helper returns an object with found: true", () => {
+    expect(base().found).toBe(true);
+  });
+});
+
 describe("AI supervisor — individual domain training (positive: domain binds)", () => {
   for (const dc of DOMAINS) {
     it(`[${dc.domain}] supervisor surfaces the domain as the binding constraint with the correct disposition`, () => {

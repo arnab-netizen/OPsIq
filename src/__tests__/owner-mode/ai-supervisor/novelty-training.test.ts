@@ -103,6 +103,78 @@ const CASES: NoveltyCase[] = [
   },
 ];
 
+describe("AI supervisor — novelty training CASES fixture assertions", () => {
+  it("CASES has exactly 10 entries", () => {
+    expect(CASES).toHaveLength(10);
+  });
+  it("all CASES have a non-empty name string", () => {
+    for (const c of CASES) {
+      expect(typeof c.name).toBe("string");
+      expect(c.name.length).toBeGreaterThan(0);
+    }
+  });
+  it("all CASES have kind that is 'sparse', 'blocked', or 'high_risk'", () => {
+    const valid = new Set<Kind>(["sparse", "blocked", "high_risk"]);
+    for (const c of CASES) {
+      expect(valid.has(c.kind)).toBe(true);
+    }
+  });
+  it("all CASES have an over object", () => {
+    for (const c of CASES) {
+      expect(typeof c.over).toBe("object");
+      expect(c.over).not.toBeNull();
+    }
+  });
+  it("CASES[0].name starts with '1.'", () => {
+    expect(CASES[0].name).toMatch(/^1\./);
+  });
+  it("CASES[9].name starts with '10.'", () => {
+    expect(CASES[9].name).toMatch(/^10\./);
+  });
+  it("sparse CASES count is 5", () => {
+    expect(CASES.filter((c) => c.kind === "sparse").length).toBe(5);
+  });
+  it("blocked CASES count is 2", () => {
+    expect(CASES.filter((c) => c.kind === "blocked").length).toBe(2);
+  });
+  it("high_risk CASES count is 3", () => {
+    expect(CASES.filter((c) => c.kind === "high_risk").length).toBe(3);
+  });
+  it("all CASES names are unique", () => {
+    const names = CASES.map((c) => c.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+  it("base() helper returns found: true", () => {
+    expect(base().found).toBe(true);
+  });
+  it("base() helper returns dominantConstraint: 'optimization'", () => {
+    expect(base().dominantConstraint).toBe("optimization");
+  });
+  it("base() helper returns overallConfidence: 'high'", () => {
+    expect(base().overallConfidence).toBe("high");
+  });
+  it("base() helper returns growthScaleAllowed: false", () => {
+    expect(base().growthScaleAllowed).toBe(false);
+  });
+  it("base() helper returns unsafeCount: 0", () => {
+    expect(base().unsafeCount).toBe(0);
+  });
+  it("blocked CASES have dominantConstraint compliance_block or proof_fraud_block", () => {
+    for (const c of CASES.filter((c) => c.kind === "blocked")) {
+      expect(["compliance_block", "proof_fraud_block"]).toContain(c.over.dominantConstraint);
+    }
+  });
+  it("some high_risk CASES have ownerApprovalRequired: true in over", () => {
+    const highRisk = CASES.filter((c) => c.kind === "high_risk");
+    expect(highRisk.some((c) => c.over.ownerApprovalRequired === true)).toBe(true);
+  });
+  it("sparse CASES have criticalDomainsAllReal: false in over", () => {
+    for (const c of CASES.filter((c) => c.kind === "sparse")) {
+      expect(c.over.criticalDomainsAllReal).toBe(false);
+    }
+  });
+});
+
 describe("AI supervisor — new / unfamiliar situation training", () => {
   for (const nc of CASES) {
     it(`[${nc.name}] handled with caution: no fake certainty, no high-risk autonomous action`, () => {

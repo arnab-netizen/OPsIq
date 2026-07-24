@@ -38,6 +38,80 @@ function mockDb(rows: ReturnType<typeof scenarioRows>): PrismaClient {
   } as unknown as PrismaClient;
 }
 
+describe("owner scenario constraints — structural assertions (no service call)", () => {
+  it("SCENARIOS is a non-empty array", () => {
+    expect(Array.isArray(SCENARIOS)).toBe(true);
+    expect(SCENARIOS.length).toBeGreaterThan(0);
+  });
+  it("all SCENARIOS have a non-empty id string", () => {
+    for (const s of SCENARIOS) {
+      expect(typeof s.id).toBe("string");
+      expect(s.id.length).toBeGreaterThan(0);
+    }
+  });
+  it("all SCENARIOS have a non-empty expectedConstraint string", () => {
+    for (const s of SCENARIOS) {
+      expect(typeof s.expectedConstraint).toBe("string");
+      expect(s.expectedConstraint.length).toBeGreaterThan(0);
+    }
+  });
+  it("all SCENARIOS have a knobs object", () => {
+    for (const s of SCENARIOS) {
+      expect(typeof s.knobs).toBe("object");
+      expect(s.knobs).not.toBeNull();
+    }
+  });
+  it("all SCENARIO ids are unique", () => {
+    const ids = SCENARIOS.map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+  it("at least 7 distinct dominant constraints across scenarios", () => {
+    expect(new Set(SCENARIOS.map((s) => s.expectedConstraint)).size).toBeGreaterThanOrEqual(7);
+  });
+  it("SCENARIOS has at least 7 entries", () => {
+    expect(SCENARIOS.length).toBeGreaterThanOrEqual(7);
+  });
+  it("some SCENARIOS have expectedConstraint 'cash_survival'", () => {
+    expect(SCENARIOS.some((s) => s.expectedConstraint === "cash_survival")).toBe(true);
+  });
+  it("getOwnerWholeBusinessPlan is a function", () => {
+    expect(typeof getOwnerWholeBusinessPlan).toBe("function");
+  });
+  it("scenarioRows is a function", () => {
+    expect(typeof scenarioRows).toBe("function");
+  });
+  it("NOW fixture is a Date object", () => {
+    expect(NOW instanceof Date).toBe(true);
+  });
+  it("WS fixture is a non-empty string", () => {
+    expect(typeof WS).toBe("string");
+    expect(WS.length).toBeGreaterThan(0);
+  });
+  it("BIZ fixture is a non-empty string", () => {
+    expect(typeof BIZ).toBe("string");
+    expect(BIZ.length).toBeGreaterThan(0);
+  });
+  it("learningRow has a non-empty id", () => {
+    expect(typeof learningRow.id).toBe("string");
+    expect(learningRow.id.length).toBeGreaterThan(0);
+  });
+  it("learningRow has active: true", () => {
+    expect(learningRow.active).toBe(true);
+  });
+  it("learningRow workspaceId matches WS", () => {
+    expect(learningRow.workspaceId).toBe(WS);
+  });
+  it("scenarioRows returns an object for the first SCENARIO", () => {
+    const rows = scenarioRows(SCENARIOS[0].knobs, { workspaceId: WS, businessId: BIZ, now: NOW });
+    expect(typeof rows).toBe("object");
+    expect(rows).not.toBeNull();
+  });
+  it("SCENARIOS[0] has id and expectedConstraint as strings", () => {
+    expect(typeof SCENARIOS[0].id).toBe("string");
+    expect(typeof SCENARIOS[0].expectedConstraint).toBe("string");
+  });
+});
+
 describe("representative scenario profiles → expected dominant constraint (full service path)", () => {
   for (const s of SCENARIOS) {
     it(`[${s.id}] resolves ${s.expectedConstraint} and is provider-backed`, async () => {

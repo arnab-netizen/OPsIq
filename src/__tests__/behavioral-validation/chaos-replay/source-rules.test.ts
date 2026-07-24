@@ -9,6 +9,85 @@ import { validateCountedScenario, isCountedScenarioValid, REGISTER_IDS } from "@
 
 const base = COUNTED_CHAOS_SCENARIOS[0];
 
+describe("source rules (§3) — structural corpus assertions (no service call)", () => {
+  it("COUNTED_CHAOS_SCENARIOS is a non-empty array", () => {
+    expect(Array.isArray(COUNTED_CHAOS_SCENARIOS)).toBe(true);
+    expect(COUNTED_CHAOS_SCENARIOS.length).toBeGreaterThan(0);
+  });
+  it("all scenarios have a non-empty scenarioId string", () => {
+    for (const s of COUNTED_CHAOS_SCENARIOS) {
+      expect(typeof s.scenarioId).toBe("string");
+      expect(s.scenarioId.length).toBeGreaterThan(0);
+    }
+  });
+  it("all scenarios have sourceRefs as a non-empty array", () => {
+    for (const s of COUNTED_CHAOS_SCENARIOS) {
+      expect(Array.isArray(s.sourceRefs)).toBe(true);
+      expect(s.sourceRefs.length).toBeGreaterThan(0);
+    }
+  });
+  it("all scenarios have chaosTypes as an array", () => {
+    for (const s of COUNTED_CHAOS_SCENARIOS) {
+      expect(Array.isArray(s.chaosTypes)).toBe(true);
+    }
+  });
+  it("all scenarios have a non-empty businessProfile", () => {
+    for (const s of COUNTED_CHAOS_SCENARIOS) {
+      expect(typeof s.businessProfile).toBe("string");
+      expect(s.businessProfile.length).toBeGreaterThan(0);
+    }
+  });
+  it("all scenarios have a non-empty temptingWrongAction", () => {
+    for (const s of COUNTED_CHAOS_SCENARIOS) {
+      expect(typeof s.temptingWrongAction).toBe("string");
+      expect(s.temptingWrongAction.length).toBeGreaterThan(0);
+    }
+  });
+  it("all scenarios have a non-empty expectedRealWorldConsequenceIfWrong", () => {
+    for (const s of COUNTED_CHAOS_SCENARIOS) {
+      expect(typeof s.expectedRealWorldConsequenceIfWrong).toBe("string");
+      expect(s.expectedRealWorldConsequenceIfWrong.length).toBeGreaterThan(0);
+    }
+  });
+  it("all scenarios have missingData as an array", () => {
+    for (const s of COUNTED_CHAOS_SCENARIOS) {
+      expect(Array.isArray(s.missingData)).toBe(true);
+    }
+  });
+  it("all scenarios have sourceLimitations as an array", () => {
+    for (const s of COUNTED_CHAOS_SCENARIOS) {
+      expect(Array.isArray(s.sourceLimitations)).toBe(true);
+    }
+  });
+  it("all counted scenarios have synthetic !== true", () => {
+    for (const s of COUNTED_CHAOS_SCENARIOS) {
+      expect(s.synthetic).not.toBe(true);
+    }
+  });
+  it("validateCountedScenario is a function", () => {
+    expect(typeof validateCountedScenario).toBe("function");
+  });
+  it("isCountedScenarioValid is a function", () => {
+    expect(typeof isCountedScenarioValid).toBe("function");
+  });
+  it("REGISTER_IDS is a Set", () => {
+    expect(REGISTER_IDS instanceof Set).toBe(true);
+  });
+  it("REGISTER_IDS is non-empty", () => {
+    expect(REGISTER_IDS.size).toBeGreaterThan(0);
+  });
+  it("all scenario IDs are unique", () => {
+    const ids = COUNTED_CHAOS_SCENARIOS.map((s) => s.scenarioId);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+  it("base scenario (first counted case) passes isCountedScenarioValid", () => {
+    expect(isCountedScenarioValid(base)).toBe(true);
+  });
+  it("base scenario validateCountedScenario returns empty array (no violations)", () => {
+    expect(validateCountedScenario(base)).toEqual([]);
+  });
+});
+
 describe("source rules (§3) — counted corpus is real, sourced and privacy-clean", () => {
   it("every counted scenario passes all source rules", () => {
     for (const s of COUNTED_CHAOS_SCENARIOS) {
