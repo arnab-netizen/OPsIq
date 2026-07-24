@@ -18,6 +18,57 @@ const SENSITIVE = [
   RecommendationSensitivity.HIRING_SENSITIVE,
 ];
 
+describe("[module2] recommendation input-quality gate — module contract assertions", () => {
+  it("evaluateInputQualityGate is a function", () => {
+    expect(typeof evaluateInputQualityGate).toBe("function");
+  });
+  it("assertInputQualityForPromotion is a function", () => {
+    expect(typeof assertInputQualityForPromotion).toBe("function");
+  });
+  it("InputQualityGateError is defined", () => {
+    expect(InputQualityGateError).toBeDefined();
+  });
+  it("RecommendationSensitivity.FINANCE_SENSITIVE is defined", () => {
+    expect(RecommendationSensitivity.FINANCE_SENSITIVE).toBeDefined();
+  });
+  it("RecommendationSensitivity.GENERAL is defined", () => {
+    expect(RecommendationSensitivity.GENERAL).toBeDefined();
+  });
+  it("RecommendationSensitivity.COMPLIANCE_SENSITIVE is defined", () => {
+    expect(RecommendationSensitivity.COMPLIANCE_SENSITIVE).toBeDefined();
+  });
+  it("InputQualityPromotionOutcome.BLOCKED_INSUFFICIENT_DATA is defined", () => {
+    expect(InputQualityPromotionOutcome.BLOCKED_INSUFFICIENT_DATA).toBeDefined();
+  });
+  it("InputQualityPromotionOutcome.REQUIRES_OWNER_REVIEW is defined", () => {
+    expect(InputQualityPromotionOutcome.REQUIRES_OWNER_REVIEW).toBeDefined();
+  });
+  it("InputQualityPromotionOutcome.REQUIRES_PROFESSIONAL_REVIEW is defined", () => {
+    expect(InputQualityPromotionOutcome.REQUIRES_PROFESSIONAL_REVIEW).toBeDefined();
+  });
+  it("BLOCKING has 3 entries", () => {
+    expect(BLOCKING.length).toBe(3);
+  });
+  it("WEAK has 3 entries", () => {
+    expect(WEAK.length).toBe(3);
+  });
+  it("SENSITIVE has 4 entries", () => {
+    expect(SENSITIVE.length).toBe(4);
+  });
+  it("evaluateInputQualityGate returns an object", () => {
+    expect(typeof evaluateInputQualityGate("complete", RecommendationSensitivity.FINANCE_SENSITIVE)).toBe("object");
+  });
+  it("evaluateInputQualityGate result has an allowed field", () => {
+    expect(evaluateInputQualityGate("complete", RecommendationSensitivity.FINANCE_SENSITIVE)).toHaveProperty("allowed");
+  });
+  it("evaluateInputQualityGate result has an outcome field", () => {
+    expect(evaluateInputQualityGate("complete", RecommendationSensitivity.FINANCE_SENSITIVE)).toHaveProperty("outcome");
+  });
+  it("evaluateInputQualityGate('complete', FINANCE_SENSITIVE).allowed is true", () => {
+    expect(evaluateInputQualityGate("complete", RecommendationSensitivity.FINANCE_SENSITIVE).allowed).toBe(true);
+  });
+});
+
 describe("[module2] recommendation input-quality gate", () => {
   it("complete data allows a sensitive recommendation", () => {
     for (const s of SENSITIVE) {
