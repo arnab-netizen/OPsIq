@@ -6442,3 +6442,48 @@ model OwnerBusinessConditionProfile {
   @@index([businessId, version])
   @@map("owner_business_condition_profiles")
 }
+
+// Bundle 5.2 — Owner Connector Registry
+// Connector registrations for owner-mode integration fabric.
+// Token values are never stored here — they are in OwnerConnectorToken (separate model).
+
+model OwnerConnector {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  businessId          String?   @map("business_id")
+  provider            String    @map("provider") // ConnectorProvider enum value: "HUBSPOT" | "QUICKBOOKS" | etc.
+  status              String    @map("status") // ConnectorStatus: "ACTIVE" | "DISCONNECTED" | "EXPIRED" | "REFRESH_FAILED" | "PENDING_AUTH"
+  connectedAt         DateTime  @default(now()) @map("connected_at")
+  lastSyncAt          DateTime? @map("last_sync_at")
+  lastSyncRecords     Int?      @map("last_sync_records")
+  tokenExpiresAt      DateTime? @map("token_expires_at")
+  syncFailureMessage  String?   @map("sync_failure_message")
+  registeredBy        String    @map("registered_by") // actorId — internal only
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  token OwnerConnectorToken?
+
+  @@unique([workspaceId, provider])
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([businessId])
+  @@map("owner_connectors")
+}
+
+// Token storage is separate — tokens are never joined into public-facing queries.
+// encryptedAccessToken and encryptedRefreshToken use AES-256-GCM ciphertext format.
+model OwnerConnectorToken {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  connectorId           String    @unique @map("connector_id") @db.Uuid
+  encryptedAccessToken  String    @map("encrypted_access_token")
+  encryptedRefreshToken String?   @map("encrypted_refresh_token")
+  tokenType             String    @default("Bearer") @map("token_type")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  connector OwnerConnector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@index([connectorId])
+  @@map("owner_connector_tokens")
+}
