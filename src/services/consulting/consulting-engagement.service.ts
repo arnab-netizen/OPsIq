@@ -548,6 +548,38 @@ export async function computeConsultingEngagementHealth(
   return { status, reasons, criticalFindingsUnresolved: criticalUnresolved, criticalActionsUnresolved, overdueActions };
 }
 
+// ─── Health: update (recompute + persist + audit) ────────────────────────────
+
+export async function updateConsultingEngagementHealth(
+  params: { engagementId: string; workspaceId: string },
+  actorId: string
+): Promise<ConsultingEngagementHealth> {
+  const health = await computeConsultingEngagementHealth(params);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (db.engagement as any).update({
+    where: { id: params.engagementId },
+    data: { healthStatus: health.status.toLowerCase(), updatedAt: new Date() },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.CONSULTING_HEALTH_UPDATED,
+    actorId,
+    entityType: "Engagement",
+    entityId: params.engagementId,
+    workspaceId: params.workspaceId,
+    payload: {
+      status: health.status,
+      reasons: health.reasons,
+      criticalFindingsUnresolved: health.criticalFindingsUnresolved,
+      criticalActionsUnresolved: health.criticalActionsUnresolved,
+      overdueActions: health.overdueActions,
+    },
+  });
+
+  return health;
+}
+
 // ─── Engagement: close (gate: all critical actions resolved) ──────────────────
 
 export async function closeConsultingEngagement(

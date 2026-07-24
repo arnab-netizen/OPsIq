@@ -3467,6 +3467,31 @@
     "committed": "29f788bd",
     "pushed": true
   },
+  "bundle_7_slice_7_health_mutation": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "description": "Bundle 7 Slice 7: updateConsultingEngagementHealth — fills missing CONSULTING_HEALTH_UPDATED audit emission gap. Adds UpdateHealthSchema, updateConsultingEngagementHealth() service method (recompute + db.update + emitAuditEvent), POST ?action=update_health route case. 22 tests covering capability enforcement, input validation, HEALTHY/AT_RISK/BLOCKED results, audit service call args, workspace isolation, response shape.",
+    "files": [
+      "src/domain/consulting/consulting-contracts.ts (UpdateHealthSchema added)",
+      "src/services/consulting/consulting-engagement.service.ts (updateConsultingEngagementHealth added)",
+      "src/app/api/consulting/engagements/route.ts (update_health case added)",
+      "src/__tests__/api/bundle7-health-mutation.test.ts (NEW — 22 tests)"
+    ],
+    "wiring_proof": {
+      "caller": "src/app/api/consulting/engagements/route.ts::POST?action=update_health",
+      "service": "src/services/consulting/consulting-engagement.service.ts::updateConsultingEngagementHealth()",
+      "input": "POST body {engagementId: uuid}",
+      "output": "JSON {health: {status, reasons, criticalFindingsUnresolved, criticalActionsUnresolved, overdueActions}}",
+      "workspace_enforcement": "ctx.verifiedWorkspaceId always used; body workspaceId ignored",
+      "auth_enforcement": "CAPABILITIES.CONSULTING_WRITE required",
+      "audit_event": "CONSULTING_HEALTH_UPDATED emitted with status, reasons, counts, workspaceId"
+    },
+    "test_coverage": "22 tests — capability enforcement (3), input validation (3), HEALTHY result (3), AT_RISK result (2), BLOCKED result (2), audit service call args (4), workspace isolation (2), response shape (3)",
+    "gates_run": "npx vitest run bundle7-health-mutation (22/22 PASS), all 7 Bundle 7 files (211/211 PASS), npx tsc --noEmit (0 errors), npm run build (PASS), npx prisma validate (PASS), governance scan (0 new findings in new files)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use wrapper mock pattern",
+    "committed": "pending",
+    "pushed": false
+  },
   "bundle_7_slice_6_health_api": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "SERVICE_WITH_WIRING",
@@ -3489,7 +3514,7 @@
     "test_coverage": "27 tests — capability declaration (2), input validation (4), HEALTHY (3), AT_RISK (3), BLOCKED (3), workspace isolation (4), no audit on read (5), response shape (3)",
     "gates_run": "npx vitest run bundle7-health (27/27 PASS), all 6 Bundle 7 files (189/189 PASS), npx tsc --noEmit (0 errors), governance:scan:strict (0 new findings)",
     "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use wrapper mock + vi.resetAllMocks() pattern",
-    "committed": "pending",
-    "pushed": false
+    "committed": "6897e0bd",
+    "pushed": true
   }
 }

@@ -22,6 +22,7 @@ import {
   GenerateRecommendationSchema,
   AssignConsultingActionSchema,
   CloseEngagementSchema,
+  UpdateHealthSchema,
 } from "@/domain/consulting/consulting-contracts";
 import {
   createConsultingEngagement,
@@ -32,6 +33,7 @@ import {
   generateConsultingRecommendation,
   assignConsultingAction,
   closeConsultingEngagement,
+  updateConsultingEngagementHealth,
 } from "@/services/consulting/consulting-engagement.service";
 
 export const dynamic = "force-dynamic";
@@ -145,6 +147,18 @@ export const POST = withCanonicalEnforcement(
           ctx.verifiedActorId
         );
         return canonicalJson({ engagement }, { status: 200 });
+      }
+
+      case "update_health": {
+        const parsed = UpdateHealthSchema.safeParse(body);
+        if (!parsed.success) {
+          return canonicalJson({ error: parsed.error.flatten() }, { status: 422 });
+        }
+        const health = await updateConsultingEngagementHealth(
+          { engagementId: parsed.data.engagementId, workspaceId: ctx.verifiedWorkspaceId },
+          ctx.verifiedActorId
+        );
+        return canonicalJson({ health }, { status: 200 });
       }
 
       default:

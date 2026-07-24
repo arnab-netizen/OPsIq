@@ -149,6 +149,10 @@ export const CloseEngagementSchema = z.object({
   outcomeSummary: z.string().optional(),
 });
 
+export const UpdateHealthSchema = z.object({
+  engagementId: z.string().uuid(),
+});
+
 // ─── Public DTO (client-visible) — no consultant-internal fields ──────────────
 
 export interface ConsultingEngagementClientDTO {
