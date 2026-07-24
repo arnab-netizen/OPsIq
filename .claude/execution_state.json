@@ -3375,6 +3375,38 @@
     "test_coverage": "39 tests — 6 mutation paths verified, 3 read paths verified, all idempotent paths verified, all failure paths verified, entityType field correctness verified",
     "gates_run": "npx vitest run bundle7-audit-completeness.test.ts (39/39 PASS), npx tsc --noEmit (0 errors), npm run build (clean), npx prisma validate (✓)",
     "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern",
+    "committed": "aaedf5fa"
+  },
+  "bundle_7_slice_2_permission_matrix": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "PERMISSION_MATRIX_TEST_SUITE",
+    "description": "Bundle 7 Slice 2: 25-test permission matrix suite proving consulting route correctly declares CONSULTING_READ for GET and CONSULTING_WRITE for POST, that enforcement gates fire before handler body (db not called on deny), workspace isolation enforced from ctx not body, and input validation runs after capability check.",
+    "files": [
+      "src/__tests__/api/bundle7-permission-matrix.test.ts (NEW)"
+    ],
+    "permission_matrix_coverage": {
+      "GET_declares_CONSULTING_READ": "✓ capturedDeclarations includes consulting:read in GET's requireCapabilities",
+      "POST_declares_CONSULTING_WRITE": "✓ capturedDeclarations includes consulting:write in POST's requireCapabilities",
+      "requireWorkspace_true_for_GET": "✓ requireWorkspace: true declared",
+      "requireWorkspace_true_for_POST": "✓ requireWorkspace: true declared",
+      "GET_does_not_declare_WRITE": "✓ consulting:write not in GET's requireCapabilities",
+      "POST_does_not_declare_READ": "✓ consulting:read not in POST's requireCapabilities",
+      "GET_deny_behavior": "✓ 403 returned; db not called (handler never runs)",
+      "GET_allow_behavior": "✓ 200 list, 200 single get, 200 with both caps",
+      "POST_deny_behavior": "✓ 403 returned; engagement.findFirst/create not called",
+      "POST_allow_behavior": "✓ 201 create, 200 advance_phase, 200 close",
+      "workspace_isolation_GET": "✓ verifiedWorkspaceId from ctx used in findMany, not query param",
+      "workspace_isolation_POST": "✓ verifiedWorkspaceId from ctx used in findFirst, not body workspaceId injection",
+      "validation_order": "✓ 422 for missing title (after cap check); 403 takes precedence over 422 when enforcement denies"
+    },
+    "root_causes_found_fixed": [
+      "CreateEngagementSchema requires clientId: z.string().uuid() — test bodies must use valid UUIDs not 'client-001'",
+      "AdvancePhaseSchema requires engagementId: z.string().uuid() — ENG_ID constant is not a UUID; use explicit UUID in test body",
+      "CloseEngagementSchema requires engagementId: z.string().uuid() — same fix"
+    ],
+    "test_coverage": "25 tests — declaration assertions (6), GET enforcement (5), POST enforcement (6), cross-capability isolation (3), workspace isolation (2), input validation order (3)",
+    "gates_run": "npx vitest run bundle7-permission-matrix.test.ts (25/25 PASS), full bundle run (175/175 PASS), npx tsc --noEmit (0 errors), npm run build (clean)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern",
     "committed": "pending"
   }
 }
