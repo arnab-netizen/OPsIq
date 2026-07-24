@@ -627,7 +627,37 @@
     "test_coverage": "58 tests covering: static enforcement (11), createApproval idempotency (5), submitEvidence (7), makeDecision immutability (9), initiateAppeal (5), listApprovals filters (5), DTO boundary (4), workspace isolation (5), audit events (7)",
     "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 58/58 (✓), lint-ratchet PASS (2154 errors < 2155 baseline), recurrence scan 0 violations"
   },
-  "next_automatic_target": "Bundle 3.7 committed and pushed — next: Bundle 3.8",
+  "bundle_3_8_owner_onboarding": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "files": [
+      "src/domain/constants/capabilities.ts",
+      "src/domain/constants/audit-events.ts",
+      "prisma/schema.prisma",
+      "src/services/owner-mode/owner-onboarding-lifecycle.service.ts",
+      "src/app/api/owner/onboarding-lifecycle/route.ts",
+      "src/__tests__/api/owner/onboarding/lifecycle.test.ts"
+    ],
+    "wiring_proof": {
+      "caller": "src/app/api/owner/onboarding-lifecycle/route.ts (POST, GET, PATCH)",
+      "service": "src/services/owner-mode/owner-onboarding-lifecycle.service.ts",
+      "workspace_enforcement": "✓ loadOnboarding enforces workspaceId on every read; all write paths pass workspaceId",
+      "auth_enforced": "✓ CAPABILITIES.OWNER_ONBOARD + requireWorkspace: true on all three handlers",
+      "dto_boundary": "✓ archetypeScore, completionKey, createdBy, updatedBy excluded from PublicOnboardingDTO",
+      "audit_events": "✓ 3 audit events: onboarding.started, onboarding.completed, onboarding.re_triggered",
+      "idempotency": "✓ startOnboarding checks @@unique workspaceId before insert; completeOnboarding idempotent via completionKey"
+    },
+    "schema_models": ["OwnerOnboarding"],
+    "state_machine": "IN_PROGRESS → COMPLETED (completeOnboarding); COMPLETED → RE_ONBOARDING (triggerReOnboarding); RE_ONBOARDING → COMPLETED (completeOnboarding again)",
+    "archetype_classification": "deterministic: SURVIVAL_MODE | TURNAROUND | STABILIZATION | GROWTH_READY based on revenueTrend, profitability, cashRunwayWeeks — no ML",
+    "onboarding_gate": "assertOnboardingComplete(workspaceId) throws ValidationError if not COMPLETED — available for other owner-mode routes to enforce",
+    "action_queue": "top-5 achievable actions per archetype (morale-safe, no overwhelming scope)",
+    "capability_added": "OWNER_ONBOARD: 'owner:onboard' added to capabilities.ts",
+    "note": "Existing owner-onboarding.service.ts is a separate read-only computed-state service; lifecycle persistence uses new OwnerOnboarding Prisma model",
+    "test_coverage": "62 tests covering: classifyArchetype pure function (10), buildInitialActionQueue (6), startOnboarding idempotency+validation (10), completeOnboarding archetype+idempotency (10), triggerReOnboarding state machine (7), assertOnboardingComplete gate (4), static enforcement (6), workspace isolation (4), audit events (4), route (1)",
+    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 62/62 (✓), lint-ratchet PASS (2154 errors < 2155 baseline)"
+  },
+  "next_automatic_target": "Bundle 3.8 committed — next: Bundle 3.9",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "UNKNOWN (timeout \u2014 not a blocker)",

@@ -582,6 +582,11 @@ export const AUDIT_EVENTS = {
   STARTUP_EXECUTION_AUTHORIZATION_DENIED: "startup.execution_authorization_denied",
   STARTUP_APPROVAL_BECAME_STALE: "startup.approval_became_stale",
   STARTUP_EXECUTION_PLAN_SUPERSEDED: "startup.execution_plan_superseded",
+  // Bundle 3.8 — Owner Onboarding and Archetype Seeding
+  ONBOARDING_STARTED: "onboarding.started",
+  ONBOARDING_COMPLETED: "onboarding.completed",
+  ONBOARDING_RE_TRIGGERED: "onboarding.re_triggered",
+
   // Bundle 3.7 — Approval Resolution and Evidence Chain
   APPROVAL_CREATED: "approval.created",
   APPROVAL_EVIDENCE_SUBMITTED: "approval.evidence_submitted",

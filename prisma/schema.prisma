@@ -6322,3 +6322,33 @@ model OwnerApprovalEvidence {
   @@index([workspaceId, approvalId])
   @@map("owner_approval_evidences")
 }
+
+// Bundle 3.8 — Owner Onboarding and Archetype Seeding
+model OwnerOnboarding {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String    @unique @map("workspace_id") @db.Uuid
+  businessId          String    @map("business_id") @db.Uuid
+  ownerId             String    @map("owner_id") @db.Uuid
+  status              String    @default("IN_PROGRESS")
+  businessName        String    @map("business_name")
+  businessType        String    @map("business_type")
+  revenueRange        String    @map("revenue_range")
+  revenueTrend        String    @map("revenue_trend")
+  cashRunwayWeeks     Int?      @map("cash_runway_weeks")
+  profitability       String    @map("profitability")
+  ownerHoursPerWeek   Int?      @map("owner_hours_per_week")
+  teamSize            Int?      @map("team_size")
+  archetype           String?
+  archetypeScore      Float?    @map("archetype_score")
+  initialActionQueue  Json?     @map("initial_action_queue")
+  completionKey       String?   @map("completion_key")
+  completedAt         DateTime? @map("completed_at")
+  reOnboardingReason  String?   @map("re_onboarding_reason") @db.Text
+  createdBy           String    @map("created_by") @db.Uuid
+  updatedBy           String?   @map("updated_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, status])
+  @@map("owner_onboarding")
+}

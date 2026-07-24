@@ -120,6 +120,9 @@ export const CAPABILITIES = {
   // Approval
   CONSULTING_APPROVE: "consulting:approve",
 
+  // Onboarding
+  OWNER_ONBOARD: "owner:onboard",
+
   // Audit Trail
   AUDIT_VIEW: "audit:view",
   AUDIT_EXPORT: "audit:export",
