@@ -29,6 +29,82 @@ function deps() {
   };
 }
 
+describe("archetype seed service — function contract assertions", () => {
+  it("seedLaundryArchetype is a function", () => {
+    expect(typeof seedLaundryArchetype).toBe("function");
+  });
+  it("assertSeedAllowed is a function", () => {
+    expect(typeof assertSeedAllowed).toBe("function");
+  });
+  it("SeedNotAllowedError is a class (function constructor)", () => {
+    expect(typeof SeedNotAllowedError).toBe("function");
+  });
+  it("SeedNotAllowedError instances are Error instances", () => {
+    const err = new SeedNotAllowedError("prod");
+    expect(err).toBeInstanceOf(Error);
+  });
+  it("SeedNotAllowedError message contains the env string", () => {
+    const err = new SeedNotAllowedError("production");
+    expect(err.message).toContain("production");
+  });
+  it("assertSeedAllowed does not throw for 'test'", () => {
+    expect(() => assertSeedAllowed("test")).not.toThrow();
+  });
+  it("assertSeedAllowed does not throw for 'development'", () => {
+    expect(() => assertSeedAllowed("development")).not.toThrow();
+  });
+  it("assertSeedAllowed throws SeedNotAllowedError for 'production'", () => {
+    expect(() => assertSeedAllowed("production")).toThrow(SeedNotAllowedError);
+  });
+  it("assertSeedAllowed throws an Error for 'production'", () => {
+    expect(() => assertSeedAllowed("production")).toThrow(Error);
+  });
+  it("seedLaundryArchetype resolves in test env (returns an object)", async () => {
+    const { deps: d } = deps();
+    const r = await seedLaundryArchetype({ workspaceId: "ws-x", actorId: "actor-x", env: "test" }, d);
+    expect(r).toBeTruthy();
+    expect(typeof r).toBe("object");
+  });
+  it("seedLaundryArchetype result has businessId", async () => {
+    const { deps: d } = deps();
+    const r = await seedLaundryArchetype({ workspaceId: "ws-x", actorId: "actor-x", env: "test" }, d);
+    expect(r.businessId).toBe("biz1");
+  });
+  it("seedLaundryArchetype result has numeric equipmentCount > 0", async () => {
+    const { deps: d } = deps();
+    const r = await seedLaundryArchetype({ workspaceId: "ws-x", actorId: "actor-x", env: "test" }, d);
+    expect(typeof r.equipmentCount).toBe("number");
+    expect(r.equipmentCount).toBeGreaterThan(0);
+  });
+  it("seedLaundryArchetype result has numeric processCount > 0", async () => {
+    const { deps: d } = deps();
+    const r = await seedLaundryArchetype({ workspaceId: "ws-x", actorId: "actor-x", env: "test" }, d);
+    expect(typeof r.processCount).toBe("number");
+    expect(r.processCount).toBeGreaterThan(0);
+  });
+  it("seedLaundryArchetype result has numeric sopCount > 0", async () => {
+    const { deps: d } = deps();
+    const r = await seedLaundryArchetype({ workspaceId: "ws-x", actorId: "actor-x", env: "test" }, d);
+    expect(typeof r.sopCount).toBe("number");
+    expect(r.sopCount).toBeGreaterThan(0);
+  });
+  it("seedLaundryArchetype calls createBusiness exactly once", async () => {
+    const { fns, deps: d } = deps();
+    await seedLaundryArchetype({ workspaceId: "ws-x", actorId: "actor-x", env: "test" }, d);
+    expect(fns.createBusiness).toHaveBeenCalledTimes(1);
+  });
+  it("seedLaundryArchetype calls registerProcess at least once", async () => {
+    const { fns, deps: d } = deps();
+    await seedLaundryArchetype({ workspaceId: "ws-x", actorId: "actor-x", env: "test" }, d);
+    expect(fns.registerProcess.mock.calls.length).toBeGreaterThan(0);
+  });
+  it("seedLaundryArchetype calls createSopDraft at least once", async () => {
+    const { fns, deps: d } = deps();
+    await seedLaundryArchetype({ workspaceId: "ws-x", actorId: "actor-x", env: "test" }, d);
+    expect(fns.createSopDraft.mock.calls.length).toBeGreaterThan(0);
+  });
+});
+
 describe("assertSeedAllowed", () => {
   it("throws in production, allows otherwise", () => {
     expect(() => assertSeedAllowed("production")).toThrow(SeedNotAllowedError);
