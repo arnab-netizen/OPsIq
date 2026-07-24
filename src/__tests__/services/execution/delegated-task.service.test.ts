@@ -85,6 +85,23 @@ function makeDeps(opts: { committedStatus: T; auditThrows?: boolean }) {
   return { deps, committed, calls };
 }
 
+describe("applyTaskTransition — module contract assertions", () => {
+  it("applyTaskTransition is a function", () => { expect(typeof applyTaskTransition).toBe("function"); });
+  it("TaskTransitionNotAllowedError is a class/function", () => { expect(typeof TaskTransitionNotAllowedError).toBe("function"); });
+  it("TaskTransitionConflictError is a class/function", () => { expect(typeof TaskTransitionConflictError).toBe("function"); });
+  it("T (DelegatedTaskStatus) is an object", () => { expect(typeof T).toBe("object"); });
+  it("T.IN_PROGRESS is defined", () => { expect(T.IN_PROGRESS).toBeDefined(); });
+  it("T.PROOF_REQUIRED is defined", () => { expect(T.PROOF_REQUIRED).toBeDefined(); });
+  it("T.COMPLETED_PENDING_REVIEW is defined", () => { expect(T.COMPLETED_PENDING_REVIEW).toBeDefined(); });
+  it("T.APPROVED_COMPLETE is defined", () => { expect(T.APPROVED_COMPLETE).toBeDefined(); });
+  it("T.DRAFT is defined", () => { expect(T.DRAFT).toBeDefined(); });
+  it("T.BLOCKED is defined", () => { expect(T.BLOCKED).toBeDefined(); });
+  it("TaskActorRole is an object", () => { expect(typeof TaskActorRole).toBe("object"); });
+  it("TaskActorRole.OWNER is defined", () => { expect(TaskActorRole.OWNER).toBeDefined(); });
+  it("TaskActorRole.EMPLOYEE is defined", () => { expect(TaskActorRole.EMPLOYEE).toBeDefined(); });
+  it("ownerActor.canApproveCompletion is true", () => { expect(ownerActor.canApproveCompletion).toBe(true); });
+});
+
 describe("applyTaskTransition", () => {
   it("applies a valid, authorized transition and writes the audit event", async () => {
     const { deps, committed, calls } = makeDeps({ committedStatus: T.IN_PROGRESS });
