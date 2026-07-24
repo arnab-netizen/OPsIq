@@ -635,6 +635,7 @@ export const AUDIT_EVENTS = {
   CONSULTING_ENGAGEMENT_CLOSED: "consulting.engagement_closed",
   CONSULTING_HEALTH_UPDATED: "consulting.health_updated",
   CONSULTING_DIMENSION_UPDATED: "consulting.dimension_updated",
+  CONSULTING_ENGAGEMENT_EXPORTED: "consulting.engagement_exported",
 } as const;
 
 export type AuditEventName =

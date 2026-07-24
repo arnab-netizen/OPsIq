@@ -3436,6 +3436,34 @@
     "test_coverage": "23 tests — client single GET (5), humanFactors restriction (8), client list (3), consultant view (5), null humanFactors (2)",
     "gates_run": "npx vitest run bundle7-dto-leakage (23/23 PASS), all 3 Bundle 7 files (87/87 PASS), npx tsc --noEmit (0 errors)",
     "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern with poison DB rows",
+    "committed": "c41b70de",
+    "pushed": true
+  },
+  "bundle_7_slice_5_export_api": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "description": "Bundle 7 Slice 5: Consulting engagement export API — GET /api/consulting/engagements/export aggregates engagement + findings + recommendations + actions into structured consultant-view export packet.",
+    "files": [
+      "src/services/consulting/consulting-export.service.ts (NEW)",
+      "src/app/api/consulting/engagements/export/route.ts (NEW)",
+      "src/__tests__/api/bundle7-export.test.ts (NEW — 27 tests)",
+      "src/domain/constants/audit-events.ts (CONSULTING_ENGAGEMENT_EXPORTED added)",
+      "src/services/consulting/consulting-engagement.service.ts (metadata: {consultingTarget} added to recommendation create)"
+    ],
+    "wiring_proof": {
+      "caller": "src/app/api/consulting/engagements/export/route.ts::GET",
+      "service": "src/services/consulting/consulting-export.service.ts::exportConsultingEngagement()",
+      "input": "GET ?id=<uuid>",
+      "output": "JSON {export: {exportedAt, workspaceId, engagement: {findings, recommendations, actions}}}",
+      "workspace_enforcement": "ctx.verifiedWorkspaceId always used; URL workspaceId param injection blocked",
+      "auth_enforcement": "CAPABILITIES.CONSULTING_READ required",
+      "audit_event": "consulting.engagement_exported emitted with findingsCount/recommendationsCount/actionsCount",
+      "404_handling": "NotFoundError caught → 404",
+      "400_handling": "missing id → 400"
+    },
+    "test_coverage": "27 tests — capability declaration (2), input validation (3), export structure (4), findings (2), recommendations (3), actions (3), audit event (8), workspace isolation (2)",
+    "gates_run": "npx vitest run bundle7-export (27/27 PASS), all 5 Bundle 7 files (114/114 PASS), adversarial + service tests (111/111 PASS), npx tsc --noEmit (0 errors)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern",
     "committed": "pending"
   }
 }

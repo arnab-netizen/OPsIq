@@ -390,6 +390,7 @@ export async function generateConsultingRecommendation(
       visibility: params.visibility ?? "client",
       version: 1,
       createdBy: actorId,
+      metadata: { consultingTarget: params.consultingTarget },
     },
   });
 
