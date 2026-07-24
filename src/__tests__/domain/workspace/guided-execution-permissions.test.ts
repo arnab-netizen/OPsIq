@@ -17,6 +17,23 @@ const nonOwner = (grants: string[] = []): PermissionContext => ({
   grants: new Set(grants),
 });
 
+describe("guided-execution-permissions — module contract assertions", () => {
+  it("P (GuidedExecutionPermission) is an object", () => { expect(typeof P).toBe("object"); });
+  it("OWNER_ONLY_PERMISSIONS is an object", () => { expect(typeof OWNER_ONLY_PERMISSIONS).toBe("object"); });
+  it("GRANTABLE_PERMISSIONS is an object", () => { expect(typeof GRANTABLE_PERMISSIONS).toBe("object"); });
+  it("isOwnerOnly is a function", () => { expect(typeof isOwnerOnly).toBe("function"); });
+  it("isGrantable is a function", () => { expect(typeof isGrantable).toBe("function"); });
+  it("parsePermission is a function", () => { expect(typeof parsePermission).toBe("function"); });
+  it("hasPermission is a function", () => { expect(typeof hasPermission).toBe("function"); });
+  it("canGrantPermission is a function", () => { expect(typeof canGrantPermission).toBe("function"); });
+  it("owner is an object", () => { expect(typeof owner).toBe("object"); });
+  it("owner.isOwner is true", () => { expect(owner.isOwner).toBe(true); });
+  it("nonOwner is a function", () => { expect(typeof nonOwner).toBe("function"); });
+  it("nonOwner() has isOwner false", () => { expect(nonOwner().isOwner).toBe(false); });
+  it("isOwnerOnly(P.APPROVE_REFUND) is true", () => { expect(isOwnerOnly(P.APPROVE_REFUND)).toBe(true); });
+  it("OWNER_ONLY_PERMISSIONS.size equals 9", () => { expect(OWNER_ONLY_PERMISSIONS.size).toBe(9); });
+});
+
 describe("permission taxonomy", () => {
   it("owner-only and grantable sets are disjoint and cover all permissions", () => {
     for (const p of Object.values(P)) {

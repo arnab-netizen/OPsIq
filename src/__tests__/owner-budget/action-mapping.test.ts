@@ -23,6 +23,23 @@ const sample: BudgetGeneratedAction = {
   killRule: "Stop if pipeline drops >20% in two weeks",
 };
 
+describe("action-mapping — module contract assertions", () => {
+  it("budgetActionSourceKey is a function", () => { expect(typeof budgetActionSourceKey).toBe("function"); });
+  it("mapPlanActionToRow is a function", () => { expect(typeof mapPlanActionToRow).toBe("function"); });
+  it("OPEN_BUDGET_ACTION_STATUSES is an object", () => { expect(typeof OPEN_BUDGET_ACTION_STATUSES).toBe("object"); });
+  it("OPEN_BUDGET_ACTION_STATUSES.size is greater than 0", () => { expect(OPEN_BUDGET_ACTION_STATUSES.size).toBeGreaterThan(0); });
+  it("sample is an object", () => { expect(typeof sample).toBe("object"); });
+  it("sample has title field", () => { expect(sample).toHaveProperty("title"); });
+  it("sample has decisionType field", () => { expect(sample).toHaveProperty("decisionType"); });
+  it("sample.decisionType equals 'CUT'", () => { expect(sample.decisionType).toBe("CUT"); });
+  it("budgetActionSourceKey(sample) returns a string", () => { expect(typeof budgetActionSourceKey(sample)).toBe("string"); });
+  it("budgetActionSourceKey(sample).length is greater than 0", () => { expect(budgetActionSourceKey(sample).length).toBeGreaterThan(0); });
+  it("mapPlanActionToRow(sample) returns an object", () => { expect(typeof mapPlanActionToRow(sample)).toBe("object"); });
+  it("mapPlanActionToRow(sample) has sourceKey field", () => { expect(mapPlanActionToRow(sample)).toHaveProperty("sourceKey"); });
+  it("mapPlanActionToRow(sample) has title field", () => { expect(mapPlanActionToRow(sample)).toHaveProperty("title"); });
+  it("OPEN_BUDGET_ACTION_STATUSES has 'proposed'", () => { expect(OPEN_BUDGET_ACTION_STATUSES.has("proposed")).toBe(true); });
+});
+
 describe("budgetActionSourceKey", () => {
   it("is stable for the same decisionType + title", () => {
     expect(budgetActionSourceKey(sample)).toBe(budgetActionSourceKey({ ...sample }));

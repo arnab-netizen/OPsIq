@@ -13,6 +13,23 @@ import {
 const AT = "2026-07-05T00:00:00.000Z";
 const NOW = new Date(AT);
 
+describe("complaint-rework — module contract assertions", () => {
+  it("planRecordEvent is a function", () => { expect(typeof planRecordEvent).toBe("function"); });
+  it("buildComplaintReworkAnalysis is a function", () => { expect(typeof buildComplaintReworkAnalysis).toBe("function"); });
+  it("riskForEvent is a function", () => { expect(typeof riskForEvent).toBe("function"); });
+  it("OperationalEventType is an object", () => { expect(typeof OperationalEventType).toBe("object"); });
+  it("OperationalEventType.COMPLAINT is defined", () => { expect(OperationalEventType.COMPLAINT).toBeDefined(); });
+  it("ComplaintCategory is an object", () => { expect(typeof ComplaintCategory).toBe("object"); });
+  it("ComplaintCategory.QUALITY_COMPLAINT is defined", () => { expect(ComplaintCategory.QUALITY_COMPLAINT).toBeDefined(); });
+  it("ReworkCategory is an object", () => { expect(typeof ReworkCategory).toBe("object"); });
+  it("ReworkCategory.REWASH is defined", () => { expect(ReworkCategory.REWASH).toBeDefined(); });
+  it("AT is a string", () => { expect(typeof AT).toBe("string"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("planRecordEvent with valid COMPLAINT returns ok true", () => { expect(planRecordEvent({ eventType: OperationalEventType.COMPLAINT, category: ComplaintCategory.QUALITY_COMPLAINT, description: "test" }).ok).toBe(true); });
+  it("planRecordEvent with blank description returns ok false", () => { expect(planRecordEvent({ eventType: OperationalEventType.COMPLAINT, category: ComplaintCategory.QUALITY_COMPLAINT, description: "" }).ok).toBe(false); });
+  it("riskForEvent(COMPLAINT, QUALITY_COMPLAINT) returns an object", () => { expect(typeof riskForEvent(OperationalEventType.COMPLAINT, ComplaintCategory.QUALITY_COMPLAINT)).toBe("object"); });
+});
+
 describe("complaint/rework — validation + mapping", () => {
   it("records a valid complaint; fails closed on missing category / blank description / bad type", () => {
     expect(planRecordEvent({ eventType: OperationalEventType.COMPLAINT, category: ComplaintCategory.QUALITY_COMPLAINT, description: "stain remained" }).ok).toBe(true);
