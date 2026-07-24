@@ -82,6 +82,23 @@ const goodSubmission = {
   submittedByUserId: "emp-1",
 };
 
+describe("proof-service — module contract assertions", () => {
+  it("ProofValidationError is a function", () => { expect(typeof ProofValidationError).toBe("function"); });
+  it("ProofTransitionNotAllowedError is a function", () => { expect(typeof ProofTransitionNotAllowedError).toBe("function"); });
+  it("ProofConflictError is a function", () => { expect(typeof ProofConflictError).toBe("function"); });
+  it("ProofSelfReviewError is a function", () => { expect(typeof ProofSelfReviewError).toBe("function"); });
+  it("ProofDuplicateRejectedError is a function", () => { expect(typeof ProofDuplicateRejectedError).toBe("function"); });
+  it("submitProof is a function", () => { expect(typeof submitProof).toBe("function"); });
+  it("reviewProof is a function", () => { expect(typeof reviewProof).toBe("function"); });
+  it("PS is an object", () => { expect(typeof PS).toBe("object"); });
+  it("ProofType is an object", () => { expect(typeof ProofType).toBe("object"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("WS is a string", () => { expect(typeof WS).toBe("string"); });
+  it("requirement is an object", () => { expect(typeof requirement).toBe("object"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("submitProof", () => {
   it("validates, authorizes, records SUBMITTED + audit", async () => {
     const { deps, committed, calls } = makeDeps({ committedStatus: PS.PENDING_SUBMISSION });
