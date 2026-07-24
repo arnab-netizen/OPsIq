@@ -14,6 +14,23 @@ const lowRisk: FmeaInput = {
   reassessmentMetric: "marketing payback months",
 };
 
+describe("FMEA assurance — module contract assertions", () => {
+  it("requireFmea is a function", () => { expect(typeof requireFmea).toBe("function"); });
+  it("assessFmea is a function", () => { expect(typeof assessFmea).toBe("function"); });
+  it("fmeaAdjustedDisposition is a function", () => { expect(typeof fmeaAdjustedDisposition).toBe("function"); });
+  it("isHighImpact is a function", () => { expect(typeof isHighImpact).toBe("function"); });
+  it("lowRisk is an object", () => { expect(typeof lowRisk).toBe("object"); });
+  it("lowRisk has action field", () => { expect(lowRisk).toHaveProperty("action"); });
+  it("lowRisk.action equals 'marketing_spend'", () => { expect(lowRisk.action).toBe("marketing_spend"); });
+  it("lowRisk has severity field", () => { expect(lowRisk).toHaveProperty("severity"); });
+  it("lowRisk.severity equals 4", () => { expect(lowRisk.severity).toBe(4); });
+  it("lowRisk has mitigation field", () => { expect(lowRisk).toHaveProperty("mitigation"); });
+  it("lowRisk has proofRequired field", () => { expect(lowRisk).toHaveProperty("proofRequired"); });
+  it("isHighImpact('send_reminder') is false", () => { expect(isHighImpact("send_reminder")).toBe(false); });
+  it("requireFmea('send_reminder').ok is true", () => { expect(requireFmea("send_reminder").ok).toBe(true); });
+  it("assessFmea(lowRisk) returns an object", () => { expect(typeof assessFmea(lowRisk)).toBe("object"); });
+});
+
 describe("FMEA assurance", () => {
   it("a high-impact action WITHOUT an FMEA fails", () => {
     const r = requireFmea("branch_expansion");

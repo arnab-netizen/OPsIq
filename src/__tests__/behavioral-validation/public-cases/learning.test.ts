@@ -12,6 +12,23 @@ import { PUBLIC_CORPUS } from "@/behavioral-validation/public-cases/library";
 let rep: LearningPersistenceReport;
 beforeAll(async () => { rep = await runPublicLearningLoop({ limit: 300 }); }, 120_000);
 
+describe("public-corpus learning persistence — module contract assertions", () => {
+  it("runPublicLearningLoop is a function", () => { expect(typeof runPublicLearningLoop).toBe("function"); });
+  it("genericAdvise is a function", () => { expect(typeof genericAdvise).toBe("function"); });
+  it("advise is a function", () => { expect(typeof advise).toBe("function"); });
+  it("scoreAdvice is a function", () => { expect(typeof scoreAdvice).toBe("function"); });
+  it("PUBLIC_CORPUS is an array", () => { expect(Array.isArray(PUBLIC_CORPUS)).toBe(true); });
+  it("PUBLIC_CORPUS.length is greater than 0", () => { expect(PUBLIC_CORPUS.length).toBeGreaterThan(0); });
+  it("PUBLIC_CORPUS[0] has meta field", () => { expect(PUBLIC_CORPUS[0]).toHaveProperty("meta"); });
+  it("PUBLIC_CORPUS[0] has case field", () => { expect(PUBLIC_CORPUS[0]).toHaveProperty("case"); });
+  it("PUBLIC_CORPUS[0].meta has split field", () => { expect((PUBLIC_CORPUS[0] as any).meta).toHaveProperty("split"); });
+  it("PUBLIC_CORPUS[0].meta has dominantConstraint field", () => { expect((PUBLIC_CORPUS[0] as any).meta).toHaveProperty("dominantConstraint"); });
+  it("genericAdvise() returns an object", () => { expect(typeof genericAdvise()).toBe("object"); });
+  it("genericAdvise() does not throw", () => { expect(() => genericAdvise()).not.toThrow(); });
+  it("PUBLIC_CORPUS.some(p => p.meta.split === 'training') is true", () => { expect(PUBLIC_CORPUS.some((p) => (p as any).meta.split === "training")).toBe(true); });
+  it("PUBLIC_CORPUS[0].meta has domains field", () => { expect((PUBLIC_CORPUS[0] as any).meta).toHaveProperty("domains"); });
+});
+
 describe("public-corpus learning persistence — evidence", () => {
   it("persists >=100 governed artifacts from failures", () => {
     expect(rep.artifactsPersisted).toBeGreaterThanOrEqual(100);
