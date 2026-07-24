@@ -14,6 +14,32 @@ const feasible = (over: Partial<FeasibilityContext> = {}): FeasibilityContext =>
 const item = (over: Partial<PlanItem> = {}): PlanItem => ({ taskTemplateType: "TURNOVER_SERVICE", locationId: "locA", scheduledAtMs: 1, assignee: "s1", supervisor: "sup1", riskLevel: "STANDARD", ...over });
 const plan = (items: PlanItem[]): DistributionPlan => ({ distributionPlanId: "dp1", workspaceId: "ws1", businessId: "b1", locationId: "locA", version: 1, createdAtMs: 1, createdBy: "owner1", sourceType: "HUMAN_CREATED", status: "DISPATCHED", items, idempotencyKey: "k1", dispatched: true, changeLog: [] });
 
+describe("[R8/R21] automated dispatch and audit trail — module contract assertions", () => {
+  it("validateAuditEvent is a function", () => { expect(typeof validateAuditEvent).toBe("function"); });
+  it("assertAuditable is a function", () => { expect(typeof assertAuditable).toBe("function"); });
+  it("AuditLog is a class (function)", () => { expect(typeof AuditLog).toBe("function"); });
+  it("UnauditableActionError is a class (function)", () => { expect(typeof UnauditableActionError).toBe("function"); });
+  it("dispatchApprovedPlan is a function", () => { expect(typeof dispatchApprovedPlan).toBe("function"); });
+  it("feasible() returns object with staffAvailable", () => { expect(feasible()).toHaveProperty("staffAvailable"); });
+  it("item() returns object with taskTemplateType", () => { expect(item()).toHaveProperty("taskTemplateType"); });
+  it("plan([]) returns object with distributionPlanId", () => { expect(plan([])).toHaveProperty("distributionPlanId"); });
+  it("new AuditLog() is instanceof AuditLog", () => { expect(new AuditLog()).toBeInstanceOf(AuditLog); });
+  it("new AuditLog().all() returns empty array", () => { expect(new AuditLog().all()).toHaveLength(0); });
+  it("validateAuditEvent with complete event returns []", () => {
+    const e = { workspaceId: "ws1", actor: "u1", type: "DISPATCH" as const, timestampMs: 10, detail: "x" };
+    expect(validateAuditEvent(e)).toEqual([]);
+  });
+  it("dispatchApprovedPlan returns object with dispatched array", () => {
+    expect(Array.isArray(dispatchApprovedPlan(plan([item()]), [feasible()], 1).dispatched)).toBe(true);
+  });
+  it("dispatchApprovedPlan returns object with blocked array", () => {
+    expect(Array.isArray(dispatchApprovedPlan(plan([]), [], 1).blocked)).toBe(true);
+  });
+  it("dispatchApprovedPlan returns object with auditEvents array", () => {
+    expect(Array.isArray(dispatchApprovedPlan(plan([]), [], 1).auditEvents)).toBe(true);
+  });
+});
+
 describe("[R21] audit trail", () => {
   const ev = (over: Partial<AuditEvent> = {}): AuditEvent => ({ workspaceId: "ws1", actor: "u1", type: "DISPATCH", timestampMs: 10, detail: "x", ...over });
   it("a complete audit event validates; missing workspace/actor/type/timestamp fails", () => {

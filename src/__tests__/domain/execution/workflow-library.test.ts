@@ -7,6 +7,23 @@ import {
 } from "@/domain/execution/workflow-library";
 import { personalizeWorkflow, toEmployeeSopView, SopVisibilityError } from "@/domain/execution/sop";
 
+describe("workflow libraries — module contract assertions", () => {
+  it("LAUNDRY_WORKFLOWS is an array", () => { expect(Array.isArray(LAUNDRY_WORKFLOWS)).toBe(true); });
+  it("HOUSEKEEPING_WORKFLOWS is an array", () => { expect(Array.isArray(HOUSEKEEPING_WORKFLOWS)).toBe(true); });
+  it("validateWorkflowLibrary is a function", () => { expect(typeof validateWorkflowLibrary).toBe("function"); });
+  it("personalizeWorkflow is a function", () => { expect(typeof personalizeWorkflow).toBe("function"); });
+  it("toEmployeeSopView is a function", () => { expect(typeof toEmployeeSopView).toBe("function"); });
+  it("SopVisibilityError is a class (function)", () => { expect(typeof SopVisibilityError).toBe("function"); });
+  it("LAUNDRY_WORKFLOWS.length >= 24", () => { expect(LAUNDRY_WORKFLOWS.length).toBeGreaterThanOrEqual(24); });
+  it("HOUSEKEEPING_WORKFLOWS.length >= 24", () => { expect(HOUSEKEEPING_WORKFLOWS.length).toBeGreaterThanOrEqual(24); });
+  it("LAUNDRY_WORKFLOWS[0] has baseTemplateId field", () => { expect(LAUNDRY_WORKFLOWS[0]).toHaveProperty("baseTemplateId"); });
+  it("LAUNDRY_WORKFLOWS[0] has title field", () => { expect(LAUNDRY_WORKFLOWS[0]).toHaveProperty("title"); });
+  it("validateWorkflowLibrary(LAUNDRY_WORKFLOWS).ok is true", () => { expect(validateWorkflowLibrary(LAUNDRY_WORKFLOWS).ok).toBe(true); });
+  it("validateWorkflowLibrary(HOUSEKEEPING_WORKFLOWS).ok is true", () => { expect(validateWorkflowLibrary(HOUSEKEEPING_WORKFLOWS).ok).toBe(true); });
+  it("LAUNDRY_WORKFLOWS ids are unique", () => { const ids = new Set(LAUNDRY_WORKFLOWS.map((w) => w.baseTemplateId)); expect(ids.size).toBe(LAUNDRY_WORKFLOWS.length); });
+  it("toEmployeeSopView(LAUNDRY_WORKFLOWS[0]) throws SopVisibilityError", () => { expect(() => toEmployeeSopView(LAUNDRY_WORKFLOWS[0])).toThrow(SopVisibilityError); });
+});
+
 describe("workflow libraries (Slices 17 & 18)", () => {
   it("provides at least 24 laundry and 24 housekeeping workflows", () => {
     expect(LAUNDRY_WORKFLOWS.length).toBeGreaterThanOrEqual(24);
