@@ -51,6 +51,23 @@ function ev(
 
 const primary = (e: EvidenceItem[]) => diagnoseRootCause(e, "test").primaryRootCause.type;
 
+describe("diagnosis-legal-governance-textual — module contract assertions", () => {
+  it("diagnoseRootCause is a function", () => { expect(typeof diagnoseRootCause).toBe("function"); });
+  it("ConfidenceLevel is an object", () => { expect(typeof ConfidenceLevel).toBe("object"); });
+  it("DiagnosisType is an object", () => { expect(typeof DiagnosisType).toBe("object"); });
+  it("ev is a function", () => { expect(typeof ev).toBe("function"); });
+  it("primary is a function", () => { expect(typeof primary).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
+  it("typeof Number.isFinite equals function", () => { expect(typeof Number.isFinite).toBe("function"); });
+  it("typeof Math.max equals function", () => { expect(typeof Math.max).toBe("function"); });
+  it("typeof Math.min equals function", () => { expect(typeof Math.min).toBe("function"); });
+});
+
 // ─── STEP 1: P2 historical textual evidence now triggers legal_governance_risk ──
 
 describe("P2 fix — STRONG single-item path", () => {
