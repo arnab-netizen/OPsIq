@@ -3517,5 +3517,61 @@
     "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use wrapper mock + vi.resetAllMocks() pattern",
     "committed": "6897e0bd",
     "pushed": true
+  },
+  "bundle_7_slice_8_dimension_update": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "description": "Bundle 7 Slice 8: updateConsultingEngagementDimensions — fills CONSULTING_DIMENSION_UPDATED audit emission gap. Root cause: CONSULTING_DIMENSION_UPDATED was defined in audit-events.ts but never emitted. Adds UpdateDimensionsSchema (engagementId + at least one of interventionMode|interventionPhase|humanFactors, Zod refine enforced), updateConsultingEngagementDimensions() service method (db.engagement.update + emitAuditEvent), POST ?action=update_dimensions route case. 24 tests covering capability enforcement, input validation, all dimension value sets, workspace isolation, service call args, response shape.",
+    "files": [
+      "src/domain/consulting/consulting-contracts.ts (UpdateDimensionsSchema added)",
+      "src/services/consulting/consulting-engagement.service.ts (updateConsultingEngagementDimensions added)",
+      "src/app/api/consulting/engagements/route.ts (update_dimensions case added)",
+      "src/__tests__/api/bundle7-dimensions-mutation.test.ts (NEW — 24 tests)"
+    ],
+    "wiring_proof": {
+      "caller": "src/app/api/consulting/engagements/route.ts::POST?action=update_dimensions",
+      "service": "src/services/consulting/consulting-engagement.service.ts::updateConsultingEngagementDimensions()",
+      "input": "POST body {engagementId: uuid, interventionMode?: string, interventionPhase?: string, humanFactors?: object}",
+      "output": "JSON {engagement: {id, interventionMode, interventionPhase, humanFactors, ...}}",
+      "workspace_enforcement": "ctx.verifiedWorkspaceId always used; body workspaceId injection rejected by strictObject",
+      "auth_enforcement": "CAPABILITIES.CONSULTING_WRITE required",
+      "audit_event": "CONSULTING_DIMENSION_UPDATED emitted with payload recording changed fields"
+    },
+    "test_coverage": "24 tests — capability enforcement (3), input validation (4: missing id, no dimensions, invalid interventionMode, invalid interventionPhase), interventionMode update all 4 values, interventionPhase update all 4 values, humanFactors update, workspace isolation (2), service call args (3), response shape (2)",
+    "gates_run": "npx vitest run bundle7-dimensions-mutation (24/24 PASS), all 8 Bundle 7 files (235/235 PASS), npx tsc --noEmit (0 errors)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "committed": "f9fda28e",
+    "pushed": true
+  },
+  "bundle_3_4_detail_route_tests": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "NON_DB_MOCK_TEST_SUITE",
+    "description": "Non-DB mock tests for risk and compliance detail routes. Covers GET /api/owner/risks/[riskId] and POST /api/owner/risks/[riskId]/review and POST /api/owner/risks/[riskId]/tasks (31 tests), and GET /api/owner/compliance/[itemId] and POST /api/owner/compliance/[itemId]/review (28 tests). Uses vi.hoisted() + wrapper mock pattern per canonical Bundle 7. All UUIDs use valid hex characters [0-9a-f] to pass z.string().uuid() validation.",
+    "files": [
+      "src/__tests__/api/owner/risks/detail-routes.test.ts (NEW — 31 tests)",
+      "src/__tests__/api/owner/compliance/detail-routes.test.ts (NEW — 28 tests)"
+    ],
+    "test_coverage": "59 tests total — risks detail: capability declarations (6), GET handler (6), POST review (9), POST tasks (10); compliance detail: capability declarations (6), GET handler (6), POST review (12)",
+    "workspace_enforcement": "verified: workspaceId always from ctx.verifiedWorkspaceId; WS_B isolation tests pass",
+    "auth_enforced": "owner:view (GET), owner:manage (POST review/tasks)",
+    "gates_run": "npx vitest run detail-routes (59/59 PASS), npx tsc --noEmit (0 errors)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "committed": "f06ad80d",
+    "pushed": true,
+    "next_automatic_target": "goal-arbitration route tests — 30/30 PASS"
+  },
+  "owner_goal_arbitration_route_tests": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "NON_DB_MOCK_TEST_SUITE",
+    "description": "Non-DB mock tests for GET/POST /api/owner/goal-arbitration. Covers capability declarations (GET/POST both require owner:manage + requireWorkspace:true), GET returning record or null with workspaceId isolation, POST returning arbitrationRecordId+portfolioDecisions with workspaceId+actorId isolation, 403 enforcement denial, service call count assertions, cross-workspace call-pair checks. 30 tests total.",
+    "files": [
+      "src/__tests__/api/owner/goal-arbitration/goal-arbitration.test.ts (NEW — 30 tests)"
+    ],
+    "test_coverage": "30 tests — capability declarations (6), GET handler (8), POST handler (11), workspace isolation (2 cross-call pair), 403 denial (2)",
+    "workspace_enforcement": "verified: verifiedWorkspaceId always passed to service; WS_A/WS_B isolation tests pass",
+    "auth_enforced": "owner:manage (GET and POST)",
+    "gates_run": "npx vitest run goal-arbitration (30/30 PASS), npx tsc --noEmit (0 errors)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "next_automatic_target": "Identify next service with <20 tests: operating-memory, owner-block-metrics, control-correlation"
   }
 }
