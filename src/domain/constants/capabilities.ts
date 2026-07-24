@@ -123,6 +123,9 @@ export const CAPABILITIES = {
   // Onboarding
   OWNER_ONBOARD: "owner:onboard",
 
+  // SOP Management
+  SOP_MANAGE: "sop:manage",
+
   // Audit Trail
   AUDIT_VIEW: "audit:view",
   AUDIT_EXPORT: "audit:export",

@@ -582,6 +582,12 @@ export const AUDIT_EVENTS = {
   STARTUP_EXECUTION_AUTHORIZATION_DENIED: "startup.execution_authorization_denied",
   STARTUP_APPROVAL_BECAME_STALE: "startup.approval_became_stale",
   STARTUP_EXECUTION_PLAN_SUPERSEDED: "startup.execution_plan_superseded",
+  // Bundle 3.9 — Process Intelligence and SOP Management
+  SOP_TRAINING_ASSIGNED: "sop.training_assigned",
+  SOP_TRAINING_COMPLETED: "sop.training_completed",
+  SOP_NONCOMPLIANCE_ALERT_CREATED: "sop.noncompliance_alert_created",
+  SOP_COMPLIANCE_REASSESSMENT_TRIGGERED: "sop.compliance_reassessment_triggered",
+
   // Bundle 3.8 — Owner Onboarding and Archetype Seeding
   ONBOARDING_STARTED: "onboarding.started",
   ONBOARDING_COMPLETED: "onboarding.completed",

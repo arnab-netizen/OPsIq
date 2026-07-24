@@ -6352,3 +6352,41 @@ model OwnerOnboarding {
   @@index([workspaceId, status])
   @@map("owner_onboarding")
 }
+
+// Bundle 3.9 — Process Intelligence and SOP Management
+
+model OwnerSopTrainingAssignment {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  sopDocumentId String    @map("sop_document_id") @db.Uuid
+  assignedTo    String    @map("assigned_to") @db.Uuid
+  assignedBy    String    @map("assigned_by") @db.Uuid
+  dueDate       DateTime? @map("due_date")
+  status        String    @default("ASSIGNED")
+  completedAt   DateTime? @map("completed_at")
+  evidenceUrl   String?   @map("evidence_url") @db.Text
+  evidenceNote  String?   @map("evidence_note") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, sopDocumentId, assignedTo], map: "sop_training_ws_sop_staff")
+  @@index([workspaceId, sopDocumentId])
+  @@index([workspaceId, status])
+  @@map("owner_sop_training_assignments")
+}
+
+model OwnerSopNonComplianceAlert {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  sopDocumentId  String    @map("sop_document_id") @db.Uuid
+  alertWindow    String    @map("alert_window")
+  complianceRate Float     @map("compliance_rate")
+  threshold      Float
+  acknowledged   Boolean   @default(false)
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@unique([workspaceId, sopDocumentId, alertWindow], map: "sop_noncompliance_ws_sop_window")
+  @@index([workspaceId, acknowledged])
+  @@map("owner_sop_noncompliance_alerts")
+}
