@@ -733,7 +733,35 @@
     "test_count": 44,
     "gates_run": "npx tsc --noEmit (✓), npm run build (✓), npx prisma validate (✓), lint-ratchet PASS (0 errors on changed files), vitest 44/44 (✓)"
   },
-  "next_automatic_target": "Bundle 4.1 committed — identify next highest-priority roadmap slice",
+  "bundle_4_2_owner_bcp": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_API_ROUTE",
+    "description": "Owner Business Condition Profile (BCP) — source of truth for all 4 OpsIQ dimensions: consulting_lifecycle_stage, business_condition, intervention_mode/phase, human_execution_reality. Full derivation engine, idempotent create, versioned re-evaluation, version history, DTO boundary enforcement (inputFactsJson excluded), workspace-scoped throughout, audit events on create and evaluate.",
+    "files_created": [
+      "prisma/schema.prisma (OwnerBusinessConditionProfile model)",
+      "src/services/owner-mode/owner-bcp.service.ts",
+      "src/__tests__/services/owner-mode/owner-bcp.test.ts",
+      "src/app/api/owner/bcp/route.ts"
+    ],
+    "files_modified": [
+      "src/domain/constants/audit-events.ts (OWNER_BCP_CREATED, OWNER_BCP_EVALUATED)"
+    ],
+    "four_dimensions_coverage": {
+      "consulting_lifecycle_stage": "✓ deriveConsultingLifecycleStage() + supplied override",
+      "business_condition": "✓ conditionCode + conditionSeverity + businessConditionScore from 4 domain health scores",
+      "intervention_mode_and_phase": "✓ deriveInterventionMode() + deriveInterventionPhase() + supplied override",
+      "human_execution_reality": "✓ humanExecutionRisk passed through from BcpInputFacts"
+    },
+    "DTO_boundary": "✓ inputFactsJson and triggeredBy excluded from PublicBcpDTO — only returned as internal BcpRow",
+    "workspace_enforcement": "✓ workspaceId enforced in all DB queries + withCanonicalEnforcement middleware",
+    "auth_enforcement": "✓ CAPABILITIES.OWNER_MANAGE required on GET/POST/PATCH",
+    "audit_events": "✓ OWNER_BCP_CREATED on create, OWNER_BCP_EVALUATED on evaluate",
+    "idempotency": "✓ createConditionProfile returns existing isCurrent=true profile if present",
+    "version_snapshots": "✓ evaluateConditionProfile marks old isCurrent=false, creates new version",
+    "test_count": 96,
+    "gates_run": "vitest 96/96 (✓), npx tsc --noEmit (✓), npm run build (✓), npx prisma validate (✓), lint-ratchet PASS (0 errors on changed files)"
+  },
+  "next_automatic_target": "Bundle 4.3 — identify next highest-priority Bundle 4+ slice",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "UNKNOWN (timeout \u2014 not a blocker)",

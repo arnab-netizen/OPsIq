@@ -614,6 +614,9 @@ export const AUDIT_EVENTS = {
   COMPLAINT_CLOSED: "complaint.closed",
   COMPLAINT_SLA_BREACHED: "complaint.sla_breached",
   COMPLAINT_REOPENED: "complaint.reopened",
+  // Bundle 4.2 — Owner Business Condition Profile
+  OWNER_BCP_CREATED: "owner_bcp.created",
+  OWNER_BCP_EVALUATED: "owner_bcp.evaluated",
 } as const;
 
 export type AuditEventName =

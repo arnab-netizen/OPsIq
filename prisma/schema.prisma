@@ -6390,3 +6390,55 @@ model OwnerSopNonComplianceAlert {
   @@index([workspaceId, acknowledged])
   @@map("owner_sop_noncompliance_alerts")
 }
+
+// Bundle 4 — Business Condition Profile (owner-mode)
+// One BCP per evaluation; isCurrent=true marks the live snapshot.
+// inputFactsJson is intentionally excluded from all public DTOs.
+model OwnerBusinessConditionProfile {
+  id                         String    @id @default(cuid())
+  workspaceId                String    @map("workspace_id") @db.Uuid
+  businessId                 String    @map("business_id")
+  version                    Int       @default(1)
+  isCurrent                  Boolean   @default(true) @map("is_current")
+
+  // Business condition (one of 5 condition codes)
+  conditionCode              String    @map("condition_code")
+  conditionSeverity          String    @map("condition_severity")
+
+  // Four OpsIQ dimensions
+  consultingLifecycleStage   String    @map("consulting_lifecycle_stage")
+  businessConditionScore     Int       @map("business_condition_score")
+  interventionMode           String    @map("intervention_mode")
+  interventionPhase          String    @map("intervention_phase")
+  humanExecutionRisk         String    @map("human_execution_risk")
+
+  // Per-domain health scores (0-100)
+  financialHealthScore       Int       @default(50) @map("financial_health_score")
+  operationalHealthScore     Int       @default(50) @map("operational_health_score")
+  salesHealthScore           Int       @default(50) @map("sales_health_score")
+  sopHealthScore             Int       @default(50) @map("sop_health_score")
+
+  // Derived guidance
+  recommendationPriority     String    @map("recommendation_priority")
+  reviewCadence              String    @map("review_cadence")
+  healthStatus               String    @map("health_status")
+
+  // Trigger context
+  triggerType                String    @map("trigger_type")
+  triggerDescription         String    @map("trigger_description") @db.Text
+  triggeredBy                String    @map("triggered_by")
+
+  // Internal only — scoring inputs excluded from all public DTOs
+  inputFactsJson             String    @map("input_facts_json") @db.Text
+
+  // Optional link to the reassessment event that caused this re-evaluation
+  sourceReassessmentEventId  String?   @map("source_reassessment_event_id")
+
+  createdAt                  DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([workspaceId, businessId, isCurrent])
+  @@index([businessId, version])
+  @@map("owner_business_condition_profiles")
+}
