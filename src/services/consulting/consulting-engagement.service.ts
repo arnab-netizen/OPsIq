@@ -580,6 +580,60 @@ export async function updateConsultingEngagementHealth(
   return health;
 }
 
+// ─── Dimensions: update (interventionMode, interventionPhase, humanFactors) ────
+
+export async function updateConsultingEngagementDimensions(
+  params: {
+    engagementId: string;
+    workspaceId: string;
+    interventionMode?: string;
+    interventionPhase?: string;
+    humanFactors?: HumanFactors;
+  },
+  actorId: string
+): Promise<ConsultingEngagementConsultantDTO> {
+  const engagement = await db.engagement.findFirst({
+    where: { id: params.engagementId, workspaceId: params.workspaceId },
+  });
+
+  if (!engagement) throw new NotFoundError("Engagement", params.engagementId);
+
+  const updateData: Record<string, unknown> = { updatedAt: new Date() };
+  if (params.interventionMode !== undefined) updateData.interventionMode = params.interventionMode;
+  if (params.interventionPhase !== undefined) updateData.interventionPhase = params.interventionPhase;
+  if (params.humanFactors !== undefined) updateData.humanFactors = params.humanFactors as object;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updated = await (db.engagement as any).update({
+    where: { id: params.engagementId },
+    data: updateData,
+  }) as Engagement;
+
+  const r = toRow(updated);
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.CONSULTING_DIMENSION_UPDATED,
+    actorId,
+    entityType: "Engagement",
+    entityId: params.engagementId,
+    workspaceId: params.workspaceId,
+    payload: {
+      interventionMode: params.interventionMode ?? null,
+      interventionPhase: params.interventionPhase ?? null,
+      humanFactorsUpdated: params.humanFactors !== undefined,
+    },
+  });
+
+  return toConsultantDTO({
+    ...r,
+    consultantNotes: r.consultantNotes,
+    humanFactors: r.humanFactors,
+    consultingPhase: r.consultingPhase,
+    assignedConsultantId: updated.assignedConsultantId ?? null,
+    createdBy: updated.createdBy ?? null,
+  });
+}
+
 // ─── Engagement: close (gate: all critical actions resolved) ──────────────────
 
 export async function closeConsultingEngagement(

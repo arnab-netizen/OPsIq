@@ -23,6 +23,7 @@ import {
   AssignConsultingActionSchema,
   CloseEngagementSchema,
   UpdateHealthSchema,
+  UpdateDimensionsSchema,
 } from "@/domain/consulting/consulting-contracts";
 import {
   createConsultingEngagement,
@@ -34,6 +35,7 @@ import {
   assignConsultingAction,
   closeConsultingEngagement,
   updateConsultingEngagementHealth,
+  updateConsultingEngagementDimensions,
 } from "@/services/consulting/consulting-engagement.service";
 
 export const dynamic = "force-dynamic";
@@ -159,6 +161,24 @@ export const POST = withCanonicalEnforcement(
           ctx.verifiedActorId
         );
         return canonicalJson({ health }, { status: 200 });
+      }
+
+      case "update_dimensions": {
+        const parsed = UpdateDimensionsSchema.safeParse(body);
+        if (!parsed.success) {
+          return canonicalJson({ error: parsed.error.flatten() }, { status: 422 });
+        }
+        const engagement = await updateConsultingEngagementDimensions(
+          {
+            engagementId: parsed.data.engagementId,
+            workspaceId: ctx.verifiedWorkspaceId,
+            interventionMode: parsed.data.interventionMode,
+            interventionPhase: parsed.data.interventionPhase,
+            humanFactors: parsed.data.humanFactors as Parameters<typeof updateConsultingEngagementDimensions>[0]["humanFactors"],
+          },
+          ctx.verifiedActorId
+        );
+        return canonicalJson({ engagement }, { status: 200 });
       }
 
       default:

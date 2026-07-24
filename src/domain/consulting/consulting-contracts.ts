@@ -153,6 +153,28 @@ export const UpdateHealthSchema = z.object({
   engagementId: z.string().uuid(),
 });
 
+export const UpdateDimensionsSchema = z.object({
+  engagementId: z.string().uuid(),
+  interventionMode: z.enum(["recovery", "growth", "transformation", "stabilization"]).optional(),
+  interventionPhase: z.enum(["triage", "stabilize", "rebuild", "optimize"]).optional(),
+  humanFactors: z
+    .object({
+      ownerBottleneckRisk: z.enum(["LOW", "MEDIUM", "HIGH"]).nullable().default(null),
+      followThroughRisk: z.enum(["LOW", "MEDIUM", "HIGH"]).nullable().default(null),
+      resistanceToChange: z.enum(["LOW", "MEDIUM", "HIGH"]).nullable().default(null),
+      communicationBreakdownRisk: z.enum(["LOW", "MEDIUM", "HIGH"]).nullable().default(null),
+      moraleFragility: z.enum(["LOW", "MEDIUM", "HIGH"]).nullable().default(null),
+      managementCapabilityGap: z.enum(["LOW", "MEDIUM", "HIGH"]).nullable().default(null),
+      keyPersonDependency: z.boolean().default(false),
+      accountabilityWeakness: z.enum(["LOW", "MEDIUM", "HIGH"]).nullable().default(null),
+      notes: z.string().optional(),
+    })
+    .optional(),
+}).refine(
+  (data) => data.interventionMode !== undefined || data.interventionPhase !== undefined || data.humanFactors !== undefined,
+  { message: "At least one dimension must be provided for update" }
+);
+
 // ─── Public DTO (client-visible) — no consultant-internal fields ──────────────
 
 export interface ConsultingEngagementClientDTO {
