@@ -67,6 +67,23 @@ function diagnose(input: OperationsSnapshotInput) {
   return diagnoseOperationsSnapshot(input, { now: new Date("2026-06-05") });
 }
 
+describe("owner-operations diagnosis — module contract assertions", () => {
+  it("diagnoseOperationsSnapshot is a function", () => { expect(typeof diagnoseOperationsSnapshot).toBe("function"); });
+  it("buildOperationsRiskFindings is a function", () => { expect(typeof buildOperationsRiskFindings).toBe("function"); });
+  it("buildOperationsOpportunityFindings is a function", () => { expect(typeof buildOperationsOpportunityFindings).toBe("function"); });
+  it("computeOperationsMetrics is a function", () => { expect(typeof computeOperationsMetrics).toBe("function"); });
+  it("resolveOperationsThresholds is a function", () => { expect(typeof resolveOperationsThresholds).toBe("function"); });
+  it("rankOperationsFindings is a function", () => { expect(typeof rankOperationsFindings).toBe("function"); });
+  it("ownerFindingSchema is an object", () => { expect(typeof ownerFindingSchema).toBe("object"); });
+  it("domainScoreSchema is an object", () => { expect(typeof domainScoreSchema).toBe("object"); });
+  it("healthy is a function", () => { expect(typeof healthy).toBe("function"); });
+  it("overloaded is a function", () => { expect(typeof overloaded).toBe("function"); });
+  it("codes is a function", () => { expect(typeof codes).toBe("function"); });
+  it("diagnose is a function", () => { expect(typeof diagnose).toBe("function"); });
+  it("healthy() returns an object", () => { expect(typeof healthy()).toBe("object"); });
+  it("overloaded() returns an object", () => { expect(typeof overloaded()).toBe("object"); });
+});
+
 describe("owner-operations detector — risk findings", () => {
   it("overloaded triggers the operations risk cluster", () => {
     const r = diagnose(overloaded());
