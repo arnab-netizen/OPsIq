@@ -738,7 +738,9 @@ describe("[db] Business Risk — alert integration", () => {
     });
     expect(overdueBefore?.resolvedAt).toBeNull();
 
-    await reviewRisk({ workspaceId: alertWorkspaceId, riskId: risk.id, actorId: actor, newStatus: "RESOLVED" });
+    // ASSESSED → MITIGATING → RESOLVED (ASSESSED → RESOLVED is not a valid FSM transition)
+    await reviewRisk({ workspaceId: alertWorkspaceId, riskId: risk.id, actorId: actor, newStatus: "MITIGATING" });
+    await reviewRisk({ workspaceId: alertWorkspaceId, riskId: risk.id, actorId: actor, newStatus: "RESOLVED", residualRisk: 5 });
 
     const overdueAfter = await db.alert.findFirst({
       where: { workspaceId: alertWorkspaceId, entityId: risk.id, idempotencyKey: `risk_overdue_${risk.id}` },
