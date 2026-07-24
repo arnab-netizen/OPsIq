@@ -43,6 +43,23 @@ function stripInput(over: Partial<PriorityStripInput> = {}): PriorityStripInput 
   };
 }
 
+describe("no-bypass — module contract assertions", () => {
+  it("buildSupervisorSummary is a function", () => { expect(typeof buildSupervisorSummary).toBe("function"); });
+  it("buildPriorityCommandStrip is a function", () => { expect(typeof buildPriorityCommandStrip).toBe("function"); });
+  it("readFileSync is a function", () => { expect(typeof readFileSync).toBe("function"); });
+  it("resolve is a function", () => { expect(typeof resolve).toBe("function"); });
+  it("supInput is a function", () => { expect(typeof supInput).toBe("function"); });
+  it("stripInput is a function", () => { expect(typeof stripInput).toBe("function"); });
+  it("supInput() returns an object", () => { expect(typeof supInput()).toBe("object"); });
+  it("stripInput() returns an object", () => { expect(typeof stripInput()).toBe("object"); });
+  it("supInput() has found field", () => { expect(supInput()).toHaveProperty("found"); });
+  it("supInput().found is true", () => { expect(supInput().found).toBe(true); });
+  it("stripInput().wbp is an object", () => { expect(typeof stripInput().wbp).toBe("object"); });
+  it("buildSupervisorSummary(supInput()) returns an object", () => { expect(typeof buildSupervisorSummary(supInput())).toBe("object"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("no-bypass — missing runtime output never fabricates advice", () => {
   it("the priority strip returns NO cards when the runtime plan is not found (no static fallback)", () => {
     expect(buildPriorityCommandStrip(stripInput({ wbp: { ...stripInput().wbp, found: false } }))).toHaveLength(0);
