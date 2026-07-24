@@ -21,12 +21,12 @@ describe("public-corpus learning persistence — module contract assertions", ()
   it("PUBLIC_CORPUS.length is greater than 0", () => { expect(PUBLIC_CORPUS.length).toBeGreaterThan(0); });
   it("PUBLIC_CORPUS[0] has meta field", () => { expect(PUBLIC_CORPUS[0]).toHaveProperty("meta"); });
   it("PUBLIC_CORPUS[0] has case field", () => { expect(PUBLIC_CORPUS[0]).toHaveProperty("case"); });
-  it("PUBLIC_CORPUS[0].meta has split field", () => { expect((PUBLIC_CORPUS[0] as any).meta).toHaveProperty("split"); });
-  it("PUBLIC_CORPUS[0].meta has dominantConstraint field", () => { expect((PUBLIC_CORPUS[0] as any).meta).toHaveProperty("dominantConstraint"); });
+  it("PUBLIC_CORPUS[0].meta has split field", () => { expect(PUBLIC_CORPUS[0].meta).toHaveProperty("split"); });
+  it("PUBLIC_CORPUS[0].meta has dominantConstraint field", () => { expect(PUBLIC_CORPUS[0].meta).toHaveProperty("dominantConstraint"); });
   it("genericAdvise() returns an object", () => { expect(typeof genericAdvise()).toBe("object"); });
   it("genericAdvise() does not throw", () => { expect(() => genericAdvise()).not.toThrow(); });
-  it("PUBLIC_CORPUS.some(p => p.meta.split === 'training') is true", () => { expect(PUBLIC_CORPUS.some((p) => (p as any).meta.split === "training")).toBe(true); });
-  it("PUBLIC_CORPUS[0].meta has domains field", () => { expect((PUBLIC_CORPUS[0] as any).meta).toHaveProperty("domains"); });
+  it("PUBLIC_CORPUS.some(p => p.meta.split === 'training') is true", () => { expect(PUBLIC_CORPUS.some((p) => p.meta.split === "training")).toBe(true); });
+  it("PUBLIC_CORPUS[0].meta has domains field", () => { expect(PUBLIC_CORPUS[0].meta).toHaveProperty("domains"); });
 });
 
 describe("public-corpus learning persistence — evidence", () => {
