@@ -53,6 +53,8 @@ import {
   assignConsultingAction,
   computeConsultingEngagementHealth,
   closeConsultingEngagement,
+  updateConsultingEngagementHealth,
+  updateConsultingEngagementDimensions,
 } from "@/services/consulting/consulting-engagement.service";
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -802,6 +804,131 @@ describe("audit event entityType field correctness", () => {
     );
 
     expect(mockEmitAuditEvent.mock.calls[0][0].entityType).toBe("Engagement");
+  });
+});
+
+// ─── 10b. updateConsultingEngagementHealth ────────────────────────────────────
+
+describe("updateConsultingEngagementHealth — audit event", () => {
+  it("emits CONSULTING_HEALTH_UPDATED on successful update", async () => {
+    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow());
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ healthStatus: "healthy" }));
+
+    await updateConsultingEngagementHealth({ engagementId: ENG_ID, workspaceId: WS }, ACTOR);
+
+    expect(mockEmitAuditEvent).toHaveBeenCalledTimes(1);
+    const call = mockEmitAuditEvent.mock.calls[0][0];
+    expect(call.eventName).toBe("consulting.health_updated");
+    expect(call.actorId).toBe(ACTOR);
+    expect(call.workspaceId).toBe(WS);
+    expect(call.entityId).toBe(ENG_ID);
+    expect(call.entityType).toBe("Engagement");
+  });
+
+  it("emits payload with status, reasons, and counts", async () => {
+    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow());
+    mockDb.finding.findMany.mockResolvedValue([
+      { ...makeFindingRow(), severity: "critical", status: "identified" },
+    ]);
+    mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ healthStatus: "blocked" }));
+
+    await updateConsultingEngagementHealth({ engagementId: ENG_ID, workspaceId: WS }, ACTOR);
+
+    const payload = mockEmitAuditEvent.mock.calls[0][0].payload;
+    expect(payload.status).toBe("BLOCKED");
+    expect(Array.isArray(payload.reasons)).toBe(true);
+    expect(payload.criticalFindingsUnresolved).toBe(1);
+    expect(payload.criticalActionsUnresolved).toBe(0);
+    expect(payload.overdueActions).toBe(0);
+  });
+
+  it("does NOT emit when engagement not found", async () => {
+    mockDb.engagement.findFirst.mockResolvedValue(null);
+
+    await expect(
+      updateConsultingEngagementHealth({ engagementId: ENG_ID, workspaceId: WS }, ACTOR)
+    ).rejects.toThrow();
+
+    expect(mockEmitAuditEvent).not.toHaveBeenCalled();
+  });
+});
+
+// ─── 10c. updateConsultingEngagementDimensions ────────────────────────────────
+
+describe("updateConsultingEngagementDimensions — audit event", () => {
+  it("emits CONSULTING_DIMENSION_UPDATED on successful update", async () => {
+    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow());
+    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ interventionMode: "growth" }));
+
+    await updateConsultingEngagementDimensions(
+      { engagementId: ENG_ID, workspaceId: WS, interventionMode: "growth" },
+      ACTOR
+    );
+
+    expect(mockEmitAuditEvent).toHaveBeenCalledTimes(1);
+    const call = mockEmitAuditEvent.mock.calls[0][0];
+    expect(call.eventName).toBe("consulting.dimension_updated");
+    expect(call.actorId).toBe(ACTOR);
+    expect(call.workspaceId).toBe(WS);
+    expect(call.entityId).toBe(ENG_ID);
+    expect(call.entityType).toBe("Engagement");
+  });
+
+  it("emits payload recording which dimensions changed", async () => {
+    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow());
+    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ interventionPhase: "rebuild" }));
+
+    await updateConsultingEngagementDimensions(
+      { engagementId: ENG_ID, workspaceId: WS, interventionPhase: "rebuild" },
+      ACTOR
+    );
+
+    const payload = mockEmitAuditEvent.mock.calls[0][0].payload;
+    expect(payload.interventionPhase).toBe("rebuild");
+    expect(payload.interventionMode).toBeNull();
+    expect(typeof payload.humanFactorsUpdated).toBe("boolean");
+  });
+
+  it("emits humanFactorsUpdated=true when humanFactors provided", async () => {
+    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow());
+    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow());
+
+    await updateConsultingEngagementDimensions(
+      {
+        engagementId: ENG_ID,
+        workspaceId: WS,
+        humanFactors: {
+          ownerBottleneckRisk: "HIGH",
+          followThroughRisk: null,
+          resistanceToChange: null,
+          communicationBreakdownRisk: null,
+          moraleFragility: null,
+          managementCapabilityGap: null,
+          keyPersonDependency: false,
+          accountabilityWeakness: null,
+        },
+      },
+      ACTOR
+    );
+
+    const payload = mockEmitAuditEvent.mock.calls[0][0].payload;
+    expect(payload.humanFactorsUpdated).toBe(true);
+  });
+
+  it("does NOT emit when engagement not found", async () => {
+    mockDb.engagement.findFirst.mockResolvedValue(null);
+
+    await expect(
+      updateConsultingEngagementDimensions(
+        { engagementId: ENG_ID, workspaceId: WS, interventionMode: "growth" },
+        ACTOR
+      )
+    ).rejects.toThrow();
+
+    expect(mockEmitAuditEvent).not.toHaveBeenCalled();
   });
 });
 
