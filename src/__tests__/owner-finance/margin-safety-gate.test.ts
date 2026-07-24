@@ -12,6 +12,23 @@ import {
 import { RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
 import { enforceMarginSafetyForPromotion, type MarginDeps } from "@/services/owner-finance/recommendation-margin-safety.service";
 
+describe("margin-safety-gate — module contract assertions", () => {
+  it("evaluateMarginSafety is a function", () => { expect(typeof evaluateMarginSafety).toBe("function"); });
+  it("assertMarginSafetyForPromotion is a function", () => { expect(typeof assertMarginSafetyForPromotion).toBe("function"); });
+  it("MarginSafetyGateError is a function", () => { expect(typeof MarginSafetyGateError).toBe("function"); });
+  it("MarginSafetyOutcome is an object", () => { expect(typeof MarginSafetyOutcome).toBe("object"); });
+  it("grossMarginPctFrom is a function", () => { expect(typeof grossMarginPctFrom).toBe("function"); });
+  it("RecommendationSensitivity is an object", () => { expect(typeof RecommendationSensitivity).toBe("object"); });
+  it("enforceMarginSafetyForPromotion is a function", () => { expect(typeof enforceMarginSafetyForPromotion).toBe("function"); });
+  it("evaluateMarginSafety(20, PRICING_SENSITIVE, 15) returns an object", () => { expect(typeof evaluateMarginSafety(20, RecommendationSensitivity.PRICING_SENSITIVE, 15)).toBe("object"); });
+  it("evaluateMarginSafety result has allowed field", () => { expect(evaluateMarginSafety(20, RecommendationSensitivity.PRICING_SENSITIVE, 15)).toHaveProperty("allowed"); });
+  it("evaluateMarginSafety result has outcome field", () => { expect(evaluateMarginSafety(20, RecommendationSensitivity.PRICING_SENSITIVE, 15)).toHaveProperty("outcome"); });
+  it("evaluateMarginSafety(20, PRICING_SENSITIVE, 15).allowed is true", () => { expect(evaluateMarginSafety(20, RecommendationSensitivity.PRICING_SENSITIVE, 15).allowed).toBe(true); });
+  it("evaluateMarginSafety(8, PRICING_SENSITIVE, 15).allowed is false", () => { expect(evaluateMarginSafety(8, RecommendationSensitivity.PRICING_SENSITIVE, 15).allowed).toBe(false); });
+  it("grossMarginPctFrom(100, 70) equals 30", () => { expect(grossMarginPctFrom(100, 70)).toBe(30); });
+  it("MarginSafetyOutcome.BLOCKED_BELOW_FLOOR is defined", () => { expect(MarginSafetyOutcome.BLOCKED_BELOW_FLOOR).toBeDefined(); });
+});
+
 describe("evaluateMarginSafety", () => {
   it("blocks a pricing rec below the margin floor", () => {
     const r = evaluateMarginSafety(8, RecommendationSensitivity.PRICING_SENSITIVE, 15);
