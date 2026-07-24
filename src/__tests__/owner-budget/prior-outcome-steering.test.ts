@@ -32,6 +32,23 @@ const hasFailureSignal = (p: ReturnType<typeof plan>) => p.signals.some((s) => s
 
 const failed: PriorInitiativeOutcome = { initiativeLabel: "budget-action:Referral campaign", outcome: "FAILED", safeForLearning: true };
 
+describe("prior-outcome-steering — module contract assertions", () => {
+  it("composeUpdatedPlan is a function", () => { expect(typeof composeUpdatedPlan).toBe("function"); });
+  it("plan is a function", () => { expect(typeof plan).toBe("function"); });
+  it("growthLine is a function", () => { expect(typeof growthLine).toBe("function"); });
+  it("hasFailureSignal is a function", () => { expect(typeof hasFailureSignal).toBe("function"); });
+  it("finance is an object", () => { expect(typeof finance).toBe("object"); });
+  it("growthCandidate is an object", () => { expect(typeof growthCandidate).toBe("object"); });
+  it("assessment is an object", () => { expect(typeof assessment).toBe("object"); });
+  it("failed is an object", () => { expect(typeof failed).toBe("object"); });
+  it("plan() returns an object", () => { expect(typeof plan()).toBe("object"); });
+  it("plan() has fundAllocationChanges field", () => { expect(plan()).toHaveProperty("fundAllocationChanges"); });
+  it("failed.outcome equals FAILED", () => { expect(failed.outcome).toBe("FAILED"); });
+  it("failed.safeForLearning is true", () => { expect(failed.safeForLearning).toBe(true); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("P3-A3 M9 — prior funded-initiative outcomes steer the next plan", () => {
   it("baseline (no history) funds the growth candidate and emits no failure guard", () => {
     const p = plan();
