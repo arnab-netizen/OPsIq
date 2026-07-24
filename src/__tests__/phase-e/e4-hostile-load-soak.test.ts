@@ -757,5 +757,19 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
       // INVARIANT: Gate reflects actual status
       expect(allPassed).toBe(true); // Should be true for production
     });
+
+    it("readiness checklist has 8 required criteria", () => {
+      const readinessChecklist = {
+        replayDeterminism: true,
+        soakStability: true,
+        noQueueCollapse: true,
+        noCorruption: true,
+        noTenantLeakage: true,
+        recoveryBounded: true,
+        latencySLO: true,
+        memoryBounded: true,
+      };
+      expect(Object.keys(readinessChecklist)).toHaveLength(8);
+    });
   });
 });

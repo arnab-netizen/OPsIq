@@ -263,4 +263,10 @@ describe("Workflow 7 — generateOwnerBusinessReview (decoupled from engagementI
     expect(typeof result.rationale).toBe("string");
     expect(result.rationale.length).toBeGreaterThan(0);
   });
+
+  it("businessId from call site is forwarded into the result", async () => {
+    const db = makeDb();
+    const result = await generateOwnerBusinessReview("biz-custom-99", "ws-1", "actor-1", REVIEWED_AT, db);
+    expect(result.businessId).toBe("biz-custom-99");
+  });
 });

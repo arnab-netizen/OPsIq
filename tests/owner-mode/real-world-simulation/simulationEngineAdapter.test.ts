@@ -105,6 +105,11 @@ describe("normalizeSimulationFixtureToEvidence: structural contract", () => {
     );
     expect(itemsWithData.length).toBeGreaterThan(0);
   });
+
+  it("loadSimulationFixtures returns corpus with status READY", () => {
+    const corpus = loadSimulationFixtures();
+    expect(corpus.status).toBe("READY");
+  });
 });
 
 // ── Engine adapter: calls real diagnosis engine ───────────────────────────────
