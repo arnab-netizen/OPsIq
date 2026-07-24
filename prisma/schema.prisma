@@ -6276,3 +6276,49 @@ model OwnerActionAssignment {
   @@index([workspaceId, stallDetected])
   @@map("owner_action_assignments")
 }
+
+// Bundle 3.7 — Approval Resolution and Evidence Chain
+model OwnerApprovalRequest {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  idempotencyKey   String    @map("idempotency_key")
+  businessId       String    @map("business_id") @db.Uuid
+  actionId         String?   @map("action_id")
+  actionDomain     String?   @map("action_domain")
+  requestedBy      String    @map("requested_by") @db.Uuid
+  status           String    @default("PENDING")
+  rationale        String?   @db.Text
+  decidedById      String?   @map("decided_by_id") @db.Uuid
+  decidedAt        DateTime? @map("decided_at")
+  appealOfId       String?   @map("appeal_of_id") @db.Uuid
+  rescopeTriggered Boolean   @default(false) @map("rescope_triggered")
+  createdBy        String    @map("created_by") @db.Uuid
+  updatedBy        String?   @map("updated_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  evidences        OwnerApprovalEvidence[]
+
+  @@unique([workspaceId, idempotencyKey], map: "owner_approval_requests_ws_idem")
+  @@index([workspaceId, status])
+  @@index([workspaceId, businessId])
+  @@index([workspaceId, actionId])
+  @@map("owner_approval_requests")
+}
+
+model OwnerApprovalEvidence {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid
+  approvalId       String   @map("approval_id") @db.Uuid
+  evidenceType     String   @map("evidence_type")
+  description      String   @db.Text
+  sourceUrl        String?  @map("source_url") @db.Text
+  credibilityScore Float?   @map("credibility_score")
+  submittedBy      String   @map("submitted_by") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  approval         OwnerApprovalRequest @relation(fields: [approvalId], references: [id])
+
+  @@index([workspaceId, approvalId])
+  @@map("owner_approval_evidences")
+}

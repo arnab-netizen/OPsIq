@@ -598,7 +598,36 @@
     "test_coverage": "53 tests covering: static enforcement (11), assignAction idempotency (6), reassignAction (5), recordOutcome (6), evaluateStallDetection (5), listAssignments filters (6), getBottleneckSummary (4), DTO boundary (3), workspace isolation (5), priority validation (2)",
     "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 53/53 (✓), lint-ratchet PASS (2154 errors < 2155 baseline), recurrence scan 0 violations"
   },
-  "next_automatic_target": "Bundle 3.6 committed and pushed — await PR review",
+  "bundle_3_7_approval_resolution": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "files": [
+      "src/domain/constants/capabilities.ts",
+      "src/domain/constants/audit-events.ts",
+      "prisma/schema.prisma",
+      "src/services/owner-mode/approval-resolution.service.ts",
+      "src/app/api/owner/approval/route.ts",
+      "src/__tests__/api/owner/approval/approval.test.ts"
+    ],
+    "wiring_proof": {
+      "caller": "src/app/api/owner/approval/route.ts (POST, GET, PATCH)",
+      "service": "src/services/owner-mode/approval-resolution.service.ts",
+      "workspace_enforcement": "✓ loadApproval enforces workspaceId on every read; all write paths pass workspaceId",
+      "auth_enforced": "✓ CAPABILITIES.CONSULTING_APPROVE + requireWorkspace: true on all three handlers",
+      "dto_boundary": "✓ decidedById, createdBy, updatedBy, idempotencyKey excluded from PublicApprovalDTO; credibilityScore excluded from PublicEvidenceDTO",
+      "audit_events": "✓ 5 audit events: approval.created, approval.evidence_submitted, approval.decided, approval.appeal_initiated, approval.action_rescoped",
+      "idempotency": "✓ createApproval and initiateAppeal check (workspaceId, idempotencyKey) before insert"
+    },
+    "schema_models": ["OwnerApprovalRequest", "OwnerApprovalEvidence"],
+    "state_machine": "PENDING → APPROVED | REJECTED | DEFERRED; DEFERRED → APPROVED | REJECTED; immutable once APPROVED/REJECTED",
+    "evidence_chain": "append-only: submitEvidence blocked on APPROVED/REJECTED status",
+    "appeal_path": "initiateAppeal only from REJECTED → creates new OwnerApprovalRequest linked via appealOfId",
+    "rescope_seam": "fireRescopeSignal no-op stub — replaced by real rescope call when action service supports it (Stage 4+)",
+    "capability_added": "CONSULTING_APPROVE: 'consulting:approve' added to capabilities.ts",
+    "test_coverage": "58 tests covering: static enforcement (11), createApproval idempotency (5), submitEvidence (7), makeDecision immutability (9), initiateAppeal (5), listApprovals filters (5), DTO boundary (4), workspace isolation (5), audit events (7)",
+    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 58/58 (✓), lint-ratchet PASS (2154 errors < 2155 baseline), recurrence scan 0 violations"
+  },
+  "next_automatic_target": "Bundle 3.7 committed and pushed — next: Bundle 3.8",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "UNKNOWN (timeout \u2014 not a blocker)",

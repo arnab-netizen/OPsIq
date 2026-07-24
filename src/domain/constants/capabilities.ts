@@ -117,6 +117,9 @@ export const CAPABILITIES = {
   OWNER_VIEW: "owner:view",
   OWNER_MANAGE: "owner:manage",
 
+  // Approval
+  CONSULTING_APPROVE: "consulting:approve",
+
   // Audit Trail
   AUDIT_VIEW: "audit:view",
   AUDIT_EXPORT: "audit:export",

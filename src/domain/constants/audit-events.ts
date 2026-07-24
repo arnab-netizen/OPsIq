@@ -582,6 +582,13 @@ export const AUDIT_EVENTS = {
   STARTUP_EXECUTION_AUTHORIZATION_DENIED: "startup.execution_authorization_denied",
   STARTUP_APPROVAL_BECAME_STALE: "startup.approval_became_stale",
   STARTUP_EXECUTION_PLAN_SUPERSEDED: "startup.execution_plan_superseded",
+  // Bundle 3.7 — Approval Resolution and Evidence Chain
+  APPROVAL_CREATED: "approval.created",
+  APPROVAL_EVIDENCE_SUBMITTED: "approval.evidence_submitted",
+  APPROVAL_DECIDED: "approval.decided",
+  APPROVAL_APPEAL_INITIATED: "approval.appeal_initiated",
+  APPROVAL_ACTION_RESCOPED: "approval.action_rescoped",
+
   // Bundle 3.6 — Owner Action Assignment and Outcome Tracking
   OWNER_ACTION_ASSIGNED: "owner.action_assigned",
   OWNER_ACTION_REASSIGNED: "owner.action_reassigned",
