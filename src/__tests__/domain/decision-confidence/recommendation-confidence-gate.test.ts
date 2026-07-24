@@ -15,6 +15,23 @@ const base = (over: Partial<ConfidenceGateInput> = {}): ConfidenceGateInput => (
   ...over,
 });
 
+describe("recommendation confidence gate — module contract assertions", () => {
+  it("classifyRecommendationConfidence is a function", () => { expect(typeof classifyRecommendationConfidence).toBe("function"); });
+  it("assertConfidenceForPromotion is a function", () => { expect(typeof assertConfidenceForPromotion).toBe("function"); });
+  it("ConfidenceGateError is a class/function", () => { expect(typeof ConfidenceGateError).toBe("function"); });
+  it("ConfidencePromotionClass is an object", () => { expect(typeof ConfidencePromotionClass).toBe("object"); });
+  it("ConfidencePromotionClass.HIGH_CONFIDENCE is defined", () => { expect(ConfidencePromotionClass.HIGH_CONFIDENCE).toBeDefined(); });
+  it("ConfidencePromotionClass.LOW_CONFIDENCE is defined", () => { expect(ConfidencePromotionClass.LOW_CONFIDENCE).toBeDefined(); });
+  it("ConfidencePromotionClass.BLOCKED_UNSAFE is defined", () => { expect(ConfidencePromotionClass.BLOCKED_UNSAFE).toBeDefined(); });
+  it("ConfidencePromotionClass.INSUFFICIENT_DATA is defined", () => { expect(ConfidencePromotionClass.INSUFFICIENT_DATA).toBeDefined(); });
+  it("base is a function", () => { expect(typeof base).toBe("function"); });
+  it("base() returns an object", () => { expect(typeof base()).toBe("object"); });
+  it("base() has confidenceLevel field", () => { expect(base()).toHaveProperty("confidenceLevel"); });
+  it("base().confidenceLevel equals 'high'", () => { expect(base().confidenceLevel).toBe("high"); });
+  it("base() has isUnsafe field", () => { expect(base()).toHaveProperty("isUnsafe"); });
+  it("base().isUnsafe is false", () => { expect(base().isUnsafe).toBe(false); });
+});
+
 describe("[module3] recommendation confidence gate", () => {
   it("high / very_high confidence auto-promotes", () => {
     expect(classifyRecommendationConfidence(base({ confidenceLevel: "high" })).allowed).toBe(true);

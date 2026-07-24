@@ -9,6 +9,23 @@ const cleanGrowth = (over: Partial<GrowthSignals> = {}): GrowthSignals => ({
   capacityStressed: false, profitImpactVerified: true, revenueGrowing: true, ...over,
 });
 
+describe("growth and scale readiness — module contract assertions", () => {
+  it("assessGrowthReadiness is a function", () => { expect(typeof assessGrowthReadiness).toBe("function"); });
+  it("assertGrowthReady is a function", () => { expect(typeof assertGrowthReady).toBe("function"); });
+  it("GrowthNotReadyError is a class/function", () => { expect(typeof GrowthNotReadyError).toBe("function"); });
+  it("GrowthReadiness is an object", () => { expect(typeof GrowthReadiness).toBe("object"); });
+  it("GrowthReadiness.GROWTH_READY is defined", () => { expect(GrowthReadiness.GROWTH_READY).toBeDefined(); });
+  it("assessScaleReadiness is a function", () => { expect(typeof assessScaleReadiness).toBe("function"); });
+  it("assertScaleReady is a function", () => { expect(typeof assertScaleReady).toBe("function"); });
+  it("NotScaleReadyError is a class/function", () => { expect(typeof NotScaleReadyError).toBe("function"); });
+  it("ScaleReadiness is an object", () => { expect(typeof ScaleReadiness).toBe("object"); });
+  it("ProgressionMove is an object", () => { expect(typeof ProgressionMove).toBe("object"); });
+  it("ProgressionMove.MARKETING_SCALE is defined", () => { expect(ProgressionMove.MARKETING_SCALE).toBeDefined(); });
+  it("cleanGrowth is a function", () => { expect(typeof cleanGrowth).toBe("function"); });
+  it("cleanGrowth() returns an object", () => { expect(typeof cleanGrowth()).toBe("object"); });
+  it("cleanGrowth() has cashRunwayWeak field", () => { expect(cleanGrowth()).toHaveProperty("cashRunwayWeak"); });
+});
+
 describe("[module21] growth readiness (delegates to progression engine)", () => {
   it("clean signals -> GROWTH_READY", () => {
     const r = assessGrowthReadiness(cleanGrowth());

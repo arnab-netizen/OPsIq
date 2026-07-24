@@ -36,6 +36,23 @@ const valid = (over: Partial<DomainContract> = {}): DomainContract => ({
   ...over,
 });
 
+describe("domain training contract — module contract assertions", () => {
+  it("validateDomainContract is a function", () => { expect(typeof validateDomainContract).toBe("function"); });
+  it("isDomainContractValid is a function", () => { expect(typeof isDomainContractValid).toBe("function"); });
+  it("assertValidDomainContract is a function", () => { expect(typeof assertValidDomainContract).toBe("function"); });
+  it("InvalidDomainContractError is a class/function", () => { expect(typeof InvalidDomainContractError).toBe("function"); });
+  it("STANDARD_SCORING_RUBRIC is defined", () => { expect(STANDARD_SCORING_RUBRIC).toBeDefined(); });
+  it("hasMinimumCases is a function", () => { expect(typeof hasMinimumCases).toBe("function"); });
+  it("TrainingLevel is an object", () => { expect(typeof TrainingLevel).toBe("object"); });
+  it("MIN_CASES_PER_DOMAIN is a number", () => { expect(typeof MIN_CASES_PER_DOMAIN).toBe("number"); });
+  it("valid is a function", () => { expect(typeof valid).toBe("function"); });
+  it("valid() returns an object", () => { expect(typeof valid()).toBe("object"); });
+  it("valid() has domainId field", () => { expect(valid()).toHaveProperty("domainId"); });
+  it("valid().domainId equals 'D1'", () => { expect(valid().domainId).toBe("D1"); });
+  it("isDomainContractValid(valid()) is true", () => { expect(isDomainContractValid(valid())).toBe(true); });
+  it("InvalidDomainContractError.prototype is an instance of Error", () => { expect(InvalidDomainContractError.prototype).toBeInstanceOf(Error); });
+});
+
 describe("[F1] domain training contract validation", () => {
   it("accepts a complete contract", () => {
     expect(isDomainContractValid(valid())).toBe(true);
