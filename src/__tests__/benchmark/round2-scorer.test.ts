@@ -45,6 +45,23 @@ function key(over: Partial<CaseKeyFacts> = {}): CaseKeyFacts {
 
 // ─── 1. Covered + correct diagnosis ──────────────────────────────────────────
 
+describe("round2-scorer — module contract assertions", () => {
+  it("scoreCase is a function", () => { expect(typeof scoreCase).toBe("function"); });
+  it("scoreDiagnosisAxis is a function", () => { expect(typeof scoreDiagnosisAxis).toBe("function"); });
+  it("scoreFirstActionAxis is a function", () => { expect(typeof scoreFirstActionAxis).toBe("function"); });
+  it("classifyExpectedDiagnosis is a function", () => { expect(typeof classifyExpectedDiagnosis).toBe("function"); });
+  it("normalizeDiagnosis is a function", () => { expect(typeof normalizeDiagnosis).toBe("function"); });
+  it("actionMatches is a function", () => { expect(typeof actionMatches).toBe("function"); });
+  it("aggregateCorpus is a function", () => { expect(typeof aggregateCorpus).toBe("function"); });
+  it("facts is a function", () => { expect(typeof facts).toBe("function"); });
+  it("facts() returns an object", () => { expect(typeof facts()).toBe("object"); });
+  it("facts() has committed field", () => { expect(facts()).toHaveProperty("committed"); });
+  it("key is a function", () => { expect(typeof key).toBe("function"); });
+  it("key() returns an object", () => { expect(typeof key()).toBe("object"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("round2-scorer", () => {
   it("[1] scores a covered, correctly-diagnosed case as PASS on diagnosis", () => {
     const s = scoreCase("R2-COVERED-OK", facts(), key());

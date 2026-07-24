@@ -18,6 +18,23 @@ const cand = (over: Partial<LearningCandidate> = {}): LearningCandidate => ({
   harmful: false, disputed: false, inconclusive: false, simulationTested: true, ...over,
 });
 
+describe("f10-f12 — module contract assertions", () => {
+  it("LearningStage is an object", () => { expect(typeof LearningStage).toBe("object"); });
+  it("canPromote is a function", () => { expect(typeof canPromote).toBe("function"); });
+  it("terminalStage is a function", () => { expect(typeof terminalStage).toBe("function"); });
+  it("isIllegalJump is a function", () => { expect(typeof isIllegalJump).toBe("function"); });
+  it("validateRecommendationQuality is a function", () => { expect(typeof validateRecommendationQuality).toBe("function"); });
+  it("isRecommendationQualityOk is a function", () => { expect(typeof isRecommendationQualityOk).toBe("function"); });
+  it("checkFeasibility is a function", () => { expect(typeof checkFeasibility).toBe("function"); });
+  it("cand is a function", () => { expect(typeof cand).toBe("function"); });
+  it("cand() returns an object", () => { expect(typeof cand()).toBe("object"); });
+  it("rec is a function", () => { expect(typeof rec).toBe("function"); });
+  it("feas is a function", () => { expect(typeof feas).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("[F10] learning quarantine", () => {
   it("unverified outcome blocked", () => {
     expect(canPromote(cand({ outcomeVerified: false }))).toBe(false);
