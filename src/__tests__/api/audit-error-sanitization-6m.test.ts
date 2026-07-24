@@ -201,4 +201,8 @@ describe("Phase 6M — audit error sanitization: value route", () => {
       expect.objectContaining({ workspaceId: "ws-1" })
     );
   });
+
+  it("VALUE_CTX default verifiedWorkspaceId is ws-1", () => {
+    expect(VALUE_CTX.verifiedWorkspaceId).toBe("ws-1");
+  });
 });

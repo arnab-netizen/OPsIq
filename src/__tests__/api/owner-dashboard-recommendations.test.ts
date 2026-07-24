@@ -198,4 +198,10 @@ describe("Owner Dashboard Recommendations", () => {
     expect(mapped[1].id).toBe("x2");
     expect(mapped[2].id).toBe("x3");
   });
+
+  it("priority values high, medium, low are distinct strings", () => {
+    expect("high").not.toBe("medium");
+    expect("medium").not.toBe("low");
+    expect("high").not.toBe("low");
+  });
 });

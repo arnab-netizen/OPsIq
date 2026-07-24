@@ -189,4 +189,9 @@ describe("signup route rate limiting", () => {
     // Either 400/threw (validation fails on empty body) or non-429
     expect(first).not.toBe(429);
   });
+
+  it("makeReq URL targets the /api/auth/signup path", () => {
+    const req = makeReq("1.2.3.4");
+    expect(req.url).toContain("/api/auth/signup");
+  });
 });

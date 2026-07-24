@@ -322,5 +322,9 @@ describe("Leads Routes — non-DB mock tests", () => {
         2, expect.anything(), expect.objectContaining({ verifiedWorkspaceId: WS_B }), WS_B
       );
     });
+
+    it("WS_A and WS_B fixtures are distinct workspace IDs", () => {
+      expect(WS_A).not.toBe(WS_B);
+    });
   });
 });

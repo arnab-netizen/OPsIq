@@ -324,5 +324,20 @@ describe("Public API Service", () => {
       const dto = toPublicKPIDTO(kpi);
       expect(dto.targetValue).toBe(150000);
     });
+
+    it("includes direction field in KPI DTO", () => {
+      const kpi = {
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        engagementId: "550e8400-e29b-41d4-a716-446655440001",
+        name: "Margin",
+        currentValue: 40,
+        targetValue: 60,
+        direction: "increase",
+        trend: "stable",
+        updatedAt: new Date().toISOString(),
+      };
+      const dto = toPublicKPIDTO(kpi);
+      expect(dto.direction).toBe("increase");
+    });
   });
 });
