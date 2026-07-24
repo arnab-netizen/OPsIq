@@ -657,7 +657,58 @@
     "test_coverage": "62 tests covering: classifyArchetype pure function (10), buildInitialActionQueue (6), startOnboarding idempotency+validation (10), completeOnboarding archetype+idempotency (10), triggerReOnboarding state machine (7), assertOnboardingComplete gate (4), static enforcement (6), workspace isolation (4), audit events (4), route (1)",
     "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 62/62 (✓), lint-ratchet PASS (2154 errors < 2155 baseline)"
   },
-  "next_automatic_target": "Bundle 3.8 committed — next: Bundle 3.9",
+  "bundle_3_9_sop_process_intelligence": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING",
+    "files": [
+      "src/domain/constants/capabilities.ts",
+      "src/domain/constants/audit-events.ts",
+      "prisma/schema.prisma",
+      "src/services/owner-mode/sop-process-intelligence.service.ts",
+      "src/app/api/owner/sop-intelligence/route.ts",
+      "src/__tests__/api/owner/sop-intelligence/sop-intelligence.test.ts"
+    ],
+    "wiring_proof": {
+      "caller": "src/app/api/owner/sop-intelligence/route.ts (POST, GET, PATCH)",
+      "service": "src/services/owner-mode/sop-process-intelligence.service.ts",
+      "workspace_enforcement": "✓ workspaceId enforced on all reads and writes; idempotency checks use workspaceId+sopDocumentId+assignedTo constraint",
+      "auth_enforced": "✓ CAPABILITIES.SOP_MANAGE + requireWorkspace: true on all three handlers",
+      "dto_boundary": "✓ assignedBy excluded from PublicTrainingAssignmentDTO; complianceRate excluded from PublicNonComplianceAlertDTO",
+      "audit_events": "✓ 3 audit events: sop.training_assigned, sop.training_completed, sop.noncompliance_alert_created",
+      "idempotency": "✓ assignTraining checks @@unique(workspaceId, sopDocumentId, assignedTo); createNonComplianceAlert checks @@unique(workspaceId, sopDocumentId, alertWindow); recordTrainingCompletion returns existing if COMPLETED"
+    },
+    "schema_models": ["OwnerSopTrainingAssignment", "OwnerSopNonComplianceAlert"],
+    "compliance_logic": "calculateComplianceRate uses parallel count queries; threshold default 0.8; complianceRate=1.0 when no assignments",
+    "reassessment_seam": "fireComplianceReAssessmentSignal no-op stub — replaced by real call when business condition service supports it (Stage 4+)",
+    "capability_added": "SOP_MANAGE: 'sop:manage' added to capabilities.ts",
+    "test_coverage": "38 tests covering: assignTraining idempotency (6), recordTrainingCompletion (7), calculateComplianceRate (5), createNonComplianceAlert (7), listTrainingAssignments (4), listNonComplianceAlerts (3), static enforcement (6)",
+    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), npm run build (✓), vitest 38/38 (✓), lint-ratchet PASS"
+  },
+  "bundle_3_10_adversarial_closure": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ADVERSARIAL_TEST_SUITE",
+    "files": [
+      "src/__tests__/stage3-adversarial/stage3-adversarial-closure.test.ts"
+    ],
+    "coverage_dimensions": [
+      "workspace isolation — cross-bundle (10 tests): WS_B cannot access WS_A records in any Stage 3 service",
+      "concurrent mutation safety — idempotency proofs (9 tests): all idempotent operations proven via mock race",
+      "DTO leakage boundary — static verification (11 tests): all Stage 3 public DTOs exclude internal fields via regex",
+      "audit completeness (8 tests): every material Stage 3 mutation emits correct audit event name",
+      "business condition re-evaluation chain (5 tests): REJECTED approval rescopeTriggered, archetype determinism, parallel count",
+      "auth capability boundary — static verification (10 tests): all 5 routes use withCanonicalEnforcement + requireWorkspace"
+    ],
+    "services_covered": [
+      "customer-complaint.service",
+      "owner-action-assignment-lifecycle.service",
+      "approval-resolution.service",
+      "owner-onboarding-lifecycle.service",
+      "sop-process-intelligence.service"
+    ],
+    "test_count": 53,
+    "gates_run": "npx tsc --noEmit (✓), npm run build (✓), lint-ratchet PASS, vitest 53/53 (✓)"
+  },
+  "next_automatic_target": "Bundle 3.10 committed — Stage 3 complete",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "UNKNOWN (timeout \u2014 not a blocker)",
