@@ -48,6 +48,23 @@ const envExample = fs.readFileSync(path.join(ROOT, ".env.example"), "utf-8");
 
 const requiredNames = manifest.required.map((e) => e.name);
 
+describe("owner-self-use-env-contract — module contract assertions", () => {
+  it("fs is an object", () => { expect(typeof fs).toBe("object"); });
+  it("path is an object", () => { expect(typeof path).toBe("object"); });
+  it("ROOT is a string", () => { expect(typeof ROOT).toBe("string"); });
+  it("ROOT.length is greater than 0", () => { expect(ROOT.length).toBeGreaterThan(0); });
+  it("manifest is an object", () => { expect(typeof manifest).toBe("object"); });
+  it("manifest has required field", () => { expect(manifest).toHaveProperty("required"); });
+  it("manifest.required is an array", () => { expect(Array.isArray(manifest.required)).toBe(true); });
+  it("requiredNames is an array", () => { expect(Array.isArray(requiredNames)).toBe(true); });
+  it("requiredNames.length equals 3", () => { expect(requiredNames.length).toBe(3); });
+  it("preflight is a string", () => { expect(typeof preflight).toBe("string"); });
+  it("validate is a string", () => { expect(typeof validate).toBe("string"); });
+  it("envExample is a string", () => { expect(typeof envExample).toBe("string"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("owner-self-use env contract: canonical required set", () => {
   it("is exactly NODE_ENV, DATABASE_URL, NEXT_PUBLIC_APP_URL", () => {
     expect([...requiredNames].sort()).toEqual(

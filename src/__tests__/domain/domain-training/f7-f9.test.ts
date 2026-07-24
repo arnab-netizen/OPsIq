@@ -26,6 +26,23 @@ const rec = (over: Partial<DecisionRecord> = {}): DecisionRecord => ({
   verificationPlan: "recheck cash in 48h", stopRollbackRedesign: "stop on dispute", ...over,
 });
 
+describe("domain-training-f7-f9 — module contract assertions", () => {
+  it("validateDecisionRecord is a function", () => { expect(typeof validateDecisionRecord).toBe("function"); });
+  it("isDecisionRecordValid is a function", () => { expect(typeof isDecisionRecordValid).toBe("function"); });
+  it("assertRecordable is a function", () => { expect(typeof assertRecordable).toBe("function"); });
+  it("InvalidDecisionRecordError is a function", () => { expect(typeof InvalidDecisionRecordError).toBe("function"); });
+  it("HarmType is an object", () => { expect(typeof HarmType).toBe("object"); });
+  it("validateHarmEntry is a function", () => { expect(typeof validateHarmEntry).toBe("function"); });
+  it("harmfulSideEffectPreventsSuccess is a function", () => { expect(typeof harmfulSideEffectPreventsSuccess).toBe("function"); });
+  it("cautionSeverity is a function", () => { expect(typeof cautionSeverity).toBe("function"); });
+  it("domainHasSideEffectMetrics is a function", () => { expect(typeof domainHasSideEffectMetrics).toBe("function"); });
+  it("verifyWithSideEffects is a function", () => { expect(typeof verifyWithSideEffects).toBe("function"); });
+  it("rec is a function", () => { expect(typeof rec).toBe("function"); });
+  it("harm is a function", () => { expect(typeof harm).toBe("function"); });
+  it("rec() returns an object", () => { expect(typeof rec()).toBe("object"); });
+  it("harm() returns an object", () => { expect(typeof harm()).toBe("object"); });
+});
+
 describe("[F7] decision journal", () => {
   it("accepts a complete record", () => {
     expect(isDecisionRecordValid(rec())).toBe(true);

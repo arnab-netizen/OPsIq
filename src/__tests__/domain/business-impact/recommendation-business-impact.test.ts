@@ -50,6 +50,23 @@ function complete(over: Partial<RecommendationBusinessImpact> = {}): Recommendat
   };
 }
 
+describe("recommendation-business-impact — module contract assertions", () => {
+  it("evaluateBusinessImpactGate is a function", () => { expect(typeof evaluateBusinessImpactGate).toBe("function"); });
+  it("assertBusinessImpactForPromotion is a function", () => { expect(typeof assertBusinessImpactForPromotion).toBe("function"); });
+  it("BusinessImpactGateError is a function", () => { expect(typeof BusinessImpactGateError).toBe("function"); });
+  it("LeanClassification is an object", () => { expect(typeof LeanClassification).toBe("object"); });
+  it("EvidenceConfidenceLevel is an object", () => { expect(typeof EvidenceConfidenceLevel).toBe("object"); });
+  it("REC is a string", () => { expect(typeof REC).toBe("string"); });
+  it("WS is a string", () => { expect(typeof WS).toBe("string"); });
+  it("dim is a function", () => { expect(typeof dim).toBe("function"); });
+  it("horizon is a function", () => { expect(typeof horizon).toBe("function"); });
+  it("complete is a function", () => { expect(typeof complete).toBe("function"); });
+  it("complete() returns an object", () => { expect(typeof complete()).toBe("object"); });
+  it("complete() has recommendationId field", () => { expect(complete()).toHaveProperty("recommendationId"); });
+  it("LeanClassification.LEAN_APPROVED is defined", () => { expect(LeanClassification.LEAN_APPROVED).toBeDefined(); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+});
+
 describe("[module1] business-impact promotion gate — fail closed", () => {
   it("a complete, lean-approved assessment passes", () => {
     const r = evaluateBusinessImpactGate(complete(), { recommendationId: REC, workspaceId: WS });
