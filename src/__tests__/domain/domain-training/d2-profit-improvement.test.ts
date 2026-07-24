@@ -6,6 +6,23 @@ import { TrainingLevel, REQUIRED_SCENARIO_TYPES, MIN_CASES_PER_DOMAIN } from "@/
 
 const respond = (cse: { input: unknown }) => respondProfitImprovement(cse.input as ProfitInput);
 
+describe("[D2] profit improvement — module contract assertions", () => {
+  it("evaluateDomain is a function", () => { expect(typeof evaluateDomain).toBe("function"); });
+  it("scoreCase is a function", () => { expect(typeof scoreCase).toBe("function"); });
+  it("respondProfitImprovement is a function", () => { expect(typeof respondProfitImprovement).toBe("function"); });
+  it("PROFIT_IMPROVEMENT_CASES is an array", () => { expect(Array.isArray(PROFIT_IMPROVEMENT_CASES)).toBe(true); });
+  it("REQUIRED_SCENARIO_TYPES is an array", () => { expect(Array.isArray(REQUIRED_SCENARIO_TYPES)).toBe(true); });
+  it("TrainingLevel.LEVEL_5_OUTCOME_VERIFIED is defined", () => { expect(TrainingLevel.LEVEL_5_OUTCOME_VERIFIED).toBeDefined(); });
+  it("MIN_CASES_PER_DOMAIN is a positive number", () => { expect(MIN_CASES_PER_DOMAIN).toBeGreaterThan(0); });
+  it("respond is a function", () => { expect(typeof respond).toBe("function"); });
+  it("PROFIT_IMPROVEMENT_CASES has at least 1 element", () => { expect(PROFIT_IMPROVEMENT_CASES.length).toBeGreaterThan(0); });
+  it("REQUIRED_SCENARIO_TYPES has at least 1 element", () => { expect(REQUIRED_SCENARIO_TYPES.length).toBeGreaterThan(0); });
+  it("each case has an id field", () => { for (const c of PROFIT_IMPROVEMENT_CASES) expect(c).toHaveProperty("id"); });
+  it("each case has an input field", () => { for (const c of PROFIT_IMPROVEMENT_CASES) expect(c).toHaveProperty("input"); });
+  it("each case has a scenarioType field", () => { for (const c of PROFIT_IMPROVEMENT_CASES) expect(c).toHaveProperty("scenarioType"); });
+  it("respondProfitImprovement(PROFIT_IMPROVEMENT_CASES[0].input) returns an object", () => { expect(typeof respondProfitImprovement(PROFIT_IMPROVEMENT_CASES[0].input)).toBe("object"); });
+});
+
 describe("[D2] profit improvement — executable scored training", () => {
   it("carries >=21 cases covering every required scenario type", () => {
     expect(PROFIT_IMPROVEMENT_CASES.length).toBeGreaterThanOrEqual(MIN_CASES_PER_DOMAIN);
