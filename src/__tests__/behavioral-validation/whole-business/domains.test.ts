@@ -12,6 +12,23 @@ beforeAll(async () => {
   reports = buildDomainMatrix(pairs);
 }, 60000);
 
+describe("36-domain competency matrix — module contract assertions", () => {
+  it("DOMAINS is an array", () => { expect(Array.isArray(DOMAINS)).toBe(true); });
+  it("DOMAINS has 36 entries", () => { expect(DOMAINS).toHaveLength(36); });
+  it("CRITICAL_DOMAINS is an array", () => { expect(Array.isArray(CRITICAL_DOMAINS)).toBe(true); });
+  it("CRITICAL_DOMAINS has 15 entries", () => { expect(CRITICAL_DOMAINS).toHaveLength(15); });
+  it("advisedCorpus is a function", () => { expect(typeof advisedCorpus).toBe("function"); });
+  it("buildDomainMatrix is a function", () => { expect(typeof buildDomainMatrix).toBe("function"); });
+  it("summariseMatrix is a function", () => { expect(typeof summariseMatrix).toBe("function"); });
+  it("scoreDomain is a function", () => { expect(typeof scoreDomain).toBe("function"); });
+  it("CRITICAL_DOMAINS are all in DOMAINS", () => { for (const d of CRITICAL_DOMAINS) expect(DOMAINS).toContain(d); });
+  it("DOMAINS contains 'cash_flow'", () => { expect(DOMAINS).toContain("cash_flow"); });
+  it("DOMAINS contains 'owner_workload'", () => { expect(DOMAINS).toContain("owner_workload"); });
+  it("CRITICAL_DOMAINS contains 'cash_flow'", () => { expect(CRITICAL_DOMAINS).toContain("cash_flow"); });
+  it("scoreDomain with empty cases returns totalCases=0", () => { expect(scoreDomain("vendor_supplier", []).totalCases).toBe(0); });
+  it("scoreDomain with empty cases returns NOT_READY readiness", () => { expect(scoreDomain("vendor_supplier", []).readiness).toBe("NOT_READY"); });
+});
+
 describe("36-domain competency matrix", () => {
   it("covers all 36 domains and marks 15 critical", () => {
     expect(DOMAINS.length).toBe(36);
