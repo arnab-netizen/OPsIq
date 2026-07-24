@@ -16,6 +16,7 @@ import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { exportConsultingEngagement } from "@/services/consulting/consulting-export.service";
 import { NotFoundError } from "@/infra/errors";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -40,7 +41,8 @@ export const GET = withCanonicalEnforcement(
       return canonicalJson({ export: exported }, { status: 200 });
     } catch (err) {
       if (err instanceof NotFoundError) {
-        return canonicalJson({ error: err.message }, { status: 404 });
+        const governed = classifyOperatorError(err, { context: "load" });
+        return canonicalJson({ error: governed.operatorMessage }, { status: 404 });
       }
       throw err;
     }
