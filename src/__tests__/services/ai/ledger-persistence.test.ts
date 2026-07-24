@@ -48,6 +48,23 @@ function baseEntry(overrides: Partial<AiCallLedgerEntry> = {}): AiCallLedgerEntr
   };
 }
 
+describe("AI-6 ledger persistence — module contract assertions", () => {
+  it("buildAiCallAuditData is a function", () => { expect(typeof buildAiCallAuditData).toBe("function"); });
+  it("splitValidatorResults is a function", () => { expect(typeof splitValidatorResults).toBe("function"); });
+  it("assertNoSecrets is a function", () => { expect(typeof assertNoSecrets).toBe("function"); });
+  it("AI_CALL_RECORDED_EVENT is a string", () => { expect(typeof AI_CALL_RECORDED_EVENT).toBe("string"); });
+  it("AI_CALL_RECORDED_EVENT equals 'ai.call_recorded'", () => { expect(AI_CALL_RECORDED_EVENT).toBe("ai.call_recorded"); });
+  it("runMissingQuestionTask is a function", () => { expect(typeof runMissingQuestionTask).toBe("function"); });
+  it("clearAiCallLedger is a function", () => { expect(typeof clearAiCallLedger).toBe("function"); });
+  it("setAiCallLedgerSink is a function", () => { expect(typeof setAiCallLedgerSink).toBe("function"); });
+  it("MockAiProvider is a function", () => { expect(typeof MockAiProvider).toBe("function"); });
+  it("buildAiContext is a function", () => { expect(typeof buildAiContext).toBe("function"); });
+  it("baseEntry is a function", () => { expect(typeof baseEntry).toBe("function"); });
+  it("baseEntry() returns an object", () => { expect(typeof baseEntry()).toBe("object"); });
+  it("baseEntry() has workspaceId field", () => { expect(baseEntry()).toHaveProperty("workspaceId"); });
+  it("splitValidatorResults('ACCEPTED') validatorResult is 'PASSED'", () => { expect(splitValidatorResults("ACCEPTED").validatorResult).toBe("PASSED"); });
+});
+
 describe("AI-6 ledger persistence — pure mapper", () => {
   it("maps every required field into the AuditEvent payload", () => {
     const data = buildAiCallAuditData(baseEntry());

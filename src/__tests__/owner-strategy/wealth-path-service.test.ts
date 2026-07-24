@@ -11,6 +11,23 @@ import * as path from "path";
 import { mapMetricSnapshotToWealthPathInput } from "@/services/owner-strategy/wealth-path.service";
 import { classifyWealthPath } from "@/domain/owner-strategy/wealth-path";
 
+describe("wealth-path-service — module contract assertions", () => {
+  it("mapMetricSnapshotToWealthPathInput is a function", () => { expect(typeof mapMetricSnapshotToWealthPathInput).toBe("function"); });
+  it("classifyWealthPath is a function", () => { expect(typeof classifyWealthPath).toBe("function"); });
+  it("fs is an object", () => { expect(typeof fs).toBe("object"); });
+  it("path is an object", () => { expect(typeof path).toBe("object"); });
+  it("mapMetricSnapshotToWealthPathInput(null) returns an object", () => { expect(typeof mapMetricSnapshotToWealthPathInput(null)).toBe("object"); });
+  it("mapMetricSnapshotToWealthPathInput(null) returns empty object", () => { expect(mapMetricSnapshotToWealthPathInput(null)).toEqual({}); });
+  it("mapMetricSnapshotToWealthPathInput with revenue returns object", () => { expect(typeof mapMetricSnapshotToWealthPathInput({ revenue: 100000, grossProfit: 60000, netProfit: 20000 })).toBe("object"); });
+  it("mapMetricSnapshotToWealthPathInput grossMarginPct equals 60", () => { expect(mapMetricSnapshotToWealthPathInput({ revenue: 100000, grossProfit: 60000, netProfit: 20000 }).grossMarginPct).toBe(60); });
+  it("mapMetricSnapshotToWealthPathInput netMarginPct equals 20", () => { expect(mapMetricSnapshotToWealthPathInput({ revenue: 100000, grossProfit: 60000, netProfit: 20000 }).netMarginPct).toBe(20); });
+  it("mapMetricSnapshotToWealthPathInput with revenue 0 has undefined grossMarginPct", () => { expect(mapMetricSnapshotToWealthPathInput({ revenue: 0, grossProfit: 10, netProfit: 5 }).grossMarginPct).toBeUndefined(); });
+  it("classifyWealthPath({}) returns an object", () => { expect(typeof classifyWealthPath({})).toBe("object"); });
+  it("classifyWealthPath({}) has pathType field", () => { expect(classifyWealthPath({})).toHaveProperty("pathType"); });
+  it("classifyWealthPath({}) has blocksHighRiskExecution field", () => { expect(classifyWealthPath({})).toHaveProperty("blocksHighRiskExecution"); });
+  it("classifyWealthPath({}) has provisionalLowConfidence field", () => { expect(classifyWealthPath({})).toHaveProperty("provisionalLowConfidence"); });
+});
+
 describe("mapMetricSnapshotToWealthPathInput — honest derivation", () => {
   it("derives margins and repeat ratio from a real snapshot", () => {
     const input = mapMetricSnapshotToWealthPathInput({

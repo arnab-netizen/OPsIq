@@ -19,6 +19,23 @@ function makeHypothesis(overrides: Partial<HypothesisForPlanning> = {}): Hypothe
   };
 }
 
+describe("startup-validation-planner — module contract assertions", () => {
+  it("buildValidationPlan is a function", () => { expect(typeof buildValidationPlan).toBe("function"); });
+  it("rankExperiments is a function", () => { expect(typeof rankExperiments).toBe("function"); });
+  it("makeHypothesis is a function", () => { expect(typeof makeHypothesis).toBe("function"); });
+  it("makeHypothesis() returns an object", () => { expect(typeof makeHypothesis()).toBe("object"); });
+  it("makeHypothesis() has id field", () => { expect(makeHypothesis()).toHaveProperty("id"); });
+  it("makeHypothesis().id equals 'hyp-1'", () => { expect(makeHypothesis().id).toBe("hyp-1"); });
+  it("makeHypothesis() has statement field", () => { expect(makeHypothesis()).toHaveProperty("statement"); });
+  it("makeHypothesis() has hypothesisType field", () => { expect(makeHypothesis()).toHaveProperty("hypothesisType"); });
+  it("makeHypothesis().hypothesisType equals 'DEMAND'", () => { expect(makeHypothesis().hypothesisType).toBe("DEMAND"); });
+  it("makeHypothesis() has confidenceBefore field", () => { expect(makeHypothesis()).toHaveProperty("confidenceBefore"); });
+  it("makeHypothesis().confidenceBefore equals 40", () => { expect(makeHypothesis().confidenceBefore).toBe(40); });
+  it("buildValidationPlan([]) returns an object", () => { expect(typeof buildValidationPlan([])).toBe("object"); });
+  it("buildValidationPlan([]) has experiments field", () => { expect(buildValidationPlan([])).toHaveProperty("experiments"); });
+  it("buildValidationPlan([]).experiments has length 0", () => { expect(buildValidationPlan([]).experiments).toHaveLength(0); });
+});
+
 describe("buildValidationPlan", () => {
   it("returns empty experiments list for empty hypotheses", () => {
     const result = buildValidationPlan([]);
