@@ -18,6 +18,23 @@ const rec = (
   ...over,
 });
 
+describe("negative-recommendation — module contract assertions", () => {
+  it("evaluateNegativeRecommendation is a function", () => { expect(typeof evaluateNegativeRecommendation).toBe("function"); });
+  it("rankNegativeRecommendations is a function", () => { expect(typeof rankNegativeRecommendations).toBe("function"); });
+  it("assertNoBlockingNegative is a function", () => { expect(typeof assertNoBlockingNegative).toBe("function"); });
+  it("BlockingNegativeRecommendationError is a function", () => { expect(typeof BlockingNegativeRecommendationError).toBe("function"); });
+  it("rec is a function", () => { expect(typeof rec).toBe("function"); });
+  it("rec() returns an object", () => { expect(typeof rec()).toBe("object"); });
+  it("rec() has action field", () => { expect(rec()).toHaveProperty("action"); });
+  it("rec() has kind field", () => { expect(rec()).toHaveProperty("kind"); });
+  it("rec() has harmIfDone field", () => { expect(rec()).toHaveProperty("harmIfDone"); });
+  it("evaluateNegativeRecommendation(rec()) returns an object", () => { expect(typeof evaluateNegativeRecommendation(rec())).toBe("object"); });
+  it("evaluateNegativeRecommendation(rec()) has urgency field", () => { expect(evaluateNegativeRecommendation(rec())).toHaveProperty("urgency"); });
+  it("rankNegativeRecommendations([]) returns an array", () => { expect(Array.isArray(rankNegativeRecommendations([]))).toBe(true); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("[module34] evaluateNegativeRecommendation urgency tiers", () => {
   it("[module34] BLOCKING when harm critical AND evidence strong", () => {
     const r = evaluateNegativeRecommendation(

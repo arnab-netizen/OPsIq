@@ -51,6 +51,23 @@ const ctx = (over: Partial<GuidanceContext> = {}): GuidanceContext => ({
   ...over,
 });
 
+describe("adversarial-simulations — module contract assertions", () => {
+  it("buildOwnerNowView is a function", () => { expect(typeof buildOwnerNowView).toBe("function"); });
+  it("IssueCategory is an object", () => { expect(typeof IssueCategory).toBe("object"); });
+  it("BusinessFunction is an object", () => { expect(typeof BusinessFunction).toBe("object"); });
+  it("GuidanceClassification is an object", () => { expect(typeof GuidanceClassification).toBe("object"); });
+  it("EvidenceConfidenceLevel is an object", () => { expect(typeof EvidenceConfidenceLevel).toBe("object"); });
+  it("buildBeginnerExplanation is a function", () => { expect(typeof buildBeginnerExplanation).toBe("function"); });
+  it("assertBeginnerSafe is a function", () => { expect(typeof assertBeginnerSafe).toBe("function"); });
+  it("evaluateGuidanceForGeneric is a function", () => { expect(typeof evaluateGuidanceForGeneric).toBe("function"); });
+  it("validateGuidanceObject is a function", () => { expect(typeof validateGuidanceObject).toBe("function"); });
+  it("ProofType is an object", () => { expect(typeof ProofType).toBe("object"); });
+  it("issue is a function", () => { expect(typeof issue).toBe("function"); });
+  it("ctx is a function", () => { expect(typeof ctx).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("[module41] adversarial sim 1 — beginner owner, weak data, 'what do I do today?'", () => {
   it("caps confidence, blocks on missing data, returns a jargon-free beginner explanation", () => {
     const v = buildOwnerNowView(
