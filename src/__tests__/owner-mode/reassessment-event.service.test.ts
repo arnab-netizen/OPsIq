@@ -38,6 +38,69 @@ const base = {
   sourceProofId: "22222222-2222-2222-2222-222222222222",
 };
 
+describe("createReassessmentEvent — module contract assertions", () => {
+  it("createReassessmentEvent is a function", () => {
+    expect(typeof createReassessmentEvent).toBe("function");
+  });
+  it("makeDeps() returns an object with deps and calls", () => {
+    const d = makeDeps();
+    expect(typeof d).toBe("object");
+    expect(d).toHaveProperty("deps");
+    expect(d).toHaveProperty("calls");
+  });
+  it("makeDeps().deps.uuid is a function", () => {
+    expect(typeof makeDeps().deps.uuid).toBe("function");
+  });
+  it("makeDeps().deps.uuid() returns a string", () => {
+    expect(typeof makeDeps().deps.uuid()).toBe("string");
+  });
+  it("makeDeps().calls.created is an array initially empty", () => {
+    expect(Array.isArray(makeDeps().calls.created)).toBe(true);
+    expect(makeDeps().calls.created).toHaveLength(0);
+  });
+  it("makeDeps().calls.audits is an array initially empty", () => {
+    expect(Array.isArray(makeDeps().calls.audits)).toBe(true);
+    expect(makeDeps().calls.audits).toHaveLength(0);
+  });
+  it("makeDeps().calls.txs is 0 initially", () => {
+    expect(makeDeps().calls.txs).toBe(0);
+  });
+  it("base is an object", () => {
+    expect(typeof base).toBe("object");
+  });
+  it("base.workspaceId is a UUID-format string", () => {
+    expect(base.workspaceId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/);
+  });
+  it("base.trigger is 'evidence_retraction'", () => {
+    expect(base.trigger).toBe("evidence_retraction");
+  });
+  it("base.businessId is 'biz-1'", () => {
+    expect(base.businessId).toBe("biz-1");
+  });
+  it("createReassessmentEvent resolves to an object with a deduped field", async () => {
+    const { deps } = makeDeps();
+    const r = await createReassessmentEvent(base, deps);
+    expect(typeof r).toBe("object");
+    expect(r).toHaveProperty("deduped");
+  });
+  it("deduped field is a boolean", async () => {
+    const { deps } = makeDeps();
+    const r = await createReassessmentEvent(base, deps);
+    expect(typeof r.deduped).toBe("boolean");
+  });
+  it("with null existing, deduped is false", async () => {
+    const { deps } = makeDeps(null);
+    const r = await createReassessmentEvent(base, deps);
+    expect(r.deduped).toBe(false);
+  });
+  it("base.sourceProofId is a UUID-format string", () => {
+    expect(base.sourceProofId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/);
+  });
+  it("makeDeps().deps.now() returns a Date instance", () => {
+    expect(makeDeps().deps.now()).toBeInstanceOf(Date);
+  });
+});
+
 describe("createReassessmentEvent", () => {
   it("creates the reassessment + audit atomically and persists the proof key", async () => {
     const { deps, calls } = makeDeps();

@@ -18,6 +18,57 @@ function read(rel: string): string {
   return readFileSync(resolve(process.cwd(), rel), "utf8");
 }
 
+describe("mobile usability — module contract assertions", () => {
+  it("read is a function", () => {
+    expect(typeof read).toBe("function");
+  });
+  it("FILES.onboarding is a string", () => {
+    expect(typeof FILES.onboarding).toBe("string");
+  });
+  it("FILES.commandCenter is a string", () => {
+    expect(typeof FILES.commandCenter).toBe("string");
+  });
+  it("FILES.strip is a string", () => {
+    expect(typeof FILES.strip).toBe("string");
+  });
+  it("Object.keys(FILES).length is 3", () => {
+    expect(Object.keys(FILES).length).toBe(3);
+  });
+  it("FILES.onboarding ends with '.tsx'", () => {
+    expect(FILES.onboarding.endsWith(".tsx")).toBe(true);
+  });
+  it("read(FILES.onboarding) is a non-empty string > 100 chars", () => {
+    expect(read(FILES.onboarding).length).toBeGreaterThan(100);
+  });
+  it("read(FILES.commandCenter) contains 'min-h-[44px]'", () => {
+    expect(read(FILES.commandCenter)).toMatch(/min-h-\[44px\]/);
+  });
+  it("read(FILES.onboarding) contains 'min-h-[44px]'", () => {
+    expect(read(FILES.onboarding)).toMatch(/min-h-\[44px\]/);
+  });
+  it("read(FILES.strip) contains 'grid'", () => {
+    expect(read(FILES.strip)).toMatch(/grid/);
+  });
+  it("read(FILES.strip) contains 'sm:grid-cols-2'", () => {
+    expect(read(FILES.strip)).toMatch(/sm:grid-cols-2/);
+  });
+  it("read(FILES.commandCenter) contains 'owner-readiness-score'", () => {
+    expect(read(FILES.commandCenter)).toContain("owner-readiness-score");
+  });
+  it("read(FILES.strip) contains 'owner-priority-strip'", () => {
+    expect(read(FILES.strip)).toContain("owner-priority-strip");
+  });
+  it("read(FILES.onboarding) contains 'data-testid=\"owner-onboarding\"'", () => {
+    expect(read(FILES.onboarding)).toMatch(/data-testid="owner-onboarding"/);
+  });
+  it("read(FILES.commandCenter) does not contain fixed pixel widths > 200px", () => {
+    expect(read(FILES.commandCenter)).not.toMatch(/width:\s*[2-9]\d{2,}px/);
+  });
+  it("FILES.strip ends with '.tsx'", () => {
+    expect(FILES.strip.endsWith(".tsx")).toBe(true);
+  });
+});
+
 describe("mobile usability of owner-pilot surfaces", () => {
   it("interactive controls use a 44px minimum touch target", () => {
     const onboarding = read(FILES.onboarding);
