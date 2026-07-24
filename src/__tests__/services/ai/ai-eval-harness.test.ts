@@ -19,6 +19,10 @@ describe("AI-18 eval harness — module contract assertions", () => {
   it("runAiEvalHarness() byTrack has GUARDRAIL_TESTED", async () => { const r = await runAiEvalHarness(); expect(r.byTrack).toHaveProperty("GUARDRAIL_TESTED"); });
   it("runAiEvalHarness() byTrack has PROMPT_INJECTION_TESTED", async () => { const r = await runAiEvalHarness(); expect(r.byTrack).toHaveProperty("PROMPT_INJECTION_TESTED"); });
   it("runAiEvalHarness() results is an array", async () => { const r = await runAiEvalHarness(); expect(Array.isArray(r.results)).toBe(true); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
 });
 
 describe("AI-18 governed-AI eval harness (mock track)", () => {

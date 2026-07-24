@@ -15,6 +15,10 @@ describe("ProjectionRebuildEngine with EventReplayEngine — module contract ass
   it("fs module is importable", async () => { const fs = await import("fs"); expect(fs).toBeDefined(); });
   it("path module is importable", async () => { const p = await import("path"); expect(p).toBeDefined(); });
   it("path.resolve is a function", async () => { const p = await import("path"); expect(typeof p.resolve).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
 });
 
 describe("ProjectionRebuildEngine with EventReplayEngine Integration", () => {

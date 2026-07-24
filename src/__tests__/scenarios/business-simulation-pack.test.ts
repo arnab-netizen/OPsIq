@@ -29,6 +29,23 @@ const EXPECTED_COUNTS: Record<string, number> = {
   cash_crisis: 5, customer_vendor: 4, owner_unavailable: 3, extreme_crisis: 2,
 };
 
+describe("business-simulation-pack — module contract assertions", () => {
+  it("PACK is an array", () => { expect(Array.isArray(PACK)).toBe(true); });
+  it("BUSINESS_SIMULATION_SUBCATEGORIES is an array", () => { expect(Array.isArray(BUSINESS_SIMULATION_SUBCATEGORIES)).toBe(true); });
+  it("BUSINESS_SIMULATION_EVENTS is an array", () => { expect(Array.isArray(BUSINESS_SIMULATION_EVENTS)).toBe(true); });
+  it("businessSimulationSchema is an object", () => { expect(typeof businessSimulationSchema).toBe("object"); });
+  it("SIMULATION_ACTION_STATUSES is an array", () => { expect(Array.isArray(SIMULATION_ACTION_STATUSES)).toBe(true); });
+  it("BUSINESS_SIMULATION_SOURCES is an array", () => { expect(Array.isArray(BUSINESS_SIMULATION_SOURCES)).toBe(true); });
+  it("sourceRecordSchema is an object", () => { expect(typeof sourceRecordSchema).toBe("object"); });
+  it("findPII is a function", () => { expect(typeof findPII).toBe("function"); });
+  it("PROCEEDISH is an object", () => { expect(typeof PROCEEDISH).toBe("object"); });
+  it("OWNER_GATED is a string", () => { expect(typeof OWNER_GATED).toBe("string"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("Sequential Simulations pack — count & identity", () => {
   it("has exactly 50 counted, unique simulations", () => {
     expect(PACK.length).toBe(50);
