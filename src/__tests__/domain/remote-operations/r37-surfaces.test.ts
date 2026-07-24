@@ -1,6 +1,23 @@
 import { describe, it, expect } from "vitest";
 import { assessWorkload, isEmployeeFault, stockoutRisk, canCloseMaintenanceVerified, compareLocations, aiOverrideHarm, assessLocationHandover, canContactExternalCustomer, LOCATION_HANDOVER_FIELDS, type WorkloadInput } from "@/domain/remote-operations/remaining-surfaces";
 
+describe("R37 remaining surfaces — module contract assertions", () => {
+  it("assessWorkload is a function", () => { expect(typeof assessWorkload).toBe("function"); });
+  it("isEmployeeFault is a function", () => { expect(typeof isEmployeeFault).toBe("function"); });
+  it("stockoutRisk is a function", () => { expect(typeof stockoutRisk).toBe("function"); });
+  it("canCloseMaintenanceVerified is a function", () => { expect(typeof canCloseMaintenanceVerified).toBe("function"); });
+  it("compareLocations is a function", () => { expect(typeof compareLocations).toBe("function"); });
+  it("aiOverrideHarm is a function", () => { expect(typeof aiOverrideHarm).toBe("function"); });
+  it("assessLocationHandover is a function", () => { expect(typeof assessLocationHandover).toBe("function"); });
+  it("canContactExternalCustomer is a function", () => { expect(typeof canContactExternalCustomer).toBe("function"); });
+  it("LOCATION_HANDOVER_FIELDS is an array", () => { expect(Array.isArray(LOCATION_HANDOVER_FIELDS)).toBe(true); });
+  it("LOCATION_HANDOVER_FIELDS.length is greater than 0", () => { expect(LOCATION_HANDOVER_FIELDS.length).toBeGreaterThan(0); });
+  it("isEmployeeFault('EMPLOYEE') is true", () => { expect(isEmployeeFault("EMPLOYEE")).toBe(true); });
+  it("isEmployeeFault('BAD_SCHEDULING') is false", () => { expect(isEmployeeFault("BAD_SCHEDULING")).toBe(false); });
+  it("canContactExternalCustomer('STAFF_MEMBER') is false", () => { expect(canContactExternalCustomer("STAFF_MEMBER")).toBe(false); });
+  it("canContactExternalCustomer('OPERATIONS_MANAGER') is true", () => { expect(canContactExternalCustomer("OPERATIONS_MANAGER")).toBe(true); });
+});
+
 describe("[§37] workload fairness gate", () => {
   const w = (over: Partial<WorkloadInput> = {}): WorkloadInput => ({ dailyTaskCount: 3, maxDailyTasks: 5, travelTimeKnown: true, physicalIntensity: "MEDIUM", overtimeRisk: false, isHighOrCritical: false, ...over });
   it("flags overload and incomplete workload data", () => {

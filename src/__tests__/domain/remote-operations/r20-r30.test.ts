@@ -8,6 +8,23 @@ const item = (over: Partial<OwnerDecisionItem> = {}): OwnerDecisionItem => ({
   verificationPlan: "tenant confirms", ownerModeConflicts: [], ...over,
 });
 
+describe("R20-R30 remote operations — module contract assertions", () => {
+  it("validateOwnerDecisionItem is a function", () => { expect(typeof validateOwnerDecisionItem).toBe("function"); });
+  it("buildDailyBriefing is a function", () => { expect(typeof buildDailyBriefing).toBe("function"); });
+  it("detectTrendDeterioration is a function", () => { expect(typeof detectTrendDeterioration).toBe("function"); });
+  it("weeklyReviewRejectsVanity is a function", () => { expect(typeof weeklyReviewRejectsVanity).toBe("function"); });
+  it("weeklyReviewAllowsSuccessClaim is a function", () => { expect(typeof weeklyReviewAllowsSuccessClaim).toBe("function"); });
+  it("findCrossLocationBackup is a function", () => { expect(typeof findCrossLocationBackup).toBe("function"); });
+  it("slaStatus is a function", () => { expect(typeof slaStatus).toBe("function"); });
+  it("validateCommNote is a function", () => { expect(typeof validateCommNote).toBe("function"); });
+  it("checkVendorDispatchable is a function", () => { expect(typeof checkVendorDispatchable).toBe("function"); });
+  it("item is a function", () => { expect(typeof item).toBe("function"); });
+  it("item() returns an object", () => { expect(typeof item()).toBe("object"); });
+  it("item() has decisionType field", () => { expect(item()).toHaveProperty("decisionType"); });
+  it("item().decisionType equals 'approve_repair'", () => { expect(item().decisionType).toBe("approve_repair"); });
+  it("validateOwnerDecisionItem(item()) returns an empty array", () => { expect(validateOwnerDecisionItem(item())).toEqual([]); });
+});
+
 describe("[R20] owner decision queue + daily briefing + trends", () => {
   it("an owner decision item requires the governed fields", () => {
     expect(validateOwnerDecisionItem(item())).toEqual([]);
