@@ -48,7 +48,7 @@ describe("Signup Owner Permissions — non-DB function contract assertions", () 
   it("hasCapability returns true for ADMIN_OR_PORTFOLIO_MANAGER with workspace scope", () => {
     const ctx = {
       userId: "u1",
-      roles: [{ role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER as any, scope: "workspace", scopeId: "ws-1" }],
+      roles: [{ role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER, scope: "workspace", scopeId: "ws-1" }],
       engagementMemberships: [],
     };
     expect(hasCapability(ctx, CAPABILITIES.OWNER_VIEW)).toBe(true);

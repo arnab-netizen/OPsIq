@@ -83,7 +83,6 @@ describe("Working-Capital RBAC — module contract assertions (non-DB)", () => {
     expect(ROLES.ADMIN_OR_PORTFOLIO_MANAGER).not.toBe(ROLES.ANALYST);
   });
   it("randomUUID import produces UUID-format strings", () => {
-    const { randomUUID } = require("crypto");
     const id = randomUUID();
     expect(typeof id).toBe("string");
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
