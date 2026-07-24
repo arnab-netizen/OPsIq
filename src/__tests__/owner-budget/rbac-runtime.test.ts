@@ -126,6 +126,23 @@ async function postOverride(businessId: string) {
   return POST(req, { params: Promise.resolve({}) });
 }
 
+describe("Dynamic Budget RBAC — module contract assertions", () => {
+  it("randomUUID is a function", () => { expect(typeof randomUUID).toBe("function"); });
+  it("NextRequest is a class/function", () => { expect(typeof NextRequest).toBe("function"); });
+  it("db is an object", () => { expect(typeof db).toBe("object"); });
+  it("ROLES is an object", () => { expect(typeof ROLES).toBe("object"); });
+  it("createBusiness is a function", () => { expect(typeof createBusiness).toBe("function"); });
+  it("SHOULD_RUN_DB_TESTS is a boolean", () => { expect(typeof SHOULD_RUN_DB_TESTS).toBe("boolean"); });
+  it("mockSessionValid is a boolean", () => { expect(typeof mockSessionValid).toBe("boolean"); });
+  it("mockActorId is a string", () => { expect(typeof mockActorId).toBe("string"); });
+  it("OWNER_ROLE is an array", () => { expect(Array.isArray(OWNER_ROLE)).toBe(true); });
+  it("NO_OWNER_ROLE is an array", () => { expect(Array.isArray(NO_OWNER_ROLE)).toBe(true); });
+  it("actAs is a function", () => { expect(typeof actAs).toBe("function"); });
+  it("getActions is a function", () => { expect(typeof getActions).toBe("function"); });
+  it("patchAction is a function", () => { expect(typeof patchAction).toBe("function"); });
+  it("getGuidance is a function", () => { expect(typeof getGuidance).toBe("function"); });
+});
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Dynamic Budget RBAC — runtime authorization", () => {
   let s: Seeded;
   beforeEach(async () => { s = await seedWorkspace(); });

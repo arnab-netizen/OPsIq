@@ -10,6 +10,23 @@ import {
   composeUpdatedPlan,
 } from "@/domain/owner-budget";
 
+describe("Slice 5 engines — module contract assertions", () => {
+  it("detectUnderinvestment is a function", () => { expect(typeof detectUnderinvestment).toBe("function"); });
+  it("detectCollusionRisk is a function", () => { expect(typeof detectCollusionRisk).toBe("function"); });
+  it("composeUpdatedPlan is a function", () => { expect(typeof composeUpdatedPlan).toBe("function"); });
+  it("detectUnderinvestment({cashSafe:true}) returns an object", () => { expect(typeof detectUnderinvestment({ cashSafe: true })).toBe("object"); });
+  it("detectUnderinvestment result has hasHarmful field", () => { expect(detectUnderinvestment({ cashSafe: true })).toHaveProperty("hasHarmful"); });
+  it("detectUnderinvestment result has findings field", () => { expect(detectUnderinvestment({ cashSafe: true })).toHaveProperty("findings"); });
+  it("detectCollusionRisk({}) returns an object", () => { expect(typeof detectCollusionRisk({})).toBe("object"); });
+  it("detectCollusionRisk result has hasRisk field", () => { expect(detectCollusionRisk({})).toHaveProperty("hasRisk"); });
+  it("detectCollusionRisk result has findings field", () => { expect(detectCollusionRisk({})).toHaveProperty("findings"); });
+  it("detectCollusionRisk({selfApprovalCount:1}).hasRisk is false", () => { expect(detectCollusionRisk({ selfApprovalCount: 1, splitSpendClusterCount: 1 }).hasRisk).toBe(false); });
+  it("detectCollusionRisk({selfApprovalCount:3}).hasRisk is true", () => { expect(detectCollusionRisk({ selfApprovalCount: 3 }).hasRisk).toBe(true); });
+  it("detectUnderinvestment({cashSafe:true}).hasHarmful is false with no underfunding", () => { expect(detectUnderinvestment({ cashSafe: true }).hasHarmful).toBe(false); });
+  it("composeUpdatedPlan with finance assessment returns an object", () => { expect(typeof composeUpdatedPlan({ assessment: { finance: { periodStart: "2026-01-01", periodEnd: "2026-01-31", currency: "INR", revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 30000, cashOnHand: 200000 }, dataConfidence: "OPERATIONAL" } })).toBe("object"); });
+  it("composeUpdatedPlan result has signals field", () => { expect(composeUpdatedPlan({ assessment: { finance: { periodStart: "2026-01-01", periodEnd: "2026-01-31", currency: "INR", revenue: 100000, costOfGoodsOrServices: 50000, fixedCosts: 30000, cashOnHand: 200000 }, dataConfidence: "OPERATIONAL" } })).toHaveProperty("signals"); });
+});
+
 describe("Underinvestment Detection", () => {
   it("flags harmful underinvestment when cash is safe and a trend is adverse", () => {
     const r = detectUnderinvestment({ cashSafe: true, marketingUnderfunded: true, revenueTargetMissed: true, maintenanceUnderfunded: true, downtimeRising: true });
