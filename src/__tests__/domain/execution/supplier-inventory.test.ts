@@ -17,6 +17,23 @@ const item = (over: Partial<StockItemInput> = {}): StockItemInput => ({
   sku: "chem-1", currentQty: 100, dailyUsage: 10, leadTimeDays: 3, safetyStock: 20, ...over,
 });
 
+describe("[module23] supplier-inventory — module contract assertions", () => {
+  it("reorderPoint is a function", () => { expect(typeof reorderPoint).toBe("function"); });
+  it("daysOfCover is a function", () => { expect(typeof daysOfCover).toBe("function"); });
+  it("isBelowReorderPoint is a function", () => { expect(typeof isBelowReorderPoint).toBe("function"); });
+  it("isStockout is a function", () => { expect(typeof isStockout).toBe("function"); });
+  it("stockoutRisk is a function", () => { expect(typeof stockoutRisk).toBe("function"); });
+  it("suggestReorder is a function", () => { expect(typeof suggestReorder).toBe("function"); });
+  it("onTimeRate is a function", () => { expect(typeof onTimeRate).toBe("function"); });
+  it("classifySupplier is a function", () => { expect(typeof classifySupplier).toBe("function"); });
+  it("supplyCutoffRisk is a function", () => { expect(typeof supplyCutoffRisk).toBe("function"); });
+  it("item is a function", () => { expect(typeof item).toBe("function"); });
+  it("item() returns an object with sku field", () => { expect(item()).toHaveProperty("sku"); });
+  it("item().currentQty is 100 by default", () => { expect(item().currentQty).toBe(100); });
+  it("reorderPoint(item()) returns a positive number", () => { expect(reorderPoint(item())).toBeGreaterThan(0); });
+  it("isStockout(item({ currentQty: 0 })) returns true", () => { expect(isStockout(item({ currentQty: 0 }))).toBe(true); });
+});
+
 describe("[module23] inventory control", () => {
   it("reorder point = usage*lead + safety", () => {
     expect(reorderPoint(item())).toBe(10 * 3 + 20); // 50

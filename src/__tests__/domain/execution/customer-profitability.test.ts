@@ -13,6 +13,23 @@ const C = (over: Partial<CustomerProfitInput> = {}): CustomerProfitInput => ({
   customerId: "c1", segment: "retail", revenue: 1000, directCost: 600, orders: 10, complaints: 1, ...over,
 });
 
+describe("[module17] customer profitability — module contract assertions", () => {
+  it("complaintRate is a function", () => { expect(typeof complaintRate).toBe("function"); });
+  it("estimateLtv is a function", () => { expect(typeof estimateLtv).toBe("function"); });
+  it("classifyCustomer is a function", () => { expect(typeof classifyCustomer).toBe("function"); });
+  it("assessCustomerProfitability is a function", () => { expect(typeof assessCustomerProfitability).toBe("function"); });
+  it("rollupBySegment is a function", () => { expect(typeof rollupBySegment).toBe("function"); });
+  it("rankByProfitability is a function", () => { expect(typeof rankByProfitability).toBe("function"); });
+  it("C is a function", () => { expect(typeof C).toBe("function"); });
+  it("C() returns an object with customerId field", () => { expect(C()).toHaveProperty("customerId"); });
+  it("C().segment is 'retail' by default", () => { expect(C().segment).toBe("retail"); });
+  it("C().revenue is 1000 by default", () => { expect(C().revenue).toBe(1000); });
+  it("complaintRate(C()) returns a number", () => { expect(typeof complaintRate(C())).toBe("number"); });
+  it("classifyCustomer(0.4) returns 'PROFITABLE'", () => { expect(classifyCustomer(0.4)).toBe("PROFITABLE"); });
+  it("classifyCustomer(-0.1) returns 'LOSS_MAKING'", () => { expect(classifyCustomer(-0.1)).toBe("LOSS_MAKING"); });
+  it("rollupBySegment([]) returns an empty array", () => { expect(rollupBySegment([])).toHaveLength(0); });
+});
+
 describe("[module17] customer profitability", () => {
   it("complaint rate = complaints / orders (0 when no orders)", () => {
     expect(complaintRate(C({ orders: 10, complaints: 2 }))).toBeCloseTo(0.2, 5);
