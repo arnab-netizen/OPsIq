@@ -3284,5 +3284,31 @@
     ],
     "gates_run": "npx tsc --noEmit (PASS), npm run build (PASS), npx prisma validate (PASS), node validate-bundle-manifests.mjs (PASS), node scan-recurrence-defects.mjs (PASS), vitest 238 tests (PASS)",
     "committed": "pending"
+  },
+  "bundle_6_consulting_mode": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING + DOMAIN_CONTRACT + API_ROUTES",
+    "description": "Consulting Mode engagement lifecycle — phase FSM (DISCOVERY→DIAGNOSIS→IMPLEMENTATION→REVIEW), client/consultant DTO boundary, evidence-chain finding creation, finding-required recommendation generation, consulting action assignment, critical-action closure gate, 4th OpsIQ dimension (humanFactors JSON), health computation",
+    "files": [
+      "prisma/schema.prisma (consultingPhase, consultantNotes, humanFactors fields added)",
+      "src/domain/constants/capabilities.ts (CONSULTING_READ, CONSULTING_WRITE added)",
+      "src/domain/constants/audit-events.ts (8 consulting audit events added)",
+      "src/domain/consulting/consulting-contracts.ts (NEW)",
+      "src/services/consulting/consulting-engagement.service.ts (NEW)",
+      "src/app/api/consulting/engagements/route.ts (NEW)",
+      "src/__tests__/services/consulting/consulting-engagement.test.ts (NEW)"
+    ],
+    "workspace_enforcement": "✓ All service methods enforce workspaceId parameter; route uses ctx.verifiedWorkspaceId exclusively",
+    "auth_enforced": "✓ GET requires CAPABILITIES.CONSULTING_READ; POST requires CAPABILITIES.CONSULTING_WRITE; requireWorkspace: true",
+    "DTO_boundary": "✓ toClientDTO() strips consultantNotes, assignedConsultantId, createdBy, full humanFactors (only summary fields exposed); toConsultantDTO() includes all fields",
+    "audit_events": "8 events emitted: engagement_created, phase_advanced, finding_created, recommendation_generated, action_assigned, engagement_closed, health_updated, dimension_updated",
+    "four_opsiq_dimensions": "✓ consultingPhase (lifecycle stage) + BusinessConditionProfile relation (business_condition) + interventionMode/interventionPhase (intervention) + humanFactors JSON (human_execution_reality)",
+    "closure_gate": "✓ All critical-priority actions must be completed or cancelled before engagement closure",
+    "phase_fsm": "✓ Forward-only (DISCOVERY→DIAGNOSIS→IMPLEMENTATION→REVIEW), no skipping, no reversal, REVIEW is terminal",
+    "test_coverage": "63 tests — phase FSM (transitions, invalid transitions, terminal state), finding creation (evidence chain validation, workspace isolation), recommendation generation (finding validation), action assignment (consultingTarget, priority), closure gate (critical action blocking, happy path), DTO redaction (client vs consultant boundary), health computation (HEALTHY/AT_RISK/BLOCKED), audit event assertions (all 6 mutation paths)",
+    "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓), npx prisma generate (✓), npx vitest run consulting-engagement.test.ts (63/63 ✓)",
+    "compilation": "✓ TypeScript compiles without errors — EngagementRow extension pattern + toRow() cast used for new Prisma fields",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() mocked DB",
+    "committed": "pending"
   }
 }

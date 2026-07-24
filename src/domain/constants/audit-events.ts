@@ -625,6 +625,16 @@ export const AUDIT_EVENTS = {
   CONNECTOR_REFRESH_FAILED: "connector.refresh_failed",
   INTEGRATION_EVENT_INGESTED: "integration_event.ingested",
   INTEGRATION_EVENT_BCP_TRIGGERED: "integration_event.bcp_triggered",
+
+  // Bundle 6 — Consulting Mode
+  CONSULTING_ENGAGEMENT_CREATED: "consulting.engagement_created",
+  CONSULTING_PHASE_ADVANCED: "consulting.phase_advanced",
+  CONSULTING_FINDING_CREATED: "consulting.finding_created",
+  CONSULTING_RECOMMENDATION_GENERATED: "consulting.recommendation_generated",
+  CONSULTING_ACTION_ASSIGNED: "consulting.action_assigned",
+  CONSULTING_ENGAGEMENT_CLOSED: "consulting.engagement_closed",
+  CONSULTING_HEALTH_UPDATED: "consulting.health_updated",
+  CONSULTING_DIMENSION_UPDATED: "consulting.dimension_updated",
 } as const;
 
 export type AuditEventName =

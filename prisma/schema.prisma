@@ -340,6 +340,10 @@ model Engagement {
   isBlocked                 Boolean                    @default(false) @map("is_blocked")
   blockerReason             String?                    @map("blocker_reason")
   blockedAt                 DateTime?                  @map("blocked_at")
+  // Bundle 6 — Consulting Mode (four OpsIQ dimensions at engagement level)
+  consultingPhase           String                     @default("DISCOVERY") @map("consulting_phase")
+  consultantNotes           String?                    @map("consultant_notes")
+  humanFactors              Json?                      @map("human_factors")
   workspaceId               String                     @map("workspace_id") @db.Uuid
   actions                   Action[]
   businessConditionProfiles BusinessConditionProfile[]

@@ -136,6 +136,10 @@ export const CAPABILITIES = {
   // Integration Fabric (Bundle 5)
   INTEGRATION_MANAGE: "integration:manage",
   INTEGRATION_VIEW: "integration:view",
+
+  // Consulting Mode (Bundle 6)
+  CONSULTING_WRITE: "consulting:write",
+  CONSULTING_READ: "consulting:read",
 } as const;
 
 export type CapabilityName =
