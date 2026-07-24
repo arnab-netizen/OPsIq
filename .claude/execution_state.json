@@ -3601,5 +3601,19 @@
     "gates_run": "npx vitest run kpi-ownership.test.ts (32/32 PASS)",
     "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
     "next_automatic_target": "resource-pools route (0 dedicated route tests)"
+  },
+  "owner_resource_pools_route_tests": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "NON_DB_MOCK_TEST_SUITE",
+    "description": "Non-DB mock tests for GET/POST /api/owner/resource-pools. Covers GET listResourcePools, POST CREATE_POOL (createResourcePool with resourceType/label/totalCapacity/unit), POST ALLOCATE (allocateResource with poolId/objectiveId/allocationAmount), POST RELEASE (releaseAllocation with positional workspaceId/actorId/allocationId args), inline 400 guards for missing required fields, capability enforcement, workspace and actor isolation. 33 tests total.",
+    "files": [
+      "src/__tests__/api/owner/resource-pools/resource-pools.test.ts (NEW — 33 tests)"
+    ],
+    "test_coverage": "33 tests — capability declarations (6), GET (6), POST CREATE_POOL (6), POST ALLOCATE (6), POST RELEASE (6), workspace isolation (2), actor isolation (1)",
+    "workspace_enforcement": "verified: verifiedWorkspaceId always passed to service; WS_A/WS_B isolation tests pass",
+    "auth_enforced": "owner:manage (GET and POST)",
+    "gates_run": "npx vitest run resource-pools.test.ts (33/33 PASS)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() wrapper mock pattern",
+    "next_automatic_target": "override-arbitration route (0 dedicated tests), cost-attribution/cost-intelligence routes"
   }
 }
