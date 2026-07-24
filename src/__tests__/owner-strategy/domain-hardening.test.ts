@@ -34,6 +34,23 @@ function action(over: Partial<ProposedAction> & Pick<ProposedAction, "label" | "
   return { downsideRisk: "low", evidenceStrength: "medium", financialDecision: "APPROVED", assigneeRole: "staff", ...over };
 }
 
+describe("domain-hardening — module contract assertions", () => {
+  it("composeWealthCommandCenter is a function", () => { expect(typeof composeWealthCommandCenter).toBe("function"); });
+  it("RecommendationSensitivity is an object", () => { expect(typeof RecommendationSensitivity).toBe("object"); });
+  it("evaluateMarginSafety is a function", () => { expect(typeof evaluateMarginSafety).toBe("function"); });
+  it("evaluateCashSafetyGate is a function", () => { expect(typeof evaluateCashSafetyGate).toBe("function"); });
+  it("campaignRoiPct is a function", () => { expect(typeof campaignRoiPct).toBe("function"); });
+  it("assessScaleReadiness is a function", () => { expect(typeof assessScaleReadiness).toBe("function"); });
+  it("detectFakeCompletion is a function", () => { expect(typeof detectFakeCompletion).toBe("function"); });
+  it("evaluateComplianceGate is a function", () => { expect(typeof evaluateComplianceGate).toBe("function"); });
+  it("assertLoopIntegration is a function", () => { expect(typeof assertLoopIntegration).toBe("function"); });
+  it("action is a function", () => { expect(typeof action).toBe("function"); });
+  it("action({label:'test',kind:'fix_operations',workPackageKind:'sop_creation'}) returns an object", () => { expect(typeof action({ label: "test", kind: "fix_operations", workPackageKind: "sop_creation" })).toBe("object"); });
+  it("action result has label field", () => { expect(action({ label: "test", kind: "fix_operations", workPackageKind: "sop_creation" })).toHaveProperty("label"); });
+  it("detectFakeCompletion(true,false,false,true) is true", () => { expect(detectFakeCompletion(true, false, false, true)).toBe(true); });
+  it("evaluateMarginSafety(8,PRICING_SENSITIVE).allowed is false", () => { expect(evaluateMarginSafety(8, RecommendationSensitivity.PRICING_SENSITIVE).allowed).toBe(false); });
+});
+
 describe("Domain Hardening — each domain plugs into the wealth loop + safety gate", () => {
   it("FINANCE (Phase 24): action flows through loop; unsafe discount + spend blocked", () => {
     const cc = composeWealthCommandCenter({
