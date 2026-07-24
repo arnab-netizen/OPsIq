@@ -582,6 +582,14 @@ export const AUDIT_EVENTS = {
   STARTUP_EXECUTION_AUTHORIZATION_DENIED: "startup.execution_authorization_denied",
   STARTUP_APPROVAL_BECAME_STALE: "startup.approval_became_stale",
   STARTUP_EXECUTION_PLAN_SUPERSEDED: "startup.execution_plan_superseded",
+  // Bundle 3.5 — Customer Complaint and Service Recovery
+  COMPLAINT_CREATED: "complaint.created",
+  COMPLAINT_TRIAGED: "complaint.triaged",
+  COMPLAINT_RECOVERY_ACTION_ADDED: "complaint.recovery_action_added",
+  COMPLAINT_RESOLVED: "complaint.resolved",
+  COMPLAINT_CLOSED: "complaint.closed",
+  COMPLAINT_SLA_BREACHED: "complaint.sla_breached",
+  COMPLAINT_REOPENED: "complaint.reopened",
 } as const;
 
 export type AuditEventName =
