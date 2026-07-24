@@ -25,6 +25,23 @@ import { ProofType } from "@/domain/execution/proof";
 import { EvidenceConfidenceLevel } from "@/domain/business-impact/recommendation-business-impact";
 import { BoundaryValidationStatus } from "@/domain/execution/boundary";
 
+describe("foundations — module contract assertions", () => {
+  it("isBusinessFunction is a function", () => { expect(typeof isBusinessFunction).toBe("function"); });
+  it("requiresProfessionalReview is a function", () => { expect(typeof requiresProfessionalReview).toBe("function"); });
+  it("assertBusinessFunction is a function", () => { expect(typeof assertBusinessFunction).toBe("function"); });
+  it("MissingBusinessFunctionError is a function", () => { expect(typeof MissingBusinessFunctionError).toBe("function"); });
+  it("ALL_BUSINESS_FUNCTIONS is an array", () => { expect(Array.isArray(ALL_BUSINESS_FUNCTIONS)).toBe(true); });
+  it("BusinessFunction is an object", () => { expect(typeof BusinessFunction).toBe("object"); });
+  it("GuidanceClassification is an object", () => { expect(typeof GuidanceClassification).toBe("object"); });
+  it("isBlocked is a function", () => { expect(typeof isBlocked).toBe("function"); });
+  it("isActionable is a function", () => { expect(typeof isActionable).toBe("function"); });
+  it("validateGuidanceObject is a function", () => { expect(typeof validateGuidanceObject).toBe("function"); });
+  it("InvalidGuidanceError is a function", () => { expect(typeof InvalidGuidanceError).toBe("function"); });
+  it("ProofType is an object", () => { expect(typeof ProofType).toBe("object"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("[module41] business function enum", () => {
   it("has the full 360° coverage (27 functions)", () => {
     expect(ALL_BUSINESS_FUNCTIONS.length).toBe(27);

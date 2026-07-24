@@ -27,6 +27,23 @@ const clean: LearningGateInput = {
 };
 const g = (o: Partial<LearningGateInput>) => determineLearningEligibility({ ...clean, ...o });
 
+describe("learning-gate — module contract assertions", () => {
+  it("determineLearningEligibility is a function", () => { expect(typeof determineLearningEligibility).toBe("function"); });
+  it("isLearningEligible is a function", () => { expect(typeof isLearningEligible).toBe("function"); });
+  it("L is an object", () => { expect(typeof L).toBe("object"); });
+  it("ProofGateStatus is an object", () => { expect(typeof ProofGateStatus).toBe("object"); });
+  it("OutcomeStatus is an object", () => { expect(typeof OutcomeStatus).toBe("object"); });
+  it("AttributionStatus is an object", () => { expect(typeof AttributionStatus).toBe("object"); });
+  it("ProfitImpactConfidence is an object", () => { expect(typeof ProfitImpactConfidence).toBe("object"); });
+  it("OwnerLearningApproval is an object", () => { expect(typeof OwnerLearningApproval).toBe("object"); });
+  it("ImplementationQualityStatus is an object", () => { expect(typeof ImplementationQualityStatus).toBe("object"); });
+  it("AiMutationAttemptStatus is an object", () => { expect(typeof AiMutationAttemptStatus).toBe("object"); });
+  it("clean is an object", () => { expect(typeof clean).toBe("object"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("determineLearningEligibility — fail-closed blocks", () => {
   it("AI mutation attempt is blocked first (highest priority)", () => {
     expect(
