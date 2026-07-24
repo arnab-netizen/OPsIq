@@ -14,6 +14,64 @@ const suites = [
   { name: "D9 owner workload", cases: OWNER_WORKLOAD_CASES, respond: (c: DomainCase) => respondOwnerWorkload(c.input as never) },
 ];
 
+describe("[D7-D9] domain training suites — structural assertions", () => {
+  it("suites has exactly 3 entries", () => {
+    expect(suites).toHaveLength(3);
+  });
+  it("suites[0].name is 'D7 capacity'", () => {
+    expect(suites[0].name).toBe("D7 capacity");
+  });
+  it("suites[1].name is 'D8 staff workload'", () => {
+    expect(suites[1].name).toBe("D8 staff workload");
+  });
+  it("suites[2].name is 'D9 owner workload'", () => {
+    expect(suites[2].name).toBe("D9 owner workload");
+  });
+  it("CAPACITY_CASES has at least 21 entries", () => {
+    expect(CAPACITY_CASES.length).toBeGreaterThanOrEqual(21);
+  });
+  it("STAFF_WORKLOAD_CASES has at least 21 entries", () => {
+    expect(STAFF_WORKLOAD_CASES.length).toBeGreaterThanOrEqual(21);
+  });
+  it("OWNER_WORKLOAD_CASES has at least 21 entries", () => {
+    expect(OWNER_WORKLOAD_CASES.length).toBeGreaterThanOrEqual(21);
+  });
+  it("evaluateDomain is a function", () => {
+    expect(typeof evaluateDomain).toBe("function");
+  });
+  it("scoreCase is a function", () => {
+    expect(typeof scoreCase).toBe("function");
+  });
+  it("REQUIRED_SCENARIO_TYPES is a non-empty array", () => {
+    expect(Array.isArray(REQUIRED_SCENARIO_TYPES)).toBe(true);
+    expect(REQUIRED_SCENARIO_TYPES.length).toBeGreaterThan(0);
+  });
+  it("MIN_CASES_PER_DOMAIN is >= 21", () => {
+    expect(MIN_CASES_PER_DOMAIN).toBeGreaterThanOrEqual(21);
+  });
+  it("TrainingLevel.LEVEL_5_OUTCOME_VERIFIED is defined", () => {
+    expect(TrainingLevel.LEVEL_5_OUTCOME_VERIFIED).toBeDefined();
+  });
+  it("all suites have respond as a function", () => {
+    for (const s of suites) expect(typeof s.respond).toBe("function");
+  });
+  it("all suites have cases as a non-empty array", () => {
+    for (const s of suites) {
+      expect(Array.isArray(s.cases)).toBe(true);
+      expect(s.cases.length).toBeGreaterThan(0);
+    }
+  });
+  it("all CAPACITY_CASES have a scenarioType string", () => {
+    for (const c of CAPACITY_CASES) expect(typeof c.scenarioType).toBe("string");
+  });
+  it("all STAFF_WORKLOAD_CASES have a scenarioType string", () => {
+    for (const c of STAFF_WORKLOAD_CASES) expect(typeof c.scenarioType).toBe("string");
+  });
+  it("all OWNER_WORKLOAD_CASES have a scenarioType string", () => {
+    for (const c of OWNER_WORKLOAD_CASES) expect(typeof c.scenarioType).toBe("string");
+  });
+});
+
 for (const s of suites) {
   describe(`[${s.name}] executable scored training`, () => {
     it(">=21 cases, all scenario types", () => {
