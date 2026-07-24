@@ -17,6 +17,56 @@ function tally(pred: (p: (typeof PUBLIC_CORPUS)[number]) => boolean): Record<str
   return m;
 }
 
+describe("public corpus — module contract assertions", () => {
+  it("PUBLIC_CORPUS is an array", () => {
+    expect(Array.isArray(PUBLIC_CORPUS)).toBe(true);
+  });
+  it("PUBLIC_CORPUS has at least 1 entry", () => {
+    expect(PUBLIC_CORPUS.length).toBeGreaterThan(0);
+  });
+  it("REQUIRED_DOMAINS is an array with 60 entries", () => {
+    expect(Array.isArray(REQUIRED_DOMAINS)).toBe(true);
+    expect(REQUIRED_DOMAINS.length).toBe(60);
+  });
+  it("REQUIRED_DOMAIN_SET is a Set", () => {
+    expect(REQUIRED_DOMAIN_SET).toBeInstanceOf(Set);
+  });
+  it("REQUIRED_DOMAIN_SET.size is 60", () => {
+    expect(REQUIRED_DOMAIN_SET.size).toBe(60);
+  });
+  it("CRITICAL_DOMAINS is an array with at least 1 entry", () => {
+    expect(Array.isArray(CRITICAL_DOMAINS)).toBe(true);
+    expect(CRITICAL_DOMAINS.length).toBeGreaterThan(0);
+  });
+  it("PUBLIC_CORPUS[0] has a meta field", () => {
+    expect(PUBLIC_CORPUS[0]).toHaveProperty("meta");
+  });
+  it("adversarial is a function", () => {
+    expect(typeof adversarial).toBe("function");
+  });
+  it("tally is a function", () => {
+    expect(typeof tally).toBe("function");
+  });
+  it("adversarial({meta:{severity:'fraud'}}) returns true", () => {
+    expect(adversarial({ meta: { severity: "fraud" } })).toBe(true);
+  });
+  it("adversarial({meta:{severity:'normal'}}) returns false", () => {
+    expect(adversarial({ meta: { severity: "normal" } })).toBe(false);
+  });
+  it("tally(() => true) returns an object", () => {
+    expect(typeof tally(() => true)).toBe("object");
+  });
+  it("all REQUIRED_DOMAINS are strings", () => {
+    for (const d of REQUIRED_DOMAINS) expect(typeof d).toBe("string");
+  });
+  it("REQUIRED_DOMAIN_SET contains REQUIRED_DOMAINS[0]", () => {
+    expect(REQUIRED_DOMAIN_SET.has(REQUIRED_DOMAINS[0])).toBe(true);
+  });
+  it("all CRITICAL_DOMAINS are contained in REQUIRED_DOMAIN_SET", () => {
+    for (const d of CRITICAL_DOMAINS) expect(REQUIRED_DOMAIN_SET.has(d)).toBe(true);
+  });
+});
+
 describe("public corpus — 60/60 domain coverage", () => {
   const all = tally(() => true);
 
