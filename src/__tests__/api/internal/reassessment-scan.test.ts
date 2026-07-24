@@ -79,4 +79,96 @@ describe("[unit] internal reassessment-scan route authorized happy-path (Wave 9)
     expect(body.ok).toBe(false);
     expect(body.error).not.toContain("secret connection string"); // operator-safe, no raw leak
   });
+
+  it("returns body.skipped from scanner result", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = STRONG_TOKEN;
+    scanMock.mockResolvedValue({ scanned: 5, reassessed: 3, skipped: 2, businesses: [] });
+    const res = await POST(post({ authorization: `Bearer ${STRONG_TOKEN}` }));
+    const body = (await res.json()) as { skipped: number };
+    expect(body.skipped).toBe(2);
+  });
+
+  it("response body has ok=true on success", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = STRONG_TOKEN;
+    scanMock.mockResolvedValue({ scanned: 0, reassessed: 0, skipped: 0, businesses: [] });
+    const res = await POST(post({ authorization: `Bearer ${STRONG_TOKEN}` }));
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
+  });
+
+  it("response body has ok=false on scanner error", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = STRONG_TOKEN;
+    scanMock.mockRejectedValue(new Error("disk full"));
+    const res = await POST(post({ authorization: `Bearer ${STRONG_TOKEN}` }));
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(false);
+  });
+
+  it("error response body has 'error' string field", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = STRONG_TOKEN;
+    scanMock.mockRejectedValue(new Error("network timeout"));
+    const res = await POST(post({ authorization: `Bearer ${STRONG_TOKEN}` }));
+    const body = (await res.json()) as { error: string };
+    expect(typeof body.error).toBe("string");
+    expect(body.error.length).toBeGreaterThan(0);
+  });
+
+  it("scanner is called once even when it throws", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = STRONG_TOKEN;
+    scanMock.mockRejectedValue(new Error("timeout"));
+    await POST(post({ authorization: `Bearer ${STRONG_TOKEN}` }));
+    expect(scanMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("scanner receives a Date argument (not undefined)", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = STRONG_TOKEN;
+    scanMock.mockResolvedValue({ scanned: 0, reassessed: 0, skipped: 0, businesses: [] });
+    await POST(post({ authorization: `Bearer ${STRONG_TOKEN}` }));
+    expect(scanMock.mock.calls[0][0]).toBeInstanceOf(Date);
+  });
+});
+
+describe("[unit] internal reassessment-scan route — additional auth rejection cases", () => {
+  it("returns 401 for Authorization header with Basic scheme instead of Bearer", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = STRONG_TOKEN;
+    const res = await POST(post({ authorization: `Basic ${STRONG_TOKEN}` }));
+    expect(res.status).toBe(401);
+    expect(scanMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 for Authorization header with no space (no scheme)", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = STRONG_TOKEN;
+    const res = await POST(post({ authorization: STRONG_TOKEN }));
+    expect(res.status).toBe(401);
+    expect(scanMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 for a token that is much shorter than required", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = "ab";
+    const res = await POST(post({ authorization: "Bearer ab" }));
+    expect(res.status).toBe(401);
+    expect(scanMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when token is configured but request sends wrong token", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = STRONG_TOKEN;
+    const res = await POST(post({ authorization: "Bearer definitely-not-the-right-token!!" }));
+    expect(res.status).toBe(401);
+    expect(scanMock).not.toHaveBeenCalled();
+  });
+
+  it("scanner is never called on any 401 response path", async () => {
+    delete process.env.SCHEDULER_INTERNAL_TOKEN;
+    await POST(post({ authorization: "Bearer anything" }));
+    process.env.SCHEDULER_INTERNAL_TOKEN = "short";
+    await POST(post({ authorization: "Bearer short" }));
+    expect(scanMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 for empty string Authorization header", async () => {
+    process.env.SCHEDULER_INTERNAL_TOKEN = STRONG_TOKEN;
+    const res = await POST(post({ authorization: "" }));
+    expect(res.status).toBe(401);
+    expect(scanMock).not.toHaveBeenCalled();
+  });
 });
