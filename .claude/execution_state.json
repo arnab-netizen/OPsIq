@@ -3183,8 +3183,8 @@
     "pushed": true
   },
   "bundle_3_4_risk_compliance_lifecycle": {
-    "status": "WIRED_NOT_CALLED",
-    "classification": "API_ROUTES_WITH_WIRING + UI_PAGES + DB_TESTS",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "API_ROUTES_WITH_WIRING + UI_PAGES + DB_TESTS + NON_DB_MOCK_TESTS",
     "description": "Full lifecycle for BusinessRiskEntry and OwnerComplianceItem: status transitions, task linkage, breach alerts, detail UI pages, status filters",
     "files_created": [
       "prisma/migrations/20260723000000_risk_compliance_lifecycle/migration.sql",
