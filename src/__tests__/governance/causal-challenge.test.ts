@@ -1,6 +1,68 @@
 import { describe, it, expect } from "vitest";
 import { runCausalChallenge } from "@/services/governance/causal-challenge";
 
+describe("causal-challenge verifier — module contract assertions", () => {
+  it("runCausalChallenge is a function", () => {
+    expect(typeof runCausalChallenge).toBe("function");
+  });
+  it("runCausalChallenge returns an object", () => {
+    const r = runCausalChallenge({ committed: false, businessProblem: "test", diagnosisType: "unknown", evidence: [] });
+    expect(typeof r).toBe("object");
+  });
+  it("runCausalChallenge result has challenged field", () => {
+    const r = runCausalChallenge({ committed: false, businessProblem: "test", diagnosisType: "unknown", evidence: [] });
+    expect(r).toHaveProperty("challenged");
+  });
+  it("runCausalChallenge result has abstention_hint field", () => {
+    const r = runCausalChallenge({ committed: false, businessProblem: "test", diagnosisType: "unknown", evidence: [] });
+    expect(r).toHaveProperty("abstention_hint");
+  });
+  it("challenged is a boolean", () => {
+    const r = runCausalChallenge({ committed: false, businessProblem: "test", diagnosisType: "unknown", evidence: [] });
+    expect(typeof r.challenged).toBe("boolean");
+  });
+  it("uncommitted diagnosis is not challenged", () => {
+    const r = runCausalChallenge({ committed: false, businessProblem: "test", diagnosisType: "unknown", evidence: [] });
+    expect(r.challenged).toBe(false);
+  });
+  it("uncommitted diagnosis has null abstention_hint", () => {
+    const r = runCausalChallenge({ committed: false, businessProblem: "test", diagnosisType: "unknown", evidence: [] });
+    expect(r.abstention_hint).toBeNull();
+  });
+  it("result has outOfModelCauseInProblem field", () => {
+    const r = runCausalChallenge({ committed: true, businessProblem: "test", diagnosisType: "quality_control_failure", evidence: [] });
+    expect(r).toHaveProperty("outOfModelCauseInProblem");
+  });
+  it("result has adverseOffArchetypeEvidence field", () => {
+    const r = runCausalChallenge({ committed: true, businessProblem: "test", diagnosisType: "quality_control_failure", evidence: [] });
+    expect(r).toHaveProperty("adverseOffArchetypeEvidence");
+  });
+  it("committed with empty evidence does not challenge", () => {
+    const r = runCausalChallenge({ committed: true, businessProblem: "steady growth needed", diagnosisType: "quality_control_failure", evidence: [] });
+    expect(r.challenged).toBe(false);
+  });
+  it("outOfModelCauseInProblem is a boolean", () => {
+    const r = runCausalChallenge({ committed: true, businessProblem: "test", diagnosisType: "quality_control_failure", evidence: [] });
+    expect(typeof r.outOfModelCauseInProblem).toBe("boolean");
+  });
+  it("adverseOffArchetypeEvidence is a boolean", () => {
+    const r = runCausalChallenge({ committed: true, businessProblem: "test", diagnosisType: "quality_control_failure", evidence: [] });
+    expect(typeof r.adverseOffArchetypeEvidence).toBe("boolean");
+  });
+  it("benign evidence on supported domain does not challenge", () => {
+    const r = runCausalChallenge({ committed: true, businessProblem: "No QA checkpoints; complaints rising.", diagnosisType: "quality_control_failure", evidence: [{ dimension: "quality_delivery", finding: "complaint rate rising", isCritical: true }] });
+    expect(r.challenged).toBe(false);
+  });
+  it("non-adverse off-archetype evidence does not trigger adverseOffArchetypeEvidence", () => {
+    const r = runCausalChallenge({ committed: true, businessProblem: "Customers don't rebook.", diagnosisType: "customer_retention_erosion", evidence: [{ dimension: "customer_retention", finding: "low repeat", isCritical: true }, { dimension: "financial_health", finding: "revenue growing steadily" }] });
+    expect(r.adverseOffArchetypeEvidence).toBe(false);
+  });
+  it("abstention_hint is string or null", () => {
+    const r = runCausalChallenge({ committed: true, businessProblem: "test", diagnosisType: "customer_retention_erosion", evidence: [] });
+    expect(r.abstention_hint === null || typeof r.abstention_hint === "string").toBe(true);
+  });
+});
+
 /** RC-7 Option A: independent causal-challenge verifier. */
 describe("causal-challenge verifier", () => {
   it("is inert when the diagnosis is not committed", () => {
