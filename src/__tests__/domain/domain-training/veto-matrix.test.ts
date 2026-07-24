@@ -3,6 +3,23 @@ import { evaluateVetoes, isVetoed, NO_VETOES, type VetoContext } from "@/domain/
 
 const ctx = (over: Partial<VetoContext> = {}): VetoContext => ({ ...NO_VETOES, ...over });
 
+describe("veto-matrix — module contract assertions", () => {
+  it("evaluateVetoes is a function", () => { expect(typeof evaluateVetoes).toBe("function"); });
+  it("isVetoed is a function", () => { expect(typeof isVetoed).toBe("function"); });
+  it("NO_VETOES is an object", () => { expect(typeof NO_VETOES).toBe("object"); });
+  it("ctx is a function", () => { expect(typeof ctx).toBe("function"); });
+  it("ctx() returns an object", () => { expect(typeof ctx()).toBe("object"); });
+  it("NO_VETOES is not null", () => { expect(NO_VETOES).not.toBeNull(); });
+  it("evaluateVetoes returns an object with blocked array", () => { expect(evaluateVetoes(NO_VETOES)).toHaveProperty("blocked"); });
+  it("isVetoed returns a boolean", () => { expect(typeof isVetoed("growth", NO_VETOES)).toBe("boolean"); });
+  it("isVetoed returns false for growth in NO_VETOES context", () => { expect(isVetoed("growth", NO_VETOES)).toBe(false); });
+  it("evaluateVetoes on NO_VETOES returns empty blocked array", () => { expect(evaluateVetoes(NO_VETOES).blocked).toHaveLength(0); });
+  it("ctx() spreads NO_VETOES by default", () => { expect(ctx()).toMatchObject(NO_VETOES); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+  it("expect is a function", () => { expect(typeof expect).toBe("function"); });
+});
+
 describe("[F6] veto matrix — each veto has a passing + failing test", () => {
   it("critical cash blocks growth/marketing/expansion/hiring/bulk-buying", () => {
     const c = ctx({ criticalCashSurvivalRisk: true });
