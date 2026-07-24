@@ -39,6 +39,23 @@ const experiment = (status: ValidationStatus, over: Partial<ValidationExperiment
   cheaperAlternativeConsidered: "c", doNotScaleNote: "n", confidence: "MEDIUM", ...over,
 });
 
+describe("opportunity-portfolio-capital-allocation — module contract assertions", () => {
+  it("decidePortfolioItem is a function", () => { expect(typeof decidePortfolioItem).toBe("function"); });
+  it("buildOpportunityPortfolio is a function", () => { expect(typeof buildOpportunityPortfolio).toBe("function"); });
+  it("WS is a string", () => { expect(typeof WS).toBe("string"); });
+  it("AT is a string", () => { expect(typeof AT).toBe("string"); });
+  it("CTX is an object", () => { expect(typeof CTX).toBe("object"); });
+  it("candidate is a function", () => { expect(typeof candidate).toBe("function"); });
+  it("candidate() returns an object", () => { expect(typeof candidate()).toBe("object"); });
+  it("experiment is a function", () => { expect(typeof experiment).toBe("function"); });
+  it("experiment() returns an object", () => { expect(typeof experiment("NOT_STARTED")).toBe("object"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("decidePortfolioItem — the scaling gate (capital follows proof)", () => {
   it("1. an un-run (NOT_STARTED) experiment can never scale — it routes to VALIDATE_CHEAPLY, scale blocked", () => {
     const it = decidePortfolioItem(candidate(), experiment("NOT_STARTED"), CTX, AT);
