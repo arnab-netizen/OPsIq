@@ -21,6 +21,23 @@ beforeAll(async () => {
   trainedAdvice = await advise(cash, { store, workspaceId: "wp" });
 }, 60000);
 
+describe("whole-plan — module contract assertions", () => {
+  it("buildWholeBusinessPlan is a function", () => { expect(typeof buildWholeBusinessPlan).toBe("function"); });
+  it("scoreWholeBusiness is a function", () => { expect(typeof scoreWholeBusiness).toBe("function"); });
+  it("scoreCollectivePlan is a function", () => { expect(typeof scoreCollectivePlan).toBe("function"); });
+  it("advise is a function", () => { expect(typeof advise).toBe("function"); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("InMemoryLearningStore is a function", () => { expect(typeof InMemoryLearningStore).toBe("function"); });
+  it("learnFromFailure is a function", () => { expect(typeof learnFromFailure).toBe("function"); });
+  it("scoreAdvice is a function", () => { expect(typeof scoreAdvice).toBe("function"); });
+  it("EXPANDED_CASES is an array", () => { expect(Array.isArray(EXPANDED_CASES)).toBe(true); });
+  it("EXPANDED_CASES.length is greater than 0", () => { expect(EXPANDED_CASES.length).toBeGreaterThan(0); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("SEED_CASES.length is greater than 0", () => { expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("cash is an object", () => { expect(typeof cash).toBe("object"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+});
+
 describe("whole-business operating plan", () => {
   it("produces an integrated plan with all 25 sections populated", () => {
     const p = buildWholeBusinessPlan(cash, baseAdvise(cash));
