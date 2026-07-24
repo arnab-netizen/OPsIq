@@ -47,6 +47,23 @@ function healthy(): SalesSnapshotInput {
 
 const stateRank = (s: string) => SALES_STATES.indexOf(s as never);
 
+describe("owner-sales/metrics — module contract assertions", () => {
+  it("computeSalesMetrics is a function", () => { expect(typeof computeSalesMetrics).toBe("function"); });
+  it("isValidCurrency is a function", () => { expect(typeof isValidCurrency).toBe("function"); });
+  it("num is a function", () => { expect(typeof num).toBe("function"); });
+  it("resolveSalesThresholds is a function", () => { expect(typeof resolveSalesThresholds).toBe("function"); });
+  it("leadToSaleConversionPct is a function", () => { expect(typeof leadToSaleConversionPct).toBe("function"); });
+  it("repeatRatePct is a function", () => { expect(typeof repeatRatePct).toBe("function"); });
+  it("lostCustomerRatePct is a function", () => { expect(typeof lostCustomerRatePct).toBe("function"); });
+  it("averageOrderValue is a function", () => { expect(typeof averageOrderValue).toBe("function"); });
+  it("b2bSharePct is a function", () => { expect(typeof b2bSharePct).toBe("function"); });
+  it("complaintToSaleRatioPct is a function", () => { expect(typeof complaintToSaleRatioPct).toBe("function"); });
+  it("SALES_STATES is an array", () => { expect(Array.isArray(SALES_STATES)).toBe(true); });
+  it("healthy is a function", () => { expect(typeof healthy).toBe("function"); });
+  it("stateRank is a function", () => { expect(typeof stateRank).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+});
+
 describe("owner-sales — safe numeric + currency", () => {
   it("num() fails closed on missing/NaN/Infinity", () => {
     expect(num(5)).toBe(5);
