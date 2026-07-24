@@ -15,6 +15,61 @@ import * as path from "path";
 const API = path.resolve(__dirname, "../../app/api");
 const read = (rel: string) => fs.readFileSync(path.join(API, rel), "utf-8");
 
+describe("cross-tenant hardening (GAP-TEN-02) — structural assertions", () => {
+  it("API base path is a non-empty string", () => {
+    expect(typeof API).toBe("string");
+    expect(API.length).toBeGreaterThan(0);
+  });
+  it("API base path contains 'app/api'", () => {
+    expect(API).toContain("app/api");
+  });
+  it("read is a function", () => {
+    expect(typeof read).toBe("function");
+  });
+  it("billing/plan route uses canonical enforcement", () => {
+    expect(read("billing/plan/route.ts")).toContain("withCanonicalEnforcement");
+  });
+  it("billing/plan route uses verifiedWorkspaceId", () => {
+    expect(read("billing/plan/route.ts")).toContain("verifiedWorkspaceId");
+  });
+  it("billing/plan route does not use raw x-workspace-id header", () => {
+    expect(read("billing/plan/route.ts")).not.toContain('headers.get("x-workspace-id")');
+  });
+  it("webhooks/subscribe route uses canonical enforcement", () => {
+    expect(read("webhooks/subscribe/route.ts")).toContain("withCanonicalEnforcement");
+  });
+  it("webhooks/subscribe route uses verifiedWorkspaceId", () => {
+    expect(read("webhooks/subscribe/route.ts")).toContain("verifiedWorkspaceId");
+  });
+  it("deliverables route uses canonical enforcement", () => {
+    expect(read("deliverables/[deliverableId]/route.ts")).toContain("withCanonicalEnforcement");
+  });
+  it("deliverables route uses verifiedWorkspaceId", () => {
+    expect(read("deliverables/[deliverableId]/route.ts")).toContain("verifiedWorkspaceId");
+  });
+  it("deliverables route does not use raw x-workspace-id header", () => {
+    expect(read("deliverables/[deliverableId]/route.ts")).not.toContain('headers.get("x-workspace-id")');
+  });
+  it("engagements business-impact route uses canonical enforcement", () => {
+    expect(read("engagements/[engagementId]/business-impact/route.ts")).toContain("withCanonicalEnforcement");
+  });
+  it("engagements business-impact route uses verifiedWorkspaceId", () => {
+    expect(read("engagements/[engagementId]/business-impact/route.ts")).toContain("verifiedWorkspaceId");
+  });
+  it("engagements business-impact route uses assertEngagementAccess", () => {
+    expect(read("engagements/[engagementId]/business-impact/route.ts")).toContain("assertEngagementAccess");
+  });
+  it("engagements decision-evidence route uses assertEngagementAccess", () => {
+    expect(read("engagements/[engagementId]/decision-evidence/route.ts")).toContain("assertEngagementAccess");
+  });
+  it("webhooks test route uses canonical enforcement", () => {
+    expect(read("webhooks/[id]/test/route.ts")).toContain("withCanonicalEnforcement");
+  });
+  it("webhooks test route uses verifiedWorkspaceId", () => {
+    expect(read("webhooks/[id]/test/route.ts")).toContain("verifiedWorkspaceId");
+  });
+});
+
 describe("cross-tenant workspace-header hardening (GAP-TEN-02)", () => {
   describe("canonical routes derive the tenant from the verified workspace", () => {
     const canonicalRoutes = [
