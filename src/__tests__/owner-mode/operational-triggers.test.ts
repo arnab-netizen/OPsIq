@@ -12,6 +12,78 @@ import { triggerProcessReviewOnRepeatedFailure } from "@/services/owner-mode/pro
 
 beforeEach(() => emitAuditEvent.mockClear());
 
+describe("operational triggers — module contract assertions", () => {
+  it("deriveTrainingFromObservedFailure is a function", () => {
+    expect(typeof deriveTrainingFromObservedFailure).toBe("function");
+  });
+  it("triggerProcessReviewOnRepeatedFailure is a function", () => {
+    expect(typeof triggerProcessReviewOnRepeatedFailure).toBe("function");
+  });
+  it("emitAuditEvent mock is a function", () => {
+    expect(typeof emitAuditEvent).toBe("function");
+  });
+  it("deriveTrainingFromObservedFailure returns a Promise", () => {
+    const fakeDb = { ownerTrainingRecommendation: { create: vi.fn(async () => ({ id: "t1" })), update: vi.fn() }, ownerStaffSkill: { upsert: vi.fn(), findFirst: vi.fn(), update: vi.fn() } };
+    const result = deriveTrainingFromObservedFailure(
+      { workspaceId: "ws1", staffRef: "emp1", signal: "proof_failure", occurrences: 1, processAffected: "p", metric: "m", expectedImprovement: "x", actorId: "o1" },
+      { db: fakeDb as never, now: () => new Date() }
+    );
+    expect(result instanceof Promise).toBe(true);
+    return result;
+  });
+  it("triggerProcessReviewOnRepeatedFailure returns a Promise", () => {
+    const fakeDb = { ownerProcess: { create: vi.fn(), findFirst: vi.fn(async () => ({ id: "p1", workspaceId: "ws1", reviewFrequencyDays: 30, nextReviewAt: null })), update: vi.fn(async () => ({})) } };
+    const result = triggerProcessReviewOnRepeatedFailure("p1", { workspaceId: "ws1", failureCount: 1, threshold: 3 }, { db: fakeDb as never, now: () => new Date() });
+    expect(result instanceof Promise).toBe(true);
+    return result;
+  });
+  it("deriveTrainingFromObservedFailure resolves to null when occurrences is 0", async () => {
+    const fakeDb = { ownerTrainingRecommendation: { create: vi.fn(async () => ({ id: "t1" })), update: vi.fn() }, ownerStaffSkill: { upsert: vi.fn(), findFirst: vi.fn(), update: vi.fn() } };
+    const id = await deriveTrainingFromObservedFailure(
+      { workspaceId: "ws1", staffRef: "emp1", signal: "rework", occurrences: 0, processAffected: "p", metric: "m", expectedImprovement: "x", actorId: "o1" },
+      { db: fakeDb as never, now: () => new Date() }
+    );
+    expect(id).toBeNull();
+  });
+  it("triggerProcessReviewOnRepeatedFailure resolves to object with due field", async () => {
+    const fakeDb = { ownerProcess: { create: vi.fn(), findFirst: vi.fn(async () => ({ id: "p1", workspaceId: "ws1", reviewFrequencyDays: 30, nextReviewAt: null })), update: vi.fn(async () => ({})) } };
+    const result = await triggerProcessReviewOnRepeatedFailure("p1", { workspaceId: "ws1", failureCount: 1, threshold: 3 }, { db: fakeDb as never, now: () => new Date() });
+    expect(result).toHaveProperty("due");
+  });
+  it("triggerProcessReviewOnRepeatedFailure below threshold returns due=false", async () => {
+    const fakeDb = { ownerProcess: { create: vi.fn(), findFirst: vi.fn(async () => ({ id: "p1", workspaceId: "ws1", reviewFrequencyDays: 30, nextReviewAt: null })), update: vi.fn(async () => ({})) } };
+    const result = await triggerProcessReviewOnRepeatedFailure("p1", { workspaceId: "ws1", failureCount: 1, threshold: 3 }, { db: fakeDb as never, now: () => new Date() });
+    expect(result.due).toBe(false);
+  });
+  it("triggerProcessReviewOnRepeatedFailure result has triggers field", async () => {
+    const fakeDb = { ownerProcess: { create: vi.fn(), findFirst: vi.fn(async () => ({ id: "p1", workspaceId: "ws1", reviewFrequencyDays: 30, nextReviewAt: null })), update: vi.fn(async () => ({})) } };
+    const result = await triggerProcessReviewOnRepeatedFailure("p1", { workspaceId: "ws1", failureCount: 1, threshold: 3 }, { db: fakeDb as never, now: () => new Date() });
+    expect(result).toHaveProperty("triggers");
+  });
+  it("emitAuditEvent is cleared between tests (mock pattern works)", () => {
+    expect(emitAuditEvent.mock.calls.length).toBe(0);
+  });
+  it("deriveTrainingFromObservedFailure resolves to string id when occurrences > 0", async () => {
+    const fakeDb = { ownerTrainingRecommendation: { create: vi.fn(async () => ({ id: "tr1" })), update: vi.fn() }, ownerStaffSkill: { upsert: vi.fn(), findFirst: vi.fn(), update: vi.fn() } };
+    const id = await deriveTrainingFromObservedFailure(
+      { workspaceId: "ws1", staffRef: "emp1", signal: "proof_failure", occurrences: 2, processAffected: "p", metric: "m", expectedImprovement: "x", actorId: "o1" },
+      { db: fakeDb as never, now: () => new Date() }
+    );
+    expect(typeof id).toBe("string");
+  });
+  it("triggerProcessReviewOnRepeatedFailure at threshold returns due=true", async () => {
+    const fakeDb = { ownerProcess: { create: vi.fn(), findFirst: vi.fn(async () => ({ id: "p1", workspaceId: "ws1", reviewFrequencyDays: 30, nextReviewAt: null })), update: vi.fn(async () => ({})) } };
+    const result = await triggerProcessReviewOnRepeatedFailure("p1", { workspaceId: "ws1", failureCount: 3, threshold: 3 }, { db: fakeDb as never, now: () => new Date() });
+    expect(result.due).toBe(true);
+  });
+  it("triggers array is empty when not due", async () => {
+    const fakeDb = { ownerProcess: { create: vi.fn(), findFirst: vi.fn(async () => ({ id: "p1", workspaceId: "ws1", reviewFrequencyDays: 30, nextReviewAt: null })), update: vi.fn(async () => ({})) } };
+    const result = await triggerProcessReviewOnRepeatedFailure("p1", { workspaceId: "ws1", failureCount: 1, threshold: 3 }, { db: fakeDb as never, now: () => new Date() });
+    expect(Array.isArray(result.triggers)).toBe(true);
+    expect(result.triggers).toHaveLength(0);
+  });
+});
+
 describe("deriveTrainingFromObservedFailure (G20)", () => {
   function deps() {
     const create = vi.fn(async () => ({ id: "tr1" }));

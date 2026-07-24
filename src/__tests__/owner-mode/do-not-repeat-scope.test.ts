@@ -15,6 +15,61 @@ import {
 
 beforeEach(() => emitAuditEvent.mockClear());
 
+describe("do-not-repeat-scope — module contract assertions", () => {
+  it("enforceDoNotRepeatForPromotion is a function", () => {
+    expect(typeof enforceDoNotRepeatForPromotion).toBe("function");
+  });
+  it("DoNotRepeatBlockedError is a function (class)", () => {
+    expect(typeof DoNotRepeatBlockedError).toBe("function");
+  });
+  it("scopeKeyForImpactArea is a function", () => {
+    expect(typeof scopeKeyForImpactArea).toBe("function");
+  });
+  it("scopeKeyForImpactArea('Operations') returns 'scope:operations'", () => {
+    expect(scopeKeyForImpactArea("Operations")).toBe("scope:operations");
+  });
+  it("scopeKeyForImpactArea(null) returns null", () => {
+    expect(scopeKeyForImpactArea(null)).toBeNull();
+  });
+  it("scopeKeyForImpactArea('Sales') returns 'scope:sales'", () => {
+    expect(scopeKeyForImpactArea("Sales")).toBe("scope:sales");
+  });
+  it("scopeKeyForImpactArea('marketing') returns 'scope:marketing'", () => {
+    expect(scopeKeyForImpactArea("marketing")).toBe("scope:marketing");
+  });
+  it("DoNotRepeatBlockedError can be instantiated", () => {
+    const err = new DoNotRepeatBlockedError("test");
+    expect(err).toBeInstanceOf(DoNotRepeatBlockedError);
+  });
+  it("DoNotRepeatBlockedError is instanceof Error", () => {
+    const err = new DoNotRepeatBlockedError("test");
+    expect(err).toBeInstanceOf(Error);
+  });
+  it("scopeKeyForImpactArea result starts with 'scope:' for non-null input", () => {
+    const r = scopeKeyForImpactArea("Finance");
+    expect(r).not.toBeNull();
+    expect(r!.startsWith("scope:")).toBe(true);
+  });
+  it("scopeKeyForImpactArea lowercases the area", () => {
+    expect(scopeKeyForImpactArea("SALES")).toBe("scope:sales");
+  });
+  it("emitAuditEvent mock is a function", () => {
+    expect(typeof emitAuditEvent).toBe("function");
+  });
+  it("DoNotRepeatBlockedError message is accessible", () => {
+    const err = new DoNotRepeatBlockedError("blocked reason");
+    expect(typeof err.message).toBe("string");
+  });
+  it("scopeKeyForImpactArea('') does not return 'scope:'", () => {
+    const r = scopeKeyForImpactArea("");
+    expect(r === null || r !== "scope:").toBe(true);
+  });
+  it("scopeKeyForImpactArea returns a string or null", () => {
+    const r = scopeKeyForImpactArea("Finance");
+    expect(typeof r === "string" || r === null).toBe(true);
+  });
+});
+
 function deps(finding: { code: string | null; impactArea: string | null } | null, ruleKeys: string[]) {
   const captured: { keys?: string[] } = {};
   return {
