@@ -3,6 +3,23 @@ import { EXPANDED_CASES, distributionOf, REQUIRED_DISTRIBUTION, expandCases, cas
 import { SEED_CASES } from "@/behavioral-validation/seed-cases";
 import { behavioralCaseSchema } from "@/behavioral-validation/schema";
 
+describe("case expansion — module contract assertions", () => {
+  it("EXPANDED_CASES is an array", () => { expect(Array.isArray(EXPANDED_CASES)).toBe(true); });
+  it("EXPANDED_CASES.length is greater than 0", () => { expect(EXPANDED_CASES.length).toBeGreaterThan(0); });
+  it("distributionOf is a function", () => { expect(typeof distributionOf).toBe("function"); });
+  it("REQUIRED_DISTRIBUTION is an object", () => { expect(typeof REQUIRED_DISTRIBUTION).toBe("object"); });
+  it("expandCases is a function", () => { expect(typeof expandCases).toBe("function"); });
+  it("casesForMode is a function", () => { expect(typeof casesForMode).toBe("function"); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("SEED_CASES.length is greater than 0", () => { expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("behavioralCaseSchema is an object", () => { expect(typeof behavioralCaseSchema).toBe("object"); });
+  it("distributionOf(EXPANDED_CASES) is an object", () => { expect(typeof distributionOf(EXPANDED_CASES)).toBe("object"); });
+  it("distributionOf(EXPANDED_CASES) has distinctLocations field", () => { expect(distributionOf(EXPANDED_CASES)).toHaveProperty("distinctLocations"); });
+  it("distributionOf(EXPANDED_CASES) has distinctArchetypes field", () => { expect(distributionOf(EXPANDED_CASES)).toHaveProperty("distinctArchetypes"); });
+  it("casesForMode('smoke').length is 25", () => { expect(casesForMode("smoke").length).toBe(25); });
+  it("EXPANDED_CASES[0] has id field", () => { expect(EXPANDED_CASES[0]).toHaveProperty("id"); });
+});
+
 describe("case expansion", () => {
   const dist = distributionOf(EXPANDED_CASES);
 

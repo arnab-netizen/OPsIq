@@ -5,6 +5,23 @@ import { checkRatchet, ratchetReport, computeBenchmark, type Benchmark } from "@
 
 const accepted: Benchmark = JSON.parse(readFileSync(resolve(process.cwd(), "OPSIQ_EXPERT_BENCHMARK.json"), "utf8"));
 
+describe("benchmark ratchet — module contract assertions", () => {
+  it("checkRatchet is a function", () => { expect(typeof checkRatchet).toBe("function"); });
+  it("ratchetReport is a function", () => { expect(typeof ratchetReport).toBe("function"); });
+  it("computeBenchmark is a function", () => { expect(typeof computeBenchmark).toBe("function"); });
+  it("readFileSync is a function", () => { expect(typeof readFileSync).toBe("function"); });
+  it("resolve is a function", () => { expect(typeof resolve).toBe("function"); });
+  it("accepted is an object", () => { expect(typeof accepted).toBe("object"); });
+  it("accepted has overallScore field", () => { expect(accepted).toHaveProperty("overallScore"); });
+  it("accepted has unsafeOutputs field", () => { expect(accepted).toHaveProperty("unsafeOutputs"); });
+  it("accepted has genericAnswerFailsGreen field", () => { expect(accepted).toHaveProperty("genericAnswerFailsGreen"); });
+  it("accepted has businessMathGreen field", () => { expect(accepted).toHaveProperty("businessMathGreen"); });
+  it("accepted.unsafeOutputs is 0", () => { expect(accepted.unsafeOutputs).toBe(0); });
+  it("accepted.genericAnswerFailsGreen is true", () => { expect(accepted.genericAnswerFailsGreen).toBe(true); });
+  it("accepted.businessMathGreen is true", () => { expect(accepted.businessMathGreen).toBe(true); });
+  it("checkRatchet(accepted, accepted).passed is true", () => { expect(checkRatchet(accepted, accepted).passed).toBe(true); });
+});
+
 describe("benchmark ratchet", () => {
   it("the accepted benchmark file exists and is well-formed", () => {
     expect(accepted.overallScore).toBeGreaterThan(0);

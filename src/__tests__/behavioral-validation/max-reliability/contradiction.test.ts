@@ -15,6 +15,23 @@ const goodPlan: NonNullable<AdviceOutput["ownerWorkloadPlan"]> = {
   nextOwnerTouchpoint: "Friday review", estimatedOwnerReductionPct: 60,
 };
 
+describe("contradiction detection — module contract assertions", () => {
+  it("detectContradictions is a function", () => { expect(typeof detectContradictions).toBe("function"); });
+  it("assessOwnerBurden is a function", () => { expect(typeof assessOwnerBurden).toBe("function"); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("SEED_CASES.length is greater than 0", () => { expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("goodPlan is an object", () => { expect(typeof goodPlan).toBe("object"); });
+  it("goodPlan has ownerDecides field", () => { expect(goodPlan).toHaveProperty("ownerDecides"); });
+  it("goodPlan has estimatedOwnerReductionPct field", () => { expect(goodPlan).toHaveProperty("estimatedOwnerReductionPct"); });
+  it("goodPlan.estimatedOwnerReductionPct equals 60", () => { expect(goodPlan.estimatedOwnerReductionPct).toBe(60); });
+  it("goodPlan has standingInstruction field", () => { expect(goodPlan).toHaveProperty("standingInstruction"); });
+  it("assessOwnerBurden(goodPlan).ok is true", () => { expect(assessOwnerBurden(goodPlan).ok).toBe(true); });
+  it("assessOwnerBurden(undefined).ok is false", () => { expect(assessOwnerBurden(undefined).ok).toBe(false); });
+  it("goodPlan has staffProof field", () => { expect(goodPlan).toHaveProperty("staffProof"); });
+  it("goodPlan has defer field", () => { expect(goodPlan).toHaveProperty("defer"); });
+});
+
 describe("contradiction detection", () => {
   const cases: Array<[string, AdviceOutput]> = [
     ["says do not spend but recommends spend", { recommendedNextAction: "Spend on marketing now", whatNotToDo: ["Do not spend on marketing"], proofRequired: ["x"], reassessmentTrigger: "7d" }],

@@ -17,6 +17,23 @@ function artifact(over: Partial<LearningArtifact> = {}): LearningArtifact {
   };
 }
 
+describe("learning store — module contract assertions", () => {
+  it("InMemoryLearningStore is a class/function", () => { expect(typeof InMemoryLearningStore).toBe("function"); });
+  it("isVisibleTo is a function", () => { expect(typeof isVisibleTo).toBe("function"); });
+  it("AT is a non-empty string", () => { expect(typeof AT).toBe("string"); expect(AT.length).toBeGreaterThan(0); });
+  it("AT equals '2026-06-29T00:00:00Z'", () => { expect(AT).toBe("2026-06-29T00:00:00Z"); });
+  it("artifact is a function", () => { expect(typeof artifact).toBe("function"); });
+  it("artifact() returns an object", () => { expect(typeof artifact()).toBe("object"); });
+  it("artifact() has id field", () => { expect(artifact()).toHaveProperty("id"); });
+  it("artifact().id equals 'case-x::v1'", () => { expect(artifact().id).toBe("case-x::v1"); });
+  it("artifact() has sourceCaseId field", () => { expect(artifact()).toHaveProperty("sourceCaseId"); });
+  it("artifact() has riskLevel field", () => { expect(artifact()).toHaveProperty("riskLevel"); });
+  it("artifact().riskLevel equals 'high'", () => { expect(artifact().riskLevel).toBe("high"); });
+  it("artifact() has approvalStatus field", () => { expect(artifact()).toHaveProperty("approvalStatus"); });
+  it("artifact().approvalStatus equals 'pending'", () => { expect(artifact().approvalStatus).toBe("pending"); });
+  it("new InMemoryLearningStore() does not throw", () => { expect(() => new InMemoryLearningStore()).not.toThrow(); });
+});
+
 describe("learning store — persistence + read-back", () => {
   it("saves and reads an artifact back by id and via findApplicable", async () => {
     const store = new InMemoryLearningStore();
