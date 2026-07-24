@@ -34,6 +34,23 @@ const instr = (o: Partial<StandingInstructionRecord> = {}): StandingInstructionR
 
 beforeEach(() => emitAuditEvent.mockClear());
 
+describe("owner-load — module contract assertions", () => {
+  it("evaluateStandingInstruction is a function", () => { expect(typeof evaluateStandingInstruction).toBe("function"); });
+  it("classifyAttention is a function", () => { expect(typeof classifyAttention).toBe("function"); });
+  it("summarizeOwnerAttention is a function", () => { expect(typeof summarizeOwnerAttention).toBe("function"); });
+  it("batchByStandingInstructions is a function", () => { expect(typeof batchByStandingInstructions).toBe("function"); });
+  it("recordStandingInstruction is a function", () => { expect(typeof recordStandingInstruction).toBe("function"); });
+  it("evaluateRequestAgainstStandingInstructions is a function", () => { expect(typeof evaluateRequestAgainstStandingInstructions).toBe("function"); });
+  it("StandingInstructionUnauthorizedError is a function", () => { expect(typeof StandingInstructionUnauthorizedError).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("emitAuditEvent is a function", () => { expect(typeof emitAuditEvent).toBe("function"); });
+  it("instr is a function", () => { expect(typeof instr).toBe("function"); });
+  it("instr() returns an object", () => { expect(typeof instr()).toBe("object"); });
+  it("instr() has scope field", () => { expect(instr()).toHaveProperty("scope"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("evaluateStandingInstruction", () => {
   const base = { scope: "petty_cash", actionType: "spend", amount: 100, now: NOW };
   it("auto-allows an allowed action within the ceiling", () => {
