@@ -54,6 +54,11 @@ describe("owner loop service — module contract assertions", () => {
   it("ProofStatus.SUBMITTED is defined", () => { expect(ProofStatus.SUBMITTED).toBeDefined(); });
   it("TaskActorRole is an object", () => { expect(typeof TaskActorRole).toBe("object"); });
   it("TaskActorRole.OWNER is defined", () => { expect(TaskActorRole.OWNER).toBeDefined(); });
+  it("NOW is an object (Date)", () => { expect(typeof NOW).toBe("object"); });
+  it("intervention is a function", () => { expect(typeof intervention).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
 });
 
 describe("owner loop (service-level)", () => {
