@@ -323,20 +323,24 @@ export async function createNonComplianceAlert(
     payload: { sopDocumentId, alertWindow, threshold },
   });
 
-  // Trigger business condition re-assessment (fire-and-forget seam)
-  void fireComplianceReAssessmentSignal(workspaceId, actorId, sopDocumentId, alertWindow);
+  // Trigger business condition re-assessment (fire-and-forget, Bundle 4.1).
+  // SOP non-compliance is a contradicting evidence signal → owner reassessment event.
+  void fireComplianceReAssessmentSignal(workspaceId, actorId, alert.id);
 
   return toPublicAlertDTO(alert as AlertRow);
 }
 
 async function fireComplianceReAssessmentSignal(
-  _workspaceId: string,
-  _actorId: string,
-  _sopDocumentId: string,
-  _alertWindow: string,
+  workspaceId: string,
+  actorId: string,
+  alertId: string,
 ): Promise<void> {
-  // Seam: triggers business condition re-evaluation when SOP compliance falls below threshold.
-  // Replaced by real re-assessment call when business condition service supports it (Stage 4+).
+  const { routeSopComplianceSignal } = await import(
+    "@/services/owner-mode/stage3-signal-router.service"
+  );
+  // businessId is not yet available on SOP alerts — signal is wired but skips until
+  // OwnerSopNonComplianceAlert gains a businessId field (Stage 5+).
+  await routeSopComplianceSignal(workspaceId, actorId, alertId, null);
 }
 
 // ─── List Training Assignments ────────────────────────────────────────────────

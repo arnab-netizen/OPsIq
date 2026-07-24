@@ -337,7 +337,7 @@ export async function makeDecision(input: MakeDecisionInput): Promise<PublicAppr
       payload: { actionId: approval.actionId, actionDomain: approval.actionDomain },
     });
 
-    void fireRescopeSignal(workspaceId, actorId, approvalId);
+    void fireRescopeSignal(workspaceId, actorId, approvalId, approval.businessId, approval.actionId);
   }
 
   const reloaded = await loadApproval(approvalId, workspaceId);
@@ -345,11 +345,16 @@ export async function makeDecision(input: MakeDecisionInput): Promise<PublicAppr
 }
 
 async function fireRescopeSignal(
-  _workspaceId: string,
-  _actorId: string,
-  _approvalId: string,
+  workspaceId: string,
+  actorId: string,
+  approvalId: string,
+  businessId: string,
+  actionId: string | null,
 ): Promise<void> {
-  // Seam: replaced by real rescope call when action service supports it (Stage 4+).
+  const { routeApprovalRejectionSignal } = await import(
+    "@/services/owner-mode/stage3-signal-router.service"
+  );
+  await routeApprovalRejectionSignal(workspaceId, actorId, approvalId, businessId, actionId);
 }
 
 // ─── Initiate Appeal ─────────────────────────────────────────────────────────

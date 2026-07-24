@@ -374,20 +374,23 @@ export async function resolveComplaint(input: ResolveComplaintInput): Promise<Pu
     payload: { resolutionSummary },
   });
 
-  // Business condition re-evaluation seam (fire-and-forget).
-  // Resolved complaint is a material signal — re-evaluation wired when dashboard
-  // service exposes the reevaluateBusinessCondition entry point (Stage 4+).
-  void fireComplaintResolvedSignal(workspaceId, actorId, complaintId);
+  // Business condition re-evaluation (fire-and-forget, Bundle 4.1).
+  // Resolved complaint is a material quality signal → owner reassessment event.
+  void fireComplaintResolvedSignal(workspaceId, actorId, complaintId, complaint.businessId);
 
   return toPublicDTO(updated as ComplaintRow);
 }
 
 async function fireComplaintResolvedSignal(
-  _workspaceId: string,
-  _actorId: string,
-  _complaintId: string,
+  workspaceId: string,
+  actorId: string,
+  complaintId: string,
+  businessId: string | null,
 ): Promise<void> {
-  // Seam: replaced by real reeval call when dashboard service supports it.
+  const { routeComplaintResolutionSignal } = await import(
+    "@/services/owner-mode/stage3-signal-router.service"
+  );
+  await routeComplaintResolutionSignal(workspaceId, actorId, complaintId, businessId);
 }
 
 // ─── Close ───────────────────────────────────────────────────────────────────

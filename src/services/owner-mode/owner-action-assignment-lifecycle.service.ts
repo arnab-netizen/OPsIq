@@ -280,21 +280,25 @@ export async function recordOutcome(input: RecordOutcomeInput): Promise<PublicAs
     payload: { outcome, actionId: existing.actionId, actionDomain: existing.actionDomain },
   });
 
-  // FAILED outcome → business condition re-evaluation (fire-and-forget seam).
-  // Wired to real re-evaluation when dashboard service exposes entry point (Stage 4+).
+  // FAILED outcome → business condition re-evaluation (fire-and-forget, Bundle 4.1).
+  // Failed action is an execution health signal → owner reassessment event.
   if (outcome === "FAILED") {
-    void fireActionFailedSignal(workspaceId, actorId, assignmentId);
+    void fireActionFailedSignal(workspaceId, actorId, assignmentId, existing.businessId);
   }
 
   return toPublicDTO(updated as AssignmentRow);
 }
 
 async function fireActionFailedSignal(
-  _workspaceId: string,
-  _actorId: string,
-  _assignmentId: string,
+  workspaceId: string,
+  actorId: string,
+  assignmentId: string,
+  businessId: string,
 ): Promise<void> {
-  // Seam: replaced by real reeval call when dashboard service supports it.
+  const { routeActionFailureSignal } = await import(
+    "@/services/owner-mode/stage3-signal-router.service"
+  );
+  await routeActionFailureSignal(workspaceId, actorId, assignmentId, businessId);
 }
 
 // ─── Stall Detection Evaluator ───────────────────────────────────────────────
