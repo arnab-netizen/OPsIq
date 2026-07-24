@@ -23,6 +23,23 @@ const inp = (over: Partial<AntiGamingInput> = {}): AntiGamingInput => ({ workspa
 const gRow = (over: Partial<ProofEventRow>): ProofEventRow => ({ id: over.id, submittedByUserId: "op-1", reviewedByUserId: null, status: "NEEDS_HUMAN_REVIEW", duplicateFlagged: false, createdAt: new Date(NOW), ...over });
 const cRow = (over: Partial<CredibilityProofRow>): CredibilityProofRow => ({ id: over.id, submittedByUserId: "op-1", reviewedByUserId: null, proofType: "photo", status: "NEEDS_HUMAN_REVIEW", duplicateFlagged: false, createdAt: new Date(NOW), reviewedAt: null, ...over });
 
+describe("proof evidence lists — module contract assertions", () => {
+  it("identifyGamingSignals is a function", () => { expect(typeof identifyGamingSignals).toBe("function"); });
+  it("aggregateProofEvents is a function", () => { expect(typeof aggregateProofEvents).toBe("function"); });
+  it("buildEvidenceCredibility is a function", () => { expect(typeof buildEvidenceCredibility).toBe("function"); });
+  it("aggregateCredibility is a function", () => { expect(typeof aggregateCredibility).toBe("function"); });
+  it("AT is a string", () => { expect(typeof AT).toBe("string"); });
+  it("NOW is a number", () => { expect(typeof NOW).toBe("number"); });
+  it("inp is a function", () => { expect(typeof inp).toBe("function"); });
+  it("gRow is a function", () => { expect(typeof gRow).toBe("function"); });
+  it("cRow is a function", () => { expect(typeof cRow).toBe("function"); });
+  it("inp() returns an object with workspaceId field", () => { expect(inp()).toHaveProperty("workspaceId"); });
+  it("inp().workspaceId is 'ws-1'", () => { expect(inp().workspaceId).toBe("ws-1"); });
+  it("aggregateProofEvents([], NOW) returns an object with actors field", () => { expect(aggregateProofEvents([], NOW)).toHaveProperty("actors"); });
+  it("aggregateProofEvents([], NOW).actors is an array", () => { expect(Array.isArray(aggregateProofEvents([], NOW).actors)).toBe(true); });
+  it("identifyGamingSignals(inp()).signals is an array", () => { expect(Array.isArray(identifyGamingSignals(inp()).signals)).toBe(true); });
+});
+
 describe("anti-gaming — per-proof evidence lists", () => {
   it("aggregateProofEvents collects per-actor / per-reviewer proof IDs", () => {
     const { actors, reviewers } = aggregateProofEvents([

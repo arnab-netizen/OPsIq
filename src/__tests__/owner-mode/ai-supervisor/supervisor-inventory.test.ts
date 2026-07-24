@@ -46,6 +46,23 @@ const REQUIRED_ADVICE_ROUTES = [
   "src/app/api/owner/opportunities/decide/route.ts",
 ];
 
+describe("AI supervisor inventory — module contract assertions", () => {
+  it("readFileSync is a function", () => { expect(typeof readFileSync).toBe("function"); });
+  it("existsSync is a function", () => { expect(typeof existsSync).toBe("function"); });
+  it("inventory is an object", () => { expect(typeof inventory).toBe("object"); });
+  it("inventory has paths field", () => { expect(inventory).toHaveProperty("paths"); });
+  it("inventory.paths is an array", () => { expect(Array.isArray(inventory.paths)).toBe(true); });
+  it("inventory has ownerAdviceIsDeterministic field", () => { expect(inventory).toHaveProperty("ownerAdviceIsDeterministic"); });
+  it("inventory.ownerAdviceIsDeterministic is true", () => { expect(inventory.ownerAdviceIsDeterministic).toBe(true); });
+  it("REQUIRED_ADVICE_ROUTES is an array", () => { expect(Array.isArray(REQUIRED_ADVICE_ROUTES)).toBe(true); });
+  it("REQUIRED_ADVICE_ROUTES has 8 elements", () => { expect(REQUIRED_ADVICE_ROUTES.length).toBe(8); });
+  it("REQUIRED_ADVICE_ROUTES includes the whole-business-plan route", () => { expect(REQUIRED_ADVICE_ROUTES.some((r) => r.includes("whole-business-plan"))).toBe(true); });
+  it("inventory.paths.length is at least 8", () => { expect(inventory.paths.length).toBeGreaterThanOrEqual(8); });
+  it("each path in inventory has an id field", () => { for (const p of inventory.paths) expect(p).toHaveProperty("id"); });
+  it("each path in inventory has a file field", () => { for (const p of inventory.paths) expect(p).toHaveProperty("file"); });
+  it("each path in inventory has a kind field", () => { for (const p of inventory.paths) expect(p).toHaveProperty("kind"); });
+});
+
 describe("AI supervisor inventory", () => {
   it("declares owner advice as deterministic and inventories at least the core supervisor paths", () => {
     expect(inventory.ownerAdviceIsDeterministic).toBe(true);

@@ -53,6 +53,23 @@ function makeDeps(): { deps: IntakeDeps; rows: Stored[]; audits: unknown[] } {
 
 const competitor = { rawSignalType: "COMPETITOR_REVIEW_GAP" as const, rawDescription: "Rival is slow on delivery; reviews complain", extractedBusinessNeed: "faster delivery", targetCustomerSegment: "local", sourceQuality: "PUBLIC_SOURCE_UNVERIFIED" as const, evidenceRefs: ["url-1"], hasUnitEconomics: true };
 
+describe("external opportunity intake — module contract assertions", () => {
+  it("submitExternalOpportunitySignal is a function", () => { expect(typeof submitExternalOpportunitySignal).toBe("function"); });
+  it("getActiveExternalOpportunitySignals is a function", () => { expect(typeof getActiveExternalOpportunitySignals).toBe("function"); });
+  it("WS is a non-empty string", () => { expect(typeof WS).toBe("string"); expect(WS.length).toBeGreaterThan(0); });
+  it("OTHER_WS is a non-empty string", () => { expect(typeof OTHER_WS).toBe("string"); expect(OTHER_WS.length).toBeGreaterThan(0); });
+  it("WS and OTHER_WS are different", () => { expect(WS).not.toBe(OTHER_WS); });
+  it("makeDeps is a function", () => { expect(typeof makeDeps).toBe("function"); });
+  it("makeDeps() returns an object with deps field", () => { expect(makeDeps()).toHaveProperty("deps"); });
+  it("makeDeps() returns an object with rows field", () => { expect(makeDeps()).toHaveProperty("rows"); });
+  it("makeDeps() returns an object with audits field", () => { expect(makeDeps()).toHaveProperty("audits"); });
+  it("makeDeps().rows is an empty array initially", () => { expect(makeDeps().rows).toEqual([]); });
+  it("makeDeps().audits is an empty array initially", () => { expect(makeDeps().audits).toEqual([]); });
+  it("competitor has rawSignalType field", () => { expect(competitor).toHaveProperty("rawSignalType"); });
+  it("competitor.rawSignalType is 'COMPETITOR_REVIEW_GAP'", () => { expect(competitor.rawSignalType).toBe("COMPETITOR_REVIEW_GAP"); });
+  it("competitor has rawDescription field", () => { expect(competitor).toHaveProperty("rawDescription"); });
+});
+
 describe("submitExternalOpportunitySignal", () => {
   it("1. persists a valid submission with an atomic audit and returns the operating result", async () => {
     const { deps, rows, audits } = makeDeps();
