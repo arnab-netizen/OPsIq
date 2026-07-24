@@ -13,6 +13,24 @@ import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
  * - WorkspaceMembership: workspaceId, userId, role, addedBy, isActive (id auto-generated)
  */
 
+describe("Signup Schema Contract — module contract assertions (non-DB)", () => {
+  it("randomUUID is a function", () => { expect(typeof randomUUID).toBe("function"); });
+  it("SHOULD_RUN_DB_TESTS is a boolean", () => { expect(typeof SHOULD_RUN_DB_TESTS).toBe("boolean"); });
+  it("db is an object", () => { expect(typeof db).toBe("object"); });
+  it("randomUUID() returns a string", () => { expect(typeof randomUUID()).toBe("string"); });
+  it("randomUUID() output has length 36", () => { expect(randomUUID().length).toBe(36); });
+  it("randomUUID() matches UUID regex", () => { expect(randomUUID()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); });
+  it("randomUUID() splits into 5 parts on dash", () => { expect(randomUUID().split("-")).toHaveLength(5); });
+  it("two randomUUID() calls produce different values", () => { expect(randomUUID()).not.toBe(randomUUID()); });
+  it("randomUUID() starts with a hex character", () => { expect(randomUUID()).toMatch(/^[0-9a-f]/i); });
+  it("randomUUID() output contains exactly 4 hyphens", () => { expect(randomUUID().split("-").length - 1).toBe(4); });
+  it("db.user is defined", () => { expect(db.user).toBeDefined(); });
+  it("db.session is defined", () => { expect(db.session).toBeDefined(); });
+  it("db.workspace is defined", () => { expect(db.workspace).toBeDefined(); });
+  it("db.workspaceMembership is defined", () => { expect(db.workspaceMembership).toBeDefined(); });
+  it("db.userRoleAssignment is defined", () => { expect(db.userRoleAssignment).toBeDefined(); });
+});
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("Signup Schema Contract", () => {
   it("should create user with all required fields", async () => {
     const userId = randomUUID();

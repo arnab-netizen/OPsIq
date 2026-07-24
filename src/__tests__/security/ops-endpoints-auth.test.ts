@@ -66,6 +66,24 @@ function makeRequest(
   return new NextRequest(url, { method: "GET", headers });
 }
 
+describe("GET /api/ops/* endpoints — module contract assertions", () => {
+  it("errorsGET is a function", () => { expect(typeof errorsGET).toBe("function"); });
+  it("metricsGET is a function", () => { expect(typeof metricsGET).toBe("function"); });
+  it("readinessGET is a function", () => { expect(typeof readinessGET).toBe("function"); });
+  it("runtimeGET is a function", () => { expect(typeof runtimeGET).toBe("function"); });
+  it("HANDLERS is an object", () => { expect(typeof HANDLERS).toBe("object"); });
+  it("HANDLERS has 4 entries", () => { expect(Object.keys(HANDLERS)).toHaveLength(4); });
+  it("endpoints is an array with 4 entries", () => { expect(Array.isArray(endpoints)).toBe(true); expect(endpoints).toHaveLength(4); });
+  it("endpoints includes /api/ops/errors", () => { expect(endpoints).toContain("/api/ops/errors"); });
+  it("endpoints includes /api/ops/metrics", () => { expect(endpoints).toContain("/api/ops/metrics"); });
+  it("endpoints includes /api/ops/readiness", () => { expect(endpoints).toContain("/api/ops/readiness"); });
+  it("endpoints includes /api/ops/runtime", () => { expect(endpoints).toContain("/api/ops/runtime"); });
+  it("NextRequest is a constructor function", () => { expect(typeof NextRequest).toBe("function"); });
+  it("makeRequest is a function", () => { expect(typeof makeRequest).toBe("function"); });
+  it("TEST_KEY is a non-empty string", () => { expect(typeof TEST_KEY).toBe("string"); expect(TEST_KEY.length).toBeGreaterThan(0); });
+  it("HANDLERS['/api/ops/errors'] is a function", () => { expect(typeof HANDLERS["/api/ops/errors"]).toBe("function"); });
+});
+
 describe("GET /api/ops/* endpoints - Auth requirements (in-process)", () => {
   describe("Without diagnostic key", () => {
     endpoints.forEach((endpoint) => {

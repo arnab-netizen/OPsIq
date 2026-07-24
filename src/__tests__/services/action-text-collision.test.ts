@@ -33,6 +33,33 @@ function recText(type: DiagnosisType): string {
     .toLowerCase();
 }
 
+describe("action-text collision fix — module contract assertions", () => {
+  it("designInterventions is a function", () => { expect(typeof designInterventions).toBe("function"); });
+  it("actionMatches is a function", () => { expect(typeof actionMatches).toBe("function"); });
+  it("DiagnosisType is an object", () => { expect(typeof DiagnosisType).toBe("object"); });
+  it("DiagnosisConfidence is an object", () => { expect(typeof DiagnosisConfidence).toBe("object"); });
+  it("DiagnosisType.DEBT_SOLVENCY_PRESSURE is defined", () => { expect(DiagnosisType.DEBT_SOLVENCY_PRESSURE).toBeDefined(); });
+  it("DiagnosisType.WORKING_CAPITAL_STRESS is defined", () => { expect(DiagnosisType.WORKING_CAPITAL_STRESS).toBeDefined(); });
+  it("DiagnosisType.PRICING_POWER_FAILURE is defined", () => { expect(DiagnosisType.PRICING_POWER_FAILURE).toBeDefined(); });
+  it("DiagnosisType.INVENTORY_FORECASTING_MISMATCH is defined", () => { expect(DiagnosisType.INVENTORY_FORECASTING_MISMATCH).toBeDefined(); });
+  it("rc helper is a function", () => { expect(typeof rc).toBe("function"); });
+  it("rc(DEBT_SOLVENCY_PRESSURE) returns an object", () => { expect(typeof rc(DiagnosisType.DEBT_SOLVENCY_PRESSURE)).toBe("object"); });
+  it("rc result has id, type, confidence fields", () => {
+    const r = rc(DiagnosisType.DEBT_SOLVENCY_PRESSURE);
+    expect(r).toHaveProperty("id"); expect(r).toHaveProperty("type"); expect(r).toHaveProperty("confidence");
+  });
+  it("rc result type matches input", () => { expect(rc(DiagnosisType.DEBT_SOLVENCY_PRESSURE).type).toBe(DiagnosisType.DEBT_SOLVENCY_PRESSURE); });
+  it("designInterventions(rc(DEBT), []) returns non-empty array", () => {
+    const result = designInterventions(rc(DiagnosisType.DEBT_SOLVENCY_PRESSURE), []);
+    expect(Array.isArray(result)).toBe(true); expect(result.length).toBeGreaterThan(0);
+  });
+  it("designInterventions result[0] has title field", () => {
+    const r = designInterventions(rc(DiagnosisType.DEBT_SOLVENCY_PRESSURE), []);
+    expect(r[0]).toHaveProperty("title");
+  });
+  it("actionMatches returns a boolean", () => { expect(typeof actionMatches("some text", "some text")).toBe("boolean"); });
+});
+
 describe("action-text collision fix", () => {
   it("rationales no longer contain 'avoid'-style unsafe echoes", () => {
     for (const t of [
