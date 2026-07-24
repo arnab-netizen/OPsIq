@@ -46,6 +46,23 @@ function makeDeps(opts: { committedStatus?: St } = {}) {
   return { deps: { db, now: () => NOW } as EscalationDeps, committed, calls };
 }
 
+describe("escalation acknowledgement — module contract assertions", () => {
+  it("acknowledgeEscalation is a function", () => { expect(typeof acknowledgeEscalation).toBe("function"); });
+  it("planEscalationAcknowledgement is a function", () => { expect(typeof planEscalationAcknowledgement).toBe("function"); });
+  it("EscalationStatus (St) is an object", () => { expect(typeof St).toBe("object"); });
+  it("St.OPEN is defined", () => { expect(St.OPEN).toBeDefined(); });
+  it("St.ACKNOWLEDGED is defined", () => { expect(St.ACKNOWLEDGED).toBeDefined(); });
+  it("NOW is a Date", () => { expect(NOW).toBeInstanceOf(Date); });
+  it("WS is a non-empty string", () => { expect(typeof WS).toBe("string"); expect(WS.length).toBeGreaterThan(0); });
+  it("makeDeps is a function", () => { expect(typeof makeDeps).toBe("function"); });
+  it("makeDeps() returns an object with deps field", () => { expect(makeDeps()).toHaveProperty("deps"); });
+  it("makeDeps() returns an object with committed field", () => { expect(makeDeps()).toHaveProperty("committed"); });
+  it("makeDeps() returns an object with calls field", () => { expect(makeDeps()).toHaveProperty("calls"); });
+  it("makeDeps().committed.status is St.OPEN by default", () => { expect(makeDeps().committed.status).toBe(St.OPEN); });
+  it("planEscalationAcknowledgement(St.OPEN, 'mgr').allowed is true", () => { expect(planEscalationAcknowledgement(St.OPEN, "mgr").allowed).toBe(true); });
+  it("planEscalationAcknowledgement(St.OPEN, null).allowed is false", () => { expect(planEscalationAcknowledgement(St.OPEN, null).allowed).toBe(false); });
+});
+
 describe("planEscalationAcknowledgement (domain)", () => {
   it("allows OPEN → ACKNOWLEDGED with an acknowledger", () => {
     expect(planEscalationAcknowledgement(St.OPEN, "mgr")).toEqual({ allowed: true, alreadyAcknowledged: false, reason: "ok" });
