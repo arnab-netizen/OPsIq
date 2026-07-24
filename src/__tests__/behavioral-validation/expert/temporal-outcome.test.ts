@@ -10,6 +10,26 @@ const AT = "2026-06-29T00:00:00Z";
 const WS = "outcome-ws";
 const c = SEED_CASES.find((x) => x.id === "A1")!;
 
+describe("temporal outcome validation — module contract assertions", () => {
+  it("createCheckpoints is a function", () => { expect(typeof createCheckpoints).toBe("function"); });
+  it("evaluateCheckpoint is a function", () => { expect(typeof evaluateCheckpoint).toBe("function"); });
+  it("processCheckpoint is a function", () => { expect(typeof processCheckpoint).toBe("function"); });
+  it("DoNotRepeatLedger is a class (function)", () => { expect(typeof DoNotRepeatLedger).toBe("function"); });
+  it("CHECKPOINT_DAYS is an array", () => { expect(Array.isArray(CHECKPOINT_DAYS)).toBe(true); });
+  it("CHECKPOINT_DAYS.length > 0", () => { expect(CHECKPOINT_DAYS.length).toBeGreaterThan(0); });
+  it("advise is a function", () => { expect(typeof advise).toBe("function"); });
+  it("InMemoryLearningStore is a class (function)", () => { expect(typeof InMemoryLearningStore).toBe("function"); });
+  it("SEED_CASES is a non-empty array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("c is defined and not null", () => { expect(c).toBeDefined(); expect(c).not.toBeNull(); });
+  it("c.id === 'A1'", () => { expect(c.id).toBe("A1"); });
+  it("createCheckpoints(c) returns a non-empty array", () => { const cps = createCheckpoints(c); expect(Array.isArray(cps)).toBe(true); expect(cps.length).toBeGreaterThan(0); });
+  it("new DoNotRepeatLedger() instanceof DoNotRepeatLedger", () => { expect(new DoNotRepeatLedger()).toBeInstanceOf(DoNotRepeatLedger); });
+  it("createCheckpoints(c)[0] has day, metric, failureCondition fields", () => {
+    const cp = createCheckpoints(c)[0];
+    expect(cp).toHaveProperty("day"); expect(cp).toHaveProperty("metric"); expect(cp).toHaveProperty("failureCondition");
+  });
+});
+
 describe("temporal outcome validation", () => {
   it("a recommendation creates outcome checkpoints with all required fields", () => {
     const cps = createCheckpoints(c);

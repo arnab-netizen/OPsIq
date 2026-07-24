@@ -1,6 +1,26 @@
 import { describe, it, expect } from "vitest";
 import { SIMULATIONS, runSimulation } from "@/behavioral-validation/expert/multi-turn";
 
+describe("multi-turn owner simulations — module contract assertions", () => {
+  it("SIMULATIONS is an array", () => { expect(Array.isArray(SIMULATIONS)).toBe(true); });
+  it("SIMULATIONS has 10 entries", () => { expect(SIMULATIONS).toHaveLength(10); });
+  it("runSimulation is a function", () => { expect(typeof runSimulation).toBe("function"); });
+  it("SIMULATIONS[0] is an object", () => { expect(typeof SIMULATIONS[0]).toBe("object"); });
+  it("SIMULATIONS[0].id is a non-empty string", () => { expect(typeof SIMULATIONS[0].id).toBe("string"); expect(SIMULATIONS[0].id.length).toBeGreaterThan(0); });
+  it("SIMULATIONS[0].moves is a non-empty array", () => { expect(Array.isArray(SIMULATIONS[0].moves)).toBe(true); expect(SIMULATIONS[0].moves.length).toBeGreaterThan(0); });
+  it("all SIMULATIONS have moves with ≥2 entries", () => { for (const s of SIMULATIONS) expect(s.moves.length).toBeGreaterThanOrEqual(2); });
+  it("all SIMULATIONS have non-empty id strings", () => { for (const s of SIMULATIONS) expect(s.id.length).toBeGreaterThan(0); });
+  it("all SIMULATIONS ids are unique", () => { const ids = SIMULATIONS.map((s) => s.id); expect(new Set(ids).size).toBe(SIMULATIONS.length); });
+  it("SIMULATIONS has no null/undefined entries", () => { for (const s of SIMULATIONS) expect(s).not.toBeNull(); });
+  it("SIMULATIONS contains owner_hides_cash_problem", () => { expect(SIMULATIONS.find((s) => s.id === "owner_hides_cash_problem")).toBeDefined(); });
+  it("SIMULATIONS contains owner_wants_shortcut_without_proof", () => { expect(SIMULATIONS.find((s) => s.id === "owner_wants_shortcut_without_proof")).toBeDefined(); });
+  it("SIMULATIONS contains owner_wants_fast_growth_weak_cash", () => { expect(SIMULATIONS.find((s) => s.id === "owner_wants_fast_growth_weak_cash")).toBeDefined(); });
+  it("at least one simulation has emotional_pressure moves", () => {
+    const emotional = SIMULATIONS.filter((s) => s.moves.some((m) => m.kind === "emotional_pressure"));
+    expect(emotional.length).toBeGreaterThan(0);
+  });
+});
+
 describe("multi-turn owner simulations", () => {
   it("a simulation runner exists with the 10 owner behaviours", () => {
     expect(SIMULATIONS.length).toBe(10);
