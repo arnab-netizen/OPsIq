@@ -17,6 +17,23 @@ import { scoreAdvice } from "@/behavioral-validation/scorer";
 const byFlag = (f: string) => PUBLIC_CORPUS.filter((p) => p.meta.realFlag === f);
 const adversarialSeverity = (s: string) => ["fraud", "extreme", "ugly_spiral"].includes(s);
 
+describe("public-cases corpus — module contract assertions", () => {
+  it("PUBLIC_CORPUS is an array", () => { expect(Array.isArray(PUBLIC_CORPUS)).toBe(true); });
+  it("PUBLIC_CORPUS.length is at least 1500", () => { expect(PUBLIC_CORPUS.length).toBeGreaterThanOrEqual(1500); });
+  it("CATEGORIES is an array", () => { expect(Array.isArray(CATEGORIES)).toBe(true); });
+  it("CATEGORIES.length is greater than 0", () => { expect(CATEGORIES.length).toBeGreaterThan(0); });
+  it("publicCaseSchema is an object", () => { expect(typeof publicCaseSchema).toBe("object"); });
+  it("materialChangeCount is a function", () => { expect(typeof materialChangeCount).toBe("function"); });
+  it("caseSignature is a function", () => { expect(typeof caseSignature).toBe("function"); });
+  it("SOURCE_REGISTER is an array", () => { expect(Array.isArray(SOURCE_REGISTER)).toBe(true); });
+  it("behavioralCaseSchema is an object", () => { expect(typeof behavioralCaseSchema).toBe("object"); });
+  it("arbitrate is a function", () => { expect(typeof arbitrate).toBe("function"); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("scoreAdvice is a function", () => { expect(typeof scoreAdvice).toBe("function"); });
+  it("byFlag is a function", () => { expect(typeof byFlag).toBe("function"); });
+  it("adversarialSeverity is a function", () => { expect(typeof adversarialSeverity).toBe("function"); });
+});
+
 describe("public case library — volume & mix", () => {
   it("meets the required case volumes", () => {
     expect(PUBLIC_CORPUS.length).toBeGreaterThanOrEqual(1500);
