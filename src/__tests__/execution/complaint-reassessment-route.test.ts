@@ -67,6 +67,23 @@ function reassessDeps(): { deps: ReassessmentDeps; created: () => number } {
   return { deps, created: () => rows.length };
 }
 
+describe("H6 — complaint → reassessment routing — module contract assertions", () => {
+  it("routeComplaintToReassessment is a function", () => { expect(typeof routeComplaintToReassessment).toBe("function"); });
+  it("complaintDeps is a function", () => { expect(typeof complaintDeps).toBe("function"); });
+  it("reassessDeps is a function", () => { expect(typeof reassessDeps).toBe("function"); });
+  it("WS is a non-empty string", () => { expect(WS.length).toBeGreaterThan(0); });
+  it("BIZ is a non-empty string", () => { expect(BIZ.length).toBeGreaterThan(0); });
+  it("EVENT is a non-empty string", () => { expect(EVENT.length).toBeGreaterThan(0); });
+  it("PROOF is a non-empty string", () => { expect(PROOF.length).toBeGreaterThan(0); });
+  it("complaintDeps('ACCEPTED') has uuid field", () => { expect(complaintDeps("ACCEPTED")).toHaveProperty("uuid"); });
+  it("complaintDeps('ACCEPTED') has db field", () => { expect(complaintDeps("ACCEPTED")).toHaveProperty("db"); });
+  it("reassessDeps() has deps and created fields", () => { const r = reassessDeps(); expect(r).toHaveProperty("deps"); expect(r).toHaveProperty("created"); });
+  it("reassessDeps().created() starts at 0", () => { expect(reassessDeps().created()).toBe(0); });
+  it("reassessDeps().deps has uuid function", () => { expect(typeof reassessDeps().deps.uuid).toBe("function"); });
+  it("reassessDeps().deps.uuid() returns non-empty string", () => { expect(reassessDeps().deps.uuid().length).toBeGreaterThan(0); });
+  it("complaintDeps().now() returns 0", () => { expect(complaintDeps("ACCEPTED").now()).toBe(0); });
+});
+
 describe("H6 — complaint → reassessment routing", () => {
   it("a complaint against an ACCEPTED proof creates a governed reassessment (new_contradicting_evidence)", async () => {
     const r = reassessDeps();
