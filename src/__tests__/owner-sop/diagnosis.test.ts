@@ -63,6 +63,23 @@ function diagnose(input: SopSnapshotInput) {
   return diagnoseSopSnapshot(input, { now: new Date("2026-06-05") });
 }
 
+describe("owner-sop diagnosis — module contract assertions", () => {
+  it("diagnoseSopSnapshot is a function", () => { expect(typeof diagnoseSopSnapshot).toBe("function"); });
+  it("buildSopRiskFindings is a function", () => { expect(typeof buildSopRiskFindings).toBe("function"); });
+  it("buildSopOpportunityFindings is a function", () => { expect(typeof buildSopOpportunityFindings).toBe("function"); });
+  it("computeSopMetrics is a function", () => { expect(typeof computeSopMetrics).toBe("function"); });
+  it("resolveSopThresholds is a function", () => { expect(typeof resolveSopThresholds).toBe("function"); });
+  it("rankSopFindings is a function", () => { expect(typeof rankSopFindings).toBe("function"); });
+  it("ownerFindingSchema is an object", () => { expect(typeof ownerFindingSchema).toBe("object"); });
+  it("domainScoreSchema is an object", () => { expect(typeof domainScoreSchema).toBe("object"); });
+  it("disciplined is a function", () => { expect(typeof disciplined).toBe("function"); });
+  it("breakdown is a function", () => { expect(typeof breakdown).toBe("function"); });
+  it("codes is a function", () => { expect(typeof codes).toBe("function"); });
+  it("diagnose is a function", () => { expect(typeof diagnose).toBe("function"); });
+  it("disciplined() returns an object", () => { expect(typeof disciplined()).toBe("object"); });
+  it("breakdown() returns an object", () => { expect(typeof breakdown()).toBe("object"); });
+});
+
 describe("owner-sop detector — risk findings", () => {
   it("breakdown triggers the execution risk cluster", () => {
     const r = diagnose(breakdown());

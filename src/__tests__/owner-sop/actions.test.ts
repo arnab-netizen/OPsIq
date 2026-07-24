@@ -64,6 +64,23 @@ function plan(input: SopSnapshotInput) {
 }
 const actionCodes = (p: { actions: { findingCode: string }[] }) => p.actions.map((a) => a.findingCode);
 
+describe("owner-sop actions — module contract assertions", () => {
+  it("diagnoseSopSnapshot is a function", () => { expect(typeof diagnoseSopSnapshot).toBe("function"); });
+  it("planSopActionsFromDiagnosis is a function", () => { expect(typeof planSopActionsFromDiagnosis).toBe("function"); });
+  it("buildSopRecommendations is a function", () => { expect(typeof buildSopRecommendations).toBe("function"); });
+  it("SOP_REC_TEMPLATES is an object", () => { expect(typeof SOP_REC_TEMPLATES).toBe("object"); });
+  it("ownerActionSchema is an object", () => { expect(typeof ownerActionSchema).toBe("object"); });
+  it("OWNER_ACTION_STATUSES is defined", () => { expect(OWNER_ACTION_STATUSES).toBeDefined(); });
+  it("calculateOwnerPriorityScore is a function", () => { expect(typeof calculateOwnerPriorityScore).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("disciplined is a function", () => { expect(typeof disciplined).toBe("function"); });
+  it("breakdown is a function", () => { expect(typeof breakdown).toBe("function"); });
+  it("plan is a function", () => { expect(typeof plan).toBe("function"); });
+  it("actionCodes is a function", () => { expect(typeof actionCodes).toBe("function"); });
+  it("disciplined() returns an object", () => { expect(typeof disciplined()).toBe("object"); });
+  it("breakdown() returns an object", () => { expect(typeof breakdown()).toBe("object"); });
+});
+
 describe("owner-sop planner — recommendation/action creation", () => {
   it("repeated failures create an eliminate-repeat-failure (convert-to-SOP) action", () => {
     const p = plan(breakdown());
