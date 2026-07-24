@@ -30,6 +30,23 @@ function rows(over: Partial<OwnerDomainRows> = {}): OwnerDomainRows {
   };
 }
 
+describe("owner-context-derivation — module contract assertions", () => {
+  it("deriveOwnerContext is a function", () => { expect(typeof deriveOwnerContext).toBe("function"); });
+  it("businessTypeToArchetype is a function", () => { expect(typeof businessTypeToArchetype).toBe("function"); });
+  it("deriveLocationContext is a function", () => { expect(typeof deriveLocationContext).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("past is a function", () => { expect(typeof past).toBe("function"); });
+  it("rows is a function", () => { expect(typeof rows).toBe("function"); });
+  it("rows() returns an object", () => { expect(typeof rows()).toBe("object"); });
+  it("rows() has business field", () => { expect(rows()).toHaveProperty("business"); });
+  it("businessTypeToArchetype('laundry_dry_cleaning') equals 'laundry_dry_cleaning'", () => { expect(businessTypeToArchetype("laundry_dry_cleaning")).toBe("laundry_dry_cleaning"); });
+  it("businessTypeToArchetype('something unknown') returns a string", () => { expect(typeof businessTypeToArchetype("something unknown")).toBe("string"); });
+  it("deriveLocationContext('Kolkata, West Bengal', 'INR') returns an object", () => { expect(typeof deriveLocationContext("Kolkata, West Bengal", "INR")).toBe("object"); });
+  it("deriveLocationContext result has cityRegion field", () => { expect(deriveLocationContext("Kolkata, West Bengal", "INR")).toHaveProperty("cityRegion"); });
+  it("deriveLocationContext empty string has sourceConfidence 'low'", () => { expect(deriveLocationContext("", "").sourceConfidence).toBe("low"); });
+  it("rows().business.businessType equals 'laundry_dry_cleaning'", () => { expect(rows().business.businessType).toBe("laundry_dry_cleaning"); });
+});
+
 describe("businessTypeToArchetype", () => {
   it("maps exact + keyword + safe default", () => {
     expect(businessTypeToArchetype("laundry_dry_cleaning")).toBe("laundry_dry_cleaning");

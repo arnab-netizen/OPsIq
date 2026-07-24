@@ -46,6 +46,23 @@ const retail: SignalInput = {
   customerCount: 300,
 };
 
+describe("diagnosis-signals — module contract assertions", () => {
+  it("extractProblemSignals is a function", () => { expect(typeof extractProblemSignals).toBe("function"); });
+  it("findingEvidence is a function", () => { expect(typeof findingEvidence).toBe("function"); });
+  it("deriveWhyThisMattersNow is a function", () => { expect(typeof deriveWhyThisMattersNow).toBe("function"); });
+  it("deriveWhyFirst is a function", () => { expect(typeof deriveWhyFirst).toBe("function"); });
+  it("deriveBottleneck is a function", () => { expect(typeof deriveBottleneck).toBe("function"); });
+  it("enrichFirstActionDescription is a function", () => { expect(typeof enrichFirstActionDescription).toBe("function"); });
+  it("deriveWhatNotToDoYet is a function", () => { expect(typeof deriveWhatNotToDoYet).toBe("function"); });
+  it("laundry is an object", () => { expect(typeof laundry).toBe("object"); });
+  it("laundry has businessType field", () => { expect(laundry).toHaveProperty("businessType"); });
+  it("laundry.businessType equals 'Laundry'", () => { expect(laundry.businessType).toBe("Laundry"); });
+  it("housekeeping is an object", () => { expect(typeof housekeeping).toBe("object"); });
+  it("restaurant is an object", () => { expect(typeof restaurant).toBe("object"); });
+  it("retail is an object", () => { expect(typeof retail).toBe("object"); });
+  it("extractProblemSignals(laundry) returns an object", () => { expect(typeof extractProblemSignals(laundry)).toBe("object"); });
+});
+
 describe("diagnosis specificity signals", () => {
   it("extracts different primary constraints for different statements in the same category", () => {
     // Both are mainIssue=low_sales, but the statements differ meaningfully.

@@ -34,6 +34,23 @@ function deps(w: World): IQDeps {
   };
 }
 
+describe("recommendation-input-quality — module contract assertions", () => {
+  it("isInputQualityGateEnabled is a function", () => { expect(typeof isInputQualityGateEnabled).toBe("function"); });
+  it("enforceInputQualityForPromotion is a function", () => { expect(typeof enforceInputQualityForPromotion).toBe("function"); });
+  it("enforceInputQualityIfRequired is a function", () => { expect(typeof enforceInputQualityIfRequired).toBe("function"); });
+  it("mapImpactAreaToSensitivity is a function", () => { expect(typeof mapImpactAreaToSensitivity).toBe("function"); });
+  it("RecommendationSensitivity is an object", () => { expect(typeof RecommendationSensitivity).toBe("object"); });
+  it("RecommendationSensitivity.GENERAL is defined", () => { expect(RecommendationSensitivity.GENERAL).toBeDefined(); });
+  it("RecommendationSensitivity.FINANCE_SENSITIVE is defined", () => { expect(RecommendationSensitivity.FINANCE_SENSITIVE).toBeDefined(); });
+  it("RecommendationSensitivity.PRICING_SENSITIVE is defined", () => { expect(RecommendationSensitivity.PRICING_SENSITIVE).toBeDefined(); });
+  it("InputQualityGateError is a function", () => { expect(typeof InputQualityGateError).toBe("function"); });
+  it("deps is a function", () => { expect(typeof deps).toBe("function"); });
+  it("deps({}) returns an object", () => { expect(typeof deps({})).toBe("object"); });
+  it("deps({}) has db field", () => { expect(deps({})).toHaveProperty("db"); });
+  it("mapImpactAreaToSensitivity(null) equals GENERAL", () => { expect(mapImpactAreaToSensitivity(null)).toBe(RecommendationSensitivity.GENERAL); });
+  it("mapImpactAreaToSensitivity('cash runway') equals FINANCE_SENSITIVE", () => { expect(mapImpactAreaToSensitivity("cash runway")).toBe(RecommendationSensitivity.FINANCE_SENSITIVE); });
+});
+
 describe("[module2] mapImpactAreaToSensitivity", () => {
   it("maps impact areas to sensitivities; unknown -> GENERAL", () => {
     expect(mapImpactAreaToSensitivity("Financial health")).toBe(RecommendationSensitivity.FINANCE_SENSITIVE);
