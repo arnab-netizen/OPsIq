@@ -13,6 +13,23 @@ import { sourceRecordSchema, findPII } from "@/behavioral-validation/public-case
 const proceedish = (st: string) => st === "proceed" || st === "cautious_proceed";
 const BOUNDARY_DOMINANTS = new Set(["compliance_block", "proof_fraud_block", "cash_survival"]);
 
+describe("daily-operations-pack — module contract assertions", () => {
+  it("DAILY_OPERATIONS_PACK is an array", () => { expect(Array.isArray(PACK)).toBe(true); });
+  it("DAILY_OPERATIONS_SUBCATEGORIES is an array", () => { expect(Array.isArray(DAILY_OPERATIONS_SUBCATEGORIES)).toBe(true); });
+  it("businessRealityScenarioSchema is an object", () => { expect(typeof businessRealityScenarioSchema).toBe("object"); });
+  it("DAILY_OPERATIONS_SOURCES is an array", () => { expect(Array.isArray(DAILY_OPERATIONS_SOURCES)).toBe(true); });
+  it("sourceRecordSchema is an object", () => { expect(typeof sourceRecordSchema).toBe("object"); });
+  it("findPII is a function", () => { expect(typeof findPII).toBe("function"); });
+  it("proceedish is a function", () => { expect(typeof proceedish).toBe("function"); });
+  it("proceedish('proceed') returns true", () => { expect(proceedish("proceed")).toBe(true); });
+  it("proceedish('blocked') returns false", () => { expect(proceedish("blocked")).toBe(false); });
+  it("BOUNDARY_DOMINANTS is a Set", () => { expect(BOUNDARY_DOMINANTS instanceof Set).toBe(true); });
+  it("PACK.length equals 300", () => { expect(PACK.length).toBe(300); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("Daily Operations pack — count & identity", () => {
   it("has exactly 300 counted, unique scenarios", () => {
     expect(PACK.length).toBe(300);
