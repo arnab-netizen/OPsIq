@@ -3466,5 +3466,30 @@
     "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use vi.hoisted() + vi.resetAllMocks() pattern",
     "committed": "29f788bd",
     "pushed": true
+  },
+  "bundle_7_slice_6_health_api": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "description": "Bundle 7 Slice 6: Wire computeConsultingEngagementHealth to GET /api/consulting/engagements/health?id=<uuid>. Previously WIRED_NOT_CALLED — service method existed but had no API route. 27 tests covering capability declaration, input validation, HEALTHY/AT_RISK/BLOCKED status, workspace isolation, no audit event on read, and response shape.",
+    "files": [
+      "src/app/api/consulting/engagements/health/route.ts (NEW)",
+      "src/__tests__/api/bundle7-health.test.ts (NEW — 27 tests)"
+    ],
+    "wiring_proof": {
+      "caller": "src/app/api/consulting/engagements/health/route.ts::GET",
+      "service": "src/services/consulting/consulting-engagement.service.ts::computeConsultingEngagementHealth()",
+      "input": "GET ?id=<uuid>",
+      "output": "JSON {health: {status, reasons, criticalFindingsUnresolved, criticalActionsUnresolved, overdueActions}}",
+      "workspace_enforcement": "ctx.verifiedWorkspaceId always used; id from query param only",
+      "auth_enforcement": "CAPABILITIES.CONSULTING_READ required",
+      "audit_event": "None — read-only computation per consulting audit policy",
+      "404_handling": "NotFoundError caught → classifyOperatorError inline → 404",
+      "400_handling": "missing id → 400"
+    },
+    "test_coverage": "27 tests — capability declaration (2), input validation (4), HEALTHY (3), AT_RISK (3), BLOCKED (3), workspace isolation (4), no audit on read (5), response shape (3)",
+    "gates_run": "npx vitest run bundle7-health (27/27 PASS), all 6 Bundle 7 files (189/189 PASS), npx tsc --noEmit (0 errors), governance:scan:strict (0 new findings)",
+    "db_status": "DB_BLOCKED_ENVIRONMENT — all tests use wrapper mock + vi.resetAllMocks() pattern",
+    "committed": "pending",
+    "pushed": false
   }
 }
