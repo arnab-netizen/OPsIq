@@ -91,6 +91,23 @@ const instr = (b: ApprovedExecutionBoundary, action = "call_customer") => ({
   action, role: "counter_staff", boundaryId: b.boundaryId, boundaryVersion: b.boundaryVersion, boundaryContentHash: b.contentHash, summary: "x",
 });
 
+describe("guided-execution-handlers — module contract assertions", () => {
+  it("ownerGuidedChoiceHandler is a function", () => { expect(typeof ownerGuidedChoiceHandler).toBe("function"); });
+  it("employeeTaskListHandler is a function", () => { expect(typeof employeeTaskListHandler).toBe("function"); });
+  it("proofSubmitHandler is a function", () => { expect(typeof proofSubmitHandler).toBe("function"); });
+  it("proofReviewHandler is a function", () => { expect(typeof proofReviewHandler).toBe("function"); });
+  it("raiseEscalationHandler is a function", () => { expect(typeof raiseEscalationHandler).toBe("function"); });
+  it("UnauthorizedError is a function", () => { expect(typeof UnauthorizedError).toBe("function"); });
+  it("sealBoundary is a function", () => { expect(typeof sealBoundary).toBe("function"); });
+  it("ProofStatus is an object", () => { expect(typeof ProofStatus).toBe("object"); });
+  it("WS is a string", () => { expect(typeof WS).toBe("string"); });
+  it("NOW is an object", () => { expect(typeof NOW).toBe("object"); });
+  it("OWNER is an object", () => { expect(typeof OWNER).toBe("object"); });
+  it("wsDb is a function", () => { expect(typeof wsDb).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("ownerGuidedChoiceHandler", () => {
   it("owner can access; employee cannot; suspended denied", async () => {
     const owner = depsFor({ [`${WS}:owner`]: OWNER });

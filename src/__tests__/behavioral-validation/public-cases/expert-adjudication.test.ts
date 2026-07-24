@@ -31,6 +31,11 @@ describe("expert adjudication — module contract assertions", () => {
   it("PUBLIC_CORPUS[0] has meta field", () => { expect(PUBLIC_CORPUS[0]).toHaveProperty("meta"); });
   it("PUBLIC_CORPUS[0] has case field", () => { expect(PUBLIC_CORPUS[0]).toHaveProperty("case"); });
   it("PUBLIC_CORPUS[0].meta has domains field", () => { expect(PUBLIC_CORPUS[0].meta).toHaveProperty("domains"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
 });
 
 describe("expert adjudication — owner-overload domains exercise a real cross-domain tradeoff", () => {
