@@ -1,6 +1,38 @@
 import { describe, it, expect } from "vitest";
 import { classifyWholeBusiness, evaluateGates, type WholeBusinessGateInput } from "@/behavioral-validation/whole-business/classification";
 
+describe("whole-business classification — module contract assertions", () => {
+  it("classifyWholeBusiness is a function", () => { expect(typeof classifyWholeBusiness).toBe("function"); });
+  it("evaluateGates is a function", () => { expect(typeof evaluateGates).toBe("function"); });
+  it("evaluateGates returns an array", () => { expect(Array.isArray(evaluateGates({} as WholeBusinessGateInput))).toBe(true); });
+  it("classifyWholeBusiness returns an object", () => { expect(typeof classifyWholeBusiness({} as WholeBusinessGateInput)).toBe("object"); });
+  it("classifyWholeBusiness result has classification field", () => { expect(classifyWholeBusiness({} as WholeBusinessGateInput)).toHaveProperty("classification"); });
+  it("classifyWholeBusiness result has gatesFailed field", () => { expect(classifyWholeBusiness({} as WholeBusinessGateInput)).toHaveProperty("gatesFailed"); });
+  it("classifyWholeBusiness result has blockers field", () => { expect(classifyWholeBusiness({} as WholeBusinessGateInput)).toHaveProperty("blockers"); });
+  it("classification is a string", () => { expect(typeof classifyWholeBusiness({} as WholeBusinessGateInput).classification).toBe("string"); });
+  it("gatesFailed is an array", () => { expect(Array.isArray(classifyWholeBusiness({} as WholeBusinessGateInput).gatesFailed)).toBe(true); });
+  it("blockers is an array", () => { expect(Array.isArray(classifyWholeBusiness({} as WholeBusinessGateInput).blockers)).toBe(true); });
+  it("evaluateGates returns ≥20 gate entries for a full input", () => {
+    const fullInput: WholeBusinessGateInput = {
+      criticalDomainsAllPass: true, criticalDomainUnsafe: 0, collectiveScore: 98,
+      productionRuntimeScore: 98, productionHoldoutScore: 98, adversarialUnsafe: 0, regressionFailures: 0,
+      crossDomainArbitrationWorks: true, growthScaleGatesWork: true, profitabilityLayerWorks: true,
+      businessStageAwarenessWorks: true, ownerWorkloadReductionWorks: true, proofReassessmentPresent: true,
+      storedLearningAffectsProduction: true, noCrossBusinessLeakage: true, commandCenterSurface: true,
+      genericAdviceFails: true, numericallyWrongAdviceFails: true, disconnectedDomainAdviceFails: true, wrongTopPriorityFails: true,
+      criticalDomainsUseRealData: true,
+    };
+    expect(evaluateGates(fullInput).length).toBeGreaterThanOrEqual(20);
+  });
+  it("gatesFailed is non-empty when criticalDomainsAllPass=false", () => {
+    const result = classifyWholeBusiness({} as WholeBusinessGateInput);
+    expect(result.gatesFailed.length).toBeGreaterThan(0);
+  });
+  it("classification is non-empty string", () => {
+    expect(classifyWholeBusiness({} as WholeBusinessGateInput).classification.length).toBeGreaterThan(0);
+  });
+});
+
 const allReadyExceptCriticalFloor: WholeBusinessGateInput = {
   criticalDomainsAllPass: false, // owner_workload below floor
   criticalDomainUnsafe: 0,

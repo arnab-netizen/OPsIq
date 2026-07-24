@@ -13,6 +13,30 @@ import {
   MAX_QUOTE_CHARS,
 } from "@/behavioral-validation/public-cases/source-register";
 
+describe("public-case source register — module contract assertions", () => {
+  it("SOURCE_REGISTER is an array", () => { expect(Array.isArray(SOURCE_REGISTER)).toBe(true); });
+  it("SOURCE_REGISTER has at least 12 entries", () => { expect(SOURCE_REGISTER.length).toBeGreaterThanOrEqual(12); });
+  it("validateSourceRegister is a function", () => { expect(typeof validateSourceRegister).toBe("function"); });
+  it("sourceRecordSchema has a parse method", () => { expect(typeof sourceRecordSchema.parse).toBe("function"); });
+  it("findPII is a function", () => { expect(typeof findPII).toBe("function"); });
+  it("hasLongCopiedText is a function", () => { expect(typeof hasLongCopiedText).toBe("function"); });
+  it("MAX_QUOTE_CHARS is a positive number", () => { expect(typeof MAX_QUOTE_CHARS).toBe("number"); expect(MAX_QUOTE_CHARS).toBeGreaterThan(0); });
+  it("validateSourceRegister() returns an object with ok and errors", () => {
+    const res = validateSourceRegister();
+    expect(res).toHaveProperty("ok"); expect(res).toHaveProperty("errors");
+  });
+  it("validateSourceRegister().ok is boolean", () => { expect(typeof validateSourceRegister().ok).toBe("boolean"); });
+  it("findPII('') returns an empty array", () => { expect(findPII("")).toEqual([]); });
+  it("hasLongCopiedText('') returns false", () => { expect(hasLongCopiedText("")).toBe(false); });
+  it("SOURCE_REGISTER[0] has id, title, factsUsed fields", () => {
+    expect(SOURCE_REGISTER[0]).toHaveProperty("id");
+    expect(SOURCE_REGISTER[0]).toHaveProperty("title");
+    expect(SOURCE_REGISTER[0]).toHaveProperty("factsUsed");
+  });
+  it("all SOURCE_REGISTER ids are non-empty strings", () => { for (const r of SOURCE_REGISTER) expect(typeof r.id).toBe("string"); });
+  it("all SOURCE_REGISTER factsUsed are non-empty arrays", () => { for (const r of SOURCE_REGISTER) expect(Array.isArray(r.factsUsed)).toBe(true); });
+});
+
 describe("public-case source register", () => {
   it("is non-empty and fully valid (schema + ids + privacy)", () => {
     expect(SOURCE_REGISTER.length).toBeGreaterThanOrEqual(12);

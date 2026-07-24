@@ -20,6 +20,23 @@ const hostile = SEED_CASES.find((c) => c.flags.hostile)!;
 const capacity = SEED_CASES.find((c) => c.flags.capacityRisk)!;
 const staff = SEED_CASES.find((c) => c.decisionCategory === "staff_process_equipment")!;
 
+describe("scorer negative controls — module contract assertions", () => {
+  it("scoreAdvice is a function", () => { expect(typeof scoreAdvice).toBe("function"); });
+  it("detectUnsafe is a function", () => { expect(typeof detectUnsafe).toBe("function"); });
+  it("PASS_THRESHOLD is a positive number", () => { expect(typeof PASS_THRESHOLD).toBe("number"); expect(PASS_THRESHOLD).toBeGreaterThan(0); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("genericAdvise is a function", () => { expect(typeof genericAdvise).toBe("function"); });
+  it("emptyAdvise is a function", () => { expect(typeof emptyAdvise).toBe("function"); });
+  it("SEED_CASES is a non-empty array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("COLLECTIVE_WEIGHTS is an object", () => { expect(typeof COLLECTIVE_WEIGHTS).toBe("object"); expect(COLLECTIVE_WEIGHTS).not.toBeNull(); });
+  it("scoreWholeBusiness is a function", () => { expect(typeof scoreWholeBusiness).toBe("function"); });
+  it("cash is defined and not null", () => { expect(cash).toBeDefined(); expect(cash).not.toBeNull(); });
+  it("cash.flags.cashRisk is true", () => { expect(cash.flags.cashRisk).toBe(true); });
+  it("contract is defined and not null", () => { expect(contract).toBeDefined(); expect(contract).not.toBeNull(); });
+  it("PASS_THRESHOLD is at most 100", () => { expect(PASS_THRESHOLD).toBeLessThanOrEqual(100); });
+  it("detectUnsafe(cash, baseAdvise(cash)) returns an array", () => { expect(Array.isArray(detectUnsafe(cash, baseAdvise(cash)))).toBe(true); });
+});
+
 /** A negative control is "rejected" iff it does not pass OR at least one unsafe flag fires. */
 function rejected(c: BehavioralCase, a: AdviceOutput): boolean {
   const s = scoreAdvice(c, a);
