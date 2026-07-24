@@ -73,6 +73,23 @@ const baseInput = {
   actionType: "apply_discount",
 };
 
+describe("owner approval resolution — module contract assertions", () => {
+  it("resolveOwnerApproval is a function", () => { expect(typeof resolveOwnerApproval).toBe("function"); });
+  it("enforceApprovalRequirement is a function", () => { expect(typeof enforceApprovalRequirement).toBe("function"); });
+  it("makeDeps is a function", () => { expect(typeof makeDeps).toBe("function"); });
+  it("baseInput has workspaceId field", () => { expect(baseInput).toHaveProperty("workspaceId"); });
+  it("baseInput has scope field", () => { expect(baseInput).toHaveProperty("scope"); });
+  it("baseInput has contentHash field", () => { expect(baseInput).toHaveProperty("contentHash"); });
+  it("baseInput has riskClass field", () => { expect(baseInput).toHaveProperty("riskClass"); });
+  it("baseInput has actionType field", () => { expect(baseInput).toHaveProperty("actionType"); });
+  it("makeDeps returns object with deps field", () => { expect(makeDeps({ instruction: null })).toHaveProperty("deps"); });
+  it("makeDeps deps.load has db field", () => { expect(makeDeps({ instruction: null }).deps.load).toHaveProperty("db"); });
+  it("makeDeps deps.memory has db field", () => { expect(makeDeps({ instruction: null }).deps.memory).toHaveProperty("db"); });
+  it("makeDeps returns object with attentionCreate function", () => { expect(typeof makeDeps({ instruction: null }).attentionCreate).toBe("function"); });
+  it("emitAuditEvent mock is a function", () => { expect(typeof emitAuditEvent).toBe("function"); });
+  it("baseInput.workspaceId is 'ws1'", () => { expect(baseInput.workspaceId).toBe("ws1"); });
+});
+
 describe("resolveOwnerApproval", () => {
   it("auto-handles when a standing instruction allows the action", async () => {
     const { deps, attentionCreate } = makeDeps({

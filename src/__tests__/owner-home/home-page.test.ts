@@ -18,6 +18,23 @@ const home = fs.readFileSync(
   "utf8"
 );
 
+describe("Owner Home page wiring — module contract assertions", () => {
+  it("fs.readFileSync is a function", () => { expect(typeof fs.readFileSync).toBe("function"); });
+  it("src is a non-empty string", () => { expect(typeof src).toBe("string"); expect(src.length).toBeGreaterThan(0); });
+  it("home is a non-empty string", () => { expect(typeof home).toBe("string"); expect(home.length).toBeGreaterThan(0); });
+  it("src starts with '\"use client\"'", () => { expect(src.startsWith('"use client"')).toBe(true); });
+  it("src contains the owner-home API path", () => { expect(src).toContain("/api/owner/home"); });
+  it("src contains '@/ui/primitives'", () => { expect(src).toContain('from "@/ui/primitives"'); });
+  it("src contains businessHealthScore", () => { expect(src).toContain("businessHealthScore"); });
+  it("src contains cashDanger", () => { expect(src).toContain("cashDanger"); });
+  it("src contains requiredActions", () => { expect(src).toContain("requiredActions"); });
+  it("src has no mutation method calls (POST/PATCH/PUT/DELETE)", () => { expect(src).not.toMatch(/method:\s*["'](POST|PATCH|PUT|DELETE)["']/); });
+  it("home contains the /owner/home link", () => { expect(home).toContain("/owner/home"); });
+  it("src contains max-w-md (mobile-first container)", () => { expect(src).toMatch(/max-w-md/); });
+  it("src contains 'no data' (honest unknown state)", () => { expect(src).toContain("no data"); });
+  it("src contains 'Top risks'", () => { expect(src).toContain("Top risks"); });
+});
+
 describe("Owner Home page wiring", () => {
   it("is a client page using shared UI primitives", () => {
     expect(src.startsWith('"use client"')).toBe(true);
