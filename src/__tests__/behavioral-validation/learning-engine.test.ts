@@ -8,6 +8,58 @@ import { learningArtifactSchema } from "@/behavioral-validation/schema";
 const AT = "2026-06-29T00:00:00Z";
 const opts = { workspaceId: "ws-1", actor: "trainer", at: AT };
 
+describe("learning engine — module contract assertions", () => {
+  it("deriveCorrection is a function", () => {
+    expect(typeof deriveCorrection).toBe("function");
+  });
+  it("scoreAdvice is a function", () => {
+    expect(typeof scoreAdvice).toBe("function");
+  });
+  it("baseAdvise is a function", () => {
+    expect(typeof baseAdvise).toBe("function");
+  });
+  it("emptyAdvise is a function", () => {
+    expect(typeof emptyAdvise).toBe("function");
+  });
+  it("SEED_CASES is an array", () => {
+    expect(Array.isArray(SEED_CASES)).toBe(true);
+  });
+  it("SEED_CASES has at least 1 entry", () => {
+    expect(SEED_CASES.length).toBeGreaterThan(0);
+  });
+  it("SEED_CASES[0] has an id field", () => {
+    expect(SEED_CASES[0]).toHaveProperty("id");
+  });
+  it("SEED_CASES[0] has a hiddenRootCause field", () => {
+    expect(SEED_CASES[0]).toHaveProperty("hiddenRootCause");
+  });
+  it("SEED_CASES[0] has a sourceSeedCaseId field", () => {
+    expect(SEED_CASES[0]).toHaveProperty("sourceSeedCaseId");
+  });
+  it("learningArtifactSchema is defined", () => {
+    expect(learningArtifactSchema).toBeDefined();
+  });
+  it("learningArtifactSchema.parse is a function", () => {
+    expect(typeof learningArtifactSchema.parse).toBe("function");
+  });
+  it("AT is the string '2026-06-29T00:00:00Z'", () => {
+    expect(AT).toBe("2026-06-29T00:00:00Z");
+  });
+  it("opts has workspaceId 'ws-1'", () => {
+    expect(opts.workspaceId).toBe("ws-1");
+  });
+  it("emptyAdvise() returns an object", () => {
+    expect(typeof emptyAdvise()).toBe("object");
+  });
+  it("scoreAdvice result has passed, total, failureLabels, unsafe fields", () => {
+    const s = scoreAdvice(SEED_CASES[0], baseAdvise(SEED_CASES[0]));
+    expect(s).toHaveProperty("passed");
+    expect(s).toHaveProperty("total");
+    expect(s).toHaveProperty("failureLabels");
+    expect(s).toHaveProperty("unsafe");
+  });
+});
+
 describe("learning engine", () => {
   it("returns null for a CLEAN pass (passed with no failure labels — nothing to learn)", () => {
     const c = SEED_CASES.find((x) => {

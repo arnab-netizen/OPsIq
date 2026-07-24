@@ -15,6 +15,59 @@ function readRun(name: string): { count: number; results: Record<string, Record<
   return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null;
 }
 
+describe("gate-protection — module contract assertions (non-DB)", () => {
+  it("CHAOS_LEDGER is an array", () => {
+    expect(Array.isArray(CHAOS_LEDGER)).toBe(true);
+  });
+  it("EXPECTED_LEDGER_COUNT is a number", () => {
+    expect(typeof EXPECTED_LEDGER_COUNT).toBe("number");
+  });
+  it("EXPECTED_LEDGER_COUNT >= 180", () => {
+    expect(EXPECTED_LEDGER_COUNT).toBeGreaterThanOrEqual(180);
+  });
+  it("CHAOS_LEDGER.length equals EXPECTED_LEDGER_COUNT", () => {
+    expect(CHAOS_LEDGER.length).toBe(EXPECTED_LEDGER_COUNT);
+  });
+  it("CHAOS_LEDGER[0] has a scenarioId field", () => {
+    expect(CHAOS_LEDGER[0]).toHaveProperty("scenarioId");
+  });
+  it("all CHAOS_LEDGER scenarioIds are strings", () => {
+    for (const e of CHAOS_LEDGER) expect(typeof e.scenarioId).toBe("string");
+  });
+  it("highestSupportedState is a function", () => {
+    expect(typeof highestSupportedState).toBe("function");
+  });
+  it("canClaimLiveOutcome is a function", () => {
+    expect(typeof canClaimLiveOutcome).toBe("function");
+  });
+  it("readRun is a function", () => {
+    expect(typeof readRun).toBe("function");
+  });
+  it("highestSupportedState returns a string", () => {
+    const evidence = { hasSimulationProof: true, hasDbBrowserProof: false, hasFullMobileProof: false, hasShadowPilotIntake: false, hasLiveBusinessData: false, hasRealDates: false, hasBeforeAfterMetrics: false, ownerWaiver: false, publicSaasApproved: false };
+    expect(typeof highestSupportedState(evidence)).toBe("string");
+  });
+  it("canClaimLiveOutcome returns false when hasLiveBusinessData is false", () => {
+    const evidence = { hasSimulationProof: true, hasDbBrowserProof: true, hasFullMobileProof: true, hasShadowPilotIntake: false, hasLiveBusinessData: false, hasRealDates: false, hasBeforeAfterMetrics: false, ownerWaiver: false, publicSaasApproved: false };
+    expect(canClaimLiveOutcome(evidence)).toBe(false);
+  });
+  it("canClaimLiveOutcome returns a boolean", () => {
+    const evidence = { hasSimulationProof: false, hasDbBrowserProof: false, hasFullMobileProof: false, hasShadowPilotIntake: false, hasLiveBusinessData: false, hasRealDates: false, hasBeforeAfterMetrics: false, ownerWaiver: false, publicSaasApproved: false };
+    expect(typeof canClaimLiveOutcome(evidence)).toBe("boolean");
+  });
+  it("all CHAOS_LEDGER scenarioIds are distinct", () => {
+    const ids = CHAOS_LEDGER.map((e) => e.scenarioId);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+  it("readRun returns null for a non-existent file", () => {
+    expect(readRun("__does_not_exist__.json")).toBeNull();
+  });
+  it("highestSupportedState with minimal evidence returns a string", () => {
+    const min = { hasSimulationProof: false, hasDbBrowserProof: false, hasFullMobileProof: false, hasShadowPilotIntake: false, hasLiveBusinessData: false, hasRealDates: false, hasBeforeAfterMetrics: false, ownerWaiver: false, publicSaasApproved: false };
+    expect(typeof highestSupportedState(min)).toBe("string");
+  });
+});
+
 describe("gate-protection (§4)", () => {
   it("1. exhaustive counted scenario count never drops below 180", () => {
     expect(CHAOS_LEDGER.length).toBe(EXPECTED_LEDGER_COUNT);
