@@ -7,6 +7,23 @@ import { runRegression, canMarkTrained, type RegressionCase } from "@/domain/dom
 
 const respond = (cse: { input: unknown }) => respondCashSurvival(cse.input as CashSurvivalInput);
 
+describe("d1-cash-survival — module contract assertions", () => {
+  it("evaluateDomain is a function", () => { expect(typeof evaluateDomain).toBe("function"); });
+  it("scoreCase is a function", () => { expect(typeof scoreCase).toBe("function"); });
+  it("respondCashSurvival is a function", () => { expect(typeof respondCashSurvival).toBe("function"); });
+  it("CASH_SURVIVAL_CASES is an array", () => { expect(Array.isArray(CASH_SURVIVAL_CASES)).toBe(true); });
+  it("TrainingLevel is an object", () => { expect(typeof TrainingLevel).toBe("object"); });
+  it("REQUIRED_SCENARIO_TYPES is an array", () => { expect(Array.isArray(REQUIRED_SCENARIO_TYPES)).toBe(true); });
+  it("MIN_CASES_PER_DOMAIN is a number", () => { expect(typeof MIN_CASES_PER_DOMAIN).toBe("number"); });
+  it("runRegression is a function", () => { expect(typeof runRegression).toBe("function"); });
+  it("canMarkTrained is a function", () => { expect(typeof canMarkTrained).toBe("function"); });
+  it("respond is a function", () => { expect(typeof respond).toBe("function"); });
+  it("CASH_SURVIVAL_CASES.length is >= 21", () => { expect(CASH_SURVIVAL_CASES.length).toBeGreaterThanOrEqual(21); });
+  it("TrainingLevel.LEVEL_5_OUTCOME_VERIFIED is defined", () => { expect(TrainingLevel.LEVEL_5_OUTCOME_VERIFIED).toBeDefined(); });
+  it("REQUIRED_SCENARIO_TYPES.length is > 0", () => { expect(REQUIRED_SCENARIO_TYPES.length).toBeGreaterThan(0); });
+  it("respond(CASH_SURVIVAL_CASES[0]) returns an object", () => { expect(typeof respond(CASH_SURVIVAL_CASES[0])).toBe("object"); });
+});
+
 describe("[D1] cash survival — executable scored training", () => {
   it("carries at least 21 cases covering every required scenario type", () => {
     expect(CASH_SURVIVAL_CASES.length).toBeGreaterThanOrEqual(MIN_CASES_PER_DOMAIN);
