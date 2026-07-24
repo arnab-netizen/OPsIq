@@ -11,9 +11,9 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { execSync, spawnSync } from "child_process";
+import { execSync } from "child_process";
 import { join } from "path";
-import { writeFileSync, mkdirSync, rmSync } from "fs";
+import { rmSync } from "fs";
 import { tmpdir } from "os";
 
 const root = join(__dirname, "..", "..", "..");
@@ -61,20 +61,6 @@ describe("scan-recurrence-defects.mjs — live scan", () => {
 
 describe("scan-recurrence-defects.mjs — fixture detection", () => {
   const scratchDir = join(tmpdir(), "opsiq-scanner-test-" + process.pid);
-
-  function writeFixture(subPath: string, content: string) {
-    const full = join(scratchDir, subPath);
-    mkdirSync(join(full, ".."), { recursive: true });
-    writeFileSync(full, content, "utf8");
-  }
-
-  function runScannerOnDir(dir: string): { code: number; output: string } {
-    // We can't easily override SCAN_DIRS without modifying the script, so
-    // we test detection via the live codebase scan patterns instead.
-    // These fixture tests verify the detection logic by running the scanner
-    // on the real codebase and confirming expected behaviors.
-    return runScanner();
-  }
 
   afterAll(() => {
     try { rmSync(scratchDir, { recursive: true }); } catch {}

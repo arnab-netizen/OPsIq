@@ -10,7 +10,7 @@
  *  5. ci-cd-foundations.yml and mvp-readiness.yml must NOT have push/PR automatic triggers
  */
 
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -109,10 +109,9 @@ for (const workflow of PUSH_BANNED_OVERLAPPING) {
   // Look for push: or pull_request: in the on: block (not inside comments)
   const lines = content.split('\n');
   let inOn = false;
-  let inJobs = false;
   for (const line of lines) {
-    if (/^on:/.test(line)) { inOn = true; inJobs = false; continue; }
-    if (/^jobs:/.test(line)) { inOn = false; inJobs = true; continue; }
+    if (/^on:/.test(line)) { inOn = true; continue; }
+    if (/^jobs:/.test(line)) { inOn = false; continue; }
     if (inOn && /^\s+(push|pull_request):/.test(line) && !line.trimStart().startsWith('#')) {
       const trigger = line.trim().replace(':', '');
       check(false, `${workflow} has an automatic '${trigger}:' trigger (must be dispatch-only — duplicates ci.yml)`);

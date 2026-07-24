@@ -108,7 +108,7 @@ try {
 
 if (ledger) {
   const stages = ledger.stages || {};
-  for (const [stageKey, stageData] of Object.entries(stages)) {
+  for (const [, stageData] of Object.entries(stages)) {
     const ledgerBundles = Array.isArray(stageData.bundles) ? stageData.bundles : [];
     for (const lb of ledgerBundles) {
       if (!lb || !lb.id) continue;

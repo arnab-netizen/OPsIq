@@ -132,7 +132,6 @@ function scanD2(file, lines) {
 
   const hasCanonical = /withCanonicalEnforcement|withAuth|enforceWorkspaceScoping/.test(content);
   if (!hasCanonical) {
-    const rel = relative(root, file);
     warn(file, 1, 2, `Route has mutation handler (POST/PUT/PATCH/DELETE) but no withCanonicalEnforcement/withAuth found — verify workspace+auth enforcement manually`);
   }
 }

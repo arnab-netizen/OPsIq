@@ -25,7 +25,7 @@
 import { describe, it, expect } from "vitest";
 import { execSync } from "child_process";
 import { join } from "path";
-import { readdirSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 
 const root = join(__dirname, "..", "..", "..");
 const bundlesDir = join(root, "docs", "opsiq", "bundles");
@@ -96,7 +96,6 @@ describe("Bundle manifests — file structure", () => {
   });
 
   it("each bundle file is non-empty", () => {
-    const { readFileSync } = require("fs");
     for (const f of bundleFiles) {
       const content = readFileSync(join(bundlesDir, f), "utf8");
       expect(content.length).toBeGreaterThan(50);
@@ -104,7 +103,6 @@ describe("Bundle manifests — file structure", () => {
   });
 
   it("each bundle file contains required fields: id, stage, name, status", () => {
-    const { readFileSync } = require("fs");
     for (const f of bundleFiles) {
       const content = readFileSync(join(bundlesDir, f), "utf8");
       expect(content).toMatch(/^id:/m);
@@ -121,7 +119,6 @@ describe("REMAINING_STAGE_ACCEPTANCE.yaml — ledger consistency", () => {
   let ledgerContent: string;
 
   beforeAll(() => {
-    const { readFileSync } = require("fs");
     ledgerContent = readFileSync(ledgerPath, "utf8");
   });
 
