@@ -119,6 +119,23 @@ async function currentMode(engagementId: string): Promise<string | undefined> {
   return e?.interventionMode;
 }
 
+describe("Intervention PATCH route — module contract assertions", () => {
+  it("SHOULD_RUN_DB_TESTS is a boolean", () => { expect(typeof SHOULD_RUN_DB_TESTS).toBe("boolean"); });
+  it("ROLES is an object", () => { expect(typeof ROLES).toBe("object"); });
+  it("ROLES.ADMIN_OR_PORTFOLIO_MANAGER is defined", () => { expect(ROLES.ADMIN_OR_PORTFOLIO_MANAGER).toBeDefined(); });
+  it("ROLES.CLIENT_OWNER is defined", () => { expect(ROLES.CLIENT_OWNER).toBeDefined(); });
+  it("ROLES.EXPERIENCED_CONSULTANT is defined", () => { expect(ROLES.EXPERIENCED_CONSULTANT).toBeDefined(); });
+  it("MANAGER_ROLE is an array", () => { expect(Array.isArray(MANAGER_ROLE)).toBe(true); });
+  it("VIEW_ONLY_ROLE is an array", () => { expect(Array.isArray(VIEW_ONLY_ROLE)).toBe(true); });
+  it("CLIENT_ROLE is an array", () => { expect(Array.isArray(CLIENT_ROLE)).toBe(true); });
+  it("MANAGER_ROLE[0].role equals ROLES.ADMIN_OR_PORTFOLIO_MANAGER", () => { expect(MANAGER_ROLE[0].role).toBe(ROLES.ADMIN_OR_PORTFOLIO_MANAGER); });
+  it("randomUUID is a function", () => { expect(typeof randomUUID).toBe("function"); });
+  it("randomUUID() returns a string", () => { expect(typeof randomUUID()).toBe("string"); });
+  it("MANAGER_ROLE[0].scope is 'workspace'", () => { expect(MANAGER_ROLE[0].scope).toBe("workspace"); });
+  it("VIEW_ONLY_ROLE[0].scope is 'workspace'", () => { expect(VIEW_ONLY_ROLE[0].scope).toBe("workspace"); });
+  it("CLIENT_ROLE[0].scope is 'workspace'", () => { expect(CLIENT_ROLE[0].scope).toBe("workspace"); });
+});
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Intervention PATCH route — runtime RBAC (canonical)", () => {
   let s: Seeded;
   beforeEach(async () => { s = await seed(); });
