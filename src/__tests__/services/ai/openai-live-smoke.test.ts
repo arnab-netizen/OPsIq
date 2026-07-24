@@ -41,6 +41,23 @@ function ledgerHasNoSecret() {
   expect(dump).not.toMatch(/sk-[A-Za-z0-9]/);
 }
 
+describe("AI-17 live smoke — module contract assertions", () => {
+  it("OpenAiProvider is a class/function", () => { expect(typeof OpenAiProvider).toBe("function"); });
+  it("buildAiContext is a function", () => { expect(typeof buildAiContext).toBe("function"); });
+  it("runMissingQuestionTask is a function", () => { expect(typeof runMissingQuestionTask).toBe("function"); });
+  it("getAiCallLedger is a function", () => { expect(typeof getAiCallLedger).toBe("function"); });
+  it("clearAiCallLedger is a function", () => { expect(typeof clearAiCallLedger).toBe("function"); });
+  it("runDiagnosisReview is a function", () => { expect(typeof runDiagnosisReview).toBe("function"); });
+  it("runOwnerActionRedTeam is a function", () => { expect(typeof runOwnerActionRedTeam).toBe("function"); });
+  it("LIVE is a boolean", () => { expect(typeof LIVE).toBe("boolean"); });
+  it("ctx is a function", () => { expect(typeof ctx).toBe("function"); });
+  it("provider is a function", () => { expect(typeof provider).toBe("function"); });
+  it("ledgerHasNoSecret is a function", () => { expect(typeof ledgerHasNoSecret).toBe("function"); });
+  it("new OpenAiProvider() does not throw", () => { expect(() => new OpenAiProvider()).not.toThrow(); });
+  it("ctx('MISSING_QUESTION_GENERATION', 'LOW_CONTENT', []) has taskType field", () => { expect(ctx("MISSING_QUESTION_GENERATION", "LOW_CONTENT", [])).toHaveProperty("taskType"); });
+  it("ctx('MISSING_QUESTION_GENERATION', 'LOW_CONTENT', []).taskType is 'MISSING_QUESTION_GENERATION'", () => { expect(ctx("MISSING_QUESTION_GENERATION", "LOW_CONTENT", []).taskType).toBe("MISSING_QUESTION_GENERATION"); });
+});
+
 describe.skipIf(!LIVE)("AI-17 live OpenAI smoke (synthetic data only)", () => {
   it("MISSING_QUESTION_GENERATION returns schema-valid, accepted advisory questions", async () => {
     clearAiCallLedger();

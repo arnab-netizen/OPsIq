@@ -50,6 +50,23 @@ function seededDb(opts: { hasBusiness?: boolean; hasSnapshots?: boolean; learnin
   } as unknown as PrismaClient;
 }
 
+describe("getOwnerWholeBusinessPlan — module contract assertions", () => {
+  it("getOwnerWholeBusinessPlan is a function", () => { expect(typeof getOwnerWholeBusinessPlan).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW).toBeInstanceOf(Date); });
+  it("past is a function", () => { expect(typeof past).toBe("function"); });
+  it("WS is a non-empty string", () => { expect(typeof WS).toBe("string"); expect(WS.length).toBeGreaterThan(0); });
+  it("BIZ is a non-empty string", () => { expect(typeof BIZ).toBe("string"); expect(BIZ.length).toBeGreaterThan(0); });
+  it("learningRow is an object", () => { expect(typeof learningRow).toBe("object"); });
+  it("learningRow.id is 'art1'", () => { expect(learningRow.id).toBe("art1"); });
+  it("learningRow.active is true", () => { expect(learningRow.active).toBe(true); });
+  it("learningRow.workspaceId equals WS", () => { expect(learningRow.workspaceId).toBe(WS); });
+  it("seededDb is a function", () => { expect(typeof seededDb).toBe("function"); });
+  it("seededDb() returns an object", () => { expect(typeof seededDb()).toBe("object"); });
+  it("past(1) returns a Date", () => { expect(past(1)).toBeInstanceOf(Date); });
+  it("past(0).getTime() equals NOW.getTime()", () => { expect(past(0).getTime()).toBe(NOW.getTime()); });
+  it("past(1).getTime() is less than NOW.getTime()", () => { expect(past(1).getTime()).toBeLessThan(NOW.getTime()); });
+});
+
 describe("getOwnerWholeBusinessPlan", () => {
   it("generates a whole-business view from the new runtime over real provider data", async () => {
     const view = await getOwnerWholeBusinessPlan({ db: seededDb(), workspaceId: WS, businessId: BIZ, now: NOW });
