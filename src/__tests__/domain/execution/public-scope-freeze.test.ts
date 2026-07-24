@@ -9,6 +9,23 @@ import {
   type FrozenScopeArea,
 } from "@/domain/execution/public-scope-freeze";
 
+describe("public-scope-freeze — module contract assertions", () => {
+  it("FROZEN_SCOPE_AREAS is an array", () => { expect(Array.isArray(FROZEN_SCOPE_AREAS)).toBe(true); });
+  it("FROZEN_SCOPE_REASONS is an object", () => { expect(typeof FROZEN_SCOPE_REASONS).toBe("object"); });
+  it("classifyScope is a function", () => { expect(typeof classifyScope).toBe("function"); });
+  it("isOwnerModeAllowed is a function", () => { expect(typeof isOwnerModeAllowed).toBe("function"); });
+  it("assertWithinOwnerScope is a function", () => { expect(typeof assertWithinOwnerScope).toBe("function"); });
+  it("PublicScopeFrozenError is a function", () => { expect(typeof PublicScopeFrozenError).toBe("function"); });
+  it("FROZEN_SCOPE_AREAS contains 'BILLING'", () => { expect(FROZEN_SCOPE_AREAS).toContain("BILLING"); });
+  it("FROZEN_SCOPE_AREAS.length equals 6", () => { expect(FROZEN_SCOPE_AREAS).toHaveLength(6); });
+  it("FROZEN_SCOPE_AREAS contains 'PUBLIC_SAAS'", () => { expect(FROZEN_SCOPE_AREAS).toContain("PUBLIC_SAAS"); });
+  it("classifyScope({area:'BILLING'}) returns an object", () => { expect(typeof classifyScope({ area: "BILLING" })).toBe("object"); });
+  it("classifyScope({area:'BILLING'}).inScope is false", () => { expect(classifyScope({ area: "BILLING" }).inScope).toBe(false); });
+  it("classifyScope({area:'BILLING'}).frozenArea equals 'BILLING'", () => { expect(classifyScope({ area: "BILLING" }).frozenArea).toBe("BILLING"); });
+  it("classifyScope({tags:['dashboard']}).inScope is true", () => { expect(classifyScope({ tags: ["dashboard"] }).inScope).toBe(true); });
+  it("isOwnerModeAllowed({}) is true", () => { expect(isOwnerModeAllowed({})).toBe(true); });
+});
+
 describe("[module40] Public Scope Freeze Guard", () => {
   it("[module40] exposes all six frozen areas with reasons", () => {
     expect(FROZEN_SCOPE_AREAS).toEqual([

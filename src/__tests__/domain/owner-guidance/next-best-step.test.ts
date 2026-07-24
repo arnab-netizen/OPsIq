@@ -18,6 +18,23 @@ const issue = (over: Partial<BusinessIssue> = {}): BusinessIssue => ({
   ...over,
 });
 
+describe("next-best-step — module contract assertions", () => {
+  it("deriveActionsToAvoid is a function", () => { expect(typeof deriveActionsToAvoid).toBe("function"); });
+  it("selectNextBestSteps is a function", () => { expect(typeof selectNextBestSteps).toBe("function"); });
+  it("isEmergency is a function", () => { expect(typeof isEmergency).toBe("function"); });
+  it("allRankedIssues is a function", () => { expect(typeof allRankedIssues).toBe("function"); });
+  it("IssueCategory is an object", () => { expect(typeof IssueCategory).toBe("object"); });
+  it("IssueCategory.CASH_DANGER is defined", () => { expect(IssueCategory.CASH_DANGER).toBeDefined(); });
+  it("BusinessFunction is an object", () => { expect(typeof BusinessFunction).toBe("object"); });
+  it("issue is a function", () => { expect(typeof issue).toBe("function"); });
+  it("issue() returns an object", () => { expect(typeof issue()).toBe("object"); });
+  it("issue() has id field", () => { expect(issue()).toHaveProperty("id"); });
+  it("issue() has category field", () => { expect(issue()).toHaveProperty("category"); });
+  it("deriveActionsToAvoid([]) returns an array", () => { expect(Array.isArray(deriveActionsToAvoid([]))).toBe(true); });
+  it("deriveActionsToAvoid([issue()]) is empty for no-risk issue", () => { expect(deriveActionsToAvoid([issue()])).toHaveLength(0); });
+  it("selectNextBestSteps([]) returns an object", () => { expect(typeof selectNextBestSteps([])).toBe("object"); });
+});
+
 describe("[module41] actions to avoid", () => {
   it("cash danger forbids campaigns, discounts, and hiring", () => {
     const avoid = deriveActionsToAvoid([issue({ id: "c", category: IssueCategory.CASH_DANGER, severity: "CRITICAL" })]);

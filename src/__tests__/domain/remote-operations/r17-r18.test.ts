@@ -2,6 +2,23 @@ import { describe, it, expect } from "vitest";
 import { detectManagerIntegrityIssues, checkManagerClosure, exceptionNeedsOwner, type ManagerIntegritySignals, type ManagerException } from "@/domain/remote-operations/manager-exception";
 import { dedupeAlerts, groupAlerts, groupEscalates, type RemoteAlert } from "@/domain/remote-operations/escalation-dedup";
 
+describe("r17-r18 — module contract assertions", () => {
+  it("detectManagerIntegrityIssues is a function", () => { expect(typeof detectManagerIntegrityIssues).toBe("function"); });
+  it("checkManagerClosure is a function", () => { expect(typeof checkManagerClosure).toBe("function"); });
+  it("exceptionNeedsOwner is a function", () => { expect(typeof exceptionNeedsOwner).toBe("function"); });
+  it("dedupeAlerts is a function", () => { expect(typeof dedupeAlerts).toBe("function"); });
+  it("groupAlerts is a function", () => { expect(typeof groupAlerts).toBe("function"); });
+  it("groupEscalates is a function", () => { expect(typeof groupEscalates).toBe("function"); });
+  it("dedupeAlerts([], new Map()) returns an object", () => { expect(typeof dedupeAlerts([], new Map())).toBe("object"); });
+  it("dedupeAlerts([], new Map()) has toSend field", () => { expect(dedupeAlerts([], new Map())).toHaveProperty("toSend"); });
+  it("dedupeAlerts([], new Map()) has suppressed field", () => { expect(dedupeAlerts([], new Map())).toHaveProperty("suppressed"); });
+  it("groupAlerts([]) returns an array", () => { expect(Array.isArray(groupAlerts([]))).toBe(true); });
+  it("groupAlerts([]).length is 0 for empty input", () => { expect(groupAlerts([])).toHaveLength(0); });
+  it("groupEscalates with CRITICAL count 1 is true", () => { expect(groupEscalates({ groupKey: "x", count: 1, maxSeverity: "CRITICAL", summary: "" }, 5)).toBe(true); });
+  it("groupEscalates with MEDIUM count 2 below threshold is false", () => { expect(groupEscalates({ groupKey: "x", count: 2, maxSeverity: "MEDIUM", summary: "" }, 5)).toBe(false); });
+  it("groupEscalates at threshold count is true", () => { expect(groupEscalates({ groupKey: "x", count: 5, maxSeverity: "MEDIUM", summary: "" }, 5)).toBe(true); });
+});
+
 describe("[R17] manager exception queue + integrity controls", () => {
   const clean = (over: Partial<ManagerIntegritySignals> = {}): ManagerIntegritySignals => ({
     closedIssueWithoutProof: false, downgradedSeverityAfterComplaint: false, repeatedlyClosedReopenedIssues: false,
