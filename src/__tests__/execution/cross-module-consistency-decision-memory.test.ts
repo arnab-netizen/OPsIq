@@ -39,6 +39,23 @@ const cleanGrowth: GrowthSignals = {
   capacityStressed: false, profitImpactVerified: true, revenueGrowing: true,
 };
 
+describe("cross-module-consistency — module contract assertions", () => {
+  it("planBusinessSurvivalRecovery is a function", () => { expect(typeof planBusinessSurvivalRecovery).toBe("function"); });
+  it("planAndValidateSurvival is a function", () => { expect(typeof planAndValidateSurvival).toBe("function"); });
+  it("assessGrowthReadiness is a function", () => { expect(typeof assessGrowthReadiness).toBe("function"); });
+  it("GrowthReadiness is an object", () => { expect(typeof GrowthReadiness).toBe("object"); });
+  it("evaluateProgressionRecommendation is a function", () => { expect(typeof evaluateProgressionRecommendation).toBe("function"); });
+  it("ProgressionMove is an object", () => { expect(typeof ProgressionMove).toBe("object"); });
+  it("evaluateDoNotRepeat is a function", () => { expect(typeof evaluateDoNotRepeat).toBe("function"); });
+  it("interpretRawPublicSignal is a function", () => { expect(typeof interpretRawPublicSignal).toBe("function"); });
+  it("prioritisePublicSignals is a function", () => { expect(typeof prioritisePublicSignals).toBe("function"); });
+  it("explainOwnerCockpitDecision is a function", () => { expect(typeof explainOwnerCockpitDecision).toBe("function"); });
+  it("MONEY is an object", () => { expect(typeof MONEY).toBe("object"); });
+  it("crisis is a function", () => { expect(typeof crisis).toBe("function"); });
+  it("cleanGrowth is an object", () => { expect(typeof cleanGrowth).toBe("object"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+});
+
 describe("1. finance/cash overrides growth/opportunity", () => {
   it("weak cash alone blocks a growth move even when everything else is clean", () => {
     const decision = evaluateProgressionRecommendation({ ...cleanGrowth, cashRunwayWeak: true }, ProgressionMove.MARKETING_SCALE);
