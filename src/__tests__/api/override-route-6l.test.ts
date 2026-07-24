@@ -154,4 +154,79 @@ describe("Phase 6L — override route dead resolveServerRole removal", () => {
     expect(calls[0][0].actorId).toBe("actor-A");
     expect(calls[1][0].actorId).toBe("actor-B");
   });
+
+  describe("Phase 6L — additional result and helper coverage", () => {
+    it("result.success is true on success", async () => {
+      const result = (await overridePOST(makeCtx() as never)) as typeof SAMPLE_RESULT;
+      expect(result.success).toBe(true);
+    });
+
+    it("result.overrideRecordId is rec-xyz", async () => {
+      const result = (await overridePOST(makeCtx() as never)) as typeof SAMPLE_RESULT;
+      expect(result.overrideRecordId).toBe("rec-xyz");
+    });
+
+    it("result.operatorItemId is item-abc", async () => {
+      const result = (await overridePOST(makeCtx() as never)) as typeof SAMPLE_RESULT;
+      expect(result.operatorItemId).toBe("item-abc");
+    });
+
+    it("result.overriddenAction is launch_campaign", async () => {
+      const result = (await overridePOST(makeCtx() as never)) as typeof SAMPLE_RESULT;
+      expect(result.overriddenAction).toBe("launch_campaign");
+    });
+
+    it("result.originalAction is hold", async () => {
+      const result = (await overridePOST(makeCtx() as never)) as typeof SAMPLE_RESULT;
+      expect(result.originalAction).toBe("hold");
+    });
+
+    it("makeCtx default body operatorItemId is item-abc", async () => {
+      const ctx = makeCtx();
+      const body = (await ctx.request.json()) as Record<string, unknown>;
+      expect(body.operatorItemId).toBe("item-abc");
+    });
+
+    it("makeCtx default riskAcknowledged is true", async () => {
+      const ctx = makeCtx();
+      const body = (await ctx.request.json()) as Record<string, unknown>;
+      expect(body.riskAcknowledged).toBe(true);
+    });
+
+    it("different workspaces produce different workspaceId values in service call", async () => {
+      const ctxA = { ...makeCtx(), verifiedWorkspaceId: "ws-A" };
+      const ctxB = { ...makeCtx(), verifiedWorkspaceId: "ws-B" };
+
+      await overridePOST(ctxA as never);
+      await overridePOST(ctxB as never);
+
+      const calls = mocks.recordOperatorOverride.mock.calls;
+      expect(calls[0][0].workspaceId).toBe("ws-A");
+      expect(calls[1][0].workspaceId).toBe("ws-B");
+    });
+
+    it("rejected error message is propagated from recordOperatorOverride", async () => {
+      mocks.recordOperatorOverride.mockRejectedValue(new Error("specific error message here"));
+      await expect(overridePOST(makeCtx() as never)).rejects.toThrow("specific error message here");
+    });
+
+    it("recordOperatorOverride receives all 5 core fields", async () => {
+      await overridePOST(makeCtx() as never);
+      expect(mocks.recordOperatorOverride).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspaceId: "ws-1",
+          actorId: "actor-1",
+          operatorItemId: "item-abc",
+          overriddenAction: "launch_campaign",
+          reason: "Risk accepted by stakeholder",
+        })
+      );
+    });
+
+    it("overridePOST returns a Promise (route is async)", async () => {
+      const resultPromise = overridePOST(makeCtx() as never);
+      expect(resultPromise).toBeInstanceOf(Promise);
+      await resultPromise;
+    });
+  });
 });

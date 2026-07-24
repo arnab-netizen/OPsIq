@@ -252,4 +252,82 @@ describe("Phase 6K — run route in-process duplicate detection", () => {
     // Different bodies → different hash inputs
     expect(hashes[0]).not.toBe(hashes[1]);
   });
+
+  it("checkRateLimit is called with workspace ID", async () => {
+    mocks.normalizeDecisionInput.mockReturnValue({ valid: false, error: { message: "test" } });
+    try { await runPOST(makeCtx() as never); } catch { /* expected */ }
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith("ws-1");
+  });
+
+  it("checkRateLimit is called exactly once per request", async () => {
+    mocks.normalizeDecisionInput.mockReturnValue({ valid: false, error: { message: "test" } });
+    try { await runPOST(makeCtx() as never); } catch { /* expected */ }
+    expect(mocks.checkRateLimit).toHaveBeenCalledTimes(1);
+  });
+
+  it("getRequestHash is called exactly once per request", async () => {
+    mocks.normalizeDecisionInput.mockReturnValue({ valid: false, error: { message: "test" } });
+    try { await runPOST(makeCtx() as never); } catch { /* expected */ }
+    expect(mocks.getRequestHash).toHaveBeenCalledTimes(1);
+  });
+
+  it("isDuplicateRequest is called exactly once when not a duplicate", async () => {
+    mocks.isDuplicateRequest.mockReturnValue(false);
+    mocks.normalizeDecisionInput.mockReturnValue({ valid: false, error: { message: "test" } });
+    try { await runPOST(makeCtx() as never); } catch { /* expected */ }
+    expect(mocks.isDuplicateRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it("emitAuditEvent is not called when isDuplicateRequest returns true", async () => {
+    mocks.isDuplicateRequest.mockReturnValue(true);
+    try { await runPOST(makeCtx() as never); } catch { /* expected */ }
+    expect(mocks.emitAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("route rejects when checkRateLimit returns false", async () => {
+    mocks.checkRateLimit.mockReturnValue(false);
+    await expect(runPOST(makeCtx() as never)).rejects.toThrow();
+  });
+
+  it("isDuplicateRequest is not called when checkRateLimit blocks", async () => {
+    mocks.checkRateLimit.mockReturnValue(false);
+    try { await runPOST(makeCtx() as never); } catch { /* expected */ }
+    expect(mocks.isDuplicateRequest).not.toHaveBeenCalled();
+  });
+
+  it("makeCtx sets verifiedWorkspaceId to ws-1 by default", () => {
+    const ctx = makeCtx();
+    expect(ctx.verifiedWorkspaceId).toBe("ws-1");
+  });
+
+  it("makeCtx sets verifiedActorId to actor-1 by default", () => {
+    const ctx = makeCtx();
+    expect(ctx.verifiedActorId).toBe("actor-1");
+  });
+
+  it("makeCtx request json resolves with revenue, cost, confidence fields", async () => {
+    const ctx = makeCtx();
+    const body = await ctx.request.json();
+    expect(body).toMatchObject({ revenue: 100000, cost: 70000, confidence: 0.8 });
+  });
+
+  it("duplicate error thrown by route is an instance of Error", async () => {
+    mocks.isDuplicateRequest.mockReturnValue(true);
+    const err = await runPOST(makeCtx() as never).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+  });
+
+  it("getRequestHash receives body cost field in hash input", async () => {
+    mocks.normalizeDecisionInput.mockReturnValue({ valid: false, error: { message: "test" } });
+    try { await runPOST(makeCtx({ cost: 55000 }) as never); } catch { /* expected */ }
+    expect(mocks.getRequestHash).toHaveBeenCalledWith(
+      "ws-1",
+      expect.objectContaining({ cost: 55000 })
+    );
+  });
+
+  it("resolveServerRole is called as part of role verification", async () => {
+    try { await runPOST(makeCtx() as never); } catch { /* expected */ }
+    expect(mocks.resolveServerRole).toHaveBeenCalled();
+  });
 });

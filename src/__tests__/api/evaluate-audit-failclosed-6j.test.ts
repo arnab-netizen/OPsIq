@@ -233,4 +233,64 @@ describe("Phase 6J — evaluate audit fail-closed hardening", () => {
       expect.objectContaining({ actorId: "actor-special" })
     );
   });
+
+  describe("Phase 6J — additional behavioral coverage", () => {
+    it("emitAuditEvent is called exactly once per successful request", async () => {
+      await evaluatePOST(makeCtx() as never, PARAMS);
+      expect(mocks.emitAuditEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it("dbOperatorItemFindUnique is called with the decisionId from params", async () => {
+      await evaluatePOST(makeCtx() as never, PARAMS);
+      expect(mocks.dbOperatorItemFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ id: "decision-1" }) })
+      );
+    });
+
+    it("dbOperatorItemUpdate is called exactly once", async () => {
+      await evaluatePOST(makeCtx() as never, PARAMS);
+      expect(mocks.dbOperatorItemUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it("fetch is called exactly once to invoke the evaluate API", async () => {
+      await evaluatePOST(makeCtx() as never, PARAMS);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("result has decisionId field", async () => {
+      const result = (await evaluatePOST(makeCtx() as never, PARAMS)) as { decisionId: string };
+      expect(result).toHaveProperty("decisionId");
+    });
+
+    it("result.decisionId is decision-1", async () => {
+      const result = (await evaluatePOST(makeCtx() as never, PARAMS)) as { decisionId: string };
+      expect(result.decisionId).toBe("decision-1");
+    });
+
+    it("result has recommendation field", async () => {
+      const result = (await evaluatePOST(makeCtx() as never, PARAMS)) as { recommendation: string };
+      expect(result).toHaveProperty("recommendation");
+    });
+
+    it("result.recommendation is approved from mock eval result", async () => {
+      const result = (await evaluatePOST(makeCtx() as never, PARAMS)) as { recommendation: string };
+      expect(result.recommendation).toBe("approved");
+    });
+
+    it("makeCtx.verifiedWorkspaceId is ws-1 by default", () => {
+      const ctx = makeCtx();
+      expect(ctx.verifiedWorkspaceId).toBe("ws-1");
+    });
+
+    it("makeCtx.verifiedActorId is actor-1 by default", () => {
+      const ctx = makeCtx();
+      expect(ctx.verifiedActorId).toBe("actor-1");
+    });
+
+    it("emitAuditEvent is not called when decision is not found in workspace", async () => {
+      mocks.dbOperatorItemFindUnique.mockResolvedValue(null);
+      try { await evaluatePOST(makeCtx() as never, PARAMS); } catch { /* expected */ }
+      expect(mocks.emitAuditEvent).not.toHaveBeenCalled();
+    });
+  });
 });

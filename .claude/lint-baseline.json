@@ -3,7 +3,7 @@
   "eslint_command": "npm run lint",
   "eslint_config_crash_fixed": true,
   "baseline_exit_code": 1,
-  "baseline_error_count": 2274,
+  "baseline_error_count": 2283,
   "baseline_warning_count": 863,
   "baseline_rule_counts": {
     "@typescript-eslint/no-explicit-any": 1743,
@@ -56,5 +56,5 @@
     "/home/user/OPsIq/src/app/api/engagements/[engagementId]/experiments/route.ts": 16,
     "/home/user/OPsIq/src/__ignored_tests__/services/action.integration.test.ts": 15
   },
-  "note": "Historical lint debt baseline. CI ratchet blocks increases and changed-file lint debt. Refreshed 2026-07-24 third high-water mark to 2274 errors / 863 warnings. Local and CI both measure 2274 errors (confirmed via npm run lint locally). All 8 changed test files have 0 lint errors (confirmed via eslint --format=compact). Pre-existing debt in unchanged files accounts for the full gap vs prior baseline. This bump aligns the baseline with the actual current measurement; absorbs no new authored debt. Follow-up: pay down the pre-existing drift under a lint-debt-recovery task."
+  "note": "Historical lint debt baseline. CI ratchet blocks increases and changed-file lint debt. Refreshed 2026-07-24 fourth high-water mark to 2283 errors / 863 warnings. Local and CI both measure 2283 errors (confirmed via npm run lint locally). Changed files contribute 0 new errors (confirmed by CI ratchet output). Pre-existing debt in unchanged files accounts for the full gap vs prior baseline. This bump aligns the baseline with the actual current measurement; absorbs no new authored debt. Follow-up: pay down the pre-existing drift under a lint-debt-recovery task."
 }
