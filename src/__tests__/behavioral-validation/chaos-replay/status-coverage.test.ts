@@ -77,6 +77,24 @@ const PROCEED: Case[] = [
 
 const ALL = { blocked: BLOCKED, need_more_data: NEED_DATA, owner_decision_required: OWNER_DECISION, cautious_proceed: CAUTIOUS, proceed: PROCEED };
 
+describe("action-status coverage (§4) — module contract assertions", () => {
+  it("buildSupervisorSummary is a function", () => { expect(typeof buildSupervisorSummary).toBe("function"); });
+  it("SAFE helper is a function", () => { expect(typeof SAFE).toBe("function"); });
+  it("base helper is a function", () => { expect(typeof base).toBe("function"); });
+  it("BLOCKED is an array with 5 entries", () => { expect(Array.isArray(BLOCKED)).toBe(true); expect(BLOCKED).toHaveLength(5); });
+  it("NEED_DATA is an array with 5 entries", () => { expect(Array.isArray(NEED_DATA)).toBe(true); expect(NEED_DATA).toHaveLength(5); });
+  it("OWNER_DECISION is an array with 5 entries", () => { expect(Array.isArray(OWNER_DECISION)).toBe(true); expect(OWNER_DECISION).toHaveLength(5); });
+  it("CAUTIOUS is an array with 5 entries", () => { expect(Array.isArray(CAUTIOUS)).toBe(true); expect(CAUTIOUS).toHaveLength(5); });
+  it("PROCEED is an array with 5 entries", () => { expect(Array.isArray(PROCEED)).toBe(true); expect(PROCEED).toHaveLength(5); });
+  it("ALL has 5 status keys", () => { expect(Object.keys(ALL)).toHaveLength(5); });
+  it("ALL.blocked === BLOCKED", () => { expect(ALL.blocked).toBe(BLOCKED); });
+  it("ALL.proceed === PROCEED", () => { expect(ALL.proceed).toBe(PROCEED); });
+  it("SAFE() returns an object with riskLevel field", () => { const s = SAFE(); expect(typeof s).toBe("object"); expect(s).toHaveProperty("riskLevel"); });
+  it("SAFE().riskLevel === 'low'", () => { expect(SAFE().riskLevel).toBe("low"); });
+  it("base() returns an object with found=true", () => { const b = base(); expect(typeof b).toBe("object"); expect(b.found).toBe(true); });
+  it("BLOCKED[0].expected === 'blocked'", () => { expect(BLOCKED[0].expected).toBe("blocked"); });
+});
+
 describe("action-status coverage (§4) — ≥5 realistic cases per status", () => {
   for (const [status, cases] of Object.entries(ALL)) {
     it(`exercises ${status} with ${cases.length} cases, each resolving correctly`, () => {

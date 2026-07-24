@@ -6,6 +6,29 @@ import type { AdviceOutput } from "@/behavioral-validation/schema";
 
 const c = SEED_CASES.find((x) => x.id === "A1")!;
 
+describe("actionability score — module contract assertions", () => {
+  it("scoreActionability is a function", () => { expect(typeof scoreActionability).toBe("function"); });
+  it("buildActionabilityReport is a function", () => { expect(typeof buildActionabilityReport).toBe("function"); });
+  it("ACTIONABILITY_THRESHOLD is a positive number", () => { expect(typeof ACTIONABILITY_THRESHOLD).toBe("number"); expect(ACTIONABILITY_THRESHOLD).toBeGreaterThan(0); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("genericAdvise is a function", () => { expect(typeof genericAdvise).toBe("function"); });
+  it("SEED_CASES is a non-empty array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("c (SEED_CASES A1) is defined and non-null", () => { expect(c).toBeDefined(); expect(c).not.toBeNull(); });
+  it("c has id field equal to 'A1'", () => { expect(c.id).toBe("A1"); });
+  it("scoreActionability({}) returns an object", () => { expect(typeof scoreActionability({})).toBe("object"); });
+  it("scoreActionability({}) has passed and score fields", () => {
+    const r = scoreActionability({});
+    expect(r).toHaveProperty("passed"); expect(r).toHaveProperty("score");
+  });
+  it("scoreActionability({}).passed is a boolean", () => { expect(typeof scoreActionability({}).passed).toBe("boolean"); });
+  it("scoreActionability({}).score is a number", () => { expect(typeof scoreActionability({}).score).toBe("number"); });
+  it("scoreActionability({}).passed is false for empty input", () => { expect(scoreActionability({}).passed).toBe(false); });
+  it("buildActionabilityReport([]) returns an object with a count field", () => {
+    const r = buildActionabilityReport([]);
+    expect(typeof r).toBe("object"); expect(r).toHaveProperty("count");
+  });
+});
+
 describe("actionability score", () => {
   it("generic strategic advice fails actionability", () => {
     expect(scoreActionability(genericAdvise()).passed).toBe(false);
