@@ -7,6 +7,66 @@
 import { describe, it, expect } from "vitest";
 import { ClassifiedApiError } from "@/infra/classified-error";
 
+describe("Route-Level Execution Markers — module contract assertions", () => {
+  it("ClassifiedApiError is a constructor function", () => { expect(typeof ClassifiedApiError).toBe("function"); });
+  it("new ClassifiedApiError is instanceof Error", () => { expect(new ClassifiedApiError("msg", "code", "op")).toBeInstanceOf(Error); });
+  it("new ClassifiedApiError is instanceof ClassifiedApiError", () => { expect(new ClassifiedApiError("msg", "code", "op")).toBeInstanceOf(ClassifiedApiError); });
+  it("new ClassifiedApiError has correct message", () => { expect(new ClassifiedApiError("test-msg", "code", "op").message).toBe("test-msg"); });
+  it("new ClassifiedApiError safeDetails is null or undefined by default", () => {
+    const err = new ClassifiedApiError("msg", "code", "op");
+    expect(err.safeDetails == null || err.safeDetails === undefined).toBe(true);
+  });
+  it("safeDetails can be set on an instance", () => {
+    const err = new ClassifiedApiError("msg", "code", "op");
+    err.safeDetails = { routeVersion: "v1" };
+    expect(err.safeDetails?.routeVersion).toBe("v1");
+  });
+  it("safeDetails.serviceImportPath is accessible after assignment", () => {
+    const err = new ClassifiedApiError("msg", "code", "op");
+    err.safeDetails = { serviceImportPath: "@/services/engagement" };
+    expect(err.safeDetails?.serviceImportPath).toBe("@/services/engagement");
+  });
+  it("safeDetails.handlerName is accessible after assignment", () => {
+    const err = new ClassifiedApiError("msg", "code", "op");
+    err.safeDetails = { handlerName: "myHandler" };
+    expect(err.safeDetails?.handlerName).toBe("myHandler");
+  });
+  it("two separate instances have independent safeDetails", () => {
+    const a = new ClassifiedApiError("a", "code", "op");
+    const b = new ClassifiedApiError("b", "code", "op");
+    a.safeDetails = { routeVersion: "v1" };
+    expect(b.safeDetails).toBeFalsy();
+  });
+  it("new ClassifiedApiError with 4 args is an instanceof Error", () => { expect(new ClassifiedApiError("msg", "code", "op", 400)).toBeInstanceOf(Error); });
+  it("ClassifiedApiError with httpStatus 400 is valid", () => {
+    const err = new ClassifiedApiError("parse fail", "parse_failed", "parse", 400);
+    expect(err).toBeInstanceOf(ClassifiedApiError);
+  });
+  it("multiple safeDetails fields can be set together", () => {
+    const err = new ClassifiedApiError("msg", "code", "op");
+    err.safeDetails = { routeVersion: "v1", serviceImportPath: "@/svc", handlerName: "h" };
+    expect(err.safeDetails?.routeVersion).toBe("v1");
+    expect(err.safeDetails?.serviceImportPath).toBe("@/svc");
+    expect(err.safeDetails?.handlerName).toBe("h");
+  });
+  it("safeDetails engagementsServiceVersion can be explicitly undefined", () => {
+    const err = new ClassifiedApiError("msg", "code", "op");
+    err.safeDetails = { routeVersion: "v1", engagementsServiceVersion: undefined };
+    expect(err.safeDetails?.engagementsServiceVersion).toBeUndefined();
+  });
+  it("ClassifiedApiError with code 'P2022' safeDetails is preserved", () => {
+    const err = new ClassifiedApiError("msg", "code", "op");
+    err.safeDetails = { prismaCode: "P2022" };
+    expect(err.safeDetails?.prismaCode).toBe("P2022");
+  });
+  it("ClassifiedApiError instances are always Error instances regardless of args", () => {
+    const e1 = new ClassifiedApiError("a", "b", "c");
+    const e2 = new ClassifiedApiError("x", "y", "z", 500);
+    expect(e1).toBeInstanceOf(Error);
+    expect(e2).toBeInstanceOf(Error);
+  });
+});
+
 describe("Route-Level Execution Markers", () => {
   describe("Route version and service path in errors", () => {
     it("ClassifiedApiError includes routeVersion in safeDetails", () => {
