@@ -306,5 +306,49 @@ describe("Owner Dashboard Service", () => {
       expect(error.message).toBe("Test error message");
       expect(error).toBeInstanceOf(Error);
     });
+
+    it("DashboardServiceError code is accessible as string", () => {
+      const error = new DashboardServiceError("MY_CODE", "msg");
+      expect(typeof error.code).toBe("string");
+      expect(error.code).toBe("MY_CODE");
+    });
+
+    it("DashboardServiceError preserves different codes", () => {
+      const e1 = new DashboardServiceError("VALIDATION_FAILED", "bad input");
+      const e2 = new DashboardServiceError("SERVICE_ERROR", "internal");
+      expect(e1.code).toBe("VALIDATION_FAILED");
+      expect(e2.code).toBe("SERVICE_ERROR");
+    });
+  });
+
+  describe("calculateWorkspaceHealth — edge cases", () => {
+    it("should handle empty snapshots array", async () => {
+      const health = await calculateWorkspaceHealth(context, []);
+      expect(health.workspaceId).toBe(mockWorkspaceId);
+      expect(health.healthyEngagements).toBe(0);
+      expect(health.criticalEngagements).toBe(0);
+      expect(health.atRiskEngagements).toBe(0);
+    });
+
+    it("should count all engagement types from single snapshot", async () => {
+      const snapshots = [
+        { engagementId: "e1", status: "at_risk" as const, kpiOnTrackCount: 5, kpiTotalCount: 10 },
+      ];
+      const health = await calculateWorkspaceHealth(context, snapshots);
+      expect(health.atRiskEngagements).toBe(1);
+      expect(health.healthyEngagements).toBe(0);
+    });
+  });
+
+  describe("summarizeActionQueue — edge cases", () => {
+    it("should return zero totalCount for empty actions", async () => {
+      const summary = await summarizeActionQueue(context, []);
+      expect(summary.totalCount).toBe(0);
+    });
+
+    it("should return empty criticalActions for empty actions", async () => {
+      const summary = await summarizeActionQueue(context, []);
+      expect(summary.criticalActions).toHaveLength(0);
+    });
   });
 });

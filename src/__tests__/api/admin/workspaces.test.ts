@@ -192,4 +192,16 @@ describe("Phase D1-A: GET /api/admin/workspaces", () => {
     const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
     expect(res.pagination).toHaveProperty("limit");
   });
+
+  it("workspace entries have slug string field", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(typeof res.workspaces[0].slug).toBe("string");
+  });
+
+  it("workspace entries have name string field", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(typeof res.workspaces[0].name).toBe("string");
+  });
 });

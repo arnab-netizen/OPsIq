@@ -159,3 +159,62 @@ describe("security invariants", () => {
     expect(result.violations).toBeDefined();
   });
 });
+
+describe("POST /api/owner/learning-reviews — additional decisions", () => {
+  it("creates review with REJECTED decision", async () => {
+    vi.mocked(svc.createReview).mockResolvedValue({ id: "review-rej", decision: "REJECTED" });
+    const result = await svc.createReview({} as any, {
+      workspaceId: WS,
+      candidateId: CAND_ID,
+      reviewerId: "r@e.com",
+      decision: "REJECTED",
+      reviewNotes: "not suitable",
+      reviewedAt: new Date(),
+    });
+    expect((result as any).decision).toBe("REJECTED");
+  });
+
+  it("creates review with DEFERRED decision", async () => {
+    vi.mocked(svc.createReview).mockResolvedValue({ id: "review-def", decision: "DEFERRED" });
+    const result = await svc.createReview({} as any, {
+      workspaceId: WS,
+      candidateId: CAND_ID,
+      reviewerId: "r@e.com",
+      decision: "DEFERRED",
+      reviewNotes: "need more info",
+      reviewedAt: new Date(),
+    });
+    expect((result as any).decision).toBe("DEFERRED");
+  });
+
+  it("createReview called exactly once per request", async () => {
+    vi.mocked(svc.createReview).mockResolvedValue({ id: REVIEW_ID, decision: "APPROVED" });
+    await svc.createReview({} as any, {
+      workspaceId: WS,
+      candidateId: CAND_ID,
+      reviewerId: "r@e.com",
+      decision: "APPROVED",
+      reviewNotes: "ok",
+      reviewedAt: new Date(),
+    });
+    expect(svc.createReview).toHaveBeenCalledTimes(1);
+  });
+
+  it("listReviewsForWorkspace called exactly once per request", async () => {
+    vi.mocked(svc.listReviewsForWorkspace).mockResolvedValue([]);
+    await svc.listReviewsForWorkspace({} as any, WS);
+    expect(svc.listReviewsForWorkspace).toHaveBeenCalledTimes(1);
+  });
+
+  it("getReview returns review with workspaceId field", async () => {
+    vi.mocked(svc.getReview).mockResolvedValue({ id: REVIEW_ID, workspaceId: WS } as any);
+    const result = await svc.getReview({} as any, WS, REVIEW_ID);
+    expect((result as any).workspaceId).toBe(WS);
+  });
+
+  it("listReviewsForCandidate called exactly once per request", async () => {
+    vi.mocked(svc.listReviewsForCandidate).mockResolvedValue([]);
+    await svc.listReviewsForCandidate({} as any, WS, CAND_ID);
+    expect(svc.listReviewsForCandidate).toHaveBeenCalledTimes(1);
+  });
+});

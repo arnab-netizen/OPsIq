@@ -208,5 +208,34 @@ describe("Owner Arbitrate Route — non-DB mock tests", () => {
       const [calledCandidates] = mockArbitrate.mock.calls[0];
       expect(calledCandidates[0].riskOfAction).toBe(0.2);
     });
+
+    it("result body rejected field is an array", async () => {
+      mockArbitrate.mockReturnValueOnce(ARBITRATION_RESULT);
+      const result = await arbitratePost(makeCtx({ candidates: [CAND_A] }));
+      expect(Array.isArray(result.body.rejected)).toBe(true);
+    });
+
+    it("result body deferred field is an array", async () => {
+      mockArbitrate.mockReturnValueOnce(ARBITRATION_RESULT);
+      const result = await arbitratePost(makeCtx({ candidates: [CAND_A] }));
+      expect(Array.isArray(result.body.deferred)).toBe(true);
+    });
+
+    it("result body reasons object is defined", async () => {
+      mockArbitrate.mockReturnValueOnce(ARBITRATION_RESULT);
+      const result = await arbitratePost(makeCtx({ candidates: [CAND_A] }));
+      expect(result.body.reasons).toBeDefined();
+    });
+
+    it("single candidate: arbitrate receives array of length 1", async () => {
+      mockArbitrate.mockReturnValueOnce(ARBITRATION_RESULT);
+      await arbitratePost(makeCtx({ candidates: [CAND_A] }));
+      const [calledCandidates] = mockArbitrate.mock.calls[0];
+      expect(calledCandidates).toHaveLength(1);
+    });
+
+    it("empty candidates array: route rejects with validation error", async () => {
+      await expect(arbitratePost(makeCtx({ candidates: [] }))).rejects.toThrow();
+    });
   });
 });

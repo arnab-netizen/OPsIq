@@ -309,5 +309,13 @@ describe("Clients Routes — non-DB mock tests", () => {
         2, expect.anything(), expect.objectContaining({ verifiedWorkspaceId: WS_B }), WS_B
       );
     });
+
+    it("createClient called exactly once per POST request", async () => {
+      mockCheckIdempotencyKey.mockResolvedValue({ isNew: true });
+      mockCreateClient.mockResolvedValue(CREATE_RESULT);
+      mockRecordIdempotencyResponse.mockResolvedValue(undefined);
+      await clientsPost(makeCtxPost(CREATE_BODY, IDEMPOTENCY_KEY, { verifiedWorkspaceId: WS_A }));
+      expect(mockCreateClient).toHaveBeenCalledTimes(1);
+    });
   });
 });

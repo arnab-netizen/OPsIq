@@ -124,6 +124,26 @@ describe("Scenario 2 — startedAt is server-stamped (code contract)", () => {
   });
 });
 
+// ─── Additional valid FSM transitions ────────────────────────────────────────
+
+describe("Valid FSM transitions — other allowed state changes", () => {
+  it("does not throw for draft → assigned", () => {
+    expect(() => validateActionTransition("draft" as ActionStatus, "assigned" as ActionStatus)).not.toThrow();
+  });
+
+  it("does not throw for assigned → cancelled", () => {
+    expect(() => validateActionTransition("assigned" as ActionStatus, "cancelled" as ActionStatus)).not.toThrow();
+  });
+
+  it("does not throw for in_progress → completed", () => {
+    expect(() => validateActionTransition("in_progress" as ActionStatus, "completed" as ActionStatus)).not.toThrow();
+  });
+
+  it("does not throw for blocked → assigned", () => {
+    expect(() => validateActionTransition("blocked" as ActionStatus, "assigned" as ActionStatus)).not.toThrow();
+  });
+});
+
 // ─── Scenario 5, 6, 7 documentation ─────────────────────────────────────────
 
 describe("Scenarios 5-7 — DB-dependent assertions (see attention-engine.db.test.ts)", () => {
