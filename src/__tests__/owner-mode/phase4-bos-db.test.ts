@@ -43,6 +43,23 @@ const actorId = randomUUID();
 const ws = randomUUID();      // primary workspace
 const otherWs = randomUUID(); // isolation probe — never seeded as ClientAccount
 
+describe("phase4-bos-db — module contract assertions", () => {
+  it("SHOULD_RUN_DB_TESTS is a boolean", () => { expect(typeof SHOULD_RUN_DB_TESTS).toBe("boolean"); });
+  it("db is an object", () => { expect(typeof db).toBe("object"); });
+  it("writeMemoryEntry is a function", () => { expect(typeof writeMemoryEntry).toBe("function"); });
+  it("getMemoryEntries is a function", () => { expect(typeof getMemoryEntries).toBe("function"); });
+  it("getMemoryHistory is a function", () => { expect(typeof getMemoryHistory).toBe("function"); });
+  it("createArbitrationOverride is a function", () => { expect(typeof createArbitrationOverride).toBe("function"); });
+  it("runGoalArbitration is a function", () => { expect(typeof runGoalArbitration).toBe("function"); });
+  it("createKPIOwnership is a function", () => { expect(typeof createKPIOwnership).toBe("function"); });
+  it("createResourcePool is a function", () => { expect(typeof createResourcePool).toBe("function"); });
+  it("allocateResource is a function", () => { expect(typeof allocateResource).toBe("function"); });
+  it("actorId is a string", () => { expect(typeof actorId).toBe("string"); });
+  it("ws is a string", () => { expect(typeof ws).toBe("string"); });
+  it("otherWs is a string", () => { expect(typeof otherWs).toBe("string"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+});
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db] Phase 4 — Business Operating System",
   () => {

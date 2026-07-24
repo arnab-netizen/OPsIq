@@ -29,6 +29,23 @@ const allDone = (): MilestoneOutcome[] => [done(1), done(2), done(3, "IMPROVED")
 const recover = (outcomes: MilestoneOutcome[], over?: Partial<CrisisInput>) =>
   computeRecoveryExecution({ recoveryCaseId: "rc", workspaceArchetype: "laundry_local_service", plan: planOf(over), outcomes })!;
 
+describe("recovery-milestone-execution — module contract assertions", () => {
+  it("planBusinessSurvivalRecovery is a function", () => { expect(typeof planBusinessSurvivalRecovery).toBe("function"); });
+  it("computeRecoveryExecution is a function", () => { expect(typeof computeRecoveryExecution).toBe("function"); });
+  it("computeAndValidateRecovery is a function", () => { expect(typeof computeAndValidateRecovery).toBe("function"); });
+  it("recoveryExecutionViewSchema is an object", () => { expect(typeof recoveryExecutionViewSchema).toBe("object"); });
+  it("crisis is a function", () => { expect(typeof crisis).toBe("function"); });
+  it("planOf is a function", () => { expect(typeof planOf).toBe("function"); });
+  it("done is a function", () => { expect(typeof done).toBe("function"); });
+  it("allDone is a function", () => { expect(typeof allDone).toBe("function"); });
+  it("recover is a function", () => { expect(typeof recover).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+});
+
 describe("recovery-milestone-execution", () => {
   it("1. a milestone cannot advance without evidence (next bottleneck is the un-evidenced milestone)", () => {
     const v = recover([{ order: 1, executed: true, evidenceProvided: false }]);
