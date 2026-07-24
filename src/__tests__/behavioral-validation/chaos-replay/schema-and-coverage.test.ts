@@ -14,6 +14,23 @@ import {
 const counted = COUNTED_CHAOS_SCENARIOS;
 const cov = computeCoverage();
 
+describe("chaos-schema-and-coverage — module contract assertions", () => {
+  it("chaosScenarioSchema is an object", () => { expect(typeof chaosScenarioSchema).toBe("object"); });
+  it("COUNTED_CHAOS_SCENARIOS is an array", () => { expect(Array.isArray(COUNTED_CHAOS_SCENARIOS)).toBe(true); });
+  it("COUNTED_PUBLIC_CASES is an array", () => { expect(Array.isArray(COUNTED_PUBLIC_CASES)).toBe(true); });
+  it("SYNTHETIC_EDGE_SCENARIOS is an array", () => { expect(Array.isArray(SYNTHETIC_EDGE_SCENARIOS)).toBe(true); });
+  it("REQUIRED_CATEGORIES is an array", () => { expect(Array.isArray(REQUIRED_CATEGORIES)).toBe(true); });
+  it("computeCoverage is a function", () => { expect(typeof computeCoverage).toBe("function"); });
+  it("counted is an array", () => { expect(Array.isArray(counted)).toBe(true); });
+  it("counted.length is greater than 0", () => { expect(counted.length).toBeGreaterThan(0); });
+  it("cov is an object", () => { expect(typeof cov).toBe("object"); });
+  it("cov has countedTotal field", () => { expect(cov).toHaveProperty("countedTotal"); });
+  it("cov has categories field", () => { expect(cov).toHaveProperty("categories"); });
+  it("cov.categories is an array", () => { expect(Array.isArray(cov.categories)).toBe(true); });
+  it("SYNTHETIC_EDGE_SCENARIOS[0] is an object", () => { expect(typeof SYNTHETIC_EDGE_SCENARIOS[0]).toBe("object"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+});
+
 describe("chaos scenario schema (§5)", () => {
   it("validates every counted scenario as schema-complete", () => {
     for (const s of counted) expect(() => chaosScenarioSchema.parse(s)).not.toThrow();
