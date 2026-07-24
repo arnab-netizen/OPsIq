@@ -10,6 +10,26 @@ import {
 
 const I = (type: QualityIncidentType, over: Partial<QualityIncident> = {}): QualityIncident => ({ type, count: 1, directCost: 100, ...over });
 
+describe("[module15] quality economics (COPQ) — module contract assertions", () => {
+  it("incidentCost is a function", () => { expect(typeof incidentCost).toBe("function"); });
+  it("totalCostOfPoorQuality is a function", () => { expect(typeof totalCostOfPoorQuality).toBe("function"); });
+  it("classifyCopq is a function", () => { expect(typeof classifyCopq).toBe("function"); });
+  it("qualityEconomicsSummary is a function", () => { expect(typeof qualityEconomicsSummary).toBe("function"); });
+  it("QualityIncidentType.REFUND is defined", () => { expect(QualityIncidentType.REFUND).toBeDefined(); });
+  it("QualityIncidentType.REWORK is defined", () => { expect(QualityIncidentType.REWORK).toBeDefined(); });
+  it("QualityIncidentType.COMPLAINT is defined", () => { expect(QualityIncidentType.COMPLAINT).toBeDefined(); });
+  it("incidentCost returns a number", () => { expect(typeof incidentCost(I(QualityIncidentType.REFUND))).toBe("number"); });
+  it("totalCostOfPoorQuality([]) returns total=0", () => { expect(totalCostOfPoorQuality([]).total).toBe(0); });
+  it("totalCostOfPoorQuality([]) has incidentCount=0", () => { expect(totalCostOfPoorQuality([]).incidentCount).toBe(0); });
+  it("classifyCopq(0) returns 'LOW'", () => { expect(classifyCopq(0)).toBe("LOW"); });
+  it("qualityEconomicsSummary([], 0) has copq=0", () => { expect(qualityEconomicsSummary([], 0).copq).toBe(0); });
+  it("qualityEconomicsSummary([], 0) has dominantType=null", () => { expect(qualityEconomicsSummary([], 0).dominantType).toBeNull(); });
+  it("I helper returns object with type and count fields", () => {
+    const i = I(QualityIncidentType.REFUND);
+    expect(i).toHaveProperty("type"); expect(i).toHaveProperty("count");
+  });
+});
+
 describe("[module15] quality economics (COPQ)", () => {
   it("incident cost = count x (direct + recovery + goodwill)", () => {
     expect(incidentCost(I(QualityIncidentType.REFUND, { count: 3, directCost: 100, recoveryCost: 20, goodwillCost: 30 }))).toBe(3 * 150);
