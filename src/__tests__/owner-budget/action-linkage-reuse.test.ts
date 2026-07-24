@@ -20,6 +20,58 @@ const serviceSrc = fs.readFileSync(
   "utf8"
 );
 
+describe("Deep Action-System Linkage — module contract assertions", () => {
+  it("canTransition is a function", () => {
+    expect(typeof canTransition).toBe("function");
+  });
+  it("requiresCompletionEvidence is a function", () => {
+    expect(typeof requiresCompletionEvidence).toBe("function");
+  });
+  it("RECOVERY_ACTION_STATUSES is an array", () => {
+    expect(Array.isArray(RECOVERY_ACTION_STATUSES)).toBe(true);
+  });
+  it("RECOVERY_ACTION_STATUSES has 6 entries", () => {
+    expect(RECOVERY_ACTION_STATUSES.length).toBe(6);
+  });
+  it("RECOVERY_ACTION_STATUSES contains 'proposed'", () => {
+    expect(RECOVERY_ACTION_STATUSES).toContain("proposed");
+  });
+  it("RECOVERY_ACTION_STATUSES contains 'completed'", () => {
+    expect(RECOVERY_ACTION_STATUSES).toContain("completed");
+  });
+  it("RECOVERY_ACTION_STATUSES contains 'cancelled'", () => {
+    expect(RECOVERY_ACTION_STATUSES).toContain("cancelled");
+  });
+  it("serviceSrc is a non-empty string", () => {
+    expect(typeof serviceSrc).toBe("string");
+    expect(serviceSrc.length).toBeGreaterThan(100);
+  });
+  it("canTransition('proposed', 'assigned') is true", () => {
+    expect(canTransition("proposed", "assigned")).toBe(true);
+  });
+  it("canTransition('assigned', 'in_progress') is true", () => {
+    expect(canTransition("assigned", "in_progress")).toBe(true);
+  });
+  it("canTransition('completed', 'assigned') is false", () => {
+    expect(canTransition("completed", "assigned")).toBe(false);
+  });
+  it("requiresCompletionEvidence('completed') is true", () => {
+    expect(requiresCompletionEvidence("completed")).toBe(true);
+  });
+  it("requiresCompletionEvidence('proposed') is false", () => {
+    expect(requiresCompletionEvidence("proposed")).toBe(false);
+  });
+  it("serviceSrc contains 'emitAuditEvent'", () => {
+    expect(serviceSrc).toContain("emitAuditEvent");
+  });
+  it("serviceSrc contains import from @/domain/founder-recovery/action-status", () => {
+    expect(serviceSrc).toContain('from "@/domain/founder-recovery/action-status"');
+  });
+  it("canTransition('proposed', 'completed') is false", () => {
+    expect(canTransition("proposed", "completed")).toBe(false);
+  });
+});
+
 describe("Deep Action-System Linkage reuse", () => {
   it("reuses the shared owner action status machine (no parallel FSM)", () => {
     expect(serviceSrc).toContain('from "@/domain/founder-recovery/action-status"');

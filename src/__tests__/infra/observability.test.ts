@@ -11,6 +11,62 @@ function named(name: string, message: string): Error {
   return e;
 }
 
+describe("observability — module contract assertions", () => {
+  it("categorizeError is a function", () => {
+    expect(typeof categorizeError).toBe("function");
+  });
+  it("captureError is a function", () => {
+    expect(typeof captureError).toBe("function");
+  });
+  it("named() returns an Error instance", () => {
+    expect(named("ZodError", "bad input")).toBeInstanceOf(Error);
+  });
+  it("categorizeError returns a string", () => {
+    expect(typeof categorizeError(new Error("x"), "/unknown")).toBe("string");
+  });
+  it("categorizeError maps ZodError on /api/diagnosis to VALIDATION_ERROR", () => {
+    expect(categorizeError(named("ZodError", "bad input"), "/api/diagnosis")).toBe("VALIDATION_ERROR");
+  });
+  it("categorizeError maps PrismaClientKnownRequestError to DATABASE_ERROR", () => {
+    expect(categorizeError(named("PrismaClientKnownRequestError", "db fail"), "/api/x")).toBe("DATABASE_ERROR");
+  });
+  it("categorizeError maps /something-else to UNEXPECTED_ERROR", () => {
+    expect(categorizeError(new Error("boom"), "/something-else")).toBe("UNEXPECTED_ERROR");
+  });
+  it("categorizeError maps /diagnosis to DIAGNOSIS_ERROR", () => {
+    expect(categorizeError(new Error("boom"), "/diagnosis")).toBe("DIAGNOSIS_ERROR");
+  });
+  it("categorizeError maps RateLimitError on /api/auth/signup to AUTH_RATE_LIMIT", () => {
+    expect(categorizeError(named("RateLimitError", "rate limit exceeded"), "/api/auth/signup")).toBe("AUTH_RATE_LIMIT");
+  });
+  it("categorizeError maps Unauthorized error on /api/auth/login to AUTH_ERROR", () => {
+    expect(categorizeError(new Error("Unauthorized"), "/api/auth/login")).toBe("AUTH_ERROR");
+  });
+  it("captureError returns a string category", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(typeof captureError(new Error("x"), { route: "/api/auth/login" })).toBe("string");
+    spy.mockRestore();
+  });
+  it("captureError with /api/auth/login returns AUTH_ERROR", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(captureError(new Error("Unauthorized"), { route: "/api/auth/login" })).toBe("AUTH_ERROR");
+    spy.mockRestore();
+  });
+  it("named() sets name property on the error", () => {
+    expect(named("ZodError", "bad input").name).toBe("ZodError");
+  });
+  it("named() sets message property on the error", () => {
+    expect(named("ZodError", "bad input").message).toBe("bad input");
+  });
+  it("categorizeError is deterministic: same input gives same output twice", () => {
+    const err = new Error("boom");
+    expect(categorizeError(err, "/diagnosis")).toBe(categorizeError(err, "/diagnosis"));
+  });
+  it("categorizeError maps /dashboard to DASHBOARD_ERROR", () => {
+    expect(categorizeError(new Error("boom"), "/dashboard")).toBe("DASHBOARD_ERROR");
+  });
+});
+
 describe("observability categorization (deterministic, low-cardinality)", () => {
   const cases: Array<{ error: unknown; route?: string; expected: ObservabilityCategory }> = [
     { error: named("ZodError", "bad input"), route: "/api/diagnosis", expected: "VALIDATION_ERROR" },
