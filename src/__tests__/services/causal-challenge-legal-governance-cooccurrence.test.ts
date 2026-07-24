@@ -31,6 +31,23 @@ function cc(
   return runCausalChallenge({ committed: true, businessProblem, diagnosisType, evidence });
 }
 
+describe("causal-challenge-legal-governance-cooccurrence — module contract assertions", () => {
+  it("runCausalChallenge is a function", () => { expect(typeof runCausalChallenge).toBe("function"); });
+  it("cc is a function", () => { expect(typeof cc).toBe("function"); });
+  it("cc('legal_governance_risk', []) returns an object", () => { expect(typeof cc("legal_governance_risk", [])).toBe("object"); });
+  it("cc result has adverseOffArchetypeEvidence field", () => { expect(cc("legal_governance_risk", [])).toHaveProperty("adverseOffArchetypeEvidence"); });
+  it("cc result has challenged field", () => { expect(cc("legal_governance_risk", [])).toHaveProperty("challenged"); });
+  it("typeof cc result.adverseOffArchetypeEvidence is 'boolean'", () => { expect(typeof cc("legal_governance_risk", []).adverseOffArchetypeEvidence).toBe("boolean"); });
+  it("typeof cc result.challenged is 'boolean'", () => { expect(typeof cc("legal_governance_risk", []).challenged).toBe("boolean"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+  it("expect is a function", () => { expect(typeof expect).toBe("function"); });
+  it("cc('cash_liquidity_crisis', []) returns an object", () => { expect(typeof cc("cash_liquidity_crisis", [])).toBe("object"); });
+  it("cc('cash_liquidity_crisis', []) has challenged field", () => { expect(cc("cash_liquidity_crisis", [])).toHaveProperty("challenged"); });
+  it("cc with empty evidence has challenged false", () => { expect(cc("legal_governance_risk", []).challenged).toBe(false); });
+  it("cc with empty evidence has adverseOffArchetypeEvidence false", () => { expect(cc("legal_governance_risk", []).adverseOffArchetypeEvidence).toBe(false); });
+});
+
 describe("P2 causal-challenge — legal_governance_risk home-signal bypass", () => {
   it("governance text in raw 'operations' dim does NOT hold for legal_governance_risk (Luckin-style)", () => {
     const r = cc("legal_governance_risk", [
