@@ -1,23 +1,24 @@
 "use client";
 
 /**
- * /owner/compliance — Compliance calendar (review queue).
+ * /owner/compliance — Compliance calendar.
  *
- * Lists compliance items that are expired or expiring soon (from the server
- * review queue). Shows a warning banner when any expired/expiring items exist.
- * Create new items via Modal form.
+ * Lists all compliance items with status filters and temporal state badges.
+ * Warning banners for overdue / action_required items. Create new items via Modal.
  * No workspace IDs or actor IDs are supplied from the client.
  */
 
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Badge, Button, Modal, Input, Select, Textarea } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type ComplianceKind = "licence" | "permit" | "insurance" | "tax" | "document";
+type ComplianceStatus = "active" | "evidence_pending" | "review_pending" | "compliant" | "breached" | "waived";
 type ProvenanceSource = "owner_input" | "professional_input" | "authoritative_document";
-type ComplianceState = "expired" | "expiring_soon";
+type TemporalState = "upcoming" | "action_required" | "overdue" | null;
 
 interface ComplianceItem {
   id: string;
@@ -25,12 +26,13 @@ interface ComplianceItem {
   name: string;
   reference: string | null;
   expiresAt: string | null;
-  status: string;
+  status: ComplianceStatus;
   jurisdiction: string | null;
   obligationOwner: string | null;
   penaltyDescription: string | null;
-  state: ComplianceState;
+  temporalState: TemporalState;
   createdAt: string;
+  updatedAt: string;
 }
 
 const KIND_LABELS: Record<ComplianceKind, string> = {
@@ -43,6 +45,36 @@ const KIND_LABELS: Record<ComplianceKind, string> = {
 
 const KINDS: ComplianceKind[] = ["licence", "permit", "insurance", "tax", "document"];
 
+const STATUS_LABELS: Record<ComplianceStatus, string> = {
+  active: "Active",
+  evidence_pending: "Evidence pending",
+  review_pending: "Review pending",
+  compliant: "Compliant",
+  breached: "Breached",
+  waived: "Waived",
+};
+
+const STATUS_VARIANT: Record<ComplianceStatus, "default" | "warning" | "success" | "destructive"> = {
+  active: "default",
+  evidence_pending: "warning",
+  review_pending: "warning",
+  compliant: "success",
+  breached: "destructive",
+  waived: "default",
+};
+
+const TEMPORAL_LABELS: Record<string, string> = {
+  upcoming: "Upcoming",
+  action_required: "Action required",
+  overdue: "Overdue",
+};
+
+const TEMPORAL_VARIANT: Record<string, "default" | "warning" | "success" | "destructive"> = {
+  upcoming: "default",
+  action_required: "warning",
+  overdue: "destructive",
+};
+
 const PROVENANCE_LABELS: Record<ProvenanceSource, string> = {
   owner_input: "Owner input",
   professional_input: "Professional input",
@@ -50,6 +82,8 @@ const PROVENANCE_LABELS: Record<ProvenanceSource, string> = {
 };
 
 const PROVENANCES: ProvenanceSource[] = ["owner_input", "professional_input", "authoritative_document"];
+
+const ALL_STATUSES: ComplianceStatus[] = ["active", "evidence_pending", "review_pending", "compliant", "breached", "waived"];
 
 interface FormState {
   kind: ComplianceKind | "";
@@ -93,6 +127,7 @@ export default function CompliancePage() {
   const [items, setItems] = useState<ComplianceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -103,21 +138,23 @@ export default function CompliancePage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch("/api/owner/compliance");
+      const url = statusFilter ? `/api/owner/compliance?status=${encodeURIComponent(statusFilter)}` : "/api/owner/compliance";
+      const data = await apiFetch(url);
       setItems(data.items ?? []);
     } catch (err) {
       setError(classifyOperatorError(err, { context: "load" }).operatorMessage);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [statusFilter]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const expiredItems = items.filter((i) => i.state === "expired");
-  const expiringSoonItems = items.filter((i) => i.state === "expiring_soon");
+  const overdueItems = items.filter((i) => i.temporalState === "overdue");
+  const actionRequiredItems = items.filter((i) => i.temporalState === "action_required");
+  const breachedItems = items.filter((i) => i.status === "breached");
 
   function openCreate() {
     setForm(EMPTY_FORM);
@@ -177,25 +214,42 @@ export default function CompliancePage() {
       </div>
 
       {/* Warning banners */}
-      {expiredItems.length > 0 && (
+      {breachedItems.length > 0 && (
         <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          <strong>{expiredItems.length} expired</strong> compliance{" "}
-          {expiredItems.length === 1 ? "item requires" : "items require"} immediate attention.
+          <strong>{breachedItems.length} compliance {breachedItems.length === 1 ? "item is" : "items are"} in breach</strong> — immediate action required.
         </div>
       )}
-      {expiringSoonItems.length > 0 && (
+      {overdueItems.length > 0 && (
+        <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <strong>{overdueItems.length} overdue</strong> compliance {overdueItems.length === 1 ? "item requires" : "items require"} immediate attention.
+        </div>
+      )}
+      {actionRequiredItems.length > 0 && (
         <div className="mb-4 rounded-md border border-yellow-500/50 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-400">
-          <strong>{expiringSoonItems.length}</strong> compliance{" "}
-          {expiringSoonItems.length === 1 ? "item is" : "items are"} expiring within 30 days.
+          <strong>{actionRequiredItems.length}</strong> compliance {actionRequiredItems.length === 1 ? "item is" : "items are"} expiring within 30 days.
         </div>
       )}
+
+      {/* Status filter */}
+      <div className="flex gap-3 mb-6 flex-wrap">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded border border-border bg-background px-3 py-1.5 text-sm"
+        >
+          <option value="">All statuses</option>
+          {ALL_STATUSES.map((s) => (
+            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+          ))}
+        </select>
+      </div>
 
       {loading && <p className="text-muted-foreground text-sm">Loading…</p>}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {!loading && !error && items.length === 0 && (
         <p className="text-muted-foreground text-sm">
-          No compliance items in the review queue. All items are up to date.
+          {statusFilter ? `No compliance items with status "${STATUS_LABELS[statusFilter as ComplianceStatus] ?? statusFilter}".` : "No compliance items yet."}
         </p>
       )}
 
@@ -207,9 +261,11 @@ export default function CompliancePage() {
                 <th className="px-4 py-2 text-left font-medium">Name</th>
                 <th className="px-4 py-2 text-left font-medium">Kind</th>
                 <th className="px-4 py-2 text-left font-medium">Expires</th>
+                <th className="px-4 py-2 text-left font-medium">Status</th>
                 <th className="px-4 py-2 text-left font-medium">State</th>
                 <th className="px-4 py-2 text-left font-medium">Jurisdiction</th>
                 <th className="px-4 py-2 text-left font-medium">Owner</th>
+                <th className="px-4 py-2 text-left font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -228,14 +284,26 @@ export default function CompliancePage() {
                     {item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    {item.state === "expired" ? (
-                      <Badge variant="destructive">Expired</Badge>
+                    <Badge variant={STATUS_VARIANT[item.status]}>
+                      {STATUS_LABELS[item.status]}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    {item.temporalState ? (
+                      <Badge variant={TEMPORAL_VARIANT[item.temporalState]}>
+                        {TEMPORAL_LABELS[item.temporalState]}
+                      </Badge>
                     ) : (
-                      <Badge variant="warning">Expiring soon</Badge>
+                      <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{item.jurisdiction ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{item.obligationOwner ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <Link href={`/owner/compliance/${item.id}`} className="text-primary hover:underline text-sm">
+                      View
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

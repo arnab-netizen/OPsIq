@@ -93,8 +93,8 @@ export async function createBusinessRisk(input: CreateBusinessRiskInput) {
   const impact = clamp100(input.impact ?? 50);
   const severity = computeSeverity(likelihood, impact);
 
-  return db.$transaction(async (tx: Prisma.TransactionClient) => {
-    const risk = await tx.businessRiskEntry.create({
+  const risk = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.businessRiskEntry.create({
       data: {
         workspaceId: input.workspaceId,
         riskCode: input.riskCode.trim().toUpperCase(),
@@ -117,14 +117,31 @@ export async function createBusinessRisk(input: CreateBusinessRiskInput) {
         workspaceId: input.workspaceId,
         actorId: input.actorId,
         entityType: "BusinessRiskEntry",
-        entityId: risk.id,
-        payload: { riskCode: risk.riskCode, category: input.category, severity },
+        entityId: created.id,
+        payload: { riskCode: created.riskCode, category: input.category, severity },
       },
       tx,
     );
 
-    return risk;
+    return created;
   });
+
+  if (severity >= CRITICAL_SEVERITY_THRESHOLD) {
+    const { createAlert } = await import("@/services/alerts/alert-service");
+    await createAlert({
+      workspaceId: input.workspaceId,
+      userId: input.actorId,
+      type: "threshold_breach",
+      channel: "in_app",
+      severity: "critical",
+      message: `Critical risk identified: ${risk.riskCode}`,
+      entityType: "BusinessRiskEntry",
+      entityId: risk.id,
+      idempotencyKey: `risk_critical_${risk.id}`,
+    }).catch(() => {});
+  }
+
+  return risk;
 }
 
 export async function updateBusinessRisk(input: UpdateBusinessRiskInput) {
@@ -189,6 +206,7 @@ export async function listBusinessRisks(
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.category ? { category: opts.category } : {}),
     },
+    include: { taskLinks: { select: { id: true, taskId: true, linkType: true, createdAt: true } } },
     orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
   });
 }
@@ -196,7 +214,268 @@ export async function listBusinessRisks(
 export async function getBusinessRisk(workspaceId: string, riskId: string) {
   const risk = await db.businessRiskEntry.findFirst({
     where: { id: riskId, workspaceId },
+    include: { taskLinks: { select: { id: true, taskId: true, linkType: true, linkedBy: true, createdAt: true } } },
   });
   if (!risk) throw new NotFoundError("BusinessRiskEntry", riskId);
   return risk;
+}
+
+// ─── Task linkage ─────────────────────────────────────────────────────────────
+
+export interface LinkRiskTaskInput {
+  workspaceId: string;
+  riskId: string;
+  taskId: string;
+  linkType?: "MITIGATION" | "EVIDENCE";
+  actorId: string;
+}
+
+export async function linkTaskToRisk(input: LinkRiskTaskInput) {
+  // Verify risk belongs to workspace
+  const risk = await db.businessRiskEntry.findFirst({
+    where: { id: input.riskId, workspaceId: input.workspaceId },
+    select: { id: true },
+  });
+  if (!risk) throw new NotFoundError("BusinessRiskEntry", input.riskId);
+
+  // Verify task belongs to workspace (cross-workspace guard)
+  const task = await db.delegatedTask.findFirst({
+    where: { id: input.taskId, workspaceId: input.workspaceId },
+    select: { id: true },
+  });
+  if (!task) throw new NotFoundError("DelegatedTask", input.taskId);
+
+  const link = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await (tx as unknown as { riskTaskLink: { upsert(a: unknown): Promise<unknown> } }).riskTaskLink.upsert({
+      where: { workspaceId_riskId_taskId: { workspaceId: input.workspaceId, riskId: input.riskId, taskId: input.taskId } },
+      create: {
+        workspaceId: input.workspaceId,
+        riskId: input.riskId,
+        taskId: input.taskId,
+        linkType: input.linkType ?? "MITIGATION",
+        linkedBy: input.actorId,
+      },
+      update: { linkType: input.linkType ?? "MITIGATION" },
+    });
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OWNER_RISK_TASK_LINKED,
+        workspaceId: input.workspaceId,
+        actorId: input.actorId,
+        entityType: "BusinessRiskEntry",
+        entityId: input.riskId,
+        payload: { taskId: input.taskId, linkType: input.linkType ?? "MITIGATION" },
+      },
+      tx,
+    );
+    return created;
+  });
+  return link;
+}
+
+// ─── Lifecycle transitions ────────────────────────────────────────────────────
+
+export interface ReviewRiskInput {
+  workspaceId: string;
+  riskId: string;
+  actorId: string;
+  newStatus: "MITIGATING" | "ACCEPTED" | "RESOLVED" | "CLOSED" | "ASSESSED";
+  residualRisk?: number | null;
+  acceptanceRationale?: string | null;
+  reviewNotes?: string | null;
+  reviewDueDate?: Date | null;
+}
+
+const CRITICAL_SEVERITY_THRESHOLD = 75;
+// Only RESOLVED and CLOSED unconditionally resolve alerts.
+// ACCEPTED resolves alerts only when acceptanceRationale is recorded (authorized acceptance).
+// MITIGATING, ASSESSED, IDENTIFIED remain active — mitigation underway ≠ remediation verified.
+const RISK_RESOLUTION_STATUSES = new Set(["RESOLVED", "CLOSED"]);
+
+const VALID_REVIEW_TRANSITIONS: Record<string, string[]> = {
+  IDENTIFIED:  ["ASSESSED", "MITIGATING", "ACCEPTED", "CLOSED"],
+  ASSESSED:    ["MITIGATING", "ACCEPTED", "CLOSED"],
+  MITIGATING:  ["ASSESSED", "RESOLVED", "ACCEPTED", "CLOSED"],
+  ACCEPTED:    ["MITIGATING", "RESOLVED", "CLOSED"],
+  RESOLVED:    ["CLOSED", "IDENTIFIED"],
+  CLOSED:      [],
+  TRANSFERRED: ["CLOSED"],
+};
+
+export async function reviewRisk(input: ReviewRiskInput) {
+  const existing = await db.businessRiskEntry.findFirst({
+    where: { id: input.riskId, workspaceId: input.workspaceId },
+    select: { id: true, status: true, riskCode: true, severity: true, reviewDueDate: true },
+  });
+  if (!existing) throw new NotFoundError("BusinessRiskEntry", input.riskId);
+
+  const allowed = VALID_REVIEW_TRANSITIONS[existing.status] ?? [];
+  if (!allowed.includes(input.newStatus)) {
+    throw new ValidationError(
+      `Illegal risk transition: ${existing.status} → ${input.newStatus}. Allowed: ${allowed.join(", ") || "none"}`
+    );
+  }
+
+  const now = new Date();
+  const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.businessRiskEntry.update({
+      where: { id: input.riskId },
+      data: {
+        status: input.newStatus,
+        reviewedAt: now,
+        ...(input.residualRisk !== undefined ? { residualRisk: input.residualRisk } : {}),
+        ...(input.acceptanceRationale !== undefined ? { acceptanceRationale: input.acceptanceRationale } : {}),
+        ...(input.reviewDueDate !== undefined ? { reviewDueDate: input.reviewDueDate } : {}),
+      },
+    });
+
+    let eventName: AuditEventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_REVIEW_COMPLETED;
+    if (input.newStatus === "ACCEPTED") eventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_ACCEPTED;
+    else if (input.newStatus === "CLOSED" || input.newStatus === "RESOLVED") eventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_CLOSED;
+
+    await emitAuditEvent(
+      {
+        eventName,
+        workspaceId: input.workspaceId,
+        actorId: input.actorId,
+        entityType: "BusinessRiskEntry",
+        entityId: input.riskId,
+        payload: {
+          previousStatus: existing.status,
+          newStatus: input.newStatus,
+          residualRisk: input.residualRisk,
+          acceptanceRationale: input.acceptanceRationale,
+        },
+      },
+      tx,
+    );
+    return updated;
+  });
+
+  // Post-transaction alert integration (best effort — risk is already committed)
+  const effectiveReviewDueDate =
+    input.reviewDueDate !== undefined ? input.reviewDueDate : existing.reviewDueDate;
+
+  // Alerts are resolved when:
+  //   - risk reaches RESOLVED or CLOSED (remediation verified / lifecycle complete)
+  //   - risk is ACCEPTED with an explicit rationale (owner-authorized acceptance)
+  // MITIGATING does NOT resolve alerts — work underway ≠ remediation verified.
+  const resolvesAlerts =
+    RISK_RESOLUTION_STATUSES.has(input.newStatus) ||
+    (input.newStatus === "ACCEPTED" && !!input.acceptanceRationale);
+
+  if (resolvesAlerts) {
+    // Resolve any active critical or overdue alerts
+    const active = await db.alert.findMany({
+      where: {
+        workspaceId: input.workspaceId,
+        idempotencyKey: { in: [`risk_critical_${input.riskId}`, `risk_overdue_${input.riskId}`] },
+        resolvedAt: null,
+      },
+      select: { id: true },
+    }).catch(() => [] as Array<{ id: string }>);
+    if (active.length > 0) {
+      const { resolveAlert } = await import("@/services/alerts/alert-service");
+      for (const a of active) {
+        await resolveAlert(a.id, input.workspaceId, input.actorId).catch(() => {});
+      }
+    }
+  } else {
+    // Non-resolving statuses (IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED w/o rationale):
+    // keep or create alerts as appropriate.
+    const { createAlert } = await import("@/services/alerts/alert-service");
+    if (existing.severity >= CRITICAL_SEVERITY_THRESHOLD) {
+      await createAlert({
+        workspaceId: input.workspaceId,
+        userId: input.actorId,
+        type: "threshold_breach",
+        channel: "in_app",
+        severity: "critical",
+        message: `Critical risk under review: ${existing.riskCode}`,
+        entityType: "BusinessRiskEntry",
+        entityId: input.riskId,
+        idempotencyKey: `risk_critical_${input.riskId}`,
+      }).catch(() => {});
+    }
+    if (effectiveReviewDueDate && effectiveReviewDueDate < now) {
+      await createAlert({
+        workspaceId: input.workspaceId,
+        userId: input.actorId,
+        type: "blocked",
+        channel: "in_app",
+        severity: "high",
+        message: `Risk review overdue: ${existing.riskCode}`,
+        entityType: "BusinessRiskEntry",
+        entityId: input.riskId,
+        idempotencyKey: `risk_overdue_${input.riskId}`,
+      }).catch(() => {});
+    }
+  }
+
+  return result;
+}
+
+// ─── Overdue risk alert evaluation ───────────────────────────────────────────
+//
+// Called best-effort from the owner now-view on every load (and from any other
+// evaluation seam that has a valid actorId). Frequency: per owner now-view request.
+// Limitation: no background scheduler — alerts surface only when the view is loaded.
+
+export async function evaluateOverdueRiskAlerts(
+  workspaceId: string,
+  actorId: string,
+  now: Date = new Date(),
+): Promise<void> {
+  // Query non-terminal risks with reviewDueDate in the past (bounded at 500)
+  const overdueRisks = await db.businessRiskEntry.findMany({
+    where: {
+      workspaceId,
+      reviewDueDate: { lt: now },
+      status: { notIn: ["RESOLVED", "CLOSED"] },
+    },
+    select: { id: true, riskCode: true },
+    take: 500,
+  }).catch(() => [] as Array<{ id: string; riskCode: string }>);
+
+  if (overdueRisks.length > 0) {
+    const { createAlert } = await import("@/services/alerts/alert-service");
+    for (const risk of overdueRisks) {
+      await createAlert({
+        workspaceId,
+        userId: actorId,
+        type: "blocked",
+        channel: "in_app",
+        severity: "high",
+        message: `Risk review overdue: ${risk.riskCode}`,
+        entityType: "BusinessRiskEntry",
+        entityId: risk.id,
+        idempotencyKey: `risk_overdue_${risk.id}`,
+      }).catch(() => {});
+    }
+  }
+
+  // Resolve stale overdue alerts for risks that have since been resolved/closed
+  const resolvedRisks = await db.businessRiskEntry.findMany({
+    where: { workspaceId, status: { in: ["RESOLVED", "CLOSED"] } },
+    select: { id: true },
+    take: 500,
+  }).catch(() => [] as Array<{ id: string }>);
+
+  if (resolvedRisks.length > 0) {
+    const staleAlerts = await db.alert.findMany({
+      where: {
+        workspaceId,
+        idempotencyKey: { in: resolvedRisks.map((r: { id: string }) => `risk_overdue_${r.id}`) },
+        resolvedAt: null,
+      },
+      select: { id: true },
+    }).catch(() => [] as Array<{ id: string }>);
+
+    if (staleAlerts.length > 0) {
+      const { resolveAlert } = await import("@/services/alerts/alert-service");
+      for (const a of staleAlerts) {
+        await resolveAlert(a.id, workspaceId, actorId).catch(() => {});
+      }
+    }
+  }
 }

@@ -11,6 +11,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Badge, Button, Modal, Input, Select, Textarea } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
@@ -294,12 +295,17 @@ export default function RisksPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => openEdit(risk)}
-                      className="text-primary hover:underline text-sm"
-                    >
-                      Edit
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => openEdit(risk)}
+                        className="text-primary hover:underline text-sm"
+                      >
+                        Edit
+                      </button>
+                      <Link href={`/owner/risks/${risk.id}`} className="text-primary hover:underline text-sm">
+                        View
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

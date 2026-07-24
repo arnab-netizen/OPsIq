@@ -1344,8 +1344,17 @@ async function buildBusinessOperatingSystem(
 export async function getOwnerNowView(
   workspaceId: string,
   businessId: string | null,
-  injected?: GuidanceDeps
+  injected?: GuidanceDeps,
+  actorId?: string,
 ): Promise<OwnerNowViewPayload> {
+  // Best-effort overdue risk alert evaluation on every owner now-view load.
+  if (actorId) {
+    import("@/services/owner-mode/business-risk.service")
+      .then(({ evaluateOverdueRiskAlerts }) =>
+        evaluateOverdueRiskAlerts(workspaceId, actorId).catch(() => {})
+      )
+      .catch(() => {});
+  }
   const deps = injected ?? (await resolveDefaultDeps());
   const { ctx, state, ag, raw, avgActiveMargin, pipelineSummary } = await assembleGuidanceContext(workspaceId, businessId, deps);
 

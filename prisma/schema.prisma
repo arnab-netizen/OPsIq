@@ -1334,6 +1334,8 @@ model OwnerComplianceItem {
   name                 String
   reference            String?
   expiresAt            DateTime? @map("expires_at")
+  /// Managed status: active | evidence_pending | review_pending | compliant | breached | waived
+  /// Temporal states (upcoming/overdue/action_required) are computed from expiresAt.
   status               String    @default("active")
   createdByUserId      String    @map("created_by_user_id") @db.Uuid
   /// Where this obligation applies (e.g. "England and Wales", "UK", "Federal").
@@ -1350,11 +1352,39 @@ model OwnerComplianceItem {
   penaltyDescription   String?   @map("penalty_description")
   /// Provenance: "owner_input" | "professional_input" | "authoritative_document".
   provenanceSource     String?   @map("provenance_source")
+  /// When this item was last formally reviewed.
+  reviewedAt           DateTime? @map("reviewed_at")
+  /// Who performed the last formal review.
+  reviewedBy           String?   @map("reviewed_by") @db.Uuid
+  /// Notes from the last review action.
+  complianceNotes      String?   @map("compliance_notes") @db.Text
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
 
+  taskLinks            ComplianceTaskLink[]
+
   @@index([workspaceId, kind])
+  @@index([workspaceId, status])
   @@map("owner_compliance_item")
+}
+
+/// Bundle 3.4 — Compliance ↔ Task linkage. One obligation may have many remediation/evidence tasks.
+/// Workspace-scoped with duplicate-prevention via unique(workspaceId, complianceItemId, taskId).
+model ComplianceTaskLink {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid
+  complianceItemId String   @map("compliance_item_id") @db.Uuid
+  taskId           String   @map("task_id") @db.Uuid
+  linkType         String   @default("REMEDIATION") @map("link_type") // REMEDIATION | EVIDENCE
+  linkedBy         String   @map("linked_by") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  complianceItem   OwnerComplianceItem @relation(fields: [complianceItemId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, complianceItemId, taskId], map: "compliance_task_links_workspace_pair")
+  @@index([workspaceId, complianceItemId], map: "ctl_compliance_idx")
+  @@index([workspaceId, taskId], map: "ctl_task_idx")
+  @@map("compliance_task_links")
 }
 
 /// Jarvis 360 Slice 12 — do-not-repeat rule. A dedicated, fully-migrated store for
@@ -5979,8 +6009,11 @@ model BusinessRiskEntry {
   likelihood       Int       @default(50)              // 0-100
   impact           Int       @default(50)              // 0-100
   severity         Int       @default(50)              // computed: Math.round(likelihood * impact / 100)
-  status           String    @default("IDENTIFIED")    // IDENTIFIED | MITIGATING | ACCEPTED | RESOLVED | TRANSFERRED
-  mitigationAction String?   @map("mitigation_action") @db.Text
+  status           String    @default("IDENTIFIED")    // IDENTIFIED | MITIGATING | ACCEPTED | RESOLVED | TRANSFERRED | CLOSED
+  mitigationAction    String?   @map("mitigation_action") @db.Text
+  mitigationOwner     String?   @map("mitigation_owner")  // Name/role of person responsible for mitigation
+  reviewDueDate       DateTime? @map("review_due_date")    // When the risk must next be reviewed
+  acceptanceRationale String?   @map("acceptance_rationale") @db.Text  // Why residual risk was accepted
   residualRisk     Int?      @map("residual_risk")    // 0-100 after mitigation
   linkedObjectiveId      String?  @map("linked_objective_id") @db.Uuid
   linkedStartupSessionId String?  @map("linked_startup_session_id") @db.Uuid
@@ -5992,12 +6025,33 @@ model BusinessRiskEntry {
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
+  taskLinks              RiskTaskLink[]
+
   @@unique([workspaceId, riskCode])
   @@index([workspaceId, status])
   @@index([workspaceId, category])
   @@index([workspaceId, severity])
   @@index([workspaceId, originBlueprintId])
   @@map("business_risk_entries")
+}
+
+/// Bundle 3.4 — Risk ↔ Task linkage. One risk may have many mitigation/evidence tasks.
+/// Workspace-scoped with duplicate-prevention via unique(workspaceId, riskId, taskId).
+model RiskTaskLink {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  riskId      String   @map("risk_id") @db.Uuid
+  taskId      String   @map("task_id") @db.Uuid
+  linkType    String   @default("MITIGATION") @map("link_type") // MITIGATION | EVIDENCE
+  linkedBy    String   @map("linked_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  risk        BusinessRiskEntry @relation(fields: [riskId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, riskId, taskId], map: "risk_task_links_workspace_pair")
+  @@index([workspaceId, riskId], map: "rtl_risk_idx")
+  @@index([workspaceId, taskId], map: "rtl_task_idx")
+  @@map("risk_task_links")
 }
 
 /// Workspace-scoped KPI ownership — links a metric to an owner and review cadence.
