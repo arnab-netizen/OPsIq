@@ -142,6 +142,18 @@ stages:
     name: Business Condition Profile Operations
     overall_status: COMPLETE
     bundles:
+      - id: bundle-4
+        name: Business Condition Profile Operations (parent — superseded by sub-bundles 4.1+4.2)
+        status: CLOSED
+        post_merge_evidence:
+          pr_sha: "cda988e7267552294f6b5c597d1bed0fb8979e53"
+          merge_sha: "5bc1fc013cd52064afcffb65505d7359da872718"
+          main_integration_run: "30152600373"
+          db_verification_run: "30147768617"
+          verification_date: "2026-07-25"
+          gate_result: "post_merge_main_integration_completed_success"
+          notes: "Parent bundle file retained; closed via sub-bundles 4.1 and 4.2"
+
       - id: bundle-4.1
         name: Stage 3 Signal Wiring
         status: CLOSED
@@ -181,6 +193,18 @@ stages:
     name: Integration Fabric and Connector Registry
     overall_status: COMPLETE
     bundles:
+      - id: bundle-5
+        name: Integration Fabric and Connector Registry (parent — superseded by sub-bundles 5.1+5.2+5.3)
+        status: CLOSED
+        post_merge_evidence:
+          pr_sha: "cda988e7267552294f6b5c597d1bed0fb8979e53"
+          merge_sha: "5bc1fc013cd52064afcffb65505d7359da872718"
+          main_integration_run: "30152600373"
+          db_verification_run: "30147768617"
+          verification_date: "2026-07-25"
+          gate_result: "post_merge_main_integration_completed_success"
+          notes: "Parent bundle file retained; closed via sub-bundles 5.1, 5.2, and 5.3"
+
       - id: bundle-5.1
         name: Integration Fabric Contracts
         status: CLOSED
