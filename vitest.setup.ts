@@ -29,6 +29,10 @@ beforeAll(async () => {
     const { getDbInstance } = await import("./src/lib/db");
     await getDbInstance();
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith("[vitest]")) {
+      // Test file mocks @/lib/db without getDbInstance — unit test, DB init skipped.
+      return;
+    }
     console.error("Failed to initialize database in test setup:", error);
     throw error;
   }
