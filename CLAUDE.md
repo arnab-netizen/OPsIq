@@ -95,6 +95,64 @@ Ten rules (enforced):
 9. **Commit message states root cause and local verification**: Must include defect class and "ran vitest run X, Y/Y pass".
 10. **No new phase until previous phase CI is green on main**: Resolve all CI failures before starting new feature work.
 
+## Standard validation commands
+
+Run in this order before any commit. Stop at first failure:
+```
+npx tsc --noEmit
+npx prisma validate
+npm run build
+npx vitest run <affected-test-file>
+npm run lint
+```
+
+For Prisma schema changes, also run: `npx prisma format`
+
+## Destructive-operation boundaries
+
+**MAY NOT without explicit owner authority:**
+- `git push --force` or `git push --force-with-lease` to main
+- `git merge` into main (only via CI-gated PR)
+- `git reset --hard` discarding committed work
+- Prisma migration on a live database with existing data
+- Deleting governed records (`CustomerRecord`, `PurchaseOrder`, `MarketingCampaign`, `OwnerApprovalRequest`, `AlertRule`, `ComplianceDeadline`)
+- Rotating or exposing secrets
+- Sending customer-facing communications
+- Spending money or executing external financial transactions
+- Modifying `audit_log` rows in any way
+
+**MAY freely without prompt:**
+- All read operations (git log, diff, status, fetch, branch, ls-tree, show)
+- npm run build, lint, tsc --noEmit, vitest run, prisma validate, prisma format
+- git add, git commit, git push -u origin (feature branch only)
+- Creating or modifying files on the active feature branch
+- Running local services or test databases
+
+## Exact-SHA merge policy
+
+A PR may be merged into main ONLY when:
+1. Owner issues explicit written authorization at a named exact HEAD SHA.
+2. All blocking CI checks are green at that exact SHA.
+3. The PR is cleanly mergeable (no conflicts) at that SHA.
+4. The authorization is invalidated if the PR HEAD advances past the named SHA.
+
+Authorization for one SHA does not carry over to any other SHA.
+
+## Owner approval boundaries
+
+Claude must NEVER:
+- Self-accept any stage or bundle
+- Mark any bundle CLOSED without post-merge CI evidence
+- Begin a new stage without explicit owner acceptance of the preceding stage
+- Weaken auth, workspace enforcement, or DTO redaction to make gates green
+- Merge PRs autonomously
+
+## Active execution harness
+
+Read `.claude/active-state.json` for the current factory stage, active bundle, blocking dependencies, and next target. Keep that file updated — it is the lightweight operating state. `execution_state.json` contains full historical record.
+
+Read `docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml` for the evidence ledger. Bundles transition PENDING → CLOSED only when all four evidence fields (`pr_sha`, `merge_sha`, `main_integration_run`, `db_verification_run`) are non-null.
+
 ## Response format
 When asked to implement a slice, return exactly:
 A. Files created

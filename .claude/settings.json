@@ -1,0 +1,55 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)",
+      "Bash(git fetch:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push -u origin:*)",
+      "Bash(git stash:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git show:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run lint:ratchet:*)",
+      "Bash(npm ci:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx prisma validate:*)",
+      "Bash(npx prisma format:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(node scripts/:*)",
+      "Bash(ls:*)",
+      "Bash(find .:*)",
+      "Bash(python3:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /home/user/OPsIq && if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'schema\\.prisma'; then echo '[harness] prisma/schema.prisma changed — validating' && npx prisma validate 2>&1 | tail -8; fi"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '\"git commit\"\\|git commit -'; then cd /home/user/OPsIq && node scripts/scan-recurrence-defects.mjs --pre-commit 2>/dev/null | grep -E 'VIOLATION|ERROR' | head -5; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
