@@ -1,0 +1,91 @@
+{
+  "_schema": "harness-active-state/1.0",
+  "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
+  "last_updated": "2026-07-25",
+
+  "factory_stage": "COMPLETION_FACTORY_ALL_BUNDLES_CLOSED_AWAITING_OWNER_ACCEPTANCE",
+  "active_bundle": null,
+  "blocked_by": ["OWNER_STAGE_3_ACCEPTANCE", "OWNER_COMPLETION_FACTORY_ACCEPTANCE"],
+
+  "owner_outcome": "Owner has a fully operational OpsIQ: customers, inventory, procurement, campaigns, complaints, action assignments, approvals, onboarding, SOP intelligence, BCP, integration fabric, consulting mode, and deployment readiness — all lifecycle-managed and workspace-isolated",
+
+  "current_gap": "Awaiting explicit owner acceptance of Factory Stage 3 and the Completion Factory bundle closure before any new stage work begins",
+  "next_target": "Owner decision on acceptance, then any new stage work or deployment-readiness hardening",
+
+  "main_sha": "7a19de9dd8436ee9cf8e2f0d746195a04bc49405",
+  "prs_merged_to_main": [
+    {
+      "number": 251,
+      "title": "Bundle 3.5-3.10 Owner Mode — Stage 3 complete",
+      "head_sha": "cda988e7267552294f6b5c597d1bed0fb8979e53",
+      "merge_sha": "5bc1fc013cd52064afcffb65505d7359da872718",
+      "main_integration_run": "30152600373",
+      "result": "GREEN (after corrective PR #252)"
+    },
+    {
+      "number": 252,
+      "title": "fix(ci): vitest.setup.ts must not rethrow Vitest mock-validation error",
+      "head_sha": "db4506049a5cc99a7ab6d2576ed7bc2a743dee44",
+      "merge_sha": "45694526099aa5b092631fa2cc6d037a5aa1c3b9",
+      "main_integration_run": "30152600373",
+      "result": "GREEN"
+    },
+    {
+      "number": 253,
+      "title": "FACTORY STAGE 3 — Core Business-Domain Completion (3B-3F)",
+      "head_sha": "ff34141056d9d47f053372fafe9a033d86d98928",
+      "merge_sha": "7a19de9dd8436ee9cf8e2f0d746195a04bc49405",
+      "main_integration_run": "30162157766",
+      "result": "GREEN — 29488/29488 tests, 0 failed",
+      "domains": ["3B-CustomerRecord", "3C-StockItem+PurchaseOrder", "3D-MarketingCampaign", "3E-EmailTransport", "3F-EntityWorkspaceId"]
+    }
+  ],
+
+  "bundle_status": {
+    "bundle-3.4": "CLOSED",
+    "bundle-3.5": "CLOSED",
+    "bundle-3.6": "CLOSED",
+    "bundle-3.7": "CLOSED",
+    "bundle-3.8": "CLOSED",
+    "bundle-3.9": "CLOSED",
+    "bundle-3.10": "CLOSED",
+    "bundle-4": "CLOSED",
+    "bundle-4.1": "CLOSED",
+    "bundle-4.2": "CLOSED",
+    "bundle-5": "CLOSED",
+    "bundle-5.1": "CLOSED",
+    "bundle-5.2": "CLOSED",
+    "bundle-5.3": "CLOSED",
+    "bundle-6": "CLOSED",
+    "bundle-7": "CLOSED"
+  },
+
+  "ledger": "docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml",
+  "ledger_status": "ALL_STAGES_3_THROUGH_7_CLOSED",
+
+  "scope_drift": "NO",
+  "stage_4_begun": false,
+  "completion_factory_status": "COMPLETE — all components verified per chore(factory) commit 7e29d160",
+
+  "operating_loop": [
+    "main-truth",
+    "owner-outcome",
+    "parallel-specialist-agents",
+    "structured-gap-synthesis",
+    "plan-mode",
+    "checkpoint",
+    "one-write-owner-implementation",
+    "hook-driven-fast-validation",
+    "adversarial-agent",
+    "dependency-aware-tests",
+    "postgres-provider-browser-proof",
+    "exact-sha-merge-candidate-ci",
+    "readonly-acceptance-agent",
+    "owner-merge-authorization",
+    "main-integration",
+    "deployment-telemetry-proof",
+    "evidence-artifact",
+    "capability-closed",
+    "next-highest-dependency-operational-gap"
+  ]
+}
