@@ -325,7 +325,7 @@ export async function createNonComplianceAlert(
 
   // Trigger business condition re-assessment (fire-and-forget, Bundle 4.1).
   // SOP non-compliance is a contradicting evidence signal → owner reassessment event.
-  void fireComplianceReAssessmentSignal(workspaceId, actorId, alert.id);
+  void fireComplianceReAssessmentSignal(workspaceId, actorId, alert.id, sopDocumentId);
 
   return toPublicAlertDTO(alert as AlertRow);
 }
@@ -334,13 +334,20 @@ async function fireComplianceReAssessmentSignal(
   workspaceId: string,
   actorId: string,
   alertId: string,
+  sopDocumentId: string,
 ): Promise<void> {
   const { routeSopComplianceSignal } = await import(
     "@/services/owner-mode/stage3-signal-router.service"
   );
-  // businessId is not yet available on SOP alerts — signal is wired but skips until
-  // OwnerSopNonComplianceAlert gains a businessId field (Stage 5+).
-  await routeSopComplianceSignal(workspaceId, actorId, alertId, null);
+  // Look up businessId from the SOP document record so the reassessment event
+  // can be attributed to the correct business without requiring a schema change
+  // on OwnerSopNonComplianceAlert.
+  const sopDoc = await db.ownerSopDocument.findFirst({
+    where: { id: sopDocumentId, workspaceId },
+    select: { businessId: true },
+  });
+  const businessId = sopDoc?.businessId ?? null;
+  await routeSopComplianceSignal(workspaceId, actorId, alertId, businessId);
 }
 
 // ─── List Training Assignments ────────────────────────────────────────────────

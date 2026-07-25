@@ -605,6 +605,7 @@ export const AUDIT_EVENTS = {
   OWNER_ACTION_REASSIGNED: "owner.action_reassigned",
   OWNER_ACTION_OUTCOME_CLOSED: "owner.action_outcome_closed",
   OWNER_ACTION_STALL_DETECTED: "owner.action_stall_detected",
+  OWNER_ACTION_APPROVAL_GRANTED: "owner.action_approval_granted",
 
   // Bundle 3.5 — Customer Complaint and Service Recovery
   COMPLAINT_CREATED: "complaint.created",

@@ -340,6 +340,10 @@ export async function makeDecision(input: MakeDecisionInput): Promise<PublicAppr
     void fireRescopeSignal(workspaceId, actorId, approvalId, approval.businessId, approval.actionId);
   }
 
+  if (decision === "APPROVED" && approval.actionId) {
+    void fireApprovalGrantedTrigger(workspaceId, actorId, approvalId, approval.actionId);
+  }
+
   const reloaded = await loadApproval(approvalId, workspaceId);
   return toPublicDTO(reloaded);
 }
@@ -355,6 +359,35 @@ async function fireRescopeSignal(
     "@/services/owner-mode/stage3-signal-router.service"
   );
   await routeApprovalRejectionSignal(workspaceId, actorId, approvalId, businessId, actionId);
+}
+
+async function fireApprovalGrantedTrigger(
+  workspaceId: string,
+  actorId: string,
+  approvalId: string,
+  actionId: string,
+): Promise<void> {
+  // Find the linked OwnerActionAssignment to record the approval event.
+  const assignment = await db.ownerActionAssignment.findFirst({
+    where: { workspaceId, actionId },
+    select: { id: true },
+  });
+  if (!assignment) return;
+
+  // Touch updatedBy to mark that an approval decision was recorded for this assignment.
+  await db.ownerActionAssignment.update({
+    where: { id: assignment.id },
+    data: { updatedBy: actorId },
+  });
+
+  await emitAuditEvent({
+    workspaceId,
+    actorId,
+    eventName: AUDIT_EVENTS.OWNER_ACTION_APPROVAL_GRANTED,
+    entityType: "OwnerActionAssignment",
+    entityId: assignment.id,
+    payload: { approvalId, actionId },
+  });
 }
 
 // ─── Initiate Appeal ─────────────────────────────────────────────────────────

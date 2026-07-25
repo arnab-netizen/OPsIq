@@ -17,6 +17,7 @@ const {
   mockReassignAction,
   mockRecordOutcome,
   mockListAssignments,
+  mockGetBottleneckSummary,
   mockParseRequestBody,
   mockCanonicalJson,
   mockWithCanonical,
@@ -25,6 +26,7 @@ const {
   mockReassignAction: vi.fn(),
   mockRecordOutcome: vi.fn(),
   mockListAssignments: vi.fn(),
+  mockGetBottleneckSummary: vi.fn(),
   mockParseRequestBody: vi.fn(),
   mockCanonicalJson: vi.fn(),
   mockWithCanonical: vi.fn(),
@@ -35,6 +37,7 @@ vi.mock("@/services/owner-mode/owner-action-assignment-lifecycle.service", () =>
   reassignAction: mockReassignAction,
   recordOutcome: mockRecordOutcome,
   listAssignments: mockListAssignments,
+  getBottleneckSummary: mockGetBottleneckSummary,
 }));
 
 vi.mock("@/lib/validation", () => ({
@@ -136,6 +139,15 @@ beforeAll(async () => {
   actionAssignmentsPatch = route.PATCH as unknown as (ctx?: unknown) => Promise<unknown>;
 });
 
+const MOCK_BOTTLENECK = {
+  workspaceId: WS_A,
+  businessId: BIZ_ID,
+  totalAssigned: 10,
+  stalled: 2,
+  failed: 1,
+  bottleneckScore: 0.3,
+};
+
 beforeEach(() => {
   vi.resetAllMocks();
   allowAll();
@@ -145,6 +157,7 @@ beforeEach(() => {
   mockReassignAction.mockResolvedValue({ ...MOCK_ASSIGNMENT, assignedTo: "new@example.com" });
   mockRecordOutcome.mockResolvedValue({ ...MOCK_ASSIGNMENT, status: "COMPLETED" });
   mockListAssignments.mockResolvedValue([MOCK_ASSIGNMENT]);
+  mockGetBottleneckSummary.mockResolvedValue(MOCK_BOTTLENECK);
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -418,6 +431,48 @@ describe("PATCH /api/owner/action-assignments — record_outcome", () => {
     mockParseRequestBody.mockResolvedValueOnce({ ...OUTCOME_INPUT, outcome: "FAILED" });
     await actionAssignmentsPatch(makeCtx({ verifiedWorkspaceId: WS_A }));
     const call = mockRecordOutcome.mock.calls[0][0];
+    expect(call.workspaceId).toBe(WS_A);
+  });
+});
+
+describe("GET /api/owner/action-assignments?mode=bottleneck — owner bottleneck metric", () => {
+  it("calls getBottleneckSummary when mode=bottleneck", async () => {
+    await actionAssignmentsGet(makeCtx({ request: { url: `${BASE_URL}?mode=bottleneck` } }));
+    expect(mockGetBottleneckSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call listAssignments when mode=bottleneck", async () => {
+    await actionAssignmentsGet(makeCtx({ request: { url: `${BASE_URL}?mode=bottleneck` } }));
+    expect(mockListAssignments).not.toHaveBeenCalled();
+  });
+
+  it("passes workspaceId to getBottleneckSummary", async () => {
+    await actionAssignmentsGet(makeCtx({ request: { url: `${BASE_URL}?mode=bottleneck` } }));
+    expect(mockGetBottleneckSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: WS_A })
+    );
+  });
+
+  it("passes businessId query param to getBottleneckSummary", async () => {
+    await actionAssignmentsGet(makeCtx({ request: { url: `${BASE_URL}?mode=bottleneck&businessId=${BIZ_ID}` } }));
+    expect(mockGetBottleneckSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ businessId: BIZ_ID })
+    );
+  });
+
+  it("returns 200 on bottleneck summary", async () => {
+    const result = await actionAssignmentsGet(makeCtx({ request: { url: `${BASE_URL}?mode=bottleneck` } })) as { status: number };
+    expect(result.status).toBe(200);
+  });
+
+  it("returns bottleneckScore in body", async () => {
+    const result = await actionAssignmentsGet(makeCtx({ request: { url: `${BASE_URL}?mode=bottleneck` } })) as { body: { bottleneckScore: number } };
+    expect(typeof result.body.bottleneckScore).toBe("number");
+  });
+
+  it("workspace isolation: bottleneck uses verifiedWorkspaceId only", async () => {
+    await actionAssignmentsGet(makeCtx({ request: { url: `${BASE_URL}?mode=bottleneck` } }));
+    const call = mockGetBottleneckSummary.mock.calls[0][0];
     expect(call.workspaceId).toBe(WS_A);
   });
 });
