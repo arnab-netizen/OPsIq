@@ -97,6 +97,13 @@ export function composeWealthCommandCenter(input: WealthCommandCenterInput): Wea
         : null,
       proofRequirement: startupValidation.validationWorkPackage?.requiredProof ?? null,
       outcomeReviewState: "no_actions_yet",
+      approvalsNeeded: startupValidation.validationWorkPackage?.ownerApprovalRequired
+        ? [`Startup validation approval: ${startupValidation.validationWorkPackage.title}`]
+        : [],
+      exceptions: startupValidation.warnings.filter((w) => w.toLowerCase().includes("not authorized") || w.toLowerCase().includes("validate first")),
+      proofFailed: [],
+      actionsToIgnore: [],
+      stopPivotScaleWarnings: [],
       startupValidation,
       provisional: true,
       warnings: startupValidation.warnings,
@@ -185,6 +192,32 @@ export function composeWealthCommandCenter(input: WealthCommandCenterInput): Wea
       ? "pending_review"
       : "all_reviewed";
 
+  // ---- Phase 25 — Owner Daily Command Center decision surface ----------------
+  const approvalsNeeded: string[] = [];
+  if (financialGovernor?.requiresOwnerApproval) approvalsNeeded.push(`Financial approval needed: ${proposed?.label ?? "spend"}`);
+  if (workPackage?.ownerApprovalRequired) approvalsNeeded.push(`Work Package approval required: ${workPackage.title}`);
+
+  const exceptions: string[] = [];
+  if (unsafe) exceptions.push(`Unsafe/illegal/outside-authority action flagged: "${proposed?.label}"`);
+  if (wisdomAdmission?.decision === "BLOCK") exceptions.push("Business-wisdom gate blocked: unverified high-risk advice.");
+  if (cashSafety && !cashSafety.allowed) exceptions.push(`Cash-safety exception: action blocked (${cashSafety.effectiveState}).`);
+
+  const actionsToIgnore: string[] = [];
+  if (opportunityCost?.betterAlternativeExists && proposed?.label && nextBestMove.decision === "CHOOSE_ALTERNATIVE") {
+    actionsToIgnore.push(proposed.label);
+  }
+
+  const stopPivotScaleWarnings: string[] = [];
+  if (wealthPath?.pathType === "trap_business") {
+    stopPivotScaleWarnings.push("STOP: business model is a wealth trap — stop investing and consider pivot or exit.");
+  }
+  if (wealthPath?.strategicOptions?.includes("exit")) stopPivotScaleWarnings.push("EXIT may be the highest-value option.");
+  if (wealthPath?.strategicOptions?.includes("pivot")) stopPivotScaleWarnings.push("PIVOT to a higher-margin model recommended.");
+  if (wealthPath && ["multi_unit_scalable_business", "asset_light_scalable_service", "technology_product_business"].includes(wealthPath.pathType)
+      && (businessModelQuality?.tier === "strong" || businessModelQuality?.tier === "exceptional")) {
+    stopPivotScaleWarnings.push("SCALE: business model is ready for expansion — seize the window.");
+  }
+
   return {
     mode,
     businessName,
@@ -201,6 +234,11 @@ export function composeWealthCommandCenter(input: WealthCommandCenterInput): Wea
     ownerWorkloadTransfer,
     proofRequirement: workPackage?.requiredProof ?? null,
     outcomeReviewState,
+    approvalsNeeded,
+    exceptions,
+    proofFailed: [],
+    actionsToIgnore,
+    stopPivotScaleWarnings,
     startupValidation: null,
     provisional: wealthPath?.provisionalLowConfidence ?? false,
     warnings,
