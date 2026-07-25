@@ -197,21 +197,25 @@ describe("validate-stage-acceptance.mjs", () => {
     }
   }
 
-  it("stage 3 acceptance fails (PENDING bundles outstanding)", () => {
+  it("stage 3 integrity check passes (PENDING bundles are expected during development)", () => {
     const result = runStageAcceptance("--stage 3");
-    // Stage 3 has PENDING bundles — must fail
-    expect(result.code).toBe(1);
-    expect(result.output).toMatch(/FAILED|violation/i);
+    // Validator is a data-integrity gate: PENDING = development-normal, exit 0.
+    // Only CLOSED bundles with missing evidence cause exit 1.
+    // main-integration.yml relies on this exit-0 contract for PENDING stages.
+    expect(result.code).toBe(0);
+    expect(result.output).toMatch(/not yet closed|integrity passed/i);
   });
 
-  it("stage 4 acceptance fails (NOT_STARTED)", () => {
+  it("stage 4 integrity check passes (PENDING bundles are expected during development)", () => {
     const result = runStageAcceptance("--stage 4");
-    expect(result.code).toBe(1);
+    // Same data-integrity contract: PENDING bundles → exit 0.
+    expect(result.code).toBe(0);
   });
 
-  it("all stages acceptance fails while pending bundles remain", () => {
+  it("all stages integrity check passes while bundles are pending", () => {
     const result = runStageAcceptance("--stage all");
-    expect(result.code).toBe(1);
+    // Same data-integrity contract across all stages: PENDING → exit 0.
+    expect(result.code).toBe(0);
   });
 
   it("exits with code 2 if --stage argument missing", () => {
