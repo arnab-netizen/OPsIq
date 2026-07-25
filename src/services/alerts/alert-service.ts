@@ -354,7 +354,10 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
 
     logger.info("Email alert delivered", { alertId: alert.id, userId: alert.userId });
   } catch (error) {
-    const errorMessage = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+    const errorMessage = classifyOperatorError(
+      error instanceof Error ? error : new Error(String(error)),
+      { context: "network" }
+    ).operatorMessage.slice(0, 500);
 
     // emailSentAt (from claim) is preserved as the attempt timestamp.
     // State: emailSentAt != null + emailError != null = "attempted, failed with error".

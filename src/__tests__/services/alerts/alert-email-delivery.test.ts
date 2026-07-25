@@ -47,7 +47,9 @@ vi.mock("@/lib/workspace-validation", () => ({
   enforceWorkspaceId: vi.fn(),
 }));
 vi.mock("@/lib/operator-error-governance", () => ({
-  classifyOperatorError: vi.fn().mockReturnValue({ operatorMessage: "test error" }),
+  classifyOperatorError: vi.fn().mockImplementation((err: unknown) => ({
+    operatorMessage: err instanceof Error ? err.message : String(err),
+  })),
 }));
 vi.mock("@/domain/constants/audit-events", () => ({
   AUDIT_EVENTS: {
