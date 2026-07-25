@@ -15,6 +15,7 @@ const {
   mockFindFirstAlert,
   mockCreateAlert,
   mockFindManyAlert,
+  mockFindFirstSopDoc,
   mockEmitAuditEvent,
 } = vi.hoisted(() => ({
   mockFindFirstTraining: vi.fn(),
@@ -25,6 +26,7 @@ const {
   mockFindFirstAlert: vi.fn(),
   mockCreateAlert: vi.fn(),
   mockFindManyAlert: vi.fn(),
+  mockFindFirstSopDoc: vi.fn().mockResolvedValue(null),
   mockEmitAuditEvent: vi.fn(),
 }));
 
@@ -42,11 +44,18 @@ vi.mock("@/lib/db", () => ({
       create: mockCreateAlert,
       findMany: mockFindManyAlert,
     },
+    ownerSopDocument: {
+      findFirst: mockFindFirstSopDoc,
+    },
   },
 }));
 
 vi.mock("@/infra/audit", () => ({
   emitAuditEvent: mockEmitAuditEvent,
+}));
+
+vi.mock("@/services/owner-mode/stage3-signal-router.service", () => ({
+  routeSopComplianceSignal: vi.fn().mockResolvedValue(undefined),
 }));
 
 import {
@@ -468,5 +477,42 @@ describe("static enforcement", () => {
     );
     expect(caps).toContain("SOP_MANAGE");
     expect(caps).toContain('"sop:manage"');
+  });
+});
+
+describe("Bundle 3.9 — SOP non-compliance → businessId-aware reassessment signal", () => {
+  it("createNonComplianceAlert queries OwnerSopDocument for businessId", async () => {
+    mockFindFirstAlert.mockResolvedValue(null);
+    mockCreateAlert.mockResolvedValue(makeAlertRow());
+    mockFindFirstSopDoc.mockResolvedValueOnce({ businessId: "biz00000-0000-0000-0000-000000000001" });
+
+    await createNonComplianceAlert({
+      workspaceId: WS_A, actorId: ACTOR, sopDocumentId: SOP_ID, alertWindow: "2026-W31", complianceRate: 0.4,
+    });
+
+    await new Promise((r) => setImmediate(r));
+    expect(mockFindFirstSopDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: SOP_ID, workspaceId: WS_A }) })
+    );
+  });
+
+  it("signal is fired even when SOP doc has no businessId (graceful null)", async () => {
+    mockFindFirstAlert.mockResolvedValue(null);
+    mockCreateAlert.mockResolvedValue(makeAlertRow());
+    mockFindFirstSopDoc.mockResolvedValueOnce(null);
+
+    await expect(createNonComplianceAlert({
+      workspaceId: WS_A, actorId: ACTOR, sopDocumentId: SOP_ID, alertWindow: "2026-W32", complianceRate: 0.3,
+    })).resolves.toBeDefined();
+  });
+
+  it("signal is not fired for idempotent duplicate alert (no extra doc query)", async () => {
+    mockFindFirstAlert.mockResolvedValue(makeAlertRow());
+
+    await createNonComplianceAlert({
+      workspaceId: WS_A, actorId: ACTOR, sopDocumentId: SOP_ID, alertWindow: "2026-W30", complianceRate: 0.5,
+    });
+
+    expect(mockFindFirstSopDoc).not.toHaveBeenCalled();
   });
 });

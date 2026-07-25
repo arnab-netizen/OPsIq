@@ -170,8 +170,10 @@ describe("REMAINING_STAGE_ACCEPTANCE.yaml — ledger consistency", () => {
     }
   });
 
-  it("stage-3 has BLOCKED_ON_BUNDLES acceptance status", () => {
-    expect(ledgerContent).toContain("BLOCKED_ON_BUNDLES");
+  it("stage-3 acceptance status is CLOSED (all bundles merged)", () => {
+    // Stage 3 acceptance was CLOSED on 2026-07-25 via PR #251 + PR #252 corrective fix
+    expect(ledgerContent).toContain("stage-3:");
+    expect(ledgerContent).toMatch(/stage-3[\s\S]*?overall_status: COMPLETE/);
   });
 });
 
@@ -197,21 +199,20 @@ describe("validate-stage-acceptance.mjs", () => {
     }
   }
 
-  it("stage 3 acceptance fails (PENDING bundles outstanding)", () => {
+  it("stage 3 acceptance passes (all bundles CLOSED — PR #251 + PR #252)", () => {
     const result = runStageAcceptance("--stage 3");
-    // Stage 3 has PENDING bundles — must fail
-    expect(result.code).toBe(1);
-    expect(result.output).toMatch(/FAILED|violation/i);
+    expect(result.code).toBe(0);
+    expect(result.output).toMatch(/PASS|closed|complete/i);
   });
 
-  it("stage 4 acceptance fails (NOT_STARTED)", () => {
+  it("stage 4 acceptance passes (bundles 4.1 + 4.2 CLOSED)", () => {
     const result = runStageAcceptance("--stage 4");
-    expect(result.code).toBe(1);
+    expect(result.code).toBe(0);
   });
 
-  it("all stages acceptance fails while pending bundles remain", () => {
+  it("all stages acceptance passes (stages 3-7 all CLOSED)", () => {
     const result = runStageAcceptance("--stage all");
-    expect(result.code).toBe(1);
+    expect(result.code).toBe(0);
   });
 
   it("exits with code 2 if --stage argument missing", () => {

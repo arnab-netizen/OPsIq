@@ -17,6 +17,7 @@ import {
   reassignAction,
   recordOutcome,
   listAssignments,
+  getBottleneckSummary,
 } from "@/services/owner-mode/owner-action-assignment-lifecycle.service";
 
 export const dynamic = "force-dynamic";
@@ -73,7 +74,17 @@ export const POST = withCanonicalEnforcement(
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
+    const mode = url.searchParams.get("mode");
     const businessId = url.searchParams.get("businessId") ?? undefined;
+
+    if (mode === "bottleneck") {
+      const summary = await getBottleneckSummary({
+        workspaceId: ctx.verifiedWorkspaceId,
+        businessId,
+      });
+      return canonicalJson(summary, { status: 200 });
+    }
+
     const status = url.searchParams.get("status") ?? undefined;
     const assignedTo = url.searchParams.get("assignedTo") ?? undefined;
     const stallOnly = url.searchParams.get("stallOnly") === "true";

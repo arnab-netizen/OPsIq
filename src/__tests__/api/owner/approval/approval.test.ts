@@ -12,6 +12,8 @@ const {
   mockUpdate,
   mockFindMany,
   mockEvidenceCreate,
+  mockAssignmentFindFirst,
+  mockAssignmentUpdate,
   mockEmitAuditEvent,
 } = vi.hoisted(() => ({
   mockFindFirst: vi.fn(),
@@ -19,6 +21,8 @@ const {
   mockUpdate: vi.fn(),
   mockFindMany: vi.fn(),
   mockEvidenceCreate: vi.fn(),
+  mockAssignmentFindFirst: vi.fn().mockResolvedValue(null),
+  mockAssignmentUpdate: vi.fn(),
   mockEmitAuditEvent: vi.fn(),
 }));
 
@@ -32,6 +36,10 @@ vi.mock("@/lib/db", () => ({
     },
     ownerApprovalEvidence: {
       create: mockEvidenceCreate,
+    },
+    ownerActionAssignment: {
+      findFirst: mockAssignmentFindFirst,
+      update: mockAssignmentUpdate,
     },
   },
 }));
@@ -979,5 +987,100 @@ describe("Audit events", () => {
     const call = mockEmitAuditEvent.mock.calls[0][0] as { workspaceId: string; actorId: string };
     expect(call.workspaceId).toBe(WS_A);
     expect(call.actorId).toBe(ACTOR);
+  });
+});
+
+describe("Bundle 3.7 — approval → action status update trigger", () => {
+  const ACTION_ID = "action-1";
+  const ASSIGN_ID = "assign00-0000-0000-0000-000000000001";
+
+  it("APPROVED decision with actionId fires assignment lookup", async () => {
+    mockFindFirst
+      .mockResolvedValueOnce(makeApprovalRow({ actionId: ACTION_ID }))
+      .mockResolvedValueOnce(makeApprovalRow({ status: "APPROVED", actionId: ACTION_ID }));
+    mockUpdate.mockResolvedValue(makeApprovalRow({ status: "APPROVED", actionId: ACTION_ID }));
+    mockAssignmentFindFirst.mockResolvedValueOnce({ id: ASSIGN_ID });
+    mockAssignmentUpdate.mockResolvedValueOnce({ id: ASSIGN_ID });
+
+    await makeDecision({
+      workspaceId: WS_A,
+      actorId: ACTOR,
+      approvalId: APPROVAL_ID,
+      decision: "APPROVED",
+    });
+
+    expect(mockAssignmentFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ workspaceId: WS_A, actionId: ACTION_ID }) })
+    );
+  });
+
+  it("APPROVED decision with matched assignment emits OWNER_ACTION_APPROVAL_GRANTED audit event", async () => {
+    mockFindFirst
+      .mockResolvedValueOnce(makeApprovalRow({ actionId: ACTION_ID }))
+      .mockResolvedValueOnce(makeApprovalRow({ status: "APPROVED", actionId: ACTION_ID }));
+    mockUpdate.mockResolvedValue(makeApprovalRow({ status: "APPROVED", actionId: ACTION_ID }));
+    mockAssignmentFindFirst.mockResolvedValueOnce({ id: ASSIGN_ID });
+    mockAssignmentUpdate.mockResolvedValueOnce({ id: ASSIGN_ID });
+
+    await makeDecision({
+      workspaceId: WS_A,
+      actorId: ACTOR,
+      approvalId: APPROVAL_ID,
+      decision: "APPROVED",
+    });
+
+    // Allow fire-and-forget to resolve
+    await new Promise((r) => setImmediate(r));
+
+    const events = mockEmitAuditEvent.mock.calls.map((c: unknown[]) => (c[0] as { eventName: string }).eventName);
+    expect(events).toContain("owner.action_approval_granted");
+  });
+
+  it("APPROVED decision with no matching assignment does not throw", async () => {
+    mockFindFirst
+      .mockResolvedValueOnce(makeApprovalRow({ actionId: ACTION_ID }))
+      .mockResolvedValueOnce(makeApprovalRow({ status: "APPROVED", actionId: ACTION_ID }));
+    mockUpdate.mockResolvedValue(makeApprovalRow({ status: "APPROVED", actionId: ACTION_ID }));
+    mockAssignmentFindFirst.mockResolvedValueOnce(null);
+
+    await expect(makeDecision({
+      workspaceId: WS_A,
+      actorId: ACTOR,
+      approvalId: APPROVAL_ID,
+      decision: "APPROVED",
+    })).resolves.toBeDefined();
+  });
+
+  it("APPROVED decision without actionId does not call assignment lookup", async () => {
+    mockFindFirst
+      .mockResolvedValueOnce(makeApprovalRow({ actionId: null }))
+      .mockResolvedValueOnce(makeApprovalRow({ status: "APPROVED", actionId: null }));
+    mockUpdate.mockResolvedValue(makeApprovalRow({ status: "APPROVED", actionId: null }));
+
+    await makeDecision({
+      workspaceId: WS_A,
+      actorId: ACTOR,
+      approvalId: APPROVAL_ID,
+      decision: "APPROVED",
+    });
+
+    expect(mockAssignmentFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("REJECTED decision does not fire approval-granted trigger", async () => {
+    const rejectedRow = makeApprovalRow({ status: "REJECTED", actionId: ACTION_ID });
+    mockFindFirst
+      .mockResolvedValueOnce(makeApprovalRow({ actionId: ACTION_ID }))
+      .mockResolvedValueOnce(rejectedRow);
+    mockUpdate.mockResolvedValue(rejectedRow);
+
+    await makeDecision({
+      workspaceId: WS_A,
+      actorId: ACTOR,
+      approvalId: APPROVAL_ID,
+      decision: "REJECTED",
+    });
+
+    expect(mockAssignmentFindFirst).not.toHaveBeenCalled();
   });
 });

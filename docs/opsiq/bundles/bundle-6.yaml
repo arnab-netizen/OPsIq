@@ -1,7 +1,7 @@
 id: bundle-6
 stage: 6
 name: Consulting Mode and Engagement Operations
-status: PENDING
+status: CLOSED
 priority: 9
 
 description: |
@@ -34,10 +34,10 @@ dependencies:
   - bundle-5  # Integration Fabric (PENDING)
 
 post_merge_evidence:
-  pr_sha: null
-  merge_sha: null
-  main_integration_run: null
-  db_verification_run: null
+  pr_sha: "cda988e7267552294f6b5c597d1bed0fb8979e53"
+  merge_sha: "5bc1fc013cd52064afcffb65505d7359da872718"
+  main_integration_run: "30152600373"
+  db_verification_run: "30147768617"
 
 security:
   workspace_enforcement: required

@@ -64,6 +64,78 @@ describe("wealth-loop-simulation — module contract assertions", () => {
   it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
 });
 
+describe("Phase 25 — Owner Daily Command Center: approvalsNeeded, exceptions, actionsToIgnore, stopPivotScaleWarnings", () => {
+  it("approvalsNeeded populated when financial governor requires owner approval", () => {
+    const cc = composeWealthCommandCenter({
+      wealthPathInput: { netMarginPct: 12 },
+      proposedAction: { ...STABILIZE, workPackageKind: "equipment_purchase", label: "Buy machine" } as ProposedAction,
+      spend: { amount: 200000, category: "equipment", requestedByUserId: "owner", approvedByUserId: "owner", ownerApprovalThreshold: 50000 },
+    });
+    expect(cc.approvalsNeeded.length).toBeGreaterThan(0);
+    expect(cc.approvalsNeeded.some((a) => /financial|approval/i.test(a))).toBe(true);
+  });
+
+  it("exceptions populated when cash-safety gate blocks action", () => {
+    const cc = composeWealthCommandCenter({
+      wealthPathInput: { netMarginPct: 6 },
+      proposedAction: { ...STABILIZE, workPackageKind: "marketing_campaign", label: "Growth push", riskSensitivity: RecommendationSensitivity.GROWTH_SENSITIVE } as ProposedAction,
+      cash: { cashflowState: "AT_RISK", survivalState: "AT_RISK" },
+    });
+    expect(cc.exceptions.length).toBeGreaterThan(0);
+    expect(cc.exceptions.some((e) => /cash|blocked/i.test(e))).toBe(true);
+  });
+
+  it("actionsToIgnore populated when better alternative exists", () => {
+    const weakProposal: ProposedAction = {
+      label: "Low-value ad blast", kind: "marketing", workPackageKind: "marketing_campaign",
+      grossMarginPotentialPct: 60, scalability: "high", downsideRisk: "high", evidenceStrength: "low",
+    };
+    const cc = composeWealthCommandCenter({
+      wealthPathInput: { netMarginPct: 14, grossMarginPct: 55 },
+      proposedAction: weakProposal,
+      alternatives: [STABILIZE],
+    });
+    expect(cc.nextBestMove.decision).toBe("CHOOSE_ALTERNATIVE");
+    expect(cc.actionsToIgnore).toContain("Low-value ad blast");
+  });
+
+  it("stopPivotScaleWarnings populated for trap_business", () => {
+    const cc = composeWealthCommandCenter({
+      wealthPathInput: { netMarginPct: 1, grossMarginPct: 15, capitalIntensity: "high", workingCapitalPressure: "high", downsideRisk: "high", differentiation: "none", competitiveMoat: "none", expansionPath: "local" },
+      proposedAction: { ...STABILIZE, workPackageKind: "sop_creation" } as ProposedAction,
+    });
+    expect(cc.stopPivotScaleWarnings.length).toBeGreaterThan(0);
+    expect(cc.stopPivotScaleWarnings.some((w) => /stop|trap|pivot|exit/i.test(w))).toBe(true);
+  });
+
+  it("proofFailed is an empty array by default from composition", () => {
+    const cc = composeWealthCommandCenter({
+      wealthPathInput: { netMarginPct: 10 },
+      proposedAction: { ...STABILIZE, workPackageKind: "sop_creation" } as ProposedAction,
+    });
+    expect(Array.isArray(cc.proofFailed)).toBe(true);
+  });
+
+  it("owner gets command decisions, not a passive dashboard (exit gate)", () => {
+    // Phase 25 exit gate: Owner sees approvalsNeeded, exceptions, actionsToIgnore,
+    // stopPivotScaleWarnings — not just a status dashboard.
+    const cc = composeWealthCommandCenter({
+      wealthPathInput: { netMarginPct: 1, grossMarginPct: 15, capitalIntensity: "high", workingCapitalPressure: "high", downsideRisk: "high", differentiation: "none", competitiveMoat: "none", expansionPath: "local" },
+      proposedAction: { ...STABILIZE, workPackageKind: "sop_creation" } as ProposedAction,
+      spend: { amount: 80000, category: "equipment", requestedByUserId: "staff", approvedByUserId: "staff", ownerApprovalThreshold: 50000 },
+    });
+    // All four Phase 25 decision surfaces are present and typed
+    expect(Array.isArray(cc.approvalsNeeded)).toBe(true);
+    expect(Array.isArray(cc.exceptions)).toBe(true);
+    expect(Array.isArray(cc.proofFailed)).toBe(true);
+    expect(Array.isArray(cc.actionsToIgnore)).toBe(true);
+    expect(Array.isArray(cc.stopPivotScaleWarnings)).toBe(true);
+    // For a trap business with spend requiring approval, the owner must act on both
+    expect(cc.approvalsNeeded.length).toBeGreaterThan(0);
+    expect(cc.stopPivotScaleWarnings.length).toBeGreaterThan(0);
+  });
+});
+
 describe("Phase 26 — wealth-loop simulations", () => {
   it("1. laundry/local service — SURVIVAL (thin margin, short runway)", () => {
     const cc = composeWealthCommandCenter({
@@ -314,5 +386,113 @@ describe("Phase 26 — wealth-loop simulations", () => {
     });
     expect(cc.nextBestMove.decision).toBe("BLOCKED"); // cash gate
     expect(scale.allowed).toBe(false); // ops not scale-ready
+  });
+
+  it("17. STARTUP IDEA TRAP — all ideas are economic traps, no launch authorized", () => {
+    // All submitted ideas have fatal economics: negative net margin or capital sink.
+    // No idea passes screening → no recommended idea, no validation work package.
+    const cc = composeWealthCommandCenter({
+      mode: "startup",
+      startupIntake: { capitalAvailable: 50000, monthlySurvivalNeed: 20000, fastCashVsScale: "fast_cash" },
+      startupIdeas: [
+        {
+          name: "High-cost reseller",
+          industry: "retail",
+          structural: { grossMarginPct: 8, netMarginPct: -5, expansionPath: "local", capitalIntensity: "high", downsideRisk: "high" },
+          estimatedStartupCost: 120000, // exceeds capital
+          estimatedMonthlyRevenue: 40000,
+          estimatedMonthlyCost: 42000,  // loss-making
+        },
+        {
+          name: "Capital-intensive franchise",
+          industry: "food_beverage",
+          structural: { grossMarginPct: 20, netMarginPct: 2, expansionPath: "local", capitalIntensity: "high", downsideRisk: "high" },
+          estimatedStartupCost: 200000, // exceeds capital
+          estimatedMonthlyRevenue: 30000,
+          estimatedMonthlyCost: 29400,
+        },
+      ],
+    });
+    expect(cc.mode).toBe("startup");
+    // No idea should be recommended when economics are fatally weak
+    expect(cc.startupValidation).not.toBeNull();
+    expect(cc.startupValidation!.launchAllowed).toBe(false);
+    // Owner must see warnings about why launch is blocked
+    expect(cc.warnings.length).toBeGreaterThan(0);
+    // Next move is VALIDATE_FIRST (validate-or-rework), not DO_THIS
+    expect(["VALIDATE_FIRST", "BLOCKED"]).toContain(cc.nextBestMove.decision);
+  });
+
+  it("18. DORMANT CUSTOMER RECOVERY — reactivation action drives customer_reactivation WP", () => {
+    // Dormant customers represent recoverable revenue; OpsIQ prepares a reactivation
+    // work package with contact scripts and measurement window.
+    const reactivate: ProposedAction = {
+      label: "Reactivate dormant customers", kind: "customer_retention", workPackageKind: "customer_reactivation",
+      marketDemand: "high", grossMarginPotentialPct: 65, netMarginPotentialPct: 20,
+      repeatPurchasePotential: "high", downsideRisk: "low", evidenceStrength: "medium",
+    };
+    const cc = composeWealthCommandCenter({
+      businessName: "Sparkle Laundry",
+      wealthPathInput: { netMarginPct: 14, grossMarginPct: 62, expansionPath: "local", revenueFrequency: "recurring" },
+      proposedAction: reactivate,
+    });
+    expect(cc.nextBestMove.decision).toBe("DO_THIS");
+    expect(cc.workPackage).not.toBeNull();
+    expect(cc.workPackage!.actionKind).toBe("customer_reactivation");
+    expect(cc.workPackage!.preparedArtifacts.length).toBeGreaterThan(0);
+    expect(cc.proofRequirement).toBeTruthy();
+    expect(cc.ownerWorkloadTransfer).not.toBeNull();
+    assertPreparedWhenSafe(cc);
+  });
+
+  it("19. B2B OPPORTUNITY — qualified prospect drives b2b_outreach WP, not just advice", () => {
+    // A B2B sales opportunity with high evidence should produce a prepared outreach
+    // work package — not generic sales advice.
+    const b2bProspect: ProposedAction = {
+      label: "Close B2B contract with retail chain",
+      kind: "sales_followup",
+      workPackageKind: "b2b_outreach",
+      marketDemand: "high",
+      grossMarginPotentialPct: 70,
+      netMarginPotentialPct: 25,
+      scalability: "high",
+      downsideRisk: "low",
+      evidenceStrength: "high",
+    };
+    const cc = composeWealthCommandCenter({
+      businessName: "Sparkle Laundry",
+      wealthPathInput: { netMarginPct: 14, grossMarginPct: 62, expansionPath: "multi_unit" },
+      proposedAction: b2bProspect,
+    });
+    expect(["DO_THIS", "VALIDATE_FIRST"]).toContain(cc.nextBestMove.decision);
+    expect(cc.workPackage).not.toBeNull();
+    expect(cc.workPackage!.actionKind).toBe("b2b_outreach");
+    expect(cc.opportunityCost).not.toBeNull();
+    expect(cc.proofRequirement).toBeTruthy();
+    assertPreparedWhenSafe(cc);
+  });
+
+  it("20. VENDOR FAILURE — vendor negotiation WP prepared to address supply risk", () => {
+    // A key vendor has become unreliable; the owner needs a contingency plan.
+    // OpsIQ prepares a vendor negotiation/replacement work package.
+    const vendorContingency: ProposedAction = {
+      label: "Replace unreliable supplier",
+      kind: "fix_operations",
+      workPackageKind: "vendor_negotiation",
+      downsideRisk: "medium",
+      evidenceStrength: "high",
+      capitalRequirement: "low",
+      problem: "Primary supplier missing delivery windows — operations at risk",
+    };
+    const cc = composeWealthCommandCenter({
+      businessName: "Sparkle Laundry",
+      wealthPathInput: { netMarginPct: 14, grossMarginPct: 58, expansionPath: "local" },
+      proposedAction: vendorContingency,
+    });
+    expect(["DO_THIS", "VALIDATE_FIRST"]).toContain(cc.nextBestMove.decision);
+    expect(cc.workPackage).not.toBeNull();
+    expect(cc.workPackage!.actionKind).toBe("vendor_negotiation");
+    expect(cc.proofRequirement).toBeTruthy();
+    assertPreparedWhenSafe(cc);
   });
 });
