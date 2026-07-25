@@ -367,27 +367,31 @@ async function fireApprovalGrantedTrigger(
   approvalId: string,
   actionId: string,
 ): Promise<void> {
-  // Find the linked OwnerActionAssignment to record the approval event.
-  const assignment = await db.ownerActionAssignment.findFirst({
-    where: { workspaceId, actionId },
-    select: { id: true },
-  });
-  if (!assignment) return;
+  try {
+    // Find the linked OwnerActionAssignment to record the approval event.
+    const assignment = await db.ownerActionAssignment.findFirst({
+      where: { workspaceId, actionId },
+      select: { id: true },
+    });
+    if (!assignment) return;
 
-  // Touch updatedBy to mark that an approval decision was recorded for this assignment.
-  await db.ownerActionAssignment.update({
-    where: { id: assignment.id },
-    data: { updatedBy: actorId },
-  });
+    // Touch updatedBy to mark that an approval decision was recorded for this assignment.
+    await db.ownerActionAssignment.update({
+      where: { id: assignment.id },
+      data: { updatedBy: actorId },
+    });
 
-  await emitAuditEvent({
-    workspaceId,
-    actorId,
-    eventName: AUDIT_EVENTS.OWNER_ACTION_APPROVAL_GRANTED,
-    entityType: "OwnerActionAssignment",
-    entityId: assignment.id,
-    payload: { approvalId, actionId },
-  });
+    await emitAuditEvent({
+      workspaceId,
+      actorId,
+      eventName: AUDIT_EVENTS.OWNER_ACTION_APPROVAL_GRANTED,
+      entityType: "OwnerActionAssignment",
+      entityId: assignment.id,
+      payload: { approvalId, actionId },
+    });
+  } catch {
+    // fire-and-forget — errors never propagate to caller
+  }
 }
 
 // ─── Initiate Appeal ─────────────────────────────────────────────────────────

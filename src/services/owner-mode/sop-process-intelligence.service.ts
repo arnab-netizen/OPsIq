@@ -336,18 +336,22 @@ async function fireComplianceReAssessmentSignal(
   alertId: string,
   sopDocumentId: string,
 ): Promise<void> {
-  const { routeSopComplianceSignal } = await import(
-    "@/services/owner-mode/stage3-signal-router.service"
-  );
-  // Look up businessId from the SOP document record so the reassessment event
-  // can be attributed to the correct business without requiring a schema change
-  // on OwnerSopNonComplianceAlert.
-  const sopDoc = await db.ownerSopDocument.findFirst({
-    where: { id: sopDocumentId, workspaceId },
-    select: { businessId: true },
-  });
-  const businessId = sopDoc?.businessId ?? null;
-  await routeSopComplianceSignal(workspaceId, actorId, alertId, businessId);
+  try {
+    const { routeSopComplianceSignal } = await import(
+      "@/services/owner-mode/stage3-signal-router.service"
+    );
+    // Look up businessId from the SOP document record so the reassessment event
+    // can be attributed to the correct business without requiring a schema change
+    // on OwnerSopNonComplianceAlert.
+    const sopDoc = await db.ownerSopDocument.findFirst({
+      where: { id: sopDocumentId, workspaceId },
+      select: { businessId: true },
+    });
+    const businessId = sopDoc?.businessId ?? null;
+    await routeSopComplianceSignal(workspaceId, actorId, alertId, businessId);
+  } catch {
+    // fire-and-forget — errors never propagate to caller
+  }
 }
 
 // ─── List Training Assignments ────────────────────────────────────────────────
