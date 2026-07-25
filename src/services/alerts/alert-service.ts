@@ -4,6 +4,7 @@ import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { getEmailProvider } from "@/lib/integrations/email-provider";
 
 export type AlertType = "blocked" | "threshold_breach" | "execution_failure";
 export type AlertChannel = "in_app" | "email";
@@ -255,11 +256,71 @@ export async function triggerExecutionFailureAlert(
 }
 
 async function deliverEmailAlert(alert: Alert): Promise<void> {
-  logger.info("Email alert delivery (stub — transport not yet wired)", {
-    alertId: alert.id,
-    userId: alert.userId,
-    type: alert.type,
-    message: alert.message,
+  const provider = getEmailProvider();
+  if (!provider) {
+    logger.warn("Email alert queued but RESEND_API_KEY not configured — falling back to in-app only", {
+      alertId: alert.id,
+      userId: alert.userId,
+      type: alert.type,
+      severity: alert.severity,
+    });
+    return;
+  }
+
+  const recipient = await db.user.findUnique({ where: { id: alert.userId }, select: { email: true } });
+  if (!recipient?.email) {
+    logger.warn("Email alert skipped — user has no email address", { alertId: alert.id, userId: alert.userId });
+    return;
+  }
+
+  const severityLabel = alert.severity === "critical" ? "🔴 CRITICAL" : alert.severity === "high" ? "🟠 HIGH" : "⚠️ ALERT";
+  await provider.send({
+    to: recipient.email,
+    subject: `${severityLabel}: ${alert.type.replace(/_/g, " ")} — OpsIQ`,
+    html: `<p><strong>${severityLabel}</strong></p><p>${alert.message}</p><p style="color:#666;font-size:12px">Alert ID: ${alert.id}</p>`,
+    text: `${severityLabel}\n\n${alert.message}\n\nAlert ID: ${alert.id}`,
+  });
+
+  logger.info("Email alert delivered", { alertId: alert.id, userId: alert.userId, to: recipient.email });
+}
+
+export async function triggerComplianceDeadlineAlert(
+  workspaceId: string,
+  userId: string,
+  itemTitle: string,
+  daysUntilDeadline: number,
+  itemId: string,
+): Promise<Alert> {
+  return createAlert({
+    workspaceId,
+    userId,
+    type: "threshold_breach",
+    channel: "email",
+    severity: daysUntilDeadline <= 3 ? "critical" : daysUntilDeadline <= 7 ? "high" : "medium",
+    message: `Compliance item "${itemTitle}" is due in ${daysUntilDeadline} day${daysUntilDeadline === 1 ? "" : "s"}.`,
+    entityType: "ComplianceItem",
+    entityId: itemId,
+    idempotencyKey: `compliance-deadline:${itemId}:days${daysUntilDeadline}`,
+  });
+}
+
+export async function triggerCriticalStateAlert(
+  workspaceId: string,
+  userId: string,
+  domain: "cash" | "risk" | "operations",
+  stateLabel: string,
+  entityId?: string,
+): Promise<Alert> {
+  return createAlert({
+    workspaceId,
+    userId,
+    type: "threshold_breach",
+    channel: "email",
+    severity: "critical",
+    message: `CRITICAL ${domain.toUpperCase()} STATE: ${stateLabel}. Immediate attention required.`,
+    entityType: domain === "cash" ? "CashflowDiagnosis" : domain === "risk" ? "BusinessRisk" : "OperationsSnapshot",
+    entityId: entityId ?? undefined,
+    idempotencyKey: `critical-state:${domain}:${workspaceId}:${stateLabel.slice(0, 40)}`,
   });
 }
 

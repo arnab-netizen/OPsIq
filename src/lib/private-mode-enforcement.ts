@@ -22,7 +22,13 @@ import type { PrivateModeRole } from "@/domain/private-mode/role-config";
 import { hasRequiredFeatures } from "@/domain/private-mode/role-config";
 import type { PrivateModeFeatures } from "@/domain/private-mode/role-config";
 import { withCanonicalEnforcement, type CanonicalHandler } from "@/lib/canonical-route-enforcement";
-import type { PrivateModeGateOptions } from "@/middleware/private-mode-gate";
+
+export interface PrivateModeGateOptions {
+  requiredRole?: PrivateModeRole;
+  requiredFeatures?: string[];
+  required?: boolean;
+  bypassPrivateMode?: boolean;
+}
 
 export interface PrivateModeEnforcementDeps {
   prisma?: PrismaClient;

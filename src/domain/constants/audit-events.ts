@@ -627,6 +627,20 @@ export const AUDIT_EVENTS = {
   INTEGRATION_EVENT_INGESTED: "integration_event.ingested",
   INTEGRATION_EVENT_BCP_TRIGGERED: "integration_event.bcp_triggered",
 
+  // Stage 3B — Customer Records
+  OWNER_CUSTOMER_CREATED: "owner.customer_created",
+  OWNER_CUSTOMER_UPDATED: "owner.customer_updated",
+
+  // Stage 3C — Inventory and Procurement
+  OWNER_STOCK_ITEM_CREATED: "owner.stock_item_created",
+  OWNER_STOCK_ITEM_UPDATED: "owner.stock_item_updated",
+  OWNER_PURCHASE_ORDER_CREATED: "owner.purchase_order_created",
+  OWNER_PURCHASE_ORDER_STATUS_CHANGED: "owner.purchase_order_status_changed",
+
+  // Stage 3D — Marketing Campaigns
+  OWNER_MARKETING_CAMPAIGN_CREATED: "owner.marketing_campaign_created",
+  OWNER_MARKETING_CAMPAIGN_UPDATED: "owner.marketing_campaign_updated",
+
   // Bundle 6 — Consulting Mode
   CONSULTING_ENGAGEMENT_CREATED: "consulting.engagement_created",
   CONSULTING_PHASE_ADVANCED: "consulting.phase_advanced",

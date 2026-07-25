@@ -377,6 +377,7 @@ model Engagement {
 
 model Entity {
   id          String       @id @db.Uuid
+  workspaceId String       @map("workspace_id") @db.Uuid
   name        String
   type        String
   externalId  String?      @map("external_id")
@@ -386,6 +387,7 @@ model Entity {
   creator     User         @relation(fields: [createdBy], references: [id])
   entityLinks EntityLink[]
 
+  @@index([workspaceId])
   @@index([createdBy])
   @@index([externalId])
   @@index([type])
@@ -5259,6 +5261,7 @@ model OperationalEvent {
   relatedProofId        String?   @map("related_proof_id") @db.Uuid
   relatedActionId       String?   @map("related_action_id") @db.Uuid
   businessId            String?   @map("business_id") @db.Uuid
+  customerRecordId      String?   @map("customer_record_id") @db.Uuid
   category              String
   severity              String    @default("MEDIUM")
   status                String    @default("OPEN") // OPEN | IN_REVIEW | RESOLVED | DISMISSED | DUPLICATE
@@ -6490,4 +6493,101 @@ model OwnerConnectorToken {
 
   @@index([connectorId])
   @@map("owner_connector_tokens")
+}
+
+model CustomerRecord {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  businessId       String    @map("business_id") @db.Uuid
+  name             String    @db.VarChar(200)
+  email            String?   @db.VarChar(254)
+  phone            String?   @db.VarChar(50)
+  segment          String?   @db.VarChar(100)
+  lastPurchaseDate DateTime? @map("last_purchase_date")
+  ltv              Decimal?  @db.Decimal(18, 2)
+  tags             String[]  @default([])
+  notes            String?   @db.Text
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, businessId])
+  @@index([workspaceId, segment])
+  @@map("customer_records")
+}
+
+// M010 — Per-campaign marketing records
+model MarketingCampaign {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  businessId  String    @map("business_id") @db.Uuid
+  name        String    @db.VarChar(200)
+  channel     String    @db.VarChar(100)
+  // DRAFT | ACTIVE | PAUSED | COMPLETED | CANCELLED
+  status      String    @default("DRAFT")
+  budget      Decimal?  @db.Decimal(18, 2)
+  spend       Decimal?  @default(0) @db.Decimal(18, 2)
+  leads       Int?      @default(0)
+  conversions Int?      @default(0)
+  revenue     Decimal?  @default(0) @db.Decimal(18, 2)
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  notes       String?   @db.Text
+  createdBy   String    @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, businessId])
+  @@index([workspaceId, status])
+  @@map("marketing_campaigns")
+}
+
+// M014 — Stock item catalog with reorder point tracking
+model StockItem {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  businessId    String   @map("business_id") @db.Uuid
+  sku           String   @db.VarChar(100)
+  name          String   @db.VarChar(200)
+  unit          String   @default("unit") @db.VarChar(50)
+  currentQty    Decimal  @default(0) @map("current_qty") @db.Decimal(18, 4)
+  reorderPoint  Decimal  @default(0) @map("reorder_point") @db.Decimal(18, 4)
+  safetyStock   Decimal  @default(0) @map("safety_stock") @db.Decimal(18, 4)
+  leadTimeDays  Int      @default(0) @map("lead_time_days")
+  dailyUsage    Decimal  @default(0) @map("daily_usage") @db.Decimal(18, 4)
+  vendorId      String?  @map("vendor_id") @db.Uuid
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, businessId, sku])
+  @@index([workspaceId, businessId])
+  @@map("stock_items")
+}
+
+// M015 — Purchase order lifecycle: DRAFT → REVIEWED → APPROVED → ISSUED → DELIVERED
+model PurchaseOrder {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  businessId    String    @map("business_id") @db.Uuid
+  poNumber      String    @map("po_number") @db.VarChar(100)
+  vendorId      String?   @map("vendor_id") @db.Uuid
+  vendorName    String?   @map("vendor_name") @db.VarChar(200)
+  // DRAFT | REVIEWED | APPROVED | ISSUED | DELIVERED | CANCELLED
+  status        String    @default("DRAFT")
+  lineItems     Json      @default("[]") @map("line_items")
+  totalAmount   Decimal?  @map("total_amount") @db.Decimal(18, 2)
+  currency      String    @default("USD") @db.VarChar(10)
+  notes         String?   @db.Text
+  approvedById  String?   @map("approved_by_id") @db.Uuid
+  approvedAt    DateTime? @map("approved_at")
+  issuedAt      DateTime? @map("issued_at")
+  deliveredAt   DateTime? @map("delivered_at")
+  createdBy     String    @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, poNumber])
+  @@index([workspaceId, businessId])
+  @@index([workspaceId, status])
+  @@map("purchase_orders")
 }
