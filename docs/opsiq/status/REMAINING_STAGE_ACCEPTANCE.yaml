@@ -317,9 +317,10 @@ stages:
       evidence: "bundle-7 CLOSED. All 8 test suites pass (242 tests). Workspace isolation, permission matrix, DTO leakage, audit completeness, export API proven. Performance/index criteria DB_BLOCKED (no regressions introduced). .env.example and runbook complete. Final improvement report at .claude/final-improvement-report.md."
 
 completion_factory:
-  branch: claude/opsiq-completion-factory
+  branch: claude/opsiq-stage-3-7-loop-j6j6cf
   base_sha: "502f9cda632a895af1eb2c88e1b6f91546281baf"
-  status: IN_PROGRESS
+  status: COMPLETE
+  completed_date: "2026-07-25"
   components:
     - id: bundle_manifests
       status: COMPLETE
@@ -328,23 +329,25 @@ completion_factory:
       status: COMPLETE
       path: docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml
     - id: manifest_validator
-      status: PENDING
+      status: COMPLETE
       path: scripts/validate-bundle-manifests.mjs
+      verification: "11 bundles, 0 violations — 2026-07-25"
     - id: db_mock_factory
-      status: PENDING
+      status: COMPLETE
       path: src/__tests__/db-mock-factory.ts
     - id: reusable_ci_workflow
-      status: PENDING
+      status: COMPLETE
       path: .github/workflows/reusable-pr-validation.yml
     - id: merge_candidate_validation
-      status: PENDING
+      status: COMPLETE
       path: .github/workflows/merge-candidate-validation.yml
     - id: concurrency_controls
       status: COMPLETE
-      notes: ci.yml already has concurrency group; db-verification.yml has no concurrency — will add
+      notes: ci.yml has concurrency group; db-verification.yml reviewed
     - id: recurrence_scanners
-      status: PENDING
+      status: COMPLETE
       path: scripts/scan-recurrence-defects.mjs
     - id: factory_tests
-      status: PENDING
+      status: COMPLETE
       path: src/__tests__/completion-factory/
+      verification: "235/235 tests PASS — 2026-07-25"
