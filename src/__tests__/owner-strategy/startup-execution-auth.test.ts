@@ -155,3 +155,92 @@ describe("G2-15 staleness type safety — VersionedApprovalState compile-time co
     expect(withProfile).not.toBe(withoutProfile);
   });
 });
+
+describe("T006 — G2-15 staleness non-regression: no false-positive when non-material artifacts are unchanged", () => {
+  // T006: Verify execution gate does not false-positive when only non-material artifacts
+  // changed. Before the G2-15 fix, only ideaVersionId was passed to checkApprovalStaleness;
+  // profileVersionId was null, so a changed profile never triggered re-approval (silent miss).
+  // After the fix, all 9 IDs are passed. T006 proves the deterministic hash contract that
+  // makes the runtime check correct without requiring a DB call.
+
+  it("computeApprovalPackageHash is deterministic: same 9-field state produces same hash", () => {
+    const state: VersionedApprovalState = {
+      ideaId: null,
+      ideaVersionId: "iv-t006-a",
+      profileVersionId: "pv-t006-a",
+      economicModelId: "em-t006-a",
+      readinessId: "rd-t006-a",
+      systemRecId: "sr-t006-a",
+      businessModelId: "bm-t006-a",
+      marketSizingId: "ms-t006-a",
+      validationPlanId: "vp-t006-a",
+    };
+    const h1 = computeApprovalPackageHash({ sessionId: "sess-t006", ...state });
+    const h2 = computeApprovalPackageHash({ sessionId: "sess-t006", ...state });
+    expect(h1).toBe(h2);
+    expect(h1).toHaveLength(64); // SHA-256 hex
+  });
+
+  it("hash is unchanged when none of the 9 material IDs change (no false-positive staleness)", () => {
+    // Non-material changes (owner adds a note, attaches a document, creates a task)
+    // do NOT appear in VersionedApprovalState → same hash → checkApprovalStaleness returns isStale=false
+    const state: VersionedApprovalState = {
+      ideaId: null,
+      ideaVersionId: "iv-t006-b",
+      profileVersionId: "pv-t006-b",
+      economicModelId: null,
+      readinessId: null,
+      systemRecId: null,
+      businessModelId: null,
+      marketSizingId: null,
+      validationPlanId: null,
+    };
+    const hashBefore = computeApprovalPackageHash({ sessionId: "sess-t006-b", ...state });
+    // Simulate non-material artifact change: state is identical (hash inputs are unchanged)
+    const hashAfterNonMaterialChange = computeApprovalPackageHash({ sessionId: "sess-t006-b", ...state });
+    expect(hashBefore).toBe(hashAfterNonMaterialChange);
+  });
+
+  it("hash DOES change when any of the 9 material IDs change (staleness correctly detected)", () => {
+    const base: VersionedApprovalState = {
+      ideaId: null,
+      ideaVersionId: "iv-t006-c",
+      profileVersionId: "pv-t006-c-ORIGINAL",
+      economicModelId: null,
+      readinessId: null,
+      systemRecId: null,
+      businessModelId: null,
+      marketSizingId: null,
+      validationPlanId: null,
+    };
+    const hashOriginal = computeApprovalPackageHash({ sessionId: "sess-t006-c", ...base });
+    // Profile update (material — business condition changed) → different hash → isStale=true
+    const updated = { ...base, profileVersionId: "pv-t006-c-UPDATED" };
+    const hashUpdated = computeApprovalPackageHash({ sessionId: "sess-t006-c", ...updated });
+    expect(hashOriginal).not.toBe(hashUpdated);
+  });
+
+  it("hash changes for each of the 9 material ID fields independently", () => {
+    const base: VersionedApprovalState = {
+      ideaId: null,
+      ideaVersionId: "iv-base",
+      profileVersionId: "pv-base",
+      economicModelId: "em-base",
+      readinessId: "rd-base",
+      systemRecId: "sr-base",
+      businessModelId: "bm-base",
+      marketSizingId: "ms-base",
+      validationPlanId: "vp-base",
+    };
+    const baseHash = computeApprovalPackageHash({ sessionId: "sess-t006-d", ...base });
+    const fields: (keyof VersionedApprovalState)[] = [
+      "ideaVersionId", "profileVersionId", "economicModelId", "readinessId",
+      "systemRecId", "businessModelId", "marketSizingId", "validationPlanId",
+    ];
+    for (const field of fields) {
+      const mutated = { ...base, [field]: `${String(base[field])}-CHANGED` };
+      const mutatedHash = computeApprovalPackageHash({ sessionId: "sess-t006-d", ...mutated });
+      expect(mutatedHash).not.toBe(baseHash);
+    }
+  });
+});

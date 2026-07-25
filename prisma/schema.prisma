@@ -377,6 +377,7 @@ model Engagement {
 
 model Entity {
   id          String       @id @db.Uuid
+  workspaceId String       @map("workspace_id") @db.Uuid
   name        String
   type        String
   externalId  String?      @map("external_id")
@@ -386,6 +387,7 @@ model Entity {
   creator     User         @relation(fields: [createdBy], references: [id])
   entityLinks EntityLink[]
 
+  @@index([workspaceId])
   @@index([createdBy])
   @@index([externalId])
   @@index([type])
