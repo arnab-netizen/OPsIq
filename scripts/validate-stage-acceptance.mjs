@@ -24,17 +24,21 @@ import { load as yamlLoad } from 'js-yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
-const ledgerPath = join(root, 'docs', 'opsiq', 'status', 'REMAINING_STAGE_ACCEPTANCE.yaml');
-
 const args = process.argv.slice(2);
 const stageIdx = args.indexOf('--stage');
 
 if (stageIdx === -1 || !args[stageIdx + 1]) {
-  console.error('Usage: node validate-stage-acceptance.mjs --stage <N|all>');
+  console.error('Usage: node validate-stage-acceptance.mjs --stage <N|all> [--ledger <path>]');
   process.exit(2);
 }
 
 const stageArg = args[stageIdx + 1];
+
+// --ledger <path> overrides the default ledger path (used by non-vacuity tests)
+const ledgerIdx = args.indexOf('--ledger');
+const ledgerPath = (ledgerIdx !== -1 && args[ledgerIdx + 1])
+  ? args[ledgerIdx + 1]
+  : join(root, 'docs', 'opsiq', 'status', 'REMAINING_STAGE_ACCEPTANCE.yaml');
 
 let ledger;
 try {

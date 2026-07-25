@@ -259,12 +259,7 @@ export async function triggerExecutionFailureAlert(
 }
 
 async function deliverEmailAlert(alert: Alert): Promise<void> {
-  // Idempotency guard: skip if already delivered (crash-after-create recovery).
-  if (alert.emailSentAt) {
-    logger.info("Email alert already delivered — skipping duplicate send", { alertId: alert.id });
-    return;
-  }
-
+  // Provider check first — record skip state before touching the delivery slot.
   const provider = getEmailProvider();
   if (!provider) {
     logger.warn("Email alert queued but RESEND_API_KEY not configured — falling back to in-app only", {
@@ -280,13 +275,46 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
     return;
   }
 
-  const recipient = await db.user.findUnique({ where: { id: alert.userId }, select: { email: true } });
-  if (!recipient?.email) {
+  // Workspace-membership check: recipient must have an active membership in the alert's workspace.
+  // Prevents cross-workspace email delivery if a userId somehow appears in the wrong workspace.
+  const recipient = await db.user.findFirst({
+    where: {
+      id: alert.userId,
+      workspaceMemberships: { some: { workspaceId: alert.workspaceId, isActive: true } },
+    },
+    select: { email: true },
+  });
+  if (!recipient) {
+    logger.warn("Email alert skipped — user not found or not a member of workspace", {
+      alertId: alert.id,
+      userId: alert.userId,
+      workspaceId: alert.workspaceId,
+    });
+    await db.alert.update({
+      where: { id: alert.id },
+      data: { emailError: "user_not_in_workspace" },
+    }).catch(() => {});
+    return;
+  }
+  if (!recipient.email) {
     logger.warn("Email alert skipped — user has no email address", { alertId: alert.id, userId: alert.userId });
     await db.alert.update({
       where: { id: alert.id },
       data: { emailError: "user_no_email_address" },
     }).catch(() => {});
+    return;
+  }
+
+  // Atomic delivery claim: sets emailSentAt to NOW() only if it is currently NULL.
+  // Returns 0 rows updated if another concurrent execution already claimed this delivery slot.
+  // This prevents duplicate sends under concurrent execution (crash-recovery, parallel workers).
+  const claimed = await db.$executeRaw`
+    UPDATE "alerts"
+    SET "email_sent_at" = NOW()
+    WHERE "id" = ${alert.id} AND "email_sent_at" IS NULL
+  `;
+  if (claimed === 0) {
+    logger.info("Email alert delivery already claimed or completed — skipping", { alertId: alert.id });
     return;
   }
 
@@ -299,10 +327,10 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
       text: `${severityLabel}\n\n${alert.message}\n\nAlert ID: ${alert.id}`,
     });
 
+    // emailSentAt was set by the atomic claim above; persist the provider message ID.
     await db.alert.update({
       where: { id: alert.id },
       data: {
-        emailSentAt: new Date(),
         resendMessageId: result.id ?? null,
         emailError: null,
       },
@@ -320,12 +348,16 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
         severity: alert.severity,
       },
       visibility: "internal",
-    }).catch(() => {});
+    }).catch(() => {
+      logger.warn("Failed to emit ALERT_EMAIL_DELIVERED audit event", { alertId: alert.id });
+    });
 
     logger.info("Email alert delivered", { alertId: alert.id, userId: alert.userId });
   } catch (error) {
     const errorMessage = (error instanceof Error ? error.message : String(error)).slice(0, 500);
 
+    // emailSentAt (from claim) is preserved as the attempt timestamp.
+    // State: emailSentAt != null + emailError != null = "attempted, failed with error".
     await db.alert.update({
       where: { id: alert.id },
       data: { emailError: errorMessage },
@@ -342,7 +374,9 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
         severity: alert.severity,
       },
       visibility: "internal",
-    }).catch(() => {});
+    }).catch(() => {
+      logger.warn("Failed to emit ALERT_EMAIL_FAILED audit event", { alertId: alert.id });
+    });
 
     throw error;
   }

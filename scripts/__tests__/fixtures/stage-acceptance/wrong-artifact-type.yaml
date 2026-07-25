@@ -1,0 +1,12 @@
+stages:
+  stage-3:
+    name: Test Stage — CLOSED bundle with wrong artifact_type
+    bundles:
+      - id: bundle-test-wrong-type
+        artifact_type: infrastructure_component
+        status: CLOSED
+        post_merge_evidence:
+          pr_sha: "abc123abc123abc1"
+          merge_sha: "def456def456def4"
+          main_integration_run: "https://github.com/org/repo/actions/runs/1001"
+          db_verification_run: "https://github.com/org/repo/actions/runs/1002"
