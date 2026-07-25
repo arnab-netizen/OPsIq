@@ -6513,6 +6513,32 @@ model CustomerRecord {
   @@map("customer_records")
 }
 
+// M010 — Per-campaign marketing records
+model MarketingCampaign {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  businessId  String    @map("business_id") @db.Uuid
+  name        String    @db.VarChar(200)
+  channel     String    @db.VarChar(100)
+  // DRAFT | ACTIVE | PAUSED | COMPLETED | CANCELLED
+  status      String    @default("DRAFT")
+  budget      Decimal?  @db.Decimal(18, 2)
+  spend       Decimal?  @default(0) @db.Decimal(18, 2)
+  leads       Int?      @default(0)
+  conversions Int?      @default(0)
+  revenue     Decimal?  @default(0) @db.Decimal(18, 2)
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  notes       String?   @db.Text
+  createdBy   String    @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, businessId])
+  @@index([workspaceId, status])
+  @@map("marketing_campaigns")
+}
+
 // M014 — Stock item catalog with reorder point tracking
 model StockItem {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid

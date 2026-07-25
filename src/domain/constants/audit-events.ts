@@ -637,6 +637,10 @@ export const AUDIT_EVENTS = {
   OWNER_PURCHASE_ORDER_CREATED: "owner.purchase_order_created",
   OWNER_PURCHASE_ORDER_STATUS_CHANGED: "owner.purchase_order_status_changed",
 
+  // Stage 3D — Marketing Campaigns
+  OWNER_MARKETING_CAMPAIGN_CREATED: "owner.marketing_campaign_created",
+  OWNER_MARKETING_CAMPAIGN_UPDATED: "owner.marketing_campaign_updated",
+
   // Bundle 6 — Consulting Mode
   CONSULTING_ENGAGEMENT_CREATED: "consulting.engagement_created",
   CONSULTING_PHASE_ADVANCED: "consulting.phase_advanced",
