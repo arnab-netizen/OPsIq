@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { z } from "zod/v4";
@@ -98,31 +99,42 @@ export async function transitionPurchaseOrder(
   toStatus: POStatus,
   actorId: string,
 ) {
-  const existing = await db.purchaseOrder.findFirst({ where: { workspaceId, id: poId } });
-  if (!existing) return null;
+  let capturedFrom: string | undefined;
 
-  const allowed = VALID_TRANSITIONS[existing.status as POStatus] ?? [];
-  if (!allowed.includes(toStatus)) {
-    throw new Error(`Invalid transition: ${existing.status} → ${toStatus}`);
+  const record = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const existing = await tx.purchaseOrder.findFirst({ where: { workspaceId, id: poId } });
+    if (!existing) return null;
+
+    // Idempotent: already in desired state — return as-is without re-emitting audit event
+    if (existing.status === toStatus) return existing;
+
+    const allowed = VALID_TRANSITIONS[existing.status as POStatus] ?? [];
+    if (!allowed.includes(toStatus)) {
+      throw new Error(`Invalid transition: ${existing.status} → ${toStatus}`);
+    }
+
+    capturedFrom = existing.status;
+    const now = new Date();
+    return tx.purchaseOrder.update({
+      where: { id: poId, workspaceId },
+      data: {
+        status: toStatus,
+        ...(toStatus === "APPROVED" && { approvedById: actorId, approvedAt: now }),
+        ...(toStatus === "ISSUED" && { issuedAt: now }),
+        ...(toStatus === "DELIVERED" && { deliveredAt: now }),
+      },
+    });
+  });
+
+  if (record && capturedFrom !== undefined) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OWNER_PURCHASE_ORDER_STATUS_CHANGED,
+      actorId,
+      workspaceId,
+      entityType: "PurchaseOrder",
+      entityId: record.id,
+      payload: { poId, from: capturedFrom, to: toStatus },
+    });
   }
-
-  const now = new Date();
-  const record = await db.purchaseOrder.update({
-    where: { id: poId },
-    data: {
-      status: toStatus,
-      ...(toStatus === "APPROVED" && { approvedById: actorId, approvedAt: now }),
-      ...(toStatus === "ISSUED" && { issuedAt: now }),
-      ...(toStatus === "DELIVERED" && { deliveredAt: now }),
-    },
-  });
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OWNER_PURCHASE_ORDER_STATUS_CHANGED,
-    actorId,
-    workspaceId,
-    entityType: "PurchaseOrder",
-    entityId: record.id,
-    payload: { poId, from: existing.status, to: toStatus },
-  });
   return record;
 }

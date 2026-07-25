@@ -82,7 +82,7 @@ export async function updateStockItem(
   if (!existing) return null;
 
   const record = await db.stockItem.update({
-    where: { id: stockItemId },
+    where: { id: stockItemId, workspaceId },
     data: {
       ...(input.sku != null && { sku: input.sku }),
       ...(input.name != null && { name: input.name }),

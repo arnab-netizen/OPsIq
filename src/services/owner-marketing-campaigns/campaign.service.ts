@@ -86,7 +86,7 @@ export async function updateCampaign(
   if (!existing) return null;
 
   const record = await db.marketingCampaign.update({
-    where: { id: campaignId },
+    where: { id: campaignId, workspaceId },
     data: {
       ...(input.name != null && { name: input.name }),
       ...(input.channel != null && { channel: input.channel }),

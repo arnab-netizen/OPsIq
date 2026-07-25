@@ -81,7 +81,7 @@ export async function updateCustomer(
   if (!existing) return null;
 
   const record = await db.customerRecord.update({
-    where: { id: customerId },
+    where: { id: customerId, workspaceId },
     data: {
       ...(input.name != null && { name: input.name }),
       ...(input.email !== undefined && { email: input.email ?? null }),
