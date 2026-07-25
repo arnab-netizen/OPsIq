@@ -6512,3 +6512,54 @@ model CustomerRecord {
   @@index([workspaceId, segment])
   @@map("customer_records")
 }
+
+// M014 — Stock item catalog with reorder point tracking
+model StockItem {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  businessId    String   @map("business_id") @db.Uuid
+  sku           String   @db.VarChar(100)
+  name          String   @db.VarChar(200)
+  unit          String   @default("unit") @db.VarChar(50)
+  currentQty    Decimal  @default(0) @map("current_qty") @db.Decimal(18, 4)
+  reorderPoint  Decimal  @default(0) @map("reorder_point") @db.Decimal(18, 4)
+  safetyStock   Decimal  @default(0) @map("safety_stock") @db.Decimal(18, 4)
+  leadTimeDays  Int      @default(0) @map("lead_time_days")
+  dailyUsage    Decimal  @default(0) @map("daily_usage") @db.Decimal(18, 4)
+  vendorId      String?  @map("vendor_id") @db.Uuid
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, businessId, sku])
+  @@index([workspaceId, businessId])
+  @@map("stock_items")
+}
+
+// M015 — Purchase order lifecycle: DRAFT → REVIEWED → APPROVED → ISSUED → DELIVERED
+model PurchaseOrder {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  businessId    String    @map("business_id") @db.Uuid
+  poNumber      String    @map("po_number") @db.VarChar(100)
+  vendorId      String?   @map("vendor_id") @db.Uuid
+  vendorName    String?   @map("vendor_name") @db.VarChar(200)
+  // DRAFT | REVIEWED | APPROVED | ISSUED | DELIVERED | CANCELLED
+  status        String    @default("DRAFT")
+  lineItems     Json      @default("[]") @map("line_items")
+  totalAmount   Decimal?  @map("total_amount") @db.Decimal(18, 2)
+  currency      String    @default("USD") @db.VarChar(10)
+  notes         String?   @db.Text
+  approvedById  String?   @map("approved_by_id") @db.Uuid
+  approvedAt    DateTime? @map("approved_at")
+  issuedAt      DateTime? @map("issued_at")
+  deliveredAt   DateTime? @map("delivered_at")
+  createdBy     String    @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, poNumber])
+  @@index([workspaceId, businessId])
+  @@index([workspaceId, status])
+  @@map("purchase_orders")
+}
