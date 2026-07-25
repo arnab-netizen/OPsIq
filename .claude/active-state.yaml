@@ -1,7 +1,7 @@
 factory_stage: 3
 active_bundle: "Stage 3 — Core Business-Domain Completion"
 owner_outcome: "owner-can-operate-all-core-domains-desktop-and-mobile"
-status: IMPLEMENTING
+status: STAGE_3_FULLY_PROVEN_AWAITING_OWNER_ACCEPTANCE
 branch: claude/opsiq-stage-3a
 
 proven:
@@ -10,17 +10,24 @@ proven:
   - "3C: M014/M015 — StockItem + PurchaseOrder + state machine (21 tests)"
   - "3D: M010 — MarketingCampaign + ROI computation (10 tests)"
   - "3E: M001/M020/M032 — Resend email transport + compliance/critical-state triggers (8 tests)"
+  - "3F: M018 Entity workspaceId + M019 dead gate deleted + MNEW-01 T006 regression (32 tests)"
 
-gaps:
-  - "3F-M018: workspaceId enforcement on Entity model (verify/fix)"
-  - "3F-M019: dead private-mode-gate middleware (verify/delete)"
-  - "3F-MNEW-01: T006 regression test for G2-15 staleness fix"
+gaps: []
 
-next_target: "Stage 3F — M018/M019/MNEW-01 gap closure then Stage 3 exit reconciliation"
-blockers: []
+gates:
+  build: "PASS (npm run build)"
+  typecheck: "PASS (npx tsc --noEmit)"
+  prisma_validate: "PASS"
+  stage3_domain_tests: "81/81 PASS"
+  db_tests: "DB_BLOCKED_ENVIRONMENT (no local DB)"
 
-last_commits:
+commits:
+  - "875fadd7: STAGE 3F (M018/M019/MNEW-01)"
   - "cd9bf3f7: STAGE 3E (M001/M020/M032)"
   - "4d28ce44: STAGE 3D (M010)"
   - "189f989d: STAGE 3C (M014/M015)"
   - "60d71aaf: STAGE 3B (M021-customers)"
+
+next_target: "AWAITING_OWNER_ACCEPTANCE — exact-SHA PR merge authorization required to proceed to Stage 4"
+blockers:
+  - "PR creation requires explicit owner authorization (user instruction: DO NOT create PR without explicit ask)"
