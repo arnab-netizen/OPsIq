@@ -13,6 +13,25 @@ import {
   FORBIDDEN_GOVERNANCE_ACTIONS,
 } from "@/domain/owner-budget";
 
+describe("Owner budget governance — module contract assertions", () => {
+  it("classifyOverrideOutcome is a function", () => { expect(typeof classifyOverrideOutcome).toBe("function"); });
+  it("assertOverrideAllowed is a function", () => { expect(typeof assertOverrideAllowed).toBe("function"); });
+  it("checkAuthorityTransition is a function", () => { expect(typeof checkAuthorityTransition).toBe("function"); });
+  it("recommendAuthorityChange is a function", () => { expect(typeof recommendAuthorityChange).toBe("function"); });
+  it("isLawfulAuthorityAction is a function", () => { expect(typeof isLawfulAuthorityAction).toBe("function"); });
+  it("FORBIDDEN_GOVERNANCE_ACTIONS is a non-empty array", () => { expect(Array.isArray(FORBIDDEN_GOVERNANCE_ACTIONS)).toBe(true); expect(FORBIDDEN_GOVERNANCE_ACTIONS.length).toBeGreaterThan(0); });
+  it("assertOverrideAllowed({}) returns object with allowed field", () => { expect(assertOverrideAllowed({})).toHaveProperty("allowed"); });
+  it("assertOverrideAllowed({}).allowed is true when no blocks set", () => { expect(assertOverrideAllowed({}).allowed).toBe(true); });
+  it("classifyOverrideOutcome returns a string", () => {
+    expect(typeof classifyOverrideOutcome({ ownerDecision: "followed", outcomeVerified: false, outcomeSuccess: null })).toBe("string");
+  });
+  it("checkAuthorityTransition returns object with ok field", () => { expect(checkAuthorityTransition("NORMAL", "WATCH")).toHaveProperty("ok"); });
+  it("checkAuthorityTransition('NORMAL', 'WATCH').ok is true", () => { expect(checkAuthorityTransition("NORMAL", "WATCH").ok).toBe(true); });
+  it("isLawfulAuthorityAction returns a boolean", () => { expect(typeof isLawfulAuthorityAction("suspend_category")).toBe("boolean"); });
+  it("recommendAuthorityChange returns object with recommendedStatus", () => { expect(recommendAuthorityChange("NORMAL", {})).toHaveProperty("recommendedStatus"); });
+  it("recommendAuthorityChange returns object with lawfulActions array", () => { expect(Array.isArray(recommendAuthorityChange("NORMAL", {}).lawfulActions)).toBe(true); });
+});
+
 describe("Owner override outcome classification", () => {
   it("does NOT credit advice on override failure unless predicted risk verifiably materialized", () => {
     // Override failed but we cannot verify the predicted risk caused it → unverified.

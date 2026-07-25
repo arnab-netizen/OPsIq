@@ -3,6 +3,23 @@ import { validateRaci, accountableUser, assertValidRaci, RaciValidationError, Ra
 
 const A = (userId: string, role: RaciRole): RaciAssignment => ({ userId, role });
 
+describe("[module13] RACI — module contract assertions", () => {
+  it("validateRaci is a function", () => { expect(typeof validateRaci).toBe("function"); });
+  it("accountableUser is a function", () => { expect(typeof accountableUser).toBe("function"); });
+  it("assertValidRaci is a function", () => { expect(typeof assertValidRaci).toBe("function"); });
+  it("RaciValidationError is a class/function", () => { expect(typeof RaciValidationError).toBe("function"); });
+  it("RaciRole is an object", () => { expect(typeof RaciRole).toBe("object"); });
+  it("RaciRole.ACCOUNTABLE is defined", () => { expect(RaciRole.ACCOUNTABLE).toBeDefined(); });
+  it("RaciRole.RESPONSIBLE is defined", () => { expect(RaciRole.RESPONSIBLE).toBeDefined(); });
+  it("RaciRole.CONSULTED is defined", () => { expect(RaciRole.CONSULTED).toBeDefined(); });
+  it("A is a function", () => { expect(typeof A).toBe("function"); });
+  it("A('u1', RaciRole.ACCOUNTABLE) returns an object", () => { expect(typeof A("u1", RaciRole.ACCOUNTABLE)).toBe("object"); });
+  it("A('u1', RaciRole.ACCOUNTABLE).userId is 'u1'", () => { expect(A("u1", RaciRole.ACCOUNTABLE).userId).toBe("u1"); });
+  it("validateRaci([]) returns an object with ok field", () => { expect(validateRaci([])).toHaveProperty("ok"); });
+  it("validateRaci([]).ok is false for empty matrix", () => { expect(validateRaci([]).ok).toBe(false); });
+  it("accountableUser([]) returns null", () => { expect(accountableUser([])).toBeNull(); });
+});
+
 describe("[module13] RACI accountability matrix", () => {
   it("a valid matrix has exactly one accountable + >=1 responsible", () => {
     const r = validateRaci([A("u1", RaciRole.ACCOUNTABLE), A("u2", RaciRole.RESPONSIBLE), A("u3", RaciRole.CONSULTED)]);

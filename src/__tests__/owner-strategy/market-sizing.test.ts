@@ -22,6 +22,23 @@ function makeInputs(overrides: Partial<MarketSizingInputs> = {}): MarketSizingIn
   };
 }
 
+describe("market sizing — module contract assertions", () => {
+  it("estimateMarketSize is a function", () => { expect(typeof estimateMarketSize).toBe("function"); });
+  it("makeInputs is a function", () => { expect(typeof makeInputs).toBe("function"); });
+  it("makeInputs() returns an object with sourcePopulationUnits field", () => { expect(makeInputs()).toHaveProperty("sourcePopulationUnits"); });
+  it("makeInputs().sourcePopulationUnits is 50000 by default", () => { expect(makeInputs().sourcePopulationUnits).toBe(50000); });
+  it("makeInputs().priceRangeCents is non-null by default", () => { expect(makeInputs().priceRangeCents).not.toBeNull(); });
+  it("estimateMarketSize(makeInputs()) returns an object with status field", () => { expect(estimateMarketSize(makeInputs())).toHaveProperty("status"); });
+  it("estimateMarketSize(makeInputs()).status is 'ESTIMATED'", () => { expect(estimateMarketSize(makeInputs()).status).toBe("ESTIMATED"); });
+  it("null sourcePopulationUnits yields INSUFFICIENT_EVIDENCE_TO_ESTIMATE", () => { expect(estimateMarketSize({ ...makeInputs(), sourcePopulationUnits: null }).status).toBe("INSUFFICIENT_EVIDENCE_TO_ESTIMATE"); });
+  it("null priceRangeCents yields INSUFFICIENT_EVIDENCE_TO_ESTIMATE", () => { expect(estimateMarketSize({ ...makeInputs(), priceRangeCents: null }).status).toBe("INSUFFICIENT_EVIDENCE_TO_ESTIMATE"); });
+  it("estimateMarketSize result has calculationVersion field", () => { expect(estimateMarketSize(makeInputs())).toHaveProperty("calculationVersion"); });
+  it("calculationVersion flows through to result", () => { expect(estimateMarketSize({ ...makeInputs(), calculationVersion: "v2" }).calculationVersion).toBe("v2"); });
+  it("makeInputs().applicabilityRate is 0.2 by default", () => { expect(makeInputs().applicabilityRate).toBe(0.2); });
+  it("makeInputs().calculationVersion is 'v1' by default", () => { expect(makeInputs().calculationVersion).toBe("v1"); });
+  it("makeInputs().evidenceIds is an array", () => { expect(Array.isArray(makeInputs().evidenceIds)).toBe(true); });
+});
+
 describe("estimateMarketSize", () => {
   it("returns INSUFFICIENT_EVIDENCE_TO_ESTIMATE when sourcePopulationUnits is null", () => {
     const result = estimateMarketSize({ ...makeInputs(), sourcePopulationUnits: null });

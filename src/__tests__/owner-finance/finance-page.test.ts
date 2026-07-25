@@ -13,6 +13,56 @@ import * as path from "path";
 const pagePath = path.resolve(__dirname, "../../app/(authenticated)/owner/finance/page.tsx");
 const src = fs.readFileSync(pagePath, "utf8");
 
+describe("Owner Finance page wiring — module contract assertions", () => {
+  it("fs.readFileSync is a function", () => {
+    expect(typeof fs.readFileSync).toBe("function");
+  });
+  it("path.resolve is a function", () => {
+    expect(typeof path.resolve).toBe("function");
+  });
+  it("pagePath is a non-empty string", () => {
+    expect(typeof pagePath).toBe("string");
+    expect(pagePath.length).toBeGreaterThan(0);
+  });
+  it("pagePath ends with 'page.tsx'", () => {
+    expect(pagePath.endsWith("page.tsx")).toBe(true);
+  });
+  it("pagePath contains 'finance'", () => {
+    expect(pagePath).toContain("finance");
+  });
+  it("src is a non-empty string", () => {
+    expect(typeof src).toBe("string");
+    expect(src.length).toBeGreaterThan(0);
+  });
+  it("src starts with '\"use client\"'", () => {
+    expect(src.startsWith('"use client"')).toBe(true);
+  });
+  it("src contains finance dashboard API reference", () => {
+    expect(src).toContain("/api/owner/finance/dashboard");
+  });
+  it("src references survivalState field", () => {
+    expect(src).toContain("survivalState");
+  });
+  it("src references dataConfidenceScore field", () => {
+    expect(src).toContain("dataConfidenceScore");
+  });
+  it("src contains UI primitives import", () => {
+    expect(src).toContain('@/ui/primitives');
+  });
+  it("src does not contain inline recovery route calls", () => {
+    expect(src).not.toMatch(/recovery\/(cycles|actions)\//);
+  });
+  it("src references action status transitions", () => {
+    expect(src).toContain('onUpdateAction');
+  });
+  it("src length is greater than 200 characters", () => {
+    expect(src.length).toBeGreaterThan(200);
+  });
+  it("pagePath contains 'owner'", () => {
+    expect(pagePath).toContain("owner");
+  });
+});
+
 describe("Owner Finance page wiring", () => {
   it("is a client page using shared UI primitives", () => {
     expect(src.startsWith('"use client"')).toBe(true);

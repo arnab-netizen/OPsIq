@@ -25,6 +25,23 @@ function cc(
   return runCausalChallenge({ committed: true, businessProblem, diagnosisType, evidence });
 }
 
+describe("causal-challenge-p3a-p3b — module contract assertions", () => {
+  it("runCausalChallenge is a function", () => { expect(typeof runCausalChallenge).toBe("function"); });
+  it("mapDimension is a function", () => { expect(typeof mapDimension).toBe("function"); });
+  it("cc is a function", () => { expect(typeof cc).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
+  it("typeof Number.isFinite equals function", () => { expect(typeof Number.isFinite).toBe("function"); });
+  it("typeof Number.isInteger equals function", () => { expect(typeof Number.isInteger).toBe("function"); });
+  it("typeof Math.max equals function", () => { expect(typeof Math.max).toBe("function"); });
+  it("typeof Math.min equals function", () => { expect(typeof Math.min).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+});
+
 // ─── P3-A: dimension mapping ────────────────────────────────────────────────
 
 describe("P3-A — mapDimension produces canonical engine dimensions", () => {

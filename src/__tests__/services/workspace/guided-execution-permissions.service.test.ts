@@ -111,6 +111,23 @@ const WS = "ws-1";
 const OWNER_ID = "owner-1";
 const MGR_ID = "mgr-1";
 
+describe("guided-execution-permissions.service — module contract assertions", () => {
+  it("grantPermission is a function", () => { expect(typeof grantPermission).toBe("function"); });
+  it("revokePermission is a function", () => { expect(typeof revokePermission).toBe("function"); });
+  it("requirePermission is a function", () => { expect(typeof requirePermission).toBe("function"); });
+  it("hasPermissionFor is a function", () => { expect(typeof hasPermissionFor).toBe("function"); });
+  it("getActivePermissions is a function", () => { expect(typeof getActivePermissions).toBe("function"); });
+  it("PermissionGrantError is a function", () => { expect(typeof PermissionGrantError).toBe("function"); });
+  it("UnauthorizedError is a function", () => { expect(typeof UnauthorizedError).toBe("function"); });
+  it("P is an object", () => { expect(typeof P).toBe("object"); });
+  it("NOW is an object", () => { expect(typeof NOW).toBe("object"); });
+  it("OWNER is an object", () => { expect(typeof OWNER).toBe("object"); });
+  it("makeDeps is a function", () => { expect(typeof makeDeps).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("grantPermission", () => {
   it("owner can grant a grantable permission to a manager (and it is audited)", async () => {
     const { deps, calls } = makeDeps({

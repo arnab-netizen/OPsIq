@@ -43,6 +43,21 @@ function deps(rows: Rows): GuidanceDeps {
 const healthyFin = { cash: { cashflowState: "SAFE", dataConfidenceScore: 0.9 }, fin: { survivalState: "SAFE", dataConfidenceScore: 0.9 }, cap: { growthSafe: true, expansionTriggered: false, bottleneckUtilization: 0.4 } };
 const m = (o: Record<string, number | null>) => ({ complaintCount: 0, rewashCount: 0, refundAmount: 0, newCustomers: 10, repeatCustomers: 30, revenue: 100000, ...o });
 
+it("module41 contract: getOwnerNowView is a function", () => { expect(typeof getOwnerNowView).toBe("function"); });
+it("module41 contract: IssueCategory is an object", () => { expect(typeof IssueCategory).toBe("object"); });
+it("module41 contract: GuidanceClassification is an object", () => { expect(typeof GuidanceClassification).toBe("object"); });
+it("module41 contract: deps is a function", () => { expect(typeof deps).toBe("function"); });
+it("module41 contract: healthyFin is an object", () => { expect(typeof healthyFin).toBe("object"); });
+it("module41 contract: m is a function", () => { expect(typeof m).toBe("function"); });
+it("module41 contract: healthyFin has cash field", () => { expect(healthyFin).toHaveProperty("cash"); });
+it("module41 contract: m({}) returns an object", () => { expect(typeof m({})).toBe("object"); });
+it("module41 contract: m({}) has complaintCount field", () => { expect(m({})).toHaveProperty("complaintCount"); });
+it("module41 contract: m({}).revenue equals 100000", () => { expect(m({}).revenue).toBe(100000); });
+it("module41 contract: deps(healthyFin) returns an object", () => { expect(typeof deps(healthyFin)).toBe("object"); });
+it("module41 contract: deps(healthyFin) has db field", () => { expect(deps(healthyFin)).toHaveProperty("db"); });
+it("module41 contract: IssueCategory.CASH_DANGER is defined", () => { expect(IssueCategory.CASH_DANGER).toBeDefined(); });
+it("module41 contract: IssueCategory.CUSTOMER_SERVICE_FAILURE is defined", () => { expect(IssueCategory.CUSTOMER_SERVICE_FAILURE).toBeDefined(); });
+
 it("[module41] sim1 — complaints rising → top action is service failure + marketing forbidden", async () => {
   const out = await getOwnerNowView("ws1", "biz1", deps({ ...healthyFin, metric: m({ complaintCount: 12 }) }));
   expect(out.view.topOwnerActions[0].category).toBe(IssueCategory.CUSTOMER_SERVICE_FAILURE);

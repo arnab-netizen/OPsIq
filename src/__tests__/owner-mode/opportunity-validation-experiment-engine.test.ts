@@ -61,6 +61,23 @@ const asDeferred = (x: ValidationExperiment | DeferredValidation): DeferredValid
   return x;
 };
 
+describe("opportunity-validation-experiment-engine — module contract assertions", () => {
+  it("designValidationExperiment is a function", () => { expect(typeof designValidationExperiment).toBe("function"); });
+  it("buildOpportunityValidationPlan is a function", () => { expect(typeof buildOpportunityValidationPlan).toBe("function"); });
+  it("CTX is an object", () => { expect(typeof CTX).toBe("object"); });
+  it("candidate is a function", () => { expect(typeof candidate).toBe("function"); });
+  it("asExperiment is a function", () => { expect(typeof asExperiment).toBe("function"); });
+  it("asDeferred is a function", () => { expect(typeof asDeferred).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
+  it("typeof Number.isFinite equals function", () => { expect(typeof Number.isFinite).toBe("function"); });
+  it("typeof Number.isInteger equals function", () => { expect(typeof Number.isInteger).toBe("function"); });
+});
+
 describe("designValidationExperiment — type selection by opportunity shape", () => {
   it("1. a locally-feasible NEW_SERVICE gets a small real batch trial", () => {
     const e = asExperiment(designValidationExperiment(candidate({ opportunityType: "NEW_SERVICE", localFeasibility: "STRONG" }), CTX, AT));

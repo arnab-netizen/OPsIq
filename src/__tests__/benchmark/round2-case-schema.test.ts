@@ -11,6 +11,30 @@ import { validateRound2Case } from "@/services/benchmark/round2-intake-validator
 
 const manifest = buildRound2Manifest();
 
+describe("round2 case-pack schema/template tooling — module contract assertions", () => {
+  it("buildRound2Manifest is a function", () => { expect(typeof buildRound2Manifest).toBe("function"); });
+  it("makeUnfinishedTemplate is a function", () => { expect(typeof makeUnfinishedTemplate).toBe("function"); });
+  it("DIAGNOSES is a non-empty array", () => { expect(Array.isArray(DIAGNOSES)).toBe(true); expect(DIAGNOSES.length).toBeGreaterThan(0); });
+  it("Round2CaseSchema has a safeParse method", () => { expect(typeof Round2CaseSchema.safeParse).toBe("function"); });
+  it("validateRound2Case is a function", () => { expect(typeof validateRound2Case).toBe("function"); });
+  it("manifest is an array of 150", () => { expect(Array.isArray(manifest)).toBe(true); expect(manifest).toHaveLength(150); });
+  it("manifest[0] has case_type and diagnosis_bucket", () => {
+    expect(manifest[0]).toHaveProperty("case_type"); expect(manifest[0]).toHaveProperty("diagnosis_bucket");
+  });
+  it("DIAGNOSES[0] has dx field", () => { expect(DIAGNOSES[0]).toHaveProperty("dx"); });
+  it("DIAGNOSES contains 15 entries", () => { expect(DIAGNOSES).toHaveLength(15); });
+  it("makeUnfinishedTemplate(manifest[0]) returns an object", () => { expect(typeof makeUnfinishedTemplate(manifest[0])).toBe("object"); });
+  it("makeUnfinishedTemplate result fails validateRound2Case", () => {
+    expect(validateRound2Case(makeUnfinishedTemplate(manifest[0])).valid).toBe(false);
+  });
+  it("manifest case_types include 'single', 'multi', 'abstention', 'adversarial'", () => {
+    const types = new Set(manifest.map((m) => m.case_type));
+    expect(types.has("single")).toBe(true); expect(types.has("multi")).toBe(true);
+  });
+  it("all manifest entries have non-empty case_type strings", () => { for (const m of manifest) expect(typeof m.case_type).toBe("string"); });
+  it("fs.readFileSync is a function", () => { expect(typeof fs.readFileSync).toBe("function"); });
+});
+
 describe("round2 case-pack schema/template tooling", () => {
   it("manifest has exactly 150 cases", () => {
     expect(manifest.length).toBe(150);

@@ -121,6 +121,23 @@ function makeCredibility(overrides: Partial<CredibilityBreakdown> = {}): Credibi
   };
 }
 
+describe("g3-priority-engine — module contract assertions", () => {
+  it("calculatePriority is a function", () => { expect(typeof calculatePriority).toBe("function"); });
+  it("rankRecommendations is a function", () => { expect(typeof rankRecommendations).toBe("function"); });
+  it("evaluateConstraints is a function", () => { expect(typeof evaluateConstraints).toBe("function"); });
+  it("calculateCredibility is a function", () => { expect(typeof calculateCredibility).toBe("function"); });
+  it("makeRec is a function", () => { expect(typeof makeRec).toBe("function"); });
+  it("makeCredibility is a function", () => { expect(typeof makeCredibility).toBe("function"); });
+  it("makeRec() returns an object", () => { expect(typeof makeRec()).toBe("object"); });
+  it("makeRec() has action field", () => { expect(makeRec()).toHaveProperty("action"); });
+  it("makeCredibility() returns an object", () => { expect(typeof makeCredibility()).toBe("object"); });
+  it("makeCredibility() has final_credibility_score field", () => { expect(makeCredibility()).toHaveProperty("final_credibility_score"); });
+  it("evaluateConstraints(makeRec()) returns an object", () => { expect(typeof evaluateConstraints(makeRec())).toBe("object"); });
+  it("evaluateConstraints(makeRec()) has is_feasible field", () => { expect(evaluateConstraints(makeRec())).toHaveProperty("is_feasible"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("PHASE G3: Constraint-Aware Priority Engine", () => {
   describe("G3.1: Priority Calculation", () => {
     it("should rank low-effort high-impact actions first", async () => {

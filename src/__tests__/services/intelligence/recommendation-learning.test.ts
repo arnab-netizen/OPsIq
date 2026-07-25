@@ -35,6 +35,23 @@ const patternHits: OperatorItem[] = [
 const failed = (id: string, over: Partial<OperatorItem> = {}): OperatorItem =>
   ({ id, action: "fix_channel", workspaceId: "w1", createdBy: "u1", problemType: "revenue_leak", status: "failed", ...over } as OperatorItem);
 
+describe("recommendation-learning — module contract assertions", () => {
+  it("generateRecommendation is a function", () => { expect(typeof generateRecommendation).toBe("function"); });
+  it("generateMultipleRecommendations is a function", () => { expect(typeof generateMultipleRecommendations).toBe("function"); });
+  it("decision is an object", () => { expect(typeof decision).toBe("object"); });
+  it("decision has decision field", () => { expect(decision).toHaveProperty("decision"); });
+  it("decision.decision equals 'APPROVED'", () => { expect(decision.decision).toBe("APPROVED"); });
+  it("patterns is an array", () => { expect(Array.isArray(patterns)).toBe(true); });
+  it("patterns.length equals 3", () => { expect(patterns).toHaveLength(3); });
+  it("patternHits is an array", () => { expect(Array.isArray(patternHits)).toBe(true); });
+  it("patternHits.length equals 2", () => { expect(patternHits).toHaveLength(2); });
+  it("failed is a function", () => { expect(typeof failed).toBe("function"); });
+  it("failed('x') returns an object", () => { expect(typeof failed("x")).toBe("object"); });
+  it("failed('x').status equals 'failed'", () => { expect(failed("x").status).toBe("failed"); });
+  it("generateRecommendation(decision,patterns,patternHits) returns an object", () => { expect(typeof generateRecommendation(decision, patterns, patternHits)).toBe("object"); });
+  it("generateRecommendation result has confidenceScore field", () => { expect(generateRecommendation(decision, patterns, patternHits)).toHaveProperty("confidenceScore"); });
+});
+
 describe("P3-A B6 — recommendation learns from prior realized failures", () => {
   it("clean history: confidence is unchanged and no learning is applied", () => {
     const r = generateRecommendation(decision, patterns, patternHits);

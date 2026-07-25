@@ -8,6 +8,23 @@ import { publicCaseMetaSchema } from "@/behavioral-validation/public-cases/schem
 
 const base: SourceRecord = { ...SOURCE_REGISTER[0] };
 
+describe("source quality — module contract assertions", () => {
+  it("scoreSource is a function", () => { expect(typeof scoreSource).toBe("function"); });
+  it("validateSourceRef is a function", () => { expect(typeof validateSourceRef).toBe("function"); });
+  it("canGloballyPromote is a function", () => { expect(typeof canGloballyPromote).toBe("function"); });
+  it("sourceRegisterReliabilitySummary is a function", () => { expect(typeof sourceRegisterReliabilitySummary).toBe("function"); });
+  it("markingErrors is a function", () => { expect(typeof markingErrors).toBe("function"); });
+  it("SOURCE_REGISTER is an array", () => { expect(Array.isArray(SOURCE_REGISTER)).toBe(true); });
+  it("SOURCE_REGISTER.length is greater than 0", () => { expect(SOURCE_REGISTER.length).toBeGreaterThan(0); });
+  it("publicCaseMetaSchema is an object", () => { expect(typeof publicCaseMetaSchema).toBe("object"); });
+  it("base is an object", () => { expect(typeof base).toBe("object"); });
+  it("base has id field", () => { expect(base).toHaveProperty("id"); });
+  it("validateSourceRef(SOURCE_REGISTER[0].id) is true", () => { expect(validateSourceRef(SOURCE_REGISTER[0].id)).toBe(true); });
+  it("publicCaseMetaSchemaSample is a function", () => { expect(typeof publicCaseMetaSchemaSample).toBe("function"); });
+  it("sourceRegisterReliabilitySummary().total equals SOURCE_REGISTER.length", () => { expect(sourceRegisterReliabilitySummary().total).toBe(SOURCE_REGISTER.length); });
+  it("SOURCE_REGISTER[0] has reliability field", () => { expect(SOURCE_REGISTER[0]).toHaveProperty("reliability"); });
+});
+
 describe("source quality + validity assurance", () => {
   it("a hallucinated / malformed source ID fails validation", () => {
     expect(validateSourceRef("SRC-DOES-NOT-EXIST")).toBe(false);

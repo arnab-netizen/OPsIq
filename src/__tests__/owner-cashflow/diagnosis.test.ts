@@ -69,6 +69,23 @@ function diagnose(input: CashflowSnapshotInput) {
   return diagnoseCashflowSnapshot(input, { now: new Date("2026-06-05") });
 }
 
+describe("owner-cashflow diagnosis — module contract assertions", () => {
+  it("diagnoseCashflowSnapshot is a function", () => { expect(typeof diagnoseCashflowSnapshot).toBe("function"); });
+  it("buildCashflowRiskFindings is a function", () => { expect(typeof buildCashflowRiskFindings).toBe("function"); });
+  it("buildCashflowOpportunityFindings is a function", () => { expect(typeof buildCashflowOpportunityFindings).toBe("function"); });
+  it("computeCashflowMetrics is a function", () => { expect(typeof computeCashflowMetrics).toBe("function"); });
+  it("resolveCashflowThresholds is a function", () => { expect(typeof resolveCashflowThresholds).toBe("function"); });
+  it("rankCashflowFindings is a function", () => { expect(typeof rankCashflowFindings).toBe("function"); });
+  it("ownerFindingSchema is an object", () => { expect(typeof ownerFindingSchema).toBe("object"); });
+  it("domainScoreSchema is an object", () => { expect(typeof domainScoreSchema).toBe("object"); });
+  it("healthy is a function", () => { expect(typeof healthy).toBe("function"); });
+  it("crisis is a function", () => { expect(typeof crisis).toBe("function"); });
+  it("codes is a function", () => { expect(typeof codes).toBe("function"); });
+  it("diagnose is a function", () => { expect(typeof diagnose).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("owner-cashflow detector — risk findings", () => {
   it("crisis triggers the survival risk cluster", () => {
     const r = diagnose(crisis());

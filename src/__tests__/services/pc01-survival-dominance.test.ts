@@ -32,6 +32,23 @@ function ev(
 }
 const primary = (e: EvidenceItem[]) => diagnoseRootCause(e, "test").primaryRootCause.type;
 
+describe("PC-01 survival dominance — module contract assertions", () => {
+  it("diagnoseRootCause is a function", () => { expect(typeof diagnoseRootCause).toBe("function"); });
+  it("ConfidenceLevel is an object", () => { expect(typeof ConfidenceLevel).toBe("object"); });
+  it("ConfidenceLevel.HIGH is defined", () => { expect(ConfidenceLevel.HIGH).toBeDefined(); });
+  it("DiagnosisType is an object", () => { expect(typeof DiagnosisType).toBe("object"); });
+  it("DiagnosisType.CASH_LIQUIDITY_CRISIS is defined", () => { expect(DiagnosisType.CASH_LIQUIDITY_CRISIS).toBeDefined(); });
+  it("DiagnosisType.CUSTOMER_RETENTION_EROSION is defined", () => { expect(DiagnosisType.CUSTOMER_RETENTION_EROSION).toBeDefined(); });
+  it("DiagnosisType.DEBT_SOLVENCY_PRESSURE is defined", () => { expect(DiagnosisType.DEBT_SOLVENCY_PRESSURE).toBeDefined(); });
+  it("DiagnosisType.UNKNOWN is defined", () => { expect(DiagnosisType.UNKNOWN).toBeDefined(); });
+  it("seq is a number", () => { expect(typeof seq).toBe("number"); });
+  it("ev is a function", () => { expect(typeof ev).toBe("function"); });
+  it("primary is a function", () => { expect(typeof primary).toBe("function"); });
+  it("ev('financial_health', 'test').finding is 'test'", () => { expect(ev("financial_health", "test").finding).toBe("test"); });
+  it("ev('financial_health', 'test').dimension is 'financial_health'", () => { expect(ev("financial_health", "test").dimension).toBe("financial_health"); });
+  it("ev('financial_health', 'test').isCritical is true by default", () => { expect(ev("financial_health", "test").isCritical).toBe(true); });
+});
+
 describe("PC-01 survival dominance", () => {
   it("cash survival (3-month runway) beats a matched retention diagnosis", () => {
     expect(

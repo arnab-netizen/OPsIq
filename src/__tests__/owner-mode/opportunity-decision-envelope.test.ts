@@ -26,6 +26,23 @@ const mk = (over: Partial<Parameters<typeof buildOpportunityEnvelope>[0]> = {}) 
   });
 };
 
+describe("opportunity decision envelope — module contract assertions", () => {
+  it("buildOpportunityEnvelope is a function", () => { expect(typeof buildOpportunityEnvelope).toBe("function"); });
+  it("screenOpportunity is a function", () => { expect(typeof screenOpportunity).toBe("function"); });
+  it("FLOOR is a number", () => { expect(typeof FLOOR).toBe("number"); });
+  it("FLOOR is 0.3", () => { expect(FLOOR).toBe(0.3); });
+  it("mk is a function", () => { expect(typeof mk).toBe("function"); });
+  it("mk() returns an object", () => { expect(typeof mk()).toBe("object"); });
+  it("mk() returns object with opportunityType field", () => { expect(mk()).toHaveProperty("opportunityType"); });
+  it("mk() returns object with verdict field", () => { expect(mk()).toHaveProperty("verdict"); });
+  it("mk() returns object with confidence field", () => { expect(mk()).toHaveProperty("confidence"); });
+  it("mk().verdict is 'accept' for default healthy inputs", () => { expect(mk().verdict).toBe("accept"); });
+  it("mk({ marginPct: 0.1 }).verdict is 'reject' for below-floor margin", () => { expect(mk({ marginPct: 0.1 }).verdict).toBe("reject"); });
+  it("mk({ marginPct: null }).confidence is 'LOW' for unknown margin", () => { expect(mk({ marginPct: null }).confidence).toBe("LOW"); });
+  it("mk() result has firstTestAction field", () => { expect(mk()).toHaveProperty("firstTestAction"); });
+  it("mk() result has ownerApprovalRequired field", () => { expect(mk()).toHaveProperty("ownerApprovalRequired"); });
+});
+
 describe("opportunity decision envelope (Wealth Standard)", () => {
   it("carries every required owner-decision field", () => {
     const e = mk();

@@ -1,6 +1,66 @@
 import { describe, it, expect } from "vitest";
 import { detectFalseLean, FalseLeanPattern } from "@/domain/execution/false-lean-detector";
 
+describe("[module11] false lean detector — structural contract assertions", () => {
+  it("detectFalseLean is a function", () => {
+    expect(typeof detectFalseLean).toBe("function");
+  });
+  it("detectFalseLean returns an object with verdict, approvable, and patterns", () => {
+    const r = detectFalseLean({});
+    expect("verdict" in r && "approvable" in r && "patterns" in r).toBe(true);
+  });
+  it("detectFalseLean({}) returns CLEAN verdict", () => {
+    expect(detectFalseLean({}).verdict).toBe("CLEAN");
+  });
+  it("detectFalseLean({}) returns approvable: true", () => {
+    expect(detectFalseLean({}).approvable).toBe(true);
+  });
+  it("detectFalseLean({}) returns empty patterns array", () => {
+    expect(detectFalseLean({}).patterns).toHaveLength(0);
+  });
+  it("FalseLeanPattern.STAFF_CUT_WITHOUT_WORKLOAD_REDUCTION is defined", () => {
+    expect(FalseLeanPattern.STAFF_CUT_WITHOUT_WORKLOAD_REDUCTION).toBeDefined();
+  });
+  it("FalseLeanPattern.GROWTH_WITHOUT_CAPACITY is defined", () => {
+    expect(FalseLeanPattern.GROWTH_WITHOUT_CAPACITY).toBeDefined();
+  });
+  it("FalseLeanPattern.DISCOUNT_WITHOUT_MARGIN_PROOF is defined", () => {
+    expect(FalseLeanPattern.DISCOUNT_WITHOUT_MARGIN_PROOF).toBeDefined();
+  });
+  it("FalseLeanPattern.OWNER_LABOUR_SUBSTITUTION is defined", () => {
+    expect(FalseLeanPattern.OWNER_LABOUR_SUBSTITUTION).toBeDefined();
+  });
+  it("FalseLeanPattern.INVENTORY_BELOW_SAFE_MINIMUM is defined", () => {
+    expect(FalseLeanPattern.INVENTORY_BELOW_SAFE_MINIMUM).toBeDefined();
+  });
+  it("FalseLeanPattern.AUTOMATION_OF_BROKEN_PROCESS is defined", () => {
+    expect(FalseLeanPattern.AUTOMATION_OF_BROKEN_PROCESS).toBeDefined();
+  });
+  it("verdict is a string", () => {
+    expect(typeof detectFalseLean({}).verdict).toBe("string");
+  });
+  it("patterns is an Array", () => {
+    expect(Array.isArray(detectFalseLean({}).patterns)).toBe(true);
+  });
+  it("approvable is a boolean", () => {
+    expect(typeof detectFalseLean({}).approvable).toBe("boolean");
+  });
+  it("STAFF_CUT_WITHOUT_WORKLOAD_REDUCTION is detected and causes REJECT", () => {
+    const r = detectFalseLean({ staffReduced: true, workloadReduced: false });
+    expect(r.patterns).toContain(FalseLeanPattern.STAFF_CUT_WITHOUT_WORKLOAD_REDUCTION);
+    expect(r.verdict).toBe("REJECT");
+  });
+  it("safe variant: staffReduced=true workloadReduced=true → no false-lean pattern", () => {
+    const r = detectFalseLean({ staffReduced: true, workloadReduced: true });
+    expect(r.patterns).not.toContain(FalseLeanPattern.STAFF_CUT_WITHOUT_WORKLOAD_REDUCTION);
+  });
+  it("multiple REJECT patterns are all detected simultaneously", () => {
+    const r = detectFalseLean({ staffReduced: true, workloadReduced: false, orderGrowthPlanned: true, capacityHeadroom: false });
+    expect(r.patterns.length).toBeGreaterThanOrEqual(2);
+    expect(r.verdict).toBe("REJECT");
+  });
+});
+
 describe("[module11] false lean detector", () => {
   it("clean signals -> CLEAN + approvable", () => {
     const r = detectFalseLean({ staffReduced: true, workloadReduced: true, orderGrowthPlanned: true, capacityHeadroom: true });

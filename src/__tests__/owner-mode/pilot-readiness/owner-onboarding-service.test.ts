@@ -19,6 +19,23 @@ function rows(partial: Partial<OwnerDomainRows>): OwnerDomainRows {
   } as OwnerDomainRows;
 }
 
+describe("owner onboarding service — module contract assertions", () => {
+  it("mapBusinessTypeToProfile is a function", () => { expect(typeof mapBusinessTypeToProfile).toBe("function"); });
+  it("mapOperatingModelToRole is a function", () => { expect(typeof mapOperatingModelToRole).toBe("function"); });
+  it("rowsToSuppliedCategories is a function", () => { expect(typeof rowsToSuppliedCategories).toBe("function"); });
+  it("rows({}) has cashflow field", () => { expect(rows({})).toHaveProperty("cashflow"); });
+  it("rows({}) has finance field", () => { expect(rows({})).toHaveProperty("finance"); });
+  it("rows({}).cashflow is null by default", () => { expect(rows({}).cashflow).toBeNull(); });
+  it("mapBusinessTypeToProfile('something else') returns 'generic'", () => { expect(mapBusinessTypeToProfile("something else")).toBe("generic"); });
+  it("mapOperatingModelToRole(null, false) returns 'owner_operated'", () => { expect(mapOperatingModelToRole(null, false)).toBe("owner_operated"); });
+  it("mapOperatingModelToRole(null, true) returns 'multi_location'", () => { expect(mapOperatingModelToRole(null, true)).toBe("multi_location"); });
+  it("rowsToSuppliedCategories(rows({})) returns empty array", () => { expect(rowsToSuppliedCategories(rows({}))).toHaveLength(0); });
+  it("rowsToSuppliedCategories returns an array", () => { expect(Array.isArray(rowsToSuppliedCategories(rows({})))).toBe(true); });
+  it("mapBusinessTypeToProfile returns a non-empty string", () => { expect(mapBusinessTypeToProfile("Premium Dry Cleaning").length).toBeGreaterThan(0); });
+  it("mapOperatingModelToRole('remote owner', false) returns 'remote_owner'", () => { expect(mapOperatingModelToRole("remote owner", false)).toBe("remote_owner"); });
+  it("mapOperatingModelToRole('manager-run', false) returns 'manager_run'", () => { expect(mapOperatingModelToRole("manager-run", false)).toBe("manager_run"); });
+});
+
 describe("owner onboarding service mappings", () => {
   it("maps business type free-text to a canonical profile", () => {
     expect(mapBusinessTypeToProfile("Premium Dry Cleaning")).toBe("laundry_drycleaning");

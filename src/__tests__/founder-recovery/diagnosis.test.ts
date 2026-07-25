@@ -27,6 +27,57 @@ const failing: MetricSnapshotInput = {
   campaignConversions: 10, // efficiency 0.5 -> POOR_CAMPAIGN_CONVERSION (critical)
 };
 
+describe("founder-recovery diagnosis — module contract assertions", () => {
+  it("calculateMetrics is a function", () => {
+    expect(typeof calculateMetrics).toBe("function");
+  });
+  it("generateFindings is a function", () => {
+    expect(typeof generateFindings).toBe("function");
+  });
+  it("calculateMetrics(failing) returns an object", () => {
+    expect(typeof calculateMetrics(failing)).toBe("object");
+  });
+  it("calculateMetrics(failing) result has a currency field", () => {
+    expect(calculateMetrics(failing)).toHaveProperty("currency");
+  });
+  it("calculateMetrics(failing).currency is 'INR'", () => {
+    expect(calculateMetrics(failing).currency).toBe("INR");
+  });
+  it("calculateMetrics(failing) result has a grossMarginPct field", () => {
+    expect(calculateMetrics(failing)).toHaveProperty("grossMarginPct");
+  });
+  it("calculateMetrics(failing).grossMarginPct is a number", () => {
+    expect(typeof calculateMetrics(failing).grossMarginPct).toBe("number");
+  });
+  it("calculateMetrics(failing) result has a netMarginPct field", () => {
+    expect(calculateMetrics(failing)).toHaveProperty("netMarginPct");
+  });
+  it("generateFindings returns an array", () => {
+    expect(Array.isArray(generateFindings(failing, calculateMetrics(failing)))).toBe(true);
+  });
+  it("generateFindings returns at least 1 finding for the failing snapshot", () => {
+    expect(generateFindings(failing, calculateMetrics(failing)).length).toBeGreaterThanOrEqual(1);
+  });
+  it("findings[0] has a code field", () => {
+    expect(generateFindings(failing, calculateMetrics(failing))[0]).toHaveProperty("code");
+  });
+  it("findings[0] has a severity field", () => {
+    expect(generateFindings(failing, calculateMetrics(failing))[0]).toHaveProperty("severity");
+  });
+  it("findings[0] has an evidence field", () => {
+    expect(generateFindings(failing, calculateMetrics(failing))[0]).toHaveProperty("evidence");
+  });
+  it("findings[0] has a sourceMetric field", () => {
+    expect(generateFindings(failing, calculateMetrics(failing))[0]).toHaveProperty("sourceMetric");
+  });
+  it("findings[0] has a confidence field", () => {
+    expect(generateFindings(failing, calculateMetrics(failing))[0]).toHaveProperty("confidence");
+  });
+  it("failing.currency is 'INR'", () => {
+    expect(failing.currency).toBe("INR");
+  });
+});
+
 describe("founder-recovery diagnosis", () => {
   it("produces evidence-backed findings strictly from real metrics + thresholds", () => {
     const d = calculateMetrics(failing);

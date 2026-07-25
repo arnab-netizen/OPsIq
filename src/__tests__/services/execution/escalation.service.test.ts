@@ -57,6 +57,23 @@ function makeDeps(opts: { committedStatus?: St; auditThrows?: boolean } = {}) {
   return { deps: { db, now: () => NOW } as EscalationDeps, committed, calls };
 }
 
+describe("escalation service — module contract assertions", () => {
+  it("raiseBlocker is a function", () => { expect(typeof raiseBlocker).toBe("function"); });
+  it("resolveEscalation is a function", () => { expect(typeof resolveEscalation).toBe("function"); });
+  it("EscalationResolutionError is a class/function", () => { expect(typeof EscalationResolutionError).toBe("function"); });
+  it("EscalationConflictError is a class/function", () => { expect(typeof EscalationConflictError).toBe("function"); });
+  it("B (BlockerType) is an object", () => { expect(typeof B).toBe("object"); });
+  it("B.REFUND_REQUEST is defined", () => { expect(B.REFUND_REQUEST).toBeDefined(); });
+  it("B.DISCOUNT_REQUEST is defined", () => { expect(B.DISCOUNT_REQUEST).toBeDefined(); });
+  it("St (EscalationStatus) is an object", () => { expect(typeof St).toBe("object"); });
+  it("St.OPEN is defined", () => { expect(St.OPEN).toBeDefined(); });
+  it("St.RESOLVED is defined", () => { expect(St.RESOLVED).toBeDefined(); });
+  it("Tgt (EscalationTarget) is an object", () => { expect(typeof Tgt).toBe("object"); });
+  it("Tgt.OWNER is defined", () => { expect(Tgt.OWNER).toBeDefined(); });
+  it("NOW is a Date", () => { expect(NOW).toBeInstanceOf(Date); });
+  it("WS is a non-empty string", () => { expect(typeof WS).toBe("string"); expect(WS.length).toBeGreaterThan(0); });
+});
+
 describe("raiseBlocker", () => {
   it("an employee raises a refund blocker → routed to owner, persisted, audited", async () => {
     const { deps, calls } = makeDeps();

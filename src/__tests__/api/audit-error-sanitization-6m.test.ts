@@ -112,4 +112,97 @@ describe("Phase 6M — audit error sanitization: value route", () => {
       })
     );
   });
+
+  it("classifyOperatorError is NOT called when audit succeeds", async () => {
+    await valueGET(VALUE_CTX as never);
+    expect(valueMocks.classifyOperatorError).not.toHaveBeenCalled();
+  });
+
+  it("getItems is called exactly once per request", async () => {
+    await valueGET(VALUE_CTX as never);
+    expect(valueMocks.getItems).toHaveBeenCalledTimes(1);
+  });
+
+  it("calculateValue is called exactly once per request", async () => {
+    await valueGET(VALUE_CTX as never);
+    expect(valueMocks.calculateValue).toHaveBeenCalledTimes(1);
+  });
+
+  it("emitAuditEvent is called exactly once per request", async () => {
+    await valueGET(VALUE_CTX as never);
+    expect(valueMocks.emitAuditEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("result contains totalExpected field", async () => {
+    const result = (await valueGET(VALUE_CTX as never)) as typeof SAMPLE_METRICS;
+    expect(result.totalExpected).toBe(100000);
+  });
+
+  it("result contains totalActual field", async () => {
+    const result = (await valueGET(VALUE_CTX as never)) as typeof SAMPLE_METRICS;
+    expect(result.totalActual).toBe(80000);
+  });
+
+  it("result contains roi field", async () => {
+    const result = (await valueGET(VALUE_CTX as never)) as typeof SAMPLE_METRICS;
+    expect(result.roi).toBe(0.8);
+  });
+
+  it("result contains itemsAnalyzed field", async () => {
+    const result = (await valueGET(VALUE_CTX as never)) as typeof SAMPLE_METRICS;
+    expect(result.itemsAnalyzed).toBe(5);
+  });
+
+  it("result contains lossFromWrongDecisions field", async () => {
+    const result = (await valueGET(VALUE_CTX as never)) as typeof SAMPLE_METRICS;
+    expect(result.lossFromWrongDecisions).toBe(20000);
+  });
+
+  it("result contains totalDelta field", async () => {
+    const result = (await valueGET(VALUE_CTX as never)) as typeof SAMPLE_METRICS;
+    expect(result.totalDelta).toBe(-20000);
+  });
+
+  it("result is exactly the value returned by calculateValue", async () => {
+    const altMetrics = { ...SAMPLE_METRICS, roi: 1.5, totalExpected: 200000 };
+    valueMocks.calculateValue.mockReturnValue(altMetrics);
+    const result = await valueGET(VALUE_CTX as never);
+    expect(result).toEqual(altMetrics);
+  });
+
+  it("classifyOperatorError context arg is 'load'", async () => {
+    valueMocks.emitAuditEvent.mockRejectedValue(new Error("fail"));
+    await valueGET(VALUE_CTX as never);
+    expect(valueMocks.classifyOperatorError).toHaveBeenCalledWith(
+      expect.any(Error),
+      { context: "load" }
+    );
+  });
+
+  it("audit failure does not change the returned metrics (fail-open)", async () => {
+    valueMocks.emitAuditEvent.mockRejectedValue(new Error("audit fail"));
+    const result = (await valueGET(VALUE_CTX as never)) as typeof SAMPLE_METRICS;
+    expect(result.roi).toBe(SAMPLE_METRICS.roi);
+    expect(result.totalExpected).toBe(SAMPLE_METRICS.totalExpected);
+  });
+
+  it("getItems result is passed to calculateValue", async () => {
+    const items = [{ id: "item-1" }, { id: "item-2" }];
+    valueMocks.getItems.mockResolvedValue(items);
+    await valueGET(VALUE_CTX as never);
+    expect(valueMocks.calculateValue).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ id: "item-1" })])
+    );
+  });
+
+  it("emitAuditEvent receives the workspaceId from ctx", async () => {
+    await valueGET(VALUE_CTX as never);
+    expect(valueMocks.emitAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "ws-1" })
+    );
+  });
+
+  it("VALUE_CTX default verifiedWorkspaceId is ws-1", () => {
+    expect(VALUE_CTX.verifiedWorkspaceId).toBe("ws-1");
+  });
 });

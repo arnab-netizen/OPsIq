@@ -117,12 +117,29 @@ export const CAPABILITIES = {
   OWNER_VIEW: "owner:view",
   OWNER_MANAGE: "owner:manage",
 
+  // Approval
+  CONSULTING_APPROVE: "consulting:approve",
+
+  // Onboarding
+  OWNER_ONBOARD: "owner:onboard",
+
+  // SOP Management
+  SOP_MANAGE: "sop:manage",
+
   // Audit Trail
   AUDIT_VIEW: "audit:view",
   AUDIT_EXPORT: "audit:export",
 
   // Webhooks
   WEBHOOK_MANAGE: "webhook:manage",
+
+  // Integration Fabric (Bundle 5)
+  INTEGRATION_MANAGE: "integration:manage",
+  INTEGRATION_VIEW: "integration:view",
+
+  // Consulting Mode (Bundle 6)
+  CONSULTING_WRITE: "consulting:write",
+  CONSULTING_READ: "consulting:read",
 } as const;
 
 export type CapabilityName =

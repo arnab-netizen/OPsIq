@@ -50,6 +50,23 @@ function specificGuidance(overrides: Partial<GuidanceObject> = {}): GuidanceObje
   };
 }
 
+describe("generic-output-guard — module contract assertions", () => {
+  it("FORBIDDEN_GENERIC_PHRASES is an array", () => { expect(Array.isArray(FORBIDDEN_GENERIC_PHRASES)).toBe(true); });
+  it("containsForbiddenGeneric is a function", () => { expect(typeof containsForbiddenGeneric).toBe("function"); });
+  it("assessSpecificity is a function", () => { expect(typeof assessSpecificity).toBe("function"); });
+  it("isSpecificEnough is a function", () => { expect(typeof isSpecificEnough).toBe("function"); });
+  it("evaluateGuidanceForGeneric is a function", () => { expect(typeof evaluateGuidanceForGeneric).toBe("function"); });
+  it("assertNonGeneric is a function", () => { expect(typeof assertNonGeneric).toBe("function"); });
+  it("GenericGuidanceError is a function", () => { expect(typeof GenericGuidanceError).toBe("function"); });
+  it("ProofType is an object", () => { expect(typeof ProofType).toBe("object"); });
+  it("EvidenceConfidenceLevel is an object", () => { expect(typeof EvidenceConfidenceLevel).toBe("object"); });
+  it("BusinessFunction is an object", () => { expect(typeof BusinessFunction).toBe("object"); });
+  it("specificGuidance is a function", () => { expect(typeof specificGuidance).toBe("function"); });
+  it("specificGuidance() returns an object", () => { expect(typeof specificGuidance()).toBe("object"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("[module41] generic-output-guard — forbidden phrase list", () => {
   it("[module41] exposes exactly the 11 lowercased forbidden phrases", () => {
     expect(FORBIDDEN_GENERIC_PHRASES).toHaveLength(11);

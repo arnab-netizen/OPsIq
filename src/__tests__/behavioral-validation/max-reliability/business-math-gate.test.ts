@@ -4,6 +4,23 @@
 import { describe, it, expect } from "vitest";
 import { assertBusinessMath, type MathDecision } from "@/behavioral-validation/max-reliability/business-math-gate";
 
+describe("business-math-gate — module contract assertions", () => {
+  it("assertBusinessMath is a function", () => { expect(typeof assertBusinessMath).toBe("function"); });
+  it("assertBusinessMath with empty trace returns an object", () => { expect(typeof assertBusinessMath({ kind: "contract", recommendation: "proceed", calculationTrace: [], n: {} })).toBe("object"); });
+  it("assertBusinessMath result has ok field", () => { expect(assertBusinessMath({ kind: "contract", recommendation: "proceed", calculationTrace: [], n: {} })).toHaveProperty("ok"); });
+  it("assertBusinessMath result has failures field", () => { expect(assertBusinessMath({ kind: "contract", recommendation: "proceed", calculationTrace: [], n: {} })).toHaveProperty("failures"); });
+  it("assertBusinessMath result has computed field", () => { expect(assertBusinessMath({ kind: "contract", recommendation: "proceed", calculationTrace: [], n: {} })).toHaveProperty("computed"); });
+  it("assertBusinessMath with empty trace gives ok false", () => { expect(assertBusinessMath({ kind: "contract", recommendation: "proceed", calculationTrace: [], n: {} }).ok).toBe(false); });
+  it("assertBusinessMath failures is an array", () => { expect(Array.isArray(assertBusinessMath({ kind: "contract", recommendation: "proceed", calculationTrace: [], n: {} }).failures)).toBe(true); });
+  it("assertBusinessMath sound expansion gives ok true", () => { expect(assertBusinessMath({ kind: "expansion", recommendation: "proceed", calculationTrace: ["runway 120d, affordable"], n: { capexAndWorkingCapital: 200000, availableCash: 600000, cash: 600000, monthlyNetBurn: 100000 } }).ok).toBe(true); });
+  it("assertBusinessMath trace contradiction flags failure", () => { expect(assertBusinessMath({ kind: "contract", recommendation: "proceed", calculationTrace: ["margin is negative after terms"], n: { ratePerUnit: 100, fullyLoadedCost: 70, paymentTermsDays: 10 } }).failures).toContain("calculation trace contradicts the proceed recommendation"); });
+  it("assertBusinessMath hiring with low cash fails", () => { expect(assertBusinessMath({ kind: "hiring", recommendation: "proceed", calculationTrace: ["utilization"], n: { workHours: 120, availableHours: 300, cash: 50000, monthlyNetBurn: 80000 } }).ok).toBe(false); });
+  it("assertBusinessMath discount negative margin fails", () => { expect(assertBusinessMath({ kind: "discount", recommendation: "proceed", calculationTrace: ["margin after discount"], n: { discountedRevenue: 90, cogs: 110 } }).ok).toBe(false); });
+  it("assertBusinessMath sound contract gives ok true", () => { expect(assertBusinessMath({ kind: "contract", recommendation: "proceed", calculationTrace: ["margin after 30d terms = +14"], n: { ratePerUnit: 100, fullyLoadedCost: 80, paymentTermsDays: 30 } }).ok).toBe(true); });
+  it("assertBusinessMath asset without payback fails", () => { expect(assertBusinessMath({ kind: "asset", recommendation: "proceed", calculationTrace: ["payback"], n: { investment: 800000, monthlyIncrementalProfit: 0 } }).ok).toBe(false); });
+  it("assertBusinessMath marketing net-negative fails", () => { expect(assertBusinessMath({ kind: "marketing", recommendation: "proceed", calculationTrace: ["net ROAS after refunds"], n: { adRevenue: 500000, adSpend: 100000, returnRate: 0.4, grossMarginPct: 0.25 } }).ok).toBe(false); });
+});
+
 describe("business-math assurance gate", () => {
   it("a missing required calculation fails", () => {
     const d: MathDecision = { kind: "contract", recommendation: "proceed", calculationTrace: [], n: { ratePerUnit: 100, fullyLoadedCost: 80, paymentTermsDays: 30 } };

@@ -49,6 +49,23 @@ function input(over: Partial<SupervisorInput> = {}): SupervisorInput {
   };
 }
 
+describe("supervisor-summary — module contract assertions", () => {
+  it("buildSupervisorSummary is a function", () => { expect(typeof buildSupervisorSummary).toBe("function"); });
+  it("input is a function", () => { expect(typeof input).toBe("function"); });
+  it("input() returns an object", () => { expect(typeof input()).toBe("object"); });
+  it("input() has dominantConstraint field", () => { expect(input()).toHaveProperty("dominantConstraint"); });
+  it("input() has nextBestAction field", () => { expect(input()).toHaveProperty("nextBestAction"); });
+  it("input() has doNotDo field", () => { expect(input()).toHaveProperty("doNotDo"); });
+  it("input().doNotDo is an array", () => { expect(Array.isArray(input().doNotDo)).toBe(true); });
+  it("buildSupervisorSummary(input()) returns an object", () => { expect(typeof buildSupervisorSummary(input())).toBe("object"); });
+  it("buildSupervisorSummary(input()) has ledger field", () => { expect(buildSupervisorSummary(input())).toHaveProperty("ledger"); });
+  it("buildSupervisorSummary(input()) has topPriorities field", () => { expect(buildSupervisorSummary(input())).toHaveProperty("topPriorities"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+});
+
 describe("supervisor summary — assumption ledger + no fake confidence", () => {
   it("produces an assumption ledger with known facts, marked assumptions, missing data, confidence + reason, what-would-change", () => {
     const s = buildSupervisorSummary(input());

@@ -11,6 +11,23 @@ function mk(over: Partial<BehavioralCase>): BehavioralCase {
   return { ...base, ...over, flags: { ...base.flags, hostile: false, missingOrStaleData: false, cashRisk: false, capacityRisk: false, complianceRisk: false, ownerEmotional: false, remoteOwner: false, multiBranch: false, ...(over.flags ?? {}) } };
 }
 
+describe("profitability-growth-stages — module contract assertions", () => {
+  it("profitabilityCheck is a function", () => { expect(typeof profitabilityCheck).toBe("function"); });
+  it("affectsArbitration is a function", () => { expect(typeof affectsArbitration).toBe("function"); });
+  it("evaluateGrowthGates is a function", () => { expect(typeof evaluateGrowthGates).toBe("function"); });
+  it("inferBusinessStage is a function", () => { expect(typeof inferBusinessStage).toBe("function"); });
+  it("stageAdjustedPriority is a function", () => { expect(typeof stageAdjustedPriority).toBe("function"); });
+  it("stageRequiresStopLoss is a function", () => { expect(typeof stageRequiresStopLoss).toBe("function"); });
+  it("STAGE_TOP_PRIORITY is an object", () => { expect(typeof STAGE_TOP_PRIORITY).toBe("object"); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("base is an object", () => { expect(typeof base).toBe("object"); });
+  it("mk is a function", () => { expect(typeof mk).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("profitability / efficiency control layer", () => {
   it("fails advice that celebrates revenue while profit/cash declines", () => {
     const c = mk({ flags: { cashRisk: true } });

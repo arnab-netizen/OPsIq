@@ -14,6 +14,58 @@ const src = fs.readFileSync(
   "utf8"
 );
 
+describe("Owner Command Center home page — source file contract assertions", () => {
+  it("src is a non-empty string", () => {
+    expect(typeof src).toBe("string");
+    expect(src.length).toBeGreaterThan(100);
+  });
+  it("src starts with '\"use client\"'", () => {
+    expect(src.startsWith('"use client"')).toBe(true);
+  });
+  it("src contains '/api/owner/command-center'", () => {
+    expect(src).toContain("/api/owner/command-center");
+  });
+  it("src contains 'recommendedNextAction'", () => {
+    expect(src).toContain("recommendedNextAction");
+  });
+  it("src contains 'overallHealthScore'", () => {
+    expect(src).toContain("overallHealthScore");
+  });
+  it("src contains 'survivalRiskScore'", () => {
+    expect(src).toContain("survivalRiskScore");
+  });
+  it("src contains 'domainsWired'", () => {
+    expect(src).toContain("domainsWired");
+  });
+  it("src contains '/owner/finance'", () => {
+    expect(src).toContain("/owner/finance");
+  });
+  it("src contains '/owner/recovery'", () => {
+    expect(src).toContain("/owner/recovery");
+  });
+  it("src contains 'Do this next'", () => {
+    expect(src).toContain("Do this next");
+  });
+  it("src does not contain '/diagnoses'", () => {
+    expect(src).not.toContain("/diagnoses");
+  });
+  it("src contains 'from \"@/ui/primitives\"'", () => {
+    expect(src).toContain('from "@/ui/primitives"');
+  });
+  it("src contains 'Missing critical data'", () => {
+    expect(src).toContain("Missing critical data");
+  });
+  it("src does not contain '/verify'", () => {
+    expect(src).not.toContain("/verify");
+  });
+  it("src length is > 500 characters", () => {
+    expect(src.length).toBeGreaterThan(500);
+  });
+  it("src is a string (typeof check)", () => {
+    expect(typeof src).toBe("string");
+  });
+});
+
 describe("Owner Command Center home page wiring", () => {
   it("is a client page using shared UI primitives", () => {
     expect(src.startsWith('"use client"')).toBe(true);

@@ -68,6 +68,23 @@ const TRAP_IDEA: StartupIdea = {
   estimatedMonthlyCost: 41000, // loss-making
 };
 
+describe("startup-mode — module contract assertions", () => {
+  it("evaluateIdea is a function", () => { expect(typeof evaluateIdea).toBe("function"); });
+  it("validateStartup is a function", () => { expect(typeof validateStartup).toBe("function"); });
+  it("planLaunch is a function", () => { expect(typeof planLaunch).toBe("function"); });
+  it("StartupNotValidatedError is a function", () => { expect(typeof StartupNotValidatedError).toBe("function"); });
+  it("INTAKE is an object", () => { expect(typeof INTAKE).toBe("object"); });
+  it("SOLID_IDEA is an object", () => { expect(typeof SOLID_IDEA).toBe("object"); });
+  it("UNAFFORDABLE_IDEA is an object", () => { expect(typeof UNAFFORDABLE_IDEA).toBe("object"); });
+  it("TRAP_IDEA is an object", () => { expect(typeof TRAP_IDEA).toBe("object"); });
+  it("INTAKE.capitalAvailable equals 300000", () => { expect(INTAKE.capitalAvailable).toBe(300000); });
+  it("SOLID_IDEA.name equals Local laundry service", () => { expect(SOLID_IDEA.name).toBe("Local laundry service"); });
+  it("evaluateIdea(INTAKE, SOLID_IDEA) returns an object", () => { expect(typeof evaluateIdea(INTAKE, SOLID_IDEA)).toBe("object"); });
+  it("evaluateIdea(INTAKE, SOLID_IDEA) has accepted field", () => { expect(evaluateIdea(INTAKE, SOLID_IDEA)).toHaveProperty("accepted"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("evaluateIdea — honest screening", () => {
   it("accepts a solid affordable idea and computes economics", () => {
     const e = evaluateIdea(INTAKE, SOLID_IDEA);

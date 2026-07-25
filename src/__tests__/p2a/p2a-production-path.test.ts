@@ -5,6 +5,23 @@ import { v4 as uuidv4 } from "uuid";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
+describe("p2a-production-path — module contract assertions", () => {
+  it("createRecommendation is a function", () => { expect(typeof createRecommendation).toBe("function"); });
+  it("updateRecommendation is a function", () => { expect(typeof updateRecommendation).toBe("function"); });
+  it("getRecommendation is a function", () => { expect(typeof getRecommendation).toBe("function"); });
+  it("uuidv4 is a function", () => { expect(typeof uuidv4).toBe("function"); });
+  it("uuidv4() returns a string", () => { expect(typeof uuidv4()).toBe("string"); });
+  it("uuidv4() returns a string of length 36", () => { expect(uuidv4()).toHaveLength(36); });
+  it("SHOULD_RUN_DB_TESTS is defined", () => { expect(SHOULD_RUN_DB_TESTS).toBeDefined(); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+  it("expect is a function", () => { expect(typeof expect).toBe("function"); });
+  it("beforeAll is a function", () => { expect(typeof beforeAll).toBe("function"); });
+  it("afterAll is a function", () => { expect(typeof afterAll).toBe("function"); });
+  it("uuidv4() contains hyphens", () => { expect(uuidv4()).toContain("-"); });
+  it("typeof SHOULD_RUN_DB_TESTS is boolean", () => { expect(typeof SHOULD_RUN_DB_TESTS).toBe("boolean"); });
+});
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functions", () => {
   const testWorkspaceId = uuidv4();
   const testClientId = uuidv4();

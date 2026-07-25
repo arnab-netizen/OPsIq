@@ -582,6 +582,61 @@ export const AUDIT_EVENTS = {
   STARTUP_EXECUTION_AUTHORIZATION_DENIED: "startup.execution_authorization_denied",
   STARTUP_APPROVAL_BECAME_STALE: "startup.approval_became_stale",
   STARTUP_EXECUTION_PLAN_SUPERSEDED: "startup.execution_plan_superseded",
+  // Bundle 3.9 — Process Intelligence and SOP Management
+  SOP_TRAINING_ASSIGNED: "sop.training_assigned",
+  SOP_TRAINING_COMPLETED: "sop.training_completed",
+  SOP_NONCOMPLIANCE_ALERT_CREATED: "sop.noncompliance_alert_created",
+  SOP_COMPLIANCE_REASSESSMENT_TRIGGERED: "sop.compliance_reassessment_triggered",
+
+  // Bundle 3.8 — Owner Onboarding and Archetype Seeding
+  ONBOARDING_STARTED: "onboarding.started",
+  ONBOARDING_COMPLETED: "onboarding.completed",
+  ONBOARDING_RE_TRIGGERED: "onboarding.re_triggered",
+
+  // Bundle 3.7 — Approval Resolution and Evidence Chain
+  APPROVAL_CREATED: "approval.created",
+  APPROVAL_EVIDENCE_SUBMITTED: "approval.evidence_submitted",
+  APPROVAL_DECIDED: "approval.decided",
+  APPROVAL_APPEAL_INITIATED: "approval.appeal_initiated",
+  APPROVAL_ACTION_RESCOPED: "approval.action_rescoped",
+
+  // Bundle 3.6 — Owner Action Assignment and Outcome Tracking
+  OWNER_ACTION_ASSIGNED: "owner.action_assigned",
+  OWNER_ACTION_REASSIGNED: "owner.action_reassigned",
+  OWNER_ACTION_OUTCOME_CLOSED: "owner.action_outcome_closed",
+  OWNER_ACTION_STALL_DETECTED: "owner.action_stall_detected",
+  OWNER_ACTION_APPROVAL_GRANTED: "owner.action_approval_granted",
+
+  // Bundle 3.5 — Customer Complaint and Service Recovery
+  COMPLAINT_CREATED: "complaint.created",
+  COMPLAINT_TRIAGED: "complaint.triaged",
+  COMPLAINT_RECOVERY_ACTION_ADDED: "complaint.recovery_action_added",
+  COMPLAINT_RESOLVED: "complaint.resolved",
+  COMPLAINT_CLOSED: "complaint.closed",
+  COMPLAINT_SLA_BREACHED: "complaint.sla_breached",
+  COMPLAINT_REOPENED: "complaint.reopened",
+  // Bundle 4.2 — Owner Business Condition Profile
+  OWNER_BCP_CREATED: "owner_bcp.created",
+  OWNER_BCP_EVALUATED: "owner_bcp.evaluated",
+
+  // Bundle 5.1 — Integration Fabric
+  CONNECTOR_REGISTERED: "connector.registered",
+  CONNECTOR_DISCONNECTED: "connector.disconnected",
+  CONNECTOR_TOKEN_REFRESHED: "connector.token_refreshed",
+  CONNECTOR_REFRESH_FAILED: "connector.refresh_failed",
+  INTEGRATION_EVENT_INGESTED: "integration_event.ingested",
+  INTEGRATION_EVENT_BCP_TRIGGERED: "integration_event.bcp_triggered",
+
+  // Bundle 6 — Consulting Mode
+  CONSULTING_ENGAGEMENT_CREATED: "consulting.engagement_created",
+  CONSULTING_PHASE_ADVANCED: "consulting.phase_advanced",
+  CONSULTING_FINDING_CREATED: "consulting.finding_created",
+  CONSULTING_RECOMMENDATION_GENERATED: "consulting.recommendation_generated",
+  CONSULTING_ACTION_ASSIGNED: "consulting.action_assigned",
+  CONSULTING_ENGAGEMENT_CLOSED: "consulting.engagement_closed",
+  CONSULTING_HEALTH_UPDATED: "consulting.health_updated",
+  CONSULTING_DIMENSION_UPDATED: "consulting.dimension_updated",
+  CONSULTING_ENGAGEMENT_EXPORTED: "consulting.engagement_exported",
 } as const;
 
 export type AuditEventName =

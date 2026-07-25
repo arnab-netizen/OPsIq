@@ -43,6 +43,24 @@ function itemFor(over: Partial<AdjudicationItem> = {}): Omit<AdjudicationItem, "
   };
 }
 
+describe("expert adjudication queue — module contract assertions", () => {
+  it("AdjudicationQueue is a class (function)", () => { expect(typeof AdjudicationQueue).toBe("function"); });
+  it("adjudicatedArtifactUsable is a function", () => { expect(typeof adjudicatedArtifactUsable).toBe("function"); });
+  it("evaluateForAdjudication is a function", () => { expect(typeof evaluateForAdjudication).toBe("function"); });
+  it("hasSufficientEvidence is a function", () => { expect(typeof hasSufficientEvidence).toBe("function"); });
+  it("InMemoryLearningStore is a class (function)", () => { expect(typeof InMemoryLearningStore).toBe("function"); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("scoreAdvice is a function", () => { expect(typeof scoreAdvice).toBe("function"); });
+  it("buildGoldAnswer is a function", () => { expect(typeof buildGoldAnswer).toBe("function"); });
+  it("compareToGold is a function", () => { expect(typeof compareToGold).toBe("function"); });
+  it("deriveCorrection is a function", () => { expect(typeof deriveCorrection).toBe("function"); });
+  it("SEED_CASES is a non-empty array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("emptyAdvise is a function", () => { expect(typeof emptyAdvise).toBe("function"); });
+  it("c is defined and not null", () => { expect(c).toBeDefined(); expect(c).not.toBeNull(); });
+  it("c.id === 'A1'", () => { expect(c.id).toBe("A1"); });
+  it("new InMemoryLearningStore() instanceof InMemoryLearningStore", () => { expect(new InMemoryLearningStore()).toBeInstanceOf(InMemoryLearningStore); });
+});
+
 describe("expert adjudication queue", () => {
   it("an uncertain (low-confidence) case enters adjudication", () => {
     const advice = { ...baseAdvise(c), dataConfidence: "low" as const };

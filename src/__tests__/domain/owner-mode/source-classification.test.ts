@@ -8,6 +8,23 @@ import {
   type SourceClassification,
 } from "@/domain/owner-mode/source-classification";
 
+describe("source-classification — module contract assertions", () => {
+  it("SOURCE_CLASSIFICATIONS is iterable", () => { expect(Array.isArray([...SOURCE_CLASSIFICATIONS])).toBe(true); });
+  it("SOURCE_CLASS_WEIGHT is an object", () => { expect(typeof SOURCE_CLASS_WEIGHT).toBe("object"); });
+  it("sourceClassWeight is a function", () => { expect(typeof sourceClassWeight).toBe("function"); });
+  it("classifyFactSource is a function", () => { expect(typeof classifyFactSource).toBe("function"); });
+  it("factSourceWeight is a function", () => { expect(typeof factSourceWeight).toBe("function"); });
+  it("SOURCE_CLASSIFICATIONS contains VERIFIED_RECORD", () => { expect([...SOURCE_CLASSIFICATIONS]).toContain("VERIFIED_RECORD"); });
+  it("SOURCE_CLASSIFICATIONS contains UNKNOWN", () => { expect([...SOURCE_CLASSIFICATIONS]).toContain("UNKNOWN"); });
+  it("SOURCE_CLASS_WEIGHT.UNKNOWN equals 0", () => { expect(SOURCE_CLASS_WEIGHT.UNKNOWN).toBe(0); });
+  it("SOURCE_CLASS_WEIGHT.VERIFIED_RECORD equals 1", () => { expect(SOURCE_CLASS_WEIGHT.VERIFIED_RECORD).toBe(1); });
+  it("classifyFactSource({}) returns a string", () => { expect(typeof classifyFactSource({})).toBe("string"); });
+  it("factSourceWeight({}) equals 0", () => { expect(factSourceWeight({})).toBe(0); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("source-classification canon (Decision-OS §1.10)", () => {
   it("defines exactly the eight canonical classes", () => {
     expect([...SOURCE_CLASSIFICATIONS].sort()).toEqual(

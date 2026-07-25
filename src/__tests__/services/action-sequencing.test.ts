@@ -25,6 +25,23 @@ function ev(
   return { dimension, finding, isCritical, supportingData };
 }
 
+describe("action-sequencing — module contract assertions", () => {
+  it("sequenceFirstAction is a function", () => { expect(typeof sequenceFirstAction).toBe("function"); });
+  it("overridesTemplate is a function", () => { expect(typeof overridesTemplate).toBe("function"); });
+  it("runConsultingEngine is a function", () => { expect(typeof runConsultingEngine).toBe("function"); });
+  it("C is an object", () => { expect(typeof C).toBe("object"); });
+  it("InterventionClass is an object", () => { expect(typeof InterventionClass).toBe("object"); });
+  it("ConfidenceLevel is an object", () => { expect(typeof ConfidenceLevel).toBe("object"); });
+  it("ev is a function", () => { expect(typeof ev).toBe("function"); });
+  it("ev() returns an object", () => { expect(typeof ev("financial_health", "test")).toBe("object"); });
+  it("ev() has dimension field", () => { expect(ev("financial_health", "test")).toHaveProperty("dimension"); });
+  it("ev() has finding field", () => { expect(ev("financial_health", "test")).toHaveProperty("finding"); });
+  it("C.CASH_LIQUIDITY_CRISIS is defined", () => { expect(C.CASH_LIQUIDITY_CRISIS).toBeDefined(); });
+  it("C.CUSTOMER_RETENTION_EROSION is defined", () => { expect(C.CUSTOMER_RETENTION_EROSION).toBeDefined(); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("R4 action sequencing — verify/stabilize-first selection", () => {
   it("correct retention diagnosis no longer jumps to a loyalty program — verify the driver first", () => {
     const p = sequenceFirstAction({

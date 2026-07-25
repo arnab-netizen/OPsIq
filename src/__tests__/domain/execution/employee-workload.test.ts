@@ -9,6 +9,23 @@ import {
   WorkloadBand,
 } from "@/domain/execution/employee-workload";
 
+describe("[module8] employee workload — module contract assertions", () => {
+  it("committedHours is a function", () => { expect(typeof committedHours).toBe("function"); });
+  it("availableHours is a function", () => { expect(typeof availableHours).toBe("function"); });
+  it("computeUtilization is a function", () => { expect(typeof computeUtilization).toBe("function"); });
+  it("classifyUtilizationBand is a function", () => { expect(typeof classifyUtilizationBand).toBe("function"); });
+  it("assessEmployeeWorkload is a function", () => { expect(typeof assessEmployeeWorkload).toBe("function"); });
+  it("wouldOverburden is a function", () => { expect(typeof wouldOverburden).toBe("function"); });
+  it("WorkloadBand is an object", () => { expect(typeof WorkloadBand).toBe("object"); });
+  it("WorkloadBand.HEALTHY_UTILIZATION is defined", () => { expect(WorkloadBand.HEALTHY_UTILIZATION).toBeDefined(); });
+  it("WorkloadBand.UNSUSTAINABLE is defined", () => { expect(WorkloadBand.UNSUSTAINABLE).toBeDefined(); });
+  it("WorkloadBand.OVERBURDEN_RISK is defined", () => { expect(WorkloadBand.OVERBURDEN_RISK).toBeDefined(); });
+  it("availableHours({ shiftHours: 8, breakHours: 0 }) is 8", () => { expect(availableHours({ shiftHours: 8, breakHours: 0 })).toBe(8); });
+  it("computeUtilization({ shiftHours: 0 }) is 0", () => { expect(computeUtilization({ shiftHours: 0 })).toBe(0); });
+  it("classifyUtilizationBand(0.6) is HEALTHY_UTILIZATION", () => { expect(classifyUtilizationBand(0.6)).toBe(WorkloadBand.HEALTHY_UTILIZATION); });
+  it("assessEmployeeWorkload({ shiftHours: 8, taskHours: 4 }) returns an object", () => { expect(typeof assessEmployeeWorkload({ shiftHours: 8, taskHours: 4 })).toBe("object"); });
+});
+
 describe("[module8] employee workload model", () => {
   it("committed hours count task + travel + rework + overtime", () => {
     expect(committedHours({ shiftHours: 8, taskHours: 4, travelHours: 1, reworkHours: 0.5, overtimeHours: 1 })).toBe(6.5);

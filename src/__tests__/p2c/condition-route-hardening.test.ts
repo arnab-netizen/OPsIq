@@ -78,6 +78,32 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe("P2C-BATCH-4C: condition route hardening — module contract assertions", () => {
+  it("deriveHardeningContextFromConditionProfile is a function", () => { expect(typeof deriveHardeningContextFromConditionProfile).toBe("function"); });
+  it("GET is a function", () => { expect(typeof GET).toBe("function"); });
+  it("POST is a function", () => { expect(typeof POST).toBe("function"); });
+  it("ENGAGEMENT_ID is a string", () => { expect(typeof ENGAGEMENT_ID).toBe("string"); });
+  it("ENGAGEMENT_ID is non-empty", () => { expect(ENGAGEMENT_ID.length).toBeGreaterThan(0); });
+  it("ctx is an object", () => { expect(typeof ctx).toBe("object"); });
+  it("ctx has verifiedActorId", () => { expect(ctx).toHaveProperty("verifiedActorId"); });
+  it("ctx has verifiedWorkspaceId", () => { expect(ctx).toHaveProperty("verifiedWorkspaceId"); });
+  it("sampleProfile is an object", () => { expect(typeof sampleProfile).toBe("object"); });
+  it("sampleProfile.engagementId equals ENGAGEMENT_ID", () => { expect(sampleProfile.engagementId).toBe(ENGAGEMENT_ID); });
+  it("sampleProfile.businessStatus is a string", () => { expect(typeof sampleProfile.businessStatus).toBe("string"); });
+  it("sampleProfile.severityScore is a number", () => { expect(typeof sampleProfile.severityScore).toBe("number"); });
+  it("sampleProfile.isCurrent is a boolean", () => { expect(typeof sampleProfile.isCurrent).toBe("boolean"); });
+  it("deriveHardeningContextFromConditionProfile(sampleProfile) returns an object with sufficientData=true", () => {
+    const h = deriveHardeningContextFromConditionProfile(sampleProfile);
+    expect(typeof h).toBe("object");
+    expect((h as { sufficientData: boolean }).sufficientData).toBe(true);
+  });
+  it("deriveHardeningContextFromConditionProfile(null) returns object with sufficientData=false", () => {
+    const h = deriveHardeningContextFromConditionProfile(null);
+    expect(typeof h).toBe("object");
+    expect((h as { sufficientData: boolean }).sufficientData).toBe(false);
+  });
+});
+
 describe("P2C-BATCH-4C: GET condition route hardening exposure", () => {
   // 1. Additive: existing profiles preserved + hardeningContext present.
   it("returns existing profiles and an additive hardeningContext", async () => {

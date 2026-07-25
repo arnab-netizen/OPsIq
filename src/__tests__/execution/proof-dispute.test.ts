@@ -12,6 +12,55 @@ const req = (over: Record<string, unknown> = {}) => ({
   category: ProofDisputeCategory.QUALITY_FAILURE, reason: "rewash needed", actorRole: TaskActorRole.MANAGER, ...over,
 });
 
+describe("planProofDispute — module contract assertions", () => {
+  it("planProofDispute is a function", () => {
+    expect(typeof planProofDispute).toBe("function");
+  });
+  it("ProofDisputeCategory is an object (enum)", () => {
+    expect(typeof ProofDisputeCategory).toBe("object");
+  });
+  it("ProofDisputeCategory.QUALITY_FAILURE is defined", () => {
+    expect(ProofDisputeCategory.QUALITY_FAILURE).toBeDefined();
+  });
+  it("ProofDisputeCategory.BAD_OUTCOME is defined", () => {
+    expect(ProofDisputeCategory.BAD_OUTCOME).toBeDefined();
+  });
+  it("ProofDisputeCategory.CUSTOMER_COMPLAINT is defined", () => {
+    expect(ProofDisputeCategory.CUSTOMER_COMPLAINT).toBeDefined();
+  });
+  it("ProofDisputeCategory.REWORK_REQUIRED is defined", () => {
+    expect(ProofDisputeCategory.REWORK_REQUIRED).toBeDefined();
+  });
+  it("ProofStatus is an object (enum)", () => {
+    expect(typeof ProofStatus).toBe("object");
+  });
+  it("ProofStatus.DISPUTED is defined", () => {
+    expect(ProofStatus.DISPUTED).toBeDefined();
+  });
+  it("ProofStatus.OVERRIDDEN_NOT_VERIFIED is defined", () => {
+    expect(ProofStatus.OVERRIDDEN_NOT_VERIFIED).toBeDefined();
+  });
+  it("TaskActorRole is an object (enum)", () => {
+    expect(typeof TaskActorRole).toBe("object");
+  });
+  it("TaskActorRole.MANAGER is defined", () => {
+    expect(TaskActorRole.MANAGER).toBeDefined();
+  });
+  it("TaskActorRole.OWNER is defined", () => {
+    expect(TaskActorRole.OWNER).toBeDefined();
+  });
+  it("req() returns object with category field", () => {
+    expect(req()).toHaveProperty("category");
+  });
+  it("planProofDispute returns object with ok field", () => {
+    const r = planProofDispute(req());
+    expect(r).toHaveProperty("ok");
+  });
+  it("planProofDispute with valid req returns ok=true", () => {
+    expect(planProofDispute(req()).ok).toBe(true);
+  });
+});
+
 describe("planProofDispute", () => {
   it("valid manager dispute → DISPUTED with the category's trigger", () => {
     const r = planProofDispute(req());

@@ -13,6 +13,23 @@ import {
 } from "@/domain/execution/operational-capacity";
 import { ProofRiskLevel } from "@/domain/execution/proof";
 
+describe("operational-capacity — module contract assertions", () => {
+  it("computeCapacityStatus is a function", () => { expect(typeof computeCapacityStatus).toBe("function"); });
+  it("computeBurdenLevel is a function", () => { expect(typeof computeBurdenLevel).toBe("function"); });
+  it("evaluateExpressRequest is a function", () => { expect(typeof evaluateExpressRequest).toBe("function"); });
+  it("proofBurdenForRisk is a function", () => { expect(typeof proofBurdenForRisk).toBe("function"); });
+  it("proofBurdenForTask is a function", () => { expect(typeof proofBurdenForTask).toBe("function"); });
+  it("Cap is an object", () => { expect(typeof Cap).toBe("object"); });
+  it("B is an object", () => { expect(typeof B).toBe("object"); });
+  it("PB is an object", () => { expect(typeof PB).toBe("object"); });
+  it("ProofRiskLevel is an object", () => { expect(typeof ProofRiskLevel).toBe("object"); });
+  it("LAUNDRY_CAPACITY_FACTORS is an array", () => { expect(Array.isArray(LAUNDRY_CAPACITY_FACTORS)).toBe(true); });
+  it("HOUSEKEEPING_CAPACITY_FACTORS is an array", () => { expect(Array.isArray(HOUSEKEEPING_CAPACITY_FACTORS)).toBe(true); });
+  it("LAUNDRY_CAPACITY_FACTORS.length is greater than 0", () => { expect(LAUNDRY_CAPACITY_FACTORS.length).toBeGreaterThan(0); });
+  it("HOUSEKEEPING_CAPACITY_FACTORS.length is greater than 0", () => { expect(HOUSEKEEPING_CAPACITY_FACTORS.length).toBeGreaterThan(0); });
+  it("Cap.GREEN is defined", () => { expect(Cap.GREEN).toBeDefined(); });
+});
+
 describe("computeCapacityStatus", () => {
   it("GREEN when all factors are comfortably below threshold", () => {
     expect(computeCapacityStatus({ utilizations: [0.2, 0.5, 0.7] })).toBe(Cap.GREEN);

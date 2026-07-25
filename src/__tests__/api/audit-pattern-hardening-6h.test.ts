@@ -272,4 +272,79 @@ describe("Phase 6H Wave 1 — audit fail-closed hardening", () => {
       expect("operator_item.completed").toBe("operator_item.completed");
     });
   });
+
+  describe("POST /api/decisions/intake — additional coverage", () => {
+    it("emitAuditEvent is called exactly once per intake request", async () => {
+      await intakePOST(makeIntakeRequest() as never);
+      expect(mocks.emitAuditEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it("emitAuditEvent actorId matches verifiedActorId from context", async () => {
+      await intakePOST(makeIntakeRequest() as never);
+      expect(mocks.emitAuditEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ actorId: "actor-1" })
+      );
+    });
+
+    it("buildIntakeOperatorItemData is called exactly once", async () => {
+      await intakePOST(makeIntakeRequest() as never);
+      expect(mocks.buildIntakeOperatorItemData).toHaveBeenCalledTimes(1);
+    });
+
+    it("dbOperatorItemCreate is called exactly once", async () => {
+      await intakePOST(makeIntakeRequest() as never);
+      expect(mocks.dbOperatorItemCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it("result.status is pending for a successful intake", async () => {
+      const result = (await intakePOST(makeIntakeRequest() as never)) as { status: string };
+      expect(result.status).toBe("pending");
+    });
+
+    it("result.decisionId matches the created item id", async () => {
+      const result = (await intakePOST(makeIntakeRequest() as never)) as { decisionId: string };
+      expect(result.decisionId).toBe("item-1");
+    });
+
+    it("emitAuditEvent eventName is decision.intake", async () => {
+      await intakePOST(makeIntakeRequest() as never);
+      expect(mocks.emitAuditEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ eventName: "decision.intake" })
+      );
+    });
+  });
+
+  describe("POST /api/operator — additional coverage", () => {
+    it("result.success is true on happy path", async () => {
+      const result = (await operatorPOST(makeOperatorCtx() as never)) as { success: boolean };
+      expect(result.success).toBe(true);
+    });
+
+    it("updateItem is called exactly once", async () => {
+      await operatorPOST(makeOperatorCtx() as never);
+      expect(mocks.updateItem).toHaveBeenCalledTimes(1);
+    });
+
+    it("checkIdempotencyKey is called exactly once", async () => {
+      await operatorPOST(makeOperatorCtx() as never);
+      expect(mocks.checkIdempotencyKey).toHaveBeenCalledTimes(1);
+    });
+
+    it("recordIdempotencyResponse is called on success", async () => {
+      await operatorPOST(makeOperatorCtx() as never);
+      expect(mocks.recordIdempotencyResponse).toHaveBeenCalledTimes(1);
+    });
+
+    it("emitAuditEvent is called exactly once for operator update", async () => {
+      await operatorPOST(makeOperatorCtx() as never);
+      expect(mocks.emitAuditEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it("emitAuditEvent workspaceId matches ws-1", async () => {
+      await operatorPOST(makeOperatorCtx() as never);
+      expect(mocks.emitAuditEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceId: "ws-1" })
+      );
+    });
+  });
 });

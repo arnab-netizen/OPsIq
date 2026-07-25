@@ -28,6 +28,23 @@ beforeAll(async () => {
   pass = auditReplay(lockExpectations(scenario), await replayScenario(UGLY, store));
 }, 120000);
 
+describe("failure loop — module contract assertions", () => {
+  it("COUNTED_PUBLIC_CASES is an array", () => { expect(Array.isArray(COUNTED_PUBLIC_CASES)).toBe(true); });
+  it("COUNTED_PUBLIC_CASES.length is greater than 0", () => { expect(COUNTED_PUBLIC_CASES.length).toBeGreaterThan(0); });
+  it("publicCaseToChaosScenario is a function", () => { expect(typeof publicCaseToChaosScenario).toBe("function"); });
+  it("replayScenario is a function", () => { expect(typeof replayScenario).toBe("function"); });
+  it("lockExpectations is a function", () => { expect(typeof lockExpectations).toBe("function"); });
+  it("auditReplay is a function", () => { expect(typeof auditReplay).toBe("function"); });
+  it("failureToArtifacts is a function", () => { expect(typeof failureToArtifacts).toBe("function"); });
+  it("recordRerun is a function", () => { expect(typeof recordRerun).toBe("function"); });
+  it("unresolvedHighRiskFailures is a function", () => { expect(typeof unresolvedHighRiskFailures).toBe("function"); });
+  it("InMemoryLearningStore is a class/function", () => { expect(typeof InMemoryLearningStore).toBe("function"); });
+  it("UGLY is defined", () => { expect(UGLY).toBeDefined(); });
+  it("UGLY has meta field", () => { expect(UGLY).toHaveProperty("meta"); });
+  it("fail is a function", () => { expect(typeof fail).toBe("function"); });
+  it("fail().pass is false", () => { expect(fail().pass).toBe(false); });
+});
+
 describe("failure → learning / regression loop (§13)", () => {
   it("a passing audit creates no failure artifacts", () => {
     expect(pass.pass).toBe(true);

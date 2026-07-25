@@ -169,5 +169,11 @@ describe("P2B: Path Convergence Verification", () => {
       // (not captured by null/zero/undefined, not uncertain, not partial)
       expect(result.category).toBe("success");
     });
+
+    it("classifyOutcome always returns a category string", () => {
+      const result = classifyOutcome(10000, 10000);
+      expect(typeof result.category).toBe("string");
+      expect(result.category.length).toBeGreaterThan(0);
+    });
   });
 });

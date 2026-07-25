@@ -69,6 +69,23 @@ function instr(b: ApprovedExecutionBoundary, over: Partial<BoundaryInstruction> 
   };
 }
 
+describe("guidance-gating — module contract assertions", () => {
+  it("containUntrusted is a function", () => { expect(typeof containUntrusted).toBe("function"); });
+  it("gateEmployeeGuidance is a function", () => { expect(typeof gateEmployeeGuidance).toBe("function"); });
+  it("UNTRUSTED_OPEN is a string", () => { expect(typeof UNTRUSTED_OPEN).toBe("string"); });
+  it("UNTRUSTED_CLOSE is a string", () => { expect(typeof UNTRUSTED_CLOSE).toBe("string"); });
+  it("sealBoundary is a function", () => { expect(typeof sealBoundary).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("boundary is a function", () => { expect(typeof boundary).toBe("function"); });
+  it("instr is a function", () => { expect(typeof instr).toBe("function"); });
+  it("boundary() returns an object", () => { expect(typeof boundary()).toBe("object"); });
+  it("boundary() has boundaryId field", () => { expect(boundary()).toHaveProperty("boundaryId"); });
+  it("boundary().boundaryId equals 'bnd-1'", () => { expect(boundary().boundaryId).toBe("bnd-1"); });
+  it("UNTRUSTED_OPEN is non-empty", () => { expect(UNTRUSTED_OPEN.length).toBeGreaterThan(0); });
+  it("containUntrusted({source:'test',content:'hello'}) returns a string", () => { expect(typeof containUntrusted({ source: "test", content: "hello" })).toBe("string"); });
+  it("containUntrusted result starts with UNTRUSTED_OPEN", () => { expect(containUntrusted({ source: "test", content: "hello" }).startsWith(UNTRUSTED_OPEN)).toBe(true); });
+});
+
 describe("containUntrusted", () => {
   it("wraps content as data with explicit non-instruction framing", () => {
     const out = containUntrusted({ source: "employee_note", content: "hello" });

@@ -37,6 +37,58 @@ vi.mock("@/services/auth", () => ({
 const OWNER_ROLE = [{ role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER, scope: "workspace", scopeId: null }];
 const NO_OWNER_ROLE = [{ role: ROLES.ANALYST, scope: "workspace", scopeId: null }];
 
+describe("Working-Capital RBAC — module contract assertions (non-DB)", () => {
+  it("ROLES is an object", () => {
+    expect(typeof ROLES).toBe("object");
+  });
+  it("ROLES.ADMIN_OR_PORTFOLIO_MANAGER is defined", () => {
+    expect(ROLES.ADMIN_OR_PORTFOLIO_MANAGER).toBeDefined();
+  });
+  it("ROLES.ANALYST is defined", () => {
+    expect(ROLES.ANALYST).toBeDefined();
+  });
+  it("SHOULD_RUN_DB_TESTS is a boolean", () => {
+    expect(typeof SHOULD_RUN_DB_TESTS).toBe("boolean");
+  });
+  it("OWNER_ROLE is an array with one entry", () => {
+    expect(Array.isArray(OWNER_ROLE)).toBe(true);
+    expect(OWNER_ROLE).toHaveLength(1);
+  });
+  it("OWNER_ROLE[0].role equals ADMIN_OR_PORTFOLIO_MANAGER", () => {
+    expect(OWNER_ROLE[0].role).toBe(ROLES.ADMIN_OR_PORTFOLIO_MANAGER);
+  });
+  it("NO_OWNER_ROLE is an array with one entry", () => {
+    expect(Array.isArray(NO_OWNER_ROLE)).toBe(true);
+    expect(NO_OWNER_ROLE).toHaveLength(1);
+  });
+  it("NO_OWNER_ROLE[0].role equals ANALYST", () => {
+    expect(NO_OWNER_ROLE[0].role).toBe(ROLES.ANALYST);
+  });
+  it("OWNER_ROLE[0].scope is 'workspace'", () => {
+    expect(OWNER_ROLE[0].scope).toBe("workspace");
+  });
+  it("NO_OWNER_ROLE[0].scope is 'workspace'", () => {
+    expect(NO_OWNER_ROLE[0].scope).toBe("workspace");
+  });
+  it("OWNER_ROLE[0] has scopeId field", () => {
+    expect(OWNER_ROLE[0]).toHaveProperty("scopeId");
+  });
+  it("ROLES.ADMIN_OR_PORTFOLIO_MANAGER is a string", () => {
+    expect(typeof ROLES.ADMIN_OR_PORTFOLIO_MANAGER).toBe("string");
+  });
+  it("ROLES.ANALYST is a string", () => {
+    expect(typeof ROLES.ANALYST).toBe("string");
+  });
+  it("ROLES.ADMIN_OR_PORTFOLIO_MANAGER !== ROLES.ANALYST", () => {
+    expect(ROLES.ADMIN_OR_PORTFOLIO_MANAGER).not.toBe(ROLES.ANALYST);
+  });
+  it("randomUUID import produces UUID-format strings", () => {
+    const id = randomUUID();
+    expect(typeof id).toBe("string");
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  });
+});
+
 interface Seeded { actorId: string; workspaceId: string; businessId: string; }
 async function seed(): Promise<Seeded> {
   const actorId = randomUUID();

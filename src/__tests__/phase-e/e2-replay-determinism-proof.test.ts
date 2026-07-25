@@ -488,5 +488,10 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
       // complete well under 2s; exceeding that signals a real complexity blowup.
       expect(totalDuration).toBeLessThan(2000);
     });
+
+    it("createDeterministicEvents returns exactly the requested count", () => {
+      const events = createDeterministicEvents(99, 250);
+      expect(events).toHaveLength(250);
+    });
   });
 });

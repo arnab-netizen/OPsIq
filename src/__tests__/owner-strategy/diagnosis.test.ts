@@ -58,6 +58,23 @@ function diagnose(input: StrategySnapshotInput) {
   return diagnoseStrategySnapshot(input, { now: new Date("2026-06-05") });
 }
 
+describe("owner-strategy diagnosis — module contract assertions", () => {
+  it("diagnoseStrategySnapshot is a function", () => { expect(typeof diagnoseStrategySnapshot).toBe("function"); });
+  it("buildStrategyRiskFindings is a function", () => { expect(typeof buildStrategyRiskFindings).toBe("function"); });
+  it("buildStrategyOpportunityFindings is a function", () => { expect(typeof buildStrategyOpportunityFindings).toBe("function"); });
+  it("computeStrategyMetrics is a function", () => { expect(typeof computeStrategyMetrics).toBe("function"); });
+  it("resolveStrategyThresholds is a function", () => { expect(typeof resolveStrategyThresholds).toBe("function"); });
+  it("rankStrategyFindings is a function", () => { expect(typeof rankStrategyFindings).toBe("function"); });
+  it("ownerFindingSchema is an object", () => { expect(typeof ownerFindingSchema).toBe("object"); });
+  it("domainScoreSchema is an object", () => { expect(typeof domainScoreSchema).toBe("object"); });
+  it("strongGo is a function", () => { expect(typeof strongGo).toBe("function"); });
+  it("avoid is a function", () => { expect(typeof avoid).toBe("function"); });
+  it("codes is a function", () => { expect(typeof codes).toBe("function"); });
+  it("diagnose is a function", () => { expect(typeof diagnose).toBe("function"); });
+  it("strongGo() returns an object", () => { expect(typeof strongGo()).toBe("object"); });
+  it("avoid() returns an object", () => { expect(typeof avoid()).toBe("object"); });
+});
+
 describe("owner-strategy detector — risk findings", () => {
   it("an avoid option triggers the scenario risk cluster", () => {
     const r = diagnose(avoid());

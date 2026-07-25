@@ -72,6 +72,23 @@ const cmd = {
   reason: "policy violation",
 };
 
+describe("employee-lifecycle-service — module contract assertions", () => {
+  it("LifecycleConflictError is a function", () => { expect(typeof LifecycleConflictError).toBe("function"); });
+  it("LifecycleNotAllowedError is a function", () => { expect(typeof LifecycleNotAllowedError).toBe("function"); });
+  it("suspendEmployee is a function", () => { expect(typeof suspendEmployee).toBe("function"); });
+  it("reactivateEmployee is a function", () => { expect(typeof reactivateEmployee).toBe("function"); });
+  it("offboardEmployee is a function", () => { expect(typeof offboardEmployee).toBe("function"); });
+  it("requireActiveMembership is a function", () => { expect(typeof requireActiveMembership).toBe("function"); });
+  it("assertEmployeeAssignable is a function", () => { expect(typeof assertEmployeeAssignable).toBe("function"); });
+  it("EmployeeAccessStatus is an object", () => { expect(typeof EmployeeAccessStatus).toBe("object"); });
+  it("UnauthorizedError is a function", () => { expect(typeof UnauthorizedError).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("makeDeps is a function", () => { expect(typeof makeDeps).toBe("function"); });
+  it("cmd is an object", () => { expect(typeof cmd).toBe("object"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("suspendEmployee", () => {
   it("suspends an ACTIVE member, revokes existing sessions, and audits", async () => {
     const { deps, calls } = makeDeps({

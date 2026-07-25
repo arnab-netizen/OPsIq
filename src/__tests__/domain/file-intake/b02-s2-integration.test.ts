@@ -15,6 +15,72 @@ import { parseCSV } from "../../../domain/file-intake/csv-parser";
 import { validateFileUpload } from "../../../domain/file-intake/file-validator";
 import { analyzeColumnMapping, applyColumnMappings } from "../../../domain/file-intake/column-mapper";
 
+describe("B02-S2 file intake — module contract assertions", () => {
+  it("parseCSV is a function", () => {
+    expect(typeof parseCSV).toBe("function");
+  });
+  it("validateFileUpload is a function", () => {
+    expect(typeof validateFileUpload).toBe("function");
+  });
+  it("analyzeColumnMapping is a function", () => {
+    expect(typeof analyzeColumnMapping).toBe("function");
+  });
+  it("applyColumnMappings is a function", () => {
+    expect(typeof applyColumnMappings).toBe("function");
+  });
+  it("validateFileUpload returns object with ok field", () => {
+    const r = validateFileUpload("test.csv", 100, "text/csv");
+    expect(r).toHaveProperty("ok");
+  });
+  it("validateFileUpload returns ok=true for valid csv", () => {
+    const r = validateFileUpload("finance.csv", 100, "text/csv");
+    expect(r.ok).toBe(true);
+  });
+  it("validateFileUpload returns format='csv' for csv", () => {
+    const r = validateFileUpload("finance.csv", 100, "text/csv");
+    expect(r.format).toBe("csv");
+  });
+  it("validateFileUpload returns ok=false for unknown type", () => {
+    const r = validateFileUpload("file.exe", 100, "application/octet-stream");
+    expect(r.ok).toBe(false);
+  });
+  it("parseCSV returns object with ok field", () => {
+    const r = parseCSV("a,b\n1,2");
+    expect(r).toHaveProperty("ok");
+  });
+  it("parseCSV returns ok=true for valid csv", () => {
+    const r = parseCSV("col1,col2\nval1,val2");
+    expect(r.ok).toBe(true);
+  });
+  it("parseCSV returns rows array", () => {
+    const r = parseCSV("col1,col2\nval1,val2");
+    expect(Array.isArray(r.rows)).toBe(true);
+  });
+  it("parseCSV returns headers array", () => {
+    const r = parseCSV("col1,col2\nval1,val2");
+    expect(Array.isArray(r.headers)).toBe(true);
+  });
+  it("analyzeColumnMapping returns object with ok field", () => {
+    const r = analyzeColumnMapping(["revenue", "cost", "start_date", "end_date", "currency_code"], "finance");
+    expect(r).toHaveProperty("ok");
+  });
+  it("applyColumnMappings returns object with ok field", () => {
+    const csv = "revenue,cost,start_date,end_date,currency_code\n100,50,2026-01-01,2026-12-31,USD";
+    const parsed = parseCSV(csv);
+    const mapping = analyzeColumnMapping(parsed.headers!, "finance");
+    const r = applyColumnMappings(parsed.rows!, mapping);
+    expect(r).toHaveProperty("ok");
+  });
+  it("applyColumnMappings returns mapped_rows array", () => {
+    const csv = "revenue,cost,start_date,end_date,currency_code\n100,50,2026-01-01,2026-12-31,USD";
+    const parsed = parseCSV(csv);
+    const mapping = analyzeColumnMapping(parsed.headers!, "finance");
+    const r = applyColumnMappings(parsed.rows!, mapping);
+    expect(r.ok).toBe(true);
+    expect(Array.isArray(r.mapped_rows)).toBe(true);
+  });
+});
+
 describe("B02-S2 Integration — File Intake (Validation + Parsing + Mapping)", () => {
   it("should complete full flow: CSV validation → parsing → mapping", () => {
     // Step 1: Create CSV content

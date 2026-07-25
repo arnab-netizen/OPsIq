@@ -34,6 +34,23 @@ const fullCtx = {
   profitOrCashMetric: "revenue_per_order",
 };
 
+describe("SOP domain — module contract assertions", () => {
+  it("assessSopCompleteness is a function", () => { expect(typeof assessSopCompleteness).toBe("function"); });
+  it("personalizeWorkflow is a function", () => { expect(typeof personalizeWorkflow).toBe("function"); });
+  it("nextSopVersion is a function", () => { expect(typeof nextSopVersion).toBe("function"); });
+  it("toEmployeeSopView is a function", () => { expect(typeof toEmployeeSopView).toBe("function"); });
+  it("Conf is an object", () => { expect(typeof Conf).toBe("object"); });
+  it("Conf.HIGH is defined", () => { expect(Conf.HIGH).toBeDefined(); });
+  it("Conf.NEEDS_OWNER_INPUT is defined", () => { expect(Conf.NEEDS_OWNER_INPUT).toBeDefined(); });
+  it("SopVisibilityError is a class/function", () => { expect(typeof SopVisibilityError).toBe("function"); });
+  it("base has kind 'BASE'", () => { expect(base.kind).toBe("BASE"); });
+  it("base has allowedRoles array", () => { expect(Array.isArray(base.allowedRoles)).toBe(true); });
+  it("fullCtx has workspaceId field", () => { expect(fullCtx).toHaveProperty("workspaceId"); });
+  it("fullCtx has role field", () => { expect(fullCtx).toHaveProperty("role"); });
+  it("personalizeWorkflow(base, 'sop-1', fullCtx) returns an object", () => { expect(typeof personalizeWorkflow(base, "sop-1", fullCtx)).toBe("object"); });
+  it("personalizeWorkflow(base, 'sop-1', fullCtx).confidence is Conf.HIGH", () => { expect(personalizeWorkflow(base, "sop-1", fullCtx).confidence).toBe(Conf.HIGH); });
+});
+
 describe("assessSopCompleteness", () => {
   it("HIGH confidence when all essentials present", () => {
     const sop = personalizeWorkflow(base, "sop-1", fullCtx);

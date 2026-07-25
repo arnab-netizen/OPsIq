@@ -163,4 +163,57 @@ describe("GET /api/owner/objectives/[objectiveId]", () => {
     expect(err.statusCode).toBe(404);
     expect(err.code).toBe("NOT_FOUND");
   });
+
+  // ── 11-20. Additional coverage ────────────────────────────────────────────
+
+  it("OBJECTIVE fixture has status ACTIVE", () => {
+    expect(OBJECTIVE.status).toBe("ACTIVE");
+  });
+
+  it("OBJECTIVE fixture objectiveType is GROWTH", () => {
+    expect(OBJECTIVE.objectiveType).toBe("GROWTH");
+  });
+
+  it("OBJECTIVE fixture children is empty array", () => {
+    expect(OBJECTIVE.children).toEqual([]);
+  });
+
+  it("OBJECTIVE fixture parent is null", () => {
+    expect(OBJECTIVE.parent).toBeNull();
+  });
+
+  it("OBJECTIVE fixture blockedBy is empty array", () => {
+    expect(OBJECTIVE.blockedBy).toEqual([]);
+  });
+
+  it("response body has 'objective' key wrapping the result", async () => {
+    mocks.getObjective.mockResolvedValue(OBJECTIVE);
+    const res = await (GET as unknown as RouteHandler)(makeCtx(), { objectiveId: "obj-123" });
+    expect(Object.keys(res.body as object)).toContain("objective");
+  });
+
+  it("getObjective is called with the objectiveId from route params", async () => {
+    mocks.getObjective.mockResolvedValue(OBJECTIVE);
+    await (GET as unknown as RouteHandler)(makeCtx(), { objectiveId: "obj-999" });
+    expect(mocks.getObjective).toHaveBeenCalledWith(WS, "obj-999");
+  });
+
+  it("non-NotFoundError from getObjective propagates unchanged", async () => {
+    const unexpectedErr = new Error("DB connection lost");
+    mocks.getObjective.mockRejectedValue(unexpectedErr);
+    await expect(
+      (GET as unknown as RouteHandler)(makeCtx(), { objectiveId: "obj-123" })
+    ).rejects.toThrow("DB connection lost");
+  });
+
+  it("getObjective is called exactly once per request", async () => {
+    mocks.getObjective.mockResolvedValue(OBJECTIVE);
+    await (GET as unknown as RouteHandler)(makeCtx(), { objectiveId: "obj-123" });
+    expect(mocks.getObjective).toHaveBeenCalledTimes(1);
+  });
+
+  it("makeCtx default verifiedWorkspaceId is WS", () => {
+    const ctx = makeCtx();
+    expect(ctx.verifiedWorkspaceId).toBe(WS);
+  });
 });

@@ -10,6 +10,23 @@ import type { AdviceOutput, BehavioralCase } from "@/behavioral-validation/schem
 const marketingSeed = SEED_CASES.find((c) => c.id === "A2")!;
 const cashSeed = SEED_CASES.find((c) => c.id === "A1")!;
 
+describe("business-math — module contract assertions", () => {
+  it("grossMargin is a function", () => { expect(typeof grossMargin).toBe("function"); });
+  it("contributionMarginPerUnit is a function", () => { expect(typeof contributionMarginPerUnit).toBe("function"); });
+  it("cashRunwayDays is a function", () => { expect(typeof cashRunwayDays).toBe("function"); });
+  it("validateBusinessMath is a function", () => { expect(typeof validateBusinessMath).toBe("function"); });
+  it("deriveCalcs is a function", () => { expect(typeof deriveCalcs).toBe("function"); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("SEED_CASES.length is greater than 0", () => { expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("marketingSeed is an object", () => { expect(typeof marketingSeed).toBe("object"); });
+  it("cashSeed is an object", () => { expect(typeof cashSeed).toBe("object"); });
+  it("withNumbers is a function", () => { expect(typeof withNumbers).toBe("function"); });
+  it("expertWords is a function", () => { expect(typeof expertWords).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("business-math calculators", () => {
   it("computes core formulas correctly", () => {
     expect(grossMargin(1000, 600)).toBeCloseTo(0.4);

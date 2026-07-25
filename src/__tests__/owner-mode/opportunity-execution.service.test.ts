@@ -48,6 +48,63 @@ const collectCost = {
   sourceType: "MISSING_DATA", sourceKey: "opp-a:cost", nextActionOwner: "MANAGER", approvalLevel: "MANAGER",
 };
 
+describe("opportunity-execution service — module contract assertions", () => {
+  it("recordExecutionTaskUpdate is a function", () => {
+    expect(typeof recordExecutionTaskUpdate).toBe("function");
+  });
+  it("getPersistedExecutionTasks is a function", () => {
+    expect(typeof getPersistedExecutionTasks).toBe("function");
+  });
+  it("makeDeps() returns object with deps field", () => {
+    expect(makeDeps()).toHaveProperty("deps");
+  });
+  it("makeDeps() returns object with rows field", () => {
+    expect(makeDeps()).toHaveProperty("rows");
+  });
+  it("makeDeps() returns object with audits field", () => {
+    expect(makeDeps()).toHaveProperty("audits");
+  });
+  it("makeDeps().rows starts empty", () => {
+    expect(makeDeps().rows).toHaveLength(0);
+  });
+  it("makeDeps().audits starts empty", () => {
+    expect(makeDeps().audits).toHaveLength(0);
+  });
+  it("WS is a string", () => {
+    expect(typeof WS).toBe("string");
+  });
+  it("OTHER is a string different from WS", () => {
+    expect(typeof OTHER).toBe("string");
+    expect(OTHER).not.toBe(WS);
+  });
+  it("collectCost has taskKey field", () => {
+    expect(collectCost).toHaveProperty("taskKey");
+  });
+  it("collectCost has opportunityKey field", () => {
+    expect(collectCost).toHaveProperty("opportunityKey", "opp-a");
+  });
+  it("collectCost.taskType is 'COLLECT_COST_DATA'", () => {
+    expect(collectCost.taskType).toBe("COLLECT_COST_DATA");
+  });
+  it("recordExecutionTaskUpdate returns a Promise", () => {
+    const { deps } = makeDeps();
+    const r = recordExecutionTaskUpdate({ workspaceId: WS, actorId: "u1", actorRole: "manager", submission: { ...collectCost, action: "COMPLETE", evidenceRefs: ["x"] } }, deps);
+    expect(r instanceof Promise).toBe(true);
+    return r;
+  });
+  it("getPersistedExecutionTasks returns a Promise", () => {
+    const { deps } = makeDeps();
+    const r = getPersistedExecutionTasks(WS, deps);
+    expect(r instanceof Promise).toBe(true);
+    return r;
+  });
+  it("getPersistedExecutionTasks resolves to a Map", async () => {
+    const { deps } = makeDeps();
+    const r = await getPersistedExecutionTasks(WS, deps);
+    expect(r instanceof Map).toBe(true);
+  });
+});
+
 describe("recordExecutionTaskUpdate", () => {
   it("1. persists a valid completion (with evidence) + atomic audit; updates the opportunity", async () => {
     const { deps, rows, audits } = makeDeps();

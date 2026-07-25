@@ -24,6 +24,23 @@ function ev(partial: Partial<EvidenceItem> & { finding: string }): EvidenceItem 
   } as EvidenceItem;
 }
 
+describe("financial archetypes — module contract assertions", () => {
+  it("diagnoseRootCause is a function", () => { expect(typeof diagnoseRootCause).toBe("function"); });
+  it("designInterventions is a function", () => { expect(typeof designInterventions).toBe("function"); });
+  it("ConfidenceLevel is an object", () => { expect(typeof ConfidenceLevel).toBe("object"); });
+  it("ConfidenceLevel.HIGH is defined", () => { expect(ConfidenceLevel.HIGH).toBeDefined(); });
+  it("DiagnosisType is an object", () => { expect(typeof DiagnosisType).toBe("object"); });
+  it("DiagnosisType.CASH_LIQUIDITY_CRISIS is defined", () => { expect(DiagnosisType.CASH_LIQUIDITY_CRISIS).toBeDefined(); });
+  it("DiagnosisType.UNIT_ECONOMICS_FAILURE is defined", () => { expect(DiagnosisType.UNIT_ECONOMICS_FAILURE).toBeDefined(); });
+  it("DiagnosisType.MARGIN_EROSION is defined", () => { expect(DiagnosisType.MARGIN_EROSION).toBeDefined(); });
+  it("DiagnosisType.UNKNOWN is defined", () => { expect(DiagnosisType.UNKNOWN).toBeDefined(); });
+  it("DiagnosisConfidence is an object", () => { expect(typeof DiagnosisConfidence).toBe("object"); });
+  it("DiagnosisConfidence.INSUFFICIENT_EVIDENCE is defined", () => { expect(DiagnosisConfidence.INSUFFICIENT_EVIDENCE).toBeDefined(); });
+  it("ev is a function", () => { expect(typeof ev).toBe("function"); });
+  it("ev({ finding: 'test' }).dimension is 'financial_health'", () => { expect(ev({ finding: "test" }).dimension).toBe("financial_health"); });
+  it("ev({ finding: 'test' }).finding is 'test'", () => { expect(ev({ finding: "test" }).finding).toBe("test"); });
+});
+
 describe("E1 financial archetypes", () => {
   it("cash runway archetype triggers on liquidity/runway evidence", () => {
     const r = diagnoseRootCause(

@@ -269,6 +269,62 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   }
 );
 
+describe("Actions API — additional input contract assertions (no DB required)", () => {
+  it("ctxFor helper produces context with matching actorId", () => {
+    const ctx = ctxFor("actor-abc", "ws-1");
+    expect(ctx.verifiedActorId).toBe("actor-abc");
+  });
+
+  it("ctxFor helper produces context with matching workspaceId", () => {
+    const ctx = ctxFor("actor-1", "ws-xyz");
+    expect(ctx.verifiedWorkspaceId).toBe("ws-xyz");
+  });
+
+  it("listActions rejects workspaceId that is only whitespace", async () => {
+    await expect(listActions("   ", { engagementId: "eng-1" })).rejects.toThrow(/workspace/i);
+  });
+
+  it("CreateActionInput type accepts optional description", () => {
+    const input: CreateActionInput = {
+      engagementId: "eng-1",
+      recommendationId: "rec-1",
+      title: "With description",
+      description: "Some extra context",
+    };
+    expect(input.description).toBe("Some extra context");
+  });
+
+  it("CreateActionInput type accepts optional priority field", () => {
+    const input: CreateActionInput = {
+      engagementId: "eng-1",
+      recommendationId: "rec-1",
+      title: "With priority",
+      priority: "high",
+    };
+    expect(input.priority).toBe("high");
+  });
+
+  it("CreateActionInput type accepts optional assignedTo field", () => {
+    const input: CreateActionInput = {
+      engagementId: "eng-1",
+      recommendationId: "rec-1",
+      title: "With assignee",
+      assignedTo: "user-123",
+    };
+    expect(input.assignedTo).toBe("user-123");
+  });
+
+  it("CreateActionInput type accepts optional dueDate string field", () => {
+    const input: CreateActionInput = {
+      engagementId: "eng-1",
+      recommendationId: "rec-1",
+      title: "With due date",
+      dueDate: "2026-12-31T00:00:00Z",
+    };
+    expect(input.dueDate).toBe("2026-12-31T00:00:00Z");
+  });
+});
+
 describe("Regression: Action Prisma Schema Mismatch (dueDate vs dueAt, priority not a column)", () => {
   it("should map API input dueDate → Prisma dueAt (Action schema has dueAt, not dueDate)", () => {
     // Production failure 2026-06-01: Diagnosis failed with PrismaClientValidationError because code wrote

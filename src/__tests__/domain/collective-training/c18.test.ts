@@ -11,6 +11,23 @@ const R = (d: string): DomainSignalInput => ({ domain: d as DomainSignalInput["d
 
 function packetOf(input: CollectiveInput) { return runCollective(input); }
 
+describe("C18 collective engine — module contract assertions", () => {
+  it("runCollective is a function", () => { expect(typeof runCollective).toBe("function"); });
+  it("journalCollectiveDecision is a function", () => { expect(typeof journalCollectiveDecision).toBe("function"); });
+  it("isCollectivePacketValid is a function", () => { expect(typeof isCollectivePacketValid).toBe("function"); });
+  it("HarmType is an object", () => { expect(typeof HarmType).toBe("object"); });
+  it("HarmType.QUALITY_WORSENED is defined", () => { expect(HarmType.QUALITY_WORSENED).toBeDefined(); });
+  it("G is a function", () => { expect(typeof G).toBe("function"); });
+  it("RC is a function", () => { expect(typeof RC).toBe("function"); });
+  it("R is a function", () => { expect(typeof R).toBe("function"); });
+  it("packetOf is a function", () => { expect(typeof packetOf).toBe("function"); });
+  it("G('cash-survival') returns an object", () => { expect(typeof G("cash-survival")).toBe("object"); });
+  it("G('cash-survival') has status field", () => { expect(G("cash-survival")).toHaveProperty("status"); });
+  it("G('cash-survival').status equals 'GREEN'", () => { expect(G("cash-survival").status).toBe("GREEN"); });
+  it("RC('cash-survival').status equals 'RED'", () => { expect(RC("cash-survival").status).toBe("RED"); });
+  it("RC('cash-survival').severity equals 'CRITICAL'", () => { expect(RC("cash-survival").severity).toBe("CRITICAL"); });
+});
+
 describe("[C18] end-to-end collective owner decision flow", () => {
   it("happy path: green board → valid packet, valid journal record, no harm entries", () => {
     const input: CollectiveInput = { archetype: "universal", ownerGoal: "optimize", signals: [G("cash-survival"), G("quality"), G("capacity")] };

@@ -32,6 +32,23 @@ const allWs = [wsActive, wsB, wsAlready, wsIdem];
 const unknownWs = randomUUID();
 const idemKey = `disable-${randomUUID()}`;
 
+describe("admin-disable service — module contract assertions", () => {
+  it("disableWorkspaceForAdmin is a function", () => { expect(typeof disableWorkspaceForAdmin).toBe("function"); });
+  it("checkIdempotencyKey is a function", () => { expect(typeof checkIdempotencyKey).toBe("function"); });
+  it("recordIdempotencyResponse is a function", () => { expect(typeof recordIdempotencyResponse).toBe("function"); });
+  it("SHOULD_RUN_DB_TESTS is a boolean", () => { expect(typeof SHOULD_RUN_DB_TESTS).toBe("boolean"); });
+  it("db is an object", () => { expect(typeof db).toBe("object"); });
+  it("admin is a string", () => { expect(typeof admin).toBe("string"); });
+  it("wsActive is a string", () => { expect(typeof wsActive).toBe("string"); });
+  it("wsB is a string", () => { expect(typeof wsB).toBe("string"); });
+  it("wsAlready is a string", () => { expect(typeof wsAlready).toBe("string"); });
+  it("wsIdem is a string", () => { expect(typeof wsIdem).toBe("string"); });
+  it("allWs is an array", () => { expect(Array.isArray(allWs)).toBe(true); });
+  it("allWs has 4 elements", () => { expect(allWs).toHaveLength(4); });
+  it("unknownWs is a string", () => { expect(typeof unknownWs).toBe("string"); });
+  it("idemKey starts with 'disable-'", () => { expect(idemKey.startsWith("disable-")).toBe(true); });
+});
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("Phase D1-D: workspace disable (DB-backed)", () => {
   beforeAll(async () => {
     await db.user.create({

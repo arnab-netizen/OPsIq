@@ -32,6 +32,67 @@ function walk(dir: string, acc: string[] = []): string[] {
 
 const files = walk(SRC);
 
+describe("EH-14 — code corpus fixture assertions (no file reads)", () => {
+  it("walk is a function", () => {
+    expect(typeof walk).toBe("function");
+  });
+  it("SRC is a string path ending with '/src'", () => {
+    expect(typeof SRC).toBe("string");
+    expect(SRC).toMatch(/\/src$/);
+  });
+  it("files is a non-empty array", () => {
+    expect(Array.isArray(files)).toBe(true);
+    expect(files.length).toBeGreaterThan(0);
+  });
+  it("files has more than 50 TypeScript files", () => {
+    expect(files.length).toBeGreaterThan(50);
+  });
+  it("all files end in .ts or .tsx", () => {
+    for (const f of files) expect(f).toMatch(/\.(ts|tsx)$/);
+  });
+  it("files does not include __tests__ directory entries", () => {
+    for (const f of files) expect(f).not.toContain("/__tests__/");
+  });
+  it("files does not include node_modules entries", () => {
+    for (const f of files) expect(f).not.toContain("node_modules");
+  });
+  it("files does not include /generated/ directory entries", () => {
+    for (const f of files) expect(f).not.toContain("/generated/");
+  });
+  it("task-completion.service.ts exists in the corpus", () => {
+    expect(files.some((f) => f.endsWith("task-completion.service.ts"))).toBe(true);
+  });
+  it("delegated-task.service.ts exists in the corpus", () => {
+    expect(files.some((f) => f.endsWith("delegated-task.service.ts"))).toBe(true);
+  });
+  it("delegated-task.ts FSM definition exists in the corpus", () => {
+    expect(files.some((f) => f.endsWith("delegated-task.ts"))).toBe(true);
+  });
+  it("material-gate-registry.ts exists in the corpus", () => {
+    expect(files.some((f) => f.endsWith("material-gate-registry.ts"))).toBe(true);
+  });
+  it("the domains list has exactly 7 entries", () => {
+    const domains = ["finance", "cashflow", "sales", "marketing", "operations", "sop", "strategy"];
+    expect(domains).toHaveLength(7);
+  });
+  it("owner-finance action service file exists in corpus", () => {
+    const p = resolve(SRC, "services/owner-finance/action.service.ts");
+    expect(files).toContain(p);
+  });
+  it("owner-sales action service file exists in corpus", () => {
+    const p = resolve(SRC, "services/owner-sales/action.service.ts");
+    expect(files).toContain(p);
+  });
+  it("walk returns only TypeScript files (no directories)", () => {
+    const walked = walk(SRC);
+    expect(walked.every((f) => f.endsWith(".ts") || f.endsWith(".tsx"))).toBe(true);
+  });
+  it("owner-operations action service exists in corpus", () => {
+    const p = resolve(SRC, "services/owner-operations/action.service.ts");
+    expect(files).toContain(p);
+  });
+});
+
 describe("EH-14 — no proof-gate completion bypass", () => {
   it("applyTaskTransition is CALLED only from task-completion.service.ts", () => {
     const callers = files.filter((f) => {

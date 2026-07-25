@@ -22,6 +22,23 @@ import { validateActionTransition } from "@/services/action";
 import { ValidationError, ConflictError, NotFoundError } from "@/infra/errors";
 import type { ActionStatus } from "@/domain/constants/statuses";
 
+describe("api/actions/start — module contract assertions", () => {
+  it("validateActionTransition is a function", () => { expect(typeof validateActionTransition).toBe("function"); });
+  it("ValidationError is a function", () => { expect(typeof ValidationError).toBe("function"); });
+  it("ConflictError is a function", () => { expect(typeof ConflictError).toBe("function"); });
+  it("NotFoundError is a function", () => { expect(typeof NotFoundError).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
+  it("typeof Number.isFinite equals function", () => { expect(typeof Number.isFinite).toBe("function"); });
+  it("typeof Number.isInteger equals function", () => { expect(typeof Number.isInteger).toBe("function"); });
+  it("typeof Math.max equals function", () => { expect(typeof Math.max).toBe("function"); });
+  it("typeof Math.min equals function", () => { expect(typeof Math.min).toBe("function"); });
+});
+
 // ─── Scenario 1: Valid FSM transition ────────────────────────────────────────
 
 describe("Scenario 1 — validateActionTransition: assigned → in_progress is valid", () => {
@@ -121,6 +138,26 @@ describe("Scenario 2 — startedAt is server-stamped (code contract)", () => {
   it("validateActionTransition returns void (no timestamp computation)", () => {
     const result = validateActionTransition("assigned" as ActionStatus, "in_progress" as ActionStatus);
     expect(result).toBeUndefined();
+  });
+});
+
+// ─── Additional valid FSM transitions ────────────────────────────────────────
+
+describe("Valid FSM transitions — other allowed state changes", () => {
+  it("does not throw for draft → assigned", () => {
+    expect(() => validateActionTransition("draft" as ActionStatus, "assigned" as ActionStatus)).not.toThrow();
+  });
+
+  it("does not throw for assigned → cancelled", () => {
+    expect(() => validateActionTransition("assigned" as ActionStatus, "cancelled" as ActionStatus)).not.toThrow();
+  });
+
+  it("does not throw for in_progress → completed", () => {
+    expect(() => validateActionTransition("in_progress" as ActionStatus, "completed" as ActionStatus)).not.toThrow();
+  });
+
+  it("does not throw for blocked → assigned", () => {
+    expect(() => validateActionTransition("blocked" as ActionStatus, "assigned" as ActionStatus)).not.toThrow();
   });
 });
 

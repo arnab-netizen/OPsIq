@@ -10,6 +10,29 @@ import {
   OwnerReliefPath,
 } from "@/domain/execution/owner-workload";
 
+describe("[module9] owner workload protection — module contract assertions", () => {
+  it("computeOwnerDailyLoad is a function", () => { expect(typeof computeOwnerDailyLoad).toBe("function"); });
+  it("classifyOwnerLoad is a function", () => { expect(typeof classifyOwnerLoad).toBe("function"); });
+  it("ownerBottleneckRisk is a function", () => { expect(typeof ownerBottleneckRisk).toBe("function"); });
+  it("recommendReliefPath is a function", () => { expect(typeof recommendReliefPath).toBe("function"); });
+  it("assessOwnerWorkload is a function", () => { expect(typeof assessOwnerWorkload).toBe("function"); });
+  it("wouldDeepenOwnerDependency is a function", () => { expect(typeof wouldDeepenOwnerDependency).toBe("function"); });
+  it("OwnerLoadBand.SUSTAINABLE is defined", () => { expect(OwnerLoadBand.SUSTAINABLE).toBeDefined(); });
+  it("OwnerLoadBand.BOTTLENECK_RISK is defined", () => { expect(OwnerLoadBand.BOTTLENECK_RISK).toBeDefined(); });
+  it("OwnerReliefPath.DELEGATE is defined", () => { expect(OwnerReliefPath.DELEGATE).toBeDefined(); });
+  it("OwnerReliefPath.NONE is defined", () => { expect(OwnerReliefPath.NONE).toBeDefined(); });
+  it("computeOwnerDailyLoad returns a number", () => {
+    expect(typeof computeOwnerDailyLoad({ ownerMinutesPerDay: 240, sustainableMinutesPerDay: 480 })).toBe("number");
+  });
+  it("classifyOwnerLoad(0.5) returns SUSTAINABLE", () => { expect(classifyOwnerLoad(0.5)).toBe(OwnerLoadBand.SUSTAINABLE); });
+  it("assessOwnerWorkload returns object with band field", () => {
+    expect(assessOwnerWorkload({ ownerMinutesPerDay: 120, sustainableMinutesPerDay: 480 })).toHaveProperty("band");
+  });
+  it("ownerBottleneckRisk is false for light load", () => {
+    expect(ownerBottleneckRisk({ ownerMinutesPerDay: 100, sustainableMinutesPerDay: 480 })).toBe(false);
+  });
+});
+
 describe("[module9] owner workload protection", () => {
   it("computes owner daily load (0 when no capacity)", () => {
     expect(computeOwnerDailyLoad({ ownerMinutesPerDay: 240, sustainableMinutesPerDay: 480 })).toBeCloseTo(0.5, 5);

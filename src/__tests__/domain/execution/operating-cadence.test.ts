@@ -12,6 +12,25 @@ const NOW = new Date("2026-06-26T12:00:00.000Z");
 const hoursAgo = (h: number) => new Date(NOW.getTime() - h * 3600_000);
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 24 * 3600_000);
 
+describe("[module16] operating cadence — module contract assertions", () => {
+  it("cadenceIntervalMs is a function", () => { expect(typeof cadenceIntervalMs).toBe("function"); });
+  it("nextDueAt is a function", () => { expect(typeof nextDueAt).toBe("function"); });
+  it("isCadenceDue is a function", () => { expect(typeof isCadenceDue).toBe("function"); });
+  it("overdueMs is a function", () => { expect(typeof overdueMs).toBe("function"); });
+  it("dueReviews is a function", () => { expect(typeof dueReviews).toBe("function"); });
+  it("CadenceType.DAILY_OWNER_BRIEFING is defined", () => { expect(CadenceType.DAILY_OWNER_BRIEFING).toBeDefined(); });
+  it("CadenceType.WEEKLY_BUSINESS_REVIEW is defined", () => { expect(CadenceType.WEEKLY_BUSINESS_REVIEW).toBeDefined(); });
+  it("CadenceType.MONTHLY_OPERATING_REVIEW is defined", () => { expect(CadenceType.MONTHLY_OPERATING_REVIEW).toBeDefined(); });
+  it("cadenceIntervalMs(DAILY_OWNER_BRIEFING) returns a positive number", () => { expect(cadenceIntervalMs(CadenceType.DAILY_OWNER_BRIEFING)).toBeGreaterThan(0); });
+  it("cadenceIntervalMs(WEEKLY) > cadenceIntervalMs(DAILY)", () => {
+    expect(cadenceIntervalMs(CadenceType.WEEKLY_BUSINESS_REVIEW)).toBeGreaterThan(cadenceIntervalMs(CadenceType.DAILY_OWNER_BRIEFING));
+  });
+  it("isCadenceDue with null lastRun returns true", () => { expect(isCadenceDue(CadenceType.DAILY_OWNER_BRIEFING, null, NOW)).toBe(true); });
+  it("nextDueAt with null lastRun returns NOW", () => { expect(nextDueAt(CadenceType.DAILY_OWNER_BRIEFING, null, NOW).getTime()).toBe(NOW.getTime()); });
+  it("overdueMs returns 0 when not yet due", () => { expect(overdueMs(CadenceType.DAILY_OWNER_BRIEFING, new Date(NOW.getTime() - 3600_000), NOW)).toBe(0); });
+  it("dueReviews([]) returns an empty array", () => { expect(Array.isArray(dueReviews([], NOW))).toBe(true); });
+});
+
 describe("[module16] operating cadence", () => {
   it("never-run cadences are always due", () => {
     expect(isCadenceDue(CadenceType.DAILY_OWNER_BRIEFING, null, NOW)).toBe(true);

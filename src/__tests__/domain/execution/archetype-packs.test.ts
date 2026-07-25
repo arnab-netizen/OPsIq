@@ -14,6 +14,59 @@ import {
   decideKnowledgePromotion,
 } from "@/domain/execution/business-context";
 
+describe("archetype context packs — module contract assertions", () => {
+  it("createLaundryPack is a function", () => {
+    expect(typeof createLaundryPack).toBe("function");
+  });
+  it("createHousekeepingPack is a function", () => {
+    expect(typeof createHousekeepingPack).toBe("function");
+  });
+  it("assessPackConfidence is a function", () => {
+    expect(typeof assessPackConfidence).toBe("function");
+  });
+  it("applyPromotedKnowledge is a function", () => {
+    expect(typeof applyPromotedKnowledge).toBe("function");
+  });
+  it("LAUNDRY_PACK_SLOTS is an array with >= 1 entry", () => {
+    expect(Array.isArray(LAUNDRY_PACK_SLOTS)).toBe(true);
+    expect(LAUNDRY_PACK_SLOTS.length).toBeGreaterThanOrEqual(1);
+  });
+  it("HOUSEKEEPING_PACK_SLOTS is an array with >= 1 entry", () => {
+    expect(Array.isArray(HOUSEKEEPING_PACK_SLOTS)).toBe(true);
+    expect(HOUSEKEEPING_PACK_SLOTS.length).toBeGreaterThanOrEqual(1);
+  });
+  it("KnowledgePromotionRequiredError is defined", () => {
+    expect(KnowledgePromotionRequiredError).toBeDefined();
+  });
+  it("ContextConfidence.LOW is defined", () => {
+    expect(ContextConfidence.LOW).toBeDefined();
+  });
+  it("ContextConfidence.MEDIUM is defined", () => {
+    expect(ContextConfidence.MEDIUM).toBeDefined();
+  });
+  it("ContextConfidence.HIGH is defined", () => {
+    expect(ContextConfidence.HIGH).toBeDefined();
+  });
+  it("createLaundryPack() returns an object", () => {
+    expect(typeof createLaundryPack()).toBe("object");
+  });
+  it("createLaundryPack().slots is an object", () => {
+    expect(typeof createLaundryPack().slots).toBe("object");
+  });
+  it("assessPackConfidence(createLaundryPack()) returns an object", () => {
+    expect(typeof assessPackConfidence(createLaundryPack())).toBe("object");
+  });
+  it("assessPackConfidence result has a confidence field", () => {
+    expect(assessPackConfidence(createLaundryPack())).toHaveProperty("confidence");
+  });
+  it("assessPackConfidence result has a filledSlots field (array)", () => {
+    expect(Array.isArray(assessPackConfidence(createLaundryPack()).filledSlots)).toBe(true);
+  });
+  it("assessPackConfidence result has a missingSlots field (array)", () => {
+    expect(Array.isArray(assessPackConfidence(createLaundryPack()).missingSlots)).toBe(true);
+  });
+});
+
 describe("archetype context packs (Slice 22)", () => {
   it("laundry + housekeeping pack skeletons exist with their slots", () => {
     const l = createLaundryPack();

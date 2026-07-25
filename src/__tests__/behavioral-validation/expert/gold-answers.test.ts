@@ -12,6 +12,24 @@ import { baseAdvise, genericAdvise } from "@/behavioral-validation/advisor";
 
 const cashCase = SEED_CASES.find((c) => c.id === "A1")!;
 
+describe("gold-standard expert answers — module contract assertions", () => {
+  it("buildGoldAnswer is a function", () => { expect(typeof buildGoldAnswer).toBe("function"); });
+  it("canEnterExpertValidation is a function", () => { expect(typeof canEnterExpertValidation).toBe("function"); });
+  it("compareToGold is a function", () => { expect(typeof compareToGold).toBe("function"); });
+  it("goldAnswerSchema has a parse method", () => { expect(typeof goldAnswerSchema.parse).toBe("function"); });
+  it("hasMinimumGold is a function", () => { expect(typeof hasMinimumGold).toBe("function"); });
+  it("SEED_CASES is a non-empty array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("EXPANDED_CASES is a non-empty array", () => { expect(Array.isArray(EXPANDED_CASES)).toBe(true); expect(EXPANDED_CASES.length).toBeGreaterThan(0); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("genericAdvise is a function", () => { expect(typeof genericAdvise).toBe("function"); });
+  it("cashCase is defined and not null", () => { expect(cashCase).toBeDefined(); expect(cashCase).not.toBeNull(); });
+  it("cashCase.id === 'A1'", () => { expect(cashCase.id).toBe("A1"); });
+  it("buildGoldAnswer(cashCase) returns an object", () => { expect(typeof buildGoldAnswer(cashCase)).toBe("object"); });
+  it("buildGoldAnswer(cashCase) has qualityLevel field", () => { expect(buildGoldAnswer(cashCase)).toHaveProperty("qualityLevel"); });
+  it("buildGoldAnswer(cashCase).qualityLevel === 'REQUIRED'", () => { expect(buildGoldAnswer(cashCase).qualityLevel).toBe("REQUIRED"); });
+  it("hasMinimumGold(buildGoldAnswer(cashCase)) is true", () => { expect(hasMinimumGold(buildGoldAnswer(cashCase))).toBe(true); });
+});
+
 describe("gold-standard expert answers", () => {
   it("every seed case has a REQUIRED, schema-valid gold answer", () => {
     for (const c of SEED_CASES) {

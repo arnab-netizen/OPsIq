@@ -15,6 +15,23 @@ import { buildSupervisorSummary } from "@/domain/owner-mode/supervisor-summary";
 import { InMemoryLearningStore } from "@/behavioral-validation/learning-store";
 import { findPII, hasLongCopiedText } from "@/behavioral-validation/public-cases/source-register";
 
+describe("independent gold — module contract assertions", () => {
+  it("INDEPENDENT_GOLD_CASES is an array", () => { expect(Array.isArray(INDEPENDENT_GOLD_CASES)).toBe(true); });
+  it("INDEPENDENT_SOURCES is an array", () => { expect(Array.isArray(INDEPENDENT_SOURCES)).toBe(true); });
+  it("validateIndependentSources is a function", () => { expect(typeof validateIndependentSources).toBe("function"); });
+  it("runOwnerAdvice is a function", () => { expect(typeof runOwnerAdvice).toBe("function"); });
+  it("caseToContext is a function", () => { expect(typeof caseToContext).toBe("function"); });
+  it("runtimeToSupervisorInput is a function", () => { expect(typeof runtimeToSupervisorInput).toBe("function"); });
+  it("buildSupervisorSummary is a function", () => { expect(typeof buildSupervisorSummary).toBe("function"); });
+  it("InMemoryLearningStore is a class/function", () => { expect(typeof InMemoryLearningStore).toBe("function"); });
+  it("findPII is a function", () => { expect(typeof findPII).toBe("function"); });
+  it("hasLongCopiedText is a function", () => { expect(typeof hasLongCopiedText).toBe("function"); });
+  it("INDEPENDENT_GOLD_CASES has at least 1 element", () => { expect(INDEPENDENT_GOLD_CASES.length).toBeGreaterThan(0); });
+  it("INDEPENDENT_SOURCES has at least 1 element", () => { expect(INDEPENDENT_SOURCES.length).toBeGreaterThan(0); });
+  it("each gold case has an id field", () => { for (const g of INDEPENDENT_GOLD_CASES) expect(g).toHaveProperty("id"); });
+  it("each gold case has an expected field", () => { for (const g of INDEPENDENT_GOLD_CASES) expect(g).toHaveProperty("expected"); });
+});
+
 describe("independent gold — loading + lock (§4)", () => {
   it("loads 15 independently-authored gold cases, one per category", () => {
     expect(INDEPENDENT_GOLD_CASES.length).toBe(15);

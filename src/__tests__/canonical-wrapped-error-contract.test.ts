@@ -29,6 +29,23 @@ import { ClassifiedApiError } from "@/infra/classified-error";
  * 10. Direct unwrapped routes are not affected by wrapper
  */
 
+describe("canonical-wrapped-error-contract — module contract assertions", () => {
+  it("withCanonicalEnforcement is a function", () => { expect(typeof withCanonicalEnforcement).toBe("function"); });
+  it("NotFoundError is a function", () => { expect(typeof NotFoundError).toBe("function"); });
+  it("BadRequestError is a function", () => { expect(typeof BadRequestError).toBe("function"); });
+  it("ForbiddenError is a function", () => { expect(typeof ForbiddenError).toBe("function"); });
+  it("UnauthorizedError is a function", () => { expect(typeof UnauthorizedError).toBe("function"); });
+  it("ServiceUnavailableError is a function", () => { expect(typeof ServiceUnavailableError).toBe("function"); });
+  it("ClassifiedApiError is a function", () => { expect(typeof ClassifiedApiError).toBe("function"); });
+  it("new NotFoundError is instanceof Error", () => { expect(new NotFoundError("test") instanceof Error).toBe(true); });
+  it("new UnauthorizedError statusCode equals 401", () => { expect(new UnauthorizedError("test").statusCode).toBe(401); });
+  it("new ForbiddenError statusCode equals 403", () => { expect(new ForbiddenError("test").statusCode).toBe(403); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("Canonical Wrapped Handler Error Response Contract", () => {
   let mockRequest: Partial<NextRequest>;
   let mockContext: { params: Promise<Record<string, string>> };

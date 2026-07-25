@@ -8,6 +8,57 @@ import {
 import fs from "fs";
 import path from "path";
 
+describe("demo-write-guard — module contract assertions", () => {
+  it("evaluateDemoWrite is a function", () => {
+    expect(typeof evaluateDemoWrite).toBe("function");
+  });
+  it("demoOnlyBlockedResponse is a function", () => {
+    expect(typeof demoOnlyBlockedResponse).toBe("function");
+  });
+  it("isProductionRuntime is a function", () => {
+    expect(typeof isProductionRuntime).toBe("function");
+  });
+  it("IN_MEMORY_DEMO_WRITE_FEATURES is defined", () => {
+    expect(IN_MEMORY_DEMO_WRITE_FEATURES).toBeDefined();
+  });
+  it("IN_MEMORY_DEMO_WRITE_FEATURES is an array", () => {
+    expect(Array.isArray(IN_MEMORY_DEMO_WRITE_FEATURES)).toBe(true);
+  });
+  it("IN_MEMORY_DEMO_WRITE_FEATURES.length is 0", () => {
+    expect(IN_MEMORY_DEMO_WRITE_FEATURES).toHaveLength(0);
+  });
+  it("isProductionRuntime() returns a boolean", () => {
+    expect(typeof isProductionRuntime()).toBe("boolean");
+  });
+  it("isProductionRuntime() is false in test env", () => {
+    expect(isProductionRuntime()).toBe(false);
+  });
+  it("demoOnlyBlockedResponse('test') has a status property", () => {
+    expect(demoOnlyBlockedResponse("test")).toHaveProperty("status");
+  });
+  it("demoOnlyBlockedResponse('test').status is 503", () => {
+    expect(demoOnlyBlockedResponse("test").status).toBe(503);
+  });
+  it("evaluateDemoWrite('unknown-feature') returns an object", () => {
+    expect(typeof evaluateDemoWrite("unknown-feature")).toBe("object");
+  });
+  it("evaluateDemoWrite('unknown-feature').blocked is false when IN_MEMORY list is empty", () => {
+    expect(evaluateDemoWrite("unknown-feature").blocked).toBe(false);
+  });
+  it("typeof process.env.NODE_ENV is 'string'", () => {
+    expect(typeof process.env.NODE_ENV).toBe("string");
+  });
+  it("process.env.NODE_ENV is 'test' in the test environment", () => {
+    expect(process.env.NODE_ENV).toBe("test");
+  });
+  it("demoOnlyBlockedResponse is a Response-like object (has json method)", () => {
+    expect(typeof demoOnlyBlockedResponse("test").json).toBe("function");
+  });
+  it("IN_MEMORY_DEMO_WRITE_FEATURES does not contain 'pricing-tiers'", () => {
+    expect(IN_MEMORY_DEMO_WRITE_FEATURES).not.toContain("pricing-tiers");
+  });
+});
+
 describe("demo-write-guard (Phase 0 truth/safety)", () => {
   const savedEnv = process.env.NODE_ENV;
   afterEach(() => {

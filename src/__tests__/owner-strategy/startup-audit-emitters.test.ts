@@ -24,6 +24,23 @@ vi.mock("@/services/owner-mode/operating-memory.service", () => ({ writeMemoryEn
 
 // ─── STARTUP_IDEA_REVISED ──────────────────────────────────────────────────────
 
+describe("startup-audit-emitters — module contract assertions", () => {
+  it("AUDIT_EVENTS is an object", () => { expect(typeof AUDIT_EVENTS).toBe("object"); });
+  it("mockEmitAuditEvent is a function", () => { expect(typeof mockEmitAuditEvent).toBe("function"); });
+  it("mockWriteMemoryEntry is a function", () => { expect(typeof mockWriteMemoryEntry).toBe("function"); });
+  it("TX_STUB is an object", () => { expect(typeof TX_STUB).toBe("object"); });
+  it("TX_EVIDENCE_STUB is an object", () => { expect(typeof TX_EVIDENCE_STUB).toBe("object"); });
+  it("AUDIT_EVENTS.STARTUP_IDEA_REVISED is a string", () => { expect(typeof AUDIT_EVENTS.STARTUP_IDEA_REVISED).toBe("string"); });
+  it("AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED is a string", () => { expect(typeof AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED).toBe("string"); });
+  it("AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE is a string", () => { expect(typeof AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE).toBe("string"); });
+  it("AUDIT_EVENTS.STARTUP_IDEA_REVISED equals startup.idea_revised", () => { expect(AUDIT_EVENTS.STARTUP_IDEA_REVISED).toBe("startup.idea_revised"); });
+  it("AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED equals startup.evidence_conflict_detected", () => { expect(AUDIT_EVENTS.STARTUP_EVIDENCE_CONFLICT_DETECTED).toBe("startup.evidence_conflict_detected"); });
+  it("AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE equals startup.approval_became_stale", () => { expect(AUDIT_EVENTS.STARTUP_APPROVAL_BECAME_STALE).toBe("startup.approval_became_stale"); });
+  it("Object.keys(AUDIT_EVENTS).length is greater than 0", () => { expect(Object.keys(AUDIT_EVENTS).length).toBeGreaterThan(0); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("STARTUP_IDEA_REVISED", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 

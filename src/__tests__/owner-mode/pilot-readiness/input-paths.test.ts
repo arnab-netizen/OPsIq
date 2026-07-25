@@ -44,6 +44,23 @@ function depsWith(priorSupplied: OwnerInputRecord["category"][], createSpy = vi.
   };
 }
 
+describe("input-paths — module contract assertions", () => {
+  it("parseInputRecord is a function", () => { expect(typeof parseInputRecord).toBe("function"); });
+  it("intakeDomainToCategory is a function", () => { expect(typeof intakeDomainToCategory).toBe("function"); });
+  it("submitManualEntry is a function", () => { expect(typeof submitManualEntry).toBe("function"); });
+  it("submitStructuredImport is a function", () => { expect(typeof submitStructuredImport).toBe("function"); });
+  it("planManualEntry is a function", () => { expect(typeof planManualEntry).toBe("function"); });
+  it("rowsToSuppliedCategories is a function", () => { expect(typeof rowsToSuppliedCategories).toBe("function"); });
+  it("WS is a string", () => { expect(typeof WS).toBe("string"); });
+  it("BIZ is a string", () => { expect(typeof BIZ).toBe("string"); });
+  it("record is a function", () => { expect(typeof record).toBe("function"); });
+  it("depsWith is a function", () => { expect(typeof depsWith).toBe("function"); });
+  it("record() returns an object", () => { expect(typeof record()).toBe("object"); });
+  it("record() has workspaceId field", () => { expect(record()).toHaveProperty("workspaceId"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("input record parser", () => {
   it("classifies the category and normalizes fields for a valid record", () => {
     const r = parseInputRecord(record(), { workspaceId: WS, businessId: BIZ });

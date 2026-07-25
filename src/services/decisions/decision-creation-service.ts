@@ -47,10 +47,10 @@ export async function createDecision(
   if (!type?.trim()) {
     throw new Error("Decision type is required");
   }
-  if (typeof impact !== "number" || impact <= 0) {
+  if (!Number.isFinite(impact) || impact <= 0) {
     throw new Error("Impact must be a positive number");
   }
-  if (typeof confidence !== "number" || confidence < 0 || confidence > 1) {
+  if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
     throw new Error("Confidence must be between 0 and 1");
   }
   if (!workspaceId) {

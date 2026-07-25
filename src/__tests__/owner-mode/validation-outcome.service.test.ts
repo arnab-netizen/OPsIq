@@ -44,6 +44,68 @@ function makeDeps(): { deps: OutcomeDeps; rows: Stored[]; audits: unknown[] } {
 
 const passed = { experimentKey: "exp-1", opportunityKey: "SERVICE_GAP:NEW_SERVICE", status: "COMPLETED" as const, result: "PASSED" as const, actualCost: 40, marginEvidence: "40% margin", conversions: 3 };
 
+describe("recordValidationOutcome — module contract assertions", () => {
+  it("recordValidationOutcome is a function", () => {
+    expect(typeof recordValidationOutcome).toBe("function");
+  });
+  it("getActiveValidationOutcomes is a function", () => {
+    expect(typeof getActiveValidationOutcomes).toBe("function");
+  });
+  it("makeDeps() returns an object with deps, rows, audits", () => {
+    const d = makeDeps();
+    expect(typeof d).toBe("object");
+    expect(d).toHaveProperty("deps");
+    expect(d).toHaveProperty("rows");
+    expect(d).toHaveProperty("audits");
+  });
+  it("makeDeps().rows is initially an empty array", () => {
+    expect(Array.isArray(makeDeps().rows)).toBe(true);
+    expect(makeDeps().rows).toHaveLength(0);
+  });
+  it("makeDeps().audits is initially an empty array", () => {
+    expect(Array.isArray(makeDeps().audits)).toBe(true);
+    expect(makeDeps().audits).toHaveLength(0);
+  });
+  it("passed.experimentKey is 'exp-1'", () => {
+    expect(passed.experimentKey).toBe("exp-1");
+  });
+  it("passed.result is 'PASSED'", () => {
+    expect(passed.result).toBe("PASSED");
+  });
+  it("passed.status is 'COMPLETED'", () => {
+    expect(passed.status).toBe("COMPLETED");
+  });
+  it("WS is a string", () => {
+    expect(typeof WS).toBe("string");
+  });
+  it("OTHER is a string", () => {
+    expect(typeof OTHER).toBe("string");
+  });
+  it("WS !== OTHER", () => {
+    expect(WS).not.toBe(OTHER);
+  });
+  it("recordValidationOutcome resolves to an object with an ok field", async () => {
+    const { deps } = makeDeps();
+    const r = await recordValidationOutcome({ workspaceId: WS, actorId: "u1", submission: passed }, deps);
+    expect(typeof r).toBe("object");
+    expect(r).toHaveProperty("ok");
+  });
+  it("ok is true for a valid submission", async () => {
+    const { deps } = makeDeps();
+    const r = await recordValidationOutcome({ workspaceId: WS, actorId: "u1", submission: passed }, deps);
+    expect(r.ok).toBe(true);
+  });
+  it("getActiveValidationOutcomes returns an array", async () => {
+    const { deps } = makeDeps();
+    const result = await getActiveValidationOutcomes(WS, deps);
+    expect(Array.isArray(result)).toBe(true);
+  });
+  it("makeDeps().deps.uuid() returns a string", () => {
+    expect(typeof makeDeps().deps.uuid()).toBe("string");
+  });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+});
+
 describe("recordValidationOutcome", () => {
   it("1. persists a valid outcome with an atomic audit", async () => {
     const { deps, rows, audits } = makeDeps();

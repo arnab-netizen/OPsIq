@@ -261,4 +261,83 @@ describe("Public API Service", () => {
       expect(() => assertPublicAccess("capability", "550e8400-e29b-41d4-a716-446655440000")).not.toThrow();
     });
   });
+
+  describe("toPublicEngagementDTO — field completeness", () => {
+    const engagement = {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      name: "Market Expansion",
+      status: "active",
+      industry: "Tech",
+      currentStage: "Execution",
+      progress: 50,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    it("includes industry field in DTO", () => {
+      const dto = toPublicEngagementDTO(engagement);
+      expect(dto.industry).toBe("Tech");
+    });
+
+    it("includes currentStage field in DTO", () => {
+      const dto = toPublicEngagementDTO(engagement);
+      expect(dto.currentStage).toBe("Execution");
+    });
+  });
+
+  describe("toPublicActionDTO — field completeness", () => {
+    const action = {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      engagementId: "550e8400-e29b-41d4-a716-446655440000",
+      name: "Complete analysis",
+      status: "in_progress",
+      priority: "high",
+      assignee: "john@example.com",
+      dueDate: "2026-12-31T00:00:00.000Z",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    it("includes engagementId in action DTO", () => {
+      const dto = toPublicActionDTO(action);
+      expect(dto.engagementId).toBe("550e8400-e29b-41d4-a716-446655440000");
+    });
+
+    it("includes dueDate in action DTO", () => {
+      const dto = toPublicActionDTO(action);
+      expect(dto.dueDate).toBe("2026-12-31T00:00:00.000Z");
+    });
+  });
+
+  describe("toPublicKPIDTO — field completeness", () => {
+    it("includes targetValue in KPI DTO", () => {
+      const kpi = {
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        engagementId: "550e8400-e29b-41d4-a716-446655440001",
+        name: "Revenue Growth",
+        currentValue: 100000,
+        targetValue: 150000,
+        direction: "increase",
+        trend: "improving",
+        updatedAt: new Date().toISOString(),
+      };
+      const dto = toPublicKPIDTO(kpi);
+      expect(dto.targetValue).toBe(150000);
+    });
+
+    it("includes direction field in KPI DTO", () => {
+      const kpi = {
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        engagementId: "550e8400-e29b-41d4-a716-446655440001",
+        name: "Margin",
+        currentValue: 40,
+        targetValue: 60,
+        direction: "increase",
+        trend: "stable",
+        updatedAt: new Date().toISOString(),
+      };
+      const dto = toPublicKPIDTO(kpi);
+      expect(dto.direction).toBe("increase");
+    });
+  });
 });

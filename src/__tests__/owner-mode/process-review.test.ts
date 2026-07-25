@@ -16,6 +16,23 @@ import { triggerProcessReviewIfDue, registerProcess, type ProcessDeps } from "@/
 const NOW = new Date("2026-06-28T00:00:00Z");
 beforeEach(() => emitAuditEvent.mockClear());
 
+describe("process-review — module contract assertions", () => {
+  it("evaluateProcessReview is a function", () => { expect(typeof evaluateProcessReview).toBe("function"); });
+  it("nextReviewDate is a function", () => { expect(typeof nextReviewDate).toBe("function"); });
+  it("processUpdateRequiresOwnerApproval is a function", () => { expect(typeof processUpdateRequiresOwnerApproval).toBe("function"); });
+  it("triggerProcessReviewIfDue is a function", () => { expect(typeof triggerProcessReviewIfDue).toBe("function"); });
+  it("registerProcess is a function", () => { expect(typeof registerProcess).toBe("function"); });
+  it("emitAuditEvent is a function", () => { expect(typeof emitAuditEvent).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("makeDeps is a function", () => { expect(typeof makeDeps).toBe("function"); });
+  it("makeDeps(null) returns an object", () => { expect(typeof makeDeps(null)).toBe("object"); });
+  it("makeDeps(null) result has deps field", () => { expect(makeDeps(null)).toHaveProperty("deps"); });
+  it("processUpdateRequiresOwnerApproval('sop_change') is true", () => { expect(processUpdateRequiresOwnerApproval("sop_change")).toBe(true); });
+  it("processUpdateRequiresOwnerApproval('minor') is false", () => { expect(processUpdateRequiresOwnerApproval("minor")).toBe(false); });
+  it("nextReviewDate(NOW, 30) is a Date", () => { expect(nextReviewDate(NOW, 30) instanceof Date).toBe(true); });
+  it("evaluateProcessReview({nextReviewAt:null},{},NOW).due is false", () => { expect(evaluateProcessReview({ nextReviewAt: null }, {}, NOW).due).toBe(false); });
+});
+
 describe("evaluateProcessReview", () => {
   it("not due with no schedule and no signals", () => {
     expect(evaluateProcessReview({ nextReviewAt: null }, {}, NOW).due).toBe(false);

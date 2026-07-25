@@ -5,6 +5,31 @@
 import { describe, it, expect } from "vitest";
 import { intakeUploadSchema, fieldSpecForDomain, INTAKE_TARGET_DOMAINS } from "@/domain/owner-intake";
 
+describe("Owner Intake — module contract assertions", () => {
+  it("intakeUploadSchema has safeParse method", () => { expect(typeof intakeUploadSchema.safeParse).toBe("function"); });
+  it("fieldSpecForDomain is a function", () => { expect(typeof fieldSpecForDomain).toBe("function"); });
+  it("INTAKE_TARGET_DOMAINS is a non-empty array", () => { expect(Array.isArray(INTAKE_TARGET_DOMAINS)).toBe(true); expect(INTAKE_TARGET_DOMAINS.length).toBeGreaterThan(0); });
+  it("INTAKE_TARGET_DOMAINS contains 'finance'", () => { expect(INTAKE_TARGET_DOMAINS).toContain("finance"); });
+  it("intakeUploadSchema.safeParse(valid csv) succeeds", () => {
+    expect(intakeUploadSchema.safeParse({ source: "csv_upload", targetDomain: "finance", csvText: "a,b\n1,2" }).success).toBe(true);
+  });
+  it("intakeUploadSchema rejects empty csvText", () => {
+    expect(intakeUploadSchema.safeParse({ source: "csv_upload", targetDomain: "finance", csvText: "" }).success).toBe(false);
+  });
+  it("fieldSpecForDomain('finance') returns a non-null array", () => {
+    const spec = fieldSpecForDomain("finance"); expect(spec).not.toBeNull(); expect(Array.isArray(spec)).toBe(true);
+  });
+  it("fieldSpecForDomain('portfolio') returns null", () => { expect(fieldSpecForDomain("portfolio")).toBeNull(); });
+  it("fieldSpecForDomain('nonsense') returns null", () => { expect(fieldSpecForDomain("nonsense")).toBeNull(); });
+  it("'finance' spec has length > 3", () => { expect(fieldSpecForDomain("finance")!.length).toBeGreaterThan(3); });
+  it("'finance' spec requires periodStart", () => { expect(fieldSpecForDomain("finance")!.some((f) => f.name === "periodStart" && f.required)).toBe(true); });
+  it("'finance' spec requires periodEnd", () => { expect(fieldSpecForDomain("finance")!.some((f) => f.name === "periodEnd" && f.required)).toBe(true); });
+  it("'finance' spec requires currency", () => { expect(fieldSpecForDomain("finance")!.some((f) => f.name === "currency" && f.required)).toBe(true); });
+  it("intakeUploadSchema rejects unknown source", () => {
+    expect(intakeUploadSchema.safeParse({ source: "telepathy", targetDomain: "finance", csvText: "a" }).success).toBe(false);
+  });
+});
+
 describe("Owner Intake — upload schema", () => {
   const valid = { source: "csv_upload", targetDomain: "finance", csvText: "a,b\n1,2" };
 

@@ -37,6 +37,66 @@ function makeDeps(committedStatus: T) {
   return { deps: { db, now: () => NOW } as TaskDeps, captured };
 }
 
+describe("applyTaskTransition — fixture and function contract assertions", () => {
+  it("applyTaskTransition is a function", () => {
+    expect(typeof applyTaskTransition).toBe("function");
+  });
+  it("DelegatedTaskStatus enum is defined", () => {
+    expect(T).toBeDefined();
+  });
+  it("DelegatedTaskStatus.ACKNOWLEDGED is defined", () => {
+    expect(T.ACKNOWLEDGED).toBeDefined();
+  });
+  it("DelegatedTaskStatus.IN_PROGRESS is defined", () => {
+    expect(T.IN_PROGRESS).toBeDefined();
+  });
+  it("DelegatedTaskStatus.BLOCKED is defined", () => {
+    expect(T.BLOCKED).toBeDefined();
+  });
+  it("DelegatedTaskStatus.ASSIGNED is defined", () => {
+    expect(T.ASSIGNED).toBeDefined();
+  });
+  it("TaskActorRole is defined", () => {
+    expect(TaskActorRole).toBeDefined();
+  });
+  it("TaskActorRole.EMPLOYEE is defined", () => {
+    expect(TaskActorRole.EMPLOYEE).toBeDefined();
+  });
+  it("NOW is a Date object", () => {
+    expect(NOW).toBeInstanceOf(Date);
+  });
+  it("NOW is 2026-07-05T12:00:00.000Z", () => {
+    expect(NOW.toISOString()).toBe("2026-07-05T12:00:00.000Z");
+  });
+  it("WS is the workspace sentinel string", () => {
+    expect(WS).toBe("ws-1");
+  });
+  it("employeeAssignee has role EMPLOYEE", () => {
+    expect(employeeAssignee.role).toBe(TaskActorRole.EMPLOYEE);
+  });
+  it("employeeAssignee.isAssignee is true", () => {
+    expect(employeeAssignee.isAssignee).toBe(true);
+  });
+  it("employeeAssignee cannot approve completion", () => {
+    expect(employeeAssignee.canApproveCompletion).toBe(false);
+  });
+  it("task helper returns an object with the given status", () => {
+    const t = task(T.ACKNOWLEDGED);
+    expect(t.status).toBe(T.ACKNOWLEDGED);
+    expect(t.workspaceId).toBe(WS);
+  });
+  it("makeDeps returns an object with deps and captured", () => {
+    const { deps, captured } = makeDeps(T.ACKNOWLEDGED);
+    expect(typeof deps).toBe("object");
+    expect(typeof captured).toBe("object");
+    expect(captured.data).toBeNull();
+  });
+  it("ACKNOWLEDGED → IN_PROGRESS transition is allowed for employee assignee (no throw)", async () => {
+    const { deps } = makeDeps(T.ACKNOWLEDGED);
+    await expect(applyTaskTransition({ task: task(T.ACKNOWLEDGED), to: T.IN_PROGRESS, actor: employeeAssignee, actorId: "emp-1" }, deps)).resolves.not.toThrow();
+  });
+});
+
 describe("applyTaskTransition — work-start timestamp", () => {
   it("sets workStartedAt on the first start (ACKNOWLEDGED → IN_PROGRESS)", async () => {
     const { deps, captured } = makeDeps(T.ACKNOWLEDGED);

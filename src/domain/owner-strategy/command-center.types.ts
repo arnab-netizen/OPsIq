@@ -83,6 +83,13 @@ export interface WealthCommandCenter {
   proofRequirement: string | null;
   outcomeReviewState: "no_actions_yet" | "pending_review" | "all_reviewed";
 
+  // Phase 25 — Owner Daily Command Center decision surface
+  approvalsNeeded: string[];       // approvals the owner must act on now
+  exceptions: string[];            // deviations/unsafe conditions flagged for owner
+  proofFailed: string[];           // proof failures the owner must address
+  actionsToIgnore: string[];       // actions deprioritised by the engine
+  stopPivotScaleWarnings: string[]; // stop/pivot/scale strategic signals
+
   startupValidation: StartupValidationResult | null;
 
   provisional: boolean;

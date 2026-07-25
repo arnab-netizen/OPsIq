@@ -159,6 +159,30 @@ describe("[module41] beginner mode — assertBeginnerSafe", () => {
   });
 });
 
+describe("[module41] beginner mode — assertBeginnerSafe error code", () => {
+  it("[module41] BeginnerExplanationError has code BEGINNER_EXPLANATION_UNSAFE when whatToDoFirst is empty", () => {
+    try {
+      assertBeginnerSafe({
+        plainReason: "reason",
+        whyItMatters: "matters",
+        whatToDoFirst: [],
+        whatNotToDo: ["not this"],
+        proofToCollect: [],
+        howToKnowItWorked: "track it",
+        whatHappensIfIgnored: "bad things",
+        professionalReviewWarning: null,
+        confidenceCapped: false,
+        confidenceNote: "",
+        containsJargon: false,
+      });
+      throw new Error("expected throw");
+    } catch (e) {
+      expect(e).toBeInstanceOf(BeginnerExplanationError);
+      expect((e as BeginnerExplanationError).code).toBe("BEGINNER_EXPLANATION_UNSAFE");
+    }
+  });
+});
+
 describe("[module41] beginner mode — worked example", () => {
   it("[module41] builds a complete explanation for 'not ready to grow yet'", () => {
     const exp = buildBeginnerExplanation(

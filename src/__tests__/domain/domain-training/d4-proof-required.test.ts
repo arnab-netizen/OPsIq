@@ -6,6 +6,36 @@ import { TrainingLevel, REQUIRED_SCENARIO_TYPES, MIN_CASES_PER_DOMAIN } from "@/
 
 const respond = (cse: { input: unknown }) => respondProofRequired(cse.input as ProofInput);
 
+describe("[D4] what proof is required — module contract assertions", () => {
+  it("evaluateDomain is a function", () => { expect(typeof evaluateDomain).toBe("function"); });
+  it("scoreCase is a function", () => { expect(typeof scoreCase).toBe("function"); });
+  it("respondProofRequired is a function", () => { expect(typeof respondProofRequired).toBe("function"); });
+  it("PROOF_REQUIRED_CASES is a non-empty array", () => { expect(Array.isArray(PROOF_REQUIRED_CASES)).toBe(true); expect(PROOF_REQUIRED_CASES.length).toBeGreaterThan(0); });
+  it("REQUIRED_SCENARIO_TYPES is a non-empty array", () => { expect(Array.isArray(REQUIRED_SCENARIO_TYPES)).toBe(true); expect(REQUIRED_SCENARIO_TYPES.length).toBeGreaterThan(0); });
+  it("MIN_CASES_PER_DOMAIN is a positive number", () => { expect(typeof MIN_CASES_PER_DOMAIN).toBe("number"); expect(MIN_CASES_PER_DOMAIN).toBeGreaterThan(0); });
+  it("PROOF_REQUIRED_CASES.length >= MIN_CASES_PER_DOMAIN", () => { expect(PROOF_REQUIRED_CASES.length).toBeGreaterThanOrEqual(MIN_CASES_PER_DOMAIN); });
+  it("PROOF_REQUIRED_CASES[0] has id and input fields", () => {
+    expect(PROOF_REQUIRED_CASES[0]).toHaveProperty("id"); expect(PROOF_REQUIRED_CASES[0]).toHaveProperty("input");
+  });
+  it("PROOF_REQUIRED_CASES[0].id is a non-empty string", () => { expect(typeof PROOF_REQUIRED_CASES[0].id).toBe("string"); });
+  it("TrainingLevel.LEVEL_5_OUTCOME_VERIFIED is defined", () => { expect(TrainingLevel.LEVEL_5_OUTCOME_VERIFIED).toBeDefined(); });
+  it("respondProofRequired(PROOF_REQUIRED_CASES[0].input) returns an object", () => {
+    expect(typeof respondProofRequired(PROOF_REQUIRED_CASES[0].input)).toBe("object");
+  });
+  it("respondProofRequired result has confidence field", () => {
+    expect(respondProofRequired(PROOF_REQUIRED_CASES[0].input)).toHaveProperty("confidence");
+  });
+  it("respondProofRequired result has whatNotToDo array", () => {
+    expect(Array.isArray(respondProofRequired(PROOF_REQUIRED_CASES[0].input).whatNotToDo)).toBe(true);
+  });
+  it("respond function produces same output as respondProofRequired directly", () => {
+    const cse = PROOF_REQUIRED_CASES[0];
+    const direct = respondProofRequired(cse.input);
+    const wrapped = respond(cse);
+    expect(wrapped.confidence).toBe(direct.confidence);
+  });
+});
+
 describe("[D4] what proof is required — executable scored training", () => {
   it("carries >=21 cases covering every required scenario type", () => {
     expect(PROOF_REQUIRED_CASES.length).toBeGreaterThanOrEqual(MIN_CASES_PER_DOMAIN);

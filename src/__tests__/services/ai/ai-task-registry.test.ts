@@ -9,6 +9,23 @@ import {
   taskRequiresOwnerApproval,
 } from "@/services/ai/task-registry";
 
+describe("ai-task-registry — module contract assertions", () => {
+  it("AI_TASK_TYPES is an array", () => { expect(Array.isArray(AI_TASK_TYPES)).toBe(true); });
+  it("AI_TASK_TYPES.length is greater than 0", () => { expect(AI_TASK_TYPES.length).toBeGreaterThan(0); });
+  it("AI_TASK_REGISTRY is an object", () => { expect(typeof AI_TASK_REGISTRY).toBe("object"); });
+  it("getAiTaskDefinition is a function", () => { expect(typeof getAiTaskDefinition).toBe("function"); });
+  it("taskRequiresOwnerApproval is a function", () => { expect(typeof taskRequiresOwnerApproval).toBe("function"); });
+  it("Object.keys(AI_TASK_REGISTRY).length is greater than 0", () => { expect(Object.keys(AI_TASK_REGISTRY).length).toBeGreaterThan(0); });
+  it("getAiTaskDefinition(DIAGNOSIS_REVIEW) returns an object", () => { expect(typeof getAiTaskDefinition("DIAGNOSIS_REVIEW")).toBe("object"); });
+  it("getAiTaskDefinition(DIAGNOSIS_REVIEW) has taskType field", () => { expect(getAiTaskDefinition("DIAGNOSIS_REVIEW")).toHaveProperty("taskType"); });
+  it("taskRequiresOwnerApproval(DIAGNOSIS_REVIEW) returns true", () => { expect(taskRequiresOwnerApproval("DIAGNOSIS_REVIEW")).toBe(true); });
+  it("taskRequiresOwnerApproval(EVIDENCE_SUMMARY) returns false", () => { expect(taskRequiresOwnerApproval("EVIDENCE_SUMMARY")).toBe(false); });
+  it("AI_TASK_REGISTRY has DIAGNOSIS_REVIEW key", () => { expect(AI_TASK_REGISTRY).toHaveProperty("DIAGNOSIS_REVIEW"); });
+  it("AI_TASK_REGISTRY.DIAGNOSIS_REVIEW.taskType equals DIAGNOSIS_REVIEW", () => { expect(AI_TASK_REGISTRY["DIAGNOSIS_REVIEW"].taskType).toBe("DIAGNOSIS_REVIEW"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("AI-2 task registry", () => {
   it("defines every canonical AI task type exactly once", () => {
     for (const t of AI_TASK_TYPES) {

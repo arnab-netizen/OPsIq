@@ -36,6 +36,35 @@ const missingDataCase = asContract(examples.missing_data_case);
 const contradictionCase = asContract(examples.contradiction_case);
 const NOW = new Date("2026-05-15T00:00:00.000Z");
 
+describe("diagnosis-permission gate — module contract assertions", () => {
+  it("assessDiagnosisPermission is a function", () => { expect(typeof assessDiagnosisPermission).toBe("function"); });
+  it("scoreDataQuality is a function", () => { expect(typeof scoreDataQuality).toBe("function"); });
+  it("DIAGNOSIS_PERMISSIONS is an array", () => { expect(Array.isArray(DIAGNOSIS_PERMISSIONS)).toBe(true); });
+  it("DIAGNOSIS_PERMISSIONS is non-empty", () => { expect(DIAGNOSIS_PERMISSIONS.length).toBeGreaterThan(0); });
+  it("DIAGNOSIS_PERMISSIONS contains 'SAFE_TO_DIAGNOSE'", () => { expect(DIAGNOSIS_PERMISSIONS).toContain("SAFE_TO_DIAGNOSE"); });
+  it("DIAGNOSIS_PERMISSIONS contains 'INSUFFICIENT_DATA'", () => { expect(DIAGNOSIS_PERMISSIONS).toContain("INSUFFICIENT_DATA"); });
+  it("DIAGNOSIS_PERMISSIONS contains 'UNSAFE_TO_CONCLUDE'", () => { expect(DIAGNOSIS_PERMISSIONS).toContain("UNSAFE_TO_CONCLUDE"); });
+  it("businessFactsContractSchema has a parse method", () => { expect(typeof businessFactsContractSchema.parse).toBe("function"); });
+  it("scoreDataQuality returns object with high_confidence_blocked", () => {
+    expect(scoreDataQuality(serviceBusiness, { now: NOW })).toHaveProperty("high_confidence_blocked");
+  });
+  it("scoreDataQuality returns object with recommendation_confidence_tier", () => {
+    expect(scoreDataQuality(serviceBusiness, { now: NOW })).toHaveProperty("recommendation_confidence_tier");
+  });
+  it("assessDiagnosisPermission returns object with permission field", () => {
+    expect(assessDiagnosisPermission(scoreDataQuality(serviceBusiness, { now: NOW }), {})).toHaveProperty("permission");
+  });
+  it("assessDiagnosisPermission returns object with confidenceCap field", () => {
+    expect(assessDiagnosisPermission(scoreDataQuality(serviceBusiness, { now: NOW }), {})).toHaveProperty("confidenceCap");
+  });
+  it("assessDiagnosisPermission returns object with reasons array", () => {
+    expect(Array.isArray(assessDiagnosisPermission(scoreDataQuality(serviceBusiness, { now: NOW }), {}).reasons)).toBe(true);
+  });
+  it("result permission is a canonical DIAGNOSIS_PERMISSIONS state", () => {
+    expect(DIAGNOSIS_PERMISSIONS).toContain(assessDiagnosisPermission(scoreDataQuality(serviceBusiness, { now: NOW }), {}).permission);
+  });
+});
+
 describe("diagnosis-permission gate (§15/§16)", () => {
   it("only ever returns canonical permission states", () => {
     for (const fixture of [serviceBusiness, missingDataCase, contradictionCase]) {

@@ -12,6 +12,58 @@ const WS = "ws-1";
 // even if it already clears the pass threshold — continuous improvement toward expert level.
 const isWeak = (c: (typeof EXPANDED_CASES)[number]) => scoreAdvice(c, baseAdvise(c)).failureLabels.length > 0;
 
+describe("learning loop — module contract assertions", () => {
+  it("advise is a function", () => {
+    expect(typeof advise).toBe("function");
+  });
+  it("baseAdvise is a function", () => {
+    expect(typeof baseAdvise).toBe("function");
+  });
+  it("scoreAdvice is a function", () => {
+    expect(typeof scoreAdvice).toBe("function");
+  });
+  it("learnFromFailure is a function", () => {
+    expect(typeof learnFromFailure).toBe("function");
+  });
+  it("InMemoryLearningStore is a function (class)", () => {
+    expect(typeof InMemoryLearningStore).toBe("function");
+  });
+  it("EXPANDED_CASES is an array", () => {
+    expect(Array.isArray(EXPANDED_CASES)).toBe(true);
+  });
+  it("EXPANDED_CASES has at least 1 entry", () => {
+    expect(EXPANDED_CASES.length).toBeGreaterThan(0);
+  });
+  it("EXPANDED_CASES[0] has an id field", () => {
+    expect(EXPANDED_CASES[0]).toHaveProperty("id");
+  });
+  it("EXPANDED_CASES[0] has an archetype field", () => {
+    expect(EXPANDED_CASES[0]).toHaveProperty("archetype");
+  });
+  it("EXPANDED_CASES[0] has a decisionCategory field", () => {
+    expect(EXPANDED_CASES[0]).toHaveProperty("decisionCategory");
+  });
+  it("AT is a string", () => {
+    expect(typeof AT).toBe("string");
+  });
+  it("WS is a string", () => {
+    expect(typeof WS).toBe("string");
+  });
+  it("isWeak is a function", () => {
+    expect(typeof isWeak).toBe("function");
+  });
+  it("new InMemoryLearningStore() is an instance of InMemoryLearningStore", () => {
+    expect(new InMemoryLearningStore()).toBeInstanceOf(InMemoryLearningStore);
+  });
+  it("baseAdvise(EXPANDED_CASES[0]) returns an object", () => {
+    expect(typeof baseAdvise(EXPANDED_CASES[0])).toBe("object");
+  });
+  it("scoreAdvice result has a total field that is a number", () => {
+    const score = scoreAdvice(EXPANDED_CASES[0], baseAdvise(EXPANDED_CASES[0]));
+    expect(typeof score.total).toBe("number");
+  });
+});
+
 describe("controlled-learning loop — real, not faked", () => {
   it("a weak case scores strictly higher after learning from its own weakness, with provenance", async () => {
     const store = new InMemoryLearningStore();

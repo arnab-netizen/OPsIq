@@ -14,6 +14,27 @@ import { resolve } from "node:path";
 const SRC = resolve(__dirname, "../..");
 const read = (p: string) => readFileSync(resolve(SRC, p), "utf8");
 
+describe("EH-03/EH-04 — owner UI actionability — module contract assertions", () => {
+  const _page = read("app/(authenticated)/owner/page.tsx");
+  const _taskRoute = read("app/api/owner/tasks/complete/route.ts");
+  const _approvalRoute = read("app/api/owner/approvals/resolve/route.ts");
+  const _opportunityRoute = read("app/api/owner/opportunities/decide/route.ts");
+  it("readFileSync is a function", () => { expect(typeof readFileSync).toBe("function"); });
+  it("read is a function", () => { expect(typeof read).toBe("function"); });
+  it("owner page is a non-empty string", () => { expect(typeof _page).toBe("string"); expect(_page.length).toBeGreaterThan(0); });
+  it("owner page contains 'use client'", () => { expect(_page).toContain("use client"); });
+  it("owner page has owner-actions testid", () => { expect(_page).toContain('data-testid="owner-actions"'); });
+  it("owner page contains apiPost reference", () => { expect(_page).toContain("apiPost"); });
+  it("task-completion route has withCanonicalEnforcement", () => { expect(_taskRoute).toContain("withCanonicalEnforcement"); });
+  it("task-completion route has CAPABILITIES.OWNER_MANAGE", () => { expect(_taskRoute).toContain("CAPABILITIES.OWNER_MANAGE"); });
+  it("task-completion route has requireWorkspace: true", () => { expect(_taskRoute).toContain("requireWorkspace: true"); });
+  it("approval-resolution route has withCanonicalEnforcement", () => { expect(_approvalRoute).toContain("withCanonicalEnforcement"); });
+  it("approval-resolution route has CAPABILITIES.OWNER_MANAGE", () => { expect(_approvalRoute).toContain("CAPABILITIES.OWNER_MANAGE"); });
+  it("opportunity-decide route has CAPABILITIES.OWNER_MANAGE", () => { expect(_opportunityRoute).toContain("CAPABILITIES.OWNER_MANAGE"); });
+  it("owner page surfaces 'blocked'", () => { expect(_page).toMatch(/blocked/i); });
+  it("owner page surfaces 'reason'", () => { expect(_page).toMatch(/reason/i); });
+});
+
 describe("EH-03/EH-04 — owner UI actionability", () => {
   const page = read("app/(authenticated)/owner/page.tsx");
 

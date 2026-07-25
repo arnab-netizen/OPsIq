@@ -35,6 +35,23 @@ function baseInput(calcs?: SupportingCalcInput | null): SupervisorInput {
   };
 }
 
+describe("supporting-figures — module contract assertions", () => {
+  it("buildSupportingFigures is a function", () => { expect(typeof buildSupportingFigures).toBe("function"); });
+  it("buildSupervisorSummary is a function", () => { expect(typeof buildSupervisorSummary).toBe("function"); });
+  it("runOwnerAdvice is a function", () => { expect(typeof runOwnerAdvice).toBe("function"); });
+  it("caseToContext is a function", () => { expect(typeof caseToContext).toBe("function"); });
+  it("InMemoryLearningStore is a function", () => { expect(typeof InMemoryLearningStore).toBe("function"); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("SEED_CASES.length is greater than 0", () => { expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("deriveCalcs is a function", () => { expect(typeof deriveCalcs).toBe("function"); });
+  it("ALLOWED_KEYS is a Set", () => { expect(ALLOWED_KEYS instanceof Set).toBe(true); });
+  it("baseInput is a function", () => { expect(typeof baseInput).toBe("function"); });
+  it("baseInput() returns an object", () => { expect(typeof baseInput()).toBe("object"); });
+  it("baseInput() has dominantConstraint field", () => { expect(baseInput()).toHaveProperty("dominantConstraint"); });
+  it("buildSupportingFigures(null) returns an array", () => { expect(Array.isArray(buildSupportingFigures(null))).toBe(true); });
+  it("buildSupportingFigures with all null inputs returns empty array", () => { expect(buildSupportingFigures({ cashRunwayDays: null, monthlyRevenue: null, monthlyCost: null, receivablesRisk: null, capacityUtilization: null })).toEqual([]); });
+});
+
 describe("P2-A supporting figures — quantified upside, never fabricated", () => {
   it("surfaces every real, non-null figure with correct value/unit", () => {
     const figs = buildSupportingFigures({

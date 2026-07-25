@@ -19,6 +19,25 @@ const base = (over: Partial<OperationalSafetyInput> = {}): OperationalSafetyInpu
   ...over,
 });
 
+describe("[stage3-composition] operational safety — module contract assertions", () => {
+  it("evaluateOperationalSafety is a function", () => { expect(typeof evaluateOperationalSafety).toBe("function"); });
+  it("LeanClassification.LEAN_APPROVED is defined", () => { expect(LeanClassification.LEAN_APPROVED).toBeDefined(); });
+  it("LeanClassification.FALSE_LEAN_REJECTED is defined", () => { expect(LeanClassification.FALSE_LEAN_REJECTED).toBeDefined(); });
+  it("LeanClassification.GROWTH_UNSAFE is defined", () => { expect(LeanClassification.GROWTH_UNSAFE).toBeDefined(); });
+  it("LeanClassification.CASH_UNSAFE_REJECTED is defined", () => { expect(LeanClassification.CASH_UNSAFE_REJECTED).toBeDefined(); });
+  it("assessEmployeeWorkload is a function", () => { expect(typeof assessEmployeeWorkload).toBe("function"); });
+  it("assessOwnerWorkload is a function", () => { expect(typeof assessOwnerWorkload).toBe("function"); });
+  it("assessCapacity is a function", () => { expect(typeof assessCapacity).toBe("function"); });
+  it("base() returns an object with benefits and baseRisks", () => {
+    expect(base()).toHaveProperty("benefits"); expect(base()).toHaveProperty("baseRisks");
+  });
+  it("evaluateOperationalSafety(base()) returns an object", () => { expect(typeof evaluateOperationalSafety(base())).toBe("object"); });
+  it("evaluateOperationalSafety(base()) has leanClassification", () => { expect(evaluateOperationalSafety(base())).toHaveProperty("leanClassification"); });
+  it("evaluateOperationalSafety(base()) has safeToProceed", () => { expect(evaluateOperationalSafety(base())).toHaveProperty("safeToProceed"); });
+  it("evaluateOperationalSafety(base()).safeToProceed is a boolean", () => { expect(typeof evaluateOperationalSafety(base()).safeToProceed).toBe("boolean"); });
+  it("healthyOwner has band field", () => { expect(healthyOwner).toHaveProperty("band"); });
+});
+
 describe("[stage3-composition] operational safety", () => {
   it("a clean action is approved and safe to proceed", () => {
     const r = evaluateOperationalSafety(base());

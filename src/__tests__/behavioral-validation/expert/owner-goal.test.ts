@@ -8,6 +8,23 @@ const cashRevenue = SEED_CASES.find((c) => c.id === "A1")!; // cashRisk, "grow/m
 const contractCap = SEED_CASES.find((c) => c.id === "A2")!; // capacityRisk, contract goal
 const ctx = { store: new InMemoryLearningStore(), workspaceId: "goal-ws" };
 
+describe("owner-goal alignment — module contract assertions", () => {
+  it("assessGoalAlignment is a function", () => { expect(typeof assessGoalAlignment).toBe("function"); });
+  it("adviseForGoal is a function", () => { expect(typeof adviseForGoal).toBe("function"); });
+  it("inferOwnerGoal is a function", () => { expect(typeof inferOwnerGoal).toBe("function"); });
+  it("advise is a function", () => { expect(typeof advise).toBe("function"); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("InMemoryLearningStore is a class (function)", () => { expect(typeof InMemoryLearningStore).toBe("function"); });
+  it("SEED_CASES is a non-empty array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("cashRevenue is defined and not null", () => { expect(cashRevenue).toBeDefined(); expect(cashRevenue).not.toBeNull(); });
+  it("contractCap is defined and not null", () => { expect(contractCap).toBeDefined(); expect(contractCap).not.toBeNull(); });
+  it("cashRevenue.id === 'A1'", () => { expect(cashRevenue.id).toBe("A1"); });
+  it("contractCap.id === 'A2'", () => { expect(contractCap.id).toBe("A2"); });
+  it("ctx is an object with store and workspaceId", () => { expect(typeof ctx).toBe("object"); expect(ctx).toHaveProperty("store"); expect(ctx).toHaveProperty("workspaceId"); });
+  it("inferOwnerGoal(cashRevenue) returns a string", () => { expect(typeof inferOwnerGoal(cashRevenue)).toBe("string"); });
+  it("inferOwnerGoal(cashRevenue) === 'increase_revenue'", () => { expect(inferOwnerGoal(cashRevenue)).toBe("increase_revenue"); });
+});
+
 describe("owner-goal alignment", () => {
   it("infers a structured goal from the case", () => {
     expect(inferOwnerGoal(cashRevenue)).toBe("increase_revenue");

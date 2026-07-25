@@ -68,6 +68,23 @@ async function postMetric(businessId: string, body?: unknown) {
   return POST(new NextRequest("http://localhost/api/owner/budget/archetype-metrics", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }), { params: Promise.resolve({}) });
 }
 
+describe("Archetype Metrics routes — module contract assertions", () => {
+  it("ROLES.ADMIN_OR_PORTFOLIO_MANAGER is defined", () => { expect(ROLES.ADMIN_OR_PORTFOLIO_MANAGER).toBeDefined(); });
+  it("ROLES.ANALYST is defined", () => { expect(ROLES.ANALYST).toBeDefined(); });
+  it("SHOULD_RUN_DB_TESTS is a boolean", () => { expect(typeof SHOULD_RUN_DB_TESTS).toBe("boolean"); });
+  it("OWNER_ROLE is an array", () => { expect(Array.isArray(OWNER_ROLE)).toBe(true); });
+  it("NO_OWNER_ROLE is an array", () => { expect(Array.isArray(NO_OWNER_ROLE)).toBe(true); });
+  it("OWNER_ROLE[0] has role field", () => { expect(OWNER_ROLE[0]).toHaveProperty("role"); });
+  it("NO_OWNER_ROLE[0] has role field", () => { expect(NO_OWNER_ROLE[0]).toHaveProperty("role"); });
+  it("OWNER_ROLE[0].scope is 'workspace'", () => { expect(OWNER_ROLE[0].scope).toBe("workspace"); });
+  it("randomUUID is a function", () => { expect(typeof randomUUID).toBe("function"); });
+  it("randomUUID() returns a non-empty string", () => { expect(randomUUID().length).toBeGreaterThan(0); });
+  it("db is an object", () => { expect(typeof db).toBe("object"); });
+  it("OWNER_ROLE and NO_OWNER_ROLE have different roles", () => { expect(OWNER_ROLE[0].role).not.toBe(NO_OWNER_ROLE[0].role); });
+  it("OWNER_ROLE[0].role is ROLES.ADMIN_OR_PORTFOLIO_MANAGER", () => { expect(OWNER_ROLE[0].role).toBe(ROLES.ADMIN_OR_PORTFOLIO_MANAGER); });
+  it("NO_OWNER_ROLE[0].role is ROLES.ANALYST", () => { expect(NO_OWNER_ROLE[0].role).toBe(ROLES.ANALYST); });
+});
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Archetype Metrics routes — runtime RBAC", () => {
   let s: Seeded;
   beforeEach(async () => { s = await seed(); });

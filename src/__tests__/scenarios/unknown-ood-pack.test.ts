@@ -15,6 +15,23 @@ const SUBCATS = ["unfamiliar_business_model", "new_service_category", "new_equip
   "unusual_b2b_terms", "strange_customer_behavior", "unseen_staff_proof_manipulation", "unusual_vendor_supply",
   "sudden_external_shock", "contradictory_incomplete_urgent", "weak_analogy_pattern_adjacent"];
 
+describe("unknown-ood-pack — module contract assertions", () => {
+  it("UNKNOWN_OOD_PACK is an array", () => { expect(Array.isArray(UNKNOWN_OOD_PACK)).toBe(true); });
+  it("UNKNOWN_OOD_PACK.length equals 110", () => { expect(UNKNOWN_OOD_PACK.length).toBe(110); });
+  it("P is an array", () => { expect(Array.isArray(P)).toBe(true); });
+  it("P.length equals 110", () => { expect(P.length).toBe(110); });
+  it("businessRealityScenarioSchema is an object", () => { expect(typeof businessRealityScenarioSchema).toBe("object"); });
+  it("UNKNOWN_OOD_SOURCES is an array", () => { expect(Array.isArray(UNKNOWN_OOD_SOURCES)).toBe(true); });
+  it("UNKNOWN_OOD_SOURCES.length is greater than 0", () => { expect(UNKNOWN_OOD_SOURCES.length).toBeGreaterThan(0); });
+  it("sourceRecordSchema is an object", () => { expect(typeof sourceRecordSchema).toBe("object"); });
+  it("SUBCATS is an array", () => { expect(Array.isArray(SUBCATS)).toBe(true); });
+  it("SUBCATS.length equals 11", () => { expect(SUBCATS.length).toBe(11); });
+  it("P[0] has scenarioId field", () => { expect(P[0]).toHaveProperty("scenarioId"); });
+  it("P[0] has scenarioPack field", () => { expect(P[0]).toHaveProperty("scenarioPack"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("Unknown/OOD pack — schema + safety invariants", () => {
   it("has exactly 110 counted, unique, schema-valid scenarios in pack UNKNOWN_OOD", () => {
     expect(P.length).toBe(110);

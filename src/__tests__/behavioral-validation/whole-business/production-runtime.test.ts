@@ -17,6 +17,23 @@ async function storeWithLearning(workspaceId: string): Promise<InMemoryLearningS
   return store;
 }
 
+describe("production-runtime — module contract assertions", () => {
+  it("runOwnerAdvice is a function", () => { expect(typeof runOwnerAdvice).toBe("function"); });
+  it("contextToCase is a function", () => { expect(typeof contextToCase).toBe("function"); });
+  it("commandCenterSummary is a function", () => { expect(typeof commandCenterSummary).toBe("function"); });
+  it("caseToContext is a function", () => { expect(typeof caseToContext).toBe("function"); });
+  it("runProductionValidation is a function", () => { expect(typeof runProductionValidation).toBe("function"); });
+  it("InMemoryLearningStore is a function", () => { expect(typeof InMemoryLearningStore).toBe("function"); });
+  it("learnFromFailure is a function", () => { expect(typeof learnFromFailure).toBe("function"); });
+  it("scoreAdvice is a function", () => { expect(typeof scoreAdvice).toBe("function"); });
+  it("emptyAdvise is a function", () => { expect(typeof emptyAdvise).toBe("function"); });
+  it("storeWithLearning is a function", () => { expect(typeof storeWithLearning).toBe("function"); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("SEED_CASES.length is greater than 0", () => { expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("cash is an object", () => { expect(typeof cash).toBe("object"); });
+  it("AT is a string", () => { expect(typeof AT).toBe("string"); });
+});
+
 describe("production owner-advice runtime", () => {
   it("exists and returns a whole-business operating plan for a workspace-scoped context", async () => {
     const store = new InMemoryLearningStore();

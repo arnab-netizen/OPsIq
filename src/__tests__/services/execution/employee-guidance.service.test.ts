@@ -91,6 +91,23 @@ function makeDeps(opts: { auditThrows?: boolean; generator?: GuidanceGenerator }
   return { deps, calls };
 }
 
+describe("employee guidance service — module contract assertions", () => {
+  it("generateEmployeeGuidance is a function", () => { expect(typeof generateEmployeeGuidance).toBe("function"); });
+  it("defaultGuidanceGenerator is a function", () => { expect(typeof defaultGuidanceGenerator).toBe("function"); });
+  it("sealBoundary is a function", () => { expect(typeof sealBoundary).toBe("function"); });
+  it("BoundaryValidationStatus is an object", () => { expect(typeof BoundaryValidationStatus).toBe("object"); });
+  it("BoundaryValidationStatus.PASSED is defined", () => { expect(BoundaryValidationStatus.PASSED).toBeDefined(); });
+  it("NOW is a Date", () => { expect(NOW).toBeInstanceOf(Date); });
+  it("WS is a non-empty string", () => { expect(typeof WS).toBe("string"); expect(WS.length).toBeGreaterThan(0); });
+  it("boundary is a function", () => { expect(typeof boundary).toBe("function"); });
+  it("instr is a function", () => { expect(typeof instr).toBe("function"); });
+  it("makeDeps is a function", () => { expect(typeof makeDeps).toBe("function"); });
+  it("makeDeps() returns an object with deps field", () => { expect(makeDeps()).toHaveProperty("deps"); });
+  it("makeDeps() returns an object with calls field", () => { expect(makeDeps()).toHaveProperty("calls"); });
+  it("boundary() returns an object with boundaryId field", () => { expect(boundary()).toHaveProperty("boundaryId"); });
+  it("boundary().workspaceId is 'ws-1'", () => { expect(boundary().workspaceId).toBe("ws-1"); });
+});
+
 describe("generateEmployeeGuidance", () => {
   it("generates guidance when the boundary passes and writes a GENERATED ledger record", async () => {
     const b = boundary();

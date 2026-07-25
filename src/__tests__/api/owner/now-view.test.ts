@@ -121,4 +121,99 @@ describe("[module41] GET /api/owner/now-view", () => {
     const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as { derivedBusinessCondition: null };
     expect(res.derivedBusinessCondition).toBeNull();
   });
+
+  it("calls getOwnerNowView with verified workspaceId, not client-supplied", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    await GET(makeCtx("https://x/api/owner/now-view", "ws-verified"));
+    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-verified", null, undefined, "actor-1");
+  });
+
+  it("workspace isolation: WS-A and WS-B result in separate service calls", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    await GET(makeCtx("https://x/api/owner/now-view", "ws-A"));
+    await GET(makeCtx("https://x/api/owner/now-view", "ws-B"));
+    expect(mocks.getOwnerNowView).toHaveBeenNthCalledWith(1, "ws-A", null, undefined, "actor-1");
+    expect(mocks.getOwnerNowView).toHaveBeenNthCalledWith(2, "ws-B", null, undefined, "actor-1");
+  });
+
+  it("passes businessId from query param to service", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    await GET(makeCtx("https://x/api/owner/now-view?businessId=biz-abc", "ws-1"));
+    expect(mocks.getOwnerNowView).toHaveBeenCalledWith("ws-1", "biz-abc", undefined, "actor-1");
+  });
+
+  it("passes different businessId when specified", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    await GET(makeCtx("https://x/api/owner/now-view?businessId=biz-xyz", "ws-1"));
+    const [, businessArg] = mocks.getOwnerNowView.mock.calls[0];
+    expect(businessArg).toBe("biz-xyz");
+  });
+
+  it("returns stepByStep field from service", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as typeof sample;
+    expect(res).toHaveProperty("stepByStep");
+    expect(Array.isArray(res.stepByStep)).toBe(true);
+  });
+
+  it("returns whatChanged field from service", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as typeof sample;
+    expect(res).toHaveProperty("whatChanged");
+    expect(Array.isArray(res.whatChanged)).toBe(true);
+  });
+
+  it("returns beginnerExplanation field from service", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as typeof sample;
+    expect(res).toHaveProperty("beginnerExplanation");
+    expect(res.beginnerExplanation).toHaveProperty("whatToDoFirst");
+    expect(res.beginnerExplanation).toHaveProperty("whatNotToDo");
+  });
+
+  it("view field has workspaceId scoped correctly", async () => {
+    const scopedSample = { ...sample, view: { ...sample.view, workspaceId: "ws-1" } };
+    mocks.getOwnerNowView.mockResolvedValue(scopedSample);
+    const res = (await GET(makeCtx("https://x/api/owner/now-view", "ws-1"))) as typeof sample;
+    expect(res.view.workspaceId).toBe("ws-1");
+  });
+
+  it("getOwnerNowView called exactly once per request", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    await GET(makeCtx("https://x/api/owner/now-view"));
+    expect(mocks.getOwnerNowView).toHaveBeenCalledTimes(1);
+  });
+
+  it("generatedFromLiveData field is boolean", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as typeof sample;
+    expect(typeof res.generatedFromLiveData).toBe("boolean");
+  });
+
+  it("confidenceCapped can be false in view", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as typeof sample;
+    expect(typeof res.view.confidenceCapped).toBe("boolean");
+    expect(res.view.confidenceCapped).toBe(false);
+  });
+
+  it("does not mutate — GET handler does not write any data", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    await GET(makeCtx("https://x/api/owner/now-view"));
+    expect(mocks.getOwnerNowView).toHaveBeenCalledTimes(1);
+    expect(mocks.getOwnerNowView.mock.calls[0][0]).toBe("ws-1");
+  });
+
+  it("topOwnerActions and actionsToAvoid are arrays", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as typeof sample;
+    expect(Array.isArray(res.view.topOwnerActions)).toBe(true);
+    expect(Array.isArray(res.view.actionsToAvoid)).toBe(true);
+  });
+
+  it("generatedFromLiveData field is present in response view", async () => {
+    mocks.getOwnerNowView.mockResolvedValue(sample);
+    const res = (await GET(makeCtx("https://x/api/owner/now-view"))) as typeof sample;
+    expect(res).toHaveProperty("generatedFromLiveData");
+  });
 });

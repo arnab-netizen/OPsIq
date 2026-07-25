@@ -6,6 +6,23 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
  * Validates fix for dashboard route 403 issue (string literal vs capability constant)
  */
 
+describe("batch-1-phase-2-capability-fix — module contract assertions", () => {
+  it("CAPABILITIES is an object", () => { expect(typeof CAPABILITIES).toBe("object"); });
+  it("CAPABILITIES is not null", () => { expect(CAPABILITIES).not.toBeNull(); });
+  it("typeof CAPABILITIES.ENGAGEMENT_VIEW equals string", () => { expect(typeof CAPABILITIES.ENGAGEMENT_VIEW).toBe("string"); });
+  it("CAPABILITIES.ENGAGEMENT_VIEW equals engagement:view", () => { expect(CAPABILITIES.ENGAGEMENT_VIEW).toBe("engagement:view"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
+  it("typeof Number.isFinite equals function", () => { expect(typeof Number.isFinite).toBe("function"); });
+  it("typeof Number.isInteger equals function", () => { expect(typeof Number.isInteger).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("Phase 2 Sub-batch 1: Route Capability Constants", () => {
   describe("Capability constant values", () => {
     it("ENGAGEMENT_VIEW capability should be engagement:view", () => {

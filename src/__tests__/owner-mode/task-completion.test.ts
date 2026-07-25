@@ -18,6 +18,23 @@ import {
 
 beforeEach(() => emitAuditEvent.mockClear());
 
+describe("task-completion — module contract assertions", () => {
+  it("evaluateProofClearance is a function", () => { expect(typeof evaluateProofClearance).toBe("function"); });
+  it("ProofStatus is an object", () => { expect(typeof ProofStatus).toBe("object"); });
+  it("ProofStatus.NOT_REQUIRED is defined", () => { expect(ProofStatus.NOT_REQUIRED).toBeDefined(); });
+  it("ProofStatus.ACCEPTED is defined", () => { expect(ProofStatus.ACCEPTED).toBeDefined(); });
+  it("ProofStatus.SUBMITTED is defined", () => { expect(ProofStatus.SUBMITTED).toBeDefined(); });
+  it("TaskActorRole is an object", () => { expect(typeof TaskActorRole).toBe("object"); });
+  it("TaskActorRole.OWNER is defined", () => { expect(TaskActorRole.OWNER).toBeDefined(); });
+  it("completeTask is a function", () => { expect(typeof completeTask).toBe("function"); });
+  it("TaskCompletionBlockedError is a function", () => { expect(typeof TaskCompletionBlockedError).toBe("function"); });
+  it("emitAuditEvent is a function", () => { expect(typeof emitAuditEvent).toBe("function"); });
+  it("ownerActor is an object", () => { expect(typeof ownerActor).toBe("object"); });
+  it("ownerActor.role equals TaskActorRole.OWNER", () => { expect(ownerActor.role).toBe(TaskActorRole.OWNER); });
+  it("deps is a function", () => { expect(typeof deps).toBe("function"); });
+  it("evaluateProofClearance(ProofStatus.NOT_REQUIRED).cleared is true", () => { expect(evaluateProofClearance(ProofStatus.NOT_REQUIRED).cleared).toBe(true); });
+});
+
 describe("evaluateProofClearance", () => {
   const now = new Date("2026-06-28T00:00:00.000Z");
   it("clears NOT_REQUIRED and ACCEPTED-fresh-non-duplicate", () => {

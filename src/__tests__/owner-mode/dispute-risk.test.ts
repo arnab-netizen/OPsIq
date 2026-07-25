@@ -13,6 +13,29 @@ const rec = (over: Partial<DisputeRecordInput> = {}): DisputeRecordInput => ({
   proofId: "p1", disputeCategory: ProofDisputeCategory.REWORK_REQUIRED, reason: "rewash", auditEventId: "au1", occurredAt: new Date(AT), ...over,
 });
 
+describe("dispute-risk mapping — module contract assertions", () => {
+  it("buildDisputeRiskAnalysis is a function", () => { expect(typeof buildDisputeRiskAnalysis).toBe("function"); });
+  it("ProofDisputeCategory.REWORK_REQUIRED is defined", () => { expect(ProofDisputeCategory.REWORK_REQUIRED).toBeDefined(); });
+  it("ProofDisputeCategory.CUSTOMER_COMPLAINT is defined", () => { expect(ProofDisputeCategory.CUSTOMER_COMPLAINT).toBeDefined(); });
+  it("ProofDisputeCategory.SUSPECTED_FAKE_OR_REUSED_PROOF is defined", () => { expect(ProofDisputeCategory.SUSPECTED_FAKE_OR_REUSED_PROOF).toBeDefined(); });
+  it("ProofDisputeCategory.OTHER is defined", () => { expect(ProofDisputeCategory.OTHER).toBeDefined(); });
+  it("rec() has proofId field", () => { expect(rec()).toHaveProperty("proofId"); });
+  it("rec() has disputeCategory field", () => { expect(rec()).toHaveProperty("disputeCategory"); });
+  it("buildDisputeRiskAnalysis with no records returns empty risks array", () => {
+    expect(buildDisputeRiskAnalysis(WS, [], AT).risks).toHaveLength(0);
+  });
+  it("buildDisputeRiskAnalysis returns object with aggregates field", () => {
+    expect(buildDisputeRiskAnalysis(WS, [], AT)).toHaveProperty("aggregates");
+  });
+  it("buildDisputeRiskAnalysis with one record returns one risk", () => {
+    expect(buildDisputeRiskAnalysis(WS, [rec()], AT).risks).toHaveLength(1);
+  });
+  it("risk has profitLeakType field", () => { expect(buildDisputeRiskAnalysis(WS, [rec()], AT).risks[0]).toHaveProperty("profitLeakType"); });
+  it("risk has constraintType field", () => { expect(buildDisputeRiskAnalysis(WS, [rec()], AT).risks[0]).toHaveProperty("constraintType"); });
+  it("risk has workspaceId equal to WS", () => { expect(buildDisputeRiskAnalysis(WS, [rec()], AT).risks[0].workspaceId).toBe(WS); });
+  it("buildDisputeRiskAnalysis result has topRisk field", () => { expect(buildDisputeRiskAnalysis(WS, [rec()], AT)).toHaveProperty("topRisk"); });
+});
+
 describe("dispute-risk mapping", () => {
   it("REWORK_REQUIRED → REWORK_REDO_COST + QUALITY; feeds rework + quality aggregates", () => {
     const r = buildDisputeRiskAnalysis(WS, [rec()], AT);

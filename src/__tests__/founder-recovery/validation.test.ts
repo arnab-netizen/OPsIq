@@ -6,6 +6,23 @@ import {
   isStaleSnapshot,
 } from "@/domain/founder-recovery/validation";
 
+describe("founder-recovery validation — module contract assertions", () => {
+  it("businessCreateSchema is defined", () => { expect(businessCreateSchema).toBeDefined(); });
+  it("metricSnapshotSchema is defined", () => { expect(metricSnapshotSchema).toBeDefined(); });
+  it("missingCriticalMetrics is a function", () => { expect(typeof missingCriticalMetrics).toBe("function"); });
+  it("isStaleSnapshot is a function", () => { expect(typeof isStaleSnapshot).toBe("function"); });
+  it("businessCreateSchema has a safeParse method", () => { expect(typeof businessCreateSchema.safeParse).toBe("function"); });
+  it("metricSnapshotSchema has a safeParse method", () => { expect(typeof metricSnapshotSchema.safeParse).toBe("function"); });
+  it("businessCreateSchema rejects an empty object", () => { expect(businessCreateSchema.safeParse({}).success).toBe(false); });
+  it("metricSnapshotSchema rejects an empty object", () => { expect(metricSnapshotSchema.safeParse({}).success).toBe(false); });
+  it("missingCriticalMetrics({}) returns an array", () => { expect(Array.isArray(missingCriticalMetrics({}))).toBe(true); });
+  it("missingCriticalMetrics with revenue+totalCosts+orderCount returns empty array", () => { expect(missingCriticalMetrics({ revenue: 1, totalCosts: 1, orderCount: 1 })).toEqual([]); });
+  it("isStaleSnapshot returns a boolean", () => { expect(typeof isStaleSnapshot("2026-01-01", new Date("2026-06-10"))).toBe("boolean"); });
+  it("isStaleSnapshot with old date returns true", () => { expect(isStaleSnapshot("2026-01-01", new Date("2026-06-10"))).toBe(true); });
+  it("isStaleSnapshot with recent date returns false", () => { expect(isStaleSnapshot("2026-05-31", new Date("2026-06-10"))).toBe(false); });
+  it("missingCriticalMetrics({}) returns non-empty array", () => { expect(missingCriticalMetrics({}).length).toBeGreaterThan(0); });
+});
+
 describe("founder-recovery validation", () => {
   it("accepts a valid business with a supported type", () => {
     const r = businessCreateSchema.safeParse({

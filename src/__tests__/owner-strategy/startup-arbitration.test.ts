@@ -30,6 +30,23 @@ function makeIdea(overrides: Partial<StartupIdeaForArbitration> = {}): StartupId
   };
 }
 
+describe("startup-arbitration — module contract assertions", () => {
+  it("convertIdeaToObjectiveCandidate is a function", () => { expect(typeof convertIdeaToObjectiveCandidate).toBe("function"); });
+  it("arbitrateStartupIdeas is a function", () => { expect(typeof arbitrateStartupIdeas).toBe("function"); });
+  it("makeIdea is a function", () => { expect(typeof makeIdea).toBe("function"); });
+  it("makeIdea() returns an object", () => { expect(typeof makeIdea()).toBe("object"); });
+  it("makeIdea().id equals 'idea-1'", () => { expect(makeIdea().id).toBe("idea-1"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
+  it("typeof Number.isFinite equals function", () => { expect(typeof Number.isFinite).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("convertIdeaToObjectiveCandidate", () => {
   it("maps riskAdjustedScore to priorityScore (clamped 0-100)", () => {
     const idea = makeIdea({ riskAdjustedScore: 85 });

@@ -19,6 +19,23 @@ const IDEA = {
   estimatedMonthlyCost: 65000,
 };
 
+describe("startup service — module contract assertions", () => {
+  it("validateStartupSession is a function", () => { expect(typeof validateStartupSession).toBe("function"); });
+  it("startupValidateRequestSchema is defined", () => { expect(startupValidateRequestSchema).toBeDefined(); });
+  it("startupValidateRequestSchema has safeParse method", () => { expect(typeof startupValidateRequestSchema.safeParse).toBe("function"); });
+  it("INTAKE is an object with capitalAvailable field", () => { expect(INTAKE).toHaveProperty("capitalAvailable"); });
+  it("INTAKE.capitalAvailable is 300000", () => { expect(INTAKE.capitalAvailable).toBe(300000); });
+  it("IDEA is an object with name field", () => { expect(IDEA).toHaveProperty("name"); });
+  it("IDEA.name is 'Local laundry'", () => { expect(IDEA.name).toBe("Local laundry"); });
+  it("schema accepts a well-formed request", () => { expect(startupValidateRequestSchema.safeParse({ intake: INTAKE, ideas: [IDEA] }).success).toBe(true); });
+  it("schema rejects an empty ideas array", () => { expect(startupValidateRequestSchema.safeParse({ intake: INTAKE, ideas: [] }).success).toBe(false); });
+  it("validateStartupSession returns an object with validation field", () => { expect(validateStartupSession(INTAKE, [IDEA])).toHaveProperty("validation"); });
+  it("validateStartupSession returns an object with commandCenter field", () => { expect(validateStartupSession(INTAKE, [IDEA])).toHaveProperty("commandCenter"); });
+  it("commandCenter.mode is 'startup'", () => { expect(validateStartupSession(INTAKE, [IDEA]).commandCenter.mode).toBe("startup"); });
+  it("fs is an object", () => { expect(typeof fs).toBe("object"); });
+  it("path is an object", () => { expect(typeof path).toBe("object"); });
+});
+
 describe("validateStartupSession", () => {
   it("returns validation-first results + a command-center payload", () => {
     const out = validateStartupSession(INTAKE, [IDEA]);

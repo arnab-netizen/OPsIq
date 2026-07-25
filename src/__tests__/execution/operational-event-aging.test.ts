@@ -14,6 +14,23 @@ const NOW = Date.parse("2026-07-05T00:00:00.000Z");
 const AT = new Date(NOW).toISOString();
 const H = 3_600_000;
 
+describe("operational-event aging — module contract assertions", () => {
+  it("planStatusChange is a function", () => { expect(typeof planStatusChange).toBe("function"); });
+  it("buildOperationalEventAging is a function", () => { expect(typeof buildOperationalEventAging).toBe("function"); });
+  it("isActiveStatus is a function", () => { expect(typeof isActiveStatus).toBe("function"); });
+  it("isTerminalStatus is a function", () => { expect(typeof isTerminalStatus).toBe("function"); });
+  it("OperationalEventStatus is an object", () => { expect(typeof OperationalEventStatus).toBe("object"); });
+  it("OVERDUE_THRESHOLD_MS is an object", () => { expect(typeof OVERDUE_THRESHOLD_MS).toBe("object"); });
+  it("OVERDUE_THRESHOLD_MS has HIGH field", () => { expect(OVERDUE_THRESHOLD_MS).toHaveProperty("HIGH"); });
+  it("NOW is a number", () => { expect(typeof NOW).toBe("number"); });
+  it("AT is a non-empty string", () => { expect(typeof AT).toBe("string"); expect(AT.length).toBeGreaterThan(0); });
+  it("H equals 3600000", () => { expect(H).toBe(3_600_000); });
+  it("ev is a function", () => { expect(typeof ev).toBe("function"); });
+  it("ev() returns an object", () => { expect(typeof ev()).toBe("object"); });
+  it("ev() has severity field", () => { expect(ev()).toHaveProperty("severity"); });
+  it("isActiveStatus('OPEN') is true", () => { expect(isActiveStatus("OPEN")).toBe(true); });
+});
+
 describe("operational-event status FSM", () => {
   it("classifies active vs terminal statuses", () => {
     expect(isActiveStatus("OPEN")).toBe(true);

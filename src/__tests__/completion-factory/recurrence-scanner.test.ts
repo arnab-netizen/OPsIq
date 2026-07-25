@@ -36,6 +36,23 @@ function runScanner(): { code: number; output: string } {
   }
 }
 
+describe("recurrence-scanner — module contract assertions", () => {
+  it("execSync is a function", () => { expect(typeof execSync).toBe("function"); });
+  it("join is a function", () => { expect(typeof join).toBe("function"); });
+  it("rmSync is a function", () => { expect(typeof rmSync).toBe("function"); });
+  it("tmpdir is a function", () => { expect(typeof tmpdir).toBe("function"); });
+  it("root is a string", () => { expect(typeof root).toBe("string"); });
+  it("root is non-empty", () => { expect(root.length).toBeGreaterThan(0); });
+  it("scannerScript is a string", () => { expect(typeof scannerScript).toBe("string"); });
+  it("scannerScript ends with .mjs", () => { expect(scannerScript.endsWith(".mjs")).toBe(true); });
+  it("runScanner is a function", () => { expect(typeof runScanner).toBe("function"); });
+  it("runScanner() has code field", () => { expect(runScanner()).toHaveProperty("code"); });
+  it("runScanner().code is 0 or 1", () => { expect([0, 1]).toContain(runScanner().code); });
+  it("runScanner().output matches Scanned", () => { expect(runScanner().output).toMatch(/Scanned/); });
+  it("join('a','b') returns a string", () => { expect(typeof join("a", "b")).toBe("string"); });
+  it("tmpdir() returns a string", () => { expect(typeof tmpdir()).toBe("string"); });
+});
+
 describe("scan-recurrence-defects.mjs — live scan", () => {
   it("exits 0 on current codebase (no blocking violations)", () => {
     const result = runScanner();

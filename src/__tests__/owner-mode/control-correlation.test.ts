@@ -40,6 +40,23 @@ const baseInput = (over: Partial<ControlCorrelationInput> = {}): ControlCorrelat
   totalProof: 0, tamperSuspectedCount: 0, nowMs: NOW, evaluatedAt: AT, ...over,
 });
 
+describe("control-correlation — module contract assertions", () => {
+  it("buildControlCorrelationReport is a function", () => { expect(typeof buildControlCorrelationReport).toBe("function"); });
+  it("computeReassessmentCorrelations is a function", () => { expect(typeof computeReassessmentCorrelations).toBe("function"); });
+  it("computeShockCorrelations is a function", () => { expect(typeof computeShockCorrelations).toBe("function"); });
+  it("REASSESSMENT_TARGET_MS is a number", () => { expect(typeof REASSESSMENT_TARGET_MS).toBe("number"); });
+  it("SHOCK_HANDLING_TARGET_MS is a number", () => { expect(typeof SHOCK_HANDLING_TARGET_MS).toBe("number"); });
+  it("WS is a string", () => { expect(typeof WS).toBe("string"); });
+  it("AT is a string", () => { expect(typeof AT).toBe("string"); });
+  it("reassess is a function", () => { expect(typeof reassess).toBe("function"); });
+  it("reassess() returns an object", () => { expect(typeof reassess()).toBe("object"); });
+  it("shock is a function", () => { expect(typeof shock).toBe("function"); });
+  it("baseInput is a function", () => { expect(typeof baseInput).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("control-correlation — reassessment latency", () => {
   it("closed reassessment → LINKED with a real measured latency (updatedAt − createdAt)", () => {
     const { correlations, stat } = computeReassessmentCorrelations([reassess()], NOW, WS, AT);

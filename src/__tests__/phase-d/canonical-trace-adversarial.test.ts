@@ -586,6 +586,18 @@ describe("PHASE D STEPS 4-5: Canonical Trace Adversarial Testing", () => {
   // ─── FINAL VALIDATION ──────────────────────────────────────────────────────
 
   describe("Final Validation: TRUE_TRACE_AUTHORITY", () => {
+    it("CanonicalExecutionTraceManager can be instantiated with a correlation ID", () => {
+      const trace = new CanonicalExecutionTraceManager({
+        correlationId: "corr-check",
+        requestId: "req-check",
+        method: "GET",
+        pathname: "/api/health",
+      });
+      expect(trace).toBeDefined();
+      const rawTrace = trace.getTrace();
+      expect(rawTrace.sealed).toBe(false);
+    });
+
     it("Complete request lifecycle maintains single lineage", () => {
       // Simulate complete request lifecycle
       const trace = new CanonicalExecutionTraceManager({

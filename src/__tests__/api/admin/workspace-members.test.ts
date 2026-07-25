@@ -167,4 +167,76 @@ describe("Phase D1-B: GET /api/admin/workspaces/[id]/members", () => {
       GET(makeCtx("https://x/api/admin/workspaces//members"), {} as Record<string, string>)
     ).rejects.toThrow(/Workspace ID required/);
   });
+
+  it("returns empty members array when workspace has no members", async () => {
+    const emptyResult = { ...sampleResult, members: [], pagination: { limit: 50, cursor: null, nextCursor: null, hasMore: false } };
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(emptyResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members"), { id: WORKSPACE_ID })) as typeof sampleResult;
+    expect(res.members).toHaveLength(0);
+  });
+
+  it("pagination object has hasMore boolean", async () => {
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members"), { id: WORKSPACE_ID })) as typeof sampleResult;
+    expect(typeof res.pagination.hasMore).toBe("boolean");
+  });
+
+  it("pagination object has nextCursor field", async () => {
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members"), { id: WORKSPACE_ID })) as typeof sampleResult;
+    expect(res.pagination).toHaveProperty("nextCursor");
+  });
+
+  it("member isActive field is boolean", async () => {
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members"), { id: WORKSPACE_ID })) as typeof sampleResult;
+    expect(typeof res.members[0].isActive).toBe("boolean");
+  });
+
+  it("member addedAt field is string", async () => {
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members"), { id: WORKSPACE_ID })) as typeof sampleResult;
+    expect(typeof res.members[0].addedAt).toBe("string");
+  });
+
+  it("service called exactly once per request", async () => {
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members"), { id: WORKSPACE_ID });
+    expect(mocks.listWorkspaceMembersForAdmin).toHaveBeenCalledTimes(1);
+  });
+
+  it("cursor=null forwarded when no cursor param", async () => {
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members"), { id: WORKSPACE_ID });
+    expect(mocks.listWorkspaceMembersForAdmin).toHaveBeenCalledWith(WORKSPACE_ID, expect.objectContaining({ cursor: null }));
+  });
+
+  it("does not require verified workspace in enforcement (system admin access)", () => {
+    const options = (GET as unknown as { __options?: { requireWorkspace?: boolean } }).__options;
+    expect(options?.requireWorkspace).toBeFalsy();
+  });
+
+  it("member name field is string", async () => {
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members"), { id: WORKSPACE_ID })) as typeof sampleResult;
+    expect(typeof res.members[0].name).toBe("string");
+  });
+
+  it("member email field is string", async () => {
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members"), { id: WORKSPACE_ID })) as typeof sampleResult;
+    expect(typeof res.members[0].email).toBe("string");
+  });
+
+  it("response workspaceId matches the requested workspace", async () => {
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members"), { id: WORKSPACE_ID })) as typeof sampleResult;
+    expect(res.workspaceId).toBe(WORKSPACE_ID);
+  });
+
+  it("forwards limit=10 to the service pagination options", async () => {
+    mocks.listWorkspaceMembersForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/workspaces/" + WORKSPACE_ID + "/members?limit=10"), { id: WORKSPACE_ID });
+    expect(mocks.listWorkspaceMembersForAdmin).toHaveBeenCalledWith(WORKSPACE_ID, expect.objectContaining({ limit: 10 }));
+  });
 });

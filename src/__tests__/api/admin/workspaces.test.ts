@@ -114,4 +114,94 @@ describe("Phase D1-A: GET /api/admin/workspaces", () => {
     // No other mock exists on the service module surface used by this route.
     expect(Object.keys(mocks)).toEqual(["listWorkspacesForAdmin"]);
   });
+
+  it("returns empty workspaces array when no workspaces exist", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue({ workspaces: [], pagination: { limit: 100, cursor: null, nextCursor: null, hasMore: false } });
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(res.workspaces).toHaveLength(0);
+  });
+
+  it("uses default limit when no limit query param is provided", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/workspaces"));
+    expect(mocks.listWorkspacesForAdmin).toHaveBeenCalledWith({ limit: undefined, cursor: null });
+  });
+
+  it("uses cursor=null when no cursor param provided", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/workspaces?limit=50"));
+    expect(mocks.listWorkspacesForAdmin).toHaveBeenCalledWith({ limit: 50, cursor: null });
+  });
+
+  it("forwards limit=10 to the service", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/workspaces?limit=10"));
+    expect(mocks.listWorkspacesForAdmin).toHaveBeenCalledWith(expect.objectContaining({ limit: 10 }));
+  });
+
+  it("pagination object has hasMore field", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(res.pagination).toHaveProperty("hasMore");
+    expect(typeof res.pagination.hasMore).toBe("boolean");
+  });
+
+  it("pagination object has nextCursor field", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(res.pagination).toHaveProperty("nextCursor");
+  });
+
+  it("called exactly once per request", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/workspaces"));
+    expect(mocks.listWorkspacesForAdmin).toHaveBeenCalledTimes(1);
+  });
+
+  it("workspace entries have isActive boolean field", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(typeof res.workspaces[0].isActive).toBe("boolean");
+  });
+
+  it("workspace entries have memberCount number field", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(typeof res.workspaces[0].memberCount).toBe("number");
+  });
+
+  it("workspace entries have createdAt string field", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(typeof res.workspaces[0].createdAt).toBe("string");
+  });
+
+  it("does not require workspace in enforcement options", () => {
+    const options = (GET as unknown as { __options?: { requireWorkspace?: boolean } }).__options;
+    expect(options?.requireWorkspace).toBeFalsy();
+  });
+
+  it("forwards both limit and cursor from query params", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    await GET(makeCtx("https://x/api/admin/workspaces?limit=25&cursor=page2"));
+    expect(mocks.listWorkspacesForAdmin).toHaveBeenCalledWith({ limit: 25, cursor: "page2" });
+  });
+
+  it("returns pagination limit field", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(res.pagination).toHaveProperty("limit");
+  });
+
+  it("workspace entries have slug string field", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(typeof res.workspaces[0].slug).toBe("string");
+  });
+
+  it("workspace entries have name string field", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    expect(typeof res.workspaces[0].name).toBe("string");
+  });
 });

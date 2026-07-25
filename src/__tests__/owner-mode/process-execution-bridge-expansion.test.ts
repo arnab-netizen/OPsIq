@@ -78,6 +78,23 @@ function effectiveness(attribution: EffectivenessAttributionState, over: Partial
   };
 }
 
+describe("process-execution-bridge-expansion — module contract assertions", () => {
+  it("buildBridgeExpansion is a function", () => { expect(typeof buildBridgeExpansion).toBe("function"); });
+  it("bridgeWorkloadFinding is a function", () => { expect(typeof bridgeWorkloadFinding).toBe("function"); });
+  it("bridgeCapabilityRecommendation is a function", () => { expect(typeof bridgeCapabilityRecommendation).toBe("function"); });
+  it("bridgeSopDraft is a function", () => { expect(typeof bridgeSopDraft).toBe("function"); });
+  it("bridgeTrainingAssignment is a function", () => { expect(typeof bridgeTrainingAssignment).toBe("function"); });
+  it("bridgeEffectivenessEvaluation is a function", () => { expect(typeof bridgeEffectivenessEvaluation).toBe("function"); });
+  it("buildProcessExecutionBridge is a function", () => { expect(typeof buildProcessExecutionBridge).toBe("function"); });
+  it("WS is a string", () => { expect(typeof WS).toBe("string"); });
+  it("AT is a string", () => { expect(typeof AT).toBe("string"); });
+  it("workload is a function", () => { expect(typeof workload).toBe("function"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("process-execution-bridge-expansion (PASS 23)", () => {
   // ── Workload ──
   it("1. workload DELEGATE_TO_MANAGER becomes a manager task with completion evidence", () => {

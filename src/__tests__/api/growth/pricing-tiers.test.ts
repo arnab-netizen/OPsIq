@@ -263,4 +263,46 @@ describe("Pricing Tiers API Route - Service Integration", () => {
       expect(tier.workspaceId).toBe(workspaceId);
     });
   });
+
+  describe("tier field defaults", () => {
+    it("created tier entryPrice matches input", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
+        name: "Price Check Tier",
+        entryPrice: 49,
+        maxPrice: 199,
+        features: ["F1"],
+      });
+      expect(tier.entryPrice).toBe(49);
+    });
+
+    it("created tier features array matches input", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
+        name: "Feature Tier",
+        entryPrice: 99,
+        maxPrice: 299,
+        features: ["Alpha", "Beta", "Gamma"],
+      });
+      expect(tier.features).toEqual(["Alpha", "Beta", "Gamma"]);
+    });
+
+    it("created tier status defaults to DRAFT when not specified", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
+        name: "Draft Tier",
+        entryPrice: 99,
+        maxPrice: 299,
+        features: ["F1"],
+      });
+      expect(tier.status).toBe("DRAFT");
+    });
+
+    it("created tier approvalStatus defaults to pending_approval", async () => {
+      const tier = await PricingEngine.createPriceTier(workspaceId, actorId, {
+        name: "Approval Tier",
+        entryPrice: 99,
+        maxPrice: 299,
+        features: ["F1"],
+      });
+      expect(tier.approvalStatus).toBe("pending_approval");
+    });
+  });
 });

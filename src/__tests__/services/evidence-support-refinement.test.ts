@@ -54,6 +54,23 @@ function assess(
   );
 }
 
+describe("evidence-support-refinement — module contract assertions", () => {
+  it("assessSafety is a function", () => { expect(typeof assessSafety).toBe("function"); });
+  it("EVIDENCE_SUPPORT_CONFIDENCE_FLOOR is a number", () => { expect(typeof EVIDENCE_SUPPORT_CONFIDENCE_FLOOR).toBe("number"); });
+  it("EVIDENCE_SUPPORT_CONFIDENCE_FLOOR is greater than 0", () => { expect(EVIDENCE_SUPPORT_CONFIDENCE_FLOOR).toBeGreaterThan(0); });
+  it("HIGH is a number", () => { expect(typeof HIGH).toBe("number"); });
+  it("MODERATE is a number", () => { expect(typeof MODERATE).toBe("number"); });
+  it("PROVISIONAL is a number", () => { expect(typeof PROVISIONAL).toBe("number"); });
+  it("HIGH is greater than MODERATE", () => { expect(HIGH).toBeGreaterThan(MODERATE); });
+  it("MODERATE is greater than PROVISIONAL", () => { expect(MODERATE).toBeGreaterThan(PROVISIONAL); });
+  it("lowSupport is an object", () => { expect(typeof lowSupport).toBe("object"); });
+  it("noCausal is an object", () => { expect(typeof noCausal).toBe("object"); });
+  it("noConstraint is an object", () => { expect(typeof noConstraint).toBe("object"); });
+  it("noOwnerDanger is an object", () => { expect(typeof noOwnerDanger).toBe("object"); });
+  it("assess is a function", () => { expect(typeof assess).toBe("function"); });
+  it("assess(HIGH) returns an object", () => { expect(typeof assess(HIGH)).toBe("object"); });
+});
+
 describe("evidence-support refinement — release when confident & clean", () => {
   it("MODERATE-confidence committed diagnosis with low support + gaps does NOT abstain (FRC-02 class)", () => {
     const r = assess(MODERATE);

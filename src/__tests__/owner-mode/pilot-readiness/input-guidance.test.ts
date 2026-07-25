@@ -14,6 +14,23 @@ import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 
 const CONF_ORDER: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3 };
 
+describe("input-guidance — module contract assertions", () => {
+  it("buildInputGuidance is a function", () => { expect(typeof buildInputGuidance).toBe("function"); });
+  it("FIRST_DIAGNOSIS_CATEGORIES is an array", () => { expect(Array.isArray(FIRST_DIAGNOSIS_CATEGORIES)).toBe(true); });
+  it("FIRST_DIAGNOSIS_CATEGORIES.length is greater than 0", () => { expect(FIRST_DIAGNOSIS_CATEGORIES.length).toBeGreaterThan(0); });
+  it("requiredInputsForProfile is a function", () => { expect(typeof requiredInputsForProfile).toBe("function"); });
+  it("CONF_ORDER is an object", () => { expect(typeof CONF_ORDER).toBe("object"); });
+  it("CONF_ORDER.none equals 0", () => { expect(CONF_ORDER.none).toBe(0); });
+  it("CONF_ORDER.low equals 1", () => { expect(CONF_ORDER.low).toBe(1); });
+  it("CONF_ORDER.medium equals 2", () => { expect(CONF_ORDER.medium).toBe(2); });
+  it("CONF_ORDER.high equals 3", () => { expect(CONF_ORDER.high).toBe(3); });
+  it("buildInputGuidance returns object with guidance array", () => { expect(Array.isArray(buildInputGuidance({ profileType: "laundry_drycleaning", ownerRole: "owner_operated", suppliedCategories: [] }).guidance)).toBe(true); });
+  it("buildInputGuidance returns object with nextBestInput field", () => { expect(buildInputGuidance({ profileType: "laundry_drycleaning", ownerRole: "owner_operated", suppliedCategories: [] })).toHaveProperty("nextBestInput"); });
+  it("buildInputGuidance returns object with overallConfidence field", () => { expect(buildInputGuidance({ profileType: "laundry_drycleaning", ownerRole: "owner_operated", suppliedCategories: [] })).toHaveProperty("overallConfidence"); });
+  it("requiredInputsForProfile returns an object", () => { expect(typeof requiredInputsForProfile("laundry_drycleaning", "owner_operated")).toBe("object"); });
+  it("requiredInputsForProfile returns minimumRequired array", () => { expect(Array.isArray(requiredInputsForProfile("laundry_drycleaning", "owner_operated").minimumRequired)).toBe(true); });
+});
+
 describe("dynamic input guidance", () => {
   it("produces guidance for every category with all 12 owner-facing fields", () => {
     const g = buildInputGuidance({ profileType: "laundry_drycleaning", ownerRole: "owner_operated", suppliedCategories: [] });

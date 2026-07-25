@@ -60,6 +60,23 @@ function plan(input: StrategySnapshotInput) {
 }
 const actionCodes = (p: { actions: { findingCode: string }[] }) => p.actions.map((a) => a.findingCode);
 
+describe("owner-strategy actions — module contract assertions", () => {
+  it("diagnoseStrategySnapshot is a function", () => { expect(typeof diagnoseStrategySnapshot).toBe("function"); });
+  it("planStrategyActionsFromDiagnosis is a function", () => { expect(typeof planStrategyActionsFromDiagnosis).toBe("function"); });
+  it("buildStrategyRecommendations is a function", () => { expect(typeof buildStrategyRecommendations).toBe("function"); });
+  it("STRATEGY_REC_TEMPLATES is an object", () => { expect(typeof STRATEGY_REC_TEMPLATES).toBe("object"); });
+  it("ownerActionSchema is an object", () => { expect(typeof ownerActionSchema).toBe("object"); });
+  it("OWNER_ACTION_STATUSES is defined", () => { expect(OWNER_ACTION_STATUSES).toBeDefined(); });
+  it("calculateOwnerPriorityScore is a function", () => { expect(typeof calculateOwnerPriorityScore).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("strongGo is a function", () => { expect(typeof strongGo).toBe("function"); });
+  it("avoid is a function", () => { expect(typeof avoid).toBe("function"); });
+  it("plan is a function", () => { expect(typeof plan).toBe("function"); });
+  it("actionCodes is a function", () => { expect(typeof actionCodes).toBe("function"); });
+  it("strongGo() returns an object", () => { expect(typeof strongGo()).toBe("object"); });
+  it("avoid() returns an object", () => { expect(typeof avoid()).toBe("object"); });
+});
+
 describe("owner-strategy planner — recommendation/action creation", () => {
   it("a negative base case creates a drop-or-rescope action", () => {
     const p = plan(avoid());

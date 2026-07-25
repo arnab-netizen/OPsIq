@@ -12,6 +12,37 @@ import { recordSelfEvaluation, type SelfEvalDeps } from "@/services/owner-mode/s
 const NOW = new Date("2026-06-28T00:00:00Z");
 beforeEach(() => emitAuditEvent.mockClear());
 
+describe("self-evaluation — module contract assertions", () => {
+  it("classifyOutcome is a function", () => { expect(typeof classifyOutcome).toBe("function"); });
+  it("recordSelfEvaluation is a function", () => { expect(typeof recordSelfEvaluation).toBe("function"); });
+  it("emitAuditEvent mock is a function", () => { expect(typeof emitAuditEvent).toBe("function"); });
+  it("classifyOutcome returns an object", () => { expect(typeof classifyOutcome({ executed: false, metExpectation: false })).toBe("object"); });
+  it("classifyOutcome has result field", () => { expect(classifyOutcome({ executed: false, metExpectation: false })).toHaveProperty("result"); });
+  it("classifyOutcome has reassessmentRequired field", () => { expect(classifyOutcome({ executed: false, metExpectation: false })).toHaveProperty("reassessmentRequired"); });
+  it("classifyOutcome({ executed: false }) returns result 'unknown'", () => {
+    expect(classifyOutcome({ executed: false, metExpectation: false }).result).toBe("unknown");
+  });
+  it("classifyOutcome({ executed: true, metExpectation: true }) returns result 'worked'", () => {
+    expect(classifyOutcome({ executed: true, metExpectation: true }).result).toBe("worked");
+  });
+  it("classifyOutcome(worked).reassessmentRequired is false", () => {
+    expect(classifyOutcome({ executed: true, metExpectation: true }).reassessmentRequired).toBe(false);
+  });
+  it("classifyOutcome(failed with no flags) returns result 'failed'", () => {
+    expect(classifyOutcome({ executed: true, metExpectation: false }).result).toBe("failed");
+  });
+  it("classifyOutcome failed outcome has failureReason field", () => {
+    expect(classifyOutcome({ executed: true, metExpectation: false })).toHaveProperty("failureReason");
+  });
+  it("classifyOutcome with insufficientProof returns failureReason 'insufficient_proof'", () => {
+    expect(classifyOutcome({ executed: true, metExpectation: false, insufficientProof: true }).failureReason).toBe("insufficient_proof");
+  });
+  it("classifyOutcome with no flags returns failureReason 'bad_recommendation'", () => {
+    expect(classifyOutcome({ executed: true, metExpectation: false }).failureReason).toBe("bad_recommendation");
+  });
+  it("NOW is a Date instance", () => { expect(NOW).toBeInstanceOf(Date); });
+});
+
 describe("classifyOutcome", () => {
   it("unknown when not executed (invalid test)", () => {
     expect(classifyOutcome({ executed: false, metExpectation: false }).result).toBe("unknown");

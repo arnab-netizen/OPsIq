@@ -19,6 +19,23 @@ const order = (over: Partial<OrderEconomicsInput> = {}): OrderEconomicsInput => 
   revenue: 1000, labourCost: 200, materialCost: 150, deliveryCost: 50, ...over,
 });
 
+describe("[module6] unit economics — module contract assertions", () => {
+  it("totalDirectCost is a function", () => { expect(typeof totalDirectCost).toBe("function"); });
+  it("contributionMargin is a function", () => { expect(typeof contributionMargin).toBe("function"); });
+  it("contributionMarginPct is a function", () => { expect(typeof contributionMarginPct).toBe("function"); });
+  it("profitPerLabourHour is a function", () => { expect(typeof profitPerLabourHour).toBe("function"); });
+  it("isLossMaking is a function", () => { expect(typeof isLossMaking).toBe("function"); });
+  it("minimumViablePrice is a function", () => { expect(typeof minimumViablePrice).toBe("function"); });
+  it("assessDiscountSafety is a function", () => { expect(typeof assessDiscountSafety).toBe("function"); });
+  it("compareSegmentProfitability is a function", () => { expect(typeof compareSegmentProfitability).toBe("function"); });
+  it("summarizeSegment is a function", () => { expect(typeof summarizeSegment).toBe("function"); });
+  it("order is a function", () => { expect(typeof order).toBe("function"); });
+  it("order() returns an object with revenue field", () => { expect(order()).toHaveProperty("revenue"); });
+  it("order().revenue is 1000 by default", () => { expect(order().revenue).toBe(1000); });
+  it("totalDirectCost(order()) is 400", () => { expect(totalDirectCost(order())).toBe(400); });
+  it("isLossMaking(order()) is false", () => { expect(isLossMaking(order())).toBe(false); });
+});
+
 describe("[module6] unit economics — per-unit profit", () => {
   it("computes direct cost, contribution margin and pct", () => {
     const o = order();

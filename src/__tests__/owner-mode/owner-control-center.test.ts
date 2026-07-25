@@ -29,6 +29,57 @@ function inputs(over: Partial<ControlCenterInputs> = {}): ControlCenterInputs {
   };
 }
 
+describe("owner control center — module contract assertions", () => {
+  it("buildOwnerControlCenter is a function", () => {
+    expect(typeof buildOwnerControlCenter).toBe("function");
+  });
+  it("getOwnerControlCenter is a function", () => {
+    expect(typeof getOwnerControlCenter).toBe("function");
+  });
+  it("summarizeOwnerAttention is a function", () => {
+    expect(typeof summarizeOwnerAttention).toBe("function");
+  });
+  it("NOW is a Date instance", () => {
+    expect(NOW).toBeInstanceOf(Date);
+  });
+  it("calmAttention is an object", () => {
+    expect(typeof calmAttention).toBe("object");
+  });
+  it("inputs() returns an object", () => {
+    expect(typeof inputs()).toBe("object");
+  });
+  it("inputs().dataSufficiencyStatus is 'sufficient'", () => {
+    expect(inputs().dataSufficiencyStatus).toBe("sufficient");
+  });
+  it("inputs().blockedRecommendations is 0 by default", () => {
+    expect(inputs().blockedRecommendations).toBe(0);
+  });
+  it("buildOwnerControlCenter(inputs()) returns an object", () => {
+    expect(typeof buildOwnerControlCenter(inputs())).toBe("object");
+  });
+  it("buildOwnerControlCenter result has needsOwnerAttention field", () => {
+    expect(buildOwnerControlCenter(inputs())).toHaveProperty("needsOwnerAttention");
+  });
+  it("buildOwnerControlCenter result has criticalAlerts field (array)", () => {
+    expect(Array.isArray(buildOwnerControlCenter(inputs()).criticalAlerts)).toBe(true);
+  });
+  it("buildOwnerControlCenter result has handledByOpsIQ field", () => {
+    expect(buildOwnerControlCenter(inputs())).toHaveProperty("handledByOpsIQ");
+  });
+  it("buildOwnerControlCenter result has whatNotToDo field", () => {
+    expect(buildOwnerControlCenter(inputs())).toHaveProperty("whatNotToDo");
+  });
+  it("buildOwnerControlCenter result has ownerActionsToday field (number)", () => {
+    expect(typeof buildOwnerControlCenter(inputs()).ownerActionsToday).toBe("number");
+  });
+  it("buildOwnerControlCenter(inputs()).needsOwnerAttention is false in calm state", () => {
+    expect(buildOwnerControlCenter(inputs()).needsOwnerAttention).toBe(false);
+  });
+  it("buildOwnerControlCenter(inputs()).criticalAlerts is empty in calm state", () => {
+    expect(buildOwnerControlCenter(inputs()).criticalAlerts).toHaveLength(0);
+  });
+});
+
 describe("buildOwnerControlCenter", () => {
   it("is calm with no issues", () => {
     const cc = buildOwnerControlCenter(inputs());

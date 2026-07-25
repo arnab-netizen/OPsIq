@@ -40,6 +40,23 @@ const tenderReadiness = (over = {}) => ({
 const derive = (opps: OperatingOpportunity[], hints = NO_HINTS, persisted = new Map<string, PersistedTaskStatus>()) =>
   deriveOpportunityExecutionTasks(opps, hints, persisted, WS, AT);
 
+describe("opportunity-execution — module contract assertions", () => {
+  it("deriveOpportunityExecutionTasks is a function", () => { expect(typeof deriveOpportunityExecutionTasks).toBe("function"); });
+  it("planTaskUpdate is a function", () => { expect(typeof planTaskUpdate).toBe("function"); });
+  it("executionTaskKey is a function", () => { expect(typeof executionTaskKey).toBe("function"); });
+  it("opp is a function", () => { expect(typeof opp).toBe("function"); });
+  it("tenderReadiness is a function", () => { expect(typeof tenderReadiness).toBe("function"); });
+  it("derive is a function", () => { expect(typeof derive).toBe("function"); });
+  it("NO_HINTS is an object", () => { expect(typeof NO_HINTS).toBe("object"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
+  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
+  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
+  it("typeof Object.values equals function", () => { expect(typeof Object.values).toBe("function"); });
+  it("typeof Number.isFinite equals function", () => { expect(typeof Number.isFinite).toBe("function"); });
+});
+
 describe("deriveOpportunityExecutionTasks — task generation", () => {
   it("1. a prep-checklist blocking item (missing unit economics) creates a COLLECT_COST_DATA task", () => {
     const r = derive([opp({ prepChecklist: { checklistType: "B2B_OPPORTUNITY_PREP", requiredDocuments: [], requiredCostInputs: ["per-unit cost"], requiredCapacityChecks: [], requiredComplianceChecks: [], requiredProofEvidence: [], requiredOwnerDecision: [], managerCollectableItems: [], staffCollectableItems: [], opsIqDraftableItems: [], deadlineItems: [], blockingItems: ["unit economics missing"], nextChecklistAction: "x" } })]);

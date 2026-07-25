@@ -70,6 +70,23 @@ function wasting(): MarketingSnapshotInput {
   };
 }
 
+describe("owner-marketing/metrics — module contract assertions", () => {
+  it("computeMarketingMetrics is a function", () => { expect(typeof computeMarketingMetrics).toBe("function"); });
+  it("isValidCurrency is a function", () => { expect(typeof isValidCurrency).toBe("function"); });
+  it("num is a function", () => { expect(typeof num).toBe("function"); });
+  it("resolveMarketingThresholds is a function", () => { expect(typeof resolveMarketingThresholds).toBe("function"); });
+  it("costPerLead is a function", () => { expect(typeof costPerLead).toBe("function"); });
+  it("costPerOrder is a function", () => { expect(typeof costPerOrder).toBe("function"); });
+  it("campaignRoiPct is a function", () => { expect(typeof campaignRoiPct).toBe("function"); });
+  it("leadConversionPct is a function", () => { expect(typeof leadConversionPct).toBe("function"); });
+  it("referralRatePct is a function", () => { expect(typeof referralRatePct).toBe("function"); });
+  it("organicSharePct is a function", () => { expect(typeof organicSharePct).toBe("function"); });
+  it("campaignFollowupRatePct is a function", () => { expect(typeof campaignFollowupRatePct).toBe("function"); });
+  it("MARKETING_STATES is an array", () => { expect(Array.isArray(MARKETING_STATES)).toBe(true); });
+  it("healthy is a function", () => { expect(typeof healthy).toBe("function"); });
+  it("wasting is a function", () => { expect(typeof wasting).toBe("function"); });
+});
+
 describe("Owner Marketing engine — spend + conversion metrics", () => {
   it("computes cost-per-lead / cost-per-order / ROI from real inputs", () => {
     const i = healthy();

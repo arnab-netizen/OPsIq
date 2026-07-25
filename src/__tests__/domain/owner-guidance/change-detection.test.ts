@@ -31,6 +31,23 @@ function find(changes: DetectedChange[], category: ChangeCategory): DetectedChan
   return changes.find((c) => c.category === category);
 }
 
+describe("change detection engine — module contract assertions", () => {
+  it("BusinessFunction is an object", () => { expect(typeof BusinessFunction).toBe("object"); });
+  it("BusinessFunction.CASH_FLOW is defined", () => { expect(BusinessFunction.CASH_FLOW).toBeDefined(); });
+  it("ChangeCategory is an object", () => { expect(typeof ChangeCategory).toBe("object"); });
+  it("ChangeCategory.CASH_WORSENED is defined", () => { expect(ChangeCategory.CASH_WORSENED).toBeDefined(); });
+  it("ChangeCategory.COMPLAINTS_INCREASED is defined", () => { expect(ChangeCategory.COMPLAINTS_INCREASED).toBeDefined(); });
+  it("detectChanges is a function", () => { expect(typeof detectChanges).toBe("function"); });
+  it("ownerAlerts is a function", () => { expect(typeof ownerAlerts).toBe("function"); });
+  it("worseningChanges is a function", () => { expect(typeof worseningChanges).toBe("function"); });
+  it("snap is a function", () => { expect(typeof snap).toBe("function"); });
+  it("find is a function", () => { expect(typeof find).toBe("function"); });
+  it("snap() returns an object", () => { expect(typeof snap()).toBe("object"); });
+  it("snap() has cashRunwayDays field", () => { expect(snap()).toHaveProperty("cashRunwayDays"); });
+  it("snap().cashRunwayDays equals 60", () => { expect(snap().cashRunwayDays).toBe(60); });
+  it("detectChanges(snap(), { ...snap() }) returns an array", () => { expect(Array.isArray(detectChanges(snap(), { ...snap() }))).toBe(true); });
+});
+
 describe("Module 41 — real-time change detection engine", () => {
   it("[module41] cash worsening creates an owner alert", () => {
     const changes = detectChanges(snap(), snap({ cashRunwayDays: 30 }));

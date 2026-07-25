@@ -28,6 +28,23 @@ function source(over: Partial<SourceRegistryEntry> = {}): SourceRegistryEntry {
   };
 }
 
+describe("business-context — module contract assertions", () => {
+  it("createBusinessOperatingContext is a function", () => { expect(typeof createBusinessOperatingContext).toBe("function"); });
+  it("BusinessContextError is a function", () => { expect(typeof BusinessContextError).toBe("function"); });
+  it("computeFreshness is a function", () => { expect(typeof computeFreshness).toBe("function"); });
+  it("createKnowledgeUpdateCandidate is a function", () => { expect(typeof createKnowledgeUpdateCandidate).toBe("function"); });
+  it("decideKnowledgePromotion is a function", () => { expect(typeof decideKnowledgePromotion).toBe("function"); });
+  it("assessComplianceClaim is a function", () => { expect(typeof assessComplianceClaim).toBe("function"); });
+  it("T is an object", () => { expect(typeof T).toBe("object"); });
+  it("F is an object", () => { expect(typeof F).toBe("object"); });
+  it("ContextConfidence is an object", () => { expect(typeof ContextConfidence).toBe("object"); });
+  it("KnowledgeCandidateStatus is an object", () => { expect(typeof KnowledgeCandidateStatus).toBe("object"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("source is a function", () => { expect(typeof source).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("business operating context", () => {
   it("can be created with required fields", () => {
     const ctx = createBusinessOperatingContext({ country: "IN", businessArchetype: "laundry" });

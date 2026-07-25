@@ -29,6 +29,23 @@ const VERIFICATION_MODELS = [
   "OwnerStrategyVerification",
 ];
 
+describe("schema-hardening — module contract assertions", () => {
+  it("readFileSync is a function", () => { expect(typeof readFileSync).toBe("function"); });
+  it("readdirSync is a function", () => { expect(typeof readdirSync).toBe("function"); });
+  it("ROOT is a string", () => { expect(typeof ROOT).toBe("string"); });
+  it("schema is a string", () => { expect(typeof schema).toBe("string"); });
+  it("schema is non-empty", () => { expect(schema.length).toBeGreaterThan(0); });
+  it("schema contains 'model '", () => { expect(schema).toContain("model "); });
+  it("modelBlock is a function", () => { expect(typeof modelBlock).toBe("function"); });
+  it("VERIFICATION_MODELS is an array", () => { expect(Array.isArray(VERIFICATION_MODELS)).toBe(true); });
+  it("VERIFICATION_MODELS has 7 elements", () => { expect(VERIFICATION_MODELS.length).toBe(7); });
+  it("VERIFICATION_MODELS includes 'OwnerFinanceVerification'", () => { expect(VERIFICATION_MODELS).toContain("OwnerFinanceVerification"); });
+  it("modelBlock('Engagement') contains 'workspaceId'", () => { expect(modelBlock("Engagement")).toContain("workspaceId"); });
+  it("modelBlock('AuditEvent') contains 'AuditEvent'", () => { expect(modelBlock("AuditEvent")).toContain("AuditEvent"); });
+  it("schema contains 'Engagement'", () => { expect(schema).toContain("Engagement"); });
+  it("schema contains 'AuditEvent'", () => { expect(schema).toContain("AuditEvent"); });
+});
+
 describe("GAP-DB-02 — governed verification (proof) records are delete-protected", () => {
   it("every verification model's business + action relations are onDelete: Restrict (not Cascade)", () => {
     for (const model of VERIFICATION_MODELS) {

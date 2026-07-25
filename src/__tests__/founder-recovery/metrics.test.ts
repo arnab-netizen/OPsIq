@@ -8,6 +8,57 @@ const base: MetricSnapshotInput = {
   currency: "INR",
 };
 
+describe("founder-recovery metrics — module contract assertions", () => {
+  it("calculateMetrics is a function", () => {
+    expect(typeof calculateMetrics).toBe("function");
+  });
+  it("base is an object", () => {
+    expect(typeof base).toBe("object");
+  });
+  it("base.currency is 'INR'", () => {
+    expect(base.currency).toBe("INR");
+  });
+  it("base.periodStart is a string", () => {
+    expect(typeof base.periodStart).toBe("string");
+  });
+  it("base.periodEnd is a string", () => {
+    expect(typeof base.periodEnd).toBe("string");
+  });
+  it("calculateMetrics({...base}) returns an object", () => {
+    expect(typeof calculateMetrics({ ...base })).toBe("object");
+  });
+  it("calculateMetrics({...base}) result has a currency field", () => {
+    expect(calculateMetrics({ ...base })).toHaveProperty("currency");
+  });
+  it("calculateMetrics({...base}).currency is 'INR'", () => {
+    expect(calculateMetrics({ ...base }).currency).toBe("INR");
+  });
+  it("calculateMetrics({...base}) result has a grossMarginPct field", () => {
+    expect(calculateMetrics({ ...base })).toHaveProperty("grossMarginPct");
+  });
+  it("calculateMetrics({...base}).grossMarginPct is null when revenue is missing", () => {
+    expect(calculateMetrics({ ...base }).grossMarginPct).toBeNull();
+  });
+  it("calculateMetrics({...base}) result has a netMarginPct field", () => {
+    expect(calculateMetrics({ ...base })).toHaveProperty("netMarginPct");
+  });
+  it("calculateMetrics({...base}).netMarginPct is null when revenue is missing", () => {
+    expect(calculateMetrics({ ...base }).netMarginPct).toBeNull();
+  });
+  it("calculateMetrics({...base}) result has a revenueTrendPct field", () => {
+    expect(calculateMetrics({ ...base })).toHaveProperty("revenueTrendPct");
+  });
+  it("calculateMetrics({...base}).revenueTrendPct is null when no previous period", () => {
+    expect(calculateMetrics({ ...base }).revenueTrendPct).toBeNull();
+  });
+  it("calculateMetrics({...base}) result has a cashPressureIndicator field", () => {
+    expect(calculateMetrics({ ...base })).toHaveProperty("cashPressureIndicator");
+  });
+  it("calculateMetrics({...base}).cashPressureIndicator is null when inputs missing", () => {
+    expect(calculateMetrics({ ...base }).cashPressureIndicator).toBeNull();
+  });
+});
+
 describe("founder-recovery metrics", () => {
   it("computes margins, rates and ratios from real values in business currency", () => {
     const d = calculateMetrics({

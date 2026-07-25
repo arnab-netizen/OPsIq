@@ -17,6 +17,23 @@ const input = (over: Partial<CapacityInput> = {}): CapacityInput => ({
   ...over,
 });
 
+describe("[module10] capacity & bottleneck — module contract assertions", () => {
+  it("findBottleneck is a function", () => { expect(typeof findBottleneck).toBe("function"); });
+  it("assessCapacity is a function", () => { expect(typeof assessCapacity).toBe("function"); });
+  it("canAbsorbRevenueGrowth is a function", () => { expect(typeof canAbsorbRevenueGrowth).toBe("function"); });
+  it("input is a function", () => { expect(typeof input).toBe("function"); });
+  it("input() returns an object with resources field", () => { expect(input()).toHaveProperty("resources"); });
+  it("input().resources is an array", () => { expect(Array.isArray(input().resources)).toBe(true); });
+  it("input().currentRevenue is 700000", () => { expect(input().currentRevenue).toBe(700000); });
+  it("input().safeUtilization is 0.85", () => { expect(input().safeUtilization).toBe(0.85); });
+  it("findBottleneck([]) returns null", () => { expect(findBottleneck([])).toBeNull(); });
+  it("assessCapacity(input()) returns an object", () => { expect(typeof assessCapacity(input())).toBe("object"); });
+  it("assessCapacity(input()) has bottleneckResource field", () => { expect(assessCapacity(input())).toHaveProperty("bottleneckResource"); });
+  it("assessCapacity(input()) has revenueCeiling field", () => { expect(assessCapacity(input())).toHaveProperty("revenueCeiling"); });
+  it("canAbsorbRevenueGrowth(input(), 0) returns true", () => { expect(canAbsorbRevenueGrowth(input(), 0)).toBe(true); });
+  it("findBottleneck(input().resources) is not null", () => { expect(findBottleneck(input().resources)).not.toBeNull(); });
+});
+
 describe("[module10] capacity & bottleneck outputs", () => {
   it("finds the binding bottleneck (highest utilization)", () => {
     expect(findBottleneck(input().resources)?.type).toBe("machine");

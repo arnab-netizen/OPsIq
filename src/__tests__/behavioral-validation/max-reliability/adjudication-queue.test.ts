@@ -12,6 +12,23 @@ const baseItem = {
   proposedArtifactId: "art-1",
 };
 
+describe("adjudication queue — module contract assertions", () => {
+  it("AdjudicationQueue is a class/function", () => { expect(typeof AdjudicationQueue).toBe("function"); });
+  it("needsAdjudication is a function", () => { expect(typeof needsAdjudication).toBe("function"); });
+  it("riskOf is a function", () => { expect(typeof riskOf).toBe("function"); });
+  it("AT is a non-empty string", () => { expect(typeof AT).toBe("string"); expect(AT.length).toBeGreaterThan(0); });
+  it("baseItem has caseId field", () => { expect(baseItem).toHaveProperty("caseId"); });
+  it("baseItem has domain field", () => { expect(baseItem).toHaveProperty("domain"); });
+  it("baseItem has failureLabels array", () => { expect(Array.isArray(baseItem.failureLabels)).toBe(true); });
+  it("new AdjudicationQueue() creates an instance", () => { expect(new AdjudicationQueue()).toBeDefined(); });
+  it("new AdjudicationQueue().report() returns an object", () => { expect(typeof new AdjudicationQueue().report()).toBe("object"); });
+  it("new AdjudicationQueue().report().open is 0 initially", () => { expect(new AdjudicationQueue().report().open).toBe(0); });
+  it("needsAdjudication({}) returns false", () => { expect(needsAdjudication({})).toBe(false); });
+  it("needsAdjudication({ lowConfidence: true }) returns true", () => { expect(needsAdjudication({ lowConfidence: true })).toBe(true); });
+  it("riskOf({ complianceUncertainty: true }) returns 'high'", () => { expect(riskOf({ complianceUncertainty: true })).toBe("high"); });
+  it("riskOf({ lowConfidence: true }) returns 'medium'", () => { expect(riskOf({ lowConfidence: true })).toBe("medium"); });
+});
+
 describe("adjudication queue", () => {
   it("a low-confidence high-impact case enters the queue", () => {
     const q = new AdjudicationQueue();

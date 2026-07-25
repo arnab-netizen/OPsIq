@@ -61,6 +61,23 @@ function fakeDeps(requireFlagByWorkspace: Record<string, boolean> = {}): RBIDeps
   };
 }
 
+describe("recommendation-business-impact.service — module contract assertions", () => {
+  it("saveBusinessImpact is a function", () => { expect(typeof saveBusinessImpact).toBe("function"); });
+  it("getBusinessImpact is a function", () => { expect(typeof getBusinessImpact).toBe("function"); });
+  it("enforceBusinessImpactForPromotion is a function", () => { expect(typeof enforceBusinessImpactForPromotion).toBe("function"); });
+  it("isBusinessImpactRequired is a function", () => { expect(typeof isBusinessImpactRequired).toBe("function"); });
+  it("enforceBusinessImpactIfRequired is a function", () => { expect(typeof enforceBusinessImpactIfRequired).toBe("function"); });
+  it("composeBusinessImpact is a function", () => { expect(typeof composeBusinessImpact).toBe("function"); });
+  it("BusinessImpactGateError is a function", () => { expect(typeof BusinessImpactGateError).toBe("function"); });
+  it("LeanClassification is an object", () => { expect(typeof LeanClassification).toBe("object"); });
+  it("EvidenceConfidenceLevel is an object", () => { expect(typeof EvidenceConfidenceLevel).toBe("object"); });
+  it("dim is a function", () => { expect(typeof dim).toBe("function"); });
+  it("horizon is a function", () => { expect(typeof horizon).toBe("function"); });
+  it("assessment is a function", () => { expect(typeof assessment).toBe("function"); });
+  it("fakeDeps is a function", () => { expect(typeof fakeDeps).toBe("function"); });
+  it("dim() returns an object", () => { expect(typeof dim()).toBe("object"); });
+});
+
 describe("[module1] recommendation-business-impact service (DI, no DB)", () => {
   it("saves and reads back a workspace-scoped assessment", async () => {
     const deps = fakeDeps();

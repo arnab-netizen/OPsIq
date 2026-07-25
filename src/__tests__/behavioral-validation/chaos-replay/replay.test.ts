@@ -12,6 +12,59 @@ import { replayScenario, scenarioIds, type ChaosReplayResult } from "@/behaviora
 import { InMemoryLearningStore } from "@/behavioral-validation/learning-store";
 import type { PublicCase } from "@/behavioral-validation/public-cases/schema";
 
+describe("chaos replay — module contract assertions (non-DB)", () => {
+  it("COUNTED_PUBLIC_CASES is an array", () => {
+    expect(Array.isArray(COUNTED_PUBLIC_CASES)).toBe(true);
+  });
+  it("COUNTED_PUBLIC_CASES has at least 1 entry", () => {
+    expect(COUNTED_PUBLIC_CASES.length).toBeGreaterThan(0);
+  });
+  it("publicCaseToChaosScenario is a function", () => {
+    expect(typeof publicCaseToChaosScenario).toBe("function");
+  });
+  it("replayScenario is a function", () => {
+    expect(typeof replayScenario).toBe("function");
+  });
+  it("scenarioIds is a function", () => {
+    expect(typeof scenarioIds).toBe("function");
+  });
+  it("InMemoryLearningStore is a function (class)", () => {
+    expect(typeof InMemoryLearningStore).toBe("function");
+  });
+  it("new InMemoryLearningStore() is an instance of InMemoryLearningStore", () => {
+    expect(new InMemoryLearningStore()).toBeInstanceOf(InMemoryLearningStore);
+  });
+  it("scenarioIds('CHAOS-001') returns an object with workspaceId", () => {
+    expect(scenarioIds("CHAOS-001")).toHaveProperty("workspaceId");
+  });
+  it("scenarioIds('CHAOS-001') returns an object with businessId", () => {
+    expect(scenarioIds("CHAOS-001")).toHaveProperty("businessId");
+  });
+  it("scenarioIds workspaceId and businessId are strings", () => {
+    const ids = scenarioIds("CHAOS-001");
+    expect(typeof ids.workspaceId).toBe("string");
+    expect(typeof ids.businessId).toBe("string");
+  });
+  it("COUNTED_PUBLIC_CASES has cashflow_squeeze laundry case", () => {
+    const c = COUNTED_PUBLIC_CASES.find((p) => p.meta.patternId === "cashflow_squeeze" && p.meta.businessCategory === "laundry");
+    expect(c).toBeDefined();
+  });
+  it("COUNTED_PUBLIC_CASES has compliance_shutdown_risk restaurant case", () => {
+    const c = COUNTED_PUBLIC_CASES.find((p) => p.meta.patternId === "compliance_shutdown_risk" && p.meta.businessCategory === "restaurant");
+    expect(c).toBeDefined();
+  });
+  it("COUNTED_PUBLIC_CASES[0] has a meta field", () => {
+    expect(COUNTED_PUBLIC_CASES[0]).toHaveProperty("meta");
+  });
+  it("publicCaseToChaosScenario result has expectedDominantConstraint field", () => {
+    const scenario = publicCaseToChaosScenario(COUNTED_PUBLIC_CASES[0]);
+    expect(scenario).toHaveProperty("expectedDominantConstraint");
+  });
+  it("two different CHAOS IDs produce distinct workspaceIds", () => {
+    expect(scenarioIds("CHAOS-001").workspaceId).not.toBe(scenarioIds("CHAOS-002").workspaceId);
+  });
+});
+
 // One case from each of several distinct patterns/categories.
 const SAMPLE: PublicCase[] = [
   COUNTED_PUBLIC_CASES.find((p) => p.meta.patternId === "cashflow_squeeze" && p.meta.businessCategory === "laundry")!,

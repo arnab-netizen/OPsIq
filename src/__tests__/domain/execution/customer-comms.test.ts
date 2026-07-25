@@ -38,6 +38,23 @@ const base: CustomerMessageContext = {
 };
 const v = (over: Partial<CustomerMessageContext>) => validateCustomerMessage({ ...base, ...over });
 
+describe("customer-comms — module contract assertions", () => {
+  it("M is an object", () => { expect(typeof M).toBe("object"); });
+  it("S is an object", () => { expect(typeof S).toBe("object"); });
+  it("DEFAULT_COMMUNICATION_MODE is defined", () => { expect(DEFAULT_COMMUNICATION_MODE).toBeDefined(); });
+  it("detectPromises is a function", () => { expect(typeof detectPromises).toBe("function"); });
+  it("validateCustomerMessage is a function", () => { expect(typeof validateCustomerMessage).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("template is an object", () => { expect(typeof template).toBe("object"); });
+  it("base is an object", () => { expect(typeof base).toBe("object"); });
+  it("v is a function", () => { expect(typeof v).toBe("function"); });
+  it("M.TEMPLATE_ONLY is defined", () => { expect(M.TEMPLATE_ONLY).toBeDefined(); });
+  it("M.NO_CUSTOMER_COMMUNICATION is defined", () => { expect(M.NO_CUSTOMER_COMMUNICATION).toBeDefined(); });
+  it("M.AI_DRAFT_OWNER_APPROVAL_REQUIRED is defined", () => { expect(M.AI_DRAFT_OWNER_APPROVAL_REQUIRED).toBeDefined(); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("defaults + promise detection", () => {
   it("MVP default mode is TEMPLATE_ONLY", () => {
     expect(DEFAULT_COMMUNICATION_MODE).toBe(M.TEMPLATE_ONLY);

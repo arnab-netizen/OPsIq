@@ -12,6 +12,23 @@ import { EvidenceConfidenceLevel } from "@/domain/business-impact/recommendation
 
 const dp = (key: string, status: DataConfidenceStatus, critical = true): DataPoint => ({ key, status, critical });
 
+describe("[F2] data confidence engine — module contract assertions", () => {
+  it("DataConfidenceStatus is an object", () => { expect(typeof DataConfidenceStatus).toBe("object"); });
+  it("assessDataConfidence is a function", () => { expect(typeof assessDataConfidence).toBe("function"); });
+  it("confidenceCeiling is a function", () => { expect(typeof confidenceCeiling).toBe("function"); });
+  it("canTreatAsFact is a function", () => { expect(typeof canTreatAsFact).toBe("function"); });
+  it("allowsHighConfidence is a function", () => { expect(typeof allowsHighConfidence).toBe("function"); });
+  it("reversibleActionsOnly is a function", () => { expect(typeof reversibleActionsOnly).toBe("function"); });
+  it("EvidenceConfidenceLevel is an object", () => { expect(typeof EvidenceConfidenceLevel).toBe("object"); });
+  it("DataConfidenceStatus.VERIFIED is defined", () => { expect(DataConfidenceStatus.VERIFIED).toBeDefined(); });
+  it("DataConfidenceStatus.MISSING is defined", () => { expect(DataConfidenceStatus.MISSING).toBeDefined(); });
+  it("DataConfidenceStatus.STALE is defined", () => { expect(DataConfidenceStatus.STALE).toBeDefined(); });
+  it("EvidenceConfidenceLevel.VERIFIED is defined", () => { expect(EvidenceConfidenceLevel.VERIFIED).toBeDefined(); });
+  it("dp is a function", () => { expect(typeof dp).toBe("function"); });
+  it("dp('cash', DataConfidenceStatus.VERIFIED) returns an object with key field", () => { expect(dp("cash", DataConfidenceStatus.VERIFIED)).toHaveProperty("key"); });
+  it("canTreatAsFact(DataConfidenceStatus.VERIFIED) is true", () => { expect(canTreatAsFact(DataConfidenceStatus.VERIFIED)).toBe(true); });
+});
+
 describe("[F2] data confidence engine", () => {
   it("verified data allows higher (VERIFIED) confidence", () => {
     const a = assessDataConfidence([dp("cash", DataConfidenceStatus.VERIFIED), dp("oblig", DataConfidenceStatus.VERIFIED)]);

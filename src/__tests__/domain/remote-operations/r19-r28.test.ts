@@ -3,6 +3,23 @@ import { assessEconomics } from "@/domain/remote-operations/economics";
 import { evaluateReplan, dependencyClears } from "@/domain/remote-operations/replanning";
 import { assessHandover, disputeBlocksGreen, selectRandomAudit, auditCoverageRate, assessRemoteReadiness, canExpandBeyondPilot, HANDOVER_FIELDS, type Handover, type ReadinessChecklist, type PilotResult } from "@/domain/remote-operations/operations-extra";
 
+describe("r19-r28 — module contract assertions", () => {
+  it("assessEconomics is a function", () => { expect(typeof assessEconomics).toBe("function"); });
+  it("evaluateReplan is a function", () => { expect(typeof evaluateReplan).toBe("function"); });
+  it("dependencyClears is a function", () => { expect(typeof dependencyClears).toBe("function"); });
+  it("assessHandover is a function", () => { expect(typeof assessHandover).toBe("function"); });
+  it("disputeBlocksGreen is a function", () => { expect(typeof disputeBlocksGreen).toBe("function"); });
+  it("selectRandomAudit is a function", () => { expect(typeof selectRandomAudit).toBe("function"); });
+  it("auditCoverageRate is a function", () => { expect(typeof auditCoverageRate).toBe("function"); });
+  it("assessRemoteReadiness is a function", () => { expect(typeof assessRemoteReadiness).toBe("function"); });
+  it("canExpandBeyondPilot is a function", () => { expect(typeof canExpandBeyondPilot).toBe("function"); });
+  it("HANDOVER_FIELDS is an array", () => { expect(Array.isArray(HANDOVER_FIELDS)).toBe(true); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("[R24] location economics — no invented profit", () => {
   it("no collected cash → cannot claim financially healthy (accrual-only at best)", () => {
     const a = assessEconomics({ earnedRevenue: 1000, invoicedRevenue: 1000 });

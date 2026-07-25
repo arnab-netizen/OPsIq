@@ -35,6 +35,55 @@ const FINANCE_CSV = [
 
 const FIXED_NOW = new Date("2026-05-01T00:00:00Z");
 
+describe("intake adapter — module contract assertions", () => {
+  it("buildCsvIntake is a function", () => {
+    expect(typeof buildCsvIntake).toBe("function");
+  });
+  it("assembleBusinessFactsContract is a function", () => {
+    expect(typeof assembleBusinessFactsContract).toBe("function");
+  });
+  it("mapIntakeSourceToExtractionMethod is a function", () => {
+    expect(typeof mapIntakeSourceToExtractionMethod).toBe("function");
+  });
+  it("businessFactsContractSchema is defined", () => {
+    expect(businessFactsContractSchema).toBeDefined();
+  });
+  it("businessFactsContractSchema.safeParse is a function", () => {
+    expect(typeof businessFactsContractSchema.safeParse).toBe("function");
+  });
+  it("INTAKE_FIELD_SPECS is an object", () => {
+    expect(typeof INTAKE_FIELD_SPECS).toBe("object");
+  });
+  it("INTAKE_FIELD_SPECS.finance is defined", () => {
+    expect(INTAKE_FIELD_SPECS.finance).toBeDefined();
+  });
+  it("PROFILE is an object with workspace_id field", () => {
+    expect(PROFILE).toHaveProperty("workspace_id");
+  });
+  it("PROFILE.base_currency is 'INR'", () => {
+    expect(PROFILE.base_currency).toBe("INR");
+  });
+  it("PROFILE.country is 'IN'", () => {
+    expect(PROFILE.country).toBe("IN");
+  });
+  it("FINANCE_CSV is a non-empty string", () => {
+    expect(typeof FINANCE_CSV).toBe("string");
+    expect(FINANCE_CSV.length).toBeGreaterThan(0);
+  });
+  it("FINANCE_CSV contains 'INR'", () => {
+    expect(FINANCE_CSV).toContain("INR");
+  });
+  it("FIXED_NOW is a Date instance", () => {
+    expect(FIXED_NOW).toBeInstanceOf(Date);
+  });
+  it("mapIntakeSourceToExtractionMethod('csv_upload') returns 'csv_import'", () => {
+    expect(mapIntakeSourceToExtractionMethod("csv_upload")).toBe("csv_import");
+  });
+  it("mapIntakeSourceToExtractionMethod('manual_form') returns 'manual_entry'", () => {
+    expect(mapIntakeSourceToExtractionMethod("manual_form")).toBe("manual_entry");
+  });
+});
+
 describe("intake → business-facts adapter", () => {
   it("maps intake sources to canonical extraction methods", () => {
     expect(mapIntakeSourceToExtractionMethod("csv_upload")).toBe("csv_import");

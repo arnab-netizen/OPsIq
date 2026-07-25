@@ -11,6 +11,34 @@ import { RecommendationSensitivity } from "@/domain/owner-mode/recommendation-in
 
 const S = (x: FinancialHealthState) => x;
 
+describe("[module4/5] cash-safety promotion gate — module contract assertions", () => {
+  it("evaluateCashSafetyGate is a function", () => { expect(typeof evaluateCashSafetyGate).toBe("function"); });
+  it("assertCashSafetyForPromotion is a function", () => { expect(typeof assertCashSafetyForPromotion).toBe("function"); });
+  it("worseState is a function", () => { expect(typeof worseState).toBe("function"); });
+  it("CashSafetyGateError is a class (function)", () => { expect(typeof CashSafetyGateError).toBe("function"); });
+  it("CashSafetyOutcome.BLOCKED_CASH_UNSAFE is defined", () => { expect(CashSafetyOutcome.BLOCKED_CASH_UNSAFE).toBeDefined(); });
+  it("RecommendationSensitivity.GROWTH_SENSITIVE is defined", () => { expect(RecommendationSensitivity.GROWTH_SENSITIVE).toBeDefined(); });
+  it("RecommendationSensitivity.COMPLIANCE_SENSITIVE is defined", () => { expect(RecommendationSensitivity.COMPLIANCE_SENSITIVE).toBeDefined(); });
+  it("worseState('SAFE', 'CRITICAL') returns 'CRITICAL'", () => { expect(worseState(S("SAFE"), S("CRITICAL"))).toBe("CRITICAL"); });
+  it("evaluateCashSafetyGate returns object with allowed field", () => {
+    expect(evaluateCashSafetyGate("SAFE", "SAFE", RecommendationSensitivity.GROWTH_SENSITIVE)).toHaveProperty("allowed");
+  });
+  it("evaluateCashSafetyGate SAFE+SAFE+GROWTH returns allowed=true", () => {
+    expect(evaluateCashSafetyGate("SAFE", "SAFE", RecommendationSensitivity.GROWTH_SENSITIVE).allowed).toBe(true);
+  });
+  it("evaluateCashSafetyGate returns object with outcome field", () => {
+    expect(evaluateCashSafetyGate("SAFE", "SAFE", RecommendationSensitivity.GROWTH_SENSITIVE)).toHaveProperty("outcome");
+  });
+  it("assertCashSafetyForPromotion does not throw when safe", () => {
+    expect(() => assertCashSafetyForPromotion("SAFE", "SAFE", RecommendationSensitivity.GROWTH_SENSITIVE, "rec-x")).not.toThrow();
+  });
+  it("CashSafetyGateError is instanceof Error when thrown", () => {
+    try { assertCashSafetyForPromotion("SAFE", "CRITICAL", RecommendationSensitivity.GROWTH_SENSITIVE, "rec-1"); }
+    catch (e) { expect(e).toBeInstanceOf(Error); }
+  });
+  it("worseState('SAFE', 'SAFE') returns 'SAFE'", () => { expect(worseState(S("SAFE"), S("SAFE"))).toBe("SAFE"); });
+});
+
 describe("[module4/5] cash-safety promotion gate", () => {
   it("worseState returns the more severe state", () => {
     expect(worseState(S("SAFE"), S("CRITICAL"))).toBe("CRITICAL");

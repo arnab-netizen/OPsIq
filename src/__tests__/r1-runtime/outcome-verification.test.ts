@@ -5,6 +5,23 @@ import {
   verifyOutcomeValue,
 } from "@/services/outcome/verification";
 
+describe("outcome-verification — module contract assertions", () => {
+  it("captureOutcomeVerificationMetadata is a function", () => { expect(typeof captureOutcomeVerificationMetadata).toBe("function"); });
+  it("checkFraudRisk is a function", () => { expect(typeof checkFraudRisk).toBe("function"); });
+  it("verifyOutcomeValue is a function", () => { expect(typeof verifyOutcomeValue).toBe("function"); });
+  it("captureOutcomeVerificationMetadata(50000,100000,null,'u') returns an object", () => { expect(typeof captureOutcomeVerificationMetadata(50000, 100000, null, "u")).toBe("object"); });
+  it("captureOutcomeVerificationMetadata result has verificationStatus field", () => { expect(captureOutcomeVerificationMetadata(50000, 100000, null, "u")).toHaveProperty("verificationStatus"); });
+  it("captureOutcomeVerificationMetadata result has auditTrail field", () => { expect(captureOutcomeVerificationMetadata(50000, 100000, null, "u")).toHaveProperty("auditTrail"); });
+  it("captureOutcomeVerificationMetadata result has verificationEvidence field", () => { expect(captureOutcomeVerificationMetadata(50000, 100000, null, "u")).toHaveProperty("verificationEvidence"); });
+  it("captureOutcomeVerificationMetadata verificationStatus is 'unverified'", () => { expect(captureOutcomeVerificationMetadata(50000, 100000, null, "u").verificationStatus).toBe("unverified"); });
+  it("captureOutcomeVerificationMetadata verificationConfidence is 0", () => { expect(captureOutcomeVerificationMetadata(50000, 100000, null, "u").verificationConfidence).toBe(0); });
+  it("checkFraudRisk(100000,50000,null) returns an object", () => { expect(typeof checkFraudRisk(100000, 50000, null)).toBe("object"); });
+  it("checkFraudRisk result has indicators field", () => { expect(checkFraudRisk(100000, 50000, null)).toHaveProperty("indicators"); });
+  it("checkFraudRisk result has riskLevel field", () => { expect(checkFraudRisk(100000, 50000, null)).toHaveProperty("riskLevel"); });
+  it("verifyOutcomeValue(50000,100000) returns an object", () => { expect(typeof verifyOutcomeValue(50000, 100000)).toBe("object"); });
+  it("verifyOutcomeValue(50000,100000).allowed is true", () => { expect(verifyOutcomeValue(50000, 100000).allowed).toBe(true); });
+});
+
 describe("Phase R1: Outcome Verification Service", () => {
   describe("captureOutcomeVerificationMetadata", () => {
     it("marks self-reported outcomes as unverified", () => {

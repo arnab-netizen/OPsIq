@@ -8,6 +8,23 @@ const good = (over: Partial<LeanScoringInput> = {}): LeanScoringInput => ({
   ...over,
 });
 
+describe("lean-guardrail — module contract assertions", () => {
+  it("classifyLean is a function", () => { expect(typeof classifyLean).toBe("function"); });
+  it("isLeanApproved is a function", () => { expect(typeof isLeanApproved).toBe("function"); });
+  it("LeanClassification is an object", () => { expect(typeof LeanClassification).toBe("object"); });
+  it("LeanClassification.LEAN_APPROVED is defined", () => { expect(LeanClassification.LEAN_APPROVED).toBeDefined(); });
+  it("LeanClassification.DATA_INSUFFICIENT is defined", () => { expect(LeanClassification.DATA_INSUFFICIENT).toBeDefined(); });
+  it("LeanClassification.CASH_UNSAFE_REJECTED is defined", () => { expect(LeanClassification.CASH_UNSAFE_REJECTED).toBeDefined(); });
+  it("good is a function", () => { expect(typeof good).toBe("function"); });
+  it("good() returns an object", () => { expect(typeof good()).toBe("object"); });
+  it("good() has profitImpact field", () => { expect(good()).toHaveProperty("profitImpact"); });
+  it("classifyLean(good()) returns an object", () => { expect(typeof classifyLean(good())).toBe("object"); });
+  it("classifyLean(good()) has classification field", () => { expect(classifyLean(good())).toHaveProperty("classification"); });
+  it("classifyLean(good()).classification equals LEAN_APPROVED", () => { expect(classifyLean(good()).classification).toBe(LeanClassification.LEAN_APPROVED); });
+  it("isLeanApproved(LeanClassification.LEAN_APPROVED) is true", () => { expect(isLeanApproved(LeanClassification.LEAN_APPROVED)).toBe(true); });
+  it("isLeanApproved(LeanClassification.DATA_INSUFFICIENT) is false", () => { expect(isLeanApproved(LeanClassification.DATA_INSUFFICIENT)).toBe(false); });
+});
+
 describe("[module7] lean profitability & workload guardrail", () => {
   it("a clean, low-risk action is LEAN_APPROVED", () => {
     const r = classifyLean(good());

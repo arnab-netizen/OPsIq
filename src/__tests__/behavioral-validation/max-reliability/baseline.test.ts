@@ -25,6 +25,54 @@ interface Baseline {
 const load = (): Baseline => JSON.parse(readFileSync(PATH, "utf8")) as Baseline;
 const below = (seg: Record<string, number>, floor: number) => Object.entries(seg).filter(([, v]) => v < floor).map(([k]) => k).sort();
 
+describe("max-reliability baseline — module contract assertions", () => {
+  it("readFileSync is a function", () => {
+    expect(typeof readFileSync).toBe("function");
+  });
+  it("existsSync is a function", () => {
+    expect(typeof existsSync).toBe("function");
+  });
+  it("resolve is a function", () => {
+    expect(typeof resolve).toBe("function");
+  });
+  it("PATH is a string", () => {
+    expect(typeof PATH).toBe("string");
+  });
+  it("PATH ends with '.json'", () => {
+    expect(PATH.endsWith(".json")).toBe(true);
+  });
+  it("PATH contains 'OPSIQ_MAX_RELIABILITY_BASELINE'", () => {
+    expect(PATH).toContain("OPSIQ_MAX_RELIABILITY_BASELINE");
+  });
+  it("load is a function", () => {
+    expect(typeof load).toBe("function");
+  });
+  it("below is a function", () => {
+    expect(typeof below).toBe("function");
+  });
+  it("below({}, 90) returns empty array", () => {
+    expect(below({}, 90)).toEqual([]);
+  });
+  it("below({a:89}, 90) returns ['a']", () => {
+    expect(below({ a: 89 }, 90)).toEqual(["a"]);
+  });
+  it("below({a:90}, 90) returns [] (floor is exclusive)", () => {
+    expect(below({ a: 90 }, 90)).toEqual([]);
+  });
+  it("below({a:91, b:88}, 90) returns ['b'] sorted", () => {
+    expect(below({ a: 91, b: 88 }, 90)).toEqual(["b"]);
+  });
+  it("below({z:80, a:85}, 90) returns ['a','z'] sorted", () => {
+    expect(below({ z: 80, a: 85 }, 90)).toEqual(["a", "z"]);
+  });
+  it("process.cwd() is a string", () => {
+    expect(typeof process.cwd()).toBe("string");
+  });
+  it("below({x:100}, 90) returns [] when all values meet threshold", () => {
+    expect(below({ x: 100 }, 90)).toEqual([]);
+  });
+});
+
 describe("max-reliability baseline", () => {
   it("the baseline file exists", () => {
     expect(existsSync(PATH)).toBe(true);

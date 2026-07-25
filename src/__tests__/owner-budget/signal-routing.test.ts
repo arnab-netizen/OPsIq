@@ -31,6 +31,23 @@ const GAP_SAMPLES: BudgetSignalType[] = [
   "underinvestment_detected", "laundry_b2b_margin_risk",
 ];
 
+describe("signal routing — module contract assertions", () => {
+  it("routeBudgetSignal is a function", () => { expect(typeof routeBudgetSignal).toBe("function"); });
+  it("routeBudgetSignals is a function", () => { expect(typeof routeBudgetSignals).toBe("function"); });
+  it("requiresFinanceReDiagnosis is a function", () => { expect(typeof requiresFinanceReDiagnosis).toBe("function"); });
+  it("FINANCIAL is an array", () => { expect(Array.isArray(FINANCIAL)).toBe(true); });
+  it("AUDIT_CONSUMED is an array", () => { expect(Array.isArray(AUDIT_CONSUMED)).toBe(true); });
+  it("GAP_SAMPLES is an array", () => { expect(Array.isArray(GAP_SAMPLES)).toBe(true); });
+  it("FINANCIAL has at least 1 element", () => { expect(FINANCIAL.length).toBeGreaterThan(0); });
+  it("AUDIT_CONSUMED has at least 1 element", () => { expect(AUDIT_CONSUMED.length).toBeGreaterThan(0); });
+  it("GAP_SAMPLES has at least 1 element", () => { expect(GAP_SAMPLES.length).toBeGreaterThan(0); });
+  it("routeBudgetSignal('cash_runway_risk') returns an object", () => { expect(typeof routeBudgetSignal("cash_runway_risk")).toBe("object"); });
+  it("routeBudgetSignal result has consumptionMode field", () => { expect(routeBudgetSignal("cash_runway_risk")).toHaveProperty("consumptionMode"); });
+  it("routeBudgetSignal result has consumerExists field", () => { expect(routeBudgetSignal("cash_runway_risk")).toHaveProperty("consumerExists"); });
+  it("routeBudgetSignals returns an array", () => { expect(Array.isArray(routeBudgetSignals(["cash_runway_risk"]))).toBe(true); });
+  it("requiresFinanceReDiagnosis with empty array returns false", () => { expect(requiresFinanceReDiagnosis([])).toBe(false); });
+});
+
 describe("routeBudgetSignal", () => {
   it("routes financially-material signals to finance re-diagnosis (real consumer)", () => {
     for (const t of FINANCIAL) {

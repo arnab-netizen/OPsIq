@@ -15,6 +15,23 @@ import {
 
 const NOW = new Date("2026-06-28T00:00:00Z");
 
+describe("equipment-capacity — module contract assertions", () => {
+  it("assessEquipmentCapacity is a function", () => { expect(typeof assessEquipmentCapacity).toBe("function"); });
+  it("assessFleetCapacity is a function", () => { expect(typeof assessFleetCapacity).toBe("function"); });
+  it("capacityBlocksGrowth is a function", () => { expect(typeof capacityBlocksGrowth).toBe("function"); });
+  it("enforceCapacitySafetyForPromotion is a function", () => { expect(typeof enforceCapacitySafetyForPromotion).toBe("function"); });
+  it("CapacitySafetyGateError is a function", () => { expect(typeof CapacitySafetyGateError).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW instanceof Date).toBe(true); });
+  it("assessEquipmentCapacity with safe input returns an object", () => { expect(typeof assessEquipmentCapacity({ utilization: 0.5, downtimeState: "up", maintenanceDueAt: null, status: "operational" }, NOW)).toBe("object"); });
+  it("assessEquipmentCapacity result has status field", () => { expect(assessEquipmentCapacity({ utilization: 0.5, downtimeState: "up", maintenanceDueAt: null, status: "operational" }, NOW)).toHaveProperty("status"); });
+  it("assessEquipmentCapacity safe input status is 'safe'", () => { expect(assessEquipmentCapacity({ utilization: 0.5, downtimeState: "up", maintenanceDueAt: null, status: "operational" }, NOW).status).toBe("safe"); });
+  it("assessFleetCapacity([]) returns an object", () => { expect(typeof assessFleetCapacity([], NOW)).toBe("object"); });
+  it("assessFleetCapacity([]).status is 'safe'", () => { expect(assessFleetCapacity([], NOW).status).toBe("safe"); });
+  it("capacityBlocksGrowth('safe') is false", () => { expect(capacityBlocksGrowth("safe")).toBe(false); });
+  it("capacityBlocksGrowth('blocked') is true", () => { expect(capacityBlocksGrowth("blocked")).toBe(true); });
+  it("deps is a function", () => { expect(typeof deps).toBe("function"); });
+});
+
 describe("assessEquipmentCapacity", () => {
   it("blocks when down or maintenance overdue", () => {
     expect(assessEquipmentCapacity({ utilization: 0.1, downtimeState: "down", maintenanceDueAt: null, status: "operational" }, NOW).status).toBe("blocked");

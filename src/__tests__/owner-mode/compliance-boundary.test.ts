@@ -12,6 +12,23 @@ import { recordComplianceItem, getComplianceReviewItems, type ComplianceDeps } f
 const NOW = new Date("2026-06-28T00:00:00Z");
 beforeEach(() => emitAuditEvent.mockClear());
 
+describe("compliance boundary — module contract assertions", () => {
+  it("classifyComplianceRisk is a function", () => { expect(typeof classifyComplianceRisk).toBe("function"); });
+  it("isExpiringSoon is a function", () => { expect(typeof isExpiringSoon).toBe("function"); });
+  it("isExpired is a function", () => { expect(typeof isExpired).toBe("function"); });
+  it("COMPLIANCE_DISCLAIMER is a string", () => { expect(typeof COMPLIANCE_DISCLAIMER).toBe("string"); });
+  it("COMPLIANCE_DISCLAIMER is non-empty", () => { expect(COMPLIANCE_DISCLAIMER.length).toBeGreaterThan(0); });
+  it("recordComplianceItem is a function", () => { expect(typeof recordComplianceItem).toBe("function"); });
+  it("getComplianceReviewItems is a function", () => { expect(typeof getComplianceReviewItems).toBe("function"); });
+  it("NOW is a Date", () => { expect(NOW).toBeInstanceOf(Date); });
+  it("classifyComplianceRisk({}) returns an object", () => { expect(typeof classifyComplianceRisk({})).toBe("object"); });
+  it("classifyComplianceRisk({}).classification is 'informational'", () => { expect(classifyComplianceRisk({}).classification).toBe("informational"); });
+  it("classifyComplianceRisk({}).blocked is false", () => { expect(classifyComplianceRisk({}).blocked).toBe(false); });
+  it("classifyComplianceRisk({ expiryPassed: true }).blocked is true", () => { expect(classifyComplianceRisk({ expiryPassed: true }).blocked).toBe(true); });
+  it("isExpired with past date returns true", () => { expect(isExpired(new Date("2026-01-01Z"), NOW)).toBe(true); });
+  it("isExpired with future date returns false", () => { expect(isExpired(new Date("2027-01-01Z"), NOW)).toBe(false); });
+});
+
 describe("classifyComplianceRisk", () => {
   it("blocks until review when a document has expired", () => {
     const r = classifyComplianceRisk({ expiryPassed: true });

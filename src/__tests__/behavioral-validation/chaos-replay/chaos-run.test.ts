@@ -13,6 +13,56 @@ import { scoreChaos, chaosScoreGatesPass, CHAOS_THRESHOLDS } from "@/behavioral-
 import { verifyLayerMatrix, OPSIQ_LAYERS, HIGH_RISK_LAYERS } from "@/behavioral-validation/chaos-replay/chaos-layers";
 import { InMemoryLearningStore } from "@/behavioral-validation/learning-store";
 
+describe("chaos-run — module contract assertions (non-DB)", () => {
+  it("COUNTED_PUBLIC_CASES is an array", () => {
+    expect(Array.isArray(COUNTED_PUBLIC_CASES)).toBe(true);
+  });
+  it("COUNTED_PUBLIC_CASES has at least 75 entries", () => {
+    expect(COUNTED_PUBLIC_CASES.length).toBeGreaterThanOrEqual(75);
+  });
+  it("runChaosBatch is a function", () => {
+    expect(typeof runChaosBatch).toBe("function");
+  });
+  it("scoreChaos is a function", () => {
+    expect(typeof scoreChaos).toBe("function");
+  });
+  it("chaosScoreGatesPass is a function", () => {
+    expect(typeof chaosScoreGatesPass).toBe("function");
+  });
+  it("verifyLayerMatrix is a function", () => {
+    expect(typeof verifyLayerMatrix).toBe("function");
+  });
+  it("OPSIQ_LAYERS is an array with at least 1 entry", () => {
+    expect(Array.isArray(OPSIQ_LAYERS)).toBe(true);
+    expect(OPSIQ_LAYERS.length).toBeGreaterThan(0);
+  });
+  it("HIGH_RISK_LAYERS is an array with at least 1 entry", () => {
+    expect(Array.isArray(HIGH_RISK_LAYERS)).toBe(true);
+    expect(HIGH_RISK_LAYERS.length).toBeGreaterThan(0);
+  });
+  it("InMemoryLearningStore is a function (class)", () => {
+    expect(typeof InMemoryLearningStore).toBe("function");
+  });
+  it("CHAOS_THRESHOLDS is an object", () => {
+    expect(typeof CHAOS_THRESHOLDS).toBe("object");
+  });
+  it("CHAOS_THRESHOLDS has moduleRouting property (number)", () => {
+    expect(typeof CHAOS_THRESHOLDS.moduleRouting).toBe("number");
+  });
+  it("CHAOS_THRESHOLDS.moduleRouting is >= 0", () => {
+    expect(CHAOS_THRESHOLDS.moduleRouting).toBeGreaterThanOrEqual(0);
+  });
+  it("all HIGH_RISK_LAYERS entries are strings", () => {
+    for (const l of HIGH_RISK_LAYERS) expect(typeof l).toBe("string");
+  });
+  it("all COUNTED_PUBLIC_CASES have a meta field", () => {
+    expect(COUNTED_PUBLIC_CASES[0]).toHaveProperty("meta");
+  });
+  it("new InMemoryLearningStore() is an instance of InMemoryLearningStore", () => {
+    expect(new InMemoryLearningStore()).toBeInstanceOf(InMemoryLearningStore);
+  });
+});
+
 let items: ChaosBatchItem[];
 
 beforeAll(async () => {

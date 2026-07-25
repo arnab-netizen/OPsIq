@@ -6,6 +6,25 @@ import { EXPANDED_CASES } from "@/behavioral-validation/expansion";
 import { SEED_CASES } from "@/behavioral-validation/seed-cases";
 import { adviceOutputSchema } from "@/behavioral-validation/schema";
 
+describe("harness advisor — module contract assertions", () => {
+  it("advise is a function", () => { expect(typeof advise).toBe("function"); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("detectUnsafe is a function", () => { expect(typeof detectUnsafe).toBe("function"); });
+  it("InMemoryLearningStore is a class (function)", () => { expect(typeof InMemoryLearningStore).toBe("function"); });
+  it("EXPANDED_CASES is a non-empty array", () => { expect(Array.isArray(EXPANDED_CASES)).toBe(true); expect(EXPANDED_CASES.length).toBeGreaterThan(0); });
+  it("SEED_CASES is a non-empty array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("adviceOutputSchema has a parse method", () => { expect(typeof adviceOutputSchema.parse).toBe("function"); });
+  it("new InMemoryLearningStore() instanceof InMemoryLearningStore", () => { expect(new InMemoryLearningStore()).toBeInstanceOf(InMemoryLearningStore); });
+  it("SEED_CASES[0] has archetype field", () => { expect(SEED_CASES[0]).toHaveProperty("archetype"); });
+  it("SEED_CASES[0] has businessType field", () => { expect(SEED_CASES[0]).toHaveProperty("businessType"); });
+  it("baseAdvise(SEED_CASES[0]) returns an object", () => { expect(typeof baseAdvise(SEED_CASES[0])).toBe("object"); });
+  it("baseAdvise result has rootCause field", () => { expect(baseAdvise(SEED_CASES[0])).toHaveProperty("rootCause"); });
+  it("baseAdvise result has recommendedNextAction field", () => { expect(baseAdvise(SEED_CASES[0])).toHaveProperty("recommendedNextAction"); });
+  it("detectUnsafe(SEED_CASES[0], baseAdvise(SEED_CASES[0])) returns an array", () => {
+    expect(Array.isArray(detectUnsafe(SEED_CASES[0], baseAdvise(SEED_CASES[0])))).toBe(true);
+  });
+});
+
 describe("harness advisor", () => {
   it("produces schema-valid, structurally complete base advice for every seed", () => {
     for (const c of SEED_CASES) {

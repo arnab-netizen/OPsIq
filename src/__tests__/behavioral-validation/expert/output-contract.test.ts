@@ -6,6 +6,23 @@ import { SEED_CASES } from "@/behavioral-validation/seed-cases";
 const cash = SEED_CASES.find((c) => c.id === "A1")!; // high-risk + finance + operational + high-sensitivity
 const compliance = SEED_CASES.find((c) => c.flags.complianceRisk)!;
 
+describe("expert output-contract — module contract assertions", () => {
+  it("validateOutputContract is a function", () => { expect(typeof validateOutputContract).toBe("function"); });
+  it("buildContractReport is a function", () => { expect(typeof buildContractReport).toBe("function"); });
+  it("CONTRACT_SECTIONS is an array", () => { expect(Array.isArray(CONTRACT_SECTIONS)).toBe(true); });
+  it("baseAdvise is a function", () => { expect(typeof baseAdvise).toBe("function"); });
+  it("SEED_CASES is an array", () => { expect(Array.isArray(SEED_CASES)).toBe(true); });
+  it("cash is defined", () => { expect(cash).toBeDefined(); });
+  it("compliance is defined", () => { expect(compliance).toBeDefined(); });
+  it("CONTRACT_SECTIONS.length equals 22", () => { expect(CONTRACT_SECTIONS.length).toBe(22); });
+  it("SEED_CASES.length is greater than 0", () => { expect(SEED_CASES.length).toBeGreaterThan(0); });
+  it("validateOutputContract(cash, baseAdvise(cash)) returns an object", () => { expect(typeof validateOutputContract(cash, baseAdvise(cash))).toBe("object"); });
+  it("validateOutputContract(cash, baseAdvise(cash)).passed is true", () => { expect(validateOutputContract(cash, baseAdvise(cash)).passed).toBe(true); });
+  it("validateOutputContract result has missingRequired field", () => { expect(validateOutputContract(cash, baseAdvise(cash))).toHaveProperty("missingRequired"); });
+  it("buildContractReport([]) returns an object", () => { expect(typeof buildContractReport([])).toBe("object"); });
+  it("buildContractReport([]) has passRate field", () => { expect(buildContractReport([])).toHaveProperty("passRate"); });
+});
+
 describe("expert output contract", () => {
   it("defines 22 contract sections", () => {
     expect(CONTRACT_SECTIONS.length).toBe(22);

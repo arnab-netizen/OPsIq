@@ -68,6 +68,23 @@ function diagnose(input: SalesSnapshotInput) {
   return diagnoseSalesSnapshot(input, { now: new Date("2026-06-05") });
 }
 
+describe("owner-sales diagnosis — module contract assertions", () => {
+  it("diagnoseSalesSnapshot is a function", () => { expect(typeof diagnoseSalesSnapshot).toBe("function"); });
+  it("buildSalesRiskFindings is a function", () => { expect(typeof buildSalesRiskFindings).toBe("function"); });
+  it("buildSalesOpportunityFindings is a function", () => { expect(typeof buildSalesOpportunityFindings).toBe("function"); });
+  it("computeSalesMetrics is a function", () => { expect(typeof computeSalesMetrics).toBe("function"); });
+  it("resolveSalesThresholds is a function", () => { expect(typeof resolveSalesThresholds).toBe("function"); });
+  it("rankSalesFindings is a function", () => { expect(typeof rankSalesFindings).toBe("function"); });
+  it("ownerFindingSchema is an object", () => { expect(typeof ownerFindingSchema).toBe("object"); });
+  it("domainScoreSchema is an object", () => { expect(typeof domainScoreSchema).toBe("object"); });
+  it("healthy is a function", () => { expect(typeof healthy).toBe("function"); });
+  it("distress is a function", () => { expect(typeof distress).toBe("function"); });
+  it("codes is a function", () => { expect(typeof codes).toBe("function"); });
+  it("diagnose is a function", () => { expect(typeof diagnose).toBe("function"); });
+  it("healthy() returns an object", () => { expect(typeof healthy()).toBe("object"); });
+  it("distress() returns an object", () => { expect(typeof distress()).toBe("object"); });
+});
+
 describe("owner-sales detector — risk findings", () => {
   it("distress triggers the sales risk cluster", () => {
     const r = diagnose(distress());

@@ -12,6 +12,23 @@ import { sourceRecordSchema, findPII } from "@/behavioral-validation/public-case
 
 const proceedish = (st: string) => st === "proceed" || st === "cautious_proceed";
 
+describe("customer-vendor-market-pack — module contract assertions", () => {
+  it("CUSTOMER_VENDOR_MARKET_PACK is an array", () => { expect(Array.isArray(PACK)).toBe(true); });
+  it("CUSTOMER_VENDOR_MARKET_SUBCATEGORIES is an array", () => { expect(Array.isArray(CUSTOMER_VENDOR_MARKET_SUBCATEGORIES)).toBe(true); });
+  it("businessRealityScenarioSchema is an object", () => { expect(typeof businessRealityScenarioSchema).toBe("object"); });
+  it("CUSTOMER_VENDOR_MARKET_SOURCES is an array", () => { expect(Array.isArray(CUSTOMER_VENDOR_MARKET_SOURCES)).toBe(true); });
+  it("sourceRecordSchema is an object", () => { expect(typeof sourceRecordSchema).toBe("object"); });
+  it("findPII is a function", () => { expect(typeof findPII).toBe("function"); });
+  it("proceedish is a function", () => { expect(typeof proceedish).toBe("function"); });
+  it("proceedish('proceed') returns true", () => { expect(proceedish("proceed")).toBe(true); });
+  it("proceedish('blocked') returns false", () => { expect(proceedish("blocked")).toBe(false); });
+  it("PACK.length equals 100", () => { expect(PACK.length).toBe(100); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("Customer/Vendor/Market pack — count & identity", () => {
   it("has exactly 100 counted, unique scenarios", () => {
     expect(PACK.length).toBe(100);

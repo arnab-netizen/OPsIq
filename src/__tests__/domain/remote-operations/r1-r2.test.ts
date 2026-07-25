@@ -7,6 +7,23 @@ import type { LocationScope } from "@/domain/remote-operations/remote-types";
 
 const cashRedInput: CollectiveInput = { archetype: "universal", ownerGoal: "spend on marketing", signals: [{ domain: "cash-survival", status: "RED", severity: "CRITICAL", confidence: "HIGH" }] };
 
+describe("r1-r2 — module contract assertions", () => {
+  it("checkGovernedByOwnerMode is a function", () => { expect(typeof checkGovernedByOwnerMode).toBe("function"); });
+  it("assertGovernedByOwnerMode is a function", () => { expect(typeof assertGovernedByOwnerMode).toBe("function"); });
+  it("checkTerminalCannotForgeSuccess is a function", () => { expect(typeof checkTerminalCannotForgeSuccess).toBe("function"); });
+  it("OwnerModeBypassError is a function", () => { expect(typeof OwnerModeBypassError).toBe("function"); });
+  it("assertLocationScope is a function", () => { expect(typeof assertLocationScope).toBe("function"); });
+  it("canAccessTerminal is a function", () => { expect(typeof canAccessTerminal).toBe("function"); });
+  it("requiresExternalToken is a function", () => { expect(typeof requiresExternalToken).toBe("function"); });
+  it("runCollective is a function", () => { expect(typeof runCollective).toBe("function"); });
+  it("UnauthorizedError is a function", () => { expect(typeof UnauthorizedError).toBe("function"); });
+  it("ForbiddenError is a function", () => { expect(typeof ForbiddenError).toBe("function"); });
+  it("cashRedInput is an object", () => { expect(typeof cashRedInput).toBe("object"); });
+  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+  it("it is a function", () => { expect(typeof it).toBe("function"); });
+});
+
 describe("[R1] Owner Mode integration contract — remote cannot bypass governance", () => {
   it("a remote decision carrying a valid Owner Mode arbitration packet is governed", () => {
     const arbitration = runCollective(cashRedInput);

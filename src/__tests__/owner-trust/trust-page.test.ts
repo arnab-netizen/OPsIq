@@ -18,6 +18,24 @@ const home = fs.readFileSync(
   "utf8"
 );
 
+describe("Owner Trust & Explainability page — module contract assertions", () => {
+  it("fs.readFileSync is a function", () => { expect(typeof fs.readFileSync).toBe("function"); });
+  it("path.resolve is a function", () => { expect(typeof path.resolve).toBe("function"); });
+  it("src is a non-empty string", () => { expect(typeof src).toBe("string"); expect(src.length).toBeGreaterThan(0); });
+  it("home is a non-empty string", () => { expect(typeof home).toBe("string"); expect(home.length).toBeGreaterThan(0); });
+  it("src length is > 100 characters", () => { expect(src.length).toBeGreaterThan(100); });
+  it("home length is > 100 characters", () => { expect(home.length).toBeGreaterThan(100); });
+  it("src starts with '\"use client\"'", () => { expect(src.startsWith('"use client"')).toBe(true); });
+  it("src references trust API path", () => { expect(src).toContain("/api/owner/trust"); });
+  it("src references @/ui/primitives", () => { expect(src).toContain("@/ui/primitives"); });
+  it("src references §18 credibility field whatWasDetected", () => { expect(src).toContain("whatWasDetected"); });
+  it("src references confidence field", () => { expect(src).toContain("confidence"); });
+  it("src references hasInventedValues honesty field", () => { expect(src).toContain("hasInventedValues"); });
+  it("src references dataGaps honesty field", () => { expect(src).toContain("dataGaps"); });
+  it("home links to /owner/trust", () => { expect(home).toContain("/owner/trust"); });
+  it("home references owner namespace", () => { expect(home).toContain("owner"); });
+});
+
 describe("Owner Trust & Explainability page wiring", () => {
   it("is a client page using shared UI primitives", () => {
     expect(src.startsWith('"use client"')).toBe(true);

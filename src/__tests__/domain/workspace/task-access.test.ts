@@ -16,6 +16,23 @@ const viewer = (o: Partial<TaskViewer>): TaskViewer => ({
   ...o,
 });
 
+describe("canViewTask — module contract assertions", () => {
+  it("canViewTask is a function", () => { expect(typeof canViewTask).toBe("function"); });
+  it("task('emp-1').assignedUserId is 'emp-1'", () => { expect(task("emp-1").assignedUserId).toBe("emp-1"); });
+  it("EmployeeAccessStatus is an object", () => { expect(typeof EmployeeAccessStatus).toBe("object"); });
+  it("EmployeeAccessStatus.ACTIVE is defined", () => { expect(EmployeeAccessStatus.ACTIVE).toBeDefined(); });
+  it("EmployeeAccessStatus.SUSPENDED is defined", () => { expect(EmployeeAccessStatus.SUSPENDED).toBeDefined(); });
+  it("EmployeeAccessStatus.OFFBOARDED is defined", () => { expect(EmployeeAccessStatus.OFFBOARDED).toBeDefined(); });
+  it("WS is a non-empty string", () => { expect(typeof WS).toBe("string"); expect(WS.length).toBeGreaterThan(0); });
+  it("task is a function", () => { expect(typeof task).toBe("function"); });
+  it("viewer is a function", () => { expect(typeof viewer).toBe("function"); });
+  it("task('emp-1') returns an object with workspaceId field", () => { expect(task("emp-1")).toHaveProperty("workspaceId"); });
+  it("viewer({}) returns an object with userId field", () => { expect(viewer({})).toHaveProperty("userId"); });
+  it("viewer({}).isOwner is false by default", () => { expect(viewer({}).isOwner).toBe(false); });
+  it("canViewTask(viewer({ userId: 'emp-1' }), task('emp-1')) returns true", () => { expect(canViewTask(viewer({ userId: "emp-1" }), task("emp-1"))).toBe(true); });
+  it("canViewTask(viewer({ userId: 'emp-1' }), task('emp-2')) returns false", () => { expect(canViewTask(viewer({ userId: "emp-1" }), task("emp-2"))).toBe(false); });
+});
+
 describe("canViewTask", () => {
   it("employee can view their own assigned task", () => {
     expect(canViewTask(viewer({ userId: "emp-1" }), task("emp-1"))).toBe(true);

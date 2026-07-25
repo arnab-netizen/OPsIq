@@ -21,6 +21,23 @@ function ev(
 }
 const danger = (e: OwnerActionEvidence[]) => detectOwnerActionDanger(e).danger;
 
+describe("owner-action-danger — module contract assertions", () => {
+  it("detectOwnerActionDanger is a function", () => { expect(typeof detectOwnerActionDanger).toBe("function"); });
+  it("ev is a function", () => { expect(typeof ev).toBe("function"); });
+  it("danger is a function", () => { expect(typeof danger).toBe("function"); });
+  it("detectOwnerActionDanger([]) returns an object", () => { expect(typeof detectOwnerActionDanger([])).toBe("object"); });
+  it("detectOwnerActionDanger([]).danger is false for empty input", () => { expect(detectOwnerActionDanger([]).danger).toBe(false); });
+  it("detectOwnerActionDanger result has danger field", () => { expect(detectOwnerActionDanger([])).toHaveProperty("danger"); });
+  it("detectOwnerActionDanger result has type field", () => { expect(detectOwnerActionDanger([])).toHaveProperty("type"); });
+  it("ev() returns an object with dimension field", () => { expect(ev("financial_health", "test")).toHaveProperty("dimension"); });
+  it("ev('financial_health', 'test').dimension is 'financial_health'", () => { expect(ev("financial_health", "test").dimension).toBe("financial_health"); });
+  it("ev() returns an object with finding field", () => { expect(ev("financial_health", "test")).toHaveProperty("finding"); });
+  it("ev() returns an object with isCritical field", () => { expect(ev("financial_health", "test")).toHaveProperty("isCritical"); });
+  it("ev() isCritical defaults to true", () => { expect(ev("financial_health", "test").isCritical).toBe(true); });
+  it("danger([]) returns false", () => { expect(danger([])).toBe(false); });
+  it("detectOwnerActionDanger with non-critical evidence returns false danger", () => { expect(detectOwnerActionDanger([ev("financial_health", "deep discount", false, {})]).danger).toBe(false); });
+});
+
 describe("owner-action-danger — NEGATIVE_MARGIN_DISCOUNT", () => {
   it("[1] deep discount + negative contribution margin triggers", () => {
     const sig = detectOwnerActionDanger([

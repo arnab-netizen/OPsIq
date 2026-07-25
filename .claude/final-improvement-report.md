@@ -207,3 +207,89 @@ The following gates are deferred until DATABASE_URL is configured and network is
 ---
 
 **Classification:** COMPLETE_VERIFIED — all non-DB gates pass; DB runtime verified via GitHub Actions LANE_B (postgres:16, run 27793720853, 2026-06-18, 22 test files / 174 tests passed). LANE_A Neon verification run 27795140566 (2026-06-18): pooler gate ✅, schema valid ✅, migrate status ❌ NEON_DB_PENDING_MIGRATIONS (22 pending migrations + 1 ghost migration `1778679447_add_aggregate_locks`), DB tests ⏭ SKIPPED. Fix: resolve ghost migration, run `prisma migrate deploy` against Neon direct URL, re-trigger LANE_A.
+
+---
+
+## Addendum: Bundle 4–7 Completion (2026-07-24)
+
+### Bundles Completed Since v2.0
+
+| Bundle | Name | Status | Tests Added | Migration |
+|--------|------|--------|-------------|-----------|
+| 4.1 | Stage 3 Reassessment Signal Wiring | COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE | N/A | N/A |
+| 4.2 | Owner Business Condition Profile (BCP) service + API | COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE | 50+ | Yes |
+| 5.1 | Integration Fabric Contracts (connector DTO, event schemas, BCP trigger mapping) | COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE | 50+ | N/A |
+| 5.2 | Connector Registry service + API + Prisma schema | COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE | 52 | Yes |
+| 5.3 | Integration Event Ingestion service + API | COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE | 50+ | N/A |
+| 6 | Consulting Mode engagement lifecycle | COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE | 63 | Yes |
+| 7.1 | Adversarial workspace isolation suite (consulting) | COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE | 48 | N/A |
+
+### Bundle 6: Consulting Mode — Security and Correctness
+
+**Four OpsIQ dimensions at engagement level:**
+- `consultingPhase` → consulting lifecycle stage (DISCOVERY/DIAGNOSIS/IMPLEMENTATION/REVIEW)
+- `BusinessConditionProfile` relation → business condition
+- `interventionMode` + `interventionPhase` → intervention mode and phase
+- `humanFactors` JSON → human execution reality (ownerBottleneckRisk, followThroughRisk, resistanceToChange, communicationBreakdownRisk, moraleFragility, managementCapabilityGap, keyPersonDependency, accountabilityWeakness)
+
+**Security boundaries proven:**
+- Phase FSM enforced: forward-only transitions, no skip, no reversal, REVIEW is terminal
+- Client/Consultant DTO boundary: `consultantNotes`, `assignedConsultantId`, `createdBy`, full `humanFactors` never in client view
+- Evidence-chain finding creation: `primaryEvidenceId` validated in same engagement before creating finding
+- Finding-required recommendation generation: `findingId` validated in same engagement before creating recommendation
+- Critical-action closure gate: all critical-priority actions must be completed or cancelled before closure
+- All mutations emit designated audit event (8 events total)
+- `CONSULTING_READ` required for GET; `CONSULTING_WRITE` required for POST
+- `workspaceId` always from `ctx.verifiedWorkspaceId`, never from body
+
+**Migration:** `20260724000000_bundle6_consulting_engagement_fields` — three additive `ALTER TABLE` statements on `engagements`; no existing rows affected.
+
+### Bundle 7.1: Adversarial Security Tests
+
+48 tests proving:
+1. Workspace isolation — workspaceId always from service param
+2. Cross-tenant isolation — WS_B cannot access WS_A engagement
+3. DTO leakage prevention — client view strips all consultant-internal fields and restricted humanFactors
+4. Phase FSM enforcement — invalid transitions and reversals rejected
+5. Evidence gate — cross-engagement evidence blocked
+6. Closure gate — critical actions block; completed/cancelled allow
+7. Audit event completeness — all 6 mutations emit events; reads emit nothing
+
+**Root causes found and fixed during Bundle 7.1 testing:**
+- `vi.clearAllMocks()` does NOT reset mock return values (must use `vi.resetAllMocks()`)
+- Closure gate status strings are lowercase (`"completed"` / `"cancelled"`)
+- `createConsultingFinding` calls `db.finding.findFirst` before `db.finding.create` (idempotency check)
+
+### Updated Deployment-Readiness Audit (2026-07-24)
+
+| Gate | Result | Notes |
+|------|--------|-------|
+| npx tsc --noEmit | ✓ PASS | Zero TypeScript errors |
+| npx prisma validate | ✓ PASS | Schema valid |
+| npm run build | ✓ PASS | All routes build successfully |
+| npx vitest run (consulting) | ✓ PASS | 63/63 service tests + 48/48 adversarial tests |
+| CI LANE_B (Bundle 4-5) | ✓ PASS | Prior bundles verified on Postgres 16 |
+| CI LANE_B (Bundle 6) | ⚠ PENDING | Migration pushed 2026-07-24; re-run expected |
+
+### New Monetization Gaps (Bundles 4–7)
+
+1. **Consulting tier not gated by subscription** — CONSULTING_WRITE/READ capabilities exist but no subscription tier requires payment for consulting mode access; anyone with the role can use it.
+2. **Integration connectors not metered** — connector registry and event ingestion have no quota per workspace.
+
+### New Enterprise Buyer Concerns (Bundles 4–7)
+
+1. **Consulting engagement records not exportable** — no structured export for consulting phase history, findings, or recommendations (audit trail exists but not exportable).
+2. **Client/consultant role assignment not enforced at workspace level** — CONSULTING_WRITE is a capability but client-vs-consultant role distinction is not enforced via workspace membership roles.
+
+### Updated Recommended Next 10 Build Slices
+
+1. **CI LANE_B re-verify for Bundle 6** — ensure `consulting_phase`, `consultant_notes`, `human_factors` columns applied by migration
+2. **Bundle 7.2: Permission matrix tests** — test CONSULTING_READ/WRITE boundary at HTTP layer using a real `withCanonicalEnforcement` integration
+3. **Bundle 7.3: DTO leakage scan** — static analysis or runtime probe of all public GET endpoints for internal field exposure
+4. **Bundle 7.4: Audit completeness scan** — verify every mutation across all routes has an audit event in the registry
+5. **Consulting subscription gate** — require a consulting tier plan for CONSULTING_WRITE access
+6. **Consulting engagement export API** — structured JSON export of engagement + findings + recommendations
+7. **Client/consultant role enforcement** — workspace membership role must be CONSULTANT to hold CONSULTING_WRITE
+8. **Controlled learning system (Phases 29–35)** — once DB verified, implementing learning loop
+9. **Audit trail export API** — signed JSON of all material events per workspace
+10. **Pre-existing lint error resolution** — fix 1553 ESLint errors in non-owner-mode codebase

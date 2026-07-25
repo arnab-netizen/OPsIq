@@ -9,6 +9,23 @@
 import { describe, it, expect } from "vitest";
 import { classifyBudgetOutcome } from "@/domain/owner-budget/outcome-learning";
 
+describe("outcome-learning — module contract assertions", () => {
+  it("classifyBudgetOutcome is a function", () => { expect(typeof classifyBudgetOutcome).toBe("function"); });
+  it("classifyBudgetOutcome({...}) returns an object", () => { expect(typeof classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 110 })).toBe("object"); });
+  it("classifyBudgetOutcome result has outcome field", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 110 })).toHaveProperty("outcome"); });
+  it("classifyBudgetOutcome result has disposition field", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 110 })).toHaveProperty("disposition"); });
+  it("classifyBudgetOutcome result has confidenceImpact field", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 110 })).toHaveProperty("confidenceImpact"); });
+  it("classifyBudgetOutcome result has safeForLearning field", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 110 })).toHaveProperty("safeForLearning"); });
+  it("success result outcome is 'SUCCESS'", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 110 }).outcome).toBe("SUCCESS"); });
+  it("success result disposition is 'repeat'", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 110 }).disposition).toBe("repeat"); });
+  it("success result confidenceImpact is 'raise'", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 110 }).confidenceImpact).toBe("raise"); });
+  it("success result safeForLearning is true", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 110 }).safeForLearning).toBe(true); });
+  it("failed result outcome is 'FAILED'", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 10 }).outcome).toBe("FAILED"); });
+  it("cancelled result outcome is 'CANCELLED'", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, cancelled: true }).outcome).toBe("CANCELLED"); });
+  it("overridden result outcome is 'OVERRIDDEN'", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, overridden: true, expectedImpact: 100, actualImpact: 0 }).outcome).toBe("OVERRIDDEN"); });
+  it("external factor result outcome is 'EXTERNAL_FACTOR'", () => { expect(classifyBudgetOutcome({ outcomeVerified: true, externalFactor: true, expectedImpact: 100, actualImpact: 0 }).outcome).toBe("EXTERNAL_FACTOR"); });
+});
+
 describe("classifyBudgetOutcome", () => {
   it("verified success ⇒ repeat + raise confidence", () => {
     const r = classifyBudgetOutcome({ outcomeVerified: true, expectedImpact: 100, actualImpact: 110 });

@@ -31,6 +31,66 @@ function assertNoBudgetDataLeak(body: Record<string, unknown>) {
   expect(Array.isArray(body)).toBe(false);
 }
 
+describe("Dynamic Budget RBAC — SENSITIVE_KEYS structural assertions (no DB)", () => {
+  it("SENSITIVE_KEYS has exactly 14 entries", () => {
+    expect(SENSITIVE_KEYS).toHaveLength(14);
+  });
+  it("SENSITIVE_KEYS includes 'mode'", () => {
+    expect(SENSITIVE_KEYS).toContain("mode");
+  });
+  it("SENSITIVE_KEYS includes 'confidence'", () => {
+    expect(SENSITIVE_KEYS).toContain("confidence");
+  });
+  it("SENSITIVE_KEYS includes 'nextBestAction'", () => {
+    expect(SENSITIVE_KEYS).toContain("nextBestAction");
+  });
+  it("SENSITIVE_KEYS includes 'cashImpact'", () => {
+    expect(SENSITIVE_KEYS).toContain("cashImpact");
+  });
+  it("SENSITIVE_KEYS includes 'profitImpact'", () => {
+    expect(SENSITIVE_KEYS).toContain("profitImpact");
+  });
+  it("SENSITIVE_KEYS includes 'generatedActions'", () => {
+    expect(SENSITIVE_KEYS).toContain("generatedActions");
+  });
+  it("SENSITIVE_KEYS includes 'plan'", () => {
+    expect(SENSITIVE_KEYS).toContain("plan");
+  });
+  it("SENSITIVE_KEYS includes 'scenarios'", () => {
+    expect(SENSITIVE_KEYS).toContain("scenarios");
+  });
+  it("SENSITIVE_KEYS includes 'hasPlan'", () => {
+    expect(SENSITIVE_KEYS).toContain("hasPlan");
+  });
+  it("SENSITIVE_KEYS includes 'hasData'", () => {
+    expect(SENSITIVE_KEYS).toContain("hasData");
+  });
+  it("SENSITIVE_KEYS includes 'escalationPath'", () => {
+    expect(SENSITIVE_KEYS).toContain("escalationPath");
+  });
+  it("SENSITIVE_KEYS includes 'title'", () => {
+    expect(SENSITIVE_KEYS).toContain("title");
+  });
+  it("all SENSITIVE_KEYS are non-empty strings", () => {
+    for (const k of SENSITIVE_KEYS) {
+      expect(typeof k).toBe("string");
+      expect(k.length).toBeGreaterThan(0);
+    }
+  });
+  it("SENSITIVE_KEYS has no duplicates", () => {
+    expect(new Set(SENSITIVE_KEYS).size).toBe(SENSITIVE_KEYS.length);
+  });
+  it("assertNoBudgetDataLeak passes for an empty body", () => {
+    expect(() => assertNoBudgetDataLeak({})).not.toThrow();
+  });
+  it("assertNoBudgetDataLeak passes for a body with only 'error' field", () => {
+    expect(() => assertNoBudgetDataLeak({ error: "unauthorized" })).not.toThrow();
+  });
+  it("assertNoBudgetDataLeak passes for a body with only 'message' field", () => {
+    expect(() => assertNoBudgetDataLeak({ message: "forbidden" })).not.toThrow();
+  });
+});
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Dynamic Budget RBAC — unauthenticated fail-closed", () => {
   const bid = "11111111-1111-1111-1111-111111111111";
 

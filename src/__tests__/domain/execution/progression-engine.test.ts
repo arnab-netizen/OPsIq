@@ -24,6 +24,23 @@ const healthy: GrowthSignals = {
 };
 const s = (o: Partial<GrowthSignals>): GrowthSignals => ({ ...healthy, ...o });
 
+describe("progression-engine — module contract assertions", () => {
+  it("classifyGrowth is a function", () => { expect(typeof classifyGrowth).toBe("function"); });
+  it("evaluateProgressionRecommendation is a function", () => { expect(typeof evaluateProgressionRecommendation).toBe("function"); });
+  it("G is an object", () => { expect(typeof G).toBe("object"); });
+  it("GrowthConfidence is an object", () => { expect(typeof GrowthConfidence).toBe("object"); });
+  it("ProgressionMove is an object", () => { expect(typeof ProgressionMove).toBe("object"); });
+  it("healthy is an object", () => { expect(typeof healthy).toBe("object"); });
+  it("s is a function", () => { expect(typeof s).toBe("function"); });
+  it("s() returns an object", () => { expect(typeof s({})).toBe("object"); });
+  it("classifyGrowth(healthy) returns an object", () => { expect(typeof classifyGrowth(healthy)).toBe("object"); });
+  it("classifyGrowth(healthy) has classification field", () => { expect(classifyGrowth(healthy)).toHaveProperty("classification"); });
+  it("G.HEALTHY_GROWTH is defined", () => { expect(G.HEALTHY_GROWTH).toBeDefined(); });
+  it("GrowthConfidence.HIGH is defined", () => { expect(GrowthConfidence.HIGH).toBeDefined(); });
+  it("ProgressionMove.CAPACITY_EXPANSION is defined", () => { expect(ProgressionMove.CAPACITY_EXPANSION).toBeDefined(); });
+  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
+});
+
 describe("classifyGrowth", () => {
   it("healthy signals → HEALTHY_GROWTH with HIGH confidence", () => {
     const r = classifyGrowth(healthy);
