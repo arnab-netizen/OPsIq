@@ -1,5 +1,5 @@
 version: "1.0"
-last_updated: "2026-07-24"
+last_updated: "2026-07-25"
 maintainer: completion-factory
 
 # REMAINING STAGE ACCEPTANCE LEDGER
@@ -9,6 +9,11 @@ maintainer: completion-factory
 #   - PENDING → CLOSED requires explicit post-merge evidence (no shortcuts)
 #   - not_applicable requires written justification
 #   - Contradictions between this ledger and bundle YAMLs are a blocking error
+#   - artifact_type is REQUIRED on every bundle and component record.
+#     Valid values: development_bundle | infrastructure_component
+#     development_bundle: a scoped implementation unit within a stage delivery plan
+#     infrastructure_component: a completion-factory CI/tooling/harness component
+#   NOTE: bundle-4 through bundle-7 are development_bundle, NOT factory product stages.
 
 stages:
   stage-3:
@@ -16,6 +21,7 @@ stages:
     overall_status: IN_PROGRESS
     bundles:
       - id: bundle-3.4
+        artifact_type: development_bundle
         name: Risk and Compliance Full Lifecycle
         status: CLOSED
         post_merge_evidence:
@@ -31,6 +37,7 @@ stages:
           gate_result: "post_merge_main_integration_completed_success"
 
       - id: bundle-3.5
+        artifact_type: development_bundle
         name: Customer Complaint and Service Recovery
         status: PENDING
         post_merge_evidence:
@@ -40,6 +47,7 @@ stages:
           db_verification_run: null
 
       - id: bundle-3.6
+        artifact_type: development_bundle
         name: Owner Action Assignment and Outcome Tracking
         status: PENDING
         post_merge_evidence:
@@ -49,6 +57,7 @@ stages:
           db_verification_run: null
 
       - id: bundle-3.7
+        artifact_type: development_bundle
         name: Approval Resolution and Evidence Chain
         status: PENDING
         post_merge_evidence:
@@ -58,6 +67,7 @@ stages:
           db_verification_run: null
 
       - id: bundle-3.8
+        artifact_type: development_bundle
         name: Owner Onboarding and Archetype Seeding
         status: PENDING
         post_merge_evidence:
@@ -67,6 +77,7 @@ stages:
           db_verification_run: null
 
       - id: bundle-3.9
+        artifact_type: development_bundle
         name: Process Intelligence and SOP Management
         status: PENDING
         post_merge_evidence:
@@ -76,6 +87,7 @@ stages:
           db_verification_run: null
 
       - id: bundle-3.10
+        artifact_type: development_bundle
         name: Stage 3 Cross-Domain Adversarial Closure
         status: PENDING
         post_merge_evidence:
@@ -100,6 +112,7 @@ stages:
     overall_status: NOT_STARTED
     bundles:
       - id: bundle-4
+        artifact_type: development_bundle
         name: Business Condition Profile Operations
         status: PENDING
         dependency: bundle-3.10
@@ -118,6 +131,7 @@ stages:
     overall_status: NOT_STARTED
     bundles:
       - id: bundle-5
+        artifact_type: development_bundle
         name: Integration Fabric and Connector Registry
         status: PENDING
         dependency: bundle-4
@@ -136,6 +150,7 @@ stages:
     overall_status: NOT_STARTED
     bundles:
       - id: bundle-6
+        artifact_type: development_bundle
         name: Consulting Mode and Engagement Operations
         status: PENDING
         dependency: bundle-5
@@ -154,6 +169,7 @@ stages:
     overall_status: NOT_STARTED
     bundles:
       - id: bundle-7
+        artifact_type: development_bundle
         name: Final Deployment Readiness and Stage Acceptance
         status: PENDING
         dependency: bundle-6
@@ -173,29 +189,38 @@ completion_factory:
   status: IN_PROGRESS
   components:
     - id: bundle_manifests
+      artifact_type: infrastructure_component
       status: COMPLETE
       path: docs/opsiq/bundles/
     - id: acceptance_ledger
+      artifact_type: infrastructure_component
       status: COMPLETE
       path: docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml
     - id: manifest_validator
-      status: PENDING
+      artifact_type: infrastructure_component
+      status: COMPLETE
       path: scripts/validate-bundle-manifests.mjs
     - id: db_mock_factory
+      artifact_type: infrastructure_component
       status: PENDING
       path: src/__tests__/db-mock-factory.ts
     - id: reusable_ci_workflow
+      artifact_type: infrastructure_component
       status: PENDING
       path: .github/workflows/reusable-pr-validation.yml
     - id: merge_candidate_validation
+      artifact_type: infrastructure_component
       status: PENDING
       path: .github/workflows/merge-candidate-validation.yml
     - id: concurrency_controls
+      artifact_type: infrastructure_component
       status: COMPLETE
       notes: ci.yml already has concurrency group; db-verification.yml has no concurrency — will add
     - id: recurrence_scanners
-      status: PENDING
+      artifact_type: infrastructure_component
+      status: COMPLETE
       path: scripts/scan-recurrence-defects.mjs
     - id: factory_tests
+      artifact_type: infrastructure_component
       status: PENDING
       path: src/__tests__/completion-factory/

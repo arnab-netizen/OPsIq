@@ -12,6 +12,7 @@ on:
       - "claude/phase-3-execution-closure-plan-pid5a6"
       - "claude/phase-4-owner-business-operating-system"
       - "claude/phase-5-startup-mode-zero-to-validated-business"
+      - "claude/stage-3-operational-closure"
   workflow_dispatch:
 
 jobs:

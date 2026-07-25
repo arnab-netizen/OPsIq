@@ -36,6 +36,9 @@ export interface Alert {
   isRead: boolean;
   readAt?: Date | null;
   resolvedAt?: Date | null;
+  emailSentAt?: Date | null;
+  emailError?: string | null;
+  resendMessageId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -256,6 +259,12 @@ export async function triggerExecutionFailureAlert(
 }
 
 async function deliverEmailAlert(alert: Alert): Promise<void> {
+  // Idempotency guard: skip if already delivered (crash-after-create recovery).
+  if (alert.emailSentAt) {
+    logger.info("Email alert already delivered — skipping duplicate send", { alertId: alert.id });
+    return;
+  }
+
   const provider = getEmailProvider();
   if (!provider) {
     logger.warn("Email alert queued but RESEND_API_KEY not configured — falling back to in-app only", {
@@ -264,24 +273,79 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
       type: alert.type,
       severity: alert.severity,
     });
+    await db.alert.update({
+      where: { id: alert.id },
+      data: { emailError: "RESEND_API_KEY not configured — email delivery skipped" },
+    }).catch(() => {});
     return;
   }
 
   const recipient = await db.user.findUnique({ where: { id: alert.userId }, select: { email: true } });
   if (!recipient?.email) {
     logger.warn("Email alert skipped — user has no email address", { alertId: alert.id, userId: alert.userId });
+    await db.alert.update({
+      where: { id: alert.id },
+      data: { emailError: "user_no_email_address" },
+    }).catch(() => {});
     return;
   }
 
   const severityLabel = alert.severity === "critical" ? "🔴 CRITICAL" : alert.severity === "high" ? "🟠 HIGH" : "⚠️ ALERT";
-  await provider.send({
-    to: recipient.email,
-    subject: `${severityLabel}: ${alert.type.replace(/_/g, " ")} — OpsIQ`,
-    html: `<p><strong>${severityLabel}</strong></p><p>${alert.message}</p><p style="color:#666;font-size:12px">Alert ID: ${alert.id}</p>`,
-    text: `${severityLabel}\n\n${alert.message}\n\nAlert ID: ${alert.id}`,
-  });
+  try {
+    const result = await provider.send({
+      to: recipient.email,
+      subject: `${severityLabel}: ${alert.type.replace(/_/g, " ")} — OpsIQ`,
+      html: `<p><strong>${severityLabel}</strong></p><p>${alert.message}</p><p style="color:#666;font-size:12px">Alert ID: ${alert.id}</p>`,
+      text: `${severityLabel}\n\n${alert.message}\n\nAlert ID: ${alert.id}`,
+    });
 
-  logger.info("Email alert delivered", { alertId: alert.id, userId: alert.userId, to: recipient.email });
+    await db.alert.update({
+      where: { id: alert.id },
+      data: {
+        emailSentAt: new Date(),
+        resendMessageId: result.id ?? null,
+        emailError: null,
+      },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ALERT_EMAIL_DELIVERED,
+      actorId: alert.userId,
+      entityType: "alert",
+      entityId: alert.id,
+      workspaceId: alert.workspaceId,
+      payload: {
+        resendMessageId: result.id ?? null,
+        toDomain: recipient.email.split("@")[1] ?? "unknown",
+        severity: alert.severity,
+      },
+      visibility: "internal",
+    }).catch(() => {});
+
+    logger.info("Email alert delivered", { alertId: alert.id, userId: alert.userId });
+  } catch (error) {
+    const errorMessage = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+
+    await db.alert.update({
+      where: { id: alert.id },
+      data: { emailError: errorMessage },
+    }).catch(() => {});
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ALERT_EMAIL_FAILED,
+      actorId: alert.userId,
+      entityType: "alert",
+      entityId: alert.id,
+      workspaceId: alert.workspaceId,
+      payload: {
+        errorClass: error instanceof Error ? error.constructor.name : "UnknownError",
+        severity: alert.severity,
+      },
+      visibility: "internal",
+    }).catch(() => {});
+
+    throw error;
+  }
 }
 
 export async function triggerComplianceDeadlineAlert(
