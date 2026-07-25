@@ -5259,6 +5259,7 @@ model OperationalEvent {
   relatedProofId        String?   @map("related_proof_id") @db.Uuid
   relatedActionId       String?   @map("related_action_id") @db.Uuid
   businessId            String?   @map("business_id") @db.Uuid
+  customerRecordId      String?   @map("customer_record_id") @db.Uuid
   category              String
   severity              String    @default("MEDIUM")
   status                String    @default("OPEN") // OPEN | IN_REVIEW | RESOLVED | DISMISSED | DUPLICATE
@@ -6490,4 +6491,24 @@ model OwnerConnectorToken {
 
   @@index([connectorId])
   @@map("owner_connector_tokens")
+}
+
+model CustomerRecord {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  businessId       String    @map("business_id") @db.Uuid
+  name             String    @db.VarChar(200)
+  email            String?   @db.VarChar(254)
+  phone            String?   @db.VarChar(50)
+  segment          String?   @db.VarChar(100)
+  lastPurchaseDate DateTime? @map("last_purchase_date")
+  ltv              Decimal?  @db.Decimal(18, 2)
+  tags             String[]  @default([])
+  notes            String?   @db.Text
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, businessId])
+  @@index([workspaceId, segment])
+  @@map("customer_records")
 }
