@@ -3,6 +3,7 @@ import { canonicalJson } from "@/lib/canonical-json-response";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { transitionPurchaseOrder, type POStatus } from "@/services/owner-procurement/purchase-order.service";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z } from "zod/v4";
 
 const transitionSchema = z.object({
@@ -27,8 +28,9 @@ export const POST = withCanonicalEnforcement(
       if (!order) return canonicalJson({ error: "Purchase order not found" }, { status: 404 });
       return canonicalJson(order, { status: 200 });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Invalid transition";
-      return canonicalJson({ error: message }, { status: 422 });
+      const governed = classifyOperatorError(err, { context: "mutation" });
+      const safeText = governed.operatorMessage;
+      return canonicalJson({ error: safeText }, { status: 422 });
     }
   },
   { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_MANAGE] }
