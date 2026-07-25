@@ -3718,11 +3718,74 @@
     "final_completion_standard": "All 20 items addressed: startup validation, business diagnosis, wealth path judgment, strategic recommendation (continue/stabilize/pivot/scale/sell/stop), capital allocation, next-action selection, work preparation, work assignment, proof enforcement, fake-work rejection, outcome measurement, learning from results, owner workload reduction, domain hardening (all 7 domains), cross-domain command decisions, daily command center, overclaim avoidance, safety/auth/workspace/DB/audit preservation, realistic simulations, honest limitation disclosure",
     "remaining_gaps": [
       "MEDIUM: 2283 pre-existing lint errors (non-owner-strategy files, not introduced by current work)",
-      "HIGH: Stage 3 bundles 3.5-3.10 need PR merge evidence (BLOCKED_ON_USER_ACTION)",
+      "RESOLVED: Stage 3 bundles 3.5-3.10 CLOSED via PR #251 + PR #252 corrective fix (2026-07-25)",
       "MEDIUM: Phase 27 E2E execution DB_BLOCKED_ENVIRONMENT",
       "HIGH: Neon cloud DB inaccessible locally (INFRASTRUCTURE_BLOCKED)"
     ],
     "committed": "a3718015-HEAD",
     "next_automatic_target": "DEPLOYMENT_READINESS: bundles 3.5-3.10 PR creation + merge (requires user to create PRs or grant PR creation authority)"
+
+  },
+  "PR_252_CORRECTIVE_FIX_POST_MERGE_VERIFIED": {
+    "classification": "CORRECTIVE_FIX_POST_MERGE_VERIFIED",
+    "status": "CLOSED",
+    "verification_date": "2026-07-25",
+    "pr_number": 252,
+    "pr_sha": "db4506049a5cc99a7ab6d2576ed7bc2a743dee44",
+    "merge_sha": "45694526099aa5b092631fa2cc6d037a5aa1c3b9",
+    "base_sha": "5bc1fc013cd52064afcffb65505d7359da872718",
+    "root_cause": "vitest.setup.ts beforeAll (TEST_WITH_DB=true) dynamically imports @/lib/db and destructures getDbInstance; Vitest mock proxy throws [vitest]-prefixed error when test file mocks @/lib/db without getDbInstance export; catch block unconditionally re-threw, failing all 29 mock-using test files",
+    "fix": "Added guard in catch block: if error.message.startsWith('[vitest]'), return early (unit test with mocked DB — no real DB init needed)",
+    "files_changed": ["vitest.setup.ts"],
+    "diff_lines": 4,
+    "pr_ci_run": "30151435312",
+    "pr_ci_jobs": {
+      "lint": "success",
+      "build_and_test": "success",
+      "branch_protection": "success"
+    },
+    "post_merge_main_integration": {
+      "run_id": "30152600373",
+      "job_id": "89665387968",
+      "conclusion": "success",
+      "all_16_steps": "green",
+      "step_14_blocking_test_suite": "success",
+      "step_15_quarantine_nonblocking": "success",
+      "prisma_migration": "success",
+      "governance_auth_scan": "success",
+      "handler_ratchet": "success",
+      "typescript_check": "success"
+    },
+    "regression_check": "No previously-passing tests regressed; 29 previously-failing mock-db test files now pass",
+    "authorization_items_confirmed": {
+      "1_pr_merged": true,
+      "2_merge_sha": "45694526099aa5b092631fa2cc6d037a5aa1c3b9",
+      "3_db450604_ancestor_of_merge": true,
+      "4_main_integration_tested_merge_sha": true,
+      "5_prisma_migration_green": true,
+      "6_governance_auth_a7_7_handler_ratchet_green": true,
+      "7_blocking_test_suite_pass": true,
+      "8_no_regressions": true,
+      "9_test_totals_note": "Step 14 log (blocking suite) not captured in 2000-line tail (quarantined step 15 output fills end of log); job conclusion=success proven via GitHub Actions API. PR#251 failure had 1200 files (29 failed); after fix all 29 pass.",
+      "10_stage3_progression_resumed": true
+    }
+  },
+  "stage_3_bundle_closure": {
+    "classification": "STAGE_COMPLETE",
+    "status": "CLOSED",
+    "closed_date": "2026-07-25",
+    "bundles_closed": ["bundle-3.5", "bundle-3.6", "bundle-3.7", "bundle-3.8", "bundle-3.9", "bundle-3.10"],
+    "feature_pr": "251",
+    "feature_pr_sha": "cda988e7267552294f6b5c597d1bed0fb8979e53",
+    "feature_merge_sha": "5bc1fc013cd52064afcffb65505d7359da872718",
+    "corrective_pr": "252",
+    "corrective_merge_sha": "45694526099aa5b092631fa2cc6d037a5aa1c3b9",
+    "main_integration_run": "30152600373",
+    "db_verification_run": "30147768617",
+    "tests_total_bundles_3_5_to_3_10": 334,
+    "stage_3_overall_status": "COMPLETE",
+    "stage_4_unblocked": true,
+    "next_automatic_target": "Completion Factory — resume at next Stage 3+ roadmap item (bundle-4 or cost-attribution/cost-intelligence routes)"
+
   }
 }
