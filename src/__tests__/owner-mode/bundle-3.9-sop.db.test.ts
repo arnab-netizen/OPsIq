@@ -31,6 +31,9 @@ const workspaceId = randomUUID();
 const sopDocumentId = randomUUID();
 const staffMember1 = randomUUID();
 const staffMember2 = randomUUID();
+// staffMember3 is used only in the idempotent-completion test to avoid shared state
+// with the prior "COMPLETED state" test (which completes staffMember1's assignment).
+const staffMember3 = randomUUID();
 const otherWorkspace = randomUUID();
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
@@ -162,7 +165,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         workspaceId,
         actorId: actor,
         sopDocumentId,
-        assignedTo: staffMember1,
+        assignedTo: staffMember3,
       });
       await recordTrainingCompletion({
         workspaceId,
