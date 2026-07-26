@@ -18,6 +18,10 @@ maintainer: completion-factory
 
 stages:
   stage-3:
+    # FACTORY STAGE 3 — Owner Mode Full Lifecycle Operations.
+    # factory_stage_id identifies this as the product milestone the owner will accept or reject.
+    factory_stage_id: "FACTORY_STAGE_3"
+    development_bundle_id: null
     name: Owner Mode — Full Lifecycle Operations
     overall_status: COMPLETE
     bundles:
@@ -231,8 +235,16 @@ stages:
         - bundle-3.10
 
   stage-4:
-    name: Business Condition Profile Operations
-    overall_status: COMPLETE
+    # INTERNAL DELIVERY BUNDLE GROUP — NOT a Factory Stage milestone.
+    # bundle-4, bundle-4.1, bundle-4.2 are implementation delivery bundles shipped as part of
+    # Factory Stage 3 delivery. Their closure indicates code delivery only.
+    # Factory Stage 4 has not begun and requires explicit owner authorization before it starts.
+    factory_stage_id: null
+    development_bundle_id: "DELIVERY_BUNDLE_GROUP_4"
+    scope: internal_delivery_bundle_group
+    factory_stage_acceptance: NOT_APPLICABLE
+    name: Business Condition Profile Operations (internal delivery bundle group)
+    overall_status: DEVELOPMENT_BUNDLE_DELIVERY_COMPLETE
     bundles:
       - id: bundle-4
         artifact_type: development_bundle
@@ -279,14 +291,22 @@ stages:
           gate_result: "post_merge_main_integration_completed_success"
 
     stage_acceptance:
-      status: CLOSED
+      status: DEVELOPMENT_BUNDLE_DELIVERY_CLOSED
+      note: "Development bundle delivery complete. NOT Factory Stage 4 acceptance — Factory Stage 4 requires explicit owner authorization and has not begun."
       gate: scripts/validate-stage-acceptance.mjs --stage 4
       closed_date: "2026-07-25"
-      evidence: "bundles 4.1 + 4.2 CLOSED. Code on main via PR #251 merge 5bc1fc01. Main Integration run 30152600373 green."
+      evidence: "bundles 4.1 + 4.2 code delivery closed. Code on main via PR #251 merge 5bc1fc01. Main Integration run 30152600373 green."
 
   stage-5:
-    name: Integration Fabric and Connector Registry
-    overall_status: COMPLETE
+    # INTERNAL DELIVERY BUNDLE GROUP — NOT a Factory Stage milestone.
+    # bundle-5, bundle-5.1, bundle-5.2, bundle-5.3 are implementation delivery bundles.
+    # Factory Stage 5 (if it exists) has not begun and requires explicit owner authorization.
+    factory_stage_id: null
+    development_bundle_id: "DELIVERY_BUNDLE_GROUP_5"
+    scope: internal_delivery_bundle_group
+    factory_stage_acceptance: NOT_APPLICABLE
+    name: Integration Fabric and Connector Registry (internal delivery bundle group)
+    overall_status: DEVELOPMENT_BUNDLE_DELIVERY_COMPLETE
     bundles:
       - id: bundle-5
         artifact_type: development_bundle
@@ -347,14 +367,21 @@ stages:
           gate_result: "post_merge_main_integration_completed_success"
 
     stage_acceptance:
-      status: CLOSED
+      status: DEVELOPMENT_BUNDLE_DELIVERY_CLOSED
+      note: "Development bundle delivery complete. NOT a Factory Stage milestone acceptance."
       gate: scripts/validate-stage-acceptance.mjs --stage 5
       closed_date: "2026-07-25"
-      evidence: "bundles 5.1 + 5.2 + 5.3 CLOSED. Code on main via PR #251 merge 5bc1fc01. Main Integration run 30152600373 green."
+      evidence: "bundles 5.1 + 5.2 + 5.3 code delivery closed. Code on main via PR #251 merge 5bc1fc01. Main Integration run 30152600373 green."
 
   stage-6:
-    name: Consulting Mode and Engagement Operations
-    overall_status: COMPLETE
+    # INTERNAL DELIVERY BUNDLE GROUP — NOT a Factory Stage milestone.
+    # bundle-6 is an implementation delivery bundle. Not a product-stage acceptance event.
+    factory_stage_id: null
+    development_bundle_id: "DELIVERY_BUNDLE_GROUP_6"
+    scope: internal_delivery_bundle_group
+    factory_stage_acceptance: NOT_APPLICABLE
+    name: Consulting Mode and Engagement Operations (internal delivery bundle group)
+    overall_status: DEVELOPMENT_BUNDLE_DELIVERY_COMPLETE
     bundles:
       - id: bundle-6
         artifact_type: development_bundle
@@ -374,14 +401,22 @@ stages:
           notes: "63 service tests (consulting-engagement.test.ts) + 48 adversarial route tests. Phase FSM, client/consultant DTO boundary, closure gate, all 4 OpsIQ dimensions proven."
 
     stage_acceptance:
-      status: CLOSED
+      status: DEVELOPMENT_BUNDLE_DELIVERY_CLOSED
+      note: "Development bundle delivery complete. NOT a Factory Stage milestone acceptance."
       gate: scripts/validate-stage-acceptance.mjs --stage 6
       closed_date: "2026-07-25"
-      evidence: "bundle-6 CLOSED. Code on main via PR #251 merge 5bc1fc01 (commit a476e459 is ancestor of PR#251 merge). Main Integration run 30152600373 green on corrective merge SHA 45694526099aa5b092631fa2cc6d037a5aa1c3b9."
+      evidence: "bundle-6 code delivery closed. Code on main via PR #251 merge 5bc1fc01 (commit a476e459 is ancestor of PR#251 merge). Main Integration run 30152600373 green on corrective merge SHA 45694526099aa5b092631fa2cc6d037a5aa1c3b9."
 
   stage-7:
-    name: Final Deployment Readiness
-    overall_status: COMPLETE
+    # INTERNAL DELIVERY BUNDLE GROUP — NOT a Factory Stage milestone.
+    # bundle-7 is an implementation delivery bundle (deployment readiness tooling).
+    # Not a product-stage acceptance event.
+    factory_stage_id: null
+    development_bundle_id: "DELIVERY_BUNDLE_GROUP_7"
+    scope: internal_delivery_bundle_group
+    factory_stage_acceptance: NOT_APPLICABLE
+    name: Final Deployment Readiness (internal delivery bundle group)
+    overall_status: DEVELOPMENT_BUNDLE_DELIVERY_COMPLETE
     bundles:
       - id: bundle-7
         artifact_type: development_bundle
@@ -412,10 +447,11 @@ stages:
             db_index_verification: "DB_BLOCKED — index definitions present in schema; runtime verification deferred"
 
     stage_acceptance:
-      status: CLOSED
+      status: DEVELOPMENT_BUNDLE_DELIVERY_CLOSED
+      note: "Development bundle delivery complete. NOT a Factory Stage milestone acceptance."
       gate: scripts/validate-stage-acceptance.mjs --stage 7
       closed_date: "2026-07-25"
-      evidence: "bundle-7 CLOSED. All 8 test suites pass (242 tests). Workspace isolation, permission matrix, DTO leakage, audit completeness, export API proven. Performance/index criteria DB_BLOCKED (no regressions introduced). .env.example and runbook complete. Final improvement report at .claude/final-improvement-report.md."
+      evidence: "bundle-7 code delivery closed. All 8 test suites pass (242 tests). Workspace isolation, permission matrix, DTO leakage, audit completeness, export API proven. Performance/index criteria DB_BLOCKED (no regressions introduced). .env.example and runbook complete. Final improvement report at .claude/final-improvement-report.md."
 
 completion_factory:
   branch: claude/opsiq-stage-3-7-loop-j6j6cf

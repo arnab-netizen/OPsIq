@@ -269,4 +269,89 @@ describe("validate-stage-acceptance.mjs", () => {
     const result = runStageAcceptance("--stage 3 --mode invalid");
     expect(result.code).toBe(2);
   });
+
+  // ── Fixture-based independence proofs (--ledger) ───────────────────────────────
+  // These tests are independent of the live ledger state — they use controlled
+  // fixture YAML files so the proofs remain valid regardless of ledger edits.
+
+  describe("fixture-based independence proofs (--ledger)", () => {
+    const fixturesDir = join(root, "scripts", "__tests__", "fixtures", "stage-acceptance");
+
+    it("closure mode fails when any stage-3 bundle is PENDING", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "mixed-closed-pending.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/closure mode requires all bundles CLOSED/);
+    });
+
+    it("closure mode fails when stage-3 CLOSED bundle has partial evidence (db_verification_run missing)", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "closed-partial-evidence.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/db_verification_run is null/);
+    });
+
+    it("closure mode fails when stage-3 CLOSED bundle has null merge_sha", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "closed-null-merge-sha.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/merge_sha is null/);
+    });
+
+    it("closure mode fails when stage-3 CLOSED bundle has null pr_sha", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "closed-null-pr-sha.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/pr_sha is null/);
+    });
+
+    it("internal delivery bundle-group-4 CLOSED does not constitute Factory Stage 4 acceptance", () => {
+      const fixturePath = join(fixturesDir, "internal-bundle-group-4-closed.yaml");
+      const fixtureContent = readFileSync(fixturePath, "utf8");
+      // Structural proof: the fixture explicitly declares this is NOT a Factory Stage milestone
+      expect(fixtureContent).toContain("factory_stage_acceptance: NOT_APPLICABLE");
+      expect(fixtureContent).toContain("factory_stage_id: null");
+      expect(fixtureContent).toContain("scope: internal_delivery_bundle_group");
+      // Bundle-level validator passes (the bundles themselves are CLOSED with evidence)
+      const result = runStageAcceptance(
+        `--mode closure --stage 4 --ledger "${fixturePath}"`
+      );
+      expect(result.code).toBe(0);
+      // Bundle-level CLOSED ≠ Factory Stage 4 acceptance — proven by fixture declarations above
+    });
+
+    it("closure mode passes when stage-3 has full evidence (all bundles CLOSED, all fields populated)", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "valid-closed.yaml")}"`
+      );
+      expect(result.code).toBe(0);
+    });
+
+    it("integrity mode passes when all stage-3 bundles are PENDING (development-normal)", () => {
+      const result = runStageAcceptance(
+        `--mode integrity --stage 3 --ledger "${join(fixturesDir, "all-pending.yaml")}"`
+      );
+      expect(result.code).toBe(0);
+    });
+
+    it("closure mode fails when bundle has wrong artifact_type (not development_bundle)", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "wrong-artifact-type.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/artifact_type must be/);
+    });
+
+    it("closure mode fails when bundle is missing artifact_type field entirely", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "missing-artifact-type.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/missing required field 'artifact_type'/);
+    });
+  });
 });

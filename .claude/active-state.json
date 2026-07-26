@@ -2,15 +2,15 @@
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
   "last_updated": "2026-07-26",
-  "factory_stage": "COMPLETION_FACTORY_ALL_BUNDLES_CLOSED_AWAITING_OWNER_ACCEPTANCE",
+  "factory_stage": "FACTORY_STAGE_3_IMPLEMENTED_PROOF_CLOSURE_REQUIRED",
   "active_bundle": null,
   "blocked_by": [
-    "OWNER_STAGE_3_ACCEPTANCE",
-    "OWNER_COMPLETION_FACTORY_ACCEPTANCE"
+    "OWNER_STAGE_3_ACCEPTANCE_NOT_YET_GIVEN",
+    "OWNER_COMPLETION_FACTORY_ACCEPTANCE_NOT_YET_GIVEN"
   ],
-  "owner_outcome": "Owner has a fully operational OpsIQ: customers, inventory, procurement, campaigns, complaints, action assignments, approvals, onboarding, SOP intelligence, BCP, integration fabric, consulting mode, and deployment readiness — all lifecycle-managed and workspace-isolated",
-  "current_gap": "Awaiting explicit owner acceptance of Factory Stage 3 and the Completion Factory bundle closure before any new stage work begins",
-  "next_target": "Owner decision on acceptance, then any new stage work or deployment-readiness hardening",
+  "owner_outcome": "Owner has proof that the Stage 3 business domains (customers, inventory, procurement, campaigns, complaints, action assignments, approvals, onboarding, SOP intelligence, BCP, integration fabric, consulting mode) are implemented, workspace-isolated, and test-verified on main — pending explicit owner acceptance before any new stage begins",
+  "current_gap": "Closure PR created with post-merge evidence. Awaiting explicit owner acceptance of Factory Stage 3 and Completion Factory bundle closure. Stage 4 is not authorized.",
+  "next_target": "Owner decision: Factory Stage 3 acceptance then Completion Factory acceptance (in that order) before any new stage work",
   "main_sha": "15a131ab7f0b7d703b459322f3c4db5951d1e825",
   "prs_merged_to_main": [
     {
@@ -57,26 +57,35 @@
     "bundle-3.8": "CLOSED",
     "bundle-3.9": "CLOSED",
     "bundle-3.10": "CLOSED",
-    "bundle-4": "CLOSED",
     "bundle-4.1": "CLOSED",
     "bundle-4.2": "CLOSED",
-    "bundle-5": "CLOSED",
     "bundle-5.1": "CLOSED",
     "bundle-5.2": "CLOSED",
     "bundle-5.3": "CLOSED",
     "bundle-6": "CLOSED",
-    "bundle-7": "CLOSED"
+    "bundle-7": "CLOSED",
+    "_note": "Bundles 4.x, 5.x, 6, 7 are DELIVERY_BUNDLE_GROUPs (internal implementation), NOT Factory Stage milestones. Factory Stage 4 has NOT been accepted."
   },
   "ledger": "docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml",
-  "ledger_status": "ALL_STAGES_3_THROUGH_7_CLOSED",
+  "ledger_status": "STAGE_3_FACTORY_BUNDLES_CLOSED_INTERNAL_DELIVERY_BUNDLES_CLOSED_FACTORY_ACCEPTANCE_PENDING",
+  "stage_acceptance_status": {
+    "factory_stage_3": "POST_MERGE_EVIDENCE_COMPLETE_AWAITING_OWNER_ACCEPTANCE",
+    "factory_stage_4": "NOT_YET_AUTHORIZED",
+    "completion_factory": "EVIDENCE_COMPLETE_AWAITING_OWNER_ACCEPTANCE"
+  },
   "stage_acceptance_gates": {
-    "integrity_mode": "PASS — 16 bundles, 0 violations (2026-07-26)",
-    "closure_mode": "PASS — 16 bundles, 0 violations (2026-07-26)",
+    "integrity_mode_stage_3": "PASS — 7 bundles, 0 violations (2026-07-26)",
+    "closure_mode_stage_3": "PASS — 7 bundles, 0 violations (2026-07-26)",
     "bundle_manifest_validator": "PASS — 11 bundles, 0 violations (2026-07-26)"
+  },
+  "deployment_classification": {
+    "vercel": "DEPLOYMENT_ACCESS_UNVERIFIED",
+    "resend": "LIVE_PROVIDER_CREDENTIAL_UNAVAILABLE",
+    "resend_delivery": "LIVE_RESEND_DELIVERY_UNPROVEN",
+    "browser_specs_57_58": "BROWSER_EXECUTION_UNPROVEN_SPECS_EXIST_IN_TREE"
   },
   "scope_drift": "NO",
   "stage_4_begun": false,
-  "completion_factory_status": "COMPLETE — all components verified; all bundles CLOSED",
   "operating_loop": [
     "main-truth","owner-outcome","parallel-specialist-agents","structured-gap-synthesis",
     "plan-mode","checkpoint","one-write-owner-implementation","hook-driven-fast-validation",

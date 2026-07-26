@@ -8,24 +8,32 @@
 
 ## Owner Outcome
 
-When Completion Factory is accepted, the owner has verified that OpsIQ stages 3–7 are fully closed
-with tamper-evident, script-validated evidence. All CI infrastructure, acceptance validators,
-bundle manifest validators, DB mock factories, recurrence scanners, and governance scripts are
-complete and operational.
+When Completion Factory is accepted, the owner has verified that the Completion Factory
+infrastructure (acceptance validators, bundle manifest validators, DB mock factories, recurrence
+scanners, governance scripts, and CI wiring) is complete and the Stage 3 delivery bundles are
+closed with script-validated evidence.
+
+**Stage-number disambiguation:** The ledger's `stage-4` through `stage-7` entries are internal
+*delivery bundle groups* (`factory_stage_acceptance: NOT_APPLICABLE`, `factory_stage_id: null`,
+`scope: internal_delivery_bundle_group`). They are NOT Factory Stage 4–7 milestones. Their CLOSED
+status records implementation delivery, not Factory Stage acceptance.
 
 ---
 
-## All Stages Closed
+## Bundle Closure Status
 
-| Stage | Name | Status | Closed Date |
+| Ledger entry | Scope | Closure status | Closed date |
 |---|---|---|---|
-| Stage 3 | Owner Mode — Full Lifecycle Operations | CLOSED | 2026-07-26 |
-| Stage 4 | Business Condition Profile Operations | CLOSED | 2026-07-25 |
-| Stage 5 | Integration Fabric and Connector Registry | CLOSED | 2026-07-25 |
-| Stage 6 | Consulting Mode and Engagement Operations | CLOSED | 2026-07-25 |
-| Stage 7 | Final Deployment Readiness | CLOSED | 2026-07-25 |
+| stage-3 (Factory Stage 3) | Factory Stage milestone | All 7 bundles CLOSED | 2026-07-26 |
+| stage-4 (delivery bundle group) | Internal implementation delivery | All 2 bundles CLOSED | 2026-07-25 |
+| stage-5 (delivery bundle group) | Internal implementation delivery | All 3 bundles CLOSED | 2026-07-25 |
+| stage-6 (delivery bundle group) | Internal implementation delivery | 1 bundle CLOSED | 2026-07-25 |
+| stage-7 (delivery bundle group) | Internal implementation delivery | 1 bundle CLOSED | 2026-07-25 |
 
-All 16 ledger bundles CLOSED. All 11 bundle YAML files valid.
+**Important:** "CLOSED" for stages 4–7 means implementation delivery is recorded. It does NOT mean
+Factory Stage 4, 5, 6, or 7 has been accepted (Factory Stages 4–7 have not been authorized or begun).
+
+All 14 ledger bundles CLOSED at the delivery level. All 11 bundle YAML files valid.
 
 ---
 
@@ -55,9 +63,13 @@ All 16 ledger bundles CLOSED. All 11 bundle YAML files valid.
 ### Final Run Results (2026-07-26)
 
 ```
-integrity mode: ✅ PASS — 16 bundles, 0 violations
-closure mode:   ✅ PASS — 16 bundles, 0 violations
+integrity mode --stage 3: ✅ PASS — 7 bundles, 0 violations
+closure mode   --stage 3: ✅ PASS — 7 bundles, 0 violations
+integrity mode --stage all: ✅ PASS — 14 bundles, 0 violations
 ```
+
+Note: `--stage 3` is the Factory Stage 3 closure proof. The `--stage all` result covers all ledger
+entries including internal delivery bundle groups; it does not constitute Factory Stage 4–7 acceptance.
 
 ---
 
@@ -102,6 +114,19 @@ closure mode:   ✅ PASS — 16 bundles, 0 violations
 | #255 | `15a131ab7f0b7d703b459322f3c4db5951d1e825` | 30199084412 | GREEN — 35 steps |
 
 Current HEAD of main: `15a131ab7f0b7d703b459322f3c4db5951d1e825`
+
+---
+
+## Deployment and Email Classification
+
+Per owner instruction, these are classified with precise status codes (not `DB_BLOCKED`):
+
+| Component | Classification |
+|---|---|
+| Vercel production deployment | `DEPLOYMENT_ACCESS_UNVERIFIED` — alignment with SHA `15a131ab` not directly verified |
+| Resend credential availability | `LIVE_PROVIDER_CREDENTIAL_UNAVAILABLE` — production Resend API key not available in CI |
+| Resend live email delivery | `LIVE_RESEND_DELIVERY_UNPROVEN` — mock/provider-contract approach; live delivery not proven |
+| Browser specs 57, 58 | `BROWSER_EXECUTION_UNPROVEN_SPECS_EXIST_IN_TREE` — specs compile and exist in merged tree |
 
 ---
 

@@ -8,8 +8,8 @@
 
 ## Owner Outcome
 
-When Stage 3 is accepted, the owner has a fully operational OpsIQ covering all six core business
-lifecycle domains:
+When Stage 3 is accepted, the owner has proven implementation of all six core business lifecycle
+domains — implemented, workspace-isolated, and test-verified on main:
 
 | Domain | Service | Capability |
 |---|---|---|
@@ -93,12 +93,16 @@ All DB tests gate on `TEST_WITH_DB=true`; LANE_B provides ephemeral postgres:16 
 
 | Spec | Bundles | Status |
 |---|---|---|
-| `57-owner-stage3-complaint-assignment-approval.spec.ts` | 3.5, 3.6, 3.7 | Present in merged tree; authenticated API calls |
-| `58-owner-stage3-onboarding-sop.spec.ts` | 3.8, 3.9 | Present in merged tree; 10 serial tests |
+| `57-owner-stage3-complaint-assignment-approval.spec.ts` | 3.5, 3.6, 3.7 | `BROWSER_EXECUTION_UNPROVEN_SPECS_EXIST_IN_TREE` |
+| `58-owner-stage3-onboarding-sop.spec.ts` | 3.8, 3.9 | `BROWSER_EXECUTION_UNPROVEN_SPECS_EXIST_IN_TREE` |
 
-Both specs are in the merged tree at SHA `15a131ab`. Capability check for `OWNER_ONBOARD` and
+Both specs exist in the merged tree at SHA `15a131ab`. Capability check for `OWNER_ONBOARD` and
 `SOP_MANAGE` was added to `admin_or_portfolio_manager` role in `capability-check.ts` to prevent
 403s on authenticated E2E paths.
+
+**Classification:** `BROWSER_EXECUTION_UNPROVEN_SPECS_EXIST_IN_TREE` — CI browser job execution was
+not captured with a specific tracked run ID. The specs compile and exist in the merged tree but
+CI-executed browser run evidence is not available for this report.
 
 ---
 
@@ -106,20 +110,27 @@ Both specs are in the merged tree at SHA `15a131ab`. Capability check for `OWNER
 
 | Gate | Mode | Result |
 |---|---|---|
-| `validate-stage-acceptance.mjs --stage all` | integrity | PASS — 16 bundles, 0 violations |
-| `validate-stage-acceptance.mjs --stage all` | closure | PASS — 16 bundles, 0 violations |
+| `validate-stage-acceptance.mjs --stage 3` | integrity | PASS — 7 bundles, 0 violations |
+| `validate-stage-acceptance.mjs --stage 3` | closure | PASS — 7 bundles, 0 violations |
 | `validate-bundle-manifests.mjs` | — | PASS — 11 bundles, 0 violations |
+
+Note: `--stage 3` is the Factory Stage 3 closure proof. Stages 4–7 in the ledger are internal
+delivery bundle groups (`factory_stage_acceptance: NOT_APPLICABLE`) — they are NOT Factory Stage
+milestones and their closure status is independent of Factory Stage 3 or 4 acceptance.
 
 ---
 
 ## Vercel / Live Email Classification
 
-Per owner instruction, these are classified separately:
-- **Vercel production SHA:** Not directly verified in this proof sequence. Main at `15a131ab` is the
-  source of truth; Vercel deployment alignment requires separate Vercel deploy evidence.
-- **Live Resend email delivery:** Not directly proven in this proof sequence. Email transport tests
-  use mock/provider-contract approach. Live delivery requires production Resend API key and
-  separate smoke-test evidence.
+Per owner instruction, these are classified with precise status codes:
+
+| Component | Classification |
+|---|---|
+| Vercel production deployment | `DEPLOYMENT_ACCESS_UNVERIFIED` — deployment alignment with SHA `15a131ab` not directly verified in this proof sequence |
+| Resend credential availability | `LIVE_PROVIDER_CREDENTIAL_UNAVAILABLE` — production Resend API key not available in CI environment |
+| Resend live email delivery | `LIVE_RESEND_DELIVERY_UNPROVEN` — email transport tests use mock/provider-contract approach; live delivery to real recipients not proven |
+
+These classifications do NOT use `DB_BLOCKED` (which applies only to database access failures).
 
 ---
 
