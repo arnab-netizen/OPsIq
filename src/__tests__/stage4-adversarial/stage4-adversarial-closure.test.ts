@@ -269,7 +269,7 @@ describe("2. Version snapshot immutability", () => {
     });
     // No deleteMany call — immutability preserved
     const dbMock = (await import("@/lib/db")).db;
-    expect((dbMock.ownerBusinessConditionProfile as any).deleteMany).toBeUndefined();
+    expect((dbMock.ownerBusinessConditionProfile as unknown as Record<string, unknown>).deleteMany).toBeUndefined();
   });
 
   it("2.5 createConditionProfile does not call update — no isCurrent flip on initial create", async () => {
@@ -462,7 +462,7 @@ describe("5. DTO boundary — inputFactsJson must never appear in public respons
       workspaceId: WORKSPACE_A, actorId: ACTOR_ID, businessId: BUSINESS_1,
       facts: criticalFacts, triggerDescription: "Initial",
     });
-    expect((result as any).inputFactsJson).toBeUndefined();
+    expect((result as unknown as Record<string, unknown>).inputFactsJson).toBeUndefined();
   });
 
   it("5.2 evaluateConditionProfile result does not include inputFactsJson field", async () => {
@@ -472,20 +472,20 @@ describe("5. DTO boundary — inputFactsJson must never appear in public respons
       workspaceId: WORKSPACE_A, actorId: ACTOR_ID, businessId: BUSINESS_1,
       facts: stableFacts, triggerType: "KPI_CHANGE", triggerDescription: "KPI change",
     });
-    expect((result as any).inputFactsJson).toBeUndefined();
+    expect((result as unknown as Record<string, unknown>).inputFactsJson).toBeUndefined();
   });
 
   it("5.3 getCurrentConditionProfile result does not include inputFactsJson field", async () => {
     mockFindFirst.mockResolvedValue(bcpRow());
     const result = await getCurrentConditionProfile({ workspaceId: WORKSPACE_A, businessId: BUSINESS_1 });
-    expect((result as any)?.inputFactsJson).toBeUndefined();
+    expect((result as unknown as Record<string, unknown>)?.inputFactsJson).toBeUndefined();
   });
 
   it("5.4 getConditionProfileHistory results do not include inputFactsJson field", async () => {
     mockFindMany.mockResolvedValue([bcpRow({ version: 1 }), bcpRow({ version: 2 })]);
     const history = await getConditionProfileHistory({ workspaceId: WORKSPACE_A, businessId: BUSINESS_1 });
     for (const item of history) {
-      expect((item as any).inputFactsJson).toBeUndefined();
+      expect((item as unknown as Record<string, unknown>).inputFactsJson).toBeUndefined();
     }
   });
 
@@ -518,7 +518,7 @@ describe("5. DTO boundary — inputFactsJson must never appear in public respons
       expect(result.consultingLifecycleStage).toBeDefined();
       expect(result.humanExecutionRisk).toBeDefined();
       // Internal field absent
-      expect((result as any).inputFactsJson).toBeUndefined();
+      expect((result as unknown as Record<string, unknown>).inputFactsJson).toBeUndefined();
     }
   });
 });
