@@ -14,6 +14,8 @@
  * 10  provider 500 error → alert NOT deleted, FAILED state, emailSentAt=null, audit event emitted
  * 11  user not in workspace → SKIPPED via $executeRaw, no send
  * 12  concurrent delivery simulation → exactly one CLAIMED wins; exactly one email sent
+ * 13  provider receives idempotency key: alert:{workspaceId}:{alertId}:{attemptCount}
+ * 14  db.alert.update throws after provider success (crash-before-SENT) → error caught, FAILED state set
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -449,5 +451,57 @@ describe("alert email delivery FSM", () => {
 
     // Exactly one email sent despite two concurrent delivery attempts
     expect(_fakeProvider.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("13: provider.send receives stable idempotency key alert:{workspaceId}:{alertId}:{attemptCount}", async () => {
+    const stored = makeStoredAlert({ emailAttemptCount: 0 });
+    mockDb.alert.create.mockResolvedValue(stored);
+    _fakeProvider = makeFakeProvider({ id: "resend-idem-001" });
+
+    await createAlert({
+      workspaceId: stored.workspaceId,
+      userId: stored.userId as string,
+      type: "threshold_breach",
+      channel: "email",
+      severity: "critical",
+      message: stored.message as string,
+    });
+
+    await vi.waitFor(() => expect(_fakeProvider!.send).toHaveBeenCalledOnce());
+
+    const sendArg = _fakeProvider!.send.mock.calls[0][0];
+    // Key must include all three scoping parts: workspaceId, alertId, attemptCount (0+1=1)
+    expect(sendArg.idempotencyKey).toBe(`alert:${stored.workspaceId}:${stored.id}:1`);
+  });
+
+  it("14: db.alert.update throws after provider success (crash-before-SENT) → FAILED state set", async () => {
+    const stored = makeStoredAlert({ emailAttemptCount: 0 });
+    mockDb.alert.create.mockResolvedValue(stored);
+    _fakeProvider = makeFakeProvider({ id: "resend-crash-test" });
+
+    // First update (SENT path) throws; second update (FAILED path) is fire-and-forget
+    mockDb.alert.update
+      .mockRejectedValueOnce(new Error("DB connection lost"))
+      .mockResolvedValue({ emailAttemptCount: 1 });
+
+    await createAlert({
+      workspaceId: stored.workspaceId,
+      userId: stored.userId as string,
+      type: "threshold_breach",
+      channel: "email",
+      severity: "critical",
+      message: stored.message as string,
+    });
+
+    await vi.waitFor(() => expect(mockDb.alert.update).toHaveBeenCalledTimes(2));
+
+    // Provider was called (send succeeded)
+    expect(_fakeProvider!.send).toHaveBeenCalledOnce();
+
+    // Second update must record FAILED state — not SENT
+    const secondCall = mockDb.alert.update.mock.calls[1][0];
+    expect(secondCall.data.emailDeliveryStatus).toBe("FAILED");
+    // emailSentAt stays null in FAILED state (SENT ≠ FAILED invariant preserved)
+    expect(secondCall.data.emailSentAt).toBeNull();
   });
 });

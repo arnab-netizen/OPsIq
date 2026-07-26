@@ -128,6 +128,7 @@ export async function retryEmailAlert(
       subject: `${severityLabel}: ${alert.type.replace(/_/g, " ")} — OpsIQ`,
       html: `<p><strong>${severityLabel}</strong></p><p>${alert.message}</p><p style="color:#666;font-size:12px">Alert ID: ${alertId}</p>`,
       text: `${severityLabel}\n\n${alert.message}\n\nAlert ID: ${alertId}`,
+      idempotencyKey: `alert:${workspaceId}:${alertId}:${alert.emailAttemptCount + 1}`,
     });
 
     const updated = await db.alert.update({

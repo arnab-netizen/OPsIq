@@ -358,6 +358,7 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
       subject: `${severityLabel}: ${alert.type.replace(/_/g, " ")} — OpsIQ`,
       html: `<p><strong>${severityLabel}</strong></p><p>${alert.message}</p><p style="color:#666;font-size:12px">Alert ID: ${alert.id}</p>`,
       text: `${severityLabel}\n\n${alert.message}\n\nAlert ID: ${alert.id}`,
+      idempotencyKey: `alert:${alert.workspaceId}:${alert.id}:${alert.emailAttemptCount + 1}`,
     });
 
     // Provider confirmed delivery. emailSentAt = NOW() ONLY at this point (not during claim).
