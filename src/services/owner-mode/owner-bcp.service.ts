@@ -109,7 +109,6 @@ type BcpRow = {
   triggerType: string;
   triggerDescription: string;
   triggeredBy: string;
-  inputFactsJson: string;
   sourceReassessmentEventId: string | null;
   createdAt: Date;
 };
@@ -137,7 +136,6 @@ const bcpSelect = {
   triggerType: true,
   triggerDescription: true,
   triggeredBy: true,
-  inputFactsJson: true,
   sourceReassessmentEventId: true,
   createdAt: true,
 };

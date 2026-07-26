@@ -235,16 +235,16 @@ stages:
         - bundle-3.10
 
   stage-4:
-    # INTERNAL DELIVERY BUNDLE GROUP — NOT a Factory Stage milestone.
-    # bundle-4, bundle-4.1, bundle-4.2 are implementation delivery bundles shipped as part of
-    # Factory Stage 3 delivery. Their closure indicates code delivery only.
-    # Factory Stage 4 has not begun and requires explicit owner authorization before it starts.
-    factory_stage_id: null
-    development_bundle_id: "DELIVERY_BUNDLE_GROUP_4"
-    scope: internal_delivery_bundle_group
-    factory_stage_acceptance: NOT_APPLICABLE
-    name: Business Condition Profile Operations (internal delivery bundle group)
-    overall_status: DEVELOPMENT_BUNDLE_DELIVERY_COMPLETE
+    # FACTORY STAGE 4 — BCP Cross-Domain Adversarial Closure.
+    # Authorized to begin by owner from main SHA 2bc40a9cad3389090fd3074fd476cb4c21725e1f (2026-07-26).
+    # bundle-4, bundle-4.1, bundle-4.2 are closed development delivery bundles (code delivery).
+    # bundle-4.3 is the Factory Stage 4 adversarial closure gate (PENDING — awaiting CI+DB proof).
+    factory_stage_id: "FACTORY_STAGE_4"
+    development_bundle_id: null
+    scope: factory_stage
+    factory_stage_acceptance: IN_PROGRESS
+    name: Stage 4 Cross-Domain Adversarial Closure
+    overall_status: IN_PROGRESS
     bundles:
       - id: bundle-4
         artifact_type: development_bundle
@@ -290,12 +290,22 @@ stages:
           tests_bundle: 96
           gate_result: "post_merge_main_integration_completed_success"
 
+      - id: bundle-4.3
+        artifact_type: development_bundle
+        name: Stage 4 Cross-Domain Adversarial Closure
+        status: PENDING
+        post_merge_evidence:
+          pr_sha: null
+          merge_sha: null
+          main_integration_run: null
+          db_verification_run: null
+
     stage_acceptance:
-      status: DEVELOPMENT_BUNDLE_DELIVERY_CLOSED
-      note: "Development bundle delivery complete. NOT Factory Stage 4 acceptance — Factory Stage 4 requires explicit owner authorization and has not begun."
+      status: IN_PROGRESS
+      note: "Factory Stage 4 authorized by owner (2026-07-26). bundle-4.3 adversarial closure PENDING — awaiting PR, CI, and DB proof."
       gate: scripts/validate-stage-acceptance.mjs --stage 4
-      closed_date: "2026-07-25"
-      evidence: "bundles 4.1 + 4.2 code delivery closed. Code on main via PR #251 merge 5bc1fc01. Main Integration run 30152600373 green."
+      authorized_date: "2026-07-26"
+      authorized_from_sha: "2bc40a9cad3389090fd3074fd476cb4c21725e1f"
 
   stage-5:
     # INTERNAL DELIVERY BUNDLE GROUP — NOT a Factory Stage milestone.
