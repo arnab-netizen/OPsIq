@@ -340,6 +340,7 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
         "email_last_attempt_at"  = NOW(),
         "email_attempt_count"    = "email_attempt_count" + 1
     WHERE "id" = ${alert.id}
+      AND "workspace_id" = ${alert.workspaceId}
       AND (
         ("email_delivery_status" = 'PENDING')
         OR ("email_delivery_status" = 'CLAIMED' AND "email_claim_expires_at" < NOW())

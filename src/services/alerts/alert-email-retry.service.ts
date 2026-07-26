@@ -99,6 +99,7 @@ export async function retryEmailAlert(
         "email_last_attempt_at"  = NOW(),
         "email_attempt_count"    = "email_attempt_count" + 1
     WHERE "id" = ${alertId}
+      AND "workspace_id" = ${workspaceId}
       AND (
         ("email_delivery_status" = 'FAILED')
         OR ("email_delivery_status" = 'CLAIMED' AND "email_claim_expires_at" < NOW())
