@@ -272,7 +272,7 @@ const EMAIL_CLAIM_LEASE_MS = 5 * 60 * 1000;
 
 // Retryable provider errors: transient network, rate limits, server errors.
 function isRetryableProviderError(error: unknown): boolean {
-  const msg = error instanceof Error ? error.message : String(error);
+  const msg = String(error);
   return /429|503|502|500|504|timeout|ECONNRESET|ETIMEDOUT|network/i.test(msg);
 }
 

@@ -11,7 +11,7 @@ const EMAIL_MAX_ATTEMPTS = 3;
 const EMAIL_CLAIM_LEASE_MS = 5 * 60 * 1000;
 
 function isRetryableProviderError(error: unknown): boolean {
-  const msg = error instanceof Error ? error.message : String(error);
+  const msg = String(error);
   return /429|503|502|500|504|timeout|ECONNRESET|ETIMEDOUT|network/i.test(msg);
 }
 
@@ -158,7 +158,7 @@ export async function retryEmailAlert(
     logger.info("Email alert delivered via retry", { alertId, actorId });
     return { alertId, status: "SENT", attemptCount: updated.emailAttemptCount };
   } catch (error) {
-    const errorMessage = classifyOperatorError(
+    const safeMessage = classifyOperatorError(
       error instanceof Error ? error : new Error(String(error)),
       { context: "network" }
     ).operatorMessage.slice(0, 500);
@@ -175,7 +175,7 @@ export async function retryEmailAlert(
       where: { id: alertId },
       data: {
         emailDeliveryStatus: "FAILED",
-        emailError: errorMessage,
+        emailError: safeMessage,
         emailSentAt: null,
       },
     }).catch(() => {});
@@ -191,6 +191,6 @@ export async function retryEmailAlert(
     }).catch(() => {});
 
     logger.warn("Email alert retry failed", { alertId, attemptCount, isPermanentlyFailed });
-    return { alertId, status: "FAILED", attemptCount, message: errorMessage };
+    return { alertId, status: "FAILED", attemptCount, message: safeMessage };
   }
 }
