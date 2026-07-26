@@ -1,0 +1,99 @@
+# OpsIQ Capability Dependency Graph
+# Format: capability → blocks (downstream capabilities that depend on it)
+# Status: PROVEN | WIRED_NOT_CALLED | MISSING | DB_BLOCKED
+
+M001_email_transport:
+  status: PROVEN
+  file: src/lib/integrations/email-provider.ts
+  blocks:
+    - M020_compliance_notifications
+    - M032_critical_state_notifications
+
+M004_owner_risk_surface:
+  status: PROVEN
+  blocks:
+    - owner_risk_end_to_end_workflow
+
+M005_owner_compliance_surface:
+  status: PROVEN
+  blocks:
+    - M020_compliance_notifications
+    - owner_compliance_end_to_end_workflow
+
+M006_owner_task_surface:
+  status: PROVEN
+  blocks:
+    - owner_task_end_to_end_workflow
+
+M007_owner_alert_surface:
+  status: PROVEN
+  blocks:
+    - owner_alert_end_to_end_workflow
+
+M010_marketing_campaign:
+  status: PROVEN
+  blocks:
+    - owner_marketing_end_to_end_workflow
+    - M038_campaign_to_crm_link
+
+M011_owner_cashflow_surface:
+  status: PROVEN
+  blocks:
+    - owner_cashflow_end_to_end_workflow
+
+M014_stock_item:
+  status: PROVEN
+  blocks:
+    - M015_purchase_order
+    - M038_stock_to_procurement
+    - owner_inventory_end_to_end_workflow
+
+M015_purchase_order:
+  status: PROVEN
+  blocks:
+    - owner_procurement_end_to_end_workflow
+    - M038_stock_to_procurement
+
+M018_entity_workspace_id:
+  status: PROVEN
+  blocks:
+    - entity_workspace_isolation
+    - future_entity_service
+
+M019_dead_gate_removed:
+  status: PROVEN
+  blocks: []
+
+M020_compliance_notifications:
+  status: PROVEN
+  blocks: []
+
+M021_customer_record:
+  status: PROVEN
+  blocks:
+    - owner_sales_end_to_end_workflow
+    - M038_campaign_to_crm_link
+
+M032_critical_state_notifications:
+  status: PROVEN
+  blocks: []
+
+MNEW01_T006_staleness_regression:
+  status: PROVEN
+  blocks: []
+
+# Stage 4+ capabilities (MISSING — not yet built)
+M038_stock_to_procurement:
+  status: MISSING
+  blocks:
+    - owner_supply_chain_workflow
+
+owner_mobile_shell:
+  status: MISSING
+  blocks:
+    - owner_mobile_operation
+
+stage4_owner_operational_surfaces:
+  status: MISSING
+  blocks:
+    - pilot_readiness

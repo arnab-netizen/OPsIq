@@ -1,4 +1,5 @@
 id: bundle-7
+artifact_type: development_bundle
 stage: 7
 name: Final Deployment Readiness and Stage Acceptance
 status: CLOSED

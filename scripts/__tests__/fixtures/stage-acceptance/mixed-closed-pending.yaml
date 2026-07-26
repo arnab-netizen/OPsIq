@@ -1,0 +1,20 @@
+stages:
+  stage-3:
+    name: Test Stage — one CLOSED, one PENDING
+    bundles:
+      - id: bundle-test-closed-ok
+        artifact_type: development_bundle
+        status: CLOSED
+        post_merge_evidence:
+          pr_sha: "abc123abc123abc1"
+          merge_sha: "def456def456def4"
+          main_integration_run: "https://github.com/org/repo/actions/runs/1001"
+          db_verification_run: "https://github.com/org/repo/actions/runs/1002"
+      - id: bundle-test-still-pending
+        artifact_type: development_bundle
+        status: PENDING
+        post_merge_evidence:
+          pr_sha: null
+          merge_sha: null
+          main_integration_run: null
+          db_verification_run: null

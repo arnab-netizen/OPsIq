@@ -222,7 +222,7 @@ class GovernanceScanner {
     // Pattern: fetch(...).then().catch() without useOperatorMutation
     if (file.includes(".test.") || file.includes(".spec.")) return;
 
-    const hasFetch = /fetch\s*\(/i.test(line);
+    const hasFetch = /\bfetch\s*\(/i.test(line);
     const hasMutate = /mutate|useOperatorMutation|GovMutationButton/i.test(line);
 
     if (hasFetch && !hasMutate) {

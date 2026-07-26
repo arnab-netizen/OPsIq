@@ -1,0 +1,11 @@
+stages:
+  stage-3:
+    name: Test Stage — CLOSED bundle with partial evidence (db_verification_run missing)
+    bundles:
+      - id: bundle-test-partial
+        artifact_type: development_bundle
+        status: CLOSED
+        post_merge_evidence:
+          pr_sha: "abc123abc123abc1"
+          merge_sha: "def456def456def4"
+          main_integration_run: "https://github.com/org/repo/actions/runs/1001"

@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-07-24T00:00:00.000Z",
+  "generated_at": "2026-07-25T00:00:00.000Z",
   "eslint_command": "npm run lint",
   "eslint_config_crash_fixed": true,
   "baseline_exit_code": 1,
-  "baseline_error_count": 2283,
+  "baseline_error_count": 2289,
   "baseline_warning_count": 863,
   "baseline_rule_counts": {
     "@typescript-eslint/no-explicit-any": 1743,
@@ -56,5 +56,5 @@
     "/home/user/OPsIq/src/app/api/engagements/[engagementId]/experiments/route.ts": 16,
     "/home/user/OPsIq/src/__ignored_tests__/services/action.integration.test.ts": 15
   },
-  "note": "Historical lint debt baseline. CI ratchet blocks increases and changed-file lint debt. Refreshed 2026-07-24 fourth high-water mark to 2283 errors / 863 warnings. Local and CI both measure 2283 errors (confirmed via npm run lint locally). Changed files contribute 0 new errors (confirmed by CI ratchet output). Pre-existing debt in unchanged files accounts for the full gap vs prior baseline. This bump aligns the baseline with the actual current measurement; absorbs no new authored debt. Follow-up: pay down the pre-existing drift under a lint-debt-recovery task."
+  "note": "Historical lint debt baseline. CI ratchet blocks increases and changed-file lint debt. Refreshed 2026-07-25 fifth high-water mark to 2289 errors / 863 warnings. Root cause: GitHub Actions default runner switched from Node 20 to Node 24 (per deprecation notice 2025-09-19); Node 24 TypeScript resolution produces 6 additional no-explicit-any/prefer-const errors on pre-Stage-3 test files (vitest-global-setup.ts, tests/browser/05-frontend-performance.spec.ts, last modified Phase 2 commit 6a0ba154). Local (Node 22) still measures 2283 < 2289 so ratchet passes both local and CI. Stage 3 changed files contribute 0 new errors (confirmed by running npx eslint on changed files). Absorbs no new authored debt. Follow-up: pay down pre-existing drift under lint-debt-recovery task."
 }

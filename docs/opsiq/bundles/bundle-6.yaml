@@ -1,4 +1,5 @@
 id: bundle-6
+artifact_type: development_bundle
 stage: 6
 name: Consulting Mode and Engagement Operations
 status: CLOSED

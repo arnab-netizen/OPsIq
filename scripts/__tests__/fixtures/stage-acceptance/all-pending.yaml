@@ -1,0 +1,20 @@
+stages:
+  stage-3:
+    name: Test Stage — all bundles PENDING
+    bundles:
+      - id: bundle-test-pending-a
+        artifact_type: development_bundle
+        status: PENDING
+        post_merge_evidence:
+          pr_sha: null
+          merge_sha: null
+          main_integration_run: null
+          db_verification_run: null
+      - id: bundle-test-pending-b
+        artifact_type: development_bundle
+        status: PENDING
+        post_merge_evidence:
+          pr_sha: null
+          merge_sha: null
+          main_integration_run: null
+          db_verification_run: null

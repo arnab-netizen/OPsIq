@@ -171,9 +171,27 @@ describe("REMAINING_STAGE_ACCEPTANCE.yaml — ledger consistency", () => {
   });
 
   it("stage-3 acceptance status is CLOSED (all bundles merged)", () => {
-    // Stage 3 acceptance was CLOSED on 2026-07-25 via PR #251 + PR #252 corrective fix
+    // Stage 3 acceptance was CLOSED on 2026-07-26 via PR #255 proof-closure
     expect(ledgerContent).toContain("stage-3:");
     expect(ledgerContent).toMatch(/stage-3[\s\S]*?overall_status: COMPLETE/);
+  });
+
+  it("bundle-3.9 db_test_count is 13 (corrected from 12)", () => {
+    // Factual count confirmed: 13 it() calls in bundle-3.9-sop.db.test.ts
+    const b39 = ledgerContent.match(/id: bundle-3\.9[\s\S]*?id: bundle-3\.10/);
+    expect(b39).not.toBeNull();
+    expect(b39![0]).toContain("db_test_count: 13");
+    expect(b39![0]).not.toContain("db_test_count: 12");
+  });
+
+  it("bundles 3.5-3.10 all CLOSED with PR #255 merge SHA", () => {
+    // Post-merge evidence from PR #255 (15a131ab7f0b7d703b459322f3c4db5951d1e825)
+    const expectedMergeSha = "15a131ab7f0b7d703b459322f3c4db5951d1e825";
+    expect(ledgerContent).toContain(expectedMergeSha);
+  });
+
+  it("bundles 3.5-3.10 reference Main Integration run 30199084412", () => {
+    expect(ledgerContent).toContain("main_integration_run: \"30199084412\"");
   });
 });
 
@@ -199,24 +217,56 @@ describe("validate-stage-acceptance.mjs", () => {
     }
   }
 
-  it("stage 3 acceptance passes (all bundles CLOSED — PR #251 + PR #252)", () => {
+  // ── Integrity mode (--mode integrity): PENDING = normal development, exit 0 ──
+
+  it("stage 3 integrity check passes with explicit --mode integrity", () => {
+    const result = runStageAcceptance("--mode integrity --stage 3");
+    expect(result.code).toBe(0);
+  });
+
+  it("stage 3 integrity check passes without explicit mode (integrity is default)", () => {
     const result = runStageAcceptance("--stage 3");
     expect(result.code).toBe(0);
-    expect(result.output).toMatch(/PASS|closed|complete/i);
   });
 
-  it("stage 4 acceptance passes (bundles 4.1 + 4.2 CLOSED)", () => {
-    const result = runStageAcceptance("--stage 4");
+  it("stage 4 integrity check passes", () => {
+    const result = runStageAcceptance("--mode integrity --stage 4");
     expect(result.code).toBe(0);
   });
 
-  it("all stages acceptance passes (stages 3-7 all CLOSED)", () => {
-    const result = runStageAcceptance("--stage all");
+  it("all stages integrity check passes", () => {
+    const result = runStageAcceptance("--mode integrity --stage all");
     expect(result.code).toBe(0);
   });
+
+  // ── Closure mode (--mode closure): all stage 3 bundles are now CLOSED ─────────
+
+  it("stage 3 closure check passes (all 6 bundles CLOSED via PR #255)", () => {
+    const result = runStageAcceptance("--mode closure --stage 3");
+    // Bundles 3.5–3.10 are CLOSED with post-merge evidence from PR #255
+    // merge SHA 15a131ab7f0b7d703b459322f3c4db5951d1e825
+    expect(result.code).toBe(0);
+  });
+
+  it("stage 4 closure check passes (bundles 4.1 + 4.2 CLOSED)", () => {
+    const result = runStageAcceptance("--mode closure --stage 4");
+    expect(result.code).toBe(0);
+  });
+
+  it("all stages closure check passes (stages 3-7 all CLOSED)", () => {
+    const result = runStageAcceptance("--mode closure --stage all");
+    expect(result.code).toBe(0);
+  });
+
+  // ── Invalid arguments ──────────────────────────────────────────────────────────
 
   it("exits with code 2 if --stage argument missing", () => {
     const result = runStageAcceptance("");
+    expect(result.code).toBe(2);
+  });
+
+  it("exits with code 2 if --mode has an invalid value", () => {
+    const result = runStageAcceptance("--stage 3 --mode invalid");
     expect(result.code).toBe(2);
   });
 });

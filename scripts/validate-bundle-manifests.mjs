@@ -74,6 +74,15 @@ for (const file of bundleFiles) {
     fail(`${file}: unknown status '${status}' (must be PENDING | IN_PROGRESS | CLOSED)`);
   }
 
+  const VALID_ARTIFACT_TYPES = ['development_bundle', 'infrastructure_component'];
+  if (!parsed.artifact_type) {
+    fail(`${file}: missing required field 'artifact_type' (must be: ${VALID_ARTIFACT_TYPES.join(' | ')})`);
+  } else if (!VALID_ARTIFACT_TYPES.includes(parsed.artifact_type)) {
+    fail(`${file}: unknown artifact_type '${parsed.artifact_type}' (must be: ${VALID_ARTIFACT_TYPES.join(' | ')})`);
+  } else if (parsed.artifact_type !== 'development_bundle') {
+    fail(`${file}: bundle manifest artifact_type must be 'development_bundle', got '${parsed.artifact_type}'`);
+  }
+
   if (status === 'CLOSED') {
     const required = ['pr_sha', 'merge_sha', 'main_integration_run', 'db_verification_run'];
     for (const field of required) {
@@ -119,6 +128,13 @@ if (ledger) {
         continue;
       }
 
+      // artifact_type on ledger bundle entries
+      if (!lb.artifact_type) {
+        fail(`Ledger/${lb.id}: missing required field 'artifact_type' (expected 'development_bundle')`);
+      } else if (lb.artifact_type !== 'development_bundle') {
+        fail(`Ledger/${lb.id}: bundle entry artifact_type must be 'development_bundle', got '${lb.artifact_type}'`);
+      }
+
       // Status consistency
       if (lb.status !== bundleFile.status) {
         fail(`Ledger/${lb.id}: status '${lb.status}' contradicts bundle file status '${bundleFile.status}'`);
@@ -134,6 +150,20 @@ if (ledger) {
           }
         }
       }
+    }
+  }
+
+  // ─── Validate completion_factory.components artifact_type ──────────────────
+  const cf = ledger.completion_factory || {};
+  const cfComponents = Array.isArray(cf.components) ? cf.components : [];
+  for (const comp of cfComponents) {
+    if (!comp || !comp.id) continue;
+    if (!comp.artifact_type) {
+      fail(`completion_factory/${comp.id}: missing required field 'artifact_type' (expected 'infrastructure_component')`);
+    } else if (comp.artifact_type !== 'infrastructure_component') {
+      fail(`completion_factory/${comp.id}: component artifact_type must be 'infrastructure_component', got '${comp.artifact_type}'`);
+    } else {
+      console.log(`  ✓ completion_factory/${comp.id}: artifact_type=${comp.artifact_type}`);
     }
   }
 

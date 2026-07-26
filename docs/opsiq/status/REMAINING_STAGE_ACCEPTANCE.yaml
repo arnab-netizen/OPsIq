@@ -1,6 +1,6 @@
 version: "1.0"
-last_updated: "2026-07-25"
-# Updated: bundle-6 + bundle-7 CLOSED (2026-07-25); all stages 3-7 COMPLETE
+last_updated: "2026-07-26"
+# Updated: bundles 3.5–3.10 CLOSED via PR #255 proof-closure (2026-07-26)
 maintainer: completion-factory
 
 # REMAINING STAGE ACCEPTANCE LEDGER
@@ -10,6 +10,11 @@ maintainer: completion-factory
 #   - PENDING → CLOSED requires explicit post-merge evidence (no shortcuts)
 #   - not_applicable requires written justification
 #   - Contradictions between this ledger and bundle YAMLs are a blocking error
+#   - artifact_type is REQUIRED on every bundle and component record.
+#     Valid values: development_bundle | infrastructure_component
+#     development_bundle: a scoped implementation unit within a stage delivery plan
+#     infrastructure_component: a completion-factory CI/tooling/harness component
+#   NOTE: bundle-4 through bundle-7 are development_bundle, NOT factory product stages.
 
 stages:
   stage-3:
@@ -17,6 +22,7 @@ stages:
     overall_status: COMPLETE
     bundles:
       - id: bundle-3.4
+        artifact_type: development_bundle
         name: Risk and Compliance Full Lifecycle
         status: CLOSED
         post_merge_evidence:
@@ -32,104 +38,190 @@ stages:
           gate_result: "post_merge_main_integration_completed_success"
 
       - id: bundle-3.5
+        artifact_type: development_bundle
         name: Customer Complaint and Service Recovery
         status: CLOSED
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          db_test_file: "src/__tests__/owner-mode/bundle-3.5-complaint.db.test.ts"
+          db_test_count: 12
+          db_tests_gate: "SKIP_WITHOUT_TEST_WITH_DB_confirmed"
+          browser_spec_file: "tests/browser/57-owner-stage3-complaint-assignment-approval.spec.ts"
+          browser_spec_bundles_covered: ["3.5", "3.6", "3.7"]
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          service: "src/services/owner-mode/customer-complaint.service.ts"
+          audit_events: ["complaint.created", "complaint.triaged", "complaint.recovery_action_added", "complaint.resolved", "complaint.closed"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
-          pr_sha: "cda988e7267552294f6b5c597d1bed0fb8979e53"
-          merge_sha: "5bc1fc013cd52064afcffb65505d7359da872718"
-          # PR #251 merge triggered run 30149037470 (FAILED — 29 mock-db test files).
-          # PR #252 corrective fix (vitest.setup.ts) merged at 45694526099aa5b092631fa2cc6d037a5aa1c3b9.
-          # main_integration_run is the first green run containing all bundle-3.5 code.
-          main_integration_run: "30152600373"
-          db_verification_run: "30147768617"
-          verification_date: "2026-07-25"
-          corrective_pr: "252"
-          corrective_pr_sha: "db4506049a5cc99a7ab6d2576ed7bc2a743dee44"
-          corrective_merge_sha: "45694526099aa5b092631fa2cc6d037a5aa1c3b9"
-          corrective_fix: "vitest.setup.ts catch block must not rethrow Vitest mock-validation errors under TEST_WITH_DB=true"
-          tests_bundle: 70
+          pr_sha: "95138558ed4e37abffe7599aa3eee3514a9acbb5"
+          merge_sha: "15a131ab7f0b7d703b459322f3c4db5951d1e825"
+          main_integration_run: "30199084412"
+          db_verification_run: "30196020202"
+          verification_date: "2026-07-26"
           gate_result: "post_merge_main_integration_completed_success"
+          notes: "Proof-closure via PR #255 (stage-3-proof-closure branch). Original implementation in PR #251/#252 (merge 5bc1fc013cd52064afcffb65505d7359da872718, corrective merge 45694526099aa5b092631fa2cc6d037a5aa1c3b9)."
+          tests_bundle: 70
 
       - id: bundle-3.6
+        artifact_type: development_bundle
         name: Owner Action Assignment and Outcome Tracking
         status: CLOSED
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          db_test_file: "src/__tests__/owner-mode/bundle-3.6-assignment.db.test.ts"
+          db_test_count: 11
+          db_tests_gate: "SKIP_WITHOUT_TEST_WITH_DB_confirmed"
+          browser_spec_file: "tests/browser/57-owner-stage3-complaint-assignment-approval.spec.ts"
+          browser_spec_bundles_covered: ["3.5", "3.6", "3.7"]
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          service: "src/services/owner-mode/owner-action-assignment-lifecycle.service.ts"
+          audit_events: ["owner.action_assigned", "owner.action_reassigned", "owner.action_outcome_closed", "owner.action_stall_detected"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
-          pr_sha: "cda988e7267552294f6b5c597d1bed0fb8979e53"
-          merge_sha: "5bc1fc013cd52064afcffb65505d7359da872718"
-          main_integration_run: "30152600373"
-          db_verification_run: "30147768617"
-          verification_date: "2026-07-25"
-          corrective_pr: "252"
-          corrective_pr_sha: "db4506049a5cc99a7ab6d2576ed7bc2a743dee44"
-          corrective_merge_sha: "45694526099aa5b092631fa2cc6d037a5aa1c3b9"
-          tests_bundle: 53
+          pr_sha: "95138558ed4e37abffe7599aa3eee3514a9acbb5"
+          merge_sha: "15a131ab7f0b7d703b459322f3c4db5951d1e825"
+          main_integration_run: "30199084412"
+          db_verification_run: "30196020202"
+          verification_date: "2026-07-26"
           gate_result: "post_merge_main_integration_completed_success"
+          notes: "Proof-closure via PR #255. Original implementation in PR #251/#252."
+          tests_bundle: 53
 
       - id: bundle-3.7
+        artifact_type: development_bundle
         name: Approval Resolution and Evidence Chain
         status: CLOSED
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          db_test_file: "src/__tests__/owner-mode/bundle-3.7-approval.db.test.ts"
+          db_test_count: 13
+          db_tests_gate: "SKIP_WITHOUT_TEST_WITH_DB_confirmed"
+          browser_spec_file: "tests/browser/57-owner-stage3-complaint-assignment-approval.spec.ts"
+          browser_spec_bundles_covered: ["3.5", "3.6", "3.7"]
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          service: "src/services/owner-mode/approval-resolution.service.ts"
+          audit_events: ["approval.created", "approval.evidence_submitted", "approval.decided", "approval.action_rescoped", "approval.appeal_initiated"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
-          pr_sha: "cda988e7267552294f6b5c597d1bed0fb8979e53"
-          merge_sha: "5bc1fc013cd52064afcffb65505d7359da872718"
-          main_integration_run: "30152600373"
-          db_verification_run: "30147768617"
-          verification_date: "2026-07-25"
-          corrective_pr: "252"
-          corrective_pr_sha: "db4506049a5cc99a7ab6d2576ed7bc2a743dee44"
-          corrective_merge_sha: "45694526099aa5b092631fa2cc6d037a5aa1c3b9"
-          tests_bundle: 58
+          pr_sha: "95138558ed4e37abffe7599aa3eee3514a9acbb5"
+          merge_sha: "15a131ab7f0b7d703b459322f3c4db5951d1e825"
+          main_integration_run: "30199084412"
+          db_verification_run: "30196020202"
+          verification_date: "2026-07-26"
           gate_result: "post_merge_main_integration_completed_success"
+          notes: "Proof-closure via PR #255. Original implementation in PR #251/#252."
+          tests_bundle: 58
 
       - id: bundle-3.8
+        artifact_type: development_bundle
         name: Owner Onboarding and Archetype Seeding
         status: CLOSED
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          db_test_file: "src/__tests__/owner-mode/bundle-3.8-onboarding.db.test.ts"
+          db_test_count: 13
+          db_tests_gate: "SKIP_WITHOUT_TEST_WITH_DB_confirmed"
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          service: "src/services/owner-mode/owner-onboarding-lifecycle.service.ts"
+          audit_events: ["onboarding.started", "onboarding.completed", "onboarding.re_triggered"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
-          pr_sha: "cda988e7267552294f6b5c597d1bed0fb8979e53"
-          merge_sha: "5bc1fc013cd52064afcffb65505d7359da872718"
-          main_integration_run: "30152600373"
-          db_verification_run: "30147768617"
-          verification_date: "2026-07-25"
-          corrective_pr: "252"
-          corrective_pr_sha: "db4506049a5cc99a7ab6d2576ed7bc2a743dee44"
-          corrective_merge_sha: "45694526099aa5b092631fa2cc6d037a5aa1c3b9"
-          tests_bundle: 62
+          pr_sha: "95138558ed4e37abffe7599aa3eee3514a9acbb5"
+          merge_sha: "15a131ab7f0b7d703b459322f3c4db5951d1e825"
+          main_integration_run: "30199084412"
+          db_verification_run: "30196020202"
+          verification_date: "2026-07-26"
           gate_result: "post_merge_main_integration_completed_success"
+          notes: "Proof-closure via PR #255. Original implementation in PR #251/#252."
+          tests_bundle: 62
 
       - id: bundle-3.9
+        artifact_type: development_bundle
         name: Process Intelligence and SOP Management
         status: CLOSED
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          db_test_file: "src/__tests__/owner-mode/bundle-3.9-sop.db.test.ts"
+          db_test_count: 13
+          db_tests_gate: "SKIP_WITHOUT_TEST_WITH_DB_confirmed"
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          service: "src/services/owner-mode/sop-process-intelligence.service.ts"
+          audit_events: ["sop.training_assigned", "sop.training_completed", "sop.noncompliance_alert_created"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
-          pr_sha: "cda988e7267552294f6b5c597d1bed0fb8979e53"
-          merge_sha: "5bc1fc013cd52064afcffb65505d7359da872718"
-          main_integration_run: "30152600373"
-          db_verification_run: "30147768617"
-          verification_date: "2026-07-25"
-          corrective_pr: "252"
-          corrective_pr_sha: "db4506049a5cc99a7ab6d2576ed7bc2a743dee44"
-          corrective_merge_sha: "45694526099aa5b092631fa2cc6d037a5aa1c3b9"
-          tests_bundle: 38
+          pr_sha: "95138558ed4e37abffe7599aa3eee3514a9acbb5"
+          merge_sha: "15a131ab7f0b7d703b459322f3c4db5951d1e825"
+          main_integration_run: "30199084412"
+          db_verification_run: "30196020202"
+          verification_date: "2026-07-26"
           gate_result: "post_merge_main_integration_completed_success"
+          notes: "Proof-closure via PR #255. db_test_count corrected from 12 to 13 (13 it() calls confirmed in bundle-3.9-sop.db.test.ts). Original implementation in PR #251/#252."
+          tests_bundle: 38
 
       - id: bundle-3.10
+        artifact_type: development_bundle
         name: Stage 3 Cross-Domain Adversarial Closure
         status: CLOSED
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          non_db_test_file: "src/__tests__/stage3-adversarial/stage3-adversarial-closure.test.ts"
+          non_db_test_count: 53
+          db_test_file: "src/__tests__/owner-mode/phase7-cross-domain-adversarial.db.test.ts"
+          db_test_count: 8
+          total_adversarial_tests: 61
+          adversarial_contracts_covered:
+            - workspace_isolation_cross_bundle
+            - concurrent_mutation_safety
+            - dto_leakage_boundary
+            - audit_completeness
+            - business_condition_re_evaluation_chain
+            - auth_capability_boundary
+            - cross_domain_arbitration_db_backed
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          non_db_adversarial_run: "53 passed (53) confirmed vitest run"
+          stage_acceptance_integrity_mode: "PASS"
+          browser_spec_file: "tests/browser/58-owner-stage3-onboarding-sop.spec.ts"
+          browser_spec_bundles_covered: ["3.8", "3.9"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
-          pr_sha: "cda988e7267552294f6b5c597d1bed0fb8979e53"
-          merge_sha: "5bc1fc013cd52064afcffb65505d7359da872718"
-          main_integration_run: "30152600373"
-          db_verification_run: "30147768617"
-          verification_date: "2026-07-25"
-          corrective_pr: "252"
-          corrective_pr_sha: "db4506049a5cc99a7ab6d2576ed7bc2a743dee44"
-          corrective_merge_sha: "45694526099aa5b092631fa2cc6d037a5aa1c3b9"
-          tests_bundle: 53
+          pr_sha: "95138558ed4e37abffe7599aa3eee3514a9acbb5"
+          merge_sha: "15a131ab7f0b7d703b459322f3c4db5951d1e825"
+          main_integration_run: "30199084412"
+          db_verification_run: "30196020202"
+          verification_date: "2026-07-26"
           gate_result: "post_merge_main_integration_completed_success"
+          notes: "Proof-closure via PR #255 (adversarial closure bundle). Original implementation in PR #251/#252."
+          tests_bundle: 53
 
     stage_acceptance:
       status: CLOSED
       gate: scripts/validate-stage-acceptance.mjs --stage 3
-      closed_date: "2026-07-25"
-      evidence: "All 6 required bundles CLOSED. Main Integration run 30152600373 on merge SHA 45694526099aa5b092631fa2cc6d037a5aa1c3b9 — conclusion: success, all 16 steps green including blocking full test suite."
+      closed_date: "2026-07-26"
+      evidence: "All 6 required bundles CLOSED via PR #255 proof-closure. Main Integration run 30199084412 on merge SHA 15a131ab7f0b7d703b459322f3c4db5951d1e825 — conclusion: success, all 35 steps green including migration (step 11), stage acceptance integrity gate (step 14), full DB+non-DB test suite (step 15). Pre-merge LANE_B DB verification run 30196020202 also green."
       required_bundles:
         - bundle-3.5
         - bundle-3.6
@@ -143,6 +235,7 @@ stages:
     overall_status: COMPLETE
     bundles:
       - id: bundle-4
+        artifact_type: development_bundle
         name: Business Condition Profile Operations (parent — superseded by sub-bundles 4.1+4.2)
         status: CLOSED
         post_merge_evidence:
@@ -194,6 +287,7 @@ stages:
     overall_status: COMPLETE
     bundles:
       - id: bundle-5
+        artifact_type: development_bundle
         name: Integration Fabric and Connector Registry (parent — superseded by sub-bundles 5.1+5.2+5.3)
         status: CLOSED
         post_merge_evidence:
@@ -258,6 +352,7 @@ stages:
     overall_status: COMPLETE
     bundles:
       - id: bundle-6
+        artifact_type: development_bundle
         name: Consulting Mode and Engagement Operations
         status: CLOSED
         post_merge_evidence:
@@ -284,6 +379,7 @@ stages:
     overall_status: COMPLETE
     bundles:
       - id: bundle-7
+        artifact_type: development_bundle
         name: Final Deployment Readiness and Stage Acceptance
         status: CLOSED
         post_merge_evidence:
@@ -323,31 +419,41 @@ completion_factory:
   completed_date: "2026-07-25"
   components:
     - id: bundle_manifests
+      artifact_type: infrastructure_component
       status: COMPLETE
       path: docs/opsiq/bundles/
     - id: acceptance_ledger
+      artifact_type: infrastructure_component
       status: COMPLETE
       path: docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml
     - id: manifest_validator
+      artifact_type: infrastructure_component
       status: COMPLETE
       path: scripts/validate-bundle-manifests.mjs
       verification: "11 bundles, 0 violations — 2026-07-25"
     - id: db_mock_factory
+      artifact_type: infrastructure_component
       status: COMPLETE
       path: src/__tests__/db-mock-factory.ts
     - id: reusable_ci_workflow
+      artifact_type: infrastructure_component
       status: COMPLETE
       path: .github/workflows/reusable-pr-validation.yml
+      notes: "Wired into ci.yml bundle-validate job (pr_sha pending merge); was previously unreferenced"
     - id: merge_candidate_validation
+      artifact_type: infrastructure_component
       status: COMPLETE
       path: .github/workflows/merge-candidate-validation.yml
     - id: concurrency_controls
+      artifact_type: infrastructure_component
       status: COMPLETE
       notes: ci.yml has concurrency group; db-verification.yml reviewed
     - id: recurrence_scanners
+      artifact_type: infrastructure_component
       status: COMPLETE
       path: scripts/scan-recurrence-defects.mjs
     - id: factory_tests
+      artifact_type: infrastructure_component
       status: COMPLETE
       path: src/__tests__/completion-factory/
       verification: "235/235 tests PASS — 2026-07-25"

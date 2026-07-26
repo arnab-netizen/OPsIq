@@ -138,30 +138,40 @@ function scanD2(file, lines) {
 
 // ─── D3: Raw workspaceId from request body ────────────────────────────────────
 // Pattern: body.workspaceId or params.workspaceId used directly without ctx.verifiedWorkspaceId
+// In service files, params.workspaceId is a typed function-parameter object (not HTTP route params);
+// only body.workspaceId is a genuine violation there. Route handlers must not use either.
 
 function scanD3(file, lines) {
+  const isApiRoute = file.includes(join('src', 'app', 'api'));
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (/body\.workspaceId\b/.test(line) || /params\.workspaceId\b/.test(line)) {
-      // Allow in DTO validation / Zod schema definitions
-      if (/z\.|schema|zodiac|Schema|interface|type\s+\w/.test(line)) continue;
-      // Allow in test files
-      if (file.includes('__tests__') || file.includes('.test.')) continue;
-      warn(file, i + 1, 3, `body.workspaceId or params.workspaceId used directly — use ctx.verifiedWorkspaceId instead`);
-    }
+    const hasBody = /body\.workspaceId\b/.test(line);
+    const hasParams = /params\.workspaceId\b/.test(line);
+    if (!hasBody && !hasParams) continue;
+    // In service files, params.workspaceId is a validated function argument — not a violation
+    if (!isApiRoute && hasParams && !hasBody) continue;
+    // Allow in DTO validation / Zod schema definitions
+    if (/z\.|schema|zodiac|Schema|interface|type\s+\w/.test(line)) continue;
+    // Allow in test files
+    if (file.includes('__tests__') || file.includes('.test.')) continue;
+    fail(file, i + 1, 3, `body.workspaceId or params.workspaceId used directly — use ctx.verifiedWorkspaceId instead`);
   }
 }
 
 // ─── D4: Raw actorId from request body ───────────────────────────────────────
 
 function scanD4(file, lines) {
+  const isApiRoute = file.includes(join('src', 'app', 'api'));
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (/body\.actorId\b|body\.userId\b|params\.actorId\b/.test(line)) {
-      if (/z\.|schema|Schema|interface|type\s+\w/.test(line)) continue;
-      if (file.includes('__tests__') || file.includes('.test.')) continue;
-      warn(file, i + 1, 4, `body.actorId/userId used directly — use ctx.verifiedActorId instead`);
-    }
+    const hasBody = /body\.actorId\b|body\.userId\b/.test(line);
+    const hasParams = /params\.actorId\b/.test(line);
+    if (!hasBody && !hasParams) continue;
+    // In service files, params.actorId is a validated function argument — not a violation
+    if (!isApiRoute && hasParams && !hasBody) continue;
+    if (/z\.|schema|Schema|interface|type\s+\w/.test(line)) continue;
+    if (file.includes('__tests__') || file.includes('.test.')) continue;
+    fail(file, i + 1, 4, `body.actorId/userId used directly — use ctx.verifiedActorId instead`);
   }
 }
 
