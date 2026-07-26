@@ -1574,31 +1574,47 @@ model OwnerStandingInstruction {
 
 /// Stage 3 Slice 3.2 — owner-scoped, workspace-isolated in-app alert.
 /// Persists business condition, risk, and execution alerts for owner acknowledgement.
+enum EmailDeliveryStatus {
+  PENDING
+  CLAIMED
+  SENT
+  FAILED
+  SKIPPED
+
+  @@map("email_delivery_status_enum")
+}
+
 model Alert {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId    String    @map("workspace_id") @db.Uuid
-  userId         String    @map("user_id") @db.Uuid
-  type           String
-  channel        String    @default("in_app")
-  message        String
-  entityType     String?   @map("entity_type")
-  entityId       String?   @map("entity_id") @db.Uuid
-  severity       String    @default("medium")
-  idempotencyKey  String?   @map("idempotency_key")
-  isRead          Boolean   @default(false) @map("is_read")
-  readAt          DateTime? @map("read_at")
-  resolvedAt      DateTime? @map("resolved_at")
-  emailSentAt     DateTime? @map("email_sent_at")
-  emailError      String?   @map("email_error")
-  resendMessageId String?   @map("resend_message_id")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String              @map("workspace_id") @db.Uuid
+  userId               String              @map("user_id") @db.Uuid
+  type                 String
+  channel              String              @default("in_app")
+  message              String
+  entityType           String?             @map("entity_type")
+  entityId             String?             @map("entity_id") @db.Uuid
+  severity             String              @default("medium")
+  idempotencyKey       String?             @map("idempotency_key")
+  isRead               Boolean             @default(false) @map("is_read")
+  readAt               DateTime?           @map("read_at")
+  resolvedAt           DateTime?           @map("resolved_at")
+  emailSentAt          DateTime?           @map("email_sent_at")
+  emailError           String?             @map("email_error")
+  resendMessageId      String?             @map("resend_message_id")
+  emailDeliveryStatus  EmailDeliveryStatus @default(PENDING) @map("email_delivery_status")
+  emailClaimedAt       DateTime?           @map("email_claimed_at")
+  emailClaimExpiresAt  DateTime?           @map("email_claim_expires_at")
+  emailLastAttemptAt   DateTime?           @map("email_last_attempt_at")
+  emailAttemptCount    Int                 @default(0) @map("email_attempt_count")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  workspace            Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, idempotencyKey], map: "alert_workspace_idempotency_key")
   @@index([workspaceId, userId, isRead])
   @@index([workspaceId, createdAt])
+  @@index([emailDeliveryStatus, emailClaimExpiresAt])
   @@map("alerts")
 }
 

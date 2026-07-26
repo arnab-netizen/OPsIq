@@ -3,18 +3,25 @@
  * Completion Factory — Stage Acceptance Gate
  *
  * Usage:
- *   node scripts/validate-stage-acceptance.mjs --stage 3
+ *   node scripts/validate-stage-acceptance.mjs --stage 3 [--mode integrity|closure]
  *   node scripts/validate-stage-acceptance.mjs --stage all
  *
- * Validates acceptance-data integrity for bundles in the target stage.
- * Violations (blocking, exit 1):
+ * Modes:
+ *   --mode integrity (default)
+ *     Data-integrity gate. PENDING/IN_PROGRESS bundles are normal during development
+ *     and pass (exit 0). Only CLOSED bundles with missing evidence fields fail (exit 1).
+ *     Wire this to PR/main validation CI steps.
+ *
+ *   --mode closure
+ *     Stage-closure gate. ALL bundles in the target stage must be CLOSED with full
+ *     evidence. Any PENDING or IN_PROGRESS bundle fails (exit 1).
+ *     Wire this to the explicit stage-closure authorization gate.
+ *
+ * Violations (exit 1 in both modes):
  *   - A CLOSED bundle has null post_merge_evidence fields (data integrity violation)
  *   - A bundle entry is missing artifact_type or has wrong value
- * Expected state (not a violation, exit 0):
- *   - PENDING or IN_PROGRESS bundles — normal during development
- *
- * The rule "Stage N+1 must not begin before Stage N acceptance is green" is enforced
- * by checking that NO bundle is CLOSED with missing evidence. PENDING bundles are fine.
+ * Additional violation in closure mode only:
+ *   - Any bundle that is not CLOSED
  */
 
 import { readFileSync } from 'fs';
@@ -28,7 +35,15 @@ const args = process.argv.slice(2);
 const stageIdx = args.indexOf('--stage');
 
 if (stageIdx === -1 || !args[stageIdx + 1]) {
-  console.error('Usage: node validate-stage-acceptance.mjs --stage <N|all> [--ledger <path>]');
+  console.error('Usage: node validate-stage-acceptance.mjs --stage <N|all> [--mode integrity|closure] [--ledger <path>]');
+  process.exit(2);
+}
+
+// --mode integrity (default) | closure
+const modeIdx = args.indexOf('--mode');
+const mode = (modeIdx !== -1 && args[modeIdx + 1]) ? args[modeIdx + 1] : 'integrity';
+if (mode !== 'integrity' && mode !== 'closure') {
+  console.error(`Invalid --mode value '${mode}'. Must be 'integrity' or 'closure'.`);
   process.exit(2);
 }
 
@@ -93,8 +108,14 @@ function checkStage(stageKey) {
         console.log(`  ✓ ${id}: CLOSED — merge_sha=${sha}`);
       }
     } else {
-      // PENDING or IN_PROGRESS — expected during development, not a violation
-      console.log(`  · ${id}: status=${status} (not yet closed)`);
+      if (mode === 'closure') {
+        // Closure gate: every bundle must be CLOSED
+        console.error(`  ❌ ${id}: status=${status} — closure mode requires all bundles CLOSED`);
+        violations++;
+      } else {
+        // Integrity gate: PENDING or IN_PROGRESS is expected during development
+        console.log(`  · ${id}: status=${status} (not yet closed)`);
+      }
     }
   }
 }
@@ -108,10 +129,11 @@ if (stageArg === 'all') {
 }
 
 console.log('');
+const modeLabel = mode === 'closure' ? 'closure' : 'integrity';
 if (violations === 0) {
-  console.log(`✅ Stage acceptance integrity passed (${checked} bundles, 0 violations)`);
+  console.log(`✅ Stage acceptance ${modeLabel} passed (${checked} bundles, 0 violations)`);
   process.exit(0);
 } else {
-  console.error(`❌ Stage acceptance integrity FAILED: ${violations} violation(s) across ${checked} bundles`);
+  console.error(`❌ Stage acceptance ${modeLabel} FAILED: ${violations} violation(s) across ${checked} bundles`);
   process.exit(1);
 }

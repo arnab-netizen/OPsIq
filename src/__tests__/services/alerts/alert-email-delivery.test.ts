@@ -1,26 +1,25 @@
 /**
- * Alert email delivery — Stage 3E corrective closure tests.
+ * Alert email delivery — Stage 3G FSM corrective closure tests.
  *
- * Covers:
- *  1  provider configured → sends correct Resend request; resendMessageId persisted via update;
- *     emailSentAt set by atomic $executeRaw claim (NOT by db.alert.update)
- *  2  provider absent → in-app alert persists, emailError recorded, no $executeRaw call
- *  3  provider failure → alert persists, emailError set, failure audit event emitted
+ * Covers the full email delivery FSM:
+ *  1  provider configured → atomic CLAIMED claim, email sent, SENT state set, emailSentAt set by db.update
+ *  2  provider absent → SKIPPED state written via $executeRaw, no db.alert.update
+ *  3  provider failure → FAILED state, emailSentAt=null, failure audit event emitted
  *  4  duplicate idempotency key → createAlert returns existing; no second email sent
  *  5  compliance deadline trigger → uses channel:"email" and enters real delivery path
- *  6  critical state trigger → uses channel:"email" and enters real delivery path
- *  7  user has no email address → alert persists, emailError=user_no_email_address, no $executeRaw call
+ *  6  critical state trigger �� uses channel:"email" and enters real delivery path
+ *  7  user has no email address → SKIPPED via $executeRaw, no subsequent claim
  *  8  denied request (enforceWorkspaceId throws) → no DB create, no email side-effect
  *  9  delivery already claimed ($executeRaw returns 0) → no send, no update; idempotency guard fires
- * 10  provider 500 error → alert NOT deleted, emailError persisted, audit event emitted
- * 11  user not in workspace (findFirst returns null) → emailError=user_not_in_workspace, no claim
- * 12  concurrent delivery simulation → $executeRaw returns 1 then 0; exactly one email sent
+ * 10  provider 500 error → alert NOT deleted, FAILED state, emailSentAt=null, audit event emitted
+ * 11  user not in workspace → SKIPPED via $executeRaw, no send
+ * 12  concurrent delivery simulation → exactly one CLAIMED wins; exactly one email sent
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { randomUUID } from "crypto";
 
-// ── Mocks ──────────────────────────────────────────────────────────────────
+// ── Mocks ───────────────��──────────────────────���───────────────────────────
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -57,6 +56,8 @@ vi.mock("@/domain/constants/audit-events", () => ({
     ALERT_UPDATED: "alert.updated",
     ALERT_EMAIL_DELIVERED: "alert.email_delivered",
     ALERT_EMAIL_FAILED: "alert.email_failed",
+    ALERT_EMAIL_RETRY: "alert.email_retry",
+    ALERT_EMAIL_PERMANENTLY_FAILED: "alert.email_permanently_failed",
   },
 }));
 
@@ -76,7 +77,7 @@ import {
   triggerCriticalStateAlert,
 } from "@/services/alerts/alert-service";
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────���────────────────────────────────��───────────────
 
 const mockDb = db as {
   $executeRaw: ReturnType<typeof vi.fn>;
@@ -113,6 +114,11 @@ function makeStoredAlert(overrides: Record<string, unknown> = {}) {
     emailSentAt: null,
     emailError: null,
     resendMessageId: null,
+    emailDeliveryStatus: "PENDING",
+    emailClaimedAt: null,
+    emailClaimExpiresAt: null,
+    emailLastAttemptAt: null,
+    emailAttemptCount: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -126,45 +132,47 @@ function makeFakeProvider(result?: { id?: string }) {
 beforeEach(() => {
   vi.clearAllMocks();
   _fakeProvider = null;
-  // Default: atomic delivery claim succeeds (1 row updated)
+  // Default: atomic delivery claim succeeds (1 row updated = CLAIMED)
   mockDb.$executeRaw.mockResolvedValue(1);
   // Default: user found with valid email and active workspace membership
   mockDb.user.findFirst.mockResolvedValue({ email: "owner@example.com" });
-  mockDb.alert.update.mockResolvedValue({});
+  // Default: no existing alert (idempotency check finds nothing → proceeds to create)
+  // The failure-path attempt-count lookup uses `.catch(() => null)` and defaults to 1 when null.
   mockDb.alert.findFirst.mockResolvedValue(null);
+  mockDb.alert.update.mockResolvedValue({ emailAttemptCount: 1 });
 });
 
 afterEach(() => {
   _fakeProvider = null;
 });
 
-// ── Tests ──────────────────────────────────────────────────────────────────
+// ���─ Tests ──────────────────────────────────────────────────────���───────────
 
-describe("alert email delivery", () => {
-  it("1: provider configured → atomic claim fires, email sent, resendMessageId persisted; emailSentAt NOT set in db.update", async () => {
+describe("alert email delivery FSM", () => {
+  it("1: provider configured → CLAIMED via $executeRaw, email sent, db.update sets SENT + emailSentAt", async () => {
     const stored = makeStoredAlert();
     mockDb.alert.create.mockResolvedValue(stored);
     _fakeProvider = makeFakeProvider({ id: "resend-msg-001" });
 
     await createAlert({
       workspaceId: stored.workspaceId,
-      userId: stored.userId,
+      userId: stored.userId as string,
       type: "threshold_breach",
       channel: "email",
       severity: "critical",
-      message: stored.message,
+      message: stored.message as string,
     });
 
-    // Allow the fire-and-forget deliverEmailAlert to settle
     await vi.waitFor(() => expect(mockDb.alert.update).toHaveBeenCalled());
 
-    // Atomic claim must have been made before send
+    // Atomic claim (PENDING→CLAIMED) must fire before send
     expect(mockDb.$executeRaw).toHaveBeenCalledOnce();
 
     const updateCall = mockDb.alert.update.mock.calls[0][0];
     expect(updateCall.where.id).toBe(stored.id);
-    // emailSentAt is set by the $executeRaw atomic UPDATE — NOT by db.alert.update
-    expect(updateCall.data.emailSentAt).toBeUndefined();
+    // emailSentAt is set ONLY here — after provider confirmation (SENT state)
+    expect(updateCall.data.emailDeliveryStatus).toBe("SENT");
+    expect(updateCall.data.emailSentAt).toBeInstanceOf(Date);
     expect(updateCall.data.resendMessageId).toBe("resend-msg-001");
     expect(updateCall.data.emailError).toBeNull();
 
@@ -172,87 +180,83 @@ describe("alert email delivery", () => {
     const sendArg = _fakeProvider!.send.mock.calls[0][0];
     expect(sendArg.to).toBe("owner@example.com");
     expect(sendArg.subject).toContain("CRITICAL");
-    expect(sendArg.html).toContain(stored.message);
+    expect(sendArg.html).toContain(stored.message as string);
   });
 
-  it("2: provider absent → emailError records skip, no $executeRaw call made", async () => {
+  it("2: provider absent → SKIPPED state via $executeRaw, db.alert.update NOT called", async () => {
     const stored = makeStoredAlert();
     mockDb.alert.create.mockResolvedValue(stored);
     _fakeProvider = null; // no provider
 
     await createAlert({
       workspaceId: stored.workspaceId,
-      userId: stored.userId,
+      userId: stored.userId as string,
       type: "threshold_breach",
       channel: "email",
       severity: "critical",
-      message: stored.message,
+      message: stored.message as string,
     });
 
-    await vi.waitFor(() => expect(mockDb.alert.update).toHaveBeenCalled());
+    await vi.waitFor(() => expect(mockDb.$executeRaw).toHaveBeenCalled());
 
-    // Provider check fires BEFORE the atomic claim — no $executeRaw call
-    expect(mockDb.$executeRaw).not.toHaveBeenCalled();
-
-    const updateCall = mockDb.alert.update.mock.calls[0][0];
-    expect(updateCall.data.emailError).toContain("RESEND_API_KEY not configured");
-    expect(updateCall.data.emailSentAt).toBeUndefined();
-    // Alert still in DB — create was called once
+    // SKIPPED written via $executeRaw (atomically, same pattern as claim)
+    expect(mockDb.$executeRaw).toHaveBeenCalledOnce();
+    // db.alert.update is NOT called — no separate update step
+    expect(mockDb.alert.update).not.toHaveBeenCalled();
+    // Alert row persisted
     expect(mockDb.alert.create).toHaveBeenCalledOnce();
   });
 
-  it("3: provider failure → alert persists, emailError set, failure audit event emitted", async () => {
+  it("3: provider failure → FAILED state, emailSentAt=null, failure audit emitted", async () => {
     const stored = makeStoredAlert();
     mockDb.alert.create.mockResolvedValue(stored);
     _fakeProvider = { send: vi.fn().mockRejectedValue(new Error("Resend API error 429: rate limit exceeded")) };
 
     await createAlert({
       workspaceId: stored.workspaceId,
-      userId: stored.userId,
+      userId: stored.userId as string,
       type: "threshold_breach",
       channel: "email",
       severity: "critical",
-      message: stored.message,
+      message: stored.message as string,
     });
 
     await vi.waitFor(() => expect(mockDb.alert.update).toHaveBeenCalled());
 
     const updateCall = mockDb.alert.update.mock.calls[0][0];
+    expect(updateCall.data.emailDeliveryStatus).toBe("FAILED");
+    // FAILED: emailSentAt must remain null (SENT ≠ FAILED invariant)
+    expect(updateCall.data.emailSentAt).toBeNull();
     expect(updateCall.data.emailError).toContain("429");
-    // emailSentAt was set by the atomic claim (before send); db.update only writes emailError
-    expect(updateCall.data.emailSentAt).toBeUndefined();
 
-    // Alert was NOT deleted — DB still has the record
+    // Alert NOT deleted
     expect(mockDb.alert.create).toHaveBeenCalledOnce();
 
-    // Failure audit event emitted
+    // Failure audit event emitted (could be email_failed or email_permanently_failed)
     const failedAuditCall = mockAudit.mock.calls.find(
-      (c) => c[0]?.eventName === "alert.email_failed"
+      (c) => ["alert.email_failed", "alert.email_permanently_failed"].includes(c[0]?.eventName)
     );
     expect(failedAuditCall).toBeDefined();
     expect(failedAuditCall![0].payload.errorClass).toBe("Error");
   });
 
   it("4: duplicate idempotency key → existing alert returned, no second email sent", async () => {
-    const existing = makeStoredAlert({ emailSentAt: new Date(), resendMessageId: "already-sent" });
+    const existing = makeStoredAlert({ emailDeliveryStatus: "SENT", emailSentAt: new Date(), resendMessageId: "already-sent" });
     mockDb.alert.findFirst.mockResolvedValue(existing);
     _fakeProvider = makeFakeProvider();
 
     const result = await createAlert({
-      workspaceId: existing.workspaceId,
-      userId: existing.userId,
+      workspaceId: existing.workspaceId as string,
+      userId: existing.userId as string,
       type: "threshold_breach",
       channel: "email",
       severity: "critical",
-      message: existing.message,
+      message: existing.message as string,
       idempotencyKey: "compliance-deadline:item-1:days3",
     });
 
-    // Returned existing alert
     expect(result.id).toBe(existing.id);
-    // No new DB create
     expect(mockDb.alert.create).not.toHaveBeenCalled();
-    // No email sent
     expect(_fakeProvider.send).not.toHaveBeenCalled();
   });
 
@@ -272,7 +276,7 @@ describe("alert email delivery", () => {
     await vi.waitFor(() => expect(_fakeProvider!.send).toHaveBeenCalledOnce());
   });
 
-  it("6: critical state trigger → channel=email entered, severity=critical, delivery path invoked", async () => {
+  it("6: critical state trigger → channel=email, severity=critical, delivery path invoked", async () => {
     const stored = makeStoredAlert({ channel: "email", severity: "critical" });
     mockDb.alert.create.mockResolvedValue(stored);
     _fakeProvider = makeFakeProvider();
@@ -288,35 +292,33 @@ describe("alert email delivery", () => {
     await vi.waitFor(() => expect(_fakeProvider!.send).toHaveBeenCalledOnce());
   });
 
-  it("7: user has no email address → emailError=user_no_email_address, no $executeRaw call", async () => {
+  it("7: user has no email address → SKIPPED via $executeRaw, no subsequent claim", async () => {
     const stored = makeStoredAlert();
     mockDb.alert.create.mockResolvedValue(stored);
-    // workspace-membership check passes (user found) but email field is null
     mockDb.user.findFirst.mockResolvedValue({ email: null });
     _fakeProvider = makeFakeProvider();
 
+    // Reset claim mock so we can differentiate skip vs claim $executeRaw calls
+    mockDb.$executeRaw.mockResolvedValue(1);
+
     await createAlert({
       workspaceId: stored.workspaceId,
-      userId: stored.userId,
+      userId: stored.userId as string,
       type: "threshold_breach",
       channel: "email",
       severity: "critical",
-      message: stored.message,
+      message: stored.message as string,
     });
 
-    await vi.waitFor(() => expect(mockDb.alert.update).toHaveBeenCalled());
+    await vi.waitFor(() => expect(mockDb.$executeRaw).toHaveBeenCalled());
 
-    // User check fires BEFORE the atomic claim — no $executeRaw call
-    expect(mockDb.$executeRaw).not.toHaveBeenCalled();
-
-    const updateCall = mockDb.alert.update.mock.calls[0][0];
-    expect(updateCall.data.emailError).toBe("user_no_email_address");
+    // Only one $executeRaw call: for SKIPPED (no subsequent CLAIMED attempt)
+    expect(mockDb.$executeRaw).toHaveBeenCalledTimes(1);
     expect(_fakeProvider.send).not.toHaveBeenCalled();
-    // Alert still persisted
     expect(mockDb.alert.create).toHaveBeenCalledOnce();
   });
 
-  it("8: enforceWorkspaceId throws → no DB create, no email side-effect", async () => {
+  it("8: enforceWorkspaceId throws �� no DB create, no email side-effect", async () => {
     mockEnforce.mockImplementationOnce(() => {
       throw new Error("Empty workspaceId");
     });
@@ -337,8 +339,9 @@ describe("alert email delivery", () => {
     expect(_fakeProvider.send).not.toHaveBeenCalled();
   });
 
-  it("9: delivery already claimed ($executeRaw returns 0) → no send, no db.update; idempotency guard fires", async () => {
-    // Simulate another worker having already claimed the delivery slot
+  it("9: delivery already claimed ($executeRaw returns 0) → no send, no db.update", async () => {
+    // Second row in $executeRaw sequence returns 0 (claim slot already taken)
+    // First call may be the SKIPPED check or CLAIMED check
     mockDb.$executeRaw.mockResolvedValueOnce(0);
     const stored = makeStoredAlert();
     mockDb.alert.create.mockResolvedValue(stored);
@@ -346,22 +349,20 @@ describe("alert email delivery", () => {
 
     await createAlert({
       workspaceId: stored.workspaceId,
-      userId: stored.userId,
+      userId: stored.userId as string,
       type: "threshold_breach",
       channel: "email",
       severity: "critical",
-      message: stored.message,
+      message: stored.message as string,
     });
 
-    // Allow the fire-and-forget path to settle
     await new Promise((r) => setTimeout(r, 20));
 
-    // Claim was attempted but lost — no send, no subsequent update
     expect(_fakeProvider.send).not.toHaveBeenCalled();
     expect(mockDb.alert.update).not.toHaveBeenCalled();
   });
 
-  it("10: provider 500 error → alert NOT deleted, emailError persisted, audit event emitted", async () => {
+  it("10: provider 500 error → FAILED state, emailSentAt=null, audit emitted", async () => {
     const stored = makeStoredAlert();
     mockDb.alert.create.mockResolvedValue(stored);
     _fakeProvider = {
@@ -370,90 +371,83 @@ describe("alert email delivery", () => {
 
     await createAlert({
       workspaceId: stored.workspaceId,
-      userId: stored.userId,
+      userId: stored.userId as string,
       type: "threshold_breach",
       channel: "email",
       severity: "critical",
-      message: stored.message,
+      message: stored.message as string,
     });
 
     await vi.waitFor(() => expect(mockDb.alert.update).toHaveBeenCalled());
 
-    // Alert row still in DB (create called once, never deleted)
     expect(mockDb.alert.create).toHaveBeenCalledOnce();
 
     const updateCall = mockDb.alert.update.mock.calls[0][0];
+    expect(updateCall.data.emailDeliveryStatus).toBe("FAILED");
+    expect(updateCall.data.emailSentAt).toBeNull();
     expect(updateCall.data.emailError).toContain("500");
 
     const failedAudit = mockAudit.mock.calls.find(
-      (c) => c[0]?.eventName === "alert.email_failed"
+      (c) => ["alert.email_failed", "alert.email_permanently_failed"].includes(c[0]?.eventName)
     );
     expect(failedAudit).toBeDefined();
   });
 
-  it("11: user not in workspace → emailError=user_not_in_workspace, no send, no atomic claim", async () => {
+  it("11: user not in workspace → SKIPPED via $executeRaw, no send, no subsequent claim", async () => {
     const stored = makeStoredAlert();
     mockDb.alert.create.mockResolvedValue(stored);
-    // Workspace-membership check fails: user not found in this workspace
     mockDb.user.findFirst.mockResolvedValue(null);
     _fakeProvider = makeFakeProvider();
 
     await createAlert({
       workspaceId: stored.workspaceId,
-      userId: stored.userId,
+      userId: stored.userId as string,
       type: "threshold_breach",
       channel: "email",
       severity: "critical",
-      message: stored.message,
+      message: stored.message as string,
     });
 
-    await vi.waitFor(() => expect(mockDb.alert.update).toHaveBeenCalled());
+    await vi.waitFor(() => expect(mockDb.$executeRaw).toHaveBeenCalled());
 
-    // Workspace-membership check fires BEFORE the atomic claim
-    expect(mockDb.$executeRaw).not.toHaveBeenCalled();
-
-    const updateCall = mockDb.alert.update.mock.calls[0][0];
-    expect(updateCall.data.emailError).toBe("user_not_in_workspace");
+    // Only SKIPPED $executeRaw (no CLAIMED attempt)
+    expect(mockDb.$executeRaw).toHaveBeenCalledTimes(1);
     expect(_fakeProvider.send).not.toHaveBeenCalled();
-    // Alert still persisted (create called once)
     expect(mockDb.alert.create).toHaveBeenCalledOnce();
   });
 
-  it("12: concurrent delivery simulation → $executeRaw returns 1 then 0; exactly one email sent", async () => {
+  it("12: concurrent delivery simulation → exactly one CLAIMED wins; exactly one email sent", async () => {
     const stored = makeStoredAlert();
-    // Both concurrent createAlert calls resolve to the same stored alert (same id)
     mockDb.alert.create.mockResolvedValue(stored);
     _fakeProvider = makeFakeProvider({ id: "resend-concurrent-001" });
 
-    // First delivery wins the atomic claim; second finds it already taken
+    // First CLAIMED call wins; second finds slot already taken
     mockDb.$executeRaw
-      .mockResolvedValueOnce(1) // first deliverEmailAlert call: claim succeeds
-      .mockResolvedValueOnce(0); // second deliverEmailAlert call: claim already taken
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0);
 
-    // Two parallel createAlert calls on the same logical alert (e.g. two workers, crash-recovery retry)
     await Promise.all([
       createAlert({
         workspaceId: stored.workspaceId,
-        userId: stored.userId,
+        userId: stored.userId as string,
         type: "threshold_breach",
         channel: "email",
         severity: "critical",
-        message: stored.message,
+        message: stored.message as string,
       }),
       createAlert({
         workspaceId: stored.workspaceId,
-        userId: stored.userId,
+        userId: stored.userId as string,
         type: "threshold_breach",
         channel: "email",
         severity: "critical",
-        message: stored.message,
+        message: stored.message as string,
       }),
     ]);
 
-    // Allow both fire-and-forget delivery paths to settle
     await vi.waitFor(() => expect(mockDb.$executeRaw).toHaveBeenCalledTimes(2));
 
-    // Despite two concurrent delivery attempts, exactly one email was sent
+    // Exactly one email sent despite two concurrent delivery attempts
     expect(_fakeProvider.send).toHaveBeenCalledTimes(1);
   });
 });

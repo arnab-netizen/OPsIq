@@ -102,7 +102,7 @@ jobs:
         continue-on-error: false
 
       - name: Stage acceptance integrity gate (CLOSED bundles must have full evidence)
-        run: node scripts/validate-stage-acceptance.mjs --stage 3
+        run: node scripts/validate-stage-acceptance.mjs --mode integrity --stage 3
         continue-on-error: false
 
       - name: Run full test suite (blocking; quarantine excluded)
