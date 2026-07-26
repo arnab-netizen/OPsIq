@@ -1,6 +1,6 @@
 version: "1.0"
 last_updated: "2026-07-26"
-# Updated: bundles 3.5–3.10 CLOSED via PR #255 proof-closure (2026-07-26)
+# Updated: bundle-4.3 CLOSED via PR #257 post-merge evidence (2026-07-26). Factory Stage 4 fully proven.
 maintainer: completion-factory
 
 # REMAINING STAGE ACCEPTANCE LEDGER
@@ -242,9 +242,9 @@ stages:
     factory_stage_id: "FACTORY_STAGE_4"
     development_bundle_id: null
     scope: factory_stage
-    factory_stage_acceptance: IN_PROGRESS
+    factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE
     name: Stage 4 Cross-Domain Adversarial Closure
-    overall_status: IN_PROGRESS
+    overall_status: COMPLETE
     bundles:
       - id: bundle-4
         artifact_type: development_bundle
@@ -293,19 +293,26 @@ stages:
       - id: bundle-4.3
         artifact_type: development_bundle
         name: Stage 4 Cross-Domain Adversarial Closure
-        status: PENDING
+        status: CLOSED
         post_merge_evidence:
-          pr_sha: null
-          merge_sha: null
-          main_integration_run: null
-          db_verification_run: null
+          pr_sha: "514978cb713a20e5f3ecaffe61d1bdcd3cca7431"
+          merge_sha: "0de3463bc843f3771cdac153df9384bc10388630"
+          main_integration_run: "30214645193"
+          db_verification_run: "30213647265"
+          verification_date: "2026-07-26"
+          gate_result: "post_merge_main_integration_completed_success"
+          tests_bundle: 60
+          notes: "PR #257 — CI-governance fix (db-verification.yml path filter) + 60 adversarial tests. Merged at exact authorized SHA 514978cb. Main Integration job 89826563926 completed success, all steps green."
 
     stage_acceptance:
-      status: IN_PROGRESS
-      note: "Factory Stage 4 authorized by owner (2026-07-26). bundle-4.3 adversarial closure PENDING — awaiting PR, CI, and DB proof."
+      status: CLOSED
       gate: scripts/validate-stage-acceptance.mjs --stage 4
+      closed_date: "2026-07-26"
+      evidence: "All required bundles CLOSED. bundle-4.3 adversarial closure merged via PR #257 at authorized SHA 514978cb713a20e5f3ecaffe61d1bdcd3cca7431. Main Integration run 30214645193 on merge SHA 0de3463bc843f3771cdac153df9384bc10388630 — conclusion: success, all steps green including postgres:16 migration (step 11), stage acceptance integrity gate (step 14), full DB+non-DB test suite (step 15, 33 min). Pre-merge LANE_B DB Verification run 30213647265 also green on PR HEAD."
       authorized_date: "2026-07-26"
       authorized_from_sha: "2bc40a9cad3389090fd3074fd476cb4c21725e1f"
+      required_bundles:
+        - bundle-4.3
 
   stage-5:
     # INTERNAL DELIVERY BUNDLE GROUP — NOT a Factory Stage milestone.
