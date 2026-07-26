@@ -1,0 +1,24 @@
+stages:
+  stage-4:
+    factory_stage_id: null
+    development_bundle_id: "DELIVERY_BUNDLE_GROUP_4"
+    scope: internal_delivery_bundle_group
+    factory_stage_acceptance: NOT_APPLICABLE
+    name: Business Condition Profile Operations (internal delivery bundle group — NOT a Factory Stage milestone)
+    bundles:
+      - id: bundle-4.1
+        artifact_type: development_bundle
+        status: CLOSED
+        post_merge_evidence:
+          pr_sha: "abc123abc123abc1"
+          merge_sha: "def456def456def4"
+          main_integration_run: "https://github.com/org/repo/actions/runs/1001"
+          db_verification_run: "https://github.com/org/repo/actions/runs/1002"
+      - id: bundle-4.2
+        artifact_type: development_bundle
+        status: CLOSED
+        post_merge_evidence:
+          pr_sha: "abc123abc123abc1"
+          merge_sha: "def456def456def4"
+          main_integration_run: "https://github.com/org/repo/actions/runs/1001"
+          db_verification_run: "https://github.com/org/repo/actions/runs/1002"

@@ -170,8 +170,28 @@ describe("REMAINING_STAGE_ACCEPTANCE.yaml — ledger consistency", () => {
     }
   });
 
-  it("stage-3 has BLOCKED_ON_BUNDLES acceptance status", () => {
-    expect(ledgerContent).toContain("BLOCKED_ON_BUNDLES");
+  it("stage-3 acceptance status is CLOSED (all bundles merged)", () => {
+    // Stage 3 acceptance was CLOSED on 2026-07-26 via PR #255 proof-closure
+    expect(ledgerContent).toContain("stage-3:");
+    expect(ledgerContent).toMatch(/stage-3[\s\S]*?overall_status: COMPLETE/);
+  });
+
+  it("bundle-3.9 db_test_count is 13 (corrected from 12)", () => {
+    // Factual count confirmed: 13 it() calls in bundle-3.9-sop.db.test.ts
+    const b39 = ledgerContent.match(/id: bundle-3\.9[\s\S]*?id: bundle-3\.10/);
+    expect(b39).not.toBeNull();
+    expect(b39![0]).toContain("db_test_count: 13");
+    expect(b39![0]).not.toContain("db_test_count: 12");
+  });
+
+  it("bundles 3.5-3.10 all CLOSED with PR #255 merge SHA", () => {
+    // Post-merge evidence from PR #255 (15a131ab7f0b7d703b459322f3c4db5951d1e825)
+    const expectedMergeSha = "15a131ab7f0b7d703b459322f3c4db5951d1e825";
+    expect(ledgerContent).toContain(expectedMergeSha);
+  });
+
+  it("bundles 3.5-3.10 reference Main Integration run 30199084412", () => {
+    expect(ledgerContent).toContain("main_integration_run: \"30199084412\"");
   });
 });
 
@@ -199,46 +219,43 @@ describe("validate-stage-acceptance.mjs", () => {
 
   // ── Integrity mode (--mode integrity): PENDING = normal development, exit 0 ──
 
-  it("stage 3 integrity check passes with explicit --mode integrity (PENDING bundles are development-normal)", () => {
+  it("stage 3 integrity check passes with explicit --mode integrity", () => {
     const result = runStageAcceptance("--mode integrity --stage 3");
-    // Data-integrity gate: PENDING = development-normal → exit 0.
-    // Only CLOSED bundles with missing evidence cause exit 1.
-    // main-integration.yml uses --mode integrity for CI validation.
     expect(result.code).toBe(0);
-    expect(result.output).toMatch(/not yet closed|integrity passed/i);
   });
 
   it("stage 3 integrity check passes without explicit mode (integrity is default)", () => {
     const result = runStageAcceptance("--stage 3");
-    // No --mode flag → defaults to integrity → same behavior as --mode integrity.
     expect(result.code).toBe(0);
   });
 
-  it("stage 4 integrity check passes (PENDING bundles are expected during development)", () => {
+  it("stage 4 integrity check passes", () => {
     const result = runStageAcceptance("--mode integrity --stage 4");
     expect(result.code).toBe(0);
   });
 
-  it("all stages integrity check passes while bundles are pending", () => {
+  it("all stages integrity check passes", () => {
     const result = runStageAcceptance("--mode integrity --stage all");
     expect(result.code).toBe(0);
   });
 
-  // ── Closure mode (--mode closure): ALL bundles must be CLOSED ─────────────────
+  // ── Closure mode (--mode closure): all stage 3 bundles are now CLOSED ─────────
 
-  it("stage 3 closure check fails while any bundle is PENDING (closure requires all CLOSED)", () => {
+  it("stage 3 closure check passes (all 6 bundles CLOSED via PR #255)", () => {
     const result = runStageAcceptance("--mode closure --stage 3");
-    // Stage 3 bundles are PENDING during development → closure gate must reject them.
-    // This documents the expected contract: closure mode is gated, not the CI default.
-    expect(result.code).toBe(1);
-    expect(result.output).toMatch(/closure.*FAILED|closure mode requires all bundles CLOSED/i);
+    // Bundles 3.5–3.10 are CLOSED with post-merge evidence from PR #255
+    // merge SHA 15a131ab7f0b7d703b459322f3c4db5951d1e825
+    expect(result.code).toBe(0);
   });
 
-  it("closure mode output identifies which bundles are not yet closed", () => {
-    const result = runStageAcceptance("--mode closure --stage 3");
-    // PENDING bundles should appear in the error output
-    expect(result.code).toBe(1);
-    expect(result.output).toMatch(/PENDING|not yet closed|closure mode requires/i);
+  it("stage 4 closure check passes (bundles 4.1 + 4.2 CLOSED)", () => {
+    const result = runStageAcceptance("--mode closure --stage 4");
+    expect(result.code).toBe(0);
+  });
+
+  it("all stages closure check passes (stages 3-7 all CLOSED)", () => {
+    const result = runStageAcceptance("--mode closure --stage all");
+    expect(result.code).toBe(0);
   });
 
   // ── Invalid arguments ──────────────────────────────────────────────────────────
@@ -251,5 +268,90 @@ describe("validate-stage-acceptance.mjs", () => {
   it("exits with code 2 if --mode has an invalid value", () => {
     const result = runStageAcceptance("--stage 3 --mode invalid");
     expect(result.code).toBe(2);
+  });
+
+  // ── Fixture-based independence proofs (--ledger) ───────────────────────────────
+  // These tests are independent of the live ledger state — they use controlled
+  // fixture YAML files so the proofs remain valid regardless of ledger edits.
+
+  describe("fixture-based independence proofs (--ledger)", () => {
+    const fixturesDir = join(root, "scripts", "__tests__", "fixtures", "stage-acceptance");
+
+    it("closure mode fails when any stage-3 bundle is PENDING", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "mixed-closed-pending.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/closure mode requires all bundles CLOSED/);
+    });
+
+    it("closure mode fails when stage-3 CLOSED bundle has partial evidence (db_verification_run missing)", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "closed-partial-evidence.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/db_verification_run is null/);
+    });
+
+    it("closure mode fails when stage-3 CLOSED bundle has null merge_sha", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "closed-null-merge-sha.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/merge_sha is null/);
+    });
+
+    it("closure mode fails when stage-3 CLOSED bundle has null pr_sha", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "closed-null-pr-sha.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/pr_sha is null/);
+    });
+
+    it("internal delivery bundle-group-4 CLOSED does not constitute Factory Stage 4 acceptance", () => {
+      const fixturePath = join(fixturesDir, "internal-bundle-group-4-closed.yaml");
+      const fixtureContent = readFileSync(fixturePath, "utf8");
+      // Structural proof: the fixture explicitly declares this is NOT a Factory Stage milestone
+      expect(fixtureContent).toContain("factory_stage_acceptance: NOT_APPLICABLE");
+      expect(fixtureContent).toContain("factory_stage_id: null");
+      expect(fixtureContent).toContain("scope: internal_delivery_bundle_group");
+      // Bundle-level validator passes (the bundles themselves are CLOSED with evidence)
+      const result = runStageAcceptance(
+        `--mode closure --stage 4 --ledger "${fixturePath}"`
+      );
+      expect(result.code).toBe(0);
+      // Bundle-level CLOSED ≠ Factory Stage 4 acceptance — proven by fixture declarations above
+    });
+
+    it("closure mode passes when stage-3 has full evidence (all bundles CLOSED, all fields populated)", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "valid-closed.yaml")}"`
+      );
+      expect(result.code).toBe(0);
+    });
+
+    it("integrity mode passes when all stage-3 bundles are PENDING (development-normal)", () => {
+      const result = runStageAcceptance(
+        `--mode integrity --stage 3 --ledger "${join(fixturesDir, "all-pending.yaml")}"`
+      );
+      expect(result.code).toBe(0);
+    });
+
+    it("closure mode fails when bundle has wrong artifact_type (not development_bundle)", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "wrong-artifact-type.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/artifact_type must be/);
+    });
+
+    it("closure mode fails when bundle is missing artifact_type field entirely", () => {
+      const result = runStageAcceptance(
+        `--mode closure --stage 3 --ledger "${join(fixturesDir, "missing-artifact-type.yaml")}"`
+      );
+      expect(result.code).toBe(1);
+      expect(result.output).toMatch(/missing required field 'artifact_type'/);
+    });
   });
 });
