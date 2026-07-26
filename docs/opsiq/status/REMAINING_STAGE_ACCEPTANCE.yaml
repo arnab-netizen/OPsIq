@@ -161,6 +161,31 @@ stages:
         artifact_type: development_bundle
         name: Stage 3 Cross-Domain Adversarial Closure
         status: PENDING
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          non_db_test_file: "src/__tests__/stage3-adversarial/stage3-adversarial-closure.test.ts"
+          non_db_test_count: 53
+          db_test_file: "src/__tests__/owner-mode/phase7-cross-domain-adversarial.db.test.ts"
+          db_test_count: 8
+          total_adversarial_tests: 61
+          adversarial_contracts_covered:
+            - workspace_isolation_cross_bundle
+            - concurrent_mutation_safety
+            - dto_leakage_boundary
+            - audit_completeness
+            - business_condition_re_evaluation_chain
+            - auth_capability_boundary
+            - cross_domain_arbitration_db_backed
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          non_db_adversarial_run: "53 passed (53) confirmed vitest run"
+          stage_acceptance_integrity_mode: "PASS"
+          browser_spec_file: "tests/browser/58-owner-stage3-onboarding-sop.spec.ts"
+          browser_spec_bundles_covered: ["3.8", "3.9"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
           pr_sha: null
           merge_sha: null
