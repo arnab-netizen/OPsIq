@@ -1,18 +1,17 @@
 {
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
-  "last_updated": "2026-07-25",
-
+  "last_updated": "2026-07-26",
   "factory_stage": "COMPLETION_FACTORY_ALL_BUNDLES_CLOSED_AWAITING_OWNER_ACCEPTANCE",
   "active_bundle": null,
-  "blocked_by": ["OWNER_STAGE_3_ACCEPTANCE", "OWNER_COMPLETION_FACTORY_ACCEPTANCE"],
-
+  "blocked_by": [
+    "OWNER_STAGE_3_ACCEPTANCE",
+    "OWNER_COMPLETION_FACTORY_ACCEPTANCE"
+  ],
   "owner_outcome": "Owner has a fully operational OpsIQ: customers, inventory, procurement, campaigns, complaints, action assignments, approvals, onboarding, SOP intelligence, BCP, integration fabric, consulting mode, and deployment readiness — all lifecycle-managed and workspace-isolated",
-
   "current_gap": "Awaiting explicit owner acceptance of Factory Stage 3 and the Completion Factory bundle closure before any new stage work begins",
   "next_target": "Owner decision on acceptance, then any new stage work or deployment-readiness hardening",
-
-  "main_sha": "7a19de9dd8436ee9cf8e2f0d746195a04bc49405",
+  "main_sha": "15a131ab7f0b7d703b459322f3c4db5951d1e825",
   "prs_merged_to_main": [
     {
       "number": 251,
@@ -37,10 +36,19 @@
       "merge_sha": "7a19de9dd8436ee9cf8e2f0d746195a04bc49405",
       "main_integration_run": "30162157766",
       "result": "GREEN — 29488/29488 tests, 0 failed",
-      "domains": ["3B-CustomerRecord", "3C-StockItem+PurchaseOrder", "3D-MarketingCampaign", "3E-EmailTransport", "3F-EntityWorkspaceId"]
+      "domains": ["3B-CustomerRecord","3C-StockItem+PurchaseOrder","3D-MarketingCampaign","3E-EmailTransport","3F-EntityWorkspaceId"]
+    },
+    {
+      "number": 255,
+      "title": "feat(stage-3-proof-closure): focused DB tests bundles 3.5–3.9, browser specs 57–58, reusable CI wiring, adversarial closure 3.10",
+      "head_sha": "95138558ed4e37abffe7599aa3eee3514a9acbb5",
+      "merge_sha": "15a131ab7f0b7d703b459322f3c4db5951d1e825",
+      "main_integration_run": "30199084412",
+      "db_verification_run": "30196020202",
+      "result": "GREEN — all 35 steps including LANE_B DB migration + full test suite",
+      "proof_scope": "bundles 3.5-3.10 DB tests, browser specs 57+58, capability_check.ts OWNER_ONBOARD+SOP_MANAGE"
     }
   ],
-
   "bundle_status": {
     "bundle-3.4": "CLOSED",
     "bundle-3.5": "CLOSED",
@@ -59,33 +67,22 @@
     "bundle-6": "CLOSED",
     "bundle-7": "CLOSED"
   },
-
   "ledger": "docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml",
   "ledger_status": "ALL_STAGES_3_THROUGH_7_CLOSED",
-
+  "stage_acceptance_gates": {
+    "integrity_mode": "PASS — 16 bundles, 0 violations (2026-07-26)",
+    "closure_mode": "PASS — 16 bundles, 0 violations (2026-07-26)",
+    "bundle_manifest_validator": "PASS — 11 bundles, 0 violations (2026-07-26)"
+  },
   "scope_drift": "NO",
   "stage_4_begun": false,
-  "completion_factory_status": "COMPLETE — all components verified per chore(factory) commit 7e29d160",
-
+  "completion_factory_status": "COMPLETE — all components verified; all bundles CLOSED",
   "operating_loop": [
-    "main-truth",
-    "owner-outcome",
-    "parallel-specialist-agents",
-    "structured-gap-synthesis",
-    "plan-mode",
-    "checkpoint",
-    "one-write-owner-implementation",
-    "hook-driven-fast-validation",
-    "adversarial-agent",
-    "dependency-aware-tests",
-    "postgres-provider-browser-proof",
-    "exact-sha-merge-candidate-ci",
-    "readonly-acceptance-agent",
-    "owner-merge-authorization",
-    "main-integration",
-    "deployment-telemetry-proof",
-    "evidence-artifact",
-    "capability-closed",
+    "main-truth","owner-outcome","parallel-specialist-agents","structured-gap-synthesis",
+    "plan-mode","checkpoint","one-write-owner-implementation","hook-driven-fast-validation",
+    "adversarial-agent","dependency-aware-tests","postgres-provider-browser-proof",
+    "exact-sha-merge-candidate-ci","readonly-acceptance-agent","owner-merge-authorization",
+    "main-integration","deployment-telemetry-proof","evidence-artifact","capability-closed",
     "next-highest-dependency-operational-gap"
   ]
 }
