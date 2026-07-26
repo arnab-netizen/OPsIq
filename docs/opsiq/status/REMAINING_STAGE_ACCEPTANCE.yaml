@@ -248,6 +248,7 @@ stages:
           notes: "Parent bundle file retained; closed via sub-bundles 4.1 and 4.2"
 
       - id: bundle-4.1
+        artifact_type: development_bundle
         name: Stage 3 Signal Wiring
         status: CLOSED
         post_merge_evidence:
@@ -263,6 +264,7 @@ stages:
           gate_result: "post_merge_main_integration_completed_success"
 
       - id: bundle-4.2
+        artifact_type: development_bundle
         name: Owner Business Condition Profile
         status: CLOSED
         post_merge_evidence:
@@ -300,6 +302,7 @@ stages:
           notes: "Parent bundle file retained; closed via sub-bundles 5.1, 5.2, and 5.3"
 
       - id: bundle-5.1
+        artifact_type: development_bundle
         name: Integration Fabric Contracts
         status: CLOSED
         post_merge_evidence:
@@ -314,6 +317,7 @@ stages:
           gate_result: "post_merge_main_integration_completed_success"
 
       - id: bundle-5.2
+        artifact_type: development_bundle
         name: Connector Registry
         status: CLOSED
         post_merge_evidence:
@@ -328,6 +332,7 @@ stages:
           gate_result: "post_merge_main_integration_completed_success"
 
       - id: bundle-5.3
+        artifact_type: development_bundle
         name: Integration Event Ingestion
         status: CLOSED
         post_merge_evidence:
