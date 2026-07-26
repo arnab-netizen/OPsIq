@@ -1,5 +1,5 @@
 version: "1.0"
-last_updated: "2026-07-25"
+last_updated: "2026-07-26"
 maintainer: completion-factory
 
 # REMAINING STAGE ACCEPTANCE LEDGER
@@ -40,6 +40,21 @@ stages:
         artifact_type: development_bundle
         name: Customer Complaint and Service Recovery
         status: PENDING
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          db_test_file: "src/__tests__/owner-mode/bundle-3.5-complaint.db.test.ts"
+          db_test_count: 12
+          db_tests_gate: "SKIP_WITHOUT_TEST_WITH_DB_confirmed"
+          browser_spec_file: "tests/browser/57-owner-stage3-complaint-assignment-approval.spec.ts"
+          browser_spec_bundles_covered: ["3.5", "3.6", "3.7"]
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          service: "src/services/owner-mode/customer-complaint.service.ts"
+          audit_events: ["complaint.created", "complaint.triaged", "complaint.recovery_action_added", "complaint.resolved", "complaint.closed"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
           pr_sha: null
           merge_sha: null
@@ -50,6 +65,21 @@ stages:
         artifact_type: development_bundle
         name: Owner Action Assignment and Outcome Tracking
         status: PENDING
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          db_test_file: "src/__tests__/owner-mode/bundle-3.6-assignment.db.test.ts"
+          db_test_count: 11
+          db_tests_gate: "SKIP_WITHOUT_TEST_WITH_DB_confirmed"
+          browser_spec_file: "tests/browser/57-owner-stage3-complaint-assignment-approval.spec.ts"
+          browser_spec_bundles_covered: ["3.5", "3.6", "3.7"]
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          service: "src/services/owner-mode/owner-action-assignment-lifecycle.service.ts"
+          audit_events: ["owner.action_assigned", "owner.action_reassigned", "owner.action_outcome_closed", "owner.action_stall_detected"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
           pr_sha: null
           merge_sha: null
@@ -60,6 +90,21 @@ stages:
         artifact_type: development_bundle
         name: Approval Resolution and Evidence Chain
         status: PENDING
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          db_test_file: "src/__tests__/owner-mode/bundle-3.7-approval.db.test.ts"
+          db_test_count: 13
+          db_tests_gate: "SKIP_WITHOUT_TEST_WITH_DB_confirmed"
+          browser_spec_file: "tests/browser/57-owner-stage3-complaint-assignment-approval.spec.ts"
+          browser_spec_bundles_covered: ["3.5", "3.6", "3.7"]
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          service: "src/services/owner-mode/approval-resolution.service.ts"
+          audit_events: ["approval.created", "approval.evidence_submitted", "approval.decided", "approval.action_rescoped", "approval.appeal_initiated"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
           pr_sha: null
           merge_sha: null
@@ -70,6 +115,19 @@ stages:
         artifact_type: development_bundle
         name: Owner Onboarding and Archetype Seeding
         status: PENDING
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          db_test_file: "src/__tests__/owner-mode/bundle-3.8-onboarding.db.test.ts"
+          db_test_count: 13
+          db_tests_gate: "SKIP_WITHOUT_TEST_WITH_DB_confirmed"
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          service: "src/services/owner-mode/owner-onboarding-lifecycle.service.ts"
+          audit_events: ["onboarding.started", "onboarding.completed", "onboarding.re_triggered"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
           pr_sha: null
           merge_sha: null
@@ -80,6 +138,19 @@ stages:
         artifact_type: development_bundle
         name: Process Intelligence and SOP Management
         status: PENDING
+        proof_closure_evidence:
+          branch: "claude/stage-3-proof-closure"
+          db_test_file: "src/__tests__/owner-mode/bundle-3.9-sop.db.test.ts"
+          db_test_count: 12
+          db_tests_gate: "SKIP_WITHOUT_TEST_WITH_DB_confirmed"
+          tsc_gate: "PASS"
+          build_gate: "PASS"
+          prisma_validate_gate: "PASS"
+          non_db_suite: "2530 passed 0 failed"
+          service: "src/services/owner-mode/sop-process-intelligence.service.ts"
+          audit_events: ["sop.training_assigned", "sop.training_completed", "sop.noncompliance_alert_created"]
+          proof_date: "2026-07-26"
+          proof_classification: "PROOF_CLOSED_PENDING_POST_MERGE_VERIFICATION"
         post_merge_evidence:
           pr_sha: null
           merge_sha: null
@@ -206,8 +277,9 @@ completion_factory:
       path: src/__tests__/db-mock-factory.ts
     - id: reusable_ci_workflow
       artifact_type: infrastructure_component
-      status: PENDING
+      status: COMPLETE
       path: .github/workflows/reusable-pr-validation.yml
+      notes: "Wired into ci.yml bundle-validate job (pr_sha pending merge); was previously unreferenced"
     - id: merge_candidate_validation
       artifact_type: infrastructure_component
       status: PENDING
