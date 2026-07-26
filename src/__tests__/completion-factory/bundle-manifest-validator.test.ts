@@ -197,25 +197,59 @@ describe("validate-stage-acceptance.mjs", () => {
     }
   }
 
-  it("stage 3 acceptance fails (PENDING bundles outstanding)", () => {
+  // ── Integrity mode (--mode integrity): PENDING = normal development, exit 0 ──
+
+  it("stage 3 integrity check passes with explicit --mode integrity (PENDING bundles are development-normal)", () => {
+    const result = runStageAcceptance("--mode integrity --stage 3");
+    // Data-integrity gate: PENDING = development-normal → exit 0.
+    // Only CLOSED bundles with missing evidence cause exit 1.
+    // main-integration.yml uses --mode integrity for CI validation.
+    expect(result.code).toBe(0);
+    expect(result.output).toMatch(/not yet closed|integrity passed/i);
+  });
+
+  it("stage 3 integrity check passes without explicit mode (integrity is default)", () => {
     const result = runStageAcceptance("--stage 3");
-    // Stage 3 has PENDING bundles — must fail
-    expect(result.code).toBe(1);
-    expect(result.output).toMatch(/FAILED|violation/i);
+    // No --mode flag → defaults to integrity → same behavior as --mode integrity.
+    expect(result.code).toBe(0);
   });
 
-  it("stage 4 acceptance fails (NOT_STARTED)", () => {
-    const result = runStageAcceptance("--stage 4");
-    expect(result.code).toBe(1);
+  it("stage 4 integrity check passes (PENDING bundles are expected during development)", () => {
+    const result = runStageAcceptance("--mode integrity --stage 4");
+    expect(result.code).toBe(0);
   });
 
-  it("all stages acceptance fails while pending bundles remain", () => {
-    const result = runStageAcceptance("--stage all");
-    expect(result.code).toBe(1);
+  it("all stages integrity check passes while bundles are pending", () => {
+    const result = runStageAcceptance("--mode integrity --stage all");
+    expect(result.code).toBe(0);
   });
+
+  // ── Closure mode (--mode closure): ALL bundles must be CLOSED ─────────────────
+
+  it("stage 3 closure check fails while any bundle is PENDING (closure requires all CLOSED)", () => {
+    const result = runStageAcceptance("--mode closure --stage 3");
+    // Stage 3 bundles are PENDING during development → closure gate must reject them.
+    // This documents the expected contract: closure mode is gated, not the CI default.
+    expect(result.code).toBe(1);
+    expect(result.output).toMatch(/closure.*FAILED|closure mode requires all bundles CLOSED/i);
+  });
+
+  it("closure mode output identifies which bundles are not yet closed", () => {
+    const result = runStageAcceptance("--mode closure --stage 3");
+    // PENDING bundles should appear in the error output
+    expect(result.code).toBe(1);
+    expect(result.output).toMatch(/PENDING|not yet closed|closure mode requires/i);
+  });
+
+  // ── Invalid arguments ──────────────────────────────────────────────────────────
 
   it("exits with code 2 if --stage argument missing", () => {
     const result = runStageAcceptance("");
+    expect(result.code).toBe(2);
+  });
+
+  it("exits with code 2 if --mode has an invalid value", () => {
+    const result = runStageAcceptance("--stage 3 --mode invalid");
     expect(result.code).toBe(2);
   });
 });

@@ -13,6 +13,13 @@ export interface EmailMessage {
   html: string;
   text?: string;
   from?: string;
+  /**
+   * Stable key passed as Idempotency-Key header to Resend.
+   * Same key → Resend deduplicates within a 24-hour window (network-level duplicate prevention).
+   * Callers should derive this as "alert:{workspaceId}:{alertId}:{attemptCount}" so each
+   * delivery attempt uses a unique key while a single attempt is idempotent under transient retries.
+   */
+  idempotencyKey?: string;
 }
 
 export interface EmailDeliveryResult {
@@ -48,6 +55,7 @@ class ResendEmailProvider implements EmailProvider {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
+        ...(message.idempotencyKey && { "Idempotency-Key": message.idempotencyKey }),
       },
       body: JSON.stringify(payload),
     });

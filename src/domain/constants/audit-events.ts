@@ -207,6 +207,10 @@ export const AUDIT_EVENTS = {
   // Alert
   ALERT_CREATED: "alert.created",
   ALERT_UPDATED: "alert.updated",
+  ALERT_EMAIL_DELIVERED: "alert.email_delivered",
+  ALERT_EMAIL_FAILED: "alert.email_failed",
+  ALERT_EMAIL_RETRY: "alert.email_retry",
+  ALERT_EMAIL_PERMANENTLY_FAILED: "alert.email_permanently_failed",
 
   // Learning
   LEARNING_RECORDED: "learning.recorded",

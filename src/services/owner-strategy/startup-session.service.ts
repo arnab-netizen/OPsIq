@@ -1666,6 +1666,26 @@ export async function recordOwnerDecision(
   // Capture current snapshot arrays outside the transaction (read-only queries)
   const snapshots = await queryCurrentSnapshotIds(workspaceId, sessionId);
 
+  // Auto-fill versioned artifact pointer IDs from canonical DB state when the caller omits them.
+  // Mirrors the snapshot-array auto-fill above: callers should not be required to enumerate
+  // analysis artifact IDs — the service captures the current canonical state at decision time.
+  // Only applies when an ideaId is provided (idea-level fields) or at session level.
+  if (input.ideaId && (
+    input.linkedEconomicModelId === undefined || input.linkedEconomicModelId === null ||
+    input.linkedReadinessId === undefined || input.linkedReadinessId === null ||
+    input.linkedSystemRecId === undefined || input.linkedSystemRecId === null ||
+    input.linkedProfileVersionId === undefined || input.linkedProfileVersionId === null
+  )) {
+    const canonicalState = await loadCanonicalCurrentApprovalState(workspaceId, sessionId, input.ideaId);
+    input.linkedEconomicModelId  = input.linkedEconomicModelId  ?? canonicalState.economicModelId  ?? null;
+    input.linkedReadinessId      = input.linkedReadinessId      ?? canonicalState.readinessId      ?? null;
+    input.linkedSystemRecId      = input.linkedSystemRecId      ?? canonicalState.systemRecId      ?? null;
+    input.linkedProfileVersionId = input.linkedProfileVersionId ?? canonicalState.profileVersionId ?? null;
+    input.linkedBusinessModelId  = input.linkedBusinessModelId  ?? canonicalState.businessModelId  ?? null;
+    input.linkedMarketSizingId   = input.linkedMarketSizingId   ?? canonicalState.marketSizingId   ?? null;
+    input.linkedValidationPlanId = input.linkedValidationPlanId ?? canonicalState.validationPlanId ?? null;
+  }
+
   const packageHash = computeApprovalPackageHash({
     sessionId,
     ideaId: input.ideaId,
