@@ -129,6 +129,8 @@ if (stageArg === 'all') {
   }
 } else if (stageArg === 'factory-5') {
   checkStage('factory-stage-5');
+} else if (stageArg === 'factory-6') {
+  checkStage('factory-stage-6');
 } else {
   checkStage(`stage-${stageArg}`);
 }

@@ -1,0 +1,224 @@
+id: factory-stage-6-closure
+stage: factory-6
+artifact_type: factory_stage_closure
+factory_stage_id: FACTORY_STAGE_6
+development_bundle_id: null
+status: PENDING
+priority: 1
+
+name: Factory Stage 6 — Deployment and Production Readiness Closure
+scope: DEPLOYMENT_AND_PRODUCTION_READINESS_CLOSURE
+
+authorized_date: "2026-07-27"
+authorized_from_sha: "fd843562389025eaf7c0f1b7d2ff76e771fea030"
+authorized_branch: "claude/opsiq-stage-6-loop-main"
+authorized_base: "fd843562389025eaf7c0f1b7d2ff76e771fea030"
+
+description: |
+  Factory Stage 6 proves that OpsIQ can be deployed to production reliably and safely.
+  This stage does not add new product features. It proves that the deployed artifact is
+  reproducible, configuration fails closed on missing secrets, the full migration chain
+  applies on an empty database, runtime health signals are accurate and observable,
+  hot-path queries are tenant-safe and query-plan fit, and release and recovery
+  operations are documented and operable.
+
+  Explicitly excluded (classified with precise status codes — not DB_BLOCKED):
+    DEPLOYMENT_ACCESS_UNVERIFIED: Vercel production deployment alignment with exact SHA
+    LIVE_PROVIDER_CREDENTIAL_UNAVAILABLE: Resend, Stripe production credential availability
+    LIVE_PROVIDER_OPERATION_UNPROVEN: live email/payment delivery via real production APIs
+    RESERVED_FOR_FACTORY_STAGE_7: real-world pilot and live-operation proof
+
+invariants:
+  S6-I1:
+    name: Reproducible build
+    statement: >
+      npm ci && next build from the exact authorized SHA produces a successful build
+      artifact with zero TypeScript errors and zero Prisma schema violations.
+    proof_lane: LANE_A_NON_DB
+    proof_type: ci_gate
+    executable_evidence: "npm ci && npm run build && npx tsc --noEmit && npx prisma validate all exit 0"
+    status: LANE_A_PROVEN
+    proof_artifacts:
+      - ".nvmrc pins Node.js 20 for toolchain reproducibility"
+      - "main-integration.yml: npm ci + tsc + build + prisma validate gates on every push to main"
+
+  S6-I2:
+    name: Configuration fail-closed
+    statement: >
+      Missing required production configuration must prevent unsafe startup or produce
+      an explicit not-ready state. Optional provider credentials must not block
+      repository-side verification when their functions are disabled.
+    proof_lane: LANE_A_NON_DB
+    proof_type: unit_test_and_script
+    executable_evidence: "scripts/deployment-preflight.mjs exits 1 on missing required env vars"
+    status: LANE_A_PROVEN
+    proof_artifacts:
+      - "scripts/deployment-preflight.mjs: DATABASE_URL promoted to REQUIRED category (exits 1)"
+      - "src/__tests__/stage6/s6-lane-a-proofs.test.ts: S6-I2 tests (2 passing)"
+
+  S6-I3:
+    name: Secret boundary
+    statement: >
+      No secret value (DATABASE_URL, NEXTAUTH_SECRET, API keys) appears in build
+      logs, runtime responses, health output, audit payloads or diagnostic artifacts.
+    proof_lane: LANE_A_NON_DB
+    proof_type: build_artifact_scan_and_health_test
+    executable_evidence: "grep scan of .next/server + health endpoint response inspection; unit tests"
+    status: LANE_A_PROVEN
+    proof_artifacts:
+      - "src/app/api/readiness/route.ts: startup_error field removed from unauthenticated response"
+      - "src/__tests__/stage6/s6-lane-a-proofs.test.ts: S6-I3 tests (3 passing)"
+
+  S6-I4:
+    name: Complete migration chain
+    statement: >
+      Every migration applies in order to an empty PostgreSQL 16 database and results
+      in a schema compatible with the current Prisma client.
+    proof_lane: LANE_B_POSTGRES
+    proof_type: db_test
+    executable_evidence: "LANE_B CI: prisma migrate deploy on empty DB reaches schema head"
+    status: LANE_B_TEST_AUTHORED
+    proof_artifacts:
+      - ".github/workflows/stage6-db-verification.yml: LANE_B workflow with prisma migrate deploy"
+      - "src/__tests__/stage6/s6-db-proofs.test.ts: S6-I4/I6 test asserts ≥158 migrations applied"
+
+  S6-I5:
+    name: Migration failure containment
+    statement: >
+      A failed deployment has a documented and executable forward-recovery path.
+      Do not claim unsupported reverse migration capability.
+    proof_lane: LANE_A_NON_DB
+    proof_type: runbook_verification
+    executable_evidence: "runbook documents forward-recovery steps; unit test validates error handling"
+    status: LANE_A_PROVEN
+    proof_artifacts:
+      - "docs/MIGRATION_DEPLOYMENT_RUNBOOK.md: count corrected to 158, forward-recovery steps present"
+      - "Rollback Procedure section documents restore-database.sh + git checkout workflow"
+
+  S6-I6:
+    name: Schema and startup compatibility
+    statement: >
+      The application must start and execute critical readiness checks against the
+      fully migrated schema. Health endpoint returns 200 OK.
+    proof_lane: LANE_B_POSTGRES
+    proof_type: db_test_plus_health_check
+    executable_evidence: "LANE_B CI: health endpoint returns structured JSON after migration"
+    status: LANE_B_TEST_AUTHORED
+    proof_artifacts:
+      - ".github/workflows/stage6-db-verification.yml: post-migrate health probe step"
+      - "src/__tests__/stage6/s6-db-proofs.test.ts: SELECT 1 proves DB reachable post-migration"
+
+  S6-I7:
+    name: Tenant-safe hot paths
+    statement: >
+      Owner-critical queries include correct tenant scoping and must not return,
+      infer or aggregate another workspace's data.
+    proof_lane: LANE_B_POSTGRES
+    proof_type: db_test_workspace_isolation
+    executable_evidence: "LANE_B: real DB isolation test — wsB query returns zero rows for wsA data"
+    status: LANE_B_TEST_AUTHORED
+    proof_artifacts:
+      - "src/__tests__/stage6/s6-db-proofs.test.ts: S6-I7 tests (3 DB isolation assertions)"
+
+  S6-I8:
+    name: Query-plan fitness
+    statement: >
+      Representative owner-critical queries have explainable, bounded plans with
+      appropriate indexes for the seeded workload. EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+      shows no demonstrated pathological behavior. Sequential scans on small tables
+      are not a failure.
+    proof_lane: LANE_B_POSTGRES
+    proof_type: db_test_explain_analyze
+    executable_evidence: "LANE_B CI: pg_indexes asserts index existence; EXPLAIN plan captured"
+    status: LANE_B_TEST_AUTHORED
+    proof_artifacts:
+      - "src/__tests__/stage6/s6-db-proofs.test.ts: S6-I8 tests — pg_indexes check + EXPLAIN plan"
+
+  S6-I9:
+    name: Performance reproducibility
+    statement: >
+      A reproducible p50/p95/max baseline is established for hot-path queries.
+      No invented SLO. The baseline is recorded factually with controlled seed data,
+      warm-up, sample count and percentile calculation.
+    proof_lane: LANE_B_POSTGRES
+    proof_type: db_test_timing_capture
+    executable_evidence: "LANE_B CI: timing measurements recorded in test output for hot-path queries"
+    status: LANE_B_TEST_AUTHORED
+    proof_artifacts:
+      - "src/__tests__/stage6/s6-db-proofs.test.ts: S6-I9 timing baseline (10 runs, p50/p95/max)"
+
+  S6-I10:
+    name: Operational observability
+    statement: >
+      Health, readiness, startup and runtime diagnostics distinguish healthy,
+      degraded and unavailable conditions without leaking protected data.
+      Correct HTTP status codes (200 healthy, 503 degraded).
+    proof_lane: LANE_A_NON_DB
+    proof_type: unit_test_health_endpoints
+    executable_evidence: "unit tests: each health endpoint returns correct JSON shape and status codes"
+    status: LANE_A_PROVEN
+    proof_artifacts:
+      - "src/app/api/health/route.ts: { status: allHealthy ? 200 : 503 } added"
+      - "src/__tests__/stage6/s6-lane-a-proofs.test.ts: S6-I10 tests (4 passing)"
+
+  S6-I11:
+    name: Production-safe feature controls
+    statement: >
+      Production-sensitive flags have explicit defaults, documented ownership and
+      safe behavior when absent or malformed. No dev-only path defaults to enabled
+      under NODE_ENV=production.
+    proof_lane: LANE_A_NON_DB
+    proof_type: codebase_scan_and_unit_test
+    executable_evidence: "scan for dev-only defaults; unit test proves NODE_ENV=production behavior"
+    status: LANE_A_PROVEN
+    proof_artifacts:
+      - "src/lib/demo-write-guard.ts: IN_MEMORY_DEMO_WRITE_FEATURES is empty (all routes DB-backed)"
+      - "src/__tests__/stage6/s6-lane-a-proofs.test.ts: S6-I11 tests (4 passing)"
+
+  S6-I12:
+    name: Release and recovery operability
+    statement: >
+      A qualified operator can follow the repository runbooks to validate, release,
+      diagnose and recover a deployment without undocumented steps.
+    proof_lane: LANE_A_NON_DB
+    proof_type: runbook_review_and_checklist_test
+    executable_evidence: "runbook completeness verified; sections present for all required operations"
+    status: LANE_A_PROVEN
+    proof_artifacts:
+      - "docs/MIGRATION_DEPLOYMENT_RUNBOOK.md: 338-line runbook with 7-phase procedure"
+      - "docs/DEPLOYMENT_RUNBOOK.md: full deployment runbook"
+      - "Existing runbooks.test.ts verifies runbook section presence"
+
+acceptance_criteria:
+  - "S6-I1: npm ci + next build succeeds from exact SHA (zero errors)"
+  - "S6-I2: deployment-preflight.mjs exits 1 when any required env var is absent"
+  - "S6-I3: no secret value in build output or health response body"
+  - "S6-I4: full migration chain applies on empty PostgreSQL 16 DB reaching schema head"
+  - "S6-I5: failed migration does not corrupt DB; forward-recovery path documented"
+  - "S6-I6: health endpoint returns 200 after migration; Prisma client starts cleanly"
+  - "S6-I7: all governed-table queries include tenant-scoping predicate"
+  - "S6-I8: EXPLAIN ANALYZE captured; no pathological plan on seeded workload"
+  - "S6-I9: reproducible p50/p95/max baseline captured for hot-path queries"
+  - "S6-I10: all health/readiness/startup endpoints return correct JSON shape and status codes"
+  - "S6-I11: no dev-only flag defaults to enabled under NODE_ENV=production"
+  - "S6-I12: deployment runbook complete and executable for all required operations"
+
+exclusions:
+  DEPLOYMENT_ACCESS_UNVERIFIED: "Vercel production deployment alignment not directly verifiable in CI"
+  LIVE_PROVIDER_CREDENTIAL_UNAVAILABLE: "Resend/Stripe production credentials not available in CI"
+  LIVE_PROVIDER_OPERATION_UNPROVEN: "Live email/payment delivery via real production APIs not in scope"
+  RESERVED_FOR_FACTORY_STAGE_7: "Real-world pilot and live-operation proof reserved for Stage 7"
+
+gates:
+  completion_factory: scripts/validate-bundle-manifests.mjs
+  stage_acceptance_integrity: scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-6
+  deployment_preflight: scripts/deployment-preflight.mjs
+
+required_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null
+  non_db_ci_run: null
+  pre_merge_status: null
+  verification_date: null

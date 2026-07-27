@@ -105,6 +105,10 @@ jobs:
         run: node scripts/validate-stage-acceptance.mjs --mode integrity --stage 3
         continue-on-error: false
 
+      - name: Factory Stage 6 acceptance integrity gate
+        run: node scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-6
+        continue-on-error: false
+
       - name: Run full test suite (blocking; quarantine excluded)
         # Full suite including DB tests. Quarantined files excluded from this blocking lane.
         # DB tests require TEST_WITH_DB=true and the postgres service above.

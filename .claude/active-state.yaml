@@ -1,38 +1,34 @@
-factory_stage: 4
-active_bundle: "bundle-4.3 — Stage 4 Cross-Domain Adversarial Closure"
-owner_outcome: "owner-has-proof-that-all-stage-4-bcp-bundle-interactions-are-correct-under-hostile-conditions"
-status: FACTORY_STAGE_4_IN_PROGRESS
-branch: claude/opsiq-stage-4-loop-main
-authorized_from_sha: "2bc40a9cad3389090fd3074fd476cb4c21725e1f"
-stage_4_begun: true
+factory_stage: 6
+active_bundle: "factory-stage-6-closure"
+owner_outcome: "owner-has-proof-stages-3-4-5-accepted-and-OpsIQ-can-be-deployed-to-production-reliably-and-safely"
+status: FACTORY_STAGE_6_AUTHORIZED_CONTRACT_DEFINED
+branch: claude/opsiq-stage-6-loop-main
+authorized_from_sha: "fd843562389025eaf7c0f1b7d2ff76e771fea030"
+factory_stage_7: NOT_AUTHORIZED
 
-stage_3_accepted:
-  status: FACTORY_STAGE_3_FULLY_PROVEN
-  authorized_date: "2026-07-26"
-  main_sha: "2bc40a9cad3389090fd3074fd476cb4c21725e1f"
+factory_stage_acceptance:
+  factory_stage_3:
+    status: ACCEPTED
+    accepted_date: "2026-07-26"
+    merge_sha: "15a131ab7f0b7d703b459322f3c4db5951d1e825"
+  factory_stage_4:
+    status: ACCEPTED
+    accepted_date: "2026-07-27"
+    closure_merge_sha: "ce9c74486d677a078e164311c2ee136ce05dfb09"
+  factory_stage_5:
+    status: ACCEPTED
+    accepted_date: "2026-07-27"
+    pr_merge_sha: "5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd"
+    closure_merge_sha: "fd843562389025eaf7c0f1b7d2ff76e771fea030"
+    closure_main_integration_run: "30285117464"
+  factory_stage_6:
+    status: AUTHORIZED_CONTRACT_DEFINED
+    authorized_date: "2026-07-27"
+    authorized_from_sha: "fd843562389025eaf7c0f1b7d2ff76e771fea030"
+    branch: "claude/opsiq-stage-6-loop-main"
+    contract_file: "docs/opsiq/bundles/factory-stage-6-closure.yaml"
+    scope: "DEPLOYMENT_AND_PRODUCTION_READINESS_CLOSURE"
 
-completion_factory_accepted:
-  status: COMPLETION_FACTORY_INFRASTRUCTURE_FULLY_PROVEN
-  authorized_date: "2026-07-26"
-
-proven:
-  - "bundle-4.3: 60 adversarial tests passing (workspace isolation ×8, version immutability ×8, all 4 OpsIQ dimensions ×10, idempotency ×7, DTO boundary ×7, auth boundary ×6, audit completeness ×7, trigger routing ×7)"
-  - "Service fix: inputFactsJson removed from bcpSelect (defense-in-depth — not fetched on public queries)"
-  - "Root cause closed: vi.resetAllMocks() prevents mock queue contamination across tests"
-
-gaps:
-  - "bundle-4.3: CI run required (push → PR → Main Integration green)"
-  - "bundle-4.3: DB proof required (db_verification_run non-null)"
-  - "bundle-4.3: post_merge_evidence must be filled before ledger CLOSED"
-  - "Stage 4 acceptance: explicit owner authorization required after all evidence complete"
-
-gates:
-  build: "PASS (npm run build)"
-  typecheck: "PASS (npx tsc --noEmit)"
-  prisma_validate: "PASS"
-  adversarial_tests: "60/60 PASS (bundle-4.3)"
-  db_tests: "DB_BLOCKED_ENVIRONMENT (no local DB)"
-
-next_target: "Commit and push bundle-4.3 to claude/opsiq-stage-4-loop-main → create PR → CI green → DB proof → ledger CLOSED → owner Stage 4 acceptance"
-
-blockers: []
+main_sha: "fd843562389025eaf7c0f1b7d2ff76e771fea030"
+next_target: "CI green on Stage 6 proof PR; return FACTORY_STAGE_6_PR_GREEN_AWAITING_EXACT_SHA_MERGE_AUTHORIZATION"
+current_gap: "Factory Stage 6 contract defined. Running inventory to identify minimum corrections for S6-I1 through S6-I12."
