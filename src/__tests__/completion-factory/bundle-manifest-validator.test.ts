@@ -248,16 +248,17 @@ describe("validate-stage-acceptance.mjs", () => {
     expect(result.code).toBe(0);
   });
 
-  it("stage 4 closure check fails (bundle-4.3 PENDING — Factory Stage 4 in progress)", () => {
+  it("stage 4 closure check passes (all 4 bundles CLOSED via PR #257)", () => {
     const result = runStageAcceptance("--mode closure --stage 4");
-    // bundle-4.3 is PENDING during Factory Stage 4 — closure correctly exits 1
-    expect(result.code).toBe(1);
+    // bundle-4.3 is CLOSED with post-merge evidence from PR #257
+    // merge SHA 0de3463bc843f3771cdac153df9384bc10388630
+    expect(result.code).toBe(0);
   });
 
-  it("all stages closure check fails (stage-4 has PENDING bundle-4.3)", () => {
+  it("all stages closure check passes (all stages and bundles CLOSED)", () => {
     const result = runStageAcceptance("--mode closure --stage all");
-    // Factory Stage 4 is IN_PROGRESS — bundle-4.3 PENDING makes closure exit 1
-    expect(result.code).toBe(1);
+    // All bundles across stages 3-7 are CLOSED — closure correctly exits 0
+    expect(result.code).toBe(0);
   });
 
   // ── Invalid arguments ──────────────────────────────────────────────────────────
