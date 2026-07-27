@@ -45,7 +45,7 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
     const id = url.searchParams.get("id");
-    const forConsultant = url.searchParams.get("view") !== "client";
+    const forConsultant = ctx.verifiedCapabilities.has(CAPABILITIES.CONSULTING_WRITE);
 
     if (id) {
       const engagement = await getConsultingEngagement(

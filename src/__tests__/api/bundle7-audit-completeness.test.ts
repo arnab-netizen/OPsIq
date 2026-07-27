@@ -35,6 +35,10 @@ const { mockDb, mockEmitAuditEvent } = vi.hoisted(() => {
     evidence: {
       findFirst: vi.fn(),
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    $transaction: vi.fn().mockImplementation(async (fn: (tx: any) => Promise<unknown>) => {
+      return fn({ engagement: mockDb.engagement, action: mockDb.action });
+    }),
   };
   const mockEmitAuditEvent = vi.fn().mockResolvedValue(undefined);
   return { mockDb, mockEmitAuditEvent };
@@ -159,6 +163,10 @@ function makeRecRow(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.resetAllMocks();
   mockEmitAuditEvent.mockResolvedValue(undefined);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mockDb.$transaction.mockImplementation(async (fn: (tx: any) => Promise<unknown>) => {
+    return fn({ engagement: mockDb.engagement, action: mockDb.action });
+  });
 });
 
 // ─── 1. createConsultingEngagement ────────────────────────────────────────────
@@ -630,9 +638,9 @@ describe("computeConsultingEngagementHealth — read path — no audit event", (
 
 describe("closeConsultingEngagement — audit event", () => {
   it("emits CONSULTING_ENGAGEMENT_CLOSED on successful closure", async () => {
-    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow());
+    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow({ consultingPhase: "REVIEW" }));
     mockDb.action.findMany.mockResolvedValue([]); // no blocking critical actions
-    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ status: "CLOSED" }));
+    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ status: "CLOSED", consultingPhase: "REVIEW" }));
 
     await closeConsultingEngagement(
       { engagementId: ENG_ID, workspaceId: WS, closureRationale: "Work complete" },
@@ -706,9 +714,9 @@ describe("closeConsultingEngagement — audit event", () => {
   });
 
   it("emits with outcomeSummary null when not provided", async () => {
-    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow({ consultingPhase: "DISCOVERY" }));
+    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow({ consultingPhase: "REVIEW" }));
     mockDb.action.findMany.mockResolvedValue([]);
-    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ status: "CLOSED" }));
+    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ status: "CLOSED", consultingPhase: "REVIEW" }));
 
     await closeConsultingEngagement(
       { engagementId: ENG_ID, workspaceId: WS, closureRationale: "Done" },
@@ -794,9 +802,9 @@ describe("audit event entityType field correctness", () => {
   });
 
   it("closeConsultingEngagement emits entityType Engagement", async () => {
-    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow());
+    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow({ consultingPhase: "REVIEW" }));
     mockDb.action.findMany.mockResolvedValue([]);
-    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ status: "CLOSED" }));
+    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ status: "CLOSED", consultingPhase: "REVIEW" }));
 
     await closeConsultingEngagement(
       { engagementId: ENG_ID, workspaceId: WS, closureRationale: "Done" },

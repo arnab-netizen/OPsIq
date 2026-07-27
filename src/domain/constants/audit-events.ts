@@ -630,6 +630,7 @@ export const AUDIT_EVENTS = {
   CONNECTOR_REFRESH_FAILED: "connector.refresh_failed",
   INTEGRATION_EVENT_INGESTED: "integration_event.ingested",
   INTEGRATION_EVENT_BCP_TRIGGERED: "integration_event.bcp_triggered",
+  INTEGRATION_EVENT_BCP_TRIGGER_FAILED: "integration_event.bcp_trigger_failed",
 
   // Stage 3B — Customer Records
   OWNER_CUSTOMER_CREATED: "owner.customer_created",

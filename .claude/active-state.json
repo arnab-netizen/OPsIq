@@ -2,15 +2,20 @@
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
   "last_updated": "2026-07-27",
-  "factory_stage": "FACTORY_STAGE_5_AUTHORIZED",
-  "active_bundle": null,
+  "factory_stage": "FACTORY_STAGE_5",
+  "factory_stage_status": "AUTHORIZED_CONTRACT_DEFINED",
+  "factory_stage_scope": "INTEGRATION_FABRIC_AND_CONSULTING_OPERATIONS_CLOSURE",
+  "active_bundle": "factory-stage-5-closure",
   "blocked_by": [],
-  "owner_outcome": "Owner has proof that Stages 3 and 4 are implemented and accepted. Factory Stage 5 (Integration Fabric + Consulting Mode Adversarial Closure) is authorized to begin from main SHA ce9c74486d677a078e164311c2ee136ce05dfb09.",
-  "current_gap": "Factory Stage 5 contract bundle not yet created. Must define adversarial closure scope for Integration Fabric (bundles 5.1-5.3) and Consulting Mode (bundle 6), then implement and prove.",
-  "next_target": "Create bundle-5.4.yaml Factory Stage 5 adversarial closure contract. Implement 60+ adversarial tests. DB-verify. Merge with exact-SHA owner authorization.",
+  "owner_outcome": "Owner has proof that Stages 3 and 4 are implemented and accepted. Factory Stage 5 proves that external operational information can enter OpsIQ through its Integration Fabric, remain isolated and secure, update the correct business condition state, flow into Consulting Operations where appropriate, and result in deterministic, auditable, owner-usable operational outcomes.",
+  "current_gap": "Factory Stage 5 contract created. Parallel capability inventory running. Minimum production corrections and risk-derived tests to be implemented and proven.",
+  "next_target": "Complete parallel inventory, implement minimum corrections for invariants I1-I12, run LANE_B PostgreSQL proof, get CI green, prepare PR.",
   "main_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
   "active_branch": "claude/opsiq-stage-5-loop-main",
   "authorized_from_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
+  "deployment_readiness": "EXCLUDED_RESERVED_FOR_FACTORY_STAGE_6",
+  "factory_stage_6": "NOT_AUTHORIZED",
+  "factory_stage_7": "NOT_AUTHORIZED",
   "prs_merged_to_main": [
     {
       "number": 251,
@@ -63,10 +68,17 @@
       "note": "Explicitly accepted by owner: FACTORY_STAGE_4_ACCEPTED"
     },
     "factory_stage_5": {
-      "status": "AUTHORIZED_NOT_YET_PROVEN",
+      "status": "AUTHORIZED_CONTRACT_DEFINED",
       "authorized_date": "2026-07-27",
+      "contract_defined_date": "2026-07-27",
       "authorized_from_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
-      "branch": "claude/opsiq-stage-5-loop-main"
+      "branch": "claude/opsiq-stage-5-loop-main",
+      "contract_file": "docs/opsiq/bundles/factory-stage-5-closure.yaml",
+      "scope": "INTEGRATION_FABRIC_AND_CONSULTING_OPERATIONS_CLOSURE",
+      "pr_merge_sha": null,
+      "main_integration_run": null,
+      "db_verification_run": null,
+      "note": "Contract authorized by owner 2026-07-27. Scope: Integration Fabric and Consulting Operations Closure. Deployment Readiness excluded (reserved for Factory Stage 6)."
     }
   },
   "bundle_status": {
@@ -87,10 +99,11 @@
     "bundle-5.3": "CLOSED",
     "bundle-6": "CLOSED",
     "bundle-7": "CLOSED",
-    "_note": "Bundles 5.x, 6, 7 are internal delivery bundles, NOT Factory Stage milestones. Factory Stage 5 adversarial closure bundle (bundle-5.4) is not yet created."
+    "factory-stage-5-closure": "PENDING",
+    "_note": "Bundles 5.x, 6, 7 are internal delivery bundles, NOT Factory Stage milestones. factory-stage-5-closure is the Factory Stage 5 authoritative closure contract (factory_stage_closure artifact type)."
   },
   "ledger": "docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml",
-  "ledger_status": "STAGE_4_FACTORY_BUNDLES_CLOSED_STAGE_5_NOT_YET_DEFINED",
+  "ledger_status": "STAGE_4_FACTORY_ACCEPTED_STAGE_5_CONTRACT_DEFINED",
   "scope_drift": "NO",
   "stage_4_begun": true,
   "stage_5_begun": true,

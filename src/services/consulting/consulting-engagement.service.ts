@@ -645,35 +645,49 @@ export async function closeConsultingEngagement(
   },
   actorId: string
 ): Promise<ConsultingEngagementConsultantDTO> {
-  const engagement = await db.engagement.findFirst({
-    where: { id: params.engagementId, workspaceId: params.workspaceId },
-  });
+  let closedFromPhase: ConsultingPhase = "REVIEW";
 
-  if (!engagement) throw new NotFoundError("Engagement", params.engagementId);
-  if (engagement.status === "CLOSED") throw new ConflictError("Engagement is already closed");
-
-  const actions = await db.action.findMany({
-    where: { engagementId: params.engagementId },
-  });
-
-  const unresolvedCritical = actions.filter((a: Action) => {
-    const meta = (a.metadata as Record<string, unknown> | null) ?? {};
-    return meta.priority === "critical" && a.status !== "completed" && a.status !== "cancelled";
-  });
-
-  if (unresolvedCritical.length > 0) {
-    throw new ConflictError(
-      `Cannot close engagement: ${unresolvedCritical.length} critical action(s) are not yet resolved. Resolve or cancel all critical actions before closing.`
-    );
-  }
-
-  const now = new Date();
-
+  // I10: atomic read-check-write to prevent partial state on concurrent close requests
+  // I7: REVIEW phase gate enforced inside transaction
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updated = await (db.engagement as any).update({
-    where: { id: params.engagementId },
-    data: { status: "CLOSED", actualEndDate: now, updatedAt: now },
-  }) as Engagement;
+  const updated = await db.$transaction(async (tx: any) => {
+    const engagement = await tx.engagement.findFirst({
+      where: { id: params.engagementId, workspaceId: params.workspaceId },
+    });
+
+    if (!engagement) throw new NotFoundError("Engagement", params.engagementId);
+    if (engagement.status === "CLOSED") throw new ConflictError("Engagement is already closed");
+
+    // I7: closure is only valid from REVIEW phase (terminal FSM gate)
+    const currentPhase = (toRow(engagement).consultingPhase ?? "DISCOVERY") as ConsultingPhase;
+    if (currentPhase !== "REVIEW") {
+      throw new InvalidStateTransitionError("ConsultingPhase", currentPhase, "CLOSED");
+    }
+    closedFromPhase = currentPhase;
+
+    const actions = await tx.action.findMany({
+      where: { engagementId: params.engagementId },
+    });
+
+    const unresolvedCritical = actions.filter((a: Action) => {
+      const meta = (a.metadata as Record<string, unknown> | null) ?? {};
+      return meta.priority === "critical" && a.status !== "completed" && a.status !== "cancelled";
+    });
+
+    if (unresolvedCritical.length > 0) {
+      throw new ConflictError(
+        `Cannot close engagement: ${unresolvedCritical.length} critical action(s) are not yet resolved. Resolve or cancel all critical actions before closing.`
+      );
+    }
+
+    const now = new Date();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (tx.engagement as any).update({
+      where: { id: params.engagementId },
+      data: { status: "CLOSED", actualEndDate: now, updatedAt: now },
+    }) as Promise<Engagement>;
+  });
 
   const r = toRow(updated);
 
@@ -686,7 +700,7 @@ export async function closeConsultingEngagement(
     payload: {
       closureRationale: params.closureRationale,
       outcomeSummary: params.outcomeSummary ?? null,
-      consultingPhase: toRow(engagement).consultingPhase ?? "DISCOVERY",
+      consultingPhase: closedFromPhase,
     },
   });
 

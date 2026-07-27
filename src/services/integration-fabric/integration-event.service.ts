@@ -101,7 +101,9 @@ export async function ingestIntegrationEvent(
 }
 
 // ─── Fire BCP re-evaluation (fire-and-forget) ─────────────────────────────────
-// Dynamic import prevents circular dependencies. All errors are swallowed.
+// Dynamic import prevents circular dependencies.
+// I4: failures emit INTEGRATION_EVENT_BCP_TRIGGER_FAILED audit event.
+// I12: on success, active consulting engagement health is updated for the workspace.
 
 async function fireBcpReEvaluation(
   event: IntegrationEvent,
@@ -110,7 +112,6 @@ async function fireBcpReEvaluation(
   triggerDescription: string
 ): Promise<void> {
   try {
-    // Fetch current BCP facts from existing profile to use as baseline
     const { getCurrentConditionProfile } = await import(
       "@/services/owner-mode/owner-bcp.service"
     );
@@ -124,10 +125,6 @@ async function fireBcpReEvaluation(
       return;
     }
 
-    // Re-evaluate using the existing scores as the baseline (connector event
-    // doesn't carry raw health scores — a future slice will map event payload
-    // to health score deltas). For now, re-evaluate with same facts to record
-    // the trigger event in BCP version history.
     const { evaluateConditionProfile } = await import(
       "@/services/owner-mode/owner-bcp.service"
     );
@@ -160,7 +157,41 @@ async function fireBcpReEvaluation(
         kind: event.kind,
       },
     });
-  } catch {
-    // fire-and-forget — BCP re-evaluation failure never propagates to ingest caller
+
+    // I12: propagate BCP condition change to active consulting engagement health
+    try {
+      const activeEngagements = await db.engagement.findMany({
+        where: { workspaceId: event.workspaceId, status: "ACTIVE", engagementMode: "consulting" },
+        select: { id: true },
+      });
+      if (activeEngagements.length > 0) {
+        const { updateConsultingEngagementHealth } = await import(
+          "@/services/consulting/consulting-engagement.service"
+        );
+        for (const eng of activeEngagements) {
+          await updateConsultingEngagementHealth(
+            { engagementId: eng.id, workspaceId: event.workspaceId },
+            actorId
+          );
+        }
+      }
+    } catch {
+      // consulting health update is best-effort post-BCP; BCP trigger is already recorded
+    }
+  } catch (err) {
+    // I4: record failure so it is not silently lost
+    await emitAuditEvent({
+      workspaceId: event.workspaceId,
+      actorId,
+      eventName: AUDIT_EVENTS.INTEGRATION_EVENT_BCP_TRIGGER_FAILED,
+      entityType: "IntegrationEvent",
+      entityId: event.id,
+      payload: {
+        businessId: event.businessId ?? null,
+        connectorId: event.connectorId,
+        kind: event.kind,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    }).catch(() => {/* last-resort: audit emit cannot propagate to ingest caller */});
   }
 }
