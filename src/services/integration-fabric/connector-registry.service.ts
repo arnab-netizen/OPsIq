@@ -164,7 +164,7 @@ export async function disconnectConnector(
   if (!existing) throw new NotFoundError("OwnerConnector", connectorId);
 
   const row = await db.ownerConnector.update({
-    where: { id: connectorId },
+    where: { id: connectorId, workspaceId },
     data: { status: "DISCONNECTED", syncFailureMessage: null },
     select: connectorSelect,
   });
@@ -202,7 +202,7 @@ export async function markConnectorRefreshFailed(
   if (!existing) throw new NotFoundError("OwnerConnector", connectorId);
 
   const row = await db.ownerConnector.update({
-    where: { id: connectorId },
+    where: { id: connectorId, workspaceId },
     data: { status: "REFRESH_FAILED", syncFailureMessage: failureMessage },
     select: connectorSelect,
   });
@@ -302,7 +302,7 @@ export async function activateConnector(
   if (!existing) throw new NotFoundError("OwnerConnector", connectorId);
 
   const row = await db.ownerConnector.update({
-    where: { id: connectorId },
+    where: { id: connectorId, workspaceId },
     data: {
       status: "ACTIVE",
       syncFailureMessage: null,

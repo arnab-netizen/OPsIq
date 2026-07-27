@@ -393,49 +393,54 @@ export async function evaluateConditionProfile(input: EvaluateBcpInput): Promise
 
   const derived = deriveAllBcpFields(facts);
 
-  // Atomic: mark old current as not current, create new version
-  const currentVersion = await db.ownerBusinessConditionProfile.findFirst({
-    where: { workspaceId, businessId, isCurrent: true },
-    select: { id: true, version: true },
-  });
-
-  const nextVersion = (currentVersion?.version ?? 0) + 1;
-
-  if (currentVersion) {
-    await db.ownerBusinessConditionProfile.update({
-      where: { id: currentVersion.id },
-      data: { isCurrent: false },
-    });
-  }
-
-  const row = await db.ownerBusinessConditionProfile.create({
-    data: {
-      workspaceId,
-      businessId,
-      version: nextVersion,
-      isCurrent: true,
-      conditionCode: derived.conditionCode,
-      conditionSeverity: derived.conditionSeverity,
-      consultingLifecycleStage: derived.consultingLifecycleStage,
-      businessConditionScore: derived.overallScore,
-      interventionMode: derived.interventionMode,
-      interventionPhase: derived.interventionPhase,
-      humanExecutionRisk: facts.humanExecutionRisk,
-      financialHealthScore: clampScore(facts.financialHealthScore),
-      operationalHealthScore: clampScore(facts.operationalHealthScore),
-      salesHealthScore: clampScore(facts.salesHealthScore),
-      sopHealthScore: clampScore(facts.sopHealthScore),
-      recommendationPriority: derived.recommendationPriority,
-      reviewCadence: derived.reviewCadence,
-      healthStatus: derived.healthStatus,
-      triggerType: input.triggerType,
-      triggerDescription,
-      triggeredBy: actorId,
-      inputFactsJson: JSON.stringify(facts),
-      sourceReassessmentEventId: sourceReassessmentEventId ?? null,
+  // I10: Serializable transaction prevents concurrent reassessments from creating
+  // multiple isCurrent=true rows. One transaction wins; the other retries or fails.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row = await (db as any).$transaction(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async (tx: any) => {
+      const currentVersion = await tx.ownerBusinessConditionProfile.findFirst({
+        where: { workspaceId, businessId, isCurrent: true },
+        select: { id: true, version: true },
+      });
+      const nextVersion = (currentVersion?.version ?? 0) + 1;
+      if (currentVersion) {
+        await tx.ownerBusinessConditionProfile.update({
+          where: { id: currentVersion.id },
+          data: { isCurrent: false },
+        });
+      }
+      return tx.ownerBusinessConditionProfile.create({
+        data: {
+          workspaceId,
+          businessId,
+          version: nextVersion,
+          isCurrent: true,
+          conditionCode: derived.conditionCode,
+          conditionSeverity: derived.conditionSeverity,
+          consultingLifecycleStage: derived.consultingLifecycleStage,
+          businessConditionScore: derived.overallScore,
+          interventionMode: derived.interventionMode,
+          interventionPhase: derived.interventionPhase,
+          humanExecutionRisk: facts.humanExecutionRisk,
+          financialHealthScore: clampScore(facts.financialHealthScore),
+          operationalHealthScore: clampScore(facts.operationalHealthScore),
+          salesHealthScore: clampScore(facts.salesHealthScore),
+          sopHealthScore: clampScore(facts.sopHealthScore),
+          recommendationPriority: derived.recommendationPriority,
+          reviewCadence: derived.reviewCadence,
+          healthStatus: derived.healthStatus,
+          triggerType: input.triggerType,
+          triggerDescription,
+          triggeredBy: actorId,
+          inputFactsJson: JSON.stringify(facts),
+          sourceReassessmentEventId: sourceReassessmentEventId ?? null,
+        },
+        select: bcpSelect,
+      });
     },
-    select: bcpSelect,
-  });
+    { isolationLevel: "Serializable" }
+  );
 
   await emitAuditEvent({
     workspaceId,
@@ -445,10 +450,10 @@ export async function evaluateConditionProfile(input: EvaluateBcpInput): Promise
     entityId: row.id,
     payload: {
       businessId,
-      version: nextVersion,
+      version: row.version,
       triggerType: input.triggerType,
       conditionCode: derived.conditionCode,
-      previousConditionCode: null, // caller can track change if needed
+      previousConditionCode: null,
       interventionMode: derived.interventionMode,
       healthStatus: derived.healthStatus,
     },

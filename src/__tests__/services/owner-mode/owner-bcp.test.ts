@@ -12,7 +12,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // vi.hoisted ensures these are available when vi.mock factories run (hoisted before const).
 
 const { mockDb, mockEmitAuditEvent } = vi.hoisted(() => {
-  const mockDb = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mockDb: any = {
     ownerBusinessConditionProfile: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
@@ -20,6 +21,9 @@ const { mockDb, mockEmitAuditEvent } = vi.hoisted(() => {
       update: vi.fn(),
     },
   };
+  // Pass-through: execute callback with mockDb as the tx object (no real DB transaction in unit tests)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mockDb.$transaction = vi.fn(async (callback: (tx: any) => Promise<any>) => callback(mockDb));
   const mockEmitAuditEvent = vi.fn();
   return { mockDb, mockEmitAuditEvent };
 });

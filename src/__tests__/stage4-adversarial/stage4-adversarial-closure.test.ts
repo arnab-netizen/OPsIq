@@ -41,6 +41,17 @@ vi.mock("@/lib/db", () => ({
       update: mockUpdate,
       updateMany: mockUpdateMany,
     },
+    // Pass-through: execute callback with tx = same mock object (no real DB transaction in unit tests)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    $transaction: async (callback: (tx: any) => Promise<any>) => callback({
+      ownerBusinessConditionProfile: {
+        findFirst: mockFindFirst,
+        findMany: mockFindMany,
+        create: mockCreate,
+        update: mockUpdate,
+        updateMany: mockUpdateMany,
+      },
+    }),
   },
 }));
 

@@ -470,6 +470,47 @@ stages:
       closed_date: "2026-07-25"
       evidence: "bundle-7 code delivery closed. All 8 test suites pass (242 tests). Workspace isolation, permission matrix, DTO leakage, audit completeness, export API proven. Performance/index criteria DB_BLOCKED (no regressions introduced). .env.example and runbook complete. Final improvement report at .claude/final-improvement-report.md."
 
+  factory-stage-5:
+    # FACTORY STAGE 5 — Integration Fabric and Consulting Operations Closure.
+    # This is a Factory Stage milestone (factory_stage_id: FACTORY_STAGE_5).
+    # It does NOT reclassify internal delivery bundle groups 5–7.
+    # Authorized by owner 2026-07-27 from main SHA ce9c74486d677a078e164311c2ee136ce05dfb09.
+    factory_stage_id: "FACTORY_STAGE_5"
+    development_bundle_id: null
+    scope: factory_stage_closure
+    factory_stage_acceptance: IMPLEMENTED_OR_PROVEN_PRE_MERGE_AWAITING_MERGE
+    name: Integration Fabric and Consulting Operations Closure
+    overall_status: IN_PROGRESS
+    authorized_from_sha: "ce9c74486d677a078e164311c2ee136ce05dfb09"
+    authorized_date: "2026-07-27"
+    pr_number: 259
+    pr_head_sha: "cb9c6726b9102b0a772d392b2bbb7b945eb4bdc1"
+    non_db_ci_run: "30252243546"
+    non_db_ci_status: success_on_sha_cb9c6726
+    db_verification_run: "30252243262"
+    db_verification_conclusion: success_on_sha_cb9c6726
+    bundles:
+      - id: factory-stage-5-closure
+        artifact_type: factory_stage_closure
+        factory_stage_id: FACTORY_STAGE_5
+        name: Factory Stage 5 Closure Contract
+        status: PENDING
+        # Pre-merge truthful state — pr_sha and merge_sha populated only after merge
+        # Tracking fields above (pr_head_sha, non_db_ci_run, db_verification_run) record pre-merge evidence
+        required_evidence:
+          pr_sha: null
+          merge_sha: null
+          main_integration_run: null
+          db_verification_run: null
+
+    stage_acceptance:
+      status: PENDING
+      gate: scripts/validate-stage-acceptance.mjs --stage factory-5
+      closed_date: null
+      evidence: null
+      required_bundles:
+        - factory-stage-5-closure
+
 completion_factory:
   branch: claude/opsiq-stage-3-7-loop-j6j6cf
   base_sha: "502f9cda632a895af1eb2c88e1b6f91546281baf"
