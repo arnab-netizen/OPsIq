@@ -484,19 +484,21 @@ stages:
     authorized_from_sha: "ce9c74486d677a078e164311c2ee136ce05dfb09"
     authorized_date: "2026-07-27"
     pr_number: 259
-    pr_head_sha: "68f3dc0e5b9f8d7bc53dbbc0568b14776892c54c"
-    non_db_ci_run: "30250197967"
-    db_verification_run_in_progress: "30250197651"
-    non_db_ci_conclusion: success_on_sha_6e4ef55ed98531ba4d10f341a31b76817455071c
+    pr_head_sha: "1fe94d15db1b0ea7c8ee972388fa361bcbc4f4a3"
+    non_db_ci_run: "30250613867"
+    non_db_ci_status: in_progress_on_sha_1fe94d15
+    db_verification_run: "30250613589"
+    db_verification_conclusion: success_on_sha_1fe94d15
     bundles:
       - id: factory-stage-5-closure
         artifact_type: factory_stage_closure
         factory_stage_id: FACTORY_STAGE_5
         name: Factory Stage 5 Closure Contract
         status: PENDING
-        # Pre-merge truthful state — merge_sha and post-merge fields populated only after merge
+        # Pre-merge truthful state — pr_sha and merge_sha populated only after merge
+        # Tracking fields above (pr_head_sha, non_db_ci_run, db_verification_run) record pre-merge evidence
         required_evidence:
-          pr_sha: "68f3dc0e5b9f8d7bc53dbbc0568b14776892c54c"
+          pr_sha: null
           merge_sha: null
           main_integration_run: null
           db_verification_run: null
