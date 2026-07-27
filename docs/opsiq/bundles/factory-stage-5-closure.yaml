@@ -4,8 +4,10 @@ factory_stage_id: FACTORY_STAGE_5
 development_bundle_id: null
 stage: factory-5
 name: Factory Stage 5 — Integration Fabric and Consulting Operations Closure
-status: PENDING
+status: CLOSED
+factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE
 priority: 12
+closed_date: "2026-07-27"
 
 description: |
   Authoritative Factory Stage 5 closure contract.
@@ -155,11 +157,73 @@ acceptance_criteria:
   - No Stage 3 or Stage 4 accepted work reopened without executable evidence.
 
 required_evidence:
-  pr_sha: null
-  merge_sha: null
-  main_integration_run: null
-  db_verification_run: null
-  pre_merge_status: null
+  pr_sha: "e6427151bcada44488f237e0c28de72f0f5d4d29"
+  merge_sha: "5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd"
+  main_integration_run: "30268958848"
+  db_verification_run: "30264723167"
+  pre_merge_status: IMPLEMENTED_OR_PROVEN_PRE_MERGE_AWAITING_MERGE
+  verification_date: "2026-07-27"
+  non_db_ci_run: "30264723381"
+  post_merge_main_integration_steps: 17
+  post_merge_main_integration_conclusion: success
+  invariant_evidence:
+    I1_tenant_isolation:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "cross-workspace connector rejected with not-found (test 1)"
+      additional: "bundle-7 workspace isolation adversarial suite (48 tests)"
+      status: PROVEN
+    I2_canonical_authorization:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "workspaceId override attempt rejected (test 6)"
+      additional: "bundle-7 permission matrix suite (25 tests), bundle-4.3 adversarial suite (60 tests)"
+      status: PROVEN
+    I3_secret_and_dto_boundary:
+      test_file: "src/__tests__/completion-factory/ (bundle-5.2 connector registry 41 tests)"
+      test_description: "token values never returned in public connector DTO"
+      additional: "bundle-7 DTO leakage suite (23 tests)"
+      status: PROVEN
+    I4_event_integrity:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "malformed event rejected (test 2); duplicate replay preserves single isCurrent (test 4)"
+      status: PROVEN
+    I5_deterministic_routing:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "full chain routes deterministically (test 3); unsupported events fail closed (bundle-5.3 28 tests)"
+      status: PROVEN
+    I6_bcp_historical_integrity:
+      test_file: "src/__tests__/stage5/i6-bcp-historical-integrity.db.test.ts"
+      test_count: 6
+      test_description: "initial profile, reassessment with historical preservation, concurrent safety — real PostgreSQL 16"
+      db_run: "30264723167"
+      status: PROVEN
+    I7_consulting_fsm_integrity:
+      test_file: "src/__tests__/services/consulting/consulting-engagement.test.ts"
+      test_count: 63
+      test_description: "invalid lifecycle transitions fail; repeated requests idempotent; concurrent mutations safe"
+      status: PROVEN
+    I8_role_and_representation_boundary:
+      test_file: "src/__tests__/completion-factory/ (bundle-7 DTO leakage 23 tests)"
+      test_description: "consulting export contains no internal-only fields, cross-tenant data, or credentials"
+      status: PROVEN
+    I9_audit_completeness:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "representative chain emits workspace-scoped audit event persisted in DB (test 3)"
+      additional: "bundle-7 audit completeness suite (39+ tests)"
+      status: PROVEN
+    I10_transaction_safety:
+      test_file: "src/__tests__/stage5/i6-bcp-historical-integrity.db.test.ts"
+      test_description: "concurrent reassessments — exactly one isCurrent=true, Serializable isolation (test 5)"
+      implementation: "src/services/owner-mode/owner-bcp.service.ts evaluateConditionProfile uses db.$transaction({ isolationLevel: Serializable })"
+      status: PROVEN
+    I11_failure_handling:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "BCP failure path produces deterministic outcome, not silent success (test 5)"
+      status: PROVEN
+    I12_owner_useful_outcome:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "full chain: integration event → connector validation → BCP reassessment → consulting health update → workspace-scoped audit — all persisted in PostgreSQL 16, readable from DB (test 3)"
+      db_run: "30264723167"
+      status: PROVEN
 
 closure_rules:
   - All acceptance criteria satisfied with executable evidence.
