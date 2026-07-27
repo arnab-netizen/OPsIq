@@ -1,6 +1,6 @@
 version: "1.0"
 last_updated: "2026-07-27"
-# Updated: factory-stage-5-closure CLOSED via PR #259 post-merge evidence (2026-07-27). Factory Stage 5 fully proven, PROVEN_AWAITING_OWNER_ACCEPTANCE.
+# Updated: factory-stage-5 accepted by owner 2026-07-27. factory-stage-6 authorized and contract defined 2026-07-27 from SHA fd843562.
 maintainer: completion-factory
 
 # REMAINING STAGE ACCEPTANCE LEDGER
@@ -477,10 +477,13 @@ stages:
     # Authorized by owner 2026-07-27 from main SHA ce9c74486d677a078e164311c2ee136ce05dfb09.
     # PR #259 merged at exact authorized SHA e6427151bcada44488f237e0c28de72f0f5d4d29.
     # Post-merge Main Integration run 30268958848 — all 17 steps green.
+    # Closure PR #260 merged at b103e6e6, main SHA fd843562. Main Integration 30285117464 green, all 35 steps.
+    # Explicitly ACCEPTED by owner 2026-07-27.
     factory_stage_id: "FACTORY_STAGE_5"
     development_bundle_id: null
     scope: factory_stage_closure
-    factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE
+    factory_stage_acceptance: ACCEPTED
+    accepted_date: "2026-07-27"
     name: Integration Fabric and Consulting Operations Closure
     overall_status: CLOSED
     authorized_from_sha: "ce9c74486d677a078e164311c2ee136ce05dfb09"
@@ -514,6 +517,38 @@ stages:
       evidence: "PR #259 merged at exact authorized SHA e6427151bcada44488f237e0c28de72f0f5d4d29 (base ce9c74486d677a078e164311c2ee136ce05dfb09). Pre-merge DB Verification run 30264723167 and non-DB CI run 30264723381 both green on exact SHA. Post-merge Main Integration run 30268958848 on merge SHA 5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd — all 17 steps green including PostgreSQL migration (step 11), stage acceptance integrity gate (step 14), full DB+non-DB test suite (step 15). All twelve invariants I1-I12 have executable PostgreSQL-backed evidence. Factory Stage 6 has not begun. factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE."
       required_bundles:
         - factory-stage-5-closure
+
+  factory-stage-6:
+    # FACTORY STAGE 6 — Deployment and Production Readiness Closure.
+    # This is a Factory Stage milestone (factory_stage_id: FACTORY_STAGE_6).
+    # Authorized by owner 2026-07-27 from main SHA fd843562389025eaf7c0f1b7d2ff76e771fea030.
+    # Factory Stage 7 remains NOT_AUTHORIZED.
+    factory_stage_id: "FACTORY_STAGE_6"
+    development_bundle_id: null
+    scope: factory_stage_closure
+    factory_stage_acceptance: AUTHORIZED_CONTRACT_DEFINED
+    authorized_date: "2026-07-27"
+    authorized_from_sha: "fd843562389025eaf7c0f1b7d2ff76e771fea030"
+    authorized_branch: "claude/opsiq-stage-6-loop-main"
+    name: Deployment and Production Readiness Closure
+    overall_status: IN_PROGRESS
+    bundles:
+      - id: factory-stage-6-closure
+        artifact_type: factory_stage_closure
+        factory_stage_id: FACTORY_STAGE_6
+        name: Factory Stage 6 Closure Contract
+        status: PENDING
+        required_evidence:
+          pr_sha: null
+          merge_sha: null
+          main_integration_run: null
+          db_verification_run: null
+
+    stage_acceptance:
+      status: PENDING
+      gate: scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-6
+      required_bundles:
+        - factory-stage-6-closure
 
 completion_factory:
   branch: claude/opsiq-stage-3-7-loop-j6j6cf

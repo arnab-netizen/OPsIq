@@ -1,28 +1,22 @@
 {
-  "timestamp": "2026-05-31T07:07:04.365Z",
+  "timestamp": "2026-07-27T18:53:55.589Z",
   "node_version": "v22.22.2",
   "npm_version": "10.9.7",
   "environment_checks": [
     {
       "name": "NODE_ENV",
       "category": "REQUIRED",
-      "present": false,
-      "value": "[NOT SET]"
+      "present": true,
+      "value": "[SET]"
     },
     {
       "name": "DATABASE_URL",
-      "category": "EXTERNAL_RUNTIME_REQUIRED",
-      "present": false,
-      "value": "[NOT SET]"
-    },
-    {
-      "name": "NEXTAUTH_SECRET",
       "category": "REQUIRED",
       "present": false,
       "value": "[NOT SET]"
     },
     {
-      "name": "NEXTAUTH_URL",
+      "name": "NEXT_PUBLIC_APP_URL",
       "category": "EXTERNAL_RUNTIME_REQUIRED",
       "present": false,
       "value": "[NOT SET]"
@@ -30,8 +24,8 @@
     {
       "name": "SKIP_ENV_VALIDATION",
       "category": "LOCAL_ONLY",
-      "present": false,
-      "value": "[NOT SET]"
+      "present": true,
+      "value": "[SET]"
     },
     {
       "name": "STRIPE_SECRET_KEY",
@@ -40,7 +34,25 @@
       "value": "[NOT SET]"
     },
     {
-      "name": "STRIPE_PUBLISHABLE_KEY",
+      "name": "STRIPE_WEBHOOK_SECRET",
+      "category": "OPTIONAL",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+      "category": "OPTIONAL",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "OPSIQ_DIAGNOSTIC_KEY",
+      "category": "OPTIONAL",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "SENTRY_DSN",
       "category": "OPTIONAL",
       "present": false,
       "value": "[NOT SET]"
@@ -55,11 +67,9 @@
   "prisma_migrations_status": "DATABASE_URL_NOT_SET",
   "overall_status": "BLOCKED",
   "blockers": [
-    "Required env NODE_ENV not set",
-    "Required env NEXTAUTH_SECRET not set"
+    "Required env DATABASE_URL not set"
   ],
   "warnings": [
-    "External runtime env DATABASE_URL not set - will be needed at deployment",
-    "External runtime env NEXTAUTH_URL not set - will be needed at deployment"
+    "External runtime env NEXT_PUBLIC_APP_URL not set - will be needed at deployment"
   ]
 }

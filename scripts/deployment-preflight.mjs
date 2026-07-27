@@ -24,7 +24,7 @@ const projectRoot = path.resolve(__dirname, "..");
 // dependency): canonical STRIPE_SECRET_KEY, with STRIPE_API_KEY as a legacy alias.
 const envRequirements = [
   { name: "NODE_ENV", category: "REQUIRED" },
-  { name: "DATABASE_URL", category: "EXTERNAL_RUNTIME_REQUIRED" },
+  { name: "DATABASE_URL", category: "REQUIRED" },
   { name: "NEXT_PUBLIC_APP_URL", category: "EXTERNAL_RUNTIME_REQUIRED" },
   { name: "SKIP_ENV_VALIDATION", category: "LOCAL_ONLY" },
   { name: "STRIPE_SECRET_KEY", category: "OPTIONAL" }, // STRIPE_API_KEY = legacy alias

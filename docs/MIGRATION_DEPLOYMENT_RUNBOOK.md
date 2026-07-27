@@ -9,7 +9,7 @@
 
 ## Overview
 
-This runbook documents the safe deployment of Prisma database migrations to production. OpsIQ currently has 37 migrations that must be deployed in order before the application can start.
+This runbook documents the safe deployment of Prisma database migrations to production. OpsIQ currently has 158 migrations that must be deployed in order before the application can start.
 
 ---
 
@@ -76,7 +76,7 @@ npx prisma migrate deploy
 # Expected output:
 # Applying migration(s) 20260415_000000_init
 # Applying migration(s) 20260415_add_finding_recommendation_stage
-# ... (all 37 migrations)
+# ... (all 158 migrations)
 # All migrations have been successfully applied.
 
 # Verify all migrations applied
@@ -141,7 +141,7 @@ psql "postgresql://user:password@prod.rds.example.com/opsiq_prod?sslmode=require
 SELECT migration_name, rolled_back_at FROM _prisma_migrations 
 ORDER BY finished_at DESC LIMIT 10;"
 
-# Expected: All 37 migrations listed with rolled_back_at = NULL
+# Expected: All 158 migrations listed with rolled_back_at = NULL
 ```
 
 ### Phase 7: Start Application and Verify Health
