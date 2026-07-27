@@ -1,4 +1,5 @@
 id: factory-stage-6-closure
+stage: factory-6
 artifact_type: factory_stage_closure
 factory_stage_id: FACTORY_STAGE_6
 development_bundle_id: null
