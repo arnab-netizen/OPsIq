@@ -1,6 +1,6 @@
 version: "1.0"
-last_updated: "2026-07-26"
-# Updated: bundle-4.3 CLOSED via PR #257 post-merge evidence (2026-07-26). Factory Stage 4 fully proven.
+last_updated: "2026-07-27"
+# Updated: factory-stage-5-closure CLOSED via PR #259 post-merge evidence (2026-07-27). Factory Stage 5 fully proven, PROVEN_AWAITING_OWNER_ACCEPTANCE.
 maintainer: completion-factory
 
 # REMAINING STAGE ACCEPTANCE LEDGER
@@ -475,39 +475,43 @@ stages:
     # This is a Factory Stage milestone (factory_stage_id: FACTORY_STAGE_5).
     # It does NOT reclassify internal delivery bundle groups 5–7.
     # Authorized by owner 2026-07-27 from main SHA ce9c74486d677a078e164311c2ee136ce05dfb09.
+    # PR #259 merged at exact authorized SHA e6427151bcada44488f237e0c28de72f0f5d4d29.
+    # Post-merge Main Integration run 30268958848 — all 17 steps green.
     factory_stage_id: "FACTORY_STAGE_5"
     development_bundle_id: null
     scope: factory_stage_closure
-    factory_stage_acceptance: IMPLEMENTED_OR_PROVEN_PRE_MERGE_AWAITING_MERGE
+    factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE
     name: Integration Fabric and Consulting Operations Closure
-    overall_status: IN_PROGRESS
+    overall_status: CLOSED
     authorized_from_sha: "ce9c74486d677a078e164311c2ee136ce05dfb09"
     authorized_date: "2026-07-27"
     pr_number: 259
-    pr_head_sha: "cb9c6726b9102b0a772d392b2bbb7b945eb4bdc1"
-    non_db_ci_run: "30252243546"
-    non_db_ci_status: success_on_sha_cb9c6726
-    db_verification_run: "30252243262"
-    db_verification_conclusion: success_on_sha_cb9c6726
+    pr_head_sha: "e6427151bcada44488f237e0c28de72f0f5d4d29"
+    non_db_ci_run: "30264723381"
+    non_db_ci_status: success_on_sha_e6427151
+    db_verification_run: "30264723167"
+    db_verification_conclusion: success_on_sha_e6427151
+    merge_sha: "5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd"
+    main_integration_run: "30268958848"
+    main_integration_conclusion: success
+    closed_date: "2026-07-27"
     bundles:
       - id: factory-stage-5-closure
         artifact_type: factory_stage_closure
         factory_stage_id: FACTORY_STAGE_5
         name: Factory Stage 5 Closure Contract
-        status: PENDING
-        # Pre-merge truthful state — pr_sha and merge_sha populated only after merge
-        # Tracking fields above (pr_head_sha, non_db_ci_run, db_verification_run) record pre-merge evidence
+        status: CLOSED
         required_evidence:
-          pr_sha: null
-          merge_sha: null
-          main_integration_run: null
-          db_verification_run: null
+          pr_sha: "e6427151bcada44488f237e0c28de72f0f5d4d29"
+          merge_sha: "5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd"
+          main_integration_run: "30268958848"
+          db_verification_run: "30264723167"
 
     stage_acceptance:
-      status: PENDING
+      status: CLOSED
       gate: scripts/validate-stage-acceptance.mjs --stage factory-5
-      closed_date: null
-      evidence: null
+      closed_date: "2026-07-27"
+      evidence: "PR #259 merged at exact authorized SHA e6427151bcada44488f237e0c28de72f0f5d4d29 (base ce9c74486d677a078e164311c2ee136ce05dfb09). Pre-merge DB Verification run 30264723167 and non-DB CI run 30264723381 both green on exact SHA. Post-merge Main Integration run 30268958848 on merge SHA 5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd — all 17 steps green including PostgreSQL migration (step 11), stage acceptance integrity gate (step 14), full DB+non-DB test suite (step 15). All twelve invariants I1-I12 have executable PostgreSQL-backed evidence. Factory Stage 6 has not begun. factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE."
       required_bundles:
         - factory-stage-5-closure
 
