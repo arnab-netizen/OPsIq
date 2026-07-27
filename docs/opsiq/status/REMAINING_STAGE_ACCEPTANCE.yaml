@@ -478,19 +478,25 @@ stages:
     factory_stage_id: "FACTORY_STAGE_5"
     development_bundle_id: null
     scope: factory_stage_closure
-    factory_stage_acceptance: AUTHORIZED_CONTRACT_DEFINED
+    factory_stage_acceptance: IMPLEMENTED_OR_PROVEN_PRE_MERGE_AWAITING_MERGE
     name: Integration Fabric and Consulting Operations Closure
     overall_status: IN_PROGRESS
     authorized_from_sha: "ce9c74486d677a078e164311c2ee136ce05dfb09"
     authorized_date: "2026-07-27"
+    pr_number: 259
+    pr_head_sha: "68f3dc0e5b9f8d7bc53dbbc0568b14776892c54c"
+    non_db_ci_run: "30250197967"
+    db_verification_run_in_progress: "30250197651"
+    non_db_ci_conclusion: success_on_sha_6e4ef55ed98531ba4d10f341a31b76817455071c
     bundles:
       - id: factory-stage-5-closure
         artifact_type: factory_stage_closure
         factory_stage_id: FACTORY_STAGE_5
         name: Factory Stage 5 Closure Contract
         status: PENDING
+        # Pre-merge truthful state — merge_sha and post-merge fields populated only after merge
         required_evidence:
-          pr_sha: null
+          pr_sha: "68f3dc0e5b9f8d7bc53dbbc0568b14776892c54c"
           merge_sha: null
           main_integration_run: null
           db_verification_run: null
