@@ -1,54 +1,74 @@
 {
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
-  "last_updated": "2026-07-26",
-  "factory_stage": "FACTORY_STAGE_3_IMPLEMENTED_PROOF_CLOSURE_REQUIRED",
+  "last_updated": "2026-07-27",
+  "factory_stage": "FACTORY_STAGE_5_AUTHORIZED",
   "active_bundle": null,
-  "blocked_by": [
-    "OWNER_STAGE_3_ACCEPTANCE_NOT_YET_GIVEN",
-    "OWNER_COMPLETION_FACTORY_ACCEPTANCE_NOT_YET_GIVEN"
-  ],
-  "owner_outcome": "Owner has proof that the Stage 3 business domains (customers, inventory, procurement, campaigns, complaints, action assignments, approvals, onboarding, SOP intelligence, BCP, integration fabric, consulting mode) are implemented, workspace-isolated, and test-verified on main — pending explicit owner acceptance before any new stage begins",
-  "current_gap": "Closure PR created with post-merge evidence. Awaiting explicit owner acceptance of Factory Stage 3 and Completion Factory bundle closure. Stage 4 is not authorized.",
-  "next_target": "Owner decision: Factory Stage 3 acceptance then Completion Factory acceptance (in that order) before any new stage work",
-  "main_sha": "15a131ab7f0b7d703b459322f3c4db5951d1e825",
+  "blocked_by": [],
+  "owner_outcome": "Owner has proof that Stages 3 and 4 are implemented and accepted. Factory Stage 5 (Integration Fabric + Consulting Mode Adversarial Closure) is authorized to begin from main SHA ce9c74486d677a078e164311c2ee136ce05dfb09.",
+  "current_gap": "Factory Stage 5 contract bundle not yet created. Must define adversarial closure scope for Integration Fabric (bundles 5.1-5.3) and Consulting Mode (bundle 6), then implement and prove.",
+  "next_target": "Create bundle-5.4.yaml Factory Stage 5 adversarial closure contract. Implement 60+ adversarial tests. DB-verify. Merge with exact-SHA owner authorization.",
+  "main_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
+  "active_branch": "claude/opsiq-stage-5-loop-main",
+  "authorized_from_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
   "prs_merged_to_main": [
     {
       "number": 251,
       "title": "Bundle 3.5-3.10 Owner Mode — Stage 3 complete",
-      "head_sha": "cda988e7267552294f6b5c597d1bed0fb8979e53",
       "merge_sha": "5bc1fc013cd52064afcffb65505d7359da872718",
-      "main_integration_run": "30152600373",
-      "result": "GREEN (after corrective PR #252)"
-    },
-    {
-      "number": 252,
-      "title": "fix(ci): vitest.setup.ts must not rethrow Vitest mock-validation error",
-      "head_sha": "db4506049a5cc99a7ab6d2576ed7bc2a743dee44",
-      "merge_sha": "45694526099aa5b092631fa2cc6d037a5aa1c3b9",
       "main_integration_run": "30152600373",
       "result": "GREEN"
     },
     {
-      "number": 253,
-      "title": "FACTORY STAGE 3 — Core Business-Domain Completion (3B-3F)",
-      "head_sha": "ff34141056d9d47f053372fafe9a033d86d98928",
-      "merge_sha": "7a19de9dd8436ee9cf8e2f0d746195a04bc49405",
-      "main_integration_run": "30162157766",
-      "result": "GREEN — 29488/29488 tests, 0 failed",
-      "domains": ["3B-CustomerRecord","3C-StockItem+PurchaseOrder","3D-MarketingCampaign","3E-EmailTransport","3F-EntityWorkspaceId"]
-    },
-    {
       "number": 255,
-      "title": "feat(stage-3-proof-closure): focused DB tests bundles 3.5–3.9, browser specs 57–58, reusable CI wiring, adversarial closure 3.10",
+      "title": "feat(stage-3-proof-closure): bundles 3.5–3.10 proof closure",
       "head_sha": "95138558ed4e37abffe7599aa3eee3514a9acbb5",
       "merge_sha": "15a131ab7f0b7d703b459322f3c4db5951d1e825",
       "main_integration_run": "30199084412",
       "db_verification_run": "30196020202",
-      "result": "GREEN — all 35 steps including LANE_B DB migration + full test suite",
-      "proof_scope": "bundles 3.5-3.10 DB tests, browser specs 57+58, capability_check.ts OWNER_ONBOARD+SOP_MANAGE"
+      "result": "GREEN — Factory Stage 3 proven"
+    },
+    {
+      "number": 257,
+      "title": "feat(bundle-4.3): Stage 4 Cross-Domain Adversarial Closure — 60 adversarial tests",
+      "head_sha": "514978cb713a20e5f3ecaffe61d1bdcd3cca7431",
+      "merge_sha": "0de3463bc843f3771cdac153df9384bc10388630",
+      "main_integration_run": "30214645193",
+      "db_verification_run": "30213647265",
+      "result": "GREEN — Factory Stage 4 proven"
+    },
+    {
+      "number": 258,
+      "title": "chore(stage-4): record factual Factory Stage 4 closure evidence",
+      "head_sha": "88b98c99ea0cd8905de868c9500760f0149c7fe1",
+      "merge_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
+      "main_integration_run": "30233229481",
+      "result": "GREEN — Factory Stage 4 ledger closure, post-merge integration confirmed"
     }
   ],
+  "factory_stage_acceptance": {
+    "factory_stage_3": {
+      "status": "ACCEPTED",
+      "accepted_date": "2026-07-26",
+      "merge_sha": "15a131ab7f0b7d703b459322f3c4db5951d1e825"
+    },
+    "factory_stage_4": {
+      "status": "ACCEPTED",
+      "accepted_date": "2026-07-27",
+      "pr_implementation_head": "514978cb713a20e5f3ecaffe61d1bdcd3cca7431",
+      "pr_implementation_merge_sha": "0de3463bc843f3771cdac153df9384bc10388630",
+      "pr_closure_head": "88b98c99ea0cd8905de868c9500760f0149c7fe1",
+      "closure_merge_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
+      "post_merge_run": "30233229481",
+      "note": "Explicitly accepted by owner: FACTORY_STAGE_4_ACCEPTED"
+    },
+    "factory_stage_5": {
+      "status": "AUTHORIZED_NOT_YET_PROVEN",
+      "authorized_date": "2026-07-27",
+      "authorized_from_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
+      "branch": "claude/opsiq-stage-5-loop-main"
+    }
+  },
   "bundle_status": {
     "bundle-3.4": "CLOSED",
     "bundle-3.5": "CLOSED",
@@ -57,35 +77,23 @@
     "bundle-3.8": "CLOSED",
     "bundle-3.9": "CLOSED",
     "bundle-3.10": "CLOSED",
+    "bundle-4": "CLOSED",
     "bundle-4.1": "CLOSED",
     "bundle-4.2": "CLOSED",
+    "bundle-4.3": "CLOSED",
+    "bundle-5": "CLOSED",
     "bundle-5.1": "CLOSED",
     "bundle-5.2": "CLOSED",
     "bundle-5.3": "CLOSED",
     "bundle-6": "CLOSED",
     "bundle-7": "CLOSED",
-    "_note": "Bundles 4.x, 5.x, 6, 7 are DELIVERY_BUNDLE_GROUPs (internal implementation), NOT Factory Stage milestones. Factory Stage 4 has NOT been accepted."
+    "_note": "Bundles 5.x, 6, 7 are internal delivery bundles, NOT Factory Stage milestones. Factory Stage 5 adversarial closure bundle (bundle-5.4) is not yet created."
   },
   "ledger": "docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml",
-  "ledger_status": "STAGE_3_FACTORY_BUNDLES_CLOSED_INTERNAL_DELIVERY_BUNDLES_CLOSED_FACTORY_ACCEPTANCE_PENDING",
-  "stage_acceptance_status": {
-    "factory_stage_3": "POST_MERGE_EVIDENCE_COMPLETE_AWAITING_OWNER_ACCEPTANCE",
-    "factory_stage_4": "NOT_YET_AUTHORIZED",
-    "completion_factory": "EVIDENCE_COMPLETE_AWAITING_OWNER_ACCEPTANCE"
-  },
-  "stage_acceptance_gates": {
-    "integrity_mode_stage_3": "PASS — 7 bundles, 0 violations (2026-07-26)",
-    "closure_mode_stage_3": "PASS — 7 bundles, 0 violations (2026-07-26)",
-    "bundle_manifest_validator": "PASS — 11 bundles, 0 violations (2026-07-26)"
-  },
-  "deployment_classification": {
-    "vercel": "DEPLOYMENT_ACCESS_UNVERIFIED",
-    "resend": "LIVE_PROVIDER_CREDENTIAL_UNAVAILABLE",
-    "resend_delivery": "LIVE_RESEND_DELIVERY_UNPROVEN",
-    "browser_specs_57_58": "BROWSER_EXECUTION_UNPROVEN_SPECS_EXIST_IN_TREE"
-  },
+  "ledger_status": "STAGE_4_FACTORY_BUNDLES_CLOSED_STAGE_5_NOT_YET_DEFINED",
   "scope_drift": "NO",
-  "stage_4_begun": false,
+  "stage_4_begun": true,
+  "stage_5_begun": true,
   "operating_loop": [
     "main-truth","owner-outcome","parallel-specialist-agents","structured-gap-synthesis",
     "plan-mode","checkpoint","one-write-owner-implementation","hook-driven-fast-validation",
