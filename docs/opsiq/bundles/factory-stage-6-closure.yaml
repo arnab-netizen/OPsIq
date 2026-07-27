@@ -3,7 +3,7 @@ stage: factory-6
 artifact_type: factory_stage_closure
 factory_stage_id: FACTORY_STAGE_6
 development_bundle_id: null
-status: PENDING
+status: CLOSED
 priority: 1
 
 name: Factory Stage 6 — Deployment and Production Readiness Closure
@@ -77,10 +77,10 @@ invariants:
     proof_lane: LANE_B_POSTGRES
     proof_type: db_test
     executable_evidence: "LANE_B CI: prisma migrate deploy on empty DB reaches schema head"
-    status: LANE_B_TEST_AUTHORED
+    status: LANE_B_PROVEN
     proof_artifacts:
-      - ".github/workflows/stage6-db-verification.yml: LANE_B workflow with prisma migrate deploy"
-      - "src/__tests__/stage6/s6-db-proofs.test.ts: S6-I4/I6 test asserts ≥158 migrations applied"
+      - ".github/workflows/db-verification.yml: LANE_B workflow with prisma migrate deploy (run 30303650860)"
+      - "src/__tests__/stage6/s6-db-proofs.db.test.ts: S6-I4/I6 test asserts ≥158 migrations applied"
 
   S6-I5:
     name: Migration failure containment
@@ -103,10 +103,10 @@ invariants:
     proof_lane: LANE_B_POSTGRES
     proof_type: db_test_plus_health_check
     executable_evidence: "LANE_B CI: health endpoint returns structured JSON after migration"
-    status: LANE_B_TEST_AUTHORED
+    status: LANE_B_PROVEN
     proof_artifacts:
-      - ".github/workflows/stage6-db-verification.yml: post-migrate health probe step"
-      - "src/__tests__/stage6/s6-db-proofs.test.ts: SELECT 1 proves DB reachable post-migration"
+      - ".github/workflows/db-verification.yml: post-migrate health probe step (run 30303650860)"
+      - "src/__tests__/stage6/s6-db-proofs.db.test.ts: SELECT 1 proves DB reachable post-migration"
 
   S6-I7:
     name: Tenant-safe hot paths
@@ -116,9 +116,9 @@ invariants:
     proof_lane: LANE_B_POSTGRES
     proof_type: db_test_workspace_isolation
     executable_evidence: "LANE_B: real DB isolation test — wsB query returns zero rows for wsA data"
-    status: LANE_B_TEST_AUTHORED
+    status: LANE_B_PROVEN
     proof_artifacts:
-      - "src/__tests__/stage6/s6-db-proofs.test.ts: S6-I7 tests (3 DB isolation assertions)"
+      - "src/__tests__/stage6/s6-db-proofs.db.test.ts: S6-I7 tests (3 DB isolation assertions)"
 
   S6-I8:
     name: Query-plan fitness
@@ -130,9 +130,9 @@ invariants:
     proof_lane: LANE_B_POSTGRES
     proof_type: db_test_explain_analyze
     executable_evidence: "LANE_B CI: pg_indexes asserts index existence; EXPLAIN plan captured"
-    status: LANE_B_TEST_AUTHORED
+    status: LANE_B_PROVEN
     proof_artifacts:
-      - "src/__tests__/stage6/s6-db-proofs.test.ts: S6-I8 tests — pg_indexes check + EXPLAIN plan"
+      - "src/__tests__/stage6/s6-db-proofs.db.test.ts: S6-I8 tests — pg_indexes check + EXPLAIN plan"
 
   S6-I9:
     name: Performance reproducibility
@@ -143,9 +143,9 @@ invariants:
     proof_lane: LANE_B_POSTGRES
     proof_type: db_test_timing_capture
     executable_evidence: "LANE_B CI: timing measurements recorded in test output for hot-path queries"
-    status: LANE_B_TEST_AUTHORED
+    status: LANE_B_PROVEN
     proof_artifacts:
-      - "src/__tests__/stage6/s6-db-proofs.test.ts: S6-I9 timing baseline (10 runs, p50/p95/max)"
+      - "src/__tests__/stage6/s6-db-proofs.db.test.ts: S6-I9 timing baseline (10 runs, p50=3ms p95=19ms max=19ms)"
 
   S6-I10:
     name: Operational observability
@@ -215,10 +215,10 @@ gates:
   deployment_preflight: scripts/deployment-preflight.mjs
 
 required_evidence:
-  pr_sha: null
-  merge_sha: null
-  main_integration_run: null
-  db_verification_run: null
-  non_db_ci_run: null
-  pre_merge_status: null
-  verification_date: null
+  pr_sha: "a6e867ee343557a9f6132a78405663b7e9ef799f"
+  merge_sha: "b1c22d3179457ef1942b0aefee4b20c3508680a9"
+  main_integration_run: "30306181683"
+  db_verification_run: "30303650860"
+  non_db_ci_run: "30303651105"
+  pre_merge_status: GREEN
+  verification_date: "2026-07-27"

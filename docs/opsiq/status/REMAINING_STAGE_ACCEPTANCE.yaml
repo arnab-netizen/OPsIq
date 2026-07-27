@@ -522,31 +522,43 @@ stages:
     # FACTORY STAGE 6 — Deployment and Production Readiness Closure.
     # This is a Factory Stage milestone (factory_stage_id: FACTORY_STAGE_6).
     # Authorized by owner 2026-07-27 from main SHA fd843562389025eaf7c0f1b7d2ff76e771fea030.
+    # PR #261 merged at exact authorized SHA a6e867ee343557a9f6132a78405663b7e9ef799f.
+    # Post-merge Main Integration run 30306181683 — all steps green.
     # Factory Stage 7 remains NOT_AUTHORIZED.
     factory_stage_id: "FACTORY_STAGE_6"
     development_bundle_id: null
     scope: factory_stage_closure
-    factory_stage_acceptance: AUTHORIZED_CONTRACT_DEFINED
+    factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE
     authorized_date: "2026-07-27"
     authorized_from_sha: "fd843562389025eaf7c0f1b7d2ff76e771fea030"
     authorized_branch: "claude/opsiq-stage-6-loop-main"
+    pr_number: 261
+    pr_head_sha: "a6e867ee343557a9f6132a78405663b7e9ef799f"
+    non_db_ci_run: "30303651105"
+    non_db_ci_status: success_on_sha_a6e867ee
+    db_verification_run: "30303650860"
+    db_verification_conclusion: success_on_sha_a6e867ee
+    merge_sha: "b1c22d3179457ef1942b0aefee4b20c3508680a9"
+    main_integration_run: "30306181683"
+    main_integration_conclusion: success
     name: Deployment and Production Readiness Closure
-    overall_status: IN_PROGRESS
+    overall_status: PROVEN_AWAITING_OWNER_ACCEPTANCE
     bundles:
       - id: factory-stage-6-closure
         artifact_type: factory_stage_closure
         factory_stage_id: FACTORY_STAGE_6
         name: Factory Stage 6 Closure Contract
-        status: PENDING
+        status: CLOSED
         required_evidence:
-          pr_sha: null
-          merge_sha: null
-          main_integration_run: null
-          db_verification_run: null
+          pr_sha: "a6e867ee343557a9f6132a78405663b7e9ef799f"
+          merge_sha: "b1c22d3179457ef1942b0aefee4b20c3508680a9"
+          main_integration_run: "30306181683"
+          db_verification_run: "30303650860"
 
     stage_acceptance:
-      status: PENDING
+      status: PROVEN_AWAITING_OWNER_ACCEPTANCE
       gate: scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-6
+      evidence: "PR #261 merged at exact authorized SHA a6e867ee343557a9f6132a78405663b7e9ef799f (base fd843562389025eaf7c0f1b7d2ff76e771fea030). Pre-merge DB Verification run 30303650860 green (9 LANE_B tests: S6-I4/I6/I7/I8/I9 proven, p50=3ms p95=19ms max=19ms). Non-DB CI run 30303651105 green (S6-I1/I2/I3/I5/I10/I11/I12 LANE_A proven). Post-merge Main Integration run 30306181683 on merge SHA b1c22d3179457ef1942b0aefee4b20c3508680a9 — conclusion: success, all steps green including migration (step 11), Factory Stage 6 acceptance integrity gate (step 15), and full test suite (step 16)."
       required_bundles:
         - factory-stage-6-closure
 
