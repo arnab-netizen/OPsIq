@@ -419,7 +419,7 @@ describe("I4 — Event integrity: BCP trigger failure emits audit event", () => 
     );
   });
 
-  it("INTEGRATION_EVENT_BCP_TRIGGER_FAILED audit event includes businessId, connectorId, kind, error", async () => {
+  it("INTEGRATION_EVENT_BCP_TRIGGER_FAILED audit event includes businessId, connectorId, kind, errorKind", async () => {
     mockConnectorFindFirst.mockResolvedValue({ id: CONN_ID, provider: "XERO", status: "ACTIVE" });
     mockGetCurrentConditionProfile.mockRejectedValue(new Error("service-error-msg"));
 
@@ -445,8 +445,8 @@ describe("I4 — Event integrity: BCP trigger failure emits audit event", () => 
       expect(payload.businessId).toBe(BIZ_ID);
       expect(payload.connectorId).toBe(CONN_ID);
       expect(payload.kind).toBe("ACCOUNTING_EXPENSE_UPDATED");
-      expect(typeof payload.error).toBe("string");
-      expect(payload.error).toContain("service-error-msg");
+      expect(typeof payload.errorKind).toBe("string");
+      expect(payload.errorKind).toBe("Error");
     }, { timeout: 2000 });
   });
 

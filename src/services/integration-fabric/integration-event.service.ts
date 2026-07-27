@@ -190,7 +190,7 @@ async function fireBcpReEvaluation(
         businessId: event.businessId ?? null,
         connectorId: event.connectorId,
         kind: event.kind,
-        error: err instanceof Error ? err.message : String(err),
+        errorKind: err instanceof Error ? err.name : "UnknownError",
       },
     }).catch(() => {/* last-resort: audit emit cannot propagate to ingest caller */});
   }
