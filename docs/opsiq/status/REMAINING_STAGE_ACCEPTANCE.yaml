@@ -484,11 +484,11 @@ stages:
     authorized_from_sha: "ce9c74486d677a078e164311c2ee136ce05dfb09"
     authorized_date: "2026-07-27"
     pr_number: 259
-    pr_head_sha: "1fe94d15db1b0ea7c8ee972388fa361bcbc4f4a3"
-    non_db_ci_run: "30250613867"
-    non_db_ci_status: in_progress_on_sha_1fe94d15
-    db_verification_run: "30250613589"
-    db_verification_conclusion: success_on_sha_1fe94d15
+    pr_head_sha: "cb9c6726b9102b0a772d392b2bbb7b945eb4bdc1"
+    non_db_ci_run: "30252243546"
+    non_db_ci_status: success_on_sha_cb9c6726
+    db_verification_run: "30252243262"
+    db_verification_conclusion: success_on_sha_cb9c6726
     bundles:
       - id: factory-stage-5-closure
         artifact_type: factory_stage_closure
