@@ -1,6 +1,6 @@
 version: "1.0"
-last_updated: "2026-07-27"
-# Updated: factory-stage-5 accepted by owner 2026-07-27. factory-stage-6 authorized and contract defined 2026-07-27 from SHA fd843562.
+last_updated: "2026-07-28"
+# Updated: factory-stage-6 accepted by owner 2026-07-28. factory-stage-7 authorized 2026-07-28 from SHA f93bd37a, branch claude/opsiq-stage-7-loop-main.
 maintainer: completion-factory
 
 # REMAINING STAGE ACCEPTANCE LEDGER
@@ -524,11 +524,12 @@ stages:
     # Authorized by owner 2026-07-27 from main SHA fd843562389025eaf7c0f1b7d2ff76e771fea030.
     # PR #261 merged at exact authorized SHA a6e867ee343557a9f6132a78405663b7e9ef799f.
     # Post-merge Main Integration run 30306181683 — all steps green.
-    # Factory Stage 7 remains NOT_AUTHORIZED.
+    # Explicitly ACCEPTED by owner 2026-07-28.
     factory_stage_id: "FACTORY_STAGE_6"
     development_bundle_id: null
     scope: factory_stage_closure
-    factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE
+    factory_stage_acceptance: ACCEPTED
+    accepted_date: "2026-07-28"
     authorized_date: "2026-07-27"
     authorized_from_sha: "fd843562389025eaf7c0f1b7d2ff76e771fea030"
     authorized_branch: "claude/opsiq-stage-6-loop-main"
@@ -542,7 +543,7 @@ stages:
     main_integration_run: "30306181683"
     main_integration_conclusion: success
     name: Deployment and Production Readiness Closure
-    overall_status: PROVEN_AWAITING_OWNER_ACCEPTANCE
+    overall_status: ACCEPTED
     bundles:
       - id: factory-stage-6-closure
         artifact_type: factory_stage_closure
@@ -556,11 +557,47 @@ stages:
           db_verification_run: "30303650860"
 
     stage_acceptance:
-      status: PROVEN_AWAITING_OWNER_ACCEPTANCE
+      status: CLOSED
+      accepted_date: "2026-07-28"
+      note: "Owner explicitly accepted: FACTORY_STAGE_6_ACCEPTED (2026-07-28)"
       gate: scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-6
       evidence: "PR #261 merged at exact authorized SHA a6e867ee343557a9f6132a78405663b7e9ef799f (base fd843562389025eaf7c0f1b7d2ff76e771fea030). Pre-merge DB Verification run 30303650860 green (9 LANE_B tests: S6-I4/I6/I7/I8/I9 proven, p50=3ms p95=19ms max=19ms). Non-DB CI run 30303651105 green (S6-I1/I2/I3/I5/I10/I11/I12 LANE_A proven). Post-merge Main Integration run 30306181683 on merge SHA b1c22d3179457ef1942b0aefee4b20c3508680a9 — conclusion: success, all steps green including migration (step 11), Factory Stage 6 acceptance integrity gate (step 15), and full test suite (step 16)."
       required_bundles:
         - factory-stage-6-closure
+
+  factory-stage-7:
+    # FACTORY STAGE 7 — Live Private Owner Deployment, Pilot, and Unrestricted Readiness Acceptance.
+    # This is a Factory Stage milestone (factory_stage_id: FACTORY_STAGE_7).
+    # Authorized by owner 2026-07-28 from main SHA f93bd37a86ba83d36bdc45245bb648c45eb9817b.
+    # Branch: claude/opsiq-stage-7-loop-main
+    # Billing (Stripe, Lemon Squeezy) is excluded. Public SaaS rollout is excluded.
+    # Factory Stage 7 scope: LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS
+    factory_stage_id: "FACTORY_STAGE_7"
+    development_bundle_id: null
+    scope: factory_stage_closure
+    factory_stage_acceptance: AUTHORIZED_CONTRACT_DEFINED
+    authorized_date: "2026-07-28"
+    authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
+    authorized_branch: "claude/opsiq-stage-7-loop-main"
+    name: Live Private Owner Deployment, Pilot, and Unrestricted Readiness Acceptance
+    overall_status: AUTHORIZED_CONTRACT_DEFINED
+    bundles:
+      - id: factory-stage-7-closure
+        artifact_type: factory_stage_closure
+        factory_stage_id: FACTORY_STAGE_7
+        name: Factory Stage 7 Closure Contract
+        status: PENDING
+        required_evidence:
+          pr_sha: null
+          merge_sha: null
+          main_integration_run: null
+          db_verification_run: null
+
+    stage_acceptance:
+      status: AUTHORIZED_CONTRACT_DEFINED
+      gate: scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-7
+      required_bundles:
+        - factory-stage-7-closure
 
 completion_factory:
   branch: claude/opsiq-stage-3-7-loop-j6j6cf
