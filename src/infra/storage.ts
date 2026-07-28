@@ -92,14 +92,29 @@ export function getStorageProvider(): StorageProvider {
   const provider = process.env.STORAGE_PROVIDER ?? "local";
 
   switch (provider) {
-    case "local":
+    case "local": {
+      // S7-DC2: Fail-closed — local storage is ephemeral on Vercel serverless.
+      // Files written here ARE LOST on restart/re-deploy/cold-start.
+      // DURABLE_STORAGE_NOT_REQUIRED: no owner workflow currently calls this.
+      // In production: BLOCK the write path so accidental callers fail loudly
+      // rather than silently losing data.
+      // To enable persistent storage: set STORAGE_PROVIDER=s3 + S3_BUCKET + S3_REGION.
+      const isProduction =
+        process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+      if (isProduction) {
+        throw new Error(
+          "S7-DC2: LocalStorageProvider is not permitted in production. " +
+            "Configure durable storage: set STORAGE_PROVIDER=s3 with S3_BUCKET, S3_REGION, and AWS credentials."
+        );
+      }
       _storageProvider = new LocalStorageProvider(
         process.env.STORAGE_LOCAL_PATH ?? "./uploads"
       );
       break;
+    }
     case "s3":
       throw new Error(
-        "S3 storage provider not yet configured. Set STORAGE_PROVIDER=local for development."
+        "S3 storage provider not yet configured. Set S3_BUCKET, S3_REGION, and AWS credentials."
       );
     default:
       throw new Error(`Unknown storage provider: ${provider}`);

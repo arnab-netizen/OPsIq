@@ -4,13 +4,8 @@
  * In-memory sliding window implementation.
  */
 
-import { NextRequest, NextResponse } from "next/server";
 import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
-import {
-  type ClaimedWorkspaceId,
-  type VerifiedWorkspaceId,
-  claimWorkspaceId,
-} from "@/lib/workspace-identity";
+import { type VerifiedWorkspaceId } from "@/lib/workspace-identity";
 
 interface TokenBucket {
   tokens: number;
@@ -143,90 +138,6 @@ export function checkIpRateLimit(
       retryAfter,
     };
   }
-}
-
-/**
- * Middleware: Rate limit enforcement.
- * Checks both workspace and IP rate limits.
- * Returns 429 if either limit exceeded.
- * Reads x-workspace-id and x-tier headers for tier information.
- */
-export function rateLimitEnforcement() {
-  return async (request: NextRequest, response: NextResponse) => {
-    // DEAD MIDDLEWARE — not wired in production.
-    // x-workspace-id read is typed as ClaimedWorkspaceId (untrusted claim).
-    // If wired, this constitutes RATE_LIMIT_EVASION_RISK + TIER_ENFORCEMENT_VIOLATION:
-    // resolveWorkspaceTier would DB-query keyed on an unverified caller claim.
-    // Wire with VerifiedWorkspaceId from withCanonicalEnforcement context instead.
-    const claimedId: ClaimedWorkspaceId | null = claimWorkspaceId(request.headers.get("x-workspace-id"));
-    // BILL-01: tier must be resolved SERVER-SIDE from verified workspace; this path is dead.
-    const tier: SubscriptionTier = claimedId
-      ? await (await import("@/services/entitlement.service")).resolveWorkspaceTier(claimedId)  // WOULD BE UNSAFE
-      : "free";
-
-    // Get client IP
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
-
-    // Check workspace rate limit (only if workspace claim present — DEAD PATH)
-    // checkWorkspaceRateLimit requires VerifiedWorkspaceId; dead middleware cannot call it safely
-    if (claimedId) {
-      // Intentional compile-time barrier: cannot pass ClaimedWorkspaceId to checkWorkspaceRateLimit.
-      // Left as commented reference to document what would need to change if this were wired.
-      // const wsLimit = checkWorkspaceRateLimit(claimedId, tier); // TYPE ERROR — ClaimedWorkspaceId ≠ VerifiedWorkspaceId
-      const wsLimit = { allowed: false, remaining: 0, retryAfter: 60 }; // dead path stub
-      if (!wsLimit.allowed) {
-        return new NextResponse(
-          JSON.stringify({
-            error: "Rate limit exceeded (workspace)",
-            retryAfter: wsLimit.retryAfter,
-          }),
-          {
-            status: 429,
-            headers: {
-              "Retry-After": (wsLimit.retryAfter || 60).toString(),
-              "X-RateLimit-Limit": getTierConfig(tier).limits.requestsPerHour.toString(),
-              "X-RateLimit-Remaining": "0",
-            },
-          }
-        );
-      }
-
-      // Add rate limit headers
-      response.headers.set(
-        "X-RateLimit-Limit-Workspace",
-        getTierConfig(tier).limits.requestsPerHour.toString()
-      );
-      response.headers.set(
-        "X-RateLimit-Remaining-Workspace",
-        wsLimit.remaining.toString()
-      );
-    }
-
-    // Check IP rate limit
-    const ipLimit = checkIpRateLimit(ip);
-    if (!ipLimit.allowed) {
-      return new NextResponse(
-        JSON.stringify({
-          error: "Rate limit exceeded (IP)",
-          retryAfter: ipLimit.retryAfter,
-        }),
-        {
-          status: 429,
-          headers: {
-            "Retry-After": (ipLimit.retryAfter || 60).toString(),
-            "X-RateLimit-Limit": "1000",
-            "X-RateLimit-Remaining": "0",
-          },
-        }
-      );
-    }
-
-    // Add IP rate limit headers
-    response.headers.set("X-RateLimit-Limit-IP", "1000");
-    response.headers.set("X-RateLimit-Remaining-IP", ipLimit.remaining.toString());
-
-    return response;
-  };
 }
 
 /**

@@ -16,6 +16,8 @@ export interface ScheduleTaskInput {
   payload?: Record<string, unknown>;
   scheduledFor: Date;
   maxAttempts?: number;
+  workspaceId?: string;
+  idempotencyKey?: string;
 }
 
 export interface TaskHandler {
@@ -28,8 +30,32 @@ export interface SchedulerProvider {
   processDue(handlers: Map<string, TaskHandler>): Promise<number>;
 }
 
+/** Exponential backoff delay (seconds) for retry attempt N. */
+function retryDelaySeconds(attempt: number): number {
+  // attempt=1 → 60s, attempt=2 → 300s, attempt=3 → 900s
+  return Math.min(60 * Math.pow(5, attempt - 1), 3600);
+}
+
+const LEASE_MS = 5 * 60 * 1000; // 5-minute processing lease
+
 export class DatabaseSchedulerProvider implements SchedulerProvider {
   async schedule(input: ScheduleTaskInput): Promise<string> {
+    // Idempotent upsert when idempotencyKey provided.
+    if (input.idempotencyKey) {
+      const existing = await db.scheduledTask.findUnique({
+        where: { idempotencyKey: input.idempotencyKey },
+        select: { id: true },
+      });
+      if (existing) {
+        logger.info("Task already scheduled (idempotent skip)", {
+          taskName: input.taskName,
+          idempotencyKey: input.idempotencyKey,
+          existingId: existing.id,
+        });
+        return existing.id;
+      }
+    }
+
     const task = await db.scheduledTask.create({
       data: {
         id: uuidv4(),
@@ -40,6 +66,8 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
         scheduledFor: input.scheduledFor,
         maxAttempts: input.maxAttempts ?? 3,
         status: "pending",
+        workspaceId: input.workspaceId ?? null,
+        idempotencyKey: input.idempotencyKey ?? null,
       },
     });
 
@@ -47,6 +75,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
       taskId: task.id,
       taskName: input.taskName,
       scheduledFor: input.scheduledFor.toISOString(),
+      workspaceId: input.workspaceId,
     });
 
     return task.id;
@@ -62,68 +91,112 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
 
   async processDue(handlers: Map<string, TaskHandler>): Promise<number> {
     const now = new Date();
-    const dueTasks = await db.scheduledTask.findMany({
-      where: {
-        status: "pending",
-        scheduledFor: { lte: now },
-      },
-      orderBy: { scheduledFor: "asc" },
-      take: 50,
-    });
+    const leaseExpiry = new Date(now.getTime() + LEASE_MS);
+
+    // Atomic claim via raw SQL UPDATE … RETURNING.
+    // Only claim rows that are either:
+    //   (a) pending + scheduledFor <= now, OR
+    //   (b) running + lease expired (crash recovery)
+    const claimed = await db.$queryRaw<Array<{
+      id: string;
+      task_name: string;
+      payload: unknown;
+      attempts: number;
+      max_attempts: number;
+    }>>`
+      UPDATE "scheduled_tasks"
+      SET "status"           = 'running',
+          "started_at"       = ${now},
+          "lease_expires_at" = ${leaseExpiry},
+          "attempts"         = "attempts" + 1
+      WHERE "id" IN (
+        SELECT "id" FROM "scheduled_tasks"
+        WHERE (
+          ("status" = 'pending'  AND "scheduled_for" <= ${now})
+          OR
+          ("status" = 'running'  AND "lease_expires_at" < ${now})
+        )
+        ORDER BY "scheduled_for" ASC
+        LIMIT 50
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING "id", "task_name", "payload", "attempts", "max_attempts"
+    `;
+
+    if (claimed.length === 0) return 0;
 
     let processed = 0;
 
-    for (const task of dueTasks) {
-      const handler = handlers.get(task.taskName);
+    for (const task of claimed) {
+      const handler = handlers.get(task.task_name);
       if (!handler) {
         logger.warn("No handler registered for task", {
-          taskName: task.taskName,
+          taskName: task.task_name,
           taskId: task.id,
         });
+        // Release back to pending so it can be retried after a handler is registered.
+        await db.scheduledTask.update({
+          where: { id: task.id },
+          data: { status: "pending", startedAt: null, leaseExpiresAt: null },
+        }).catch(() => {});
         continue;
       }
-
-      await db.scheduledTask.update({
-        where: { id: task.id },
-        data: { status: "running", startedAt: now, attempts: task.attempts + 1 },
-      });
 
       try {
         await handler(task.payload as Record<string, unknown> | null);
         await db.scheduledTask.update({
           where: { id: task.id },
-          data: { status: "completed", completedAt: new Date() },
+          data: {
+            status: "completed",
+            completedAt: new Date(),
+            leaseExpiresAt: null,
+          },
         });
         processed++;
       } catch (err) {
-        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
+        const governed = classifyOperatorError(
+          err instanceof Error ? err : new Error(String(err)),
+          { context: "load" }
+        );
         const errorMessage = governed.operatorMessage;
-        const newAttempts = task.attempts + 1;
-        const isDeadLetter = newAttempts >= task.maxAttempts;
+        // attempts was already incremented by the UPDATE above.
+        const attemptsDone = task.attempts;
+        const isDeadLetter = attemptsDone >= task.max_attempts;
 
-        await db.scheduledTask.update({
-          where: { id: task.id },
-          data: {
-            status: isDeadLetter ? "dead_letter" : "failed",
-            lastError: errorMessage,
-          },
-        });
+        if (isDeadLetter) {
+          await db.scheduledTask.update({
+            where: { id: task.id },
+            data: {
+              status: "dead_letter",
+              lastError: errorMessage,
+              leaseExpiresAt: null,
+            },
+          });
+        } else {
+          // Exponential backoff: schedule next attempt in the future.
+          const nextRun = new Date(
+            Date.now() + retryDelaySeconds(attemptsDone) * 1000
+          );
+          await db.scheduledTask.update({
+            where: { id: task.id },
+            data: {
+              status: "pending",
+              lastError: errorMessage,
+              scheduledFor: nextRun,
+              startedAt: null,
+              leaseExpiresAt: null,
+            },
+          });
+        }
 
         logger.error("Task execution failed", {
           taskId: task.id,
-          taskName: task.taskName,
-          attempt: newAttempts,
-          maxAttempts: task.maxAttempts,
+          taskName: task.task_name,
+          attempts: attemptsDone,
+          maxAttempts: task.max_attempts,
           isDeadLetter,
           error: errorMessage,
         });
-
-        if (!isDeadLetter) {
-          await db.scheduledTask.update({
-            where: { id: task.id },
-            data: { status: "pending" },
-          });
-        }
       }
     }
 
@@ -138,17 +211,14 @@ export class InMemorySchedulerProvider implements SchedulerProvider {
   > = new Map();
 
   async schedule(input: ScheduleTaskInput): Promise<string> {
+    if (input.idempotencyKey) {
+      for (const task of this.tasks.values()) {
+        if (task.idempotencyKey === input.idempotencyKey) return task.id;
+      }
+    }
     const id = uuidv4();
-    this.tasks.set(id, {
-      ...input,
-      id,
-      status: "pending",
-      attempts: 0,
-    });
-    logger.info("Task scheduled (in-memory)", {
-      taskId: id,
-      taskName: input.taskName,
-    });
+    this.tasks.set(id, { ...input, id, status: "pending", attempts: 0 });
+    logger.info("Task scheduled (in-memory)", { taskId: id, taskName: input.taskName });
     return id;
   }
 
@@ -176,11 +246,16 @@ export class InMemorySchedulerProvider implements SchedulerProvider {
       } catch (err) {
         const maxAttempts = task.maxAttempts ?? 3;
         task.status = task.attempts >= maxAttempts ? "dead_letter" : "pending";
-        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
-        logger.error("Task failed (in-memory)", {
-          taskId: id,
-          error: governed.operatorMessage,
-        });
+        if (task.status === "pending") {
+          task.scheduledFor = new Date(
+            Date.now() + retryDelaySeconds(task.attempts) * 1000
+          );
+        }
+        const governed = classifyOperatorError(
+          err instanceof Error ? err : new Error(String(err)),
+          { context: "load" }
+        );
+        logger.error("Task failed (in-memory)", { taskId: id, error: governed.operatorMessage });
       }
     }
 
@@ -207,4 +282,9 @@ export function getScheduler(): SchedulerProvider {
   }
 
   return _scheduler;
+}
+
+/** Reset singleton (tests only). */
+export function _resetSchedulerForTest(): void {
+  _scheduler = null;
 }
