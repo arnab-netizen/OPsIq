@@ -938,7 +938,7 @@ model ScheduledTask {
   idempotencyKey  String?   @unique @map("idempotency_key")
   workspaceId     String?   @map("workspace_id") @db.Uuid
   createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @map("updated_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@index([status, scheduledFor])
   @@index([taskName])
