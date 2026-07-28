@@ -16,6 +16,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { SMOKE_EMAIL } from "@/lib/smoke-identity";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 function isAllowedEnvironment(): boolean {
   const env = process.env.NODE_ENV;
@@ -72,8 +73,12 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     logger.info("Smoke cleanup completed", deleted);
     return NextResponse.json({ ok: true, deleted });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    logger.error("Smoke cleanup error", { error: msg });
-    return NextResponse.json({ error: "Cleanup failed", detail: msg }, { status: 500 });
+    const governed = classifyOperatorError(
+      err instanceof Error ? err : new Error(String(err)),
+      { context: "load" }
+    );
+    const safeDetail = governed.operatorMessage;
+    logger.error("Smoke cleanup error", { error: safeDetail });
+    return NextResponse.json({ error: "Cleanup failed", detail: safeDetail }, { status: 500 });
   }
 }

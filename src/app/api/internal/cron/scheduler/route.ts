@@ -20,6 +20,7 @@ import { DatabaseSchedulerProvider } from "@/infra/scheduler";
 import { retryEmailAlert } from "@/services/alerts/alert-email-retry.service";
 import { captureError } from "@/infra/observability";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const MAX_EMAIL_RETRIES_PER_TICK = 20;
 const CRON_ACTOR_ID = "00000000-0000-0000-0000-000000000001"; // system actor for audit events
@@ -48,8 +49,11 @@ export async function GET(request: Request): Promise<NextResponse> {
     results.schedulerTasksProcessed = tasksProcessed;
     logger.info("Cron: scheduler tick complete", { tasksProcessed });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    errors.push(`scheduler: ${msg}`);
+    const governed = classifyOperatorError(
+      err instanceof Error ? err : new Error(String(err)),
+      { context: "load" }
+    );
+    errors.push(`scheduler: ${governed.operatorMessage}`);
     captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
   }
 
@@ -88,8 +92,11 @@ export async function GET(request: Request): Promise<NextResponse> {
     results.emailRetry = { attempted: retriable.length, sent: emailsSent, failed: emailsFailed, skipped: emailsSkipped };
     logger.info("Cron: email retry sweep complete", results.emailRetry as Record<string, unknown>);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    errors.push(`emailRetry: ${msg}`);
+    const governed = classifyOperatorError(
+      err instanceof Error ? err : new Error(String(err)),
+      { context: "load" }
+    );
+    errors.push(`emailRetry: ${governed.operatorMessage}`);
     captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
   }
 

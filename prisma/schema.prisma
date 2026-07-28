@@ -6615,3 +6615,16 @@ model PurchaseOrder {
   @@index([workspaceId, status])
   @@map("purchase_orders")
 }
+
+// S7-DC11: Distributed rate limit buckets — shared across serverless instances.
+// Token bucket algorithm stored in PostgreSQL.
+// Atomic update via INSERT ... ON CONFLICT DO UPDATE prevents double-spend.
+model RateLimitBucket {
+  key          String   @id @db.VarChar(255)
+  tokens       Float
+  lastRefillAt DateTime @map("last_refill_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("rate_limit_buckets")
+}

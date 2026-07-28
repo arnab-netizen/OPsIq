@@ -93,19 +93,18 @@ export function getStorageProvider(): StorageProvider {
 
   switch (provider) {
     case "local": {
-      // S7-DC2: Fail-closed warning — local storage writes to ephemeral filesystem.
-      // In production (Vercel serverless) the filesystem is ephemeral; files are lost
-      // between invocations and across instances. Any upload stored here WILL be lost.
-      // To enable persistent storage, configure S3: STORAGE_PROVIDER=s3 + S3_BUCKET.
-      // No production owner workflow currently calls getStorageProvider() — this warning
-      // is a safeguard against future callers being silently non-durable.
+      // S7-DC2: Fail-closed — local storage is ephemeral on Vercel serverless.
+      // Files written here ARE LOST on restart/re-deploy/cold-start.
+      // DURABLE_STORAGE_NOT_REQUIRED: no owner workflow currently calls this.
+      // In production: BLOCK the write path so accidental callers fail loudly
+      // rather than silently losing data.
+      // To enable persistent storage: set STORAGE_PROVIDER=s3 + S3_BUCKET + S3_REGION.
       const isProduction =
         process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
       if (isProduction) {
-        logger.warn(
-          "S7-DC2: LocalStorageProvider activated in production. " +
-            "Files will be lost on restart/re-deploy. Configure S3 for durable storage.",
-          { storagePath: process.env.STORAGE_LOCAL_PATH ?? "./uploads" }
+        throw new Error(
+          "S7-DC2: LocalStorageProvider is not permitted in production. " +
+            "Configure durable storage: set STORAGE_PROVIDER=s3 with S3_BUCKET, S3_REGION, and AWS credentials."
         );
       }
       _storageProvider = new LocalStorageProvider(
