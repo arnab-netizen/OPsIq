@@ -46,7 +46,7 @@ describeIf(WITH_DB)("S7-DC9: PostgreSQL private-owner binding", () => {
         id,
         email: `dc9-test-${id.slice(0, 8)}@internal.opsiq.test`,
         name: "DC9 Test User",
-        passwordHash: "test-hash",
+        hashedPassword: "test-hash",
       },
     });
     testUserId = id;
@@ -69,7 +69,7 @@ describeIf(WITH_DB)("S7-DC9: PostgreSQL private-owner binding", () => {
         workspaceId: PRIVATE_WS,
         userId,
         role: "OWNER",
-        status: "APPROVED",
+        approvalStatus: "approved",
         grantedBy: userId,
       },
     });
@@ -87,7 +87,7 @@ describeIf(WITH_DB)("S7-DC9: PostgreSQL private-owner binding", () => {
         workspaceId: PRIVATE_WS,
         userId,
         role: "OWNER",
-        status: "PENDING",
+        approvalStatus: "pending",
         grantedBy: userId,
       },
     });
@@ -105,7 +105,7 @@ describeIf(WITH_DB)("S7-DC9: PostgreSQL private-owner binding", () => {
         workspaceId: PRIVATE_WS,
         userId,
         role: "OWNER",
-        status: "APPROVED",
+        approvalStatus: "approved",
         grantedBy: userId,
       },
     });
@@ -124,7 +124,8 @@ describeIf(WITH_DB)("S7-DC9: PostgreSQL private-owner binding", () => {
         workspaceId: PRIVATE_WS,
         userId,
         role: "OWNER",
-        status: "REVOKED",
+        approvalStatus: "approved",
+        revokedAt: new Date(),
         grantedBy: userId,
       },
     });
