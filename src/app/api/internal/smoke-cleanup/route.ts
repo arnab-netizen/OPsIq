@@ -41,7 +41,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let deleted = { user: 0, workspaces: 0 };
+  const deleted = { user: 0, workspaces: 0 };
 
   try {
     // Find smoke user (may not exist if smoke never ran or already cleaned up).
