@@ -193,7 +193,7 @@ describe("disconnectConnector", () => {
 
     expect(mockDb.ownerConnector.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: CONNECTOR_ID },
+        where: { id: CONNECTOR_ID, workspaceId: WS },
         data: expect.objectContaining({ status: "DISCONNECTED" }),
       })
     );

@@ -43,7 +43,6 @@ export const GET = async () => {
     JSON.stringify({
       startup_complete: startupComplete,
       startup_status: startupStatus.status,
-      startup_error: startupFailed ? startupStatus.error : null,
       database_healthy: monitoringCheck.database_healthy,
       database_latency_ms: monitoringCheck.database_latency_ms,
       queue_healthy: monitoringCheck.queue_healthy,

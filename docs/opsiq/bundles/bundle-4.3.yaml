@@ -1,0 +1,59 @@
+id: bundle-4.3
+artifact_type: development_bundle
+stage: 4
+name: Stage 4 Cross-Domain Adversarial Closure
+status: CLOSED
+priority: 11
+
+description: |
+  Final Stage 4 hardening: cross-domain adversarial tests proving that all
+  Stage 4 BCP bundle interactions are correct under hostile conditions
+  (workspace contamination attempts, concurrent re-evaluation mutations,
+  version snapshot immutability, DTO leakage, audit completeness,
+  auth boundary enforcement). Stage 4 acceptance gate.
+
+scope:
+  - BCP workspace isolation adversarial (cross-workspace read/write attempts)
+  - BCP version snapshot immutability (historical versions cannot be mutated)
+  - All four OpsIQ dimensions updated on every re-evaluation
+  - Re-evaluation idempotency under concurrent trigger conditions
+  - DTO boundary adversarial (inputFactsJson absent from all public responses)
+  - Auth capability boundary (OWNER_MANAGE / CONSULTING_WRITE enforcement)
+  - Audit completeness (every BCP create/evaluate emits audit event)
+  - Trigger routing completeness (all 6 trigger types handled)
+  - Stage 4 acceptance gate script (blocks Stage 5 until all pass)
+
+acceptance_criteria:
+  - Cross-workspace BCP access returns not-found, not cross-tenant data
+  - Historical BCP version records are append-only (no mutation of past versions)
+  - All four OpsIQ dimensions (conditionCode, consultingLifecycleStage, interventionMode+Phase, humanExecutionRisk) present in every re-evaluation result
+  - Identical input facts with same trigger produce consistent derived fields
+  - inputFactsJson never appears in any public BCP DTO field
+  - OWNER_MANAGE capability enforced on all BCP write paths
+  - Every createConditionProfile and evaluateConditionProfile call emits audit event
+  - All six trigger types (INITIAL, EVIDENCE_UPDATE, KPI_CHANGE, BLOCKER_EVENT, SHOCK_EVENT, SIGNAL_REASSESSMENT) produce valid derived output
+  - Stage 4 acceptance gate script exits 0 when all criteria met
+  - 60 adversarial tests total
+
+dependencies:
+  - bundle-4.2  # Owner BCP (CLOSED)
+
+post_merge_evidence:
+  pr_sha: "514978cb713a20e5f3ecaffe61d1bdcd3cca7431"
+  merge_sha: "0de3463bc843f3771cdac153df9384bc10388630"
+  main_integration_run: "30214645193"
+  db_verification_run: "30213647265"
+  verification_date: "2026-07-26"
+  gate_result: "post_merge_main_integration_completed_success"
+  notes: "PR #257 — CI-governance fix (db-verification.yml path filter) + 60 adversarial tests. Merged at exact authorized SHA 514978cb. Main Integration job 89826563926 completed success (36 min), all 17 steps green: postgres:16 ✅, Prisma migrate ✅, stage acceptance integrity gate ✅, full test suite ✅. Pre-merge LANE_B DB Verification run 30213647265 also green on PR HEAD."
+  tests_bundle: 60
+
+security:
+  workspace_enforcement: required_adversarial
+  auth_capability: OWNER_MANAGE
+  dto_redaction: adversarial_boundary_test
+  audit_events: completeness_proof
+  idempotency: concurrent_safety_proof
+
+gates:
+  stage_acceptance: scripts/validate-stage-acceptance.mjs --stage 4

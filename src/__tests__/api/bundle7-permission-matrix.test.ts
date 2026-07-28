@@ -46,6 +46,10 @@ const { mockWithCanonical, capturedDeclarations, mockDb, mockEmitAuditEvent } = 
       recommendation: { findFirst: vi.fn(), create: vi.fn() },
       action: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
       evidence: { findFirst: vi.fn() },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      $transaction: vi.fn().mockImplementation(async (fn: (tx: any) => Promise<unknown>) => {
+        return fn({ engagement: mockDb.engagement, action: mockDb.action });
+      }),
     };
     const mockEmitAuditEvent = vi.fn().mockResolvedValue(undefined);
 
@@ -168,6 +172,10 @@ function denyWith(missing: string[]) {
 beforeEach(() => {
   vi.resetAllMocks();
   mockEmitAuditEvent.mockResolvedValue(undefined);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mockDb.$transaction.mockImplementation(async (fn: (tx: any) => Promise<unknown>) => {
+    return fn({ engagement: mockDb.engagement, action: mockDb.action });
+  });
   // Default: allow (passthrough to handler)
   allowAll();
 });
@@ -317,9 +325,9 @@ describe("POST — enforcement 403/200 behavior", () => {
   });
 
   it("returns 200 on close when enforcement allows", async () => {
-    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow({ id: UUID_ENG }));
+    mockDb.engagement.findFirst.mockResolvedValue(makeEngRow({ id: UUID_ENG, consultingPhase: "REVIEW" }));
     mockDb.action.findMany.mockResolvedValue([]);
-    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ id: UUID_ENG, status: "CLOSED" }));
+    mockDb.engagement.update = vi.fn().mockResolvedValue(makeEngRow({ id: UUID_ENG, status: "CLOSED", consultingPhase: "REVIEW" }));
     const req = makeRequest("?action=close", { engagementId: UUID_ENG, closureRationale: "Done" });
     const result = await (POST as (ctx?: unknown) => Promise<{ status: number }>)(
       { request: req }

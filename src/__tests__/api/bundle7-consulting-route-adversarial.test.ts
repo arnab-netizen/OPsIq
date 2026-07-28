@@ -49,6 +49,10 @@ const { mockDb, mockEmitAuditEvent } = vi.hoisted(() => {
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    $transaction: vi.fn().mockImplementation(async (fn: (tx: any) => Promise<unknown>) => {
+      return fn({ engagement: mockDb.engagement, action: mockDb.action });
+    }),
   };
   const mockEmitAuditEvent = vi.fn().mockResolvedValue(undefined);
   return { mockDb, mockEmitAuditEvent };
@@ -133,6 +137,10 @@ const makeEngagementRow = (overrides: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   vi.resetAllMocks();
   mockEmitAuditEvent.mockResolvedValue(undefined);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mockDb.$transaction.mockImplementation(async (fn: (tx: any) => Promise<unknown>) => {
+    return fn({ engagement: mockDb.engagement, action: mockDb.action });
+  });
 });
 
 // ─── 1. Workspace Isolation ───────────────────────────────────────────────────

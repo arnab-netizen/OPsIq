@@ -1,6 +1,6 @@
 version: "1.0"
-last_updated: "2026-07-26"
-# Updated: bundles 3.5–3.10 CLOSED via PR #255 proof-closure (2026-07-26)
+last_updated: "2026-07-28"
+# Updated: factory-stage-6 accepted by owner 2026-07-28. factory-stage-7 authorized 2026-07-28 from SHA f93bd37a, branch claude/opsiq-stage-7-loop-main.
 maintainer: completion-factory
 
 # REMAINING STAGE ACCEPTANCE LEDGER
@@ -235,16 +235,16 @@ stages:
         - bundle-3.10
 
   stage-4:
-    # INTERNAL DELIVERY BUNDLE GROUP — NOT a Factory Stage milestone.
-    # bundle-4, bundle-4.1, bundle-4.2 are implementation delivery bundles shipped as part of
-    # Factory Stage 3 delivery. Their closure indicates code delivery only.
-    # Factory Stage 4 has not begun and requires explicit owner authorization before it starts.
-    factory_stage_id: null
-    development_bundle_id: "DELIVERY_BUNDLE_GROUP_4"
-    scope: internal_delivery_bundle_group
-    factory_stage_acceptance: NOT_APPLICABLE
-    name: Business Condition Profile Operations (internal delivery bundle group)
-    overall_status: DEVELOPMENT_BUNDLE_DELIVERY_COMPLETE
+    # FACTORY STAGE 4 — BCP Cross-Domain Adversarial Closure.
+    # Authorized to begin by owner from main SHA 2bc40a9cad3389090fd3074fd476cb4c21725e1f (2026-07-26).
+    # bundle-4, bundle-4.1, bundle-4.2 are closed development delivery bundles (code delivery).
+    # bundle-4.3 is the Factory Stage 4 adversarial closure gate (PENDING — awaiting CI+DB proof).
+    factory_stage_id: "FACTORY_STAGE_4"
+    development_bundle_id: null
+    scope: factory_stage
+    factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE
+    name: Stage 4 Cross-Domain Adversarial Closure
+    overall_status: COMPLETE
     bundles:
       - id: bundle-4
         artifact_type: development_bundle
@@ -290,12 +290,29 @@ stages:
           tests_bundle: 96
           gate_result: "post_merge_main_integration_completed_success"
 
+      - id: bundle-4.3
+        artifact_type: development_bundle
+        name: Stage 4 Cross-Domain Adversarial Closure
+        status: CLOSED
+        post_merge_evidence:
+          pr_sha: "514978cb713a20e5f3ecaffe61d1bdcd3cca7431"
+          merge_sha: "0de3463bc843f3771cdac153df9384bc10388630"
+          main_integration_run: "30214645193"
+          db_verification_run: "30213647265"
+          verification_date: "2026-07-26"
+          gate_result: "post_merge_main_integration_completed_success"
+          tests_bundle: 60
+          notes: "PR #257 — CI-governance fix (db-verification.yml path filter) + 60 adversarial tests. Merged at exact authorized SHA 514978cb. Main Integration job 89826563926 completed success, all steps green."
+
     stage_acceptance:
-      status: DEVELOPMENT_BUNDLE_DELIVERY_CLOSED
-      note: "Development bundle delivery complete. NOT Factory Stage 4 acceptance — Factory Stage 4 requires explicit owner authorization and has not begun."
+      status: CLOSED
       gate: scripts/validate-stage-acceptance.mjs --stage 4
-      closed_date: "2026-07-25"
-      evidence: "bundles 4.1 + 4.2 code delivery closed. Code on main via PR #251 merge 5bc1fc01. Main Integration run 30152600373 green."
+      closed_date: "2026-07-26"
+      evidence: "All required bundles CLOSED. bundle-4.3 adversarial closure merged via PR #257 at authorized SHA 514978cb713a20e5f3ecaffe61d1bdcd3cca7431. Main Integration run 30214645193 on merge SHA 0de3463bc843f3771cdac153df9384bc10388630 — conclusion: success, all steps green including postgres:16 migration (step 11), stage acceptance integrity gate (step 14), full DB+non-DB test suite (step 15, 33 min). Pre-merge LANE_B DB Verification run 30213647265 also green on PR HEAD."
+      authorized_date: "2026-07-26"
+      authorized_from_sha: "2bc40a9cad3389090fd3074fd476cb4c21725e1f"
+      required_bundles:
+        - bundle-4.3
 
   stage-5:
     # INTERNAL DELIVERY BUNDLE GROUP — NOT a Factory Stage milestone.
@@ -452,6 +469,135 @@ stages:
       gate: scripts/validate-stage-acceptance.mjs --stage 7
       closed_date: "2026-07-25"
       evidence: "bundle-7 code delivery closed. All 8 test suites pass (242 tests). Workspace isolation, permission matrix, DTO leakage, audit completeness, export API proven. Performance/index criteria DB_BLOCKED (no regressions introduced). .env.example and runbook complete. Final improvement report at .claude/final-improvement-report.md."
+
+  factory-stage-5:
+    # FACTORY STAGE 5 — Integration Fabric and Consulting Operations Closure.
+    # This is a Factory Stage milestone (factory_stage_id: FACTORY_STAGE_5).
+    # It does NOT reclassify internal delivery bundle groups 5–7.
+    # Authorized by owner 2026-07-27 from main SHA ce9c74486d677a078e164311c2ee136ce05dfb09.
+    # PR #259 merged at exact authorized SHA e6427151bcada44488f237e0c28de72f0f5d4d29.
+    # Post-merge Main Integration run 30268958848 — all 17 steps green.
+    # Closure PR #260 merged at b103e6e6, main SHA fd843562. Main Integration 30285117464 green, all 35 steps.
+    # Explicitly ACCEPTED by owner 2026-07-27.
+    factory_stage_id: "FACTORY_STAGE_5"
+    development_bundle_id: null
+    scope: factory_stage_closure
+    factory_stage_acceptance: ACCEPTED
+    accepted_date: "2026-07-27"
+    name: Integration Fabric and Consulting Operations Closure
+    overall_status: CLOSED
+    authorized_from_sha: "ce9c74486d677a078e164311c2ee136ce05dfb09"
+    authorized_date: "2026-07-27"
+    pr_number: 259
+    pr_head_sha: "e6427151bcada44488f237e0c28de72f0f5d4d29"
+    non_db_ci_run: "30264723381"
+    non_db_ci_status: success_on_sha_e6427151
+    db_verification_run: "30264723167"
+    db_verification_conclusion: success_on_sha_e6427151
+    merge_sha: "5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd"
+    main_integration_run: "30268958848"
+    main_integration_conclusion: success
+    closed_date: "2026-07-27"
+    bundles:
+      - id: factory-stage-5-closure
+        artifact_type: factory_stage_closure
+        factory_stage_id: FACTORY_STAGE_5
+        name: Factory Stage 5 Closure Contract
+        status: CLOSED
+        required_evidence:
+          pr_sha: "e6427151bcada44488f237e0c28de72f0f5d4d29"
+          merge_sha: "5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd"
+          main_integration_run: "30268958848"
+          db_verification_run: "30264723167"
+
+    stage_acceptance:
+      status: CLOSED
+      gate: scripts/validate-stage-acceptance.mjs --stage factory-5
+      closed_date: "2026-07-27"
+      evidence: "PR #259 merged at exact authorized SHA e6427151bcada44488f237e0c28de72f0f5d4d29 (base ce9c74486d677a078e164311c2ee136ce05dfb09). Pre-merge DB Verification run 30264723167 and non-DB CI run 30264723381 both green on exact SHA. Post-merge Main Integration run 30268958848 on merge SHA 5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd — all 17 steps green including PostgreSQL migration (step 11), stage acceptance integrity gate (step 14), full DB+non-DB test suite (step 15). All twelve invariants I1-I12 have executable PostgreSQL-backed evidence. Factory Stage 6 has not begun. factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE."
+      required_bundles:
+        - factory-stage-5-closure
+
+  factory-stage-6:
+    # FACTORY STAGE 6 — Deployment and Production Readiness Closure.
+    # This is a Factory Stage milestone (factory_stage_id: FACTORY_STAGE_6).
+    # Authorized by owner 2026-07-27 from main SHA fd843562389025eaf7c0f1b7d2ff76e771fea030.
+    # PR #261 merged at exact authorized SHA a6e867ee343557a9f6132a78405663b7e9ef799f.
+    # Post-merge Main Integration run 30306181683 — all steps green.
+    # Explicitly ACCEPTED by owner 2026-07-28.
+    factory_stage_id: "FACTORY_STAGE_6"
+    development_bundle_id: null
+    scope: factory_stage_closure
+    factory_stage_acceptance: ACCEPTED
+    accepted_date: "2026-07-28"
+    authorized_date: "2026-07-27"
+    authorized_from_sha: "fd843562389025eaf7c0f1b7d2ff76e771fea030"
+    authorized_branch: "claude/opsiq-stage-6-loop-main"
+    pr_number: 261
+    pr_head_sha: "a6e867ee343557a9f6132a78405663b7e9ef799f"
+    non_db_ci_run: "30303651105"
+    non_db_ci_status: success_on_sha_a6e867ee
+    db_verification_run: "30303650860"
+    db_verification_conclusion: success_on_sha_a6e867ee
+    merge_sha: "b1c22d3179457ef1942b0aefee4b20c3508680a9"
+    main_integration_run: "30306181683"
+    main_integration_conclusion: success
+    name: Deployment and Production Readiness Closure
+    overall_status: ACCEPTED
+    bundles:
+      - id: factory-stage-6-closure
+        artifact_type: factory_stage_closure
+        factory_stage_id: FACTORY_STAGE_6
+        name: Factory Stage 6 Closure Contract
+        status: CLOSED
+        required_evidence:
+          pr_sha: "a6e867ee343557a9f6132a78405663b7e9ef799f"
+          merge_sha: "b1c22d3179457ef1942b0aefee4b20c3508680a9"
+          main_integration_run: "30306181683"
+          db_verification_run: "30303650860"
+
+    stage_acceptance:
+      status: CLOSED
+      accepted_date: "2026-07-28"
+      note: "Owner explicitly accepted: FACTORY_STAGE_6_ACCEPTED (2026-07-28)"
+      gate: scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-6
+      evidence: "PR #261 merged at exact authorized SHA a6e867ee343557a9f6132a78405663b7e9ef799f (base fd843562389025eaf7c0f1b7d2ff76e771fea030). Pre-merge DB Verification run 30303650860 green (9 LANE_B tests: S6-I4/I6/I7/I8/I9 proven, p50=3ms p95=19ms max=19ms). Non-DB CI run 30303651105 green (S6-I1/I2/I3/I5/I10/I11/I12 LANE_A proven). Post-merge Main Integration run 30306181683 on merge SHA b1c22d3179457ef1942b0aefee4b20c3508680a9 — conclusion: success, all steps green including migration (step 11), Factory Stage 6 acceptance integrity gate (step 15), and full test suite (step 16)."
+      required_bundles:
+        - factory-stage-6-closure
+
+  factory-stage-7:
+    # FACTORY STAGE 7 — Live Private Owner Deployment, Pilot, and Unrestricted Readiness Acceptance.
+    # This is a Factory Stage milestone (factory_stage_id: FACTORY_STAGE_7).
+    # Authorized by owner 2026-07-28 from main SHA f93bd37a86ba83d36bdc45245bb648c45eb9817b.
+    # Branch: claude/opsiq-stage-7-loop-main
+    # Billing (Stripe, Lemon Squeezy) is excluded. Public SaaS rollout is excluded.
+    # Factory Stage 7 scope: LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS
+    factory_stage_id: "FACTORY_STAGE_7"
+    development_bundle_id: null
+    scope: factory_stage_closure
+    factory_stage_acceptance: AUTHORIZED_CONTRACT_DEFINED
+    authorized_date: "2026-07-28"
+    authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
+    authorized_branch: "claude/opsiq-stage-7-loop-main"
+    name: Live Private Owner Deployment, Pilot, and Unrestricted Readiness Acceptance
+    overall_status: AUTHORIZED_CONTRACT_DEFINED
+    bundles:
+      - id: factory-stage-7-closure
+        artifact_type: factory_stage_closure
+        factory_stage_id: FACTORY_STAGE_7
+        name: Factory Stage 7 Closure Contract
+        status: PENDING
+        required_evidence:
+          pr_sha: null
+          merge_sha: null
+          main_integration_run: null
+          db_verification_run: null
+
+    stage_acceptance:
+      status: AUTHORIZED_CONTRACT_DEFINED
+      gate: scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-7
+      required_bundles:
+        - factory-stage-7-closure
 
 completion_factory:
   branch: claude/opsiq-stage-3-7-loop-j6j6cf

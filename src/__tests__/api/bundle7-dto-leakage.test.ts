@@ -80,14 +80,15 @@ vi.mock("@/lib/canonical-route-enforcement", () => ({
 
 type CanonicalResult = { body: Record<string, unknown>; status: number };
 
-function makeCtx(): Record<string, unknown> {
+function makeCtx(capabilities: string[] = []): Record<string, unknown> {
   return {
     verifiedWorkspaceId: WS_A,
     verifiedActorId: "actor-dto-test",
+    verifiedCapabilities: new Set<string>(capabilities),
   };
 }
 
-function allowAll() {
+function allowAll(capabilities: string[] = []) {
   mockWithCanonical.mockImplementation(
     async (
       handler: (ctx: unknown) => Promise<unknown>,
@@ -95,7 +96,7 @@ function allowAll() {
       testCtx: unknown
     ) => {
       const req = (testCtx as Record<string, unknown>)?.request as Request | undefined;
-      return handler({ ...makeCtx(), request: req });
+      return handler({ ...makeCtx(capabilities), request: req });
     }
   );
 }
@@ -296,6 +297,11 @@ describe("client view (?view=client) — list path", () => {
 // ─── Consultant view: internal fields must be present ────────────────────────
 
 describe("consultant view (no ?view=client) — internal fields must be present", () => {
+  beforeEach(() => {
+    // Consultant view requires CONSULTING_WRITE capability (I8 role boundary enforcement)
+    allowAll(["consulting:write"]);
+  });
+
   function consultantReq(id = true) {
     return id
       ? new Request(`http://localhost/api/consulting/engagements?id=${ENG_ID}`)

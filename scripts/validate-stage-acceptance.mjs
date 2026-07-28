@@ -82,14 +82,17 @@ function checkStage(stageKey) {
     if (!bundle || !bundle.id) continue;
     checked++;
 
-    const { id, status, post_merge_evidence: evidence, artifact_type } = bundle;
+    const { id, status, post_merge_evidence: evidence, required_evidence, artifact_type } = bundle;
+    // factory_stage_closure uses required_evidence field; development_bundle uses post_merge_evidence
+    const effectiveEvidence = artifact_type === 'factory_stage_closure' ? required_evidence : evidence;
 
     // artifact_type is required on every ledger bundle entry
+    const VALID_ARTIFACT_TYPES = ['development_bundle', 'factory_stage_closure'];
     if (!artifact_type) {
-      console.error(`  ❌ ${id}: missing required field 'artifact_type' (expected 'development_bundle')`);
+      console.error(`  ❌ ${id}: missing required field 'artifact_type' (must be: ${VALID_ARTIFACT_TYPES.join(' | ')})`);
       violations++;
-    } else if (artifact_type !== 'development_bundle') {
-      console.error(`  ❌ ${id}: artifact_type must be 'development_bundle', got '${artifact_type}'`);
+    } else if (!VALID_ARTIFACT_TYPES.includes(artifact_type)) {
+      console.error(`  ❌ ${id}: artifact_type must be 'development_bundle' or 'factory_stage_closure', got '${artifact_type}'`);
       violations++;
     }
 
@@ -97,14 +100,14 @@ function checkStage(stageKey) {
       const required = ['pr_sha', 'merge_sha', 'main_integration_run', 'db_verification_run'];
       let evidenceMissing = false;
       for (const field of required) {
-        if (!evidence || evidence[field] == null) {
+        if (!effectiveEvidence || effectiveEvidence[field] == null) {
           console.error(`  ❌ ${id}: CLOSED but evidence.${field} is null — data integrity violation`);
           violations++;
           evidenceMissing = true;
         }
       }
       if (!evidenceMissing) {
-        const sha = String(evidence.merge_sha || '').slice(0, 12);
+        const sha = String((effectiveEvidence || {}).merge_sha || '').slice(0, 12);
         console.log(`  ✓ ${id}: CLOSED — merge_sha=${sha}`);
       }
     } else {
@@ -124,6 +127,12 @@ if (stageArg === 'all') {
   for (const key of Object.keys(stages)) {
     checkStage(key);
   }
+} else if (stageArg === 'factory-5') {
+  checkStage('factory-stage-5');
+} else if (stageArg === 'factory-6') {
+  checkStage('factory-stage-6');
+} else if (stageArg === 'factory-7') {
+  checkStage('factory-stage-7');
 } else {
   checkStage(`stage-${stageArg}`);
 }

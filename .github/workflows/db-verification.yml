@@ -35,6 +35,10 @@ on:
     paths:
       - prisma/**
       - 'src/__tests__/**/*.db.test.ts'
+      - 'src/services/owner-mode/owner-bcp.service.ts'
+      - 'src/services/consulting/consulting-engagement.service.ts'
+      - 'src/services/integration-fabric/connector-registry.service.ts'
+      - 'src/services/integration-fabric/integration-event.service.ts'
 
 # Cancel obsolete PR runs when a new push arrives — preserves one run per PR.
 # workflow_dispatch runs (LANE_A) are never cancelled (no github.ref grouping).

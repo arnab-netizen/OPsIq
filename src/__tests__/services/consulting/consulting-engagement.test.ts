@@ -159,6 +159,10 @@ const { mockDb, mockEmitAuditEvent } = vi.hoisted(() => {
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    $transaction: vi.fn().mockImplementation(async (fn: (tx: any) => Promise<unknown>) => {
+      return fn({ engagement: mockDb.engagement, action: mockDb.action });
+    }),
   };
 
   const mockEmitAuditEvent = vi.fn().mockResolvedValue(undefined);
@@ -1063,7 +1067,7 @@ describe("closeConsultingEngagement", () => {
   });
 
   it("closure gate: blocks when unresolved critical actions exist", async () => {
-    mockDb.engagement.findFirst.mockResolvedValueOnce(baseEngagement);
+    mockDb.engagement.findFirst.mockResolvedValueOnce({ ...baseEngagement, consultingPhase: "REVIEW" });
     mockDb.action.findMany.mockResolvedValueOnce([
       { ...baseAction, status: "pending", metadata: { consultingTarget: "CLIENT", priority: "critical" } },
     ]);
@@ -1077,7 +1081,7 @@ describe("closeConsultingEngagement", () => {
   });
 
   it("closure gate: allows close when critical action is cancelled", async () => {
-    mockDb.engagement.findFirst.mockResolvedValueOnce(baseEngagement);
+    mockDb.engagement.findFirst.mockResolvedValueOnce({ ...baseEngagement, consultingPhase: "REVIEW" });
     mockDb.action.findMany.mockResolvedValueOnce([
       { ...baseAction, status: "cancelled", metadata: { consultingTarget: "CLIENT", priority: "critical" } },
     ]);

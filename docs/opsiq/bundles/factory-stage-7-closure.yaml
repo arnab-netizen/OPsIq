@@ -1,0 +1,331 @@
+id: factory-stage-7-closure
+stage: factory-7
+artifact_type: factory_stage_closure
+factory_stage_id: FACTORY_STAGE_7
+development_bundle_id: null
+status: PENDING
+priority: 1
+
+name: Factory Stage 7 — Live Private Owner Deployment, Pilot, and Unrestricted Readiness Acceptance
+scope: LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS
+
+authorized_date: "2026-07-28"
+authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
+authorized_branch: "claude/opsiq-stage-7-loop-main"
+authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
+
+description: |
+  Factory Stage 7 proves that the existing OpsIQ system can be deployed securely
+  for its owner, operated without developer assistance, produce correct and
+  actionable guidance from real business data, govern approved execution, capture
+  outcomes and feedback, recover safely from realistic failures, and be accepted
+  for unrestricted private owner use.
+
+  This stage is NOT authorization for: public SaaS launch, public self-registration,
+  external paying customers, billing activation, marketing launch, live destructive
+  fault injection on production infrastructure, or anonymous public access.
+
+  Billing is explicitly excluded. Stripe live payments, Lemon Squeezy activation,
+  and subscription entitlement purchase require separate owner authorization after
+  private-owner acceptance is confirmed.
+
+  Resend and external connector proof are conditional on credential availability
+  and pilot data-entry materiality. See invariants and exclusions.
+
+evidence_lanes:
+  LANE_C:
+    description: "Production runtime — a real production environment ran the code and returned correct result"
+  LANE_D:
+    description: "Live provider — a real external provider processed a real operation"
+  LANE_E:
+    description: "Simulation — realistic scenario against the real system in an isolated staging workspace"
+  LANE_F:
+    description: "Real owner pilot — owner completed a real governance cycle using real business data"
+  OWNER_ACCEPTANCE:
+    description: "Explicit owner judgment — cannot be proven by code, CI, or simulation"
+
+invariants:
+  S7-I1:
+    name: Exact private deployment identity
+    statement: >
+      The owner-accessible deployment must identify the exact approved Git commit and
+      environment. The deployed SHA must match the authorized deployment candidate.
+      The deployment need not permit anonymous public access.
+    proof_lane: LANE_C
+    proof_type: production_runtime_check
+    executable_evidence: "deployed URL responds with 200 to health probe; Vercel or equivalent deployment dashboard shows exact authorized SHA"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I2:
+    name: Production migration integrity
+    statement: >
+      All approved migrations must apply cleanly to the designated live or
+      production-equivalent database. Migration status must show no unexpected
+      pending, failed or drifted migration.
+      No destructive production migration may occur without separate owner approval
+      and a verified recovery plan.
+    proof_lane: LANE_C
+    proof_type: production_migration_check
+    executable_evidence: "prisma migrate status shows zero pending migrations; schema head confirmed against Prisma client"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I3:
+    name: Production configuration fail-closed
+    statement: >
+      Required production configuration must be present and valid. Missing required
+      configuration must prevent unsafe operation or produce an explicit not-ready state.
+      Optional provider credentials must not block owner use when the corresponding
+      feature is disabled or not required by the pilot.
+    proof_lane: LANE_C
+    proof_type: production_preflight
+    executable_evidence: "scripts/deployment-preflight.mjs exits 0 against live environment"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I4:
+    name: Private owner authentication and workspace binding
+    statement: >
+      The designated owner must authenticate successfully and be bound to the correct
+      private workspace.
+      Prove: login, logout, session renewal or expiry, unauthorized-user rejection,
+      cross-workspace rejection, and secure production cookie behavior.
+      Public self-registration must not be enabled merely to satisfy this invariant.
+    proof_lane: LANE_C
+    proof_type: production_auth_check
+    executable_evidence: "owner login, logout, session expiry, and unauthorized-user rejection all observed on production deployment"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I5:
+    name: Live tenant and secret boundary
+    statement: >
+      The owner must not be able to access or infer another workspace's records.
+      Secrets, provider tokens, raw internal errors and protected payloads must not
+      appear in owner-visible responses, logs, diagnostics or audit events.
+    proof_lane: LANE_C
+    proof_type: production_boundary_check
+    executable_evidence: "cross-workspace rejection confirmed on production; secret values absent from all owner-visible API responses, health output, and audit events"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I6:
+    name: Real business-state accuracy
+    statement: >
+      Using real owner-entered business data, OpsIQ must produce a business-condition
+      assessment that: is grounded only in supplied or retrieved evidence; identifies
+      missing or uncertain data explicitly; does not fabricate facts; populates all
+      applicable OpsIQ dimensions (consulting lifecycle stage, business condition,
+      intervention mode, intervention phase); and is judged materially accurate by
+      the owner.
+    proof_lane: LANE_F
+    proof_type: owner_pilot_judgment
+    executable_evidence: "owner judges the business-condition assessment materially accurate for their real business"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I7:
+    name: Actionable owner guidance
+    statement: >
+      Recommendations must be specific, prioritized, financially and operationally
+      relevant, feasible for the business, linked to evidence, explicit about
+      assumptions and risks, and clear about what the owner should do next.
+      Generic advice does not satisfy this invariant.
+    proof_lane: LANE_F
+    proof_type: owner_pilot_judgment
+    executable_evidence: "owner accepts and acts on at least one recommendation in the pilot cycle"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I8:
+    name: Approval and execution boundary
+    statement: >
+      OpsIQ may prepare, recommend and stage actions, but execution requiring owner
+      approval must not occur without the recorded approval.
+      Prove at least one real governed transition from recommendation through approval,
+      execution tracking and outcome recording.
+    proof_lane: LANE_F
+    proof_type: owner_pilot_governed_transition
+    executable_evidence: "at least one recommendation → approval → execution tracking → outcome record observed in pilot"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I9:
+    name: Adaptive re-evaluation
+    statement: >
+      A material new fact, failed action, changed KPI, stale approval or conflicting
+      priority must cause the appropriate re-evaluation.
+      The system must preserve historical state and explain why the recommendation or
+      priority changed.
+    proof_lane: LANE_F
+    proof_type: owner_pilot_re_evaluation
+    executable_evidence: "re-evaluation triggered and recorded after a real material change during owner pilot; historical state preserved"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I10:
+    name: Audit and provenance completeness
+    statement: >
+      Material owner decisions, approvals, executions, state transitions, provider
+      actions and outcome records must be attributable to: workspace, actor, time,
+      source evidence, affected record, and result.
+      Protected raw payloads must not be copied into audit records.
+    proof_lane: LANE_E
+    proof_type: simulation_and_production_audit_check
+    executable_evidence: "audit records for pilot transitions inspected; all six attribution fields present; no raw payload copied into audit record"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I11:
+    name: Safe degraded and failure behavior
+    statement: >
+      Prove, in staging or an isolated simulation environment:
+      required database unavailable; optional provider unavailable; malformed input;
+      duplicate request; stale approval; concurrent action; downstream timeout;
+      invalid authorization; cross-tenant request.
+      The system must fail safely, visibly and recoverably in all nine scenarios.
+      Do not deliberately disconnect or damage the production database.
+    proof_lane: LANE_E
+    proof_type: simulation_adversarial
+    executable_evidence: "nine failure scenarios simulated in isolated environment; each fails safely, visibly, and recoverably"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I12:
+    name: Operational recovery
+    statement: >
+      A designated operator must successfully use the shipped runbooks to diagnose and
+      recover from at least one staged deployment or dependency failure without an
+      undocumented step.
+      Record recovery time, decisions and deviations.
+    proof_lane: LANE_E
+    proof_type: simulation_runbook_recovery
+    executable_evidence: "staged failure introduced; docs/DEPLOYMENT_RUNBOOK.md followed; recovery confirmed without undocumented steps; recovery time recorded"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I13:
+    name: Built-in operational usability
+    statement: >
+      The owner must complete a full OpsIQ operating cycle without developer,
+      repository or Claude Code assistance:
+        enter or import business data
+          → review condition assessment
+          → understand prioritized recommendation
+          → approve or reject action
+          → record execution
+          → record outcome
+          → review re-evaluation
+      The owner may use only the deployed OpsIQ interface and built-in product guidance.
+    proof_lane: LANE_F
+    proof_type: owner_unaided_cycle
+    executable_evidence: "owner completes full cycle unaided; completion time, points of confusion, and blocked steps recorded"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I14:
+    name: Feedback and learning-loop capture
+    statement: >
+      The pilot must record: whether advice was accepted; why accepted or rejected;
+      execution status; actual result; owner usefulness score; accuracy score;
+      missing-context feedback; and correction made if any.
+      The system must preserve this feedback for future improvement without silently
+      rewriting historical evidence.
+    proof_lane: LANE_F
+    proof_type: owner_pilot_feedback_record
+    executable_evidence: "feedback record present for at least one pilot cycle with all required fields; historical evidence unchanged on re-inspection"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I15:
+    name: Measurable real outcome
+    statement: >
+      At least one real intervention must progress through a measurement period
+      appropriate to that intervention.
+      Record: baseline, expected outcome, action taken, measurement window, actual
+      outcome, variance, and owner interpretation.
+      Do not impose an arbitrary fixed pilot duration. The measurement window must
+      be appropriate to the chosen business intervention.
+    proof_lane: LANE_F
+    proof_type: owner_pilot_outcome
+    executable_evidence: "baseline, expected, actual, variance, and owner interpretation all recorded for at least one real intervention"
+    status: PENDING
+    proof_artifacts: []
+
+  S7-I16:
+    name: Unrestricted private-owner acceptance
+    statement: >
+      After all blocking Stage 7 evidence is complete, the owner must explicitly
+      decide whether OpsIQ is ready for unrestricted private owner use.
+      Public SaaS readiness and commercial billing are separate decisions not
+      included in this acceptance gate.
+    proof_lane: OWNER_ACCEPTANCE
+    proof_type: owner_explicit_acceptance
+    executable_evidence: "owner issues: FACTORY_STAGE_7_ACCEPTED"
+    status: PENDING
+    proof_artifacts: []
+
+acceptance_criteria:
+  - "S7-I1: deployed SHA matches authorized candidate; production health probe returns 200"
+  - "S7-I2: all migrations applied to production-equivalent DB; zero pending migrations"
+  - "S7-I3: deployment-preflight exits 0 against live environment"
+  - "S7-I4: owner login, logout, session expiry, and unauthorized-user rejection confirmed on production"
+  - "S7-I5: cross-workspace rejection confirmed; zero secrets in owner-visible output"
+  - "S7-I6: owner judges business-condition assessment materially accurate from real data"
+  - "S7-I7: owner accepts and acts on at least one recommendation in the pilot"
+  - "S7-I8: at least one governed recommendation → approval → execution tracking → outcome record cycle complete"
+  - "S7-I9: adaptive re-evaluation triggered and recorded after real material change"
+  - "S7-I10: all six attribution fields present in audit records; no raw payload copied into audit"
+  - "S7-I11: nine adversarial failure scenarios all fail safely in isolated simulation"
+  - "S7-I12: staged failure recovered using runbook without undocumented steps"
+  - "S7-I13: owner completes full unaided operating cycle (Gate A)"
+  - "S7-I14: feedback record present with all required fields; historical evidence intact"
+  - "S7-I15: intervention outcome recorded with baseline, variance, owner interpretation (Gate B)"
+  - "S7-I16: owner issues FACTORY_STAGE_7_ACCEPTED"
+
+exclusions:
+  BILLING_EXCLUDED: "Stripe live payments, Lemon Squeezy activation, subscription entitlement purchase, and external paying customer billing are excluded from Stage 7 acceptance. Billing work requires separate owner authorization after private-owner acceptance."
+  PUBLIC_SAAS_EXCLUDED: "Public SaaS launch, public self-registration, and external paying customers are not in Stage 7 scope."
+  RESEND_CONDITIONAL: "If Resend credentials unavailable, records LIVE_PROVIDER_OPERATION_DEFERRED_CREDENTIAL_UNAVAILABLE. Does not block Stage 7 unless email is essential to the selected pilot workflow."
+  LIVE_CONNECTOR_CONDITIONAL: "External connector proof (HubSpot, QuickBooks, Google Sheets) deferred unless credentials exist and use materially reduces pilot data-entry work."
+  LIVE_DESTRUCTIVE_FAULT_EXCLUDED: "No live destructive fault injection on production infrastructure. All adversarial scenarios run in isolated staging workspace."
+  DEPLOYMENT_CONTINGENT: "Live deployment proof contingent on Vercel project access and production domain configuration being available."
+
+simulation_domains:
+  - finance_and_cash
+  - revenue_and_sales
+  - marketing
+  - customers_and_retention
+  - suppliers
+  - operations_and_capacity
+  - workforce
+  - assets_and_maintenance
+  - risks_and_compliance
+  - opportunities_and_growth
+  - startup_new_business_mode
+  - cross_domain_shocks_and_conflicting_priorities
+
+owner_pilot:
+  gate_a: "Built-in operational usability — owner completes one full unaided operating cycle (S7-I13)"
+  gate_b: "Outcome validation — at least one real intervention with measurable baseline, approved execution, and recorded result within appropriate measurement window (S7-I15)"
+  note: "Owner may accept operational usability (Gate A) before the outcome measurement period ends. Final unrestricted-readiness acceptance (S7-I16) requires Gate B evidence or explicit owner decision that chosen evidence is sufficient."
+
+environment_model:
+  production_private_owner:
+    purpose: "Owner login, real business data, real recommendations, approved execution tracking, real outcome recording, owner acceptance"
+  staging_or_isolated_simulation:
+    purpose: "Synthetic domain simulations, adversarial cases, malformed inputs, concurrency, dependency failures, recovery exercises"
+    constraint: "Do not contaminate production owner workspace with destructive or synthetic failure scenarios"
+  repository_ci:
+    purpose: "Regression tests and fixes only"
+
+gates:
+  completion_factory: scripts/validate-bundle-manifests.mjs
+  stage_acceptance_integrity: scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-7
+
+required_evidence:
+  pr_sha: null
+  merge_sha: null
+  main_integration_run: null
+  db_verification_run: null

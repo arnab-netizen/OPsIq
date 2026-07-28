@@ -1,0 +1,257 @@
+id: factory-stage-5-closure
+artifact_type: factory_stage_closure
+factory_stage_id: FACTORY_STAGE_5
+development_bundle_id: null
+stage: factory-5
+name: Factory Stage 5 — Integration Fabric and Consulting Operations Closure
+status: CLOSED
+factory_stage_acceptance: PROVEN_AWAITING_OWNER_ACCEPTANCE
+priority: 12
+closed_date: "2026-07-27"
+
+description: |
+  Authoritative Factory Stage 5 closure contract.
+
+  Approved purpose: Prove that external operational information can enter OpsIQ
+  through its Integration Fabric, remain isolated and secure, update the correct
+  business condition state, flow into Consulting Operations where appropriate,
+  and result in deterministic, auditable, owner-usable operational outcomes.
+
+  This contract does not authorize rebuilding Integration Fabric or Consulting Mode.
+  It reuses capabilities delivered through internal delivery bundle groups 5 and 6.
+  Deployment Readiness is excluded and reserved for Factory Stage 6.
+
+  Internal delivery bundle groups 5, 6, and 7 retain their classification as
+  internal delivery bundles (factory_stage_acceptance: NOT_APPLICABLE). They are
+  not Factory Stage 5, 6, or 7 milestones.
+
+approved_business_outcome: |
+  Owner has proof that:
+  - External connectors can be registered, authorized, and isolated per tenant.
+  - Integration events are validated, ingested, and routed deterministically.
+  - Permitted events trigger correct BCP reassessments without leaking raw payloads.
+  - Consulting engagements can be created, progressed, and closed with enforced boundaries.
+  - The full integration-to-consulting operational chain produces a persisted,
+    auditable, owner-visible result.
+  - All twelve invariants I1-I12 have executable evidence.
+
+included_systems:
+  integration_fabric:
+    - connector contracts and public DTO boundary
+    - connector registry lifecycle (register, disconnect, list, get, markRefreshFailed)
+    - connector authorization and tenant ownership enforcement
+    - token/credential handling boundary (tokens never returned in public DTOs)
+    - integration-event ingestion and validation
+    - event normalization and idempotency
+    - event routing into permitted OpsIQ domains
+    - integration audit records
+
+  business_condition_linkage:
+    - permitted integration event → BCP reassessment trigger
+    - correct workspace and business targeting
+    - deterministic trigger classification (mapIntegrationEventToBcpTrigger)
+    - historical BCP profile preservation
+    - no raw private integration payload in public DTOs
+
+  consulting_operations:
+    - consulting engagement creation and lifecycle (DISCOVERY → DIAGNOSIS → IMPLEMENTATION → REVIEW)
+    - findings, recommendations, actions, and outcomes
+    - engagement FSM enforcement (invalid transitions fail)
+    - consultant/client/owner data boundaries (DTO redaction)
+    - owner-authorized execution paths
+    - consulting audit records
+
+  cross_domain_operational_chain:
+    - At least one representative executable chain:
+        connector or integration event
+        → validated tenant-safe ingestion
+        → correct BCP reassessment or signal
+        → permitted consulting engagement context/update
+        → owner-visible operational result
+        → persisted audit evidence
+
+explicit_exclusions:
+  - deployment_readiness_bundle_group_7: reserved for Factory Stage 6
+  - vercel_production_deployment_verification: not in scope
+  - live_external_connector_credentials: not available
+  - live_resend_delivery: not in scope
+  - billing_or_subscription_processing: not in scope
+  - public_saas_onboarding: not in scope
+  - real_world_owner_pilot_acceptance: not in scope
+  - general_ui_redesign: not in scope
+  - unrelated_business_domain_expansion: not in scope
+  - replacement_of_already_working_services: not in scope
+  - arbitrary_test_count_targets: not applicable
+
+dependencies:
+  - bundle-4.3  # Factory Stage 4 adversarial closure (CLOSED)
+  - bundle-5.1  # Integration Fabric Contracts (CLOSED)
+  - bundle-5.2  # Connector Registry (CLOSED)
+  - bundle-5.3  # Integration Event Ingestion (CLOSED)
+  - bundle-6    # Consulting Mode and Engagement Operations (CLOSED)
+
+invariants:
+  I1_tenant_isolation: |
+    A workspace or business must never read, update, route or infer another
+    workspace's connector, integration event, token metadata, BCP, consulting
+    engagement, finding, recommendation, action, outcome, or audit record.
+  I2_canonical_authorization: |
+    All owner, connector and consulting routes must use the repository's canonical
+    authentication and capability enforcement. No forgeable workspace headers,
+    legacy wrappers or unregistered capabilities.
+  I3_secret_and_dto_boundary: |
+    Secrets, token values, raw provider payloads and internal input-fact JSON must
+    not appear in public DTOs, logs, audit payloads or client-facing consulting exports.
+  I4_event_integrity: |
+    Integration events must have validated source connector, workspace and business
+    ownership, event type, payload contract, idempotency identity, and processing status.
+    Duplicate processing must not create duplicate business effects.
+  I5_deterministic_routing: |
+    The same accepted event and current domain state must route consistently.
+    Unsupported events must fail closed or enter an explicit rejected/unhandled state.
+    They must not silently mutate unrelated domains.
+  I6_bcp_historical_integrity: |
+    Reassessment must preserve historical profiles, maintain one valid current profile
+    and emit the required audit event. Concurrent reassessments must not create an
+    invalid multi-current state.
+  I7_consulting_fsm_integrity: |
+    Invalid consulting lifecycle transitions must fail. Repeated requests must be
+    idempotent where required. Concurrent mutations must not corrupt engagement state.
+  I8_role_and_representation_boundary: |
+    Owner, consultant, client and operator representations must expose only their
+    authorized fields and actions. A consulting export must not expose internal-only
+    reasoning, credentials, cross-tenant data or prohibited operational metadata.
+  I9_audit_completeness: |
+    Every material mutation in the approved Stage 5 chain must produce a
+    workspace-scoped audit event with sufficient identifiers to reconstruct what
+    occurred without leaking protected payloads.
+  I10_transaction_safety: |
+    Multi-write mutations must be atomic where partial completion would leave an
+    invalid business state. Failure must roll back or leave an explicit recoverable state.
+  I11_failure_handling: |
+    Provider failure, malformed event, stale state, missing connector, superseded
+    business state and retry exhaustion must produce deterministic outcomes.
+    No failure may be represented as successful processing.
+  I12_owner_useful_outcome: |
+    The representative chain must end in an actionable, persisted owner result —
+    not only an internal event or test mock.
+
+acceptance_criteria:
+  - All twelve invariants I1-I12 have executable evidence.
+  - Integration event ingestion enforces workspace isolation (cross-tenant attempt fails with not-found).
+  - Connector registration is idempotent (same workspace+provider returns existing).
+  - Token values never appear in any public connector DTO.
+  - BCP reassessment triggered by integration event preserves historical profile.
+  - Concurrent BCP reassessments do not produce multi-current profile state.
+  - Invalid consulting lifecycle transitions fail with correct error.
+  - Concurrent consulting mutations do not corrupt engagement state.
+  - Consulting export contains no internal-only fields, cross-tenant data, or credentials.
+  - All material Stage 5 mutations emit workspace-scoped audit events.
+  - Representative operational chain (event → BCP → consulting) produces persisted owner result.
+  - Canonical auth and capability enforcement verified on all Stage 5 routes.
+  - Non-DB CI green on exact PR HEAD.
+  - PostgreSQL LANE_B green on exact PR HEAD where database behavior claimed.
+  - Bundle and Factory Stage manifest validation green.
+  - Governance, auth, and recurrence scanners green.
+  - Factory Stage 6 has not begun.
+  - No Stage 3 or Stage 4 accepted work reopened without executable evidence.
+
+required_evidence:
+  pr_sha: "e6427151bcada44488f237e0c28de72f0f5d4d29"
+  merge_sha: "5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd"
+  main_integration_run: "30268958848"
+  db_verification_run: "30264723167"
+  pre_merge_status: IMPLEMENTED_OR_PROVEN_PRE_MERGE_AWAITING_MERGE
+  verification_date: "2026-07-27"
+  non_db_ci_run: "30264723381"
+  post_merge_main_integration_steps: 17
+  post_merge_main_integration_conclusion: success
+  invariant_evidence:
+    I1_tenant_isolation:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "cross-workspace connector rejected with not-found (test 1)"
+      additional: "bundle-7 workspace isolation adversarial suite (48 tests)"
+      status: PROVEN
+    I2_canonical_authorization:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "workspaceId override attempt rejected (test 6)"
+      additional: "bundle-7 permission matrix suite (25 tests), bundle-4.3 adversarial suite (60 tests)"
+      status: PROVEN
+    I3_secret_and_dto_boundary:
+      test_file: "src/__tests__/completion-factory/ (bundle-5.2 connector registry 41 tests)"
+      test_description: "token values never returned in public connector DTO"
+      additional: "bundle-7 DTO leakage suite (23 tests)"
+      status: PROVEN
+    I4_event_integrity:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "malformed event rejected (test 2); duplicate replay preserves single isCurrent (test 4)"
+      status: PROVEN
+    I5_deterministic_routing:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "full chain routes deterministically (test 3); unsupported events fail closed (bundle-5.3 28 tests)"
+      status: PROVEN
+    I6_bcp_historical_integrity:
+      test_file: "src/__tests__/stage5/i6-bcp-historical-integrity.db.test.ts"
+      test_count: 6
+      test_description: "initial profile, reassessment with historical preservation, concurrent safety — real PostgreSQL 16"
+      db_run: "30264723167"
+      status: PROVEN
+    I7_consulting_fsm_integrity:
+      test_file: "src/__tests__/services/consulting/consulting-engagement.test.ts"
+      test_count: 63
+      test_description: "invalid lifecycle transitions fail; repeated requests idempotent; concurrent mutations safe"
+      status: PROVEN
+    I8_role_and_representation_boundary:
+      test_file: "src/__tests__/completion-factory/ (bundle-7 DTO leakage 23 tests)"
+      test_description: "consulting export contains no internal-only fields, cross-tenant data, or credentials"
+      status: PROVEN
+    I9_audit_completeness:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "representative chain emits workspace-scoped audit event persisted in DB (test 3)"
+      additional: "bundle-7 audit completeness suite (39+ tests)"
+      status: PROVEN
+    I10_transaction_safety:
+      test_file: "src/__tests__/stage5/i6-bcp-historical-integrity.db.test.ts"
+      test_description: "concurrent reassessments — exactly one isCurrent=true, Serializable isolation (test 5)"
+      implementation: "src/services/owner-mode/owner-bcp.service.ts evaluateConditionProfile uses db.$transaction({ isolationLevel: Serializable })"
+      status: PROVEN
+    I11_failure_handling:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "BCP failure path produces deterministic outcome, not silent success (test 5)"
+      status: PROVEN
+    I12_owner_useful_outcome:
+      test_file: "src/__tests__/stage5/i12-integration-chain.db.test.ts"
+      test_description: "full chain: integration event → connector validation → BCP reassessment → consulting health update → workspace-scoped audit — all persisted in PostgreSQL 16, readable from DB (test 3)"
+      db_run: "30264723167"
+      status: PROVEN
+
+closure_rules:
+  - All acceptance criteria satisfied with executable evidence.
+  - PR HEAD must be exact-SHA authorized by owner before merge.
+  - Ledger entry for factory-stage-5 must be updated with pre-merge status
+    IMPLEMENTED_OR_PROVEN_PRE_MERGE_AWAITING_MERGE before merge authorization is requested.
+  - Post-merge evidence fields must be populated only after actual merge.
+  - Factory Stage 5 must not be self-accepted by automated processes.
+
+rollback_failure_rules:
+  - If any invariant has no executable evidence, the stage is not closed.
+  - If the representative chain fails in CI, the defect must be fixed before merge authorization.
+  - If a non-DB gate fails, fix from root cause; do not weaken auth, workspace enforcement, or DTO redaction.
+  - If a DB gate (LANE_B) fails, fix from root cause; mocked concurrency tests do not substitute for real PostgreSQL proof.
+
+owner_acceptance_boundary:
+  - Owner acceptance is a separate event after merge and post-merge CI confirmation.
+  - This contract does not self-accept Factory Stage 5.
+  - Owner must issue explicit Factory Stage 5 acceptance after reviewing post-merge evidence.
+
+security:
+  workspace_enforcement: required_adversarial
+  auth_capability: OWNER_MANAGE and CONSULTING_WRITE as applicable
+  dto_redaction: adversarial_boundary_test
+  audit_events: completeness_proof
+  idempotency: concurrent_safety_proof
+  token_boundary: tokens_never_in_public_dto
+
+gates:
+  stage_acceptance: scripts/validate-stage-acceptance.mjs --stage factory-5
+  bundle_manifests: scripts/validate-bundle-manifests.mjs

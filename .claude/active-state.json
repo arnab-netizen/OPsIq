@@ -1,54 +1,148 @@
 {
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
-  "last_updated": "2026-07-26",
-  "factory_stage": "FACTORY_STAGE_3_IMPLEMENTED_PROOF_CLOSURE_REQUIRED",
-  "active_bundle": null,
-  "blocked_by": [
-    "OWNER_STAGE_3_ACCEPTANCE_NOT_YET_GIVEN",
-    "OWNER_COMPLETION_FACTORY_ACCEPTANCE_NOT_YET_GIVEN"
-  ],
-  "owner_outcome": "Owner has proof that the Stage 3 business domains (customers, inventory, procurement, campaigns, complaints, action assignments, approvals, onboarding, SOP intelligence, BCP, integration fabric, consulting mode) are implemented, workspace-isolated, and test-verified on main — pending explicit owner acceptance before any new stage begins",
-  "current_gap": "Closure PR created with post-merge evidence. Awaiting explicit owner acceptance of Factory Stage 3 and Completion Factory bundle closure. Stage 4 is not authorized.",
-  "next_target": "Owner decision: Factory Stage 3 acceptance then Completion Factory acceptance (in that order) before any new stage work",
-  "main_sha": "15a131ab7f0b7d703b459322f3c4db5951d1e825",
+  "last_updated": "2026-07-28",
+  "factory_stage": "FACTORY_STAGE_7",
+  "factory_stage_status": "AUTHORIZED_CONTRACT_DEFINED",
+  "factory_stage_scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS",
+  "active_bundle": "factory-stage-7-closure",
+  "blocked_by": [],
+  "owner_outcome": "Owner has proof that Stages 3, 4, 5, and 6 are implemented and accepted. Factory Stage 7 proves that OpsIQ can be deployed securely for its owner, operated without developer assistance, produce correct and actionable guidance from real business data, govern approved execution, capture outcomes and feedback, recover safely from realistic failures, and be accepted for unrestricted private owner use.",
+  "current_gap": "Factory Stage 7 contract defined. Awaiting live deployment environment setup and owner pilot session. External credentials required before live provider proof steps can begin. Initialization PR pending owner exact-SHA merge authorization.",
+  "next_target": "Owner exact-SHA merge authorization for Stage 7 initialization PR. After merge: inventory live deployment environment, produce deployment-readiness checklist, perform all non-destructive actions autonomously.",
+  "main_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
+  "active_branch": "claude/opsiq-stage-7-loop-main",
+  "authorized_from_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
+  "deployment_readiness": "FACTORY_STAGE_6_PROVEN — deployment and production readiness closure complete and accepted",
+  "factory_stage_6": "ACCEPTED",
+  "factory_stage_7": "AUTHORIZED_CONTRACT_DEFINED",
   "prs_merged_to_main": [
     {
       "number": 251,
       "title": "Bundle 3.5-3.10 Owner Mode — Stage 3 complete",
-      "head_sha": "cda988e7267552294f6b5c597d1bed0fb8979e53",
       "merge_sha": "5bc1fc013cd52064afcffb65505d7359da872718",
-      "main_integration_run": "30152600373",
-      "result": "GREEN (after corrective PR #252)"
-    },
-    {
-      "number": 252,
-      "title": "fix(ci): vitest.setup.ts must not rethrow Vitest mock-validation error",
-      "head_sha": "db4506049a5cc99a7ab6d2576ed7bc2a743dee44",
-      "merge_sha": "45694526099aa5b092631fa2cc6d037a5aa1c3b9",
       "main_integration_run": "30152600373",
       "result": "GREEN"
     },
     {
-      "number": 253,
-      "title": "FACTORY STAGE 3 — Core Business-Domain Completion (3B-3F)",
-      "head_sha": "ff34141056d9d47f053372fafe9a033d86d98928",
-      "merge_sha": "7a19de9dd8436ee9cf8e2f0d746195a04bc49405",
-      "main_integration_run": "30162157766",
-      "result": "GREEN — 29488/29488 tests, 0 failed",
-      "domains": ["3B-CustomerRecord","3C-StockItem+PurchaseOrder","3D-MarketingCampaign","3E-EmailTransport","3F-EntityWorkspaceId"]
-    },
-    {
       "number": 255,
-      "title": "feat(stage-3-proof-closure): focused DB tests bundles 3.5–3.9, browser specs 57–58, reusable CI wiring, adversarial closure 3.10",
+      "title": "feat(stage-3-proof-closure): bundles 3.5–3.10 proof closure",
       "head_sha": "95138558ed4e37abffe7599aa3eee3514a9acbb5",
       "merge_sha": "15a131ab7f0b7d703b459322f3c4db5951d1e825",
       "main_integration_run": "30199084412",
       "db_verification_run": "30196020202",
-      "result": "GREEN — all 35 steps including LANE_B DB migration + full test suite",
-      "proof_scope": "bundles 3.5-3.10 DB tests, browser specs 57+58, capability_check.ts OWNER_ONBOARD+SOP_MANAGE"
+      "result": "GREEN — Factory Stage 3 proven"
+    },
+    {
+      "number": 257,
+      "title": "feat(bundle-4.3): Stage 4 Cross-Domain Adversarial Closure — 60 adversarial tests",
+      "head_sha": "514978cb713a20e5f3ecaffe61d1bdcd3cca7431",
+      "merge_sha": "0de3463bc843f3771cdac153df9384bc10388630",
+      "main_integration_run": "30214645193",
+      "db_verification_run": "30213647265",
+      "result": "GREEN — Factory Stage 4 proven"
+    },
+    {
+      "number": 258,
+      "title": "chore(stage-4): record factual Factory Stage 4 closure evidence",
+      "head_sha": "88b98c99ea0cd8905de868c9500760f0149c7fe1",
+      "merge_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
+      "main_integration_run": "30233229481",
+      "result": "GREEN — Factory Stage 4 ledger closure, post-merge integration confirmed"
+    },
+    {
+      "number": 259,
+      "title": "feat(stage-5): Factory Stage 5 — I6 BCP historical integrity and I12 representative integration chain DB proof",
+      "head_sha": "e6427151bcada44488f237e0c28de72f0f5d4d29",
+      "merge_sha": "5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd",
+      "non_db_ci_run": "30264723381",
+      "db_verification_run": "30264723167",
+      "main_integration_run": "30268958848",
+      "result": "GREEN — Factory Stage 5 proven, all I1-I12 invariants have PostgreSQL-backed executable evidence"
+    },
+    {
+      "number": 260,
+      "title": "chore(stage-5): record factual Factory Stage 5 closure evidence",
+      "merge_sha": "fd843562389025eaf7c0f1b7d2ff76e771fea030",
+      "main_integration_run": "30285117464",
+      "result": "GREEN — Factory Stage 5 ledger closure, post-merge integration confirmed"
+    },
+    {
+      "number": 261,
+      "title": "feat(stage-6): Factory Stage 6 — Deployment and Production Readiness Closure",
+      "head_sha": "a6e867ee343557a9f6132a78405663b7e9ef799f",
+      "merge_sha": "b1c22d3179457ef1942b0aefee4b20c3508680a9",
+      "non_db_ci_run": "30303651105",
+      "db_verification_run": "30303650860",
+      "main_integration_run": "30306181683",
+      "result": "GREEN — Factory Stage 6 proven, all S6-I1 through S6-I12 have executable evidence (LANE_A and LANE_B)"
+    },
+    {
+      "number": 262,
+      "title": "chore(stage-6): Factory Stage 6 closure evidence record",
+      "head_sha": "066f9dda66ab52063e3036d1c39376d26b569ada",
+      "merge_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
+      "result": "GREEN — Factory Stage 6 ledger closure merged; Factory Stage 7 authorized from this SHA"
     }
   ],
+  "factory_stage_acceptance": {
+    "factory_stage_3": {
+      "status": "ACCEPTED",
+      "accepted_date": "2026-07-26",
+      "merge_sha": "15a131ab7f0b7d703b459322f3c4db5951d1e825"
+    },
+    "factory_stage_4": {
+      "status": "ACCEPTED",
+      "accepted_date": "2026-07-27",
+      "pr_implementation_head": "514978cb713a20e5f3ecaffe61d1bdcd3cca7431",
+      "pr_implementation_merge_sha": "0de3463bc843f3771cdac153df9384bc10388630",
+      "pr_closure_head": "88b98c99ea0cd8905de868c9500760f0149c7fe1",
+      "closure_merge_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
+      "post_merge_run": "30233229481",
+      "note": "Explicitly accepted by owner: FACTORY_STAGE_4_ACCEPTED"
+    },
+    "factory_stage_5": {
+      "status": "ACCEPTED",
+      "accepted_date": "2026-07-27",
+      "authorized_from_sha": "ce9c74486d677a078e164311c2ee136ce05dfb09",
+      "branch": "claude/opsiq-stage-5-loop-main",
+      "contract_file": "docs/opsiq/bundles/factory-stage-5-closure.yaml",
+      "scope": "INTEGRATION_FABRIC_AND_CONSULTING_OPERATIONS_CLOSURE",
+      "pr_number": 259,
+      "pr_head_sha": "e6427151bcada44488f237e0c28de72f0f5d4d29",
+      "pr_merge_sha": "5ec3e04ebaf36bc6a514250374a3786d5bd3c4bd",
+      "closure_merge_sha": "fd843562389025eaf7c0f1b7d2ff76e771fea030",
+      "closure_main_integration_run": "30285117464",
+      "note": "Explicitly accepted by owner: FACTORY_STAGE_5_ACCEPTED"
+    },
+    "factory_stage_6": {
+      "status": "ACCEPTED",
+      "accepted_date": "2026-07-28",
+      "authorized_from_sha": "fd843562389025eaf7c0f1b7d2ff76e771fea030",
+      "authorized_branch": "claude/opsiq-stage-6-loop-main",
+      "contract_file": "docs/opsiq/bundles/factory-stage-6-closure.yaml",
+      "scope": "DEPLOYMENT_AND_PRODUCTION_READINESS_CLOSURE",
+      "pr_number": 261,
+      "pr_head_sha": "a6e867ee343557a9f6132a78405663b7e9ef799f",
+      "pr_merge_sha": "b1c22d3179457ef1942b0aefee4b20c3508680a9",
+      "closure_pr_number": 262,
+      "closure_pr_head_sha": "066f9dda66ab52063e3036d1c39376d26b569ada",
+      "closure_merge_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
+      "non_db_ci_run": "30303651105",
+      "db_verification_run": "30303650860",
+      "main_integration_run": "30306181683",
+      "main_integration_conclusion": "success_all_steps_green",
+      "note": "Explicitly accepted by owner: FACTORY_STAGE_6_ACCEPTED (2026-07-28)"
+    },
+    "factory_stage_7": {
+      "status": "AUTHORIZED_CONTRACT_DEFINED",
+      "authorized_date": "2026-07-28",
+      "authorized_from_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
+      "branch": "claude/opsiq-stage-7-loop-main",
+      "contract_file": "docs/opsiq/bundles/factory-stage-7-closure.yaml",
+      "scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS"
+    }
+  },
   "bundle_status": {
     "bundle-3.4": "CLOSED",
     "bundle-3.5": "CLOSED",
@@ -57,35 +151,28 @@
     "bundle-3.8": "CLOSED",
     "bundle-3.9": "CLOSED",
     "bundle-3.10": "CLOSED",
+    "bundle-4": "CLOSED",
     "bundle-4.1": "CLOSED",
     "bundle-4.2": "CLOSED",
+    "bundle-4.3": "CLOSED",
+    "bundle-5": "CLOSED",
     "bundle-5.1": "CLOSED",
     "bundle-5.2": "CLOSED",
     "bundle-5.3": "CLOSED",
     "bundle-6": "CLOSED",
     "bundle-7": "CLOSED",
-    "_note": "Bundles 4.x, 5.x, 6, 7 are DELIVERY_BUNDLE_GROUPs (internal implementation), NOT Factory Stage milestones. Factory Stage 4 has NOT been accepted."
+    "factory-stage-5-closure": "CLOSED",
+    "factory-stage-6-closure": "CLOSED",
+    "factory-stage-7-closure": "PENDING",
+    "_note": "Bundles 5.x, 6, 7 are internal delivery bundles, NOT Factory Stage milestones. factory-stage-N-closure files are Factory Stage authoritative closure contracts (factory_stage_closure artifact type). Billing excluded from Stage 7."
   },
   "ledger": "docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml",
-  "ledger_status": "STAGE_3_FACTORY_BUNDLES_CLOSED_INTERNAL_DELIVERY_BUNDLES_CLOSED_FACTORY_ACCEPTANCE_PENDING",
-  "stage_acceptance_status": {
-    "factory_stage_3": "POST_MERGE_EVIDENCE_COMPLETE_AWAITING_OWNER_ACCEPTANCE",
-    "factory_stage_4": "NOT_YET_AUTHORIZED",
-    "completion_factory": "EVIDENCE_COMPLETE_AWAITING_OWNER_ACCEPTANCE"
-  },
-  "stage_acceptance_gates": {
-    "integrity_mode_stage_3": "PASS — 7 bundles, 0 violations (2026-07-26)",
-    "closure_mode_stage_3": "PASS — 7 bundles, 0 violations (2026-07-26)",
-    "bundle_manifest_validator": "PASS — 11 bundles, 0 violations (2026-07-26)"
-  },
-  "deployment_classification": {
-    "vercel": "DEPLOYMENT_ACCESS_UNVERIFIED",
-    "resend": "LIVE_PROVIDER_CREDENTIAL_UNAVAILABLE",
-    "resend_delivery": "LIVE_RESEND_DELIVERY_UNPROVEN",
-    "browser_specs_57_58": "BROWSER_EXECUTION_UNPROVEN_SPECS_EXIST_IN_TREE"
-  },
+  "ledger_status": "FACTORY_STAGE_7_AUTHORIZED_CONTRACT_DEFINED",
   "scope_drift": "NO",
-  "stage_4_begun": false,
+  "stage_4_begun": true,
+  "stage_5_begun": true,
+  "stage_6_begun": true,
+  "stage_7_begun": true,
   "operating_loop": [
     "main-truth","owner-outcome","parallel-specialist-agents","structured-gap-synthesis",
     "plan-mode","checkpoint","one-write-owner-implementation","hook-driven-fast-validation",

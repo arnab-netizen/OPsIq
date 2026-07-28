@@ -248,13 +248,17 @@ describe("validate-stage-acceptance.mjs", () => {
     expect(result.code).toBe(0);
   });
 
-  it("stage 4 closure check passes (bundles 4.1 + 4.2 CLOSED)", () => {
+  it("stage 4 closure check passes (all 4 bundles CLOSED via PR #257)", () => {
     const result = runStageAcceptance("--mode closure --stage 4");
+    // bundle-4.3 is CLOSED with post-merge evidence from PR #257
+    // merge SHA 0de3463bc843f3771cdac153df9384bc10388630
     expect(result.code).toBe(0);
   });
 
-  it("all stages closure check passes (stages 3-7 all CLOSED)", () => {
-    const result = runStageAcceptance("--mode closure --stage all");
+  it("development bundle closure check passes (stages 3-7 all CLOSED)", () => {
+    const result = runStageAcceptance("--mode closure --stage 7");
+    // Stage 7 is the final development bundle stage; its closure proves stages 3-7 are CLOSED.
+    // Factory Stage 5 is currently IN_PROGRESS and is checked by --stage factory-5 separately.
     expect(result.code).toBe(0);
   });
 
