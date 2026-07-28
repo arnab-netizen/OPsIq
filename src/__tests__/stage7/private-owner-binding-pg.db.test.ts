@@ -14,7 +14,7 @@
  *  8. getSubscriptionTier and resolveWorkspaceTier are distinct paths (no conflation)
  */
 
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeAll, afterAll } from "vitest";
 import { db } from "@/lib/db";
 import { resolvePrivateModeRole } from "@/lib/private-mode-enforcement";
 import { resolveWorkspaceTier } from "@/services/entitlement.service";
@@ -30,6 +30,25 @@ const OTHER_WS = "22222222-2222-2222-2222-222222222222";
 let testUserId: string | null = null;
 
 describeIf(WITH_DB)("S7-DC9: PostgreSQL private-owner binding", () => {
+  // PrivateModeAccess.workspaceId is a FK to ClientAccount.id — seed stubs once.
+  beforeAll(async () => {
+    await db.clientAccount.upsert({
+      where: { id: PRIVATE_WS },
+      update: {},
+      create: { id: PRIVATE_WS, name: "DC9 Test Workspace A" },
+    });
+    await db.clientAccount.upsert({
+      where: { id: OTHER_WS },
+      update: {},
+      create: { id: OTHER_WS, name: "DC9 Test Workspace B" },
+    });
+  });
+
+  afterAll(async () => {
+    await db.clientAccount.delete({ where: { id: PRIVATE_WS } }).catch(() => {});
+    await db.clientAccount.delete({ where: { id: OTHER_WS } }).catch(() => {});
+  });
+
   afterEach(async () => {
     delete process.env.OPSIQ_PRIVATE_WORKSPACE_ID;
     if (testUserId) {
