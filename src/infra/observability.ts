@@ -22,6 +22,10 @@ export type ObservabilityCategory =
   | "DASHBOARD_ERROR"
   | "DATABASE_ERROR"
   | "VALIDATION_ERROR"
+  | "SCHEDULER_ERROR"
+  | "EMAIL_DELIVERY_ERROR"
+  | "AI_ERROR"
+  | "WEBHOOK_ERROR"
   | "UNEXPECTED_ERROR";
 
 export interface ObservabilityContext {
@@ -63,6 +67,16 @@ export function categorizeError(error: unknown, route?: string): ObservabilityCa
   if (r.includes("/api/auth") || name === "UnauthorizedError" || name === "ForbiddenError" || msg.includes("unauthorized") || msg.includes("forbidden") || msg.includes("authentication")) {
     return "AUTH_ERROR";
   }
+  if (r.includes("cron/scheduler") || msg.includes("scheduler") || msg.includes("scheduled task")) {
+    return "SCHEDULER_ERROR";
+  }
+  if (r.includes("webhooks/resend") || msg.includes("resend") || msg.includes("email delivery")) {
+    return "EMAIL_DELIVERY_ERROR";
+  }
+  if (msg.includes("openai") || msg.includes("ai_unavailable") || msg.includes("ai provider")) {
+    return "AI_ERROR";
+  }
+  if (r.includes("webhooks")) return "WEBHOOK_ERROR";
   if (r.includes("diagnos")) return "DIAGNOSIS_ERROR";
   if (r.includes("dashboard") || r.includes("engagement")) return "DASHBOARD_ERROR";
   return "UNEXPECTED_ERROR";
