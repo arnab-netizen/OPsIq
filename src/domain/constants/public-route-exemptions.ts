@@ -54,11 +54,17 @@ export const PUBLIC_ROUTE_EXEMPTIONS = {
   ],
   WEBHOOK_SIGNED: [
     "/api/webhooks/stripe", // Signature verification is mandatory
+    "/api/webhooks/resend", // HMAC-SHA256 (svix) signature verification — fail-closed when RESEND_WEBHOOK_SECRET unset
   ],
   SCHEDULER_TOKEN: [
     // Not session-auth: authorized by a strong SCHEDULER_INTERNAL_TOKEN (constant-time
     // compared, fail-closed / disabled when the token is unset). Invoked by the caller's scheduler.
     "/api/internal/reassessment-scan",
+    "/api/internal/cron/scheduler", // Vercel Cron — authorized by CRON_SECRET bearer token (Vercel injects)
+  ],
+  DIAGNOSTIC_KEY: [
+    // Authorized by OPSIQ_DIAGNOSTIC_KEY header; disabled in production.
+    "/api/internal/smoke-cleanup", // Smoke test cleanup — dev/test only, returns 404 in production
   ],
 } as const;
 
@@ -79,6 +85,9 @@ export const EXEMPTION_REASONS = {
   "/api/auth/logout": "Session termination - accepts both authenticated and unauthenticated requests",
   "/api/auth/signup": "User signup endpoint - public registration, no auth required",
   "/api/webhooks/stripe": "Webhook with mandatory HMAC-SHA256 signature verification - Stripe signature validates request legitimacy",
+  "/api/webhooks/resend": "Email webhook with HMAC-SHA256 (svix) signature verification + timestamp tolerance - fail-closed when RESEND_WEBHOOK_SECRET unset",
+  "/api/internal/cron/scheduler": "Vercel Cron endpoint - authorized by CRON_SECRET bearer token injected by Vercel, fail-closed when unset",
+  "/api/internal/smoke-cleanup": "Smoke test cleanup - authorized by OPSIQ_DIAGNOSTIC_KEY, returns 404 in production (never exposed publicly)",
   "/api/internal/reassessment-scan": "Scheduler endpoint authorized by SCHEDULER_INTERNAL_TOKEN (constant-time compare, fail-closed when unset) instead of session auth",
   "/api/internal/build-info": "Build metadata endpoint - safe public deployment info (commit SHA, environment)",
   "/api/internal/debug-engagements-p2007": "Internal debug and proof endpoint - development and testing only",
