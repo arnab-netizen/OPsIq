@@ -24,7 +24,7 @@ model Action {
   metadata         Json?
   version          Int        @default(1)
   createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @map("updated_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
   engagement       Engagement @relation(fields: [engagementId], references: [id])
   stage            Stage?     @relation(fields: [stageId], references: [id])
 
@@ -46,7 +46,7 @@ model AIProposalSandbox {
   approvedAt       DateTime? @map("approved_at")
   rejectedReason   String?   @map("rejected_reason")
   createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @map("updated_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   @@index([isApproved])
   @@index([recommendationId])
@@ -86,7 +86,7 @@ model BillingAccount {
   providerCustomerId String        @map("provider_customer_id")
   status             String        @default("active")
   createdAt          DateTime      @default(now()) @map("created_at")
-  updatedAt          DateTime      @map("updated_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
   stripeCustomerId   String?       @unique(map: "uk_stripe_customer_id") @map("stripe_customer_id")
   subscription       Subscription?
 
@@ -125,7 +125,7 @@ model BusinessConditionProfile {
   version                 Int        @default(1)
   isCurrent               Boolean    @default(true) @map("is_current")
   createdAt               DateTime   @default(now()) @map("created_at")
-  updatedAt               DateTime   @map("updated_at")
+  updatedAt               DateTime   @updatedAt @map("updated_at")
   engagement              Engagement @relation(fields: [engagementId], references: [id])
 
   @@index([engagementId])
@@ -207,7 +207,7 @@ model ClientAccount {
   ownerGateOptOutExpiresAt                      DateTime?                               @map("owner_gate_opt_out_expires_at")
   createdBy                                     String?                                 @map("created_by") @db.Uuid
   createdAt                                     DateTime                                @default(now()) @map("created_at")
-  updatedAt                                     DateTime                                @map("updated_at")
+  updatedAt                                     DateTime                                @updatedAt @map("updated_at")
   archivedAt                                    DateTime?                               @map("archived_at")
   clientContacts                                ClientContact[]
   workspace                                     Workspace?                              @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
@@ -248,7 +248,7 @@ model ClientContact {
   isActive      Boolean        @default(true) @map("is_active")
   notes         String?
   createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @map("updated_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
   clientAccount ClientAccount  @relation(fields: [clientId], references: [id])
   evidenceItems EvidenceItem[]
 
@@ -285,7 +285,7 @@ model Deliverable {
   rejectionReason String?    @map("rejection_reason")
   createdBy       String?    @map("created_by") @db.Uuid
   createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @map("updated_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
   engagement      Engagement @relation(fields: [engagementId], references: [id])
   stage           Stage      @relation(fields: [stageId], references: [id])
 
@@ -336,7 +336,7 @@ model Engagement {
   visibility                String                     @default("internal")
   createdBy                 String?                    @map("created_by") @db.Uuid
   createdAt                 DateTime                   @default(now()) @map("created_at")
-  updatedAt                 DateTime                   @map("updated_at")
+  updatedAt                 DateTime                   @updatedAt @map("updated_at")
   isBlocked                 Boolean                    @default(false) @map("is_blocked")
   blockerReason             String?                    @map("blocker_reason")
   blockedAt                 DateTime?                  @map("blocked_at")
@@ -383,7 +383,7 @@ model Entity {
   externalId  String?      @map("external_id")
   createdBy   String       @map("created_by") @db.Uuid
   createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @map("updated_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
   creator     User         @relation(fields: [createdBy], references: [id])
   entityLinks EntityLink[]
 
@@ -426,7 +426,7 @@ model Evidence {
   validatedBy     String?    @map("validated_by") @db.Uuid
   version         Int        @default(1)
   createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @map("updated_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
   engagement      Engagement @relation(fields: [engagementId], references: [id])
   stage           Stage?     @relation(fields: [stageId], references: [id])
   findings        Finding[]
@@ -462,7 +462,7 @@ model EvidenceBundle {
   createdBy           String?              @map("created_by") @db.Uuid
   version             Int                  @default(1)
   createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @map("updated_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
   evidenceBundleItems EvidenceBundleItem[]
   engagement          Engagement           @relation(fields: [engagementId], references: [id])
 
@@ -490,7 +490,7 @@ model EvidenceItem {
   version             Int                          @default(1)
   capturedAt          DateTime                     @map("captured_at")
   createdAt           DateTime                     @default(now()) @map("created_at")
-  updatedAt           DateTime                     @map("updated_at")
+  updatedAt           DateTime                     @updatedAt @map("updated_at")
   evidenceBundleItems EvidenceBundleItem[]
   engagement          Engagement                   @relation(fields: [engagementId], references: [id])
   sourceContact       ClientContact?               @relation(fields: [sourceContactId], references: [id])
@@ -559,7 +559,7 @@ model Finding {
   metadata          Json?
   version           Int              @default(1)
   createdAt         DateTime         @default(now()) @map("created_at")
-  updatedAt         DateTime         @map("updated_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
   archivedAt        DateTime?        @map("archived_at")
   engagement        Engagement       @relation(fields: [engagementId], references: [id])
   evidence          Evidence         @relation(fields: [primaryEvidenceId], references: [id])
@@ -601,7 +601,7 @@ model InterventionState {
   previousPhase String?    @map("previous_phase")
   version       Int        @default(1)
   createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @map("updated_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
   engagement    Engagement @relation(fields: [engagementId], references: [id])
 
   @@index([engagementId])
@@ -633,7 +633,7 @@ model KPI {
   version         Int           @default(1)
   createdBy       String?       @map("created_by") @db.Uuid
   createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @map("updated_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
   kpiSnapshots    KPISnapshot[]
   engagement      Engagement    @relation(fields: [engagementId], references: [id])
 
@@ -657,7 +657,7 @@ model LeadRecord {
   assignedTo          String?        @map("assigned_to") @db.Uuid
   createdBy           String?        @map("created_by") @db.Uuid
   createdAt           DateTime       @default(now()) @map("created_at")
-  updatedAt           DateTime       @map("updated_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
   clientAccount       ClientAccount? @relation(fields: [convertedToClientId], references: [id], onDelete: Restrict, map: "lead_records_client_id_fkey")
   engagement          Engagement?    @relation(fields: [engagementId], references: [id], onDelete: Restrict)
   workspace           Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
@@ -694,7 +694,7 @@ model OperatorItem {
   decisionHash           String?             @map("decision_hash")
   engineVersion          String              @default("v1.0.0") @map("engine_version")
   createdAt              DateTime            @default(now()) @map("created_at")
-  updatedAt              DateTime            @map("updated_at")
+  updatedAt              DateTime            @updatedAt @map("updated_at")
   signature              String?
   signatureAlgo          String?             @map("signature_algo")
   publicKeyId            String?             @map("public_key_id")
@@ -781,7 +781,7 @@ model Plan {
   priceYearly      Float            @map("price_yearly")
   active           Boolean          @default(true)
   createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @map("updated_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
   stripePriceId    String?          @map("stripe_price_id")
   planCapabilities PlanCapability[]
   subscriptions    Subscription[]
@@ -800,7 +800,7 @@ model RecommendationExpiryPolicy {
   reason           String?
   replacedById     String?   @map("replaced_by_id") @db.Uuid
   createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @map("updated_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   @@index([expiresAt])
   @@index([status])
@@ -871,7 +871,7 @@ model RecommendationLegacy {
   metadata                Json?
   version                 Int        @default(1)
   createdAt               DateTime   @default(now()) @map("created_at")
-  updatedAt               DateTime   @map("updated_at")
+  updatedAt               DateTime   @updatedAt @map("updated_at")
   archivedAt              DateTime?  @map("archived_at")
   rollbackPlan            String?    @map("rollback_plan")
   constraintsConsidered   Json?      @map("constraints_considered")
@@ -913,7 +913,7 @@ model Risk {
   assessedBy         String?    @map("assessed_by") @db.Uuid
   mitigationStrategy String?    @map("mitigation_strategy")
   createdAt          DateTime   @default(now()) @map("created_at")
-  updatedAt          DateTime   @map("updated_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
   engagement         Engagement @relation(fields: [engagementId], references: [id])
   stage              Stage      @relation(fields: [stageId], references: [id])
 
@@ -973,7 +973,7 @@ model ShockEvent {
   reportedBy   String?    @map("reported_by") @db.Uuid
   createdBy    String?    @map("created_by") @db.Uuid
   createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @map("updated_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
   engagement   Engagement @relation(fields: [engagementId], references: [id])
 
   @@index([engagementId])
@@ -1019,7 +1019,7 @@ model Stage {
   ownerId         String?       @map("owner_id") @db.Uuid
   version         Int           @default(1)
   createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @map("updated_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
   actions         Action[]
   deliverables    Deliverable[]
   evidence        Evidence[]
@@ -1044,7 +1044,7 @@ model Subscription {
   canceledAt           DateTime?      @map("canceled_at")
   cancelReason         String?        @map("cancel_reason")
   createdAt            DateTime       @default(now()) @map("created_at")
-  updatedAt            DateTime       @map("updated_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
   stripeSubscriptionId String?        @map("stripe_subscription_id")
   lastEventTimestamp   DateTime?      @map("last_event_timestamp") @db.Timestamp(6)
   billingAccount       BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
@@ -1082,7 +1082,7 @@ model ThresholdConfig {
   stalledPipelineThreshold          Float    @default(10000000) @map("stalled_pipeline_threshold")
   createdBy                         String?  @map("created_by") @db.Uuid
   createdAt                         DateTime @default(now()) @map("created_at")
-  updatedAt                         DateTime @map("updated_at")
+  updatedAt                         DateTime @updatedAt @map("updated_at")
 
   @@index([workspaceId])
   @@map("threshold_configs")
@@ -1128,7 +1128,7 @@ model User {
   isActive                        Boolean                @default(true) @map("is_active")
   version                         Int                    @default(1)
   createdAt                       DateTime               @default(now()) @map("created_at")
-  updatedAt                       DateTime               @map("updated_at")
+  updatedAt                       DateTime               @updatedAt @map("updated_at")
   deactivatedAt                   DateTime?              @map("deactivated_at")
   operatorItemsCreated            String?
   operatorItemsCompleted          String?
@@ -4318,7 +4318,7 @@ model PrivateModeAccess {
   rejectionReason String?   @map("rejection_reason") @db.Text
   metadata        Json?
   createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @map("updated_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   workspace ClientAccount @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
