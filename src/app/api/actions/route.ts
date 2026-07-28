@@ -1,6 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { checkWorkspaceRateLimit } from "@/middleware/rate-limit";
+import { checkPgRateLimit } from "@/infra/rate-limiter-pg";
 import { createAction, listActions } from "@/services/action";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { withIdempotency } from "@/infra/idempotency";
@@ -51,10 +52,19 @@ export const POST = withCanonicalEnforcement(
     // BILL-01: tier is resolved SERVER-SIDE from the workspace's active subscription,
     // never from a client-supplied x-tier header (which allowed quota elevation).
     const tier: SubscriptionTier = await resolveWorkspaceTier(workspaceId);
+    const config = getTierConfig(tier);
     const rateLimit = checkWorkspaceRateLimit(workspaceId, tier);
     if (!rateLimit.allowed) {
-      const config = getTierConfig(tier);
       throw new Error(`Rate limit exceeded: ${config.limits.requestsPerHour} requests/hour`);
+    }
+
+    // Distributed PG-backed check (shared across serverless instances — prevents split-brain).
+    const pgRateLimit = await checkPgRateLimit(`ws:${workspaceId}`, {
+      capacity: config.limits.requestsPerHour,
+      refillPerSecond: config.limits.requestsPerHour / 3600,
+    });
+    if (!pgRateLimit.allowed) {
+      throw new Error(`Rate limit exceeded: ${config.limits.requestsPerHour} requests/hour (distributed)`);
     }
 
     // Check capability: action_create

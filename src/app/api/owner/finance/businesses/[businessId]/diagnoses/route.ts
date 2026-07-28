@@ -10,6 +10,7 @@ import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { runFinanceDiagnosisSchema } from "@/domain/owner-finance/validation";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { checkDiagnosisRateLimit } from "@/middleware/rate-limit";
+import { checkPgRateLimit } from "@/infra/rate-limiter-pg";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,6 +22,19 @@ export const POST = withCanonicalEnforcement(
     const rateCheck = checkDiagnosisRateLimit(params.businessId);
     if (!rateCheck.allowed) {
       const retryAfterSec = rateCheck.retryAfterMs ? Math.ceil(rateCheck.retryAfterMs / 1000) : 3600;
+      return canonicalJson(
+        { error: "Diagnosis rate limit exceeded. Maximum 10 diagnoses per business per hour." },
+        { status: 429, headers: { "retry-after": String(retryAfterSec) } }
+      );
+    }
+
+    // Distributed PG-backed check (shared across serverless instances — prevents split-brain).
+    const pgRateCheck = await checkPgRateLimit(`diag:${params.businessId}`, {
+      capacity: 10,
+      refillPerSecond: 10 / 3600,
+    });
+    if (!pgRateCheck.allowed) {
+      const retryAfterSec = pgRateCheck.retryAfterSeconds ?? 3600;
       return canonicalJson(
         { error: "Diagnosis rate limit exceeded. Maximum 10 diagnoses per business per hour." },
         { status: 429, headers: { "retry-after": String(retryAfterSec) } }
