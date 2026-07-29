@@ -1,0 +1,78 @@
+##
+## prod-migrate-status-check.yml
+##
+## READ-ONLY production migration status check.
+## Runs `prisma migrate status` against PRODUCTION_DATABASE_URL.
+## Does NOT run prisma migrate deploy, seed, or reset.
+## Manual dispatch only — never triggered automatically.
+##
+name: "[read-only] Production migration status check"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  status-check:
+    name: prisma migrate status (production, read-only)
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Assert PRODUCTION_DATABASE_URL is direct (not pooler)
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if [ -z "$PRODUCTION_DATABASE_URL" ]; then
+            echo "::error::PRODUCTION_DATABASE_URL secret is not set."
+            exit 1
+          fi
+          if echo "$PRODUCTION_DATABASE_URL" | grep -qi '\-pooler'; then
+            echo "::error::PRODUCTION_DATABASE_URL is a pooler URL. prisma migrate status requires a direct Neon endpoint."
+            exit 1
+          fi
+          echo "PRODUCTION_DATABASE_URL is a direct URL (no '-pooler' detected)."
+
+      - name: Run prisma migrate status (read-only)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "=== Production migration status ==="
+          npx prisma migrate status 2>&1 | tee migration-status.txt
+          echo "=== End status ==="
+
+          # Surface specific Stage 7 migrations in summary
+          echo "### Production migration status" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat migration-status.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          # Fail the job explicitly if any migration is pending or failed
+          # so the caller gets a clear signal rather than a green job with buried output.
+          if grep -qiE 'pending|not yet applied|failed|rolled back' migration-status.txt; then
+            echo "::error::One or more migrations are NOT applied in production."
+            echo "RESULT: ONE_OR_MORE_DIRECTLY_PROVEN_PENDING"
+            exit 1
+          else
+            echo "RESULT: BOTH_DIRECTLY_PROVEN_APPLIED (or all migrations applied)"
+            exit 0
+          fi
+
+      - name: Upload status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-migration-status
+          path: migration-status.txt
+          retention-days: 7
