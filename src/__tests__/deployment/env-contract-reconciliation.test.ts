@@ -35,9 +35,24 @@ describe("src/lib/config.ts — Zod schema correctness", () => {
 });
 
 describe(".env.example — completeness and accuracy", () => {
-  it("documents CRON_SECRET as used by Vercel Cron", () => {
+  it("documents CRON_SECRET as REQUIRED_SELECTED_FEATURE / REQUIRED_FOR_VERCEL_CRON_SECURITY", () => {
     expect(envExample).toContain("CRON_SECRET");
-    expect(envExample).toMatch(/Vercel.*[Cc]ron|[Cc]ron.*Vercel/);
+    // Must carry the correct classification — NOT "injected automatically".
+    expect(envExample).toContain("REQUIRED_SELECTED_FEATURE");
+    expect(envExample).toContain("REQUIRED_FOR_VERCEL_CRON_SECURITY");
+    // Must document that the project owner configures this in Vercel settings.
+    expect(envExample).toMatch(/owner must configure|project owner must/i);
+    // Must NOT claim Vercel injects it automatically (that was the incorrect classification).
+    expect(envExample).not.toMatch(/Vercel injects automatically/);
+  });
+
+  it("CRON_SECRET documentation states Vercel sends it in Authorization header", () => {
+    expect(envExample).toMatch(/Authorization.*Bearer|Bearer.*Authorization/);
+  });
+
+  it("CRON_SECRET documentation covers Vercel plan requirement for per-minute schedule", () => {
+    // The vercel.json schedule is "* * * * *" (every minute) which requires Pro plan.
+    expect(envExample).toMatch(/Pro plan|Hobby plan|VERCEL_PLAN_UPGRADE_REQUIRED/);
   });
 
   it("does not claim AUTH_SECRET is required to run the session auth flow", () => {

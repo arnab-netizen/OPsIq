@@ -9,7 +9,11 @@ import * as bcrypt from "bcryptjs";
 
 const { Pool } = pg;
 const DEMO_EMAIL = "operator@demo.local";
-const DEMO_PASSWORD = "demo-password-123";
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "";
+if (!DEMO_PASSWORD) {
+  console.error("DEMO_PASSWORD env var required — set it to the staging demo user password");
+  process.exit(1);
+}
 
 async function checkLoginPrerequisites() {
   const databaseUrl = process.env.DATABASE_URL;

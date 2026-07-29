@@ -25,6 +25,13 @@
 
 export {};
 
+// MUTATION CLASSIFICATION:
+//   USER_WORKSPACE_CREATION  — user and workspace created (permanent, no cleanup)
+//   BUSINESS_RECORD_CREATION — business record created (permanent, no cleanup)
+//   OPERATIONS_RECORDS       — snapshots, diagnoses, actions, verifications (permanent)
+
+import { enforceProductionGuard, resolveSmokePassword } from "./lib/smoke-production-guard.js";
+
 const baseUrl = (process.env.BASE_URL || "https://o-ps-iq.vercel.app").replace(/\/+$/, "");
 const dryRun = process.env.DRY_RUN === "true" || process.argv.includes("--dry-run");
 const showHelp = process.argv.includes("--help") || process.argv.includes("-h");
@@ -32,9 +39,20 @@ const expectedCommit = (process.env.EXPECTED_COMMIT || "").trim();
 
 const ts = Date.now();
 const testEmail = `opsiq-operations-runtime+${ts}@example.com`;
-const testPassword = "OperationsRuntimeProof123!";
+const testPassword = resolveSmokePassword(baseUrl, "smoke-owner-operations-runtime-proof");
 const testWorkspace = `Operations Runtime Proof ${ts}`;
 const businessName = `Operations Runtime Proof ${ts}`;
+
+if (!dryRun && !showHelp) {
+  enforceProductionGuard(baseUrl, {
+    mutationClasses: ["USER_WORKSPACE_CREATION", "BUSINESS_RECORD_CREATION", "OPERATIONS_RECORDS"],
+    mutationPreview: [
+      `target    : ${baseUrl}`,
+      `test email: ${testEmail}  (permanent — no automated cleanup)`,
+      "creates   : user, workspace, business, operations snapshots/diagnoses/actions",
+    ],
+  });
+}
 
 function maskId(id: unknown): string {
   const s = typeof id === "string" ? id : String(id ?? "");
