@@ -2,8 +2,10 @@ import { z } from "zod/v4";
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
-  AUTH_SECRET: z.string().min(1),
-  AUTH_URL: z.url(),
+  // AUTH_SECRET: optional; not used for session signing (cookie-based auth). Retained for
+  // presence checks in diagnostics endpoints and optional future integrations.
+  AUTH_SECRET: z.string().default(""),
+  // AUTH_URL: removed — was not read by any runtime code. Use NEXT_PUBLIC_APP_URL instead.
   NODE_ENV: z.enum(["development", "test", "staging", "production"]).default("development"),
   NEXT_PUBLIC_APP_NAME: z.string().default("OpsIQ"),
   NEXT_PUBLIC_APP_URL: z.url().default("http://localhost:3000"),

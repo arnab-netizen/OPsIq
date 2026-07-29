@@ -14,6 +14,7 @@
  * and the email claim uses an atomic UPDATE WHERE status='FAILED'. No double-execution.
  */
 
+import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
@@ -28,8 +29,11 @@ const CRON_ACTOR_ID = "00000000-0000-0000-0000-000000000001"; // system actor fo
 function verifyCronSecret(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  const auth = request.headers.get("authorization");
-  return auth === `Bearer ${secret}`;
+  const auth = request.headers.get("authorization") ?? "";
+  const provided = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  const a = Buffer.from(provided);
+  const b = Buffer.from(secret);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 export async function GET(request: Request): Promise<NextResponse> {

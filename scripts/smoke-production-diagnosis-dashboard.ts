@@ -1,16 +1,51 @@
 #!/usr/bin/env node
 /**
- * Production Diagnosis → Dashboard Smoke Test
+ * Diagnosis → Dashboard Smoke Test — STAGING / DEVELOPMENT ONLY
  *
- * Proves: signup → diagnosis → real recommendations on dashboard
+ * This script creates a user, workspace, and business diagnosis records in the
+ * target database. It MUST NOT run against a production database without a
+ * deliberate cleanup contract.
  *
- * Usage:
- *   BASE_URL=https://o-ps-iq.vercel.app npx tsx scripts/smoke-production-diagnosis-dashboard.ts
+ * Safety gates (enforced below):
+ *  1. If BASE_URL matches a known production pattern, the script aborts unless
+ *     SMOKE_ALLOW_PRODUCTION_WRITES=true is explicitly set.
+ *  2. The created records persist after the test — use a dedicated staging
+ *     database or ensure periodic cleanup via the admin panel.
+ *
+ * Usage (staging):
+ *   BASE_URL=https://staging.opsiq.example.com npx tsx scripts/smoke-production-diagnosis-dashboard.ts
+ *
+ * Usage (production — only with explicit write authorization):
+ *   SMOKE_ALLOW_PRODUCTION_WRITES=true BASE_URL=https://o-ps-iq.vercel.app npx tsx scripts/smoke-production-diagnosis-dashboard.ts
+ *
+ * MUTATION CLASSIFICATION:
+ *   - SESSION_MUTATION: session row created on signup (persists until expiry)
+ *   - USER_WORKSPACE_CREATION: user and workspace rows created (permanent records)
+ *   - BUSINESS_DATA_MUTATION: diagnosis and engagement records created (permanent records)
+ *
+ * CLEANUP: Records created by this script must be removed via the admin panel
+ * or database console. No automated cleanup is performed.
  */
 
 export {};
 
 const baseUrl = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
+
+// Production write guard: abort if pointing at known production URLs without explicit opt-in.
+const PRODUCTION_URL_PATTERNS = [
+  /o-ps-iq\.vercel\.app/i,
+  /opsiq\.app/i,
+  /opsiq\.com/i,
+];
+const isProductionUrl = PRODUCTION_URL_PATTERNS.some((p) => p.test(baseUrl));
+if (isProductionUrl && process.env.SMOKE_ALLOW_PRODUCTION_WRITES !== "true") {
+  console.error("ERROR: BASE_URL matches a production pattern.");
+  console.error("This script creates permanent user/workspace/diagnosis records.");
+  console.error("To run against production, set: SMOKE_ALLOW_PRODUCTION_WRITES=true");
+  console.error("Ensure you have a cleanup plan before proceeding.");
+  process.exit(1);
+}
+
 const timestamp = Date.now();
 const testEmail = `opsiq-smoke+${timestamp}@example.com`;
 const testPassword = "ProductionTest123!";

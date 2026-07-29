@@ -9,8 +9,8 @@
  */
 
 const BASE_URL = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
-const DEMO_EMAIL = "operator@demo.local";
-const DEMO_PASSWORD = "demo-password-123";
+const DEMO_EMAIL = process.env.DEMO_EMAIL || "operator@demo.local";
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "";
 const OPSIQ_DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY || "not-set";
 
 // Get GitHub SHA from environment (set by workflow)
