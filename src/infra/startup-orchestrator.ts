@@ -128,12 +128,17 @@ async function performStartupChecks(): Promise<void> {
       if (!privateWorkspaceExists) {
         // Fail readiness (not crash): the misconfiguration is surfaced as a startup
         // failure so operators see it immediately, but the process is not killed.
+        // Do NOT include the workspace ID value in the error — it is a sensitive identifier.
         throw new Error(
-          `OPSIQ_PRIVATE_WORKSPACE_ID is set to "${privateWorkspaceId}" but no matching workspace was found in the database. ` +
+          "OPSIQ_PRIVATE_WORKSPACE_ID is configured but no matching workspace was found in the database. " +
           "Run scripts/seed-private-owner.ts to create it, or unset OPSIQ_PRIVATE_WORKSPACE_ID.",
         );
       }
-      logger.info("✓ STARTUP: Private workspace verified", { workspaceId: privateWorkspaceId });
+      // Log only masked form of the ID for operator diagnostics.
+      const maskedId = privateWorkspaceId.length > 8
+        ? `${privateWorkspaceId.slice(0, 4)}...${privateWorkspaceId.slice(-4)}`
+        : "***";
+      logger.info("✓ STARTUP: Private workspace verified", { workspaceId: maskedId });
     }
 
     const duration = Date.now() - startTime;

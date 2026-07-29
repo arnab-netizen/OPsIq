@@ -43,6 +43,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Print and verify checked-out SHA
+        run: |
+          CURRENT_SHA=$(git rev-parse HEAD)
+          MAIN_SHA=$(git rev-parse origin/main)
+          echo "Checked-out SHA: $CURRENT_SHA"
+          echo "origin/main SHA: $MAIN_SHA"
+          # Verify the checked-out commit is an ancestor of (or equal to) main.
+          if ! git merge-base --is-ancestor "$CURRENT_SHA" "$MAIN_SHA" && [ "$CURRENT_SHA" != "$MAIN_SHA" ]; then
+            echo "::error::Checked-out SHA ($CURRENT_SHA) is not an ancestor of origin/main. Aborting."
+            exit 1
+          fi
+          echo "✓ SHA ancestry verified"
+          echo "MIGRATION_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
+
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -75,56 +89,75 @@ jobs:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: npx prisma validate
 
-      - name: Check pending migrations
+      - name: Validate DATABASE_URL safety
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
-          # Fail if placeholder strings detected in DATABASE_URL
+          # Reject obvious placeholder values.
           if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
             echo "::error::DATABASE_URL contains placeholder value - secret not properly configured"
             exit 1
           fi
-          npx prisma migrate status 2>&1 | tee migration-status.txt
-          # Exit 0 to allow the deploy step to run regardless of pending state.
+          # Extract host for logging WITHOUT printing credentials.
+          DB_HOST=$(node -e "try { const u = new URL(process.env.DATABASE_URL); console.log(u.hostname); } catch(e) { console.log('unparseable'); }" 2>/dev/null || echo "unparseable")
+          echo "Database host: $DB_HOST"
+          # Reject Neon pooler URL — migrations require a direct connection (no pgbouncer/advisory-lock issues).
+          if echo "$DB_HOST" | grep -q '\-pooler\.'; then
+            echo "::error::DATABASE_URL hostname contains '-pooler.' — migrations require a DIRECT (non-pooler) Neon URL."
+            echo "::error::Set PRODUCTION_DATABASE_URL in GitHub Secrets to the direct endpoint (without '-pooler' in the hostname)."
+            exit 1
+          fi
+          echo "✓ DATABASE_URL safety checks passed (host: $DB_HOST)"
+
+      - name: Check pending migrations (pre-deploy)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "=== Pre-deploy migration status ==="
+          npx prisma migrate status 2>&1 | tee migration-status-before.txt
+          echo "=== End pre-deploy status ==="
+          # Exit 0 to allow the deploy step to run; the deploy step is authoritative.
           exit 0
 
       - name: Deploy migrations
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-        run: |
-          # Fail if placeholder strings detected in DATABASE_URL
-          if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
-            echo "::error::DATABASE_URL contains placeholder value - secret not properly configured"
-            exit 1
-          fi
-          npx prisma migrate deploy
+        run: npx prisma migrate deploy
 
-      - name: Verify database connection (no secrets logged)
+      - name: Verify migration status (post-deploy)
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
-          node -e "
-            const url = process.env.DATABASE_URL;
-            if (!url) {
-              console.error('ERROR: PRODUCTION_DATABASE_URL not set');
-              process.exit(1);
-            }
-            // Extract host without password
-            const host = url.match(/@([^/]+)\//)?.[1] || 'unknown';
-            console.log('Database host: ' + host);
-            console.log('✓ Database connection string validated');
-          "
+          echo "=== Post-deploy migration status ==="
+          STATUS_OUTPUT=$(npx prisma migrate status 2>&1)
+          echo "$STATUS_OUTPUT" | tee migration-status-after.txt
+          echo "=== End post-deploy status ==="
+          # Fail if any migration is not applied.
+          if echo "$STATUS_OUTPUT" | grep -qiE 'pending|failed|not applied'; then
+            echo "::error::One or more migrations remain pending or failed after deploy. Inspect migration-status-after.txt."
+            exit 1
+          fi
+          echo "✓ All migrations applied successfully"
 
       - name: Migration summary
         if: always()
         run: |
-          echo "## Production Database Migration Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Environment: production" >> $GITHUB_STEP_SUMMARY
-          echo "- Timestamp: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
-          echo "- Operation: prisma migrate deploy (no seed, no reset)" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: Migrations deployed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Important:** Verify the production app is healthy after migrations." >> $GITHUB_STEP_SUMMARY
-          echo "Recommended manual post-migration check: \`npm run deployment:smoke <PRODUCTION_URL>\`." >> $GITHUB_STEP_SUMMARY
-          echo "If migrations failed, consult docs/MIGRATION_DEPLOYMENT_RUNBOOK.md before redeploying." >> $GITHUB_STEP_SUMMARY
+          echo "## Production Database Migration Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Environment | production |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Timestamp | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Migration SHA | \`${MIGRATION_SHA:-unknown}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Operation | prisma migrate deploy (no seed, no reset) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f migration-status-after.txt ]; then
+            echo "### Post-deploy migration status" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat migration-status-after.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Important:** Verify the production app is healthy after migrations." >> "$GITHUB_STEP_SUMMARY"
+          echo "Recommended manual post-migration check: deploy f4e7ed10 to Vercel and confirm build succeeds." >> "$GITHUB_STEP_SUMMARY"
+          echo "If migrations failed, consult docs/MIGRATION_DEPLOYMENT_RUNBOOK.md before redeploying." >> "$GITHUB_STEP_SUMMARY"

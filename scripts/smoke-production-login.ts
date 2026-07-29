@@ -2,15 +2,34 @@
 // @ts-nocheck
 /**
  * Production Login Smoke Test
- * Tests /api/auth/login endpoint with demo credentials
+ *
+ * Tests the /api/auth/login endpoint with the demo operator credentials.
+ *
+ * MUTATION CLASSIFICATION:
+ *   SESSION_MUTATION — a database session row is created on a successful login.
+ *   The session persists until it expires or is explicitly revoked. This script
+ *   does NOT clean up the created session automatically. Each run leaves one
+ *   orphaned session row in the database. Acceptable for infrequent smoke runs;
+ *   for high-frequency testing use a staging environment.
+ *
+ * PREREQUISITES:
+ *   - The demo operator account (DEMO_EMAIL) must exist in the database.
+ *   - DEMO_PASSWORD must be supplied via environment variable — do NOT hardcode
+ *     credentials in this script.
  *
  * Usage:
- *   BASE_URL=https://o-ps-iq.vercel.app npx tsx scripts/smoke-production-login.ts
+ *   DEMO_PASSWORD=<password> BASE_URL=https://o-ps-iq.vercel.app npx tsx scripts/smoke-production-login.ts
  */
 
 const BASE_URL = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
-const DEMO_EMAIL = "operator@demo.local";
-const DEMO_PASSWORD = "demo-password-123";
+const DEMO_EMAIL = process.env.DEMO_EMAIL || "operator@demo.local";
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
+
+if (!DEMO_PASSWORD) {
+  console.error("ERROR: DEMO_PASSWORD environment variable is required.");
+  console.error("Usage: DEMO_PASSWORD=<password> npx tsx scripts/smoke-production-login.ts");
+  process.exit(1);
+}
 
 interface LoginResponse {
   user?: {

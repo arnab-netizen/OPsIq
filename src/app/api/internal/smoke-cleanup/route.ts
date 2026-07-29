@@ -17,6 +17,7 @@ import { db } from "@/lib/db";
 import { SMOKE_EMAIL } from "@/lib/smoke-identity";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 function isAllowedEnvironment(): boolean {
   const env = process.env.NODE_ENV;
@@ -26,18 +27,12 @@ function isAllowedEnvironment(): boolean {
   return env === "development" || env === "test";
 }
 
-function verifyDiagnosticKey(request: Request): boolean {
-  const key = process.env.OPSIQ_DIAGNOSTIC_KEY;
-  if (!key || key === "not-set") return false;
-  return request.headers.get("x-diagnostic-key") === key;
-}
-
 export async function DELETE(request: Request): Promise<NextResponse> {
   if (!isAllowedEnvironment()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (!verifyDiagnosticKey(request)) {
+  if (!verifyDiagnosticKeyFromRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

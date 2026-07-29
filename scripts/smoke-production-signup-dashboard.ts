@@ -1,16 +1,49 @@
 #!/usr/bin/env node
 /**
- * Production Signup and Real Dashboard Smoke Test
+ * Dashboard Smoke Test — STAGING / DEVELOPMENT ONLY
  *
- * Proves: signup → auto-login → real dashboard (no mock data)
+ * This script creates a user and workspace in the target database. It MUST NOT
+ * run against a production database without a deliberate cleanup contract.
  *
- * Usage:
- *   BASE_URL=https://o-ps-iq.vercel.app npx tsx scripts/smoke-production-signup-dashboard.ts
+ * Safety gates (enforced below):
+ *  1. If BASE_URL matches a known production pattern, the script aborts unless
+ *     SMOKE_ALLOW_PRODUCTION_WRITES=true is explicitly set.
+ *  2. The created records persist after the test — use a dedicated staging
+ *     database or ensure periodic cleanup via the admin panel.
+ *
+ * Usage (staging):
+ *   BASE_URL=https://staging.opsiq.example.com npx tsx scripts/smoke-production-signup-dashboard.ts
+ *
+ * Usage (production — only with explicit write authorization):
+ *   SMOKE_ALLOW_PRODUCTION_WRITES=true BASE_URL=https://o-ps-iq.vercel.app npx tsx scripts/smoke-production-signup-dashboard.ts
+ *
+ * MUTATION CLASSIFICATION:
+ *   - SESSION_MUTATION: session row created on signup (persists until expiry)
+ *   - USER_WORKSPACE_CREATION: user and workspace rows created (permanent records)
+ *
+ * CLEANUP: Records created by this script must be removed via the admin panel
+ * or database console. No automated cleanup is performed.
  */
 
 export {};
 
 const baseUrl = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
+
+// Production write guard: abort if pointing at known production URLs without explicit opt-in.
+const PRODUCTION_URL_PATTERNS = [
+  /o-ps-iq\.vercel\.app/i,
+  /opsiq\.app/i,
+  /opsiq\.com/i,
+];
+const isProductionUrl = PRODUCTION_URL_PATTERNS.some((p) => p.test(baseUrl));
+if (isProductionUrl && process.env.SMOKE_ALLOW_PRODUCTION_WRITES !== "true") {
+  console.error("ERROR: BASE_URL matches a production pattern.");
+  console.error("This script creates permanent user/workspace records.");
+  console.error("To run against production, set: SMOKE_ALLOW_PRODUCTION_WRITES=true");
+  console.error("Ensure you have a cleanup plan before proceeding.");
+  process.exit(1);
+}
+
 const timestamp = Date.now();
 const testEmail = `opsiq-smoke+${timestamp}@example.com`;
 const testPassword = "ProductionTest123!";

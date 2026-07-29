@@ -27,6 +27,13 @@
 
 export {};
 
+// MUTATION CLASSIFICATION:
+//   USER_WORKSPACE_CREATION  — user and workspace created (permanent, no cleanup)
+//   BUSINESS_RECORD_CREATION — business record created (permanent, no cleanup)
+//   CASHFLOW_RECORDS         — snapshots, diagnoses, actions, verifications (permanent)
+
+import { enforceProductionGuard, resolveSmokePassword } from "./lib/smoke-production-guard.js";
+
 const baseUrl = (process.env.BASE_URL || "https://o-ps-iq.vercel.app").replace(/\/+$/, "");
 const dryRun = process.env.DRY_RUN === "true" || process.argv.includes("--dry-run");
 const showHelp = process.argv.includes("--help") || process.argv.includes("-h");
@@ -34,9 +41,20 @@ const expectedCommit = (process.env.EXPECTED_COMMIT || "").trim();
 
 const ts = Date.now();
 const testEmail = `opsiq-cashflow-runtime+${ts}@example.com`;
-const testPassword = "CashflowRuntimeProof123!";
+const testPassword = resolveSmokePassword(baseUrl, "smoke-owner-cashflow-runtime-proof");
 const testWorkspace = `Cashflow Runtime Proof ${ts}`;
 const businessName = `Cashflow Runtime Proof ${ts}`;
+
+if (!dryRun && !showHelp) {
+  enforceProductionGuard(baseUrl, {
+    mutationClasses: ["USER_WORKSPACE_CREATION", "BUSINESS_RECORD_CREATION", "CASHFLOW_RECORDS"],
+    mutationPreview: [
+      `target    : ${baseUrl}`,
+      `test email: ${testEmail}  (permanent — no automated cleanup)`,
+      "creates   : user, workspace, business, cashflow snapshots/diagnoses/actions/verifications",
+    ],
+  });
+}
 
 function maskId(id: unknown): string {
   const s = typeof id === "string" ? id : String(id ?? "");
