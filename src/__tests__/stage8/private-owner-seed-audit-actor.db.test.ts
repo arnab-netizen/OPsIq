@@ -43,11 +43,38 @@ const SKIP = !SHOULD_RUN_DB_TESTS;
 
 let prisma: Awaited<ReturnType<typeof makePrisma>>;
 
+// ---------------------------------------------------------------------------
+// Production-URL guard — hard-fail if the resolved URL could be production.
+// The test creates and deletes real records; it must never touch a remote DB.
+// Allow only loopback addresses (127.x.x.x / localhost / ::1).
+// ---------------------------------------------------------------------------
+
+function assertLocalUrl(url: string): void {
+  let hostname = "";
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    throw new Error(`[stage8-test] DATABASE_URL is not a valid URL: "${url}"`);
+  }
+  const isLocal =
+    hostname === "localhost" ||
+    hostname === "::1" ||
+    /^127(\.\d+){3}$/.test(hostname);
+  if (!isLocal) {
+    throw new Error(
+      `[stage8-test] SAFETY GATE: DATABASE_URL resolves to a non-local host ("${hostname}"). ` +
+        "These tests may only run against a local throwaway PostgreSQL instance. " +
+        "Aborting to protect production data."
+    );
+  }
+}
+
 async function makePrisma() {
   const { PrismaClient } = await import("@/generated/prisma/client");
   const { PrismaPg } = await import("@prisma/adapter-pg");
   const pg = await import("pg");
   const url = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL ?? "";
+  assertLocalUrl(url);
   const pool = new pg.Pool({ connectionString: url });
   return new PrismaClient({ adapter: new PrismaPg(pool) }) as InstanceType<typeof PrismaClient>;
 }
