@@ -104,13 +104,9 @@ async function seed(): Promise<void> {
     const now = new Date();
     const hashedPassword = await bcrypt.hash(PRIVATE_OWNER_PASSWORD, 10);
 
-    // System actor for audit events — avoids chicken-and-egg where the new user
-    // doesn't yet exist when we need to record who performed the seed.
-    const systemActorId = "00000000-0000-0000-0000-000000000001";
-
     await prisma.$transaction(async (tx) => {
-      // 1. User — upsert by stable UUID
-      await tx.user.upsert({
+      // 1. User — upsert by stable UUID; returned ID is used as the audit actor below.
+      const owner = await tx.user.upsert({
         where: { id: OPSIQ_PRIVATE_OWNER_USER_ID },
         update: {
           // Re-hash on each seed run so password changes are applied idempotently
@@ -216,7 +212,7 @@ async function seed(): Promise<void> {
           revokedBy: null,
           revokeReason: null,
           approvalStatus: "approved",
-          approvedBy: systemActorId,
+          approvedBy: owner.id,
           approvedAt: now,
           updatedAt: now,
         },
@@ -224,10 +220,10 @@ async function seed(): Promise<void> {
           workspaceId: OPSIQ_PRIVATE_WORKSPACE_ID,
           userId: OPSIQ_PRIVATE_OWNER_USER_ID,
           role: "OWNER",
-          grantedBy: systemActorId,
+          grantedBy: owner.id,
           grantedAt: now,
           approvalStatus: "approved",
-          approvedBy: systemActorId,
+          approvedBy: owner.id,
           approvedAt: now,
           updatedAt: now,
         },
@@ -247,8 +243,8 @@ async function seed(): Promise<void> {
           id: eventId,
           eventName: AUDIT_EVENTS.PRIVATE_OWNER_SEED_EXECUTED,
           workspaceId: OPSIQ_PRIVATE_WORKSPACE_ID,
-          actorId: systemActorId,
-          actorType: "system",
+          actorId: owner.id,
+          actorType: "user",
           entityType: "workspace",
           entityId: OPSIQ_PRIVATE_WORKSPACE_ID,
           payload: {
