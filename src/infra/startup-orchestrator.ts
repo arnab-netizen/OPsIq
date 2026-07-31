@@ -6,7 +6,7 @@
  * Works across middleware, handlers, instances, restarts.
  */
 
-import { setStartupStatus, getStartupStatus } from "@/services/startup-status";
+import { setStartupStatus, getStartupStatus, resolveInstanceId } from "@/services/startup-status";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 let startupPromise: Promise<void> | null = null;
@@ -21,6 +21,11 @@ const STARTUP_TIMEOUT_MS = 30000;
  *            → STARTING → FAILED (error)
  */
 export async function ensureStartupComplete(): Promise<void> {
+  // Fail closed before anything else: a deployment runtime that cannot prove
+  // which deployment it is must not read, write, or inherit any status row.
+  // Throws MissingDeploymentIdentityError, which callers already handle.
+  resolveInstanceId();
+
   const status = await getStartupStatus();
 
   // Terminal success - no retry needed.

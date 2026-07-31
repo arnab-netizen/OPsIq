@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
+import { resolveInstanceId } from "@/services/startup-status";
 
 export async function GET(request: NextRequest) {
   // Require diagnostic key for readiness status access
@@ -21,10 +22,23 @@ export async function GET(request: NextRequest) {
     );
   }
   try {
-    // Get current readiness status
-    const startupStatus = await db.startupStatus.findFirst({
-      orderBy: { updatedAt: "desc" },
-    });
+    // Get current readiness status for THIS deployment only. Without the
+    // instance filter this returned whichever row was most recently updated —
+    // including rows written by earlier deployments.
+    let instanceId: string | null = null;
+    try {
+      instanceId = resolveInstanceId();
+    } catch {
+      // No deployment identity: report UNKNOWN rather than another deployment's row.
+      instanceId = null;
+    }
+
+    const startupStatus = instanceId
+      ? await db.startupStatus.findFirst({
+          where: { instanceId },
+          orderBy: { updatedAt: "desc" },
+        })
+      : null;
 
     const currentStatus = startupStatus?.status || "UNKNOWN";
     const lastUpdate = startupStatus?.updatedAt || new Date();
