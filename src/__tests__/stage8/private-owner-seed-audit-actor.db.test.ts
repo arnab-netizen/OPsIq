@@ -9,6 +9,11 @@
  * Fix: capture the owner User returned by step 1 upsert; use `owner.id` as
  * `actorId` with `actorType: "user"`.
  *
+ * Tests 1-9 and 11 call `runPrivateOwnerSeedTransaction` imported directly from
+ * the production seed script — the exact function the CLI invokes. Tests 10 and
+ * 12 are schema-level assertions (direct DB calls) that prove the FK constraint
+ * still exists independently of the seed path.
+ *
  * Coverage (12 requirements):
  *  1.  Fresh migrated DB: seed transaction completes without error.
  *  2.  User: expected owner user record exists.
@@ -19,7 +24,7 @@
  *  7.  Private mode access: approved OWNER access record exists.
  *  8.  Audit event: PRIVATE_OWNER_SEED_EXECUTED audit event exists.
  *  9.  Audit actor integrity: actorId references an existing users.id; actorType = "user".
- * 10.  Atomic rollback: invalid actorId in the audit step causes P2003; all
+ * 10.  Atomic rollback (schema-level): invalid actorId in the audit step causes P2003; all
  *      earlier mutations roll back — zero user/workspace/audit records remain.
  * 11.  Idempotency: running the same transaction twice creates no duplicate core records.
  * 12.  FK not weakened: inserting an audit event with a non-existent actorId still raises P2003.
@@ -30,10 +35,13 @@
 
 import { describe, it, expect, afterEach, beforeAll, afterAll } from "vitest";
 import { v4 as randomUUID } from "uuid";
-import { createHash } from "crypto";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { ROLES } from "@/domain/constants/roles";
+import {
+  runPrivateOwnerSeedTransaction,
+  type PrivateOwnerSeedParams,
+} from "../../../scripts/seed-private-owner";
 
 const SKIP = !SHOULD_RUN_DB_TESTS;
 
@@ -88,131 +96,13 @@ const WORKSPACE_ID = randomUUID();
 const OWNER_EMAIL = `seed-reg-${OWNER_ID.slice(0, 8)}@test.local`;
 const HASHED_PW = "$2a$10$testhashedpasswordvalue.not.real";
 
-// ---------------------------------------------------------------------------
-// Core seed transaction — mirrors scripts/seed-private-owner.ts exactly.
-// ---------------------------------------------------------------------------
-
-async function runSeedTransaction(now: Date) {
-  return prisma.$transaction(async (tx) => {
-    // Step 1: User upsert — owner.id is the audit actor
-    const owner = await tx.user.upsert({
-      where: { id: OWNER_ID },
-      update: { hashedPassword: HASHED_PW, isActive: true, updatedAt: now },
-      create: { id: OWNER_ID, email: OWNER_EMAIL, hashedPassword: HASHED_PW, isActive: true, updatedAt: now },
-    });
-
-    // Step 2: Workspace
-    await tx.workspace.upsert({
-      where: { id: WORKSPACE_ID },
-      update: { isActive: true },
-      create: {
-        id: WORKSPACE_ID,
-        name: "Private Owner Workspace",
-        slug: `private-owner-${WORKSPACE_ID.slice(0, 8)}`,
-        isActive: true,
-        createdBy: OWNER_ID,
-      },
-    });
-
-    // Step 3: WorkspaceMembership
-    await tx.workspaceMembership.upsert({
-      where: { workspaceId_userId: { workspaceId: WORKSPACE_ID, userId: OWNER_ID } },
-      update: { role: "owner", isActive: true, removedAt: null },
-      create: {
-        workspaceId: WORKSPACE_ID,
-        userId: OWNER_ID,
-        role: "owner",
-        addedBy: OWNER_ID,
-        isActive: true,
-      },
-    });
-
-    // Step 4: UserRoleAssignment
-    await tx.userRoleAssignment.upsert({
-      where: {
-        userId_role_scope_scopeId: {
-          userId: OWNER_ID,
-          role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER,
-          scope: "workspace",
-          scopeId: WORKSPACE_ID,
-        },
-      },
-      update: { isActive: true, revokedAt: null },
-      create: {
-        id: randomUUID(),
-        userId: OWNER_ID,
-        role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER,
-        scope: "workspace",
-        scopeId: WORKSPACE_ID,
-        grantedAt: now,
-        isActive: true,
-      },
-    });
-
-    // Step 5: ClientAccount
-    await tx.clientAccount.upsert({
-      where: { id: WORKSPACE_ID },
-      update: { status: "active", updatedAt: now },
-      create: {
-        id: WORKSPACE_ID,
-        workspaceId: WORKSPACE_ID,
-        name: "Private Owner Account",
-        status: "active",
-        visibility: "internal",
-        updatedAt: now,
-      },
-    });
-
-    // Step 6: PrivateModeAccess
-    await tx.privateModeAccess.upsert({
-      where: { workspaceId_userId: { workspaceId: WORKSPACE_ID, userId: OWNER_ID } },
-      update: {
-        role: "OWNER",
-        revokedAt: null,
-        revokedBy: null,
-        revokeReason: null,
-        approvalStatus: "approved",
-        approvedBy: owner.id,
-        approvedAt: now,
-        updatedAt: now,
-      },
-      create: {
-        workspaceId: WORKSPACE_ID,
-        userId: OWNER_ID,
-        role: "OWNER",
-        grantedBy: owner.id,
-        grantedAt: now,
-        approvalStatus: "approved",
-        approvedBy: owner.id,
-        approvedAt: now,
-        updatedAt: now,
-      },
-    });
-
-    // Step 7: AuditEvent — actorId = owner.id (the fix)
-    const eventId = randomUUID();
-    const hashInput = `${eventId}|${WORKSPACE_ID}|${AUDIT_EVENTS.PRIVATE_OWNER_SEED_EXECUTED}|${now.toISOString()}`;
-    const previousHash = createHash("sha256").update(hashInput).digest("hex");
-
-    await tx.auditEvent.create({
-      data: {
-        id: eventId,
-        eventName: AUDIT_EVENTS.PRIVATE_OWNER_SEED_EXECUTED,
-        workspaceId: WORKSPACE_ID,
-        actorId: owner.id,
-        actorType: "user",
-        entityType: "workspace",
-        entityId: WORKSPACE_ID,
-        payload: { userId: OWNER_ID, email: OWNER_EMAIL, role: "OWNER", action: "seed" },
-        previousHash,
-        visibility: "internal",
-        occurredAt: now,
-      },
-    });
-
-    return owner;
-  });
-}
+const SEED_PARAMS: PrivateOwnerSeedParams = {
+  ownerId: OWNER_ID,
+  workspaceId: WORKSPACE_ID,
+  email: OWNER_EMAIL,
+  hashedPassword: HASHED_PW,
+  now: new Date(),
+};
 
 // ---------------------------------------------------------------------------
 // Cleanup helper
@@ -249,13 +139,12 @@ describe.skipIf(SKIP)("[db] Stage 8 — private-owner seed audit-actor regressio
 
   // ── 1. Fresh migrated DB: transaction completes ───────────────────────────
   it("1. seed transaction completes on a fresh migrated DB without error", async () => {
-    const now = new Date();
-    await expect(runSeedTransaction(now)).resolves.toBeDefined();
+    await expect(runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS)).resolves.toBeUndefined();
   });
 
   // ── 2. User exists ────────────────────────────────────────────────────────
   it("2. expected owner user record exists after seed", async () => {
-    await runSeedTransaction(new Date());
+    await runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS);
     const user = await prisma.user.findUnique({ where: { id: OWNER_ID } });
     expect(user).not.toBeNull();
     expect(user!.email).toBe(OWNER_EMAIL);
@@ -264,7 +153,7 @@ describe.skipIf(SKIP)("[db] Stage 8 — private-owner seed audit-actor regressio
 
   // ── 3. Workspace exists ───────────────────────────────────────────────────
   it("3. expected workspace record exists after seed", async () => {
-    await runSeedTransaction(new Date());
+    await runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS);
     const ws = await prisma.workspace.findUnique({ where: { id: WORKSPACE_ID } });
     expect(ws).not.toBeNull();
     expect(ws!.isActive).toBe(true);
@@ -272,7 +161,7 @@ describe.skipIf(SKIP)("[db] Stage 8 — private-owner seed audit-actor regressio
 
   // ── 4. WorkspaceMembership exists ────────────────────────────────────────
   it("4. owner workspace membership record exists", async () => {
-    await runSeedTransaction(new Date());
+    await runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS);
     const mem = await prisma.workspaceMembership.findUnique({
       where: { workspaceId_userId: { workspaceId: WORKSPACE_ID, userId: OWNER_ID } },
     });
@@ -283,7 +172,7 @@ describe.skipIf(SKIP)("[db] Stage 8 — private-owner seed audit-actor regressio
 
   // ── 5. UserRoleAssignment exists with correct scope ───────────────────────
   it("5. OWNER role assignment exists with workspace scope", async () => {
-    await runSeedTransaction(new Date());
+    await runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS);
     const assignment = await prisma.userRoleAssignment.findFirst({
       where: {
         userId: OWNER_ID,
@@ -298,7 +187,7 @@ describe.skipIf(SKIP)("[db] Stage 8 — private-owner seed audit-actor regressio
 
   // ── 6. ClientAccount exists ───────────────────────────────────────────────
   it("6. expected client account record exists", async () => {
-    await runSeedTransaction(new Date());
+    await runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS);
     const ca = await prisma.clientAccount.findUnique({ where: { id: WORKSPACE_ID } });
     expect(ca).not.toBeNull();
     expect(ca!.status).toBe("active");
@@ -306,7 +195,7 @@ describe.skipIf(SKIP)("[db] Stage 8 — private-owner seed audit-actor regressio
 
   // ── 7. PrivateModeAccess exists as approved OWNER ─────────────────────────
   it("7. private mode access record is approved OWNER", async () => {
-    await runSeedTransaction(new Date());
+    await runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS);
     const pma = await prisma.privateModeAccess.findUnique({
       where: { workspaceId_userId: { workspaceId: WORKSPACE_ID, userId: OWNER_ID } },
     });
@@ -318,7 +207,7 @@ describe.skipIf(SKIP)("[db] Stage 8 — private-owner seed audit-actor regressio
 
   // ── 8. Audit event exists ────────────────────────────────────────────────
   it("8. PRIVATE_OWNER_SEED_EXECUTED audit event exists", async () => {
-    await runSeedTransaction(new Date());
+    await runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS);
     const event = await prisma.auditEvent.findFirst({
       where: {
         workspaceId: WORKSPACE_ID,
@@ -332,7 +221,7 @@ describe.skipIf(SKIP)("[db] Stage 8 — private-owner seed audit-actor regressio
 
   // ── 9. Audit actor integrity ─────────────────────────────────────────────
   it("9. audit event actorId references an existing users.id and actorType is 'user'", async () => {
-    await runSeedTransaction(new Date());
+    await runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS);
     const event = await prisma.auditEvent.findFirst({
       where: {
         workspaceId: WORKSPACE_ID,
@@ -348,54 +237,47 @@ describe.skipIf(SKIP)("[db] Stage 8 — private-owner seed audit-actor regressio
     expect(user).not.toBeNull();
   });
 
-  // ── 10. Atomic rollback ──────────────────────────────────────────────────
+  // ── 10. Atomic rollback (schema-level) ───────────────────────────────────
+  // This is a direct DB-level test, not a reimplementation of the production seed.
+  // It proves that the schema enforces atomicity: if an audit event with a ghost
+  // actorId is the LAST write in a transaction containing earlier seed mutations,
+  // the FK violation rolls back ALL prior writes. This reproduces the original bug class.
   it("10. invalid audit actorId causes P2003; all earlier seed mutations roll back", async () => {
     const GHOST_ID = "00000000-0000-0000-0000-000000000001"; // never in users
     const now = new Date();
 
     const attempt = prisma.$transaction(async (tx) => {
-      // Reproduce the pre-fix broken path: step 1–6 succeed, step 7 uses a
-      // UUID that does not exist in users → P2003 → full rollback.
-      const owner = await tx.user.upsert({
+      // Mirror steps 1-6 of the production seed directly against the tx client
+      // so we can inject the broken step 7 (ghost actorId) to prove atomicity.
+      await tx.user.upsert({
         where: { id: OWNER_ID },
         update: { hashedPassword: HASHED_PW, isActive: true, updatedAt: now },
         create: { id: OWNER_ID, email: OWNER_EMAIL, hashedPassword: HASHED_PW, isActive: true, updatedAt: now },
       });
-
       await tx.workspace.upsert({
         where: { id: WORKSPACE_ID },
         update: { isActive: true },
-        create: {
-          id: WORKSPACE_ID,
-          name: "Private Owner Workspace",
-          slug: `private-owner-${WORKSPACE_ID.slice(0, 8)}`,
-          isActive: true,
-          createdBy: owner.id,
-        },
+        create: { id: WORKSPACE_ID, name: "Private Owner Workspace", slug: `private-owner-${WORKSPACE_ID.slice(0, 8)}`, isActive: true, createdBy: OWNER_ID },
       });
-
       await tx.workspaceMembership.upsert({
         where: { workspaceId_userId: { workspaceId: WORKSPACE_ID, userId: OWNER_ID } },
         update: { role: "owner", isActive: true, removedAt: null },
         create: { workspaceId: WORKSPACE_ID, userId: OWNER_ID, role: "owner", addedBy: OWNER_ID, isActive: true },
       });
-
       await tx.userRoleAssignment.upsert({
         where: { userId_role_scope_scopeId: { userId: OWNER_ID, role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER, scope: "workspace", scopeId: WORKSPACE_ID } },
         update: { isActive: true, revokedAt: null },
         create: { id: randomUUID(), userId: OWNER_ID, role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER, scope: "workspace", scopeId: WORKSPACE_ID, grantedAt: now, isActive: true },
       });
-
       await tx.clientAccount.upsert({
         where: { id: WORKSPACE_ID },
         update: { status: "active", updatedAt: now },
         create: { id: WORKSPACE_ID, workspaceId: WORKSPACE_ID, name: "Private Owner Account", status: "active", visibility: "internal", updatedAt: now },
       });
-
       await tx.privateModeAccess.upsert({
         where: { workspaceId_userId: { workspaceId: WORKSPACE_ID, userId: OWNER_ID } },
-        update: { role: "OWNER", revokedAt: null, revokedBy: null, revokeReason: null, approvalStatus: "approved", approvedBy: owner.id, approvedAt: now, updatedAt: now },
-        create: { workspaceId: WORKSPACE_ID, userId: OWNER_ID, role: "OWNER", grantedBy: owner.id, grantedAt: now, approvalStatus: "approved", approvedBy: owner.id, approvedAt: now, updatedAt: now },
+        update: { role: "OWNER", revokedAt: null, revokedBy: null, revokeReason: null, approvalStatus: "approved", approvedBy: OWNER_ID, approvedAt: now, updatedAt: now },
+        create: { workspaceId: WORKSPACE_ID, userId: OWNER_ID, role: "OWNER", grantedBy: OWNER_ID, grantedAt: now, approvalStatus: "approved", approvedBy: OWNER_ID, approvedAt: now, updatedAt: now },
       });
 
       // Inject the pre-fix defect: ghost UUID as actorId → P2003
@@ -440,9 +322,8 @@ describe.skipIf(SKIP)("[db] Stage 8 — private-owner seed audit-actor regressio
 
   // ── 11. Idempotency: no duplicates on second run ──────────────────────────
   it("11. running the seed transaction twice creates no duplicate core records", async () => {
-    const now = new Date();
-    await runSeedTransaction(now);
-    await runSeedTransaction(now);
+    await runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS);
+    await runPrivateOwnerSeedTransaction(prisma, SEED_PARAMS);
 
     const [users, workspaces, memberships, accounts, access] = await Promise.all([
       prisma.user.count({ where: { id: OWNER_ID } }),
