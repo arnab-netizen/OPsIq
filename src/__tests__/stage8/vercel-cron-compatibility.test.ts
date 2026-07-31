@@ -277,6 +277,166 @@ describe("[stage8] 4/5/9. duplicate, concurrency and retry safety are preserved"
   });
 });
 
+describe("[stage8] drain-loop termination and call bounds", () => {
+  const MAX_DRAIN_PASSES = 25;
+  const EMAIL_PAGE = 20;
+
+  const fullEmailPage = (tag: string) =>
+    Array.from({ length: EMAIL_PAGE }, (_, i) => ({ id: `${tag}-${i}`, workspaceId: "ws" }));
+
+  it("1. zero progress in both subsystems terminates after one pass each", async () => {
+    processDue.mockResolvedValue(0);
+    alertFindMany.mockResolvedValue([]);
+
+    const { GET } = await loadRoute();
+    const body = await (await GET(cronRequest(SECRET))).json();
+
+    expect(processDue).toHaveBeenCalledTimes(1);
+    expect(alertFindMany).toHaveBeenCalledTimes(1);
+    expect(body.results.schedulerPasses).toBe(0);
+    expect(body.results.emailRetry.passes).toBe(0);
+  });
+
+  it("2. task-only progress keeps the task loop going and does not stall the email loop", async () => {
+    processDue.mockResolvedValueOnce(50).mockResolvedValueOnce(50).mockResolvedValue(0);
+    alertFindMany.mockResolvedValue([]);
+
+    const { GET } = await loadRoute();
+    const body = await (await GET(cronRequest(SECRET))).json();
+
+    expect(processDue).toHaveBeenCalledTimes(3);
+    expect(body.results.schedulerTasksProcessed).toBe(100);
+    expect(alertFindMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("3. email-only progress keeps the email loop going with no task work", async () => {
+    processDue.mockResolvedValue(0);
+    alertFindMany
+      .mockResolvedValueOnce(fullEmailPage("p1"))
+      .mockResolvedValueOnce([{ id: "tail", workspaceId: "ws" }])
+      .mockResolvedValue([]);
+
+    const { GET } = await loadRoute();
+    const body = await (await GET(cronRequest(SECRET))).json();
+
+    expect(processDue).toHaveBeenCalledTimes(1);
+    expect(alertFindMany).toHaveBeenCalledTimes(2);
+    expect(body.results.emailRetry.attempted).toBe(EMAIL_PAGE + 1);
+  });
+
+  it("4. both subsystems making progress continue independently", async () => {
+    processDue.mockResolvedValueOnce(50).mockResolvedValueOnce(3).mockResolvedValue(0);
+    alertFindMany
+      .mockResolvedValueOnce(fullEmailPage("a"))
+      .mockResolvedValueOnce(fullEmailPage("b"))
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([]);
+
+    const { GET } = await loadRoute();
+    const body = await (await GET(cronRequest(SECRET))).json();
+
+    expect(processDue).toHaveBeenCalledTimes(3);
+    expect(body.results.schedulerTasksProcessed).toBe(53);
+    expect(alertFindMany).toHaveBeenCalledTimes(3);
+    expect(body.results.emailRetry.attempted).toBe(EMAIL_PAGE * 2);
+  });
+
+  it("5/10. an endless backlog terminates at the pass cap, bounding DB calls", async () => {
+    // Never-ending work in both subsystems: the cap is the only thing that stops it.
+    processDue.mockResolvedValue(50);
+    alertFindMany.mockImplementation(async () => fullEmailPage("endless"));
+
+    const { GET } = await loadRoute();
+    const body = await (await GET(cronRequest(SECRET))).json();
+
+    expect(processDue).toHaveBeenCalledTimes(MAX_DRAIN_PASSES);
+    expect(alertFindMany).toHaveBeenCalledTimes(MAX_DRAIN_PASSES);
+
+    // Maximum theoretical rows touched in one invocation is bounded.
+    expect(body.results.schedulerTasksProcessed).toBe(MAX_DRAIN_PASSES * 50); // 1250
+    expect(body.results.emailRetry.attempted).toBe(MAX_DRAIN_PASSES * EMAIL_PAGE); // 500
+    expect(retryEmailAlert).toHaveBeenCalledTimes(MAX_DRAIN_PASSES * EMAIL_PAGE);
+  });
+
+  it("6. the shared wall-clock budget terminates the drain before the pass cap", async () => {
+    // Virtual clock: each task pass burns 20s of the 45s budget.
+    let clock = 1_700_000_000_000;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => clock);
+
+    processDue.mockImplementation(async () => {
+      clock += 20_000;
+      return 50; // always more work — only the budget can stop this
+    });
+    alertFindMany.mockResolvedValue(fullEmailPage("t"));
+
+    const { GET } = await loadRoute();
+    const body = await (await GET(cronRequest(SECRET))).json();
+
+    // Passes at t=0, 20s, 40s; the 4th check sees 60s >= 45s deadline.
+    expect(processDue).toHaveBeenCalledTimes(3);
+    expect(processDue.mock.calls.length).toBeLessThan(MAX_DRAIN_PASSES);
+    // Budget already spent, so the email loop stops before its first query.
+    expect(alertFindMany).not.toHaveBeenCalled();
+    expect(body.results.emailRetry.attempted).toBe(0);
+
+    nowSpy.mockRestore();
+  });
+
+  it("7. a throw in task processing is contained and leaves work retryable", async () => {
+    processDue.mockRejectedValue(new Error("claim failed"));
+    alertFindMany.mockResolvedValueOnce([{ id: "e1", workspaceId: "ws" }]).mockResolvedValue([]);
+
+    const { GET } = await loadRoute();
+    const res = await GET(cronRequest(SECRET));
+    const body = await res.json();
+
+    // No completion is recorded, the route does not 500, and the next
+    // invocation can re-claim because nothing was marked completed here.
+    expect(res.status).toBe(207);
+    expect(body.results.schedulerTasksProcessed).toBeUndefined();
+    expect(processDue).toHaveBeenCalledTimes(1); // throw exits the loop
+    expect(retryEmailAlert).toHaveBeenCalledTimes(1); // other subsystem unaffected
+  });
+
+  it("8. a throw in email processing is contained and leaves that alert retryable", async () => {
+    processDue.mockResolvedValue(0);
+    alertFindMany
+      .mockResolvedValueOnce([
+        { id: "x1", workspaceId: "ws" },
+        { id: "x2", workspaceId: "ws" },
+      ])
+      .mockResolvedValue([]);
+    retryEmailAlert
+      .mockRejectedValueOnce(new Error("provider 503"))
+      .mockResolvedValue({ status: "SENT", alertId: "x2", attemptCount: 1 });
+
+    const { GET } = await loadRoute();
+    const res = await GET(cronRequest(SECRET));
+    const body = await res.json();
+
+    // The thrown alert is counted failed, never marked sent, so it stays
+    // eligible for the next sweep; the sibling alert still completes.
+    expect(res.status).toBe(200);
+    expect(body.results.emailRetry.failed).toBe(1);
+    expect(body.results.emailRetry.sent).toBe(1);
+  });
+
+  it("9. no row is processed twice within one invocation", async () => {
+    alertFindMany
+      .mockResolvedValueOnce(fullEmailPage("page1"))
+      .mockResolvedValueOnce(fullEmailPage("page2"))
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([]);
+
+    const { GET } = await loadRoute();
+    await GET(cronRequest(SECRET));
+
+    const ids = retryEmailAlert.mock.calls.map((c) => c[0] as string);
+    expect(ids).toHaveLength(EMAIL_PAGE * 2);
+    expect(new Set(ids).size).toBe(ids.length); // every id exactly once
+  });
+});
+
 describe("[stage8] 10. selected cadence matches the classified requirement", () => {
   it("no production code enqueues scheduled tasks, so no task requires minute cadence", () => {
     // If this ever fails, a task producer was added: re-classify its required
