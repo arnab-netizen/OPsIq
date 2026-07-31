@@ -317,11 +317,16 @@ async function seed(): Promise<void> {
 // Entry point
 // ---------------------------------------------------------------------------
 
-(async () => {
-  try {
-    await seed();
-  } catch (err) {
-    console.error("Seed failed:", err);
-    process.exit(1);
-  }
-})();
+// Only run the seeder when executed directly (e.g. `npx tsx scripts/seed-private-owner.ts`).
+// Importing this module for `runPrivateOwnerSeedTransaction` must NOT trigger the
+// interactive confirmation prompt or env-var validation as a side effect.
+if (process.argv[1] && process.argv[1].includes("seed-private-owner")) {
+  (async () => {
+    try {
+      await seed();
+    } catch (err) {
+      console.error("Seed failed:", err);
+      process.exit(1);
+    }
+  })();
+}
