@@ -1,16 +1,16 @@
 {
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
-  "last_updated": "2026-07-28",
+  "last_updated": "2026-07-31",
   "factory_stage": "FACTORY_STAGE_7",
   "factory_stage_status": "AUTHORIZED_CONTRACT_DEFINED",
   "factory_stage_scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS",
   "active_bundle": "factory-stage-7-closure",
   "blocked_by": [],
   "owner_outcome": "Owner has proof that Stages 3, 4, 5, and 6 are implemented and accepted. Factory Stage 7 proves that OpsIQ can be deployed securely for its owner, operated without developer assistance, produce correct and actionable guidance from real business data, govern approved execution, capture outcomes and feedback, recover safely from realistic failures, and be accepted for unrestricted private owner use.",
-  "current_gap": "Factory Stage 7 contract defined. Awaiting live deployment environment setup and owner pilot session. External credentials required before live provider proof steps can begin. Initialization PR pending owner exact-SHA merge authorization.",
+  "current_gap": "Factory Stage 7 contract defined. Awaiting live deployment environment setup and owner pilot session. External credentials required before live provider proof steps can begin. Maintenance fix PR #266 (P2003 FK violation in private-owner seed audit actor) merged 2026-07-31; Main Integration run 30605104384 green on merge SHA f7d45f8a.",
   "next_target": "Owner exact-SHA merge authorization for Stage 7 initialization PR. After merge: inventory live deployment environment, produce deployment-readiness checklist, perform all non-destructive actions autonomously.",
-  "main_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
+  "main_sha": "f7d45f8a5884b64b10334f843b6b3f3f74d04e97",
   "active_branch": "claude/opsiq-stage-7-loop-main",
   "authorized_from_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
   "deployment_readiness": "FACTORY_STAGE_6_PROVEN — deployment and production readiness closure complete and accepted",
@@ -83,6 +83,14 @@
       "head_sha": "066f9dda66ab52063e3036d1c39376d26b569ada",
       "merge_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
       "result": "GREEN — Factory Stage 6 ledger closure merged; Factory Stage 7 authorized from this SHA"
+    },
+    {
+      "number": 266,
+      "title": "fix(stage8): resolve P2003 FK violation in private-owner seed audit actor",
+      "head_sha": "aae05a863fc6986ea27d3d3e035242b833ac5ba3",
+      "merge_sha": "f7d45f8a5884b64b10334f843b6b3f3f74d04e97",
+      "main_integration_run": "30605104384",
+      "result": "GREEN — maintenance fix; audit_events_actor_id_fkey P2003 resolved; 12 regression tests pass; all 37 CI steps success"
     }
   ],
   "factory_stage_acceptance": {
