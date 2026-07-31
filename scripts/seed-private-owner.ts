@@ -1,9 +1,10 @@
 /**
  * Private deployment owner seed script.
  *
- * Creates the single private-mode owner account in a clean, idempotent way.
- * Wraps all creates/upserts in a single $transaction — any failure rolls back
- * the entire seed so the DB is never left in a partial state.
+ * Creates the single private-mode owner account. This is a FIRST_RUN_ONLY
+ * operation: an advisory lock + 12-invariant assertion inside the transaction
+ * ensures the DB is clean before any write. A second call throws
+ * PrivateOwnerBootstrapInvariantError and rolls back atomically.
  *
  * Required env vars (exits 1 if any are absent):
  *   PRIVATE_OWNER_EMAIL          — email for the owner account
