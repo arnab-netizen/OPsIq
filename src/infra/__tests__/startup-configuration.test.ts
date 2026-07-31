@@ -44,6 +44,9 @@ vi.mock("@/services/startup-status", () => ({
     instance_id: "test",
   })),
   setStartupStatus: h.setStartupStatus,
+  // ensureStartupComplete resolves the deployment-scoped instance key before
+  // touching any status row, so the double must provide it too.
+  resolveInstanceId: vi.fn(() => "test"),
 }));
 
 import {
