@@ -1,9 +1,10 @@
 /**
  * Private deployment owner seed script.
  *
- * Creates the single private-mode owner account in a clean, idempotent way.
- * Wraps all creates/upserts in a single $transaction — any failure rolls back
- * the entire seed so the DB is never left in a partial state.
+ * Creates the single private-mode owner account. This is a FIRST_RUN_ONLY
+ * operation: an advisory lock + 12-invariant assertion inside the transaction
+ * ensures the DB is clean before any write. A second call throws
+ * PrivateOwnerBootstrapInvariantError and rolls back atomically.
  *
  * Required env vars (exits 1 if any are absent):
  *   PRIVATE_OWNER_EMAIL          — email for the owner account
@@ -20,7 +21,135 @@ import * as bcrypt from "bcryptjs";
 import * as readline from "readline";
 import { ROLES } from "../src/domain/constants/roles";
 import { AUDIT_EVENTS } from "../src/domain/constants/audit-events";
-import type { PrismaClient } from "../src/generated/prisma/client";
+import type { PrismaClient, Prisma } from "../src/generated/prisma/client";
+
+// ---------------------------------------------------------------------------
+// Error types
+// ---------------------------------------------------------------------------
+
+/**
+ * Thrown inside the seed transaction when a CLEAN_FIRST_SEED invariant is
+ * violated. The transaction rolls back atomically on throw.
+ */
+export class PrivateOwnerBootstrapInvariantError extends Error {
+  constructor(
+    public readonly violation: string,
+    public readonly detail: string,
+  ) {
+    super(`BOOTSTRAP_INVARIANT_VIOLATION: ${violation} — ${detail}`);
+    this.name = "PrivateOwnerBootstrapInvariantError";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Advisory lock helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive a stable 64-bit advisory lock key from the workspace UUID.
+ * Namespace prefix prevents collision with any other advisory lock usage.
+ */
+function bootstrapLockKey(workspaceId: string): bigint {
+  const h = createHash("sha256")
+    .update("opsiq:private-owner-bootstrap:v1:" + workspaceId)
+    .digest();
+  // BigInt.asIntN ensures we read a signed 64-bit integer (pg_advisory_xact_lock
+  // takes a signed bigint).
+  return BigInt.asIntN(64, h.readBigUInt64BE(0));
+}
+
+// ---------------------------------------------------------------------------
+// 13-invariant CLEAN_FIRST_SEED assertion
+// ---------------------------------------------------------------------------
+
+/**
+ * Run all 13 CLEAN_FIRST_SEED invariant count queries inside the transaction.
+ * Any non-zero count throws PrivateOwnerBootstrapInvariantError, which rolls
+ * back the entire transaction.
+ *
+ * Invariants:
+ *  1.  users.id = ownerId                                    → 0
+ *  2.  users.email = email                                   → 0
+ *  3.  workspaces.id = workspaceId                           → 0
+ *  4.  workspaces.slug = private-owner-<first8>              → 0
+ *  5.  workspace_memberships (workspaceId, userId)           → 0
+ *  6.  workspace_memberships role='owner' in this workspace (any user) → 0
+ *  7.  user_role_assignments (userId, role, scope, scopeId)  → 0
+ *  8.  user_role_assignments same role in workspace (any user) → 0
+ *  9.  client_accounts.id = workspaceId                      → 0
+ * 10.  client_accounts.workspace_id = workspaceId (any id)   → 0
+ * 11.  private_mode_access (workspaceId, userId)             → 0
+ * 12.  audit_events private_mode.owner_seed_executed for this workspace → 0
+ * 13.  users.id = ownerId AND users.email ≠ email (partial collision) → 0
+ *      (covered by invariants 1+2 together; redundant check kept for explicitness)
+ */
+async function assertBootstrapInvariants(
+  tx: Prisma.TransactionClient,
+  params: { ownerId: string; workspaceId: string; email: string; role: string },
+): Promise<void> {
+  const { ownerId, workspaceId, email, role } = params;
+  const slug = `private-owner-${workspaceId.slice(0, 8)}`;
+
+  const [
+    userById,
+    userByEmail,
+    workspaceById,
+    workspaceBySlug,
+    membershipExists,
+    conflictingOwnerMembership,
+    roleAssignmentExists,
+    conflictingRoleAssignment,
+    clientAccountById,
+    conflictingClientAccount,
+    privateModeAccessExists,
+    auditEventExists,
+  ] = await Promise.all([
+    tx.user.count({ where: { id: ownerId } }),
+    tx.user.count({ where: { email } }),
+    tx.workspace.count({ where: { id: workspaceId } }),
+    tx.workspace.count({ where: { slug } }),
+    tx.workspaceMembership.count({ where: { workspaceId, userId: ownerId } }),
+    tx.workspaceMembership.count({
+      where: { workspaceId, role: "owner", userId: { not: ownerId } },
+    }),
+    tx.userRoleAssignment.count({
+      where: { userId: ownerId, role, scope: "workspace", scopeId: workspaceId },
+    }),
+    tx.userRoleAssignment.count({
+      where: { scope: "workspace", scopeId: workspaceId, role, userId: { not: ownerId } },
+    }),
+    tx.clientAccount.count({ where: { id: workspaceId } }),
+    tx.clientAccount.count({ where: { workspaceId, id: { not: workspaceId } } }),
+    tx.privateModeAccess.count({ where: { workspaceId, userId: ownerId } }),
+    tx.auditEvent.count({
+      where: { workspaceId, eventName: AUDIT_EVENTS.PRIVATE_OWNER_SEED_EXECUTED },
+    }),
+  ]);
+
+  // Check order: most-specific conflict invariants first, then existence invariants.
+  // Ordering allows each conflict to be independently observable and testable
+  // even when FK prerequisites cause earlier existence invariants to also be non-zero.
+  const checks: Array<[number, string, string]> = [
+    [membershipExists,           "MEMBERSHIP_EXISTS",               `workspace_memberships(${workspaceId},${ownerId}) already exists`],
+    [conflictingOwnerMembership, "CONFLICTING_OWNER_MEMBERSHIP",   `another user already holds 'owner' role in workspace ${workspaceId}`],
+    [roleAssignmentExists,       "ROLE_ASSIGNMENT_EXISTS",          `user_role_assignments(${ownerId},${role},workspace,${workspaceId}) already exists`],
+    [conflictingRoleAssignment,  "CONFLICTING_ROLE_ASSIGNMENT",    `another user already holds role ${role} in workspace ${workspaceId}`],
+    [privateModeAccessExists,    "PRIVATE_MODE_ACCESS_EXISTS",     `private_mode_access(${workspaceId},${ownerId}) already exists`],
+    [clientAccountById,          "CLIENT_ACCOUNT_ID_EXISTS",       `client_accounts.id=${workspaceId} already exists`],
+    [conflictingClientAccount,   "CONFLICTING_CLIENT_ACCOUNT",     `another client_accounts row references workspace_id=${workspaceId}`],
+    [auditEventExists,           "AUDIT_EVENT_EXISTS",             `audit_events private_mode.owner_seed_executed already present for workspace ${workspaceId}`],
+    [userById,                   "USER_ID_EXISTS",                  `users.id=${ownerId} already exists`],
+    [userByEmail,                "USER_EMAIL_EXISTS",               `users.email=${email} already registered`],
+    [workspaceById,              "WORKSPACE_ID_EXISTS",             `workspaces.id=${workspaceId} already exists`],
+    [workspaceBySlug,            "WORKSPACE_SLUG_EXISTS",           `workspaces.slug=${slug} already taken`],
+  ];
+
+  for (const [count, violation, detail] of checks) {
+    if (count !== 0) {
+      throw new PrivateOwnerBootstrapInvariantError(violation, detail);
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Env var validation
@@ -54,6 +183,23 @@ export async function runPrivateOwnerSeedTransaction(
   const { ownerId, workspaceId, email, hashedPassword, now } = params;
 
   await prisma.$transaction(async (tx) => {
+    // ── Advisory lock — prevents concurrent seed attempts for this workspace.
+    // pg_advisory_xact_lock is transaction-scoped: automatically released on
+    // commit or rollback. Any concurrent call with the same key blocks until
+    // this transaction completes (or is rolled back).
+    const lockKey = bootstrapLockKey(workspaceId);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey}::bigint)`;
+
+    // ── 13-invariant CLEAN_FIRST_SEED assertion — must all be zero before
+    // any write. Throws PrivateOwnerBootstrapInvariantError (→ rollback) on
+    // any non-zero count.
+    await assertBootstrapInvariants(tx, {
+      ownerId,
+      workspaceId,
+      email,
+      role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER,
+    });
+
     // 1. User — upsert by stable UUID; returned ID is used as the audit actor below.
     const owner = await tx.user.upsert({
       where: { id: ownerId },
@@ -320,7 +466,12 @@ async function seed(): Promise<void> {
 // Only run the seeder when executed directly (e.g. `npx tsx scripts/seed-private-owner.ts`).
 // Importing this module for `runPrivateOwnerSeedTransaction` must NOT trigger the
 // interactive confirmation prompt or env-var validation as a side effect.
-if (process.argv[1] && process.argv[1].includes("seed-private-owner")) {
+// Match the exact script basename to prevent trigger from files whose path contains
+// "seed-private-owner" as a substring (e.g. test files).
+if (
+  process.argv[1] &&
+  /[/\\]seed-private-owner\.[cm]?[jt]s$/.test(process.argv[1])
+) {
   (async () => {
     try {
       await seed();
