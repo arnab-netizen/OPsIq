@@ -8,19 +8,29 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const actorId = ctx.verifiedActorId;
     const workspaceId = ctx.verifiedWorkspaceId;
+    // The canonical wrapper resolves the session from the opaque cookie token
+    // and places the verified SessionInfo on the context. Its sessionId is the
+    // sessions.id primary key — the only correct input to revokeSession().
+    // The actor id identifies the user, not the session, and must never be
+    // used here.
+    const verifiedSession = ctx.session;
 
-    if (actorId && workspaceId) {
-      // Soft-revoke via service layer with verified context
-      await revokeSession(actorId, ctx);
+    if (actorId && workspaceId && verifiedSession) {
+      // Soft-revoke via service layer with verified context. Returns false when
+      // the session was already revoked or removed; logout stays idempotent and
+      // still clears the cookie below.
+      const revoked = await revokeSession(verifiedSession, ctx);
 
-      await emitAuditEvent({
-        eventName: AUDIT_EVENTS.USER_LOGGED_OUT,
-        actorId,
-        entityType: "session",
-        entityId: actorId,
-        workspaceId,
-        visibility: "internal",
-      });
+      if (revoked) {
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.USER_LOGGED_OUT,
+          actorId,
+          entityType: "session",
+          entityId: verifiedSession.sessionId,
+          workspaceId,
+          visibility: "internal",
+        });
+      }
     }
 
     const cookieStore = await cookies();
