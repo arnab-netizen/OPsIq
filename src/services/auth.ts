@@ -185,14 +185,34 @@ export function getSessionDurationMs(): number {
   return SESSION_DURATION_MS;
 }
 
+/**
+ * Revoke exactly one authenticated session.
+ *
+ * Takes the verified session identity rather than a bare string so a user id
+ * can no longer be passed where a session id is required — the defect that
+ * made logout return 500 (`prisma.session.update` raising P2025 because no
+ * session row has an id equal to the actor's user id).
+ *
+ * Idempotent by construction: `updateMany` reports a count instead of throwing
+ * when the row is absent or already revoked, so a repeated or racing logout is
+ * a no-op rather than an error. Connection and other database failures still
+ * propagate — only "nothing matched" is treated as success.
+ *
+ * Scoping the update to `revokedAt: null` also preserves the original
+ * revocation timestamp when a session is revoked twice.
+ *
+ * @returns true when this call performed the revocation, false when the
+ *          session was already revoked or no longer exists.
+ */
 export async function revokeSession(
-  sessionId: string,
+  session: Pick<SessionInfo, "sessionId">,
   authContext: CanonicalAuthContext
-): Promise<void> {
-  await db.session.update({
-    where: { id: sessionId },
+): Promise<boolean> {
+  const result = await db.session.updateMany({
+    where: { id: session.sessionId, revokedAt: null },
     data: { revokedAt: new Date() },
   });
+  return result.count > 0;
 }
 
 export function getSessionCookieName(): string {
