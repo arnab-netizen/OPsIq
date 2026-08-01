@@ -6,6 +6,8 @@
  * NOT analytics theatre - only actionable metrics.
  */
 
+import { getMemoryPressure } from "@/infra/memory-pressure";
+
 export interface RequestMetrics {
   total_requests: number;
   latency_p50_ms: number;
@@ -203,14 +205,9 @@ class RuntimeMetricsCollector {
   }
 
   private getMemoryPressure(): "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" {
-    if (!process.memoryUsage) return "LOW";
-    const usage = process.memoryUsage();
-    const heapPercent = (usage.heapUsed / usage.heapTotal) * 100;
-
-    if (heapPercent > 95) return "CRITICAL";
-    if (heapPercent > 85) return "HIGH";
-    if (heapPercent > 70) return "MEDIUM";
-    return "LOW";
+    // Pressure is heapUsed against the V8 heap limit — actual headroom
+    // consumed. heapUsed/heapTotal only describes committed-heap packing.
+    return getMemoryPressure().level;
   }
 
   aggregateMetrics(): AggregatedMetrics {

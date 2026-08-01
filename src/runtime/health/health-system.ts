@@ -6,6 +6,7 @@
  */
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { getMemoryPressure } from "@/infra/memory-pressure";
 
 export type HealthState = "HEALTHY" | "DEGRADED" | "PARTIAL_OUTAGE" | "FAILING" | "RECOVERY_MODE";
 
@@ -111,13 +112,9 @@ class RuntimeHealthSystem {
       return "LOW";
     }
 
-    const usage = process.memoryUsage();
-    const heapUsedPercent = (usage.heapUsed / usage.heapTotal) * 100;
-
-    if (heapUsedPercent > 95) return "CRITICAL";
-    if (heapUsedPercent > 85) return "HIGH";
-    if (heapUsedPercent > 70) return "MEDIUM";
-    return "LOW";
+    // Pressure is heapUsed against the V8 heap limit — actual headroom
+    // consumed. heapUsed/heapTotal only describes committed-heap packing.
+    return getMemoryPressure().level;
   }
 
   getEventLag(): number {

@@ -12,6 +12,7 @@ import { getMetrics, getActiveRequests } from "@/infra/structured-logger";
 import { getTraceHistory, getTracesWithError } from "@/infra/request-tracer";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
+import { getMemoryPressure } from "@/infra/memory-pressure";
 
 export async function GET(request: NextRequest) {
   // Require diagnostic key for operational metrics access
@@ -42,12 +43,13 @@ export async function GET(request: NextRequest) {
         (errorsByClassification[classification] || 0) + 1;
     });
 
-    // Memory metrics
+    // Memory metrics.
+    // heapUsagePercent reports headroom consumed (heapUsed vs the V8 heap
+    // limit); the committed-heap packing ratio is exported separately so
+    // dashboards keep both signals without conflating them.
+    const memSnapshot = getMemoryPressure();
     const memUsage = process.memoryUsage();
-    const heapUsagePercent = (
-      (memUsage.heapUsed / memUsage.heapTotal) *
-      100
-    ).toFixed(2);
+    const heapUsagePercent = memSnapshot.heapHeadroomUsedPercent.toFixed(2);
 
     return NextResponse.json({
       timestamp: new Date().toISOString(),
@@ -63,6 +65,10 @@ export async function GET(request: NextRequest) {
         memory_heap_used_bytes: memUsage.heapUsed,
         memory_heap_total_bytes: memUsage.heapTotal,
         memory_heap_usage_percent: parseFloat(heapUsagePercent),
+        memory_heap_limit_bytes: memSnapshot.heapLimitBytes,
+        memory_heap_utilization_percent:
+          Math.round(memSnapshot.heapUtilizationPercent * 100) / 100,
+        memory_pressure_level: memSnapshot.level,
         memory_external_bytes: memUsage.external,
         memory_rss_bytes: memUsage.rss,
       },
