@@ -23,17 +23,36 @@
  *
  * 1. MIGRATION_DATABASE_URL is NEVER resolved implicitly. It is used only when
  *    BOTH OPSIQ_DB_TARGET=production AND OPSIQ_ALLOW_PRODUCTION_DB_COMMAND=true
- *    are set — a two-factor, auditable opt-in.
+ *    are set — a two-factor, auditable opt-in. That pair is the production READ
+ *    authorization.
  * 2. Ordinary resolution is DATABASE_URL -> DATABASE_URL_TEST -> built-in local
  *    default, so schema-only commands keep working with no configuration.
  * 3. Mutation-capable commands (migrate/db push/db execute/db seed/studio) fail
  *    closed when nothing was intentionally selected — i.e. when the value would
  *    come from the built-in local default.
- * 4. Selection is reported as a sanitized logical target only. The URL, host,
- *    username, password and database name are never emitted.
+ * 4. A production MUTATION needs more than the read authorization: the operator
+ *    must declare the exact operation in OPSIQ_PRODUCTION_OPERATION, that
+ *    operation must be allowlisted, and it must match the operation actually
+ *    being run. Declaring `migrate deploy` therefore cannot smuggle through a
+ *    `migrate reset`.
+ * 5. Some operations are refused against production at ANY authorization level
+ *    because no correct production use exists for them (see
+ *    PRODUCTION_FORBIDDEN_OPERATIONS). `migrate reset` drops every table.
+ * 6. Selection is reported as a sanitized logical target only. The URL, host,
+ *    username, password and database name are never emitted. Prisma operation
+ *    names are not secrets and may appear in refusal messages.
  *
  * No hostname matching, no assumption that Neon means production or that
  * localhost is safe, and no production identifier is hard-coded.
+ *
+ * ─── Scope limit ─────────────────────────────────────────────────────────────
+ *
+ * This governs the Prisma CLI only, because prisma.config.ts is what the CLI
+ * loads. Application runtime and standalone scripts construct PrismaClient from
+ * `env("DATABASE_URL")` in prisma/schema.prisma and are not routed through here.
+ * An operator who deliberately exports a production URL as DATABASE_URL is
+ * indistinguishable from one pointing at a local container — by design, since
+ * hostname matching is explicitly not a control here.
  */
 
 export type PrismaTarget = "local" | "test" | "ci" | "production-authorized";
@@ -53,6 +72,61 @@ const MUTATION_COMMANDS = [
   "db seed",
   "studio",
 ] as const;
+
+/**
+ * Prisma operations that may run against production once explicitly declared in
+ * OPSIQ_PRODUCTION_OPERATION. Deliberately minimal: applying reviewed migrations
+ * and running the governed seed are the only production writes OpsIQ performs.
+ * `migrate status` is read-only but appears here because isMutationCommand
+ * conservatively treats every `migrate *` subcommand as mutation-capable, and
+ * migration verification must stay possible.
+ */
+export const PRODUCTION_ALLOWED_OPERATIONS = [
+  "migrate deploy",
+  "migrate status",
+  "db seed",
+] as const;
+
+/**
+ * Operations refused against production regardless of authorization. `migrate
+ * reset` drops every table; `migrate dev` and `db push` rewrite schema outside
+ * the reviewed migration history; `db execute` runs arbitrary SQL; `studio`
+ * exposes an interactive read/write UI.
+ */
+export const PRODUCTION_FORBIDDEN_OPERATIONS = [
+  "migrate dev",
+  "migrate reset",
+  "db push",
+  "db execute",
+  "studio",
+] as const;
+
+/** Two-word Prisma subcommands, so `db push` is not mistaken for `db`. */
+const TWO_WORD_OPERATIONS = new Set([
+  "db push",
+  "db pull",
+  "db seed",
+  "db execute",
+  "migrate dev",
+  "migrate deploy",
+  "migrate reset",
+  "migrate status",
+  "migrate resolve",
+  "migrate diff",
+]);
+
+/**
+ * Name the Prisma operation being invoked, e.g. "migrate deploy" or "validate".
+ * Used only to police the production allowlist; mutation classification remains
+ * isMutationCommand's job.
+ */
+export function classifyOperation(argv: readonly string[] = []): string {
+  const words = argv.slice(2).filter((a) => !a.startsWith("-"));
+  if (words.length === 0) return "";
+  const twoWord = words.slice(0, 2).join(" ");
+  if (TWO_WORD_OPERATIONS.has(twoWord)) return twoWord;
+  return words[0];
+}
 
 export interface ResolveInput {
   /** Process environment to read. */
@@ -127,6 +201,45 @@ export function resolvePrismaDatasource(input: ResolveInput): ResolveResult {
         notices
       );
     }
+    // Operations with no correct production use are refused outright, even with
+    // OPSIQ_ALLOW_PRODUCTION_DB_COMMAND=true. `migrate reset` drops every table.
+    const operation = classifyOperation(input.argv ?? []);
+    if ((PRODUCTION_FORBIDDEN_OPERATIONS as readonly string[]).includes(operation)) {
+      throw new PrismaDatasourceError(
+        `Prisma operation "${operation}" is never permitted against production. ` +
+          `Forbidden operations: ${PRODUCTION_FORBIDDEN_OPERATIONS.join(", ")}.`,
+        notices
+      );
+    }
+
+    // A production WRITE needs the operation declared up front and matching what
+    // is actually being run, so an authorization for one operation cannot carry
+    // another. Reads need only the authorization flag checked above.
+    if (mutating) {
+      const declared = (env.OPSIQ_PRODUCTION_OPERATION ?? "").trim();
+      if (!declared) {
+        throw new PrismaDatasourceError(
+          "A production mutation requires OPSIQ_PRODUCTION_OPERATION to declare the exact " +
+            `operation. Allowlisted operations: ${PRODUCTION_ALLOWED_OPERATIONS.join(", ")}.`,
+          notices
+        );
+      }
+      if (!(PRODUCTION_ALLOWED_OPERATIONS as readonly string[]).includes(declared)) {
+        throw new PrismaDatasourceError(
+          `OPSIQ_PRODUCTION_OPERATION="${declared}" is not an allowlisted production operation. ` +
+            `Allowlisted operations: ${PRODUCTION_ALLOWED_OPERATIONS.join(", ")}.`,
+          notices
+        );
+      }
+      if (declared !== operation) {
+        throw new PrismaDatasourceError(
+          `OPSIQ_PRODUCTION_OPERATION="${declared}" does not match the operation being run ` +
+            `("${operation}"). Refusing to run an operation that was not authorized.`,
+          notices
+        );
+      }
+    }
+
     const url = env.MIGRATION_DATABASE_URL;
     if (!url) {
       throw new PrismaDatasourceError(

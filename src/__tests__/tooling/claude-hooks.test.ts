@@ -40,10 +40,10 @@ const allHookCommands = [
 /** Run a hook command under /bin/sh with a controlled env and cwd. */
 function runHook(
   command: string,
-  opts: { cwd: string; toolInput: string; projectDir?: string }
+  opts: { cwd: string; toolInput: string; projectDir?: string; pathPrefix?: string }
 ): { status: number; output: string } {
   const env: NodeJS.ProcessEnv = {
-    PATH: process.env.PATH,
+    PATH: opts.pathPrefix ? `${opts.pathPrefix}:${process.env.PATH}` : process.env.PATH,
     HOME: process.env.HOME,
     CLAUDE_TOOL_INPUT: opts.toolInput,
   };
@@ -192,6 +192,45 @@ describe("7. a failed root resolution can never read as success", () => {
       expect(cmd).toContain('if [ "$RC" -eq 0 ]');
     }
   });
+
+  it("7b. a FAILING protected command surfaces as a hook failure, not a pass", () => {
+    // Behavioural counterpart to the assertion above, and the regression that
+    // matters most: under the original hooks the guard's output was piped into
+    // `tail`/`grep`, so the pipeline's exit status (always 0) masked a failing
+    // guard. Here the real hook bodies run against a stub that exits non-zero.
+    const stubDir = fs.mkdtempSync(path.join(os.tmpdir(), "opsiq-hook-failing-"));
+    try {
+      // A repo-shaped fixture whose `npx` and `node` both fail, so whichever
+      // guard the hook reaches returns non-zero.
+      fs.writeFileSync(path.join(stubDir, "package.json"), "{}\n");
+      fs.mkdirSync(path.join(stubDir, "scripts"), { recursive: true });
+      fs.writeFileSync(path.join(stubDir, "scripts/scan-recurrence-defects.mjs"), "");
+      const binDir = path.join(stubDir, "stub-bin");
+      fs.mkdirSync(binDir);
+      for (const bin of ["npx", "node"]) {
+        const p = path.join(binDir, bin);
+        fs.writeFileSync(p, '#!/bin/sh\necho "VIOLATION: synthetic guard failure" >&2\nexit 3\n');
+        fs.chmodSync(p, 0o755);
+      }
+
+      for (const [cmd, input] of [
+        [postHook, '{"file_path":"prisma/schema.prisma"}'],
+        [preHook, '{"command":"git commit -m x"}'],
+      ] as const) {
+        const r = runHook(cmd, {
+          cwd: stubDir,
+          projectDir: stubDir,
+          pathPrefix: binDir,
+          toolInput: input,
+        });
+        expect(r.status).toBe(1);
+        expect(r.output).toContain("FAILED");
+        expect(r.output).not.toContain("PASSED");
+      }
+    } finally {
+      fs.rmSync(stubDir, { recursive: true, force: true });
+    }
+  }, 120_000);
 });
 
 describe("8. safe quoting", () => {

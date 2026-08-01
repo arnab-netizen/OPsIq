@@ -14,6 +14,7 @@ import { describe, it, expect } from "vitest";
 import {
   BUILT_IN_LOCAL_DEFAULT,
   PrismaDatasourceError,
+  classifyOperation,
   isMutationCommand,
   resolvePrismaDatasource,
 } from "@/infra/prisma-datasource";
@@ -129,7 +130,12 @@ describe("6-8, 10. fail-closed behaviour", () => {
   it("10b. production mode authorized but MIGRATION_DATABASE_URL missing does not fall back", () => {
     expect(() =>
       resolve(
-        { OPSIQ_DB_TARGET: "production", OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: "true", DATABASE_URL: LOCAL },
+        {
+          OPSIQ_DB_TARGET: "production",
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: "true",
+          OPSIQ_PRODUCTION_OPERATION: "migrate deploy",
+          DATABASE_URL: LOCAL,
+        },
         MIGRATE
       )
     ).toThrow(/Refusing to fall back/);
@@ -142,6 +148,7 @@ describe("9. explicitly authorized production", () => {
       {
         OPSIQ_DB_TARGET: "production",
         OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: "true",
+        OPSIQ_PRODUCTION_OPERATION: "migrate deploy",
         MIGRATION_DATABASE_URL: PROD,
       },
       MIGRATE
@@ -149,6 +156,99 @@ describe("9. explicitly authorized production", () => {
     expect(r.url).toBe(PROD);
     expect(r.target).toBe("production-authorized");
     expect(r.notices.join(" ")).not.toContain(PROD);
+  });
+});
+
+describe("16. production operation allowlist", () => {
+  /** Read + mutation authorization satisfied; only the operation gate remains. */
+  const prodAuth = {
+    OPSIQ_DB_TARGET: "production",
+    OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: "true",
+    MIGRATION_DATABASE_URL: PROD,
+  };
+  const argvFor = (op: string) => ["node", "prisma", ...op.split(" ")];
+
+  it.each(["migrate dev", "migrate reset", "db push", "db execute", "studio"])(
+    "16a. %s is refused against production at any authorization level",
+    (op) => {
+      // Even declaring the operation and holding the authorization flag fails.
+      expect(() =>
+        resolve({ ...prodAuth, OPSIQ_PRODUCTION_OPERATION: op }, argvFor(op))
+      ).toThrow(/never permitted against production/);
+    }
+  );
+
+  it("16b. a production mutation without a declared operation fails closed", () => {
+    expect(() => resolve(prodAuth, MIGRATE)).toThrow(/requires OPSIQ_PRODUCTION_OPERATION/);
+  });
+
+  it("16c. a declared operation outside the allowlist fails closed", () => {
+    expect(() =>
+      resolve({ ...prodAuth, OPSIQ_PRODUCTION_OPERATION: "migrate resolve" }, MIGRATE)
+    ).toThrow(/is not an allowlisted production operation/);
+  });
+
+  it("16d. authorizing one operation cannot smuggle through another", () => {
+    // The catastrophic case: declare `migrate deploy`, actually run `migrate reset`.
+    expect(() =>
+      resolve(
+        { ...prodAuth, OPSIQ_PRODUCTION_OPERATION: "migrate deploy" },
+        argvFor("migrate reset")
+      )
+    ).toThrow(/never permitted against production/);
+
+    // And a non-forbidden mismatch is still refused for not matching.
+    expect(() =>
+      resolve(
+        { ...prodAuth, OPSIQ_PRODUCTION_OPERATION: "migrate deploy" },
+        argvFor("db seed")
+      )
+    ).toThrow(/does not match the operation being run/);
+  });
+
+  it("16e. an allowlisted, declared, matching production mutation is permitted", () => {
+    for (const op of ["migrate deploy", "db seed"]) {
+      const r = resolve({ ...prodAuth, OPSIQ_PRODUCTION_OPERATION: op }, argvFor(op));
+      expect(r.url).toBe(PROD);
+      expect(r.target).toBe("production-authorized");
+    }
+  });
+
+  it("16f. production migration verification stays possible, but must be declared", () => {
+    // isMutationCommand conservatively treats every `migrate *` subcommand as
+    // mutation-capable, so even the read-only `migrate status` must be declared.
+    const argv = ["node", "prisma", "migrate", "status"];
+    expect(() => resolve(prodAuth, argv)).toThrow(/requires OPSIQ_PRODUCTION_OPERATION/);
+
+    const r = resolve({ ...prodAuth, OPSIQ_PRODUCTION_OPERATION: "migrate status" }, argv);
+    expect(r.url).toBe(PROD);
+    expect(r.target).toBe("production-authorized");
+  });
+
+  it("16g. allowlist refusals never leak the datasource", () => {
+    const secretParts = ["prod-user", "prod-pass", "synthetic-production.invalid", PROD];
+    let message = "";
+    try {
+      resolve({ ...prodAuth, OPSIQ_PRODUCTION_OPERATION: "studio" }, argvFor("studio"));
+    } catch (e) {
+      const err = e as PrismaDatasourceError;
+      message = err.message + " " + err.notices.join(" ");
+    }
+    expect(message).toMatch(/never permitted/);
+    for (const part of secretParts) expect(message).not.toContain(part);
+  });
+});
+
+describe("17. operation naming", () => {
+  it.each([
+    [["node", "prisma", "migrate", "deploy"], "migrate deploy"],
+    [["node", "prisma", "db", "push"], "db push"],
+    [["node", "prisma", "migrate", "reset", "--force"], "migrate reset"],
+    [["node", "prisma", "studio"], "studio"],
+    [["node", "prisma", "validate"], "validate"],
+    [["node", "prisma"], ""],
+  ])("%j -> %s", (argv, expected) => {
+    expect(classifyOperation(argv as string[])).toBe(expected);
   });
 });
 
