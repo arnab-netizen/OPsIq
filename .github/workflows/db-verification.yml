@@ -34,6 +34,11 @@ on:
       - main
     paths:
       - prisma/**
+      # prisma.config.ts and the datasource resolver decide which database every
+      # Prisma CLI command reaches. They sit outside prisma/**, so a change to
+      # them used to skip DB verification entirely.
+      - prisma.config.ts
+      - 'src/infra/prisma-datasource.ts'
       - 'src/__tests__/**/*.db.test.ts'
       - 'src/services/owner-mode/owner-bcp.service.ts'
       - 'src/services/consulting/consulting-engagement.service.ts'
