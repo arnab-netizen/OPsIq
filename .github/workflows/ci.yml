@@ -16,7 +16,11 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # 30 = the non-DB test step's 26-minute cap plus ~2 min of job overhead
+    # (install, governance scans, tsc, prisma validate, ratchets) plus buffer.
+    # Also reconciles this workflow with the value already asserted by
+    # src/__tests__/ci-cd/workflow-validation.test.ts ("reasonable timeout (30 minutes)").
+    timeout-minutes: 30
 
     env:
       TEST_WITH_DB: "false"
@@ -80,7 +84,18 @@ jobs:
         # DB tests self-skip when TEST_WITH_DB != 'true', but we also explicitly
         # exclude *.db.test.ts files so the intent is unambiguous.
         # Full DB suite runs on push-to-main in main-integration.yml.
-        timeout-minutes: 20
+        #
+        # 26, not 20. Measured over the 15 most recent successful runs (2026-07-28
+        # to 2026-08-01) this step took: median 1164s, p90 1189s, p95 1196s,
+        # max 1198s — against a 1200s cap. That is 4 seconds of headroom at p95,
+        # and 9 of those 15 runs finished within 60s of being killed. PR #273
+        # (a two-file .claude/ state-record change that no test reads) was failed
+        # by this cap, then passed unchanged on re-run in 899s.
+        #
+        # The suite is also growing: 725-1070s on 07-28/29 versus 1156-1198s on
+        # 07-31/08-01. 26 min = p95 + ~30% headroom. It buys margin, it does not
+        # make the growth safe — see the sharding note in the PR description.
+        timeout-minutes: 26
         run: |
           EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
           echo "Quarantined (excluded from blocking lane): $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") file(s)"
