@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd /home/user/OPsIq && if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'schema\\.prisma'; then echo '[harness] prisma/schema.prisma changed — validating' && npx prisma validate 2>&1 | tail -8; fi"
+            "command": "ROOT=\"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}\"; if [ -z \"$ROOT\" ] || [ ! -d \"$ROOT\" ]; then echo \"[hook:prisma-validate] BLOCKED: cannot resolve repository root (CLAUDE_PROJECT_DIR unset and git rev-parse failed); guard did NOT run\"; exit 1; fi; cd \"$ROOT\" || { echo \"[hook:prisma-validate] BLOCKED: cannot enter repository root; guard did NOT run\"; exit 1; }; if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'schema\\.prisma'; then echo \"[hook:prisma-validate] running: prisma/schema.prisma changed\"; OUT=$(npx prisma validate 2>&1); RC=$?; echo \"$OUT\" | tail -8; if [ \"$RC\" -eq 0 ]; then echo \"[hook:prisma-validate] PASSED\"; else echo \"[hook:prisma-validate] FAILED (exit $RC)\"; exit 1; fi; else echo \"[hook:prisma-validate] skipped: prisma/schema.prisma not modified\"; fi"
           }
         ]
       }
@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '\"git commit\"\\|git commit -'; then cd /home/user/OPsIq && node scripts/scan-recurrence-defects.mjs --pre-commit 2>/dev/null | grep -E 'VIOLATION|ERROR' | head -5; fi"
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '\"git commit\"\\|git commit -'; then ROOT=\"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}\"; if [ -z \"$ROOT\" ] || [ ! -d \"$ROOT\" ]; then echo \"[hook:recurrence-scan] BLOCKED: cannot resolve repository root (CLAUDE_PROJECT_DIR unset and git rev-parse failed); guard did NOT run\"; exit 1; fi; cd \"$ROOT\" || { echo \"[hook:recurrence-scan] BLOCKED: cannot enter repository root; guard did NOT run\"; exit 1; }; echo \"[hook:recurrence-scan] running: git commit detected\"; OUT=$(node scripts/scan-recurrence-defects.mjs --pre-commit 2>&1); RC=$?; echo \"$OUT\" | grep -E 'VIOLATION|ERROR' | head -5; if [ \"$RC\" -eq 0 ]; then echo \"[hook:recurrence-scan] PASSED\"; else echo \"[hook:recurrence-scan] FAILED (exit $RC)\"; exit 1; fi; fi"
           }
         ]
       }
