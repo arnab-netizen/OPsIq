@@ -6,6 +6,7 @@
  */
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { getMemoryPressure, isMemoryExhausted } from "@/infra/memory-pressure";
 
 export enum HealthStatus {
   HEALTHY = "healthy",
@@ -64,12 +65,13 @@ export function checkMemory(): CheckResult {
   const startTime = Date.now();
 
   try {
-    if (typeof process !== "undefined" && process.memoryUsage) {
-      const memUsage = process.memoryUsage();
-      const heapUsedPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
-
-      // Consider unhealthy if heap usage > 90%
-      const status = heapUsedPercent > 90 ? HealthStatus.DEGRADED : HealthStatus.HEALTHY;
+    const snapshot = getMemoryPressure();
+    if (snapshot.available) {
+      // Degraded only on genuine headroom exhaustion (heapUsed vs the V8 heap
+      // limit), not on committed-heap packing.
+      const status = isMemoryExhausted(snapshot)
+        ? HealthStatus.DEGRADED
+        : HealthStatus.HEALTHY;
 
       return {
         status,

@@ -5,6 +5,12 @@ import { classifyError, reportError } from "@/infra/error-tracking";
 import { cleanupOldRecords } from "@/services/production/retention-cleanup";
 import { isStartupComplete } from "@/infra/startup-state";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import {
+  bytesToMb,
+  getMemoryPressure,
+  isMemoryExhausted,
+  isMemoryWarning,
+} from "@/infra/memory-pressure";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -59,17 +65,44 @@ export async function GET(): Promise<NextResponse> {
     };
   }
 
-  // Memory check
-  const memUsage = process.memoryUsage();
-  const heapUsagePercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
+  // Memory check.
+  //
+  // Saturation is measured as heapUsed against V8's reported heap_size_limit.
+  // The legacy heapUsed/heapTotal ratio is kept as a diagnostic field only: it
+  // measures how tightly the *committed* heap is packed, is bounded at 100% by
+  // construction, and routinely reads 90%+ on a perfectly healthy process.
+  //
+  // Only CRITICAL pressure (imminent heap exhaustion) is treated as blocking.
+  // HIGH pressure surfaces as a warning without changing the HTTP status, and
+  // an unmeasurable snapshot never marks the service unavailable.
+  const memory = getMemoryPressure();
   checks.memory = {
-    status: heapUsagePercent < 90 ? "healthy" : "unhealthy",
-    usage: `${Math.round(heapUsagePercent)}%`,
+    status: !memory.available
+      ? "unknown"
+      : isMemoryExhausted(memory)
+        ? "unhealthy"
+        : isMemoryWarning(memory)
+          ? "warning"
+          : "healthy",
+    // Retained for backward compatibility with existing operator tooling.
+    usage: `${Math.round(memory.heapUtilizationPercent)}%`,
+    heapUsedPercentOfLimit: Math.round(memory.heapHeadroomUsedPercent * 100) / 100,
+    heapUtilizationPercent: Math.round(memory.heapUtilizationPercent * 100) / 100,
+    heapUsedMb: bytesToMb(memory.heapUsedBytes),
+    heapTotalMb: bytesToMb(memory.heapTotalBytes),
+    heapLimitMb: bytesToMb(memory.heapLimitBytes),
+    rssMb: bytesToMb(memory.rssBytes),
+    externalMb: bytesToMb(memory.externalBytes),
+    arrayBuffersMb: bytesToMb(memory.arrayBuffersBytes),
+    level: memory.level,
   };
-  if (heapUsagePercent >= 90) {
+  if (isMemoryExhausted(memory) || isMemoryWarning(memory)) {
     const classified = classifyError(
-      new Error(`High memory usage: ${heapUsagePercent.toFixed(2)}%`),
-      { check: "memory", heapUsagePercent }
+      new Error(
+        `Memory pressure ${memory.level}: heapUsed is ` +
+          `${memory.heapHeadroomUsedPercent.toFixed(2)}% of the V8 heap limit`
+      ),
+      { check: "memory", level: memory.level }
     );
     reportError(classified);
   }
@@ -88,9 +121,13 @@ export async function GET(): Promise<NextResponse> {
     environment: process.env.NODE_ENV ?? "unknown",
   };
 
-  const allHealthy = Object.values(checks).every(
-    (c) => c.status === "healthy"
-  );
+  // Availability is decided by blocking checks only. A check is blocking when
+  // its failure means the service cannot serve traffic correctly: the database
+  // probe, and memory only at CRITICAL pressure. Warning-level and
+  // informational checks change the reported status but never the HTTP code.
+  const blockingFailure =
+    checks.database.status === "unhealthy" || checks.memory.status === "unhealthy";
+  const allHealthy = Object.values(checks).every((c) => c.status === "healthy");
   const overallStatus = allHealthy ? "healthy" : "degraded";
 
   logger.debug("Health check executed", { status: overallStatus });
@@ -103,6 +140,6 @@ export async function GET(): Promise<NextResponse> {
       environment: process.env.NODE_ENV ?? "unknown",
       checks,
     },
-    { status: allHealthy ? 200 : 503 }
+    { status: blockingFailure ? 503 : 200 }
   );
 }

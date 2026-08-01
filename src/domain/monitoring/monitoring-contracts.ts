@@ -11,6 +11,8 @@
  * - Structured telemetry (trace IDs, span context)
  */
 
+import { getMemoryPressure, isMemoryExhausted } from "@/infra/memory-pressure";
+
 /**
  * Health Status: What the `/health` endpoint reports
  */
@@ -225,14 +227,17 @@ export const MONITORING_ASSERTIONS = {
     },
   },
 
-  // Memory exhaustion check
+  // Memory exhaustion check.
+  //
+  // Measures heapUsed against V8's reported heap_size_limit. The previous
+  // heapUsed/heapTotal ratio described committed-heap packing, not headroom,
+  // and reported 90%+ on healthy processes — which forced /api/liveness to 503.
   MEMORY_OK: {
     check: async () => {
-      const mem = process.memoryUsage();
-      const heapPercent = (mem.heapUsed / mem.heapTotal) * 100;
+      const snapshot = getMemoryPressure();
       return {
-        healthy: heapPercent < 90,
-        percent: heapPercent,
+        healthy: !isMemoryExhausted(snapshot),
+        percent: snapshot.heapHeadroomUsedPercent,
       };
     },
   },
