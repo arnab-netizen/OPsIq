@@ -2,7 +2,7 @@ factory_stage: 7
 active_bundle: "factory-stage-7-closure"
 owner_outcome: "owner-has-proof-stages-3-4-5-6-accepted-and-OpsIQ-can-be-deployed-for-private-owner-use-operated-without-developer-assistance-and-produces-correct-actionable-guidance"
 status: FACTORY_STAGE_7_AUTHORIZED_CONTRACT_DEFINED
-branch: claude/opsiq-stage-7-loop-main
+branch: claude/post-merge-state-reconciliation
 authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 factory_stage_7: AUTHORIZED_CONTRACT_DEFINED
 
@@ -37,6 +37,8 @@ factory_stage_acceptance:
     contract_file: "docs/opsiq/bundles/factory-stage-7-closure.yaml"
     scope: "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS"
 
-main_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
-next_target: "Owner exact-SHA merge authorization for Stage 7 initialization PR. After merge: inventory live deployment environment."
-current_gap: "Factory Stage 7 contract defined. Initialization PR pending owner exact-SHA merge authorization."
+main_sha: "a77bc58a6ba6751cb402d5bb3bc6186e0079cc55"
+stage_8_closure_status: STAGE_8_CLOSURE_NOT_VERIFIED
+factory_stage_7_closure_status: PENDING
+next_target: "Owner decision: produce the missing Factory Stage 7 / Stage 8 production evidence, or explicitly re-scope. No stage may be closed without its four required evidence fields."
+current_gap: "Factory Stage 7 remains AUTHORIZED_CONTRACT_DEFINED; factory-stage-7-closure is PENDING with all four required evidence fields null. Stage 8 closure is NOT verified — no governed Stage 8 artifact exists, and production migration verification, owner bootstrap, authenticated owner flow, governed owner mutation with audit event, readiness and scheduler proof are all absent."
