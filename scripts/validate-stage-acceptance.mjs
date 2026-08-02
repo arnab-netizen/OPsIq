@@ -20,14 +20,29 @@
  * Violations (exit 1 in both modes):
  *   - A CLOSED bundle has null post_merge_evidence fields (data integrity violation)
  *   - A bundle entry is missing artifact_type or has wrong value
+ *   - A CLOSED bundle whose manifest declares closure condition 5 has an invariant
+ *     that is neither PROVEN with proof nor covered by a complete owner waiver
+ *     (see scripts/lib/invariant-closure.mjs)
  * Additional violation in closure mode only:
  *   - Any bundle that is not CLOSED
+ *
+ * Closure condition 5 is checked in BOTH modes on CLOSED bundles. Flipping a stage
+ * closure manifest to CLOSED with the four metadata fields filled in, while its
+ * invariants remain unproven, is a data-integrity violation — not merely a closure
+ * concern — so integrity mode rejects it too. A passing integrity gate therefore
+ * never permits, and must never be cited as, stage closure.
  */
 
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { load as yamlLoad } from 'js-yaml';
+import {
+  REQUIRED_EVIDENCE_FIELDS,
+  declaresInvariantProofCondition,
+  evaluateInvariantClosure,
+  summarizeInvariantClosure,
+} from './lib/invariant-closure.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -35,7 +50,7 @@ const args = process.argv.slice(2);
 const stageIdx = args.indexOf('--stage');
 
 if (stageIdx === -1 || !args[stageIdx + 1]) {
-  console.error('Usage: node validate-stage-acceptance.mjs --stage <N|all> [--mode integrity|closure] [--ledger <path>]');
+  console.error('Usage: node validate-stage-acceptance.mjs --stage <N|all> [--mode integrity|closure] [--ledger <path>] [--bundles-dir <path>]');
   process.exit(2);
 }
 
@@ -55,6 +70,13 @@ const ledgerPath = (ledgerIdx !== -1 && args[ledgerIdx + 1])
   ? args[ledgerIdx + 1]
   : join(root, 'docs', 'opsiq', 'status', 'REMAINING_STAGE_ACCEPTANCE.yaml');
 
+// --bundles-dir <path> overrides where stage-closure manifests are resolved from.
+// Manifests carry the invariant block; the ledger does not.
+const bundlesDirIdx = args.indexOf('--bundles-dir');
+const bundlesDir = (bundlesDirIdx !== -1 && args[bundlesDirIdx + 1])
+  ? args[bundlesDirIdx + 1]
+  : join(root, 'docs', 'opsiq', 'bundles');
+
 let ledger;
 try {
   ledger = yamlLoad(readFileSync(ledgerPath, 'utf8'));
@@ -66,6 +88,29 @@ try {
 const stages = ledger.stages || {};
 let violations = 0;
 let checked = 0;
+// Bundles whose manifest declares closure condition 5 but which are not CLOSED.
+// Reported at the end of integrity runs so a green integrity gate is never read
+// as stage progress.
+const unclosedInvariantContracts = [];
+
+/**
+ * Load a stage-closure manifest by bundle id.
+ * @returns {{ manifest: object|null, error: string|null, missing: boolean }}
+ */
+function loadBundleManifest(bundleId) {
+  const path = join(bundlesDir, `${bundleId}.yaml`);
+  let raw;
+  try {
+    raw = readFileSync(path, 'utf8');
+  } catch {
+    return { manifest: null, error: null, missing: true };
+  }
+  try {
+    return { manifest: yamlLoad(raw), error: null, missing: false };
+  } catch (e) {
+    return { manifest: null, error: `${path}: ${e.message}`, missing: false };
+  }
+}
 
 function checkStage(stageKey) {
   const stageData = stages[stageKey];
@@ -96,8 +141,21 @@ function checkStage(stageKey) {
       violations++;
     }
 
+    // Stage-closure manifests carry the invariant block that condition 5 governs.
+    // The ledger does not, so it is loaded here for both CLOSED evaluation and the
+    // integrity-mode non-progress notice below.
+    const isStageClosure = artifact_type === 'factory_stage_closure';
+    const { manifest, error: manifestError, missing: manifestMissing } = isStageClosure
+      ? loadBundleManifest(id)
+      : { manifest: null, error: null, missing: true };
+
+    if (manifestError) {
+      console.error(`  ❌ ${id}: cannot parse stage-closure manifest — ${manifestError}`);
+      violations++;
+    }
+
     if (status === 'CLOSED') {
-      const required = ['pr_sha', 'merge_sha', 'main_integration_run', 'db_verification_run'];
+      const required = REQUIRED_EVIDENCE_FIELDS;
       let evidenceMissing = false;
       for (const field of required) {
         if (!effectiveEvidence || effectiveEvidence[field] == null) {
@@ -106,11 +164,41 @@ function checkStage(stageKey) {
           evidenceMissing = true;
         }
       }
-      if (!evidenceMissing) {
+
+      // Closure condition 5 — invariant-level proof or explicit owner waiver.
+      // The four fields above prove only that a PR merged and CI ran; they prove
+      // nothing about the stage itself.
+      let invariantsUnmet = false;
+      if (isStageClosure && manifestMissing) {
+        console.error(
+          `  ❌ ${id}: CLOSED factory_stage_closure but no manifest found at ${join(bundlesDir, `${id}.yaml`)} — the invariant block that closure condition 5 governs cannot be read`,
+        );
+        violations++;
+        invariantsUnmet = true;
+      } else if (manifest) {
+        const result = evaluateInvariantClosure(manifest, { bundleId: id });
+        if (result.enforced) {
+          for (const violation of result.violations) {
+            console.error(`  ❌ ${violation}`);
+            violations++;
+          }
+          if (result.violations.length > 0) {
+            invariantsUnmet = true;
+          } else {
+            console.log(`  ✓ ${id}: closure condition 5 satisfied — ${summarizeInvariantClosure(result)}`);
+          }
+        }
+      }
+
+      if (!evidenceMissing && !invariantsUnmet) {
         const sha = String((effectiveEvidence || {}).merge_sha || '').slice(0, 12);
         console.log(`  ✓ ${id}: CLOSED — merge_sha=${sha}`);
       }
     } else {
+      if (declaresInvariantProofCondition(manifest)) {
+        const result = evaluateInvariantClosure(manifest, { bundleId: id });
+        unclosedInvariantContracts.push({ id, status, summary: summarizeInvariantClosure(result) });
+      }
       if (mode === 'closure') {
         // Closure gate: every bundle must be CLOSED
         console.error(`  ❌ ${id}: status=${status} — closure mode requires all bundles CLOSED`);
@@ -139,6 +227,20 @@ if (stageArg === 'all') {
 
 console.log('');
 const modeLabel = mode === 'closure' ? 'closure' : 'integrity';
+
+// A passing integrity gate must never be readable as stage closure. Say so
+// explicitly, and name every stage that still has unmet invariant proof.
+if (mode === 'integrity' && unclosedInvariantContracts.length > 0) {
+  console.log('Not closed — closure condition 5 (invariant proof) still outstanding:');
+  for (const entry of unclosedInvariantContracts) {
+    console.log(`  · ${entry.id}: status=${entry.status}, ${entry.summary}`);
+  }
+  console.log('An integrity pass checks data consistency only. It is NOT stage progress');
+  console.log('and must not be cited as closure evidence. Stage closure requires');
+  console.log('--mode closure and every invariant PROVEN with proof, or explicitly waived.');
+  console.log('');
+}
+
 if (violations === 0) {
   console.log(`✅ Stage acceptance ${modeLabel} passed (${checked} bundles, 0 violations)`);
   process.exit(0);
