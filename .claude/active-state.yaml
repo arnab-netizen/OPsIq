@@ -1,8 +1,8 @@
 factory_stage: 7
 active_bundle: "factory-stage-7-closure"
 owner_outcome: "owner-has-proof-stages-3-4-5-6-accepted-and-OpsIQ-can-be-deployed-for-private-owner-use-operated-without-developer-assistance-and-produces-correct-actionable-guidance"
-status: FACTORY_STAGE_7_AUTHORIZED_CONTRACT_DEFINED
-branch: claude/post-merge-state-reconciliation
+status: FACTORY_STAGE_7_AUTHORIZED_CONTRACT_FROZEN_PARTIAL
+branch: claude/stage7-pr1a-governance-contract-freeze
 authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 factory_stage_7: AUTHORIZED_CONTRACT_DEFINED
 
@@ -37,8 +37,20 @@ factory_stage_acceptance:
     contract_file: "docs/opsiq/bundles/factory-stage-7-closure.yaml"
     scope: "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS"
 
-main_sha: "a77bc58a6ba6751cb402d5bb3bc6186e0079cc55"
+main_sha: "4fe42fa8fcd536d44d97ccb3c6e46a23dcffe068"
 stage_8_closure_status: STAGE_8_CLOSURE_NOT_VERIFIED
 factory_stage_7_closure_status: PENDING
-next_target: "Owner decision: produce the missing Factory Stage 7 / Stage 8 production evidence, or explicitly re-scope. No stage may be closed without its four required evidence fields."
+
+factory_stage_7_contract_freeze:
+  applied_in: PR-1A
+  date: "2026-08-02"
+  base_sha: "4fe42fa8fcd536d44d97ccb3c6e46a23dcffe068"
+  owner_decisions_applied: ["D-5 (option b)", "D-6 (option a)"]
+  amendments_applied: ["A3", "A5", "A6", "A7", "A8"]
+  amendments_deferred: ["A1 (D-1)", "A2 (D-2, D-3)", "A4 (D-4)"]
+  enforcement_status: "DECLARATIVE_ONLY — no validator changed in PR-1A; PR-1B implements enforcement"
+  scope: "GOVERNANCE_ARTIFACTS_ONLY — no runtime, production, Prisma, CI-workflow, or validator change"
+  warning: "Do NOT mark factory-stage-7-closure CLOSED before PR-1B lands."
+
+next_target: "Owner review of PR-1A. Then either PR-1B (closure-gate enforcement) or owner decisions D-1, D-2, D-3 to unblock PR-2. No stage may be closed without its five closure conditions."
 current_gap: "Factory Stage 7 remains AUTHORIZED_CONTRACT_DEFINED; factory-stage-7-closure is PENDING with all four required evidence fields null. Stage 8 closure is NOT verified — no governed Stage 8 artifact exists, and production migration verification, owner bootstrap, authenticated owner flow, governed owner mutation with audit event, readiness and scheduler proof are all absent."

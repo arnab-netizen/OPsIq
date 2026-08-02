@@ -581,6 +581,27 @@ stages:
     authorized_branch: "claude/opsiq-stage-7-loop-main"
     name: Live Private Owner Deployment, Pilot, and Unrestricted Readiness Acceptance
     overall_status: AUTHORIZED_CONTRACT_DEFINED
+    # CONTRACT FREEZE (PR-1A, 2026-08-02). Owner decisions D-5 (option b) and D-6
+    # (option a) approved 2026-08-02. Amendments A3, A5, A6, A7, A8 applied to
+    # docs/opsiq/bundles/factory-stage-7-closure.yaml. Amendments A1, A2 and A4 are
+    # deferred pending owner decisions D-1, D-2, D-3 and D-4 and are recorded under
+    # deferred_amendments in the contract.
+    #
+    # Stage 7 closure now requires FIVE conditions, not four. The fifth is invariant-level
+    # proof (status PROVEN plus a non-empty proof_artifacts entry) or an explicit owner
+    # waiver, for every S7-I1..S7-I16. See closure_conditions in the contract.
+    #
+    # ENFORCEMENT: declarative only. PR-1A changed no validator. The closure gate does not
+    # yet read the invariant block, so the four fields below remain the only machine-checked
+    # closure condition until PR-1B lands. Do NOT mark this bundle CLOSED before PR-1B.
+    contract_freeze:
+      applied_in: PR-1A
+      date: "2026-08-02"
+      base_sha: "4fe42fa8fcd536d44d97ccb3c6e46a23dcffe068"
+      owner_decisions_applied: ["D-5 (option b)", "D-6 (option a)"]
+      amendments_applied: ["A3", "A5", "A6", "A7", "A8"]
+      amendments_deferred: ["A1 (D-1)", "A2 (D-2, D-3)", "A4 (D-4)"]
+      enforcement_status: "DECLARATIVE_ONLY — validator logic deferred to PR-1B"
     bundles:
       - id: factory-stage-7-closure
         artifact_type: factory_stage_closure
