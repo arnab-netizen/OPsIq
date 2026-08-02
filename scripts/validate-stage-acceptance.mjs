@@ -39,8 +39,8 @@ import { fileURLToPath } from 'url';
 import { load as yamlLoad } from 'js-yaml';
 import {
   REQUIRED_EVIDENCE_FIELDS,
-  declaresInvariantProofCondition,
   evaluateInvariantClosure,
+  requiresInvariantProof,
   summarizeInvariantClosure,
 } from './lib/invariant-closure.mjs';
 
@@ -105,11 +105,18 @@ function loadBundleManifest(bundleId) {
   } catch {
     return { manifest: null, error: null, missing: true };
   }
+  let parsed;
   try {
-    return { manifest: yamlLoad(raw), error: null, missing: false };
+    parsed = yamlLoad(raw);
   } catch (e) {
     return { manifest: null, error: `${path}: ${e.message}`, missing: false };
   }
+  // An empty file parses to undefined. Treat anything that is not a mapping as
+  // unreadable rather than as "nothing to check".
+  if (parsed === null || parsed === undefined) {
+    return { manifest: null, error: `${path}: file is empty — no manifest to validate`, missing: false };
+  }
+  return { manifest: parsed, error: null, missing: false };
 }
 
 function checkStage(stageKey) {
@@ -144,13 +151,41 @@ function checkStage(stageKey) {
     // Stage-closure manifests carry the invariant block that condition 5 governs.
     // The ledger does not, so it is loaded here for both CLOSED evaluation and the
     // integrity-mode non-progress notice below.
+    // Load the manifest when the ledger says this is a stage closure OR when the
+    // validator-owned registry governs this bundle id. Keying solely off the
+    // ledger's artifact_type would let a ledger edit (reclassifying the bundle as
+    // a development_bundle with post_merge_evidence) skip invariant evaluation.
     const isStageClosure = artifact_type === 'factory_stage_closure';
-    const { manifest, error: manifestError, missing: manifestMissing } = isStageClosure
+    const isGoverned = requiresInvariantProof(id);
+    const { manifest, error: manifestError, missing: manifestMissing } = (isStageClosure || isGoverned)
       ? loadBundleManifest(id)
       : { manifest: null, error: null, missing: true };
 
     if (manifestError) {
       console.error(`  ❌ ${id}: cannot parse stage-closure manifest — ${manifestError}`);
+      violations++;
+    }
+
+    // Structural enforcement — evaluated at EVERY status, not just CLOSED. The
+    // validator, not the manifest, decides whether a contract is governed; a
+    // contract that has dropped its enforcement declaration or altered the
+    // canonical invariant set must fail while it is still PENDING, rather than
+    // being quietly disarmed now and closed later.
+    let closure = null;
+    if (manifest) {
+      closure = evaluateInvariantClosure(manifest, { bundleId: id });
+      for (const violation of closure.structuralViolations) {
+        console.error(`  ❌ ${violation}`);
+        violations++;
+      }
+    }
+
+    // A governed contract whose manifest could not be read is unverifiable. Fail
+    // closed at any status: this check reads the registry, never the manifest.
+    if (manifestMissing && isGoverned) {
+      console.error(
+        `  ❌ ${id}: governed by closure condition 5 but no manifest found at ${join(bundlesDir, `${id}.yaml`)} — the canonical invariant set cannot be verified`,
+      );
       violations++;
     }
 
@@ -168,25 +203,22 @@ function checkStage(stageKey) {
       // Closure condition 5 — invariant-level proof or explicit owner waiver.
       // The four fields above prove only that a PR merged and CI ran; they prove
       // nothing about the stage itself.
-      let invariantsUnmet = false;
+      let invariantsUnmet = closure ? closure.structuralViolations.length > 0 : false;
       if (isStageClosure && manifestMissing) {
         console.error(
           `  ❌ ${id}: CLOSED factory_stage_closure but no manifest found at ${join(bundlesDir, `${id}.yaml`)} — the invariant block that closure condition 5 governs cannot be read`,
         );
         violations++;
         invariantsUnmet = true;
-      } else if (manifest) {
-        const result = evaluateInvariantClosure(manifest, { bundleId: id });
-        if (result.enforced) {
-          for (const violation of result.violations) {
-            console.error(`  ❌ ${violation}`);
-            violations++;
-          }
-          if (result.violations.length > 0) {
-            invariantsUnmet = true;
-          } else {
-            console.log(`  ✓ ${id}: closure condition 5 satisfied — ${summarizeInvariantClosure(result)}`);
-          }
+      } else if (closure && closure.enforced) {
+        for (const violation of closure.proofViolations) {
+          console.error(`  ❌ ${violation}`);
+          violations++;
+        }
+        if (closure.proofViolations.length > 0) {
+          invariantsUnmet = true;
+        } else if (!invariantsUnmet) {
+          console.log(`  ✓ ${id}: closure condition 5 satisfied — ${summarizeInvariantClosure(closure)}`);
         }
       }
 
@@ -195,9 +227,16 @@ function checkStage(stageKey) {
         console.log(`  ✓ ${id}: CLOSED — merge_sha=${sha}`);
       }
     } else {
-      if (declaresInvariantProofCondition(manifest)) {
-        const result = evaluateInvariantClosure(manifest, { bundleId: id });
-        unclosedInvariantContracts.push({ id, status, summary: summarizeInvariantClosure(result) });
+      // Keyed off the registry, not off anything the manifest declares, so the
+      // notice cannot be silenced by editing the contract.
+      if (requiresInvariantProof(id)) {
+        unclosedInvariantContracts.push({
+          id,
+          status,
+          summary: closure && closure.enforced
+            ? summarizeInvariantClosure(closure)
+            : 'invariant state unreadable',
+        });
       }
       if (mode === 'closure') {
         // Closure gate: every bundle must be CLOSED

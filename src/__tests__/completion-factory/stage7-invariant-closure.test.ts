@@ -1,21 +1,29 @@
 /**
  * Factory Stage 7 — closure condition 5 enforcement (PR-1B)
  *
- * Proves that the two closure gates now read the invariant block of a
- * factory_stage_closure manifest, and that a stage cannot be closed on metadata
- * alone.
+ * Proves that the two closure gates read the invariant block of a stage-closure
+ * manifest, that a stage cannot be closed on metadata alone, and — after the
+ * hostile forensic audit — that a manifest cannot opt itself out of the rules
+ * that govern it.
  *
- * The historical governance gap this guards against: before PR-1B, neither
- * scripts/validate-stage-acceptance.mjs nor scripts/validate-bundle-manifests.mjs
- * looked at `invariants`. A closure manifest could be flipped to CLOSED with
- * pr_sha, merge_sha, main_integration_run and db_verification_run pasted in while
- * all sixteen Stage 7 invariants sat at PENDING with empty proof_artifacts, and
- * both gates exited 0. That is the mechanism by which a stage could be declared
- * closed with no evidence that the stage had happened.
+ * Two historical governance gaps are covered:
+ *
+ *  1. Before PR-1B, neither validator looked at `invariants`. A closure manifest
+ *     could be flipped to CLOSED with the four metadata fields pasted in while all
+ *     sixteen Stage 7 invariants sat at PENDING with empty proof_artifacts, and
+ *     both gates exited 0.
+ *
+ *  2. The first PR-1B implementation asked the manifest whether enforcement
+ *     applied, by testing for `closure_conditions.5_invariant_proof`. Deleting
+ *     that key, renaming it, writing `closure_conditions` as a list, or deleting
+ *     invariants from the manifest all silently disabled or shrank enforcement.
+ *     Enforcement is now owned by STAGE_CLOSURE_ENFORCEMENT_REGISTRY in
+ *     scripts/lib/invariant-closure.mjs and keyed on the bundle id.
  *
  * Every case drives the real scripts as subprocesses against generated fixtures,
  * so the assertions cover the shipped enforcement path rather than a reimplemented
- * copy of it.
+ * copy of it. Fixtures use the real bundle ids, so they exercise the production
+ * registry entries rather than a test-only registry.
  */
 
 import { describe, it, expect, afterAll } from "vitest";
@@ -39,7 +47,12 @@ afterAll(() => {
 
 // ─── Fixture builders ─────────────────────────────────────────────────────────
 
-const BUNDLE_ID = "factory-stage-test-closure";
+const STAGE_7_ID = "factory-stage-7-closure";
+const STAGE_6_ID = "factory-stage-6-closure";
+const STAGE_5_ID = "factory-stage-5-closure";
+
+/** The canonical set the validator owns. Mirrored here so drift fails a test. */
+const CANONICAL_IDS = Array.from({ length: 16 }, (_, i) => `S7-I${i + 1}`);
 
 const FULL_EVIDENCE = {
   pr_sha: "1111111111111111111111111111111111111111",
@@ -48,120 +61,96 @@ const FULL_EVIDENCE = {
   db_verification_run: "https://github.com/org/repo/actions/runs/1002",
 };
 
+const NULL_EVIDENCE = {
+  pr_sha: null,
+  merge_sha: null,
+  main_integration_run: null,
+  db_verification_run: null,
+};
+
+const CONDITIONS = {
+  "1_pr_sha": "required_evidence.pr_sha is non-null",
+  "2_merge_sha": "required_evidence.merge_sha is non-null",
+  "3_main_integration_run": "required_evidence.main_integration_run is non-null",
+  "4_db_verification_run": "required_evidence.db_verification_run is non-null",
+  "5_invariant_proof":
+    "Every invariant carries status: PROVEN with at least one proof_artifacts entry, or an explicit owner waiver.",
+};
+
 const COMPLETE_WAIVER = {
-  invariant: "ST-I2",
+  invariant: "S7-I2",
   owner: "arnab-netizen",
   reason: "Live provider credentials unavailable for the pilot; email is not on the selected workflow.",
   date: "2026-08-02",
-  acknowledgement: "Owner acknowledges ST-I2 is closed without proof and accepts the residual risk.",
+  acknowledgement: "Owner acknowledges S7-I2 is closed without proof and accepts the residual risk.",
 };
 
-type InvariantEntry = Record<string, unknown>;
+type Entry = Record<string, unknown>;
 
-function provenInvariant(id: string): InvariantEntry {
-  return {
-    name: `Test invariant ${id}`,
-    status: "PROVEN",
-    proof_artifacts: [`${id}: evidence recorded at docs/evidence/${id}.md`],
-  };
+const proven = (id: string): Entry => ({
+  name: `Invariant ${id}`,
+  status: "PROVEN",
+  proof_artifacts: [`${id}: evidence recorded at docs/evidence/${id}.md`],
+});
+
+const pendingInv = (id: string): Entry => ({
+  name: `Invariant ${id}`,
+  status: "PENDING",
+  proof_artifacts: [],
+});
+
+/** All sixteen canonical invariants, built from a per-id factory. */
+function canonicalInvariants(factory: (id: string) => Entry): Record<string, Entry> {
+  return Object.fromEntries(CANONICAL_IDS.map((id) => [id, factory(id)]));
 }
 
-function pendingInvariant(id: string): InvariantEntry {
-  return { name: `Test invariant ${id}`, status: "PENDING", proof_artifacts: [] };
+/** All proven except the named ids, which are left PENDING. */
+function allProvenExcept(...unproven: string[]): Record<string, Entry> {
+  return canonicalInvariants((id) => (unproven.includes(id) ? pendingInv(id) : proven(id)));
 }
 
-/**
- * Build a stage-closure manifest. `declareCondition5` controls whether the
- * manifest opts into invariant-proof enforcement, exactly as a frozen contract
- * does via closure_conditions.5_invariant_proof.
- */
-function buildManifest(options: {
+function buildStage7Manifest(options: {
   status?: string;
-  invariants?: Record<string, unknown>;
+  invariants?: unknown;
   waivers?: unknown;
-  declareCondition5?: boolean;
-  evidence?: Record<string, unknown>;
-}): Record<string, unknown> {
+  conditions?: unknown;
+  omitConditions?: boolean;
+  evidence?: unknown;
+} = {}): Record<string, unknown> {
   const {
     status = "CLOSED",
-    invariants = { "ST-I1": provenInvariant("ST-I1"), "ST-I2": provenInvariant("ST-I2") },
+    invariants = canonicalInvariants(proven),
     waivers = [],
-    declareCondition5 = true,
+    conditions = CONDITIONS,
+    omitConditions = false,
     evidence = FULL_EVIDENCE,
   } = options;
 
   const manifest: Record<string, unknown> = {
-    id: BUNDLE_ID,
-    stage: "factory-test",
+    id: STAGE_7_ID,
+    stage: "factory-7",
     artifact_type: "factory_stage_closure",
-    factory_stage_id: "FACTORY_STAGE_TEST",
-    development_bundle_id: null,
+    factory_stage_id: "FACTORY_STAGE_7",
     status,
-    priority: 1,
-    name: "Factory Stage Test Closure",
+    name: "Factory Stage 7 Closure",
     invariants,
+    invariant_waivers: waivers,
     required_evidence: evidence,
   };
-
-  if (declareCondition5) {
-    manifest.closure_conditions = {
-      "1_pr_sha": "required_evidence.pr_sha is non-null",
-      "2_merge_sha": "required_evidence.merge_sha is non-null",
-      "3_main_integration_run": "required_evidence.main_integration_run is non-null",
-      "4_db_verification_run": "required_evidence.db_verification_run is non-null",
-      "5_invariant_proof":
-        "Every invariant carries status: PROVEN with at least one proof_artifacts entry, or an explicit owner waiver.",
-    };
-    manifest.invariant_waivers = waivers;
-  }
-
+  if (!omitConditions) manifest.closure_conditions = conditions;
   return manifest;
 }
 
-function buildLedger(status: string, evidence: Record<string, unknown>): Record<string, unknown> {
-  return {
-    stages: {
-      "factory-stage-7": {
-        name: "Factory Stage Test",
-        bundles: [
-          {
-            id: BUNDLE_ID,
-            artifact_type: "factory_stage_closure",
-            status,
-            required_evidence: evidence,
-          },
-        ],
-      },
-    },
-  };
-}
-
-/** Materialise a ledger + bundles dir into a fresh temp workspace. */
-function writeFixture(manifest: Record<string, unknown>): { ledgerPath: string; bundlesDir: string } {
-  const dir = mkdtempSync(join(tmpdir(), "opsiq-stage7-closure-"));
-  tempDirs.push(dir);
-
-  const bundlesDir = join(dir, "bundles");
-  mkdirSync(bundlesDir);
-  writeFileSync(join(bundlesDir, `${BUNDLE_ID}.yaml`), YAML.dump(manifest), "utf8");
-
-  const ledgerPath = join(dir, "ledger.yaml");
-  const ledger = buildLedger(
-    manifest.status as string,
-    (manifest.required_evidence ?? {}) as Record<string, unknown>,
-  );
-  writeFileSync(ledgerPath, YAML.dump(ledger), "utf8");
-
-  return { ledgerPath, bundlesDir };
+function buildLedger(bundleId: string, status: string, evidence: unknown, artifactType = "factory_stage_closure") {
+  const entry: Record<string, unknown> = { id: bundleId, artifact_type: artifactType, status };
+  if (artifactType === "factory_stage_closure") entry.required_evidence = evidence;
+  else entry.post_merge_evidence = evidence;
+  return { stages: { "factory-stage-7": { name: "Factory Stage Test", bundles: [entry] } } };
 }
 
 function runScript(script: string, args: string[]): { code: number; output: string } {
   try {
-    const output = execFileSync("node", [script, ...args], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: "pipe",
-    });
+    const output = execFileSync("node", [script, ...args], { cwd: root, encoding: "utf8", stdio: "pipe" });
     return { code: 0, output };
   } catch (err: unknown) {
     const e = err as { status?: number; stdout?: string; stderr?: string };
@@ -169,11 +158,48 @@ function runScript(script: string, args: string[]): { code: number; output: stri
   }
 }
 
-function runStageAcceptance(
-  manifest: Record<string, unknown>,
-  mode: "integrity" | "closure" = "integrity",
-): { code: number; output: string } {
-  const { ledgerPath, bundlesDir } = writeFixture(manifest);
+/**
+ * Materialise a manifest (object or raw YAML text) plus a ledger, then run the
+ * stage acceptance gate against them.
+ */
+function runGate(options: {
+  manifest?: Record<string, unknown>;
+  rawManifest?: string;
+  bundleId?: string;
+  ledgerStatus?: string;
+  ledgerEvidence?: unknown;
+  ledgerArtifactType?: string;
+  writeManifest?: boolean;
+  mode?: "integrity" | "closure";
+}): { code: number; output: string } {
+  const {
+    manifest,
+    rawManifest,
+    bundleId = STAGE_7_ID,
+    ledgerArtifactType = "factory_stage_closure",
+    writeManifest = true,
+    mode = "integrity",
+  } = options;
+
+  const dir = mkdtempSync(join(tmpdir(), "opsiq-stage7-closure-"));
+  tempDirs.push(dir);
+  const bundlesDir = join(dir, "bundles");
+  mkdirSync(bundlesDir);
+
+  if (writeManifest) {
+    const body = rawManifest ?? YAML.dump(manifest ?? {});
+    writeFileSync(join(bundlesDir, `${bundleId}.yaml`), body, "utf8");
+  }
+
+  const ledgerStatus = options.ledgerStatus ?? (manifest?.status as string) ?? "CLOSED";
+  const ledgerEvidence = options.ledgerEvidence ?? manifest?.required_evidence ?? FULL_EVIDENCE;
+  const ledgerPath = join(dir, "ledger.yaml");
+  writeFileSync(
+    ledgerPath,
+    YAML.dump(buildLedger(bundleId, ledgerStatus, ledgerEvidence, ledgerArtifactType)),
+    "utf8",
+  );
+
   return runScript(stageAcceptanceScript, [
     "--stage",
     "factory-7",
@@ -186,316 +212,433 @@ function runStageAcceptance(
   ]);
 }
 
-// ─── Rule 1: metadata alone must never close a stage ──────────────────────────
+// ─── Audit bypasses B01 / B02 / B10 — enforcement cannot be opted out ─────────
 
-describe("Stage 7 closure condition 5 — Rule 1: invariant proof required", () => {
-  it("blocks closure when only the four metadata fields are populated (the historical gap)", () => {
-    const manifest = buildManifest({
-      invariants: {
-        "ST-I1": pendingInvariant("ST-I1"),
-        "ST-I2": pendingInvariant("ST-I2"),
-      },
+describe("Stage 7 condition 5 — enforcement is validator-owned (audit B01/B02/B10)", () => {
+  it("B01: deleting closure_conditions is a violation, not an opt-out", () => {
+    const result = runGate({ manifest: buildStage7Manifest({ omitConditions: true }) });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("closure_conditions is absent");
+    expect(result.output).toContain("cannot opt itself out");
+  });
+
+  it("B02: renaming 5_invariant_proof is a violation", () => {
+    const result = runGate({
+      manifest: buildStage7Manifest({ conditions: { "5_invariant_proofs": "typo" } }),
     });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("does not declare '5_invariant_proof'");
+  });
 
+  it("B10: closure_conditions written as a list is a violation", () => {
+    const result = runGate({
+      manifest: buildStage7Manifest({ conditions: ["5_invariant_proof"] }),
+    });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("closure_conditions is list");
+  });
+
+  it("B01 is blocked even while the contract is still PENDING", () => {
+    // A contract must not be quietly disarmed now and closed later.
+    const result = runGate({
+      manifest: buildStage7Manifest({
+        status: "PENDING",
+        omitConditions: true,
+        invariants: canonicalInvariants(pendingInv),
+        evidence: NULL_EVIDENCE,
+      }),
+    });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("cannot opt itself out");
+  });
+
+  it("5_invariant_proof declared with a null value still enforces", () => {
+    const result = runGate({
+      manifest: buildStage7Manifest({
+        conditions: { "5_invariant_proof": null },
+        invariants: canonicalInvariants(pendingInv),
+      }),
+    });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("blocks closure");
+  });
+});
+
+// ─── Audit bypass B04 — the validator owns the canonical invariant set ────────
+
+describe("Stage 7 condition 5 — canonical invariant set (audit B04)", () => {
+  it("B04: deleting invariants is a violation even when the survivors are proven", () => {
+    const result = runGate({
+      manifest: buildStage7Manifest({ invariants: { "S7-I1": proven("S7-I1") } }),
+    });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("canonical invariant(s) missing");
+    expect(result.output).toContain("S7-I16");
+    expect(result.output).toContain("cannot shrink it");
+  });
+
+  it("adding an undeclared invariant is a violation", () => {
+    const result = runGate({
+      manifest: buildStage7Manifest({
+        invariants: { ...canonicalInvariants(proven), "S7-I17": proven("S7-I17") },
+      }),
+    });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("undeclared invariant(s)");
+    expect(result.output).toContain("S7-I17");
+    expect(result.output).toContain("cannot extend it");
+  });
+
+  it("an empty invariants map is a violation", () => {
+    const result = runGate({ manifest: buildStage7Manifest({ invariants: {} }) });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("'invariants' is empty");
+  });
+
+  it("invariants written as a list is a violation", () => {
+    const result = runGate({ manifest: buildStage7Manifest({ invariants: [] }) });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("'invariants' is");
+  });
+
+  it("duplicate invariant ids fail validation (YAML rejects duplicate mapping keys)", () => {
+    const raw = `id: ${STAGE_7_ID}
+artifact_type: factory_stage_closure
+status: CLOSED
+closure_conditions:
+  5_invariant_proof: proof or waiver
+invariants:
+  S7-I1:
+    status: PENDING
+    proof_artifacts: []
+  S7-I1:
+    status: PROVEN
+    proof_artifacts: ["forged"]
+invariant_waivers: []
+`;
+    const result = runGate({ rawManifest: raw });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("duplicated mapping key");
+  });
+
+  it("a stage-closure manifest unknown to the registry is a violation", () => {
+    const manifest = { ...buildStage7Manifest(), id: "factory-stage-99-closure" };
+    const result = runGate({ manifest, bundleId: "factory-stage-99-closure" });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("not present in STAGE_CLOSURE_ENFORCEMENT_REGISTRY");
+  });
+});
+
+// ─── Ledger-side and file-side evasion ───────────────────────────────────────
+
+describe("Stage 7 condition 5 — evasion via the ledger or the manifest file", () => {
+  it("reclassifying the ledger entry as a development_bundle does not skip invariants", () => {
+    const result = runGate({
+      manifest: buildStage7Manifest({ invariants: canonicalInvariants(pendingInv) }),
+      ledgerArtifactType: "development_bundle",
+      ledgerEvidence: FULL_EVIDENCE,
+    });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("blocks closure");
+  });
+
+  it("an empty manifest file is a violation, not an absence of things to check", () => {
+    const result = runGate({ rawManifest: "" });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("file is empty");
+  });
+
+  it("a manifest that is a bare scalar is a violation", () => {
+    const result = runGate({ rawManifest: "just-a-string\n" });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("not a mapping");
+  });
+
+  it("a governed contract with no manifest on disk is a violation at any status", () => {
+    const result = runGate({
+      writeManifest: false,
+      ledgerStatus: "PENDING",
+      ledgerEvidence: NULL_EVIDENCE,
+    });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("canonical invariant set cannot be verified");
+  });
+});
+
+// ─── Proof requirement ───────────────────────────────────────────────────────
+
+describe("Stage 7 condition 5 — invariant proof required", () => {
+  it("blocks closure when only the four metadata fields are populated (the original gap)", () => {
+    const manifest = buildStage7Manifest({ invariants: canonicalInvariants(pendingInv) });
     for (const mode of ["integrity", "closure"] as const) {
-      const result = runStageAcceptance(manifest, mode);
+      const result = runGate({ manifest, mode });
       expect(result.code, `mode=${mode} must reject metadata-only closure`).toBe(1);
-      expect(result.output).toContain("ST-I1");
-      expect(result.output).toContain("ST-I2");
+      expect(result.output).toContain("invariant S7-I1 blocks closure");
+      expect(result.output).toContain("invariant S7-I16 blocks closure");
     }
   });
 
   it("blocks closure when an invariant is PROVEN but proof_artifacts is empty", () => {
-    const manifest = buildManifest({
-      invariants: {
-        "ST-I1": provenInvariant("ST-I1"),
-        "ST-I2": { name: "no proof", status: "PROVEN", proof_artifacts: [] },
-      },
-    });
-
-    const result = runStageAcceptance(manifest);
+    const invariants = canonicalInvariants(proven);
+    invariants["S7-I3"] = { status: "PROVEN", proof_artifacts: [] };
+    const result = runGate({ manifest: buildStage7Manifest({ invariants }) });
     expect(result.code).toBe(1);
-    expect(result.output).toContain("ST-I2");
+    expect(result.output).toContain("invariant S7-I3 blocks closure");
     expect(result.output).toContain("proof_artifacts");
   });
 
   it("blocks closure when proof_artifacts is absent entirely", () => {
-    const manifest = buildManifest({
-      invariants: {
-        "ST-I1": provenInvariant("ST-I1"),
-        "ST-I2": { name: "no proof key", status: "PROVEN" },
-      },
-    });
-
-    const result = runStageAcceptance(manifest);
+    const invariants = canonicalInvariants(proven);
+    invariants["S7-I4"] = { status: "PROVEN" };
+    const result = runGate({ manifest: buildStage7Manifest({ invariants }) });
     expect(result.code).toBe(1);
-    expect(result.output).toContain("ST-I2");
     expect(result.output).toContain("proof_artifacts absent");
   });
 
   it("does not count empty-string proof artifacts as proof", () => {
-    const manifest = buildManifest({
-      invariants: {
-        "ST-I1": provenInvariant("ST-I1"),
-        "ST-I2": { name: "blank proof", status: "PROVEN", proof_artifacts: ["", "   "] },
-      },
-    });
-
-    const result = runStageAcceptance(manifest);
+    const invariants = canonicalInvariants(proven);
+    invariants["S7-I5"] = { status: "PROVEN", proof_artifacts: ["", "   "] };
+    const result = runGate({ manifest: buildStage7Manifest({ invariants }) });
     expect(result.code).toBe(1);
-    expect(result.output).toContain("ST-I2");
+    expect(result.output).toContain("invariant S7-I5 blocks closure");
   });
 
-  it("passes when every invariant is PROVEN with at least one proof artifact", () => {
-    const manifest = buildManifest({
-      invariants: {
-        "ST-I1": provenInvariant("ST-I1"),
-        "ST-I2": provenInvariant("ST-I2"),
-      },
-    });
+  it("does not accept a non-PROVEN status such as LANE_A_PROVEN", () => {
+    const invariants = canonicalInvariants(proven);
+    invariants["S7-I6"] = { status: "LANE_A_PROVEN", proof_artifacts: ["ci gate"] };
+    const result = runGate({ manifest: buildStage7Manifest({ invariants }) });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("required: 'PROVEN'");
+  });
 
-    const result = runStageAcceptance(manifest, "closure");
+  it("passes when all sixteen invariants are PROVEN with at least one proof artifact", () => {
+    const result = runGate({ manifest: buildStage7Manifest(), mode: "closure" });
     expect(result.code).toBe(0);
     expect(result.output).toContain("closure condition 5 satisfied");
+    expect(result.output).toContain("16/16 invariants proven");
   });
 });
 
-// ─── Rule 2: waivers must be complete and attributable ────────────────────────
+// ─── Waivers ─────────────────────────────────────────────────────────────────
 
-describe("Stage 7 closure condition 5 — Rule 2: waiver completeness", () => {
-  const unprovenSet = {
-    "ST-I1": provenInvariant("ST-I1"),
-    "ST-I2": pendingInvariant("ST-I2"),
+describe("Stage 7 condition 5 — waiver completeness", () => {
+  const withUnproven = (waivers: unknown) =>
+    buildStage7Manifest({ invariants: allProvenExcept("S7-I2"), waivers });
+
+  /** A copy of the complete waiver with exactly one required field removed. */
+  const waiverWithout = (field: string): Record<string, unknown> => {
+    const waiver: Record<string, unknown> = { ...COMPLETE_WAIVER };
+    delete waiver[field];
+    return waiver;
   };
 
   it("rejects an empty waiver object", () => {
-    const result = runStageAcceptance(buildManifest({ invariants: unprovenSet, waivers: [{}] }));
+    const result = runGate({ manifest: withUnproven([{}]) });
     expect(result.code).toBe(1);
     expect(result.output).toContain("invariant_waivers[0]");
-    expect(result.output).toContain("ST-I2");
   });
 
   it("rejects a waiver missing its reason", () => {
-    const { reason: _reason, ...withoutReason } = COMPLETE_WAIVER;
-    const result = runStageAcceptance(
-      buildManifest({ invariants: unprovenSet, waivers: [withoutReason] }),
-    );
+    const rest = waiverWithout("reason");
+    const result = runGate({ manifest: withUnproven([rest]) });
     expect(result.code).toBe(1);
     expect(result.output).toContain("reason");
-    expect(result.output).toContain("ST-I2");
   });
 
   it("rejects an anonymous waiver (no owner attribution)", () => {
-    const { owner: _owner, ...anonymous } = COMPLETE_WAIVER;
-    const result = runStageAcceptance(
-      buildManifest({ invariants: unprovenSet, waivers: [anonymous] }),
-    );
+    const rest = waiverWithout("owner");
+    const result = runGate({ manifest: withUnproven([rest]) });
     expect(result.code).toBe(1);
     expect(result.output).toContain("owner");
   });
 
-  it("rejects a waiver with no timestamp", () => {
-    const { date: _date, ...undated } = COMPLETE_WAIVER;
-    const result = runStageAcceptance(buildManifest({ invariants: unprovenSet, waivers: [undated] }));
+  it("rejects a waiver with no date", () => {
+    const rest = waiverWithout("date");
+    const result = runGate({ manifest: withUnproven([rest]) });
     expect(result.code).toBe(1);
     expect(result.output).toContain("date");
   });
 
   it("rejects a waiver with no explicit acknowledgement", () => {
-    const { acknowledgement: _ack, ...unacknowledged } = COMPLETE_WAIVER;
-    const result = runStageAcceptance(
-      buildManifest({ invariants: unprovenSet, waivers: [unacknowledged] }),
-    );
+    const rest = waiverWithout("acknowledgement");
+    const result = runGate({ manifest: withUnproven([rest]) });
     expect(result.code).toBe(1);
     expect(result.output).toContain("acknowledgement");
   });
 
   it("rejects a waiver naming an invariant the contract does not declare", () => {
-    const result = runStageAcceptance(
-      buildManifest({
-        invariants: unprovenSet,
-        waivers: [{ ...COMPLETE_WAIVER, invariant: "ST-I99" }],
-      }),
-    );
+    const result = runGate({ manifest: withUnproven([{ ...COMPLETE_WAIVER, invariant: "S7-I99" }]) });
     expect(result.code).toBe(1);
-    expect(result.output).toContain("ST-I99");
+    expect(result.output).toContain("S7-I99");
   });
 
   it("rejects duplicate waivers for the same invariant", () => {
-    const result = runStageAcceptance(
-      buildManifest({ invariants: unprovenSet, waivers: [COMPLETE_WAIVER, COMPLETE_WAIVER] }),
-    );
+    const result = runGate({ manifest: withUnproven([COMPLETE_WAIVER, COMPLETE_WAIVER]) });
     expect(result.code).toBe(1);
     expect(result.output).toContain("duplicate owner waiver");
   });
 
+  it("treats a missing invariant_waivers list as no waivers, never as blanket approval", () => {
+    const manifest = withUnproven([]);
+    delete (manifest as Record<string, unknown>).invariant_waivers;
+    const result = runGate({ manifest });
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("invariant S7-I2 blocks closure");
+  });
+
   it("accepts a complete owner waiver in place of proof", () => {
-    const result = runStageAcceptance(
-      buildManifest({ invariants: unprovenSet, waivers: [COMPLETE_WAIVER] }),
-      "closure",
-    );
+    const result = runGate({ manifest: withUnproven([COMPLETE_WAIVER]), mode: "closure" });
     expect(result.code).toBe(0);
     expect(result.output).toContain("1 waived");
   });
 
-  it("treats a missing invariant_waivers list as no waivers, never as blanket approval", () => {
-    const manifest = buildManifest({ invariants: unprovenSet, waivers: [] });
-    delete (manifest as Record<string, unknown>).invariant_waivers;
-    const result = runStageAcceptance(manifest);
+  it("accepts an unquoted YAML date, which parses to a Date object (audit false negative)", () => {
+    const raw = YAML.dump(withUnproven([])).replace(
+      "invariant_waivers: []",
+      [
+        "invariant_waivers:",
+        "  - invariant: S7-I2",
+        "    owner: arnab-netizen",
+        "    reason: credentials unavailable for the pilot",
+        "    date: 2026-08-02",
+        "    acknowledgement: owner accepts the residual risk",
+      ].join("\n"),
+    );
+    const result = runGate({ rawManifest: raw, mode: "closure" });
+    expect(result.code).toBe(0);
+    expect(result.output).toContain("1 waived");
+  });
+
+  it("accepts a full YAML timestamp as the waiver date", () => {
+    const raw = YAML.dump(withUnproven([])).replace(
+      "invariant_waivers: []",
+      [
+        "invariant_waivers:",
+        "  - invariant: S7-I2",
+        "    owner: arnab-netizen",
+        "    reason: credentials unavailable for the pilot",
+        "    date: 2026-08-02T10:30:00Z",
+        "    acknowledgement: owner accepts the residual risk",
+      ].join("\n"),
+    );
+    const result = runGate({ rawManifest: raw, mode: "closure" });
+    expect(result.code).toBe(0);
+  });
+
+  it("still rejects an empty-string date", () => {
+    const result = runGate({ manifest: withUnproven([{ ...COMPLETE_WAIVER, date: "" }]) });
     expect(result.code).toBe(1);
-    expect(result.output).toContain("ST-I2");
+    expect(result.output).toContain("date");
   });
 });
 
-// ─── Rule 3: failures must be specific ────────────────────────────────────────
+// ─── Rule 3: specific failure messages ───────────────────────────────────────
 
-describe("Stage 7 closure condition 5 — Rule 3: specific failure messages", () => {
+describe("Stage 7 condition 5 — specific failure messages", () => {
   it("names the invariant, the unmet requirement, the missing proof and the missing waiver", () => {
-    const result = runStageAcceptance(
-      buildManifest({
-        invariants: { "ST-I1": provenInvariant("ST-I1"), "ST-I2": pendingInvariant("ST-I2") },
-      }),
-    );
-
+    const result = runGate({ manifest: buildStage7Manifest({ invariants: allProvenExcept("S7-I2") }) });
     expect(result.code).toBe(1);
-    expect(result.output).toContain("invariant ST-I2 blocks closure");
+    expect(result.output).toContain("invariant S7-I2 blocks closure");
     expect(result.output).toContain("unmet requirement:");
     expect(result.output).toContain("missing proof:");
     expect(result.output).toContain("missing waiver:");
-    // The satisfied invariant must not be blamed.
-    expect(result.output).not.toContain("invariant ST-I1 blocks closure");
+    expect(result.output).not.toContain("invariant S7-I1 blocks closure");
   });
 
   it("reports every unmet invariant, not just the first", () => {
-    const result = runStageAcceptance(
-      buildManifest({
-        invariants: {
-          "ST-I1": pendingInvariant("ST-I1"),
-          "ST-I2": pendingInvariant("ST-I2"),
-          "ST-I3": pendingInvariant("ST-I3"),
-        },
-      }),
-    );
-
+    const result = runGate({
+      manifest: buildStage7Manifest({ invariants: allProvenExcept("S7-I2", "S7-I9", "S7-I14") }),
+    });
     expect(result.code).toBe(1);
-    for (const id of ["ST-I1", "ST-I2", "ST-I3"]) {
+    for (const id of ["S7-I2", "S7-I9", "S7-I14"]) {
       expect(result.output).toContain(`invariant ${id} blocks closure`);
     }
   });
 });
 
-// ─── Rule 4: a passing integrity gate is not closure ──────────────────────────
+// ─── Rule 4: integrity is not closure, and the notice cannot be silenced ─────
 
-describe("Stage 7 closure condition 5 — Rule 4: integrity is not closure", () => {
-  it("passes integrity for a PENDING contract but states it is not stage progress", () => {
-    const manifest = buildManifest({
-      status: "PENDING",
-      invariants: { "ST-I1": pendingInvariant("ST-I1"), "ST-I2": pendingInvariant("ST-I2") },
-      evidence: {
-        pr_sha: null,
-        merge_sha: null,
-        main_integration_run: null,
-        db_verification_run: null,
-      },
+describe("Stage 7 condition 5 — integrity is not closure", () => {
+  it("passes integrity for a well-formed PENDING contract but states it is not progress", () => {
+    const result = runGate({
+      manifest: buildStage7Manifest({
+        status: "PENDING",
+        invariants: canonicalInvariants(pendingInv),
+        evidence: NULL_EVIDENCE,
+      }),
+      mode: "integrity",
     });
-
-    const result = runStageAcceptance(manifest, "integrity");
     expect(result.code).toBe(0);
     expect(result.output).toContain("closure condition 5 (invariant proof) still outstanding");
     expect(result.output).toContain("NOT stage progress");
-    expect(result.output).toContain("0/2 invariants proven");
+    expect(result.output).toContain("0/16 invariants proven");
   });
 
   it("still refuses closure mode for the same PENDING contract", () => {
-    const manifest = buildManifest({
-      status: "PENDING",
-      invariants: { "ST-I1": pendingInvariant("ST-I1") },
-      evidence: {
-        pr_sha: null,
-        merge_sha: null,
-        main_integration_run: null,
-        db_verification_run: null,
-      },
+    const result = runGate({
+      manifest: buildStage7Manifest({
+        status: "PENDING",
+        invariants: canonicalInvariants(pendingInv),
+        evidence: NULL_EVIDENCE,
+      }),
+      mode: "closure",
     });
-
-    const result = runStageAcceptance(manifest, "closure");
     expect(result.code).toBe(1);
-  });
-
-  it("fails a CLOSED stage-closure entry whose manifest cannot be found", () => {
-    const dir = mkdtempSync(join(tmpdir(), "opsiq-stage7-nomanifest-"));
-    tempDirs.push(dir);
-    const bundlesDir = join(dir, "bundles");
-    mkdirSync(bundlesDir);
-    const ledgerPath = join(dir, "ledger.yaml");
-    writeFileSync(ledgerPath, YAML.dump(buildLedger("CLOSED", FULL_EVIDENCE)), "utf8");
-
-    const result = runScript(stageAcceptanceScript, [
-      "--stage",
-      "factory-7",
-      "--mode",
-      "integrity",
-      "--ledger",
-      ledgerPath,
-      "--bundles-dir",
-      bundlesDir,
-    ]);
-
-    expect(result.code).toBe(1);
-    expect(result.output).toContain("no manifest found");
   });
 });
 
-// ─── Rule 5: contracts that never froze condition 5 are untouched ─────────────
+// ─── Legacy stages must be unaffected ────────────────────────────────────────
 
-describe("Stage 7 closure condition 5 — Rule 5: no effect on contracts without condition 5", () => {
-  it("leaves a CLOSED contract with LANE_*_PROVEN invariants and no closure_conditions alone", () => {
-    // This is the Factory Stage 6 shape: structured invariants, but statuses are
-    // LANE_A_PROVEN / LANE_B_PROVEN and the manifest never froze condition 5.
-    const manifest = buildManifest({
-      declareCondition5: false,
+describe("Stage 7 condition 5 — legacy stage contracts unchanged", () => {
+  it("leaves factory-stage-6-closure (LANE_*_PROVEN, no closure_conditions) alone", () => {
+    const manifest = {
+      id: STAGE_6_ID,
+      artifact_type: "factory_stage_closure",
+      status: "CLOSED",
       invariants: {
-        "ST-I1": { name: "lane a", status: "LANE_A_PROVEN", proof_artifacts: ["ci gate"] },
-        "ST-I2": { name: "lane b", status: "LANE_B_PROVEN", proof_artifacts: ["db run"] },
+        "S6-I1": { status: "LANE_A_PROVEN", proof_artifacts: ["ci gate"] },
+        "S6-I2": { status: "LANE_B_PROVEN", proof_artifacts: ["db run"] },
       },
-    });
-
-    const result = runStageAcceptance(manifest, "closure");
+      required_evidence: FULL_EVIDENCE,
+    };
+    const result = runGate({ manifest, bundleId: STAGE_6_ID, mode: "closure" });
     expect(result.code).toBe(0);
     expect(result.output).not.toContain("closure condition 5");
   });
 
-  it("leaves a CLOSED contract with free-text invariants alone", () => {
-    // This is the Factory Stage 5 shape: invariants are prose, not structured entries.
-    const manifest = buildManifest({
-      declareCondition5: false,
+  it("leaves factory-stage-5-closure (free-text invariants) alone", () => {
+    const manifest = {
+      id: STAGE_5_ID,
+      artifact_type: "factory_stage_closure",
+      status: "CLOSED",
       invariants: {
         I1_tenant_isolation: "A workspace must never read another workspace's records.",
         I2_authorization: "All routes use canonical capability enforcement.",
       },
-    });
-
-    const result = runStageAcceptance(manifest, "closure");
+      required_evidence: FULL_EVIDENCE,
+    };
+    const result = runGate({ manifest, bundleId: STAGE_5_ID, mode: "closure" });
     expect(result.code).toBe(0);
   });
 });
 
-// ─── Live repository state ────────────────────────────────────────────────────
+// ─── Live repository state ───────────────────────────────────────────────────
 
-describe("Stage 7 closure condition 5 — live repository state", () => {
+describe("Stage 7 condition 5 — live repository state", () => {
   it("keeps the real Factory Stage 6 integrity gate green", () => {
-    const result = runScript(stageAcceptanceScript, ["--mode", "integrity", "--stage", "factory-6"]);
-    expect(result.code).toBe(0);
+    expect(runScript(stageAcceptanceScript, ["--mode", "integrity", "--stage", "factory-6"]).code).toBe(0);
   });
 
   it("keeps the real stage-3 integrity gate green", () => {
-    const result = runScript(stageAcceptanceScript, ["--mode", "integrity", "--stage", "3"]);
-    expect(result.code).toBe(0);
+    expect(runScript(stageAcceptanceScript, ["--mode", "integrity", "--stage", "3"]).code).toBe(0);
+  });
+
+  it("keeps the real all-stage integrity gate green", () => {
+    expect(runScript(stageAcceptanceScript, ["--mode", "integrity", "--stage", "all"]).code).toBe(0);
   });
 
   it("keeps the real bundle manifest validator green", () => {
-    const result = runScript(bundleManifestScript, []);
-    expect(result.code).toBe(0);
+    expect(runScript(bundleManifestScript, []).code).toBe(0);
   });
 
   it("reports the real Factory Stage 7 contract as PENDING with 16 unproven invariants", () => {
@@ -506,27 +649,27 @@ describe("Stage 7 closure condition 5 — live repository state", () => {
   });
 
   it("refuses to close the real Factory Stage 7 contract", () => {
-    const result = runScript(stageAcceptanceScript, ["--mode", "closure", "--stage", "factory-7"]);
-    expect(result.code).toBe(1);
+    expect(runScript(stageAcceptanceScript, ["--mode", "closure", "--stage", "factory-7"]).code).toBe(1);
+  });
+
+  it("confirms the real contract still declares all sixteen canonical invariants", () => {
+    // Guards against the canonical set and the shipped contract drifting apart.
+    const result = runScript(stageAcceptanceScript, ["--mode", "integrity", "--stage", "factory-7"]);
+    expect(result.output).not.toContain("canonical invariant(s) missing");
+    expect(result.output).not.toContain("undeclared invariant(s)");
   });
 });
 
-// ─── Bundle manifest validator path ───────────────────────────────────────────
+// ─── Bundle manifest validator path ──────────────────────────────────────────
 
 describe("validate-bundle-manifests.mjs — closure condition 5", () => {
-  /**
-   * The manifest validator always scans docs/opsiq/bundles/, so it is exercised
-   * here against the real repository set. The generated-fixture cases above cover
-   * the shared evaluation module that both gates call, which is the single place
-   * the rule is implemented.
-   */
   it("passes the current repository bundle set", () => {
     const result = runScript(bundleManifestScript, []);
     expect(result.code).toBe(0);
     expect(result.output).toContain("Bundle manifest validation passed");
   });
 
-  it("does not report condition 5 for Stage 5 or Stage 6, which never froze it", () => {
+  it("does not report condition 5 for Stage 5 or Stage 6, which are legacy-exempt", () => {
     const result = runScript(bundleManifestScript, []);
     expect(result.output).not.toContain("factory-stage-5-closure.yaml: closure condition 5");
     expect(result.output).not.toContain("factory-stage-6-closure.yaml: closure condition 5");

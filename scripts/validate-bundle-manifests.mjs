@@ -93,6 +93,15 @@ for (const file of bundleFiles) {
     fail(`${file}: bundle manifest artifact_type must be 'development_bundle' or 'factory_stage_closure', got '${parsed.artifact_type}'`);
   }
 
+  // Closure condition 5, structural half — evaluated at EVERY status. Whether a
+  // contract is governed is decided by the validator-owned registry keyed on the
+  // bundle id, never by anything the manifest declares, so a manifest cannot opt
+  // itself out by dropping closure_conditions or by deleting invariants.
+  const closureResult = evaluateInvariantClosure(parsed, { bundleId: id });
+  for (const violation of closureResult.structuralViolations) {
+    fail(`${file}: ${violation}`);
+  }
+
   if (status === 'CLOSED') {
     const required = REQUIRED_EVIDENCE_FIELDS;
     // factory_stage_closure uses required_evidence instead of post_merge_evidence when CLOSED
@@ -105,14 +114,13 @@ for (const file of bundleFiles) {
       }
     }
 
-    // Closure condition 5 — the four fields above prove only that a PR merged and
-    // CI ran. A manifest that froze condition 5 must also carry invariant proof.
-    const closureResult = evaluateInvariantClosure(parsed, { bundleId: file });
+    // Proof half — the four fields above prove only that a PR merged and CI ran.
+    // A governed contract must also carry invariant proof or an owner waiver.
     if (closureResult.enforced) {
-      for (const violation of closureResult.violations) {
-        fail(violation);
+      for (const violation of closureResult.proofViolations) {
+        fail(`${file}: ${violation}`);
       }
-      if (closureResult.violations.length === 0) {
+      if (closureResult.proofViolations.length === 0 && closureResult.structuralViolations.length === 0) {
         console.log(`  ✓ ${file}: closure condition 5 satisfied — ${summarizeInvariantClosure(closureResult)}`);
       }
     }
