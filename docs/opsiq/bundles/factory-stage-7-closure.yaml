@@ -171,7 +171,12 @@ invariants:
       actions and outcome records must be attributable to: workspace, actor, time,
       source evidence, affected record, and result.
       Protected raw payloads must not be copied into audit records.
-    proof_lane: LANE_E
+    # AMENDMENT A3 (2026-08-02): proof_lane corrected from LANE_E to LANE_C+LANE_E.
+    # The declared proof_type has always required a production audit inspection, which
+    # LANE_E (isolated simulation) cannot supply. The lane label contradicted the proof
+    # type; the proof type was correct. No scope change — this is a label correction and
+    # required no owner decision.
+    proof_lane: LANE_C+LANE_E
     proof_type: simulation_and_production_audit_check
     executable_evidence: "audit records for pilot transitions inspected; all six attribution fields present; no raw payload copied into audit record"
     status: PENDING
@@ -235,6 +240,13 @@ invariants:
     proof_lane: LANE_F
     proof_type: owner_pilot_feedback_record
     executable_evidence: "feedback record present for at least one pilot cycle with all required fields; historical evidence unchanged on re-inspection"
+    # AMENDMENT A6 (2026-08-02, owner decision D-6 option a): the eight required fields
+    # are bound to concrete columns and routes by the annex below. Owner accepted that
+    # the existing schema is sufficient; no new persisted fields are required.
+    # The annex records that three of the eight fields have no dedicated column and are
+    # satisfied by a documented free-text convention. Read the annex before claiming
+    # this invariant proven.
+    field_mapping_annex: docs/opsiq/evidence/stage-7/s7-i14-field-mapping.md
     status: PENDING
     proof_artifacts: []
 
@@ -250,6 +262,13 @@ invariants:
     proof_lane: LANE_F
     proof_type: owner_pilot_outcome
     executable_evidence: "baseline, expected, actual, variance, and owner interpretation all recorded for at least one real intervention"
+    # AMENDMENT A5 (2026-08-02): the absence of a fixed measurement window is DELIBERATE
+    # and must never be read as an omission to be filled in. The window is declared by
+    # the owner when the pilot intervention is selected (owner decision D-7, deferred by
+    # design). Because the window is owner-declared, no Stage 7 closure date can be
+    # computed in advance. Clarification only — no scope change, no owner decision.
+    measurement_window: intentional_open_parameter
+    measurement_window_owner_decision: D-7
     status: PENDING
     proof_artifacts: []
 
@@ -323,6 +342,88 @@ environment_model:
 gates:
   completion_factory: scripts/validate-bundle-manifests.mjs
   stage_acceptance_integrity: scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-7
+
+# AMENDMENT A8 (2026-08-02): governance note on what the gates above do and do not prove.
+# Clarification only — no scope change, no owner decision.
+gate_semantics:
+  integrity_mode_is_not_progress: >
+    scripts/validate-stage-acceptance.mjs --mode integrity exits 0 while every invariant
+    is PENDING. That is its designed behaviour: integrity mode only rejects a CLOSED
+    bundle carrying null evidence. A passing integrity gate is NOT evidence of Stage 7
+    progress and must never be cited as such in any status record, commit message, or
+    acceptance claim.
+  four_fields_do_not_prove_the_stage: >
+    pr_sha, merge_sha, main_integration_run and db_verification_run prove only that a
+    pull request merged and that CI ran. They prove nothing about owner deployment,
+    pilot execution, or unrestricted readiness. See closure_conditions below.
+
+# AMENDMENT A7 (2026-08-02, owner decision D-5 option b): Stage 7 closure requires FIVE
+# conditions, not four. Prior to this amendment no validator read the invariant block at
+# all, so this bundle could be marked CLOSED with four identifiers filled in while all
+# sixteen invariants remained PENDING with empty proof_artifacts, and both gates would
+# exit 0. Condition 5 closes that hole.
+#
+# ENFORCEMENT STATUS: declarative only in PR-1A. PR-1B implements the validator logic.
+# Until PR-1B merges, condition 5 is binding on the owner and on any agent operating in
+# this repository, but is NOT machine-enforced. Do not mark this bundle CLOSED before
+# PR-1B lands.
+closure_conditions:
+  1_pr_sha: "required_evidence.pr_sha is non-null"
+  2_merge_sha: "required_evidence.merge_sha is non-null"
+  3_main_integration_run: "required_evidence.main_integration_run is non-null"
+  4_db_verification_run: "required_evidence.db_verification_run is non-null"
+  5_invariant_proof: >
+    Every invariant S7-I1 through S7-I16 carries status: PROVEN with at least one
+    non-empty proof_artifacts entry, OR an explicit owner waiver recorded under
+    invariant_waivers below. A waiver must name the invariant, the owner, the date,
+    and the reason. A waiver is never a default and is never implied by silence.
+  enforced_by: "scripts/validate-stage-acceptance.mjs --mode closure --stage factory-7 (logic pending PR-1B)"
+
+# Explicit owner waivers against condition 5. Empty means no invariant has been waived.
+invariant_waivers: []
+
+# Provenance of every change to this contract since authorization.
+amendments:
+  - id: A3
+    date: "2026-08-02"
+    applied_in: PR-1A
+    authority: "contract-internal correction; no owner decision required"
+    summary: "S7-I10 proof_lane corrected LANE_E -> LANE_C+LANE_E to match its declared proof_type"
+  - id: A5
+    date: "2026-08-02"
+    applied_in: PR-1A
+    authority: "clarification; no owner decision required"
+    summary: "S7-I15 measurement window annotated intentional_open_parameter (owner-declared via D-7)"
+  - id: A6
+    date: "2026-08-02"
+    applied_in: PR-1A
+    authority: "owner decision D-6, option (a), approved 2026-08-02"
+    summary: "S7-I14 bound to docs/opsiq/evidence/stage-7/s7-i14-field-mapping.md; existing schema accepted as sufficient"
+  - id: A7
+    date: "2026-08-02"
+    applied_in: PR-1A
+    authority: "owner decision D-5, option (b), approved 2026-08-02"
+    summary: "Fifth closure condition added: invariant-level proof or explicit owner waiver. Declarative in PR-1A; enforced in PR-1B"
+  - id: A8
+    date: "2026-08-02"
+    applied_in: PR-1A
+    authority: "clarification; no owner decision required"
+    summary: "gate_semantics added: a passing integrity gate is not Stage 7 progress"
+
+# Amendments identified during reconciliation that are NOT applied, because the owner
+# decision they depend on has not been issued. Listed so they cannot be silently lost.
+deferred_amendments:
+  - id: A1
+    blocked_by_owner_decision: D-1
+    summary: "Add deployment_candidate_sha. S7-I1 requires the deployed SHA to match an authorized deployment candidate; no candidate SHA has ever been named."
+  - id: A2
+    blocked_by_owner_decision: "D-3 (and D-2 for the migration half)"
+    summary: "Rewrite S7-I3 executable_evidence. As written it names scripts/deployment-preflight.mjs 'against live environment', which that script cannot do: it reads local process.env and exits 0 on WARNING."
+  - id: A4
+    blocked_by_owner_decision: D-4
+    summary: "Add isolated_environment target for S7-I11. environment_model.staging_or_isolated_simulation names a purpose, not a target."
+
+evidence_standard: docs/opsiq/evidence/stage-7/README.md
 
 required_evidence:
   pr_sha: null

@@ -1,17 +1,17 @@
 {
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
-  "last_updated": "2026-08-01",
+  "last_updated": "2026-08-02",
   "factory_stage": "FACTORY_STAGE_7",
-  "factory_stage_status": "AUTHORIZED_CONTRACT_DEFINED",
+  "factory_stage_status": "AUTHORIZED_CONTRACT_FROZEN_PARTIAL",
   "factory_stage_scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS",
   "active_bundle": "factory-stage-7-closure",
   "blocked_by": [],
   "owner_outcome": "Owner has proof that Stages 3, 4, 5, and 6 are implemented and accepted. Factory Stage 7 proves that OpsIQ can be deployed securely for its owner, operated without developer assistance, produce correct and actionable guidance from real business data, govern approved execution, capture outcomes and feedback, recover safely from realistic failures, and be accepted for unrestricted private owner use.",
   "current_gap": "Factory Stage 7 remains AUTHORIZED_CONTRACT_DEFINED; factory-stage-7-closure is PENDING with all four required evidence fields null. Stage 8 closure is NOT verified — no STAGE_8_PRIVATE_OWNER_PRODUCTION_CLOSED record exists in any commit on any ref, and there is no evidence for production migration verification, owner bootstrap, authenticated owner flow, a governed owner mutation with its audit event, production readiness, or scheduler execution.",
   "next_target": "Owner decision. Either produce the missing Factory Stage 7 / Stage 8 production evidence, or explicitly re-scope. No stage may be closed without the four required evidence fields.",
-  "main_sha": "a77bc58a6ba6751cb402d5bb3bc6186e0079cc55",
-  "active_branch": "claude/post-merge-state-reconciliation",
+  "main_sha": "4fe42fa8fcd536d44d97ccb3c6e46a23dcffe068",
+  "active_branch": "claude/stage7-pr1a-governance-contract-freeze",
   "authorized_from_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
   "deployment_readiness": "FACTORY_STAGE_6_PROVEN — deployment and production readiness closure complete and accepted",
   "factory_stage_6": "ACCEPTED",
@@ -207,6 +207,21 @@
     "next-highest-dependency-operational-gap"
   ],
   "stage_8_closure_status": "STAGE_8_CLOSURE_NOT_VERIFIED — audited 2026-08-01 against origin/main. No governed Stage 8 artifact exists (no ledger entry, no bundle, no closure record in git history).",
-  "factory_stage_7_closure_status": "PENDING — pr_sha, merge_sha, main_integration_run and db_verification_run are all null in docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml.",
+  "factory_stage_7_closure_status": "PENDING — pr_sha, merge_sha, main_integration_run and db_verification_run are all null in docs/opsiq/status/REMAINING_STAGE_ACCEPTANCE.yaml. All 16 invariants S7-I1..S7-I16 remain PENDING with empty proof_artifacts.",
+  "factory_stage_7_contract_freeze": {
+    "applied_in": "PR-1A",
+    "date": "2026-08-02",
+    "base_sha": "4fe42fa8fcd536d44d97ccb3c6e46a23dcffe068",
+    "owner_decisions_applied": ["D-5 (option b)", "D-6 (option a)"],
+    "amendments_applied": ["A3", "A5", "A6", "A7", "A8"],
+    "amendments_deferred": {
+      "A1": "blocked by owner decision D-1 (deployment candidate SHA)",
+      "A2": "blocked by owner decisions D-2, D-3 (migration status authorization, REQUIRED config set)",
+      "A4": "blocked by owner decision D-4 (isolated environment for S7-I11)"
+    },
+    "enforcement_status": "DECLARATIVE_ONLY — PR-1A changed no validator. The closure gate still reads only the four evidence fields. PR-1B implements invariant and waiver enforcement.",
+    "scope": "GOVERNANCE_ARTIFACTS_ONLY — no runtime, production, Prisma, CI-workflow, or validator change",
+    "warning": "Do NOT mark factory-stage-7-closure CLOSED before PR-1B lands. Until then the fifth closure condition is binding but not machine-enforced."
+  },
   "prs_merged_to_main_completeness": "NOT EXHAUSTIVE — PRs #263 through #271 are merged on main but were never recorded here. Treat git history, not this list, as the authoritative record of what is on main."
 }
