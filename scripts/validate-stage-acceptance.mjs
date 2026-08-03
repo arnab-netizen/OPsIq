@@ -77,6 +77,15 @@ const bundlesDir = (bundlesDirIdx !== -1 && args[bundlesDirIdx + 1])
   ? args[bundlesDirIdx + 1]
   : join(root, 'docs', 'opsiq', 'bundles');
 
+// --evidence-dir <path> overrides where proof_artifacts references are resolved
+// from (G-1). Used by the hostile suite to drive a real artifact directory rather
+// than mocking the resolution path. It cannot loosen any rule: an artifact in the
+// supplied directory still has to satisfy every eligibility check.
+const evidenceDirIdx = args.indexOf('--evidence-dir');
+const evidenceDir = (evidenceDirIdx !== -1 && args[evidenceDirIdx + 1])
+  ? args[evidenceDirIdx + 1]
+  : join(root, 'docs', 'opsiq', 'evidence', 'stage-7', 'artifacts');
+
 let ledger;
 try {
   ledger = yamlLoad(readFileSync(ledgerPath, 'utf8'));
@@ -173,7 +182,7 @@ function checkStage(stageKey) {
     // being quietly disarmed now and closed later.
     let closure = null;
     if (manifest) {
-      closure = evaluateInvariantClosure(manifest, { bundleId: id });
+      closure = evaluateInvariantClosure(manifest, { bundleId: id, evidenceDir });
       for (const violation of closure.structuralViolations) {
         console.error(`  ❌ ${violation}`);
         violations++;

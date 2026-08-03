@@ -40,21 +40,21 @@
  *   2 — the validator could not run as asked (bad flag, missing token)
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { dirname, join, relative, basename } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   ACCEPTANCE,
   CI_LANES,
   OWNER_LANES,
   PROVENANCE_STATE,
-  SIGNATURE_STATE,
   classifyAcceptance,
   evaluateOwnerProvenance,
   evaluateRunProvenance,
+  evaluateSupersessionChain,
   explainAcceptance,
-  validateEvidenceArtifact,
+  loadEvidenceArtifactIndex,
 } from './lib/evidence-artifact.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -95,21 +95,6 @@ const ownerLogins = (process.env.EVIDENCE_OWNER_LOGINS ?? '')
 if (options.requireProvenance && !githubToken) {
   usageError('--require-provenance needs GH_TOKEN or GITHUB_TOKEN to cross-check runs and owner attestations. Refusing to report provenance as verified without checking it.');
 }
-
-// ─── Collect artifact files ───────────────────────────────────────────────────
-
-function collectJsonFiles(dir) {
-  if (!existsSync(dir)) return [];
-  const found = [];
-  for (const entry of readdirSync(dir).sort()) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) found.push(...collectJsonFiles(full));
-    else if (entry.endsWith('.json')) found.push(full);
-  }
-  return found;
-}
-
-const files = collectJsonFiles(options.dir);
 
 // ─── GitHub cross-checks ──────────────────────────────────────────────────────
 
@@ -198,72 +183,50 @@ async function verifyProvenance(artifact) {
 
 // ─── Evaluate every artifact ──────────────────────────────────────────────────
 
-const records = [];
-const seenIds = new Map();
+// Structural load, duplicate detection and supersession all come from the shared
+// resolution layer in scripts/lib/evidence-artifact.mjs. G-1 root cause: when this
+// gate walked the directory itself and invariant-closure.mjs read a bare string,
+// the two could disagree about the same artifact. There is now exactly one reader.
+const { records, byId } = loadEvidenceArtifactIndex({
+  dir: options.dir,
+  signingKey,
+  displayRoot: repoRoot,
+});
 
-for (const file of files) {
-  const relPath = relative(repoRoot, file);
-  let parsed;
-  try {
-    parsed = JSON.parse(readFileSync(file, 'utf8'));
-  } catch (error) {
-    records.push({
-      path: relPath,
-      artifactId: null,
-      level: ACCEPTANCE.REJECTED,
-      violations: [`${relPath}: not parseable as JSON — ${error.message}`],
-      signatureState: SIGNATURE_STATE.ABSENT,
-      provenanceState: PROVENANCE_STATE.UNCHECKED,
-    });
-    continue;
-  }
-
-  const { violations, signatureState } = validateEvidenceArtifact(parsed, {
-    signingKey,
-    fileName: basename(file),
-  });
-  const scoped = violations.map((violation) => `${relPath}: ${violation}`);
-
-  const artifactId = typeof parsed?.artifact_id === 'string' ? parsed.artifact_id : null;
-  if (artifactId) {
-    if (seenIds.has(artifactId)) {
-      scoped.push(`${relPath}: duplicate artifact_id ${artifactId}, already recorded by ${seenIds.get(artifactId)} — an artifact copied and re-filed is not a second observation`);
-    } else {
-      seenIds.set(artifactId, relPath);
-    }
-  }
-
-  let provenanceState = PROVENANCE_STATE.UNCHECKED;
-  if (options.requireProvenance && scoped.length === 0) {
+// Provenance is the one check this gate can perform that the closure library
+// cannot: it needs the network and a token. Layered on top of the shared result
+// rather than duplicating the structural pass.
+if (options.requireProvenance) {
+  for (const record of records) {
+    if (record.violations.length > 0) continue;
     // Serial by design: artifacts are few, and GitHub secondary rate limits
     // punish a burst of concurrent API calls far more than they cost here.
+    // Re-read from the path the record was actually loaded from. Reconstructing it
+    // from the canonical directory would read the wrong file whenever --dir points
+    // somewhere else, which is exactly how the hostile suite drives this gate.
+    const parsed = JSON.parse(readFileSync(record.absolutePath, 'utf8'));
     const provenanceViolations = await verifyProvenance(parsed);
     if (provenanceViolations.length > 0) {
-      provenanceState = PROVENANCE_STATE.FAILED;
-      scoped.push(...provenanceViolations.map((violation) => `${relPath}: ${violation}`));
+      record.provenanceState = PROVENANCE_STATE.FAILED;
+      record.violations.push(...provenanceViolations.map((violation) => `${record.path}: ${violation}`));
     } else {
-      provenanceState = PROVENANCE_STATE.VERIFIED;
+      record.provenanceState = PROVENANCE_STATE.VERIFIED;
     }
+    record.level = classifyAcceptance({
+      violations: record.violations,
+      signatureState: record.signatureState,
+      provenanceState: record.provenanceState,
+    });
   }
-
-  records.push({
-    path: relPath,
-    artifactId,
-    lane: parsed?.lane ?? null,
-    invariantId: parsed?.invariant_id ?? null,
-    level: classifyAcceptance({ violations: scoped, signatureState, provenanceState }),
-    violations: scoped,
-    signatureState,
-    provenanceState,
-  });
 }
 
-// `supersedes` must name an artifact that exists, or the chain is unauditable.
+// A supersession chain that is missing a link, cycles, self-references or crosses
+// invariants is unauditable, and an unauditable chain is not evidence.
 for (const record of records) {
   if (record.violations.length > 0) continue;
-  const parsed = JSON.parse(readFileSync(join(repoRoot, record.path), 'utf8'));
-  if (parsed.supersedes && !seenIds.has(parsed.supersedes)) {
-    record.violations.push(`${record.path}: supersedes ${parsed.supersedes}, which is not present in ${relative(repoRoot, options.dir)} — a superseding artifact must be auditable against the artifact it replaces`);
+  const chainViolations = evaluateSupersessionChain(record, byId);
+  if (chainViolations.length > 0) {
+    record.violations.push(...chainViolations.map((violation) => `${record.path}: ${violation}`));
     record.level = ACCEPTANCE.REJECTED;
   }
 }
