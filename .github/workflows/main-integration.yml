@@ -109,6 +109,22 @@ jobs:
         run: node scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-6
         continue-on-error: false
 
+      - name: Factory Stage 7 acceptance integrity gate (closure condition 5)
+        # Stage 7 closure requires invariant-level proof or an explicit owner waiver
+        # (factory-stage-7-closure.yaml closure_conditions.5_invariant_proof). Without
+        # this step the condition would be enforced on pull requests but not on main,
+        # so a direct push flipping the contract to CLOSED with only the four metadata
+        # fields populated would land unchecked.
+        run: node scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-7
+        continue-on-error: false
+
+      - name: Bundle manifest validator (evidence and closure conditions)
+        # The only gate that reads every manifest in docs/opsiq/bundles/, including the
+        # invariant block of stage-closure contracts. Previously ran on PR validation
+        # only, leaving main without manifest-level closure enforcement.
+        run: node scripts/validate-bundle-manifests.mjs
+        continue-on-error: false
+
       - name: Run full test suite (blocking; quarantine excluded)
         # Full suite including DB tests. Quarantined files excluded from this blocking lane.
         # DB tests require TEST_WITH_DB=true and the postgres service above.
