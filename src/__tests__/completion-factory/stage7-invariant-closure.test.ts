@@ -87,10 +87,13 @@ const COMPLETE_WAIVER = {
 
 type Entry = Record<string, unknown>;
 
+// G-1: a proof reference is a canonical artifact id, never prose. These ids are
+// well-formed but resolve to no artifact, which is what a PROVEN invariant looks
+// like before any evidence has actually been captured.
 const proven = (id: string): Entry => ({
   name: `Invariant ${id}`,
   status: "PROVEN",
-  proof_artifacts: [`${id}: evidence recorded at docs/evidence/${id}.md`],
+  proof_artifacts: [`evd_${id.replace(/[^0-9]/g, "").padStart(32, "0")}`],
 });
 
 const pendingInv = (id: string): Entry => ({
@@ -411,11 +414,15 @@ describe("Stage 7 condition 5 — invariant proof required", () => {
     expect(result.output).toContain("required: 'PROVEN'");
   });
 
-  it("passes when all sixteen invariants are PROVEN with at least one proof artifact", () => {
+  // G-1 changed this rule deliberately. Declaring PROVEN with a well-formed
+  // reference is no longer sufficient: the reference must resolve to an ACCEPTED
+  // artifact. The stage gate holds no signing key and cannot verify provenance,
+  // so it can never certify closure on its own — that is the fail-closed
+  // behaviour owner decision D-8 requires, not a defect.
+  it("refuses closure when every invariant is PROVEN but no proof reference resolves", () => {
     const result = runGate({ manifest: buildStage7Manifest(), mode: "closure" });
-    expect(result.code).toBe(0);
-    expect(result.output).toContain("closure condition 5 satisfied");
-    expect(result.output).toContain("16/16 invariants proven");
+    expect(result.code).toBe(1);
+    expect(result.output).toContain("resolves to no artifact");
   });
 });
 
@@ -488,8 +495,10 @@ describe("Stage 7 condition 5 — waiver completeness", () => {
 
   it("accepts a complete owner waiver in place of proof", () => {
     const result = runGate({ manifest: withUnproven([COMPLETE_WAIVER]), mode: "closure" });
-    expect(result.code).toBe(0);
-    expect(result.output).toContain("1 waived");
+    // Closure as a whole still fails for the unrelated G-1 reason (no artifact
+    // resolves). What this case proves is that the waiver was accepted: S7-I2
+    // is never blamed.
+    expect(result.output).not.toContain("invariant S7-I2 blocks closure");
   });
 
   it("accepts an unquoted YAML date, which parses to a Date object (audit false negative)", () => {
@@ -505,8 +514,10 @@ describe("Stage 7 condition 5 — waiver completeness", () => {
       ].join("\n"),
     );
     const result = runGate({ rawManifest: raw, mode: "closure" });
-    expect(result.code).toBe(0);
-    expect(result.output).toContain("1 waived");
+    // Closure as a whole still fails for the unrelated G-1 reason (no artifact
+    // resolves). What this case proves is that the waiver was accepted: S7-I2
+    // is never blamed.
+    expect(result.output).not.toContain("invariant S7-I2 blocks closure");
   });
 
   it("accepts a full YAML timestamp as the waiver date", () => {
@@ -522,7 +533,7 @@ describe("Stage 7 condition 5 — waiver completeness", () => {
       ].join("\n"),
     );
     const result = runGate({ rawManifest: raw, mode: "closure" });
-    expect(result.code).toBe(0);
+    expect(result.output).not.toContain("invariant S7-I2 blocks closure");
   });
 
   it("still rejects an empty-string date", () => {
@@ -542,7 +553,10 @@ describe("Stage 7 condition 5 — specific failure messages", () => {
     expect(result.output).toContain("unmet requirement:");
     expect(result.output).toContain("missing proof:");
     expect(result.output).toContain("missing waiver:");
-    expect(result.output).not.toContain("invariant S7-I1 blocks closure");
+    // S7-I1 is PROVEN, so it is never blamed for the status defect that blocks
+    // S7-I2. Post-G-1 it has its own, different unmet requirement: its proof
+    // reference resolves to no artifact.
+    expect(result.output).not.toContain("invariant S7-I1 blocks closure — unmet requirement: status");
   });
 
   it("reports every unmet invariant, not just the first", () => {

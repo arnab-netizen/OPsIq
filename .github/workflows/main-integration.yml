@@ -118,6 +118,20 @@ jobs:
         run: node scripts/validate-stage-acceptance.mjs --mode integrity --stage factory-7
         continue-on-error: false
 
+      - name: Stage 7 evidence artifact validator
+        # G-1: structural evidence enforcement must run on main, not only on pull
+        # requests. Without this step a direct push could land a malformed, forged,
+        # duplicated or secret-bearing artifact and no gate on main would read it —
+        # structurally the same defect PR-1B closed for the Stage 7 closure gate.
+        #
+        # Default mode deliberately. Main holds no EVIDENCE_SIGNING_KEY and no
+        # protected provenance context, so this step rejects structural invalidity
+        # but never claims ACCEPTED provenance it cannot verify. Refusing an
+        # artifact the right to back a PROVEN invariant is the closure gate's job
+        # (scripts/lib/invariant-closure.mjs), which requires ACCEPTED.
+        run: node scripts/validate-evidence-artifacts.mjs
+        continue-on-error: false
+
       - name: Bundle manifest validator (evidence and closure conditions)
         # The only gate that reads every manifest in docs/opsiq/bundles/, including the
         # invariant block of stage-closure contracts. Previously ran on PR validation

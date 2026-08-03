@@ -42,6 +42,8 @@
  */
 
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join as pathJoin, relative as pathRelative } from 'node:path';
 
 /** Schema version of the artifact form defined here. */
 export const EVIDENCE_VERSION = '1.0.0';
@@ -805,4 +807,377 @@ export function explainAcceptance({ signatureState, provenanceState }) {
     reasons.push('provenance cross-check failed');
   }
   return reasons.join('; ');
+}
+
+// ─── Proof-artifact resolution (G-1) ──────────────────────────────────────────
+//
+// Before G-1 a Stage 7 invariant satisfied its proof requirement with any
+// non-empty string in proof_artifacts, so the literal text "proved it" counted
+// as evidence. The evidence artifact format existed but nothing consumed it.
+//
+// This section is the single authoritative resolution path. Both
+// validate-evidence-artifacts.mjs (structural gate) and invariant-closure.mjs
+// (proof/closure gate) consume it, so structural validity, acceptance, invariant
+// proof and stage closure can never diverge in their reading of an artifact.
+//
+// Owner decision D-8 is implemented here: an UNVERIFIED artifact may be
+// committed and structurally validated, but may never satisfy a PROVEN
+// invariant. Resolution fails closed — anything it cannot positively verify is
+// a violation, never a pass.
+
+/** Canonical artifact-id reference form. Exported so gates never re-derive it. */
+export const ARTIFACT_ID_PATTERN = ARTIFACT_ID;
+
+/** Repository-relative directory that holds Stage 7 evidence artifacts. */
+export const EVIDENCE_ARTIFACTS_DIR = 'docs/opsiq/evidence/stage-7/artifacts';
+
+/**
+ * A proof_artifacts entry is a canonical artifact id and nothing else.
+ * Prose, paths, URLs, uppercase, and shortened ids are all rejected — an
+ * unresolvable reference is not evidence.
+ */
+export function isCanonicalArtifactReference(reference) {
+  return typeof reference === 'string' && ARTIFACT_ID.test(reference);
+}
+
+/**
+ * Why a reference is not a canonical artifact id. Gate output must name the
+ * defect, never print a bare rejection.
+ */
+export function explainReferenceRejection(reference) {
+  if (typeof reference !== 'string') return `is ${describe(reference)}, not a string`;
+  const trimmed = reference.trim();
+  if (trimmed.length === 0) return 'is empty';
+  if (/^https?:\/\//i.test(trimmed)) return 'is a URL — a link is not a captured observation';
+  if (trimmed.includes('/') || trimmed.includes('\\')) return 'is a path — reference the artifact_id, not a location on disk';
+  if (/^evd_/i.test(trimmed) && !/^evd_/.test(trimmed)) return 'has a non-lowercase evd_ prefix — artifact ids are lowercase';
+  if (/^evd_[0-9a-fA-F]*$/.test(trimmed) && trimmed.length !== 36) {
+    return `is ${trimmed.length - 4} hex character(s) long — a canonical artifact id carries exactly 32`;
+  }
+  if (/^evd_/.test(trimmed) && /[^0-9a-f]/.test(trimmed.slice(4))) return 'contains non-hexadecimal characters after evd_';
+  if (trimmed !== reference) return 'carries surrounding whitespace';
+  return 'is free text — a proof reference must be a canonical artifact id of the form evd_ followed by 32 lowercase hex characters';
+}
+
+/**
+ * Every `.json` file at or below `dir`, depth-first and sorted, as
+ * `{ full, relativeToDir }`.
+ *
+ * The walk is recursive on purpose. A flat `readdirSync` would leave a malformed,
+ * forged or secret-bearing artifact filed one directory down completely unread,
+ * and an unread file is an unenforced file — the gate would print "0 artifacts
+ * present" over the top of it.
+ */
+function collectArtifactFiles(dir, prefix = '') {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const found = [];
+  for (const entry of entries.sort((a, b) => (a.name < b.name ? -1 : 1))) {
+    const full = pathJoin(dir, entry.name);
+    const relativeToDir = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) found.push(...collectArtifactFiles(full, relativeToDir));
+    else if (entry.name.endsWith('.json')) found.push({ full, relativeToDir });
+  }
+  return found;
+}
+
+/**
+ * Read and validate every artifact at or below `dir`, returning an index keyed by
+ * artifact_id plus the flat record list.
+ *
+ * Provenance is never assumed. A caller that cannot verify provenance leaves it
+ * UNCHECKED, which caps acceptance at UNVERIFIED — the gate then reports what it
+ * could not check rather than claiming a verification it did not perform.
+ *
+ * Canonical layout is enforced here, not merely assumed: proof references resolve
+ * through `<dir>/<artifact_id>.json` and nowhere else, so an artifact filed in a
+ * subdirectory sits outside the path every gate reads. It is validated and
+ * reported — never silently skipped — but it is refused entry to the index and so
+ * can never back a proof.
+ *
+ * @param {object} [options]
+ * @param {string} [options.dir]              absolute artifacts directory
+ * @param {string|null} [options.signingKey]  enables signature verification
+ * @param {Map<string,string>} [options.provenance] artifact_id -> PROVENANCE_STATE
+ * @param {string} [options.displayRoot]      root that reported paths are shown against
+ * @returns {{ records: object[], byId: Map<string, object>, duplicates: string[] }}
+ */
+export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance = null, displayRoot = process.cwd() } = {}) {
+  const records = [];
+  const byId = new Map();
+  const duplicates = [];
+
+  // A missing directory is an empty directory. Emptiness is neither pass nor
+  // failure; it is the absence of any captured observation.
+  for (const { full, relativeToDir } of collectArtifactFiles(dir)) {
+    const name = relativeToDir.slice(relativeToDir.lastIndexOf('/') + 1);
+    const nested = relativeToDir.includes('/');
+    const relPath = pathRelative(displayRoot, full);
+    let parsed;
+    try {
+      parsed = JSON.parse(readFileSync(full, 'utf8'));
+    } catch (error) {
+      records.push({
+        path: relPath, absolutePath: full, fileName: name, nested,
+        artifactId: null, invariantId: null, lane: null,
+        proofType: null, subjectSha: null, supersedes: null,
+        level: ACCEPTANCE.REJECTED,
+        violations: [`${relPath}: not parseable as JSON — ${error.message}`],
+        signatureState: SIGNATURE_STATE.ABSENT,
+        provenanceState: PROVENANCE_STATE.UNCHECKED,
+      });
+      continue;
+    }
+
+    const { violations, signatureState } = validateEvidenceArtifact(parsed, { signingKey, fileName: name });
+    const scoped = violations.map((v) => `${relPath}: ${v}`);
+    const artifactId = typeof parsed?.artifact_id === 'string' ? parsed.artifact_id : null;
+
+    if (nested) {
+      scoped.push(`${relPath}: is filed in a subdirectory of ${EVIDENCE_ARTIFACTS_DIR} — an artifact must sit directly in that directory under its canonical filename, because that is the only path a proof reference resolves through`);
+    }
+
+    if (artifactId && !nested) {
+      if (byId.has(artifactId)) {
+        duplicates.push(artifactId);
+        scoped.push(`${relPath}: duplicate artifact_id ${artifactId}, already recorded by ${byId.get(artifactId).path} — an artifact copied and re-filed is not a second observation`);
+      }
+    }
+
+    const provenanceState = provenance?.get(artifactId) ?? PROVENANCE_STATE.UNCHECKED;
+    const record = {
+      path: relPath,
+      absolutePath: full,
+      fileName: name,
+      nested,
+      artifactId,
+      invariantId: parsed?.invariant_id ?? null,
+      lane: parsed?.lane ?? null,
+      proofType: parsed?.proof_type ?? null,
+      subjectSha: parsed?.subject_sha ?? null,
+      supersedes: parsed?.supersedes ?? null,
+      level: classifyAcceptance({ violations: scoped, signatureState, provenanceState }),
+      violations: scoped,
+      signatureState,
+      provenanceState,
+    };
+    records.push(record);
+    // A nested artifact is reported but never indexed: no proof reference may
+    // resolve to a file outside the canonical path.
+    if (artifactId && !nested && !byId.has(artifactId)) byId.set(artifactId, record);
+  }
+
+  return { records, byId, duplicates };
+}
+
+/**
+ * State of a contract's authorized subject-SHA policy.
+ *
+ * An empty allowlist is not "allow all". Evidence describes one commit, and a
+ * contract that has not yet named the commit its evidence must describe has not
+ * authorized any evidence at all. Treating absence as permission is how a
+ * trust boundary fails open: the rule reads as enforced while checking nothing.
+ */
+export const SUBJECT_SHA_POLICY = Object.freeze({
+  PRESENT: 'SUBJECT_SHA_POLICY_PRESENT',
+  MISSING: 'SUBJECT_SHA_POLICY_MISSING',
+  MALFORMED: 'SUBJECT_SHA_POLICY_MALFORMED',
+});
+
+/** Emitted when a policy exists but does not authorize the artifact's commit. */
+export const SUBJECT_SHA_NOT_AUTHORIZED = 'SUBJECT_SHA_NOT_AUTHORIZED';
+
+/**
+ * The fields a manifest may use to name the commit its evidence must describe.
+ * Declaration order fixes the reported order, so the result is deterministic.
+ *
+ * A stage-closure manifest carries required_evidence; a development bundle
+ * carries post_merge_evidence. Reading only one shape would leave the other
+ * unconstrained, which is the same silent-disable defect in a different place.
+ */
+const SUBJECT_SHA_POLICY_FIELDS = Object.freeze([
+  ['closure_subject_sha', (m) => m?.closure_subject_sha],
+  ['required_evidence.merge_sha', (m) => m?.required_evidence?.merge_sha],
+  ['required_evidence.pr_sha', (m) => m?.required_evidence?.pr_sha],
+  ['post_merge_evidence.merge_sha', (m) => m?.post_merge_evidence?.merge_sha],
+]);
+
+/**
+ * Resolve one manifest's authorized subject-SHA policy.
+ *
+ * The single authority for this question. `invariant-closure.mjs` consumes it, and
+ * `validate-stage-acceptance.mjs` / `validate-bundle-manifests.mjs` inherit it
+ * through that call, so no caller can hold a second opinion about which commits a
+ * contract authorizes.
+ *
+ * Three states, no fourth:
+ *   PRESENT    at least one well-formed authorized SHA; artifacts are checked
+ *              against it.
+ *   MISSING    no field names a SHA. No artifact may back a PROVEN invariant.
+ *   MALFORMED  a field names something that is not a 40-character lowercase SHA.
+ *              Fails closed rather than dropping the entry and continuing with a
+ *              shorter list, which would silently weaken the policy.
+ *
+ * An absent or explicitly null field is MISSING, not MALFORMED — a contract that
+ * has not filled a field in yet is untruthful about nothing. A field filled in
+ * wrongly is a defect in the contract and is reported as one.
+ *
+ * No implicit fallback exists, by design: not HEAD, not the default branch, not
+ * the deployment SHA, not the artifact's own subject_sha, not a merge base. The
+ * contract names the commit or no evidence may be used. This function performs no
+ * process, git, network or environment I/O, so there is nowhere for such a
+ * fallback to enter.
+ *
+ * @param {object} manifest parsed bundle manifest
+ * @returns {{ state: string, authorized: string[], violations: string[] }}
+ */
+export function resolveSubjectShaPolicy(manifest) {
+  const authorized = [];
+  const violations = [];
+
+  for (const [field, read] of SUBJECT_SHA_POLICY_FIELDS) {
+    let value;
+    try {
+      value = read(manifest);
+    } catch {
+      value = undefined;
+    }
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'string' && SHA40.test(value)) {
+      if (!authorized.includes(value)) authorized.push(value);
+      continue;
+    }
+    violations.push(
+      `${SUBJECT_SHA_POLICY.MALFORMED}: ${field} is ${describe(value)}${typeof value === 'string' ? ` '${value}'` : ''} — an authorized subject SHA must be a 40-character lowercase commit SHA. A field filled in wrongly is a defect in the contract, not a reason to fall back to a shorter allowlist`,
+    );
+  }
+
+  if (violations.length > 0) return { state: SUBJECT_SHA_POLICY.MALFORMED, authorized: [], violations };
+  if (authorized.length === 0) return { state: SUBJECT_SHA_POLICY.MISSING, authorized: [], violations };
+  return { state: SUBJECT_SHA_POLICY.PRESENT, authorized, violations };
+}
+
+/**
+ * Resolve the supersession chain for one artifact.
+ *
+ * Append-only correction: a later artifact supersedes an earlier one. Only the
+ * terminal, non-superseded artifact may back a proof. Cycles, self-supersession,
+ * cross-invariant supersession and chains through a missing or rejected artifact
+ * all fail closed — an unauditable chain is not evidence.
+ *
+ * @returns {string[]} violations; empty means the chain is sound
+ */
+export function evaluateSupersessionChain(record, byId) {
+  const violations = [];
+  const seen = new Set([record.artifactId]);
+  let cursor = record;
+
+  while (cursor?.supersedes) {
+    const target = cursor.supersedes;
+    if (target === cursor.artifactId) {
+      violations.push(`${cursor.artifactId} supersedes itself — a correction must be a different artifact`);
+      break;
+    }
+    if (seen.has(target)) {
+      violations.push(`supersession cycle detected at ${target} — the chain from ${record.artifactId} never terminates`);
+      break;
+    }
+    seen.add(target);
+    const next = byId.get(target);
+    if (!next) {
+      violations.push(`supersedes ${target}, which is not present in ${EVIDENCE_ARTIFACTS_DIR} — a superseding artifact must be auditable against the artifact it replaces`);
+      break;
+    }
+    if (next.invariantId !== cursor.invariantId) {
+      violations.push(`${cursor.artifactId} (${cursor.invariantId}) supersedes ${target} (${next.invariantId}) — supersession is only meaningful within one invariant`);
+      break;
+    }
+    if (next.level === ACCEPTANCE.REJECTED) {
+      violations.push(`supersession chain passes through ${target}, which is REJECTED — a chain is only as auditable as its weakest link`);
+      break;
+    }
+    cursor = next;
+  }
+  return violations;
+}
+
+/** Artifact ids that some other artifact validly supersedes. */
+export function collectSupersededIds(records, byId) {
+  const superseded = new Set();
+  for (const record of records) {
+    if (!record.supersedes || record.violations.length > 0) continue;
+    const target = byId.get(record.supersedes);
+    if (target && target.invariantId === record.invariantId && target.artifactId !== record.artifactId) {
+      superseded.add(record.supersedes);
+    }
+  }
+  return superseded;
+}
+
+/**
+ * Decide whether one proof reference may back a PROVEN invariant.
+ *
+ * Every eligibility rule is checked here and nowhere else, so a gate cannot
+ * accidentally enforce a subset. Fails closed on every unmet condition.
+ *
+ * @param {string} reference           the proof_artifacts entry as written
+ * @param {object} context
+ * @param {string} context.invariantId contract invariant the reference sits under
+ * @param {string[]} context.allowedLanes lanes the contract permits for it
+ * @param {string|null} context.expectedProofType contract proof_type, if declared
+ * @param {Map<string,object>} context.byId
+ * @param {Set<string>} context.superseded
+ * @param {{state: string, authorized: string[]}} context.subjectShaPolicy contract subject-SHA policy
+ * @returns {string[]} violations; empty means eligible
+ */
+export function evaluateProofReference(reference, context) {
+  const { invariantId, allowedLanes, expectedProofType, byId, superseded, subjectShaPolicy } = context;
+
+  if (!isCanonicalArtifactReference(reference)) {
+    return [`proof reference ${JSON.stringify(reference)} ${explainReferenceRejection(reference)}`];
+  }
+
+  const record = byId.get(reference);
+  if (!record) {
+    return [`proof reference ${reference} resolves to no artifact — expected ${EVIDENCE_ARTIFACTS_DIR}/${reference}.json`];
+  }
+
+  const violations = [];
+  if (record.violations.length > 0) {
+    violations.push(`proof reference ${reference} names a structurally invalid artifact: ${record.violations[0]}`);
+  }
+  if (record.invariantId !== invariantId) {
+    violations.push(`proof reference ${reference} is bound to invariant ${record.invariantId}, not ${invariantId} — an artifact does not change what it observed by being cited elsewhere`);
+  }
+  if (allowedLanes.length > 0 && !allowedLanes.includes(record.lane)) {
+    violations.push(`proof reference ${reference} is lane ${record.lane}, but ${invariantId} requires ${allowedLanes.join(' or ')}`);
+  }
+  if (expectedProofType && record.proofType !== expectedProofType) {
+    violations.push(`proof reference ${reference} declares proof_type ${record.proofType}, but ${invariantId} requires ${expectedProofType}`);
+  }
+  // Three states, evaluated explicitly. There is no fourth branch in which the
+  // rule quietly does nothing: an unauthorized commit and an unstated policy are
+  // both refusals, and they are told apart so the operator knows which to fix.
+  if (subjectShaPolicy.state === SUBJECT_SHA_POLICY.MISSING) {
+    violations.push(`proof reference ${reference}: ${SUBJECT_SHA_POLICY.MISSING} — the contract names no authorized subject SHA, so no commit is authorized and no artifact may back a PROVEN invariant. An empty allowlist is not permission to use any commit; it is the absence of an authorization. Name the authorized commit in closure_subject_sha or required_evidence before citing evidence`);
+  } else if (subjectShaPolicy.state === SUBJECT_SHA_POLICY.MALFORMED) {
+    violations.push(`proof reference ${reference}: ${SUBJECT_SHA_POLICY.MALFORMED} — the contract's subject-SHA policy is not readable, so nothing can be authorized against it`);
+  } else if (!subjectShaPolicy.authorized.includes(record.subjectSha)) {
+    violations.push(`proof reference ${reference}: ${SUBJECT_SHA_NOT_AUTHORIZED} — observed subject_sha ${record.subjectSha}, which is not an authorized closure subject SHA (${subjectShaPolicy.authorized.join(', ')}). Evidence captured against another commit does not describe this one`);
+  }
+  if (superseded.has(reference)) {
+    violations.push(`proof reference ${reference} has been superseded by a later artifact — only the terminal artifact in a supersession chain may back a proof`);
+  }
+  violations.push(...evaluateSupersessionChain(record, byId).map((v) => `proof reference ${reference}: ${v}`));
+
+  if (record.level !== ACCEPTANCE.ACCEPTED) {
+    const why = explainAcceptance(record) || 'acceptance requirements not met';
+    violations.push(`proof reference ${reference} is ${record.level}, not ACCEPTED — ${why}. Owner decision D-8: an artifact that has not been verified may be committed, but may never satisfy a PROVEN invariant`);
+  }
+
+  return violations;
 }

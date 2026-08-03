@@ -47,12 +47,40 @@
  *
  * ─── The rule ────────────────────────────────────────────────────────────────
  * Every invariant in a governed manifest must satisfy one of:
- *   (a) status === 'PROVEN' AND proof_artifacts contains >= 1 non-empty entry, or
+ *   (a) status === 'PROVEN' AND proof_artifacts contains >= 1 canonical artifact
+ *       reference that resolves to an eligible ACCEPTED evidence artifact bound to
+ *       that invariant, or
  *   (b) a complete owner waiver naming that invariant exists in invariant_waivers.
+ *
+ * ─── G-1: proof references are resolved, not counted ─────────────────────────
+ * PR-1B required >= 1 non-empty proof_artifacts entry but never interpreted it, so
+ * the string "proved it" satisfied the same test as a captured, signed,
+ * provenance-verified observation. Proof references are now canonical artifact ids
+ * resolved through scripts/lib/evidence-artifact.mjs — the same authoritative path
+ * validate-evidence-artifacts.mjs uses, so the structural gate and the closure gate
+ * can never disagree about an artifact.
+ *
+ * Owner decision D-8: an UNVERIFIED artifact may be committed and structurally
+ * validated, but may never satisfy a PROVEN invariant. Acceptance requires a
+ * verified signature and verified provenance, which this library only ever reports
+ * when a caller supplies the protected context. A gate without that context reports
+ * what it could not check and fails closed; it never certifies closure by default.
  *
  * A waiver is never a default and is never implied by silence. An incomplete
  * waiver is not a waiver: it is reported as a violation and does not satisfy (b).
  */
+
+import { join as pathJoin } from 'node:path';
+
+import {
+  EVIDENCE_ARTIFACTS_DIR,
+  collectSupersededIds,
+  evaluateProofReference,
+  explainReferenceRejection,
+  isCanonicalArtifactReference,
+  loadEvidenceArtifactIndex,
+  resolveSubjectShaPolicy,
+} from './evidence-artifact.mjs';
 
 /**
  * The four closure metadata fields (conditions 1-4).
@@ -196,13 +224,17 @@ export function requiresInvariantProof(bundleId) {
 }
 
 /**
- * Count proof artifacts that actually constitute proof. Entries that are empty,
- * whitespace-only, or not strings do not count — an empty string in the list is
- * not evidence.
+ * Lanes the contract permits for one invariant.
+ *
+ * The frozen contract writes a compound lane as `LANE_C+LANE_E` (S7-I10), which
+ * means either lane may carry the observation. An absent proof_lane leaves the
+ * set empty, which the resolver reads as unconstrained rather than as a licence
+ * to accept anything — every other eligibility rule still applies.
  */
-function countUsableProofArtifacts(proofArtifacts) {
-  if (!Array.isArray(proofArtifacts)) return 0;
-  return proofArtifacts.filter(isNonEmptyString).length;
+function contractLanesFor(invariantEntry) {
+  const declared = invariantEntry?.proof_lane;
+  if (typeof declared !== 'string' || declared.trim() === '') return [];
+  return declared.split('+').map((lane) => lane.trim()).filter(Boolean);
 }
 
 /**
@@ -386,6 +418,32 @@ export function evaluateInvariantClosure(manifest, options = {}) {
     });
   }
 
+  // ─── Evidence index (G-1) ─────────────────────────────────────────────────
+  //
+  // Loaded once per evaluation and shared by every invariant, so two invariants
+  // can never disagree about the same artifact. Options are injected rather than
+  // read from the environment here, which is what lets the tests drive a real
+  // temporary artifact directory instead of a mock.
+  const evidenceIndex = loadEvidenceArtifactIndex({
+    dir: options.evidenceDir ?? pathJoin(options.repoRoot ?? process.cwd(), EVIDENCE_ARTIFACTS_DIR),
+    signingKey: options.signingKey ?? null,
+    provenance: options.provenance ?? null,
+  });
+  const supersededIds = collectSupersededIds(evidenceIndex.records, evidenceIndex.byId);
+
+  // Which commit the contract's evidence must describe. Resolved by the shared
+  // library so this gate cannot hold a different opinion from any other caller.
+  //
+  // An absent policy is a refusal, not a licence. Before this was explicit, an
+  // empty allowlist skipped the check entirely, and the live Stage 7 contract —
+  // whose four required_evidence fields are all still null — therefore had no
+  // subject-SHA enforcement at all. A rule that reads as enforced while checking
+  // nothing is worse than no rule, because it is trusted.
+  const subjectShaPolicy = resolveSubjectShaPolicy(manifest);
+  for (const violation of subjectShaPolicy.violations) {
+    structuralViolations.push(`${bundleId}: ${violation}`);
+  }
+
   // ─── Every invariant proven, or explicitly waived ─────────────────────────
   const proven = [];
   const waived = [];
@@ -403,9 +461,53 @@ export function evaluateInvariantClosure(manifest, options = {}) {
     }
 
     const status = invariantEntry.status;
-    const artifactCount = countUsableProofArtifacts(invariantEntry.proof_artifacts);
     const statusOk = status === REQUIRED_INVARIANT_STATUS;
-    const proofOk = artifactCount >= 1;
+
+    // G-1: a non-empty string is no longer proof. Every listed reference must
+    // resolve to an eligible ACCEPTED artifact bound to THIS invariant.
+    //
+    // Structural rejection of a malformed reference applies at every status, so
+    // a PENDING contract cannot quietly carry junk that only fails at closure
+    // time. Eligibility (existence, acceptance, lane, supersession) is required
+    // only where the contract claims the invariant is PROVEN — a truthful
+    // PENDING invariant with no proof_artifacts remains valid and unaffected.
+    const references = Array.isArray(invariantEntry.proof_artifacts) ? invariantEntry.proof_artifacts : [];
+    const seenReferences = new Set();
+    let referencesEligible = true;
+
+    for (const reference of references) {
+      if (!isCanonicalArtifactReference(reference)) {
+        structuralViolations.push(
+          `${bundleId}: invariant ${id} proof reference ${JSON.stringify(reference)} ${explainReferenceRejection(reference)}`,
+        );
+        referencesEligible = false;
+        continue;
+      }
+      if (seenReferences.has(reference)) {
+        structuralViolations.push(
+          `${bundleId}: invariant ${id} lists proof reference ${reference} more than once — citing one observation twice does not make it two`,
+        );
+        referencesEligible = false;
+        continue;
+      }
+      seenReferences.add(reference);
+
+      if (!statusOk) continue;
+      const problems = evaluateProofReference(reference, {
+        invariantId: id,
+        allowedLanes: contractLanesFor(invariantEntry),
+        expectedProofType: typeof invariantEntry.proof_type === 'string' ? invariantEntry.proof_type : null,
+        byId: evidenceIndex.byId,
+        superseded: supersededIds,
+        subjectShaPolicy,
+      });
+      if (problems.length > 0) {
+        referencesEligible = false;
+        for (const problem of problems) proofViolations.push(`${bundleId}: invariant ${id} — ${problem}`);
+      }
+    }
+
+    const proofOk = seenReferences.size >= 1 && referencesEligible;
 
     if (statusOk && proofOk) {
       proven.push(id);
@@ -429,15 +531,17 @@ export function evaluateInvariantClosure(manifest, options = {}) {
     }
     if (!proofOk) {
       const observed = Array.isArray(invariantEntry.proof_artifacts)
-        ? `${invariantEntry.proof_artifacts.length} entr${invariantEntry.proof_artifacts.length === 1 ? 'y' : 'ies'}, ${artifactCount} usable`
+        ? `${invariantEntry.proof_artifacts.length} entr${invariantEntry.proof_artifacts.length === 1 ? 'y' : 'ies'}, ${referencesEligible ? seenReferences.size : 0} eligible`
         : invariantEntry.proof_artifacts === undefined
           ? 'absent'
           : `not a list (${describeType(invariantEntry.proof_artifacts)})`;
-      requirementParts.push(`proof_artifacts ${observed} (required: >= 1 non-empty entry)`);
+      requirementParts.push(
+        `proof_artifacts ${observed} (required: >= 1 entry resolving to an ACCEPTED evidence artifact bound to ${id})`,
+      );
     }
 
     proofViolations.push(
-      `${bundleId}: invariant ${id} blocks closure — unmet requirement: ${requirementParts.join('; ')}; missing proof: ${proofOk ? 'none' : `no usable proof_artifacts entry for ${id}`}; missing waiver: no complete owner waiver for ${id} in invariant_waivers (a waiver requires ${WAIVER_REQUIRED_FIELDS.join(', ')})`,
+      `${bundleId}: invariant ${id} blocks closure — unmet requirement: ${requirementParts.join('; ')}; missing proof: ${proofOk ? 'none' : `no eligible ACCEPTED evidence artifact for ${id}`}; missing waiver: no complete owner waiver for ${id} in invariant_waivers (a waiver requires ${WAIVER_REQUIRED_FIELDS.join(', ')})`,
     );
   }
 
