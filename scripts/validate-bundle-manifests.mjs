@@ -9,6 +9,9 @@
  *  4. The REMAINING_STAGE_ACCEPTANCE.yaml ledger is consistent with all bundle files
  *  5. No bundle is marked CLOSED without post_merge_evidence
  *  6. Dependency ordering is respected (no CLOSED bundle depends on PENDING)
+ *  7. A CLOSED manifest that declares closure condition 5 has every invariant
+ *     PROVEN with at least one proof artifact, or covered by a complete owner
+ *     waiver (see scripts/lib/invariant-closure.mjs)
  *
  * Exit codes:
  *   0 — all checks pass
@@ -19,6 +22,11 @@ import { readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { load as yamlLoad } from 'js-yaml';
+import {
+  REQUIRED_EVIDENCE_FIELDS,
+  evaluateInvariantClosure,
+  summarizeInvariantClosure,
+} from './lib/invariant-closure.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -85,8 +93,17 @@ for (const file of bundleFiles) {
     fail(`${file}: bundle manifest artifact_type must be 'development_bundle' or 'factory_stage_closure', got '${parsed.artifact_type}'`);
   }
 
+  // Closure condition 5, structural half — evaluated at EVERY status. Whether a
+  // contract is governed is decided by the validator-owned registry keyed on the
+  // bundle id, never by anything the manifest declares, so a manifest cannot opt
+  // itself out by dropping closure_conditions or by deleting invariants.
+  const closureResult = evaluateInvariantClosure(parsed, { bundleId: id });
+  for (const violation of closureResult.structuralViolations) {
+    fail(`${file}: ${violation}`);
+  }
+
   if (status === 'CLOSED') {
-    const required = ['pr_sha', 'merge_sha', 'main_integration_run', 'db_verification_run'];
+    const required = REQUIRED_EVIDENCE_FIELDS;
     // factory_stage_closure uses required_evidence instead of post_merge_evidence when CLOSED
     const evidenceObj = parsed.artifact_type === 'factory_stage_closure'
       ? (parsed.required_evidence || {})
@@ -96,10 +113,21 @@ for (const file of bundleFiles) {
         fail(`${file}: status=CLOSED but evidence.${field} is null or missing`);
       }
     }
+
+    // Proof half — the four fields above prove only that a PR merged and CI ran.
+    // A governed contract must also carry invariant proof or an owner waiver.
+    if (closureResult.enforced) {
+      for (const violation of closureResult.proofViolations) {
+        fail(`${file}: ${violation}`);
+      }
+      if (closureResult.proofViolations.length === 0 && closureResult.structuralViolations.length === 0) {
+        console.log(`  ✓ ${file}: closure condition 5 satisfied — ${summarizeInvariantClosure(closureResult)}`);
+      }
+    }
   }
 
   if (status === 'PENDING') {
-    const fields = ['pr_sha', 'merge_sha', 'main_integration_run', 'db_verification_run'];
+    const fields = REQUIRED_EVIDENCE_FIELDS;
     // factory_stage_closure PENDING is expected to have null required_evidence fields
     const evidenceObj = parsed.artifact_type === 'factory_stage_closure'
       ? (parsed.required_evidence || {})
@@ -156,7 +184,7 @@ if (ledger) {
         const le = lb.artifact_type === 'factory_stage_closure'
           ? (lb.required_evidence || {})
           : (lb.post_merge_evidence || {});
-        const required = ['pr_sha', 'merge_sha', 'main_integration_run', 'db_verification_run'];
+        const required = REQUIRED_EVIDENCE_FIELDS;
         for (const field of required) {
           if (le[field] == null) {
             fail(`Ledger/${lb.id}: status=CLOSED but ledger evidence.${field} is null`);
