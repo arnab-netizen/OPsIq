@@ -79,6 +79,7 @@ import {
   explainReferenceRejection,
   isCanonicalArtifactReference,
   loadEvidenceArtifactIndex,
+  resolveSubjectShaPolicy,
 } from './evidence-artifact.mjs';
 
 /**
@@ -430,18 +431,18 @@ export function evaluateInvariantClosure(manifest, options = {}) {
   });
   const supersededIds = collectSupersededIds(evidenceIndex.records, evidenceIndex.byId);
 
-  // Which commit the contract's evidence must describe. Empty means unconstrained
-  // (nothing to compare against yet); a populated closure_subject_sha pins it.
-  // A stage-closure manifest carries required_evidence; a development bundle
-  // carries post_merge_evidence. Reading only one of them leaves the allowlist
-  // empty for the other shape, which silently disables the check — the exact
-  // failure mode this rule exists to prevent.
-  const subjectShaAllowlist = [
-    manifest.closure_subject_sha,
-    manifest.required_evidence?.merge_sha,
-    manifest.required_evidence?.pr_sha,
-    manifest.post_merge_evidence?.merge_sha,
-  ].filter((sha) => typeof sha === 'string' && /^[0-9a-f]{40}$/.test(sha));
+  // Which commit the contract's evidence must describe. Resolved by the shared
+  // library so this gate cannot hold a different opinion from any other caller.
+  //
+  // An absent policy is a refusal, not a licence. Before this was explicit, an
+  // empty allowlist skipped the check entirely, and the live Stage 7 contract —
+  // whose four required_evidence fields are all still null — therefore had no
+  // subject-SHA enforcement at all. A rule that reads as enforced while checking
+  // nothing is worse than no rule, because it is trusted.
+  const subjectShaPolicy = resolveSubjectShaPolicy(manifest);
+  for (const violation of subjectShaPolicy.violations) {
+    structuralViolations.push(`${bundleId}: ${violation}`);
+  }
 
   // ─── Every invariant proven, or explicitly waived ─────────────────────────
   const proven = [];
@@ -498,7 +499,7 @@ export function evaluateInvariantClosure(manifest, options = {}) {
         expectedProofType: typeof invariantEntry.proof_type === 'string' ? invariantEntry.proof_type : null,
         byId: evidenceIndex.byId,
         superseded: supersededIds,
-        subjectShaAllowlist,
+        subjectShaPolicy,
       });
       if (problems.length > 0) {
         referencesEligible = false;

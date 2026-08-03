@@ -27,10 +27,13 @@ import YAML from "js-yaml";
 import {
   ACCEPTANCE,
   PROVENANCE_STATE,
+  SUBJECT_SHA_NOT_AUTHORIZED,
+  SUBJECT_SHA_POLICY,
   buildEvidenceArtifact,
   evaluateSupersessionChain,
   isCanonicalArtifactReference,
   loadEvidenceArtifactIndex,
+  resolveSubjectShaPolicy,
 } from "../../../scripts/lib/evidence-artifact.mjs";
 import { evaluateInvariantClosure } from "../../../scripts/lib/invariant-closure.mjs";
 
@@ -407,7 +410,7 @@ describe("G-1 — binding rules", () => {
     const r = evaluate(contractWith({ "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) }), {
       evidenceDir: dir, provenance: verifiedProvenance(artifact),
     });
-    expect(allViolations(r)).toContain("is not the authorized closure subject SHA");
+    expect(allViolations(r)).toContain("SUBJECT_SHA_NOT_AUTHORIZED");
   });
 });
 
@@ -609,6 +612,214 @@ describe("G-1 — closure-level enforcement", () => {
       evidenceDir: writeArtifacts([]),
     }) as { waived: string[] };
     expect(result.waived).toContain("S7-I1");
+  });
+});
+
+describe("G-1 — subject-SHA policy fails closed when the contract states none", () => {
+  /**
+   * Root cause this block exists for: the eligibility path applied the subject-SHA
+   * rule only when the allowlist was non-empty, so a contract that named no
+   * authorized commit had the rule skipped rather than enforced. The live Stage 7
+   * contract carries four null required_evidence fields, so the rule was inert on
+   * the real contract — an artifact bearing any commit at all would have been
+   * accepted the moment ACCEPTED provenance became reachable.
+   *
+   * An empty allowlist is not "allow all". It is the absence of an authorization.
+   */
+
+  /** The real Stage 7 contract, read from disk, with only the named overrides applied. */
+  function liveContract(overrides: Record<string, unknown> = {}, patch: Record<string, unknown> = {}) {
+    const raw = YAML.load(
+      readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
+    ) as Record<string, unknown>;
+    const invariants = { ...(raw.invariants as Record<string, unknown>) };
+    for (const [id, entry] of Object.entries(overrides)) invariants[id] = entry;
+    return { ...raw, ...patch, invariants };
+  }
+
+  function evaluateLive(manifest: Record<string, unknown>, dir: string, provenance?: Map<string, string>) {
+    return evaluateInvariantClosure(manifest, {
+      bundleId: STAGE_7_ID, evidenceDir: dir, signingKey: SIGNING_KEY, provenance,
+    }) as { structuralViolations: string[]; proofViolations: string[]; proven: string[]; waived: string[] };
+  }
+
+  const withPolicy = (shas: string[]) => ({
+    required_evidence: {
+      pr_sha: shas[0] ?? null, merge_sha: shas[1] ?? shas[0] ?? null,
+      main_integration_run: "1", db_verification_run: "1",
+    },
+  });
+
+  it("the live contract states no authorized subject SHA", () => {
+    const policy = resolveSubjectShaPolicy(liveContract());
+    expect(policy.state).toBe(SUBJECT_SHA_POLICY.MISSING);
+    expect(policy.authorized).toEqual([]);
+  });
+
+  it("live contract, PENDING with empty proof_artifacts, still passes", () => {
+    const r = evaluateLive(liveContract(), writeArtifacts([]));
+    expect(r.proofViolations.filter((v) => v.includes("SUBJECT_SHA"))).toHaveLength(0);
+    expect(r.structuralViolations).toHaveLength(0);
+  });
+
+  it("live contract, PROVEN with an otherwise-eligible artifact, fails SUBJECT_SHA_POLICY_MISSING", () => {
+    const artifact = signedArtifact("S7-I1");
+    const dir = writeArtifacts([artifact]);
+    const r = evaluateLive(
+      liveContract({ "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) }),
+      dir, verifiedProvenance(artifact),
+    );
+    expect(allViolations(r)).toContain(SUBJECT_SHA_POLICY.MISSING);
+    expect(r.proven).not.toContain("S7-I1");
+  });
+
+  it("an empty allowlist never means allow all", () => {
+    // Every one of these is a commit an implicit fallback might have reached for.
+    const candidates: Record<string, string> = {
+      "all-zero SHA": "0".repeat(40),
+      "current main SHA": SUBJECT_SHA,
+      "a deployment-shaped SHA": "a77bc58a6ba6751cb402d5bb3bc6186e0079cc55",
+      "an arbitrary SHA": "9".repeat(40),
+    };
+    for (const [label, sha] of Object.entries(candidates)) {
+      const artifact = signedArtifact("S7-I1", { subject_sha: sha });
+      const r = evaluateLive(
+        liveContract({ "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) }),
+        writeArtifacts([artifact]), verifiedProvenance(artifact),
+      );
+      expect(allViolations(r), label).toContain(SUBJECT_SHA_POLICY.MISSING);
+      expect(r.proven, label).not.toContain("S7-I1");
+    }
+  });
+
+  it("the artifact's own subject_sha never authorizes itself", () => {
+    const sha = "7".repeat(40);
+    const artifact = signedArtifact("S7-I1", { subject_sha: sha });
+    const r = evaluateLive(
+      liveContract({ "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) }),
+      writeArtifacts([artifact]), verifiedProvenance(artifact),
+    );
+    expect(allViolations(r)).toContain(SUBJECT_SHA_POLICY.MISSING);
+  });
+
+  it("an explicit policy naming the artifact's commit passes", () => {
+    const artifact = signedArtifact("S7-I1");
+    const r = evaluateLive(
+      liveContract({ "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) }, withPolicy([SUBJECT_SHA])),
+      writeArtifacts([artifact]), verifiedProvenance(artifact),
+    );
+    expect(r.proven).toContain("S7-I1");
+  });
+
+  it("an explicit policy excluding the artifact's commit fails SUBJECT_SHA_NOT_AUTHORIZED", () => {
+    const artifact = signedArtifact("S7-I1", { subject_sha: "1".repeat(40) });
+    const r = evaluateLive(
+      liveContract({ "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) }, withPolicy([SUBJECT_SHA])),
+      writeArtifacts([artifact]), verifiedProvenance(artifact),
+    );
+    expect(allViolations(r)).toContain(SUBJECT_SHA_NOT_AUTHORIZED);
+    expect(allViolations(r)).not.toContain(SUBJECT_SHA_POLICY.MISSING);
+    expect(r.proven).not.toContain("S7-I1");
+  });
+
+  it("multiple authorized SHAs are deterministic and deduplicated", () => {
+    const second = "2".repeat(40);
+    const policy = resolveSubjectShaPolicy(liveContract({}, withPolicy([SUBJECT_SHA, second])));
+    expect(policy.state).toBe(SUBJECT_SHA_POLICY.PRESENT);
+    expect(policy.authorized).toEqual([second, SUBJECT_SHA]); // merge_sha, then pr_sha — declaration order
+    const dup = resolveSubjectShaPolicy(liveContract({}, withPolicy([SUBJECT_SHA, SUBJECT_SHA])));
+    expect(dup.authorized).toEqual([SUBJECT_SHA]);
+    // An artifact on either authorized commit is accepted.
+    for (const sha of [SUBJECT_SHA, second]) {
+      const artifact = signedArtifact("S7-I1", { subject_sha: sha });
+      const r = evaluateLive(
+        liveContract({ "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) }, withPolicy([SUBJECT_SHA, second])),
+        writeArtifacts([artifact]), verifiedProvenance(artifact),
+      );
+      expect(r.proven, sha).toContain("S7-I1");
+    }
+  });
+
+  it("a malformed policy fails structurally rather than shortening the allowlist", () => {
+    for (const bad of ["f129fb8", "F".repeat(40), 42, ["a".repeat(40)], {}]) {
+      const manifest = liveContract({}, {
+        required_evidence: { pr_sha: SUBJECT_SHA, merge_sha: bad, main_integration_run: "1", db_verification_run: "1" },
+      });
+      const policy = resolveSubjectShaPolicy(manifest);
+      expect(policy.state, JSON.stringify(bad)).toBe(SUBJECT_SHA_POLICY.MALFORMED);
+      // The one well-formed sibling must NOT survive as a silently shorter allowlist.
+      expect(policy.authorized, JSON.stringify(bad)).toEqual([]);
+      const artifact = signedArtifact("S7-I1");
+      const r = evaluateLive(
+        { ...manifest, invariants: { ...(manifest.invariants as object), "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) } },
+        writeArtifacts([artifact]), verifiedProvenance(artifact),
+      );
+      expect(r.structuralViolations.join("\n"), JSON.stringify(bad)).toContain(SUBJECT_SHA_POLICY.MALFORMED);
+      expect(r.proven, JSON.stringify(bad)).not.toContain("S7-I1");
+    }
+  });
+
+  it("an absent or null field is MISSING, not MALFORMED", () => {
+    expect(resolveSubjectShaPolicy({}).state).toBe(SUBJECT_SHA_POLICY.MISSING);
+    expect(resolveSubjectShaPolicy({ required_evidence: null }).state).toBe(SUBJECT_SHA_POLICY.MISSING);
+    expect(resolveSubjectShaPolicy({ closure_subject_sha: null }).state).toBe(SUBJECT_SHA_POLICY.MISSING);
+    expect(resolveSubjectShaPolicy(null).state).toBe(SUBJECT_SHA_POLICY.MISSING);
+  });
+
+  it("a whitespace-padded SHA is malformed, not trimmed into authorization", () => {
+    const policy = resolveSubjectShaPolicy({ closure_subject_sha: ` ${SUBJECT_SHA} ` });
+    expect(policy.state).toBe(SUBJECT_SHA_POLICY.MALFORMED);
+    expect(policy.authorized).toEqual([]);
+  });
+
+  it("a PENDING invariant with a malformed reference still fails as before", () => {
+    const r = evaluateLive(
+      liveContract({ "S7-I1": { name: "S7-I1", status: "PENDING", proof_artifacts: ["proved it"] } }),
+      writeArtifacts([]),
+    );
+    expect(r.structuralViolations.join("\n")).toContain("is free text");
+  });
+
+  it("waived invariants are unaffected by the subject-SHA policy", () => {
+    const manifest = liveContract();
+    (manifest as { invariant_waivers: unknown[] }).invariant_waivers = [{
+      invariant: "S7-I1", owner: "arnab-netizen", reason: "Not applicable to the private pilot scope.",
+      date: "2026-08-03", acknowledgement: "I accept this invariant is not proven.",
+    }];
+    const r = evaluateLive(manifest, writeArtifacts([]));
+    expect(r.waived).toContain("S7-I1");
+    expect(r.structuralViolations).toHaveLength(0);
+  });
+
+  it("closure fails when every artifact is otherwise eligible but no policy exists", () => {
+    const artifacts = CANONICAL_IDS.map((id) => signedArtifact(id));
+    const dir = writeArtifacts(artifacts);
+    const overrides: Record<string, unknown> = {};
+    CANONICAL_IDS.forEach((id, i) => { overrides[id] = provenWith(id, [artifacts[i].artifact_id]); });
+    const r = evaluateLive(liveContract(overrides), dir, verifiedProvenance(...artifacts));
+    expect(r.proven).toHaveLength(0);
+    expect(allViolations(r)).toContain(SUBJECT_SHA_POLICY.MISSING);
+  });
+
+  it("a G-2-style verified provenance map cannot make an artifact usable while the policy is absent", () => {
+    const artifact = signedArtifact("S7-I1");
+    const everythingVerified = new Map<string, string>([[artifact.artifact_id as string, PROVENANCE_STATE.VERIFIED]]);
+    const r = evaluateLive(
+      liveContract({ "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) }),
+      writeArtifacts([artifact]), everythingVerified,
+    );
+    expect(r.proven).not.toContain("S7-I1");
+    expect(allViolations(r)).toContain(SUBJECT_SHA_POLICY.MISSING);
+  });
+
+  it("this PR adds no subject SHA to the live contract", () => {
+    const raw = YAML.load(
+      readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
+    ) as Record<string, unknown>;
+    expect(raw.closure_subject_sha).toBeUndefined();
+    expect(raw.required_evidence).toEqual({
+      pr_sha: null, merge_sha: null, main_integration_run: null, db_verification_run: null,
+    });
   });
 });
 

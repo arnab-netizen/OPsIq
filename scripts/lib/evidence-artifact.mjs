@@ -975,6 +975,93 @@ export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance =
 }
 
 /**
+ * State of a contract's authorized subject-SHA policy.
+ *
+ * An empty allowlist is not "allow all". Evidence describes one commit, and a
+ * contract that has not yet named the commit its evidence must describe has not
+ * authorized any evidence at all. Treating absence as permission is how a
+ * trust boundary fails open: the rule reads as enforced while checking nothing.
+ */
+export const SUBJECT_SHA_POLICY = Object.freeze({
+  PRESENT: 'SUBJECT_SHA_POLICY_PRESENT',
+  MISSING: 'SUBJECT_SHA_POLICY_MISSING',
+  MALFORMED: 'SUBJECT_SHA_POLICY_MALFORMED',
+});
+
+/** Emitted when a policy exists but does not authorize the artifact's commit. */
+export const SUBJECT_SHA_NOT_AUTHORIZED = 'SUBJECT_SHA_NOT_AUTHORIZED';
+
+/**
+ * The fields a manifest may use to name the commit its evidence must describe.
+ * Declaration order fixes the reported order, so the result is deterministic.
+ *
+ * A stage-closure manifest carries required_evidence; a development bundle
+ * carries post_merge_evidence. Reading only one shape would leave the other
+ * unconstrained, which is the same silent-disable defect in a different place.
+ */
+const SUBJECT_SHA_POLICY_FIELDS = Object.freeze([
+  ['closure_subject_sha', (m) => m?.closure_subject_sha],
+  ['required_evidence.merge_sha', (m) => m?.required_evidence?.merge_sha],
+  ['required_evidence.pr_sha', (m) => m?.required_evidence?.pr_sha],
+  ['post_merge_evidence.merge_sha', (m) => m?.post_merge_evidence?.merge_sha],
+]);
+
+/**
+ * Resolve one manifest's authorized subject-SHA policy.
+ *
+ * The single authority for this question. `invariant-closure.mjs` consumes it, and
+ * `validate-stage-acceptance.mjs` / `validate-bundle-manifests.mjs` inherit it
+ * through that call, so no caller can hold a second opinion about which commits a
+ * contract authorizes.
+ *
+ * Three states, no fourth:
+ *   PRESENT    at least one well-formed authorized SHA; artifacts are checked
+ *              against it.
+ *   MISSING    no field names a SHA. No artifact may back a PROVEN invariant.
+ *   MALFORMED  a field names something that is not a 40-character lowercase SHA.
+ *              Fails closed rather than dropping the entry and continuing with a
+ *              shorter list, which would silently weaken the policy.
+ *
+ * An absent or explicitly null field is MISSING, not MALFORMED — a contract that
+ * has not filled a field in yet is untruthful about nothing. A field filled in
+ * wrongly is a defect in the contract and is reported as one.
+ *
+ * No implicit fallback exists, by design: not HEAD, not the default branch, not
+ * the deployment SHA, not the artifact's own subject_sha, not a merge base. The
+ * contract names the commit or no evidence may be used. This function performs no
+ * process, git, network or environment I/O, so there is nowhere for such a
+ * fallback to enter.
+ *
+ * @param {object} manifest parsed bundle manifest
+ * @returns {{ state: string, authorized: string[], violations: string[] }}
+ */
+export function resolveSubjectShaPolicy(manifest) {
+  const authorized = [];
+  const violations = [];
+
+  for (const [field, read] of SUBJECT_SHA_POLICY_FIELDS) {
+    let value;
+    try {
+      value = read(manifest);
+    } catch {
+      value = undefined;
+    }
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'string' && SHA40.test(value)) {
+      if (!authorized.includes(value)) authorized.push(value);
+      continue;
+    }
+    violations.push(
+      `${SUBJECT_SHA_POLICY.MALFORMED}: ${field} is ${describe(value)}${typeof value === 'string' ? ` '${value}'` : ''} — an authorized subject SHA must be a 40-character lowercase commit SHA. A field filled in wrongly is a defect in the contract, not a reason to fall back to a shorter allowlist`,
+    );
+  }
+
+  if (violations.length > 0) return { state: SUBJECT_SHA_POLICY.MALFORMED, authorized: [], violations };
+  if (authorized.length === 0) return { state: SUBJECT_SHA_POLICY.MISSING, authorized: [], violations };
+  return { state: SUBJECT_SHA_POLICY.PRESENT, authorized, violations };
+}
+
+/**
  * Resolve the supersession chain for one artifact.
  *
  * Append-only correction: a later artifact supersedes an earlier one. Only the
@@ -1044,11 +1131,11 @@ export function collectSupersededIds(records, byId) {
  * @param {string|null} context.expectedProofType contract proof_type, if declared
  * @param {Map<string,object>} context.byId
  * @param {Set<string>} context.superseded
- * @param {string[]} context.subjectShaAllowlist authorized closure subject SHAs
+ * @param {{state: string, authorized: string[]}} context.subjectShaPolicy contract subject-SHA policy
  * @returns {string[]} violations; empty means eligible
  */
 export function evaluateProofReference(reference, context) {
-  const { invariantId, allowedLanes, expectedProofType, byId, superseded, subjectShaAllowlist } = context;
+  const { invariantId, allowedLanes, expectedProofType, byId, superseded, subjectShaPolicy } = context;
 
   if (!isCanonicalArtifactReference(reference)) {
     return [`proof reference ${JSON.stringify(reference)} ${explainReferenceRejection(reference)}`];
@@ -1072,8 +1159,15 @@ export function evaluateProofReference(reference, context) {
   if (expectedProofType && record.proofType !== expectedProofType) {
     violations.push(`proof reference ${reference} declares proof_type ${record.proofType}, but ${invariantId} requires ${expectedProofType}`);
   }
-  if (subjectShaAllowlist.length > 0 && !subjectShaAllowlist.includes(record.subjectSha)) {
-    violations.push(`proof reference ${reference} observed subject_sha ${record.subjectSha}, which is not the authorized closure subject SHA (${subjectShaAllowlist.join(', ')}) — evidence captured against another commit does not describe this one`);
+  // Three states, evaluated explicitly. There is no fourth branch in which the
+  // rule quietly does nothing: an unauthorized commit and an unstated policy are
+  // both refusals, and they are told apart so the operator knows which to fix.
+  if (subjectShaPolicy.state === SUBJECT_SHA_POLICY.MISSING) {
+    violations.push(`proof reference ${reference}: ${SUBJECT_SHA_POLICY.MISSING} — the contract names no authorized subject SHA, so no commit is authorized and no artifact may back a PROVEN invariant. An empty allowlist is not permission to use any commit; it is the absence of an authorization. Name the authorized commit in closure_subject_sha or required_evidence before citing evidence`);
+  } else if (subjectShaPolicy.state === SUBJECT_SHA_POLICY.MALFORMED) {
+    violations.push(`proof reference ${reference}: ${SUBJECT_SHA_POLICY.MALFORMED} — the contract's subject-SHA policy is not readable, so nothing can be authorized against it`);
+  } else if (!subjectShaPolicy.authorized.includes(record.subjectSha)) {
+    violations.push(`proof reference ${reference}: ${SUBJECT_SHA_NOT_AUTHORIZED} — observed subject_sha ${record.subjectSha}, which is not an authorized closure subject SHA (${subjectShaPolicy.authorized.join(', ')}). Evidence captured against another commit does not describe this one`);
   }
   if (superseded.has(reference)) {
     violations.push(`proof reference ${reference} has been superseded by a later artifact — only the terminal artifact in a supersession chain may back a proof`);
