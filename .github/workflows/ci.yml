@@ -16,7 +16,12 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Must stay strictly greater than the non-DB suite step cap below plus setup.
+    # A step timeout is only reachable if the job outlives it: with a 25-minute job
+    # cap, raising the step to 30 would change nothing, because the job would be
+    # killed at 25 first and the step would never report its own timeout.
+    # Observed: setup through step start costs ~2 minutes, so 40 leaves real room.
+    timeout-minutes: 40
 
     env:
       TEST_WITH_DB: "false"
@@ -80,7 +85,31 @@ jobs:
         # DB tests self-skip when TEST_WITH_DB != 'true', but we also explicitly
         # exclude *.db.test.ts files so the intent is unambiguous.
         # Full DB suite runs on push-to-main in main-integration.yml.
-        timeout-minutes: 20
+        #
+        # ─── Why 30 and not 20 ────────────────────────────────────────────────
+        # NON_DB_SUITE_TIMEOUT_HEADROOM_EXHAUSTED. The suite grew to ~28,460 tests
+        # across 1,009 files while this cap stayed at 20 minutes. Two consecutive
+        # runs of the identical commit (30845807196 attempts 1 and 2) were killed
+        # here with ZERO test failures — every file passed both times.
+        #
+        # The second attempt is the instructive one: vitest self-reported 1199.66s,
+        # inside the 1200s cap, and the step was killed anyway. This cap also covers
+        # the quarantine-list `node -e` prelude, npx startup and reporter teardown,
+        # which that figure excludes — so the budget actually available to the suite
+        # was already negative, not merely thin. Recent margins: +23.5s, +27.1s,
+        # -7.1s, then a kill at nominal -0.0s. Run-to-run variance is ~30s.
+        #
+        # This restores operational headroom. It does NOT fix the underlying cost:
+        # ~63% of the runtime (760s of 1207s) is test-environment instantiation, not
+        # test execution. Splitting the suite, reducing jsdom setup, separating
+        # Node-only from browser-environment tests, sharding, and safe environment
+        # reuse are tracked as a separate deferred package — see
+        # docs/opsiq/ci/NON_DB_SUITE_CAPACITY.md.
+        #
+        # Nothing about what is asserted changed. Same command, same selection, same
+        # blocking behaviour, same exit-code handling. The tests were already passing;
+        # they were being denied the time to say so.
+        timeout-minutes: 30
         run: |
           EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
           echo "Quarantined (excluded from blocking lane): $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") file(s)"
