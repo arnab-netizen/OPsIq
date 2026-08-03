@@ -14,6 +14,55 @@ authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 authorized_branch: "claude/opsiq-stage-7-loop-main"
 authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 
+# ─── Authorized evidence subject SHA (owner decision D-9) ────────────────────
+# The single commit every Stage 7 evidence artifact must describe. An artifact
+# whose subject_sha is any other commit is refused with SUBJECT_SHA_NOT_AUTHORIZED,
+# because evidence captured against another commit does not describe this one.
+#
+# Until this field was set, scripts/lib/evidence-artifact.mjs resolved the policy
+# as SUBJECT_SHA_POLICY_MISSING and refused every proof reference. That is the
+# fail-closed default: an empty authorization is not permission to use any commit.
+#
+# This field states which commit evidence may describe. It is NOT closure evidence
+# and it proves nothing on its own — required_evidence below remains null, every
+# invariant remains PENDING, and Stage 7 remains open.
+#
+# Authorized by the owner on 2026-08-03 at the exact merge commit of PR #278, which
+# was simultaneously: current main; Main Integration green (run 30841390660,
+# success, 30534 blocking tests passed, 0 failed); deployed to Vercel production
+# (deployment 5731543184, state success) and not superseded; and the commit that
+# introduced the G-1 accepted-evidence binding that enforces this very field.
+closure_subject_sha: "ef44972882b35709ee12c54d2dfb7395a6477bf8"
+closure_subject_sha_authorization:
+  decision: "D-9"
+  authorized_by: "owner"
+  authorized_date: "2026-08-03"
+  authorization_text: "AUTHORIZE_STAGE7_SUBJECT_SHA: ef44972882b35709ee12c54d2dfb7395a6477bf8"
+  main_integration_run: "30841390660"
+  main_integration_conclusion: "success"
+  main_integration_tested_sha: "ef44972882b35709ee12c54d2dfb7395a6477bf8"
+  vercel_production_deployment: "5731543184"
+  vercel_production_state: "success"
+  vercel_production_commit_sha: "ef44972882b35709ee12c54d2dfb7395a6477bf8"
+  rationale: >-
+    First commit simultaneously current on main, integration-green, and live in
+    production, and the commit that made subject-SHA authorization enforceable.
+  # Recorded limitations. Both are stated rather than assumed, because an
+  # unverified claim in a governance record is worse than an absent one.
+  unverified:
+    production_alias: >-
+      Whether o-ps-iq.vercel.app resolves to deployment 5731543184 was NOT
+      verified. The check requires Vercel API access; no Vercel token or CLI was
+      available, and the GitHub deployments API exposes no alias data. The
+      deployment's own URL reported success; the alias binding did not.
+    git_commit_signature: >-
+      Deployment-side Git commit signature verification was NOT checked, for the
+      same reason.
+  deployment_success_is_not_readiness: >-
+    Vercel deployment state 'success' means the deployment completed. It is not
+    application readiness, not Owner Mode readiness, and not Stage 7 progress.
+    Authorizing this subject SHA proves no invariant and closes no stage.
+
 description: |
   Factory Stage 7 proves that the existing OpsIQ system can be deployed securely
   for its owner, operated without developer assistance, produce correct and
