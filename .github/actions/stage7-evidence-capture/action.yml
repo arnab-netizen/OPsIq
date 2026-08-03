@@ -1,0 +1,152 @@
+name: Stage 7 evidence capture
+description: >
+  Capture one Factory Stage 7 evidence artifact from an observation produced by the
+  calling job. Infrastructure only — using this action is evidence generation and
+  requires owner authorisation.
+
+# ─── Why a composite action and not a reusable workflow ──────────────────────
+# The observation must be the verbatim output of a step the calling job already ran.
+# A composite action shares that job's workspace, so the caller writes its output to
+# a file and names the path here. A reusable workflow would need the observation
+# passed as a string input, which would mean interpolating caller-controlled text
+# into a shell command — a script-injection surface on the one job that holds the
+# evidence signing key. Every input below is passed through `env:` for the same
+# reason and is never interpolated into a `run:` body.
+#
+# Design and threat model: docs/opsiq/evidence/stage-7/EVIDENCE_ARTIFACT_SPEC.md
+# Producer rule (PR-1A):   docs/opsiq/evidence/stage-7/README.md
+#
+# The calling job MUST:
+#   - check out with fetch-depth: 0 (subject_sha ancestry is verified later)
+#   - run on a commit that is an ancestor of main
+#   - hold `secrets.EVIDENCE_SIGNING_KEY`; without it the artifact is written
+#     unsigned and can never exceed acceptance level UNVERIFIED
+#   - declare `permissions: actions: read` so run_started_at can be read back
+#
+# This action writes one artifact file. It sets no invariant to PROVEN, creates no
+# waiver, and touches no bundle manifest.
+
+inputs:
+  invariant:
+    description: "Stage 7 invariant id, S7-I1 … S7-I16"
+    required: true
+  lane:
+    description: "LANE_C | LANE_D | LANE_E | LANE_F | OWNER_ACCEPTANCE"
+    required: true
+  proof_type:
+    description: "The proof_type this invariant declares in factory-stage-7-closure.yaml, verbatim"
+    required: true
+  environment:
+    description: "production | isolated_simulation | ci"
+    required: true
+  method:
+    description: "http_probe | db_query | test_run | migration_check | preflight | owner_attestation"
+    required: true
+  assertion:
+    description: "The specific claim this observation supports — not a restatement of the invariant"
+    required: true
+  result:
+    description: "PASS | FAIL | BLOCKED | NOT_TESTED"
+    required: true
+  observation_file:
+    description: "Path to a file holding the verbatim observation. Never paraphrased."
+    required: true
+  replay_command:
+    description: "Command that reproduces the observation. Required on LANE_C, LANE_D and LANE_E."
+    required: false
+    default: ""
+  deployment_id:
+    description: "Deployment identifier. Required on LANE_C."
+    required: false
+    default: ""
+  classification:
+    description: "INTERNAL_ONLY | OWNER_VISIBLE | CLIENT_VISIBLE"
+    required: false
+    default: "INTERNAL_ONLY"
+  supersedes:
+    description: "artifact_id this artifact replaces. Artifacts are append-only."
+    required: false
+    default: ""
+  owner_attestation_ref:
+    description: "URL of the owner's GitHub comment naming this artifact. Required on LANE_F and OWNER_ACCEPTANCE."
+    required: false
+    default: ""
+  signing_key:
+    description: "EVIDENCE_SIGNING_KEY. Pass secrets.EVIDENCE_SIGNING_KEY; omit and the artifact is UNVERIFIED."
+    required: false
+    default: ""
+  github_token:
+    description: "Token with actions: read, used only to read this run's start time"
+    required: true
+
+outputs:
+  artifact_id:
+    description: "The derived artifact id"
+    value: ${{ steps.capture.outputs.artifact_id }}
+  artifact_path:
+    description: "Path of the written artifact"
+    value: ${{ steps.capture.outputs.artifact_path }}
+
+runs:
+  using: composite
+  steps:
+    # run_started_at is not exposed as a GITHUB_* variable, and the validator
+    # compares it against the API. Reading it back from the API here guarantees the
+    # artifact records the same instant the cross-check will later observe.
+    - name: Read this run's start time
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        REPO: ${{ github.repository }}
+        RUN_ID: ${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        started=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '.run_started_at')
+        if [ -z "$started" ] || [ "$started" = "null" ]; then
+          echo "REFUSED: could not read run_started_at for run $RUN_ID (needs permissions: actions: read)" >&2
+          exit 2
+        fi
+        echo "GITHUB_RUN_STARTED_AT=$started" >> "$GITHUB_ENV"
+
+    - name: Capture evidence artifact
+      id: capture
+      shell: bash
+      env:
+        EVIDENCE_SIGNING_KEY: ${{ inputs.signing_key }}
+        IN_INVARIANT: ${{ inputs.invariant }}
+        IN_LANE: ${{ inputs.lane }}
+        IN_PROOF_TYPE: ${{ inputs.proof_type }}
+        IN_ENVIRONMENT: ${{ inputs.environment }}
+        IN_METHOD: ${{ inputs.method }}
+        IN_ASSERTION: ${{ inputs.assertion }}
+        IN_RESULT: ${{ inputs.result }}
+        IN_OBSERVATION_FILE: ${{ inputs.observation_file }}
+        IN_REPLAY_COMMAND: ${{ inputs.replay_command }}
+        IN_DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+        IN_CLASSIFICATION: ${{ inputs.classification }}
+        IN_SUPERSEDES: ${{ inputs.supersedes }}
+        IN_OWNER_ATTESTATION_REF: ${{ inputs.owner_attestation_ref }}
+      run: |
+        set -euo pipefail
+        args=(
+          --invariant "$IN_INVARIANT"
+          --lane "$IN_LANE"
+          --proof-type "$IN_PROOF_TYPE"
+          --environment "$IN_ENVIRONMENT"
+          --method "$IN_METHOD"
+          --assertion "$IN_ASSERTION"
+          --result "$IN_RESULT"
+          --classification "$IN_CLASSIFICATION"
+          --observation-file "$IN_OBSERVATION_FILE"
+        )
+        [ -n "$IN_REPLAY_COMMAND" ] && args+=(--replay-command "$IN_REPLAY_COMMAND")
+        [ -n "$IN_DEPLOYMENT_ID" ] && args+=(--deployment-id "$IN_DEPLOYMENT_ID")
+        [ -n "$IN_SUPERSEDES" ] && args+=(--supersedes "$IN_SUPERSEDES")
+        [ -n "$IN_OWNER_ATTESTATION_REF" ] && args+=(--owner-attestation-ref "$IN_OWNER_ATTESTATION_REF")
+        node "$GITHUB_ACTION_PATH/../../../scripts/capture-evidence.mjs" "${args[@]}"
+
+    - name: Validate what was just written
+      shell: bash
+      env:
+        EVIDENCE_SIGNING_KEY: ${{ inputs.signing_key }}
+      run: node scripts/validate-evidence-artifacts.mjs
