@@ -105,6 +105,16 @@ jobs:
         run: node scripts/validate-bundle-manifests.mjs
         continue-on-error: false
 
+      # Default mode: blocks on REJECTED artifacts only, so a malformed or forged
+      # artifact fails on the PR that introduces it. Signature and provenance are not
+      # checked here — the PR gate holds no signing key, and a gate that cannot check
+      # provenance must never report it as verified. A closure gate runs the same
+      # validator with --require-accepted --require-provenance.
+      - name: Stage 7 evidence artifact validator
+        if: inputs.run_bundle_validator
+        run: node scripts/validate-evidence-artifacts.mjs
+        continue-on-error: false
+
       - name: Run non-DB test suite
         run: |
           if [ -n "${{ inputs.test_pattern }}" ]; then

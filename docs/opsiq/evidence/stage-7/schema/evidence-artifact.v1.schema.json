@@ -1,0 +1,275 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opsiq.internal/schema/stage-7/evidence-artifact.v1.schema.json",
+  "title": "Factory Stage 7 evidence artifact (v1)",
+  "description": "Canonical form of one Stage 7 evidence artifact: one invariant, one observation, one attempt. Documented companion to scripts/lib/evidence-artifact.mjs, which is the executable authority CI runs. Design rationale: docs/opsiq/evidence/stage-7/EVIDENCE_ARTIFACT_SPEC.md. Lane-conditional rules (producer type per lane, deployment_id per lane, replay per lane) are expressed in allOf below and enforced identically by the library.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_version",
+    "artifact_id",
+    "invariant_id",
+    "lane",
+    "proof_type",
+    "artifact_classification",
+    "environment",
+    "method",
+    "captured_at_utc",
+    "subject_sha",
+    "deployment_id",
+    "producer",
+    "replay",
+    "observation",
+    "assertion",
+    "result",
+    "redaction_attestation",
+    "supersedes",
+    "signature"
+  ],
+  "properties": {
+    "evidence_version": {
+      "description": "Schema version of this artifact. Only 1.0.0 exists.",
+      "const": "1.0.0"
+    },
+    "artifact_id": {
+      "description": "Derived, never chosen: 'evd_' + first 32 hex of sha256 over the canonical envelope with artifact_id and signature removed. The file must be named <artifact_id>.json.",
+      "type": "string",
+      "pattern": "^evd_[0-9a-f]{32}$"
+    },
+    "invariant_id": {
+      "description": "The Stage 7 invariant this artifact is offered against.",
+      "enum": [
+        "S7-I1", "S7-I2", "S7-I3", "S7-I4", "S7-I5", "S7-I6", "S7-I7", "S7-I8",
+        "S7-I9", "S7-I10", "S7-I11", "S7-I12", "S7-I13", "S7-I14", "S7-I15", "S7-I16"
+      ]
+    },
+    "lane": {
+      "description": "Evidence lane, per docs/opsiq/bundles/factory-stage-7-closure.yaml. S7-I10 declares LANE_C+LANE_E and is proven by one artifact in each lane, not by a combined lane value.",
+      "enum": ["LANE_C", "LANE_D", "LANE_E", "LANE_F", "OWNER_ACCEPTANCE"]
+    },
+    "proof_type": {
+      "description": "The contract's declared proof_type for this invariant, copied verbatim.",
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_classification": {
+      "description": "Who this artifact may be shown to. Raw production observations default to INTERNAL_ONLY.",
+      "enum": ["INTERNAL_ONLY", "OWNER_VISIBLE", "CLIENT_VISIBLE"]
+    },
+    "environment": {
+      "description": "Where the observation was made.",
+      "enum": ["production", "isolated_simulation", "ci"]
+    },
+    "method": {
+      "description": "How the observation was made.",
+      "enum": [
+        "http_probe",
+        "db_query",
+        "test_run",
+        "migration_check",
+        "preflight",
+        "owner_attestation"
+      ]
+    },
+    "captured_at_utc": {
+      "description": "ISO-8601 instant with an explicit Z suffix. Must fall inside the producing run's window.",
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+    },
+    "subject_sha": {
+      "description": "Full 40-hex commit the observation was made against. Under --require-provenance it must be an ancestor of origin/main.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "deployment_id": {
+      "description": "Deployment identifier. Required for LANE_C, forbidden for LANE_E and OWNER_ACCEPTANCE.",
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "producer": {
+      "description": "Who produced this artifact. An interactive agent session has no representable value here — that is deliberate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "repository"],
+      "properties": {
+        "type": {
+          "enum": ["github_actions", "owner"]
+        },
+        "repository": {
+          "description": "owner/name of the repository that produced the artifact.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$"
+        },
+        "workflow": { "type": ["string", "null"] },
+        "workflow_ref": { "type": ["string", "null"] },
+        "job": { "type": ["string", "null"] },
+        "run_id": {
+          "description": "GitHub Actions run id, as a decimal string. Required on CI lanes, forbidden on owner lanes.",
+          "type": ["string", "null"],
+          "pattern": "^[0-9]+$"
+        },
+        "run_number": { "type": ["integer", "null"], "minimum": 1 },
+        "run_attempt": { "type": ["integer", "null"], "minimum": 1 },
+        "run_started_at": {
+          "type": ["string", "null"],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+        },
+        "actor": { "type": ["string", "null"] },
+        "event_name": { "type": ["string", "null"] },
+        "owner_identity": {
+          "description": "Owner GitHub login. Required on owner lanes, forbidden on CI lanes.",
+          "type": ["string", "null"]
+        },
+        "owner_attestation_ref": {
+          "description": "URL of a GitHub issue or PR comment authored by the owner, containing this artifact_id and subject_sha. Required on owner lanes.",
+          "type": ["string", "null"],
+          "format": "uri"
+        }
+      }
+    },
+    "replay": {
+      "description": "How to reproduce the observation. Owner judgment is inherently non-replayable; that is a property, not a deficiency.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["replayable", "command"],
+      "properties": {
+        "replayable": { "type": "boolean" },
+        "command": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "observation": {
+      "description": "The verbatim observation and its hash. Never paraphrased, never re-serialised before hashing.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw", "content_hash", "byte_length", "truncated"],
+      "properties": {
+        "raw": { "type": "string", "minLength": 1 },
+        "content_hash": {
+          "description": "sha256 over the UTF-8 bytes of observation.raw exactly.",
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "byte_length": { "type": "integer", "minimum": 1 },
+        "truncated": {
+          "description": "True when the capture helper truncated the observation at its size cap. A truncated observation still hashes what it stored.",
+          "type": "boolean"
+        }
+      }
+    },
+    "assertion": {
+      "description": "The specific claim this observation supports. Not a restatement of the invariant.",
+      "type": "string",
+      "minLength": 1
+    },
+    "result": {
+      "enum": ["PASS", "FAIL", "BLOCKED", "NOT_TESTED"]
+    },
+    "redaction_attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attested", "statement", "scanner", "patterns_checked"],
+      "properties": {
+        "attested": { "const": true },
+        "statement": { "type": "string", "minLength": 1 },
+        "scanner": { "type": "string", "pattern": "^evidence-redaction-scan@[0-9]+$" },
+        "patterns_checked": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "supersedes": {
+      "description": "artifact_id this artifact replaces. Artifacts are append-only: a correction is a new artifact, never an in-place edit.",
+      "type": ["string", "null"],
+      "pattern": "^evd_[0-9a-f]{32}$"
+    },
+    "signature": {
+      "description": "HMAC-SHA256 over the canonical envelope with signature removed, keyed by the CI-only EVIDENCE_SIGNING_KEY. null when the key was not provisioned — such an artifact can never exceed acceptance level UNVERIFIED.",
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": { "const": "HMAC-SHA256" },
+        "key_id": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "title": "CI lanes are produced by GitHub Actions and are replayable",
+      "if": { "properties": { "lane": { "enum": ["LANE_C", "LANE_D", "LANE_E"] } } },
+      "then": {
+        "properties": {
+          "producer": {
+            "required": [
+              "type", "repository", "workflow", "job", "run_id",
+              "run_number", "run_attempt", "run_started_at", "actor", "event_name"
+            ],
+            "properties": {
+              "type": { "const": "github_actions" },
+              "run_id": { "type": "string" },
+              "workflow": { "type": "string", "minLength": 1 },
+              "job": { "type": "string", "minLength": 1 },
+              "owner_identity": { "type": "null" },
+              "owner_attestation_ref": { "type": "null" }
+            }
+          },
+          "replay": {
+            "properties": {
+              "replayable": { "const": true },
+              "command": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Owner lanes are produced by the owner and are not replayable",
+      "if": { "properties": { "lane": { "enum": ["LANE_F", "OWNER_ACCEPTANCE"] } } },
+      "then": {
+        "properties": {
+          "producer": {
+            "required": ["type", "repository", "owner_identity", "owner_attestation_ref"],
+            "properties": {
+              "type": { "const": "owner" },
+              "run_id": { "type": "null" },
+              "owner_identity": { "type": "string", "minLength": 1 },
+              "owner_attestation_ref": { "type": "string", "minLength": 1 }
+            }
+          },
+          "replay": {
+            "properties": {
+              "replayable": { "const": false },
+              "command": { "type": "null" }
+            }
+          },
+          "method": { "const": "owner_attestation" },
+          "environment": { "const": "production" }
+        }
+      }
+    },
+    {
+      "title": "LANE_C observations name the deployment they were taken from",
+      "if": { "properties": { "lane": { "const": "LANE_C" } } },
+      "then": {
+        "properties": {
+          "deployment_id": { "type": "string", "minLength": 1 },
+          "environment": { "const": "production" }
+        }
+      }
+    },
+    {
+      "title": "LANE_E runs in an isolated environment and names no deployment",
+      "if": { "properties": { "lane": { "const": "LANE_E" } } },
+      "then": {
+        "properties": {
+          "deployment_id": { "type": "null" },
+          "environment": { "enum": ["isolated_simulation", "ci"] }
+        }
+      }
+    },
+    {
+      "title": "OWNER_ACCEPTANCE names no deployment",
+      "if": { "properties": { "lane": { "const": "OWNER_ACCEPTANCE" } } },
+      "then": { "properties": { "deployment_id": { "type": "null" } } }
+    }
+  ]
+}

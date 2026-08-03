@@ -37,6 +37,10 @@ const KNOWN_PREFIXES: Array<{
   { prefix: "a77-", classification: "GOVERNANCE" },
   { prefix: "auth-", classification: "GOVERNANCE" },
   { prefix: "behavioral-", classification: "GOVERNANCE" },
+  // capture-evidence.mjs writes a Stage 7 evidence artifact from an observation the
+  // calling CI job already produced: no HTTP call, no database access, no mutation of
+  // any governed record. It refuses to run outside GitHub Actions.
+  { prefix: "capture-", classification: "GOVERNANCE" },
   { prefix: "check-", classification: "GOVERNANCE" },
   { prefix: "ci-", classification: "GOVERNANCE" },
   { prefix: "deployment-", classification: "GOVERNANCE" },

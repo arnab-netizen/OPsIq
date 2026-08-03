@@ -1,0 +1,808 @@
+/**
+ * Factory Stage 7 — Evidence Artifact Library
+ *
+ * Pure, I/O-free authority for the canonical Stage 7 evidence artifact. Shared by
+ * the CI capture helper (scripts/capture-evidence.mjs), the validator
+ * (scripts/validate-evidence-artifacts.mjs) and the hostile-audit suite
+ * (src/__tests__/completion-factory/stage7-evidence-artifact.test.ts), so the rule
+ * that governs capture is bit-for-bit the rule that governs acceptance.
+ *
+ * Design and threat model: docs/opsiq/evidence/stage-7/EVIDENCE_ARTIFACT_SPEC.md
+ * Documented schema:       docs/opsiq/evidence/stage-7/schema/evidence-artifact.v1.schema.json
+ * Frozen standard (PR-1A): docs/opsiq/evidence/stage-7/README.md
+ *
+ * ─── The gap this closes ─────────────────────────────────────────────────────
+ * The frozen standard states the producer rule in prose: LANE_C and LANE_E
+ * artifacts must be produced by a CI run and carry that run id, and "an artifact
+ * produced by an interactive agent session is not valid evidence." Prose cannot
+ * reject a file. There was no artifact format, no schema and no validator, so any
+ * file an agent chose to write could be called evidence and nothing could
+ * contradict it.
+ *
+ * ─── What makes forgery fail ─────────────────────────────────────────────────
+ * The adversary modelled here is an agent with full write access to the working
+ * tree that cannot read a GitHub Actions secret and cannot post as the owner.
+ *
+ *   1. producer.type has exactly two legal values, github_actions and owner.
+ *      There is no value an interactive session may truthfully use.
+ *   2. artifact_id is derived from the content, so it cannot be chosen, and a
+ *      copied artifact keeps the id — and therefore the invariant and observation
+ *      — it was captured for.
+ *   3. The HMAC signature covers the entire envelope, binding run id, subject SHA,
+ *      capture time, content hash and assertion to one another. Editing any one
+ *      of them invalidates the artifact, and re-signing needs the CI-only key.
+ *   4. Provenance cross-check (validator, online) proves the named run actually
+ *      ran on that commit, or that the owner actually wrote that attestation.
+ *
+ * Fail-closed: an artifact that cannot be fully verified is UNVERIFIED, and
+ * UNVERIFIED evidence may never back a PROVEN invariant.
+ *
+ * This library generates no evidence, changes no invariant status and creates no
+ * waiver. Producing an artifact is a separate, owner-authorised act.
+ */
+
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+
+/** Schema version of the artifact form defined here. */
+export const EVIDENCE_VERSION = '1.0.0';
+
+/** Lanes whose artifacts must originate in CI. */
+export const CI_LANES = Object.freeze(['LANE_C', 'LANE_D', 'LANE_E']);
+
+/** Lanes whose artifacts must originate with the owner. */
+export const OWNER_LANES = Object.freeze(['LANE_F', 'OWNER_ACCEPTANCE']);
+
+export const LANES = Object.freeze([...CI_LANES, ...OWNER_LANES]);
+
+/**
+ * Canonical Stage 7 invariant ids, owned here rather than read from the manifest.
+ * Same reasoning as STAGE_CLOSURE_ENFORCEMENT_REGISTRY in invariant-closure.mjs:
+ * a contract that supplies the list of things it is checked against can shrink it.
+ */
+export const INVARIANT_IDS = Object.freeze([
+  'S7-I1', 'S7-I2', 'S7-I3', 'S7-I4', 'S7-I5', 'S7-I6', 'S7-I7', 'S7-I8',
+  'S7-I9', 'S7-I10', 'S7-I11', 'S7-I12', 'S7-I13', 'S7-I14', 'S7-I15', 'S7-I16',
+]);
+
+export const PRODUCER_TYPES = Object.freeze(['github_actions', 'owner']);
+export const ENVIRONMENTS = Object.freeze(['production', 'isolated_simulation', 'ci']);
+export const CLASSIFICATIONS = Object.freeze(['INTERNAL_ONLY', 'OWNER_VISIBLE', 'CLIENT_VISIBLE']);
+export const RESULTS = Object.freeze(['PASS', 'FAIL', 'BLOCKED', 'NOT_TESTED']);
+export const METHODS = Object.freeze([
+  'http_probe', 'db_query', 'test_run', 'migration_check', 'preflight', 'owner_attestation',
+]);
+
+/** Acceptance levels. Only ACCEPTED may back a PROVEN invariant. */
+export const ACCEPTANCE = Object.freeze({
+  REJECTED: 'REJECTED',
+  UNVERIFIED: 'UNVERIFIED',
+  ACCEPTED: 'ACCEPTED',
+});
+
+/** Signature verification outcomes. */
+export const SIGNATURE_STATE = Object.freeze({
+  VERIFIED: 'VERIFIED',
+  INVALID: 'INVALID',
+  ABSENT: 'ABSENT',
+  UNCHECKED: 'UNCHECKED',
+});
+
+/** Provenance verification outcomes. */
+export const PROVENANCE_STATE = Object.freeze({
+  VERIFIED: 'VERIFIED',
+  FAILED: 'FAILED',
+  UNCHECKED: 'UNCHECKED',
+});
+
+/** Default signing key id recorded in artifacts. */
+export const DEFAULT_SIGNING_KEY_ID = 'stage7-evidence-v1';
+
+export const SIGNATURE_ALGORITHM = 'HMAC-SHA256';
+
+/**
+ * Cap on a stored observation. Large enough for a full vitest run or a migration
+ * status dump; small enough that git stays usable as the retention layer.
+ */
+export const MAX_OBSERVATION_BYTES = 256 * 1024;
+
+export const REDACTION_STATEMENT =
+  'No secret, token, credential value or connection string appears in this artifact.';
+
+const TOP_LEVEL_KEYS = Object.freeze([
+  'evidence_version', 'artifact_id', 'invariant_id', 'lane', 'proof_type',
+  'artifact_classification', 'environment', 'method', 'captured_at_utc',
+  'subject_sha', 'deployment_id', 'producer', 'replay', 'observation',
+  'assertion', 'result', 'redaction_attestation', 'supersedes', 'signature',
+]);
+
+const PRODUCER_KEYS = Object.freeze([
+  'type', 'repository', 'workflow', 'workflow_ref', 'job', 'run_id', 'run_number',
+  'run_attempt', 'run_started_at', 'actor', 'event_name', 'owner_identity',
+  'owner_attestation_ref',
+]);
+
+const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+const SHA40 = /^[0-9a-f]{40}$/;
+const ARTIFACT_ID = /^evd_[0-9a-f]{32}$/;
+const CONTENT_HASH = /^sha256:[0-9a-f]{64}$/;
+const HEX64 = /^[0-9a-f]{64}$/;
+const REPO_SLUG = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+const DECIMAL = /^[0-9]+$/;
+
+// ─── Redaction scan ───────────────────────────────────────────────────────────
+
+/**
+ * Values that look like an assignment but carry no secret. Without this, an
+ * artifact that honestly records `password: <redacted>` would be rejected for
+ * containing a secret, which would push capture towards paraphrasing output —
+ * exactly what the standard forbids.
+ */
+const PLACEHOLDER_VALUE =
+  /^(?:\*+|x+|\.+|redacted|hidden|masked|omitted|placeholder|null|undefined|true|false|<[^>]*>|\[[^\]]*\]|\$\{[^}]*\}|\{\{[^}]*\}\})$/i;
+
+function assignmentCarriesValue(text) {
+  const pattern =
+    /\b(?:password|passwd|secret|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|private[_-]?key)\b\s*[:=]\s*["']?([^\s"',;)]{8,})/gi;
+  for (const match of text.matchAll(pattern)) {
+    if (!PLACEHOLDER_VALUE.test(match[1])) return true;
+  }
+  return false;
+}
+
+/**
+ * Secret shapes refused in an observation. Presence-only evidence is the rule:
+ * configuration artifacts record booleans, never values.
+ */
+export const REDACTION_PATTERNS = Object.freeze([
+  { id: 'aws_access_key_id', test: (t) => /\bAKIA[0-9A-Z]{16}\b/.test(t) },
+  { id: 'github_token', test: (t) => /\bgh[pousr]_[A-Za-z0-9]{36}\b/.test(t) },
+  { id: 'github_fine_grained_pat', test: (t) => /\bgithub_pat_[A-Za-z0-9_]{22,}\b/.test(t) },
+  { id: 'private_key_block', test: (t) => /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----/.test(t) },
+  { id: 'database_url_with_credentials', test: (t) => /\b(?:postgres|postgresql|mysql|mongodb(?:\+srv)?|redis|amqp):\/\/[^\s:@/]+:[^\s@/]+@/.test(t) },
+  { id: 'stripe_live_secret', test: (t) => /\b[rs]k_live_[A-Za-z0-9]{16,}\b/.test(t) },
+  { id: 'json_web_token', test: (t) => /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/.test(t) },
+  { id: 'bearer_token', test: (t) => /\bBearer\s+[A-Za-z0-9._~+/-]{20,}={0,2}/.test(t) },
+  { id: 'slack_token', test: (t) => /\bxox[abposr]-[A-Za-z0-9-]{10,}\b/.test(t) },
+  { id: 'model_provider_key', test: (t) => /\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{24,}\b/.test(t) },
+  { id: 'vercel_token', test: (t) => /\bvercel_[A-Za-z0-9]{24,}\b/.test(t) },
+  { id: 'resend_api_key', test: (t) => /\bre_[A-Za-z0-9]{24,}\b/.test(t) },
+  { id: 'google_api_key', test: (t) => /\bAIza[0-9A-Za-z_-]{35}\b/.test(t) },
+  { id: 'secret_assignment_with_value', test: assignmentCarriesValue },
+]);
+
+export const REDACTION_SCANNER_ID = `evidence-redaction-scan@${REDACTION_PATTERNS.length}`;
+
+/**
+ * @param {string} text
+ * @returns {string[]} ids of patterns that matched — never the matched text, so a
+ *   secret cannot leak into a validator log while being reported.
+ */
+export function scanForSecrets(text) {
+  if (typeof text !== 'string' || text.length === 0) return [];
+  return REDACTION_PATTERNS.filter((pattern) => pattern.test(text)).map((pattern) => pattern.id);
+}
+
+// ─── Canonical form, hashing, identity ────────────────────────────────────────
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Deterministic JSON with sorted keys.
+ *
+ * Same convention as canonicalStringify in src/services/integrity/hash.ts. It is
+ * restated here rather than imported because this library is plain ESM that CI
+ * runs with no TypeScript build step; a test asserts the two agree so the
+ * duplication cannot drift silently.
+ */
+export function canonicalStringify(value) {
+  if (value === undefined) return undefined;
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalStringify(item) ?? 'null').join(',')}]`;
+  const pairs = Object.keys(value)
+    .sort()
+    .map((key) => [key, canonicalStringify(value[key])])
+    .filter(([, serialized]) => serialized !== undefined)
+    .map(([key, serialized]) => `${JSON.stringify(key)}:${serialized}`);
+  return `{${pairs.join(',')}}`;
+}
+
+export function sha256Hex(input) {
+  return createHash('sha256').update(input, 'utf8').digest('hex');
+}
+
+/** sha256 over the UTF-8 bytes of the observation exactly as stored. */
+export function computeContentHash(raw) {
+  return `sha256:${sha256Hex(raw)}`;
+}
+
+function envelopeWithout(artifact, keys) {
+  const copy = {};
+  for (const key of Object.keys(artifact)) {
+    if (!keys.includes(key)) copy[key] = artifact[key];
+  }
+  return copy;
+}
+
+/**
+ * Derive the artifact id from its content. `artifact_id` and `signature` are
+ * excluded, so the id is stable across signing and cannot be chosen by the author.
+ */
+export function computeArtifactId(artifact) {
+  return `evd_${sha256Hex(canonicalStringify(envelopeWithout(artifact, ['artifact_id', 'signature']))).slice(0, 32)}`;
+}
+
+/** The exact byte string an artifact's signature is computed over. */
+export function signingPayload(artifact) {
+  return canonicalStringify(envelopeWithout(artifact, ['signature']));
+}
+
+export function computeSignatureValue(artifact, signingKey) {
+  return createHmac('sha256', signingKey).update(signingPayload(artifact), 'utf8').digest('hex');
+}
+
+/**
+ * Constant-time signature comparison.
+ *
+ * @returns {'VERIFIED'|'INVALID'|'ABSENT'|'UNCHECKED'}
+ */
+export function verifySignature(artifact, signingKey) {
+  if (!isPlainObject(artifact) || artifact.signature === null || artifact.signature === undefined) {
+    return SIGNATURE_STATE.ABSENT;
+  }
+  if (!signingKey) return SIGNATURE_STATE.UNCHECKED;
+  const signature = artifact.signature;
+  if (!isPlainObject(signature) || typeof signature.value !== 'string' || !HEX64.test(signature.value)) {
+    return SIGNATURE_STATE.INVALID;
+  }
+  if (signature.algorithm !== SIGNATURE_ALGORITHM) return SIGNATURE_STATE.INVALID;
+  const expected = Buffer.from(computeSignatureValue(artifact, signingKey), 'hex');
+  const actual = Buffer.from(signature.value, 'hex');
+  if (expected.length !== actual.length) return SIGNATURE_STATE.INVALID;
+  return timingSafeEqual(expected, actual) ? SIGNATURE_STATE.VERIFIED : SIGNATURE_STATE.INVALID;
+}
+
+// ─── Builder ──────────────────────────────────────────────────────────────────
+
+/**
+ * Assemble a canonical artifact.
+ *
+ * Provenance fields are supplied by the caller, but the only supported caller —
+ * scripts/capture-evidence.mjs — reads them exclusively from GITHUB_* environment
+ * variables and exposes no flag that could override them.
+ *
+ * @param {object} input
+ * @param {string|null} [signingKey]  omitted → signature: null → UNVERIFIED
+ * @param {string} [signingKeyId]
+ * @returns {object} the artifact, with artifact_id and signature filled in
+ */
+export function buildEvidenceArtifact(input, { signingKey = null, signingKeyId = DEFAULT_SIGNING_KEY_ID } = {}) {
+  const raw = String(input.raw_observation ?? '');
+  const capped = Buffer.byteLength(raw, 'utf8') > MAX_OBSERVATION_BYTES;
+  const stored = capped ? Buffer.from(raw, 'utf8').subarray(0, MAX_OBSERVATION_BYTES).toString('utf8') : raw;
+  const isOwnerLane = OWNER_LANES.includes(input.lane);
+
+  const producer = isOwnerLane
+    ? {
+        type: 'owner',
+        repository: input.repository ?? null,
+        workflow: null,
+        workflow_ref: null,
+        job: null,
+        run_id: null,
+        run_number: null,
+        run_attempt: null,
+        run_started_at: null,
+        actor: null,
+        event_name: null,
+        owner_identity: input.owner_identity ?? null,
+        owner_attestation_ref: input.owner_attestation_ref ?? null,
+      }
+    : {
+        type: 'github_actions',
+        repository: input.repository ?? null,
+        workflow: input.workflow ?? null,
+        workflow_ref: input.workflow_ref ?? null,
+        job: input.job ?? null,
+        run_id: input.run_id ?? null,
+        run_number: input.run_number ?? null,
+        run_attempt: input.run_attempt ?? null,
+        run_started_at: input.run_started_at ?? null,
+        actor: input.actor ?? null,
+        event_name: input.event_name ?? null,
+        owner_identity: null,
+        owner_attestation_ref: null,
+      };
+
+  const artifact = {
+    evidence_version: EVIDENCE_VERSION,
+    artifact_id: null,
+    invariant_id: input.invariant_id,
+    lane: input.lane,
+    proof_type: input.proof_type,
+    artifact_classification: input.artifact_classification ?? 'INTERNAL_ONLY',
+    environment: input.environment,
+    method: input.method,
+    captured_at_utc: input.captured_at_utc,
+    subject_sha: input.subject_sha,
+    deployment_id: input.deployment_id ?? null,
+    producer,
+    replay: isOwnerLane
+      ? { replayable: false, command: null }
+      : { replayable: true, command: input.replay_command ?? null },
+    observation: {
+      raw: stored,
+      content_hash: computeContentHash(stored),
+      byte_length: Buffer.byteLength(stored, 'utf8'),
+      truncated: capped,
+    },
+    assertion: input.assertion,
+    result: input.result,
+    redaction_attestation: {
+      attested: true,
+      statement: REDACTION_STATEMENT,
+      scanner: REDACTION_SCANNER_ID,
+      patterns_checked: REDACTION_PATTERNS.length,
+    },
+    supersedes: input.supersedes ?? null,
+    signature: null,
+  };
+
+  artifact.artifact_id = computeArtifactId(artifact);
+
+  if (signingKey) {
+    artifact.signature = {
+      algorithm: SIGNATURE_ALGORITHM,
+      key_id: signingKeyId,
+      value: computeSignatureValue(artifact, signingKey),
+    };
+  }
+
+  return artifact;
+}
+
+// ─── Structural validation ────────────────────────────────────────────────────
+
+function nonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function describe(value) {
+  if (value === null) return 'null';
+  if (value === undefined) return 'absent';
+  if (Array.isArray(value)) return 'list';
+  return typeof value;
+}
+
+/**
+ * Full structural, lane and integrity validation of one artifact.
+ *
+ * Mirrors evidence-artifact.v1.schema.json. The schema documents the contract;
+ * this function is what CI enforces, so where a reader needs certainty, this is
+ * the authority.
+ *
+ * @param {unknown} artifact
+ * @param {object} [options]
+ * @param {string|null} [options.signingKey]  enables signature verification
+ * @param {string|null} [options.fileName]    basename, checked against artifact_id
+ * @returns {{ violations: string[], signatureState: string }}
+ */
+export function validateEvidenceArtifact(artifact, options = {}) {
+  const { signingKey = null, fileName = null } = options;
+  const violations = [];
+  const fail = (message) => violations.push(message);
+
+  if (!isPlainObject(artifact)) {
+    return {
+      violations: [`artifact is ${describe(artifact)}, not a JSON object`],
+      signatureState: SIGNATURE_STATE.ABSENT,
+    };
+  }
+
+  const label = nonEmptyString(artifact.artifact_id) ? artifact.artifact_id : '<no artifact_id>';
+  const at = (message) => `${label}: ${message}`;
+
+  for (const key of Object.keys(artifact)) {
+    if (!TOP_LEVEL_KEYS.includes(key)) {
+      fail(at(`unknown top-level field '${key}' — the artifact form is closed; an artifact may not carry fields the validator does not evaluate`));
+    }
+  }
+  for (const key of TOP_LEVEL_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(artifact, key)) {
+      fail(at(`required field '${key}' is absent`));
+    }
+  }
+
+  if (artifact.evidence_version !== EVIDENCE_VERSION) {
+    fail(at(`evidence_version is ${describe(artifact.evidence_version)} '${artifact.evidence_version}' (required: '${EVIDENCE_VERSION}')`));
+  }
+  if (!INVARIANT_IDS.includes(artifact.invariant_id)) {
+    fail(at(`invariant_id '${artifact.invariant_id}' is not a canonical Stage 7 invariant (${INVARIANT_IDS.join(', ')})`));
+  }
+  if (!LANES.includes(artifact.lane)) {
+    fail(at(`lane '${artifact.lane}' is not one of ${LANES.join(', ')}`));
+  }
+  if (!nonEmptyString(artifact.proof_type)) {
+    fail(at('proof_type must be the non-empty proof_type declared for this invariant by the contract'));
+  }
+  if (!CLASSIFICATIONS.includes(artifact.artifact_classification)) {
+    fail(at(`artifact_classification '${artifact.artifact_classification}' is not one of ${CLASSIFICATIONS.join(', ')}`));
+  }
+  if (!ENVIRONMENTS.includes(artifact.environment)) {
+    fail(at(`environment '${artifact.environment}' is not one of ${ENVIRONMENTS.join(', ')}`));
+  }
+  if (!METHODS.includes(artifact.method)) {
+    fail(at(`method '${artifact.method}' is not one of ${METHODS.join(', ')}`));
+  }
+  if (typeof artifact.captured_at_utc !== 'string' || !ISO_UTC.test(artifact.captured_at_utc)) {
+    fail(at(`captured_at_utc '${artifact.captured_at_utc}' is not an ISO-8601 UTC instant with a Z suffix`));
+  }
+  if (typeof artifact.subject_sha !== 'string' || !SHA40.test(artifact.subject_sha)) {
+    fail(at(`subject_sha '${artifact.subject_sha}' is not a full 40-character lowercase commit SHA`));
+  }
+  if (!RESULTS.includes(artifact.result)) {
+    fail(at(`result '${artifact.result}' is not one of ${RESULTS.join(', ')}`));
+  }
+  if (!nonEmptyString(artifact.assertion)) {
+    fail(at('assertion must state the specific claim this observation supports'));
+  }
+  if (artifact.supersedes !== null && !(typeof artifact.supersedes === 'string' && ARTIFACT_ID.test(artifact.supersedes))) {
+    fail(at(`supersedes '${artifact.supersedes}' must be null or an artifact_id — artifacts are append-only, a correction is a new artifact`));
+  }
+
+  validateRedaction(artifact, fail, at);
+  validateObservation(artifact, fail, at);
+  const producerOk = validateProducer(artifact, fail, at);
+  if (producerOk) validateLaneBinding(artifact, fail, at);
+
+  // ─── Identity: derived, never chosen ────────────────────────────────────────
+  if (typeof artifact.artifact_id !== 'string' || !ARTIFACT_ID.test(artifact.artifact_id)) {
+    fail(at(`artifact_id '${artifact.artifact_id}' is malformed (required: evd_ followed by 32 lowercase hex characters)`));
+  } else {
+    const derived = computeArtifactId(artifact);
+    if (derived !== artifact.artifact_id) {
+      fail(at(`artifact_id does not match its content — declared ${artifact.artifact_id}, derived ${derived}. The id is a hash of the artifact: a mismatch means a field was edited after capture, or the artifact was copied from another observation.`));
+    }
+    if (fileName !== null && fileName !== `${artifact.artifact_id}.json`) {
+      fail(at(`file is named '${fileName}' but must be named '${artifact.artifact_id}.json' — the filename is part of duplicate detection`));
+    }
+  }
+
+  // ─── Signature ──────────────────────────────────────────────────────────────
+  const signatureState = verifySignature(artifact, signingKey);
+  if (artifact.signature !== null && !isPlainObject(artifact.signature)) {
+    fail(at(`signature is ${describe(artifact.signature)} — it must be an object or null`));
+  } else if (isPlainObject(artifact.signature)) {
+    const extra = Object.keys(artifact.signature).filter((k) => !['algorithm', 'key_id', 'value'].includes(k));
+    if (extra.length > 0) fail(at(`signature carries unknown field(s): ${extra.join(', ')}`));
+    if (artifact.signature.algorithm !== SIGNATURE_ALGORITHM) {
+      fail(at(`signature.algorithm '${artifact.signature.algorithm}' is not ${SIGNATURE_ALGORITHM}`));
+    }
+    if (!nonEmptyString(artifact.signature.key_id)) fail(at('signature.key_id is required'));
+    if (typeof artifact.signature.value !== 'string' || !HEX64.test(artifact.signature.value)) {
+      fail(at(`signature.value '${artifact.signature.value}' is not 64 lowercase hex characters`));
+    }
+  }
+  if (signatureState === SIGNATURE_STATE.INVALID) {
+    fail(at('signature does not verify against the evidence signing key — the artifact was altered after capture, or was signed with a different key'));
+  }
+
+  return { violations, signatureState };
+}
+
+function validateRedaction(artifact, fail, at) {
+  const attestation = artifact.redaction_attestation;
+  if (!isPlainObject(attestation)) {
+    fail(at(`redaction_attestation is ${describe(attestation)} — every artifact must attest that it carries no secret value`));
+    return;
+  }
+  if (attestation.attested !== true) {
+    fail(at('redaction_attestation.attested must be true — an artifact that does not attest redaction is not evidence'));
+  }
+  if (!nonEmptyString(attestation.statement)) fail(at('redaction_attestation.statement is required'));
+  if (attestation.scanner !== REDACTION_SCANNER_ID) {
+    fail(at(`redaction_attestation.scanner '${attestation.scanner}' does not match the current scanner '${REDACTION_SCANNER_ID}' — re-capture against the current pattern set`));
+  }
+  if (attestation.patterns_checked !== REDACTION_PATTERNS.length) {
+    fail(at(`redaction_attestation.patterns_checked is ${describe(attestation.patterns_checked)} ${attestation.patterns_checked} (current scanner checks ${REDACTION_PATTERNS.length})`));
+  }
+}
+
+function validateObservation(artifact, fail, at) {
+  const observation = artifact.observation;
+  if (!isPlainObject(observation)) {
+    fail(at(`observation is ${describe(observation)} — required: { raw, content_hash, byte_length, truncated }`));
+    return;
+  }
+  const extra = Object.keys(observation).filter((k) => !['raw', 'content_hash', 'byte_length', 'truncated'].includes(k));
+  if (extra.length > 0) fail(at(`observation carries unknown field(s): ${extra.join(', ')}`));
+
+  if (!nonEmptyString(observation.raw)) {
+    fail(at('observation.raw must be the verbatim output, response or attestation — never paraphrased, never empty'));
+    return;
+  }
+  if (typeof observation.content_hash !== 'string' || !CONTENT_HASH.test(observation.content_hash)) {
+    fail(at(`observation.content_hash '${observation.content_hash}' is malformed (required: sha256:<64 hex>)`));
+  } else {
+    const expected = computeContentHash(observation.raw);
+    if (expected !== observation.content_hash) {
+      fail(at(`observation.content_hash does not hash observation.raw — declared ${observation.content_hash}, actual ${expected}. The observation was edited after capture.`));
+    }
+  }
+  const byteLength = Buffer.byteLength(observation.raw, 'utf8');
+  if (observation.byte_length !== byteLength) {
+    fail(at(`observation.byte_length is ${describe(observation.byte_length)} ${observation.byte_length} but observation.raw is ${byteLength} bytes`));
+  }
+  if (byteLength > MAX_OBSERVATION_BYTES) {
+    fail(at(`observation.raw is ${byteLength} bytes, over the ${MAX_OBSERVATION_BYTES}-byte cap`));
+  }
+  if (typeof observation.truncated !== 'boolean') {
+    fail(at(`observation.truncated is ${describe(observation.truncated)} — required: boolean`));
+  }
+
+  const leaked = scanForSecrets(observation.raw);
+  if (leaked.length > 0) {
+    fail(at(`observation.raw matches secret pattern(s): ${leaked.join(', ')} — configuration evidence records presence booleans only, never values. Re-capture with the value removed; do not edit this artifact in place.`));
+  }
+}
+
+function validateProducer(artifact, fail, at) {
+  const producer = artifact.producer;
+  if (!isPlainObject(producer)) {
+    fail(at(`producer is ${describe(producer)} — required: an object naming who produced this artifact`));
+    return false;
+  }
+  const extra = Object.keys(producer).filter((k) => !PRODUCER_KEYS.includes(k));
+  if (extra.length > 0) fail(at(`producer carries unknown field(s): ${extra.join(', ')}`));
+
+  if (!PRODUCER_TYPES.includes(producer.type)) {
+    fail(at(`producer.type '${producer.type}' is not one of ${PRODUCER_TYPES.join(', ')} — an interactive agent session has no valid producer identity and therefore cannot produce evidence`));
+    return false;
+  }
+  if (typeof producer.repository !== 'string' || !REPO_SLUG.test(producer.repository)) {
+    fail(at(`producer.repository '${producer.repository}' is not an owner/name repository slug`));
+  }
+  return true;
+}
+
+/**
+ * Lane → producer binding. The producer rule from the frozen standard, as a table
+ * the validator reads rather than prose a reader has to remember.
+ */
+function validateLaneBinding(artifact, fail, at) {
+  const producer = artifact.producer;
+  const lane = artifact.lane;
+  const replay = artifact.replay;
+  const isCiLane = CI_LANES.includes(lane);
+  const isOwnerLane = OWNER_LANES.includes(lane);
+
+  if (!isPlainObject(replay)) {
+    fail(at(`replay is ${describe(replay)} — required: { replayable, command }`));
+  } else {
+    const extra = Object.keys(replay).filter((k) => !['replayable', 'command'].includes(k));
+    if (extra.length > 0) fail(at(`replay carries unknown field(s): ${extra.join(', ')}`));
+  }
+
+  if (isCiLane) {
+    if (producer.type !== 'github_actions') {
+      fail(at(`lane ${lane} requires producer.type 'github_actions' but the artifact declares '${producer.type}' — LANE_C, LANE_D and LANE_E evidence must originate in a CI run`));
+    }
+    if (typeof producer.run_id !== 'string' || !DECIMAL.test(producer.run_id)) {
+      fail(at(`lane ${lane} requires producer.run_id (the GitHub Actions run that produced the observation); got ${describe(producer.run_id)} '${producer.run_id}'`));
+    }
+    for (const field of ['workflow', 'job', 'actor', 'event_name']) {
+      if (!nonEmptyString(producer[field])) {
+        fail(at(`lane ${lane} requires producer.${field}; got ${describe(producer[field])}`));
+      }
+    }
+    if (!Number.isInteger(producer.run_number) || producer.run_number < 1) {
+      fail(at(`lane ${lane} requires an integer producer.run_number; got ${describe(producer.run_number)} ${producer.run_number}`));
+    }
+    if (!Number.isInteger(producer.run_attempt) || producer.run_attempt < 1) {
+      fail(at(`lane ${lane} requires an integer producer.run_attempt; got ${describe(producer.run_attempt)} ${producer.run_attempt}`));
+    }
+    if (typeof producer.run_started_at !== 'string' || !ISO_UTC.test(producer.run_started_at)) {
+      fail(at(`lane ${lane} requires producer.run_started_at as an ISO-8601 UTC instant; got ${describe(producer.run_started_at)} '${producer.run_started_at}'`));
+    }
+    if (producer.owner_identity !== null || producer.owner_attestation_ref !== null) {
+      fail(at(`lane ${lane} is a CI lane: producer.owner_identity and producer.owner_attestation_ref must both be null`));
+    }
+    if (isPlainObject(replay)) {
+      if (replay.replayable !== true) {
+        fail(at(`lane ${lane} evidence must be replayable — replay.replayable is ${describe(replay.replayable)} ${replay.replayable}`));
+      }
+      if (!nonEmptyString(replay.command)) {
+        fail(at(`lane ${lane} evidence must name the command that reproduces it — replay.command is ${describe(replay.command)}`));
+      }
+    }
+    if (artifact.method === 'owner_attestation') {
+      fail(at(`method 'owner_attestation' is not available on CI lane ${lane}`));
+    }
+  }
+
+  if (isOwnerLane) {
+    if (producer.type !== 'owner') {
+      fail(at(`lane ${lane} requires producer.type 'owner' but the artifact declares '${producer.type}' — LANE_F and OWNER_ACCEPTANCE evidence is produced by the owner and by no one else`));
+    }
+    if (producer.run_id !== null) {
+      fail(at(`lane ${lane} must not claim a CI run id — owner judgment is not produced by CI; got producer.run_id '${producer.run_id}'`));
+    }
+    if (!nonEmptyString(producer.owner_identity)) {
+      fail(at(`lane ${lane} requires producer.owner_identity (the owner's GitHub login)`));
+    }
+    if (!nonEmptyString(producer.owner_attestation_ref)) {
+      fail(at(`lane ${lane} requires producer.owner_attestation_ref — the URL of a GitHub comment written by the owner that names this artifact_id and subject_sha`));
+    }
+    if (artifact.method !== 'owner_attestation') {
+      fail(at(`lane ${lane} requires method 'owner_attestation'; got '${artifact.method}'`));
+    }
+    if (isPlainObject(replay)) {
+      if (replay.replayable !== false) {
+        fail(at(`lane ${lane} evidence is inherently non-replayable and must be marked so — replay.replayable is ${describe(replay.replayable)} ${replay.replayable}`));
+      }
+      if (replay.command !== null) {
+        fail(at(`lane ${lane} evidence must not name a replay command; got '${replay.command}'`));
+      }
+    }
+  }
+
+  if (lane === 'LANE_C') {
+    if (!nonEmptyString(artifact.deployment_id)) {
+      fail(at('LANE_C evidence must name the deployment_id it was observed against — LANE_C evidence expires when the production deployment changes'));
+    }
+    if (artifact.environment !== 'production') {
+      fail(at(`LANE_C evidence must be observed in environment 'production'; got '${artifact.environment}'`));
+    }
+  }
+  if (lane === 'LANE_E') {
+    if (artifact.deployment_id !== null) {
+      fail(at(`LANE_E evidence is observed in an isolated environment and must not name a deployment_id; got '${artifact.deployment_id}'`));
+    }
+    if (!['isolated_simulation', 'ci'].includes(artifact.environment)) {
+      fail(at(`LANE_E evidence must be observed in 'isolated_simulation' or 'ci'; got '${artifact.environment}'`));
+    }
+  }
+  if (lane === 'OWNER_ACCEPTANCE' && artifact.deployment_id !== null) {
+    fail(at(`OWNER_ACCEPTANCE evidence must not name a deployment_id; got '${artifact.deployment_id}'`));
+  }
+}
+
+// ─── Provenance ───────────────────────────────────────────────────────────────
+
+function toEpoch(value) {
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Cross-check a CI artifact against the GitHub Actions run it claims.
+ *
+ * Pure: the caller performs the API request and passes the run object in, so this
+ * is unit-testable without network. A fabricated run id fails at the request; a
+ * real run id borrowed from another workflow fails here.
+ *
+ * @param {object} artifact
+ * @param {object|null} run  GitHub Actions run object, or null when not found
+ * @returns {string[]} violations
+ */
+export function evaluateRunProvenance(artifact, run) {
+  const producer = artifact.producer ?? {};
+  const label = `${artifact.artifact_id}: `;
+  if (run === null || run === undefined) {
+    return [`${label}GitHub Actions run ${producer.run_id} was not found in ${producer.repository} — the artifact names a run that does not exist`];
+  }
+
+  const violations = [];
+  const mismatch = (field, declared, actual) =>
+    violations.push(`${label}${field} declared '${declared}' but run ${producer.run_id} reports '${actual}'`);
+
+  if (String(run.id) !== String(producer.run_id)) mismatch('producer.run_id', producer.run_id, run.id);
+  if (run.repository?.full_name && run.repository.full_name !== producer.repository) {
+    mismatch('producer.repository', producer.repository, run.repository.full_name);
+  }
+  if (run.head_sha !== artifact.subject_sha) {
+    violations.push(`${label}subject_sha '${artifact.subject_sha}' is not the commit run ${producer.run_id} executed ('${run.head_sha}') — the observation was not made against the commit it claims`);
+  }
+  if (run.name !== producer.workflow) mismatch('producer.workflow', producer.workflow, run.name);
+  if (Number(run.run_number) !== Number(producer.run_number)) mismatch('producer.run_number', producer.run_number, run.run_number);
+  if (Number(run.run_attempt) !== Number(producer.run_attempt)) mismatch('producer.run_attempt', producer.run_attempt, run.run_attempt);
+  if (run.event !== producer.event_name) mismatch('producer.event_name', producer.event_name, run.event);
+
+  const declaredStart = toEpoch(producer.run_started_at);
+  const actualStart = toEpoch(run.run_started_at ?? run.created_at);
+  if (declaredStart === null || actualStart === null || declaredStart !== actualStart) {
+    mismatch('producer.run_started_at', producer.run_started_at, run.run_started_at ?? run.created_at);
+  }
+
+  const captured = toEpoch(artifact.captured_at_utc);
+  const windowEnd = toEpoch(run.updated_at ?? run.completed_at) ?? Number.POSITIVE_INFINITY;
+  if (captured === null) {
+    violations.push(`${label}captured_at_utc '${artifact.captured_at_utc}' is not a parseable instant`);
+  } else if (actualStart !== null && (captured < actualStart || captured > windowEnd)) {
+    violations.push(`${label}captured_at_utc '${artifact.captured_at_utc}' falls outside the window of run ${producer.run_id} (${run.run_started_at ?? run.created_at} … ${run.updated_at ?? run.completed_at}) — the observation was not taken during that run`);
+  }
+
+  return violations;
+}
+
+/**
+ * Cross-check an owner artifact against the GitHub comment it names.
+ *
+ * An agent can write any file, but cannot post a comment as the owner's account.
+ * That asymmetry is the whole basis of owner-lane provenance.
+ *
+ * @param {object} artifact
+ * @param {object|null} comment  GitHub comment object, or null when not found
+ * @param {string[]} allowedLogins  owner allowlist (case-insensitive)
+ * @returns {string[]} violations
+ */
+export function evaluateOwnerProvenance(artifact, comment, allowedLogins) {
+  const producer = artifact.producer ?? {};
+  const label = `${artifact.artifact_id}: `;
+  const allowed = (allowedLogins ?? []).map((login) => String(login).toLowerCase());
+
+  if (allowed.length === 0) {
+    return [`${label}no owner login allowlist is configured — owner-lane provenance cannot be verified (set EVIDENCE_OWNER_LOGINS)`];
+  }
+  if (comment === null || comment === undefined) {
+    return [`${label}owner attestation ${producer.owner_attestation_ref} could not be retrieved — the artifact names an attestation that does not exist or is not readable`];
+  }
+
+  const violations = [];
+  const author = String(comment.user?.login ?? '');
+  if (!allowed.includes(author.toLowerCase())) {
+    violations.push(`${label}owner attestation was written by '${author || '<unknown>'}', who is not in the owner allowlist (${allowed.join(', ')}) — LANE_F and OWNER_ACCEPTANCE evidence is produced by the owner and by no one else`);
+  }
+  if (nonEmptyString(producer.owner_identity) && author.toLowerCase() !== String(producer.owner_identity).toLowerCase()) {
+    violations.push(`${label}producer.owner_identity declares '${producer.owner_identity}' but the attestation was written by '${author}'`);
+  }
+  const body = String(comment.body ?? '');
+  if (!body.includes(artifact.artifact_id)) {
+    violations.push(`${label}the owner attestation does not name this artifact_id — an attestation must be bound to the artifact it attests, or it can be pointed at by any number of fabricated artifacts`);
+  }
+  if (!body.includes(artifact.subject_sha)) {
+    violations.push(`${label}the owner attestation does not name subject_sha ${artifact.subject_sha}`);
+  }
+  return violations;
+}
+
+// ─── Acceptance ───────────────────────────────────────────────────────────────
+
+/**
+ * Combine the three checks into one acceptance level. Fail-closed: anything short
+ * of structural + signature + provenance is UNVERIFIED, and UNVERIFIED evidence
+ * may never back a PROVEN invariant.
+ *
+ * @param {{ violations: string[], signatureState: string, provenanceState: string }} input
+ * @returns {'REJECTED'|'UNVERIFIED'|'ACCEPTED'}
+ */
+export function classifyAcceptance({ violations, signatureState, provenanceState }) {
+  if (violations.length > 0) return ACCEPTANCE.REJECTED;
+  if (signatureState === SIGNATURE_STATE.INVALID) return ACCEPTANCE.REJECTED;
+  if (provenanceState === PROVENANCE_STATE.FAILED) return ACCEPTANCE.REJECTED;
+  if (signatureState !== SIGNATURE_STATE.VERIFIED) return ACCEPTANCE.UNVERIFIED;
+  if (provenanceState !== PROVENANCE_STATE.VERIFIED) return ACCEPTANCE.UNVERIFIED;
+  return ACCEPTANCE.ACCEPTED;
+}
+
+/**
+ * Why an artifact did not reach ACCEPTED. Gate output must always name the
+ * unmet requirement, never print a bare level.
+ */
+export function explainAcceptance({ signatureState, provenanceState }) {
+  const reasons = [];
+  if (signatureState === SIGNATURE_STATE.ABSENT) {
+    reasons.push('unsigned (EVIDENCE_SIGNING_KEY was not available at capture time)');
+  } else if (signatureState === SIGNATURE_STATE.UNCHECKED) {
+    reasons.push('signature not checked (EVIDENCE_SIGNING_KEY not available to the validator)');
+  } else if (signatureState === SIGNATURE_STATE.INVALID) {
+    reasons.push('signature does not verify');
+  }
+  if (provenanceState === PROVENANCE_STATE.UNCHECKED) {
+    reasons.push('provenance not checked (run with --require-provenance and a GitHub token)');
+  } else if (provenanceState === PROVENANCE_STATE.FAILED) {
+    reasons.push('provenance cross-check failed');
+  }
+  return reasons.join('; ');
+}
