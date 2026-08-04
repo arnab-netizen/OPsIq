@@ -41,6 +41,8 @@ const root = join(__dirname, "..", "..", "..");
 const STAGE_7_ID = "factory-stage-7-closure";
 const SIGNING_KEY = "g1-test-signing-key-not-a-real-secret";
 const SUBJECT_SHA = "f129fb8633b38230c16fb44aed8f5f90c8f4b8a9";
+/** Owner decision D-9, 2026-08-03: the one commit Stage 7 evidence may describe. */
+const AUTHORIZED_SUBJECT_SHA = "ef44972882b35709ee12c54d2dfb7395a6477bf8";
 
 const CANONICAL_IDS = Array.from({ length: 16 }, (_, i) => `S7-I${i + 1}`);
 
@@ -627,14 +629,31 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
    * An empty allowlist is not "allow all". It is the absence of an authorization.
    */
 
-  /** The real Stage 7 contract, read from disk, with only the named overrides applied. */
-  function liveContract(overrides: Record<string, unknown> = {}, patch: Record<string, unknown> = {}) {
+  /** The real Stage 7 contract exactly as it sits on disk, with invariant overrides. */
+  function realContract(overrides: Record<string, unknown> = {}, patch: Record<string, unknown> = {}) {
     const raw = YAML.load(
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
     const invariants = { ...(raw.invariants as Record<string, unknown>) };
     for (const [id, entry] of Object.entries(overrides)) invariants[id] = entry;
     return { ...raw, ...patch, invariants };
+  }
+
+  /**
+   * The real contract with its D-9 authorization stripped — the shape it had before
+   * the owner named a subject SHA, and the shape any future stage contract has
+   * before its own D-9.
+   *
+   * These cases must keep testing the MISSING state on a realistic contract. Reading
+   * the live file directly would silently stop exercising that state the moment a
+   * SHA was authorized, which is exactly the kind of check that quietly stops
+   * checking. The D-9 tests below read the live file unmodified instead.
+   */
+  function liveContract(overrides: Record<string, unknown> = {}, patch: Record<string, unknown> = {}) {
+    const m = realContract(overrides, patch);
+    if (!("closure_subject_sha" in patch)) delete m.closure_subject_sha;
+    delete m.closure_subject_sha_authorization;
+    return m;
   }
 
   function evaluateLive(manifest: Record<string, unknown>, dir: string, provenance?: Map<string, string>) {
@@ -650,19 +669,19 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
     },
   });
 
-  it("the live contract states no authorized subject SHA", () => {
+  it("a contract with no authorized subject SHA resolves MISSING", () => {
     const policy = resolveSubjectShaPolicy(liveContract());
     expect(policy.state).toBe(SUBJECT_SHA_POLICY.MISSING);
     expect(policy.authorized).toEqual([]);
   });
 
-  it("live contract, PENDING with empty proof_artifacts, still passes", () => {
+  it("no-policy contract, PENDING with empty proof_artifacts, still passes", () => {
     const r = evaluateLive(liveContract(), writeArtifacts([]));
     expect(r.proofViolations.filter((v) => v.includes("SUBJECT_SHA"))).toHaveLength(0);
     expect(r.structuralViolations).toHaveLength(0);
   });
 
-  it("live contract, PROVEN with an otherwise-eligible artifact, fails SUBJECT_SHA_POLICY_MISSING", () => {
+  it("no-policy contract, PROVEN with an otherwise-eligible artifact, fails SUBJECT_SHA_POLICY_MISSING", () => {
     const artifact = signedArtifact("S7-I1");
     const dir = writeArtifacts([artifact]);
     const r = evaluateLive(
@@ -812,14 +831,106 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
     expect(allViolations(r)).toContain(SUBJECT_SHA_POLICY.MISSING);
   });
 
-  it("this PR adds no subject SHA to the live contract", () => {
+  /**
+   * D-9 replaced the earlier assertion that the contract carried no subject SHA.
+   * That assertion existed to prove PR #278 did not quietly authorize a commit to
+   * make its own tests pass. The owner has since authorized one explicitly, so the
+   * guarantee worth holding is narrower and stricter: exactly one commit is
+   * authorized, it is the one the owner named, and authorizing it moved nothing
+   * else in the contract.
+   */
+  it("the live contract authorizes exactly the owner-named subject SHA", () => {
     const raw = YAML.load(
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
-    expect(raw.closure_subject_sha).toBeUndefined();
+    expect(raw.closure_subject_sha).toBe(AUTHORIZED_SUBJECT_SHA);
+    const policy = resolveSubjectShaPolicy(raw);
+    expect(policy.state).toBe(SUBJECT_SHA_POLICY.PRESENT);
+    expect(policy.authorized).toEqual([AUTHORIZED_SUBJECT_SHA]);
+  });
+
+  it("authorizing a subject SHA is not closure evidence and proves nothing", () => {
+    const raw = YAML.load(
+      readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
+    ) as Record<string, unknown>;
+    // The four closure-evidence fields describe the PR that closes Stage 7. Naming
+    // the commit evidence may describe is a different statement, and must not be
+    // written into them — doing so would claim closure evidence that does not exist.
     expect(raw.required_evidence).toEqual({
       pr_sha: null, merge_sha: null, main_integration_run: null, db_verification_run: null,
     });
+    expect(raw.status).toBe("PENDING");
+    expect(raw.invariant_waivers).toEqual([]);
+    const invariants = raw.invariants as Record<string, { status: string; proof_artifacts: unknown[] }>;
+    expect(Object.keys(invariants)).toHaveLength(16);
+    for (const [id, entry] of Object.entries(invariants)) {
+      expect(entry.status, id).toBe("PENDING");
+      expect(entry.proof_artifacts, id).toEqual([]);
+    }
+  });
+
+  it("an artifact on the authorized commit is accepted; any other commit is not", () => {
+    const onAuthorized = signedArtifact("S7-I1", { subject_sha: AUTHORIZED_SUBJECT_SHA });
+    const elsewhere = signedArtifact("S7-I1", { subject_sha: "3".repeat(40) });
+    const liveShaContract = (a: Record<string, unknown>) =>
+      realContract({ "S7-I1": provenWith("S7-I1", [a.artifact_id]) });
+
+    const accepted = evaluateLive(liveShaContract(onAuthorized), writeArtifacts([onAuthorized]), verifiedProvenance(onAuthorized));
+    expect(accepted.proven).toContain("S7-I1");
+
+    const refused = evaluateLive(liveShaContract(elsewhere), writeArtifacts([elsewhere]), verifiedProvenance(elsewhere));
+    expect(refused.proven).not.toContain("S7-I1");
+    expect(allViolations(refused)).toContain(SUBJECT_SHA_NOT_AUTHORIZED);
+  });
+
+  it("no artifact becomes ACCEPTED merely because a subject SHA now exists", () => {
+    // The policy is one eligibility rule among many. Satisfying it does not confer
+    // acceptance: signature and provenance are still unverifiable in this context,
+    // so the artifact remains UNVERIFIED and D-8 still refuses it.
+    const artifact = signedArtifact("S7-I1", { subject_sha: AUTHORIZED_SUBJECT_SHA });
+    const dir = writeArtifacts([artifact]);
+
+    const { records } = loadEvidenceArtifactIndex({ dir, signingKey: SIGNING_KEY });
+    expect(records[0].level).toBe(ACCEPTANCE.UNVERIFIED);
+
+    // Evaluated the way the shipped gates evaluate it: no signing key, no provenance.
+    const asShipped = evaluateInvariantClosure(
+      realContract({ "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) }),
+      { bundleId: STAGE_7_ID, evidenceDir: dir },
+    ) as { proven: string[]; proofViolations: string[] };
+    expect(asShipped.proven).not.toContain("S7-I1");
+    expect(asShipped.proofViolations.join("\n")).toContain("not ACCEPTED");
+  });
+
+  it("the authorization record names the run and deployment it rests on", () => {
+    const raw = YAML.load(
+      readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
+    ) as Record<string, unknown>;
+    const auth = raw.closure_subject_sha_authorization as Record<string, unknown>;
+    expect(auth.decision).toBe("D-9");
+    // The SHA the owner authorized must be the SHA CI tested and the SHA production
+    // deployed. A record that names three different commits records nothing.
+    expect(raw.closure_subject_sha).toBe(AUTHORIZED_SUBJECT_SHA);
+    expect(auth.main_integration_tested_sha).toBe(AUTHORIZED_SUBJECT_SHA);
+    expect(auth.vercel_production_commit_sha).toBe(AUTHORIZED_SUBJECT_SHA);
+    expect(auth.main_integration_run).toBe("30841390660");
+    expect(auth.vercel_production_deployment).toBe("5731543184");
+    // The limitations must stay recorded, not quietly dropped once inconvenient.
+    const unverified = auth.unverified as Record<string, string>;
+    expect(unverified.production_alias).toMatch(/NOT\s+verified/);
+    expect(auth.deployment_success_is_not_readiness).toMatch(/not Owner Mode readiness/);
+  });
+
+  it("the contract still refuses closure — an authorized SHA is not a proven stage", () => {
+    let code = 0;
+    try {
+      execFileSync("node", ["scripts/validate-stage-acceptance.mjs", "--mode", "closure", "--stage", "factory-7"], {
+        cwd: root, encoding: "utf8", stdio: "pipe",
+      });
+    } catch (err) {
+      code = (err as { status?: number }).status ?? 1;
+    }
+    expect(code).not.toBe(0);
   });
 });
 
