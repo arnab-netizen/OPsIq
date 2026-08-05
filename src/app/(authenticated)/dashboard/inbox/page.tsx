@@ -37,6 +37,11 @@ function NoWorkspaceState() {
   );
 }
 
+/**
+ * The (authenticated) layout already redirects unauthenticated users to /login and supplies the app
+ * shell. These page-level checks are defence in depth: they keep the route fail-closed even if it is
+ * ever rendered outside that layout again, which is exactly how the original HTTP 500 arose.
+ */
 export default async function DashboardInboxPage() {
   // Authentication first — no database query runs until the session is established.
   const session = await getSession();

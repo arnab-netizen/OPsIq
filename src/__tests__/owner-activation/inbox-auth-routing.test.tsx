@@ -1,9 +1,12 @@
 /**
  * /dashboard/inbox authentication routing — closes the HTTP 500 defect.
  *
- * The page previously threw on a missing session and on a missing workspace membership. Because it
- * renders outside the (authenticated) route group, nothing caught either throw, so an anonymous
- * visitor received a 500 instead of a login redirect.
+ * The page previously threw on a missing session and on a missing workspace membership, and it lived
+ * outside the (authenticated) route group, so nothing caught either throw: an anonymous visitor got a
+ * 500 instead of a login redirect, and an authenticated owner got a page with no app shell.
+ *
+ * It now lives inside (authenticated) — so the layout guard applies and the sidebar renders — and the
+ * page keeps its own checks as defence in depth. These tests exercise the page's own checks directly.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup } from "@testing-library/react";
@@ -25,11 +28,11 @@ vi.mock("@/services/auth", () => ({ getSession: () => getSessionMock() }));
 vi.mock("@/lib/db", () => ({
   db: { workspaceMembership: { findFirst: (args: unknown) => findFirstMock(args) } },
 }));
-vi.mock("@/app/dashboard/inbox/inbox-client", () => ({
+vi.mock("@/app/(authenticated)/dashboard/inbox/inbox-client", () => ({
   InboxClient: ({ workspaceId }: { workspaceId: string }) => <div data-testid="inbox-client">{workspaceId}</div>,
 }));
 
-import DashboardInboxPage, { metadata } from "@/app/dashboard/inbox/page";
+import DashboardInboxPage, { metadata } from "@/app/(authenticated)/dashboard/inbox/page";
 
 beforeEach(() => {
   getSessionMock.mockReset();

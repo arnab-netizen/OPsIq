@@ -260,7 +260,8 @@ function ReadinessBand({ state }: { state: OnboardingView }) {
   );
 }
 
-function WaysToAdd({ hasBusiness }: { hasBusiness: boolean }) {
+/** Only rendered once a business exists — every card here is always actionable. */
+function WaysToAdd() {
   const cards = [
     {
       href: "/owner/manual-entry",
@@ -296,10 +297,7 @@ function WaysToAdd({ hasBusiness }: { hasBusiness: boolean }) {
           <Link
             key={card.title}
             href={card.href}
-            aria-disabled={!hasBusiness}
-            className={`block rounded-lg border border-border p-4 transition-colors hover:border-primary hover:bg-muted/40 ${
-              hasBusiness ? "" : "pointer-events-none opacity-50"
-            }`}
+            className="block rounded-lg border border-border p-4 transition-colors hover:border-primary hover:bg-muted/40"
           >
             <p className="font-medium text-foreground">{card.title}</p>
             <p className="mt-1 text-sm text-muted-foreground">{card.body}</p>
@@ -494,7 +492,7 @@ export default function OwnerDataHubPage() {
           )}
 
           {state && <ReadinessBand state={state} />}
-          <WaysToAdd hasBusiness={hasBusiness} />
+          <WaysToAdd />
           {state && <MissingCritical items={state.missingMinimum ?? []} />}
           {groups.length > 0 && (
             <div>
