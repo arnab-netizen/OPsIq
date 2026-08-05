@@ -23,10 +23,10 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center text-foreground">
       <div className="w-full max-w-md space-y-4">
-        <span className="text-xl font-bold text-primary">Rebilix</span>
+        <span className="text-xl font-bold text-primary">OpsIQ</span>
         <h1 className="text-2xl font-bold tracking-tight">Something went wrong</h1>
         <p className="text-sm text-muted-foreground">
-          Rebilix hit an unexpected error. You can try again or return to the app. If it keeps
+          OpsIQ hit an unexpected error. You can try again or return to the app. If it keeps
           happening, contact beta support and we&rsquo;ll help.
         </p>
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -41,7 +41,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
             href="/"
             className="inline-flex h-11 w-full items-center justify-center rounded-lg border border-border bg-background px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:w-auto"
           >
-            Return to Rebilix
+            Return to OpsIQ
           </Link>
         </div>
         <p className="text-xs text-muted-foreground">

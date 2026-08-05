@@ -29,20 +29,20 @@ describe("Diagnosis sensitive-data warning", () => {
 });
 
 describe("Privacy page", () => {
-  it("renders Rebilix branding and support@opsiq.com", () => {
+  it("renders OpsIQ branding and support@opsiq.com", () => {
     const { container } = render(<PrivacyPage />);
     const text = container.textContent ?? "";
-    expect(text).toMatch(/Rebilix/);
+    expect(text).toMatch(/OpsIQ/);
     expect(container.querySelector('a[href="mailto:support@opsiq.com"]')).not.toBeNull();
     expect(text).toMatch(/beta/i);
   });
 });
 
 describe("Terms page", () => {
-  it("renders Rebilix, the not-advice disclaimer, and support@opsiq.com", () => {
+  it("renders OpsIQ, the not-advice disclaimer, and support@opsiq.com", () => {
     const { container } = render(<TermsPage />);
     const text = container.textContent ?? "";
-    expect(text).toMatch(/Rebilix/);
+    expect(text).toMatch(/OpsIQ/);
     expect(text).toMatch(/not financial, legal, accounting, or tax advice/i);
     expect(container.querySelector('a[href="mailto:support@opsiq.com"]')).not.toBeNull();
   });

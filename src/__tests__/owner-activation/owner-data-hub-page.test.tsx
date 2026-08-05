@@ -1,0 +1,174 @@
+/**
+ * /owner/data page — proves the hub renders real readiness from the existing onboarding contract,
+ * links to the existing intake surfaces, and never fabricates completeness.
+ */
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { render, cleanup, screen, waitFor } from "@testing-library/react";
+
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
+import OwnerDataHubPage from "@/app/(authenticated)/owner/data/page";
+
+const fetchMock = vi.fn();
+const json = (body: unknown, ok = true) =>
+  Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) });
+
+const ONBOARDING = {
+  businessName: "Test Co",
+  suppliedCategories: ["revenue_sales"],
+  requirements: {
+    minimumRequired: ["revenue_sales", "expenses", "cash_debt"],
+    recommended: ["marketing"],
+    optional: [],
+  },
+  missingMinimum: [
+    {
+      category: "expenses",
+      label: "Expense records",
+      severity: "critical",
+      why: "Your variable costs are needed to know if work is actually profitable.",
+      decisionAffected: "margin, cost control, and which work to stop",
+    },
+  ],
+  minimumSuppliedCount: 1,
+  minimumRequiredCount: 3,
+  minimumComplete: false,
+  confidenceBeforeDiagnosis: "low",
+  canRunFirstDiagnosis: false,
+  firstAction: "Add last month's expenses.",
+  whatNotToDo: ["Do not change prices yet."],
+  nextBestUpload: "expenses",
+  found: true,
+};
+
+beforeEach(() => {
+  fetchMock.mockReset();
+  vi.stubGlobal("fetch", fetchMock);
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+function mockWithBusiness() {
+  fetchMock.mockImplementation((url: string) =>
+    url.includes("/api/owner/businesses")
+      ? json({ businesses: [{ id: "b1", name: "Test Co", currency: "GBP" }] })
+      : json(ONBOARDING),
+  );
+}
+
+describe("no business yet", () => {
+  it("shows the business profile as the blocking first step", async () => {
+    fetchMock.mockImplementation(() => json({ businesses: [] }));
+    render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-create-business")).toBeTruthy());
+    expect(screen.getByTestId("data-hub-create-business").textContent).toMatch(
+      /Start with your business profile/i,
+    );
+    expect(screen.getByTestId("data-hub-business-name")).toBeTruthy();
+  });
+
+  it("does not offer readiness or categories before a business exists", async () => {
+    fetchMock.mockImplementation(() => json({ businesses: [] }));
+    const { container } = render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-create-business")).toBeTruthy());
+    expect(container.querySelector('[data-testid="data-hub-readiness"]')).toBeNull();
+    expect(container.querySelector('[data-testid="data-hub-group-money"]')).toBeNull();
+  });
+});
+
+describe("with a business", () => {
+  it("renders real readiness counts from the onboarding contract", async () => {
+    mockWithBusiness();
+    render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
+    const band = screen.getByTestId("data-hub-readiness");
+    expect(band.textContent).toContain("1 of 3 essential items added");
+    expect(band.querySelector('[role="progressbar"]')!.getAttribute("aria-valuenow")).toBe("33");
+    expect(band.textContent).toContain("Confidence: LOW");
+  });
+
+  it("states plainly that there is not enough data for a trustworthy diagnosis", async () => {
+    mockWithBusiness();
+    render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-insufficient")).toBeTruthy());
+    expect(screen.getByTestId("data-hub-insufficient").textContent).toMatch(
+      /does not yet have enough reliable business information to generate a trustworthy diagnosis/i,
+    );
+  });
+
+  it("shows what is missing, why, and which decision it affects", async () => {
+    mockWithBusiness();
+    render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-missing")).toBeTruthy());
+    const missing = screen.getByTestId("data-hub-missing");
+    expect(missing.textContent).toContain("Expense records");
+    expect(missing.textContent).toContain("know if work is actually profitable");
+    expect(missing.textContent).toContain("margin, cost control");
+    // Direct link to the surface that fixes it.
+    expect(missing.querySelector("a")!.getAttribute("href")).toMatch(/^\/owner\/(manual-entry|intake)/);
+  });
+
+  it("renders all four category groups with real supplied counts", async () => {
+    mockWithBusiness();
+    render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-group-money")).toBeTruthy());
+    for (const group of ["money", "people", "customers", "operations"]) {
+      expect(screen.getByTestId(`data-hub-group-${group}`)).toBeTruthy();
+    }
+    // One supplied category (revenue_sales) sits in Money.
+    expect(screen.getByTestId("data-hub-group-money").textContent).toContain("1 of 6 added");
+    expect(screen.getByTestId("data-hub-group-people").textContent).toContain("0 of 4 added");
+  });
+
+  it("links to both existing intake surfaces without duplicating them", async () => {
+    mockWithBusiness();
+    const { container } = render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
+    const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href") ?? "");
+    expect(hrefs).toContain("/owner/manual-entry");
+    expect(hrefs).toContain("/owner/intake");
+    expect(hrefs).toContain("/owner/onboarding");
+    // The hub does not host its own upload form.
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it("is honest that integrations are not available rather than rendering a dead control", async () => {
+    mockWithBusiness();
+    render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-integrations")).toBeTruthy());
+    const card = screen.getByTestId("data-hub-integrations");
+    expect(card.textContent).toMatch(/not available yet/i);
+    expect(card.querySelector("a")).toBeNull();
+  });
+
+  it("offers the first assessment only once the gate opens", async () => {
+    fetchMock.mockImplementation((url: string) =>
+      url.includes("/api/owner/businesses")
+        ? json({ businesses: [{ id: "b1", name: "Test Co" }] })
+        : json({ ...ONBOARDING, canRunFirstDiagnosis: true, missingMinimum: [] }),
+    );
+    const { container } = render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
+    expect(container.querySelector('[data-testid="data-hub-insufficient"]')).toBeNull();
+    const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+    expect(hrefs).toContain("/diagnosis");
+  });
+
+  it("surfaces an error without crashing when the onboarding call fails", async () => {
+    fetchMock.mockImplementation((url: string) =>
+      url.includes("/api/owner/businesses")
+        ? json({ businesses: [{ id: "b1", name: "Test Co" }] })
+        : json({ error: "boom" }, false),
+    );
+    render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+  });
+});

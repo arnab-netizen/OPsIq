@@ -6,6 +6,7 @@ import { Button, Input, Textarea, Select, Badge } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { createClientIdempotencyKey } from "@/lib/client-idempotency";
 import DiagnosisBetaNotice from "@/components/diagnosis/DiagnosisBetaNotice";
+import DiagnosisEvidenceScopeNotice from "@/components/diagnosis/DiagnosisEvidenceScopeNotice";
 
 interface DiagnosisResult {
   id: string;
@@ -126,6 +127,8 @@ export default function DiagnosisPage() {
           <p className="text-muted-foreground text-sm mb-4">
             Engagement ID: {result.engagementId}
           </p>
+
+          <DiagnosisEvidenceScopeNotice placement="result" />
 
           {result.executiveBrief && (
             <div className={`rounded-lg p-4 mb-6 ${result.severity === "critical" ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200"}`}>
@@ -359,6 +362,7 @@ export default function DiagnosisPage() {
         Describe your business challenge and receive a diagnosis with a recommended action plan.
       </p>
 
+      <DiagnosisEvidenceScopeNotice placement="form" />
       <DiagnosisBetaNotice />
 
       {error && (

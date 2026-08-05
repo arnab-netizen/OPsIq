@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ImpactChart } from "@/components/decisions/ImpactChart";
 
 export const metadata = {
-  title: "Decision Impact Dashboard | Rebilix",
+  title: "Decision Impact Dashboard | OpsIQ",
   description: "View decision outcomes and governance metrics",
 };
 

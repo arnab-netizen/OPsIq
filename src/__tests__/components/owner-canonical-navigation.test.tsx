@@ -18,9 +18,11 @@ import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 afterEach(() => cleanup());
 
 describe("owner canonical navigation", () => {
-  it("1. the primary owner nav entry points to /owner/cockpit (canonical), labelled 'Owner Cockpit'", () => {
+  it("1. the primary owner nav entry points to /owner/cockpit (canonical), labelled 'Home'", () => {
+    // The href is the canonical contract; the label was renamed from "Owner Cockpit" to "Home"
+    // because owners do not navigate by aircraft metaphor. The route is unchanged.
     const { getByText } = render(<SidebarNav canViewOwnerRecovery={true} />);
-    const link = getByText("Owner Cockpit").closest("a");
+    const link = getByText("Home").closest("a");
     expect(link).not.toBeNull();
     expect(link!.getAttribute("href")).toBe("/owner/cockpit");
   });
@@ -32,7 +34,7 @@ describe("owner canonical navigation", () => {
 
   it("3. the owner cockpit entry is gated to OWNER_VIEW users", () => {
     const { queryByText } = render(<SidebarNav canViewOwnerRecovery={false} />);
-    expect(queryByText("Owner Cockpit")).toBeNull();
+    expect(queryByText("Home")).toBeNull();
   });
 
   it("4. the canonical cockpit link banner points to /owner/cockpit", () => {

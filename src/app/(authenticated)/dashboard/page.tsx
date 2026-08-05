@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { Badge } from "@/ui/primitives";
 import FirstDiagnosisCta from "@/components/dashboard/FirstDiagnosisCta";
+import OwnerActivationPanel from "@/components/dashboard/OwnerActivationPanel";
 
 // UI-01: this server component fetches its own protected API, which authenticates from
 // the session cookie. A server-side fetch does NOT inherit the incoming request cookies,
@@ -105,6 +106,9 @@ export default async function DashboardPage() {
       <p className="mt-1 text-sm text-muted-foreground">
         Business intervention overview
       </p>
+
+      {/* ─── Owner activation (self-hides once the minimum data set is complete) ─── */}
+      <OwnerActivationPanel />
 
       {/* ─── KPIs Row ──────────────────────────────────────────────────── */}
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">

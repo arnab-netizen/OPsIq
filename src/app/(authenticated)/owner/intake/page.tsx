@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Input, Select } from "@/ui/primitives";
 import { sourceQualityTier, type IntakeSource } from "@/domain/owner-intake/types";
@@ -120,8 +121,35 @@ export default function OwnerIntakePage() {
             Upload a CSV (or paste rows) for a domain. We validate and normalize it, show every error, and nothing feeds a diagnosis until you confirm it.
           </p>
         </div>
-        <Button onClick={() => setShowUpload((s) => !s)} disabled={businesses.length === 0}>+ Upload data</Button>
+        <Button
+          onClick={() => setShowUpload((s) => !s)}
+          disabled={businesses.length === 0}
+          aria-describedby={businesses.length === 0 ? "upload-blocked-reason" : undefined}
+        >
+          + Upload data
+        </Button>
       </div>
+
+      {businesses.length === 0 && (
+        <div
+          id="upload-blocked-reason"
+          data-testid="intake-upload-blocked"
+          className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <p className="font-medium">You need a business profile before you can upload.</p>
+          <p className="mt-1">
+            Uploads are stored against a business, so OpsIQ needs to know which business the rows
+            belong to. Adding one takes about a minute.
+          </p>
+          <Link
+            href="/owner/data"
+            data-testid="intake-upload-blocked-cta"
+            className="mt-2 inline-block font-medium underline hover:no-underline"
+          >
+            Add your business profile →
+          </Link>
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
@@ -149,7 +177,10 @@ export default function OwnerIntakePage() {
 
       {businesses.length === 0 ? (
         <div className="border rounded-lg p-8 text-center text-muted-foreground">
-          No businesses yet. Create one in any owner domain to upload data.
+          <p>No business profile yet, so there is nowhere to put uploaded data.</p>
+          <Link href="/owner/data" className="mt-2 inline-block font-medium text-primary underline hover:no-underline">
+            Add your business profile →
+          </Link>
         </div>
       ) : (
         <>
