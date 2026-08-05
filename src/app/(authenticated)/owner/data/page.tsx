@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Select } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   buildOwnerDataHubView,
   inputTargetForCategory,
@@ -129,7 +130,10 @@ function CreateBusinessPanel({ onCreated }: { onCreated: () => void }) {
       });
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "That could not be saved. Check the details and try again.");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), {
+        context: "save",
+      });
+      setError(governed.operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -411,7 +415,10 @@ export default function OwnerDataHubPage() {
     try {
       setState((await api(`/api/owner/onboarding?businessId=${encodeURIComponent(businessId)}`)) as OnboardingView);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load your setup state.");
+      const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), {
+        context: "load",
+      });
+      setError(governed.operatorMessage);
       setState(null);
     }
   }, []);
@@ -428,7 +435,10 @@ export default function OwnerDataHubPage() {
         await loadState(list[0].id);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load your businesses.");
+      const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), {
+        context: "load",
+      });
+      setError(governed.operatorMessage);
       setBusinesses([]);
     } finally {
       setLoading(false);
