@@ -77,3 +77,8 @@ dbenv.sh
 full-test-output.log
 test-full-output.log
 *-test-output.log
+
+# Playwright forensic artifacts (may contain sensitive session data)
+.playwright/
+.playwright-results/
+test-results/
