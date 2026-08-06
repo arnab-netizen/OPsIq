@@ -1,7 +1,7 @@
 {
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
-  "last_updated": "2026-08-02",
+  "last_updated": "2026-08-06",
   "factory_stage": "FACTORY_STAGE_7",
   "factory_stage_status": "AUTHORIZED_CONTRACT_FROZEN_PARTIAL",
   "factory_stage_scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS",
@@ -10,8 +10,8 @@
   "owner_outcome": "Owner has proof that Stages 3, 4, 5, and 6 are implemented and accepted. Factory Stage 7 proves that OpsIQ can be deployed securely for its owner, operated without developer assistance, produce correct and actionable guidance from real business data, govern approved execution, capture outcomes and feedback, recover safely from realistic failures, and be accepted for unrestricted private owner use.",
   "current_gap": "Factory Stage 7 remains AUTHORIZED_CONTRACT_DEFINED; factory-stage-7-closure is PENDING with all four required evidence fields null. Stage 8 closure is NOT verified — no STAGE_8_PRIVATE_OWNER_PRODUCTION_CLOSED record exists in any commit on any ref, and there is no evidence for production migration verification, owner bootstrap, authenticated owner flow, a governed owner mutation with its audit event, production readiness, or scheduler execution.",
   "next_target": "Owner decision. Either produce the missing Factory Stage 7 / Stage 8 production evidence, or explicitly re-scope. No stage may be closed without the four required evidence fields.",
-  "main_sha": "4fe42fa8fcd536d44d97ccb3c6e46a23dcffe068",
-  "active_branch": "claude/stage7-pr1a-governance-contract-freeze",
+  "main_sha": "c318879435f150f880c67074c8c46020ee0a6280",
+  "active_branch": "claude/pr-281-merge-verify-7oa7of",
   "authorized_from_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
   "deployment_readiness": "FACTORY_STAGE_6_PROVEN — deployment and production readiness closure complete and accepted",
   "factory_stage_6": "ACCEPTED",
@@ -95,6 +95,23 @@
       "scope": "TOOLING_PREVENTION_CONTROLS_ONLY — no schema, no migration, no product or runtime change",
       "result": "GREEN — Main Integration 30711696515 success on merge SHA a77bc58a; blocking suite 30374 passed / 17 skipped / 0 failed across 1247 files; postgres:16; PRISMA_TARGET=ci; 160 migrations applied. LANE_B 30710604668 success (1674 passed). Vercel production dpl_CRyBdLFFJML1hMGiqDgV1snksfQX READY on a77bc58a. Closes no stage.",
       "closes_no_stage": true
+    },
+    {
+      "number": 281,
+      "title": "feat(owner): expose governed data intake and readiness path",
+      "head_sha": "067e333a81d48bb08ca3c6e1865083231b319cc0",
+      "merge_sha": "c318879435f150f880c67074c8c46020ee0a6280",
+      "merge_parent_1": "9942a52b2e9c27ec6325953449a5abbbd519bb91",
+      "merge_parent_2": "067e333a81d48bb08ca3c6e1865083231b319cc0",
+      "main_integration_run": "31073684985",
+      "main_integration_conclusion": "success",
+      "main_integration_steps": 43,
+      "vercel_production_deployment": "dpl_BkDd9NCS43tF2mcRsSNWyZC4rQ7v",
+      "vercel_production_state": "READY",
+      "scope": "OWNER_ACTIVATION_DATA_PATH_REPAIR — navigation, routing, owner data-intake path; no schema migration, no closure evidence",
+      "result": "GREEN — Main Integration 31073684985 success on merge SHA c318879435 (43 steps all green). Vercel production dpl_BkDd9NCS43tF2mcRsSNWyZC4rQ7v READY. Authorized merge SHA: c318879435f150f880c67074c8c46020ee0a6280. Closes no stage. Triggered Stage 7 closure_subject_sha update from ef44972882 to c318879435 (D-10).",
+      "closes_no_stage": true,
+      "stage7_subject_sha_consequence": "D-10: closure_subject_sha updated from ef44972882 to c318879435"
     }
   ],
   "factory_stage_acceptance": {
