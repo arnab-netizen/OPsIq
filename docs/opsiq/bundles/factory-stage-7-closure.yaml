@@ -14,7 +14,7 @@ authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 authorized_branch: "claude/opsiq-stage-7-loop-main"
 authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 
-# ─── Authorized evidence subject SHA (owner decision D-9) ────────────────────
+# ─── Authorized evidence subject SHA (owner decision D-10) ───────────────────
 # The single commit every Stage 7 evidence artifact must describe. An artifact
 # whose subject_sha is any other commit is refused with SUBJECT_SHA_NOT_AUTHORIZED,
 # because evidence captured against another commit does not describe this one.
@@ -27,39 +27,44 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 # and it proves nothing on its own — required_evidence below remains null, every
 # invariant remains PENDING, and Stage 7 remains open.
 #
-# Authorized by the owner on 2026-08-03 at the exact merge commit of PR #278, which
-# was simultaneously: current main; Main Integration green (run 30841390660,
-# success, 30534 blocking tests passed, 0 failed); deployed to Vercel production
-# (deployment 5731543184, state success) and not superseded; and the commit that
-# introduced the G-1 accepted-evidence binding that enforces this very field.
-closure_subject_sha: "ef44972882b35709ee12c54d2dfb7395a6477bf8"
+# D-10 supersedes D-9 (ef44972882b35709ee12c54d2dfb7395a6477bf8). D-9 was
+# invalidated when PR #281 advanced production past ef44972882. The new authorized
+# SHA is the merge commit of PR #281 — simultaneously: current main; Main Integration
+# green (run 31073684985, success, 43 steps all green); deployed to Vercel production
+# (dpl_BkDd9NCS43tF2mcRsSNWyZC4rQ7v, READY). Authorized by the owner on 2026-08-06.
+closure_subject_sha: "c318879435f150f880c67074c8c46020ee0a6280"
 closure_subject_sha_authorization:
-  decision: "D-9"
+  decision: "D-10"
   authorized_by: "owner"
-  authorized_date: "2026-08-03"
-  authorization_text: "AUTHORIZE_STAGE7_SUBJECT_SHA: ef44972882b35709ee12c54d2dfb7395a6477bf8"
-  main_integration_run: "30841390660"
+  authorized_date: "2026-08-06"
+  authorization_text: "AUTHORIZE_STAGE7_SUBJECT_SHA: c318879435f150f880c67074c8c46020ee0a6280"
+  supersedes: "D-9"
+  superseded_sha: "ef44972882b35709ee12c54d2dfb7395a6477bf8"
+  main_integration_run: "31073684985"
   main_integration_conclusion: "success"
-  main_integration_tested_sha: "ef44972882b35709ee12c54d2dfb7395a6477bf8"
-  vercel_production_deployment: "5731543184"
-  vercel_production_state: "success"
-  vercel_production_commit_sha: "ef44972882b35709ee12c54d2dfb7395a6477bf8"
+  main_integration_tested_sha: "c318879435f150f880c67074c8c46020ee0a6280"
+  vercel_production_deployment: "dpl_BkDd9NCS43tF2mcRsSNWyZC4rQ7v"
+  vercel_production_state: "READY"
+  vercel_production_commit_sha: "c318879435f150f880c67074c8c46020ee0a6280"
+  pr_that_produced_sha: "281"
   rationale: >-
-    First commit simultaneously current on main, integration-green, and live in
-    production, and the commit that made subject-SHA authorization enforceable.
-  # Recorded limitations. Both are stated rather than assumed, because an
-  # unverified claim in a governance record is worse than an absent one.
+    Merge commit of PR #281 (Owner Activation and Data Path Repair), simultaneously:
+    current main; Main Integration green (run 31073684985, 43 steps all green);
+    deployed to Vercel production (dpl_BkDd9NCS43tF2mcRsSNWyZC4rQ7v, READY, alias
+    o-ps-iq.vercel.app). Supersedes D-9 (ef44972882), which was invalidated when
+    PR #281 advanced production. PR #281 is a supporting delivery, not the Stage 7
+    closure PR; this closure_subject_sha update is a provenance correction only.
+  # Recorded limitations. Stated rather than assumed, because an unverified claim
+  # in a governance record is worse than an absent one.
   unverified:
-    production_alias: >-
-      Whether o-ps-iq.vercel.app resolves to deployment 5731543184 was NOT
-      verified. The check requires Vercel API access; no Vercel token or CLI was
-      available, and the GitHub deployments API exposes no alias data. The
-      deployment's own URL reported success; the alias binding did not.
+    production_alias_binding: >-
+      The alias o-ps-iq.vercel.app was reported as READY by the Vercel API for
+      deployment dpl_BkDd9NCS43tF2mcRsSNWyZC4rQ7v. Independent DNS resolution
+      was not performed; the alias binding is recorded as API-reported only.
     git_commit_signature: >-
-      Deployment-side Git commit signature verification was NOT checked, for the
-      same reason.
+      Deployment-side Git commit signature verification was NOT checked.
   deployment_success_is_not_readiness: >-
-    Vercel deployment state 'success' means the deployment completed. It is not
+    Vercel deployment state 'READY' means the deployment completed. It is not
     application readiness, not Owner Mode readiness, and not Stage 7 progress.
     Authorizing this subject SHA proves no invariant and closes no stage.
 
@@ -458,6 +463,16 @@ amendments:
     applied_in: PR-1A
     authority: "clarification; no owner decision required"
     summary: "gate_semantics added: a passing integrity gate is not Stage 7 progress"
+  - id: A9
+    date: "2026-08-06"
+    applied_in: "claude/pr-281-merge-verify-7oa7of"
+    authority: "owner decision D-10, authorized 2026-08-06"
+    summary: >-
+      closure_subject_sha updated from ef44972882b35709ee12c54d2dfb7395a6477bf8
+      (D-9, 2026-08-03, PR #278 merge) to c318879435f150f880c67074c8c46020ee0a6280
+      (D-10, 2026-08-06, PR #281 merge). D-9 was invalidated when PR #281 advanced
+      production past the D-9 SHA. Stage 7 status PENDING, all invariants PENDING,
+      required_evidence null — no closure evidence changed.
 
 # Amendments identified during reconciliation that are NOT applied, because the owner
 # decision they depend on has not been issued. Listed so they cannot be silently lost.
