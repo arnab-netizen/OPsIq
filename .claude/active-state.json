@@ -10,8 +10,8 @@
   "owner_outcome": "Owner has proof that Stages 3, 4, 5, and 6 are implemented and accepted. Factory Stage 7 proves that OpsIQ can be deployed securely for its owner, operated without developer assistance, produce correct and actionable guidance from real business data, govern approved execution, capture outcomes and feedback, recover safely from realistic failures, and be accepted for unrestricted private owner use.",
   "current_gap": "Factory Stage 7 remains AUTHORIZED_CONTRACT_DEFINED; factory-stage-7-closure is PENDING with all four required evidence fields null. Stage 8 closure is NOT verified — no STAGE_8_PRIVATE_OWNER_PRODUCTION_CLOSED record exists in any commit on any ref, and there is no evidence for production migration verification, owner bootstrap, authenticated owner flow, a governed owner mutation with its audit event, production readiness, or scheduler execution.",
   "next_target": "Owner decision. Either produce the missing Factory Stage 7 / Stage 8 production evidence, or explicitly re-scope. No stage may be closed without the four required evidence fields.",
-  "main_sha": "c318879435f150f880c67074c8c46020ee0a6280",
-  "active_branch": "claude/pr-281-merge-verify-7oa7of",
+  "main_sha": "b8bace4fe13b5140ea03f86fc571888f52481b75",
+  "active_branch": "claude/stage7-d11-stable-subject",
   "authorized_from_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
   "deployment_readiness": "FACTORY_STAGE_6_PROVEN — deployment and production readiness closure complete and accepted",
   "factory_stage_6": "ACCEPTED",
@@ -112,6 +112,22 @@
       "result": "GREEN — Main Integration 31073684985 success on merge SHA c318879435 (43 steps all green). Vercel production dpl_BkDd9NCS43tF2mcRsSNWyZC4rQ7v READY. Authorized merge SHA: c318879435f150f880c67074c8c46020ee0a6280. Closes no stage. Triggered Stage 7 closure_subject_sha update from ef44972882 to c318879435 (D-10).",
       "closes_no_stage": true,
       "stage7_subject_sha_consequence": "D-10: closure_subject_sha updated from ef44972882 to c318879435"
+    },
+    {
+      "number": 283,
+      "title": "fix(deploy): skip governance-only Vercel deployments safely",
+      "head_sha": "fd4f2b9b14370f75f61a1467e77e1395a5310d83",
+      "merge_sha": "b8bace4fe13b5140ea03f86fc571888f52481b75",
+      "merge_parent_1": "5d0f88e29ca8b9f127ebc0563d97703349adceff",
+      "merge_parent_2": "fd4f2b9b14370f75f61a1467e77e1395a5310d83",
+      "main_integration_run": "31113081687",
+      "main_integration_conclusion": "success",
+      "vercel_production_deployment": "dpl_4wtSfudSQwVcbH2c5r39Vh1U739s",
+      "vercel_production_state": "READY",
+      "scope": "GOVERNANCE_ONLY_DEPLOYMENT_CONTROL — scripts/vercel-ignore-build.mjs, vercel.json ignoreCommand, 3 test/governance files; no schema, migration, runtime or product change",
+      "result": "GREEN — Main Integration 31113081687 success on merge SHA b8bace4f. Vercel production dpl_4wtSfudSQwVcbH2c5r39Vh1U739s READY. Governance-only deployment suppression merged and production verified. Triggered Stage 7 closure_subject_sha update from c318879435 to b8bace4f (D-11).",
+      "closes_no_stage": true,
+      "stage7_subject_sha_consequence": "D-11: closure_subject_sha updated from c318879435f150f880c67074c8c46020ee0a6280 to b8bace4fe13b5140ea03f86fc571888f52481b75"
     }
   ],
   "factory_stage_acceptance": {
