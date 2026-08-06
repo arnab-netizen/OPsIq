@@ -89,6 +89,12 @@ export interface OwnerOnboardingResult extends OnboardingState {
   businessId: string;
   found: boolean;
   generatedFromRuntime: true;
+  /**
+   * The categories with real supplied records, as already computed for `computeOnboardingState`.
+   * Exposed (not recomputed) so the owner-facing data hub can show per-category completion without
+   * inventing a second notion of "supplied".
+   */
+  suppliedCategories: OwnerInputCategory[];
 }
 
 /** Build the onboarding state for ONE workspace+business from real persisted state. */
@@ -99,7 +105,7 @@ export async function getOwnerOnboardingState(deps: OwnerOnboardingDeps): Promis
 
   if (!business) {
     const empty = computeOnboardingState({ businessName: "", profileType: "generic", ownerRole: "owner_operated", suppliedCategories: [] });
-    return { ...empty, workspaceId, businessId, found: false, generatedFromRuntime: true };
+    return { ...empty, workspaceId, businessId, found: false, generatedFromRuntime: true, suppliedCategories: [] };
   }
 
   const profileType = mapBusinessTypeToProfile(business.businessType);
@@ -112,5 +118,5 @@ export async function getOwnerOnboardingState(deps: OwnerOnboardingDeps): Promis
     ownerRole: role,
     suppliedCategories: supplied,
   });
-  return { ...state, workspaceId, businessId, found: true, generatedFromRuntime: true };
+  return { ...state, workspaceId, businessId, found: true, generatedFromRuntime: true, suppliedCategories: supplied };
 }

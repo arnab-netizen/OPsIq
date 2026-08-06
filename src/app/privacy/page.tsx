@@ -1,22 +1,22 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Privacy | Rebilix",
-  description: "How Rebilix handles your information during beta.",
+  title: "Privacy | OpsIQ",
+  description: "How OpsIQ handles your information during beta.",
 };
 
 export default function PrivacyPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-2xl px-6 py-12 text-foreground">
       <Link href="/" className="text-sm text-primary hover:underline">
-        &larr; Back to Rebilix
+        &larr; Back to OpsIQ
       </Link>
       <h1 className="mt-6 text-3xl font-bold tracking-tight">Privacy</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Rebilix is currently in beta.</p>
+      <p className="mt-2 text-sm text-muted-foreground">OpsIQ is currently in beta.</p>
 
       <div className="mt-8 space-y-5 text-sm leading-relaxed text-muted-foreground">
         <p>
-          Rebilix is a beta product. Please <strong>do not enter sensitive personal, customer,
+          OpsIQ is a beta product. Please <strong>do not enter sensitive personal, customer,
           employee, financial-account, password, or otherwise confidential business information</strong>{" "}
           when describing your business.
         </p>
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
           .
         </p>
         <p>
-          Because Rebilix is in beta, this notice and the service may change. We&rsquo;ll keep this
+          Because OpsIQ is in beta, this notice and the service may change. We&rsquo;ll keep this
           page updated as the product matures.
         </p>
       </div>

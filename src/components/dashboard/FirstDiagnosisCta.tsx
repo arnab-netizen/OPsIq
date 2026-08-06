@@ -10,8 +10,9 @@ export default function FirstDiagnosisCta() {
     <div className="mt-4 rounded-lg border border-border bg-muted/40 p-6">
       <h3 className="text-base font-semibold text-foreground">Run your first diagnosis</h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Describe your business and Rebilix will return risks, findings, and a prioritized action
-        plan.
+        Describe your business and OpsIQ will return risks, findings, and a prioritized action plan.
+        This first pass uses only what you type here — add your real records in Add &amp; Connect Data
+        to make it specific to your business.
       </p>
       <Link
         href="/diagnosis"

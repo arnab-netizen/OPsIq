@@ -36,12 +36,12 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
   try {
     const decision = await getDecision(id, workspaceId);
     return {
-      title: `Decision: ${decision.problem} | Rebilix`,
+      title: `Decision: ${decision.problem} | OpsIQ`,
       description: decision.action,
     };
   } catch {
     return {
-      title: "Decision | Rebilix",
+      title: "Decision | OpsIQ",
     };
   }
 }

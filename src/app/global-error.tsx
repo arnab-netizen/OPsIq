@@ -30,10 +30,10 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
         }}
       >
         <div style={{ maxWidth: "28rem" }}>
-          <div style={{ fontWeight: 700, fontSize: "1.25rem", color: "#4f46e5" }}>Rebilix</div>
+          <div style={{ fontWeight: 700, fontSize: "1.25rem", color: "#4f46e5" }}>OpsIQ</div>
           <h1 style={{ fontWeight: 700, fontSize: "1.5rem", marginTop: "0.75rem" }}>Something went wrong</h1>
           <p style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
-            Rebilix hit an unexpected error. You can try again, or return to the app. If it keeps
+            OpsIQ hit an unexpected error. You can try again, or return to the app. If it keeps
             happening, contact beta support and we&rsquo;ll help.
           </p>
           <div style={{ marginTop: "1rem", display: "flex", justifyContent: "center" }}>

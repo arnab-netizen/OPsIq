@@ -145,7 +145,7 @@ export default function OnboardingFlow() {
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome to Rebilix
+            Welcome to OpsIQ
           </h1>
           <p className="text-gray-600">
             Let's get you started in 4 simple steps

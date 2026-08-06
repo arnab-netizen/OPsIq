@@ -7,9 +7,9 @@ import GlobalError from "@/app/global-error";
 afterEach(() => cleanup());
 
 describe("App route error boundary (src/app/error.tsx)", () => {
-  it("renders the Rebilix brand and a user-safe message", () => {
+  it("renders the OpsIQ brand and a user-safe message", () => {
     const { container } = render(<AppError error={new Error("x")} reset={vi.fn()} />);
-    expect(container.textContent ?? "").toMatch(/Rebilix/);
+    expect(container.textContent ?? "").toMatch(/OpsIQ/);
     expect(container.textContent ?? "").toMatch(/Something went wrong/i);
   });
 

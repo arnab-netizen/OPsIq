@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Rebilix - Governed Business Intervention OS",
+  title: "OpsIQ - Governed Business Intervention OS",
   description:
-    "Rebilix is a governed business intervention and consulting operating system.",
+    "OpsIQ is a governed business intervention and consulting operating system.",
 };
 
 export default function RootLayout({

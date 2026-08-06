@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Decision Inbox | Rebilix",
+  title: "Decision Inbox | OpsIQ",
   description: "Govern and approve business decisions",
 };
 
