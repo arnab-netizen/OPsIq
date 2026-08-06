@@ -60,6 +60,10 @@ const KNOWN_PREFIXES: Array<{
   { prefix: "support-", classification: "GOVERNANCE" },
   { prefix: "synthetic-", classification: "GOVERNANCE" },
   { prefix: "validate-", classification: "GOVERNANCE" },
+  // vercel-ignore-build.mjs is the Vercel Ignored Build Step script. It reads git history
+  // to classify changed paths and exits with a code that controls Vercel's build decision.
+  // No HTTP calls, no database access, no mutation of any governed record.
+  { prefix: "vercel-", classification: "GOVERNANCE" },
   { prefix: "verify-", classification: "GOVERNANCE" },
 ];
 
