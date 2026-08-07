@@ -239,18 +239,37 @@ function resolveMainSha() {
   return result.stdout.trim();
 }
 
+// AUTH_SHA model: load the key registry from origin/main HEAD (AUTH_SHA) so the
+// public key does not need to exist at INF_SHA. The owner commits it to main after
+// PR-A merges as a governance-only action, before dispatching this workflow.
+function fetchKeyRegistryYaml(sha) {
+  const result = spawnSync(
+    'git', ['show', `${sha}:.governance/stage7-signing-keys.yaml`],
+    { cwd: repoRoot, encoding: 'utf8' },
+  );
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'git show exited non-zero');
+  }
+  return result.stdout;
+}
+
 let authorizationManifestSha;
+let keyRegistry;
 try {
-  authorizationManifestSha = resolveCaptureAuthorization({
+  ({ authorizationManifestSha, keyRegistry } = resolveCaptureAuthorization({
     subjectSha,
     fetchMainManifest,
     resolveMainSha,
-  });
+    fetchKeyRegistryYaml,
+  }));
 } catch (error) {
   refuse(2, error.message);
 }
 
-// ─── Assemble ─────────────────────────────────────────────────────────────────
+// ─── Signing key — required ───────────────────────────────────────────────────
+// Rule 16: no unsigned artifacts. EVIDENCE_SIGNING_KEY must be present.
+// The key is provided via GitHub Environment secret (stage7-evidence-signing),
+// which is accessible only from tag refs matching stage7-evidence-subject-*.
 
 const signingKey = process.env.EVIDENCE_SIGNING_KEY?.trim() || null;
 const signingKeyId = process.env.EVIDENCE_SIGNING_KEY_ID?.trim() || DEFAULT_SIGNING_KEY_ID;

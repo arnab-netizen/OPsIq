@@ -914,9 +914,11 @@ export function explainAcceptance({ signatureState, provenanceState }) {
  * unit-testable without git. Production callers pass real git operations.
  * Test callers pass fixture functions. No runtime env var bypass exists.
  *
- * The gate reads `closure_subject_sha` from the bundle manifest at origin/main
- * and verifies it equals `subjectSha`. This ensures evidence is only captured
- * against the exact commit the owner authorized via D-13.
+ * AUTH_SHA model: the gate reads `closure_subject_sha` from the bundle manifest at
+ * origin/main, verifies it equals `subjectSha`, and then — if `fetchKeyRegistryYaml`
+ * is provided — loads the Ed25519 key registry from that same AUTH_SHA commit. The
+ * returned `keyRegistry` is used for immediate post-signing verification, so the
+ * public key never needs to exist at INF_SHA: it is read from AUTH_SHA at runtime.
  *
  * @param {object} opts
  * @param {string} opts.subjectSha        GITHUB_SHA of the current run (40 hex chars)
@@ -925,12 +927,22 @@ export function explainAcceptance({ signatureState, provenanceState }) {
  *   at origin/main. Must throw on failure.
  * @param {() => string} opts.resolveMainSha
  *   Returns the 40-char lowercase SHA of origin/main HEAD. Must throw on failure.
- * @returns {string} The 40-char SHA of origin/main at the time of authorization.
- *   This is recorded as `authorization_manifest_sha` in the artifact, binding the
- *   D-13 manifest state to the signed payload.
+ * @param {((sha: string) => string) | null} [opts.fetchKeyRegistryYaml]
+ *   Optional. Given AUTH_SHA, returns the YAML content of
+ *   .governance/stage7-signing-keys.yaml at that commit. When provided, the
+ *   returned `keyRegistry` will contain the active Ed25519 public keys from AUTH_SHA.
+ *   When omitted, `keyRegistry` is an empty Map (backward-compatible for tests).
+ * @returns {{ authorizationManifestSha: string, keyRegistry: Map<string, string> }}
+ *   `authorizationManifestSha` is recorded in the artifact; `keyRegistry` is used
+ *   for immediate signature verification. Both are derived from the same AUTH_SHA.
  * @throws {Error} Message contains 'OPTION A authorization gate' when authorization fails.
  */
-export function resolveCaptureAuthorization({ subjectSha, fetchMainManifest, resolveMainSha }) {
+export function resolveCaptureAuthorization({
+  subjectSha,
+  fetchMainManifest,
+  resolveMainSha,
+  fetchKeyRegistryYaml = null,
+}) {
   let rawManifest;
   try {
     rawManifest = fetchMainManifest();
@@ -987,33 +999,47 @@ export function resolveCaptureAuthorization({ subjectSha, fetchMainManifest, res
     );
   }
 
-  return mainSha.trim();
+  const authorizationManifestSha = mainSha.trim();
+
+  // AUTH_SHA model: load key registry from AUTH_SHA so the public key does not need
+  // to exist at INF_SHA. The owner commits the public key to main (AUTH_SHA) as a
+  // governance-only commit AFTER PR-A merges, before dispatching the capture workflow.
+  let keyRegistry = new Map();
+  if (typeof fetchKeyRegistryYaml === 'function') {
+    let yamlContent;
+    try {
+      yamlContent = fetchKeyRegistryYaml(authorizationManifestSha);
+    } catch (error) {
+      throw new Error(
+        `OPTION A authorization gate: could not load key registry from AUTH_SHA ` +
+        `${authorizationManifestSha} — ${error.message}. ` +
+        `The owner must commit the Ed25519 public key to ` +
+        `.governance/stage7-signing-keys.yaml on main before dispatching capture.`,
+      );
+    }
+    keyRegistry = parseKeyRegistryYaml(yamlContent);
+  }
+
+  return { authorizationManifestSha, keyRegistry };
 }
 
 // ─── Key registry ─────────────────────────────────────────────────────────────
 
 /**
- * Load the Ed25519 public key registry from a YAML file.
+ * Parse an Ed25519 public key registry from a YAML string.
  *
  * Returns a Map<keyId, publicKeyPem> containing only `status: active` Ed25519 keys.
  * Keys with status `pending_owner_provisioning` or `revoked` are skipped.
  *
- * The file format is the versioned registry at .governance/stage7-signing-keys.yaml.
- * No runtime path override is accepted — callers always pass the hardcoded path.
+ * Accepts the YAML content directly so callers can supply it from any source —
+ * a file, a git-show command, or a test fixture.
  *
- * @param {string} filePath  absolute path to the registry YAML file
+ * @param {string} yamlContent  YAML content of the key registry
  * @returns {Map<string, string>} key_id → public key in PEM format
  */
-export function loadKeyRegistry(filePath) {
-  let raw;
-  try {
-    raw = readFileSync(filePath, 'utf8');
-  } catch (error) {
-    throw new Error(`could not read key registry from ${filePath}: ${error.message}`);
-  }
-
+export function parseKeyRegistryYaml(yamlContent) {
   const keyMap = new Map();
-  const lines = raw.split('\n');
+  const lines = String(yamlContent ?? '').split('\n');
   let current = null;
 
   const unquote = (s) => {
@@ -1060,6 +1086,26 @@ export function loadKeyRegistry(filePath) {
   finalize(current);
 
   return keyMap;
+}
+
+/**
+ * Load the Ed25519 public key registry from a YAML file.
+ *
+ * Reads the file and delegates to parseKeyRegistryYaml. The file format is the
+ * versioned registry at .governance/stage7-signing-keys.yaml. No runtime path
+ * override is accepted — callers always pass the hardcoded path.
+ *
+ * @param {string} filePath  absolute path to the registry YAML file
+ * @returns {Map<string, string>} key_id → public key in PEM format
+ */
+export function loadKeyRegistry(filePath) {
+  let raw;
+  try {
+    raw = readFileSync(filePath, 'utf8');
+  } catch (error) {
+    throw new Error(`could not read key registry from ${filePath}: ${error.message}`);
+  }
+  return parseKeyRegistryYaml(raw);
 }
 
 // ─── Proof-artifact resolution (G-1) ──────────────────────────────────────────

@@ -56,6 +56,8 @@ import {
   explainAcceptance,
   loadEvidenceArtifactIndex,
   loadKeyRegistry,
+  parseKeyRegistryYaml,
+  verifySignature,
 } from './lib/evidence-artifact.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -97,18 +99,42 @@ for (let i = 0; i < argv.length; i += 1) {
 // When the registry has active keys (production post-provisioning), use it.
 // When the registry has no active keys (pending_owner_provisioning placeholder),
 // fall back to EVIDENCE_SIGNING_KEY env var so tests can still verify signatures.
+//
+// In --from-auth-sha-registry mode the registry is NOT loaded at startup; each
+// artifact's authorization_manifest_sha is used to load its own registry from git.
 const KEY_REGISTRY_PATH = join(repoRoot, '.governance', 'stage7-signing-keys.yaml');
 let keyRegistry = new Map();
-try {
-  keyRegistry = loadKeyRegistry(KEY_REGISTRY_PATH);
-} catch {
-  // Registry file absent or unreadable — proceed with empty registry.
-  // Signature state will be UNCHECKED or rely on env var fallback below.
+if (!options.fromAuthShaRegistry) {
+  try {
+    keyRegistry = loadKeyRegistry(KEY_REGISTRY_PATH);
+  } catch {
+    // Registry file absent or unreadable — proceed with empty registry.
+  }
 }
 const evidenceSigningKeyPem = process.env.EVIDENCE_SIGNING_KEY?.trim() || null;
 // Registry takes precedence; env var is a fallback for test suites that
 // cannot commit an active key but need signature verification.
 const signingKey = keyRegistry.size > 0 ? keyRegistry : evidenceSigningKeyPem;
+
+/**
+ * Load the key registry from a specific git commit via `git show`.
+ * Returns an empty Map if the file is absent or unreadable at that SHA.
+ *
+ * Used in --from-auth-sha-registry mode so the trusted verifier reads each
+ * artifact's registry from its authorization_manifest_sha, not from the local
+ * working-tree copy (which is at INF_SHA, not AUTH_SHA).
+ *
+ * @param {string} sha  40-character lowercase commit SHA
+ * @returns {Map<string, string>} key_id → public key PEM
+ */
+function loadKeyRegistryAtSha(sha) {
+  const result = spawnSync(
+    'git', ['show', `${sha}:.governance/stage7-signing-keys.yaml`],
+    { cwd: repoRoot, encoding: 'utf8' },
+  );
+  if (result.status !== 0) return new Map();
+  return parseKeyRegistryYaml(result.stdout);
+}
 
 const githubToken = process.env.GH_TOKEN?.trim() || process.env.GITHUB_TOKEN?.trim() || null;
 const ownerLogins = (process.env.EVIDENCE_OWNER_LOGINS ?? '')
