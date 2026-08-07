@@ -41,8 +41,8 @@ const root = join(__dirname, "..", "..", "..");
 const STAGE_7_ID = "factory-stage-7-closure";
 const SIGNING_KEY = "g1-test-signing-key-not-a-real-secret";
 const SUBJECT_SHA = "f129fb8633b38230c16fb44aed8f5f90c8f4b8a9";
-/** Owner decision D-11, 2026-08-06: the one commit Stage 7 evidence may describe. */
-const AUTHORIZED_SUBJECT_SHA = "b8bace4fe13b5140ea03f86fc571888f52481b75";
+/** Owner decision D-12, 2026-08-07: the one commit Stage 7 evidence may describe. */
+const AUTHORIZED_SUBJECT_SHA = "036c526940f349d7d06e05635f29c064c78ba71b";
 
 const CANONICAL_IDS = Array.from({ length: 16 }, (_, i) => `S7-I${i + 1}`);
 
@@ -832,9 +832,9 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
   });
 
   /**
-   * D-11 replaced the D-10 assertion (PR #281 merge SHA c318879435). PR #283
-   * merged the governance-only Vercel deployment-control script, making b8bace4
-   * the stable production subject; the owner authorized b8bace4 as the new subject
+   * D-12 replaced the D-11 assertion (PR #283 merge SHA b8bace4f). PR #285
+   * introduced permanent CI trigger hardening and recovery controls, making 036c5269
+   * the stable production subject; the owner authorized 036c5269 as the new subject
    * SHA. The guarantee worth holding is narrower and stricter: exactly one commit
    * is authorized, it is the one the owner named, and authorizing it moved nothing
    * else in the contract.
@@ -907,14 +907,14 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
     const auth = raw.closure_subject_sha_authorization as Record<string, unknown>;
-    expect(auth.decision).toBe("D-11");
+    expect(auth.decision).toBe("D-12");
     // The SHA the owner authorized must be the SHA CI tested and the SHA production
     // deployed. A record that names three different commits records nothing.
     expect(raw.closure_subject_sha).toBe(AUTHORIZED_SUBJECT_SHA);
     expect(auth.main_integration_tested_sha).toBe(AUTHORIZED_SUBJECT_SHA);
     expect(auth.vercel_production_commit_sha).toBe(AUTHORIZED_SUBJECT_SHA);
-    expect(auth.main_integration_run).toBe("31113081687");
-    expect(auth.vercel_production_deployment).toBe("dpl_4wtSfudSQwVcbH2c5r39Vh1U739s");
+    expect(auth.main_integration_run).toBe("31152964750");
+    expect(auth.vercel_production_deployment).toBe("dpl_14RgWwfdbpp6RWgzY3ncVqE25VQf");
     // The limitations must stay recorded, not quietly dropped once inconvenient.
     const unverified = auth.unverified as Record<string, string>;
     expect(unverified.production_alias_binding).toMatch(/API-reported only/);

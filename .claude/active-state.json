@@ -1,7 +1,7 @@
 {
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
-  "last_updated": "2026-08-06",
+  "last_updated": "2026-08-07",
   "factory_stage": "FACTORY_STAGE_7",
   "factory_stage_status": "AUTHORIZED_CONTRACT_FROZEN_PARTIAL",
   "factory_stage_scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS",
@@ -10,8 +10,8 @@
   "owner_outcome": "Owner has proof that Stages 3, 4, 5, and 6 are implemented and accepted. Factory Stage 7 proves that OpsIQ can be deployed securely for its owner, operated without developer assistance, produce correct and actionable guidance from real business data, govern approved execution, capture outcomes and feedback, recover safely from realistic failures, and be accepted for unrestricted private owner use.",
   "current_gap": "Factory Stage 7 remains AUTHORIZED_CONTRACT_DEFINED; factory-stage-7-closure is PENDING with all four required evidence fields null. Stage 8 closure is NOT verified — no STAGE_8_PRIVATE_OWNER_PRODUCTION_CLOSED record exists in any commit on any ref, and there is no evidence for production migration verification, owner bootstrap, authenticated owner flow, a governed owner mutation with its audit event, production readiness, or scheduler execution.",
   "next_target": "Owner decision. Either produce the missing Factory Stage 7 / Stage 8 production evidence, or explicitly re-scope. No stage may be closed without the four required evidence fields.",
-  "main_sha": "b8bace4fe13b5140ea03f86fc571888f52481b75",
-  "active_branch": "claude/stage7-d11-stable-subject",
+  "main_sha": "036c526940f349d7d06e05635f29c064c78ba71b",
+  "active_branch": "claude/stage7-d12-stable-subject",
   "authorized_from_sha": "f93bd37a86ba83d36bdc45245bb648c45eb9817b",
   "deployment_readiness": "FACTORY_STAGE_6_PROVEN — deployment and production readiness closure complete and accepted",
   "factory_stage_6": "ACCEPTED",
@@ -128,6 +128,23 @@
       "result": "GREEN — Main Integration 31113081687 success on merge SHA b8bace4f. Vercel production dpl_4wtSfudSQwVcbH2c5r39Vh1U739s READY. Governance-only deployment suppression merged and production verified. Triggered Stage 7 closure_subject_sha update from c318879435 to b8bace4f (D-11).",
       "closes_no_stage": true,
       "stage7_subject_sha_consequence": "D-11: closure_subject_sha updated from c318879435f150f880c67074c8c46020ee0a6280 to b8bace4fe13b5140ea03f86fc571888f52481b75"
+    },
+    {
+      "number": 285,
+      "title": "fix(ci): add ready_for_review trigger and workflow_dispatch recovery gate",
+      "branch": "claude/fix-ci-recovery-controls",
+      "head_sha": "a1bcaeeabe22e216abdc15a7dd8041043bb5d6f9",
+      "merge_sha": "036c526940f349d7d06e05635f29c064c78ba71b",
+      "merge_parent_1": "9691b3b314f42e7526137ea6ed2d590262d32ab0",
+      "merge_parent_2": "a1bcaeeabe22e216abdc15a7dd8041043bb5d6f9",
+      "main_integration_run": "31152964750",
+      "main_integration_conclusion": "success",
+      "vercel_production_deployment": "dpl_14RgWwfdbpp6RWgzY3ncVqE25VQf",
+      "vercel_production_state": "READY",
+      "scope": "CI_RECOVERY_CONTROLS — .github/workflows/ci.yml, .github/workflows/main-integration.yml, scripts/ci-governance-check.mjs, src/__tests__/ci-cd/ci-trigger-governance.test.ts; no schema, migration, runtime or product change",
+      "result": "GREEN — Main Integration 31152964750 success on merge SHA 036c526940f349d7d06e05635f29c064c78ba71b. Vercel production dpl_14RgWwfdbpp6RWgzY3ncVqE25VQf READY. CI_TRIGGER_GAP_PR284 and CI_RECOVERY_DISPATCH_ABSENT permanently closed.",
+      "closes_no_stage": true,
+      "stage7_subject_sha_consequence": "D-12: closure_subject_sha updated from b8bace4fe13b5140ea03f86fc571888f52481b75 to 036c526940f349d7d06e05635f29c064c78ba71b"
     }
   ],
   "factory_stage_acceptance": {

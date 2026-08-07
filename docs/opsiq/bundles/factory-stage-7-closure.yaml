@@ -14,7 +14,7 @@ authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 authorized_branch: "claude/opsiq-stage-7-loop-main"
 authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 
-# ─── Authorized evidence subject SHA (owner decision D-11) ───────────────────
+# ─── Authorized evidence subject SHA (owner decision D-12) ───────────────────
 # The single commit every Stage 7 evidence artifact must describe. An artifact
 # whose subject_sha is any other commit is refused with SUBJECT_SHA_NOT_AUTHORIZED,
 # because evidence captured against another commit does not describe this one.
@@ -27,42 +27,43 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 # and it proves nothing on its own — required_evidence below remains null, every
 # invariant remains PENDING, and Stage 7 remains open.
 #
-# D-11 supersedes D-10 (c318879435f150f880c67074c8c46020ee0a6280). D-10 was a
-# provenance correction after PR #281 advanced production. D-11 advances the subject
-# to the merge commit of PR #283, which is now stable: the governance-only
-# deployment-control script (scripts/vercel-ignore-build.mjs) prevents future
-# governance-only commits from producing new Vercel production SHAs.
-# Authorized by the owner on 2026-08-06.
-closure_subject_sha: "b8bace4fe13b5140ea03f86fc571888f52481b75"
+# D-12 supersedes D-11 (b8bace4fe13b5140ea03f86fc571888f52481b75). D-11 was the
+# merge commit of PR #283 (Vercel governance-only deployment control). D-12 advances
+# the subject to the merge commit of PR #285, which added permanent CI trigger
+# hardening and recovery controls. The governance-only deployment-control script
+# (scripts/vercel-ignore-build.mjs) remains active and enforced.
+# Authorized by the owner on 2026-08-07.
+closure_subject_sha: "036c526940f349d7d06e05635f29c064c78ba71b"
 closure_subject_sha_authorization:
-  decision: "D-11"
+  decision: "D-12"
   authorized_by: "owner"
-  authorized_date: "2026-08-06"
-  authorization_text: "AUTHORIZE_STAGE7_SUBJECT_SHA: b8bace4fe13b5140ea03f86fc571888f52481b75"
-  supersedes: "D-10"
-  superseded_sha: "c318879435f150f880c67074c8c46020ee0a6280"
-  main_integration_run: "31113081687"
+  authorized_date: "2026-08-07"
+  authorization_text: "AUTHORIZE_STAGE7_SUBJECT_SHA: 036c526940f349d7d06e05635f29c064c78ba71b"
+  supersedes: "D-11"
+  superseded_sha: "b8bace4fe13b5140ea03f86fc571888f52481b75"
+  pr_that_produced_sha: "285"
+  pr_head: "a1bcaeeabe22e216abdc15a7dd8041043bb5d6f9"
+  main_integration_run: "31152964750"
   main_integration_conclusion: "success"
-  main_integration_tested_sha: "b8bace4fe13b5140ea03f86fc571888f52481b75"
-  vercel_production_deployment: "dpl_4wtSfudSQwVcbH2c5r39Vh1U739s"
+  main_integration_tested_sha: "036c526940f349d7d06e05635f29c064c78ba71b"
+  vercel_production_deployment: "dpl_14RgWwfdbpp6RWgzY3ncVqE25VQf"
   vercel_production_state: "READY"
-  vercel_production_commit_sha: "b8bace4fe13b5140ea03f86fc571888f52481b75"
-  pr_that_produced_sha: "283"
+  vercel_production_commit_sha: "036c526940f349d7d06e05635f29c064c78ba71b"
   rationale: >-
-    Merge commit of PR #283 (Vercel governance-only deployment control), simultaneously:
-    current main; Main Integration green (run 31113081687, success); deployed to Vercel
-    production (dpl_4wtSfudSQwVcbH2c5r39Vh1U739s, READY, alias o-ps-iq.vercel.app).
-    Supersedes D-10 (c318879435). This subject is stable: the governance-only
-    deployment-control script (scripts/vercel-ignore-build.mjs, wired via
-    vercel.json ignoreCommand) prevents future governance-only commits from producing
-    new Vercel production SHAs. Future governance-only merges to main will be skipped
-    by Vercel; only runtime-relevant changes trigger new production deployments.
+    Merge commit of PR #285 (permanent CI trigger hardening and recovery controls),
+    simultaneously: current main HEAD; Main Integration green (run 31152964750,
+    success, 036c526940f349d7d06e05635f29c064c78ba71b tested); Vercel production
+    deployment dpl_14RgWwfdbpp6RWgzY3ncVqE25VQf READY at merge SHA
+    036c526940f349d7d06e05635f29c064c78ba71b (alias o-ps-iq.vercel.app).
+    Supersedes D-11 (b8bace4f). The governance-only deployment-control script
+    (scripts/vercel-ignore-build.mjs, wired via vercel.json ignoreCommand) remains
+    active and enforced.
   # Recorded limitations. Stated rather than assumed, because an unverified claim
   # in a governance record is worse than an absent one.
   unverified:
     production_alias_binding: >-
       The alias o-ps-iq.vercel.app was reported as bound to deployment
-      dpl_4wtSfudSQwVcbH2c5r39Vh1U739s by the Vercel API. Independent DNS
+      dpl_14RgWwfdbpp6RWgzY3ncVqE25VQf by the Vercel API. Independent DNS
       resolution was not performed; the alias binding is recorded as API-reported only.
     git_commit_signature: >-
       Deployment-side Git commit signature verification was NOT checked.
@@ -492,6 +493,16 @@ amendments:
       Vercel deployment-control script (scripts/vercel-ignore-build.mjs), making
       b8bace4 the stable production subject. Stage 7 status PENDING, all invariants
       PENDING, required_evidence null — no closure evidence changed.
+  - id: A11
+    date: "2026-08-07"
+    applied_in: "claude/stage7-d12-stable-subject"
+    authority: "owner decision D-12, authorized 2026-08-07"
+    summary: >-
+      closure_subject_sha updated from b8bace4fe13b5140ea03f86fc571888f52481b75
+      (D-11, 2026-08-06, PR #283 merge) to 036c526940f349d7d06e05635f29c064c78ba71b
+      (D-12, 2026-08-07, PR #285 merge). PR #285 introduced permanent CI trigger
+      hardening and recovery controls. Stage 7 status PENDING, all invariants PENDING,
+      required_evidence null — no closure evidence changed.
 
 # Amendments identified during reconciliation that are NOT applied, because the owner
 # decision they depend on has not been issued. Listed so they cannot be silently lost.
