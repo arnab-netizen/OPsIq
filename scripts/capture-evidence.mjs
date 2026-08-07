@@ -239,26 +239,55 @@ function resolveMainSha() {
   return result.stdout.trim();
 }
 
+// AUTH_SHA model: load the key registry from origin/main HEAD (AUTH_SHA) so the
+// public key does not need to exist at INF_SHA. The owner commits it to main after
+// PR-A merges as a governance-only action, before dispatching this workflow.
+function fetchKeyRegistryYaml(sha) {
+  const result = spawnSync(
+    'git', ['show', `${sha}:.governance/stage7-signing-keys.yaml`],
+    { cwd: repoRoot, encoding: 'utf8' },
+  );
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'git show exited non-zero');
+  }
+  return result.stdout;
+}
+
 let authorizationManifestSha;
+let keyRegistry;
 try {
-  authorizationManifestSha = resolveCaptureAuthorization({
+  ({ authorizationManifestSha, keyRegistry } = resolveCaptureAuthorization({
     subjectSha,
     fetchMainManifest,
     resolveMainSha,
-  });
+    fetchKeyRegistryYaml,
+  }));
 } catch (error) {
   refuse(2, error.message);
 }
 
-// ─── Assemble ─────────────────────────────────────────────────────────────────
+// ─── Signing key — required ───────────────────────────────────────────────────
+// Rule 16: no unsigned artifacts. EVIDENCE_SIGNING_KEY must be present.
+// The key is provided via GitHub Environment secret (stage7-evidence-signing),
+// which is accessible only from tag refs matching stage7-evidence-subject-*.
 
 const signingKey = process.env.EVIDENCE_SIGNING_KEY?.trim() || null;
 const signingKeyId = process.env.EVIDENCE_SIGNING_KEY_ID?.trim() || DEFAULT_SIGNING_KEY_ID;
 if (!signingKey) {
-  console.warn(
-    'WARN: EVIDENCE_SIGNING_KEY is not available to this job. The artifact will be written '
-      + 'unsigned and can never exceed acceptance level UNVERIFIED, which may not back a PROVEN '
-      + 'invariant. Provision the secret (spec gap G-2) and re-capture.',
+  refuse(2,
+    'EVIDENCE_SIGNING_KEY is not set. This workflow must run with the GitHub Environment '
+    + 'secret stage7-evidence-signing. An unsigned artifact cannot back a PROVEN invariant '
+    + 'and must not be committed. Provision the secret and re-run.',
+  );
+}
+
+if (keyRegistry.size === 0) {
+  refuse(2,
+    `EVIDENCE_SIGNING_KEY is present but the key registry at AUTH_SHA `
+    + `${authorizationManifestSha} has no active Ed25519 key. `
+    + `The owner must commit the production public key to `
+    + `.governance/stage7-signing-keys.yaml on main (as a governance-only commit `
+    + `after PR-A merges) before dispatching the capture workflow.`,
   );
 }
 
@@ -299,7 +328,13 @@ const artifact = buildEvidenceArtifact(
   { signingKey, signingKeyId },
 );
 
-const { violations } = validateEvidenceArtifact(artifact, { signingKey, fileName: `${artifact.artifact_id}.json` });
+// Verify with the public key registry from AUTH_SHA, not just the private key.
+// This confirms the artifact was signed with a key whose public counterpart
+// is registered on main at AUTH_SHA — fail-closed if verification fails.
+const { violations } = validateEvidenceArtifact(artifact, {
+  signingKey: keyRegistry,
+  fileName: `${artifact.artifact_id}.json`,
+});
 if (violations.length > 0) {
   console.error('REFUSED: the assembled artifact does not satisfy the evidence schema. Nothing was written.');
   for (const violation of violations) console.error(`  - ${violation}`);
