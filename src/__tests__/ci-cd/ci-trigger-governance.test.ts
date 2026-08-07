@@ -48,10 +48,10 @@ const mi = YAML.load(readFileSync(MI_PATH, "utf8")) as Workflow;
 // ─── ci.yml trigger coverage ────────────────────────────────────────────────
 
 describe("ci.yml — pull_request trigger coverage (CI_TRIGGER_GAP_PR284)", () => {
-  const pr = (ci.on as any).pull_request as {
+  const pr = ci.on["pull_request"] as {
     branches?: string[];
     types?: string[];
-  };
+  } | undefined;
 
   it("pull_request trigger is defined", () => {
     expect(pr).toBeDefined();
