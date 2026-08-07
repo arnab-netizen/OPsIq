@@ -149,8 +149,30 @@ if (mergeCandidateContent) {
   check(!hasDirectPR, 'merge-candidate-validation.yml must NOT have a pull_request trigger (dispatch-only)');
 }
 
+// 9. ci.yml must include ready_for_review in pull_request types (CI_TRIGGER_GAP_PR284)
+//    A PR converted from draft to ready fires this event. Without it, CI does not run
+//    when a PR is marked ready and the merged HEAD has no CI evidence.
+if (ciContent) {
+  const hasReadyForReview = /ready_for_review/.test(ciContent);
+  check(hasReadyForReview, 'ci.yml must include ready_for_review in pull_request types — absence caused CI_TRIGGER_GAP_PR284 (draft→ready PRs got no CI run)');
+}
+
+// 10. main-integration.yml must have workflow_dispatch trigger (CI_RECOVERY_DISPATCH_ABSENT)
+//     Without this, a missing or stale main-integration run requires a dummy push to recover.
+const mainIntContent = readWorkflow('main-integration.yml');
+if (mainIntContent) {
+  const hasDispatch = /^\s+workflow_dispatch:/m.test(mainIntContent);
+  check(hasDispatch, 'main-integration.yml must have workflow_dispatch trigger — absence made manual CI recovery require a dummy push (CI_RECOVERY_DISPATCH_ABSENT)');
+
+  // 11. workflow_dispatch on main-integration.yml must not expose an arbitrary SHA or branch input.
+  //     Such an input would let a caller run the full DB suite on a commit that never went through
+  //     PR CI, bypassing the staged gate structure entirely.
+  const hasShaInput = /\bsha\b\s*:/.test(mainIntContent) && /workflow_dispatch/.test(mainIntContent);
+  check(!hasShaInput, 'main-integration.yml workflow_dispatch must NOT expose a sha input — callers cannot target arbitrary commits');
+}
+
 // Summary
-const rulesChecked = SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 5;
+const rulesChecked = SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 8;
 if (violations === 0) {
   console.log(`✓ CI governance check passed (${rulesChecked} rules checked)`);
   process.exit(0);
