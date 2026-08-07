@@ -719,6 +719,15 @@ model OperatorItem {
   verificationConfidence Float?              @map("verification_confidence")
   verifiedAt             DateTime?           @map("verified_at")
   auditTrail             Json?               @map("audit_trail")
+  decisionType           String?             @map("decision_type")
+  problemType            String?             @map("problem_type")
+  baselineValue          Float?              @map("baseline_value")
+  projectedWithoutAction Float?              @map("projected_without_action")
+  outcomeDelta           Float?              @map("outcome_delta")
+  decisionAccuracy       Float?              @map("decision_accuracy")
+  decisionError          Float?              @map("decision_error")
+  executedAt             DateTime?           @map("executed_at")
+  executedBy             String?             @map("executed_by") @db.Uuid
   calibrationRecords     CalibrationRecord[]
   entityLinks            EntityLink[]
   completedByUser        User?               @relation("operator_items_completed_byTousers", fields: [completedBy], references: [id])

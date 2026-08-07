@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { triggerExecutionFailureAlert, triggerBlockedAlert } from "@/services/alerts/alert-service";
@@ -26,7 +27,7 @@ export async function executeDecision(
   let concurrencyBlocked = false;
 
   try {
-    const updated = await db.$transaction(async (tx: any) => {
+    const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const result = await tx.operatorItem.updateMany({
         where: {
           id: decisionId,
@@ -111,7 +112,7 @@ export async function markSuccess(
 
   const now = new Date();
 
-  const updated = await db.$transaction(async (tx: any) => {
+  const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const result = await tx.operatorItem.updateMany({
       where: {
         id: decisionId,
@@ -197,7 +198,7 @@ export async function markFailure(
 
   const now = new Date();
 
-  const updated = await db.$transaction(async (tx: any) => {
+  const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const result = await tx.operatorItem.updateMany({
       where: {
         id: decisionId,
