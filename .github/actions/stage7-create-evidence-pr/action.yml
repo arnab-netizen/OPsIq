@@ -1,0 +1,159 @@
+name: Stage 7 create evidence PR
+description: >
+  Push one Stage 7 evidence artifact to a new branch forked from origin/main and
+  open a pull request targeting main. The direct-to-main commit flow is replaced
+  by this PR-based flow so the trusted verifier can validate the artifact as pure
+  data from a privileged context (main checkout) before the PR is merged.
+
+# ─── Security invariants ──────────────────────────────────────────────────────
+# 1. The branch is forked from origin/main — never from GITHUB_SHA — so the PR
+#    diff is always add-only relative to the main baseline.
+# 2. Exactly one file is staged: the artifact. A diff check aborts if any other
+#    file is staged or if the staged file is not inside the canonical artifacts dir.
+# 3. Collision detection: if the artifact file already exists in origin/main the
+#    action refuses (artifacts are append-only).
+# 4. The branch name embeds run_id and artifact_id so concurrent captures never
+#    collide on the same branch.
+
+inputs:
+  artifact_path:
+    description: "Absolute path of the artifact written by the capture step"
+    required: true
+  artifact_id:
+    description: "Canonical artifact_id — used in the commit message and branch name"
+    required: true
+  github_token:
+    description: "Token with contents: write and pull-requests: write on this repository"
+    required: true
+
+outputs:
+  branch_name:
+    description: "Name of the evidence branch pushed (stage7-evidence/<run_id>/<artifact_id>)"
+    value: ${{ steps.create.outputs.branch_name }}
+  pr_number:
+    description: "Number of the created pull request"
+    value: ${{ steps.create.outputs.pr_number }}
+  pr_url:
+    description: "HTML URL of the created pull request"
+    value: ${{ steps.create.outputs.pr_url }}
+  pr_head_sha:
+    description: "HEAD SHA of the created pull request (used for Commit Status API)"
+    value: ${{ steps.create.outputs.pr_head_sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Create evidence branch, push artifact, open PR
+      id: create
+      shell: bash
+      env:
+        ARTIFACT_PATH: ${{ inputs.artifact_path }}
+        ARTIFACT_ID: ${{ inputs.artifact_id }}
+        GH_TOKEN: ${{ inputs.github_token }}
+        REPO: ${{ github.repository }}
+        RUN_ID: ${{ github.run_id }}
+      run: |
+        set -euo pipefail
+
+        # ── 1. Path validation: must be inside the canonical artifacts dir ──────
+        EXPECTED_DIR="docs/opsiq/evidence/stage-7/artifacts"
+        REPO_ROOT="$(git rev-parse --show-toplevel)"
+        ABS_EXPECTED="$REPO_ROOT/$EXPECTED_DIR"
+        ABS_ARTIFACT="$(realpath "$ARTIFACT_PATH")"
+
+        if [[ "$ABS_ARTIFACT" != "$ABS_EXPECTED/"* ]]; then
+          echo "REFUSED: artifact_path '$ARTIFACT_PATH' resolves to '$ABS_ARTIFACT'" >&2
+          echo "         which is outside $ABS_EXPECTED" >&2
+          exit 1
+        fi
+
+        REL_PATH="${ABS_ARTIFACT#$REPO_ROOT/}"
+
+        # ── 2. Collision detection: must not exist in origin/main ───────────────
+        git fetch origin main --quiet
+        if git cat-file -e "origin/main:$REL_PATH" 2>/dev/null; then
+          echo "REFUSED: $REL_PATH already exists in origin/main." >&2
+          echo "         Artifacts are append-only — a correction must be a new artifact." >&2
+          exit 1
+        fi
+
+        # ── 3. Save artifact content before branch switch ───────────────────────
+        SAVE_FILE="$(mktemp)"
+        cp "$ABS_ARTIFACT" "$SAVE_FILE"
+
+        # ── 4. Configure git identity ───────────────────────────────────────────
+        git config user.name  "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        # ── 5. Create evidence branch from origin/main HEAD ─────────────────────
+        BRANCH_NAME="stage7-evidence/$RUN_ID/$ARTIFACT_ID"
+        git checkout -b "$BRANCH_NAME" origin/main
+
+        # ── 6. Place artifact into branch tree ──────────────────────────────────
+        mkdir -p "$(dirname "$ABS_EXPECTED/$ARTIFACT_ID.json")"
+        cp "$SAVE_FILE" "$REL_PATH"
+
+        # ── 7. Stage exactly the artifact file — add-only diff check ───────────
+        git add -- "$REL_PATH"
+
+        STAGED_COUNT=$(git diff --cached --name-only | wc -l | tr -d '[:space:]')
+        STAGED_FILE=$(git diff --cached --name-only | head -1)
+
+        if [ "$STAGED_COUNT" != "1" ] || [ "$STAGED_FILE" != "$REL_PATH" ]; then
+          echo "REFUSED: staging area must contain exactly '$REL_PATH'." >&2
+          echo "         Staged ($STAGED_COUNT): $STAGED_FILE" >&2
+          exit 1
+        fi
+
+        # Verify every staged change is an addition (no modifications, no deletions).
+        MODIFIED=$(git diff --cached --diff-filter=CDMRTUXB --name-only)
+        if [ -n "$MODIFIED" ]; then
+          echo "REFUSED: evidence branch must be add-only. Non-add changes detected: $MODIFIED" >&2
+          exit 1
+        fi
+
+        # ── 8. Commit and push ──────────────────────────────────────────────────
+        git commit --no-verify -m "feat(stage7): evidence artifact $ARTIFACT_ID
+
+        Automated evidence commit from run $RUN_ID.
+        Artifact path: $REL_PATH
+        "
+
+        git push origin HEAD:"$BRANCH_NAME"
+
+        # ── 9. Create pull request via GitHub API ───────────────────────────────
+        PR_BODY="Stage 7 evidence artifact \`$ARTIFACT_ID\` captured in run [$RUN_ID](https://github.com/$REPO/actions/runs/$RUN_ID).
+
+        **This PR was created automatically by the Stage 7 evidence capture workflow.**
+        The trusted verifier will validate this artifact as data from a privileged context
+        and post a commit status. Do NOT merge until the status is \`success\`."
+
+        PR_RESPONSE=$(curl -sS -f -X POST \
+          -H "Authorization: Bearer $GH_TOKEN" \
+          -H "Content-Type: application/json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "https://api.github.com/repos/$REPO/pulls" \
+          -d "$(jq -nc \
+            --arg title "feat(stage7): evidence artifact $ARTIFACT_ID" \
+            --arg body "$PR_BODY" \
+            --arg head "$BRANCH_NAME" \
+            '{title: $title, body: $body, head: $head, base: "main"}')")
+
+        PR_NUMBER=$(echo "$PR_RESPONSE" | jq -r '.number')
+        PR_URL=$(echo "$PR_RESPONSE" | jq -r '.html_url')
+        PR_HEAD_SHA=$(echo "$PR_RESPONSE" | jq -r '.head.sha')
+
+        if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+          echo "FAILED: could not create pull request. API response:" >&2
+          echo "$PR_RESPONSE" >&2
+          exit 1
+        fi
+
+        echo "Created evidence PR #$PR_NUMBER: $PR_URL"
+        echo "  branch:   $BRANCH_NAME"
+        echo "  head sha: $PR_HEAD_SHA"
+
+        echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+        echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+        echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+        echo "pr_head_sha=$PR_HEAD_SHA" >> "$GITHUB_OUTPUT"

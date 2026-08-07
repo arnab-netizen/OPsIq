@@ -764,3 +764,282 @@ describe("Stage 7 evidence — canonicalisation matches the existing integrity h
     expect(callLib("computeArtifactId", [withoutSignature])).toEqual(artifact.artifact_id);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUTH_SHA model — parseKeyRegistryYaml and resolveCaptureAuthorization
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Convert the Map returned by parseKeyRegistryYaml to a plain object for assertions. */
+function callParseKeyRegistryYaml(yaml: string): Record<string, string> {
+  const script = `
+    import { parseKeyRegistryYaml } from ${JSON.stringify(libPath)};
+    const result = parseKeyRegistryYaml(process.env.TEST_YAML);
+    const obj = {};
+    for (const [k, v] of result) obj[k] = v;
+    process.stdout.write(JSON.stringify(obj));
+  `;
+  const result = spawnSync("node", ["--input-type=module", "-e", script], {
+    encoding: "utf8",
+    cwd: root,
+    env: { PATH: process.env.PATH ?? "", TEST_YAML: yaml },
+  });
+  if (result.status !== 0) throw new Error(`parseKeyRegistryYaml failed: ${result.stderr}`);
+  return JSON.parse(result.stdout);
+}
+
+/**
+ * Call resolveCaptureAuthorization with injectable fixture callbacks.
+ * Returns { authorizationManifestSha, keyRegistrySize, keyRegistryKeys }.
+ */
+function callResolveCaptureAuth(opts: {
+  subjectSha: string;
+  closureSubjectSha: string;
+  mainSha: string;
+  keyRegistryYaml?: string;
+  throwOnManifest?: boolean;
+  throwOnRegistry?: boolean;
+}): { authorizationManifestSha: string; keyRegistrySize: number; keyRegistryKeys: string[] } {
+  const script = `
+    import { resolveCaptureAuthorization } from ${JSON.stringify(libPath)};
+    const opts = JSON.parse(process.env.RESOLVE_OPTS);
+    const manifest = \`closure_subject_sha: \${opts.closureSubjectSha}\`;
+    const fetchMainManifest = opts.throwOnManifest
+      ? () => { throw new Error("git show failed"); }
+      : () => manifest;
+    const resolveMainSha = () => opts.mainSha;
+    const fetchKeyRegistryYaml = opts.keyRegistryYaml !== undefined
+      ? (opts.throwOnRegistry
+          ? () => { throw new Error("git show registry failed"); }
+          : () => opts.keyRegistryYaml)
+      : null;
+    const result = resolveCaptureAuthorization({
+      subjectSha: opts.subjectSha,
+      fetchMainManifest,
+      resolveMainSha,
+      fetchKeyRegistryYaml,
+    });
+    const out = {
+      authorizationManifestSha: result.authorizationManifestSha,
+      keyRegistrySize: result.keyRegistry.size,
+      keyRegistryKeys: [...result.keyRegistry.keys()],
+    };
+    process.stdout.write(JSON.stringify(out));
+  `;
+  const result = spawnSync("node", ["--input-type=module", "-e", script], {
+    encoding: "utf8",
+    cwd: root,
+    env: { PATH: process.env.PATH ?? "", RESOLVE_OPTS: JSON.stringify(opts) },
+  });
+  if (result.status !== 0) throw new Error(`resolveCaptureAuthorization threw: ${result.stderr}`);
+  return JSON.parse(result.stdout);
+}
+
+/** Call resolveCaptureAuthorization expecting it to throw. Returns stderr text. */
+function callResolveCaptureAuthExpectThrow(opts: {
+  subjectSha: string;
+  closureSubjectSha: string;
+  mainSha: string;
+  keyRegistryYaml?: string;
+  throwOnManifest?: boolean;
+  throwOnRegistry?: boolean;
+}): string {
+  const script = `
+    import { resolveCaptureAuthorization } from ${JSON.stringify(libPath)};
+    const opts = JSON.parse(process.env.RESOLVE_OPTS);
+    const manifest = \`closure_subject_sha: \${opts.closureSubjectSha}\`;
+    const fetchMainManifest = opts.throwOnManifest
+      ? () => { throw new Error("git show failed"); }
+      : () => manifest;
+    const resolveMainSha = () => opts.mainSha;
+    const fetchKeyRegistryYaml = opts.keyRegistryYaml !== undefined
+      ? (opts.throwOnRegistry
+          ? () => { throw new Error("git show registry failed"); }
+          : () => opts.keyRegistryYaml)
+      : null;
+    try {
+      resolveCaptureAuthorization({
+        subjectSha: opts.subjectSha,
+        fetchMainManifest,
+        resolveMainSha,
+        fetchKeyRegistryYaml,
+      });
+      process.stderr.write("NO_THROW");
+      process.exit(1);
+    } catch (e) {
+      process.stdout.write(e.message);
+    }
+  `;
+  const result = spawnSync("node", ["--input-type=module", "-e", script], {
+    encoding: "utf8",
+    cwd: root,
+    env: { PATH: process.env.PATH ?? "", RESOLVE_OPTS: JSON.stringify(opts) },
+  });
+  return result.stdout;
+}
+
+const FAKE_SHA = "a".repeat(40);
+const FAKE_MAIN_SHA = "b".repeat(40);
+const FAKE_KEY_B64 = "MCowBQYDK2VwAyEABQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHw==";
+
+const ACTIVE_KEY_YAML = `
+version: "1"
+keys:
+  - key_id: "test-key-v1"
+    algorithm: "Ed25519"
+    status: "active"
+    public_key_spki_der_base64: "${FAKE_KEY_B64}"
+`;
+
+const PENDING_ONLY_YAML = `
+version: "1"
+keys:
+  - key_id: "test-key-v1"
+    algorithm: "Ed25519"
+    status: "pending_owner_provisioning"
+    public_key_spki_der_base64: "${FAKE_KEY_B64}"
+`;
+
+const MIXED_STATUS_YAML = `
+version: "1"
+keys:
+  - key_id: "revoked-key"
+    algorithm: "Ed25519"
+    status: "revoked"
+    public_key_spki_der_base64: "${FAKE_KEY_B64}"
+  - key_id: "pending-key"
+    algorithm: "Ed25519"
+    status: "pending_owner_provisioning"
+    public_key_spki_der_base64: "${FAKE_KEY_B64}"
+  - key_id: "active-key"
+    algorithm: "Ed25519"
+    status: "active"
+    public_key_spki_der_base64: "${FAKE_KEY_B64}"
+`;
+
+describe("Stage 7 AUTH_SHA model — parseKeyRegistryYaml", () => {
+  it("includes active Ed25519 keys and excludes pending and revoked keys", () => {
+    const result = callParseKeyRegistryYaml(MIXED_STATUS_YAML);
+    expect(Object.keys(result)).toHaveLength(1);
+    expect(result["active-key"]).toBeDefined();
+    expect(result["revoked-key"]).toBeUndefined();
+    expect(result["pending-key"]).toBeUndefined();
+  });
+
+  it("returns an empty map when YAML has no active Ed25519 keys", () => {
+    const result = callParseKeyRegistryYaml(PENDING_ONLY_YAML);
+    expect(Object.keys(result)).toHaveLength(0);
+  });
+
+  it("returns an empty map for empty YAML", () => {
+    const result = callParseKeyRegistryYaml("");
+    expect(Object.keys(result)).toHaveLength(0);
+  });
+
+  it("wraps the base64 value in PEM format for active keys", () => {
+    const result = callParseKeyRegistryYaml(ACTIVE_KEY_YAML);
+    const pem = result["test-key-v1"];
+    expect(pem).toBeDefined();
+    expect(pem).toContain("-----BEGIN PUBLIC KEY-----");
+    expect(pem).toContain("-----END PUBLIC KEY-----");
+  });
+});
+
+describe("Stage 7 AUTH_SHA model — resolveCaptureAuthorization returns keyRegistry", () => {
+  it("returns empty keyRegistry when fetchKeyRegistryYaml is not provided", () => {
+    const out = callResolveCaptureAuth({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_SHA,
+      mainSha: FAKE_MAIN_SHA,
+    });
+    expect(out.authorizationManifestSha).toBe(FAKE_MAIN_SHA);
+    expect(out.keyRegistrySize).toBe(0);
+    expect(out.keyRegistryKeys).toHaveLength(0);
+  });
+
+  it("returns populated keyRegistry when fetchKeyRegistryYaml returns active key YAML", () => {
+    const out = callResolveCaptureAuth({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_SHA,
+      mainSha: FAKE_MAIN_SHA,
+      keyRegistryYaml: ACTIVE_KEY_YAML,
+    });
+    expect(out.authorizationManifestSha).toBe(FAKE_MAIN_SHA);
+    expect(out.keyRegistrySize).toBe(1);
+    expect(out.keyRegistryKeys).toContain("test-key-v1");
+  });
+
+  it("returns empty keyRegistry when fetchKeyRegistryYaml YAML has no active keys", () => {
+    const out = callResolveCaptureAuth({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_SHA,
+      mainSha: FAKE_MAIN_SHA,
+      keyRegistryYaml: PENDING_ONLY_YAML,
+    });
+    expect(out.keyRegistrySize).toBe(0);
+  });
+
+  it("propagates error from fetchKeyRegistryYaml with OPTION A context message", () => {
+    const msg = callResolveCaptureAuthExpectThrow({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_SHA,
+      mainSha: FAKE_MAIN_SHA,
+      keyRegistryYaml: "",
+      throwOnRegistry: true,
+    });
+    expect(msg).toContain("OPTION A authorization gate");
+    expect(msg).toContain("key registry");
+    expect(msg).toContain("git show registry failed");
+  });
+
+  it("propagates error from fetchMainManifest with OPTION A context message", () => {
+    const msg = callResolveCaptureAuthExpectThrow({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_SHA,
+      mainSha: FAKE_MAIN_SHA,
+      throwOnManifest: true,
+    });
+    expect(msg).toContain("OPTION A authorization gate");
+    expect(msg).toContain("factory-stage-7-closure.yaml");
+  });
+
+  it("rejects when closure_subject_sha does not match subjectSha", () => {
+    const msg = callResolveCaptureAuthExpectThrow({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_MAIN_SHA,
+      mainSha: FAKE_MAIN_SHA,
+    });
+    expect(msg).toContain("OPTION A authorization gate");
+    expect(msg).toContain("is NOT authorized");
+  });
+});
+
+describe("Stage 7 AUTH_SHA model — validator --from-auth-sha-registry flag", () => {
+  it("rejects an artifact whose authorization_manifest_sha is null", () => {
+    const { artifact } = captureArtifact();
+    const dir = stage({ ...artifact, authorization_manifest_sha: null });
+    const result = runNode(validatorScript, ["--dir", dir, "--from-auth-sha-registry"]);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("REJECTED");
+  });
+
+  it("treats an artifact as UNVERIFIED when the registry at AUTH_SHA has no active keys", () => {
+    // Use HEAD as authorization_manifest_sha. The repo's key registry has
+    // status: pending_owner_provisioning at HEAD → no active keys → UNCHECKED → UNVERIFIED.
+    const headSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+    const input = { ...baseInput(), authorization_manifest_sha: headSha };
+    const artifact = callLib("buildEvidenceArtifact", [input, { signingKey: SIGNING_KEY_PEM }]) as Artifact;
+    const dir = stage(artifact);
+    const result = runNode(validatorScript, ["--dir", dir, "--from-auth-sha-registry"]);
+    // Validator exits 0 in default mode (not --require-accepted); UNVERIFIED is not blocking.
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("UNVERIFIED");
+  });
+
+  it("unknown flag --from-auth-sha-registry is not rejected alongside known flags", () => {
+    // Confirms the flag is listed in KNOWN_FLAGS and doesn't trigger usageError.
+    const dir = makeTempDir();
+    const result = runNode(validatorScript, ["--dir", dir, "--from-auth-sha-registry"]);
+    // Empty dir is neither pass nor fail; just confirm the flag is accepted (no exit 2).
+    expect(result.status).not.toBe(2);
+  });
+});
