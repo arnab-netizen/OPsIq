@@ -1,0 +1,104 @@
+name: Stage 7 commit artifact
+description: >
+  Commit and push exactly one Stage 7 evidence artifact to main.
+  Hard guarantees: (1) no directory-wide git add, (2) artifact path is validated
+  before staging, (3) collision detection prevents overwriting an existing artifact,
+  (4) up to 5 rebase retries handle concurrent artifact commits.
+
+# ─── Security invariants ──────────────────────────────────────────────────────
+# 1. Only the single artifact_path file is staged — never a wildcard.
+# 2. The path must be inside docs/opsiq/evidence/stage-7/artifacts/ — any
+#    other path aborts with non-zero exit.
+# 3. A file that already exists at artifact_path aborts — artifacts are
+#    append-only and this guard prevents silent overwrite via a rebase replay.
+# 4. Git config (user.name / user.email) is set only for this commit.
+
+inputs:
+  artifact_path:
+    description: "Absolute path of the artifact written by the capture step"
+    required: true
+  artifact_id:
+    description: "Canonical artifact_id — used in the commit message"
+    required: true
+  github_token:
+    description: "Token with contents: write on this repository"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate path and commit artifact
+      shell: bash
+      env:
+        ARTIFACT_PATH: ${{ inputs.artifact_path }}
+        ARTIFACT_ID: ${{ inputs.artifact_id }}
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        set -euo pipefail
+
+        # ── 1. Path validation: must be inside the canonical artifacts dir ──────
+        EXPECTED_DIR="docs/opsiq/evidence/stage-7/artifacts"
+        REPO_ROOT="$(git rev-parse --show-toplevel)"
+        ABS_EXPECTED="$REPO_ROOT/$EXPECTED_DIR"
+
+        # Resolve the artifact path to an absolute path (resolving any symlinks).
+        ABS_ARTIFACT="$(realpath "$ARTIFACT_PATH")"
+
+        # Verify containment using prefix match on the resolved path.
+        if [[ "$ABS_ARTIFACT" != "$ABS_EXPECTED/"* ]]; then
+          echo "REFUSED: artifact_path '$ARTIFACT_PATH' resolves to '$ABS_ARTIFACT'" >&2
+          echo "         which is outside $ABS_EXPECTED" >&2
+          echo "         Only artifacts inside the canonical Stage 7 directory may be committed." >&2
+          exit 1
+        fi
+
+        # ── 2. Collision detection: file must not already exist on HEAD ─────────
+        REL_PATH="${ABS_ARTIFACT#$REPO_ROOT/}"
+        if git cat-file -e "HEAD:$REL_PATH" 2>/dev/null; then
+          echo "REFUSED: $REL_PATH already exists in HEAD." >&2
+          echo "         Artifacts are append-only — a correction must be a new artifact." >&2
+          exit 1
+        fi
+
+        # ── 3. Configure git identity for this commit ───────────────────────────
+        git config user.name  "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        # ── 4. Stage exactly the one artifact file — no wildcard add ────────────
+        git add -- "$ABS_ARTIFACT"
+
+        git commit --no-verify -m "feat(stage7): capture evidence artifact $ARTIFACT_ID
+
+        Automated artifact commit from run $GITHUB_RUN_ID (attempt $GITHUB_RUN_ATTEMPT).
+        Artifact written by the evidence capture job; path: $REL_PATH
+        "
+
+        # ── 5. Push with rebase retry (handles concurrent artifact commits) ─────
+        MAX_RETRIES=5
+        for attempt in $(seq 1 $MAX_RETRIES); do
+          if git push origin HEAD:main; then
+            echo "Pushed artifact $ARTIFACT_ID to main (attempt $attempt)."
+            exit 0
+          fi
+
+          if [ "$attempt" -ge "$MAX_RETRIES" ]; then
+            echo "FAILED: could not push after $MAX_RETRIES attempts." >&2
+            exit 1
+          fi
+
+          echo "Push conflict — rebasing onto origin/main (attempt $attempt)…"
+          git fetch origin main
+          git rebase origin/main
+
+          # ── Re-check collision after rebase: another run may have committed ───
+          # After rebasing, our commit is the new HEAD. Check whether the same
+          # file was already present in origin/main BEFORE our commit (i.e. in HEAD^).
+          if git cat-file -e "HEAD^:$REL_PATH" 2>/dev/null; then
+            echo "REFUSED after rebase: $REL_PATH already exists in origin/main." >&2
+            echo "         Another concurrent capture wrote this artifact. Failing." >&2
+            exit 1
+          fi
+
+          # Exponential back-off: 2 4 8 16 seconds
+          sleep $((2 ** attempt))
+        done

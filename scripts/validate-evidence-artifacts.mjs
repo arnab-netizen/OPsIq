@@ -55,6 +55,7 @@ import {
   evaluateSupersessionChain,
   explainAcceptance,
   loadEvidenceArtifactIndex,
+  loadKeyRegistry,
 } from './lib/evidence-artifact.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -85,7 +86,23 @@ for (let i = 0; i < argv.length; i += 1) {
   } else usageError(`unknown flag '${token}'`);
 }
 
-const signingKey = process.env.EVIDENCE_SIGNING_KEY?.trim() || null;
+// Load the key registry from the fixed path — no runtime path override.
+// When the registry has active keys (production post-provisioning), use it.
+// When the registry has no active keys (pending_owner_provisioning placeholder),
+// fall back to EVIDENCE_SIGNING_KEY env var so tests can still verify signatures.
+const KEY_REGISTRY_PATH = join(repoRoot, '.governance', 'stage7-signing-keys.yaml');
+let keyRegistry = new Map();
+try {
+  keyRegistry = loadKeyRegistry(KEY_REGISTRY_PATH);
+} catch {
+  // Registry file absent or unreadable — proceed with empty registry.
+  // Signature state will be UNCHECKED or rely on env var fallback below.
+}
+const evidenceSigningKeyPem = process.env.EVIDENCE_SIGNING_KEY?.trim() || null;
+// Registry takes precedence; env var is a fallback for test suites that
+// cannot commit an active key but need signature verification.
+const signingKey = keyRegistry.size > 0 ? keyRegistry : evidenceSigningKeyPem;
+
 const githubToken = process.env.GH_TOKEN?.trim() || process.env.GITHUB_TOKEN?.trim() || null;
 const ownerLogins = (process.env.EVIDENCE_OWNER_LOGINS ?? '')
   .split(',')

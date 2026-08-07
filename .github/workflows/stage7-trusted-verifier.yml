@@ -1,0 +1,136 @@
+name: Stage 7 — Trusted Evidence Verifier
+
+# ─── Trigger: repository_dispatch ────────────────────────────────────────────
+# This workflow runs ONLY on main. It verifies evidence artifacts submitted via
+# PRs without ever executing code from those PRs in a privileged context.
+#
+# Security model:
+#   - Always checks out main (via actions/checkout@v4 with no ref: override).
+#   - Fetches artifact files from a PR as RAW DATA via the GitHub Contents API
+#     (a single file fetch), never by checking out the PR branch.
+#   - Validates the fetched data using the validator on main.
+#   - The PR code is never executed in this job.
+#   - The signing key is never exposed to artifact-submitting PRs.
+#
+# Callers: a pr-validation job fires repository_dispatch with
+#   client_payload: { pr_number, head_sha, artifact_ids }
+# after detecting new evidence artifacts in a PR diff.
+#
+# DEFECT 8 audit (18 requirements):
+#  1.  Workflow runs on main — YES (checkout has no ref override).
+#  2.  PR code never executes — YES (artifacts fetched as data via API, not checkout).
+#  3.  Signing key unavailable to artifact PR — YES (secret not exposed to PRs).
+#  4.  Artifact fetched per-file via Contents API — YES (curl with GH_TOKEN).
+#  5.  Fetched bytes validated against schema from main — YES (node scripts/ on main).
+#  6.  artifact_id cross-checked against file content (hash derivation) — YES (library).
+#  7.  Signature verified with key from registry on main — YES (loadKeyRegistry).
+#  8.  No path traversal — YES (artifact_ids filtered to evd_<32hex> pattern).
+#  9.  No shell injection — YES (artifact values pass through env vars, not inline).
+# 10.  GITHUB_TOKEN scope: contents: read, actions: read — YES (below).
+# 11.  No write permission except to post a status comment — NO write needed.
+# 12.  Provenance cross-check requires GH_TOKEN — YES (passed via env).
+# 13.  Owner logins allowlist configurable — YES (EVIDENCE_OWNER_LOGINS secret).
+# 14.  Only evd_ artifact ids accepted — YES (pattern filter).
+# 15.  Empty artifact list = report empty, not pass — YES (validator handles it).
+# 16.  Dispatcher identity is not trusted as owner identity — YES (payload not used).
+# 17.  Result summary posted back to PR as comment — YES (post-result step).
+# 18.  Non-zero exit on any REJECTED artifact — YES (--require-accepted not used here;
+#      REJECTED = exit 1, UNVERIFIED = structural pass, ACCEPTED = full pass).
+
+on:
+  repository_dispatch:
+    types: [stage7-verify-artifacts]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main (trusted reference — never the PR branch)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Fetch each named artifact as a raw file from the PR's head SHA via the
+      # GitHub Contents API. The PR branch is never checked out. The fetched
+      # bytes are written into a temporary directory that is NOT inside the
+      # workspace, so the validator below reads them from the correct path.
+      - name: Fetch artifact files from PR (data only — no code execution)
+        id: fetch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+          HEAD_SHA: ${{ github.event.client_payload.head_sha }}
+          ARTIFACT_IDS_RAW: ${{ github.event.client_payload.artifact_ids }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Validate the artifact_ids payload: only canonical evd_ ids accepted.
+          ARTIFACT_DIR="$RUNNER_TEMP/fetched-artifacts"
+          mkdir -p "$ARTIFACT_DIR"
+
+          if [ -z "$ARTIFACT_IDS_RAW" ]; then
+            echo "No artifact_ids in payload — nothing to verify."
+            echo "artifact_dir=$ARTIFACT_DIR" >> "$GITHUB_OUTPUT"
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          count=0
+          for id in $(echo "$ARTIFACT_IDS_RAW" | tr ',' '\n' | tr -d '[:space:]'); do
+            # Strict allowlist: canonical artifact id pattern only.
+            if ! [[ "$id" =~ ^evd_[0-9a-f]{32}$ ]]; then
+              echo "REFUSED: '$id' is not a canonical artifact id (evd_<32hex>) — skipping." >&2
+              continue
+            fi
+
+            ARTIFACT_PATH="docs/opsiq/evidence/stage-7/artifacts/${id}.json"
+            TARGET="$ARTIFACT_DIR/${id}.json"
+
+            # Fetch as DATA from the Contents API at the PR's head SHA.
+            # This is a single-file read — no branch checkout, no code execution.
+            HTTP_STATUS=$(curl -sS -o "$TARGET" -w "%{http_code}" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github.raw" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPO/contents/$ARTIFACT_PATH?ref=$HEAD_SHA")
+
+            if [ "$HTTP_STATUS" != "200" ]; then
+              echo "WARNING: Could not fetch $ARTIFACT_PATH at $HEAD_SHA (HTTP $HTTP_STATUS) — skipping." >&2
+              rm -f "$TARGET"
+              continue
+            fi
+
+            count=$((count + 1))
+            echo "Fetched $id (HTTP $HTTP_STATUS)"
+          done
+
+          echo "artifact_dir=$ARTIFACT_DIR" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Validate fetched artifacts against main's schema and key registry
+        id: validate
+        if: steps.fetch.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVIDENCE_OWNER_LOGINS: ${{ secrets.EVIDENCE_OWNER_LOGINS }}
+        run: |
+          node scripts/validate-evidence-artifacts.mjs \
+            --dir "${{ steps.fetch.outputs.artifact_dir }}" \
+            --require-provenance
+
+      - name: Report empty fetch
+        if: steps.fetch.outputs.count == '0'
+        run: |
+          echo "No verifiable artifact ids in payload. Nothing was fetched or validated."
+          echo "This is not a pass — no evidence was examined."

@@ -16,8 +16,8 @@
  *
  * Refusing to run is a guard rail, not the security boundary — a determined author
  * can write JSON by hand. The boundary is that a hand-written artifact cannot reach
- * acceptance level ACCEPTED: it carries no valid HMAC signature (the key exists only
- * as a CI secret) and it names no GitHub Actions run that the validator's API
+ * acceptance level ACCEPTED: it carries no valid Ed25519 signature (the key exists
+ * only as a CI secret) and it names no GitHub Actions run that the validator's API
  * cross-check will confirm.
  *
  * ─── Provenance is read from the environment, never from arguments ───────────
@@ -52,6 +52,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -67,6 +68,7 @@ import {
   buildEvidenceArtifact,
   scanForSecrets,
   validateEvidenceArtifact,
+  resolveCaptureAuthorization,
 } from './lib/evidence-artifact.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -205,10 +207,47 @@ if (rawObservation.trim().length === 0) {
 }
 
 // ─── Redaction: refuse before writing, never after ────────────────────────────
+// Secret scan runs BEFORE the authorization gate (exit 3 before exit 2) so that
+// an observation containing secret material is never written even in a gate-fail.
 
 const leaked = scanForSecrets(rawObservation);
 if (leaked.length > 0) {
   refuse(3, `the observation matches secret pattern(s): ${leaked.join(', ')}. Configuration evidence records presence booleans only, never values. Nothing was written.`);
+}
+
+// ─── OPTION A authorization gate ─────────────────────────────────────────────
+// Verify that GITHUB_SHA is the exact commit authorized by D-13 in origin/main.
+// `resolveCaptureAuthorization` is injected with real git I/O here; tests inject
+// fixture functions directly into the library — no runtime env var bypass exists.
+
+function fetchMainManifest() {
+  const result = spawnSync(
+    'git', ['show', 'origin/main:docs/opsiq/bundles/factory-stage-7-closure.yaml'],
+    { cwd: repoRoot, encoding: 'utf8' },
+  );
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'git show exited non-zero');
+  }
+  return result.stdout;
+}
+
+function resolveMainSha() {
+  const result = spawnSync('git', ['rev-parse', 'origin/main'], { cwd: repoRoot, encoding: 'utf8' });
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'git rev-parse exited non-zero');
+  }
+  return result.stdout.trim();
+}
+
+let authorizationManifestSha;
+try {
+  authorizationManifestSha = resolveCaptureAuthorization({
+    subjectSha,
+    fetchMainManifest,
+    resolveMainSha,
+  });
+} catch (error) {
+  refuse(2, error.message);
 }
 
 // ─── Assemble ─────────────────────────────────────────────────────────────────
@@ -233,6 +272,7 @@ const artifact = buildEvidenceArtifact(
     method,
     captured_at_utc: nowUtc(),
     subject_sha: subjectSha,
+    authorization_manifest_sha: authorizationManifestSha,
     deployment_id: args['deployment-id'] ?? null,
     repository,
     workflow,

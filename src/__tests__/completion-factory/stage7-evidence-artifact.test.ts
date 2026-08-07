@@ -12,17 +12,30 @@
  *      timestamp, modified content hash, missing replay command, wrong producer,
  *      manual artifact — each is rejected, and each rejection names the mechanism.
  *
- * The suite drives the real scripts as subprocesses. Nothing here is Stage 7
- * evidence: every artifact is built in a temp directory from a synthetic run
- * context that no GitHub run will ever match, and the repository's own artifact
- * directory is never written to.
+ * captureArtifact() calls buildEvidenceArtifact() directly (via callLib), bypassing
+ * the CLI capture script and the OPTION A authorization gate. This is correct: the gate
+ * verifies GITHUB_SHA against origin/main's closure manifest, which cannot be satisfied
+ * by the synthetic test GITHUB_SHA. CLI refusal tests (refuses outside Actions, refuses
+ * incomplete context, etc.) still run the capture script as a subprocess.
+ *
+ * Signing uses an ephemeral Ed25519 key pair generated at suite initialisation. The
+ * private key is never written to disk or committed; it exists only in this process.
  *
  * Design and threat model: docs/opsiq/evidence/stage-7/EVIDENCE_ARTIFACT_SPEC.md
  */
 
 import { describe, it, expect, afterAll } from "vitest";
+import { generateKeyPairSync } from "crypto";
 import { execFileSync, spawnSync } from "child_process";
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync, rmSync, renameSync } from "fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  rmSync,
+  renameSync,
+} from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { canonicalStringify as canonicalStringifyTs } from "@/services/integrity/hash";
@@ -32,7 +45,20 @@ const captureScript = join(root, "scripts", "capture-evidence.mjs");
 const validatorScript = join(root, "scripts", "validate-evidence-artifacts.mjs");
 const libPath = join(root, "scripts", "lib", "evidence-artifact.mjs");
 
-const SIGNING_KEY = "test-only-signing-key-never-provisioned-anywhere";
+// ─── Ephemeral Ed25519 test keys ──────────────────────────────────────────────
+// Generated fresh per test run. Never written to disk or committed.
+// The production signing key is a later owner action (OWNER_ACTION_REQUIRED);
+// do NOT use these keys outside tests.
+
+const { privateKey: SIGNING_KEY_PEM } = generateKeyPairSync("ed25519", {
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  publicKeyEncoding: { type: "spki", format: "pem" },
+});
+
+const { privateKey: ATTACKER_KEY_PEM } = generateKeyPairSync("ed25519", {
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  publicKeyEncoding: { type: "spki", format: "pem" },
+});
 
 /**
  * A synthetic GitHub Actions context. The run id is deliberately impossible
@@ -78,6 +104,7 @@ type Artifact = {
   invariant_id: string;
   lane: string;
   subject_sha: string;
+  authorization_manifest_sha: string | null;
   captured_at_utc: string;
   environment: string;
   method: string;
@@ -124,30 +151,53 @@ function writeObservation(dir: string, text = "Test Files  1 passed (1)\n     Te
   return path;
 }
 
-/** Capture a valid artifact through the shipped helper. Returns its parsed form. */
+/** Input base shared by captureArtifact and callLib-direct tests. */
+function baseInput(rawObservation = "Test Files  1 passed (1)\n     Tests  9 passed (9)\n") {
+  return {
+    invariant_id: "S7-I11",
+    lane: "LANE_E",
+    proof_type: "simulation_adversarial",
+    environment: "isolated_simulation",
+    method: "test_run",
+    assertion: "Nine adversarial failure scenarios each fail safely, visibly and recoverably.",
+    result: "PASS",
+    replay_command: "npx vitest run src/__tests__/example.test.ts --reporter=basic",
+    raw_observation: rawObservation,
+    repository: FAKE_RUN_ENV.GITHUB_REPOSITORY,
+    run_id: FAKE_RUN_ENV.GITHUB_RUN_ID,
+    run_number: Number(FAKE_RUN_ENV.GITHUB_RUN_NUMBER),
+    run_attempt: Number(FAKE_RUN_ENV.GITHUB_RUN_ATTEMPT),
+    workflow: FAKE_RUN_ENV.GITHUB_WORKFLOW,
+    job: FAKE_RUN_ENV.GITHUB_JOB,
+    actor: FAKE_RUN_ENV.GITHUB_ACTOR,
+    event_name: FAKE_RUN_ENV.GITHUB_EVENT_NAME,
+    subject_sha: FAKE_RUN_ENV.GITHUB_SHA,
+    run_started_at: FAKE_RUN_ENV.GITHUB_RUN_STARTED_AT,
+    captured_at_utc: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+    authorization_manifest_sha: null,
+  };
+}
+
+/**
+ * Capture a valid artifact by calling buildEvidenceArtifact() directly via callLib.
+ * The CLI capture script (and its OPTION A authorization gate) is NOT invoked.
+ * CLI refusal behaviour is covered by runNode(captureScript, ...) tests below.
+ */
 function captureArtifact(
-  overrides: { args?: string[]; env?: Record<string, string>; observation?: string; signed?: boolean } = {},
+  overrides: { observation?: string; signed?: boolean } = {},
 ): { artifact: Artifact; dir: string; path: string } {
   const dir = makeTempDir();
-  const observationPath = writeObservation(dir, overrides.observation);
   const outDir = join(dir, "artifacts");
-  const env = {
-    ...FAKE_RUN_ENV,
-    ...(overrides.signed === false ? {} : { EVIDENCE_SIGNING_KEY: SIGNING_KEY }),
-    ...(overrides.env ?? {}),
-  };
-  const args = [
-    ...(overrides.args ?? CAPTURE_DEFAULTS),
-    "--observation-file", observationPath,
-    "--out-dir", outDir,
-  ];
-  const result = runNode(captureScript, args, env);
-  if (result.status !== 0) {
-    throw new Error(`capture failed unexpectedly (exit ${result.status}):\n${result.output}`);
-  }
-  const files = readdirSync(outDir);
-  const path = join(outDir, files[0]);
-  return { artifact: JSON.parse(readFileSync(path, "utf8")), dir: outDir, path };
+  mkdirSync(outDir, { recursive: true });
+
+  const input = baseInput(overrides.observation);
+  const opts =
+    overrides.signed === false ? {} : { signingKey: SIGNING_KEY_PEM };
+  const artifact = callLib("buildEvidenceArtifact", [input, opts]) as Artifact;
+
+  const path = join(outDir, `${artifact.artifact_id}.json`);
+  writeFileSync(path, JSON.stringify(artifact, null, 2), "utf8");
+  return { artifact, dir: outDir, path };
 }
 
 /** Place an arbitrary object in a fresh artifact directory, named by its own id. */
@@ -161,7 +211,7 @@ function stage(artifact: { artifact_id?: string }, fileName?: string): string {
 function validate(dir: string, opts: { key?: boolean; requireAccepted?: boolean } = {}): RunResult {
   const args = ["--dir", dir];
   if (opts.requireAccepted) args.push("--require-accepted");
-  return runNode(validatorScript, args, opts.key === false ? {} : { EVIDENCE_SIGNING_KEY: SIGNING_KEY });
+  return runNode(validatorScript, args, opts.key === false ? {} : { EVIDENCE_SIGNING_KEY: SIGNING_KEY_PEM });
 }
 
 /** Evaluate a pure library export in a subprocess, so the shipped .mjs is what runs. */
@@ -210,7 +260,7 @@ describe("Stage 7 evidence — an interactive session cannot produce evidence", 
       ...CAPTURE_DEFAULTS,
       "--observation-file", writeObservation(dir),
       "--out-dir", join(dir, "artifacts"),
-    ], { EVIDENCE_SIGNING_KEY: SIGNING_KEY });
+    ], { EVIDENCE_SIGNING_KEY: SIGNING_KEY_PEM });
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("interactive agent session is not valid evidence");
@@ -272,7 +322,7 @@ describe("Stage 7 evidence — an interactive session cannot produce evidence", 
   it("refuses to report provenance as verified when it cannot check it", () => {
     const { dir } = captureArtifact();
     const result = runNode(validatorScript, ["--dir", dir, "--require-provenance"], {
-      EVIDENCE_SIGNING_KEY: SIGNING_KEY,
+      EVIDENCE_SIGNING_KEY: SIGNING_KEY_PEM,
     });
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("Refusing to report provenance as verified without checking it");
@@ -375,7 +425,7 @@ describe("Stage 7 evidence — malformed artifacts are rejected", () => {
       ...CAPTURE_DEFAULTS,
       "--observation-file", writeObservation(dir, secretish),
       "--out-dir", join(dir, "artifacts"),
-    ], { ...FAKE_RUN_ENV, EVIDENCE_SIGNING_KEY: SIGNING_KEY });
+    ], { ...FAKE_RUN_ENV, EVIDENCE_SIGNING_KEY: SIGNING_KEY_PEM });
 
     expect(capture.status).toBe(3);
     expect(capture.stderr).toContain("database_url_with_credentials");
@@ -550,8 +600,12 @@ describe("Stage 7 evidence — hostile audit", () => {
   });
 
   it("attack: a self-signed artifact fails against the real key", () => {
-    const { artifact } = captureArtifact({ env: { EVIDENCE_SIGNING_KEY: "attacker-guessed-key" } });
-    const result = validate(stage(artifact));
+    // Attacker signs with their own ephemeral key — validator uses the legitimate key.
+    const attackerArtifact = callLib("buildEvidenceArtifact", [
+      baseInput(),
+      { signingKey: ATTACKER_KEY_PEM },
+    ]) as Artifact;
+    const result = validate(stage(attackerArtifact));
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("signature does not verify");
   });
