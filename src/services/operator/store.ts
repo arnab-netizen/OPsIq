@@ -170,9 +170,15 @@ export async function updateItem(
   if (updates.status !== undefined) updateData.status = updates.status;
   if (updates.dueAt !== undefined) updateData.dueAt = updates.dueAt ? new Date(updates.dueAt) : null;
   if (updates.decisionType !== undefined) updateData.decisionType = updates.decisionType;
+  if (updates.problemType !== undefined) updateData.problemType = updates.problemType;
+  if (updates.baselineValue !== undefined) updateData.baselineValue = updates.baselineValue;
+  if (updates.projectedWithoutAction !== undefined) updateData.projectedWithoutAction = updates.projectedWithoutAction;
   if (updates.expectedOutcome !== undefined) updateData.expectedOutcome = updates.expectedOutcome;
   if (updates.actualOutcome !== undefined) updateData.actualOutcome = updates.actualOutcome;
   if (updates.actualOutcomeValue !== undefined) updateData.actualOutcomeValue = updates.actualOutcomeValue;
+  if (updates.outcomeDelta !== undefined) updateData.outcomeDelta = updates.outcomeDelta;
+  if (updates.decisionAccuracy !== undefined) updateData.decisionAccuracy = updates.decisionAccuracy;
+  if (updates.decisionError !== undefined) updateData.decisionError = updates.decisionError;
   if (updates.outcomeNotes !== undefined) updateData.outcomeNotes = updates.outcomeNotes;
   if (updates.startedAt !== undefined) updateData.startedAt = updates.startedAt ? new Date(updates.startedAt) : null;
   if (updates.completedAt !== undefined) updateData.completedAt = updates.completedAt ? new Date(updates.completedAt) : null;
