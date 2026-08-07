@@ -33,21 +33,13 @@ keys:
     status: "pending_owner_provisioning"
     note: >
       Production signing key for Stage 7 evidence artifacts.
-      AUTH_SHA model: the capture workflow reads this registry from the AUTH_SHA
-      commit (origin/main HEAD at capture time), NOT from the checked-out working
-      tree (INF_SHA). The public key therefore does NOT need to exist at INF_SHA.
-      Owner provisioning sequence after PR-A merges:
-        1. Generate the key pair OFFLINE (never inside Claude Code or any AI assistant).
-        2. Commit only the public_key_spki_der_base64 value below as a governance-only
-           commit directly on main (no PR required — this commit becomes AUTH_SHA).
-        3. Tag the INF_SHA commit as stage7-evidence-subject-<tag> to unlock the
-           GitHub Environment stage7-evidence-signing for the capture workflow.
-        4. Provision the private key as GitHub Actions secret EVIDENCE_SIGNING_KEY
-           in the stage7-evidence-signing environment.
-        5. No DISPATCH_TOKEN required — the capture workflow uses GITHUB_TOKEN for
-           repository_dispatch (contents:write is granted by the workflow's permissions block).
-      Artifacts captured before provisioning are permanently UNVERIFIED and cannot
-      back a PROVEN invariant.
+      Owner must generate this key pair OFFLINE and commit only the
+      public_key_spki_der_base64 value below before PR-A is merged (DEFECT 12:
+      the workflow at INF_SHA reads this file from the checked-out tree, so the
+      public key must exist at the INF_SHA commit). The private key is provisioned
+      as GitHub Actions secret EVIDENCE_SIGNING_KEY ONLY after the public key is
+      committed and the PR is merged. Artifacts captured before provisioning are
+      permanently UNVERIFIED and cannot back a PROVEN invariant.
     # public_key_spki_der_base64: <OWNER PROVIDES THIS — SEE GENERATION INSTRUCTIONS ABOVE>
     added_by: "pending_owner_action"
     not_before: "pending"
