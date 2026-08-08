@@ -102,8 +102,8 @@ export const GET = withCanonicalEnforcement(
           decision: "APPROVED" as const,
           workspaceId: decision.workspaceId,
           ownerUserId: decision.ownerUserId,
-          createdBy: decision.createdBy,
-          lastUpdatedBy: decision.lastUpdatedBy,
+          createdBy: decision.createdByUserId,
+          lastUpdatedBy: decision.lastUpdatedByUserId,
           expectedImpact: Number(decision.impactExpected),
           confidence: Number(decision.confidence),
           explanation: decision.explanation

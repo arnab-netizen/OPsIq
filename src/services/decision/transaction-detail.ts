@@ -53,10 +53,10 @@ export async function getDecisionDetail(
     evaluation: decision.explanation,
 
     // Ownership & Assignment
-    createdBy: decision.createdBy,
+    createdBy: decision.createdByUserId,
     ownerUserId: decision.ownerUserId,
-    assignedTo: decision.assignedTo,
-    reviewedBy: decision.reviewedBy,
+    assignedTo: decision.assignedToUserId,
+    reviewedBy: decision.reviewedByUserId,
 
     // Execution
     executionStatus: decision.executionStatus,

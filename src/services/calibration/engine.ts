@@ -75,10 +75,14 @@ export function computeCalibration(
     };
   }
 
-  // Filter to completed items with actual outcome values
+  // Filter to completed items with actual outcome values.
+  // "done" is the legacy status; "outcome_recorded" is the canonical status written
+  // by the current decision-lifecycle service at OUTCOME_RECORDED state transition.
+  // Both must be included so calibration is not blind to new completions.
+  const COMPLETED_STATUSES = new Set(["done", "outcome_recorded"]);
   const completedItems = items.filter(
     (item) =>
-      item.status === "done" &&
+      COMPLETED_STATUSES.has(item.status) &&
       item.actualOutcomeValue !== undefined &&
       item.actualOutcomeValue !== null &&
       item.impactExpected !== undefined &&
