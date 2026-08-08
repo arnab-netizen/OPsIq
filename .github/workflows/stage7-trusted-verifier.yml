@@ -1,6 +1,6 @@
 name: Stage 7 — Trusted Evidence Verifier
 
-# ─── Trigger: repository_dispatch ────────────────────────────────────────────
+# ─── Trigger: workflow_dispatch ───────────────────────────────────────────────
 # This workflow runs ONLY on main. It verifies evidence artifacts submitted via
 # PRs without ever executing code from those PRs in a privileged context.
 #
@@ -18,9 +18,11 @@ name: Stage 7 — Trusted Evidence Verifier
 #   - The signing key is never exposed to artifact-submitting PRs.
 #   - Posts the result as a Commit Status on the live PR HEAD SHA.
 #
-# Callers: stage7-capture fires repository_dispatch with
-#   client_payload: { pr_number, head_sha, artifact_ids }
-# after the evidence PR is opened and the artifact is committed.
+# Callers: stage7-capture dispatches workflow_dispatch with inputs
+#   { pr_number, head_sha, artifact_ids }
+# using GITHUB_TOKEN — no PAT required. workflow_dispatch does not loop
+# (GITHUB_TOKEN triggering workflow_dispatch on the same repo is permitted;
+# only automatic triggers — push, pull_request — are blocked to prevent loops).
 #
 # PR-A remediation (DEFECT 8 updated audit — 20 requirements):
 #  1.  Workflow runs on main — YES (checkout ref: main).
@@ -40,7 +42,7 @@ name: Stage 7 — Trusted Evidence Verifier
 # 13.  Owner logins allowlist configurable — YES (EVIDENCE_OWNER_LOGINS secret).
 # 14.  Only evd_ artifact ids accepted — YES (pattern filter).
 # 15.  Empty artifact list = error status, not pass — YES (validator handles it).
-# 16.  Dispatcher identity is not trusted as owner identity — YES (payload not used).
+# 16.  Dispatcher identity is not trusted as owner identity — YES (inputs not used for identity).
 # 17.  Result posted as Commit Status on the independently resolved live HEAD SHA —
 #      YES (replaces prior issue-comment approach; post step runs with if: always()).
 # 18.  Non-zero exit on any REJECTED artifact — YES (assert step at end).
@@ -49,8 +51,20 @@ name: Stage 7 — Trusted Evidence Verifier
 # 20.  PR diff verified add-only inside canonical artifacts directory — YES (addonly step).
 
 on:
-  repository_dispatch:
-    types: [stage7-verify-artifacts]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Evidence PR number"
+        required: true
+        type: string
+      head_sha:
+        description: "PR head SHA at time of capture (hint only — live SHA is independently resolved)"
+        required: true
+        type: string
+      artifact_ids:
+        description: "Comma-separated canonical artifact ids (evd_<32hex>)"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -82,8 +96,8 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
-          PAYLOAD_HEAD_SHA: ${{ github.event.client_payload.head_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          PAYLOAD_HEAD_SHA: ${{ inputs.head_sha }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -123,7 +137,7 @@ jobs:
         if: steps.resolve_pr.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+          PR_NUMBER: ${{ inputs.pr_number }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -161,7 +175,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LIVE_HEAD_SHA: ${{ steps.resolve_pr.outputs.live_head_sha }}
-          ARTIFACT_IDS_RAW: ${{ github.event.client_payload.artifact_ids }}
+          ARTIFACT_IDS_RAW: ${{ inputs.artifact_ids }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -240,7 +254,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           LIVE_HEAD_SHA: ${{ steps.resolve_pr.outputs.live_head_sha }}
-          PAYLOAD_HEAD_SHA: ${{ github.event.client_payload.head_sha }}
+          PAYLOAD_HEAD_SHA: ${{ inputs.head_sha }}
           RESOLVE_OUTCOME: ${{ steps.resolve_pr.outcome }}
           FETCH_COUNT: ${{ steps.fetch.outputs.count }}
           ADD_ONLY: ${{ steps.addonly.outputs.add_only }}

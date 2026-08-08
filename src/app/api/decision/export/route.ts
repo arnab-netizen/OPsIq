@@ -81,7 +81,7 @@ export const GET = withCanonicalEnforcement(
         status: item!.status,
         createdAt: item!.createdAt.toISOString(),
         ownerUserId: item!.ownerUserId,
-        createdBy: item!.createdBy,
+        createdBy: item!.createdByUserId,
       },
       inputs: item!.inputsSnapshot ? (item!.inputsSnapshot as Record<string, unknown>) : null,
       outputs: {

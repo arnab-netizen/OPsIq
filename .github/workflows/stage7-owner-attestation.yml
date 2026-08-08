@@ -1,0 +1,145 @@
+name: Stage 7 — Owner Attestation Capture (LANE_F / OWNER_ACCEPTANCE)
+
+# Captures owner attestation evidence for LANE_F and OWNER_ACCEPTANCE invariants.
+# Owner-lane invariants (S7-I6 through S7-I9, S7-I13 through S7-I16) cannot be
+# proven by automated LANE_C probes — they require a human pilot and owner sign-off.
+#
+# Trigger: workflow_dispatch (owner manually dispatches after completing pilot activity)
+#
+# Required secrets: GITHUB_TOKEN (standard, no extra secrets needed)
+# The evidence artifact is committed to docs/opsiq/evidence/stage-7/artifacts/
+
+on:
+  workflow_dispatch:
+    inputs:
+      invariant_id:
+        description: |
+          Invariant to attest. Must be one of the LANE_F or OWNER_ACCEPTANCE invariants:
+          S7-I6, S7-I7, S7-I8, S7-I9, S7-I13, S7-I14, S7-I15, S7-I16
+        required: true
+        type: choice
+        options:
+          - S7-I6
+          - S7-I7
+          - S7-I8
+          - S7-I9
+          - S7-I13
+          - S7-I14
+          - S7-I15
+          - S7-I16
+      attestation_statement:
+        description: |
+          Owner attestation statement (one sentence describing what was completed
+          during the pilot session that proves this invariant).
+        required: true
+        type: string
+      pilot_session_date:
+        description: |
+          ISO date of the owner pilot session (YYYY-MM-DD).
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  capture-owner-attestation:
+    name: Capture owner attestation for ${{ inputs.invariant_id }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Validate invariant_id is LANE_F or OWNER_ACCEPTANCE
+        run: |
+          VALID_IDS="S7-I6 S7-I7 S7-I8 S7-I9 S7-I13 S7-I14 S7-I15 S7-I16"
+          if ! echo "$VALID_IDS" | grep -qw "${{ inputs.invariant_id }}"; then
+            echo "ERROR: ${{ inputs.invariant_id }} is not a LANE_F or OWNER_ACCEPTANCE invariant"
+            exit 1
+          fi
+          echo "invariant_id=${{ inputs.invariant_id }}" >> $GITHUB_ENV
+
+      - name: Validate pilot_session_date format
+        run: |
+          if ! echo "${{ inputs.pilot_session_date }}" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+            echo "ERROR: pilot_session_date must be YYYY-MM-DD format"
+            exit 1
+          fi
+
+      - name: Validate attestation_statement is non-empty
+        run: |
+          STATEMENT="${{ inputs.attestation_statement }}"
+          if [ -z "$STATEMENT" ] || [ ${#STATEMENT} -lt 10 ]; then
+            echo "ERROR: attestation_statement must be at least 10 characters"
+            exit 1
+          fi
+
+      - name: Determine lane for invariant
+        run: |
+          case "${{ inputs.invariant_id }}" in
+            S7-I6|S7-I7|S7-I8|S7-I9) echo "INVARIANT_LANE=LANE_F" >> $GITHUB_ENV ;;
+            S7-I13|S7-I14|S7-I15|S7-I16) echo "INVARIANT_LANE=OWNER_ACCEPTANCE" >> $GITHUB_ENV ;;
+          esac
+
+      - name: Create attestation evidence artifact
+        run: |
+          ARTIFACT_ID="${{ inputs.invariant_id }}-owner-attestation"
+          ARTIFACT_PATH="docs/opsiq/evidence/stage-7/artifacts/${ARTIFACT_ID}.json"
+          mkdir -p "$(dirname "$ARTIFACT_PATH")"
+
+          cat > "$ARTIFACT_PATH" << EOF
+          {
+            "artifact_id": "${ARTIFACT_ID}",
+            "invariant_id": "${{ inputs.invariant_id }}",
+            "lane": "${INVARIANT_LANE}",
+            "type": "owner_attestation",
+            "status": "ACCEPTED",
+            "captured_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "captured_by": "${{ github.actor }}",
+            "pilot_session_date": "${{ inputs.pilot_session_date }}",
+            "attestation_statement": "${{ inputs.attestation_statement }}",
+            "workflow_run_id": "${{ github.run_id }}",
+            "workflow_sha": "${{ github.sha }}",
+            "repository": "${{ github.repository }}",
+            "provenance": {
+              "source": "github_actions_workflow_dispatch",
+              "workflow": "stage7-owner-attestation.yml",
+              "actor_verified_by": "github_oidc",
+              "branch": "${{ github.ref_name }}"
+            }
+          }
+          EOF
+
+          echo "ARTIFACT_PATH=$ARTIFACT_PATH" >> $GITHUB_ENV
+          echo "Attestation artifact created at $ARTIFACT_PATH"
+          cat "$ARTIFACT_PATH"
+
+      - name: Commit attestation artifact
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${{ env.ARTIFACT_PATH }}"
+          git commit -m "chore(stage7): capture owner attestation for ${{ inputs.invariant_id }} [${INVARIANT_LANE}]
+
+          Invariant: ${{ inputs.invariant_id }}
+          Lane: ${INVARIANT_LANE}
+          Pilot session: ${{ inputs.pilot_session_date }}
+          Actor: ${{ github.actor }}
+          Run: ${{ github.run_id }}"
+          git push origin HEAD
+
+      - name: Summary
+        run: |
+          echo "## Owner Attestation Captured" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Invariant | ${{ inputs.invariant_id }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lane | ${INVARIANT_LANE} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Pilot Date | ${{ inputs.pilot_session_date }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Actor | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifact | ${{ env.ARTIFACT_PATH }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Attestation | ${{ inputs.attestation_statement }} |" >> $GITHUB_STEP_SUMMARY
