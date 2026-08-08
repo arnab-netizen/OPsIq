@@ -88,7 +88,7 @@ export default async function EngagementsPage({
                   healthStatus: string;
                   interventionMode: string;
                   createdAt: string;
-                  client: { id: string; name: string };
+                  clientAccount: { id: string; name: string };
                 }) => (
                   <tr key={eng.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
@@ -102,8 +102,8 @@ export default async function EngagementsPage({
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/clients/${eng.client.id}`} className="text-muted-foreground hover:text-primary">
-                        {eng.client.name}
+                      <Link href={`/clients/${eng.clientAccount.id}`} className="text-muted-foreground hover:text-primary">
+                        {eng.clientAccount.name}
                       </Link>
                     </td>
                     <td className="px-4 py-3">
