@@ -1,11 +1,12 @@
 {
   "_schema": "harness-active-state/1.0",
   "_rule": "Keep this file small. One canonical truth per field. No history — history lives in execution_state.json and git.",
-  "last_updated": "2026-08-07",
+  "last_updated": "2026-08-08",
   "factory_stage": "FACTORY_STAGE_7",
   "factory_stage_status": "AUTHORIZED_CONTRACT_FROZEN_PARTIAL",
   "factory_stage_scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS",
   "active_bundle": "factory-stage-7-closure",
+  "active_branch": "claude/owner-operational-completion",
   "blocked_by": [],
   "owner_outcome": "Owner has proof that Stages 3, 4, 5, and 6 are implemented and accepted. Factory Stage 7 proves that OpsIQ can be deployed securely for its owner, operated without developer assistance, produce correct and actionable guidance from real business data, govern approved execution, capture outcomes and feedback, recover safely from realistic failures, and be accepted for unrestricted private owner use.",
   "current_gap": "Factory Stage 7 remains AUTHORIZED_CONTRACT_DEFINED; factory-stage-7-closure is PENDING with all four required evidence fields null. Stage 8 closure is NOT verified — no STAGE_8_PRIVATE_OWNER_PRODUCTION_CLOSED record exists in any commit on any ref, and there is no evidence for production migration verification, owner bootstrap, authenticated owner flow, a governed owner mutation with its audit event, production readiness, or scheduler execution.",
