@@ -19,8 +19,8 @@ export const runtime = "nodejs";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const plan = await db.startupResearchPlan.findUnique({
-      where: { sessionId: params.sessionId },
+    const plan = await db.startupResearchPlan.findFirst({
+      where: { sessionId: params.sessionId, workspaceId: ctx.verifiedWorkspaceId as string },
       include: { acquisitions: { orderBy: { createdAt: "desc" } } },
     });
     const ownerTasks = await getOwnerResearchTasks(ctx.verifiedWorkspaceId, params.sessionId);
