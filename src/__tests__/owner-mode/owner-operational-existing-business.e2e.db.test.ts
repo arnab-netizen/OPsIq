@@ -78,18 +78,20 @@ const state: {
 
 // Guards afterAll from hanging when beforeAll fails (e.g. Neon cold-start)
 let seeded = false;
+// Background keepalive: pings Neon every 8s to prevent compute auto-suspend
+// between sequential tests (Neon suspends after ~5-10s of no activity).
+let neonKeepalive: ReturnType<typeof setInterval> | undefined;
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db][e2e] Owner-mode governance spine — existing business",
   () => {
     beforeAll(async () => {
       // Pre-warm: retry so Neon cold-start doesn't abort the run immediately.
-      // connectionTimeoutMillis=30s in db.ts bounds each attempt.
-      // idleTimeoutMillis=120s keeps client-side pool alive between tests.
+      // connectionTimeoutMillis=90s in db.ts gives Neon cold-start reliable margin.
       let dbAvailable = false;
       for (let attempt = 0; attempt < 3; attempt++) {
         try { await db.user.count(); dbAvailable = true; break; } catch {
-          if (attempt < 2) await new Promise(r => setTimeout(r, 3000));
+          if (attempt < 2) await new Promise(r => setTimeout(r, 5000));
         }
       }
       if (!dbAvailable) return;  // DB unreachable — skip seeding; afterAll will no-op
@@ -158,9 +160,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         }),
       ]);
       seeded = true;
+      // Start keepalive AFTER seeding so Neon stays awake throughout the suite.
+      neonKeepalive = setInterval(async () => {
+        try { await db.user.count(); } catch { /* transient Neon errors ignored */ }
+      }, 8000);
     }, 300000);
 
     afterAll(async () => {
+      if (neonKeepalive) clearInterval(neonKeepalive);
       // If seeding never completed (e.g. DB unreachable), skip cleanup to avoid hanging.
       if (!seeded) return;
       // Delete in reverse dependency order; .catch so a missing record never blocks cleanup

@@ -31,6 +31,7 @@ const wsId = randomUUID();
 
 // Guards afterAll from hanging when beforeAll fails (e.g. Neon cold-start)
 let seeded = false;
+let neonKeepalive: ReturnType<typeof setInterval> | undefined;
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db][e2e] Owner business simulations A-G — semantic quality gates",
@@ -40,7 +41,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       let dbAvailable = false;
       for (let attempt = 0; attempt < 3; attempt++) {
         try { await (prisma as any).user.count(); dbAvailable = true; break; } catch {
-          if (attempt < 2) await new Promise(r => setTimeout(r, 3000));
+          if (attempt < 2) await new Promise(r => setTimeout(r, 5000));
         }
       }
       if (!dbAvailable) return;
@@ -52,9 +53,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         data: { id: wsId, name: "Simulation Workspace", slug: `sim-${wsId.slice(0, 8)}`, createdBy: actorId },
       });
       seeded = true;
+      neonKeepalive = setInterval(async () => {
+        try { await (prisma as any).user.count(); } catch { /* transient Neon errors ignored */ }
+      }, 8000);
     }, 300000);
 
     afterAll(async () => {
+      if (neonKeepalive) clearInterval(neonKeepalive);
       if (!seeded) return;
       await (prisma as any).workspace.deleteMany({ where: { id: wsId } }).catch(() => undefined);
       await (prisma as any).user.deleteMany({ where: { id: actorId } }).catch(() => undefined);
