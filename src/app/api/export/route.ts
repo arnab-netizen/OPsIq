@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { db } from "@/lib/db";
 import {
   createExportPackage,
   validateExportData,
@@ -25,49 +26,74 @@ export const GET = withCanonicalEnforcement(
     throw new Error("Invalid format. Use 'json' or 'csv'");
   }
 
-  // Build export data (mock - would query database in real implementation)
+  // Fetch real workspace data for export
+  const [operatorItems, engagements] = await Promise.all([
+    db.operatorItem.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+      select: {
+        id: true,
+        problem: true,
+        action: true,
+        status: true,
+        priorityScore: true,
+        confidence: true,
+        decisionType: true,
+        expectedOutcome: true,
+        actualOutcome: true,
+        outcomeDelta: true,
+        decisionAccuracy: true,
+        dueAt: true,
+        executedAt: true,
+        createdAt: true,
+      },
+    }),
+    db.engagement.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+      select: {
+        id: true,
+        clientName: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        createdAt: true,
+      },
+    }),
+  ]);
+
   const exportedData: ExportedData = {
     workspaceId,
     exportedAt: new Date(),
     format,
     tables: [
       {
-        name: "actions",
-        rowCount: 0,
-        columns: [
-          "id",
-          "title",
-          "status",
-          "priority",
-          "dueDate",
-          "createdAt",
-        ],
-        data: [], // Would be populated from database
-      },
-      {
         name: "decisions",
-        rowCount: 0,
+        rowCount: operatorItems.length,
         columns: [
-          "id",
-          "title",
-          "status",
-          "confidence",
-          "createdAt",
+          "id", "problem", "action", "status", "priorityScore", "confidence",
+          "decisionType", "expectedOutcome", "actualOutcome", "outcomeDelta",
+          "decisionAccuracy", "dueAt", "executedAt", "createdAt",
         ],
-        data: [], // Would be populated from database
+        data: operatorItems.map((item: any) => ({
+          ...item,
+          dueAt: item.dueAt?.toISOString() ?? null,
+          executedAt: item.executedAt?.toISOString() ?? null,
+          createdAt: item.createdAt.toISOString(),
+        })),
       },
       {
         name: "engagements",
-        rowCount: 0,
-        columns: [
-          "id",
-          "clientName",
-          "status",
-          "startDate",
-          "endDate",
-          "createdAt",
-        ],
-        data: [], // Would be populated from database
+        rowCount: engagements.length,
+        columns: ["id", "clientName", "status", "startDate", "endDate", "createdAt"],
+        data: engagements.map((eng: any) => ({
+          ...eng,
+          startDate: eng.startDate?.toISOString() ?? null,
+          endDate: eng.endDate?.toISOString() ?? null,
+          createdAt: eng.createdAt.toISOString(),
+        })),
       },
     ],
   };

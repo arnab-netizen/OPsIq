@@ -35,38 +35,40 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
 
-    // Fetch all completed items with outcome data
+    // Fetch all completed items. firstCompletedAt / firstPositiveOutcomeAt are
+    // set when the status transitions to "done" and when a positive outcome is
+    // recorded respectively. Items with null timestamps are included but produce
+    // no time-to-value entry (they have no measurable window yet).
     const items = await db.operatorItem.findMany({
       where: {
         workspaceId,
-      status: "done",
-      firstCompletedAt: {
-        not: null,
+        status: "done",
       },
-      firstPositiveOutcomeAt: {
-        not: null,
+      orderBy: {
+        updatedAt: "desc",
       },
-    },
-    orderBy: {
-      firstCompletedAt: "desc",
-    },
-  });
+    });
 
   // Calculate time to value metrics
   const timeToValueMetrics: TimeToValueMetric[] = [];
   const timeToValueDays: number[] = [];
 
   for (const item of items) {
-    if (item.firstCompletedAt && item.firstPositiveOutcomeAt) {
-      const completedAt = new Date(item.firstCompletedAt);
-      const positiveOutcomeAt = new Date(item.firstPositiveOutcomeAt);
+    // Use dedicated timestamps when populated; fall back to executedAt / updatedAt
+    // for items completed before the firstCompletedAt column was added.
+    const completedTs = item.firstCompletedAt ?? item.executedAt ?? null;
+    const outcomeTs = item.firstPositiveOutcomeAt ?? null;
+
+    if (completedTs && outcomeTs) {
+      const completedAt = new Date(completedTs);
+      const positiveOutcomeAt = new Date(outcomeTs);
       const timeToValueMs = positiveOutcomeAt.getTime() - completedAt.getTime();
       const timeToValueDaysValue = timeToValueMs / (1000 * 60 * 60 * 24);
 
       timeToValueMetrics.push({
         itemId: item.id,
-        completedAt: item.firstCompletedAt.toISOString(),
-        positiveOutcomeAt: item.firstPositiveOutcomeAt.toISOString(),
+        completedAt: completedAt.toISOString(),
+        positiveOutcomeAt: positiveOutcomeAt.toISOString(),
         timeToValueMs,
         timeToValueDays: timeToValueDaysValue,
       });

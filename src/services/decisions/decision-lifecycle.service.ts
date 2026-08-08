@@ -23,6 +23,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "@/infra/errors";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 /**
  * Transition decision to a new state
@@ -385,36 +386,38 @@ export async function recordDecisionOutcome(
     updateData.auditTrail = verificationMetadata.auditTrail;
   }
 
-  // Update with outcome data
-  const updated = await db.operatorItem.update({
-    where: { id: decisionId },
-    data: {
-      ...updateData,
-      status: mapStateToStatus("OUTCOME_RECORDED"),
-      updatedAt: new Date(),
-      lastUpdatedByUserId: actorId,
-    },
-  });
-
-  // Emit audit event
-  await emitAuditEvent({
-    eventName: "outcome.recorded" as any,
-    entityType: "OperatorItem",
-    entityId: decisionId,
-    workspaceId,
-    actorId,
-    payload: {
-      fromState: "EXECUTED",
-      toState: "OUTCOME_RECORDED",
-      outcomeData,
-    },
-    visibility: "internal",
-  }).catch((error) => {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.warn("Failed to emit audit event for outcome recording", {
-      decisionId,
-      error: governed.operatorMessage,
+  // Update with outcome data AND emit audit in one atomic transaction (fail-closed — no swallow).
+  let updatedId: string;
+  let updatedStatus: string;
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.operatorItem.update({
+      where: { id: decisionId },
+      data: {
+        ...updateData,
+        status: mapStateToStatus("OUTCOME_RECORDED"),
+        updatedAt: new Date(),
+        lastUpdatedByUserId: actorId,
+      },
     });
+    updatedId = updated.id;
+    updatedStatus = updated.status;
+
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OUTCOME_RECORDED,
+        entityType: "OperatorItem",
+        entityId: decisionId,
+        workspaceId,
+        actorId,
+        payload: {
+          fromState: "EXECUTED",
+          toState: "OUTCOME_RECORDED",
+          outcomeData,
+        },
+        visibility: "internal",
+      },
+      tx
+    );
   });
 
   logger.info("Decision outcome recorded", {
@@ -425,8 +428,8 @@ export async function recordDecisionOutcome(
   });
 
   return {
-    id: updated.id,
-    status: updated.status,
+    id: updatedId!,
+    status: updatedStatus!,
   };
 }
 

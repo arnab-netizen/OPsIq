@@ -222,7 +222,10 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
         `/api/decisions/${decision.id}/record-outcome?workspaceId=${wsId}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "idempotency-key": `outcome-${decision.id}-${Date.now()}`,
+          },
           body: JSON.stringify({ actualOutcome: "success", actualOutcomeValue: value }),
         }
       );

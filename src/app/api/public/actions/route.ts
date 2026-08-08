@@ -8,6 +8,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { toPublicActionDTO, PublicAPIError } from "@/services/public-api.service";
+import { db } from "@/lib/db";
 import { z } from "zod/v4";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
@@ -17,6 +18,31 @@ const querySchema = z.object({
   limit: z.string().optional().default("100"),
   offset: z.string().optional().default("0"),
 });
+
+const PUBLIC_STATUS_TO_DB: Record<string, string[]> = {
+  draft: ["draft"],
+  assigned: ["pending"],
+  in_progress: ["in_progress"],
+  blocked: ["blocked"],
+  completed: ["done", "outcome_recorded", "closed"],
+  verified: ["verified"],
+};
+
+function dbStatusToPublic(status: string): "draft" | "assigned" | "in_progress" | "blocked" | "completed" | "verified" {
+  if (status === "pending") return "assigned";
+  if (status === "in_progress") return "in_progress";
+  if (status === "done" || status === "outcome_recorded" || status === "closed") return "completed";
+  if (status === "blocked") return "blocked";
+  if (status === "verified") return "verified";
+  return "draft";
+}
+
+function priorityScoreToPriority(score: number): "low" | "medium" | "high" | "critical" {
+  if (score < 25) return "low";
+  if (score < 50) return "medium";
+  if (score < 75) return "high";
+  return "critical";
+}
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -34,43 +60,47 @@ export const GET = withCanonicalEnforcement(
       const limit = Math.min(parseInt(queryParams.limit), 1000);
       const offset = parseInt(queryParams.offset);
 
-      const mockActions = [
-        {
-          id: "550e8400-e29b-41d4-a716-446655440100",
-          engagementId: "550e8400-e29b-41d4-a716-446655440000",
-          name: "Conduct market research",
-          description: "Interview 20+ potential customers in target market",
-          status: queryParams.status || "in_progress",
-          priority: queryParams.priority || "high",
-          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          assignee: "sarah@company.com",
-          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: "550e8400-e29b-41d4-a716-446655440101",
-          engagementId: "550e8400-e29b-41d4-a716-446655440001",
-          name: "Implement process automation",
-          description: "Deploy workflow automation in procurement",
-          status: queryParams.status || "assigned",
-          priority: queryParams.priority || "medium",
-          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          assignee: "john@company.com",
-          createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
+      const dbStatusFilter = queryParams.status
+        ? { status: { in: PUBLIC_STATUS_TO_DB[queryParams.status] } }
+        : {};
 
-      let filtered = mockActions;
-      if (queryParams.status) {
-        filtered = filtered.filter((a) => a.status === queryParams.status);
-      }
-      if (queryParams.priority) {
-        filtered = filtered.filter((a) => a.priority === queryParams.priority);
-      }
+      const items = await db.operatorItem.findMany({
+        where: { workspaceId, ...dbStatusFilter },
+        orderBy: { createdAt: "desc" },
+        take: limit + offset,
+        select: {
+          id: true,
+          problem: true,
+          action: true,
+          status: true,
+          priorityScore: true,
+          dueAt: true,
+          ownerUserId: true,
+          workspaceId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      const mapped = items.map((item: any) => ({
+        id: item.id,
+        name: item.problem,
+        description: item.action,
+        status: dbStatusToPublic(item.status),
+        priority: priorityScoreToPriority(item.priorityScore),
+        dueDate: item.dueAt?.toISOString(),
+        owner: item.ownerUserId ?? undefined,
+        engagementId: item.workspaceId,
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+      }));
+
+      const filtered = queryParams.priority
+        ? mapped.filter((a: any) => a.priority === queryParams.priority)
+        : mapped;
 
       const paginated = filtered.slice(offset, offset + limit);
-      const publicDTOs = paginated.map((a) => toPublicActionDTO(a));
+      const publicDTOs = paginated.map((a: any) => toPublicActionDTO(a));
 
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.OPERATOR_QUEUE_VIEWED,
