@@ -3940,11 +3940,11 @@
     "gaps": {
       "notification_service": {
         "file": "src/services/notification-service.ts",
-        "finding": "All delivery methods (sendOwnerNotification, sendStaffNotification, sendAdminNotification) are fully mock-backed — no real email/SMS/push transport wired",
+        "finding": "All delivery methods (sendOwnerNotification, sendStaffNotification, sendAdminNotification) are fully mock-backed \u2014 no real email/SMS/push transport wired",
         "prior_classification": "WIRED_NOT_CALLED",
         "corrected_classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
-        "reason": "Mock shell by design — delivery transport is explicitly NOT wired until a real provider is configured. Correct classification is mock shell, not wiring gap.",
-        "remediation": "Wire a real transport (SendGrid, Twilio, etc.) when notification delivery is required for production. No code change needed now — classification only."
+        "reason": "Mock shell by design \u2014 delivery transport is explicitly NOT wired until a real provider is configured. Correct classification is mock shell, not wiring gap.",
+        "remediation": "Wire a real transport (SendGrid, Twilio, etc.) when notification delivery is required for production. No code change needed now \u2014 classification only."
       },
       "escalation_delivery": {
         "file": "src/services/escalation.ts",
@@ -3959,7 +3959,7 @@
         "function": "handleEmailAction",
         "finding": "handleEmailAction is explicitly stubbed (console.log only, no real email dispatch)",
         "corrected_classification": "EXPLICIT_STUB",
-        "reason": "Stub is intentional — email is handled via notification-service.ts mock shell. Two parallel stubs for the same gap; the stub is consistent with the rest of the delivery layer.",
+        "reason": "Stub is intentional \u2014 email is handled via notification-service.ts mock shell. Two parallel stubs for the same gap; the stub is consistent with the rest of the delivery layer.",
         "remediation": "Replace stub with a call to notification-service when real email transport is configured."
       },
       "escalation_review_cycle_history": {
@@ -3975,7 +3975,10 @@
         "finding": "Real distributed rate-limiting implementation using PostgreSQL window functions",
         "corrected_classification": "WIRED",
         "reason": "checkPgRateLimit is called on at least 2 production routes (verified during research). It is a real implementation, not a stub.",
-        "wired_on": ["src/app/api/recommendations/route.ts", "src/app/api/actions/route.ts"]
+        "wired_on": [
+          "src/app/api/recommendations/route.ts",
+          "src/app/api/actions/route.ts"
+        ]
       },
       "historical_accuracy_weight": {
         "file": "src/services/decision-confidence.service.ts",
@@ -3987,12 +3990,25 @@
       "cleanup_old_snapshots": {
         "file": "src/services/snapshot.service.ts",
         "function": "cleanupOldSnapshots",
-        "finding": "cleanupOldSnapshots is a pure stub — logs intent but performs no database deletion",
+        "finding": "cleanupOldSnapshots is a pure stub \u2014 logs intent but performs no database deletion",
         "corrected_classification": "EXPLICIT_STUB",
         "reason": "Stub is intentional pending production retention policy decision. No production data at risk.",
         "remediation": "Implement actual deleteMany for snapshots older than retention window when policy is decided."
       }
     },
-    "summary": "7 gaps reclassified. 2 are intentional design stubs (notification, email delivery). 1 is wired correctly (checkPgRateLimit). 2 are explicit stubs pending integration decisions. 2 are genuine implementation gaps (historical_accuracy_weight, cleanupOldSnapshots) that require future persistence work. No security, DTO, or workspace enforcement gaps identified."
-  }
+    "summary": "7 gaps reclassified \u2014 all confirmed P3/QUALITY by deep call-path analysis. No P1 promotions. No production owner journey is blocked by any of these gaps. All represent intentional stubs, dead code, or UX-level quality improvements for post-pilot hardening.",
+    "p1_assessment_status": "COMPLETE",
+    "p1_assessment_result": "ALL_P3_QUALITY_NO_P1_PROMOTIONS",
+    "p1_assessment_date": "2026-08-08",
+    "p1_assessment_evidence": {
+      "notification_service": "P3/QUALITY \u2014 No owner journey depends on notification delivery; log-only escalation continues; real delivery is UX enhancement",
+      "handle_email_action": "P3/QUALITY \u2014 triggerAction/action-handlers.ts has zero production imports; confirmed dead code via grep; no live owner path calls it",
+      "escalation_review_cycle_history": "P3/QUALITY \u2014 POST (generate/detect) operations fully functional; GET history returns empty with explanatory notes; no owner journey blocked",
+      "check_pg_rate_limit": "P3/QUALITY \u2014 ALREADY WIRED: actions route has both in-memory pre-pass AND PG distributed gate; diagnosis rate limit in-memory only but protected by auth+workspace isolation",
+      "historical_accuracy_weight": "P3/QUALITY \u2014 Hardcode is in dead code (calculateCredibility() has zero production callers); owner-facing confidence uses computeDecisionConfidence() and generateDecisionConfidenceScore() which are live and dynamic",
+      "cleanup_old_snapshots": "P3/QUALITY \u2014 Inert stub: SnapshotOptimizationEngine upserts and self-evicts stale rows; owner metric snapshots are unique-per-period; no unbounded accumulation risk in pilot timeframe",
+      "escalation_delivery": "P3/QUALITY \u2014 Structured captureError + dead-letter DB writes on failure; in-memory scheduler only reachable via getScheduler() which has zero production callers; cron uses DB provider directly"
+    }
+  },
+  "block_6_status": "COMPLETE"
 }
