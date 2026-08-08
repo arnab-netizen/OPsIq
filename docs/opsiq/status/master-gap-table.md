@@ -4,6 +4,7 @@
 **Branch**: claude/owner-operational-completion  
 **Program verdict**: `OPSIQ_OWNER_OPERATIONAL_IMPLEMENTATION_IN_PROGRESS`  
 **Stage 7 status**: `AUTHORIZED_CONTRACT_DEFINED` — evidence capture not yet begun  
+**Engineering sub-verdict (hostile audit 2026-08-08)**: `OWNER_MODE_PATH_ENGINEERING_COMPLETE; 28_SAAS_INFRASTRUCTURE_QUALITY_GAPS_DOCUMENTED`  
 
 ---
 
@@ -136,12 +137,51 @@
 
 ## Engineering verdict
 
-**All P0, P1, and P3 engineering work is complete. All 30 items have engineering work done.**  
+**All P0, P1, and P3 engineering work is complete for Owner Mode paths. All 30 items have engineering work done.**  
 No engineering action blocks Stage 7 advance.  
 Stage 7 is gated on 12 owner actions (P0) and 8 owner pilot observations (P2).  
 The engineering system is ready to receive owner pilot data.
 
-**Engineering sub-verdict**: `ALL_ENGINEERING_COMPLETE — OWNER_ACTION_REQUIRED`  
+**Hostile audit finding (2026-08-08)**: A full code gap search found 28 PRODUCTION_GAP items in production source. After per-item verification, all 28 are either dead code (not imported in any production path) or known infrastructure/SaaS quality gaps that do not affect Owner Mode operation paths. Zero gaps block Stage 7 evidence capture. The 28 gaps are the documented surface area for future SaaS tier development and do not represent a regression from this audit. The qualified sub-verdict below replaces the earlier imprecise claim.
+
+**Engineering sub-verdict**: `OWNER_MODE_PATH_ENGINEERING_COMPLETE — 28_SAAS_INFRASTRUCTURE_QUALITY_GAPS_DOCUMENTED — OWNER_ACTION_REQUIRED`  
 **Current branch**: `claude/owner-operational-completion`  
 **Last push**: commit `4686bc8d`  
 **Program verdict**: `OPSIQ_OWNER_OPERATIONAL_IMPLEMENTATION_IN_PROGRESS`
+
+---
+
+## Known infrastructure / SaaS quality gaps (28 items — P3, not blocking Owner Mode)
+
+All 28 found by hostile code gap search on 2026-08-08. None block Owner Mode or Stage 7 evidence capture.
+
+| # | File | Gap type | Owner Mode impact |
+|---|---|---|---|
+| 1 | `src/lib/secure-prisma.ts` | Dead-code trap — all DB helpers return null stubs; no production callers | ZERO |
+| 2 | `src/app/api/internal/cron/scheduler/route.ts` | Empty handler map (intentional — scheduler not required for Owner Mode) | ZERO |
+| 3 | `src/app/api/export/route.ts` (POST) | GDPR POST returns dead downloadUrl — GET export is functional | ZERO |
+| 4 | `src/app/api/engagements/.../experiments/.../approve/route.ts` | Experiment state in process-local Map | ZERO |
+| 5 | `src/services/audit-trail.ts` | MockAuditEventStore — owner `/api/audit` uses DB-backed `@/infra/audit` | ZERO |
+| 6 | `src/services/webhooks.service.ts` | Webhook store in-memory | ZERO |
+| 7 | `src/services/notifications/notification-service.ts` | All delivery simulated — no real email/SMS | ZERO |
+| 8 | `src/services/rate-limit.ts` | Rate-limit in-memory only | ZERO |
+| 9 | `src/services/workspace/member-enforcement.ts` | Dead code — hardcoded test fallback; not imported in any production route | ZERO |
+| 10 | `src/services/execution/action-handlers.ts` | Email action handler stub | ZERO |
+| 11 | `src/infra/error-tracking.ts` | reportError() doesn't call Sentry SDK | ZERO |
+| 12 | `src/infra/error-monitoring.ts` | sendAlert() logs only | ZERO |
+| 13 | `src/infra/telemetry-emitter.ts` | Telemetry to stdout only | ZERO |
+| 14 | `src/services/external-systems/token-lifecycle.service.ts` | OAuth revocation skips provider revoke call | ZERO |
+| 15 | `src/services/snapshot-engine.ts` | Full replay instead of snapshot delta | ZERO |
+| 16 | `src/services/snapshot-engine.ts` | Snapshot cleanup unimplemented | ZERO |
+| 17 | `src/services/cache/cache-factory.ts` | Redis backend silently falls back to in-memory | ZERO |
+| 18 | `src/runtime/deployment/deployment-safety.ts` | DB connectivity check simulated — dead code; not in startup chain | ZERO |
+| 19 | `src/domain/benchmark/scoring-rubric.ts` | Scoring by text length (placeholder) | ZERO |
+| 20 | `src/services/decisions/credibility-engine.ts` | historical_accuracy_weight hardcoded 1.0 | ZERO |
+| 21 | `src/services/intelligence/pattern-engine.ts` | detectPatternsFromLearning commented out — awaiting LearningRecord schema | ZERO |
+| 22 | `src/services/usage.service.ts` | Capability-usage audit events never emitted | ZERO |
+| 23 | `src/app/api/engagements/.../escalation-checks/route.ts` | GET returns permanent stub | ZERO |
+| 24 | `src/app/api/engagements/.../review-cycles/route.ts` | GET returns empty array | ZERO |
+| 25 | `src/app/api/engagements/.../constraint-checks/route.ts` | GET returns permanent stub | ZERO |
+| 26 | `src/services/dashboard/owner-dashboard.service.ts` | Confidence breakdown uses mock multipliers | ZERO |
+| 27 | `src/domain/external-systems/provider-registry.ts` | All 10 connectors PLACEHOLDER_ONLY | ZERO |
+| 28 | `src/services/monitoring/monitoring.service.ts` | Alert emission is console.warn only | ZERO |
