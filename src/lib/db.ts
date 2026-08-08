@@ -3,6 +3,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 const globalForPrisma = globalThis as unknown as {
   prisma: any | undefined;
   prismaPromise: Promise<any> | undefined;
+  pgPool: any | undefined;
 };
 
 /**
@@ -40,23 +41,27 @@ async function createPrismaClient() {
     const pg = await import("pg");
     const { PrismaPg } = await import("@prisma/adapter-pg");
 
+    const isTestEnv = !!(process.env.VITEST || process.env.NODE_ENV === "test");
     const pool = new pg.Pool({
       connectionString: databaseUrl,
       ssl: databaseUrl.includes("sslmode=require")
         ? { rejectUnauthorized: false }
         : undefined,
-      // Bound connection attempts so operations fail fast on DB unavailability
-      // rather than hanging indefinitely (default is 0 = wait forever).
-      // 90s gives Neon cold-start (typically 27-60s) reliable margin.
-      connectionTimeoutMillis: 90000,
-      // Keep idle connections alive for 2 min so Neon cold-start only pays once
-      // per test suite run rather than once per query after a 10s lull.
-      idleTimeoutMillis: 120000,
-      // TCP keepalive: prevents OS/NAT from dropping idle connections silently,
-      // reducing "Connection terminated unexpectedly" errors on Neon endpoints.
+      // In test envs, connectionTimeoutMillis=0 (unlimited pool-queue wait) so cold-start
+      // connection attempts block until Neon compute is ready. Production keeps 90s.
+      connectionTimeoutMillis: isTestEnv ? 0 : 90000,
+      // In test envs, keep max=1 connection. The neonKeepalive heartbeat (in each test
+      // suite's beforeAll) sends SELECT 1 through this pool every 4s, keeping the single
+      // connection active. idleTimeoutMillis=300s (5 min) gives a wide safety margin so
+      // the connection is never removed even if the heartbeat misses a tick.
+      max: isTestEnv ? 1 : 10,
+      idleTimeoutMillis: isTestEnv ? 300000 : 120000,
+      // TCP keepalive: prevents OS/NAT from silently dropping idle connections.
       keepAlive: true,
       keepAliveInitialDelayMillis: 10000,
     });
+    // Store pool reference so pingDatabase() can bypass Prisma's $extends() chain.
+    globalForPrisma.pgPool = pool;
     const adapter = new PrismaPg(pool);
     const client = new PrismaClient({ adapter });
 
@@ -113,6 +118,70 @@ export async function getDbInstance() {
     dbInitPromise = getDb();
   }
   return dbInitPromise;
+}
+
+/**
+ * Connectivity ping using a dedicated temporary pg.Client — completely separate
+ * from Prisma's pg.Pool. This prevents the keepalive/beforeEach pings from
+ * competing with Prisma queries for pool slots (critical with max:1 in test envs,
+ * where a hung pool.connect() in a keepalive would deadlock Prisma transactions).
+ *
+ * Each attempt is bounded by timeoutMs (default 90s). On timeout the temporary
+ * client is forcibly ended so it doesn't leak as an orphaned TCP connection.
+ */
+export async function pingDatabase(timeoutMs = 90000): Promise<void> {
+  // Ensure the Prisma pool is initialised (for subsequent Prisma queries)
+  if (!globalForPrisma.pgPool) {
+    await getDbInstance();
+  }
+
+  const rawUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL || "";
+  const dbUrl =
+    (process.env.VITEST || process.env.NODE_ENV === "test") && rawUrl.includes("-pooler.")
+      ? rawUrl.replace("-pooler.", ".")
+      : rawUrl;
+
+  const pg = await import("pg");
+  const ssl = dbUrl.includes("sslmode=require") ? { rejectUnauthorized: false } : undefined;
+  const deadline = Date.now() + timeoutMs;
+
+  // Retry loop: Neon's proxy may immediately reject (ECONNRESET) during cold-start,
+  // or it may hold the connection open for 7-10 minutes while compute wakes up.
+  // Each attempt uses the FULL remaining budget as its timeout so a cold-start
+  // that needs 10 minutes isn't cut short by a per-attempt cap. If the proxy
+  // immediately rejects (fast error), we retry in 500ms using whatever budget remains.
+  while (true) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new Error(`pingDatabase timeout after ${timeoutMs}ms`);
+
+    const client = new pg.Client({ connectionString: dbUrl, ssl });
+    let success = false;
+    try {
+      await Promise.race([
+        (async () => {
+          await client.connect();
+          await client.query("SELECT 1");
+        })(),
+        new Promise<never>((_, reject) => {
+          const t = setTimeout(
+            () => reject(new Error("attempt timeout")),
+            remaining  // use full remaining budget — allows Neon cold-start to complete
+          );
+          if (typeof t === "object" && t.unref) t.unref();
+        }),
+      ]);
+      success = true;
+    } catch {
+      // attempt failed — will retry
+    } finally {
+      client.end().catch(() => {});
+    }
+
+    if (success) return;
+    if (Date.now() + 500 < deadline) {
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
 }
 
 // NOTE: Removed auto-initialization on module load

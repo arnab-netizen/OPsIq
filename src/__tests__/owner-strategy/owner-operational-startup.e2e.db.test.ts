@@ -20,7 +20,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { randomUUID } from "crypto";
-import { db } from "@/lib/db";
+import { db, pingDatabase } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import {
   createStartupSession,
@@ -142,19 +142,18 @@ const readinessInputs: ReadinessInputs = {
 
 // Guards afterAll from hanging when beforeAll fails (e.g. Neon cold-start)
 let seeded = false;
+// Prisma-pool heartbeat: SELECT 1 through the pool every 4s keeps the pool's
+// connection active so idleTimeoutMillis never fires and Neon compute stays alive.
 let neonKeepalive: ReturnType<typeof setInterval> | undefined;
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db][e2e] Startup-mode governance spine — new business",
   () => {
     beforeAll(async () => {
-      // Pre-warm: retry so Neon cold-start doesn't abort the run immediately.
+      // Single 700s ping covers Neon's full cold-start window (7-10 min).
+      // If global setup already warmed Neon this returns instantly.
       let dbAvailable = false;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try { await db.user.count(); dbAvailable = true; break; } catch {
-          if (attempt < 2) await new Promise(r => setTimeout(r, 5000));
-        }
-      }
+      try { await pingDatabase(700000); dbAvailable = true; } catch { /* unreachable */ }
       if (!dbAvailable) return;
 
       await db.user.create({
@@ -164,9 +163,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         data: { id: ws, name: "Startup E2E Consultancy", slug: `startup-e2e-${ws.slice(0, 8)}`, createdBy: actorId },
       });
       seeded = true;
+
+      // Heartbeat through the Prisma pool every 4s: keeps the pool's connection
+      // "recently used" so idleTimeoutMillis never fires, and keeps Neon compute alive.
       neonKeepalive = setInterval(async () => {
-        try { await db.user.count(); } catch { /* transient Neon errors ignored */ }
-      }, 8000);
+        try { await (db as any).$executeRaw`SELECT 1`; } catch { /* non-fatal */ }
+      }, 4000);
     }, 300000);
 
     afterAll(async () => {
@@ -176,7 +178,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       if (state.blueprintResult) {
         const r = state.blueprintResult;
         await db.processExecutionTask.deleteMany({ where: { id: { in: r.taskIds } } }).catch(() => undefined);
-        await db.kpiOwnershipRecord.deleteMany({ where: { id: { in: r.kpiIds } } }).catch(() => undefined);
+        await db.kPIOwnershipRecord.deleteMany({ where: { id: { in: r.kpiIds } } }).catch(() => undefined);
         await db.businessRiskEntry.deleteMany({ where: { id: { in: r.riskIds } } }).catch(() => undefined);
         await db.resourceAllocation.deleteMany({ where: { id: { in: r.resourceAllocationIds } } }).catch(() => undefined);
         await db.constraintResolutionRecord.deleteMany({ where: { id: { in: r.constraintIds } } }).catch(() => undefined);
@@ -204,7 +206,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     beforeEach(async () => {
       if (!seeded) return;
       for (let attempt = 0; attempt < 3; attempt++) {
-        try { await db.user.count(); return; } catch {
+        try { await pingDatabase(); return; } catch {
           if (attempt < 2) await new Promise(r => setTimeout(r, 5000));
         }
       }

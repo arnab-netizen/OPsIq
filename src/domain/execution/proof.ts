@@ -61,6 +61,7 @@ export enum ProofType {
   CUSTOMER_CONFIRMATION = "customer_confirmation",
   SHORT_NOTE = "short_note",
   CHECKLIST_COMPLETION = "checklist_completion",
+  DOCUMENT = "document",
 }
 
 export enum ProofRiskLevel {

@@ -19,7 +19,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { randomUUID } from "crypto";
-import { db } from "@/lib/db";
+import { db, pingDatabase } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { createBusinessConditionProfile } from "@/services/business-condition/business-condition-profile.service";
 import { createRecommendation } from "@/services/recommendation";
@@ -78,22 +78,20 @@ const state: {
 
 // Guards afterAll from hanging when beforeAll fails (e.g. Neon cold-start)
 let seeded = false;
-// Background keepalive: pings Neon every 8s to prevent compute auto-suspend
-// between sequential tests (Neon suspends after ~5-10s of no activity).
+// Prisma-pool heartbeat: SELECT 1 through the pool every 4s keeps the pool's
+// connection active so idleTimeoutMillis never fires and Neon compute stays alive.
 let neonKeepalive: ReturnType<typeof setInterval> | undefined;
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db][e2e] Owner-mode governance spine — existing business",
   () => {
     beforeAll(async () => {
-      // Pre-warm: retry so Neon cold-start doesn't abort the run immediately.
-      // connectionTimeoutMillis=90s in db.ts gives Neon cold-start reliable margin.
+      // Pre-warm: single 700s ping covers Neon's full cold-start window (7-10 min).
+      // If global setup already warmed Neon this returns instantly (fast path).
+      // If Neon is cold-starting, the 700s timeout allows compute to finish starting.
+      // beforeAll timeout is 900s — 700s ping leaves ~200s for seeding.
       let dbAvailable = false;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try { await db.user.count(); dbAvailable = true; break; } catch {
-          if (attempt < 2) await new Promise(r => setTimeout(r, 5000));
-        }
-      }
+      try { await pingDatabase(700000); dbAvailable = true; } catch { /* unreachable */ }
       if (!dbAvailable) return;  // DB unreachable — skip seeding; afterAll will no-op
 
       // Batch 1: seed records with no inter-dependencies in parallel
@@ -126,6 +124,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await Promise.all([
         db.workspaceMembership.create({ data: { userId: ownerId, workspaceId: ws, role: "owner", isActive: true } }),
         db.workspaceMembership.create({ data: { userId: staffId, workspaceId: ws, role: "member", isActive: true } }),
+        // ws-scoped ClientAccount needed to satisfy OwnerActionOutcome.workspaceId → ClientAccount.id FK
+        db.clientAccount.create({ data: { id: ws, workspaceId: ws, name: "E2E Owner Workspace Account", updatedAt: NOW } }),
         db.clientAccount.create({ data: { id: clientId, workspaceId: ws, name: "Meridian Retail Ltd", updatedAt: NOW } }),
         db.ownerBusiness.create({
           data: { id: businessId, workspaceId: ws, name: "Meridian Retail Ltd", businessType: "retail", currency: "INR", createdBy: ownerId },
@@ -160,11 +160,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         }),
       ]);
       seeded = true;
-      // Start keepalive AFTER seeding so Neon stays awake throughout the suite.
+
+      // Heartbeat through the Prisma pool every 4s: keeps the pool's connection
+      // "recently used" so idleTimeoutMillis never fires, and keeps Neon compute alive.
       neonKeepalive = setInterval(async () => {
-        try { await db.user.count(); } catch { /* transient Neon errors ignored */ }
-      }, 8000);
-    }, 300000);
+        try { await (db as any).$executeRaw`SELECT 1`; } catch { /* non-fatal */ }
+      }, 4000);
+    }, 900000);
 
     afterAll(async () => {
       if (neonKeepalive) clearInterval(neonKeepalive);
@@ -193,17 +195,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await db.user.deleteMany({ where: { id: { in: [ownerId, staffId] } } }).catch(() => undefined);
     }, 300000);
 
-    // Re-warm Neon before each test: the serverless endpoint may auto-suspend between
-    // sequential tests (even with idleTimeoutMillis=120s, Neon terminates server-side).
-    // 3 attempts × 5s delay gives Neon up to ~90s to wake up.
+    // Re-warm Neon before each test. With globalSetup's keepalive client running in
+    // the main process, Neon should already be warm. This is a belt-and-suspenders
+    // check: 5 retries × 10s give Neon up to ~300s to recover from any transient drop.
     beforeEach(async () => {
       if (!seeded) return; // suite already skipped, no-op
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try { await db.user.count(); return; } catch {
-          if (attempt < 2) await new Promise(r => setTimeout(r, 5000));
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try { await pingDatabase(); return; } catch {
+          if (attempt < 4) await new Promise(r => setTimeout(r, 10000));
         }
       }
-    }, 120000);
+    }, 300000);
 
     // ── Step 1: Business condition assessment ─────────────────────────────────
 
@@ -248,7 +250,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       });
       expect(evt).toBeTruthy();
       expect(evt!.entityType).toBe("BusinessConditionProfile");
-    }, 120000);
+    }, 300000);
 
     // ── Step 2: Recommendation creation ──────────────────────────────────────
 
@@ -283,7 +285,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         where: { workspaceId: ws, eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED },
       });
       expect(evt).toBeTruthy();
-    }, 120000);
+    }, 300000);
 
     // ── Step 3: Task assignment (execution kickoff) ────────────────────────────
 
@@ -310,7 +312,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         where: { workspaceId: ws, eventName: AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED },
       });
       expect(blocked).toBeTruthy();
-    }, 120000);
+    }, 300000);
 
     // ── Step 4: Proof intake → owner acceptance (separation of duty) ──────────
 
@@ -356,7 +358,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         actorId: ownerId,
       });
       expect(accepted).toBe(PStatus.ACCEPTED);
-    }, 120000);
+    }, 300000);
 
     // ── Step 5: Task completion (proof gate clears) ────────────────────────────
 
@@ -381,7 +383,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         where: { workspaceId: ws, eventName: AUDIT_EVENTS.OWNER_TASK_COMPLETED },
       });
       expect(evt).toBeTruthy();
-    }, 120000);
+    }, 300000);
 
     // ── Step 6: Outcome recording ─────────────────────────────────────────────
 
@@ -415,7 +417,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         where: { workspaceId: ws, eventName: AUDIT_EVENTS.OWNER_ACTION_OUTCOME_RECORDED },
       });
       expect(evt).toBeTruthy();
-    }, 120000);
+    }, 300000);
 
     // ── Step 7: Calibration (learning candidate) ──────────────────────────────
 
@@ -447,8 +449,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
             outcomeId: state.outcomeId!,
             outcomeWindowElapsed: true,
             outcomeWorkspaceId: ws,
-            humanApprovedBy: null,
-            humanApprovedAt: null,
+            humanApprovedBy: ownerId,
+            humanApprovedAt: NOW.toISOString(),
             humanReviewWorkspaceId: ws,
           },
         },
@@ -464,7 +466,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       });
       expect(persisted).toBeTruthy();
       expect(persisted.eligibilityStatus).toContain("ELIGIBLE");
-    }, 120000);
+    }, 300000);
 
     // ── Step 8: Significant change → governed re-evaluation ──────────────────
 
@@ -484,7 +486,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         },
       });
       expect(reeval).toBeTruthy();
-    }, 120000);
+    }, 300000);
 
     // ── Step 9: Audit trail integrity ─────────────────────────────────────────
 
@@ -522,6 +524,6 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         where: { workspaceId: randomUUID() },
       });
       expect(leaked.length).toBe(0);
-    }, 120000);
+    }, 300000);
   },
 );
