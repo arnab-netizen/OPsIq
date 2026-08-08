@@ -13,6 +13,7 @@ import {
   getTierConfig,
   getSubscriptionTier,
 } from "@/services/entitlement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 const IncrementQuotaSchema = z.object({
   type: z.enum(["action", "decision", "experiment", "export"]),
@@ -44,7 +45,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       experiments: Math.max(0, config.experimentsPerMonth - usage.experimentsCreated),
     },
   };
-}, { requireWorkspace: true });
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_VIEW] });
 
 /**
  * POST /api/entitlement/quota/increment
@@ -85,4 +86,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       experiments: Math.max(0, config.experimentsPerMonth - (updatedUsage.experimentsCreated || 0)),
     },
   };
-}, { requireWorkspace: true });
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_VIEW] });

@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
@@ -44,5 +45,6 @@ export const POST = withCanonicalEnforcement(
       slug: workspace.slug,
       message: "Workspace created successfully",
     };
-  }
+  },
+  { requireWorkspace: false, requireCapabilities: [CAPABILITIES.OWNER_ONBOARD] }
 );

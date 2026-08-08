@@ -13,8 +13,15 @@
     "store_field_mapping": "COMPLETE — firstCompletedAt/firstPositiveOutcomeAt/firstWinAchieved now mapped in getItems(), committed 64106bdf",
     "dispatch_token_cleanup": "COMPLETE — stale DISPATCH_TOKEN reference removed from .governance/stage7-signing-keys.yaml, committed 64106bdf",
     "export_capability_gate": "COMPLETE — GET /api/export now requires ACTION_VIEW + requireWorkspace, committed 0b069982",
+    "capability_key_value_bug_fix": "COMPLETE — 17 routes had string key names instead of CAPABILITIES.* values, causing all users to get 403; all fixed, committed 3d83d6ee + 342ba8aa",
+    "decision_mutation_capability_gates": "COMPLETE — 7 decision routes (record-outcome, execute, fail, intake, evaluate, verify, PATCH) had missing requireCapabilities; all added, committed cf798321",
+    "system_routes_capability_gates": "COMPLETE — 4 system routes (run, calibration, scenario, verify) had missing requireCapabilities; all added, committed cf798321",
+    "env_example_documentation": "COMPLETE — 46 undocumented env vars documented in 9 new .env.example sections (14-22), committed f8201934",
+    "store_atomicity_test": "COMPLETE — 12 tests proving updateItem CAT2 atomicity (emitAuditEvent failure inside tx rolls back db write), committed cf798321",
+    "owner_routes_capability_audit": "COMPLETE — 3 owner routes (guided-choice, first-value, execution-plan) missing requireCapabilities; all fixed with OWNER_VIEW",
+    "bulk_capability_gate_sweep": "COMPLETE — 44 non-owner API routes using withCanonicalEnforcement but missing requireCapabilities; all fixed with domain-appropriate capabilities; tsc passes, build passes, prisma validates",
     "DB_status": "DB_BLOCKED_ENVIRONMENT_NETWORK_UNREACHABLE — Neon endpoint unreachable from container; all DB-dependent items deferred",
-    "items_remaining_no_db": ["TOKEN/BYPASS DEBT scan (done — none found)", "IDEMPOTENCY audit (done — patterns correct)", "CAPABILITY AUDIT (partial)", "execution_state update"]
+    "items_remaining_no_db": ["TOKEN/BYPASS DEBT scan (done — none found)", "IDEMPOTENCY audit (done — patterns correct)", "CAPABILITY AUDIT (COMPLETE — all routes audited)"]
   },
   "blocked_by": [],
   "owner_outcome": "Owner has proof that Stages 3, 4, 5, and 6 are implemented and accepted. Factory Stage 7 proves that OpsIQ can be deployed securely for its owner, operated without developer assistance, produce correct and actionable guidance from real business data, govern approved execution, capture outcomes and feedback, recover safely from realistic failures, and be accepted for unrestricted private owner use.",

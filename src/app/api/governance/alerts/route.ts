@@ -7,6 +7,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import type { NextRequest } from "next/server";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   const workspaceId = ctx.verifiedWorkspaceId;
@@ -55,4 +56,4 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   });
 
   return alerts;
-}, { requireWorkspace: true });
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.SYSTEM_VIEW_AUDIT] });

@@ -11,6 +11,7 @@ import {
   getNotification,
   markAsRead,
 } from "@/services/notifications/notification-service";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 /**
  * GET /api/notifications/[id]
@@ -43,7 +44,7 @@ export const GET = withCanonicalEnforcement(async (
     success: true,
     notification,
   };
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] });
 
 /**
  * PATCH /api/notifications/[id]/read
@@ -78,4 +79,4 @@ export const PATCH = withCanonicalEnforcement(async (
     success: true,
     message: "Notification marked as read",
   };
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] });

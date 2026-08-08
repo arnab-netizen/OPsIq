@@ -14,6 +14,7 @@ import {
   hasCapability,
   Capability,
 } from "@/services/entitlement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 const CheckCapabilitySchema = z.object({
   capability: z.nativeEnum(Capability),
@@ -35,8 +36,7 @@ export const GET = withCanonicalEnforcement(
       tier,
       config,
     };
-  },
-  { requireWorkspace: true }
+  }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_VIEW] }
 );
 
 /**
@@ -60,6 +60,5 @@ export const POST = withCanonicalEnforcement(
       allowed: true,
       capability: parsed.capability,
     };
-  },
-  { requireWorkspace: true }
+  }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_VIEW] }
 );

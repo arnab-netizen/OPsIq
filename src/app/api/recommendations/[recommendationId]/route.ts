@@ -55,7 +55,7 @@ export const GET = withCanonicalEnforcement(async (ctx, params) => {
 
   const recommendation = await getRecommendation(recommendationId, workspaceId);
   return canonicalJson(recommendation, { status: 200 });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.RECOMMENDATION_VIEW] });
 
 export const PATCH = withCanonicalEnforcement(async (ctx, params) => {
   // Authenticate + authorize (fail-closed)
@@ -81,4 +81,4 @@ export const PATCH = withCanonicalEnforcement(async (ctx, params) => {
 
   const updated = await getRecommendation(recommendationId, workspaceId);
   return canonicalJson(updated, { status: 200 });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.RECOMMENDATION_APPROVE] });

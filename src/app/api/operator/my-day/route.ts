@@ -53,4 +53,4 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
       }
     );
   }
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] });

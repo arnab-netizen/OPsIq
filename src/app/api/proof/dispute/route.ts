@@ -7,6 +7,7 @@ import { GuidedExecutionPermission } from "@/domain/workspace/guided-execution-p
 import { TaskActorRole } from "@/domain/execution/delegated-task";
 import { ProofDisputeCategory } from "@/domain/execution/proof-dispute";
 import { disputeAcceptedProof } from "@/services/execution/proof-dispute.service";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const runtime = "nodejs";
 
@@ -59,4 +60,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     { status: result.status, deduped: result.deduped, reassessmentEventId: result.reassessmentEventId, disputeRecord: result.disputeRecord },
     { status: 200 }
   );
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });
