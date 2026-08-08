@@ -32,6 +32,14 @@ async function setup() {
     }
   }
 
+  // Strip pgbouncer pooler suffix for Neon URLs in test environments.
+  // pgbouncer transaction mode releases Neon connections after each transaction, letting Neon
+  // compute suspend between test queries. Direct connections let pg.Pool's TCP keepAlive work.
+  if (process.env.DATABASE_URL?.includes("-pooler.")) {
+    (process.env as any).DATABASE_URL = process.env.DATABASE_URL.replace("-pooler.", ".");
+    console.log("  → Switched to direct Neon endpoint for test stability (stripped -pooler)");
+  }
+
   console.log("  → Database URL:", (process.env.DATABASE_URL || "not set").replace(/:[^@]*@/, ":***@"));
 
   console.log("  → Generating Prisma client...");

@@ -12,14 +12,23 @@ const globalForPrisma = globalThis as unknown as {
  * - typically include sslmode=require
  */
 async function createPrismaClient() {
-  const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
+  const rawUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
 
-  if (!databaseUrl) {
+  if (!rawUrl) {
     throw new Error(
       "DATABASE_URL or TEST_DATABASE_URL environment variable is not set. " +
       "For production: Set DATABASE_URL=postgresql://user:password@host/dbname"
     );
   }
+
+  // In test/vitest environments with a Neon pooler URL, use the direct endpoint instead.
+  // pgbouncer (transaction mode, -pooler suffix) releases the Neon compute connection after every
+  // transaction, so Neon's compute can suspend between test queries even with an 8-second keepalive
+  // interval firing user.count(). The direct endpoint gives pg.Pool actual persistent TCP connections
+  // to Neon compute, so pg.Pool's TCP keepAlive actually prevents suspension between sequential tests.
+  const databaseUrl = (process.env.VITEST || process.env.NODE_ENV === "test") && rawUrl.includes("-pooler.")
+    ? rawUrl.replace("-pooler.", ".")
+    : rawUrl;
 
   try {
     const { PrismaClient } = await import("@/generated/prisma/client");
