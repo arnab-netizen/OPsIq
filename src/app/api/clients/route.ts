@@ -1,3 +1,4 @@
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { createClient, listClients } from "@/services/client-account";
@@ -65,5 +66,5 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  { requireCapabilities: ["CLIENT_CREATE"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.CLIENT_CREATE], requireWorkspace: true }
 );

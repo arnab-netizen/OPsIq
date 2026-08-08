@@ -1,3 +1,4 @@
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { generateReport } from "@/services/report/engine";
 import { BadRequestError } from "@/infra/errors";
@@ -13,5 +14,5 @@ export const GET = withCanonicalEnforcement(
       throw new BadRequestError(governed.operatorMessage);
     }
   },
-  { requireCapabilities: ["SYSTEM_VIEW_AUDIT"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.SYSTEM_VIEW_AUDIT], requireWorkspace: true }
 );

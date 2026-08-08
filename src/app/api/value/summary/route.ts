@@ -1,3 +1,4 @@
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { db } from "@/lib/db";
 
@@ -128,5 +129,5 @@ export const GET = withCanonicalEnforcement(
 
     return summary;
   },
-  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true }
 );

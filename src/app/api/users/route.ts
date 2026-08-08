@@ -1,3 +1,4 @@
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { createUser, listUsers } from "@/services/user";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
@@ -32,7 +33,7 @@ export const GET = withCanonicalEnforcement(
 
     return result;
   },
-  { requireCapabilities: ["USER_VIEW"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.USER_VIEW], requireWorkspace: true }
 );
 
 export const POST = withCanonicalEnforcement(
@@ -57,5 +58,5 @@ export const POST = withCanonicalEnforcement(
 
     return result;
   },
-  { requireCapabilities: ["USER_CREATE"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.USER_CREATE], requireWorkspace: true }
 );
