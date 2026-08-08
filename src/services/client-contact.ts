@@ -87,7 +87,7 @@ export async function deactivateContact(
   const contact = await db.clientContact.findFirst({
     where: {
       id: contactId,
-      client: { workspaceId },
+      clientAccount: { workspaceId },
     },
   });
   if (!contact) throw new NotFoundError("ClientContact", contactId);
@@ -130,7 +130,7 @@ export async function updateContact(
   const contact = await db.clientContact.findFirst({
     where: {
       id: contactId,
-      client: { workspaceId },
+      clientAccount: { workspaceId },
     },
   });
   if (!contact) throw new NotFoundError("ClientContact", contactId);
@@ -168,7 +168,7 @@ export async function getContactsForClient(clientId: string, workspaceId: string
     where: {
       clientId,
       isActive: true,
-      client: { workspaceId },
+      clientAccount: { workspaceId },
     },
     orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
   });

@@ -29,7 +29,7 @@ export const POST = withCanonicalEnforcement(
         slug: input.slug,
         description: input.description,
         createdBy: actorId,
-        memberships: {
+        workspaceMemberships: {
           create: {
             userId: actorId,
             role: "admin",

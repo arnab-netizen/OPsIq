@@ -10,6 +10,9 @@ import {
   recordIdempotencyError,
 } from "@/services/idempotency";
 import { z } from "zod";
+import { resolveAiProvider } from "@/services/ai/resolve-provider";
+import { runIntakeExtract } from "@/services/ai/tasks";
+import type { AiContext } from "@/services/ai/provider";
 
 const IntakeSchema = z.object({
   title: z.string().min(3).max(200),
@@ -87,8 +90,30 @@ export const POST = withCanonicalEnforcement(
           : decision.createdAt,
       };
 
+      // AI advisory — non-blocking. Never gates the deterministic path.
+      let aiAdvisory: { status: string; output: unknown } | null = null;
+      try {
+        const provider = resolveAiProvider();
+        const context: AiContext = {
+          workspaceId,
+          taskType: "INTAKE_EXTRACT",
+          riskLevel: "LOW_CONTENT",
+          items: [
+            { kind: "owner_note", label: "Problem statement", value: input.title, trusted: false },
+            { kind: "owner_note", label: "Description", value: input.description || "", trusted: false },
+          ],
+          allowedEvidenceIds: [],
+          gates: { requiresOwnerApproval: false },
+        };
+        const result = await runIntakeExtract(provider, context, { timeoutMs: 10000, maxRetries: 0 });
+        aiAdvisory = { status: result.status, output: result.output ?? null };
+      } catch {
+        // AI failure must never surface to caller or block deterministic response
+      }
+
+      // Cache only the deterministic response (AI advisory excluded from idempotency cache)
       await recordIdempotencyResponse(idempotencyKey, 200, responseBody, workspaceId);
-      return responseBody;
+      return { ...responseBody, aiAdvisory };
     } catch (error) {
       await recordIdempotencyError(
         idempotencyKey,
