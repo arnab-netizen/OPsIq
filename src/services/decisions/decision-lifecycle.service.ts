@@ -355,6 +355,8 @@ export async function recordDecisionOutcome(
 
   // Apply canonical outcome classification and verification
   const updateData: any = { ...outcomeData };
+  const now = new Date();
+  let outcomeCategory: string | null = outcomeData.actualOutcome ?? null;
 
   // Classify outcome if actualOutcomeValue provided
   if (outcomeData.actualOutcomeValue !== undefined && outcomeData.actualOutcomeValue !== null) {
@@ -366,6 +368,7 @@ export async function recordDecisionOutcome(
 
     const classification = classifyOutcome(outcomeData.actualOutcomeValue, decision.impactExpected ?? null);
     updateData.actualOutcome = classification.category;
+    outcomeCategory = classification.category;
 
     // Require notes for failure/uncertain
     if ((classification.category === "failure" || classification.category === "uncertain") && !outcomeData.outcomeNotes?.trim()) {
@@ -384,6 +387,17 @@ export async function recordDecisionOutcome(
     updateData.verificationConfidence = verificationMetadata.verificationConfidence;
     updateData.verificationEvidence = verificationMetadata.verificationEvidence;
     updateData.auditTrail = verificationMetadata.auditTrail;
+  }
+
+  // Set time-to-value milestone fields on first occurrence (idempotent — only if currently null/false).
+  if (!decision.firstCompletedAt) {
+    updateData.firstCompletedAt = now;
+  }
+  if (outcomeCategory === "success" && !decision.firstPositiveOutcomeAt) {
+    updateData.firstPositiveOutcomeAt = now;
+  }
+  if (outcomeCategory === "success" && !decision.firstWinAchieved) {
+    updateData.firstWinAchieved = true;
   }
 
   // Update with outcome data AND emit audit in one atomic transaction (fail-closed — no swallow).
