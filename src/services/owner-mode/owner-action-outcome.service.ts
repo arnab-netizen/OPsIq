@@ -12,14 +12,14 @@
  * time are legitimate); idempotent writes are caller's responsibility via
  * `recommendationId` / `actionId` uniqueness policy.
  *
- * All writes emit an atomic audit event. Partial success (mutation without
- * audit) is prevented by the emitAuditEvent throwing on failure; the caller
- * can wrap in a DB transaction if atomicity is required at the application
- * level.
+ * All writes are atomic: the record creation and its audit event run inside a
+ * single DB transaction so a partial commit (record exists, audit missing) is
+ * impossible.
  */
 
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -133,45 +133,50 @@ export async function recordOwnerActionOutcome(
   }
 
   const id = randomUUID();
-  const outcome = await db.ownerActionOutcome.create({
-    data: {
-      id,
-      workspaceId,
-      businessId: input.businessId,
-      outcomeStatus: input.outcomeStatus,
-      recommendationId: input.recommendationId ?? null,
-      actionId: input.actionId ?? null,
-      ownerReportedResult: input.ownerReportedResult ?? null,
-      actualMetricName: input.actualMetricName ?? null,
-      beforeValue: input.beforeValue ?? null,
-      afterValue: input.afterValue ?? null,
-      absoluteChange,
-      percentageChange,
-      measurementPeriodStart: input.measurementPeriodStart ?? null,
-      measurementPeriodEnd: input.measurementPeriodEnd ?? null,
-      evidenceQuality: input.evidenceQuality ?? null,
-      externalEventFlag: input.externalEventFlag ?? false,
-      externalEventDescription: input.externalEventDescription ?? null,
-      taskKey: input.taskKey ?? null,
-      taskType: input.taskType ?? null,
-    },
-  });
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OWNER_ACTION_OUTCOME_RECORDED,
-    actorId,
-    entityType: "owner_action_outcome",
-    entityId: id,
-    workspaceId,
-    payload: {
-      businessId: input.businessId,
-      outcomeStatus: input.outcomeStatus,
-      evidenceQuality: input.evidenceQuality ?? null,
-      externalEventFlag: input.externalEventFlag ?? false,
-      recommendationId: input.recommendationId ?? null,
-      actionId: input.actionId ?? null,
-    },
-    visibility: "internal",
+  const outcome = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await tx.ownerActionOutcome.create({
+      data: {
+        id,
+        workspaceId,
+        businessId: input.businessId,
+        outcomeStatus: input.outcomeStatus,
+        recommendationId: input.recommendationId ?? null,
+        actionId: input.actionId ?? null,
+        ownerReportedResult: input.ownerReportedResult ?? null,
+        actualMetricName: input.actualMetricName ?? null,
+        beforeValue: input.beforeValue ?? null,
+        afterValue: input.afterValue ?? null,
+        absoluteChange,
+        percentageChange,
+        measurementPeriodStart: input.measurementPeriodStart ?? null,
+        measurementPeriodEnd: input.measurementPeriodEnd ?? null,
+        evidenceQuality: input.evidenceQuality ?? null,
+        externalEventFlag: input.externalEventFlag ?? false,
+        externalEventDescription: input.externalEventDescription ?? null,
+        taskKey: input.taskKey ?? null,
+        taskType: input.taskType ?? null,
+      },
+    });
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OWNER_ACTION_OUTCOME_RECORDED,
+        actorId,
+        entityType: "owner_action_outcome",
+        entityId: id,
+        workspaceId,
+        payload: {
+          businessId: input.businessId,
+          outcomeStatus: input.outcomeStatus,
+          evidenceQuality: input.evidenceQuality ?? null,
+          externalEventFlag: input.externalEventFlag ?? false,
+          recommendationId: input.recommendationId ?? null,
+          actionId: input.actionId ?? null,
+        },
+        visibility: "internal",
+      },
+      tx,
+    );
+    return result;
   });
 
   return outcome as OwnerActionOutcomeRecord;

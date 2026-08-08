@@ -17,6 +17,8 @@
 
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import type { ApprovalRiskClass } from "@/domain/owner-mode/approval-memory";
 import {
   isApprovalRemembered,
@@ -61,25 +63,30 @@ async function autoHandled(
   forbidden: boolean,
   deps: OwnerApprovalResolutionDeps
 ): Promise<OwnerApprovalResolution> {
-  await recordAttentionEvent(
-    {
-      workspaceId: input.workspaceId,
-      eventType: forbidden ? "approval.auto_blocked" : "approval.auto_approved",
-      severity: forbidden ? "high" : "low",
-      disposition: "auto_handle",
-      ownerDecisionRequired: false,
-      handledByOpsIQ: true,
-      sourceRef: `${input.scope}:${input.contentHash.slice(0, 12)}`,
-    },
-    deps.load
-  );
-  await emitAuditEvent({
-    workspaceId: input.workspaceId,
-    eventName: AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED,
-    actorType: "system",
-    entityType: "owner_approval",
-    entityId: `${input.scope}:${input.contentHash.slice(0, 12)}`,
-    payload: { scope: input.scope, reason, forbidden },
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await recordAttentionEvent(
+      {
+        workspaceId: input.workspaceId,
+        eventType: forbidden ? "approval.auto_blocked" : "approval.auto_approved",
+        severity: forbidden ? "high" : "low",
+        disposition: "auto_handle",
+        ownerDecisionRequired: false,
+        handledByOpsIQ: true,
+        sourceRef: `${input.scope}:${input.contentHash.slice(0, 12)}`,
+      },
+      { ...(deps.load ?? {}), db: tx as unknown as OwnerLoadDeps["db"], auditClient: tx },
+    );
+    await emitAuditEvent(
+      {
+        workspaceId: input.workspaceId,
+        eventName: AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED,
+        actorType: "system",
+        entityType: "owner_approval",
+        entityId: `${input.scope}:${input.contentHash.slice(0, 12)}`,
+        payload: { scope: input.scope, reason, forbidden },
+      },
+      tx,
+    );
   });
   return {
     outcome: forbidden ? "forbidden" : "auto_handled",
@@ -121,18 +128,20 @@ export async function resolveOwnerApproval(
   }
 
   // 3. Genuine owner decision required.
-  await recordAttentionEvent(
-    {
-      workspaceId: input.workspaceId,
-      eventType: "approval.owner_decision_required",
-      severity: input.riskClass === "critical" || input.riskClass === "high" ? "high" : "medium",
-      disposition: "owner_decision",
-      ownerDecisionRequired: true,
-      handledByOpsIQ: false,
-      sourceRef: `${input.scope}:${input.contentHash.slice(0, 12)}`,
-    },
-    deps.load
-  );
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await recordAttentionEvent(
+      {
+        workspaceId: input.workspaceId,
+        eventType: "approval.owner_decision_required",
+        severity: input.riskClass === "critical" || input.riskClass === "high" ? "high" : "medium",
+        disposition: "owner_decision",
+        ownerDecisionRequired: true,
+        handledByOpsIQ: false,
+        sourceRef: `${input.scope}:${input.contentHash.slice(0, 12)}`,
+      },
+      { ...(deps.load ?? {}), db: tx as unknown as OwnerLoadDeps["db"], auditClient: tx },
+    );
+  });
   return {
     outcome: "needs_owner_approval",
     reason: "owner_decision_required",
