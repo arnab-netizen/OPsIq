@@ -36,6 +36,17 @@ async function createPrismaClient() {
       ssl: databaseUrl.includes("sslmode=require")
         ? { rejectUnauthorized: false }
         : undefined,
+      // Bound connection attempts so operations fail fast on DB unavailability
+      // rather than hanging indefinitely (default is 0 = wait forever).
+      // 90s gives Neon cold-start (typically 27-60s) reliable margin.
+      connectionTimeoutMillis: 90000,
+      // Keep idle connections alive for 2 min so Neon cold-start only pays once
+      // per test suite run rather than once per query after a 10s lull.
+      idleTimeoutMillis: 120000,
+      // TCP keepalive: prevents OS/NAT from dropping idle connections silently,
+      // reducing "Connection terminated unexpectedly" errors on Neon endpoints.
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
     });
     const adapter = new PrismaPg(pool);
     const client = new PrismaClient({ adapter });
