@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { ValidationError } from "@/infra/errors";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -123,5 +124,5 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  { requireWorkspace: true }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.DECISION_CREATE] }
 );

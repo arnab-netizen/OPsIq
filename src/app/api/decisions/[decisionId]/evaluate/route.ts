@@ -1,6 +1,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { hasPermission } from "@/middleware/workspace-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -123,5 +124,5 @@ export const POST = withCanonicalEnforcement(
         : `Decision evaluated: System recommends BLOCK (${blockStage})`,
     };
   },
-  { requireWorkspace: true }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.DECISION_UPDATE] }
 );
