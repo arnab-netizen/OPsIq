@@ -25,9 +25,10 @@ function isMissingTableError(err: unknown): boolean {
   if (!(err instanceof Prisma.PrismaClientKnownRequestError)) return false;
   if (err.code === "P2021") return true;
   // Fallback: catch the message pattern Prisma emits for a missing relation.
+  // Prisma uses camelCase "startupStatus" in invocation traces, not "startup_status".
   const msg = err.message ?? "";
   return (
-    msg.includes("startup_status") &&
+    (msg.includes("startup_status") || msg.includes("startupStatus")) &&
     (msg.includes("does not exist") || msg.includes("Invalid"))
   );
 }
