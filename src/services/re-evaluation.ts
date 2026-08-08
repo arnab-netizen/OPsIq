@@ -741,7 +741,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       correlationId: event.correlationId,
       payload: auditPayload,
       visibility: "internal",
-    });
+    }, tx);
 
     return eventId;
   });
