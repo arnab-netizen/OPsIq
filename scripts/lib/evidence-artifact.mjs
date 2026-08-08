@@ -57,6 +57,7 @@
 import { createHash, sign as cryptoSign, verify as cryptoVerify, createPrivateKey, createPublicKey } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join as pathJoin, relative as pathRelative } from 'node:path';
+import { resolveD4GovernanceTarget } from './d4-governance-resolver.mjs';
 
 /** Schema version of the artifact form defined here. */
 export const EVIDENCE_VERSION = '1.0.0';
@@ -361,7 +362,7 @@ export function verifySignature(artifact, signingKey) {
  * @param {string} [opts.signingKeyId]
  * @returns {object} the artifact, with artifact_id and signature filled in
  */
-export function buildEvidenceArtifact(input, { signingKey = null, signingKeyId = DEFAULT_SIGNING_KEY_ID } = {}) {
+export function buildEvidenceArtifact(input, { signingKey = null, signingKeyId = DEFAULT_SIGNING_KEY_ID, closureManifestYaml = null } = {}) {
   const raw = String(input.raw_observation ?? '');
   const capped = Buffer.byteLength(raw, 'utf8') > MAX_OBSERVATION_BYTES;
   const stored = capped ? Buffer.from(raw, 'utf8').subarray(0, MAX_OBSERVATION_BYTES).toString('utf8') : raw;
@@ -436,6 +437,27 @@ export function buildEvidenceArtifact(input, { signingKey = null, signingKeyId =
 
   artifact.artifact_id = computeArtifactId(artifact);
 
+  // D-4/A4 fail-closed guard — S7-I11 only. Runs BEFORE signing so a rejected
+  // artifact is never signed, and BEFORE return so no artifact object escapes.
+  // The target is extracted exclusively from the governance manifest; the caller
+  // cannot supply a target value directly (there is no such parameter).
+  if (artifact.invariant_id === 'S7-I11') {
+    const d4 = resolveD4GovernanceTarget({ manifestYaml: closureManifestYaml });
+    if (!d4.ok) {
+      throw new Error(
+        `S7-I11 evidence build blocked by D-4 enforcement (${d4.reason}): ${d4.detail}`,
+      );
+    }
+    if (artifact.environment !== d4.target) {
+      throw new Error(
+        `S7-I11 evidence build blocked: artifact environment '${artifact.environment}' does not ` +
+        `match D-4 authorized target '${d4.target}' from factory-stage-7-closure.yaml. ` +
+        `The authorized target is read from the governance manifest and cannot be overridden ` +
+        `by the caller.`,
+      );
+    }
+  }
+
   if (signingKey) {
     artifact.signature = { algorithm: SIGNATURE_ALGORITHM, key_id: signingKeyId, value: null };
     artifact.signature.value = computeSignatureValue(artifact, signingKey);
@@ -471,7 +493,7 @@ function describe(value) {
  * @returns {{ violations: string[], signatureState: string }}
  */
 export function validateEvidenceArtifact(artifact, options = {}) {
-  const { signingKey = null, fileName = null } = options;
+  const { signingKey = null, fileName = null, closureManifestYaml = null } = options;
   const violations = [];
   const fail = (message) => violations.push(message);
 
@@ -502,16 +524,28 @@ export function validateEvidenceArtifact(artifact, options = {}) {
   if (!INVARIANT_IDS.includes(artifact.invariant_id)) {
     fail(at(`invariant_id '${artifact.invariant_id}' is not a canonical Stage 7 invariant (${INVARIANT_IDS.join(', ')})`));
   }
-  // S7-I11 fail-closed guard: amendment A4 (isolated environment target) is deferred
-  // pending owner decision D-4. No evidence for S7-I11 is accepted until D-4 is made
-  // and A4 is applied to factory-stage-7-closure.yaml. This check is removed by the
-  // owner when D-4 is authorized and A4 is applied.
+  // S7-I11 fail-closed guard: D-4 / A4 enforcement.
+  // The guard verifies that amendment A4 has been applied (owner decision D-4 made),
+  // that a concrete non-generic environment target is declared in the contract, and
+  // that the artifact's environment field matches that authorized target.
+  // The target is extracted exclusively from closureManifestYaml — the caller cannot
+  // supply a target value through any other parameter.
+  // When closureManifestYaml is null (no manifest provided), the resolver returns
+  // MANIFEST_UNREADABLE, which is still a fail-closed rejection — not providing the
+  // manifest is not equivalent to a resolved D-4.
   if (artifact.invariant_id === 'S7-I11') {
-    fail(at(
-      'S7-I11 proof blocked: amendment A4 (isolated_environment target) is deferred pending ' +
-      'owner decision D-4. No S7-I11 evidence is accepted until D-4 is made and A4 is applied ' +
-      'to the Stage 7 closure contract. Remove this guard only after D-4 is recorded in the contract.'
-    ));
+    const d4 = resolveD4GovernanceTarget({ manifestYaml: closureManifestYaml });
+    if (!d4.ok) {
+      fail(at(
+        `S7-I11 proof blocked by D-4 enforcement (${d4.reason}): ${d4.detail}`,
+      ));
+    } else if (artifact.environment !== d4.target) {
+      fail(at(
+        `S7-I11 environment '${artifact.environment}' does not match D-4 authorized target ` +
+        `'${d4.target}' from factory-stage-7-closure.yaml. The authorized target is read from ` +
+        `the governance manifest and cannot be overridden by the caller.`,
+      ));
+    }
   }
   if (!LANES.includes(artifact.lane)) {
     fail(at(`lane '${artifact.lane}' is not one of ${LANES.join(', ')}`));
