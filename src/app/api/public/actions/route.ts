@@ -75,8 +75,6 @@ export const GET = withCanonicalEnforcement(
           status: true,
           priorityScore: true,
           dueAt: true,
-          ownerUserId: true,
-          workspaceId: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -89,8 +87,6 @@ export const GET = withCanonicalEnforcement(
         status: dbStatusToPublic(item.status),
         priority: priorityScoreToPriority(item.priorityScore),
         dueDate: item.dueAt?.toISOString(),
-        owner: item.ownerUserId ?? undefined,
-        engagementId: item.workspaceId,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
       }));

@@ -76,34 +76,16 @@ export function verifyDiagnosticKey(providedKey: string | null | undefined): boo
 }
 
 /**
- * Extract diagnostic key from request headers or query params.
- * Checks header first, then query param.
- *
- * @param headerValue - x-opsiq-diagnostic-key header value
- * @param queryParam - key query parameter value
- * @returns Provided key or null if missing
- */
-export function extractDiagnosticKeyFromRequest(
-  headerValue: string | null,
-  queryParam: string | null
-): string | null {
-  return headerValue || queryParam || null;
-}
-
-/**
  * Verify diagnostic key from NextRequest.
- * Extracts from header and query param, then validates using timing-safe comparison.
+ * Accepts key from x-opsiq-diagnostic-key header only — query param is excluded
+ * to prevent key leakage in server logs and browser history.
  *
  * @param request - NextRequest object
  * @returns true if key is valid, false otherwise
  */
 export function verifyDiagnosticKeyFromRequest(request: {
   headers: { get(name: string): string | null };
-  nextUrl?: { searchParams: { get(name: string): string | null } };
 }): boolean {
   const headerValue = request.headers.get("x-opsiq-diagnostic-key");
-  const queryValue = request.nextUrl?.searchParams.get("key") || null;
-
-  const providedKey = extractDiagnosticKeyFromRequest(headerValue, queryValue);
-  return verifyDiagnosticKey(providedKey);
+  return verifyDiagnosticKey(headerValue);
 }
