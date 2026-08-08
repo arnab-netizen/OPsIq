@@ -502,6 +502,17 @@ export function validateEvidenceArtifact(artifact, options = {}) {
   if (!INVARIANT_IDS.includes(artifact.invariant_id)) {
     fail(at(`invariant_id '${artifact.invariant_id}' is not a canonical Stage 7 invariant (${INVARIANT_IDS.join(', ')})`));
   }
+  // S7-I11 fail-closed guard: amendment A4 (isolated environment target) is deferred
+  // pending owner decision D-4. No evidence for S7-I11 is accepted until D-4 is made
+  // and A4 is applied to factory-stage-7-closure.yaml. This check is removed by the
+  // owner when D-4 is authorized and A4 is applied.
+  if (artifact.invariant_id === 'S7-I11') {
+    fail(at(
+      'S7-I11 proof blocked: amendment A4 (isolated_environment target) is deferred pending ' +
+      'owner decision D-4. No S7-I11 evidence is accepted until D-4 is made and A4 is applied ' +
+      'to the Stage 7 closure contract. Remove this guard only after D-4 is recorded in the contract.'
+    ));
+  }
   if (!LANES.includes(artifact.lane)) {
     fail(at(`lane '${artifact.lane}' is not one of ${LANES.join(', ')}`));
   }

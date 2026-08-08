@@ -24,11 +24,6 @@ import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 import { listEvidence } from "@/services/evidence";
 import { getKPIsForEngagement } from "@/services/kpi";
 
-interface TransactionClient {
-  recommendation: {
-    create: (params: { data: Record<string, unknown> }) => Promise<{ id: string }>;
-  };
-}
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -437,7 +432,7 @@ export async function createRecommendation(
       idempotencyKey,
       "recommendation.create",
       async () => {
-        return db.$transaction(async (tx: TransactionClient) => {
+        return db.$transaction(async (tx: any) => {
           const { derivedPriority, constraintsConsidered } = buildRecommendationPayload();
 
           const recommendation = await tx.recommendation.create({
@@ -475,7 +470,7 @@ export async function createRecommendation(
               expected_target: input.expected_target,
             },
             visibility: "internal",
-          });
+          }, tx);
 
           await EventEmitterService.emit({
             aggregateId: recommendation.id,

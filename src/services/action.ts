@@ -136,7 +136,7 @@ export async function createAction(
               priority: input.priority,
             },
             visibility: "internal",
-          });
+          }, tx);
 
           return action;
         });
