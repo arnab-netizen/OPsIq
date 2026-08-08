@@ -38,7 +38,8 @@ async function createPrismaClient() {
         : undefined,
       // Bound connection attempts so operations fail fast on DB unavailability
       // rather than hanging indefinitely (default is 0 = wait forever).
-      connectionTimeoutMillis: 30000,
+      // 90s gives Neon cold-start (typically 27-60s) reliable margin.
+      connectionTimeoutMillis: 90000,
       // Keep idle connections alive for 2 min so Neon cold-start only pays once
       // per test suite run rather than once per query after a 10s lull.
       idleTimeoutMillis: 120000,
