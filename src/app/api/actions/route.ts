@@ -36,7 +36,7 @@ export const GET = withCanonicalEnforcement(
     const result = await listActions(workspaceId, params);
     return result;
   },
-  { requireWorkspace: true, requireCapabilities: ['ACTION_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] }
 );
 
 export const POST = withCanonicalEnforcement(

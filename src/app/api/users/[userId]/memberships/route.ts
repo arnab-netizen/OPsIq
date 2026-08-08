@@ -32,7 +32,7 @@ export const GET = withCanonicalEnforcement(
     const memberships = await getMembershipsForUser(userId, workspaceId);
     return Response.json({ memberships });
   },
-  { requireWorkspace: true, requireCapabilities: ['USER_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.USER_VIEW] }
 );
 
 export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {

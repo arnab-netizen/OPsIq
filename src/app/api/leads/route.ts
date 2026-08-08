@@ -31,7 +31,7 @@ export const GET = withCanonicalEnforcement(
     const result = await listLeads(workspaceId, params);
     return result;
   },
-  { requireWorkspace: true, requireCapabilities: ['LEAD_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.LEAD_VIEW] }
 );
 
 export const POST = withCanonicalEnforcement(
