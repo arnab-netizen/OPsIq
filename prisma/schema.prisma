@@ -728,6 +728,9 @@ model OperatorItem {
   decisionError          Float?              @map("decision_error")
   executedAt             DateTime?           @map("executed_at")
   executedBy             String?             @map("executed_by") @db.Uuid
+  firstCompletedAt       DateTime?           @map("first_completed_at")
+  firstPositiveOutcomeAt DateTime?           @map("first_positive_outcome_at")
+  firstWinAchieved       Boolean             @default(false) @map("first_win_achieved")
   calibrationRecords     CalibrationRecord[]
   entityLinks            EntityLink[]
   completedByUser        User?               @relation("operator_items_completed_byTousers", fields: [completedBy], references: [id])

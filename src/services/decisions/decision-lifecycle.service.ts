@@ -389,17 +389,6 @@ export async function recordDecisionOutcome(
     updateData.auditTrail = verificationMetadata.auditTrail;
   }
 
-  // Set time-to-value milestone fields on first occurrence (idempotent — only if currently null/false).
-  if (!decision.firstCompletedAt) {
-    updateData.firstCompletedAt = now;
-  }
-  if (outcomeCategory === "success" && !decision.firstPositiveOutcomeAt) {
-    updateData.firstPositiveOutcomeAt = now;
-  }
-  if (outcomeCategory === "success" && !decision.firstWinAchieved) {
-    updateData.firstWinAchieved = true;
-  }
-
   // Update with outcome data AND emit audit in one atomic transaction (fail-closed — no swallow).
   let updatedId: string;
   let updatedStatus: string;

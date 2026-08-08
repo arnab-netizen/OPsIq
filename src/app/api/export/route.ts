@@ -55,12 +55,11 @@ export const GET = withCanonicalEnforcement(
       take: 500,
       select: {
         id: true,
+        clientName: true,
         status: true,
         startDate: true,
-        targetEndDate: true,
-        actualEndDate: true,
+        endDate: true,
         createdAt: true,
-        clientAccount: { select: { name: true } },
       },
     }),
   ]);
@@ -88,14 +87,11 @@ export const GET = withCanonicalEnforcement(
       {
         name: "engagements",
         rowCount: engagements.length,
-        columns: ["id", "clientName", "status", "startDate", "targetEndDate", "actualEndDate", "createdAt"],
+        columns: ["id", "clientName", "status", "startDate", "endDate", "createdAt"],
         data: engagements.map((eng: any) => ({
-          id: eng.id,
-          clientName: eng.clientAccount?.name ?? null,
-          status: eng.status,
+          ...eng,
           startDate: eng.startDate?.toISOString() ?? null,
-          targetEndDate: eng.targetEndDate?.toISOString() ?? null,
-          actualEndDate: eng.actualEndDate?.toISOString() ?? null,
+          endDate: eng.endDate?.toISOString() ?? null,
           createdAt: eng.createdAt.toISOString(),
         })),
       },

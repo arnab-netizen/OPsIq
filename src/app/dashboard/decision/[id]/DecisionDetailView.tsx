@@ -224,7 +224,7 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "idempotency-key": `outcome-${decision.id}`,
+            "idempotency-key": `outcome-${decision.id}-${Date.now()}`,
           },
           body: JSON.stringify({ actualOutcome: "success", actualOutcomeValue: value }),
         }
