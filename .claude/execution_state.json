@@ -4010,5 +4010,48 @@
       "escalation_delivery": "P3/QUALITY \u2014 Structured captureError + dead-letter DB writes on failure; in-memory scheduler only reachable via getScheduler() which has zero production callers; cron uses DB provider directly"
     }
   },
-  "block_6_status": "COMPLETE"
+  "block_6_status": "COMPLETE",
+  "block_7_status": {
+    "status": "ASSESSED_OWNER_ACTION_REQUIRED",
+    "finding": "stage7-capture.yml references environment: stage7-evidence-signing with secrets.EVIDENCE_SIGNING_KEY and secrets.EVIDENCE_SIGNING_KEY_ID",
+    "owner_action": "Create GitHub environment named stage7-evidence-signing in repo settings. Add EVIDENCE_SIGNING_KEY and EVIDENCE_SIGNING_KEY_ID secrets. Apply tag-protection rule to v*-stage7 pattern. Do NOT use or provision the previously disclosed Ed25519 key pair.",
+    "code_change_needed": false,
+    "file": ".github/workflows/stage7-capture.yml"
+  },
+  "block_8_status": {
+    "status": "NO_CHANGE_NEEDED",
+    "finding": "ASYMMETRIC_PRIVATE_KEY/ASYMMETRIC_PUBLIC_KEY do not exist anywhere in codebase. .env.example is correct with DECISION_SIGNING_SECRET only.",
+    "code_change_needed": false
+  },
+  "block_9_status": {
+    "status": "COMPLETE",
+    "finding": "3-factor migration gate added to docs/DEPLOYMENT_RUNBOOK.md: Factor1=migrate status pending count, Factor2=backup verified <30min old >1MB, Factor3=migrate deploy + validate + table count >=45",
+    "committed": "SHA in aeb43361 batch",
+    "file": "docs/DEPLOYMENT_RUNBOOK.md"
+  },
+  "block_2_status": {
+    "status": "VERIFICATION_IN_PROGRESS",
+    "run": 4,
+    "process_pids": [
+      15238,
+      15304
+    ],
+    "started": "2026-08-08T15:59:00Z",
+    "connection_timeout_fix": "connectionTimeoutMillis: 30000 -> 90000 (commit 63db6a53)",
+    "startup_transient_fix": "4dfc8756",
+    "file": "src/__tests__/owner-mode/owner-operational-existing-business.e2e.db.test.ts",
+    "tests": 9
+  },
+  "block_3_status": {
+    "status": "AWAITING_DB_VERIFICATION",
+    "file": "src/__tests__/owner-strategy/owner-operational-startup.e2e.db.test.ts",
+    "tests": 9,
+    "dependencies_verified": true
+  },
+  "block_4_status": {
+    "status": "AWAITING_DB_VERIFICATION",
+    "file": "src/__tests__/owner-mode/owner-business-simulations.e2e.db.test.ts",
+    "simulations": 7,
+    "dependencies_verified": true
+  }
 }
