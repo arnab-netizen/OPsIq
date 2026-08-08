@@ -7,6 +7,15 @@
   "factory_stage_scope": "LIVE_PRIVATE_OWNER_DEPLOYMENT_PILOT_AND_UNRESTRICTED_OWNER_READINESS",
   "active_bundle": "factory-stage-7-closure",
   "active_branch": "claude/owner-operational-completion",
+  "owner_operational_completion_progress": {
+    "CAT2_atomicity_sweep": "COMPLETE — 6 post-tx audit gaps closed (goals, business-condition, blueprint, cycle, budget, re-evaluation), committed 37f16d20 + 3acc9eb5",
+    "operating_policy_gate": "COMPLETE — enforceOperatingPoliciesForPromotion wired as Slice 13 gate, 20 tests pass, committed fa313ba7",
+    "store_field_mapping": "COMPLETE — firstCompletedAt/firstPositiveOutcomeAt/firstWinAchieved now mapped in getItems(), committed 64106bdf",
+    "dispatch_token_cleanup": "COMPLETE — stale DISPATCH_TOKEN reference removed from .governance/stage7-signing-keys.yaml, committed 64106bdf",
+    "export_capability_gate": "COMPLETE — GET /api/export now requires ACTION_VIEW + requireWorkspace, committed 0b069982",
+    "DB_status": "DB_BLOCKED_ENVIRONMENT_NETWORK_UNREACHABLE — Neon endpoint unreachable from container; all DB-dependent items deferred",
+    "items_remaining_no_db": ["TOKEN/BYPASS DEBT scan (done — none found)", "IDEMPOTENCY audit (done — patterns correct)", "CAPABILITY AUDIT (partial)", "execution_state update"]
+  },
   "blocked_by": [],
   "owner_outcome": "Owner has proof that Stages 3, 4, 5, and 6 are implemented and accepted. Factory Stage 7 proves that OpsIQ can be deployed securely for its owner, operated without developer assistance, produce correct and actionable guidance from real business data, govern approved execution, capture outcomes and feedback, recover safely from realistic failures, and be accepted for unrestricted private owner use.",
   "current_gap": "Factory Stage 7 remains AUTHORIZED_CONTRACT_DEFINED; factory-stage-7-closure is PENDING with all four required evidence fields null. Stage 8 closure is NOT verified — no STAGE_8_PRIVATE_OWNER_PRODUCTION_CLOSED record exists in any commit on any ref, and there is no evidence for production migration verification, owner bootstrap, authenticated owner flow, a governed owner mutation with its audit event, production readiness, or scheduler execution.",
