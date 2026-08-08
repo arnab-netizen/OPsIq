@@ -44,8 +44,8 @@ keys:
            GitHub Environment stage7-evidence-signing for the capture workflow.
         4. Provision the private key as GitHub Actions secret EVIDENCE_SIGNING_KEY
            in the stage7-evidence-signing environment.
-        5. Provision DISPATCH_TOKEN (fine-grained PAT, contents:write on this repo)
-           as a repository secret so the capture workflow can fire repository_dispatch.
+        5. No DISPATCH_TOKEN required — the capture workflow uses GITHUB_TOKEN for
+           repository_dispatch (contents:write is granted by the workflow's permissions block).
       Artifacts captured before provisioning are permanently UNVERIFIED and cannot
       back a PROVEN invariant.
     # public_key_spki_der_base64: <OWNER PROVIDES THIS — SEE GENERATION INSTRUCTIONS ABOVE>
