@@ -172,6 +172,24 @@ export async function assessCondition(
           },
         });
 
+        // Audit inside transaction: a failed audit rolls back the profile creation (CAT 2 fix).
+        await emitAuditEvent(
+          {
+            eventName: AUDIT_EVENTS.CONDITION_ASSESSED,
+            actorId,
+            entityType: "business_condition_profile",
+            entityId: newProfile.id,
+            workspaceId: input.workspaceId,
+            payload: {
+              engagementId: input.engagementId,
+              businessStatus: newProfile.businessStatus,
+              severityScore: newProfile.severityScore,
+            },
+            visibility: "internal",
+          },
+          tx
+        );
+
         return newProfile;
       });
 
@@ -182,20 +200,6 @@ export async function assessCondition(
       };
     }
   );
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.CONDITION_ASSESSED,
-    actorId,
-    entityType: "business_condition_profile",
-    entityId: result.result.id,
-    workspaceId: engagement.workspaceId,
-    payload: {
-      engagementId: input.engagementId,
-      businessStatus: result.result.businessStatus,
-      severityScore: result.result.severityScore,
-    },
-    visibility: "internal",
-  });
 
   // Count previous profiles to determine if this is initial diagnosis
   const previousProfiles = await db.businessConditionProfile.count({

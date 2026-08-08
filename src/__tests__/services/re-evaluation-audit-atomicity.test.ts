@@ -35,6 +35,7 @@ const fakeTx = {
   [TX_SENTINEL]: true,
   engagement: {
     findFirst: vi.fn().mockResolvedValue(null),
+    findUnique: vi.fn().mockResolvedValue(null),
     update: vi.fn().mockResolvedValue({}),
   },
   businessConditionProfile: {
@@ -76,6 +77,14 @@ vi.mock("@/lib/db", () => ({
     engagement: {
       findFirst: vi.fn().mockResolvedValue({
         id: "eng-001",
+        healthStatus: "unknown",
+        interventionMode: "assessment",
+        interventionPhase: "initial_assessment",
+        nextReviewDate: null,
+      }),
+      findUnique: vi.fn().mockResolvedValue({
+        id: "eng-001",
+        workspaceId: "ws-001",
         healthStatus: "unknown",
         interventionMode: "assessment",
         interventionPhase: "initial_assessment",
