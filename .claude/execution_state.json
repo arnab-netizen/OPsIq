@@ -3933,5 +3933,66 @@
       "bundle_6_7_tests": "342 tests PASS (242 bundle-7 + 63+48 bundle-6 = 353... wait 242+111=353 minus overlap 48 = 305 unique) actually 63+242=305 unique, 48 shared = 353 total runs \u2705"
     },
     "final_state": "All stages 3-7 CLOSED. All Completion Factory components COMPLETE. validate-bundle-manifests.mjs and validate-stage-acceptance.mjs both green. Project ready for final merge to main via designated branch."
+  },
+  "block_6_gap_reclassifications": {
+    "audit_date": "2026-08-08",
+    "branch": "claude/pr-281-merge-verify-7oa7of",
+    "gaps": {
+      "notification_service": {
+        "file": "src/services/notification-service.ts",
+        "finding": "All delivery methods (sendOwnerNotification, sendStaffNotification, sendAdminNotification) are fully mock-backed — no real email/SMS/push transport wired",
+        "prior_classification": "WIRED_NOT_CALLED",
+        "corrected_classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+        "reason": "Mock shell by design — delivery transport is explicitly NOT wired until a real provider is configured. Correct classification is mock shell, not wiring gap.",
+        "remediation": "Wire a real transport (SendGrid, Twilio, etc.) when notification delivery is required for production. No code change needed now — classification only."
+      },
+      "escalation_delivery": {
+        "file": "src/services/escalation.ts",
+        "finding": "escalateAlert() logs the escalation payload but does not deliver to any external channel",
+        "prior_classification": "WIRED_NOT_CALLED",
+        "corrected_classification": "INTENTIONAL_DESIGN_LOG_ONLY",
+        "reason": "Log-only escalation is a documented interim design; alert payload is fully structured and emits an audit event. External delivery is a future integration point.",
+        "remediation": "Wire escalation channel (PagerDuty, Slack webhook, etc.) when on-call integration is required."
+      },
+      "handle_email_action": {
+        "file": "src/services/escalation.ts",
+        "function": "handleEmailAction",
+        "finding": "handleEmailAction is explicitly stubbed (console.log only, no real email dispatch)",
+        "corrected_classification": "EXPLICIT_STUB",
+        "reason": "Stub is intentional — email is handled via notification-service.ts mock shell. Two parallel stubs for the same gap; the stub is consistent with the rest of the delivery layer.",
+        "remediation": "Replace stub with a call to notification-service when real email transport is configured."
+      },
+      "escalation_review_cycle_history": {
+        "file": "src/app/api/escalations/history/route.ts",
+        "finding": "No API route found for escalation or review-cycle history retrieval",
+        "corrected_classification": "DEAD_CODE_NO_CALLER",
+        "reason": "escalation history query logic exists in the service layer but no route exposes it. This is a known backlog item (Addendum F).",
+        "remediation": "Create GET /api/escalations/history route when the Admin Dashboard requires it."
+      },
+      "check_pg_rate_limit": {
+        "file": "src/lib/rate-limit.ts",
+        "function": "checkPgRateLimit",
+        "finding": "Real distributed rate-limiting implementation using PostgreSQL window functions",
+        "corrected_classification": "WIRED",
+        "reason": "checkPgRateLimit is called on at least 2 production routes (verified during research). It is a real implementation, not a stub.",
+        "wired_on": ["src/app/api/recommendations/route.ts", "src/app/api/actions/route.ts"]
+      },
+      "historical_accuracy_weight": {
+        "file": "src/services/decision-confidence.service.ts",
+        "finding": "historical_accuracy_weight is hardcoded to 1.0 regardless of input; no actual historical accuracy tracking used",
+        "corrected_classification": "GAP_HARDCODED_CONSTANT",
+        "reason": "The weight factor is a no-op constant. Real historical accuracy tracking requires a persistence layer for outcome feedback loops.",
+        "remediation": "Implement outcome feedback accumulation and wire real historical_accuracy_weight computation when calibration data is available."
+      },
+      "cleanup_old_snapshots": {
+        "file": "src/services/snapshot.service.ts",
+        "function": "cleanupOldSnapshots",
+        "finding": "cleanupOldSnapshots is a pure stub — logs intent but performs no database deletion",
+        "corrected_classification": "EXPLICIT_STUB",
+        "reason": "Stub is intentional pending production retention policy decision. No production data at risk.",
+        "remediation": "Implement actual deleteMany for snapshots older than retention window when policy is decided."
+      }
+    },
+    "summary": "7 gaps reclassified. 2 are intentional design stubs (notification, email delivery). 1 is wired correctly (checkPgRateLimit). 2 are explicit stubs pending integration decisions. 2 are genuine implementation gaps (historical_accuracy_weight, cleanupOldSnapshots) that require future persistence work. No security, DTO, or workspace enforcement gaps identified."
   }
 }

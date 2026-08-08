@@ -42,6 +42,10 @@ async function createPrismaClient() {
       // Keep idle connections alive for 2 min so Neon cold-start only pays once
       // per test suite run rather than once per query after a 10s lull.
       idleTimeoutMillis: 120000,
+      // TCP keepalive: prevents OS/NAT from dropping idle connections silently,
+      // reducing "Connection terminated unexpectedly" errors on Neon endpoints.
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
     });
     const adapter = new PrismaPg(pool);
     const client = new PrismaClient({ adapter });

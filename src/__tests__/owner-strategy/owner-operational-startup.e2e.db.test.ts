@@ -18,7 +18,7 @@
  * Run: TEST_WITH_DB=true npx vitest run \
  *   src/__tests__/owner-strategy/owner-operational-startup.e2e.db.test.ts
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -193,6 +193,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await db.workspace.deleteMany({ where: { id: ws } }).catch(() => undefined);
       await db.user.deleteMany({ where: { id: actorId } }).catch(() => undefined);
     }, 300000);
+
+    // Re-warm Neon before each test: the serverless endpoint may auto-suspend between
+    // sequential tests (even with idleTimeoutMillis=120s, Neon terminates server-side).
+    beforeEach(async () => {
+      if (!seeded) return;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try { await db.user.count(); return; } catch {
+          if (attempt < 2) await new Promise(r => setTimeout(r, 5000));
+        }
+      }
+    }, 120000);
 
     // ── Step 1: Session creation ──────────────────────────────────────────────
 

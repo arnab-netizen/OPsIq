@@ -17,7 +17,7 @@
  * Run: TEST_WITH_DB=true npx vitest run \
  *   src/__tests__/owner-mode/owner-operational-existing-business.e2e.db.test.ts
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -85,6 +85,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     beforeAll(async () => {
       // Pre-warm: retry so Neon cold-start doesn't abort the run immediately.
       // connectionTimeoutMillis=30s in db.ts bounds each attempt.
+      // idleTimeoutMillis=120s keeps client-side pool alive between tests.
       let dbAvailable = false;
       for (let attempt = 0; attempt < 3; attempt++) {
         try { await db.user.count(); dbAvailable = true; break; } catch {
@@ -184,6 +185,18 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await db.workspace.deleteMany({ where: { id: ws } }).catch(() => undefined);
       await db.user.deleteMany({ where: { id: { in: [ownerId, staffId] } } }).catch(() => undefined);
     }, 300000);
+
+    // Re-warm Neon before each test: the serverless endpoint may auto-suspend between
+    // sequential tests (even with idleTimeoutMillis=120s, Neon terminates server-side).
+    // 3 attempts × 5s delay gives Neon up to ~90s to wake up.
+    beforeEach(async () => {
+      if (!seeded) return; // suite already skipped, no-op
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try { await db.user.count(); return; } catch {
+          if (attempt < 2) await new Promise(r => setTimeout(r, 5000));
+        }
+      }
+    }, 120000);
 
     // ── Step 1: Business condition assessment ─────────────────────────────────
 

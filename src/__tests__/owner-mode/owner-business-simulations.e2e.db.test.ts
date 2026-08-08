@@ -16,7 +16,7 @@
  * Run: TEST_WITH_DB=true npx vitest run \
  *   src/__tests__/owner-mode/owner-business-simulations.e2e.db.test.ts
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -59,6 +59,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await (prisma as any).workspace.deleteMany({ where: { id: wsId } }).catch(() => undefined);
       await (prisma as any).user.deleteMany({ where: { id: actorId } }).catch(() => undefined);
     }, 300000);
+
+    // Re-warm Neon before each simulation: the serverless endpoint may auto-suspend
+    // between sequential tests even with idleTimeoutMillis=120s on the pool.
+    beforeEach(async () => {
+      if (!seeded) return;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try { await (prisma as any).user.count(); return; } catch {
+          if (attempt < 2) await new Promise(r => setTimeout(r, 5000));
+        }
+      }
+    }, 120000);
 
     // ── SIM-A: Healthy profitable-growth ─────────────────────────────────────
 
