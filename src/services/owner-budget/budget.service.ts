@@ -664,12 +664,16 @@ export async function reassessBudget(
       },
     });
     snapshotId = snapshot.id;
-  });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OWNER_BUDGET_REASSESSED,
-    actorId: opts.actorId, workspaceId, entityType: "BudgetPlanSnapshot", entityId: businessId,
-    payload: { businessId, mode: plan.mode, trigger: opts.kind, decision: plan.decisionType },
+    // Audit inside transaction: a failed audit rolls back snapshot + reassessment (CAT 2 fix).
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OWNER_BUDGET_REASSESSED,
+        actorId: opts.actorId, workspaceId, entityType: "BudgetPlanSnapshot", entityId: businessId,
+        payload: { businessId, mode: plan.mode, trigger: opts.kind, decision: plan.decisionType },
+      },
+      tx
+    );
   });
 
   // Deep action linkage: persist/link the plan's advisory actions as owner
