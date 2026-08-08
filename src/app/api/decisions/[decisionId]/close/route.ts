@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { closeDecision } from "@/services/decisions/decision-lifecycle.service";
 import { logger } from "@/infra/logger";
 import { ValidationError } from "@/infra/errors";
@@ -69,5 +70,5 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  { requireCapabilities: ["DECISION_CLOSE"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.DECISION_CLOSE], requireWorkspace: true }
 );
