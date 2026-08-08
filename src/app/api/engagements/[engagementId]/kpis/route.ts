@@ -19,7 +19,7 @@ export const GET = withCanonicalEnforcement(
     const { engagementId } = params;
 
     const engagement = await db.engagement.findUnique({
-      where: { id: engagementId },
+      where: { id: engagementId, workspaceId: ctx.verifiedWorkspaceId as string },
       select: { workspaceId: true },
     });
     if (!engagement) {
@@ -38,7 +38,7 @@ export const POST = withCanonicalEnforcement(
     const { engagementId } = params;
 
     const engagement = await db.engagement.findUnique({
-      where: { id: engagementId },
+      where: { id: engagementId, workspaceId: ctx.verifiedWorkspaceId as string },
       select: { workspaceId: true },
     });
     if (!engagement) {

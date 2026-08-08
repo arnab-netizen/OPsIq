@@ -134,8 +134,8 @@ export async function assignRole(
         data: {
           userId: input.userId,
           role: input.role,
-          scope: input.scope ?? null,
-          scopeId: input.scopeId ?? null,
+          scope: input.scope ?? "workspace",
+          scopeId: input.scopeId ?? workspaceId,
           grantedBy: actorId,
         },
       });
