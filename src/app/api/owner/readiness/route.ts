@@ -19,7 +19,13 @@ export const runtime = "nodejs";
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
-    const businessId = url.searchParams.get("businessId") ?? "";
+    const businessId = url.searchParams.get("businessId");
+    if (!businessId) {
+      return canonicalJson(
+        { found: false, reason: "no_business_configured", workspaceId: ctx.verifiedWorkspaceId },
+        { status: 200 }
+      );
+    }
     const view = await getOwnerReadiness({
       db: db as unknown as PrismaClient,
       workspaceId: ctx.verifiedWorkspaceId,

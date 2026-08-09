@@ -19,7 +19,13 @@ export const GET = withCanonicalEnforcement(
     const url = new URL(ctx.request!.url);
     // Mirrors the sibling owner routes: an absent businessId yields the service's safe not-found
     // view (found:false) rather than a hand-rendered error — the page only renders when found.
-    const businessId = url.searchParams.get("businessId") ?? "";
+    const businessId = url.searchParams.get("businessId");
+    if (!businessId) {
+      return canonicalJson(
+        { found: false, reason: "no_business_configured", workspaceId: ctx.verifiedWorkspaceId },
+        { status: 200 }
+      );
+    }
     const view = await getOwnerWholeBusinessPlan({
       db: db as unknown as PrismaClient,
       workspaceId: ctx.verifiedWorkspaceId,
