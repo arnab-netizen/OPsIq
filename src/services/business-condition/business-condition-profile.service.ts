@@ -64,7 +64,7 @@ export async function createBusinessConditionProfile(
   const now = new Date();
   const profile = await prisma.businessConditionProfile.create({
     data: {
-      id: `bcp_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      id: randomUUID(),
       engagementId: engagement_id,
       workspaceId: workspace_id,
       businessStatus: assessment.condition_status,
@@ -162,7 +162,7 @@ export async function updateBusinessConditionProfile(
   const now = new Date();
   const newProfile = await prisma.businessConditionProfile.create({
     data: {
-      id: `bcp_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      id: randomUUID(),
       engagementId: profile.engagementId,
       workspaceId: workspace_id,
       businessStatus: assessment.condition_status,

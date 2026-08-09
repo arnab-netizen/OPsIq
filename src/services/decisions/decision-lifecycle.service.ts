@@ -355,8 +355,6 @@ export async function recordDecisionOutcome(
 
   // Apply canonical outcome classification and verification
   const updateData: any = { ...outcomeData };
-  const now = new Date();
-  let outcomeCategory: string | null = outcomeData.actualOutcome ?? null;
 
   // Classify outcome if actualOutcomeValue provided
   if (outcomeData.actualOutcomeValue !== undefined && outcomeData.actualOutcomeValue !== null) {
@@ -368,7 +366,6 @@ export async function recordDecisionOutcome(
 
     const classification = classifyOutcome(outcomeData.actualOutcomeValue, decision.impactExpected ?? null);
     updateData.actualOutcome = classification.category;
-    outcomeCategory = classification.category;
 
     // Require notes for failure/uncertain
     if ((classification.category === "failure" || classification.category === "uncertain") && !outcomeData.outcomeNotes?.trim()) {

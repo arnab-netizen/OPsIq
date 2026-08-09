@@ -458,6 +458,7 @@ export async function createRecommendation(
           await emitAuditEvent({
             eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
             actorId: userId,
+            workspaceId: validatedWorkspaceId,
             entityType: "recommendation",
             entityId: recommendation.id,
             payload: {
@@ -546,6 +547,7 @@ export async function createRecommendation(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
     actorId: userId,
+    workspaceId: validatedWorkspaceId,
     entityType: "recommendation",
     entityId: recommendation.id,
     payload: {
@@ -870,6 +872,7 @@ export async function updateRecommendationStatus(
             await emitAuditEvent({
               eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_OVERRIDE,
               actorId: userId,
+              workspaceId: validatedWorkspaceId,
               entityType: "recommendation",
               entityId: recommendationId,
               payload: {
@@ -899,6 +902,7 @@ export async function updateRecommendationStatus(
             await emitAuditEvent({
               eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_WARNING,
               actorId: userId,
+              workspaceId: validatedWorkspaceId,
               entityType: "recommendation",
               entityId: recommendationId,
               payload: {
@@ -976,6 +980,7 @@ export async function updateRecommendationStatus(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
     actorId: userId,
+    workspaceId: validatedWorkspaceId,
     entityType: "recommendation",
     entityId: recommendationId,
     payload: {
@@ -1043,6 +1048,7 @@ export async function updateRecommendationPriorityFromScore(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
     actorId: userId,
+    workspaceId: validatedWorkspaceId,
     entityType: "recommendation",
     entityId: recommendationId,
     payload: {
@@ -1149,6 +1155,7 @@ export async function reRankRecommendationsInEngagement(
           actorId: userId,
           entityType: "recommendation",
           entityId: rec.id,
+          workspaceId: validatedWorkspaceId,
           payload: {
             oldPriority,
             newPriority,
