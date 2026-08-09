@@ -574,7 +574,8 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         recommendedStatus: "unknown" as const,
       };
 
-  // Persist results in a transaction
+  // Persist results in a transaction. timeout raised from the 5000ms default: the
+  // transaction contains 10+ sequential DB ops + emitAuditEvent, which exceeds 5s in CI.
   const auditEventId = await db.$transaction(async (tx: any) => {
     const auditPayload: Record<string, unknown> = {
       changeType: event.changeType,
@@ -744,7 +745,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     }, tx);
 
     return eventId;
-  });
+  }, { timeout: 30000 });
 
     logger.info("Re-evaluation completed and persisted", {
       changeType: event.changeType,
