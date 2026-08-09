@@ -156,12 +156,12 @@ function writeObservation(dir: string, text = "Test Files  1 passed (1)\n     Te
 /** Input base shared by captureArtifact and callLib-direct tests. */
 function baseInput(rawObservation = "Test Files  1 passed (1)\n     Tests  9 passed (9)\n") {
   return {
-    invariant_id: "S7-I11",
+    invariant_id: "S7-I12",
     lane: "LANE_E",
-    proof_type: "simulation_adversarial",
+    proof_type: "simulation_runbook_recovery",
     environment: "isolated_simulation",
     method: "test_run",
-    assertion: "Nine adversarial failure scenarios each fail safely, visibly and recoverably.",
+    assertion: "Staged failure introduced; runbook followed; recovery confirmed without undocumented steps.",
     result: "PASS",
     replay_command: "npx vitest run src/__tests__/example.test.ts --reporter=basic",
     raw_observation: rawObservation,

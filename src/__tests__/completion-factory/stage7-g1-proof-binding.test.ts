@@ -55,6 +55,7 @@ const CONTRACT: Record<string, { lane: string; proofType: string }> = {
   "S7-I1": { lane: "LANE_C", proofType: "production_runtime_check" },
   "S7-I2": { lane: "LANE_C", proofType: "production_migration_check" },
   "S7-I11": { lane: "LANE_E", proofType: "simulation_adversarial" },
+  "S7-I12": { lane: "LANE_E", proofType: "simulation_runbook_recovery" },
 };
 
 const tempDirs: string[] = [];
@@ -360,13 +361,13 @@ describe("G-1 — binding rules", () => {
   });
 
   it("an artifact in an incompatible lane fails", () => {
-    const artifact = signedArtifact("S7-I11"); // LANE_E
+    const artifact = signedArtifact("S7-I12"); // LANE_E
     const dir = writeArtifacts([artifact]);
     const invariants = contractWith({
-      "S7-I11": { name: "S7-I11", status: "PROVEN", proof_artifacts: [artifact.artifact_id], proof_lane: "LANE_C", proof_type: "simulation_adversarial" },
+      "S7-I12": { name: "S7-I12", status: "PROVEN", proof_artifacts: [artifact.artifact_id], proof_lane: "LANE_C", proof_type: "simulation_runbook_recovery" },
     });
     const r = evaluate(invariants, { evidenceDir: dir, provenance: verifiedProvenance(artifact) });
-    expect(allViolations(r)).toContain("is lane LANE_E, but S7-I11 requires LANE_C");
+    expect(allViolations(r)).toContain("is lane LANE_E, but S7-I12 requires LANE_C");
   });
 
   it("an artifact with an incompatible proof_type fails", () => {
@@ -380,13 +381,13 @@ describe("G-1 — binding rules", () => {
   });
 
   it("a compound contract lane accepts either declared lane", () => {
-    const artifact = signedArtifact("S7-I11"); // LANE_E
+    const artifact = signedArtifact("S7-I12"); // LANE_E
     const dir = writeArtifacts([artifact]);
     const invariants = contractWith({
-      "S7-I11": { name: "S7-I11", status: "PROVEN", proof_artifacts: [artifact.artifact_id], proof_lane: "LANE_C+LANE_E", proof_type: "simulation_adversarial" },
+      "S7-I12": { name: "S7-I12", status: "PROVEN", proof_artifacts: [artifact.artifact_id], proof_lane: "LANE_C+LANE_E", proof_type: "simulation_runbook_recovery" },
     });
     const r = evaluate(invariants, { evidenceDir: dir, provenance: verifiedProvenance(artifact) });
-    expect(r.proven).toContain("S7-I11");
+    expect(r.proven).toContain("S7-I12");
   });
 
   it("a duplicate reference under one invariant fails", () => {
@@ -815,10 +816,12 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
   });
 
   it("closure fails when every artifact is otherwise eligible but no policy exists", () => {
-    const artifacts = CANONICAL_IDS.map((id) => signedArtifact(id));
+    // S7-I11 is blocked pending D-4; use the remaining 15 invariants — enough to prove the point.
+    const ids = CANONICAL_IDS.filter((id) => id !== "S7-I11");
+    const artifacts = ids.map((id) => signedArtifact(id));
     const dir = writeArtifacts(artifacts);
     const overrides: Record<string, unknown> = {};
-    CANONICAL_IDS.forEach((id, i) => { overrides[id] = provenWith(id, [artifacts[i].artifact_id]); });
+    ids.forEach((id, i) => { overrides[id] = provenWith(id, [artifacts[i].artifact_id]); });
     const r = evaluateLive(liveContract(overrides), dir, verifiedProvenance(...artifacts));
     expect(r.proven).toHaveLength(0);
     expect(allViolations(r)).toContain(SUBJECT_SHA_POLICY.MISSING);
