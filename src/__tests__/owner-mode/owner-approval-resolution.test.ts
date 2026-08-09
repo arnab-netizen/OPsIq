@@ -37,14 +37,22 @@ function makeDeps(opts: {
   memoryReusable?: boolean;
 }) {
   const attentionCreate = vi.fn(async () => ({ id: "att1" }));
+  // loadDb carries $transaction so the service uses this object as the transaction
+  // client (tx === loadDb), making tx.ownerAttentionEvent.create === attentionCreate.
+  const loadDb: {
+    ownerStandingInstruction: { findFirst: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+    ownerAttentionEvent: { create: ReturnType<typeof vi.fn> };
+    $transaction: (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>;
+  } = {
+    ownerStandingInstruction: { findFirst: vi.fn(async () => (opts.instruction ?? null)), create: vi.fn() },
+    ownerAttentionEvent: { create: attentionCreate },
+    $transaction: async (fn) => fn(loadDb),
+  };
   return {
     attentionCreate,
     deps: {
       load: {
-        db: {
-          ownerStandingInstruction: { findFirst: vi.fn(async () => (opts.instruction ?? null)), create: vi.fn() },
-          ownerAttentionEvent: { create: attentionCreate },
-        },
+        db: loadDb,
         now: () => new Date("2026-06-28T00:00:00.000Z"),
       },
       memory: {

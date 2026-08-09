@@ -57,13 +57,19 @@ export interface OwnerApprovalResolutionDeps {
   load?: OwnerLoadDeps;
 }
 
+function resolveTransactionDb(deps: OwnerApprovalResolutionDeps): typeof db {
+  const injected = deps.load?.db as unknown as { $transaction?: unknown } | undefined;
+  return injected?.$transaction != null ? (injected as unknown as typeof db) : db;
+}
+
 async function autoHandled(
   input: ResolveOwnerApprovalInput,
   reason: OwnerApprovalResolution["reason"],
   forbidden: boolean,
   deps: OwnerApprovalResolutionDeps
 ): Promise<OwnerApprovalResolution> {
-  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+  const txDb = resolveTransactionDb(deps);
+  await txDb.$transaction(async (tx: Prisma.TransactionClient) => {
     await recordAttentionEvent(
       {
         workspaceId: input.workspaceId,
@@ -128,7 +134,8 @@ export async function resolveOwnerApproval(
   }
 
   // 3. Genuine owner decision required.
-  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+  const txDb = resolveTransactionDb(deps);
+  await txDb.$transaction(async (tx: Prisma.TransactionClient) => {
     await recordAttentionEvent(
       {
         workspaceId: input.workspaceId,
