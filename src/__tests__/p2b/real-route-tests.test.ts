@@ -58,10 +58,10 @@ vi.mock("@/services/auth", () => ({
     sessionId: "test-session",
     expiresAt: new Date(Date.now() + 86400000),
   })),
-  // PR #287 added requireCapabilities: [ACTION_UPDATE] to the operator POST route.
-  // buildCapabilityFact looks up ROLE_CAPABILITIES[role] — "admin" is not a valid
-  // RoleName, so ROLE_CAPABILITIES["admin"] is undefined and the capability is never
-  // granted. Use the real RoleName that has ACTION_UPDATE.
+  // PR #287 added requireCapabilities:[ACTION_UPDATE] to the operator POST wrapper.
+  // "admin" is not a canonical RoleName; ROLE_CAPABILITIES["admin"] is undefined,
+  // so hasCapability() returns false → evaluateAuthState Check 4 → 403.
+  // Use the real RoleName that carries ACTION_UPDATE (same as getPolicyContext below).
   getPolicyContextFact: vi.fn(async () => ({
     valid: true,
     policy: {
