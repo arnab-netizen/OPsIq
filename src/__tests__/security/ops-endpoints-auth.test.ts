@@ -108,13 +108,16 @@ describe("GET /api/ops/* endpoints - Auth requirements (in-process)", () => {
     });
   });
 
-  describe("With valid diagnostic key (query param)", () => {
+  describe("With valid diagnostic key (query param — not accepted)", () => {
+    // Query-param key submission is intentionally rejected to prevent key leakage
+    // in server access logs, browser history, and referrer headers.
+    // Only the x-opsiq-diagnostic-key header is accepted.
     endpoints.forEach((endpoint) => {
-      it(`${endpoint} should accept valid key in query param`, async () => {
+      it(`${endpoint} should reject key passed via query param (header-only policy)`, async () => {
         const response = await HANDLERS[endpoint](
           makeRequest(endpoint, { queryKey: TEST_KEY })
         );
-        expect(response.status).not.toBe(404);
+        expect(response.status).toBe(404);
       });
     });
   });

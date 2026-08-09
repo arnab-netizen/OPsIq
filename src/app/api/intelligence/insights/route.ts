@@ -1,3 +1,4 @@
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { calculateSystemicInsights } from "@/services/intelligence/insights-engine";
 import { createEventLogger } from "@/lib/observability/log";
@@ -34,8 +35,8 @@ export const GET = withCanonicalEnforcement(
     id: r.id,
     workspaceId: r.workspaceId,
     ownerUserId: r.ownerUserId,
-    createdBy: r.createdBy,
-    lastUpdatedBy: r.lastUpdatedBy,
+    createdBy: r.createdByUserId,
+    lastUpdatedBy: r.lastUpdatedByUserId,
     problem: r.problem,
     action: r.action,
     impactExpected: Number(r.impactExpected),
@@ -94,5 +95,5 @@ export const GET = withCanonicalEnforcement(
 
     return response;
   },
-  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true }
 );

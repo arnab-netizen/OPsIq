@@ -1,3 +1,4 @@
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { generateRecommendation, generateMultipleRecommendations } from "@/services/intelligence/recommendation";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
@@ -46,8 +47,8 @@ export const GET = withCanonicalEnforcement(
     id: r.id,
     workspaceId: r.workspaceId,
     ownerUserId: r.ownerUserId,
-    createdBy: r.createdBy,
-    lastUpdatedBy: r.lastUpdatedBy,
+    createdBy: r.createdByUserId,
+    lastUpdatedBy: r.lastUpdatedByUserId,
     problem: r.problem,
     action: r.action,
     impactExpected: Number(r.impactExpected),
@@ -96,8 +97,8 @@ export const GET = withCanonicalEnforcement(
     decision: "APPROVED" as const,
     workspaceId: decision.workspaceId,
     ownerUserId: decision.ownerUserId,
-    createdBy: decision.createdBy,
-    lastUpdatedBy: decision.lastUpdatedBy,
+    createdBy: decision.createdByUserId,
+    lastUpdatedBy: decision.lastUpdatedByUserId,
     expectedImpact: Number(decision.impactExpected),
     confidence: Number(decision.confidence),
     explanation: decision.explanation ? JSON.parse(String(decision.explanation)) : {
@@ -208,5 +209,5 @@ export const GET = withCanonicalEnforcement(
 
     return response;
   },
-  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true }
 );

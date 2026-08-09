@@ -35,7 +35,7 @@ export const GET = withCanonicalEnforcement(
     const state = await getInterventionState(engagementId);
     return Response.json(state);
   },
-  { requireCapabilities: ["INTERVENTION_VIEW"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.INTERVENTION_VIEW], requireWorkspace: true }
 );
 
 export const PATCH = withCanonicalEnforcement(

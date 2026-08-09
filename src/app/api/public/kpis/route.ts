@@ -8,8 +8,10 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { toPublicKPIDTO, PublicAPIError } from "@/services/public-api.service";
+import { db } from "@/lib/db";
 import { z } from "zod/v4";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 const querySchema = z.object({
   engagementId: z.string().optional(),
@@ -17,6 +19,20 @@ const querySchema = z.object({
   limit: z.string().optional().default("100"),
   offset: z.string().optional().default("0"),
 });
+
+function computeTrend(currentValue: number | null, target: number | null): "improving" | "stable" | "deteriorating" {
+  if (currentValue === null || target === null || target === 0) return "stable";
+  const ratio = currentValue / target;
+  if (ratio >= 0.9) return "improving";
+  if (ratio <= 0.5) return "deteriorating";
+  return "stable";
+}
+
+function dbDirectionToPublic(direction: string): "increase" | "decrease" | "maintain" {
+  if (direction === "up") return "increase";
+  if (direction === "down") return "decrease";
+  return "maintain";
+}
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -34,52 +50,49 @@ export const GET = withCanonicalEnforcement(
       const limit = Math.min(parseInt(queryParams.limit), 1000);
       const offset = parseInt(queryParams.offset);
 
-      const mockKPIs = [
-        {
-          id: "revenue-growth-2024",
-          engagementId: "550e8400-e29b-41d4-a716-446655440000",
-          name: "Revenue Growth Rate",
-          currentValue: 125000,
-          targetValue: 150000,
-          direction: "increase" as const,
-          trend: queryParams.trend || "improving",
-          percentOfTarget: 83,
-          lastUpdated: new Date().toISOString(),
+      const kpis = await db.kPI.findMany({
+        where: {
+          engagement: { workspaceId },
+          ...(queryParams.engagementId ? { engagementId: queryParams.engagementId } : {}),
         },
-        {
-          id: "kpi-retention-rate",
-          engagementId: "550e8400-e29b-41d4-a716-446655440001",
-          name: "Customer Retention Rate",
-          currentValue: 92,
-          targetValue: 95,
-          direction: "increase" as const,
-          trend: queryParams.trend || "stable",
-          percentOfTarget: 97,
-          lastUpdated: new Date().toISOString(),
+        orderBy: { updatedAt: "desc" },
+        take: limit + offset,
+        select: {
+          id: true,
+          engagementId: true,
+          name: true,
+          currentValue: true,
+          target: true,
+          direction: true,
+          updatedAt: true,
         },
-        {
-          id: "kpi-cost-per-unit",
-          engagementId: "550e8400-e29b-41d4-a716-446655440001",
-          name: "Cost Per Unit",
-          currentValue: 45,
-          targetValue: 35,
-          direction: "decrease" as const,
-          trend: queryParams.trend || "deteriorating",
-          percentOfTarget: 78,
-          lastUpdated: new Date().toISOString(),
-        },
-      ];
+      });
 
-      let filtered = mockKPIs;
-      if (queryParams.engagementId) {
-        filtered = filtered.filter((k) => k.engagementId === queryParams.engagementId);
-      }
-      if (queryParams.trend) {
-        filtered = filtered.filter((k) => k.trend === queryParams.trend);
-      }
+      const mapped = kpis.map((kpi: any) => {
+        const trend = computeTrend(kpi.currentValue, kpi.target);
+        const percentOfTarget =
+          kpi.currentValue !== null && kpi.target !== null && kpi.target !== 0
+            ? Math.round((kpi.currentValue / kpi.target) * 100)
+            : undefined;
+        return {
+          id: kpi.id,
+          engagementId: kpi.engagementId,
+          name: kpi.name,
+          currentValue: kpi.currentValue ?? undefined,
+          targetValue: kpi.target ?? undefined,
+          direction: dbDirectionToPublic(kpi.direction),
+          trend,
+          percentOfTarget,
+          lastUpdated: kpi.updatedAt.toISOString(),
+        };
+      });
+
+      const filtered = queryParams.trend
+        ? mapped.filter((k: any) => k.trend === queryParams.trend)
+        : mapped;
 
       const paginated = filtered.slice(offset, offset + limit);
-      const publicDTOs = paginated.map((k) => toPublicKPIDTO(k));
+      const publicDTOs = paginated.map((k: any) => toPublicKPIDTO(k));
 
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.KPI_SNAPSHOT_RECORDED,
@@ -113,6 +126,5 @@ export const GET = withCanonicalEnforcement(
       }
       throw error;
     }
-  },
-  { requireWorkspace: true }
+  }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.KPI_VIEW] }
 );

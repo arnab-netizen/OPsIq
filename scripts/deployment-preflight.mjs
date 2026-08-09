@@ -32,6 +32,8 @@ const envRequirements = [
   { name: "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", category: "OPTIONAL" },
   { name: "OPSIQ_DIAGNOSTIC_KEY", category: "OPTIONAL" },
   { name: "SENTRY_DSN", category: "OPTIONAL" },
+  { name: "ASYMMETRIC_PRIVATE_KEY", category: "OPTIONAL" }, // Ed25519/ECDSA private key for decision signing; falls back to filesystem .keys/ in non-serverless
+  { name: "ASYMMETRIC_PUBLIC_KEY", category: "OPTIONAL" },  // Matching public key; required alongside ASYMMETRIC_PRIVATE_KEY
 ];
 
 const report = {

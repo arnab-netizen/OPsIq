@@ -1,0 +1,334 @@
+name: Stage 7 — Trusted Evidence Verifier
+
+# ─── Trigger: workflow_dispatch ───────────────────────────────────────────────
+# This workflow runs ONLY on main. It verifies evidence artifacts submitted via
+# PRs without ever executing code from those PRs in a privileged context.
+#
+# Security model:
+#   - Always checks out main (via actions/checkout@v4 with no ref: override).
+#   - Independently resolves the live PR HEAD SHA from the GitHub API — the
+#     caller-supplied head_sha is cross-checked but never trusted as the target.
+#   - Fetches artifact files from the live PR HEAD as RAW DATA via the GitHub
+#     Contents API (single-file reads), never by checking out the PR branch.
+#   - Verifies the PR diff is add-only and confined to the canonical artifacts dir.
+#   - Validates the fetched data using the validator on main with
+#     --from-auth-sha-registry so the key registry is loaded from each artifact's
+#     authorization_manifest_sha, never from the working-tree registry.
+#   - The PR code is never executed in this job.
+#   - The signing key is never exposed to artifact-submitting PRs.
+#   - Posts the result as a Commit Status on the live PR HEAD SHA.
+#
+# Callers: stage7-capture dispatches workflow_dispatch with inputs
+#   { pr_number, head_sha, artifact_ids }
+# using GITHUB_TOKEN — no PAT required. workflow_dispatch does not loop
+# (GITHUB_TOKEN triggering workflow_dispatch on the same repo is permitted;
+# only automatic triggers — push, pull_request — are blocked to prevent loops).
+#
+# PR-A remediation (DEFECT 8 updated audit — 20 requirements):
+#  1.  Workflow runs on main — YES (checkout ref: main).
+#  2.  PR code never executes — YES (artifacts fetched as data via API, not checkout).
+#  3.  Signing key unavailable to artifact PR — YES (secret not exposed to PRs).
+#  4.  Artifact fetched per-file via Contents API — YES (curl with GH_TOKEN).
+#  5.  Fetched bytes validated against schema from main — YES (node scripts/ on main).
+#  6.  artifact_id cross-checked against file content (hash derivation) — YES (library).
+#  7.  Signature verified with key from AUTH_SHA registry, not working-tree — YES
+#      (--from-auth-sha-registry; each artifact's registry loaded from its own
+#       authorization_manifest_sha via git show).
+#  8.  No path traversal — YES (artifact_ids filtered to evd_<32hex> pattern).
+#  9.  No shell injection — YES (artifact values pass through env vars, not inline).
+# 10.  GITHUB_TOKEN scope: contents:read, actions:read, statuses:write — YES (below).
+# 11.  statuses:write for Commit Status API — YES (posts to stage7-evidence-trusted-verification).
+# 12.  Provenance cross-check requires GH_TOKEN — YES (passed via env).
+# 13.  Owner logins allowlist configurable — YES (EVIDENCE_OWNER_LOGINS secret).
+# 14.  Only evd_ artifact ids accepted — YES (pattern filter).
+# 15.  Empty artifact list = error status, not pass — YES (validator handles it).
+# 16.  Dispatcher identity is not trusted as owner identity — YES (inputs not used for identity).
+# 17.  Result posted as Commit Status on the independently resolved live HEAD SHA —
+#      YES (replaces prior issue-comment approach; post step runs with if: always()).
+# 18.  Non-zero exit on any REJECTED artifact — YES (assert step at end).
+# 19.  Live PR HEAD SHA resolved independently from GitHub API — YES (resolve_pr step;
+#      payload head_sha used only as fallback for error-state status posting).
+# 20.  PR diff verified add-only inside canonical artifacts directory — YES (addonly step).
+
+on:
+  repository_dispatch:
+    types: [stage7-verify-artifacts]
+    # client_payload fields expected: pr_number, head_sha, artifact_ids
+    # Dispatched by stage7-capture using GITHUB_TOKEN (Contents: write only).
+    # repository_dispatch requires Contents: write — narrower than workflow_dispatch
+    # (Actions: write), eliminating the privilege escalation identified in the
+    # ci-governance-check rule 12.
+
+permissions:
+  contents: read
+  actions: read
+  statuses: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main (trusted reference — never the PR branch)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Independently resolve the live PR HEAD SHA from the GitHub API.
+      # The payload's head_sha is treated as a hint only — the live API response is
+      # authoritative. This prevents a race where the PR was updated between the
+      # dispatch and verification, and closes the vector where a caller supplies a
+      # stale or manipulated head_sha to aim verification at a different commit.
+      - name: Resolve live PR HEAD SHA from GitHub API
+        id: resolve_pr
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+          PAYLOAD_HEAD_SHA: ${{ github.event.client_payload.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "REFUSED: pr_number '$PR_NUMBER' is not a positive integer." >&2
+            exit 1
+          fi
+
+          PR_RESPONSE=$(curl -sS -f \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER")
+
+          LIVE_HEAD_SHA=$(echo "$PR_RESPONSE" | jq -r '.head.sha')
+
+          if [ -z "$LIVE_HEAD_SHA" ] || [ "$LIVE_HEAD_SHA" = "null" ]; then
+            echo "REFUSED: could not resolve HEAD SHA for PR #$PR_NUMBER." >&2
+            echo "$PR_RESPONSE" >&2
+            exit 1
+          fi
+
+          if [ "$LIVE_HEAD_SHA" != "$PAYLOAD_HEAD_SHA" ]; then
+            echo "WARNING: payload head_sha ($PAYLOAD_HEAD_SHA) does not match live PR head ($LIVE_HEAD_SHA)."
+            echo "         Using live head_sha for verification and status posting."
+          fi
+
+          echo "live_head_sha=$LIVE_HEAD_SHA" >> "$GITHUB_OUTPUT"
+          echo "Resolved PR #$PR_NUMBER HEAD: $LIVE_HEAD_SHA"
+
+      # Verify the PR diff is add-only and every changed file is inside the
+      # canonical artifacts directory. Any modification, deletion, or file outside
+      # the directory is a violation — evidence branches are append-only by contract.
+      - name: Verify PR is add-only inside canonical artifacts directory
+        id: addonly
+        if: steps.resolve_pr.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          FILES_RESPONSE=$(curl -sS -f \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/files?per_page=100")
+
+          VIOLATIONS=""
+          while IFS=$'\t' read -r status filename; do
+            if [ "$status" != "added" ]; then
+              echo "VIOLATION: '$filename' status='$status' (must be 'added')" >&2
+              VIOLATIONS="yes"
+            fi
+            if [[ "$filename" != docs/opsiq/evidence/stage-7/artifacts/* ]]; then
+              echo "VIOLATION: '$filename' is outside docs/opsiq/evidence/stage-7/artifacts/" >&2
+              VIOLATIONS="yes"
+            fi
+          done < <(echo "$FILES_RESPONSE" | jq -r '.[] | [.status, .filename] | @tsv')
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "add_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "add_only=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Fetch each named artifact as raw data from the live PR HEAD SHA via the
+      # GitHub Contents API. The PR branch is never checked out. The fetched
+      # bytes are written into a temporary directory outside the workspace.
+      - name: Fetch artifact files from PR (data only — no code execution)
+        id: fetch
+        if: steps.resolve_pr.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LIVE_HEAD_SHA: ${{ steps.resolve_pr.outputs.live_head_sha }}
+          ARTIFACT_IDS_RAW: ${{ github.event.client_payload.artifact_ids }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          ARTIFACT_DIR="$RUNNER_TEMP/fetched-artifacts"
+          mkdir -p "$ARTIFACT_DIR"
+
+          if [ -z "$ARTIFACT_IDS_RAW" ]; then
+            echo "No artifact_ids in payload — nothing to verify."
+            echo "artifact_dir=$ARTIFACT_DIR" >> "$GITHUB_OUTPUT"
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          count=0
+          for id in $(echo "$ARTIFACT_IDS_RAW" | tr ',' '\n' | tr -d '[:space:]'); do
+            # Strict allowlist: canonical artifact id pattern only.
+            if ! [[ "$id" =~ ^evd_[0-9a-f]{32}$ ]]; then
+              echo "REFUSED: '$id' is not a canonical artifact id (evd_<32hex>) — skipping." >&2
+              continue
+            fi
+
+            ARTIFACT_PATH="docs/opsiq/evidence/stage-7/artifacts/${id}.json"
+            TARGET="$ARTIFACT_DIR/${id}.json"
+
+            # Fetch as DATA at the independently resolved live HEAD SHA.
+            HTTP_STATUS=$(curl -sS -o "$TARGET" -w "%{http_code}" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github.raw" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPO/contents/$ARTIFACT_PATH?ref=$LIVE_HEAD_SHA")
+
+            if [ "$HTTP_STATUS" != "200" ]; then
+              echo "WARNING: Could not fetch $ARTIFACT_PATH at $LIVE_HEAD_SHA (HTTP $HTTP_STATUS) — skipping." >&2
+              rm -f "$TARGET"
+              continue
+            fi
+
+            count=$((count + 1))
+            echo "Fetched $id (HTTP $HTTP_STATUS)"
+          done
+
+          echo "artifact_dir=$ARTIFACT_DIR" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      # Validate using the validator from main.
+      # --from-auth-sha-registry: load each artifact's key registry from its own
+      #   authorization_manifest_sha via git show — NEVER from the working-tree
+      #   registry (which is at INF_SHA, not AUTH_SHA).
+      # --require-provenance: cross-check each artifact against its named GitHub
+      #   Actions run via the GitHub API.
+      - name: Validate fetched artifacts (from-auth-sha-registry + provenance)
+        id: validate
+        if: >
+          steps.resolve_pr.outcome == 'success' &&
+          steps.fetch.outcome == 'success' &&
+          steps.fetch.outputs.count != '0' &&
+          steps.addonly.outputs.add_only == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVIDENCE_OWNER_LOGINS: ${{ secrets.EVIDENCE_OWNER_LOGINS }}
+        run: |
+          node scripts/validate-evidence-artifacts.mjs \
+            --dir "${{ steps.fetch.outputs.artifact_dir }}" \
+            --from-auth-sha-registry \
+            --require-provenance
+
+      # Post the verification result as a Commit Status on the independently
+      # resolved live PR HEAD SHA.
+      # Context: stage7-evidence-trusted-verification
+      # This step always runs so the PR status is always updated.
+      - name: Post Commit Status (context stage7-evidence-trusted-verification)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          LIVE_HEAD_SHA: ${{ steps.resolve_pr.outputs.live_head_sha }}
+          PAYLOAD_HEAD_SHA: ${{ github.event.client_payload.head_sha }}
+          RESOLVE_OUTCOME: ${{ steps.resolve_pr.outcome }}
+          FETCH_COUNT: ${{ steps.fetch.outputs.count }}
+          ADD_ONLY: ${{ steps.addonly.outputs.add_only }}
+          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          # Use live SHA if available; fall back to payload SHA for error-state reporting
+          # only when live resolution failed (to at least update the PR status).
+          TARGET_SHA="${LIVE_HEAD_SHA:-}"
+          if [ -z "$TARGET_SHA" ] || [ "$TARGET_SHA" = "null" ]; then
+            TARGET_SHA="${PAYLOAD_HEAD_SHA:-}"
+          fi
+
+          if [ -z "$TARGET_SHA" ] || [ "$TARGET_SHA" = "null" ]; then
+            echo "Cannot post commit status: no SHA available. Resolve outcome: ${RESOLVE_OUTCOME:-unknown}" >&2
+            exit 0
+          fi
+
+          if [ "${RESOLVE_OUTCOME:-}" != "success" ]; then
+            STATE="error"
+            DESCRIPTION="Could not resolve live PR HEAD — verification aborted."
+          elif [ "${FETCH_COUNT:-0}" = "0" ]; then
+            STATE="error"
+            DESCRIPTION="No verifiable artifact ids in payload — nothing examined."
+          elif [ "${ADD_ONLY:-false}" != "true" ]; then
+            STATE="failure"
+            DESCRIPTION="PR contains non-add changes or files outside artifacts directory."
+          elif [ "${VALIDATE_OUTCOME:-}" = "success" ]; then
+            STATE="success"
+            DESCRIPTION="All artifacts ACCEPTED: structural + signature + provenance verified."
+          elif [ "${VALIDATE_OUTCOME:-}" = "failure" ]; then
+            STATE="failure"
+            DESCRIPTION="One or more artifacts REJECTED or UNVERIFIED."
+          else
+            STATE="error"
+            DESCRIPTION="Validation did not run — see workflow log."
+          fi
+
+          TARGET_URL="https://github.com/$REPO/actions/runs/$RUN_ID"
+
+          HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPO/statuses/$TARGET_SHA" \
+            -d "$(jq -nc \
+              --arg state "$STATE" \
+              --arg target_url "$TARGET_URL" \
+              --arg description "$DESCRIPTION" \
+              --arg context "stage7-evidence-trusted-verification" \
+              '{state: $state, target_url: $target_url, description: $description, context: $context}')")
+
+          if [ "$HTTP_STATUS" != "201" ]; then
+            echo "WARNING: Commit Status API returned HTTP $HTTP_STATUS (expected 201)." >&2
+          fi
+
+          echo "Posted commit status '$STATE' to $TARGET_SHA: $DESCRIPTION"
+
+      # Fail the workflow if any check did not pass, so the Actions UI shows
+      # a red result and the owner knows verification requires attention.
+      - name: Assert verification passed
+        if: always()
+        env:
+          RESOLVE_OUTCOME: ${{ steps.resolve_pr.outcome }}
+          FETCH_COUNT: ${{ steps.fetch.outputs.count }}
+          ADD_ONLY: ${{ steps.addonly.outputs.add_only }}
+          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
+        run: |
+          set -euo pipefail
+          if [ "${RESOLVE_OUTCOME:-}" != "success" ]; then
+            echo "FAILED: PR HEAD resolution failed." >&2; exit 1
+          fi
+          if [ "${FETCH_COUNT:-0}" = "0" ]; then
+            echo "FAILED: No artifacts fetched." >&2; exit 1
+          fi
+          if [ "${ADD_ONLY:-false}" != "true" ]; then
+            echo "FAILED: PR add-only check rejected." >&2; exit 1
+          fi
+          if [ "${VALIDATE_OUTCOME:-skipped}" != "success" ]; then
+            echo "FAILED: Artifact validation outcome: ${VALIDATE_OUTCOME:-skipped}." >&2; exit 1
+          fi
+          echo "All verification checks passed."

@@ -24,11 +24,6 @@ import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 import { listEvidence } from "@/services/evidence";
 import { getKPIsForEngagement } from "@/services/kpi";
 
-interface TransactionClient {
-  recommendation: {
-    create: (params: { data: Record<string, unknown> }) => Promise<{ id: string }>;
-  };
-}
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -437,7 +432,7 @@ export async function createRecommendation(
       idempotencyKey,
       "recommendation.create",
       async () => {
-        return db.$transaction(async (tx: TransactionClient) => {
+        return db.$transaction(async (tx: any) => {
           const { derivedPriority, constraintsConsidered } = buildRecommendationPayload();
 
           const recommendation = await tx.recommendation.create({
@@ -463,6 +458,7 @@ export async function createRecommendation(
           await emitAuditEvent({
             eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
             actorId: userId,
+            workspaceId: validatedWorkspaceId,
             entityType: "recommendation",
             entityId: recommendation.id,
             payload: {
@@ -475,7 +471,7 @@ export async function createRecommendation(
               expected_target: input.expected_target,
             },
             visibility: "internal",
-          });
+          }, tx);
 
           await EventEmitterService.emit({
             aggregateId: recommendation.id,
@@ -551,6 +547,7 @@ export async function createRecommendation(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
     actorId: userId,
+    workspaceId: validatedWorkspaceId,
     entityType: "recommendation",
     entityId: recommendation.id,
     payload: {
@@ -875,6 +872,7 @@ export async function updateRecommendationStatus(
             await emitAuditEvent({
               eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_OVERRIDE,
               actorId: userId,
+              workspaceId: validatedWorkspaceId,
               entityType: "recommendation",
               entityId: recommendationId,
               payload: {
@@ -904,6 +902,7 @@ export async function updateRecommendationStatus(
             await emitAuditEvent({
               eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_WARNING,
               actorId: userId,
+              workspaceId: validatedWorkspaceId,
               entityType: "recommendation",
               entityId: recommendationId,
               payload: {
@@ -981,6 +980,7 @@ export async function updateRecommendationStatus(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
     actorId: userId,
+    workspaceId: validatedWorkspaceId,
     entityType: "recommendation",
     entityId: recommendationId,
     payload: {
@@ -1048,6 +1048,7 @@ export async function updateRecommendationPriorityFromScore(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
     actorId: userId,
+    workspaceId: validatedWorkspaceId,
     entityType: "recommendation",
     entityId: recommendationId,
     payload: {
@@ -1154,6 +1155,7 @@ export async function reRankRecommendationsInEngagement(
           actorId: userId,
           entityType: "recommendation",
           entityId: rec.id,
+          workspaceId: validatedWorkspaceId,
           payload: {
             oldPriority,
             newPriority,

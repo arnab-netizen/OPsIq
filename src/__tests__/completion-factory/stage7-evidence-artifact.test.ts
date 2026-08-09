@@ -12,17 +12,30 @@
  *      timestamp, modified content hash, missing replay command, wrong producer,
  *      manual artifact — each is rejected, and each rejection names the mechanism.
  *
- * The suite drives the real scripts as subprocesses. Nothing here is Stage 7
- * evidence: every artifact is built in a temp directory from a synthetic run
- * context that no GitHub run will ever match, and the repository's own artifact
- * directory is never written to.
+ * captureArtifact() calls buildEvidenceArtifact() directly (via callLib), bypassing
+ * the CLI capture script and the OPTION A authorization gate. This is correct: the gate
+ * verifies GITHUB_SHA against origin/main's closure manifest, which cannot be satisfied
+ * by the synthetic test GITHUB_SHA. CLI refusal tests (refuses outside Actions, refuses
+ * incomplete context, etc.) still run the capture script as a subprocess.
+ *
+ * Signing uses an ephemeral Ed25519 key pair generated at suite initialisation. The
+ * private key is never written to disk or committed; it exists only in this process.
  *
  * Design and threat model: docs/opsiq/evidence/stage-7/EVIDENCE_ARTIFACT_SPEC.md
  */
 
 import { describe, it, expect, afterAll } from "vitest";
+import { generateKeyPairSync } from "crypto";
 import { execFileSync, spawnSync } from "child_process";
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync, rmSync, renameSync } from "fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  rmSync,
+  renameSync,
+} from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { canonicalStringify as canonicalStringifyTs } from "@/services/integrity/hash";
@@ -32,7 +45,20 @@ const captureScript = join(root, "scripts", "capture-evidence.mjs");
 const validatorScript = join(root, "scripts", "validate-evidence-artifacts.mjs");
 const libPath = join(root, "scripts", "lib", "evidence-artifact.mjs");
 
-const SIGNING_KEY = "test-only-signing-key-never-provisioned-anywhere";
+// ─── Ephemeral Ed25519 test keys ──────────────────────────────────────────────
+// Generated fresh per test run. Never written to disk or committed.
+// The production signing key is a later owner action (OWNER_ACTION_REQUIRED);
+// do NOT use these keys outside tests.
+
+const { privateKey: SIGNING_KEY_PEM } = generateKeyPairSync("ed25519", {
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  publicKeyEncoding: { type: "spki", format: "pem" },
+});
+
+const { privateKey: ATTACKER_KEY_PEM } = generateKeyPairSync("ed25519", {
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  publicKeyEncoding: { type: "spki", format: "pem" },
+});
 
 /**
  * A synthetic GitHub Actions context. The run id is deliberately impossible
@@ -78,6 +104,7 @@ type Artifact = {
   invariant_id: string;
   lane: string;
   subject_sha: string;
+  authorization_manifest_sha: string | null;
   captured_at_utc: string;
   environment: string;
   method: string;
@@ -107,13 +134,15 @@ function runNode(script: string, args: string[], env: Record<string, string> = {
   };
 }
 
+// S7-I11 (simulation_adversarial) is fail-closed pending owner decision D-4 / amendment A4.
+// Tests use S7-I12 (simulation_runbook_recovery, same LANE_E) as the default invariant.
 const CAPTURE_DEFAULTS = [
-  "--invariant", "S7-I11",
+  "--invariant", "S7-I12",
   "--lane", "LANE_E",
-  "--proof-type", "simulation_adversarial",
+  "--proof-type", "simulation_runbook_recovery",
   "--environment", "isolated_simulation",
   "--method", "test_run",
-  "--assertion", "Nine adversarial failure scenarios each fail safely, visibly and recoverably.",
+  "--assertion", "Operator successfully used shipped runbooks to recover from a staged failure without undocumented steps.",
   "--result", "PASS",
   "--replay-command", "npx vitest run src/__tests__/example.test.ts --reporter=basic",
 ];
@@ -124,30 +153,53 @@ function writeObservation(dir: string, text = "Test Files  1 passed (1)\n     Te
   return path;
 }
 
-/** Capture a valid artifact through the shipped helper. Returns its parsed form. */
+/** Input base shared by captureArtifact and callLib-direct tests. */
+function baseInput(rawObservation = "Test Files  1 passed (1)\n     Tests  9 passed (9)\n") {
+  return {
+    invariant_id: "S7-I12",
+    lane: "LANE_E",
+    proof_type: "simulation_runbook_recovery",
+    environment: "isolated_simulation",
+    method: "test_run",
+    assertion: "Staged failure introduced; runbook followed; recovery confirmed without undocumented steps.",
+    result: "PASS",
+    replay_command: "npx vitest run src/__tests__/example.test.ts --reporter=basic",
+    raw_observation: rawObservation,
+    repository: FAKE_RUN_ENV.GITHUB_REPOSITORY,
+    run_id: FAKE_RUN_ENV.GITHUB_RUN_ID,
+    run_number: Number(FAKE_RUN_ENV.GITHUB_RUN_NUMBER),
+    run_attempt: Number(FAKE_RUN_ENV.GITHUB_RUN_ATTEMPT),
+    workflow: FAKE_RUN_ENV.GITHUB_WORKFLOW,
+    job: FAKE_RUN_ENV.GITHUB_JOB,
+    actor: FAKE_RUN_ENV.GITHUB_ACTOR,
+    event_name: FAKE_RUN_ENV.GITHUB_EVENT_NAME,
+    subject_sha: FAKE_RUN_ENV.GITHUB_SHA,
+    run_started_at: FAKE_RUN_ENV.GITHUB_RUN_STARTED_AT,
+    captured_at_utc: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+    authorization_manifest_sha: null,
+  };
+}
+
+/**
+ * Capture a valid artifact by calling buildEvidenceArtifact() directly via callLib.
+ * The CLI capture script (and its OPTION A authorization gate) is NOT invoked.
+ * CLI refusal behaviour is covered by runNode(captureScript, ...) tests below.
+ */
 function captureArtifact(
-  overrides: { args?: string[]; env?: Record<string, string>; observation?: string; signed?: boolean } = {},
+  overrides: { observation?: string; signed?: boolean } = {},
 ): { artifact: Artifact; dir: string; path: string } {
   const dir = makeTempDir();
-  const observationPath = writeObservation(dir, overrides.observation);
   const outDir = join(dir, "artifacts");
-  const env = {
-    ...FAKE_RUN_ENV,
-    ...(overrides.signed === false ? {} : { EVIDENCE_SIGNING_KEY: SIGNING_KEY }),
-    ...(overrides.env ?? {}),
-  };
-  const args = [
-    ...(overrides.args ?? CAPTURE_DEFAULTS),
-    "--observation-file", observationPath,
-    "--out-dir", outDir,
-  ];
-  const result = runNode(captureScript, args, env);
-  if (result.status !== 0) {
-    throw new Error(`capture failed unexpectedly (exit ${result.status}):\n${result.output}`);
-  }
-  const files = readdirSync(outDir);
-  const path = join(outDir, files[0]);
-  return { artifact: JSON.parse(readFileSync(path, "utf8")), dir: outDir, path };
+  mkdirSync(outDir, { recursive: true });
+
+  const input = baseInput(overrides.observation);
+  const opts =
+    overrides.signed === false ? {} : { signingKey: SIGNING_KEY_PEM };
+  const artifact = callLib("buildEvidenceArtifact", [input, opts]) as Artifact;
+
+  const path = join(outDir, `${artifact.artifact_id}.json`);
+  writeFileSync(path, JSON.stringify(artifact, null, 2), "utf8");
+  return { artifact, dir: outDir, path };
 }
 
 /** Place an arbitrary object in a fresh artifact directory, named by its own id. */
@@ -161,7 +213,7 @@ function stage(artifact: { artifact_id?: string }, fileName?: string): string {
 function validate(dir: string, opts: { key?: boolean; requireAccepted?: boolean } = {}): RunResult {
   const args = ["--dir", dir];
   if (opts.requireAccepted) args.push("--require-accepted");
-  return runNode(validatorScript, args, opts.key === false ? {} : { EVIDENCE_SIGNING_KEY: SIGNING_KEY });
+  return runNode(validatorScript, args, opts.key === false ? {} : { EVIDENCE_SIGNING_KEY: SIGNING_KEY_PEM });
 }
 
 /** Evaluate a pure library export in a subprocess, so the shipped .mjs is what runs. */
@@ -210,7 +262,7 @@ describe("Stage 7 evidence — an interactive session cannot produce evidence", 
       ...CAPTURE_DEFAULTS,
       "--observation-file", writeObservation(dir),
       "--out-dir", join(dir, "artifacts"),
-    ], { EVIDENCE_SIGNING_KEY: SIGNING_KEY });
+    ], { EVIDENCE_SIGNING_KEY: SIGNING_KEY_PEM });
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("interactive agent session is not valid evidence");
@@ -272,7 +324,7 @@ describe("Stage 7 evidence — an interactive session cannot produce evidence", 
   it("refuses to report provenance as verified when it cannot check it", () => {
     const { dir } = captureArtifact();
     const result = runNode(validatorScript, ["--dir", dir, "--require-provenance"], {
-      EVIDENCE_SIGNING_KEY: SIGNING_KEY,
+      EVIDENCE_SIGNING_KEY: SIGNING_KEY_PEM,
     });
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("Refusing to report provenance as verified without checking it");
@@ -375,7 +427,7 @@ describe("Stage 7 evidence — malformed artifacts are rejected", () => {
       ...CAPTURE_DEFAULTS,
       "--observation-file", writeObservation(dir, secretish),
       "--out-dir", join(dir, "artifacts"),
-    ], { ...FAKE_RUN_ENV, EVIDENCE_SIGNING_KEY: SIGNING_KEY });
+    ], { ...FAKE_RUN_ENV, EVIDENCE_SIGNING_KEY: SIGNING_KEY_PEM });
 
     expect(capture.status).toBe(3);
     expect(capture.stderr).toContain("database_url_with_credentials");
@@ -550,8 +602,12 @@ describe("Stage 7 evidence — hostile audit", () => {
   });
 
   it("attack: a self-signed artifact fails against the real key", () => {
-    const { artifact } = captureArtifact({ env: { EVIDENCE_SIGNING_KEY: "attacker-guessed-key" } });
-    const result = validate(stage(artifact));
+    // Attacker signs with their own ephemeral key — validator uses the legitimate key.
+    const attackerArtifact = callLib("buildEvidenceArtifact", [
+      baseInput(),
+      { signingKey: ATTACKER_KEY_PEM },
+    ]) as Artifact;
+    const result = validate(stage(attackerArtifact));
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("signature does not verify");
   });
@@ -656,6 +712,19 @@ describe("Stage 7 evidence — hostile audit", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("is not a canonical Stage 7 invariant");
   });
+
+  it("S7-I11 is fail-closed pending owner decision D-4 (amendment A4 not yet applied)", () => {
+    // S7-I11 evidence must be rejected until D-4 is recorded and A4 applied to
+    // factory-stage-7-closure.yaml. Regression guard: if the fail-closed block is
+    // removed, this test fails loudly. Uses the same rederiveId+validate pattern as
+    // all other forgery tests so the full validator pipeline is exercised.
+    const { artifact } = captureArtifact(); // S7-I12 (valid default)
+    const forged = rederiveId({ ...artifact, invariant_id: "S7-I11" });
+    const result = validate(stage(forged));
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S7-I11 proof blocked");
+    expect(result.stdout).toContain("D-4");
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -708,5 +777,284 @@ describe("Stage 7 evidence — canonicalisation matches the existing integrity h
     const withoutSignature = { ...artifact, signature: null };
     expect(callLib("computeArtifactId", [artifact])).toEqual(artifact.artifact_id);
     expect(callLib("computeArtifactId", [withoutSignature])).toEqual(artifact.artifact_id);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUTH_SHA model — parseKeyRegistryYaml and resolveCaptureAuthorization
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Convert the Map returned by parseKeyRegistryYaml to a plain object for assertions. */
+function callParseKeyRegistryYaml(yaml: string): Record<string, string> {
+  const script = `
+    import { parseKeyRegistryYaml } from ${JSON.stringify(libPath)};
+    const result = parseKeyRegistryYaml(process.env.TEST_YAML);
+    const obj = {};
+    for (const [k, v] of result) obj[k] = v;
+    process.stdout.write(JSON.stringify(obj));
+  `;
+  const result = spawnSync("node", ["--input-type=module", "-e", script], {
+    encoding: "utf8",
+    cwd: root,
+    env: { PATH: process.env.PATH ?? "", TEST_YAML: yaml },
+  });
+  if (result.status !== 0) throw new Error(`parseKeyRegistryYaml failed: ${result.stderr}`);
+  return JSON.parse(result.stdout);
+}
+
+/**
+ * Call resolveCaptureAuthorization with injectable fixture callbacks.
+ * Returns { authorizationManifestSha, keyRegistrySize, keyRegistryKeys }.
+ */
+function callResolveCaptureAuth(opts: {
+  subjectSha: string;
+  closureSubjectSha: string;
+  mainSha: string;
+  keyRegistryYaml?: string;
+  throwOnManifest?: boolean;
+  throwOnRegistry?: boolean;
+}): { authorizationManifestSha: string; keyRegistrySize: number; keyRegistryKeys: string[] } {
+  const script = `
+    import { resolveCaptureAuthorization } from ${JSON.stringify(libPath)};
+    const opts = JSON.parse(process.env.RESOLVE_OPTS);
+    const manifest = \`closure_subject_sha: \${opts.closureSubjectSha}\`;
+    const fetchMainManifest = opts.throwOnManifest
+      ? () => { throw new Error("git show failed"); }
+      : () => manifest;
+    const resolveMainSha = () => opts.mainSha;
+    const fetchKeyRegistryYaml = opts.keyRegistryYaml !== undefined
+      ? (opts.throwOnRegistry
+          ? () => { throw new Error("git show registry failed"); }
+          : () => opts.keyRegistryYaml)
+      : null;
+    const result = resolveCaptureAuthorization({
+      subjectSha: opts.subjectSha,
+      fetchMainManifest,
+      resolveMainSha,
+      fetchKeyRegistryYaml,
+    });
+    const out = {
+      authorizationManifestSha: result.authorizationManifestSha,
+      keyRegistrySize: result.keyRegistry.size,
+      keyRegistryKeys: [...result.keyRegistry.keys()],
+    };
+    process.stdout.write(JSON.stringify(out));
+  `;
+  const result = spawnSync("node", ["--input-type=module", "-e", script], {
+    encoding: "utf8",
+    cwd: root,
+    env: { PATH: process.env.PATH ?? "", RESOLVE_OPTS: JSON.stringify(opts) },
+  });
+  if (result.status !== 0) throw new Error(`resolveCaptureAuthorization threw: ${result.stderr}`);
+  return JSON.parse(result.stdout);
+}
+
+/** Call resolveCaptureAuthorization expecting it to throw. Returns stderr text. */
+function callResolveCaptureAuthExpectThrow(opts: {
+  subjectSha: string;
+  closureSubjectSha: string;
+  mainSha: string;
+  keyRegistryYaml?: string;
+  throwOnManifest?: boolean;
+  throwOnRegistry?: boolean;
+}): string {
+  const script = `
+    import { resolveCaptureAuthorization } from ${JSON.stringify(libPath)};
+    const opts = JSON.parse(process.env.RESOLVE_OPTS);
+    const manifest = \`closure_subject_sha: \${opts.closureSubjectSha}\`;
+    const fetchMainManifest = opts.throwOnManifest
+      ? () => { throw new Error("git show failed"); }
+      : () => manifest;
+    const resolveMainSha = () => opts.mainSha;
+    const fetchKeyRegistryYaml = opts.keyRegistryYaml !== undefined
+      ? (opts.throwOnRegistry
+          ? () => { throw new Error("git show registry failed"); }
+          : () => opts.keyRegistryYaml)
+      : null;
+    try {
+      resolveCaptureAuthorization({
+        subjectSha: opts.subjectSha,
+        fetchMainManifest,
+        resolveMainSha,
+        fetchKeyRegistryYaml,
+      });
+      process.stderr.write("NO_THROW");
+      process.exit(1);
+    } catch (e) {
+      process.stdout.write(e.message);
+    }
+  `;
+  const result = spawnSync("node", ["--input-type=module", "-e", script], {
+    encoding: "utf8",
+    cwd: root,
+    env: { PATH: process.env.PATH ?? "", RESOLVE_OPTS: JSON.stringify(opts) },
+  });
+  return result.stdout;
+}
+
+const FAKE_SHA = "a".repeat(40);
+const FAKE_MAIN_SHA = "b".repeat(40);
+const FAKE_KEY_B64 = "MCowBQYDK2VwAyEABQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHw==";
+
+const ACTIVE_KEY_YAML = `
+version: "1"
+keys:
+  - key_id: "test-key-v1"
+    algorithm: "Ed25519"
+    status: "active"
+    public_key_spki_der_base64: "${FAKE_KEY_B64}"
+`;
+
+const PENDING_ONLY_YAML = `
+version: "1"
+keys:
+  - key_id: "test-key-v1"
+    algorithm: "Ed25519"
+    status: "pending_owner_provisioning"
+    public_key_spki_der_base64: "${FAKE_KEY_B64}"
+`;
+
+const MIXED_STATUS_YAML = `
+version: "1"
+keys:
+  - key_id: "revoked-key"
+    algorithm: "Ed25519"
+    status: "revoked"
+    public_key_spki_der_base64: "${FAKE_KEY_B64}"
+  - key_id: "pending-key"
+    algorithm: "Ed25519"
+    status: "pending_owner_provisioning"
+    public_key_spki_der_base64: "${FAKE_KEY_B64}"
+  - key_id: "active-key"
+    algorithm: "Ed25519"
+    status: "active"
+    public_key_spki_der_base64: "${FAKE_KEY_B64}"
+`;
+
+describe("Stage 7 AUTH_SHA model — parseKeyRegistryYaml", () => {
+  it("includes active Ed25519 keys and excludes pending and revoked keys", () => {
+    const result = callParseKeyRegistryYaml(MIXED_STATUS_YAML);
+    expect(Object.keys(result)).toHaveLength(1);
+    expect(result["active-key"]).toBeDefined();
+    expect(result["revoked-key"]).toBeUndefined();
+    expect(result["pending-key"]).toBeUndefined();
+  });
+
+  it("returns an empty map when YAML has no active Ed25519 keys", () => {
+    const result = callParseKeyRegistryYaml(PENDING_ONLY_YAML);
+    expect(Object.keys(result)).toHaveLength(0);
+  });
+
+  it("returns an empty map for empty YAML", () => {
+    const result = callParseKeyRegistryYaml("");
+    expect(Object.keys(result)).toHaveLength(0);
+  });
+
+  it("wraps the base64 value in PEM format for active keys", () => {
+    const result = callParseKeyRegistryYaml(ACTIVE_KEY_YAML);
+    const pem = result["test-key-v1"];
+    expect(pem).toBeDefined();
+    expect(pem).toContain("-----BEGIN PUBLIC KEY-----");
+    expect(pem).toContain("-----END PUBLIC KEY-----");
+  });
+});
+
+describe("Stage 7 AUTH_SHA model — resolveCaptureAuthorization returns keyRegistry", () => {
+  it("returns empty keyRegistry when fetchKeyRegistryYaml is not provided", () => {
+    const out = callResolveCaptureAuth({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_SHA,
+      mainSha: FAKE_MAIN_SHA,
+    });
+    expect(out.authorizationManifestSha).toBe(FAKE_MAIN_SHA);
+    expect(out.keyRegistrySize).toBe(0);
+    expect(out.keyRegistryKeys).toHaveLength(0);
+  });
+
+  it("returns populated keyRegistry when fetchKeyRegistryYaml returns active key YAML", () => {
+    const out = callResolveCaptureAuth({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_SHA,
+      mainSha: FAKE_MAIN_SHA,
+      keyRegistryYaml: ACTIVE_KEY_YAML,
+    });
+    expect(out.authorizationManifestSha).toBe(FAKE_MAIN_SHA);
+    expect(out.keyRegistrySize).toBe(1);
+    expect(out.keyRegistryKeys).toContain("test-key-v1");
+  });
+
+  it("returns empty keyRegistry when fetchKeyRegistryYaml YAML has no active keys", () => {
+    const out = callResolveCaptureAuth({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_SHA,
+      mainSha: FAKE_MAIN_SHA,
+      keyRegistryYaml: PENDING_ONLY_YAML,
+    });
+    expect(out.keyRegistrySize).toBe(0);
+  });
+
+  it("propagates error from fetchKeyRegistryYaml with OPTION A context message", () => {
+    const msg = callResolveCaptureAuthExpectThrow({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_SHA,
+      mainSha: FAKE_MAIN_SHA,
+      keyRegistryYaml: "",
+      throwOnRegistry: true,
+    });
+    expect(msg).toContain("OPTION A authorization gate");
+    expect(msg).toContain("key registry");
+    expect(msg).toContain("git show registry failed");
+  });
+
+  it("propagates error from fetchMainManifest with OPTION A context message", () => {
+    const msg = callResolveCaptureAuthExpectThrow({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_SHA,
+      mainSha: FAKE_MAIN_SHA,
+      throwOnManifest: true,
+    });
+    expect(msg).toContain("OPTION A authorization gate");
+    expect(msg).toContain("factory-stage-7-closure.yaml");
+  });
+
+  it("rejects when closure_subject_sha does not match subjectSha", () => {
+    const msg = callResolveCaptureAuthExpectThrow({
+      subjectSha: FAKE_SHA,
+      closureSubjectSha: FAKE_MAIN_SHA,
+      mainSha: FAKE_MAIN_SHA,
+    });
+    expect(msg).toContain("OPTION A authorization gate");
+    expect(msg).toContain("is NOT authorized");
+  });
+});
+
+describe("Stage 7 AUTH_SHA model — validator --from-auth-sha-registry flag", () => {
+  it("rejects an artifact whose authorization_manifest_sha is null", () => {
+    const { artifact } = captureArtifact();
+    const dir = stage({ ...artifact, authorization_manifest_sha: null });
+    const result = runNode(validatorScript, ["--dir", dir, "--from-auth-sha-registry"]);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("REJECTED");
+  });
+
+  it("treats an artifact as UNVERIFIED when the registry at AUTH_SHA has no active keys", () => {
+    // Use HEAD as authorization_manifest_sha. The repo's key registry has
+    // status: pending_owner_provisioning at HEAD → no active keys → UNCHECKED → UNVERIFIED.
+    const headSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+    const input = { ...baseInput(), authorization_manifest_sha: headSha };
+    const artifact = callLib("buildEvidenceArtifact", [input, { signingKey: SIGNING_KEY_PEM }]) as Artifact;
+    const dir = stage(artifact);
+    const result = runNode(validatorScript, ["--dir", dir, "--from-auth-sha-registry"]);
+    // Validator exits 0 in default mode (not --require-accepted); UNVERIFIED is not blocking.
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("UNVERIFIED");
+  });
+
+  it("unknown flag --from-auth-sha-registry is not rejected alongside known flags", () => {
+    // Confirms the flag is listed in KNOWN_FLAGS and doesn't trigger usageError.
+    const dir = makeTempDir();
+    const result = runNode(validatorScript, ["--dir", dir, "--from-auth-sha-registry"]);
+    // Empty dir is neither pass nor fail; just confirm the flag is accepted (no exit 2).
+    expect(result.status).not.toBe(2);
   });
 });

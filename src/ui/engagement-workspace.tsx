@@ -165,8 +165,8 @@ export function EngagementWorkspace({
               <div>
                 <dt className="text-sm text-muted-foreground">Client</dt>
                 <dd>
-                  <Link href={`/clients/${engagement.client.id}`} className="text-primary hover:underline">
-                    {engagement.client.name}
+                  <Link href={`/clients/${engagement.clientAccount.id}`} className="text-primary hover:underline">
+                    {engagement.clientAccount.name}
                   </Link>
                 </dd>
               </div>

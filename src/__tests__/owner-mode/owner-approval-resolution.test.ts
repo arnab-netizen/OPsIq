@@ -10,7 +10,15 @@ const emitAuditEvent = vi.fn(async () => "audit-id");
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: (...a: unknown[]) => emitAuditEvent(...a) }));
 // workflow.ts top-level imports @/lib/db (the generated Prisma client). Mock it so the
 // module graph resolves without a generated client; all DB access here is DI-injected.
-vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
+vi.mock("@/lib/db", () => {
+  const tx = { ownerAttentionEvent: { create: vi.fn(async () => ({ id: "att-tx-1" })) } };
+  return {
+    db: { $transaction: vi.fn().mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx)) },
+    getDbInstance: vi.fn().mockResolvedValue({
+      $transaction: vi.fn().mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx)),
+    }),
+  };
+});
 
 import { resolveOwnerApproval } from "@/services/owner-mode/owner-approval-resolution.service";
 import { enforceApprovalRequirement } from "@/services/approval/workflow";
@@ -29,14 +37,22 @@ function makeDeps(opts: {
   memoryReusable?: boolean;
 }) {
   const attentionCreate = vi.fn(async () => ({ id: "att1" }));
+  // loadDb carries $transaction so the service uses this object as the transaction
+  // client (tx === loadDb), making tx.ownerAttentionEvent.create === attentionCreate.
+  const loadDb: {
+    ownerStandingInstruction: { findFirst: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+    ownerAttentionEvent: { create: ReturnType<typeof vi.fn> };
+    $transaction: (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>;
+  } = {
+    ownerStandingInstruction: { findFirst: vi.fn(async () => (opts.instruction ?? null)), create: vi.fn() },
+    ownerAttentionEvent: { create: attentionCreate },
+    $transaction: async (fn) => fn(loadDb),
+  };
   return {
     attentionCreate,
     deps: {
       load: {
-        db: {
-          ownerStandingInstruction: { findFirst: vi.fn(async () => (opts.instruction ?? null)), create: vi.fn() },
-          ownerAttentionEvent: { create: attentionCreate },
-        },
+        db: loadDb,
         now: () => new Date("2026-06-28T00:00:00.000Z"),
       },
       memory: {

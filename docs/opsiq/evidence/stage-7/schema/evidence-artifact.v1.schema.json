@@ -16,6 +16,7 @@
     "method",
     "captured_at_utc",
     "subject_sha",
+    "authorization_manifest_sha",
     "deployment_id",
     "producer",
     "replay",
@@ -79,6 +80,11 @@
     "subject_sha": {
       "description": "Full 40-hex commit the observation was made against. Under --require-provenance it must be an ancestor of origin/main.",
       "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "authorization_manifest_sha": {
+      "description": "SHA of origin/main HEAD at the moment the OPTION A authorization gate verified D-13. Binds the D-13 manifest state to the signed artifact. null when captured without the gate (e.g. owner lane where the gate is not applicable).",
+      "type": ["string", "null"],
       "pattern": "^[0-9a-f]{40}$"
     },
     "deployment_id": {
@@ -181,14 +187,18 @@
       "pattern": "^evd_[0-9a-f]{32}$"
     },
     "signature": {
-      "description": "HMAC-SHA256 over the canonical envelope with signature removed, keyed by the CI-only EVIDENCE_SIGNING_KEY. null when the key was not provisioned — such an artifact can never exceed acceptance level UNVERIFIED.",
+      "description": "Ed25519 signature over canonicalStringify(artifact) with signature.value set to null, binding algorithm, key_id, and all content fields including authorization_manifest_sha. null when the key was not provisioned — such an artifact can never exceed acceptance level UNVERIFIED. The private key exists ONLY as a CI secret (EVIDENCE_SIGNING_KEY) and is never committed. Key registry: .governance/stage7-signing-keys.yaml. Unknown key_id is INVALID (fail closed), not UNCHECKED.",
       "type": ["object", "null"],
       "additionalProperties": false,
       "required": ["algorithm", "key_id", "value"],
       "properties": {
-        "algorithm": { "const": "HMAC-SHA256" },
+        "algorithm": { "const": "Ed25519" },
         "key_id": { "type": "string", "minLength": 1 },
-        "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        "value": {
+          "description": "128 lowercase hex characters encoding the 64-byte Ed25519 signature.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{128}$"
+        }
       }
     }
   },

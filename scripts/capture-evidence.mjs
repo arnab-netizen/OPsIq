@@ -16,8 +16,8 @@
  *
  * Refusing to run is a guard rail, not the security boundary — a determined author
  * can write JSON by hand. The boundary is that a hand-written artifact cannot reach
- * acceptance level ACCEPTED: it carries no valid HMAC signature (the key exists only
- * as a CI secret) and it names no GitHub Actions run that the validator's API
+ * acceptance level ACCEPTED: it carries no valid Ed25519 signature (the key exists
+ * only as a CI secret) and it names no GitHub Actions run that the validator's API
  * cross-check will confirm.
  *
  * ─── Provenance is read from the environment, never from arguments ───────────
@@ -52,6 +52,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -67,6 +68,7 @@ import {
   buildEvidenceArtifact,
   scanForSecrets,
   validateEvidenceArtifact,
+  resolveCaptureAuthorization,
 } from './lib/evidence-artifact.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -205,21 +207,87 @@ if (rawObservation.trim().length === 0) {
 }
 
 // ─── Redaction: refuse before writing, never after ────────────────────────────
+// Secret scan runs BEFORE the authorization gate (exit 3 before exit 2) so that
+// an observation containing secret material is never written even in a gate-fail.
 
 const leaked = scanForSecrets(rawObservation);
 if (leaked.length > 0) {
   refuse(3, `the observation matches secret pattern(s): ${leaked.join(', ')}. Configuration evidence records presence booleans only, never values. Nothing was written.`);
 }
 
-// ─── Assemble ─────────────────────────────────────────────────────────────────
+// ─── OPTION A authorization gate ─────────────────────────────────────────────
+// Verify that GITHUB_SHA is the exact commit authorized by D-13 in origin/main.
+// `resolveCaptureAuthorization` is injected with real git I/O here; tests inject
+// fixture functions directly into the library — no runtime env var bypass exists.
+
+function fetchMainManifest() {
+  const result = spawnSync(
+    'git', ['show', 'origin/main:docs/opsiq/bundles/factory-stage-7-closure.yaml'],
+    { cwd: repoRoot, encoding: 'utf8' },
+  );
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'git show exited non-zero');
+  }
+  return result.stdout;
+}
+
+function resolveMainSha() {
+  const result = spawnSync('git', ['rev-parse', 'origin/main'], { cwd: repoRoot, encoding: 'utf8' });
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'git rev-parse exited non-zero');
+  }
+  return result.stdout.trim();
+}
+
+// AUTH_SHA model: load the key registry from origin/main HEAD (AUTH_SHA) so the
+// public key does not need to exist at INF_SHA. The owner commits it to main after
+// PR-A merges as a governance-only action, before dispatching this workflow.
+function fetchKeyRegistryYaml(sha) {
+  const result = spawnSync(
+    'git', ['show', `${sha}:.governance/stage7-signing-keys.yaml`],
+    { cwd: repoRoot, encoding: 'utf8' },
+  );
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || 'git show exited non-zero');
+  }
+  return result.stdout;
+}
+
+let authorizationManifestSha;
+let keyRegistry;
+try {
+  ({ authorizationManifestSha, keyRegistry } = resolveCaptureAuthorization({
+    subjectSha,
+    fetchMainManifest,
+    resolveMainSha,
+    fetchKeyRegistryYaml,
+  }));
+} catch (error) {
+  refuse(2, error.message);
+}
+
+// ─── Signing key — required ───────────────────────────────────────────────────
+// Rule 16: no unsigned artifacts. EVIDENCE_SIGNING_KEY must be present.
+// The key is provided via GitHub Environment secret (stage7-evidence-signing),
+// which is accessible only from tag refs matching stage7-evidence-subject-*.
 
 const signingKey = process.env.EVIDENCE_SIGNING_KEY?.trim() || null;
 const signingKeyId = process.env.EVIDENCE_SIGNING_KEY_ID?.trim() || DEFAULT_SIGNING_KEY_ID;
 if (!signingKey) {
-  console.warn(
-    'WARN: EVIDENCE_SIGNING_KEY is not available to this job. The artifact will be written '
-      + 'unsigned and can never exceed acceptance level UNVERIFIED, which may not back a PROVEN '
-      + 'invariant. Provision the secret (spec gap G-2) and re-capture.',
+  refuse(2,
+    'EVIDENCE_SIGNING_KEY is not set. This workflow must run with the GitHub Environment '
+    + 'secret stage7-evidence-signing. An unsigned artifact cannot back a PROVEN invariant '
+    + 'and must not be committed. Provision the secret and re-run.',
+  );
+}
+
+if (keyRegistry.size === 0) {
+  refuse(2,
+    `EVIDENCE_SIGNING_KEY is present but the key registry at AUTH_SHA `
+    + `${authorizationManifestSha} has no active Ed25519 key. `
+    + `The owner must commit the production public key to `
+    + `.governance/stage7-signing-keys.yaml on main (as a governance-only commit `
+    + `after PR-A merges) before dispatching the capture workflow.`,
   );
 }
 
@@ -233,6 +301,7 @@ const artifact = buildEvidenceArtifact(
     method,
     captured_at_utc: nowUtc(),
     subject_sha: subjectSha,
+    authorization_manifest_sha: authorizationManifestSha,
     deployment_id: args['deployment-id'] ?? null,
     repository,
     workflow,
@@ -259,7 +328,13 @@ const artifact = buildEvidenceArtifact(
   { signingKey, signingKeyId },
 );
 
-const { violations } = validateEvidenceArtifact(artifact, { signingKey, fileName: `${artifact.artifact_id}.json` });
+// Verify with the public key registry from AUTH_SHA, not just the private key.
+// This confirms the artifact was signed with a key whose public counterpart
+// is registered on main at AUTH_SHA — fail-closed if verification fails.
+const { violations } = validateEvidenceArtifact(artifact, {
+  signingKey: keyRegistry,
+  fileName: `${artifact.artifact_id}.json`,
+});
 if (violations.length > 0) {
   console.error('REFUSED: the assembled artifact does not satisfy the evidence schema. Nothing was written.');
   for (const violation of violations) console.error(`  - ${violation}`);

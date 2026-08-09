@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from "@/infra/errors";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   hasPermission,
   canActOnDecision,
@@ -80,5 +81,5 @@ export const PATCH = withCanonicalEnforcement(
       throw lifecycleError;
     }
   },
-  { requireWorkspace: true }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.DECISION_UPDATE] }
 );

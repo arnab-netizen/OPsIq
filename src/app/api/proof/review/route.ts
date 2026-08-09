@@ -1,6 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { proofReviewHandler } from "@/services/routes/guided-execution-handlers";
 import { GuidedExecutionPermission } from "@/domain/workspace/guided-execution-permissions";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 /**
  * POST /api/proof/review — manager/owner reviews a proof.
@@ -20,4 +21,4 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
     requiredPermission: GuidedExecutionPermission.PROOF_REVIEW_LOW_RISK,
     command: { ...body.command, workspaceId, actorId },
   });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.EVIDENCE_VALIDATE] });

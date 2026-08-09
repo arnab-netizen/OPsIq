@@ -1,6 +1,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError, ValidationError, ForbiddenError } from "@/infra/errors";
 import { hasPermission } from "@/middleware/workspace-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { logger } from "@/infra/logger";
 import { executeDecision } from "@/services/decisions/decision-lifecycle.service";
 import { db } from "@/lib/db";
@@ -56,5 +57,5 @@ export const POST = withCanonicalEnforcement(
       message: "Decision executed successfully",
     };
   },
-  { requireWorkspace: true }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.DECISION_UPDATE] }
 );

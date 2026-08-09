@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { parseRequestBody } from "@/lib/validation";
 import { requirePermission } from "@/services/workspace/guided-execution-permissions.service";
@@ -30,4 +31,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
   const r = await acknowledgeEscalation({ escalationId: input.escalationId, workspaceId, acknowledgedBy: actorId });
   return canonicalJson({ status: r.status, alreadyAcknowledged: r.alreadyAcknowledged }, { status: 200 });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });

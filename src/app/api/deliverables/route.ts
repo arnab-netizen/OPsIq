@@ -35,7 +35,7 @@ export const GET = withCanonicalEnforcement(
     const deliverables = await getDeliverablesForEngagement(engagementId, workspaceId);
     return deliverables;
   },
-  { requireWorkspace: true, requireCapabilities: ['DELIVERABLE_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.DELIVERABLE_VIEW] }
 );
 
 export const POST = withCanonicalEnforcement(

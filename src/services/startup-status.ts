@@ -10,8 +10,28 @@
 
 import { createHash } from "crypto";
 
+import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+
+/**
+ * True when a Prisma error indicates the startup_status table does not exist.
+ * Covers P2021 ("table does not exist") and the message pattern Prisma uses
+ * when it cannot find the table in the catalogue.
+ * Logged at WARN rather than ERROR so CI is not polluted with noise before
+ * the startup_status migration has been applied.
+ */
+function isMissingTableError(err: unknown): boolean {
+  if (!(err instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (err.code === "P2021") return true;
+  // Fallback: catch the message pattern Prisma emits for a missing relation.
+  // Prisma uses camelCase "startupStatus" in invocation traces, not "startup_status".
+  const msg = err.message ?? "";
+  return (
+    (msg.includes("startup_status") || msg.includes("startupStatus")) &&
+    (msg.includes("does not exist") || msg.includes("Invalid"))
+  );
+}
 
 export type StartupStatusType = "NOT_STARTED" | "STARTING" | "READY" | "FAILED";
 
@@ -188,7 +208,11 @@ export async function getStartupStatus(): Promise<{
       instance_id: result.instanceId,
     };
   } catch (error) {
-    logger.error("Failed to read startup status from DB", error);
+    if (isMissingTableError(error)) {
+      logger.warn("startup_status table not found during read — migration not yet applied");
+    } else {
+      logger.error("Failed to read startup status from DB", error);
+    }
     // Fail open on transient DB read errors: assume not started so the checks
     // re-run. (Identity failures are handled above and fail CLOSED.)
     return {
@@ -236,9 +260,15 @@ export async function setStartupStatus(
       error: options?.error,
     });
   } catch (error) {
-    logger.error("Failed to write startup status to DB", error, { status });
-    // If we can't write to DB, we still proceed but log the error
-    // This prevents DB write failures from blocking startup
+    if (isMissingTableError(error)) {
+      logger.warn(
+        "startup_status table not found — run `prisma migrate deploy` to create it",
+        { status },
+      );
+    } else {
+      logger.error("Failed to write startup status to DB", error, { status });
+    }
+    // Non-fatal: startup continues regardless. DB write failures do not block app startup.
   }
 }
 
@@ -261,6 +291,10 @@ export async function resetStartupStatus(): Promise<void> {
     });
     logger.info("[STARTUP-STATUS] Status reset");
   } catch (error) {
-    logger.error("Failed to reset startup status", error);
+    if (isMissingTableError(error)) {
+      logger.warn("startup_status table not found during reset — migration not yet applied");
+    } else {
+      logger.error("Failed to reset startup status", error);
+    }
   }
 }

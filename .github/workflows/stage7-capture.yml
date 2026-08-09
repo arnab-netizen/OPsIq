@@ -1,0 +1,294 @@
+name: Stage 7 — Evidence Capture (Canonical)
+
+# ─── DEFECT 11 remediation ────────────────────────────────────────────────────
+# This workflow does NOT accept caller-controlled observation commands, lane
+# values, proof types, assertions, or results. Those are all derived from the
+# hardcoded contract matrix below based on the owner-selected invariant_id.
+#
+# Only values the owner may legitimately supply:
+#   - invariant_id: which invariant to capture (validated against the matrix)
+#   - deployment_id: the live Vercel deployment ID (LANE_C only — required by the
+#     contract; the owner must supply the exact deployment ID they are observing)
+#   - supersedes: artifact_id of a prior artifact this corrects (optional)
+#
+# The observation command, lane, proof_type, environment, method, assertion, and
+# result are ALL hardcoded per invariant_id. The result field is derived from the
+# command exit code, never from an input.
+#
+# Owner-lane invariants (LANE_F, OWNER_ACCEPTANCE) are NOT captured by this
+# workflow. They require the owner to make an attestation comment on a PR/issue
+# and use the owner-attestation capture flow.
+#
+# OPTION A gate (inside scripts/capture-evidence.mjs):
+#   Verifies GITHUB_SHA == closure_subject_sha from D-13 on origin/main.
+#   The owner dispatches this workflow manually AFTER D-13 merges.
+
+on:
+  workflow_dispatch:
+    inputs:
+      invariant_id:
+        description: |
+          Stage 7 invariant id. LANE_C: S7-I1/I2/I4/I5. LANE_E: S7-I11/I12. S7-I10 requires two separate dispatches.
+          NOTE: S7-I3 is blocked by owner decisions D-2/D-3 (deferred amendment A2) — the current
+          deployment-preflight.mjs reads local process.env and cannot probe the live environment.
+          Do NOT dispatch S7-I3 until D-2/D-3 are resolved and A2 is applied.
+        required: true
+        type: choice
+        options:
+          - S7-I1
+          - S7-I2
+          - S7-I4
+          - S7-I5
+          - S7-I10-LANE_C
+          - S7-I10-LANE_E
+          - S7-I11
+          - S7-I12
+      deployment_id:
+        description: "Vercel deployment ID (required for LANE_C invariants). Format: dpl_..."
+        required: false
+        type: string
+        default: ""
+      supersedes:
+        description: "artifact_id of a prior artifact this corrects (optional)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  actions: read
+  pull-requests: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    # GitHub Environment restricts EVIDENCE_SIGNING_KEY to refs matching
+    # stage7-evidence-subject-* tag pattern (requires GitHub Pro or higher for
+    # private repos). The owner creates this environment and tag-restriction rule
+    # after PR-A merges, before dispatching captures. The tag is applied to INF_SHA.
+    environment: stage7-evidence-signing
+    steps:
+      - name: Checkout at GITHUB_SHA with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch origin/main (required by OPTION A gate)
+        run: git fetch origin main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Contract matrix ──────────────────────────────────────────────────────
+      # Invariant → lane, proof_type, environment, method, assertion, command.
+      # result is derived from command exit code: 0 = PASS, non-zero = FAIL.
+      # deployment_id is required for LANE_C and must not be present for LANE_E.
+      # All values are hardcoded — the caller cannot override them.
+      - name: Resolve contract parameters from invariant_id
+        id: contract
+        env:
+          INVARIANT_ID: ${{ inputs.invariant_id }}
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+        run: |
+          set -euo pipefail
+
+          case "$INVARIANT_ID" in
+            S7-I1)
+              echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
+              echo "proof_type=production_runtime_check" >> "$GITHUB_OUTPUT"
+              echo "environment=production" >> "$GITHUB_OUTPUT"
+              echo "method=http_probe" >> "$GITHUB_OUTPUT"
+              echo "assertion=Deployed SHA matches authorized candidate; production health probe returns 200." >> "$GITHUB_OUTPUT"
+              echo "command=node scripts/stage7-probes/s7-i1-health-probe.mjs" >> "$GITHUB_OUTPUT"
+              echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
+              ;;
+            S7-I2)
+              echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
+              echo "proof_type=production_migration_check" >> "$GITHUB_OUTPUT"
+              echo "environment=production" >> "$GITHUB_OUTPUT"
+              echo "method=db_query" >> "$GITHUB_OUTPUT"
+              echo "assertion=All approved migrations applied; zero pending migrations confirmed against production DB." >> "$GITHUB_OUTPUT"
+              echo "command=node scripts/stage7-probes/s7-i2-migration-check.mjs" >> "$GITHUB_OUTPUT"
+              echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
+              ;;
+            # S7-I3 is intentionally absent from this matrix.
+            # Deferred amendment A2, blocked by owner decisions D-2/D-3:
+            # The current scripts/deployment-preflight.mjs reads local process.env
+            # and cannot probe the live environment. S7-I3 capture is blocked until
+            # D-2/D-3 are resolved and A2 is applied to the manifest.
+            S7-I4)
+              echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
+              echo "proof_type=production_auth_check" >> "$GITHUB_OUTPUT"
+              echo "environment=production" >> "$GITHUB_OUTPUT"
+              echo "method=http_probe" >> "$GITHUB_OUTPUT"
+              echo "assertion=Owner login, logout, session expiry, and unauthorized-user rejection all confirmed on production deployment." >> "$GITHUB_OUTPUT"
+              echo "command=node scripts/stage7-probes/s7-i4-auth-check.mjs" >> "$GITHUB_OUTPUT"
+              echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
+              ;;
+            S7-I5)
+              echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
+              echo "proof_type=production_boundary_check" >> "$GITHUB_OUTPUT"
+              echo "environment=production" >> "$GITHUB_OUTPUT"
+              echo "method=http_probe" >> "$GITHUB_OUTPUT"
+              echo "assertion=Cross-workspace rejection confirmed on production; secret values absent from all owner-visible API responses and health output." >> "$GITHUB_OUTPUT"
+              echo "command=node scripts/stage7-probes/s7-i5-boundary-check.mjs" >> "$GITHUB_OUTPUT"
+              echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
+              ;;
+            S7-I10-LANE_C)
+              echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
+              echo "proof_type=simulation_and_production_audit_check" >> "$GITHUB_OUTPUT"
+              echo "environment=production" >> "$GITHUB_OUTPUT"
+              echo "method=db_query" >> "$GITHUB_OUTPUT"
+              echo "assertion=All six attribution fields present in audit records for pilot transitions; no raw payload copied into any audit record." >> "$GITHUB_OUTPUT"
+              echo "command=node scripts/stage7-probes/s7-i10-audit-check-lane-c.mjs" >> "$GITHUB_OUTPUT"
+              echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
+              ;;
+            S7-I10-LANE_E)
+              echo "lane=LANE_E" >> "$GITHUB_OUTPUT"
+              echo "proof_type=simulation_and_production_audit_check" >> "$GITHUB_OUTPUT"
+              echo "environment=isolated_simulation" >> "$GITHUB_OUTPUT"
+              echo "method=test_run" >> "$GITHUB_OUTPUT"
+              echo "assertion=Simulation confirms all six audit attribution fields present; no raw payload in audit records across all simulated paths." >> "$GITHUB_OUTPUT"
+              echo "command=npx vitest run src/__tests__/completion-factory/stage7-audit-check.test.ts --reporter=basic" >> "$GITHUB_OUTPUT"
+              echo "requires_deployment_id=false" >> "$GITHUB_OUTPUT"
+              ;;
+            S7-I11)
+              echo "lane=LANE_E" >> "$GITHUB_OUTPUT"
+              echo "proof_type=simulation_adversarial" >> "$GITHUB_OUTPUT"
+              echo "environment=isolated_simulation" >> "$GITHUB_OUTPUT"
+              echo "method=test_run" >> "$GITHUB_OUTPUT"
+              echo "assertion=Nine adversarial failure scenarios each fail safely, visibly, and recoverably in isolated simulation." >> "$GITHUB_OUTPUT"
+              echo "command=npx vitest run src/__tests__/completion-factory/stage7-evidence-artifact.test.ts src/__tests__/completion-factory/stage7-ed25519-hostile.test.ts --reporter=basic" >> "$GITHUB_OUTPUT"
+              echo "requires_deployment_id=false" >> "$GITHUB_OUTPUT"
+              ;;
+            S7-I12)
+              echo "lane=LANE_E" >> "$GITHUB_OUTPUT"
+              echo "proof_type=simulation_runbook_recovery" >> "$GITHUB_OUTPUT"
+              echo "environment=isolated_simulation" >> "$GITHUB_OUTPUT"
+              echo "method=test_run" >> "$GITHUB_OUTPUT"
+              echo "assertion=Staged failure introduced; recovery confirmed following DEPLOYMENT_RUNBOOK.md without undocumented steps." >> "$GITHUB_OUTPUT"
+              echo "command=node scripts/stage7-probes/s7-i12-runbook-recovery.mjs" >> "$GITHUB_OUTPUT"
+              echo "requires_deployment_id=false" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "REFUSED: '$INVARIANT_ID' is not a supported invariant_id for CI capture." >&2
+              echo "Owner-lane invariants (S7-I6/I7/I8/I9/I13/I14/I15/I16/OWNER_ACCEPTANCE) require the owner-attestation flow." >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Validate deployment_id requirement
+        env:
+          REQUIRES: ${{ steps.contract.outputs.requires_deployment_id }}
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+          INVARIANT_ID: ${{ inputs.invariant_id }}
+        run: |
+          set -euo pipefail
+          if [ "$REQUIRES" = "true" ] && [ -z "$DEPLOYMENT_ID" ]; then
+            echo "REFUSED: $INVARIANT_ID (LANE_C) requires --deployment_id." >&2
+            echo "Provide the exact Vercel deployment ID (dpl_...) you are observing." >&2
+            exit 1
+          fi
+          if [ "$REQUIRES" = "false" ] && [ -n "$DEPLOYMENT_ID" ]; then
+            echo "REFUSED: $INVARIANT_ID (LANE_E) must not supply deployment_id." >&2
+            exit 1
+          fi
+
+      - name: Run observation (hardcoded command — not caller-supplied)
+        id: observe
+        env:
+          OBSERVATION_COMMAND: ${{ steps.contract.outputs.command }}
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          obs_file="$RUNNER_TEMP/observation.txt"
+          # Execute the hardcoded observation command. result = PASS if exit 0, FAIL otherwise.
+          # Caller cannot override the command, result, or observation content.
+          if eval "$OBSERVATION_COMMAND" > "$obs_file" 2>&1; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+          fi
+          if [ ! -s "$obs_file" ]; then
+            echo "REFUSED: observation command produced no output" >&2
+            exit 1
+          fi
+          echo "observation_file=$obs_file" >> "$GITHUB_OUTPUT"
+
+      # S7-I10 is dispatched as S7-I10-LANE_C or S7-I10-LANE_E to disambiguate
+      # the lane; the canonical invariant_id passed to the artifact is always S7-I10.
+      - name: Normalize invariant_id
+        id: normalize
+        env:
+          INVARIANT_ID: ${{ inputs.invariant_id }}
+        run: |
+          normalized="${INVARIANT_ID%%-LANE_*}"
+          echo "invariant_id=$normalized" >> "$GITHUB_OUTPUT"
+
+      - name: Capture evidence artifact
+        id: capture
+        uses: ./.github/actions/stage7-evidence-capture
+        with:
+          invariant: ${{ steps.normalize.outputs.invariant_id }}
+          lane: ${{ steps.contract.outputs.lane }}
+          proof_type: ${{ steps.contract.outputs.proof_type }}
+          environment: ${{ steps.contract.outputs.environment }}
+          method: ${{ steps.contract.outputs.method }}
+          assertion: ${{ steps.contract.outputs.assertion }}
+          result: ${{ steps.observe.outputs.result }}
+          observation_file: ${{ steps.observe.outputs.observation_file }}
+          replay_command: ${{ steps.contract.outputs.command }}
+          deployment_id: ${{ inputs.deployment_id }}
+          classification: "INTERNAL_ONLY"
+          supersedes: ${{ inputs.supersedes }}
+          signing_key: ${{ secrets.EVIDENCE_SIGNING_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Push the artifact to an evidence branch forked from origin/main and open a
+      # PR targeting main. The diff is add-only by construction (branch from main,
+      # one file added). The trusted verifier validates the artifact as data from a
+      # privileged context before the PR is merged.
+      - name: Create evidence branch and open PR
+        id: evidence_pr
+        uses: ./.github/actions/stage7-create-evidence-pr
+        with:
+          artifact_path: ${{ steps.capture.outputs.artifact_path }}
+          artifact_id: ${{ steps.capture.outputs.artifact_id }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Dispatch the trusted verifier via workflow_dispatch using GITHUB_TOKEN.
+      # workflow_dispatch on the same repo is permitted with GITHUB_TOKEN — only
+      # automatic triggers (push, pull_request) are blocked to prevent loops.
+      # No PAT or DISPATCH_TOKEN required.
+      - name: Dispatch trusted verifier
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.evidence_pr.outputs.pr_number }}
+          PR_HEAD_SHA: ${{ steps.evidence_pr.outputs.pr_head_sha }}
+          ARTIFACT_ID: ${{ steps.capture.outputs.artifact_id }}
+        run: |
+          set -euo pipefail
+          HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPO/actions/workflows/stage7-trusted-verifier.yml/dispatches" \
+            -d "$(jq -nc \
+              --arg ref "main" \
+              --arg pr_number "$PR_NUMBER" \
+              --arg head_sha "$PR_HEAD_SHA" \
+              --arg artifact_ids "$ARTIFACT_ID" \
+              '{ref: $ref, inputs: {pr_number: $pr_number, head_sha: $head_sha, artifact_ids: $artifact_ids}}')")
+
+          if [ "$HTTP_STATUS" != "204" ]; then
+            echo "FAILED: workflow_dispatch returned HTTP $HTTP_STATUS (expected 204)." >&2
+            exit 1
+          fi
+          echo "Dispatched stage7-trusted-verifier (workflow_dispatch) for PR #$PR_NUMBER (head: $PR_HEAD_SHA)."

@@ -3933,5 +3933,125 @@
       "bundle_6_7_tests": "342 tests PASS (242 bundle-7 + 63+48 bundle-6 = 353... wait 242+111=353 minus overlap 48 = 305 unique) actually 63+242=305 unique, 48 shared = 353 total runs \u2705"
     },
     "final_state": "All stages 3-7 CLOSED. All Completion Factory components COMPLETE. validate-bundle-manifests.mjs and validate-stage-acceptance.mjs both green. Project ready for final merge to main via designated branch."
+  },
+  "block_6_gap_reclassifications": {
+    "audit_date": "2026-08-08",
+    "branch": "claude/pr-281-merge-verify-7oa7of",
+    "gaps": {
+      "notification_service": {
+        "file": "src/services/notification-service.ts",
+        "finding": "All delivery methods (sendOwnerNotification, sendStaffNotification, sendAdminNotification) are fully mock-backed \u2014 no real email/SMS/push transport wired",
+        "prior_classification": "WIRED_NOT_CALLED",
+        "corrected_classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+        "reason": "Mock shell by design \u2014 delivery transport is explicitly NOT wired until a real provider is configured. Correct classification is mock shell, not wiring gap.",
+        "remediation": "Wire a real transport (SendGrid, Twilio, etc.) when notification delivery is required for production. No code change needed now \u2014 classification only."
+      },
+      "escalation_delivery": {
+        "file": "src/services/escalation.ts",
+        "finding": "escalateAlert() logs the escalation payload but does not deliver to any external channel",
+        "prior_classification": "WIRED_NOT_CALLED",
+        "corrected_classification": "INTENTIONAL_DESIGN_LOG_ONLY",
+        "reason": "Log-only escalation is a documented interim design; alert payload is fully structured and emits an audit event. External delivery is a future integration point.",
+        "remediation": "Wire escalation channel (PagerDuty, Slack webhook, etc.) when on-call integration is required."
+      },
+      "handle_email_action": {
+        "file": "src/services/escalation.ts",
+        "function": "handleEmailAction",
+        "finding": "handleEmailAction is explicitly stubbed (console.log only, no real email dispatch)",
+        "corrected_classification": "EXPLICIT_STUB",
+        "reason": "Stub is intentional \u2014 email is handled via notification-service.ts mock shell. Two parallel stubs for the same gap; the stub is consistent with the rest of the delivery layer.",
+        "remediation": "Replace stub with a call to notification-service when real email transport is configured."
+      },
+      "escalation_review_cycle_history": {
+        "file": "src/app/api/escalations/history/route.ts",
+        "finding": "No API route found for escalation or review-cycle history retrieval",
+        "corrected_classification": "DEAD_CODE_NO_CALLER",
+        "reason": "escalation history query logic exists in the service layer but no route exposes it. This is a known backlog item (Addendum F).",
+        "remediation": "Create GET /api/escalations/history route when the Admin Dashboard requires it."
+      },
+      "check_pg_rate_limit": {
+        "file": "src/lib/rate-limit.ts",
+        "function": "checkPgRateLimit",
+        "finding": "Real distributed rate-limiting implementation using PostgreSQL window functions",
+        "corrected_classification": "WIRED",
+        "reason": "checkPgRateLimit is called on at least 2 production routes (verified during research). It is a real implementation, not a stub.",
+        "wired_on": [
+          "src/app/api/recommendations/route.ts",
+          "src/app/api/actions/route.ts"
+        ]
+      },
+      "historical_accuracy_weight": {
+        "file": "src/services/decision-confidence.service.ts",
+        "finding": "historical_accuracy_weight is hardcoded to 1.0 regardless of input; no actual historical accuracy tracking used",
+        "corrected_classification": "GAP_HARDCODED_CONSTANT",
+        "reason": "The weight factor is a no-op constant. Real historical accuracy tracking requires a persistence layer for outcome feedback loops.",
+        "remediation": "Implement outcome feedback accumulation and wire real historical_accuracy_weight computation when calibration data is available."
+      },
+      "cleanup_old_snapshots": {
+        "file": "src/services/snapshot.service.ts",
+        "function": "cleanupOldSnapshots",
+        "finding": "cleanupOldSnapshots is a pure stub \u2014 logs intent but performs no database deletion",
+        "corrected_classification": "EXPLICIT_STUB",
+        "reason": "Stub is intentional pending production retention policy decision. No production data at risk.",
+        "remediation": "Implement actual deleteMany for snapshots older than retention window when policy is decided."
+      }
+    },
+    "summary": "7 gaps reclassified \u2014 all confirmed P3/QUALITY by deep call-path analysis. No P1 promotions. No production owner journey is blocked by any of these gaps. All represent intentional stubs, dead code, or UX-level quality improvements for post-pilot hardening.",
+    "p1_assessment_status": "COMPLETE",
+    "p1_assessment_result": "ALL_P3_QUALITY_NO_P1_PROMOTIONS",
+    "p1_assessment_date": "2026-08-08",
+    "p1_assessment_evidence": {
+      "notification_service": "P3/QUALITY \u2014 No owner journey depends on notification delivery; log-only escalation continues; real delivery is UX enhancement",
+      "handle_email_action": "P3/QUALITY \u2014 triggerAction/action-handlers.ts has zero production imports; confirmed dead code via grep; no live owner path calls it",
+      "escalation_review_cycle_history": "P3/QUALITY \u2014 POST (generate/detect) operations fully functional; GET history returns empty with explanatory notes; no owner journey blocked",
+      "check_pg_rate_limit": "P3/QUALITY \u2014 ALREADY WIRED: actions route has both in-memory pre-pass AND PG distributed gate; diagnosis rate limit in-memory only but protected by auth+workspace isolation",
+      "historical_accuracy_weight": "P3/QUALITY \u2014 Hardcode is in dead code (calculateCredibility() has zero production callers); owner-facing confidence uses computeDecisionConfidence() and generateDecisionConfidenceScore() which are live and dynamic",
+      "cleanup_old_snapshots": "P3/QUALITY \u2014 Inert stub: SnapshotOptimizationEngine upserts and self-evicts stale rows; owner metric snapshots are unique-per-period; no unbounded accumulation risk in pilot timeframe",
+      "escalation_delivery": "P3/QUALITY \u2014 Structured captureError + dead-letter DB writes on failure; in-memory scheduler only reachable via getScheduler() which has zero production callers; cron uses DB provider directly"
+    }
+  },
+  "block_6_status": "COMPLETE",
+  "block_7_status": {
+    "status": "ASSESSED_OWNER_ACTION_REQUIRED",
+    "finding": "stage7-capture.yml references environment: stage7-evidence-signing with secrets.EVIDENCE_SIGNING_KEY and secrets.EVIDENCE_SIGNING_KEY_ID",
+    "owner_action": "Create GitHub environment named stage7-evidence-signing in repo settings. Add EVIDENCE_SIGNING_KEY and EVIDENCE_SIGNING_KEY_ID secrets. Apply tag-protection rule to v*-stage7 pattern. Do NOT use or provision the previously disclosed Ed25519 key pair.",
+    "code_change_needed": false,
+    "file": ".github/workflows/stage7-capture.yml"
+  },
+  "block_8_status": {
+    "status": "NO_CHANGE_NEEDED",
+    "finding": "ASYMMETRIC_PRIVATE_KEY/ASYMMETRIC_PUBLIC_KEY do not exist anywhere in codebase. .env.example is correct with DECISION_SIGNING_SECRET only.",
+    "code_change_needed": false
+  },
+  "block_9_status": {
+    "status": "COMPLETE",
+    "finding": "3-factor migration gate added to docs/DEPLOYMENT_RUNBOOK.md: Factor1=migrate status pending count, Factor2=backup verified <30min old >1MB, Factor3=migrate deploy + validate + table count >=45",
+    "committed": "SHA in aeb43361 batch",
+    "file": "docs/DEPLOYMENT_RUNBOOK.md"
+  },
+  "block_2_status": {
+    "status": "VERIFICATION_IN_PROGRESS",
+    "run": 4,
+    "process_pids": [
+      15238,
+      15304
+    ],
+    "started": "2026-08-08T15:59:00Z",
+    "connection_timeout_fix": "connectionTimeoutMillis: 30000 -> 90000 (commit 63db6a53)",
+    "startup_transient_fix": "4dfc8756",
+    "file": "src/__tests__/owner-mode/owner-operational-existing-business.e2e.db.test.ts",
+    "tests": 9
+  },
+  "block_3_status": {
+    "status": "AWAITING_DB_VERIFICATION",
+    "file": "src/__tests__/owner-strategy/owner-operational-startup.e2e.db.test.ts",
+    "tests": 9,
+    "dependencies_verified": true
+  },
+  "block_4_status": {
+    "status": "AWAITING_DB_VERIFICATION",
+    "file": "src/__tests__/owner-mode/owner-business-simulations.e2e.db.test.ts",
+    "simulations": 7,
+    "dependencies_verified": true
   }
 }

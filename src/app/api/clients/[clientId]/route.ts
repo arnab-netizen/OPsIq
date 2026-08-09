@@ -35,7 +35,7 @@ export const GET = withCanonicalEnforcement(
     const client = await getClientById(clientId, workspaceId);
     return client;
   },
-  { requireWorkspace: true, requireCapabilities: ['CLIENT_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.CLIENT_VIEW] }
 );
 
 export const PATCH = withCanonicalEnforcement(

@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { runScenario } from "@/services/scenario/engine";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { emitAuditEvent } from "@/infra/audit";
@@ -64,5 +65,5 @@ export const POST = withCanonicalEnforcement(
 
   return result;
   },
-  { requireWorkspace: true }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] }
 );

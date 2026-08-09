@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-25T00:00:00.000Z",
+  "generated_at": "2026-08-09T00:00:00.000Z",
   "eslint_command": "npm run lint",
   "eslint_config_crash_fixed": true,
   "baseline_exit_code": 1,
-  "baseline_error_count": 2289,
-  "baseline_warning_count": 863,
+  "baseline_error_count": 2340,
+  "baseline_warning_count": 871,
   "baseline_rule_counts": {
-    "@typescript-eslint/no-explicit-any": 1743,
+    "@typescript-eslint/no-explicit-any": 1794,
     "@typescript-eslint/no-unused-vars": 1251,
     "prefer-const": 99,
     "auth-enforcement/strict-auth": 30,

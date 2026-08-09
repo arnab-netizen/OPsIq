@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { db } from "@/lib/db";
@@ -138,4 +139,4 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
     });
     throw new Error("Failed to create checkout session");
   }
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_MANAGE] });

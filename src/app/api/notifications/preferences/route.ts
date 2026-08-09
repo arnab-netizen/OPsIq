@@ -13,6 +13,7 @@ import {
   NotificationChannel,
   NotificationType,
 } from "@/services/notifications/notification-service";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 const SetPreferencesSchema = z.object({
   channels: z.record(
@@ -54,8 +55,7 @@ export const GET = withCanonicalEnforcement(
         frequency: "real_time",
       },
     };
-  },
-  { requireWorkspace: true }
+  }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] }
 );
 
 /**
@@ -80,6 +80,5 @@ export const PATCH = withCanonicalEnforcement(
       success: true,
       preferences,
     };
-  },
-  { requireWorkspace: true }
+  }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] }
 );

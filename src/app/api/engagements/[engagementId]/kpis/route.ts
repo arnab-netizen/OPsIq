@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getKPIsForEngagement, createKPI } from "@/services/kpi";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { db } from "@/lib/db";
@@ -19,7 +20,7 @@ export const GET = withCanonicalEnforcement(
     const { engagementId } = params;
 
     const engagement = await db.engagement.findUnique({
-      where: { id: engagementId },
+      where: { id: engagementId, workspaceId: ctx.verifiedWorkspaceId as string },
       select: { workspaceId: true },
     });
     if (!engagement) {
@@ -30,7 +31,8 @@ export const GET = withCanonicalEnforcement(
 
     const kpis = await getKPIsForEngagement(engagementId, engagement.workspaceId);
     return kpis;
-  }
+  },
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.KPI_VIEW] }
 );
 
 export const POST = withCanonicalEnforcement(
@@ -38,7 +40,7 @@ export const POST = withCanonicalEnforcement(
     const { engagementId } = params;
 
     const engagement = await db.engagement.findUnique({
-      where: { id: engagementId },
+      where: { id: engagementId, workspaceId: ctx.verifiedWorkspaceId as string },
       select: { workspaceId: true },
     });
     if (!engagement) {
@@ -54,5 +56,6 @@ export const POST = withCanonicalEnforcement(
       engagement.workspaceId
     );
     return canonicalJson(kpi, { status: 201 });
-  }
+  },
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.KPI_DEFINE] }
 );

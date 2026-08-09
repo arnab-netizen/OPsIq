@@ -6,7 +6,7 @@
  * Reuses the pure rules in domain/owner-mode/owner-load (no duplicate logic).
  */
 
-import { emitAuditEvent } from "@/infra/audit";
+import { emitAuditEvent, type AuditClient } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { assertBusinessInWorkspace, type BusinessScopeDb } from "@/services/owner-mode/business-scope";
 import {
@@ -32,6 +32,8 @@ interface OwnerLoadDb extends BusinessScopeDb {
 export interface OwnerLoadDeps {
   db: OwnerLoadDb;
   now?: () => Date;
+  /** Optional tx client — when provided, audit writes inside this service join the caller's transaction. */
+  auditClient?: AuditClient;
 }
 
 async function resolveDefaultDeps(): Promise<OwnerLoadDeps> {
@@ -139,12 +141,15 @@ export async function recordAttentionEvent(
       sourceRef: input.sourceRef ?? null,
     },
   });
-  await emitAuditEvent({
-    workspaceId: input.workspaceId,
-    eventName: AUDIT_EVENTS.OWNER_ATTENTION_EVENT_RECORDED,
-    actorType: "system",
-    entityType: "owner_attention_event",
-    entityId: input.eventType,
-    payload: { disposition: input.disposition, severity: input.severity },
-  });
+  await emitAuditEvent(
+    {
+      workspaceId: input.workspaceId,
+      eventName: AUDIT_EVENTS.OWNER_ATTENTION_EVENT_RECORDED,
+      actorType: "system",
+      entityType: "owner_attention_event",
+      entityId: input.eventType,
+      payload: { disposition: input.disposition, severity: input.severity },
+    },
+    deps.auditClient,
+  );
 }

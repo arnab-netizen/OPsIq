@@ -517,6 +517,20 @@ deferred_amendments:
     blocked_by_owner_decision: D-4
     summary: "Add isolated_environment target for S7-I11. environment_model.staging_or_isolated_simulation names a purpose, not a target."
 
+# ─── S7-I11 isolated environment target (owner decision D-4) ──────────────────
+# Populated when owner makes decision D-4 and amendment A4 is applied.
+# Rules enforced by scripts/lib/d4-governance-resolver.mjs:
+#   - Must be present and non-empty (TARGET_ABSENT if missing)
+#   - Must NOT be 'isolated_simulation' or 'staging_or_isolated_simulation'
+#     (those are purpose labels, not concrete targets — TARGET_IS_GENERIC if supplied)
+#   - Valid values: 'ci' (GitHub Actions CI), or a custom concrete identifier
+# To apply D-4:
+#   1. Remove the A4 entry from deferred_amendments above.
+#   2. Add A4 to the amendments list with the decision date and authority.
+#   3. Uncomment and populate s7_i11_environment_target below.
+#   4. Ensure the capture artifact's environment field matches this value exactly.
+# s7_i11_environment_target: <OWNER PROVIDES AFTER D-4 IS DECIDED>
+
 evidence_standard: docs/opsiq/evidence/stage-7/README.md
 
 required_evidence:

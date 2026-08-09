@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { employeeTaskGuidanceHandler } from "@/services/routes/guided-execution-handlers";
 import { sealBoundary } from "@/domain/execution/boundary";
@@ -54,5 +55,6 @@ export const POST = withCanonicalEnforcement(
       instruction,
       untrusted: body.untrusted,
     });
-  }
+  },
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] }
 );

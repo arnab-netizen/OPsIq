@@ -150,12 +150,12 @@ describe("Clients Routes — non-DB mock tests", () => {
 
   describe("capability declarations", () => {
     it("GET is guarded by CLIENT_VIEW with workspace", () => {
-      expect(capturedGetDecl[0]?.requireCapabilities).toContain("CLIENT_VIEW");
+      expect(capturedGetDecl[0]?.requireCapabilities).toContain("client:view");
       expect(capturedGetDecl[0]?.requireWorkspace).toBe(true);
     });
 
     it("POST is guarded by CLIENT_CREATE with workspace", () => {
-      expect(capturedPostDecl[0]?.requireCapabilities).toContain("CLIENT_CREATE");
+      expect(capturedPostDecl[0]?.requireCapabilities).toContain("client:create");
       expect(capturedPostDecl[0]?.requireWorkspace).toBe(true);
     });
 

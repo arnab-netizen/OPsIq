@@ -59,8 +59,8 @@ export default async function DeliverableDetailPage({
           <div>
             <h1 className="text-2xl font-bold text-foreground">{deliverable.title}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              <Link href={`/clients/${deliverable.engagement.client.id}`} className="text-primary hover:underline">
-                {deliverable.engagement.client.name}
+              <Link href={`/clients/${deliverable.engagement.clientAccount.id}`} className="text-primary hover:underline">
+                {deliverable.engagement.clientAccount.name}
               </Link>
               {" "} — {deliverable.engagement.title}
             </p>

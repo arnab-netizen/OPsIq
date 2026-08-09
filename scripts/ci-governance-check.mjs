@@ -171,8 +171,22 @@ if (mainIntContent) {
   check(!hasShaInput, 'main-integration.yml workflow_dispatch must NOT expose a sha input — callers cannot target arbitrary commits');
 }
 
+// 12. stage7-trusted-verifier.yml must use repository_dispatch (not workflow_dispatch).
+//     Rationale: repository_dispatch requires Contents: write only.
+//     workflow_dispatch requires Actions: write — unnecessary privilege escalation.
+//     Evidence persistence already needs Contents: write; no broader grant should be added.
+const verifierContent = readWorkflow('stage7-trusted-verifier.yml');
+if (verifierContent) {
+  const hasRepositoryDispatch = /^\s+repository_dispatch:/m.test(verifierContent);
+  const hasWorkflowDispatch = /^\s+workflow_dispatch:/m.test(verifierContent);
+  check(hasRepositoryDispatch, 'stage7-trusted-verifier.yml must use repository_dispatch trigger (Contents: write only — Actions: write is unnecessary)');
+  check(!hasWorkflowDispatch, 'stage7-trusted-verifier.yml must NOT use workflow_dispatch trigger (requires Actions: write — privilege escalation beyond Contents: write)');
+  const hasCorrectEventType = /types:\s*\[\s*stage7-verify-artifacts\s*\]/.test(verifierContent);
+  check(hasCorrectEventType, 'stage7-trusted-verifier.yml repository_dispatch must specify types: [stage7-verify-artifacts]');
+}
+
 // Summary
-const rulesChecked = SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 8;
+const rulesChecked = SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 11;
 if (violations === 0) {
   console.log(`✓ CI governance check passed (${rulesChecked} rules checked)`);
   process.exit(0);

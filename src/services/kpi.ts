@@ -62,7 +62,7 @@ export async function createKPI(
               name: input.name,
             },
             visibility: "internal",
-          });
+          }, tx);
 
           return kpi;
         });
@@ -225,7 +225,7 @@ export async function updateKPIValue(
                   direction: kpi.direction,
                 },
                 visibility: "internal",
-              });
+              }, tx);
             }
           }
 
@@ -240,7 +240,7 @@ export async function updateKPIValue(
               deteriorated,
             },
             visibility: "internal",
-          });
+          }, tx);
 
           return updated;
         });

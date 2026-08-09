@@ -55,13 +55,16 @@ import {
   evaluateSupersessionChain,
   explainAcceptance,
   loadEvidenceArtifactIndex,
+  loadKeyRegistry,
+  parseKeyRegistryYaml,
+  verifySignature,
 } from './lib/evidence-artifact.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '..');
 const DEFAULT_DIR = join(repoRoot, 'docs', 'opsiq', 'evidence', 'stage-7', 'artifacts');
 
-const KNOWN_FLAGS = ['--require-accepted', '--require-provenance', '--dir', '--json'];
+const KNOWN_FLAGS = ['--require-accepted', '--require-provenance', '--from-auth-sha-registry', '--dir', '--json'];
 
 function usageError(message) {
   console.error(`ERROR: ${message}`);
@@ -70,12 +73,19 @@ function usageError(message) {
 }
 
 const argv = process.argv.slice(2);
-const options = { requireAccepted: false, requireProvenance: false, dir: DEFAULT_DIR, json: false };
+const options = {
+  requireAccepted: false,
+  requireProvenance: false,
+  fromAuthShaRegistry: false,
+  dir: DEFAULT_DIR,
+  json: false,
+};
 
 for (let i = 0; i < argv.length; i += 1) {
   const token = argv[i];
   if (token === '--require-accepted') options.requireAccepted = true;
   else if (token === '--require-provenance') options.requireProvenance = true;
+  else if (token === '--from-auth-sha-registry') options.fromAuthShaRegistry = true;
   else if (token === '--json') options.json = true;
   else if (token === '--dir') {
     const value = argv[i + 1];
@@ -85,7 +95,47 @@ for (let i = 0; i < argv.length; i += 1) {
   } else usageError(`unknown flag '${token}'`);
 }
 
-const signingKey = process.env.EVIDENCE_SIGNING_KEY?.trim() || null;
+// Load the key registry from the fixed path — no runtime path override.
+// When the registry has active keys (production post-provisioning), use it.
+// When the registry has no active keys (pending_owner_provisioning placeholder),
+// fall back to EVIDENCE_SIGNING_KEY env var so tests can still verify signatures.
+//
+// In --from-auth-sha-registry mode the registry is NOT loaded at startup; each
+// artifact's authorization_manifest_sha is used to load its own registry from git.
+const KEY_REGISTRY_PATH = join(repoRoot, '.governance', 'stage7-signing-keys.yaml');
+let keyRegistry = new Map();
+if (!options.fromAuthShaRegistry) {
+  try {
+    keyRegistry = loadKeyRegistry(KEY_REGISTRY_PATH);
+  } catch {
+    // Registry file absent or unreadable — proceed with empty registry.
+  }
+}
+const evidenceSigningKeyPem = process.env.EVIDENCE_SIGNING_KEY?.trim() || null;
+// Registry takes precedence; env var is a fallback for test suites that
+// cannot commit an active key but need signature verification.
+const signingKey = keyRegistry.size > 0 ? keyRegistry : evidenceSigningKeyPem;
+
+/**
+ * Load the key registry from a specific git commit via `git show`.
+ * Returns an empty Map if the file is absent or unreadable at that SHA.
+ *
+ * Used in --from-auth-sha-registry mode so the trusted verifier reads each
+ * artifact's registry from its authorization_manifest_sha, not from the local
+ * working-tree copy (which is at INF_SHA, not AUTH_SHA).
+ *
+ * @param {string} sha  40-character lowercase commit SHA
+ * @returns {Map<string, string>} key_id → public key PEM
+ */
+function loadKeyRegistryAtSha(sha) {
+  const result = spawnSync(
+    'git', ['show', `${sha}:.governance/stage7-signing-keys.yaml`],
+    { cwd: repoRoot, encoding: 'utf8' },
+  );
+  if (result.status !== 0) return new Map();
+  return parseKeyRegistryYaml(result.stdout);
+}
+
 const githubToken = process.env.GH_TOKEN?.trim() || process.env.GITHUB_TOKEN?.trim() || null;
 const ownerLogins = (process.env.EVIDENCE_OWNER_LOGINS ?? '')
   .split(',')
@@ -184,14 +234,48 @@ async function verifyProvenance(artifact) {
 // ─── Evaluate every artifact ──────────────────────────────────────────────────
 
 // Structural load, duplicate detection and supersession all come from the shared
-// resolution layer in scripts/lib/evidence-artifact.mjs. G-1 root cause: when this
-// gate walked the directory itself and invariant-closure.mjs read a bare string,
-// the two could disagree about the same artifact. There is now exactly one reader.
+// resolution layer in scripts/lib/evidence-artifact.mjs.
+// In --from-auth-sha-registry mode, pass no signingKey here: signature state is
+// set by the per-artifact AUTH_SHA pass immediately below.
 const { records, byId } = loadEvidenceArtifactIndex({
   dir: options.dir,
-  signingKey,
+  signingKey: options.fromAuthShaRegistry ? null : signingKey,
   displayRoot: repoRoot,
 });
+
+// --from-auth-sha-registry: load each artifact's key registry from its own
+// authorization_manifest_sha via `git show`. This ensures the trusted verifier
+// never uses the working-tree registry (which is at INF_SHA, not AUTH_SHA).
+if (options.fromAuthShaRegistry) {
+  for (const record of records) {
+    if (record.violations.length > 0) continue;
+    let parsed;
+    try {
+      parsed = JSON.parse(readFileSync(record.absolutePath, 'utf8'));
+    } catch {
+      record.violations.push(`${record.path}: could not re-read artifact for AUTH_SHA registry lookup`);
+      record.level = ACCEPTANCE.REJECTED;
+      continue;
+    }
+    const authSha = parsed.authorization_manifest_sha;
+    if (!authSha || !/^[0-9a-f]{40}$/.test(authSha)) {
+      record.violations.push(
+        `${record.path}: authorization_manifest_sha '${authSha}' is not a valid 40-char lowercase SHA — `
+        + `cannot load key registry for signature verification`,
+      );
+      record.level = ACCEPTANCE.REJECTED;
+      continue;
+    }
+    const registry = loadKeyRegistryAtSha(authSha);
+    const sigState = verifySignature(parsed, registry.size > 0 ? registry : null);
+    record.signatureState = sigState;
+    record.level = classifyAcceptance({
+      violations: record.violations,
+      signatureState: sigState,
+      provenanceState: record.provenanceState,
+    });
+  }
+}
 
 // Provenance is the one check this gate can perform that the closure library
 // cannot: it needs the network and a token. Layered on top of the shared result

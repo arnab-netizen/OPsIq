@@ -8,14 +8,42 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { toPublicEngagementDTO, PublicAPIError } from "@/services/public-api.service";
+import { db } from "@/lib/db";
 import { z } from "zod/v4";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 const querySchema = z.object({
   status: z.enum(["active", "completed", "cancelled"]).optional(),
   limit: z.string().optional().default("100"),
   offset: z.string().optional().default("0"),
 });
+
+const PUBLIC_STATUS_TO_DB: Record<string, string[]> = {
+  active: ["active", "draft", "in_progress"],
+  completed: ["completed", "done", "closed"],
+  cancelled: ["cancelled", "abandoned"],
+};
+
+function dbStatusToPublic(status: string): "active" | "completed" | "cancelled" {
+  if (status === "completed" || status === "done" || status === "closed") return "completed";
+  if (status === "cancelled" || status === "abandoned") return "cancelled";
+  return "active";
+}
+
+const PHASE_PROGRESS: Record<string, number> = {
+  DISCOVERY: 10,
+  DIAGNOSIS: 25,
+  STABILIZATION: 45,
+  GROWTH: 65,
+  CONSOLIDATION: 80,
+  EXIT: 95,
+};
+
+function phaseToProgress(phase: string, status: string): number {
+  if (status === "completed" || status === "done" || status === "closed") return 100;
+  return PHASE_PROGRESS[phase?.toUpperCase()] ?? 0;
+}
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -32,32 +60,36 @@ export const GET = withCanonicalEnforcement(
       const limit = Math.min(parseInt(queryParams.limit), 1000);
       const offset = parseInt(queryParams.offset);
 
-      const mockEngagements = [
-        {
-          id: "550e8400-e29b-41d4-a716-446655440000",
-          name: "Market Expansion Initiative",
-          status: queryParams.status || "active",
-          industry: "Technology",
-          currentStage: "Execution Phase",
-          progress: 65,
-          createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: "550e8400-e29b-41d4-a716-446655440001",
-          name: "Cost Optimization Program",
-          status: queryParams.status || "active",
-          industry: "Manufacturing",
-          currentStage: "Analysis Phase",
-          progress: 40,
-          createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
+      const dbStatusFilter = queryParams.status
+        ? { status: { in: PUBLIC_STATUS_TO_DB[queryParams.status] } }
+        : {};
 
-      const filtered = mockEngagements.filter((e) => !queryParams.status || e.status === queryParams.status);
-      const paginated = filtered.slice(offset, offset + limit);
-      const publicDTOs = paginated.map((e) => toPublicEngagementDTO(e));
+      const engagements = await db.engagement.findMany({
+        where: { workspaceId, ...dbStatusFilter },
+        orderBy: { createdAt: "desc" },
+        take: limit + offset,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          consultingPhase: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      const mapped = engagements.map((eng: any) => ({
+        id: eng.id,
+        name: eng.title,
+        status: dbStatusToPublic(eng.status),
+        currentStage: eng.consultingPhase || "DISCOVERY",
+        progress: phaseToProgress(eng.consultingPhase, eng.status),
+        createdAt: eng.createdAt.toISOString(),
+        updatedAt: eng.updatedAt.toISOString(),
+      }));
+
+      const paginated = mapped.slice(offset, offset + limit);
+      const publicDTOs = paginated.map((e: any) => toPublicEngagementDTO(e));
 
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.OPERATOR_QUEUE_VIEWED,
@@ -67,7 +99,7 @@ export const GET = withCanonicalEnforcement(
         entityId: "list",
         payload: {
           count: publicDTOs.length,
-          total: filtered.length,
+          total: mapped.length,
           status: queryParams.status,
         },
       });
@@ -76,7 +108,7 @@ export const GET = withCanonicalEnforcement(
         workspaceId,
         engagements: publicDTOs,
         count: publicDTOs.length,
-        total: filtered.length,
+        total: mapped.length,
         limit,
         offset,
       };
@@ -90,6 +122,5 @@ export const GET = withCanonicalEnforcement(
       }
       throw error;
     }
-  },
-  { requireWorkspace: true }
+  }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
 );

@@ -137,21 +137,25 @@ export async function runCycle(
         },
       });
     }
-  });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.RECOVERY_CYCLE_RUN,
-    actorId,
-    workspaceId,
-    entityType: "RecoveryCycle",
-    entityId: cycleId,
-    payload: {
-      businessId,
-      cycleNumber,
-      findingCount: findings.length,
-      actionCount: actionSpecs.length,
-      healthStatus: health.status,
-    },
+    // Audit inside transaction: a failed audit rolls back all cycle writes (CAT 2 fix).
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.RECOVERY_CYCLE_RUN,
+        actorId,
+        workspaceId,
+        entityType: "RecoveryCycle",
+        entityId: cycleId,
+        payload: {
+          businessId,
+          cycleNumber,
+          findingCount: findings.length,
+          actionCount: actionSpecs.length,
+          healthStatus: health.status,
+        },
+      },
+      tx
+    );
   });
 
   return getCycle(cycleId, workspaceId);

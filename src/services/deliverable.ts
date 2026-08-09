@@ -99,8 +99,8 @@ export async function getDeliverableById(deliverableId: string, workspaceId: str
     include: {
       engagement: {
         include: {
-          client: true,
-          conditionProfiles: { where: { isCurrent: true } },
+          clientAccount: true,
+          businessConditionProfiles: { where: { isCurrent: true } },
         },
       },
     },

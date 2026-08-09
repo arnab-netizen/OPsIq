@@ -37,7 +37,7 @@ export const GET = withCanonicalEnforcement(
     const finding = await getFindingDetail(findingId, undefined, undefined, workspaceId);
     return finding;
   },
-  { requireCapabilities: ["FINDING_VIEW"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.FINDING_VIEW], requireWorkspace: true }
 );
 
 export const PATCH = withCanonicalEnforcement(

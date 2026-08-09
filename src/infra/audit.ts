@@ -29,12 +29,13 @@ function computeEventHash(eventId: string, workspaceId: string, eventName: strin
  * `$transaction` tx client satisfy this, so audit writes can participate in a
  * caller's transaction (AUDIT-01: atomic mutation + audit that rolls back together).
  */
-type AuditClient = Pick<Prisma.TransactionClient, "auditEvent">;
+export type AuditClient = Pick<Prisma.TransactionClient, "auditEvent">;
 
 export async function emitAuditEvent(
   input: AuditEventInput,
-  client: AuditClient = db
+  client?: AuditClient,
 ): Promise<string> {
+  const c = client ?? db;
   if (!input.workspaceId) {
     logger.warn("Audit event emitted without workspaceId - fail-safe activated", {
       eventName: input.eventName,
@@ -48,14 +49,14 @@ export async function emitAuditEvent(
   // Fetch the last audit event for this workspace to chain hashes.
   // Fetch eventName and occurredAt so the hash binds to actual event content
   // (using only the eventId twice was incorrect — fixed here).
-  const lastEvent = await client.auditEvent.findFirst({
+  const lastEvent = await c.auditEvent.findFirst({
     where: { workspaceId: input.workspaceId },
     orderBy: { occurredAt: "desc" },
     select: { id: true, previousHash: true, eventName: true, occurredAt: true },
   });
 
   const eventId = uuidv4();
-  const event = await client.auditEvent.create({
+  const event = await c.auditEvent.create({
     data: {
       id: eventId,
       workspaceId: input.workspaceId,

@@ -87,5 +87,5 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  { requireWorkspace: true, requireCapabilities: ['RECOMMENDATION_CREATE'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.RECOMMENDATION_CREATE] }
 );

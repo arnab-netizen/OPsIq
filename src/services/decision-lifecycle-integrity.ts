@@ -130,7 +130,7 @@ export async function runDecisionLifecycleIntegrityCheck(
 
     // Check 2: Missing owner
     const missingOwner = decisions.filter(
-      (d: any) => !d.ownerUserId && !d.createdBy
+      (d: any) => !d.ownerUserId && !d.createdByUserId
     );
     for (const decision of missingOwner) {
       findings.push({
@@ -139,7 +139,7 @@ export async function runDecisionLifecycleIntegrityCheck(
         workspaceId: decision.workspaceId,
         currentState: mapStatusToState(decision.status),
         currentStatus: decision.status,
-        issue: "Decision missing owner (ownerUserId or createdBy)",
+        issue: "Decision missing owner (ownerUserId or createdByUserId)",
         requiredFix: `Assign owner to decision ${decision.id}`,
       });
     }
@@ -373,11 +373,11 @@ export function validateDecisionFieldsForState(
   // Required by state
   switch (state) {
     case "DRAFT":
-      if (!decision.createdBy) errors.push("Draft must have createdBy");
+      if (!decision.createdByUserId) errors.push("Draft must have createdByUserId");
       break;
 
     case "SUBMITTED":
-      if (!decision.createdBy) errors.push("Submitted must have createdBy");
+      if (!decision.createdByUserId) errors.push("Submitted must have createdByUserId");
       break;
 
     case "APPROVED":

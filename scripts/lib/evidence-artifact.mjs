@@ -3,21 +3,33 @@
  *
  * Pure, I/O-free authority for the canonical Stage 7 evidence artifact. Shared by
  * the CI capture helper (scripts/capture-evidence.mjs), the validator
- * (scripts/validate-evidence-artifacts.mjs) and the hostile-audit suite
- * (src/__tests__/completion-factory/stage7-evidence-artifact.test.ts), so the rule
- * that governs capture is bit-for-bit the rule that governs acceptance.
+ * (scripts/validate-evidence-artifacts.mjs) and the hostile-audit suites under
+ * src/__tests__/completion-factory/, so the rule that governs capture is bit-for-bit
+ * the rule that governs acceptance.
  *
  * Design and threat model: docs/opsiq/evidence/stage-7/EVIDENCE_ARTIFACT_SPEC.md
  * Documented schema:       docs/opsiq/evidence/stage-7/schema/evidence-artifact.v1.schema.json
  * Frozen standard (PR-1A): docs/opsiq/evidence/stage-7/README.md
  *
- * ─── The gap this closes ─────────────────────────────────────────────────────
- * The frozen standard states the producer rule in prose: LANE_C and LANE_E
- * artifacts must be produced by a CI run and carry that run id, and "an artifact
- * produced by an interactive agent session is not valid evidence." Prose cannot
- * reject a file. There was no artifact format, no schema and no validator, so any
- * file an agent chose to write could be called evidence and nothing could
- * contradict it.
+ * ─── Signature model (Ed25519, PR-A) ─────────────────────────────────────────
+ * Signatures use Ed25519 asymmetric cryptography.
+ *   - The signing payload includes `signature: { algorithm, key_id, value: null }`,
+ *     binding the algorithm and key_id to the signature. Swapping either invalidates it.
+ *   - `artifact_id` and `signature.value` are excluded from the payload:
+ *       artifact_id — excluded so computeArtifactId and computeSignatureValue do
+ *                     not circularly depend.
+ *       signature.value — excluded so it can hold the signature of its own envelope.
+ *   - `authorization_manifest_sha` IS inside the signed payload, binding the
+ *     D-13 authorization to the artifact.
+ *   - Key registry: artifact.signature.key_id is looked up in the versioned key
+ *     registry (.governance/stage7-signing-keys.yaml). An unknown key_id is INVALID,
+ *     not UNCHECKED. An unknown key is not the same as no key.
+ *
+ * ─── OPTION A authorization gate ─────────────────────────────────────────────
+ * `resolveCaptureAuthorization` is a pure, injectable function. Production callers
+ * pass real git I/O. Test callers pass fixture functions. No runtime env var bypass
+ * exists in this library. The gate verifies that GITHUB_SHA equals the
+ * closure_subject_sha declared in origin/main's factory-stage-7-closure.yaml.
  *
  * ─── What makes forgery fail ─────────────────────────────────────────────────
  * The adversary modelled here is an agent with full write access to the working
@@ -28,9 +40,10 @@
  *   2. artifact_id is derived from the content, so it cannot be chosen, and a
  *      copied artifact keeps the id — and therefore the invariant and observation
  *      — it was captured for.
- *   3. The HMAC signature covers the entire envelope, binding run id, subject SHA,
- *      capture time, content hash and assertion to one another. Editing any one
- *      of them invalidates the artifact, and re-signing needs the CI-only key.
+ *   3. The Ed25519 signature covers the entire envelope including algorithm and
+ *      key_id, binding run id, subject SHA, authorization SHA, capture time,
+ *      content hash, assertion and signing identity to one another. Editing any
+ *      one of them invalidates the artifact, and re-signing needs the CI-only key.
  *   4. Provenance cross-check (validator, online) proves the named run actually
  *      ran on that commit, or that the owner actually wrote that attestation.
  *
@@ -41,9 +54,10 @@
  * waiver. Producing an artifact is a separate, owner-authorised act.
  */
 
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, sign as cryptoSign, verify as cryptoVerify, createPrivateKey, createPublicKey } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join as pathJoin, relative as pathRelative } from 'node:path';
+import { resolveD4GovernanceTarget } from './d4-governance-resolver.mjs';
 
 /** Schema version of the artifact form defined here. */
 export const EVIDENCE_VERSION = '1.0.0';
@@ -99,7 +113,7 @@ export const PROVENANCE_STATE = Object.freeze({
 /** Default signing key id recorded in artifacts. */
 export const DEFAULT_SIGNING_KEY_ID = 'stage7-evidence-v1';
 
-export const SIGNATURE_ALGORITHM = 'HMAC-SHA256';
+export const SIGNATURE_ALGORITHM = 'Ed25519';
 
 /**
  * Cap on a stored observation. Large enough for a full vitest run or a migration
@@ -113,8 +127,8 @@ export const REDACTION_STATEMENT =
 const TOP_LEVEL_KEYS = Object.freeze([
   'evidence_version', 'artifact_id', 'invariant_id', 'lane', 'proof_type',
   'artifact_classification', 'environment', 'method', 'captured_at_utc',
-  'subject_sha', 'deployment_id', 'producer', 'replay', 'observation',
-  'assertion', 'result', 'redaction_attestation', 'supersedes', 'signature',
+  'subject_sha', 'authorization_manifest_sha', 'deployment_id', 'producer', 'replay',
+  'observation', 'assertion', 'result', 'redaction_attestation', 'supersedes', 'signature',
 ]);
 
 const PRODUCER_KEYS = Object.freeze([
@@ -127,7 +141,7 @@ const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 const SHA40 = /^[0-9a-f]{40}$/;
 const ARTIFACT_ID = /^evd_[0-9a-f]{32}$/;
 const CONTENT_HASH = /^sha256:[0-9a-f]{64}$/;
-const HEX64 = /^[0-9a-f]{64}$/;
+const HEX128 = /^[0-9a-f]{128}$/;
 const REPO_SLUG = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 const DECIMAL = /^[0-9]+$/;
 
@@ -230,22 +244,54 @@ function envelopeWithout(artifact, keys) {
 /**
  * Derive the artifact id from its content. `artifact_id` and `signature` are
  * excluded, so the id is stable across signing and cannot be chosen by the author.
+ * `authorization_manifest_sha` IS included — it is part of the artifact's content.
  */
 export function computeArtifactId(artifact) {
   return `evd_${sha256Hex(canonicalStringify(envelopeWithout(artifact, ['artifact_id', 'signature']))).slice(0, 32)}`;
 }
 
-/** The exact byte string an artifact's signature is computed over. */
+/**
+ * The canonical byte string an artifact's signature is computed over.
+ *
+ * Returns `canonicalStringify(artifact)` as-is. The caller is responsible for
+ * having set `signature.value = null` before calling this function, so that:
+ *   - `algorithm` and `key_id` are INSIDE the signed payload (bound by the signature)
+ *   - `signature.value` is excluded (holds the signature of its own envelope)
+ *
+ * This is the single authority on what is signed. `computeSignatureValue` and
+ * `verifySignature` both call this function and enforce the null-value invariant
+ * internally.
+ */
 export function signingPayload(artifact) {
-  return canonicalStringify(envelopeWithout(artifact, ['signature']));
-}
-
-export function computeSignatureValue(artifact, signingKey) {
-  return createHmac('sha256', signingKey).update(signingPayload(artifact), 'utf8').digest('hex');
+  return canonicalStringify(artifact);
 }
 
 /**
- * Constant-time signature comparison.
+ * Compute the Ed25519 signature value over the artifact's signing payload.
+ * Sets `signature.value = null` internally before hashing so the result is stable.
+ *
+ * @param {object} artifact  must have `signature: { algorithm, key_id, value }` set
+ * @param {string} privateKeyPem  Ed25519 private key in PKCS8 PEM format
+ * @returns {string} 128-character lowercase hex string
+ */
+export function computeSignatureValue(artifact, privateKeyPem) {
+  const sig = artifact.signature;
+  const forSigning = {
+    ...artifact,
+    signature: sig ? { algorithm: sig.algorithm, key_id: sig.key_id, value: null } : sig,
+  };
+  const payload = Buffer.from(signingPayload(forSigning), 'utf8');
+  return cryptoSign(null, payload, privateKeyPem).toString('hex');
+}
+
+/**
+ * Verify an Ed25519 signature on an artifact.
+ *
+ * `signingKey` may be:
+ *   - `null` / falsy           → UNCHECKED (key unavailable to this caller)
+ *   - `Map<keyId, publicKeyPem>` → registry lookup; unknown key_id → INVALID (fail closed)
+ *   - Ed25519 private key PEM  → public key is derived and used for verification
+ *   - Ed25519 public key PEM   → used directly for verification
  *
  * @returns {'VERIFIED'|'INVALID'|'ABSENT'|'UNCHECKED'}
  */
@@ -254,15 +300,51 @@ export function verifySignature(artifact, signingKey) {
     return SIGNATURE_STATE.ABSENT;
   }
   if (!signingKey) return SIGNATURE_STATE.UNCHECKED;
+
   const signature = artifact.signature;
-  if (!isPlainObject(signature) || typeof signature.value !== 'string' || !HEX64.test(signature.value)) {
+
+  if (!isPlainObject(signature)) return SIGNATURE_STATE.INVALID;
+  if (signature.algorithm !== SIGNATURE_ALGORITHM) return SIGNATURE_STATE.INVALID;
+  if (typeof signature.value !== 'string' || !HEX128.test(signature.value)) {
     return SIGNATURE_STATE.INVALID;
   }
-  if (signature.algorithm !== SIGNATURE_ALGORITHM) return SIGNATURE_STATE.INVALID;
-  const expected = Buffer.from(computeSignatureValue(artifact, signingKey), 'hex');
-  const actual = Buffer.from(signature.value, 'hex');
-  if (expected.length !== actual.length) return SIGNATURE_STATE.INVALID;
-  return timingSafeEqual(expected, actual) ? SIGNATURE_STATE.VERIFIED : SIGNATURE_STATE.INVALID;
+
+  let publicKey;
+  try {
+    if (signingKey instanceof Map) {
+      const keyId = signature.key_id;
+      if (!keyId || !signingKey.has(keyId)) {
+        // Unknown key_id in registry = INVALID. An unknown key is not the same as no key.
+        return SIGNATURE_STATE.INVALID;
+      }
+      publicKey = createPublicKey(signingKey.get(keyId));
+    } else if (typeof signingKey === 'string') {
+      try {
+        publicKey = createPublicKey(createPrivateKey(signingKey));
+      } catch {
+        publicKey = createPublicKey(signingKey);
+      }
+    } else {
+      return SIGNATURE_STATE.UNCHECKED;
+    }
+  } catch {
+    return SIGNATURE_STATE.INVALID;
+  }
+
+  const payloadArtifact = {
+    ...artifact,
+    signature: { algorithm: signature.algorithm, key_id: signature.key_id, value: null },
+  };
+  const payload = Buffer.from(signingPayload(payloadArtifact), 'utf8');
+  const sigBytes = Buffer.from(signature.value, 'hex');
+
+  try {
+    return cryptoVerify(null, payload, publicKey, sigBytes)
+      ? SIGNATURE_STATE.VERIFIED
+      : SIGNATURE_STATE.INVALID;
+  } catch {
+    return SIGNATURE_STATE.INVALID;
+  }
 }
 
 // ─── Builder ──────────────────────────────────────────────────────────────────
@@ -275,11 +357,12 @@ export function verifySignature(artifact, signingKey) {
  * variables and exposes no flag that could override them.
  *
  * @param {object} input
- * @param {string|null} [signingKey]  omitted → signature: null → UNVERIFIED
- * @param {string} [signingKeyId]
+ * @param {object} [opts]
+ * @param {string|null} [opts.signingKey]       private key PEM; omitted → signature: null → UNVERIFIED
+ * @param {string} [opts.signingKeyId]
  * @returns {object} the artifact, with artifact_id and signature filled in
  */
-export function buildEvidenceArtifact(input, { signingKey = null, signingKeyId = DEFAULT_SIGNING_KEY_ID } = {}) {
+export function buildEvidenceArtifact(input, { signingKey = null, signingKeyId = DEFAULT_SIGNING_KEY_ID, closureManifestYaml = null } = {}) {
   const raw = String(input.raw_observation ?? '');
   const capped = Buffer.byteLength(raw, 'utf8') > MAX_OBSERVATION_BYTES;
   const stored = capped ? Buffer.from(raw, 'utf8').subarray(0, MAX_OBSERVATION_BYTES).toString('utf8') : raw;
@@ -328,6 +411,7 @@ export function buildEvidenceArtifact(input, { signingKey = null, signingKeyId =
     method: input.method,
     captured_at_utc: input.captured_at_utc,
     subject_sha: input.subject_sha,
+    authorization_manifest_sha: input.authorization_manifest_sha ?? null,
     deployment_id: input.deployment_id ?? null,
     producer,
     replay: isOwnerLane
@@ -353,12 +437,30 @@ export function buildEvidenceArtifact(input, { signingKey = null, signingKeyId =
 
   artifact.artifact_id = computeArtifactId(artifact);
 
+  // D-4/A4 fail-closed guard — S7-I11 only. Runs BEFORE signing so a rejected
+  // artifact is never signed, and BEFORE return so no artifact object escapes.
+  // The target is extracted exclusively from the governance manifest; the caller
+  // cannot supply a target value directly (there is no such parameter).
+  if (artifact.invariant_id === 'S7-I11') {
+    const d4 = resolveD4GovernanceTarget({ manifestYaml: closureManifestYaml });
+    if (!d4.ok) {
+      throw new Error(
+        `S7-I11 evidence build blocked by D-4 enforcement (${d4.reason}): ${d4.detail}`,
+      );
+    }
+    if (artifact.environment !== d4.target) {
+      throw new Error(
+        `S7-I11 evidence build blocked: artifact environment '${artifact.environment}' does not ` +
+        `match D-4 authorized target '${d4.target}' from factory-stage-7-closure.yaml. ` +
+        `The authorized target is read from the governance manifest and cannot be overridden ` +
+        `by the caller.`,
+      );
+    }
+  }
+
   if (signingKey) {
-    artifact.signature = {
-      algorithm: SIGNATURE_ALGORITHM,
-      key_id: signingKeyId,
-      value: computeSignatureValue(artifact, signingKey),
-    };
+    artifact.signature = { algorithm: SIGNATURE_ALGORITHM, key_id: signingKeyId, value: null };
+    artifact.signature.value = computeSignatureValue(artifact, signingKey);
   }
 
   return artifact;
@@ -386,12 +488,12 @@ function describe(value) {
  *
  * @param {unknown} artifact
  * @param {object} [options]
- * @param {string|null} [options.signingKey]  enables signature verification
+ * @param {string|Map<string,string>|null} [options.signingKey]  enables signature verification
  * @param {string|null} [options.fileName]    basename, checked against artifact_id
  * @returns {{ violations: string[], signatureState: string }}
  */
 export function validateEvidenceArtifact(artifact, options = {}) {
-  const { signingKey = null, fileName = null } = options;
+  const { signingKey = null, fileName = null, closureManifestYaml = null } = options;
   const violations = [];
   const fail = (message) => violations.push(message);
 
@@ -422,6 +524,29 @@ export function validateEvidenceArtifact(artifact, options = {}) {
   if (!INVARIANT_IDS.includes(artifact.invariant_id)) {
     fail(at(`invariant_id '${artifact.invariant_id}' is not a canonical Stage 7 invariant (${INVARIANT_IDS.join(', ')})`));
   }
+  // S7-I11 fail-closed guard: D-4 / A4 enforcement.
+  // The guard verifies that amendment A4 has been applied (owner decision D-4 made),
+  // that a concrete non-generic environment target is declared in the contract, and
+  // that the artifact's environment field matches that authorized target.
+  // The target is extracted exclusively from closureManifestYaml — the caller cannot
+  // supply a target value through any other parameter.
+  // When closureManifestYaml is null (no manifest provided), the resolver returns
+  // MANIFEST_UNREADABLE, which is still a fail-closed rejection — not providing the
+  // manifest is not equivalent to a resolved D-4.
+  if (artifact.invariant_id === 'S7-I11') {
+    const d4 = resolveD4GovernanceTarget({ manifestYaml: closureManifestYaml });
+    if (!d4.ok) {
+      fail(at(
+        `S7-I11 proof blocked by D-4 enforcement (${d4.reason}): ${d4.detail}`,
+      ));
+    } else if (artifact.environment !== d4.target) {
+      fail(at(
+        `S7-I11 environment '${artifact.environment}' does not match D-4 authorized target ` +
+        `'${d4.target}' from factory-stage-7-closure.yaml. The authorized target is read from ` +
+        `the governance manifest and cannot be overridden by the caller.`,
+      ));
+    }
+  }
   if (!LANES.includes(artifact.lane)) {
     fail(at(`lane '${artifact.lane}' is not one of ${LANES.join(', ')}`));
   }
@@ -442,6 +567,11 @@ export function validateEvidenceArtifact(artifact, options = {}) {
   }
   if (typeof artifact.subject_sha !== 'string' || !SHA40.test(artifact.subject_sha)) {
     fail(at(`subject_sha '${artifact.subject_sha}' is not a full 40-character lowercase commit SHA`));
+  }
+  if (artifact.authorization_manifest_sha !== null) {
+    if (typeof artifact.authorization_manifest_sha !== 'string' || !SHA40.test(artifact.authorization_manifest_sha)) {
+      fail(at(`authorization_manifest_sha '${artifact.authorization_manifest_sha}' must be null or a 40-character lowercase commit SHA`));
+    }
   }
   if (!RESULTS.includes(artifact.result)) {
     fail(at(`result '${artifact.result}' is not one of ${RESULTS.join(', ')}`));
@@ -482,8 +612,8 @@ export function validateEvidenceArtifact(artifact, options = {}) {
       fail(at(`signature.algorithm '${artifact.signature.algorithm}' is not ${SIGNATURE_ALGORITHM}`));
     }
     if (!nonEmptyString(artifact.signature.key_id)) fail(at('signature.key_id is required'));
-    if (typeof artifact.signature.value !== 'string' || !HEX64.test(artifact.signature.value)) {
-      fail(at(`signature.value '${artifact.signature.value}' is not 64 lowercase hex characters`));
+    if (typeof artifact.signature.value !== 'string' || !HEX128.test(artifact.signature.value)) {
+      fail(at(`signature.value '${String(artifact.signature.value).slice(0, 16)}...' is not 128 lowercase hex characters (Ed25519 signature)`));
     }
   }
   if (signatureState === SIGNATURE_STATE.INVALID) {
@@ -809,6 +939,209 @@ export function explainAcceptance({ signatureState, provenanceState }) {
   return reasons.join('; ');
 }
 
+// ─── OPTION A authorization gate ─────────────────────────────────────────────
+
+/**
+ * Verify that the run's GITHUB_SHA is authorized by D-13 in origin/main.
+ *
+ * This is a pure, I/O-free function. Callers inject the I/O operations so it is
+ * unit-testable without git. Production callers pass real git operations.
+ * Test callers pass fixture functions. No runtime env var bypass exists.
+ *
+ * AUTH_SHA model: the gate reads `closure_subject_sha` from the bundle manifest at
+ * origin/main, verifies it equals `subjectSha`, and then — if `fetchKeyRegistryYaml`
+ * is provided — loads the Ed25519 key registry from that same AUTH_SHA commit. The
+ * returned `keyRegistry` is used for immediate post-signing verification, so the
+ * public key never needs to exist at INF_SHA: it is read from AUTH_SHA at runtime.
+ *
+ * @param {object} opts
+ * @param {string} opts.subjectSha        GITHUB_SHA of the current run (40 hex chars)
+ * @param {() => string} opts.fetchMainManifest
+ *   Returns the YAML content of docs/opsiq/bundles/factory-stage-7-closure.yaml
+ *   at origin/main. Must throw on failure.
+ * @param {() => string} opts.resolveMainSha
+ *   Returns the 40-char lowercase SHA of origin/main HEAD. Must throw on failure.
+ * @param {((sha: string) => string) | null} [opts.fetchKeyRegistryYaml]
+ *   Optional. Given AUTH_SHA, returns the YAML content of
+ *   .governance/stage7-signing-keys.yaml at that commit. When provided, the
+ *   returned `keyRegistry` will contain the active Ed25519 public keys from AUTH_SHA.
+ *   When omitted, `keyRegistry` is an empty Map (backward-compatible for tests).
+ * @returns {{ authorizationManifestSha: string, keyRegistry: Map<string, string> }}
+ *   `authorizationManifestSha` is recorded in the artifact; `keyRegistry` is used
+ *   for immediate signature verification. Both are derived from the same AUTH_SHA.
+ * @throws {Error} Message contains 'OPTION A authorization gate' when authorization fails.
+ */
+export function resolveCaptureAuthorization({
+  subjectSha,
+  fetchMainManifest,
+  resolveMainSha,
+  fetchKeyRegistryYaml = null,
+}) {
+  let rawManifest;
+  try {
+    rawManifest = fetchMainManifest();
+  } catch (error) {
+    throw new Error(
+      `OPTION A authorization gate: failed to read factory-stage-7-closure.yaml from ` +
+      `origin/main — ${error.message}. Stage 7 evidence capture requires explicit ` +
+      `authorization via D-13. Ensure the repository has a reachable remote origin and ` +
+      `that factory-stage-7-closure.yaml exists on origin/main with a closure_subject_sha ` +
+      `matching GITHUB_SHA.`,
+    );
+  }
+
+  if (typeof rawManifest !== 'string' || rawManifest.trim().length === 0) {
+    throw new Error(
+      `OPTION A authorization gate: factory-stage-7-closure.yaml at origin/main is empty ` +
+      `or unreadable. The manifest must contain a well-formed closure_subject_sha.`,
+    );
+  }
+
+  const match = /^\s*closure_subject_sha:\s*["']?([0-9a-f]{40})["']?\s*(?:#.*)?$/m.exec(rawManifest);
+  if (!match) {
+    throw new Error(
+      `OPTION A authorization gate: factory-stage-7-closure.yaml at origin/main does not ` +
+      `contain a well-formed closure_subject_sha (must be a 40-character lowercase commit SHA). ` +
+      `The owner must commit D-13 to authorize evidence capture against a specific commit.`,
+    );
+  }
+
+  const closureSubjectSha = match[1];
+  if (closureSubjectSha !== subjectSha) {
+    throw new Error(
+      `OPTION A authorization gate: GITHUB_SHA=${subjectSha} is NOT authorized. ` +
+      `factory-stage-7-closure.yaml at origin/main has closure_subject_sha=${closureSubjectSha}. ` +
+      `Stage 7 evidence may only be captured against the exact commit authorized by D-13. ` +
+      `If INF_SHA has changed, the owner must update factory-stage-7-closure.yaml on main ` +
+      `before re-running the evidence capture workflow.`,
+    );
+  }
+
+  let mainSha;
+  try {
+    mainSha = resolveMainSha();
+  } catch (error) {
+    throw new Error(
+      `OPTION A authorization gate: could not resolve origin/main HEAD SHA — ${error.message}`,
+    );
+  }
+
+  if (typeof mainSha !== 'string' || !SHA40.test(mainSha.trim())) {
+    throw new Error(
+      `OPTION A authorization gate: resolveMainSha returned '${mainSha}' which is not a ` +
+      `valid 40-character lowercase SHA`,
+    );
+  }
+
+  const authorizationManifestSha = mainSha.trim();
+
+  // AUTH_SHA model: load key registry from AUTH_SHA so the public key does not need
+  // to exist at INF_SHA. The owner commits the public key to main (AUTH_SHA) as a
+  // governance-only commit AFTER PR-A merges, before dispatching the capture workflow.
+  let keyRegistry = new Map();
+  if (typeof fetchKeyRegistryYaml === 'function') {
+    let yamlContent;
+    try {
+      yamlContent = fetchKeyRegistryYaml(authorizationManifestSha);
+    } catch (error) {
+      throw new Error(
+        `OPTION A authorization gate: could not load key registry from AUTH_SHA ` +
+        `${authorizationManifestSha} — ${error.message}. ` +
+        `The owner must commit the Ed25519 public key to ` +
+        `.governance/stage7-signing-keys.yaml on main before dispatching capture.`,
+      );
+    }
+    keyRegistry = parseKeyRegistryYaml(yamlContent);
+  }
+
+  return { authorizationManifestSha, keyRegistry };
+}
+
+// ─── Key registry ─────────────────────────────────────────────────────────────
+
+/**
+ * Parse an Ed25519 public key registry from a YAML string.
+ *
+ * Returns a Map<keyId, publicKeyPem> containing only `status: active` Ed25519 keys.
+ * Keys with status `pending_owner_provisioning` or `revoked` are skipped.
+ *
+ * Accepts the YAML content directly so callers can supply it from any source —
+ * a file, a git-show command, or a test fixture.
+ *
+ * @param {string} yamlContent  YAML content of the key registry
+ * @returns {Map<string, string>} key_id → public key in PEM format
+ */
+export function parseKeyRegistryYaml(yamlContent) {
+  const keyMap = new Map();
+  const lines = String(yamlContent ?? '').split('\n');
+  let current = null;
+
+  const unquote = (s) => {
+    const t = s.trim();
+    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+      return t.slice(1, -1);
+    }
+    return t;
+  };
+
+  const finalize = (entry) => {
+    if (!entry) return;
+    if (entry.status !== 'active') return;
+    if (entry.algorithm !== 'Ed25519') return;
+    if (!entry.key_id || !entry.public_key_spki_der_base64) return;
+    const b64 = entry.public_key_spki_der_base64.replace(/\s/g, '');
+    const wrapped = b64.match(/.{1,64}/g)?.join('\n') ?? b64;
+    const pem = `-----BEGIN PUBLIC KEY-----\n${wrapped}\n-----END PUBLIC KEY-----\n`;
+    keyMap.set(entry.key_id, pem);
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^-\s*key_id:/.test(trimmed)) {
+      finalize(current);
+      current = {};
+      const m = /^-\s*key_id:\s*(.+)$/.exec(trimmed);
+      if (m) current.key_id = unquote(m[1]);
+      continue;
+    }
+    if (!current) continue;
+    for (const [field, pat] of [
+      ['algorithm', /^\s*algorithm:\s*(.+)$/],
+      ['status', /^\s*status:\s*(.+)$/],
+      ['public_key_spki_der_base64', /^\s*public_key_spki_der_base64:\s*(.+)$/],
+    ]) {
+      const m = pat.exec(line);
+      if (m) {
+        current[field] = unquote(m[1]);
+        break;
+      }
+    }
+  }
+  finalize(current);
+
+  return keyMap;
+}
+
+/**
+ * Load the Ed25519 public key registry from a YAML file.
+ *
+ * Reads the file and delegates to parseKeyRegistryYaml. The file format is the
+ * versioned registry at .governance/stage7-signing-keys.yaml. No runtime path
+ * override is accepted — callers always pass the hardcoded path.
+ *
+ * @param {string} filePath  absolute path to the registry YAML file
+ * @returns {Map<string, string>} key_id → public key in PEM format
+ */
+export function loadKeyRegistry(filePath) {
+  let raw;
+  try {
+    raw = readFileSync(filePath, 'utf8');
+  } catch (error) {
+    throw new Error(`could not read key registry from ${filePath}: ${error.message}`);
+  }
+  return parseKeyRegistryYaml(raw);
+}
+
 // ─── Proof-artifact resolution (G-1) ──────────────────────────────────────────
 //
 // Before G-1 a Stage 7 invariant satisfied its proof requirement with any
@@ -862,11 +1195,6 @@ export function explainReferenceRejection(reference) {
 /**
  * Every `.json` file at or below `dir`, depth-first and sorted, as
  * `{ full, relativeToDir }`.
- *
- * The walk is recursive on purpose. A flat `readdirSync` would leave a malformed,
- * forged or secret-bearing artifact filed one directory down completely unread,
- * and an unread file is an unenforced file — the gate would print "0 artifacts
- * present" over the top of it.
  */
 function collectArtifactFiles(dir, prefix = '') {
   let entries;
@@ -889,19 +1217,9 @@ function collectArtifactFiles(dir, prefix = '') {
  * Read and validate every artifact at or below `dir`, returning an index keyed by
  * artifact_id plus the flat record list.
  *
- * Provenance is never assumed. A caller that cannot verify provenance leaves it
- * UNCHECKED, which caps acceptance at UNVERIFIED — the gate then reports what it
- * could not check rather than claiming a verification it did not perform.
- *
- * Canonical layout is enforced here, not merely assumed: proof references resolve
- * through `<dir>/<artifact_id>.json` and nowhere else, so an artifact filed in a
- * subdirectory sits outside the path every gate reads. It is validated and
- * reported — never silently skipped — but it is refused entry to the index and so
- * can never back a proof.
- *
  * @param {object} [options]
  * @param {string} [options.dir]              absolute artifacts directory
- * @param {string|null} [options.signingKey]  enables signature verification
+ * @param {string|Map<string,string>|null} [options.signingKey]  enables signature verification
  * @param {Map<string,string>} [options.provenance] artifact_id -> PROVENANCE_STATE
  * @param {string} [options.displayRoot]      root that reported paths are shown against
  * @returns {{ records: object[], byId: Map<string, object>, duplicates: string[] }}
@@ -911,8 +1229,6 @@ export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance =
   const byId = new Map();
   const duplicates = [];
 
-  // A missing directory is an empty directory. Emptiness is neither pass nor
-  // failure; it is the absence of any captured observation.
   for (const { full, relativeToDir } of collectArtifactFiles(dir)) {
     const name = relativeToDir.slice(relativeToDir.lastIndexOf('/') + 1);
     const nested = relativeToDir.includes('/');
@@ -966,8 +1282,6 @@ export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance =
       provenanceState,
     };
     records.push(record);
-    // A nested artifact is reported but never indexed: no proof reference may
-    // resolve to a file outside the canonical path.
     if (artifactId && !nested && !byId.has(artifactId)) byId.set(artifactId, record);
   }
 
@@ -976,11 +1290,6 @@ export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance =
 
 /**
  * State of a contract's authorized subject-SHA policy.
- *
- * An empty allowlist is not "allow all". Evidence describes one commit, and a
- * contract that has not yet named the commit its evidence must describe has not
- * authorized any evidence at all. Treating absence as permission is how a
- * trust boundary fails open: the rule reads as enforced while checking nothing.
  */
 export const SUBJECT_SHA_POLICY = Object.freeze({
   PRESENT: 'SUBJECT_SHA_POLICY_PRESENT',
@@ -988,17 +1297,8 @@ export const SUBJECT_SHA_POLICY = Object.freeze({
   MALFORMED: 'SUBJECT_SHA_POLICY_MALFORMED',
 });
 
-/** Emitted when a policy exists but does not authorize the artifact's commit. */
 export const SUBJECT_SHA_NOT_AUTHORIZED = 'SUBJECT_SHA_NOT_AUTHORIZED';
 
-/**
- * The fields a manifest may use to name the commit its evidence must describe.
- * Declaration order fixes the reported order, so the result is deterministic.
- *
- * A stage-closure manifest carries required_evidence; a development bundle
- * carries post_merge_evidence. Reading only one shape would leave the other
- * unconstrained, which is the same silent-disable defect in a different place.
- */
 const SUBJECT_SHA_POLICY_FIELDS = Object.freeze([
   ['closure_subject_sha', (m) => m?.closure_subject_sha],
   ['required_evidence.merge_sha', (m) => m?.required_evidence?.merge_sha],
@@ -1008,32 +1308,6 @@ const SUBJECT_SHA_POLICY_FIELDS = Object.freeze([
 
 /**
  * Resolve one manifest's authorized subject-SHA policy.
- *
- * The single authority for this question. `invariant-closure.mjs` consumes it, and
- * `validate-stage-acceptance.mjs` / `validate-bundle-manifests.mjs` inherit it
- * through that call, so no caller can hold a second opinion about which commits a
- * contract authorizes.
- *
- * Three states, no fourth:
- *   PRESENT    at least one well-formed authorized SHA; artifacts are checked
- *              against it.
- *   MISSING    no field names a SHA. No artifact may back a PROVEN invariant.
- *   MALFORMED  a field names something that is not a 40-character lowercase SHA.
- *              Fails closed rather than dropping the entry and continuing with a
- *              shorter list, which would silently weaken the policy.
- *
- * An absent or explicitly null field is MISSING, not MALFORMED — a contract that
- * has not filled a field in yet is untruthful about nothing. A field filled in
- * wrongly is a defect in the contract and is reported as one.
- *
- * No implicit fallback exists, by design: not HEAD, not the default branch, not
- * the deployment SHA, not the artifact's own subject_sha, not a merge base. The
- * contract names the commit or no evidence may be used. This function performs no
- * process, git, network or environment I/O, so there is nowhere for such a
- * fallback to enter.
- *
- * @param {object} manifest parsed bundle manifest
- * @returns {{ state: string, authorized: string[], violations: string[] }}
  */
 export function resolveSubjectShaPolicy(manifest) {
   const authorized = [];
@@ -1063,13 +1337,6 @@ export function resolveSubjectShaPolicy(manifest) {
 
 /**
  * Resolve the supersession chain for one artifact.
- *
- * Append-only correction: a later artifact supersedes an earlier one. Only the
- * terminal, non-superseded artifact may back a proof. Cycles, self-supersession,
- * cross-invariant supersession and chains through a missing or rejected artifact
- * all fail closed — an unauditable chain is not evidence.
- *
- * @returns {string[]} violations; empty means the chain is sound
  */
 export function evaluateSupersessionChain(record, byId) {
   const violations = [];
@@ -1105,7 +1372,6 @@ export function evaluateSupersessionChain(record, byId) {
   return violations;
 }
 
-/** Artifact ids that some other artifact validly supersedes. */
 export function collectSupersededIds(records, byId) {
   const superseded = new Set();
   for (const record of records) {
@@ -1120,19 +1386,6 @@ export function collectSupersededIds(records, byId) {
 
 /**
  * Decide whether one proof reference may back a PROVEN invariant.
- *
- * Every eligibility rule is checked here and nowhere else, so a gate cannot
- * accidentally enforce a subset. Fails closed on every unmet condition.
- *
- * @param {string} reference           the proof_artifacts entry as written
- * @param {object} context
- * @param {string} context.invariantId contract invariant the reference sits under
- * @param {string[]} context.allowedLanes lanes the contract permits for it
- * @param {string|null} context.expectedProofType contract proof_type, if declared
- * @param {Map<string,object>} context.byId
- * @param {Set<string>} context.superseded
- * @param {{state: string, authorized: string[]}} context.subjectShaPolicy contract subject-SHA policy
- * @returns {string[]} violations; empty means eligible
  */
 export function evaluateProofReference(reference, context) {
   const { invariantId, allowedLanes, expectedProofType, byId, superseded, subjectShaPolicy } = context;
@@ -1159,9 +1412,6 @@ export function evaluateProofReference(reference, context) {
   if (expectedProofType && record.proofType !== expectedProofType) {
     violations.push(`proof reference ${reference} declares proof_type ${record.proofType}, but ${invariantId} requires ${expectedProofType}`);
   }
-  // Three states, evaluated explicitly. There is no fourth branch in which the
-  // rule quietly does nothing: an unauthorized commit and an unstated policy are
-  // both refusals, and they are told apart so the operator knows which to fix.
   if (subjectShaPolicy.state === SUBJECT_SHA_POLICY.MISSING) {
     violations.push(`proof reference ${reference}: ${SUBJECT_SHA_POLICY.MISSING} — the contract names no authorized subject SHA, so no commit is authorized and no artifact may back a PROVEN invariant. An empty allowlist is not permission to use any commit; it is the absence of an authorization. Name the authorized commit in closure_subject_sha or required_evidence before citing evidence`);
   } else if (subjectShaPolicy.state === SUBJECT_SHA_POLICY.MALFORMED) {

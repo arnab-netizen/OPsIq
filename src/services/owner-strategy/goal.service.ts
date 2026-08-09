@@ -64,15 +64,19 @@ export async function createGoal(input: CreateGoalInput): Promise<string> {
         updatedAt: new Date(),
       },
     });
-  });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OWNER_GOAL_CREATED,
-    actorId: input.actorId,
-    workspaceId: input.workspaceId,
-    entityType: "OwnerGoal",
-    entityId: goalId,
-    payload: { targetType: input.targetType, targetAmount: input.targetAmount, targetDate: input.targetDate },
+    // Audit inside transaction: a failed audit rolls back the goal creation (CAT 2 fix).
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OWNER_GOAL_CREATED,
+        actorId: input.actorId,
+        workspaceId: input.workspaceId,
+        entityType: "OwnerGoal",
+        entityId: goalId,
+        payload: { targetType: input.targetType, targetAmount: input.targetAmount, targetDate: input.targetDate },
+      },
+      tx
+    );
   });
 
   return goalId;
@@ -83,18 +87,24 @@ export async function markGoalAchieved(goalId: string, workspaceId: string, acto
   const goal = await db.ownerGoal.findFirst({ where: { id: goalId, workspaceId } });
   if (!goal) throw new NotFoundError("OwnerGoal", goalId);
 
-  await db.ownerGoal.update({
-    where: { id: goalId },
-    data: { status: "ACHIEVED", updatedAt: new Date() },
-  });
+  // Atomic: update + audit in one transaction (fail-closed).
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.ownerGoal.update({
+      where: { id: goalId },
+      data: { status: "ACHIEVED", updatedAt: new Date() },
+    });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OWNER_GOAL_ACHIEVED,
-    actorId,
-    workspaceId,
-    entityType: "OwnerGoal",
-    entityId: goalId,
-    payload: {},
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OWNER_GOAL_ACHIEVED,
+        actorId,
+        workspaceId,
+        entityType: "OwnerGoal",
+        entityId: goalId,
+        payload: {},
+      },
+      tx
+    );
   });
 }
 

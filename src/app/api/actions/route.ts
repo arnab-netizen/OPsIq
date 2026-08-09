@@ -1,3 +1,4 @@
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { checkWorkspaceRateLimit } from "@/middleware/rate-limit";
@@ -35,7 +36,7 @@ export const GET = withCanonicalEnforcement(
     const result = await listActions(workspaceId, params);
     return result;
   },
-  { requireWorkspace: true, requireCapabilities: ['ACTION_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] }
 );
 
 export const POST = withCanonicalEnforcement(
@@ -85,5 +86,5 @@ export const POST = withCanonicalEnforcement(
 
     return result;
   },
-  { requireCapabilities: ["ACTION_CREATE"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.ACTION_CREATE], requireWorkspace: true }
 );

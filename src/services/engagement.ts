@@ -387,21 +387,21 @@ export async function getEngagementById(engagementId: string, workspaceId: strin
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId, workspaceId },
     include: {
-      client: { select: { id: true, name: true, industry: true } },
-      parent: { select: { id: true, code: true, title: true } },
-      children: { select: { id: true, code: true, title: true, status: true } },
-      conditionProfiles: {
+      clientAccount: { select: { id: true, name: true, industry: true } },
+      parentEngagement: { select: { id: true, code: true, title: true } },
+      childEngagements: { select: { id: true, code: true, title: true, status: true } },
+      businessConditionProfiles: {
         where: { isCurrent: true, workspaceId },
         take: 1,
         orderBy: { createdAt: "desc" },
       },
-      memberships: {
-        where: { isActive: true, workspaceId },
+      engagementMemberships: {
+        where: { isActive: true },
         include: {
           user: { select: { id: true, name: true, email: true } },
         },
       },
-      _count: { select: { leads: true } },
+      _count: { select: { leadRecords: true } },
     },
   });
 
@@ -590,7 +590,7 @@ export async function computeNextReviewDate(
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId, workspaceId },
     include: {
-      conditionProfiles: {
+      businessConditionProfiles: {
         where: { isCurrent: true, workspaceId },
         select: { urgencyLevel: true },
       },
@@ -601,7 +601,7 @@ export async function computeNextReviewDate(
   const baseInterval = 7; // Base interval in days
   let intervalAdjustment = 0;
 
-  const condition = engagement.conditionProfiles[0];
+  const condition = engagement.businessConditionProfiles[0];
   if (condition) {
     if (condition.urgencyLevel === "critical") {
       intervalAdjustment = -5; // Review in 2 days

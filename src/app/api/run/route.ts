@@ -3,6 +3,7 @@ import { UnauthorizedError } from "@/infra/errors";
 import { runSystem } from "@/services/system/run";
 import { generateOperatorItems } from "@/services/operator/generate";
 import { addItems, addBlockedDecision } from "@/services/operator/store";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { canEdit, resolveApprovalGrant } from "@/services/auth/access";
 import { emitAuditEvent } from "@/infra/audit";
@@ -1143,4 +1144,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     }
 
   return responsePayload;
-}, { requireWorkspace: true });
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_CREATE] });
