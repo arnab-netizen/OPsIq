@@ -101,7 +101,7 @@ export default async function EngagementDetailPage({
 
   if (!engagement) notFound();
 
-  const currentCondition = engagement.conditionProfiles?.[0] ?? null;
+  const currentCondition = engagement.businessConditionProfiles?.[0] ?? null;
 
   return (
     <div className="space-y-6">
@@ -126,10 +126,10 @@ export default async function EngagementDetailPage({
             </div>
             <h1 className="mt-2 text-3xl font-bold text-foreground">{engagement.title}</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              <Link href={`/clients/${engagement.client.id}`} className="text-primary hover:underline">
-                {engagement.client.name}
+              <Link href={`/clients/${engagement.clientAccount.id}`} className="text-primary hover:underline">
+                {engagement.clientAccount.name}
               </Link>
-              {engagement.client.industry && ` — ${engagement.client.industry}`}
+              {engagement.clientAccount.industry && ` — ${engagement.clientAccount.industry}`}
             </p>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { rejectDecision, type VerifiedRejectionInput } from "@/services/decision-validation/decision-acceptance.service";
 import { logger } from "@/infra/logger";
 import { ValidationError } from "@/infra/errors";
@@ -81,5 +82,5 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  { requireCapabilities: ["DECISION_REJECT"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.DECISION_REJECT], requireWorkspace: true }
 );

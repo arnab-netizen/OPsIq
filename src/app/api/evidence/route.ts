@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { createEvidence, listEvidence } from "@/services/evidence";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
@@ -28,7 +29,7 @@ export const GET = withCanonicalEnforcement(
     const result = await listEvidence(workspaceId, params);
     return result;
   },
-  { requireWorkspace: true, requireCapabilities: ['EVIDENCE_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.EVIDENCE_VIEW] }
 );
 
 export const POST = withCanonicalEnforcement(
@@ -69,5 +70,5 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  { requireWorkspace: true, requireCapabilities: ['EVIDENCE_SUBMIT'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT] }
 );

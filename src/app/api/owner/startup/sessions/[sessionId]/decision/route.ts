@@ -24,10 +24,14 @@ export const GET = withCanonicalEnforcement(
 
     const [systemRec, ownerDecision] = await Promise.all([
       session.currentSystemRecId
-        ? db.startupSystemRecommendation.findUnique({ where: { id: session.currentSystemRecId } })
+        ? db.startupSystemRecommendation.findFirst({
+            where: { id: session.currentSystemRecId, workspaceId: ctx.verifiedWorkspaceId as string },
+          })
         : null,
       session.currentOwnerDecisionId
-        ? db.startupOwnerDecision.findUnique({ where: { id: session.currentOwnerDecisionId } })
+        ? db.startupOwnerDecision.findFirst({
+            where: { id: session.currentOwnerDecisionId, workspaceId: ctx.verifiedWorkspaceId as string },
+          })
         : null,
     ]);
 

@@ -29,6 +29,16 @@ import { enforceCashSafetyForPromotion } from "@/services/owner-finance/recommen
 import { enforceMarginSafetyForPromotion } from "@/services/owner-finance/recommendation-margin-safety.service";
 import { enforceCapacitySafetyForPromotion } from "@/services/owner-mode/recommendation-capacity-safety.service";
 import { enforceDoNotRepeatForPromotion } from "@/services/owner-mode/do-not-repeat.service";
+import {
+  evaluateCrossDomainConflicts,
+  type RecommendationCandidate,
+} from "@/services/governance/operating-policy.service";
+import { assessFleetCapacity, type CapacityStatus } from "@/domain/owner-mode/equipment-capacity";
+import {
+  mapImpactAreaToSensitivity,
+  RecommendationSensitivity,
+} from "@/domain/owner-mode/recommendation-input-quality-gate";
+import { logger } from "@/infra/logger";
 
 export type OwnerGateMode = "OPTED_OUT" | "STRICT" | "DEFAULT_ON";
 
@@ -100,6 +110,96 @@ export async function shouldEnforceOwnerGates(workspaceId: string, injected?: Po
   return (await resolveOwnerGateMode(workspaceId, injected)) !== "OPTED_OUT";
 }
 
+/** Thrown when an operating policy (growth_before_capacity / high_cost_low_payback) blocks promotion. */
+export class OperatingPolicyBlockError extends Error {
+  readonly code = "OPERATING_POLICY_BLOCKED";
+  readonly policyKey: string;
+  readonly overridePath: string | undefined;
+  constructor(policyKey: string, reason: string, overridePath?: string) {
+    super(reason);
+    this.name = "OperatingPolicyBlockError";
+    this.policyKey = policyKey;
+    this.overridePath = overridePath;
+  }
+}
+
+// Maps fleet CapacityStatus to a numeric % for growth_before_capacity policy (threshold=80).
+// safe(<85% util)→60%, caution(85-94%)→85%, high_risk(≥95%)→95%, blocked(down/overdue)→100%.
+function capacityStatusToPercent(status: CapacityStatus): number {
+  if (status === "safe") return 60;
+  if (status === "caution") return 85;
+  if (status === "high_risk") return 95;
+  return 100;
+}
+
+/**
+ * Enforce configured operating policies at recommendation promotion.
+ * growth_before_capacity: BLOCKS growth recs when fleet capacity > policy threshold (default 80%).
+ * high_cost_low_payback: WARNS when payback > threshold months (deferred until payback months
+ * are stored in the recommendation schema; non-blocking today).
+ * BLOCK throws OperatingPolicyBlockError; WARN is logged but does not block.
+ */
+async function enforceOperatingPoliciesForPromotion(
+  recommendationId: string,
+  workspaceId: string
+): Promise<void> {
+  const { db } = await import("@/lib/db");
+  const now = new Date();
+
+  // Resolve sensitivity via recommendation → finding → impactArea (same pattern as capacity-safety).
+  const rec = await (db as any).recommendation.findUnique({
+    where: { id: recommendationId, workspaceId },
+    select: { findingId: true },
+  });
+  const sensitivity: RecommendationSensitivity = rec?.findingId
+    ? mapImpactAreaToSensitivity(
+        (
+          await (db as any).finding.findFirst({
+            where: { id: rec.findingId, engagement: { workspaceId } },
+            select: { impactArea: true },
+          })
+        )?.impactArea
+      )
+    : RecommendationSensitivity.GENERAL;
+
+  const fleet = await (db as any).ownerEquipment.findMany({
+    where: { workspaceId },
+    select: { name: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true },
+  });
+
+  const fleetResult = assessFleetCapacity(fleet, now);
+  const capacityPercent = capacityStatusToPercent(fleetResult.status);
+  const isGrowthAction = sensitivity === RecommendationSensitivity.GROWTH_SENSITIVE;
+
+  const candidate: RecommendationCandidate = {
+    id: recommendationId,
+    category: isGrowthAction ? "GROWTH" : "OPERATIONS",
+    description: `Recommendation ${recommendationId}`,
+    isGrowthAction,
+  };
+
+  const results = await evaluateCrossDomainConflicts(workspaceId, [candidate], capacityPercent);
+
+  for (const result of results) {
+    if (result.decision === "BLOCK") {
+      throw new OperatingPolicyBlockError(
+        result.policyKey ?? "unknown",
+        result.blockReason ?? `Operating policy blocked promotion of ${recommendationId}`,
+        result.overridePath
+      );
+    }
+    if (result.decision === "WARN") {
+      logger.warn("Operating policy advisory at promotion", {
+        recommendationId,
+        workspaceId,
+        policyKey: result.policyKey,
+        warningMessage: result.warningMessage,
+        overridePath: result.overridePath,
+      });
+    }
+  }
+}
+
 /**
  * Run all owner safety gates for a recommendation promotion using the resolved
  * mode. OPTED_OUT skips; STRICT/DEFAULT_ON enforce (DEFAULT_ON uses the softer
@@ -131,6 +231,8 @@ export async function enforceOwnerGatesForPromotion(
     await enforceCapacitySafetyForPromotion(recommendationId, workspaceId);
     // Slice 12: block a recommendation an active do-not-repeat rule forbids.
     await enforceDoNotRepeatForPromotion(recommendationId, workspaceId);
+    // Slice 13: enforce cross-domain operating policies (growth gating, cost-payback advisory).
+    await enforceOperatingPoliciesForPromotion(recommendationId, workspaceId);
   } catch (err) {
     // Record only the structured gate code + error name (never the raw error
     // message) so the audit payload cannot leak internal detail.

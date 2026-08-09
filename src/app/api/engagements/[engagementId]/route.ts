@@ -42,7 +42,7 @@ export const GET = withCanonicalEnforcement(
     const engagement = await getEngagementById(engagementId, workspaceId, ctx.policy ? hasInternalAccess(ctx.policy) : false);
     return engagement;
   },
-  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true }
 );
 
 export const PATCH = withCanonicalEnforcement(

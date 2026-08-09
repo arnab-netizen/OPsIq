@@ -1,3 +1,4 @@
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { createClient, listClients } from "@/services/client-account";
@@ -29,7 +30,7 @@ export const GET = withCanonicalEnforcement(
     const result = await listClients(workspaceId, params);
     return result;
   },
-  { requireWorkspace: true, requireCapabilities: ['CLIENT_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.CLIENT_VIEW] }
 );
 
 export const POST = withCanonicalEnforcement(
@@ -65,5 +66,5 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  { requireCapabilities: ["CLIENT_CREATE"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.CLIENT_CREATE], requireWorkspace: true }
 );

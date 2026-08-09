@@ -19,8 +19,15 @@ export interface AsymmetricSignaturePayload {
 
 // Generate or load key pair
 function getOrCreateKeyPair(): KeyPair {
-  // In development/test, generate a new pair each time
-  // In production, load from secure storage
+  // Env-var path: preferred in both production and any containerized/serverless environment.
+  // Filesystem path is NOT writable in serverless deployments, so env vars must take priority.
+  if (process.env.ASYMMETRIC_PRIVATE_KEY && process.env.ASYMMETRIC_PUBLIC_KEY) {
+    return {
+      privateKey: process.env.ASYMMETRIC_PRIVATE_KEY,
+      publicKey: process.env.ASYMMETRIC_PUBLIC_KEY,
+    };
+  }
+
   if (process.env.NODE_ENV === "production") {
     if (fs.existsSync(PRIVATE_KEY_PATH) && fs.existsSync(PUBLIC_KEY_PATH)) {
       const privateKey = fs.readFileSync(PRIVATE_KEY_PATH, "utf-8");
@@ -29,7 +36,7 @@ function getOrCreateKeyPair(): KeyPair {
     }
 
     throw new Error(
-      "Production mode requires pre-generated keys at .keys/private.pem and .keys/public.pem"
+      "Production mode requires ASYMMETRIC_PRIVATE_KEY/ASYMMETRIC_PUBLIC_KEY env vars or pre-generated keys at .keys/private.pem and .keys/public.pem"
     );
   }
 

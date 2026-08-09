@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import * as bcrypt from "bcryptjs";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const DEMO_EMAIL = "operator@demo.local";
 const DEMO_PASSWORD = "demo-password-123";
@@ -144,7 +145,10 @@ export async function GET(request: NextRequest) {
       classification,
     });
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const governed = classifyOperatorError(
+      error instanceof Error ? error : new Error(String(error)),
+      { context: "load" }
+    );
 
     // Try to parse DATABASE_URL for structure validation
     let databaseUrlParseOk = false;
@@ -167,7 +171,7 @@ export async function GET(request: NextRequest) {
         authSecretPresent: !!process.env.AUTH_SECRET || !!process.env.NEXTAUTH_SECRET,
         dbConnectionOk: false,
         classification: databaseUrlParseOk ? "db_adapter_construction_failure" : "database_url_malformed",
-        error: errorMsg,
+        error: governed.operatorMessage,
       },
       { status: 500 }
     );

@@ -134,13 +134,15 @@ function runNode(script: string, args: string[], env: Record<string, string> = {
   };
 }
 
+// S7-I11 (simulation_adversarial) is fail-closed pending owner decision D-4 / amendment A4.
+// Tests use S7-I12 (simulation_runbook_recovery, same LANE_E) as the default invariant.
 const CAPTURE_DEFAULTS = [
-  "--invariant", "S7-I11",
+  "--invariant", "S7-I12",
   "--lane", "LANE_E",
-  "--proof-type", "simulation_adversarial",
+  "--proof-type", "simulation_runbook_recovery",
   "--environment", "isolated_simulation",
   "--method", "test_run",
-  "--assertion", "Nine adversarial failure scenarios each fail safely, visibly and recoverably.",
+  "--assertion", "Operator successfully used shipped runbooks to recover from a staged failure without undocumented steps.",
   "--result", "PASS",
   "--replay-command", "npx vitest run src/__tests__/example.test.ts --reporter=basic",
 ];
@@ -154,12 +156,12 @@ function writeObservation(dir: string, text = "Test Files  1 passed (1)\n     Te
 /** Input base shared by captureArtifact and callLib-direct tests. */
 function baseInput(rawObservation = "Test Files  1 passed (1)\n     Tests  9 passed (9)\n") {
   return {
-    invariant_id: "S7-I11",
+    invariant_id: "S7-I12",
     lane: "LANE_E",
-    proof_type: "simulation_adversarial",
+    proof_type: "simulation_runbook_recovery",
     environment: "isolated_simulation",
     method: "test_run",
-    assertion: "Nine adversarial failure scenarios each fail safely, visibly and recoverably.",
+    assertion: "Staged failure introduced; runbook followed; recovery confirmed without undocumented steps.",
     result: "PASS",
     replay_command: "npx vitest run src/__tests__/example.test.ts --reporter=basic",
     raw_observation: rawObservation,
@@ -709,6 +711,19 @@ describe("Stage 7 evidence — hostile audit", () => {
     const result = validate(stage(forged));
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("is not a canonical Stage 7 invariant");
+  });
+
+  it("S7-I11 is fail-closed pending owner decision D-4 (amendment A4 not yet applied)", () => {
+    // S7-I11 evidence must be rejected until D-4 is recorded and A4 applied to
+    // factory-stage-7-closure.yaml. Regression guard: if the fail-closed block is
+    // removed, this test fails loudly. Uses the same rederiveId+validate pattern as
+    // all other forgery tests so the full validator pipeline is exercised.
+    const { artifact } = captureArtifact(); // S7-I12 (valid default)
+    const forged = rederiveId({ ...artifact, invariant_id: "S7-I11" });
+    const result = validate(stage(forged));
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S7-I11 proof blocked");
+    expect(result.stdout).toContain("D-4");
   });
 });
 

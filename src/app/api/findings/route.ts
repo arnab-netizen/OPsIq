@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { createFinding } from "@/services/findings";
 import { hasInternalAccess } from "@/policies/capability-check";
@@ -86,5 +87,5 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  { requireWorkspace: true, requireCapabilities: ['FINDING_CREATE'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.FINDING_CREATE] }
 );

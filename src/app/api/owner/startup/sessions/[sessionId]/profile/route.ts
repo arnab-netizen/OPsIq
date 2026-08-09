@@ -26,8 +26,8 @@ export const GET = withCanonicalEnforcement(
       return canonicalJson({ profile: null, versionNumber: 0 }, { status: 200 });
     }
 
-    const version = await db.startupContextProfileVersion.findUnique({
-      where: { id: session.currentProfileVersionId },
+    const version = await db.startupContextProfileVersion.findFirst({
+      where: { id: session.currentProfileVersionId!, workspaceId: ctx.verifiedWorkspaceId as string },
     });
     return canonicalJson({ profile: version, versionNumber: session.profileVersion }, { status: 200 });
   },

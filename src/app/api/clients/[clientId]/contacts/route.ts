@@ -25,7 +25,7 @@ export const GET = withCanonicalEnforcement(
     const contacts = await getContactsForClient(clientId, workspaceId);
     return { contacts };
   },
-  { requireWorkspace: true, requireCapabilities: ['CLIENT_VIEW'] }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.CLIENT_VIEW] }
 );
 
 export const POST = withCanonicalEnforcement(

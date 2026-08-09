@@ -132,6 +132,9 @@ export async function getItems(workspaceId: string): Promise<OperatorItem[]> {
     outcomeDelta: r.outcomeDelta ? Number(r.outcomeDelta) : undefined,
     decisionAccuracy: r.decisionAccuracy ? Number(r.decisionAccuracy) : undefined,
     decisionError: r.decisionError ? Number(r.decisionError) : undefined,
+    firstCompletedAt: r.firstCompletedAt ? r.firstCompletedAt.toISOString() : null,
+    firstPositiveOutcomeAt: r.firstPositiveOutcomeAt ? r.firstPositiveOutcomeAt.toISOString() : null,
+    firstWinAchieved: r.firstWinAchieved ?? false,
     explanation: r.explanation ? JSON.parse(String(r.explanation)) : undefined,
     inputsSnapshot: r.inputsSnapshot
       ? JSON.parse(String(r.inputsSnapshot))

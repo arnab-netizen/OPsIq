@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-07-29T05:54:14.293Z",
+  "timestamp": "2026-08-08T10:01:10.564Z",
   "node_version": "v22.22.2",
   "npm_version": "10.9.7",
   "environment_checks": [
@@ -53,6 +53,18 @@
     },
     {
       "name": "SENTRY_DSN",
+      "category": "OPTIONAL",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "ASYMMETRIC_PRIVATE_KEY",
+      "category": "OPTIONAL",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "ASYMMETRIC_PUBLIC_KEY",
       "category": "OPTIONAL",
       "present": false,
       "value": "[NOT SET]"

@@ -8,12 +8,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   verifyDiagnosticKey,
-  extractDiagnosticKeyFromRequest,
+  verifyDiagnosticKeyFromRequest,
 } from "@/lib/security/diagnostic-key";
 
 describe("diagnostic-key-validation — module contract assertions", () => {
   it("verifyDiagnosticKey is a function", () => { expect(typeof verifyDiagnosticKey).toBe("function"); });
-  it("extractDiagnosticKeyFromRequest is a function", () => { expect(typeof extractDiagnosticKeyFromRequest).toBe("function"); });
+  it("verifyDiagnosticKeyFromRequest is a function", () => { expect(typeof verifyDiagnosticKeyFromRequest).toBe("function"); });
   it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
   it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
   it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
@@ -101,27 +101,34 @@ describe("Diagnostic Key Validation", () => {
     });
   });
 
-  describe("extractDiagnosticKeyFromRequest()", () => {
-    it("should return header value when present", () => {
-      expect(extractDiagnosticKeyFromRequest("header-key", null)).toBe(
-        "header-key"
-      );
+  describe("verifyDiagnosticKeyFromRequest()", () => {
+    beforeEach(() => {
+      process.env.OPSIQ_DIAGNOSTIC_KEY = "test-diagnostic-key-123";
     });
 
-    it("should return query param when header is null", () => {
-      expect(extractDiagnosticKeyFromRequest(null, "query-key")).toBe(
-        "query-key"
-      );
+    const makeRequest = (headerValue: string | null) => ({
+      headers: { get: (name: string) => (name === "x-opsiq-diagnostic-key" ? headerValue : null) },
     });
 
-    it("should prefer header over query param", () => {
-      expect(extractDiagnosticKeyFromRequest("header-key", "query-key")).toBe(
-        "header-key"
-      );
+    it("should return true when header contains correct key", () => {
+      expect(verifyDiagnosticKeyFromRequest(makeRequest("test-diagnostic-key-123"))).toBe(true);
     });
 
-    it("should return null when both are null", () => {
-      expect(extractDiagnosticKeyFromRequest(null, null)).toBe(null);
+    it("should return false when header contains wrong key", () => {
+      expect(verifyDiagnosticKeyFromRequest(makeRequest("wrong-key"))).toBe(false);
+    });
+
+    it("should return false when header is absent", () => {
+      expect(verifyDiagnosticKeyFromRequest(makeRequest(null))).toBe(false);
+    });
+
+    it("should NOT accept key from query param (H-1 regression)", () => {
+      // Request has no header — query param support was removed. Must return false.
+      const reqWithQueryOnly = {
+        headers: { get: (_name: string) => null },
+        nextUrl: { searchParams: { get: (name: string) => (name === "key" ? "test-diagnostic-key-123" : null) } },
+      };
+      expect(verifyDiagnosticKeyFromRequest(reqWithQueryOnly)).toBe(false);
     });
   });
 

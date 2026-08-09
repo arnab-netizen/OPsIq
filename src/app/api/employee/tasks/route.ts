@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { employeeTaskListHandler } from "@/services/routes/guided-execution-handlers";
 
@@ -23,4 +24,4 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
     },
   });
   return employeeTaskListHandler({ workspaceId, actorId, tasks });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] });

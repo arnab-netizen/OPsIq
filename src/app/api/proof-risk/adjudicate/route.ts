@@ -6,6 +6,7 @@ import { requirePermission } from "@/services/workspace/guided-execution-permiss
 import { GuidedExecutionPermission } from "@/domain/workspace/guided-execution-permissions";
 import { AdjudicationOutcome, AdjudicationSourceType } from "@/domain/execution/proof-risk-adjudication";
 import { adjudicateProofRiskFinding } from "@/services/execution/proof-risk-adjudication.service";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const runtime = "nodejs";
 
@@ -48,4 +49,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   });
   if (!r.ok) return canonicalJson({ error: r.reason }, { status: statusForReason(r.reason) });
   return canonicalJson({ adjudicationId: r.adjudicationId, status: r.status, deduped: r.deduped, updated: r.updated, reassessmentEventId: r.reassessmentEventId }, { status: 200 });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.EVIDENCE_VALIDATE] });

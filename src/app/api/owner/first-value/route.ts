@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { ForbiddenError, NotFoundError, AppError } from "@/infra/errors";
 import { getFirstValue } from "@/services/first-value.service";
 
@@ -43,4 +44,4 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       }
     );
   }
-}, { requireWorkspace: true });
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_VIEW] });

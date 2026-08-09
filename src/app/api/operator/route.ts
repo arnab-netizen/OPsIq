@@ -1,5 +1,6 @@
 import { UnauthorizedError, NotFoundError } from "@/infra/errors";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   getItems,
   updateItem,
@@ -33,7 +34,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
 
   logger.success({ itemCount: sorted.length });
   return sorted;
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] });
 
 export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   if (!ctx.request) {
@@ -294,4 +295,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     await recordIdempotencyResponse(idempotencyKey, 200, result);
   }
   return result;
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });

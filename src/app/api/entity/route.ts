@@ -6,13 +6,13 @@ import { canEdit } from "@/services/auth/access";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { randomUUID } from "crypto";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const entities = getEntities();
     return entities;
-  },
-  { requireWorkspace: true }
+  }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
 );
 
 export const POST = withCanonicalEnforcement(
@@ -67,6 +67,5 @@ export const POST = withCanonicalEnforcement(
     });
 
     return entity;
-  },
-  { requireWorkspace: true }
+  }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
 );

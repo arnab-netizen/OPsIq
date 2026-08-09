@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { ownerGuidedChoiceHandler } from "@/services/routes/guided-execution-handlers";
 
@@ -32,4 +33,4 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
   };
 
   return ownerGuidedChoiceHandler({ workspaceId, actorId, choices: plan });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_VIEW] });

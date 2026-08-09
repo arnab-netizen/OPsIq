@@ -7,6 +7,7 @@ import { canView } from "@/services/auth/access";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -54,6 +55,5 @@ export const GET = withCanonicalEnforcement(
   });
 
   return metrics;
-  },
-  { requireWorkspace: true }
+  }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
 );

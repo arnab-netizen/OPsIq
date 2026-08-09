@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { intakeProofSubmission } from "@/services/execution/proof-intake.service";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 /**
  * POST /api/proof/submit — employee submits proof for a delegated task.
@@ -18,4 +19,4 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
   const submission = body.command?.submission ?? body.submission ?? {};
 
   return intakeProofSubmission({ workspaceId, actorId, taskId, submission });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT] });

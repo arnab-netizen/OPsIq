@@ -43,6 +43,7 @@ import {
 import { ClassifiedApiError, ensureClassification, hasClassification } from "@/infra/classified-error";
 import { isCanonicalJsonResponse, stringifyRouteResponse } from "@/lib/canonical-json-response";
 import { db } from "@/lib/db";
+import { verifyDiagnosticKey } from "@/lib/security/diagnostic-key";
 
 /**
  * Verified context passed to handler
@@ -501,12 +502,9 @@ export function withCanonicalEnforcement(
         const errorResponse = translateAuthDecisionToResponse(decision, correlationId);
 
         // Add safe diagnostic details if diagnostic key is valid and status is 403
-        const diagnosticKey = req.headers.get("x-opsiq-diagnostic-key");
-        const expectedDiagnosticKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-        const hasDiagnosticAccess =
-          diagnosticKey &&
-          expectedDiagnosticKey &&
-          diagnosticKey === expectedDiagnosticKey;
+        const hasDiagnosticAccess = verifyDiagnosticKey(
+          req.headers.get("x-opsiq-diagnostic-key")
+        );
 
         if (hasDiagnosticAccess && errorResponse.status === 403) {
           const requiredCaps = options?.requireCapabilities || [];

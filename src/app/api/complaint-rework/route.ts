@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { parseRequestBody } from "@/lib/validation";
 import { requirePermission } from "@/services/workspace/guided-execution-permissions.service";
@@ -100,4 +101,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     : await markOperationalEventInReview({ workspaceId, actorId, eventId: input.eventId });
   if (!change.ok) return canonicalJson({ error: change.reason }, { status: statusForReason(change.reason) });
   return canonicalJson({ status: input.action, deduped: change.deduped }, { status: 200 });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });

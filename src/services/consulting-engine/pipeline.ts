@@ -38,10 +38,10 @@ export async function runConsultingPipeline(
     const engagement = await db.engagement.findFirst({
       where: { id: engagementId, workspaceId },
       include: {
-        client: {
+        clientAccount: {
           select: { industry: true, size: true },
         },
-        conditionProfiles: {
+        businessConditionProfiles: {
           where: { isCurrent: true },
           take: 1,
         },
@@ -91,15 +91,15 @@ export async function runConsultingPipeline(
       supportingData: {},
     }));
 
-    const businessCondition = engagement.conditionProfiles[0];
+    const businessCondition = engagement.businessConditionProfiles[0];
 
     const input: ConsultingEngineInput = {
       engagementId,
       businessProblem: engagement.description || engagement.title || "Business recovery engagement",
       evidence: evidenceItems,
       clientContext: {
-        industry: engagement.client.industry || "unknown",
-        size: engagement.client.size || "unknown",
+        industry: engagement.clientAccount?.industry || "unknown",
+        size: engagement.clientAccount?.size || "unknown",
         revenueImpactUrgency:
           businessCondition?.urgencyLevel?.toUpperCase() || "HIGH",
       },

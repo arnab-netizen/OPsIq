@@ -380,17 +380,9 @@ describe("[equipment] POST /api/owner/equipment", () => {
 describe("[execution-plan] GET /api/owner/execution-plan", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  /**
-   * Security note: this route uses withCanonicalEnforcement with no requireCapabilities.
-   * Enforcement relies on service-layer requireDashboardAccess(DashboardScope.OWNER)
-   * inside ownerGuidedChoiceHandler. The capability declaration at the wrapper level
-   * is absent, which is a documentation gap but not a bypass — the handler enforces it.
-   */
-  it("does not declare explicit capabilities at the wrapper level (documented security gap — enforcement is in service layer)", () => {
+  it("declares owner:view capability at the wrapper level", () => {
     const handler = executionPlanGet as { __options?: { requireCapabilities?: string[] } };
-    // No requireCapabilities means wrapper-level check is absent; enforcement must be
-    // verified via ownerGuidedChoiceHandler's requireDashboardAccess call.
-    expect(handler.__options?.requireCapabilities).toBeUndefined();
+    expect(handler.__options?.requireCapabilities).toContain("owner:view");
   });
 
   it("calls ownerGuidedChoiceHandler with workspaceId from verified context", async () => {
@@ -434,13 +426,9 @@ describe("[execution-plan] GET /api/owner/execution-plan", () => {
 describe("[guided-choice] GET /api/owner/guided-choice", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  /**
-   * Security note: same as execution-plan — no requireCapabilities at wrapper level.
-   * Enforcement via ownerGuidedChoiceHandler's requireDashboardAccess(DashboardScope.OWNER).
-   */
-  it("does not declare explicit capabilities at wrapper level (enforcement is in service layer)", () => {
+  it("declares owner:view capability at the wrapper level", () => {
     const handler = guidedChoiceGet as { __options?: { requireCapabilities?: string[] } };
-    expect(handler.__options?.requireCapabilities).toBeUndefined();
+    expect(handler.__options?.requireCapabilities).toContain("owner:view");
   });
 
   it("calls ownerGuidedChoiceHandler with correct workspaceId and actorId", async () => {

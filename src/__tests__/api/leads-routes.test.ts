@@ -164,12 +164,12 @@ describe("Leads Routes — non-DB mock tests", () => {
 
   describe("capability declarations", () => {
     it("GET is guarded by LEAD_VIEW with workspace", () => {
-      expect(capturedGetDecl[0]?.requireCapabilities).toContain("LEAD_VIEW");
+      expect(capturedGetDecl[0]?.requireCapabilities).toContain("lead:view");
       expect(capturedGetDecl[0]?.requireWorkspace).toBe(true);
     });
 
     it("POST is guarded by LEAD_CREATE with workspace", () => {
-      expect(capturedPostDecl[0]?.requireCapabilities).toContain("LEAD_CREATE");
+      expect(capturedPostDecl[0]?.requireCapabilities).toContain("lead:create");
       expect(capturedPostDecl[0]?.requireWorkspace).toBe(true);
     });
 

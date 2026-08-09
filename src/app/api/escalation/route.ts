@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { raiseEscalationHandler } from "@/services/routes/guided-execution-handlers";
 
 /**
@@ -15,4 +16,4 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
     actorId,
     command: { ...body.command, workspaceId, createdByUserId: actorId },
   });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });

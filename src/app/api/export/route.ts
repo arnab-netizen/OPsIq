@@ -118,6 +118,10 @@ export const GET = withCanonicalEnforcement(
       "expires": "0",
     },
   });
+},
+{
+  requireWorkspace: true,
+  requireCapabilities: [CAPABILITIES.ACTION_VIEW],
 });
 
 /**

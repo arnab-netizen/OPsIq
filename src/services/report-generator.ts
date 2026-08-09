@@ -200,7 +200,7 @@ export async function generateEngagementReport(
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId, workspaceId },
     include: {
-      client: { select: { id: true, name: true } },
+      clientAccount: { select: { id: true, name: true } },
     },
   });
 

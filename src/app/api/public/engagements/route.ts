@@ -11,6 +11,7 @@ import { toPublicEngagementDTO, PublicAPIError } from "@/services/public-api.ser
 import { db } from "@/lib/db";
 import { z } from "zod/v4";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 const querySchema = z.object({
   status: z.enum(["active", "completed", "cancelled"]).optional(),
@@ -121,6 +122,5 @@ export const GET = withCanonicalEnforcement(
       }
       throw error;
     }
-  },
-  { requireWorkspace: true }
+  }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
 );

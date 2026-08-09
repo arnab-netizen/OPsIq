@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { NotFoundError } from "@/infra/errors";
 import { db } from "@/lib/db";
 import { assertCanInviteMembers } from "@/services/auth/workspace-invite-policy";
@@ -94,5 +95,6 @@ export const POST = withCanonicalEnforcement(
       invitations: results,
       message: `Invited ${results.length} member(s) to workspace`,
     };
-  }
+  },
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_ONBOARD] }
 );

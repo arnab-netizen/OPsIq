@@ -93,18 +93,25 @@ export async function createBlueprint(
         },
         data: { status: "CANCELLED", notes: "Cancelled: blueprint superseded by reapproval" },
       });
-    });
-    await emitAuditEvent({
-      workspaceId,
-      actorId,
-      eventName: AUDIT_EVENTS.STARTUP_BLUEPRINT_SUPERSEDED,
-      payload: { supersededBlueprintId: existing.id, newOwnerDecisionId: input.ownerDecisionId, sessionId: input.sessionId, ideaId: input.ideaId },
-    });
-    await emitAuditEvent({
-      workspaceId,
-      actorId,
-      eventName: AUDIT_EVENTS.STARTUP_EXECUTION_PLAN_SUPERSEDED,
-      payload: { supersededBlueprintId: existing.id, sessionId: input.sessionId, ideaId: input.ideaId },
+      // Audit inside transaction: a failed audit rolls back the supersede writes (CAT 2 fix).
+      await emitAuditEvent(
+        {
+          workspaceId,
+          actorId,
+          eventName: AUDIT_EVENTS.STARTUP_BLUEPRINT_SUPERSEDED,
+          payload: { supersededBlueprintId: existing.id, newOwnerDecisionId: input.ownerDecisionId, sessionId: input.sessionId, ideaId: input.ideaId },
+        },
+        txSupersede
+      );
+      await emitAuditEvent(
+        {
+          workspaceId,
+          actorId,
+          eventName: AUDIT_EVENTS.STARTUP_EXECUTION_PLAN_SUPERSEDED,
+          payload: { supersededBlueprintId: existing.id, sessionId: input.sessionId, ideaId: input.ideaId },
+        },
+        txSupersede
+      );
     });
   }
 

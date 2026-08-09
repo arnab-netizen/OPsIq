@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { verifySignature } from "@/services/integrity/sign";
 import {
   generateDecisionHash,
@@ -78,5 +79,5 @@ export const POST = withCanonicalEnforcement(
       originalHash: decisionHash,
     };
   },
-  { requireWorkspace: true }
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] }
 );
