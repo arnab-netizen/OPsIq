@@ -145,16 +145,15 @@ export async function pingDatabase(timeoutMs = 90000): Promise<void> {
   const ssl = dbUrl.includes("sslmode=require") ? { rejectUnauthorized: false } : undefined;
   const deadline = Date.now() + timeoutMs;
 
-  // Retry loop: Neon's proxy may immediately reject (ECONNRESET) during cold-start,
-  // or it may hold the connection open for 7-10 minutes while compute wakes up.
-  // Each attempt uses the FULL remaining budget as its timeout so a cold-start
-  // that needs 10 minutes isn't cut short by a per-attempt cap. If the proxy
-  // immediately rejects (fast error), we retry in 500ms using whatever budget remains.
+  // Retry loop: each attempt uses a 5s socket timeout (connectionTimeoutMillis: 5000).
+  // At 5s/attempt + 500ms gap, a 30-min budget yields ~327 attempts. With 135s OS-default
+  // timeouts we'd only get ~13. More attempts = narrower window to miss the moment Neon's
+  // compute finishes waking up. On success (Neon warm) the connect takes < 1s.
   while (true) {
     const remaining = deadline - Date.now();
     if (remaining <= 0) throw new Error(`pingDatabase timeout after ${timeoutMs}ms`);
 
-    const client = new pg.Client({ connectionString: dbUrl, ssl });
+    const client = new pg.Client({ connectionString: dbUrl, ssl, connectionTimeoutMillis: 5000 });
     let success = false;
     try {
       await Promise.race([
