@@ -145,15 +145,18 @@ export async function pingDatabase(timeoutMs = 90000): Promise<void> {
   const ssl = dbUrl.includes("sslmode=require") ? { rejectUnauthorized: false } : undefined;
   const deadline = Date.now() + timeoutMs;
 
-  // Retry loop: each attempt uses a 5s socket timeout (connectionTimeoutMillis: 5000).
-  // At 5s/attempt + 500ms gap, a 30-min budget yields ~327 attempts. With 135s OS-default
-  // timeouts we'd only get ~13. More attempts = narrower window to miss the moment Neon's
-  // compute finishes waking up. On success (Neon warm) the connect takes < 1s.
+  // Retry loop: each attempt is capped at PER_ATTEMPT_MS via Promise.race.
+  // pg.Client has no connectionTimeoutMillis option (that is pool-only); the race
+  // timer is the only reliable per-attempt cap. At 6s/attempt + 500ms gap a 30-min
+  // budget yields ~295 attempts vs ~13 with the OS-default 135s TCP SYN timeout.
+  // When Neon compute becomes ready, connect() takes <1s, so no penalty on the
+  // happy path.
+  const PER_ATTEMPT_MS = 6000;
   while (true) {
     const remaining = deadline - Date.now();
     if (remaining <= 0) throw new Error(`pingDatabase timeout after ${timeoutMs}ms`);
 
-    const client = new pg.Client({ connectionString: dbUrl, ssl, connectionTimeoutMillis: 5000 });
+    const client = new pg.Client({ connectionString: dbUrl, ssl });
     let success = false;
     try {
       await Promise.race([
@@ -164,14 +167,14 @@ export async function pingDatabase(timeoutMs = 90000): Promise<void> {
         new Promise<never>((_, reject) => {
           const t = setTimeout(
             () => reject(new Error("attempt timeout")),
-            remaining  // use full remaining budget — allows Neon cold-start to complete
+            Math.min(PER_ATTEMPT_MS, remaining)
           );
           if (typeof t === "object" && t.unref) t.unref();
         }),
       ]);
       success = true;
     } catch {
-      // attempt failed — will retry
+      // attempt failed — will retry after cleanup
     } finally {
       client.end().catch(() => {});
     }
