@@ -51,20 +51,13 @@ name: Stage 7 — Trusted Evidence Verifier
 # 20.  PR diff verified add-only inside canonical artifacts directory — YES (addonly step).
 
 on:
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: "Evidence PR number"
-        required: true
-        type: string
-      head_sha:
-        description: "PR head SHA at time of capture (hint only — live SHA is independently resolved)"
-        required: true
-        type: string
-      artifact_ids:
-        description: "Comma-separated canonical artifact ids (evd_<32hex>)"
-        required: true
-        type: string
+  repository_dispatch:
+    types: [stage7-verify-artifacts]
+    # client_payload fields expected: pr_number, head_sha, artifact_ids
+    # Dispatched by stage7-capture using GITHUB_TOKEN (Contents: write only).
+    # repository_dispatch requires Contents: write — narrower than workflow_dispatch
+    # (Actions: write), eliminating the privilege escalation identified in the
+    # ci-governance-check rule 12.
 
 permissions:
   contents: read
@@ -96,8 +89,8 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ inputs.pr_number }}
-          PAYLOAD_HEAD_SHA: ${{ inputs.head_sha }}
+          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+          PAYLOAD_HEAD_SHA: ${{ github.event.client_payload.head_sha }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -137,7 +130,7 @@ jobs:
         if: steps.resolve_pr.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -175,7 +168,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LIVE_HEAD_SHA: ${{ steps.resolve_pr.outputs.live_head_sha }}
-          ARTIFACT_IDS_RAW: ${{ inputs.artifact_ids }}
+          ARTIFACT_IDS_RAW: ${{ github.event.client_payload.artifact_ids }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -254,7 +247,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           LIVE_HEAD_SHA: ${{ steps.resolve_pr.outputs.live_head_sha }}
-          PAYLOAD_HEAD_SHA: ${{ inputs.head_sha }}
+          PAYLOAD_HEAD_SHA: ${{ github.event.client_payload.head_sha }}
           RESOLVE_OUTCOME: ${{ steps.resolve_pr.outcome }}
           FETCH_COUNT: ${{ steps.fetch.outputs.count }}
           ADD_ONLY: ${{ steps.addonly.outputs.add_only }}
