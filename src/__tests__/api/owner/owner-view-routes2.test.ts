@@ -129,14 +129,17 @@ describe("GET /api/owner/input-guidance", () => {
     expect(arg.workspaceId).toBe("ws-REAL");
   });
 
-  it("injects businessId from query or empty string when absent", async () => {
+  it("returns no-business 200 and does not call service when businessId absent", async () => {
+    const res = await inputGuidanceGet(makeCtx(url()));
+    expect(getStatus(res)).toBe(200);
+    expect(getBody(res)).toMatchObject({ found: false, reason: "no_business_configured" });
+    expect(mocks.getOwnerInputGuidance).not.toHaveBeenCalled();
+  });
+
+  it("injects workspaceId from ctx (not URL) when businessId present", async () => {
     mocks.getOwnerInputGuidance.mockResolvedValue({});
-    await inputGuidanceGet(makeCtx(url()));
-    expect(mocks.getOwnerInputGuidance.mock.calls[0][0].businessId).toBe("");
-    vi.clearAllMocks();
-    mocks.getOwnerInputGuidance.mockResolvedValue({});
-    await inputGuidanceGet(makeCtx(url(BIZ)));
-    expect(mocks.getOwnerInputGuidance.mock.calls[0][0].businessId).toBe(BIZ);
+    await inputGuidanceGet(makeCtx(url(BIZ), "ws-REAL"));
+    expect(mocks.getOwnerInputGuidance.mock.calls[0][0].workspaceId).toBe("ws-REAL");
   });
 
   it("workspace isolation: uses verifiedWorkspaceId, not URL param", async () => {
@@ -177,10 +180,11 @@ describe("GET /api/owner/onboarding", () => {
     expect(arg.businessId).toBe(BIZ);
   });
 
-  it("defaults businessId to empty string when absent", async () => {
-    mocks.getOwnerOnboardingState.mockResolvedValue({});
-    await onboardingGet(makeCtx(url()));
-    expect(mocks.getOwnerOnboardingState.mock.calls[0][0].businessId).toBe("");
+  it("returns no-business 200 and does not call service when businessId absent", async () => {
+    const res = await onboardingGet(makeCtx(url()));
+    expect(getStatus(res)).toBe(200);
+    expect(getBody(res)).toMatchObject({ found: false, reason: "no_business_configured" });
+    expect(mocks.getOwnerOnboardingState).not.toHaveBeenCalled();
   });
 });
 
@@ -214,10 +218,11 @@ describe("GET /api/owner/readiness", () => {
     expect(arg.businessId).toBe(BIZ);
   });
 
-  it("defaults businessId to empty string when absent", async () => {
-    mocks.getOwnerReadiness.mockResolvedValue({});
-    await readinessGet(makeCtx(url()));
-    expect(mocks.getOwnerReadiness.mock.calls[0][0].businessId).toBe("");
+  it("returns no-business 200 and does not call service when businessId absent", async () => {
+    const res = await readinessGet(makeCtx(url()));
+    expect(getStatus(res)).toBe(200);
+    expect(getBody(res)).toMatchObject({ found: false, reason: "no_business_configured" });
+    expect(mocks.getOwnerReadiness).not.toHaveBeenCalled();
   });
 
   it("workspace isolation: different workspaces scoped correctly", async () => {
