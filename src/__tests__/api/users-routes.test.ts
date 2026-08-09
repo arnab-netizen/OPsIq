@@ -148,12 +148,12 @@ describe("Users Routes — non-DB mock tests", () => {
 
   describe("capability declarations", () => {
     it("GET is guarded by USER_VIEW with workspace", () => {
-      expect(capturedGetDecl[0]?.requireCapabilities).toContain("USER_VIEW");
+      expect(capturedGetDecl[0]?.requireCapabilities).toContain("user:view");
       expect(capturedGetDecl[0]?.requireWorkspace).toBe(true);
     });
 
     it("POST is guarded by USER_CREATE with workspace", () => {
-      expect(capturedPostDecl[0]?.requireCapabilities).toContain("USER_CREATE");
+      expect(capturedPostDecl[0]?.requireCapabilities).toContain("user:create");
       expect(capturedPostDecl[0]?.requireWorkspace).toBe(true);
     });
 

@@ -170,12 +170,12 @@ describe("Evidence Routes — non-DB mock tests", () => {
 
   describe("capability declarations", () => {
     it("GET is guarded by EVIDENCE_VIEW with workspace", () => {
-      expect(capturedGetDecl[0]?.requireCapabilities).toContain("EVIDENCE_VIEW");
+      expect(capturedGetDecl[0]?.requireCapabilities).toContain("evidence:view");
       expect(capturedGetDecl[0]?.requireWorkspace).toBe(true);
     });
 
     it("POST is guarded by EVIDENCE_SUBMIT with workspace", () => {
-      expect(capturedPostDecl[0]?.requireCapabilities).toContain("EVIDENCE_SUBMIT");
+      expect(capturedPostDecl[0]?.requireCapabilities).toContain("evidence:submit");
       expect(capturedPostDecl[0]?.requireWorkspace).toBe(true);
     });
 
