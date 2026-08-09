@@ -24,7 +24,7 @@ const { mockDb, mockEmitAuditEvent } = vi.hoisted(() => {
   return { mockDb, mockEmitAuditEvent };
 });
 
-vi.mock("@/lib/db", () => ({ db: mockDb }));
+vi.mock("@/lib/db", () => ({ db: mockDb, getDbInstance: vi.fn().mockResolvedValue({}) }));
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: mockEmitAuditEvent }));
 vi.mock("@/domain/constants/audit-events", () => ({
   AUDIT_EVENTS: {

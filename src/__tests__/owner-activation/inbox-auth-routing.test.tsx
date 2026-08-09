@@ -27,6 +27,8 @@ vi.mock("next/link", () => ({
 vi.mock("@/services/auth", () => ({ getSession: () => getSessionMock() }));
 vi.mock("@/lib/db", () => ({
   db: { workspaceMembership: { findFirst: (args: unknown) => findFirstMock(args) } },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 vi.mock("@/app/(authenticated)/dashboard/inbox/inbox-client", () => ({
   InboxClient: ({ workspaceId }: { workspaceId: string }) => <div data-testid="inbox-client">{workspaceId}</div>,

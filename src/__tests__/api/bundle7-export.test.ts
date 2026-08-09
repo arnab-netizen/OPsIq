@@ -57,7 +57,7 @@ const { mockWithCanonical, mockDb, mockEmitAuditEvent } = vi.hoisted(() => {
   return { mockWithCanonical, mockDb, mockEmitAuditEvent };
 });
 
-vi.mock("@/lib/db", () => ({ db: mockDb }));
+vi.mock("@/lib/db", () => ({ db: mockDb, getDbInstance: vi.fn().mockResolvedValue({}) }));
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: mockEmitAuditEvent }));
 
 const capturedDeclarations: Record<string, unknown>[] = [];

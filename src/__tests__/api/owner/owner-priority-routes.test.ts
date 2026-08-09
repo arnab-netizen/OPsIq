@@ -237,7 +237,7 @@ describe("[action-plan] GET /api/owner/action-plan — handler", () => {
 
   it("returns service result in canonicalJson body with status 200", async () => {
     mocks.getOwnerActionAssignment.mockResolvedValue(SAMPLE_ACTION_PLAN);
-    const res = await actionPlanGet(makeCtx(`https://x/api/owner/action-plan`));
+    const res = await actionPlanGet(makeCtx(`https://x/api/owner/action-plan?businessId=biz-88`));
     const body = getBody(res);
     expect(body).toEqual(SAMPLE_ACTION_PLAN);
     expect((res as CanonicalJsonResponse).status).toBe(200);
@@ -245,7 +245,7 @@ describe("[action-plan] GET /api/owner/action-plan — handler", () => {
 
   it("calls getOwnerActionAssignment with verified workspaceId", async () => {
     mocks.getOwnerActionAssignment.mockResolvedValue(SAMPLE_ACTION_PLAN);
-    await actionPlanGet(makeCtx(`https://x/api/owner/action-plan`, "ws-SPECIFIC"));
+    await actionPlanGet(makeCtx(`https://x/api/owner/action-plan?businessId=biz-88`, "ws-SPECIFIC"));
     const arg = mocks.getOwnerActionAssignment.mock.calls[0][0];
     expect(arg.workspaceId).toBe("ws-SPECIFIC");
   });
@@ -257,17 +257,19 @@ describe("[action-plan] GET /api/owner/action-plan — handler", () => {
     expect(arg.businessId).toBe("biz-88");
   });
 
-  it("passes empty string businessId when not in query (default behaviour)", async () => {
-    mocks.getOwnerActionAssignment.mockResolvedValue(SAMPLE_ACTION_PLAN);
-    await actionPlanGet(makeCtx(`https://x/api/owner/action-plan`));
-    const arg = mocks.getOwnerActionAssignment.mock.calls[0][0];
-    expect(arg.businessId).toBe("");
+  it("returns no-business 200 and does not call service when businessId absent", async () => {
+    const res = await actionPlanGet(makeCtx(`https://x/api/owner/action-plan`));
+    expect(getBody(res)).toEqual(
+      expect.objectContaining({ found: false, reason: "no_business_configured" })
+    );
+    expect((res as CanonicalJsonResponse).status).toBe(200);
+    expect(mocks.getOwnerActionAssignment).not.toHaveBeenCalled();
   });
 
   it("workspace isolation: verifiedWorkspaceId used, not any URL param", async () => {
     mocks.getOwnerActionAssignment.mockResolvedValue(SAMPLE_ACTION_PLAN);
     await actionPlanGet(
-      makeCtx(`https://x/api/owner/action-plan?workspaceId=ws-ATTACKER`, "ws-REAL")
+      makeCtx(`https://x/api/owner/action-plan?workspaceId=ws-ATTACKER&businessId=biz-88`, "ws-REAL")
     );
     const arg = mocks.getOwnerActionAssignment.mock.calls[0][0];
     expect(arg.workspaceId).toBe("ws-REAL");
@@ -276,8 +278,8 @@ describe("[action-plan] GET /api/owner/action-plan — handler", () => {
 
   it("workspace isolation: different workspaces receive correct scoping", async () => {
     mocks.getOwnerActionAssignment.mockResolvedValue(SAMPLE_ACTION_PLAN);
-    await actionPlanGet(makeCtx(`https://x/api/owner/action-plan`, "ws-ALICE"));
-    await actionPlanGet(makeCtx(`https://x/api/owner/action-plan`, "ws-BOB"));
+    await actionPlanGet(makeCtx(`https://x/api/owner/action-plan?businessId=biz-88`, "ws-ALICE"));
+    await actionPlanGet(makeCtx(`https://x/api/owner/action-plan?businessId=biz-88`, "ws-BOB"));
     expect(mocks.getOwnerActionAssignment.mock.calls[0][0].workspaceId).toBe("ws-ALICE");
     expect(mocks.getOwnerActionAssignment.mock.calls[1][0].workspaceId).toBe("ws-BOB");
   });

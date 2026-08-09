@@ -53,6 +53,8 @@ vi.mock("@/lib/db", () => ({
       },
     }),
   },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/infra/audit", () => ({

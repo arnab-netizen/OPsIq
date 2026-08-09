@@ -170,7 +170,7 @@ const { mockDb, mockEmitAuditEvent } = vi.hoisted(() => {
   return { mockDb, mockEmitAuditEvent, mockEngagement, mockFinding, mockRecommendation, mockAction, mockEvidence };
 });
 
-vi.mock("@/lib/db", () => ({ db: mockDb }));
+vi.mock("@/lib/db", () => ({ db: mockDb, getDbInstance: vi.fn().mockResolvedValue({}) }));
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: mockEmitAuditEvent }));
 
 // Fixtures accessible in tests

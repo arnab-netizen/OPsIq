@@ -41,6 +41,8 @@ vi.mock("@/lib/db", () => ({
     $transaction: (...a: unknown[]) => dbTransactionMock(...a as [any]),
     operatorItem: { findFirst: (...a: unknown[]) => dbOperatorItemFindFirstMock(...a) },
   },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 const emitAuditEventMock = vi.fn();

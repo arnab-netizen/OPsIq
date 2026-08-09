@@ -65,7 +65,7 @@ const { mockWithCanonical, mockDb, mockEmitAuditEvent } = vi.hoisted(() => {
   return { mockWithCanonical, mockDb, mockEmitAuditEvent };
 });
 
-vi.mock("@/lib/db", () => ({ db: mockDb }));
+vi.mock("@/lib/db", () => ({ db: mockDb, getDbInstance: vi.fn().mockResolvedValue({}) }));
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: mockEmitAuditEvent }));
 vi.mock("@/lib/canonical-route-enforcement", () => ({
   withCanonicalEnforcement: (

@@ -32,7 +32,7 @@ vi.mock("@/domain/owner-mode/owner-manual-entry-form", () => ({
   detectPiiInFields: mockDetectPiiInFields,
 }));
 
-vi.mock("@/lib/db", () => ({ db: {} }));
+vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
 vi.mock("@/lib/validation", () => ({ parseRequestBody: mockParseRequestBody }));
 vi.mock("@/lib/canonical-json-response", () => ({ canonicalJson: mockCanonicalJson }));
 

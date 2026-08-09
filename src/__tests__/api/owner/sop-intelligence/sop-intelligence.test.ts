@@ -48,6 +48,8 @@ vi.mock("@/lib/db", () => ({
       findFirst: mockFindFirstSopDoc,
     },
   },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/infra/audit", () => ({

@@ -51,7 +51,7 @@ const dbMock = {
   finding: { findFirst: vi.fn() },
   ownerEquipment: { findMany: vi.fn() },
 };
-vi.mock("@/lib/db", () => ({ db: dbMock }));
+vi.mock("@/lib/db", () => ({ db: dbMock, getDbInstance: vi.fn().mockResolvedValue({}) }));
 
 // Logger mock — prevent noise, allow assertions.
 const loggerWarnMock = vi.fn();
