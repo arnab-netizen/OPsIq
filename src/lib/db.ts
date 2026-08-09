@@ -184,6 +184,19 @@ export async function pingDatabase(timeoutMs = 90000): Promise<void> {
   }
 }
 
+/**
+ * Direct pool heartbeat — bypasses Prisma's client/proxy layer entirely.
+ * Sends SELECT 1 through the raw pg.Pool so the pool's connection is marked
+ * "recently used" and idleTimeoutMillis never fires. Also keeps Neon compute
+ * alive since a real query flows over the pool's TCP connection.
+ *
+ * Safe to call in setInterval: silently no-ops if the pool isn't ready yet.
+ */
+export async function heartbeatPool(): Promise<void> {
+  if (!globalForPrisma.pgPool) return;
+  await (globalForPrisma.pgPool as any).query("SELECT 1");
+}
+
 // NOTE: Removed auto-initialization on module load
 // Reason: This was causing issues when db.ts is imported in Edge Runtime (middleware context)
 // Auto-initialization now happens explicitly in app startup (see src/app/route.ts or startup sequence)

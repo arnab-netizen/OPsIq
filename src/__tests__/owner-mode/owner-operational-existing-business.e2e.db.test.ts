@@ -19,7 +19,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { randomUUID } from "crypto";
-import { db, pingDatabase } from "@/lib/db";
+import { db, pingDatabase, heartbeatPool } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { createBusinessConditionProfile } from "@/services/business-condition/business-condition-profile.service";
 import { createRecommendation } from "@/services/recommendation";
@@ -161,10 +161,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       ]);
       seeded = true;
 
-      // Heartbeat through the Prisma pool every 4s: keeps the pool's connection
-      // "recently used" so idleTimeoutMillis never fires, and keeps Neon compute alive.
+      // Direct pool heartbeat every 4s: bypasses Prisma's Proxy/extends chain and
+      // sends SELECT 1 straight through the pg.Pool, keeping the pool's TCP connection
+      // "recently used" (preventing idleTimeoutMillis eviction) and Neon compute alive.
       neonKeepalive = setInterval(async () => {
-        try { await (db as any).$executeRaw`SELECT 1`; } catch { /* non-fatal */ }
+        try { await heartbeatPool(); } catch { /* non-fatal */ }
       }, 4000);
     }, 900000);
 
