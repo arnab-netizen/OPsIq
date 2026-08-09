@@ -108,17 +108,42 @@ sleep 5
 ```
 
 ### Step 3: Deploy Database Schema (If Migrations Pending)
+
+**3-Factor Production Migration Gate — all three must pass before applying migrations:**
+
+**Factor 1 — Pending count matches CI expectation:**
 ```bash
-# Check pending migrations
 npx prisma migrate status
-# Output: X migrations pending
+# Must show exactly the count expected from the release (count verified in CI).
+# If count is HIGHER than expected → unknown migration present, BLOCK.
+# If count is LOWER → already partially applied or wrong branch, BLOCK.
+```
 
-# If migrations exist:
+**Factor 2 — Pre-migration backup taken and checksum verified:**
+```bash
+# Backup must already exist from Step 0 / Section 4 above.
+# Verify the timestamp is less than 30 minutes old and size > 1 MB:
+ls -lh /backups/opsiq/opsiq_backup_*.sql.gz | tail -1
+# Verify the checksum file is non-empty:
+cat /backups/opsiq/opsiq_backup_*.sql.gz.sha256 | grep -c '[0-9a-f]\{64\}'
+# Output must be: 1
+# If backup is missing or stale → re-run backup script, then re-verify.
+```
+
+**Factor 3 — Apply migration and confirm table count post-migration:**
+```bash
 npx prisma migrate deploy
+# Output: X migrations applied.
 
-# Verify schema
+# Confirm schema is valid
 npx prisma validate
 # Output: ✓ Schema valid
+
+# Confirm expected table count (must be ≥ 45)
+psql $DATABASE_URL -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public';"
+# Expected: ≥ 45
+
+# If any factor fails: stop here, restore from backup (see rollback section).
 ```
 
 ### Step 4: Start Services

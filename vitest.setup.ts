@@ -3,8 +3,10 @@ import dotenv from "dotenv";
 import path from "path";
 import "@testing-library/jest-dom/vitest";
 
-// Load test environment first
-dotenv.config({ path: path.resolve(process.cwd(), ".env.test") });
+// Load test environment first — override:true ensures that if globalSetup wrote a
+// .env.test with the direct Neon URL (no -pooler suffix), it wins over any pooler
+// URL that was baked into the worker's process.env copy at thread-creation time.
+dotenv.config({ path: path.resolve(process.cwd(), ".env.test"), override: true });
 
 // Fallback: ensure test database is configured
 if (!process.env.DATABASE_URL) {

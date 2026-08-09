@@ -50,7 +50,7 @@ interface AssignTx {
   proof: { create(a: unknown): Promise<unknown> };
 }
 export interface AssignTaskDeps {
-  db: { $transaction<T>(fn: (tx: AssignTx) => Promise<T>): Promise<T> };
+  db: { $transaction<T>(fn: (tx: AssignTx) => Promise<T>, opts?: { maxWait?: number; timeout?: number }): Promise<T> };
   uuid: () => string;
   now: () => Date;
 }
@@ -112,7 +112,7 @@ export async function assignDelegatedTask(input: AssignTaskInput, injected?: Ass
     // Wire the requirement onto the task so completeTask's gate (proofRequirementId != null) fires.
     await tx.delegatedTask.update({ where: { id: taskId }, data: { proofRequirementId, updatedAt: now } });
     return { proofRequirementId, proofId };
-  });
+  }, { maxWait: 30000, timeout: 60000 });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.TASK_ASSIGNED,

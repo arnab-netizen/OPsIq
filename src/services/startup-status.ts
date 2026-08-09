@@ -33,6 +33,21 @@ function isMissingTableError(err: unknown): boolean {
   );
 }
 
+/**
+ * True when an error is a transient connection failure (e.g. Neon cold-start timeout).
+ * These are downgraded to WARN because startup_status writes are non-critical and
+ * the connection will succeed once the serverless endpoint finishes waking up.
+ */
+function isTransientConnectionError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    msg.includes("Connection terminated due to connection timeout") ||
+    msg.includes("Connection terminated unexpectedly") ||
+    msg.includes("connect ECONNREFUSED") ||
+    msg.includes("connect ETIMEDOUT")
+  );
+}
+
 export type StartupStatusType = "NOT_STARTED" | "STARTING" | "READY" | "FAILED";
 
 /**
@@ -265,6 +280,8 @@ export async function setStartupStatus(
         "startup_status table not found — run `prisma migrate deploy` to create it",
         { status },
       );
+    } else if (isTransientConnectionError(error)) {
+      logger.warn("startup_status write skipped — transient connection error (serverless cold-start)", { status });
     } else {
       logger.error("Failed to write startup status to DB", error, { status });
     }
@@ -293,6 +310,8 @@ export async function resetStartupStatus(): Promise<void> {
   } catch (error) {
     if (isMissingTableError(error)) {
       logger.warn("startup_status table not found during reset — migration not yet applied");
+    } else if (isTransientConnectionError(error)) {
+      logger.warn("startup_status reset skipped — transient connection error (serverless cold-start)");
     } else {
       logger.error("Failed to reset startup status", error);
     }

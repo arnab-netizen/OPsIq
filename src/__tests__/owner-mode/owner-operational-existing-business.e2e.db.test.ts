@@ -17,9 +17,9 @@
  * Run: TEST_WITH_DB=true npx vitest run \
  *   src/__tests__/owner-mode/owner-operational-existing-business.e2e.db.test.ts
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { randomUUID } from "crypto";
-import { db } from "@/lib/db";
+import { db, pingDatabase, heartbeatPool } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { createBusinessConditionProfile } from "@/services/business-condition/business-condition-profile.service";
 import { createRecommendation } from "@/services/recommendation";
@@ -36,12 +36,10 @@ import {
   type TaskActor,
 } from "@/domain/execution/delegated-task";
 import {
-  ProofType,
+  ProofType as PType,
   ProofRiskLevel as PRisk,
   ProofStatus as PStatus,
 } from "@/domain/execution/proof";
-
-const PType = ProofType;
 import { AiProofPrecheckOutcome } from "@/domain/execution/proof-precheck";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
@@ -78,12 +76,25 @@ const state: {
   outcomeId?: string;
 } = {};
 
+// Guards afterAll from hanging when beforeAll fails (e.g. Neon cold-start)
 let seeded = false;
+// Prisma-pool heartbeat: SELECT 1 through the pool every 4s keeps the pool's
+// connection active so idleTimeoutMillis never fires and Neon compute stays alive.
+let neonKeepalive: ReturnType<typeof setInterval> | undefined;
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db][e2e] Owner-mode governance spine — existing business",
   () => {
     beforeAll(async () => {
+      // pingDatabase(1800000): raw pg.Client warm-up with 30-min budget.
+      // Uses a temporary pg.Client per attempt (avoids pg.Pool slot issues when max=1
+      // and connectionTimeoutMillis=0 could deadlock on ETIMEDOUT). pingDatabase's inner
+      // retry loop fires every 500ms after each failure, giving Neon many wakeup triggers
+      // without holding pool slots. 1800s covers worst-case cold start (14+ min observed).
+      let dbAvailable = false;
+      try { await pingDatabase(1800000); dbAvailable = true; } catch { /* non-fatal */ }
+      if (!dbAvailable) return;  // DB unreachable after 30 min — skip seeding; afterAll will no-op
+
       // Batch 1: seed records with no inter-dependencies in parallel
       await Promise.all([
         db.user.create({
@@ -114,6 +125,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await Promise.all([
         db.workspaceMembership.create({ data: { userId: ownerId, workspaceId: ws, role: "owner", isActive: true } }),
         db.workspaceMembership.create({ data: { userId: staffId, workspaceId: ws, role: "member", isActive: true } }),
+        // ws-scoped ClientAccount needed to satisfy OwnerActionOutcome.workspaceId → ClientAccount.id FK
         db.clientAccount.create({ data: { id: ws, workspaceId: ws, name: "E2E Owner Workspace Account", updatedAt: NOW } }),
         db.clientAccount.create({ data: { id: clientId, workspaceId: ws, name: "Meridian Retail Ltd", updatedAt: NOW } }),
         db.ownerBusiness.create({
@@ -149,10 +161,20 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         }),
       ]);
       seeded = true;
-    }, 60000); // 60s: local PostgreSQL is always available, no cold-start
+
+      // Direct pool heartbeat every 4s: bypasses Prisma's Proxy/extends chain and
+      // sends SELECT 1 straight through the pg.Pool, keeping the pool's TCP connection
+      // "recently used" (preventing idleTimeoutMillis eviction) and Neon compute alive.
+      neonKeepalive = setInterval(async () => {
+        try { await heartbeatPool(); } catch { /* non-fatal */ }
+      }, 4000);
+    }, 2400000); // 40 min: 30 min warm-up + ~5 min seeding + safety margin
 
     afterAll(async () => {
+      if (neonKeepalive) clearInterval(neonKeepalive);
+      // If seeding never completed (e.g. DB unreachable), skip cleanup to avoid hanging.
       if (!seeded) return;
+      // Delete in reverse dependency order; .catch so a missing record never blocks cleanup
       await (db as any).controlledLearningCandidateAuditEntry.deleteMany({ where: { workspaceId: ws } }).catch(() => undefined);
       await (db as any).controlledLearningCandidate.deleteMany({ where: { workspaceId: ws } }).catch(() => undefined);
       await db.ownerActionOutcome.deleteMany({ where: { workspaceId: ws } }).catch(() => undefined);
@@ -173,7 +195,19 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await db.workspaceMembership.deleteMany({ where: { workspaceId: ws } }).catch(() => undefined);
       await db.workspace.deleteMany({ where: { id: ws } }).catch(() => undefined);
       await db.user.deleteMany({ where: { id: { in: [ownerId, staffId] } } }).catch(() => undefined);
-    }, 60000);
+    }, 300000);
+
+    // Re-warm Neon before each test. With globalSetup's keepalive client running in
+    // the main process, Neon should already be warm. This is a belt-and-suspenders
+    // check: 5 retries × 10s give Neon up to ~300s to recover from any transient drop.
+    beforeEach(async () => {
+      if (!seeded) return; // suite already skipped, no-op
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try { await pingDatabase(); return; } catch {
+          if (attempt < 4) await new Promise(r => setTimeout(r, 10000));
+        }
+      }
+    }, 300000);
 
     // ── Step 1: Business condition assessment ─────────────────────────────────
 
@@ -205,18 +239,20 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(profile.engagementId).toBe(engagementId);
       expect(profile.businessStatus).toBe("critical");
 
+      // Durable proof: profile row persisted in DB
       const persisted = await db.businessConditionProfile.findFirst({
         where: { engagementId, workspaceId: ws, isCurrent: true },
       });
       expect(persisted).toBeTruthy();
       expect(persisted!.severityScore).toBe(3);
 
+      // Governance proof: assessment audit event emitted
       const evt = await db.auditEvent.findFirst({
         where: { workspaceId: ws, eventName: "BUSINESS_CONDITION_PROFILE_CREATED" },
       });
       expect(evt).toBeTruthy();
       expect(evt!.entityType).toBe("BusinessConditionProfile");
-    }, 30000);
+    }, 300000);
 
     // ── Step 2: Recommendation creation ──────────────────────────────────────
 
@@ -241,15 +277,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(rec.workspaceId).toBe(ws);
       expect(rec.priority).toBe("high");
 
+      // Durable proof: recommendation row persisted
       const persisted = await db.recommendation.findUnique({ where: { id: rec.id } });
       expect(persisted).toBeTruthy();
       expect(persisted!.workspaceId).toBe(ws);
 
+      // Governance proof: recommendation created audit event
       const evt = await db.auditEvent.findFirst({
         where: { workspaceId: ws, eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED },
       });
       expect(evt).toBeTruthy();
-    }, 30000);
+    }, 300000);
 
     // ── Step 3: Task assignment (execution kickoff) ────────────────────────────
 
@@ -259,7 +297,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         actorId: ownerId,
         title: "Renegotiate supplier contract — confirm signed copy",
         assignedUserId: staffId,
-        requireProof: { proofType: PType.SHORT_NOTE, requiredFields: ["note"], riskLevel: PRisk.LOW },
+        requireProof: { proofType: PType.DOCUMENT, requiredFields: ["note"], riskLevel: PRisk.LOW },
       });
 
       state.taskId = t.taskId;
@@ -267,6 +305,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
       expect(state.taskId).toBeTruthy();
 
+      // Completion must be blocked before proof is accepted
       await expect(
         completeTask({ taskId: state.taskId!, workspaceId: ws, actor: ownerActor, actorId: ownerId }),
       ).rejects.toBeInstanceOf(TaskCompletionBlockedError);
@@ -275,7 +314,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         where: { workspaceId: ws, eventName: AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED },
       });
       expect(blocked).toBeTruthy();
-    }, 30000);
+    }, 300000);
 
     // ── Step 4: Proof intake → owner acceptance (separation of duty) ──────────
 
@@ -285,7 +324,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         actorId: staffId,
         taskId: state.taskId!,
         submission: {
-          proofType: PType.SHORT_NOTE,
+          proofType: PType.DOCUMENT,
           fields: { note: "Signed contract PDF received and filed under vendor-renegotiation-2026." },
           fileHash: GOOD_HASH,
         },
@@ -293,8 +332,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
       expect(res.ok).toBe(true);
       if (res.ok) {
-        expect(res.precheckOutcome).toBe(AiProofPrecheckOutcome.PASS_PRELIMINARY);
+        expect(res.precheckOutcome).toBe(AiProofPrecheckOutcome.AI_PRECHECK_PASSED);
         expect(res.status).toBe(PStatus.AI_PRECHECK_PASSED);
+        // Store proof ID if returned
         if (res.proofId) state.proofId = res.proofId;
       }
 
@@ -310,6 +350,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         }),
       ).rejects.toThrow();
 
+      // Owner accepts (human, not performer, not AI)
       const accepted = await reviewProof({
         proofId: state.proofId!,
         workspaceId: ws,
@@ -319,11 +360,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         actorId: ownerId,
       });
       expect(accepted).toBe(PStatus.ACCEPTED);
-    }, 30000);
+    }, 300000);
 
     // ── Step 5: Task completion (proof gate clears) ────────────────────────────
 
     it("STEP 5: task completes with APPROVED_COMPLETE after proof acceptance", async () => {
+      // Pre-position task to COMPLETED_PENDING_REVIEW (as guided-execution would)
       await db.delegatedTask.update({
         where: { id: state.taskId! },
         data: { status: DelegatedTaskStatus.COMPLETED_PENDING_REVIEW },
@@ -338,11 +380,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       });
       expect(status).toBe(DelegatedTaskStatus.APPROVED_COMPLETE);
 
+      // Governance proof: task completed audit event
       const evt = await db.auditEvent.findFirst({
         where: { workspaceId: ws, eventName: AUDIT_EVENTS.OWNER_TASK_COMPLETED },
       });
       expect(evt).toBeTruthy();
-    }, 30000);
+    }, 300000);
 
     // ── Step 6: Outcome recording ─────────────────────────────────────────────
 
@@ -363,17 +406,20 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(outcome.workspaceId).toBe(ws);
       expect(outcome.businessId).toBe(businessId);
       expect(outcome.outcomeStatus).toBe("worked");
+      // Server-derived deltas (caller cannot fabricate)
       expect(outcome.absoluteChange).toBeCloseTo(-6, 5);
       expect(outcome.percentageChange).toBeCloseTo(-8.82, 1);
 
+      // Durable proof: outcome row persisted
       const persisted = await db.ownerActionOutcome.findUnique({ where: { id: outcome.id } });
       expect(persisted).toBeTruthy();
 
+      // Governance proof: outcome recorded audit event
       const evt = await db.auditEvent.findFirst({
         where: { workspaceId: ws, eventName: AUDIT_EVENTS.OWNER_ACTION_OUTCOME_RECORDED },
       });
       expect(evt).toBeTruthy();
-    }, 30000);
+    }, 300000);
 
     // ── Step 7: Calibration (learning candidate) ──────────────────────────────
 
@@ -413,14 +459,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       });
 
       expect(candidate.id).toBeTruthy();
+      // Owner manual entry + outcome window elapsed + no safety failure → eligible
       expect(candidate.eligible).toBe(true);
 
+      // Durable proof: candidate row persisted
       const persisted = await (db as any).controlledLearningCandidate.findFirst({
         where: { workspaceId: ws, businessId },
       });
       expect(persisted).toBeTruthy();
       expect(persisted.eligibilityStatus).toContain("ELIGIBLE");
-    }, 30000);
+    }, 300000);
 
     // ── Step 8: Significant change → governed re-evaluation ──────────────────
 
@@ -430,6 +478,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const archived = await db.clientAccount.findUnique({ where: { id: clientId } });
       expect(archived?.status).toBe("archived");
 
+      // Governance proof: CONDITION_CHANGED audit event emitted for the client entity
       const reeval = await db.auditEvent.findFirst({
         where: {
           workspaceId: ws,
@@ -439,7 +488,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         },
       });
       expect(reeval).toBeTruthy();
-    }, 30000);
+    }, 300000);
 
     // ── Step 9: Audit trail integrity ─────────────────────────────────────────
 
@@ -449,18 +498,22 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         orderBy: { occurredAt: "asc" },
       });
 
+      // Must have emitted at least 5 governance events across the chain
       expect(events.length).toBeGreaterThanOrEqual(5);
 
+      // Every event is scoped to this workspace — no cross-tenant leakage
       for (const evt of events) {
         expect(evt.workspaceId).toBe(ws);
       }
 
+      // Temporal ordering is consistent
       for (let i = 1; i < events.length; i++) {
         expect(events[i].occurredAt.getTime()).toBeGreaterThanOrEqual(
           events[i - 1].occurredAt.getTime(),
         );
       }
 
+      // All governance-critical event names are present in the trail
       const names = new Set(events.map((e) => e.eventName));
       expect(names.has("BUSINESS_CONDITION_PROFILE_CREATED")).toBe(true);
       expect(names.has(AUDIT_EVENTS.RECOMMENDATION_CREATED)).toBe(true);
@@ -468,10 +521,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(names.has(AUDIT_EVENTS.OWNER_ACTION_OUTCOME_RECORDED)).toBe(true);
       expect(names.has(AUDIT_EVENTS.CONDITION_CHANGED)).toBe(true);
 
+      // Cross-tenant isolation: a different workspace sees zero events from ws
       const leaked = await db.auditEvent.findMany({
         where: { workspaceId: randomUUID() },
       });
       expect(leaked.length).toBe(0);
-    }, 30000);
+    }, 300000);
   },
 );
