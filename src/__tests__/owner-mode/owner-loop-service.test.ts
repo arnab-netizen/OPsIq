@@ -9,7 +9,15 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
+vi.mock("@/lib/db", () => {
+  const tx = { ownerAttentionEvent: { create: vi.fn(async () => ({ id: "att-tx-1" })) } };
+  return {
+    db: { $transaction: vi.fn().mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx)) },
+    getDbInstance: vi.fn().mockResolvedValue({
+      $transaction: vi.fn().mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx)),
+    }),
+  };
+});
 const emitAuditEvent = vi.fn(async () => "audit-id");
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: (...a: unknown[]) => emitAuditEvent(...a) }));
 

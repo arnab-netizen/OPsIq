@@ -18,6 +18,7 @@
  */
 
 import { describe, it, expect, afterAll } from "vitest";
+import { generateKeyPairSync } from "crypto";
 import { execFileSync } from "child_process";
 import { mkdirSync, mkdtempSync, writeFileSync, rmSync, readFileSync } from "fs";
 import { join } from "path";
@@ -39,7 +40,10 @@ import { evaluateInvariantClosure } from "../../../scripts/lib/invariant-closure
 
 const root = join(__dirname, "..", "..", "..");
 const STAGE_7_ID = "factory-stage-7-closure";
-const SIGNING_KEY = "g1-test-signing-key-not-a-real-secret";
+const { privateKey: SIGNING_KEY } = generateKeyPairSync('ed25519', {
+  privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+  publicKeyEncoding: { type: 'spki', format: 'pem' },
+});
 const SUBJECT_SHA = "f129fb8633b38230c16fb44aed8f5f90c8f4b8a9";
 /** Owner decision D-12, 2026-08-07: the one commit Stage 7 evidence may describe. */
 const AUTHORIZED_SUBJECT_SHA = "036c526940f349d7d06e05635f29c064c78ba71b";

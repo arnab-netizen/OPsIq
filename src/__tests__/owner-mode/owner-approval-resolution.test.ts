@@ -10,7 +10,15 @@ const emitAuditEvent = vi.fn(async () => "audit-id");
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: (...a: unknown[]) => emitAuditEvent(...a) }));
 // workflow.ts top-level imports @/lib/db (the generated Prisma client). Mock it so the
 // module graph resolves without a generated client; all DB access here is DI-injected.
-vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
+vi.mock("@/lib/db", () => {
+  const tx = { ownerAttentionEvent: { create: vi.fn(async () => ({ id: "att-tx-1" })) } };
+  return {
+    db: { $transaction: vi.fn().mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx)) },
+    getDbInstance: vi.fn().mockResolvedValue({
+      $transaction: vi.fn().mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx)),
+    }),
+  };
+});
 
 import { resolveOwnerApproval } from "@/services/owner-mode/owner-approval-resolution.service";
 import { enforceApprovalRequirement } from "@/services/approval/workflow";
