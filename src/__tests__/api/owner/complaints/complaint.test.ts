@@ -54,6 +54,8 @@ vi.mock("@/lib/db", () => ({
       create: mockRecoveryCreate,
     },
   },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/infra/audit", () => ({

@@ -24,6 +24,8 @@ vi.mock("@/lib/db", () => ({
     $queryRaw: vi.fn(),
     rateLimitBucket: { delete: vi.fn() },
   },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 import { db } from "@/lib/db";

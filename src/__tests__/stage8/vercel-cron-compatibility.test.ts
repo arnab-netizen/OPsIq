@@ -36,6 +36,8 @@ vi.mock("@/infra/scheduler", () => ({
 
 vi.mock("@/lib/db", () => ({
   db: { alert: { findMany: alertFindMany } },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/services/alerts/alert-email-retry.service", () => ({

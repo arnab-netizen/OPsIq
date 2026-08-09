@@ -25,6 +25,8 @@ vi.mock("@/lib/db", () => ({
     alert: { findFirst: vi.fn(), update: vi.fn() },
     user: { findFirst: vi.fn() },
   },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/infra/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));

@@ -99,6 +99,8 @@ vi.mock("@/lib/db", () => ({
       findMany: vi.fn().mockResolvedValue([]),
     },
   },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/infra/audit", () => ({

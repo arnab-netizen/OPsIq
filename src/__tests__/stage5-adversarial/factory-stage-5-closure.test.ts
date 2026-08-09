@@ -56,6 +56,8 @@ vi.mock("@/lib/db", () => ({
     },
     $transaction: mockTransaction,
   },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/infra/audit", () => ({

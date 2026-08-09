@@ -86,15 +86,6 @@
     {
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
-      "file": "src/app/api/internal/login-diagnostic/route.ts",
-      "line": 147,
-      "severity": "error",
-      "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
-      "reason": "internal diagnostic route; server-side error string, not operator-rendered"
-    },
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/internal/owner-dashboard-runtime-proof/route.ts",
       "line": 121,
       "severity": "error",
@@ -271,6 +262,15 @@
       "severity": "error",
       "code": "`Transition not allowed: ${error instanceof Error ? error.message : String(error)}`",
       "reason": "outcome service internal validation/log message; not operator-rendered"
+    },
+    {
+      "type": "raw-error-message",
+      "category": "RAW ERROR MESSAGE",
+      "file": "src/services/startup-status.ts",
+      "line": 42,
+      "severity": "error",
+      "code": "const msg = err instanceof Error ? err.message : String(err);",
+      "reason": "service-layer server-side log/classification string; not operator-rendered"
     }
   ]
 }

@@ -53,6 +53,8 @@ vi.mock("@/lib/db", () => ({
       findFirst: vi.fn().mockResolvedValue(null),
     },
   },
+
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 const capturedDeclarations: Record<string, unknown>[] = [];

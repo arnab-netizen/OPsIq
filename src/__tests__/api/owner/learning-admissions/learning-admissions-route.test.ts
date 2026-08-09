@@ -29,7 +29,7 @@ vi.mock("@/services/controlled-learning-admission.service", () => ({
   listAdmissionsForWorkspace: mockListAdmissionsForWorkspace,
 }));
 
-vi.mock("@/lib/db", () => ({ db: {} }));
+vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
 vi.mock("@/lib/validation", () => ({ parseRequestBody: mockParseRequestBody }));
 vi.mock("@/lib/canonical-json-response", () => ({ canonicalJson: mockCanonicalJson }));
 
