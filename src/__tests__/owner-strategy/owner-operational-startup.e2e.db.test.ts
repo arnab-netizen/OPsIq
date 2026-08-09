@@ -150,10 +150,22 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db][e2e] Startup-mode governance spine — new business",
   () => {
     beforeAll(async () => {
-      // Single 700s ping covers Neon's full cold-start window (7-10 min).
-      // If global setup already warmed Neon this returns instantly.
+      // Pool-level retry loop: heartbeatPool() uses globalForPrisma.pgPool.query("SELECT 1")
+      // directly. Each AWS ETIMEDOUT (~135s) is caught and retried after 10s.
+      // pingDatabase held one 700s attempt (insufficient for Neon's 14+ min cold-start).
+      // The pool approach gives Neon many shorter trigger attempts to lock onto.
       let dbAvailable = false;
-      try { await pingDatabase(700000); dbAvailable = true; } catch { /* unreachable */ }
+      const warmupDeadline = Date.now() + 1800000; // 30 min — covers worst-case cold start
+      while (Date.now() < warmupDeadline) {
+        try {
+          await heartbeatPool();
+          dbAvailable = true;
+          break;
+        } catch {
+          const remaining = warmupDeadline - Date.now();
+          if (remaining > 10000) await new Promise(r => setTimeout(r, 10000));
+        }
+      }
       if (!dbAvailable) return;
 
       await db.user.create({
@@ -170,7 +182,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       neonKeepalive = setInterval(async () => {
         try { await heartbeatPool(); } catch { /* non-fatal */ }
       }, 4000);
-    }, 300000);
+    }, 2400000); // 40 min: 30 min warm-up + ~5 min seeding + safety margin
 
     afterAll(async () => {
       if (neonKeepalive) clearInterval(neonKeepalive);

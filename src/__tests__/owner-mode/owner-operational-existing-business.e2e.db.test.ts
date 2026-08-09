@@ -86,13 +86,26 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db][e2e] Owner-mode governance spine — existing business",
   () => {
     beforeAll(async () => {
-      // Pre-warm: single 700s ping covers Neon's full cold-start window (7-10 min).
-      // If global setup already warmed Neon this returns instantly (fast path).
-      // If Neon is cold-starting, the 700s timeout allows compute to finish starting.
-      // beforeAll timeout is 900s — 700s ping leaves ~200s for seeding.
+      // Warm up via pool-level retry. Neon cold-starts take 14+ minutes from fully idle;
+      // pingDatabase (temp client) timed out at 700s without retrying. heartbeatPool()
+      // uses the Prisma pg.Pool directly: each failed attempt (AWS ETIMEDOUT at ~135s)
+      // is caught and retried after 10s. Pool retries are more resilient than a single
+      // long-timeout client because pool reconnects are much shorter lived, so Neon's
+      // compute has more "trigger attempts" to lock onto. Once warm, the pool connection
+      // is reused for seeding — no cold-start gap between warm-up and first seed query.
       let dbAvailable = false;
-      try { await pingDatabase(700000); dbAvailable = true; } catch { /* unreachable */ }
-      if (!dbAvailable) return;  // DB unreachable — skip seeding; afterAll will no-op
+      const warmupDeadline = Date.now() + 1800000; // 30 min — covers worst-case cold start
+      while (Date.now() < warmupDeadline) {
+        try {
+          await heartbeatPool();
+          dbAvailable = true;
+          break;
+        } catch {
+          const remaining = warmupDeadline - Date.now();
+          if (remaining > 10000) await new Promise(r => setTimeout(r, 10000));
+        }
+      }
+      if (!dbAvailable) return;  // DB unreachable after 30 min — skip seeding; afterAll will no-op
 
       // Batch 1: seed records with no inter-dependencies in parallel
       await Promise.all([
@@ -167,7 +180,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       neonKeepalive = setInterval(async () => {
         try { await heartbeatPool(); } catch { /* non-fatal */ }
       }, 4000);
-    }, 900000);
+    }, 2400000); // 40 min: 30 min warm-up + ~5 min seeding + safety margin
 
     afterAll(async () => {
       if (neonKeepalive) clearInterval(neonKeepalive);
