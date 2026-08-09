@@ -86,25 +86,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db][e2e] Owner-mode governance spine — existing business",
   () => {
     beforeAll(async () => {
-      // Warm up via pool-level retry. Neon cold-starts take 14+ minutes from fully idle;
-      // pingDatabase (temp client) timed out at 700s without retrying. heartbeatPool()
-      // uses the Prisma pg.Pool directly: each failed attempt (AWS ETIMEDOUT at ~135s)
-      // is caught and retried after 10s. Pool retries are more resilient than a single
-      // long-timeout client because pool reconnects are much shorter lived, so Neon's
-      // compute has more "trigger attempts" to lock onto. Once warm, the pool connection
-      // is reused for seeding — no cold-start gap between warm-up and first seed query.
+      // pingDatabase(1800000): raw pg.Client warm-up with 30-min budget.
+      // Uses a temporary pg.Client per attempt (avoids pg.Pool slot issues when max=1
+      // and connectionTimeoutMillis=0 could deadlock on ETIMEDOUT). pingDatabase's inner
+      // retry loop fires every 500ms after each failure, giving Neon many wakeup triggers
+      // without holding pool slots. 1800s covers worst-case cold start (14+ min observed).
       let dbAvailable = false;
-      const warmupDeadline = Date.now() + 1800000; // 30 min — covers worst-case cold start
-      while (Date.now() < warmupDeadline) {
-        try {
-          await heartbeatPool();
-          dbAvailable = true;
-          break;
-        } catch {
-          const remaining = warmupDeadline - Date.now();
-          if (remaining > 10000) await new Promise(r => setTimeout(r, 10000));
-        }
-      }
+      try { await pingDatabase(1800000); dbAvailable = true; } catch { /* non-fatal */ }
       if (!dbAvailable) return;  // DB unreachable after 30 min — skip seeding; afterAll will no-op
 
       // Batch 1: seed records with no inter-dependencies in parallel

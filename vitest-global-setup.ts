@@ -87,13 +87,15 @@ async function setup() {
     }
 
     // Warm Neon compute before workers spawn.
-    // Single attempt with 700s timeout — covers Neon's full cold-start window (7-10 min).
-    // If Neon is already warm this returns instantly; if cold-starting it waits it out.
-    // Global setup has no strict time limit, so a long single attempt is the right approach.
-    // Non-fatal if it fails — workers handle cold-start via their own beforeAll timeout.
+    // 1800s (30 min) covers worst-case cold-start (14+ min observed in CI-like environments).
+    // 700s was insufficient — pingDatabase timed out before Neon became ready, so the global
+    // keepalive client was never created, causing workers to face a re-suspended Neon.
+    // With 1800s: pingDatabase succeeds when Neon is ready → keepalive client created →
+    // Neon stays warm for all workers. Non-fatal if it still fails — workers use their own
+    // pingDatabase(1800000) in beforeAll as a fallback.
     try {
       const { pingDatabase } = await import("./src/lib/db");
-      await pingDatabase(700000);
+      await pingDatabase(1800000);
       console.log("  ✓ Neon compute warmed for all workers");
       // Keep Neon warm throughout the suite: persistent TCP connection so Neon
       // never starts its auto-suspend timer between test worker queries.

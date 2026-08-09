@@ -39,22 +39,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db][e2e] Owner business simulations A-G — semantic quality gates",
   () => {
     beforeAll(async () => {
-      // Pool-level retry loop: heartbeatPool() uses globalForPrisma.pgPool.query("SELECT 1")
-      // directly. Each AWS ETIMEDOUT (~135s) is caught and retried after 10s.
-      // pingDatabase held one 700s attempt (insufficient for Neon's 14+ min cold-start).
-      // The pool approach gives Neon many shorter trigger attempts to lock onto.
+      // pingDatabase(1800000): raw pg.Client warm-up with 30-min budget.
+      // Uses a temporary pg.Client per attempt (avoids pg.Pool slot issues when max=1
+      // and connectionTimeoutMillis=0 could deadlock on ETIMEDOUT). pingDatabase's inner
+      // retry loop fires every 500ms after each failure, giving Neon many wakeup triggers
+      // without holding pool slots. 1800s covers worst-case cold start (14+ min observed).
       let dbAvailable = false;
-      const warmupDeadline = Date.now() + 1800000; // 30 min — covers worst-case cold start
-      while (Date.now() < warmupDeadline) {
-        try {
-          await heartbeatPool();
-          dbAvailable = true;
-          break;
-        } catch {
-          const remaining = warmupDeadline - Date.now();
-          if (remaining > 10000) await new Promise(r => setTimeout(r, 10000));
-        }
-      }
+      try { await pingDatabase(1800000); dbAvailable = true; } catch { /* non-fatal */ }
       if (!dbAvailable) return;
 
       await (prisma as any).user.create({
