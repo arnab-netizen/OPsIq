@@ -35,9 +35,16 @@ export interface WriteMemoryEntryInput {
  * Write a new version of an operating memory entry (append-only).
  * The previous version is superseded atomically within the same transaction.
  * Returns the new entry.
+ *
+ * Pass outerTx when called inside an existing db.$transaction to avoid nested
+ * transaction contention (P2028). Without it a new transaction is opened, which
+ * competes for a DB connection and fails when the pool is exhausted by the caller.
  */
-export async function writeMemoryEntry(input: WriteMemoryEntryInput) {
-  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+export async function writeMemoryEntry(
+  input: WriteMemoryEntryInput,
+  outerTx?: Prisma.TransactionClient,
+) {
+  const run = async (tx: Prisma.TransactionClient) => {
     // Find current (non-superseded) entry for this source, if any
     const existing = await tx.operatingMemoryEntry.findFirst({
       where: {
@@ -97,9 +104,12 @@ export async function writeMemoryEntry(input: WriteMemoryEntryInput) {
     );
 
     return newEntry;
-  // timeout raised: writeMemoryEntry is often called inside an outer $transaction;
-  // the default 5s/2s (timeout/maxWait) is too tight when the outer tx is long-running.
-  }, { timeout: 30000, maxWait: 10000 });
+  };
+
+  if (outerTx) {
+    return run(outerTx);
+  }
+  return db.$transaction(run, { timeout: 30000, maxWait: 10000 });
 }
 
 /** Backward-compatible alias for write. */
