@@ -745,7 +745,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     }, tx);
 
     return eventId;
-  }, { timeout: 30000 });
+  }, { timeout: 60000 });
 
     logger.info("Re-evaluation completed and persisted", {
       changeType: event.changeType,
