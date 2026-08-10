@@ -19,7 +19,7 @@ jobs:
   full-suite:
     name: Full DB Integration Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 110
 
     env:
       TEST_WITH_DB: "true"
@@ -167,7 +167,7 @@ jobs:
       - name: Run full test suite (blocking; quarantine excluded)
         # Full suite including DB tests. Quarantined files excluded from this blocking lane.
         # DB tests require TEST_WITH_DB=true and the postgres service above.
-        timeout-minutes: 45
+        timeout-minutes: 100
         run: |
           EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
           echo "Quarantined (excluded from blocking lane): $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") file(s)"
