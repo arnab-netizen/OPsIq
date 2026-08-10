@@ -20,6 +20,12 @@ export interface OwnerDbCaseIds {
    *  Use for scenarios that must test cash/capacity constraint dominance
    *  without compliance_block (rank 0) overriding the intended dominant constraint. */
   skipComplianceAndProof?: boolean;
+  /** Controls compliance item expiry when compliance IS seeded (skipComplianceAndProof falsy).
+   *  false → seeds a valid (non-expired) compliance item (+365 days), no proof seeded.
+   *  true/undefined (default) → seeds expired compliance (-5 days) + duplicateFlagged proof.
+   *  Use false for SIM-A/SIM-D where criticalDomainsRealProviderBacked must be true
+   *  but compliance_block must NOT be the dominant constraint. */
+  complianceExpired?: boolean;
   /** Override capacity to "growth-safe" state (bottleneckUtilization=0.6, growthSafe=true).
    *  Default seeds over-capacity (bottleneckUtilization=1.1, growthSafe=false).
    *  Use to isolate Finance→Growth cross-domain tests from capacity constraints. */
@@ -85,17 +91,27 @@ export async function seedOwnerDbCase(db: PrismaClient, ids: OwnerDbCaseIds): Pr
   });
 
   if (!ids.skipComplianceAndProof) {
+    // complianceExpired=false → valid (+365 days), no proof (no compliance_block risk flag)
+    // complianceExpired=true/undefined (default) → expired (-5 days), duplicateFlagged proof
+    const expiredMode = ids.complianceExpired !== false;
     await db.ownerComplianceItem.upsert({
       where: { id: rid(businessId, "cmp1") },
       update: {},
-      create: { id: rid(businessId, "cmp1"), workspaceId, businessId, kind: "trade_licence", name: "Trade licence", status: "active", expiresAt: new Date(now.getTime() - 5 * 86_400_000), createdByUserId: userId },
+      create: {
+        id: rid(businessId, "cmp1"), workspaceId, businessId, kind: "trade_licence",
+        name: "Trade licence", status: "active",
+        expiresAt: new Date(now.getTime() + (expiredMode ? -5 : 365) * 86_400_000),
+        createdByUserId: userId,
+      },
     });
 
-    await db.proof.upsert({
-      where: { id: rid(businessId, "prf1") },
-      update: {},
-      create: { id: rid(businessId, "prf1"), workspaceId, businessId, proofType: "delivery", status: "REQUIRED", duplicateFlagged: true },
-    });
+    if (expiredMode) {
+      await db.proof.upsert({
+        where: { id: rid(businessId, "prf1") },
+        update: {},
+        create: { id: rid(businessId, "prf1"), workspaceId, businessId, proofType: "delivery", status: "REQUIRED", duplicateFlagged: true },
+      });
+    }
   }
 
   await db.ownerWorkloadSnapshot.upsert({
@@ -133,7 +149,9 @@ export async function cleanupOwnerDbCase(db: PrismaClient, ids: OwnerDbCaseIds):
   await db.ownerStandingInstruction.deleteMany({ where: { id: rid(businessId, "si1") } });
   await db.ownerWorkloadSnapshot.deleteMany({ where: { id: rid(businessId, "wl1") } });
   if (!ids.skipComplianceAndProof) {
-    await db.proof.deleteMany({ where: { id: rid(businessId, "prf1") } });
+    if (ids.complianceExpired !== false) {
+      await db.proof.deleteMany({ where: { id: rid(businessId, "prf1") } });
+    }
     await db.ownerComplianceItem.deleteMany({ where: { id: rid(businessId, "cmp1") } });
   }
   await db.ownerCapacitySnapshot.deleteMany({ where: { id: rid(businessId, "cap1") } });

@@ -277,10 +277,11 @@ describe("[db][concurrency] Startup session concurrent operations", () => {
       ideas: [viableIdea],
     });
 
-    // Fire two concurrent updates without specifying expectedVersion — race on DB row version
+    // Fire two concurrent updates both claiming version 0 — application-layer optimistic lock
+    // ensures exactly one wins regardless of pg.Pool serialization (max=1 in test env).
     const results = await Promise.allSettled([
-      updateContextProfile(wsA, sessionId, actor, { racer: "A" }, "racer A"),
-      updateContextProfile(wsA, sessionId, actor, { racer: "B" }, "racer B"),
+      updateContextProfile(wsA, sessionId, actor, { racer: "A" }, "racer A", 0),
+      updateContextProfile(wsA, sessionId, actor, { racer: "B" }, "racer B", 0),
     ]);
 
     const succeeded = results.filter((r) => r.status === "fulfilled");
