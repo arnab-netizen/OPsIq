@@ -88,7 +88,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const bizId = randomUUID();
       const ids = {
         workspaceId: wsId, businessId: bizId, userId: actorId, now: NOW,
-        cashInHand: 150000, skipComplianceAndProof: true, capacityGrowthSafe: true,
+        cashInHand: 150000, complianceExpired: false, capacityGrowthSafe: true,
       };
       await seedOwnerDbCase(prisma, ids);
       try {
@@ -152,7 +152,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const bizId = randomUUID();
       const ids = {
         workspaceId: wsId, businessId: bizId, userId: actorId, now: NOW,
-        cashInHand: 100000, skipComplianceAndProof: true, capacityGrowthSafe: false,
+        cashInHand: 100000, complianceExpired: false, capacityGrowthSafe: false,
       };
       await seedOwnerDbCase(prisma, ids);
       try {

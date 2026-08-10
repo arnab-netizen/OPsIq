@@ -332,7 +332,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
       expect(res.ok).toBe(true);
       if (res.ok) {
-        expect(res.precheckOutcome).toBe(AiProofPrecheckOutcome.AI_PRECHECK_PASSED);
+        expect(res.precheckOutcome).toBe(AiProofPrecheckOutcome.PASS_PRELIMINARY);
         expect(res.status).toBe(PStatus.AI_PRECHECK_PASSED);
         // Store proof ID if returned
         if (res.proofId) state.proofId = res.proofId;

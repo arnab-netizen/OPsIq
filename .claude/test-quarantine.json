@@ -193,7 +193,7 @@
       "classification": "PRE_EXISTING_ON_MAIN / MOCK_CONTRACT_DRIFT",
       "reason": "All 9 tests call vi.spyOn(db.recommendation, 'findMany') but db.recommendation lacks findMany in the Prisma mock; Error: The property 'findMany' is not defined on the object. Mock contract has drifted from the Prisma model definition. Last modified 1383008f (predates A7.7 merge d5594f76); proven present on main before A7.7. Resolve by updating mock to match current Prisma schema.",
       "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    }
+    },
   ],
   "_remediation_note": "TEST-02: route-scanner + phase-i10-enforcement-scanner un-quarantined into the blocking lane after fixing the exemption registry (reassessment-scan token-auth exemption; scanners now consult the canonical PUBLIC_ROUTE_EXEMPTIONS). 0 unprotected/unwrapped routes remain."
 }
