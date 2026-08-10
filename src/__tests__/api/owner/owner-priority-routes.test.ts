@@ -137,7 +137,7 @@ describe("[priorities] GET /api/owner/priorities — handler", () => {
 
   it("returns service result in canonicalJson body with status 200", async () => {
     mocks.getOwnerCommandPriorities.mockResolvedValue(SAMPLE_PRIORITIES);
-    const res = await prioritiesGet(makeCtx(`https://x/api/owner/priorities`));
+    const res = await prioritiesGet(makeCtx(`https://x/api/owner/priorities?businessId=biz-55`));
     const body = getBody(res);
     expect(body).toEqual(SAMPLE_PRIORITIES);
     expect((res as CanonicalJsonResponse).status).toBe(200);
@@ -145,7 +145,7 @@ describe("[priorities] GET /api/owner/priorities — handler", () => {
 
   it("calls getOwnerCommandPriorities with verified workspaceId", async () => {
     mocks.getOwnerCommandPriorities.mockResolvedValue(SAMPLE_PRIORITIES);
-    await prioritiesGet(makeCtx(`https://x/api/owner/priorities`, "ws-SPECIFIC"));
+    await prioritiesGet(makeCtx(`https://x/api/owner/priorities?businessId=biz-55`, "ws-SPECIFIC"));
     const arg = mocks.getOwnerCommandPriorities.mock.calls[0][0];
     expect(arg.workspaceId).toBe("ws-SPECIFIC");
   });
@@ -157,17 +157,17 @@ describe("[priorities] GET /api/owner/priorities — handler", () => {
     expect(arg.businessId).toBe("biz-55");
   });
 
-  it("passes empty string businessId when not in query (default behaviour)", async () => {
-    mocks.getOwnerCommandPriorities.mockResolvedValue(SAMPLE_PRIORITIES);
-    await prioritiesGet(makeCtx(`https://x/api/owner/priorities`));
-    const arg = mocks.getOwnerCommandPriorities.mock.calls[0][0];
-    expect(arg.businessId).toBe("");
+  it("returns no-business 200 and does not call service when businessId absent", async () => {
+    const res = await prioritiesGet(makeCtx(`https://x/api/owner/priorities`));
+    expect((res as CanonicalJsonResponse).status).toBe(200);
+    expect(getBody(res)).toMatchObject({ found: false, reason: "no_business_configured" });
+    expect(mocks.getOwnerCommandPriorities).not.toHaveBeenCalled();
   });
 
   it("workspace isolation: verifiedWorkspaceId used, not any URL param", async () => {
     mocks.getOwnerCommandPriorities.mockResolvedValue(SAMPLE_PRIORITIES);
     await prioritiesGet(
-      makeCtx(`https://x/api/owner/priorities?workspaceId=ws-ATTACKER`, "ws-REAL")
+      makeCtx(`https://x/api/owner/priorities?workspaceId=ws-ATTACKER&businessId=biz-55`, "ws-REAL")
     );
     const arg = mocks.getOwnerCommandPriorities.mock.calls[0][0];
     expect(arg.workspaceId).toBe("ws-REAL");
@@ -176,8 +176,8 @@ describe("[priorities] GET /api/owner/priorities — handler", () => {
 
   it("workspace isolation: different workspaces receive correct scoping", async () => {
     mocks.getOwnerCommandPriorities.mockResolvedValue(SAMPLE_PRIORITIES);
-    await prioritiesGet(makeCtx(`https://x/api/owner/priorities`, "ws-ALICE"));
-    await prioritiesGet(makeCtx(`https://x/api/owner/priorities`, "ws-BOB"));
+    await prioritiesGet(makeCtx(`https://x/api/owner/priorities?businessId=biz-55`, "ws-ALICE"));
+    await prioritiesGet(makeCtx(`https://x/api/owner/priorities?businessId=biz-55`, "ws-BOB"));
     expect(mocks.getOwnerCommandPriorities.mock.calls[0][0].workspaceId).toBe("ws-ALICE");
     expect(mocks.getOwnerCommandPriorities.mock.calls[1][0].workspaceId).toBe("ws-BOB");
   });
@@ -259,10 +259,8 @@ describe("[action-plan] GET /api/owner/action-plan — handler", () => {
 
   it("returns no-business 200 and does not call service when businessId absent", async () => {
     const res = await actionPlanGet(makeCtx(`https://x/api/owner/action-plan`));
-    expect(getBody(res)).toEqual(
-      expect.objectContaining({ found: false, reason: "no_business_configured" })
-    );
     expect((res as CanonicalJsonResponse).status).toBe(200);
+    expect(getBody(res)).toMatchObject({ found: false, reason: "no_business_configured" });
     expect(mocks.getOwnerActionAssignment).not.toHaveBeenCalled();
   });
 

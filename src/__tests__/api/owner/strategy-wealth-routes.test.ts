@@ -357,7 +357,7 @@ describe("[whole-business-plan] GET /api/owner/whole-business-plan", () => {
 
   it("returns result in canonicalJson with status 200", async () => {
     mocks.getOwnerWholeBusinessPlan.mockResolvedValue(SAMPLE_WHOLE_PLAN);
-    const res = await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan`));
+    const res = await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan?businessId=biz-33`));
     expect(getBody(res)).toEqual(SAMPLE_WHOLE_PLAN);
     expect((res as CanonicalJsonResponse).status).toBe(200);
   });
@@ -365,7 +365,7 @@ describe("[whole-business-plan] GET /api/owner/whole-business-plan", () => {
   it("calls service with verified workspaceId", async () => {
     mocks.getOwnerWholeBusinessPlan.mockResolvedValue(SAMPLE_WHOLE_PLAN);
     await wholeBusinessPlanGet(
-      makeCtx(`https://x/api/owner/whole-business-plan`, "ws-SPECIFIC")
+      makeCtx(`https://x/api/owner/whole-business-plan?businessId=biz-33`, "ws-SPECIFIC")
     );
     const arg = mocks.getOwnerWholeBusinessPlan.mock.calls[0][0];
     expect(arg.workspaceId).toBe("ws-SPECIFIC");
@@ -380,23 +380,23 @@ describe("[whole-business-plan] GET /api/owner/whole-business-plan", () => {
     expect(arg.businessId).toBe("biz-33");
   });
 
-  it("passes empty string businessId when not in query", async () => {
-    mocks.getOwnerWholeBusinessPlan.mockResolvedValue(SAMPLE_WHOLE_PLAN);
-    await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan`));
-    const arg = mocks.getOwnerWholeBusinessPlan.mock.calls[0][0];
-    expect(arg.businessId).toBe("");
+  it("returns no-business 200 and does not call service when businessId absent", async () => {
+    const res = await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan`));
+    expect((res as CanonicalJsonResponse).status).toBe(200);
+    expect(getBody(res)).toMatchObject({ found: false, reason: "no_business_configured" });
+    expect(mocks.getOwnerWholeBusinessPlan).not.toHaveBeenCalled();
   });
 
   it("injects db into service call", async () => {
     mocks.getOwnerWholeBusinessPlan.mockResolvedValue(SAMPLE_WHOLE_PLAN);
-    await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan`));
+    await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan?businessId=biz-33`));
     const arg = mocks.getOwnerWholeBusinessPlan.mock.calls[0][0];
     expect(arg.db).toBeDefined();
   });
 
   it("injects now (a Date instance) into service call", async () => {
     mocks.getOwnerWholeBusinessPlan.mockResolvedValue(SAMPLE_WHOLE_PLAN);
-    await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan`));
+    await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan?businessId=biz-33`));
     const arg = mocks.getOwnerWholeBusinessPlan.mock.calls[0][0];
     expect(arg.now).toBeInstanceOf(Date);
   });
@@ -404,7 +404,7 @@ describe("[whole-business-plan] GET /api/owner/whole-business-plan", () => {
   it("workspace isolation: verifiedWorkspaceId used, not URL param", async () => {
     mocks.getOwnerWholeBusinessPlan.mockResolvedValue(SAMPLE_WHOLE_PLAN);
     await wholeBusinessPlanGet(
-      makeCtx(`https://x/api/owner/whole-business-plan?workspaceId=ws-ATTACKER`, "ws-REAL")
+      makeCtx(`https://x/api/owner/whole-business-plan?workspaceId=ws-ATTACKER&businessId=biz-33`, "ws-REAL")
     );
     const arg = mocks.getOwnerWholeBusinessPlan.mock.calls[0][0];
     expect(arg.workspaceId).toBe("ws-REAL");
@@ -413,8 +413,8 @@ describe("[whole-business-plan] GET /api/owner/whole-business-plan", () => {
 
   it("workspace isolation: different workspaces scoped correctly", async () => {
     mocks.getOwnerWholeBusinessPlan.mockResolvedValue(SAMPLE_WHOLE_PLAN);
-    await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan`, "ws-ALICE"));
-    await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan`, "ws-BOB"));
+    await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan?businessId=biz-33`, "ws-ALICE"));
+    await wholeBusinessPlanGet(makeCtx(`https://x/api/owner/whole-business-plan?businessId=biz-33`, "ws-BOB"));
     expect(mocks.getOwnerWholeBusinessPlan.mock.calls[0][0].workspaceId).toBe("ws-ALICE");
     expect(mocks.getOwnerWholeBusinessPlan.mock.calls[1][0].workspaceId).toBe("ws-BOB");
   });
