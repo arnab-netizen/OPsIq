@@ -109,7 +109,7 @@ export async function createStartupSession(input: CreateStartupSessionInput): Pr
       eventName: AUDIT_EVENTS.STARTUP_SESSION_CREATED,
       payload: { sessionId, status: "DRAFT", ideaCount: allIdeas.length },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return sessionId;
 }
@@ -296,7 +296,7 @@ export async function transitionSession(
         },
       }, tx);
     }
-  });
+  }, { timeout: 30000 });
 }
 
 // ─── Profile Versioning ───────────────────────────────────────────────────────
@@ -361,7 +361,7 @@ export async function updateContextProfile(
     }, tx);
 
     return { versionId, versionNumber: newVersion };
-  });
+  }, { timeout: 30000 });
 
   return result;
 }
@@ -404,7 +404,7 @@ export async function addIdea(
       eventName: AUDIT_EVENTS.STARTUP_IDEA_ADDED,
       payload: { sessionId, ideaId, name: concept.name },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return ideaId;
 }
@@ -469,7 +469,7 @@ export async function screenIdeaRecord(
         payload: { sessionId, ideaId, memoryType: "STARTUP_REJECTED_IDEA" },
       }, tx);
     }
-  });
+  }, { timeout: 30000 });
 
   return result;
 }
@@ -520,7 +520,7 @@ export async function generateAndPersistHypotheses(
       eventName: AUDIT_EVENTS.STARTUP_HYPOTHESIS_GENERATED,
       payload: { sessionId, ideaId, count: prioritized.length },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return hypothesisIds;
 }
@@ -582,7 +582,7 @@ export async function recordHypothesisResult(
       summary: `Hypothesis ${result}: ${resultSummary}`,
       data: { evaluation },
     });
-  });
+  }, { timeout: 30000 });
 
   // Wire staleness propagation on failure outcomes (outside transaction — read-only + memory write)
   if (result === "DISCONFIRMED" || result === "INCONCLUSIVE") {
@@ -662,7 +662,7 @@ export async function recordEvidenceItem(
       eventName: AUDIT_EVENTS.STARTUP_EVIDENCE_RECORDED,
       payload: { sessionId, evidenceId, evidenceType: input.evidenceType },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   // After persist: check conflicts among evidence for the same session (non-fatal — conflicts are surfaced, not blocking)
   const allEvidence = await db.startupEvidenceRecord.findMany({
@@ -730,7 +730,7 @@ export async function recordEvidenceItem(
             },
           }, tx);
         }
-      });
+      }, { timeout: 30000 });
     }
   }
 
@@ -803,7 +803,7 @@ export async function buildAndPersistEconomicModel(
       eventName: AUDIT_EVENTS.STARTUP_ECONOMIC_MODEL_BUILT,
       payload: { sessionId, ideaId, modelId, classification: result.classification, versionNumber: newVersion },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return modelId;
 }
@@ -859,7 +859,7 @@ export async function assessAndPersistReadiness(
       eventName: AUDIT_EVENTS.STARTUP_READINESS_ASSESSED,
       payload: { sessionId, ideaId, assessmentId, status: result.status },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return result;
 }
@@ -909,7 +909,7 @@ export async function createSystemRecommendation(
       eventName: AUDIT_EVENTS.STARTUP_SYSTEM_RECOMMENDATION_CREATED,
       payload: { sessionId, recId, recommendation: input.recommendation },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return recId;
 }
@@ -982,7 +982,7 @@ export async function buildAndPersistBusinessModel(
       eventName: AUDIT_EVENTS.STARTUP_BUSINESS_MODEL_BUILT,
       payload: { sessionId, ideaId, modelId, versionNumber: newVersion },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return modelId;
 }
@@ -1068,7 +1068,7 @@ export async function buildAndPersistValidationPlan(
       eventName: AUDIT_EVENTS.STARTUP_VALIDATION_PLAN_CREATED,
       payload: { sessionId, ideaId, planId, derivedFromHypotheses: activeHypotheses.length },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return planId;
 }
@@ -1134,7 +1134,7 @@ export async function buildAndPersistMarketSizing(
       eventName: AUDIT_EVENTS.STARTUP_MARKET_SIZING_BUILT,
       payload: { sessionId, ideaId, sizingId, versionNumber: newVersion, sizingStatus: input.sizingStatus ?? "ESTIMATED" },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return sizingId;
 }
@@ -1779,7 +1779,7 @@ export async function recordOwnerDecision(
       summary: `Owner decision: ${input.decisionType} for session ${sessionId}`,
       data: { decisionId, decisionType: input.decisionType, rationale: input.rationale },
     });
-  });
+  }, { timeout: 30000 });
 
   return decisionId;
 }
@@ -1835,7 +1835,7 @@ export async function buildAndPersistResearchPlan(
     }, tx);
 
     return planId;
-  });
+  }, { timeout: 30000 });
 
   return planId;
 }
@@ -1890,7 +1890,7 @@ export async function executeAutoResearch(
         payload: { sessionId, domain: domain.domain, status: result.status, acquisitionId: acq.id },
       }, tx);
       return acq.id;
-    });
+    }, { timeout: 30000 });
     results.push({ domain: domain.domain, acquisitionId: acqId, status: result.status, confidence: result.confidence });
   }
   return results;
@@ -1981,7 +1981,7 @@ export async function runIdeaArbitration(
       eventName: AUDIT_EVENTS.STARTUP_ARBITRATION_RUN,
       payload: { sessionId, arbitrationRecordId: recordId, recommendedIdeaId: result.recommendedIdeaId, ideaCount: ideasForArbitration.length },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return { ...result, arbitrationRecordId: recordId };
 }
@@ -2189,7 +2189,7 @@ export async function recordCandidateDecision(
       });
 
       await emitAuditEvent({ workspaceId, actorId, eventName: AUDIT_EVENTS.STARTUP_IDEA_ADDED, payload: { sessionId, ideaId, source: "GENERATION_BATCH", batchId, conceptIndex } }, tx);
-    });
+    }, { timeout: 30000 });
   } else {
     // REJECTED — persist with rationale to prevent rediscovery without new evidence
     await db.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -2217,7 +2217,7 @@ export async function recordCandidateDecision(
         summary: `Candidate rejected: ${concept.name ?? "unnamed"} — ${input.rejectionRationale ?? "no rationale"}`,
         data: { batchId, conceptIndex, conceptName: concept.name, rejectionRationale: input.rejectionRationale },
       });
-    });
+    }, { timeout: 30000 });
   }
 
   return { candidateId, ideaId: createdIdeaId };
@@ -2343,7 +2343,7 @@ export async function reviseIdea(
         newVersion: current.version + 1,
       },
     }, tx);
-  });
+  }, { timeout: 30000 });
 
   return newIdeaId;
 }

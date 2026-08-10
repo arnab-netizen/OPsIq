@@ -97,7 +97,9 @@ export async function writeMemoryEntry(input: WriteMemoryEntryInput) {
     );
 
     return newEntry;
-  });
+  // timeout raised: writeMemoryEntry is often called inside an outer $transaction;
+  // the default 5s/2s (timeout/maxWait) is too tight when the outer tx is long-running.
+  }, { timeout: 30000, maxWait: 10000 });
 }
 
 /** Backward-compatible alias for write. */
