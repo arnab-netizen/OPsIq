@@ -460,7 +460,7 @@ export async function screenIdeaRecord(
         key: `startup_rejected_idea:${ideaId}`,
         summary: `Idea "${idea.name}" rejected at screening: ${result.bindingConstraints.join("; ")}`,
         data: { screeningResult: result },
-      });
+      }, tx);
 
       await emitAuditEvent({
         workspaceId,
@@ -581,7 +581,7 @@ export async function recordHypothesisResult(
       key: evaluation.memoryKey,
       summary: `Hypothesis ${result}: ${resultSummary}`,
       data: { evaluation },
-    });
+    }, tx);
   }, { timeout: 30000 });
 
   // Wire staleness propagation on failure outcomes (outside transaction — read-only + memory write)
@@ -1778,7 +1778,7 @@ export async function recordOwnerDecision(
       key: `startup_owner_decision:${sessionId}`,
       summary: `Owner decision: ${input.decisionType} for session ${sessionId}`,
       data: { decisionId, decisionType: input.decisionType, rationale: input.rationale },
-    });
+    }, tx);
   }, { timeout: 30000 });
 
   return decisionId;
@@ -2216,7 +2216,7 @@ export async function recordCandidateDecision(
         key: `startup_rejected_candidate:${batchId}:${conceptIndex}`,
         summary: `Candidate rejected: ${concept.name ?? "unnamed"} — ${input.rejectionRationale ?? "no rationale"}`,
         data: { batchId, conceptIndex, conceptName: concept.name, rejectionRationale: input.rejectionRationale },
-      });
+      }, tx);
     }, { timeout: 30000 });
   }
 
