@@ -574,8 +574,44 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         recommendedStatus: "unknown" as const,
       };
 
-  // Persist results in a transaction. timeout raised from the 5000ms default: the
-  // transaction contains 10+ sequential DB ops + emitAuditEvent, which exceeds 5s in CI.
+  // Pre-compute re-ranking OUTSIDE the transaction: reRankRecommendationsInEngagement uses
+  // db directly (not tx) and does unbounded sequential work (N recs × 3 DB calls). Running it
+  // inside the transaction would race its timer without any ACID benefit — the re-ranking
+  // already has no transactional contract with the surrounding writes.
+  let reRankResult: { updated: number; recommendations: Array<{ id: string; oldPriority: string; newPriority: string; score: number }> } = { updated: 0, recommendations: [] };
+  if (targets.recommendationPriority && event.triggeredBy && event.engagementId) {
+    const engagementForWs = await db.engagement.findUnique({
+      where: { id: event.engagementId },
+      select: { workspaceId: true },
+    });
+    if (!engagementForWs) {
+      logger.warn("Engagement not found for re-ranking", { engagementId: event.engagementId });
+    } else {
+      const authContext: CanonicalAuthContext = {
+        verifiedActorId: event.triggeredBy,
+        verifiedActorType: "service",
+        verifiedActor: { id: event.triggeredBy, email: "system", name: "System", isActive: true },
+        verifiedWorkspaceId: engagementForWs.workspaceId,
+        verifiedCapabilities: new Set(),
+        traceId: "",
+        executionTrace: {},
+        verifiedSessionSnapshot: {
+          snapshotId: "",
+          snapshotTimestamp: new Date(),
+          snapshotHash: "",
+          actorId: event.triggeredBy,
+          workspaceId: engagementForWs.workspaceId,
+          capabilities: [],
+        },
+        correlationId: "",
+        requestId: "",
+      };
+      reRankResult = await reRankRecommendationsInEngagement(event.engagementId, authContext, engagementForWs.workspaceId);
+    }
+  }
+
+  // Persist results in a transaction. The re-ranking block was moved above; the remaining
+  // in-tx work is bounded (tx.* updates + one emitAuditEvent), so 30s is sufficient.
   const auditEventId = await db.$transaction(async (tx: any) => {
     const auditPayload: Record<string, unknown> = {
       changeType: event.changeType,
@@ -687,49 +723,17 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       }
     }
 
-    // 5. Dynamic re-ranking based on scoring metrics
-    if (targets.recommendationPriority && event.triggeredBy && event.engagementId) {
-      // Fetch workspaceId for this engagement
-      const engagementForWs = await db.engagement.findUnique({
-        where: { id: event.engagementId },
-        select: { workspaceId: true },
-      });
-      if (!engagementForWs) {
-        logger.warn("Engagement not found for re-ranking", { engagementId: event.engagementId });
-      } else {
-        const authContext: CanonicalAuthContext = {
-          verifiedActorId: event.triggeredBy,
-          verifiedActorType: "service",
-          verifiedActor: { id: event.triggeredBy, email: "system", name: "System", isActive: true },
-          verifiedWorkspaceId: engagementForWs.workspaceId,
-          verifiedCapabilities: new Set(),
-          traceId: "",
-          executionTrace: {},
-          verifiedSessionSnapshot: {
-            snapshotId: "",
-            snapshotTimestamp: new Date(),
-            snapshotHash: "",
-            actorId: event.triggeredBy,
-            workspaceId: engagementForWs.workspaceId,
-            capabilities: [],
-          },
-          correlationId: "",
-          requestId: "",
-        };
-        const reRankResult = await reRankRecommendationsInEngagement(event.engagementId, authContext, engagementForWs.workspaceId);
-
-        if (reRankResult.updated > 0) {
-          auditPayload.recommendationReRankingResult = {
-            count: reRankResult.updated,
-            recommendations: reRankResult.recommendations.map((r: any) => ({
-              id: r.id,
-              oldPriority: r.oldPriority,
-              newPriority: r.newPriority,
-              score: r.score,
-            })),
-          };
-        }
-      }
+    // 5. Record re-ranking result computed before the transaction opened
+    if (reRankResult.updated > 0) {
+      auditPayload.recommendationReRankingResult = {
+        count: reRankResult.updated,
+        recommendations: reRankResult.recommendations.map((r) => ({
+          id: r.id,
+          oldPriority: r.oldPriority,
+          newPriority: r.newPriority,
+          score: r.score,
+        })),
+      };
     }
 
     // Emit comprehensive audit event
@@ -745,7 +749,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     }, tx);
 
     return eventId;
-  }, { timeout: 120000 });
+  }, { timeout: 30000 });
 
     logger.info("Re-evaluation completed and persisted", {
       changeType: event.changeType,
