@@ -36,7 +36,7 @@ export interface EscalationTx {
   auditEvent: AuditCreateDelegate;
 }
 export interface EscalationDb extends EscalationTx {
-  $transaction<T>(fn: (tx: EscalationTx) => Promise<T>): Promise<T>;
+  $transaction<T>(fn: (tx: EscalationTx) => Promise<T>, opts?: { timeout?: number; maxWait?: number }): Promise<T>;
 }
 export interface EscalationDeps {
   db: EscalationDb;
@@ -123,7 +123,7 @@ export async function raiseBlocker(
         occurredAt: now,
       },
     });
-  });
+  }, { timeout: 30000 });
 
   return { escalationId: command.escalationId, route, dueAt };
 }
@@ -182,7 +182,7 @@ export async function acknowledgeEscalation(
       },
     });
     return true;
-  });
+  }, { timeout: 30000 });
 
   return { status: EscalationStatus.ACKNOWLEDGED, alreadyAcknowledged: !applied };
 }
@@ -244,7 +244,7 @@ export async function resolveEscalation(
         occurredAt: now,
       },
     });
-  });
+  }, { timeout: 30000 });
 
   return EscalationStatus.RESOLVED;
 }

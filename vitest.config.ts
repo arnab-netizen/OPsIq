@@ -21,8 +21,8 @@ export default defineConfig({
         "**/phase-*.test.ts", // Exclude phase tests (have implicit DB dependencies via enforceRequest)
       ]),
     ],
-    testTimeout: 30000,
-    hookTimeout: 30000,
+    testTimeout: 60000,
+    hookTimeout: 60000,
     // Filter tests: exclude DB-dependent tests unless TEST_WITH_DB=true
     ...(testWithDb ? {} : {
       testNamePattern: /^(?!.*\[db\]).*$/

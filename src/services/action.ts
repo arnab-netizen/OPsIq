@@ -139,7 +139,7 @@ export async function createAction(
           }, tx);
 
           return action;
-        });
+        }, { timeout: 30000 });
       },
       input,
       actorId
