@@ -1,5 +1,19 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { MonitoringService } from "@/services/monitoring/monitoring.service";
+import * as migrationCheck from "@/services/monitoring/migration-check";
+
+// checkMigrationReadiness is tested in d4-migration-check.test.ts.
+// Here we stub it so MonitoringService.checkStartup() behaves predictably
+// without a real database or filesystem.
+vi.mock("@/services/monitoring/migration-check", () => ({
+  checkMigrationReadiness: vi.fn().mockResolvedValue({
+    ready: true,
+    totalCommitted: 10,
+    applied: 10,
+    pending: 0,
+    failed: 0,
+  }),
+}));
 
 /**
  * D4 PRIORITY 4: MONITORING BACKBONE PROOFS
@@ -45,16 +59,20 @@ describe("D4: Monitoring Backbone - Local Metrics Collection", () => {
       expect(result.is_ready).toBe(true);
     });
 
-    it("should fail if database not healthy", async () => {
-      const badDb = {
-        $queryRawUnsafe: async () => {
-          throw new Error("Database connection failed");
-        },
-      };
-      const service = new MonitoringService(badDb);
-      const result = await service.checkStartup();
+    it("should fail if migration check reports not ready", async () => {
+      // Simulate a DB error inside checkMigrationReadiness
+      vi.mocked(migrationCheck.checkMigrationReadiness).mockResolvedValueOnce({
+        ready: false,
+        totalCommitted: 10,
+        applied: 5,
+        pending: 5,
+        failed: 0,
+        error: "Database connection failed",
+      });
 
-      // ASSERTION: Startup fails when database unavailable
+      const result = await monitoringService.checkStartup();
+
+      // ASSERTION: Startup fails when migrations are not ready
       expect(result.is_ready).toBe(false);
       expect(result.database_migrated).toBe(false);
     });
