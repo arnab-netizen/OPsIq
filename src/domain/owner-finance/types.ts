@@ -52,6 +52,12 @@ export interface FinancialSnapshotInput {
   loanEmiDebtPayments?: number;
   totalDebtOutstanding?: number;
   cashOnHand?: number;
+  /**
+   * Bank balance from the latest compatible cashflow snapshot — enriched by the service layer
+   * before calling the engine. Never persisted on the finance snapshot itself; absent when no
+   * compatible cashflow snapshot exists (fail-closed, not zero).
+   */
+  bankBalance?: number;
   receivables?: number;
   receivablesOverdue?: number;
   payables?: number;

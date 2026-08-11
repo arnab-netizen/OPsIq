@@ -15,6 +15,7 @@ import { getBusiness } from "@/services/founder-recovery/business.service";
 import { diagnoseFinanceSnapshot } from "@/domain/owner-finance/diagnosis";
 import { planFinanceActionsFromDiagnosis } from "@/domain/owner-finance/actions";
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
+import { mapBusinessTypeToFinanceIndustryTemplate } from "@/domain/owner-finance/thresholds";
 import { getFinancialSnapshot, rowToFinanceInput } from "./snapshot.service";
 
 export async function runFinanceDiagnosis(
@@ -23,13 +24,40 @@ export async function runFinanceDiagnosis(
   actorId: string,
   workspaceId: string
 ) {
-  await getBusiness(businessId, workspaceId);
+  const business = await getBusiness(businessId, workspaceId);
   const snapshotRow = await getFinancialSnapshot(snapshotId, workspaceId);
   if (snapshotRow.businessId !== businessId) {
     throw new NotFoundError("OwnerFinancialSnapshot", snapshotId);
   }
 
+  // Fetch latest cashflow snapshot (workspace+business scoped) for bank-balance enrichment.
+  const cashflowRow = await db.ownerCashflowSnapshot.findFirst({
+    where: { workspaceId, businessId },
+    orderBy: { periodEnd: "desc" },
+    select: { bankBalance: true, periodEnd: true },
+  });
+
   const input = rowToFinanceInput(snapshotRow);
+
+  // DEFECT 1: Enrich engine input with bank balance from a compatible cashflow snapshot.
+  // Compatibility: cashflow periodEnd within 45 days of finance snapshot periodEnd.
+  // Fail-closed: absent/stale/incompatible cashflow → bankBalance stays undefined (not zero).
+  if (cashflowRow?.bankBalance != null && Number.isFinite(cashflowRow.bankBalance)) {
+    const snapshotEnd = snapshotRow.periodEnd instanceof Date ? snapshotRow.periodEnd : new Date(snapshotRow.periodEnd as string);
+    const cfEnd = cashflowRow.periodEnd instanceof Date ? cashflowRow.periodEnd : new Date(cashflowRow.periodEnd as string);
+    const ageDays = Math.abs(snapshotEnd.getTime() - cfEnd.getTime()) / 86_400_000;
+    if (ageDays <= 45) {
+      input.bankBalance = cashflowRow.bankBalance;
+    }
+  }
+
+  // DEFECT 2: When the snapshot has no industryTemplate, resolve one from the canonical
+  // business profile (precedence: explicit snapshot override > business-type mapping > generic).
+  if (!input.industryTemplate) {
+    const mapped = mapBusinessTypeToFinanceIndustryTemplate(business.businessType);
+    if (mapped) input.industryTemplate = mapped;
+  }
+
   const diagnosis = diagnoseFinanceSnapshot(input);
   const plan = planFinanceActionsFromDiagnosis(diagnosis);
   const confidence = calculateDataConfidence(input);

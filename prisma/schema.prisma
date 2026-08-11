@@ -936,21 +936,21 @@ model Risk {
 }
 
 model ScheduledTask {
-  id              String    @id @db.Uuid
-  taskName        String    @map("task_name")
-  payload         Json?
-  status          String    @default("pending")
-  attempts        Int       @default(0)
-  maxAttempts     Int       @default(3) @map("max_attempts")
-  lastError       String?   @map("last_error")
-  scheduledFor    DateTime  @map("scheduled_for")
-  startedAt       DateTime? @map("started_at")
-  completedAt     DateTime? @map("completed_at")
-  leaseExpiresAt  DateTime? @map("lease_expires_at")
-  idempotencyKey  String?   @unique @map("idempotency_key")
-  workspaceId     String?   @map("workspace_id") @db.Uuid
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id             String    @id @db.Uuid
+  taskName       String    @map("task_name")
+  payload        Json?
+  status         String    @default("pending")
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3) @map("max_attempts")
+  lastError      String?   @map("last_error")
+  scheduledFor   DateTime  @map("scheduled_for")
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  leaseExpiresAt DateTime? @map("lease_expires_at")
+  idempotencyKey String?   @unique @map("idempotency_key")
+  workspaceId    String?   @map("workspace_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   @@index([status, scheduledFor])
   @@index([taskName])
@@ -1602,31 +1602,31 @@ enum EmailDeliveryStatus {
 }
 
 model Alert {
-  id                   String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId          String              @map("workspace_id") @db.Uuid
-  userId               String              @map("user_id") @db.Uuid
-  type                 String
-  channel              String              @default("in_app")
-  message              String
-  entityType           String?             @map("entity_type")
-  entityId             String?             @map("entity_id") @db.Uuid
-  severity             String              @default("medium")
-  idempotencyKey       String?             @map("idempotency_key")
-  isRead               Boolean             @default(false) @map("is_read")
-  readAt               DateTime?           @map("read_at")
-  resolvedAt           DateTime?           @map("resolved_at")
-  emailSentAt          DateTime?           @map("email_sent_at")
-  emailError           String?             @map("email_error")
-  resendMessageId      String?             @map("resend_message_id")
-  emailDeliveryStatus  EmailDeliveryStatus @default(PENDING) @map("email_delivery_status")
-  emailClaimedAt       DateTime?           @map("email_claimed_at")
-  emailClaimExpiresAt  DateTime?           @map("email_claim_expires_at")
-  emailLastAttemptAt   DateTime?           @map("email_last_attempt_at")
-  emailAttemptCount    Int                 @default(0) @map("email_attempt_count")
-  createdAt            DateTime            @default(now()) @map("created_at")
-  updatedAt            DateTime            @updatedAt @map("updated_at")
-  workspace            Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String              @map("workspace_id") @db.Uuid
+  userId              String              @map("user_id") @db.Uuid
+  type                String
+  channel             String              @default("in_app")
+  message             String
+  entityType          String?             @map("entity_type")
+  entityId            String?             @map("entity_id") @db.Uuid
+  severity            String              @default("medium")
+  idempotencyKey      String?             @map("idempotency_key")
+  isRead              Boolean             @default(false) @map("is_read")
+  readAt              DateTime?           @map("read_at")
+  resolvedAt          DateTime?           @map("resolved_at")
+  emailSentAt         DateTime?           @map("email_sent_at")
+  emailError          String?             @map("email_error")
+  resendMessageId     String?             @map("resend_message_id")
+  emailDeliveryStatus EmailDeliveryStatus @default(PENDING) @map("email_delivery_status")
+  emailClaimedAt      DateTime?           @map("email_claimed_at")
+  emailClaimExpiresAt DateTime?           @map("email_claim_expires_at")
+  emailLastAttemptAt  DateTime?           @map("email_last_attempt_at")
+  emailAttemptCount   Int                 @default(0) @map("email_attempt_count")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, idempotencyKey], map: "alert_workspace_idempotency_key")
   @@index([workspaceId, userId, isRead])
@@ -2660,45 +2660,46 @@ model RecoveryVerification {
 // Reuses OwnerBusiness; does not mutate any recovery_* or owner_metric_snapshots.
 
 model OwnerFinancialSnapshot {
-  id                  String              @id @db.Uuid
-  workspaceId         String              @map("workspace_id") @db.Uuid
-  businessId          String              @map("business_id") @db.Uuid
-  periodStart         DateTime            @map("period_start")
-  periodEnd           DateTime            @map("period_end")
-  currency            String
-  businessModelType   String?             @map("business_model_type")
-  industryTemplate    String?             @map("industry_template")
-  revenue             Float?
-  costOfGoods         Float?              @map("cost_of_goods")
-  fixedCosts          Float?              @map("fixed_costs")
-  variableCosts       Float?              @map("variable_costs")
-  rent                Float?
-  payroll             Float?
-  utilities           Float?
-  deliveryCost        Float?              @map("delivery_cost")
-  marketingSpend      Float?              @map("marketing_spend")
-  discountAmount      Float?              @map("discount_amount")
-  refundReworkCost    Float?              @map("refund_rework_cost")
-  debtPayments        Float?              @map("debt_payments")
-  cashOnHand          Float?              @map("cash_on_hand")
-  receivables         Float?
-  overdueReceivables  Float?              @map("overdue_receivables")
-  payables            Float?
-  overduePayables     Float?              @map("overdue_payables")
-  ownerWithdrawals    Float?              @map("owner_withdrawals")
-  inventoryCashLock   Float?              @map("inventory_cash_lock")
-  orderCount          Float?              @map("order_count")
-  customerCount       Float?              @map("customer_count")
-  repeatCustomerCount Float?              @map("repeat_customer_count")
-  b2bRevenue          Float?              @map("b2b_revenue")
-  b2cRevenue          Float?              @map("b2c_revenue")
-  notes               String?
-  dataConfidenceScore Float               @map("data_confidence_score")
-  missingCriticalData Json                @map("missing_critical_data")
-  createdAt           DateTime            @default(now()) @map("created_at")
-  updatedAt           DateTime            @updatedAt @map("updated_at")
-  business            OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  cycles              OwnerFinanceCycle[]
+  id                   String              @id @db.Uuid
+  workspaceId          String              @map("workspace_id") @db.Uuid
+  businessId           String              @map("business_id") @db.Uuid
+  periodStart          DateTime            @map("period_start")
+  periodEnd            DateTime            @map("period_end")
+  currency             String
+  businessModelType    String?             @map("business_model_type")
+  industryTemplate     String?             @map("industry_template")
+  revenue              Float?
+  costOfGoods          Float?              @map("cost_of_goods")
+  fixedCosts           Float?              @map("fixed_costs")
+  variableCosts        Float?              @map("variable_costs")
+  rent                 Float?
+  payroll              Float?
+  utilities            Float?
+  deliveryCost         Float?              @map("delivery_cost")
+  marketingSpend       Float?              @map("marketing_spend")
+  discountAmount       Float?              @map("discount_amount")
+  refundReworkCost     Float?              @map("refund_rework_cost")
+  debtPayments         Float?              @map("debt_payments")
+  totalDebtOutstanding Float?              @map("total_debt_outstanding")
+  cashOnHand           Float?              @map("cash_on_hand")
+  receivables          Float?
+  overdueReceivables   Float?              @map("overdue_receivables")
+  payables             Float?
+  overduePayables      Float?              @map("overdue_payables")
+  ownerWithdrawals     Float?              @map("owner_withdrawals")
+  inventoryCashLock    Float?              @map("inventory_cash_lock")
+  orderCount           Float?              @map("order_count")
+  customerCount        Float?              @map("customer_count")
+  repeatCustomerCount  Float?              @map("repeat_customer_count")
+  b2bRevenue           Float?              @map("b2b_revenue")
+  b2cRevenue           Float?              @map("b2c_revenue")
+  notes                String?
+  dataConfidenceScore  Float               @map("data_confidence_score")
+  missingCriticalData  Json                @map("missing_critical_data")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  business             OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  cycles               OwnerFinanceCycle[]
 
   @@unique([businessId, periodStart, periodEnd])
   @@index([workspaceId])
@@ -6238,26 +6239,26 @@ model OwnerArbitrationOverride {
 /// Workspace-scoped. SLA is enforced by severity. Business condition re-evaluation is
 /// triggered on resolution.
 model CustomerComplaint {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId         String    @map("workspace_id") @db.Uuid
-  idempotencyKey      String    @map("idempotency_key") // caller-supplied dedup key
-  status              String    @default("OPEN")
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  idempotencyKey       String    @map("idempotency_key") // caller-supplied dedup key
+  status               String    @default("OPEN")
   // OPEN | TRIAGED | RECOVERING | RESOLVED | CLOSED | REOPENED
-  title               String
-  description         String    @db.Text
-  channel             String    @default("DIRECT") // DIRECT | REFERRAL | ONLINE | PHONE | EMAIL
-  severity            String?   // LOW | MEDIUM | HIGH | CRITICAL — set during triage
-  slaDueAt            DateTime? @map("sla_due_at") // computed from severity at triage time
-  slaBreached         Boolean   @default(false) @map("sla_breach")
-  triageNotes         String?   @map("triage_notes") @db.Text // internal only; excluded from public DTO
-  resolutionSummary   String?   @map("resolution_summary") @db.Text
-  resolutionEvidenceId String?  @map("resolution_evidence_id") @db.Uuid
-  businessId          String?   @map("business_id") @db.Uuid
-  reportedBy          String?   @map("reported_by") // customer name / identifier (not a user FK)
-  createdBy           String    @map("created_by") @db.Uuid // workspace actor
-  updatedBy           String?   @map("updated_by") @db.Uuid
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  title                String
+  description          String    @db.Text
+  channel              String    @default("DIRECT") // DIRECT | REFERRAL | ONLINE | PHONE | EMAIL
+  severity             String? // LOW | MEDIUM | HIGH | CRITICAL — set during triage
+  slaDueAt             DateTime? @map("sla_due_at") // computed from severity at triage time
+  slaBreached          Boolean   @default(false) @map("sla_breach")
+  triageNotes          String?   @map("triage_notes") @db.Text // internal only; excluded from public DTO
+  resolutionSummary    String?   @map("resolution_summary") @db.Text
+  resolutionEvidenceId String?   @map("resolution_evidence_id") @db.Uuid
+  businessId           String?   @map("business_id") @db.Uuid
+  reportedBy           String?   @map("reported_by") // customer name / identifier (not a user FK)
+  createdBy            String    @map("created_by") @db.Uuid // workspace actor
+  updatedBy            String?   @map("updated_by") @db.Uuid
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   recoveryActions ComplaintRecoveryAction[]
 
@@ -6272,17 +6273,17 @@ model CustomerComplaint {
 
 /// Recovery action linked to a complaint. Each action tracks its own completion state.
 model ComplaintRecoveryAction {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId   String    @map("workspace_id") @db.Uuid
-  complaintId   String    @map("complaint_id") @db.Uuid
-  description   String    @db.Text
-  assignedTo    String?   @map("assigned_to") // role label or user id
-  dueAt         DateTime? @map("due_at")
-  completedAt   DateTime? @map("completed_at")
-  evidenceNote  String?   @map("evidence_note") @db.Text
-  createdBy     String    @map("created_by") @db.Uuid
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId  String    @map("workspace_id") @db.Uuid
+  complaintId  String    @map("complaint_id") @db.Uuid
+  description  String    @db.Text
+  assignedTo   String?   @map("assigned_to") // role label or user id
+  dueAt        DateTime? @map("due_at")
+  completedAt  DateTime? @map("completed_at")
+  evidenceNote String?   @map("evidence_note") @db.Text
+  createdBy    String    @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   complaint CustomerComplaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
 
@@ -6340,7 +6341,7 @@ model OwnerApprovalRequest {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  evidences        OwnerApprovalEvidence[]
+  evidences OwnerApprovalEvidence[]
 
   @@unique([workspaceId, idempotencyKey], map: "owner_approval_requests_ws_idem")
   @@index([workspaceId, status])
@@ -6360,7 +6361,7 @@ model OwnerApprovalEvidence {
   submittedBy      String   @map("submitted_by") @db.Uuid
   createdAt        DateTime @default(now()) @map("created_at")
 
-  approval         OwnerApprovalRequest @relation(fields: [approvalId], references: [id])
+  approval OwnerApprovalRequest @relation(fields: [approvalId], references: [id])
 
   @@index([workspaceId, approvalId])
   @@map("owner_approval_evidences")
@@ -6368,29 +6369,29 @@ model OwnerApprovalEvidence {
 
 // Bundle 3.8 — Owner Onboarding and Archetype Seeding
 model OwnerOnboarding {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId         String    @unique @map("workspace_id") @db.Uuid
-  businessId          String    @map("business_id") @db.Uuid
-  ownerId             String    @map("owner_id") @db.Uuid
-  status              String    @default("IN_PROGRESS")
-  businessName        String    @map("business_name")
-  businessType        String    @map("business_type")
-  revenueRange        String    @map("revenue_range")
-  revenueTrend        String    @map("revenue_trend")
-  cashRunwayWeeks     Int?      @map("cash_runway_weeks")
-  profitability       String    @map("profitability")
-  ownerHoursPerWeek   Int?      @map("owner_hours_per_week")
-  teamSize            Int?      @map("team_size")
-  archetype           String?
-  archetypeScore      Float?    @map("archetype_score")
-  initialActionQueue  Json?     @map("initial_action_queue")
-  completionKey       String?   @map("completion_key")
-  completedAt         DateTime? @map("completed_at")
-  reOnboardingReason  String?   @map("re_onboarding_reason") @db.Text
-  createdBy           String    @map("created_by") @db.Uuid
-  updatedBy           String?   @map("updated_by") @db.Uuid
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId        String    @unique @map("workspace_id") @db.Uuid
+  businessId         String    @map("business_id") @db.Uuid
+  ownerId            String    @map("owner_id") @db.Uuid
+  status             String    @default("IN_PROGRESS")
+  businessName       String    @map("business_name")
+  businessType       String    @map("business_type")
+  revenueRange       String    @map("revenue_range")
+  revenueTrend       String    @map("revenue_trend")
+  cashRunwayWeeks    Int?      @map("cash_runway_weeks")
+  profitability      String    @map("profitability")
+  ownerHoursPerWeek  Int?      @map("owner_hours_per_week")
+  teamSize           Int?      @map("team_size")
+  archetype          String?
+  archetypeScore     Float?    @map("archetype_score")
+  initialActionQueue Json?     @map("initial_action_queue")
+  completionKey      String?   @map("completion_key")
+  completedAt        DateTime? @map("completed_at")
+  reOnboardingReason String?   @map("re_onboarding_reason") @db.Text
+  createdBy          String    @map("created_by") @db.Uuid
+  updatedBy          String?   @map("updated_by") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   @@index([workspaceId, status])
   @@map("owner_onboarding")
@@ -6438,46 +6439,46 @@ model OwnerSopNonComplianceAlert {
 // One BCP per evaluation; isCurrent=true marks the live snapshot.
 // inputFactsJson is intentionally excluded from all public DTOs.
 model OwnerBusinessConditionProfile {
-  id                         String    @id @default(cuid())
-  workspaceId                String    @map("workspace_id") @db.Uuid
-  businessId                 String    @map("business_id")
-  version                    Int       @default(1)
-  isCurrent                  Boolean   @default(true) @map("is_current")
+  id          String  @id @default(cuid())
+  workspaceId String  @map("workspace_id") @db.Uuid
+  businessId  String  @map("business_id")
+  version     Int     @default(1)
+  isCurrent   Boolean @default(true) @map("is_current")
 
   // Business condition (one of 5 condition codes)
-  conditionCode              String    @map("condition_code")
-  conditionSeverity          String    @map("condition_severity")
+  conditionCode     String @map("condition_code")
+  conditionSeverity String @map("condition_severity")
 
   // Four OpsIQ dimensions
-  consultingLifecycleStage   String    @map("consulting_lifecycle_stage")
-  businessConditionScore     Int       @map("business_condition_score")
-  interventionMode           String    @map("intervention_mode")
-  interventionPhase          String    @map("intervention_phase")
-  humanExecutionRisk         String    @map("human_execution_risk")
+  consultingLifecycleStage String @map("consulting_lifecycle_stage")
+  businessConditionScore   Int    @map("business_condition_score")
+  interventionMode         String @map("intervention_mode")
+  interventionPhase        String @map("intervention_phase")
+  humanExecutionRisk       String @map("human_execution_risk")
 
   // Per-domain health scores (0-100)
-  financialHealthScore       Int       @default(50) @map("financial_health_score")
-  operationalHealthScore     Int       @default(50) @map("operational_health_score")
-  salesHealthScore           Int       @default(50) @map("sales_health_score")
-  sopHealthScore             Int       @default(50) @map("sop_health_score")
+  financialHealthScore   Int @default(50) @map("financial_health_score")
+  operationalHealthScore Int @default(50) @map("operational_health_score")
+  salesHealthScore       Int @default(50) @map("sales_health_score")
+  sopHealthScore         Int @default(50) @map("sop_health_score")
 
   // Derived guidance
-  recommendationPriority     String    @map("recommendation_priority")
-  reviewCadence              String    @map("review_cadence")
-  healthStatus               String    @map("health_status")
+  recommendationPriority String @map("recommendation_priority")
+  reviewCadence          String @map("review_cadence")
+  healthStatus           String @map("health_status")
 
   // Trigger context
-  triggerType                String    @map("trigger_type")
-  triggerDescription         String    @map("trigger_description") @db.Text
-  triggeredBy                String    @map("triggered_by")
+  triggerType        String @map("trigger_type")
+  triggerDescription String @map("trigger_description") @db.Text
+  triggeredBy        String @map("triggered_by")
 
   // Internal only — scoring inputs excluded from all public DTOs
-  inputFactsJson             String    @map("input_facts_json") @db.Text
+  inputFactsJson String @map("input_facts_json") @db.Text
 
   // Optional link to the reassessment event that caused this re-evaluation
-  sourceReassessmentEventId  String?   @map("source_reassessment_event_id")
+  sourceReassessmentEventId String? @map("source_reassessment_event_id")
 
-  createdAt                  DateTime  @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([workspaceId])
   @@index([businessId])
@@ -6491,19 +6492,19 @@ model OwnerBusinessConditionProfile {
 // Token values are never stored here — they are in OwnerConnectorToken (separate model).
 
 model OwnerConnector {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId         String    @map("workspace_id") @db.Uuid
-  businessId          String?   @map("business_id")
-  provider            String    @map("provider") // ConnectorProvider enum value: "HUBSPOT" | "QUICKBOOKS" | etc.
-  status              String    @map("status") // ConnectorStatus: "ACTIVE" | "DISCONNECTED" | "EXPIRED" | "REFRESH_FAILED" | "PENDING_AUTH"
-  connectedAt         DateTime  @default(now()) @map("connected_at")
-  lastSyncAt          DateTime? @map("last_sync_at")
-  lastSyncRecords     Int?      @map("last_sync_records")
-  tokenExpiresAt      DateTime? @map("token_expires_at")
-  syncFailureMessage  String?   @map("sync_failure_message")
-  registeredBy        String    @map("registered_by") // actorId — internal only
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId        String    @map("workspace_id") @db.Uuid
+  businessId         String?   @map("business_id")
+  provider           String    @map("provider") // ConnectorProvider enum value: "HUBSPOT" | "QUICKBOOKS" | etc.
+  status             String    @map("status") // ConnectorStatus: "ACTIVE" | "DISCONNECTED" | "EXPIRED" | "REFRESH_FAILED" | "PENDING_AUTH"
+  connectedAt        DateTime  @default(now()) @map("connected_at")
+  lastSyncAt         DateTime? @map("last_sync_at")
+  lastSyncRecords    Int?      @map("last_sync_records")
+  tokenExpiresAt     DateTime? @map("token_expires_at")
+  syncFailureMessage String?   @map("sync_failure_message")
+  registeredBy       String    @map("registered_by") // actorId — internal only
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   token OwnerConnectorToken?
 
@@ -6517,13 +6518,13 @@ model OwnerConnector {
 // Token storage is separate — tokens are never joined into public-facing queries.
 // encryptedAccessToken and encryptedRefreshToken use AES-256-GCM ciphertext format.
 model OwnerConnectorToken {
-  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  connectorId           String    @unique @map("connector_id") @db.Uuid
-  encryptedAccessToken  String    @map("encrypted_access_token")
-  encryptedRefreshToken String?   @map("encrypted_refresh_token")
-  tokenType             String    @default("Bearer") @map("token_type")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  connectorId           String   @unique @map("connector_id") @db.Uuid
+  encryptedAccessToken  String   @map("encrypted_access_token")
+  encryptedRefreshToken String?  @map("encrypted_refresh_token")
+  tokenType             String   @default("Bearer") @map("token_type")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   connector OwnerConnector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
 
@@ -6579,21 +6580,21 @@ model MarketingCampaign {
 
 // M014 — Stock item catalog with reorder point tracking
 model StockItem {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId   String   @map("workspace_id") @db.Uuid
-  businessId    String   @map("business_id") @db.Uuid
-  sku           String   @db.VarChar(100)
-  name          String   @db.VarChar(200)
-  unit          String   @default("unit") @db.VarChar(50)
-  currentQty    Decimal  @default(0) @map("current_qty") @db.Decimal(18, 4)
-  reorderPoint  Decimal  @default(0) @map("reorder_point") @db.Decimal(18, 4)
-  safetyStock   Decimal  @default(0) @map("safety_stock") @db.Decimal(18, 4)
-  leadTimeDays  Int      @default(0) @map("lead_time_days")
-  dailyUsage    Decimal  @default(0) @map("daily_usage") @db.Decimal(18, 4)
-  vendorId      String?  @map("vendor_id") @db.Uuid
-  notes         String?  @db.Text
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  businessId   String   @map("business_id") @db.Uuid
+  sku          String   @db.VarChar(100)
+  name         String   @db.VarChar(200)
+  unit         String   @default("unit") @db.VarChar(50)
+  currentQty   Decimal  @default(0) @map("current_qty") @db.Decimal(18, 4)
+  reorderPoint Decimal  @default(0) @map("reorder_point") @db.Decimal(18, 4)
+  safetyStock  Decimal  @default(0) @map("safety_stock") @db.Decimal(18, 4)
+  leadTimeDays Int      @default(0) @map("lead_time_days")
+  dailyUsage   Decimal  @default(0) @map("daily_usage") @db.Decimal(18, 4)
+  vendorId     String?  @map("vendor_id") @db.Uuid
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@unique([workspaceId, businessId, sku])
   @@index([workspaceId, businessId])
@@ -6602,25 +6603,25 @@ model StockItem {
 
 // M015 — Purchase order lifecycle: DRAFT → REVIEWED → APPROVED → ISSUED → DELIVERED
 model PurchaseOrder {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId   String    @map("workspace_id") @db.Uuid
-  businessId    String    @map("business_id") @db.Uuid
-  poNumber      String    @map("po_number") @db.VarChar(100)
-  vendorId      String?   @map("vendor_id") @db.Uuid
-  vendorName    String?   @map("vendor_name") @db.VarChar(200)
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId  String    @map("workspace_id") @db.Uuid
+  businessId   String    @map("business_id") @db.Uuid
+  poNumber     String    @map("po_number") @db.VarChar(100)
+  vendorId     String?   @map("vendor_id") @db.Uuid
+  vendorName   String?   @map("vendor_name") @db.VarChar(200)
   // DRAFT | REVIEWED | APPROVED | ISSUED | DELIVERED | CANCELLED
-  status        String    @default("DRAFT")
-  lineItems     Json      @default("[]") @map("line_items")
-  totalAmount   Decimal?  @map("total_amount") @db.Decimal(18, 2)
-  currency      String    @default("USD") @db.VarChar(10)
-  notes         String?   @db.Text
-  approvedById  String?   @map("approved_by_id") @db.Uuid
-  approvedAt    DateTime? @map("approved_at")
-  issuedAt      DateTime? @map("issued_at")
-  deliveredAt   DateTime? @map("delivered_at")
-  createdBy     String    @map("created_by") @db.Uuid
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  status       String    @default("DRAFT")
+  lineItems    Json      @default("[]") @map("line_items")
+  totalAmount  Decimal?  @map("total_amount") @db.Decimal(18, 2)
+  currency     String    @default("USD") @db.VarChar(10)
+  notes        String?   @db.Text
+  approvedById String?   @map("approved_by_id") @db.Uuid
+  approvedAt   DateTime? @map("approved_at")
+  issuedAt     DateTime? @map("issued_at")
+  deliveredAt  DateTime? @map("delivered_at")
+  createdBy    String    @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   @@unique([workspaceId, poNumber])
   @@index([workspaceId, businessId])
