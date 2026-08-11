@@ -99,6 +99,16 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     effortScore: 50,
     ownerRole: "owner",
   },
+  FIN_LOW_ABSOLUTE_CASH: {
+    recommendationCode: "FINREC_PROTECT_LIQUID_CASH",
+    category: "preserve_cash",
+    title: "Build at least 2 weeks of operating cash in liquid reserves",
+    requiredOwnerAction: "Postpone all discretionary spend, accelerate pending collections, and build liquid reserves (cash + bank) to cover at least 14 days of total operating costs.",
+    verificationMethod: "Re-measure cashDaysOfCosts next month; target above 14 days.",
+    expectedTimeframeDays: 14,
+    effortScore: 45,
+    ownerRole: "owner",
+  },
   FIN_HIGH_FIXED_COST_BURDEN: {
     recommendationCode: "FINREC_REDUCE_FIXED_COST",
     category: "reduce_fixed_cost_burden",

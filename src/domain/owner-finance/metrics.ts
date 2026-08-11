@@ -140,14 +140,19 @@ export function cashRunwayDays(input: FinancialSnapshotInput): number | null {
   return round1(cash / dailyBurn);
 }
 
-/** Cash divided by daily total costs — measures absolute cash cushion independent of profitability. */
+/**
+ * Cash divided by daily total costs — measures absolute cash cushion independent of profitability.
+ * Uses total liquid funds = cashOnHand + bankBalance (when bank balance is available from a
+ * compatible cashflow snapshot, enriched by the service layer). Fails closed: when neither
+ * cashOnHand nor bankBalance is present, returns null rather than zero.
+ */
 export function cashDaysOfCosts(input: FinancialSnapshotInput): number | null {
-  const cash = num(input.cashOnHand);
+  const liquidFunds = sumPresent(input.cashOnHand, input.bankBalance);
   const costs = totalCosts(input);
   const days = periodDays(input);
-  if (cash === null || costs === null || days === null || costs < 1) return null; // guard against near-zero float
+  if (liquidFunds === null || costs === null || days === null || costs < 1) return null;
   const dailyCost = costs / days;
-  return round1(cash / dailyCost);
+  return round1(liquidFunds / dailyCost);
 }
 
 export function debtServicePressurePct(input: FinancialSnapshotInput): number | null {

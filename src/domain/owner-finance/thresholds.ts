@@ -76,3 +76,16 @@ export function resolveFinanceThresholds(industryTemplate?: string): FinanceThre
   const overrides = industryTemplate ? INDUSTRY_FINANCE_THRESHOLDS[industryTemplate] : undefined;
   return { ...GENERIC_FINANCE_THRESHOLDS, ...(overrides ?? {}) };
 }
+
+/**
+ * Map a raw OwnerBusiness.businessType string to a finance industry template key.
+ * Precedence: valid explicit snapshot override > this mapping > generic fallback.
+ * Returns undefined when no mapping applies (generic defaults will be used).
+ */
+export function mapBusinessTypeToFinanceIndustryTemplate(businessType: string): string | undefined {
+  const s = (businessType ?? "").toLowerCase();
+  if (/laundr|dry.?clean|launder/.test(s)) return "laundry_local_service";
+  if (/clean|housekeep|maid|janitor/.test(s)) return "generic_local_service";
+  if (/retail|shop|store/.test(s)) return "retail_service_hybrid";
+  return undefined;
+}
