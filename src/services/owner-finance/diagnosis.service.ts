@@ -30,22 +30,29 @@ export async function runFinanceDiagnosis(
     throw new NotFoundError("OwnerFinancialSnapshot", snapshotId);
   }
 
-  // Fetch latest cashflow snapshot (workspace+business scoped) for bank-balance enrichment.
+  const snapshotEnd = snapshotRow.periodEnd instanceof Date
+    ? snapshotRow.periodEnd
+    : new Date(snapshotRow.periodEnd as string);
+
+  // DEFECT 1: Enrich engine input with bank balance from a compatible cashflow snapshot.
+  // At-or-before semantics: only a cashflow snapshot whose periodEnd ≤ finance snapshot periodEnd
+  // may enrich it (future cashflow must never influence a past diagnosis).
+  // Freshness window: ≤ 45 days before the finance snapshot periodEnd.
+  // Fail-closed: absent/stale/future cashflow → bankBalance stays undefined (not zero).
   const cashflowRow = await db.ownerCashflowSnapshot.findFirst({
-    where: { workspaceId, businessId },
+    where: { workspaceId, businessId, periodEnd: { lte: snapshotEnd } },
     orderBy: { periodEnd: "desc" },
     select: { bankBalance: true, periodEnd: true },
   });
 
   const input = rowToFinanceInput(snapshotRow);
 
-  // DEFECT 1: Enrich engine input with bank balance from a compatible cashflow snapshot.
-  // Compatibility: cashflow periodEnd within 45 days of finance snapshot periodEnd.
-  // Fail-closed: absent/stale/incompatible cashflow → bankBalance stays undefined (not zero).
   if (cashflowRow?.bankBalance != null && Number.isFinite(cashflowRow.bankBalance)) {
-    const snapshotEnd = snapshotRow.periodEnd instanceof Date ? snapshotRow.periodEnd : new Date(snapshotRow.periodEnd as string);
-    const cfEnd = cashflowRow.periodEnd instanceof Date ? cashflowRow.periodEnd : new Date(cashflowRow.periodEnd as string);
-    const ageDays = Math.abs(snapshotEnd.getTime() - cfEnd.getTime()) / 86_400_000;
+    const cfEnd = cashflowRow.periodEnd instanceof Date
+      ? cashflowRow.periodEnd
+      : new Date(cashflowRow.periodEnd as string);
+    // ageDays is always ≥ 0 here because cfEnd ≤ snapshotEnd (enforced by the query filter)
+    const ageDays = (snapshotEnd.getTime() - cfEnd.getTime()) / 86_400_000;
     if (ageDays <= 45) {
       input.bankBalance = cashflowRow.bankBalance;
     }
@@ -56,6 +63,31 @@ export async function runFinanceDiagnosis(
   if (!input.industryTemplate) {
     const mapped = mapBusinessTypeToFinanceIndustryTemplate(business.businessType);
     if (mapped) input.industryTemplate = mapped;
+  }
+
+  // DEFECT 4 — enrichment gap: when the finance snapshot has no totalDebtOutstanding
+  // (e.g. column was added after the snapshot was recorded), fall back to the most recent
+  // owner-confirmed cash_debt intake for this workspace+business.
+  // Precedence: snapshot.totalDebtOutstanding (when present) > confirmed intake > absent.
+  // Only confirmed intakes with a finite non-negative value are accepted.
+  if (input.totalDebtOutstanding == null) {
+    const intakeRow = await db.ownerDataIntake.findFirst({
+      where: { workspaceId, businessId, ownerConfirmed: true, targetDomain: "cash_debt" },
+      orderBy: [{ confirmedAt: "desc" }, { createdAt: "desc" }],
+      select: { records: true },
+    });
+    if (intakeRow) {
+      const records = intakeRow.records as unknown[];
+      const first = Array.isArray(records) && records.length > 0 && typeof records[0] === "object" && records[0] !== null
+        ? (records[0] as Record<string, unknown>)
+        : null;
+      if (first) {
+        const v = first["totalOutstandingDebt"];
+        if (typeof v === "number" && Number.isFinite(v) && v >= 0) {
+          input.totalDebtOutstanding = v;
+        }
+      }
+    }
   }
 
   const diagnosis = diagnoseFinanceSnapshot(input);
