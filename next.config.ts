@@ -18,6 +18,12 @@ const cspDirectives = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Bundle prisma/migrations so the startup migration-readiness check can
+  // read committed migration directories from the filesystem at runtime in
+  // Vercel serverless functions (which only include traced files by default).
+  outputFileTracingIncludes: {
+    "/api/startup": ["./prisma/migrations/**"],
+  },
   poweredByHeader: false,
   turbopack: {
     resolveAlias: {},

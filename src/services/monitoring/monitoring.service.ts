@@ -8,6 +8,7 @@ import {
   StartupCheck,
   MONITORING_ASSERTIONS,
 } from "@/domain/monitoring/monitoring-contracts";
+import { checkMigrationReadiness } from "./migration-check";
 
 /**
  * Monitoring Service: Local metrics collection and health checking
@@ -29,18 +30,23 @@ export class MonitoringService {
 
   /**
    * STARTUP PROBE: Did application initialize successfully?
+   *
+   * database_migrated reflects actual migration readiness — whether every
+   * committed Prisma migration has been applied to the database.  This uses
+   * getDbInstance() (not the lazy db Proxy) to avoid cold-start failures
+   * where the Proxy has not yet been initialised.
    */
   async checkStartup(): Promise<StartupCheck> {
     try {
-      const dbHealthy = await this.checkDatabase();
+      const migration = await checkMigrationReadiness();
       const routesCount = 91; // Should match route count from build output
 
       return {
         config_loaded: true,
-        database_migrated: dbHealthy.healthy,
+        database_migrated: migration.ready,
         routes_registered: routesCount,
         test_request_successful: true,
-        is_ready: dbHealthy.healthy && routesCount > 0,
+        is_ready: migration.ready && routesCount > 0,
       };
     } catch (error) {
       return {
