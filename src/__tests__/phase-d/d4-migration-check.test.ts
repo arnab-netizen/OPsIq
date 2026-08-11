@@ -53,14 +53,18 @@ function makeRow(
 
 function setupFs(dirs = COMMITTED_DIRS) {
   vi.mocked(fsMod.existsSync).mockReturnValue(true);
-  vi.mocked(fsMod.readdirSync).mockReturnValue(dirs as any);
+  vi.mocked(fsMod.readdirSync).mockReturnValue(
+    dirs as unknown as ReturnType<typeof fsMod.readdirSync>
+  );
 }
 
 function setupDb(rows: ReturnType<typeof makeRow>[]) {
   const mockPrisma = {
     $queryRawUnsafe: vi.fn().mockResolvedValue(rows),
   };
-  vi.mocked(dbMod.getDbInstance).mockResolvedValue(mockPrisma as any);
+  vi.mocked(dbMod.getDbInstance).mockResolvedValue(
+    mockPrisma as unknown as Awaited<ReturnType<typeof dbMod.getDbInstance>>
+  );
   return mockPrisma;
 }
 
@@ -202,7 +206,9 @@ describe("checkMigrationReadiness", () => {
       const mockPrisma = {
         $queryRawUnsafe: vi.fn().mockRejectedValue(new Error("relation _prisma_migrations does not exist")),
       };
-      vi.mocked(dbMod.getDbInstance).mockResolvedValue(mockPrisma as any);
+      vi.mocked(dbMod.getDbInstance).mockResolvedValue(
+        mockPrisma as unknown as Awaited<ReturnType<typeof dbMod.getDbInstance>>
+      );
 
       const result = await checkMigrationReadiness();
 
