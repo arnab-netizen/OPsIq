@@ -317,13 +317,19 @@ export function financialRiskScore(input: FinancialSnapshotInput, t: FinanceThre
   return clampScore(score);
 }
 
-export function financialHealthScore(input: FinancialSnapshotInput, t: FinanceThresholds): number {
+export function financialHealthScore(input: FinancialSnapshotInput, t: FinanceThresholds, dataConfidenceScore: number): number {
   const risk = financialRiskScore(input, t);
   const nm = netMarginPct(input);
   // Margin health maps net margin (-20%..+30%) onto 0..100.
   let marginHealth = 50;
   if (nm !== null) marginHealth = clampScore(((nm + 20) / 50) * 100);
-  return clampScore(Math.round(0.6 * (100 - risk) + 0.4 * marginHealth));
+  const raw = clampScore(Math.round(0.6 * (100 - risk) + 0.4 * marginHealth));
+  // Below HIGH confidence tier (< 85), cap health so unknown data cannot produce a perfect score.
+  // Ceiling: floor(50 + confidence/2) — at confidence=60 this caps at 80, at 0 it caps at 50.
+  if (dataConfidenceScore < 85) {
+    return Math.min(raw, Math.floor(50 + dataConfidenceScore / 2));
+  }
+  return raw;
 }
 
 export function financialOpportunityScore(input: FinancialSnapshotInput): number {
@@ -361,7 +367,7 @@ export function survivalState(
     return "AT_RISK";
   }
   // Not enough trustworthy data to assert SAFE → caution.
-  if (dataConfidenceScore < 50) return "WATCH";
+  if (dataConfidenceScore < 70) return "WATCH";
   const nm = netMarginPct(input);
   const thin = nm !== null && nm < t.thinNetMarginPct;
   if (thin || s.highReceivables || s.highPayables || s.highLeakage) return "WATCH";
@@ -423,7 +429,7 @@ export function computeFinancialMetrics(
 
     netProfit: netProfit(input),
 
-    financialHealthScore: financialHealthScore(input, t),
+    financialHealthScore: financialHealthScore(input, t, confidence.dataConfidenceScore),
     financialRiskScore: financialRiskScore(input, t),
     financialOpportunityScore: financialOpportunityScore(input),
     dataConfidenceScore: confidence.dataConfidenceScore,

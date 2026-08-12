@@ -269,6 +269,17 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     effortScore: 20,
     ownerRole: "owner",
   },
+  FIN_NOTABLE_OUTSTANDING_DEBT: {
+    recommendationCode: "FINREC_CONFIRM_DEBT_TERMS",
+    category: "reduce_debt_pressure",
+    title: "Confirm loan repayment terms",
+    requiredOwnerAction:
+      "Enter the monthly EMI / debt repayment amount so the debt-service pressure metric can be computed accurately.",
+    verificationMethod: "Confirm debtServicePressurePct is non-null on the next snapshot.",
+    expectedTimeframeDays: 7,
+    effortScore: 10,
+    ownerRole: "owner",
+  },
 };
 
 /** Build a traceable recommendation from a finding, or null if no template. */

@@ -40,7 +40,7 @@ export function missingCriticalFinanceInputs(input: FinancialSnapshotInput): str
   return missing;
 }
 
-const IMPORTANT_FIELDS: (keyof FinancialSnapshotInput)[] = [
+export const IMPORTANT_FIELDS: (keyof FinancialSnapshotInput)[] = [
   "costOfGoodsOrServices",
   "fixedCosts",
   "salaryPayroll",
