@@ -65,12 +65,12 @@ export async function runFinanceDiagnosis(
     if (mapped) input.industryTemplate = mapped;
   }
 
-  // DEFECT 4 — enrichment gap: when the finance snapshot has no totalDebtOutstanding
-  // (e.g. column was added after the snapshot was recorded), fall back to the most recent
-  // owner-confirmed cash_debt intake for this workspace+business.
-  // Precedence: snapshot.totalDebtOutstanding (when present) > confirmed intake > absent.
-  // Only confirmed intakes with a finite non-negative value are accepted.
-  if (input.totalDebtOutstanding == null) {
+  // Enrich from confirmed cash_debt intake when the snapshot is missing either
+  // the principal or the monthly repayment amount.
+  // Precedence: snapshot field (when present) > confirmed intake > absent.
+  // loanEmiDebtPayments=0 (confirmed zero repayment) is a valid answer and must
+  // not be overwritten; only null/undefined triggers enrichment.
+  if (input.totalDebtOutstanding == null || input.loanEmiDebtPayments == null) {
     const intakeRow = await db.ownerDataIntake.findFirst({
       where: { workspaceId, businessId, ownerConfirmed: true, targetDomain: "cash_debt" },
       orderBy: [{ confirmedAt: "desc" }, { createdAt: "desc" }],
@@ -82,9 +82,19 @@ export async function runFinanceDiagnosis(
         ? (records[0] as Record<string, unknown>)
         : null;
       if (first) {
-        const v = first["totalOutstandingDebt"];
-        if (typeof v === "number" && Number.isFinite(v) && v >= 0) {
-          input.totalDebtOutstanding = v;
+        if (input.totalDebtOutstanding == null) {
+          const v = first["totalOutstandingDebt"];
+          if (typeof v === "number" && Number.isFinite(v) && v >= 0) {
+            input.totalDebtOutstanding = v;
+          }
+        }
+        // Map confirmed monthlyRepayment → loanEmiDebtPayments so the debt-service
+        // pressure metric is computed correctly (0 = confirmed no fixed schedule).
+        if (input.loanEmiDebtPayments == null) {
+          const m = first["monthlyRepayment"];
+          if (typeof m === "number" && Number.isFinite(m) && m >= 0) {
+            input.loanEmiDebtPayments = m;
+          }
         }
       }
     }

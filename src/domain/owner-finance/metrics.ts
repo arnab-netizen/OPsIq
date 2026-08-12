@@ -317,6 +317,39 @@ export function financialRiskScore(input: FinancialSnapshotInput, t: FinanceThre
   return clampScore(score);
 }
 
+/**
+ * Maximum health score permitted at a given confidence level.
+ *
+ * `financialHealthScore` is a penalty-from-100 model: it measures the
+ * absence of detected risks and strength of margin. "No risk detected" means
+ * "we found no problems with the data we have" — it does NOT mean "this
+ * business is definitively financially healthy." When inputs are incomplete,
+ * the model cannot fire risk signals that depend on the missing data, which
+ * would otherwise inflate the score to near-perfect without positive evidence.
+ *
+ * This ceiling enforces the invariant UNKNOWN ≠ HEALTHY:
+ *   ceiling = floor(50 + confidence/2)
+ *
+ * Derivation: 50 is the established neutral/unknown baseline (no positive
+ * and no negative evidence). At confidence=0 the ceiling is 50 (neutral).
+ * It rises proportionally with confidence, reaching 92 at the HIGH-tier
+ * threshold (confidence=84). At and above HIGH tier (>=85) the data is
+ * considered trustworthy enough to report the uncapped score.
+ *
+ * Monotonic: higher confidence → higher ceiling → score can never decrease
+ * from increasing confidence alone.
+ *
+ * Discontinuity at the 84→85 boundary: the jump from a ceiling of 92 to
+ * uncapped is an explicit product policy consequence of the HIGH tier
+ * definition. It is bounded (at most 8 points for a raw score of 100).
+ *
+ * Returns null when confidence >= 85 (no cap applies).
+ */
+export function healthScoreCeiling(dataConfidenceScore: number): number | null {
+  if (dataConfidenceScore >= 85) return null;
+  return Math.floor(50 + dataConfidenceScore / 2);
+}
+
 export function financialHealthScore(input: FinancialSnapshotInput, t: FinanceThresholds, dataConfidenceScore: number): number {
   const risk = financialRiskScore(input, t);
   const nm = netMarginPct(input);
@@ -324,11 +357,8 @@ export function financialHealthScore(input: FinancialSnapshotInput, t: FinanceTh
   let marginHealth = 50;
   if (nm !== null) marginHealth = clampScore(((nm + 20) / 50) * 100);
   const raw = clampScore(Math.round(0.6 * (100 - risk) + 0.4 * marginHealth));
-  // Below HIGH confidence tier (< 85), cap health so unknown data cannot produce a perfect score.
-  // Ceiling: floor(50 + confidence/2) — at confidence=60 this caps at 80, at 0 it caps at 50.
-  if (dataConfidenceScore < 85) {
-    return Math.min(raw, Math.floor(50 + dataConfidenceScore / 2));
-  }
+  const ceiling = healthScoreCeiling(dataConfidenceScore);
+  if (ceiling !== null) return Math.min(raw, ceiling);
   return raw;
 }
 

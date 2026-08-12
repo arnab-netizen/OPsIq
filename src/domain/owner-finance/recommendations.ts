@@ -270,11 +270,11 @@ export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
     ownerRole: "owner",
   },
   FIN_NOTABLE_OUTSTANDING_DEBT: {
-    recommendationCode: "FINREC_CONFIRM_DEBT_TERMS",
+    recommendationCode: "FINREC_ENTER_DEBT_REPAYMENT",
     category: "reduce_debt_pressure",
-    title: "Confirm loan repayment terms",
+    title: "Enter monthly loan repayment amount",
     requiredOwnerAction:
-      "Enter the monthly EMI / debt repayment amount so the debt-service pressure metric can be computed accurately.",
+      "Enter the monthly EMI or debt repayment amount in the finance snapshot. If there is no fixed monthly repayment schedule (e.g. a family loan with flexible terms), enter 0 explicitly so debt-service pressure can be correctly computed as zero.",
     verificationMethod: "Confirm debtServicePressurePct is non-null on the next snapshot.",
     expectedTimeframeDays: 7,
     effortScore: 10,
