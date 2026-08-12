@@ -17,15 +17,18 @@ import {
   SURVIVAL_STATES,
 } from "@/domain/owner-finance";
 
-/** Profitable service business in INR (April 2026). */
+/** Profitable service business in INR (July 2026). */
 function profitable(): FinancialSnapshotInput {
   return {
-    periodStart: "2026-04-01",
-    periodEnd: "2026-04-30",
+    periodStart: "2026-07-01",
+    periodEnd: "2026-07-31",
     currency: "INR",
     businessModel: "service",
     revenue: 100000,
     costOfGoodsOrServices: 30000,
+    // fixedCosts is provided directly (= rent + salaryPayroll + utilities) so it counts as an
+    // IMPORTANT_FIELDS present entry; individual components kept for payroll-burden computation.
+    fixedCosts: 35000,
     rent: 10000,
     salaryPayroll: 20000,
     utilities: 5000,

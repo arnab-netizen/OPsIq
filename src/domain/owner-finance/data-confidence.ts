@@ -40,7 +40,7 @@ export function missingCriticalFinanceInputs(input: FinancialSnapshotInput): str
   return missing;
 }
 
-const IMPORTANT_FIELDS: (keyof FinancialSnapshotInput)[] = [
+export const IMPORTANT_FIELDS: (keyof FinancialSnapshotInput)[] = [
   "costOfGoodsOrServices",
   "fixedCosts",
   "salaryPayroll",
@@ -53,6 +53,21 @@ const IMPORTANT_FIELDS: (keyof FinancialSnapshotInput)[] = [
   "discountAmount",
   "refundAmount",
 ];
+
+/** Owner-facing display labels for each IMPORTANT_FIELDS engine key. */
+export const IMPORTANT_FIELD_LABELS: Record<string, string> = {
+  costOfGoodsOrServices: "Cost of Goods / Services",
+  fixedCosts: "Fixed Costs",
+  salaryPayroll: "Payroll / Salary",
+  loanEmiDebtPayments: "Loan / EMI / Debt Payments",
+  receivables: "Receivables",
+  payables: "Payables",
+  ownerWithdrawals: "Owner Withdrawals",
+  orderCount: "Order Count",
+  customerCount: "Customer Count",
+  discountAmount: "Discount Amount",
+  refundAmount: "Refund / Rework Cost",
+};
 
 export type MissingInputPriority = "CRITICAL" | "IMPORTANT";
 

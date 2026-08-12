@@ -8,6 +8,7 @@
 import { clampScore, clampConfidence, type OwnerFinding, type OwnerSeverity } from "@/domain/owner-spine/contracts";
 import type { FinancialSnapshotInput, FinancialDerivedMetrics } from "./types";
 import type { FinanceThresholds } from "./thresholds";
+import { IMPORTANT_FIELDS, IMPORTANT_FIELD_LABELS } from "./data-confidence";
 
 interface OppArgs {
   code: string;
@@ -186,6 +187,17 @@ export function buildFinanceOpportunityFindings(
 
   // Data quality improvement opportunity (confidence below 100)
   if (m.dataConfidenceScore < 100) {
+    const missingImportant = IMPORTANT_FIELDS.filter((f) => {
+      const v = input[f];
+      return v === null || v === undefined || (typeof v === "number" && !Number.isFinite(v));
+    });
+    // Use owner-facing labels (not camelCase keys) so the evidence line is actionable.
+    const evidenceLine =
+      m.missingRequiredInputs.length > 0
+        ? `missing critical inputs: ${m.missingRequiredInputs.join(", ")}`
+        : missingImportant.length > 0
+        ? `provide for sharper diagnosis: ${missingImportant.map((f) => IMPORTANT_FIELD_LABELS[f] ?? f).join("; ")}`
+        : "snapshot may be stale — refresh the data";
     findings.push(
       opportunity({
         code: "FIN_OPP_DATA_QUALITY",
@@ -198,8 +210,42 @@ export function buildFinanceOpportunityFindings(
         confidence: 1,
         impactScore: clampScore(100 - m.dataConfidenceScore),
         urgencyScore: 20,
-        evidence: [`dataConfidenceScore = ${m.dataConfidenceScore} < 100`, m.missingRequiredInputs.length > 0 ? `missing: ${m.missingRequiredInputs.join(", ")}` : "some non-critical fields missing"],
+        evidence: [`dataConfidenceScore = ${m.dataConfidenceScore} < 100`, evidenceLine],
         verificationMetric: "dataConfidenceScore",
+      })
+    );
+  }
+
+  // Outstanding debt context: principal is recorded but the monthly repayment amount is
+  // entirely absent (loanEmiDebtPayments === null/undefined). Only emit when EMI is genuinely
+  // unknown — confirmed zero-repayment (loanEmiDebtPayments === 0) is valid and correct:
+  // debtServicePressurePct = 0% is the right answer, not a data gap.
+  const totalDebt = typeof input.totalDebtOutstanding === "number" && Number.isFinite(input.totalDebtOutstanding)
+    ? input.totalDebtOutstanding
+    : null;
+  const emi = typeof input.loanEmiDebtPayments === "number" && Number.isFinite(input.loanEmiDebtPayments)
+    ? input.loanEmiDebtPayments
+    : null;
+  if (totalDebt !== null && totalDebt > 0 && emi === null) {
+    findings.push(
+      opportunity({
+        code: "FIN_NOTABLE_OUTSTANDING_DEBT",
+        title: "Outstanding debt principal recorded — enter monthly repayment",
+        summary:
+          "A debt principal is recorded but no monthly repayment amount has been entered. The debt-service pressure metric cannot be computed until the EMI is provided (enter 0 if there is no fixed monthly repayment).",
+        sourceMetric: "totalDebtOutstanding",
+        sourceValue: totalDebt,
+        threshold: null,
+        severity: "low",
+        confidence: 1,
+        impactScore: 15,
+        urgencyScore: 25,
+        evidence: [
+          `totalDebtOutstanding = ${totalDebt}`,
+          "loanEmiDebtPayments not provided — debtServicePressurePct cannot be computed",
+          "enter the monthly repayment amount (or 0 if there is no fixed schedule)",
+        ],
+        verificationMetric: "debtServicePressurePct",
       })
     );
   }

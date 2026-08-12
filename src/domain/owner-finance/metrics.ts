@@ -317,13 +317,46 @@ export function financialRiskScore(input: FinancialSnapshotInput, t: FinanceThre
   return clampScore(score);
 }
 
-export function financialHealthScore(input: FinancialSnapshotInput, t: FinanceThresholds): number {
+/**
+ * Maximum health score permitted at a given confidence level.
+ *
+ * `financialHealthScore` is a penalty-from-100 model: it measures the
+ * absence of detected risks and strength of margin. "No risk detected" means
+ * "we found no problems with the data we have" — it does NOT mean "this
+ * business is definitively financially healthy." When inputs are incomplete,
+ * the model cannot fire risk signals that depend on the missing data, which
+ * would otherwise inflate the score to near-perfect without positive evidence.
+ *
+ * This ceiling enforces the invariant UNKNOWN ≠ HEALTHY:
+ *   ceiling = floor(50 + confidence/2)
+ *
+ * Derivation: 50 is newly introduced as the neutral/unknown baseline for this
+ * module (no cross-domain OpsIQ precedent for this specific value; it represents
+ * the midpoint of 0–100 with no evidence in either direction). At confidence=0
+ * the ceiling is 50 (neutral). It rises proportionally with confidence and
+ * reaches 100 at confidence=100 (complete data — no practical cap).
+ *
+ * The formula applies continuously for all confidence values [0, 100].
+ * There is no special case at confidence=85 or any other tier boundary.
+ * Tier labels (very_high / minimal risk) in decision-confidence and
+ * trust-engine modules are naming conventions only — they do NOT authorize
+ * removing output caps.
+ *
+ * Monotonic: higher confidence → higher ceiling → score can never decrease
+ * from increasing confidence alone.
+ */
+export function healthScoreCeiling(dataConfidenceScore: number): number {
+  return Math.floor(50 + dataConfidenceScore / 2);
+}
+
+export function financialHealthScore(input: FinancialSnapshotInput, t: FinanceThresholds, dataConfidenceScore: number): number {
   const risk = financialRiskScore(input, t);
   const nm = netMarginPct(input);
   // Margin health maps net margin (-20%..+30%) onto 0..100.
   let marginHealth = 50;
   if (nm !== null) marginHealth = clampScore(((nm + 20) / 50) * 100);
-  return clampScore(Math.round(0.6 * (100 - risk) + 0.4 * marginHealth));
+  const raw = clampScore(Math.round(0.6 * (100 - risk) + 0.4 * marginHealth));
+  return Math.min(raw, healthScoreCeiling(dataConfidenceScore));
 }
 
 export function financialOpportunityScore(input: FinancialSnapshotInput): number {
@@ -361,7 +394,7 @@ export function survivalState(
     return "AT_RISK";
   }
   // Not enough trustworthy data to assert SAFE → caution.
-  if (dataConfidenceScore < 50) return "WATCH";
+  if (dataConfidenceScore < 70) return "WATCH";
   const nm = netMarginPct(input);
   const thin = nm !== null && nm < t.thinNetMarginPct;
   if (thin || s.highReceivables || s.highPayables || s.highLeakage) return "WATCH";
@@ -423,7 +456,7 @@ export function computeFinancialMetrics(
 
     netProfit: netProfit(input),
 
-    financialHealthScore: financialHealthScore(input, t),
+    financialHealthScore: financialHealthScore(input, t, confidence.dataConfidenceScore),
     financialRiskScore: financialRiskScore(input, t),
     financialOpportunityScore: financialOpportunityScore(input),
     dataConfidenceScore: confidence.dataConfidenceScore,
