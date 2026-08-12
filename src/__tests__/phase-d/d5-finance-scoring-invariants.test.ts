@@ -50,8 +50,13 @@ function completeHealthy(): FinancialSnapshotInput {
 }
 
 /**
- * 3 IMPORTANT_FIELDS present (costOfGoodsOrServices, salaryPayroll, orderCount),
+ * 3 IMPORTANT_FIELDS present (costOfGoodsOrServices, loanEmiDebtPayments, orderCount),
  * 8 missing → confidence = 60 (MEDIUM). No risk signals.
+ *
+ * variableCosts (not in IMPORTANT_FIELDS) satisfies the "costs" critical requirement
+ * without covering the fixedCosts component slot. salaryPayroll is intentionally absent
+ * so fixedCostsCoveredByComponents() returns false — keeping fixedCosts as a genuine
+ * missing IMPORTANT field and the confidence at exactly 60.
  */
 function lowConfidenceNoRisk(): FinancialSnapshotInput {
   return {
@@ -60,10 +65,11 @@ function lowConfidenceNoRisk(): FinancialSnapshotInput {
     currency: "INR",
     revenue: 100000,
     costOfGoodsOrServices: 0,   // IMPORTANT: present
-    salaryPayroll: 20000,        // IMPORTANT: present
+    variableCosts: 20000,        // satisfies "costs" critical; NOT in IMPORTANT_FIELDS
+    loanEmiDebtPayments: 0,      // IMPORTANT: present (confirmed zero)
     cashOnHand: 200000,
     orderCount: 100,             // IMPORTANT: present
-    // fixedCosts, loanEmiDebtPayments, receivables, payables, ownerWithdrawals,
+    // fixedCosts, salaryPayroll, receivables, payables, ownerWithdrawals,
     // customerCount, discountAmount, refundAmount — all absent (8 × 5 = 40 penalty → score 60)
   };
 }
@@ -595,14 +601,14 @@ describe("K — Trinity-shaped local engine verification", () => {
     // fixedCosts absent — engine derives from rent+salary+utilities = 145760
   };
 
-  it("dataConfidenceScore=60 (8 IMPORTANT missing)", () => {
+  it("dataConfidenceScore=65 (7 IMPORTANT missing — fixedCosts satisfied by rent+salary+utilities components)", () => {
     const m = computeFinancialMetrics(trinity, { now: NOW });
-    expect(m.dataConfidenceScore).toBe(60);
+    expect(m.dataConfidenceScore).toBe(65);
   });
 
-  it("financialHealthScore=80 (raw=100 capped by ceiling(60)=80)", () => {
+  it("financialHealthScore=82 (raw=100 capped by ceiling(65)=82)", () => {
     const m = computeFinancialMetrics(trinity, { now: NOW });
-    expect(m.financialHealthScore).toBe(80);
+    expect(m.financialHealthScore).toBe(82);
   });
 
   it("financialRiskScore=0 (no risk signals fire for Trinity)", () => {
@@ -610,7 +616,7 @@ describe("K — Trinity-shaped local engine verification", () => {
     expect(m.financialRiskScore).toBe(0);
   });
 
-  it("survivalState=WATCH (confidence=60 < 70 gate)", () => {
+  it("survivalState=WATCH (confidence=65 < 70 gate)", () => {
     const m = computeFinancialMetrics(trinity, { now: NOW });
     expect(m.survivalState).toBe("WATCH");
   });
