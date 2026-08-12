@@ -204,7 +204,7 @@ describe("D — high confidence (100) + no risk signals → SAFE with uncapped h
     expect(m.survivalState).toBe("SAFE");
   });
 
-  it("returns uncapped healthScore (≥ raw score — no ceiling when confidence ≥ 85)", () => {
+  it("returns healthScore ≥ 90 (ceiling(100)=100 — no practical cap for complete data)", () => {
     const m = computeFinancialMetrics(completeHealthy(), { now: NOW });
     expect(m.dataConfidenceScore).toBeGreaterThanOrEqual(85);
     expect(m.financialHealthScore).toBeGreaterThanOrEqual(90);
@@ -415,7 +415,7 @@ describe("H — survivalState confidence boundary at 70 (canonical cross-domain 
 // ---------------------------------------------------------------------------
 
 describe("I — healthScoreCeiling() and score-confidence monotonicity", () => {
-  // healthScoreCeiling formula: floor(50 + confidence/2) when confidence < 85; else null.
+  // healthScoreCeiling formula: floor(50 + confidence/2) for all confidence values [0, 100] (no special case at 85).
 
   it("ceiling=50 at confidence=0 (neutral/unknown baseline)", () => {
     expect(healthScoreCeiling(0)).toBe(50);
@@ -457,26 +457,26 @@ describe("I — healthScoreCeiling() and score-confidence monotonicity", () => {
     expect(healthScoreCeiling(84)).toBe(92);
   });
 
-  it("ceiling=null (uncapped) at confidence=85 (HIGH tier)", () => {
-    expect(healthScoreCeiling(85)).toBeNull();
+  it("ceiling=92 at confidence=85 (continuous formula — no tier jump)", () => {
+    expect(healthScoreCeiling(85)).toBe(92);
   });
 
-  it("ceiling=null (uncapped) at confidence=100", () => {
-    expect(healthScoreCeiling(100)).toBeNull();
+  it("ceiling=100 at confidence=100 (complete data — no practical cap)", () => {
+    expect(healthScoreCeiling(100)).toBe(100);
   });
 
   it("ceiling is monotonically non-decreasing (higher confidence → higher or equal ceiling)", () => {
-    const values = [0, 10, 20, 30, 40, 50, 60, 70, 80, 84];
+    const values = [0, 10, 20, 30, 40, 50, 60, 70, 80, 84, 85, 90, 95, 100];
     for (let i = 1; i < values.length; i++) {
-      const lo = healthScoreCeiling(values[i - 1])!;
-      const hi = healthScoreCeiling(values[i])!;
+      const lo = healthScoreCeiling(values[i - 1]);
+      const hi = healthScoreCeiling(values[i]);
       expect(hi).toBeGreaterThanOrEqual(lo);
     }
   });
 
-  it("confidence=85 is uncapped; ceiling for 84 is 92 (tier boundary is explicit policy)", () => {
+  it("ceiling is continuous across 84→85 boundary — both return 92 (no jump)", () => {
     expect(healthScoreCeiling(84)).toBe(92);
-    expect(healthScoreCeiling(85)).toBeNull();
+    expect(healthScoreCeiling(85)).toBe(92);
   });
 
   // End-to-end: risk-free, good-margin business at achievable confidence values
@@ -499,7 +499,7 @@ describe("I — healthScoreCeiling() and score-confidence monotonicity", () => {
     expect(m.financialHealthScore).toBeLessThanOrEqual(90);
   });
 
-  it("healthScore at confidence=85 is uncapped — strong healthy business can score ≥ 90", () => {
+  it("healthScore at confidence=85 has ceiling=92; strong healthy business scores ≥ 90", () => {
     const m = computeFinancialMetrics(withImportantMissing(3), { now: NOW });
     expect(m.dataConfidenceScore).toBe(85);
     expect(m.financialHealthScore).toBeGreaterThanOrEqual(90);

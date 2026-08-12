@@ -330,23 +330,22 @@ export function financialRiskScore(input: FinancialSnapshotInput, t: FinanceThre
  * This ceiling enforces the invariant UNKNOWN ≠ HEALTHY:
  *   ceiling = floor(50 + confidence/2)
  *
- * Derivation: 50 is the established neutral/unknown baseline (no positive
- * and no negative evidence). At confidence=0 the ceiling is 50 (neutral).
- * It rises proportionally with confidence, reaching 92 at the HIGH-tier
- * threshold (confidence=84). At and above HIGH tier (>=85) the data is
- * considered trustworthy enough to report the uncapped score.
+ * Derivation: 50 is newly introduced as the neutral/unknown baseline for this
+ * module (no cross-domain OpsIQ precedent for this specific value; it represents
+ * the midpoint of 0–100 with no evidence in either direction). At confidence=0
+ * the ceiling is 50 (neutral). It rises proportionally with confidence and
+ * reaches 100 at confidence=100 (complete data — no practical cap).
+ *
+ * The formula applies continuously for all confidence values [0, 100].
+ * There is no special case at confidence=85 or any other tier boundary.
+ * Tier labels (very_high / minimal risk) in decision-confidence and
+ * trust-engine modules are naming conventions only — they do NOT authorize
+ * removing output caps.
  *
  * Monotonic: higher confidence → higher ceiling → score can never decrease
  * from increasing confidence alone.
- *
- * Discontinuity at the 84→85 boundary: the jump from a ceiling of 92 to
- * uncapped is an explicit product policy consequence of the HIGH tier
- * definition. It is bounded (at most 8 points for a raw score of 100).
- *
- * Returns null when confidence >= 85 (no cap applies).
  */
-export function healthScoreCeiling(dataConfidenceScore: number): number | null {
-  if (dataConfidenceScore >= 85) return null;
+export function healthScoreCeiling(dataConfidenceScore: number): number {
   return Math.floor(50 + dataConfidenceScore / 2);
 }
 
@@ -357,9 +356,7 @@ export function financialHealthScore(input: FinancialSnapshotInput, t: FinanceTh
   let marginHealth = 50;
   if (nm !== null) marginHealth = clampScore(((nm + 20) / 50) * 100);
   const raw = clampScore(Math.round(0.6 * (100 - risk) + 0.4 * marginHealth));
-  const ceiling = healthScoreCeiling(dataConfidenceScore);
-  if (ceiling !== null) return Math.min(raw, ceiling);
-  return raw;
+  return Math.min(raw, healthScoreCeiling(dataConfidenceScore));
 }
 
 export function financialOpportunityScore(input: FinancialSnapshotInput): number {
