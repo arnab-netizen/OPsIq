@@ -77,6 +77,19 @@ export interface MissingInput {
 }
 
 /**
+ * Whether the `fixedCosts` aggregate input is satisfied by component values.
+ *
+ * The cost model computes `fixedCostsTotal = fixedCosts ?? sum(rent, salaryPayroll, utilities)`,
+ * so if any component is present the aggregate field is not a real diagnostic gap:
+ * all fixed-cost calculations (burden%, break-even) will work correctly without the aggregate.
+ * This prevents a false -5 confidence penalty when the owner has entered detailed components
+ * instead of the rolled-up total.
+ */
+export function fixedCostsCoveredByComponents(input: FinancialSnapshotInput): boolean {
+  return present(input.rent) || present(input.salaryPayroll) || present(input.utilities);
+}
+
+/**
  * Confidence tier — human-readable label derived from the numeric score.
  * HIGH (85–100): strong evidence, diagnosis reliable.
  * MEDIUM (60–84): usable evidence, minor gaps.
@@ -219,6 +232,8 @@ export function calculateDataConfidence(
   score -= missingCritical.length * 30;
 
   for (const f of IMPORTANT_FIELDS) {
+    // fixedCosts aggregate is not a gap when components (rent, salaryPayroll, utilities) cover it.
+    if (f === "fixedCosts" && fixedCostsCoveredByComponents(input)) continue;
     if (!present(input[f] as number | undefined)) score -= 5;
   }
 
