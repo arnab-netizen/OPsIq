@@ -61,6 +61,8 @@ vi.mock("@/lib/canonical-json-response", () => ({
   canonicalJson: (body: unknown, init?: { status?: number }) => ({ body, status: init?.status ?? 200 }),
 }));
 
+vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
+
 // ---------------------------------------------------------------------------
 // Service mocks (per domain) — use string literals, not constants (mocks are hoisted)
 // ---------------------------------------------------------------------------
