@@ -43,8 +43,23 @@ readonly AMENDMENT_REASON="Owner Pilot Cycle #3 data-quality action — owner co
 readonly AMEND_RECEIVABLES="0"
 readonly AMEND_PAYABLES="0"
 
-# Non-target fields in Prisma column names (returned by GET /snapshots/:id)
-# These MUST be identical between v1 and v2; receivables and payables are excluded.
+# Non-target fields in Prisma column names (returned by GET /snapshots/:id).
+# These MUST be identical between v1 and v2.
+#
+# EXCLUDED from this list (intentional or recomputed differences):
+#   id                — new UUID on v2
+#   version           — incremented (v1=1, v2=2)
+#   supersededById    — v1 stamped with v2 id; v2 is null
+#   amendmentReason   — set only on v2
+#   changedFields     — set only on v2 (["receivables","payables"])
+#   amendedByActorId  — set only on v2
+#   createdAt         — different row timestamp
+#   updatedAt         — different row timestamp
+#   receivables       — intended amendment target (→ 0)
+#   payables          — intended amendment target (→ 0)
+#   dataConfidenceScore — RECOMPUTED by calculateDataConfidence() from merged row;
+#                         not copied from v1. Will change when receivables/payables change.
+#   missingCriticalData — RECOMPUTED alongside dataConfidenceScore; not copied.
 NON_TARGET_FIELDS=(
   "businessId"
   "workspaceId"
@@ -1078,6 +1093,27 @@ echo "NOTE: Whether survivalState improves from WATCH depends on Cycle #4 model 
 
 # -----------------------------------------------------------
 # SECTION 13 — VERIFICATION PAYLOAD (PRINT ONLY — DO NOT POST)
+#
+# Metric: dataConfidenceScore (the action's measurable outcome is the
+# confidence improvement that results from owner-confirming July data).
+#
+# Schema: financeVerifySchema
+#   beforeValue: number | null
+#   afterValue:  number | null
+#   targetDirection: "up" | "down"
+#   targetValue: number | null (optional)
+#   evidence: string[] (optional)
+#   disputed: boolean (optional)
+#
+# targetDirection="up" because higher dataConfidenceScore is the improvement
+# direction (owner confirmation eliminates the missing-data penalty).
+# beforeValue=65 (Cycle #3 dataConfidenceScore — the pre-action baseline).
+# afterValue=CYCLE4_CONFIDENCE (runtime value from Cycle #4 GET; NOT hard-coded).
+# If Cycle #4 was not observed, afterValue will be null.
+#
+# evidence=[newSnapshotId]: semantically valid — the action service requires
+# a non-empty string[]; no canonical format is enforced. The snapshot UUID
+# is the direct reference to the evidence record.
 # -----------------------------------------------------------
 echo ""
 echo "============================================================"
@@ -1085,27 +1121,47 @@ echo "SECTION 13 — PROPOSED VERIFICATION PAYLOAD (PRINT ONLY)"
 echo "DO NOT POST THIS. AWAIT OWNER AUTHORIZATION."
 echo "============================================================"
 
-V2_RECEIVABLES_FINAL="$(echo "$SNAP_V2_BODY" | jq -r '.receivables // "null"')"
-V2_PAYABLES_FINAL="$(echo "$SNAP_V2_BODY" | jq -r '.payables // "null"')"
+# afterValue is the actual Cycle #4 dataConfidenceScore (runtime, not hard-coded).
+# If Cycle #4 was not observed, this will be the string "null" and must be
+# treated as unknown — do not submit the payload until Cycle #4 is confirmed.
+VERIFY_AFTER_VALUE="null"
+if [[ "$CYCLE4_CONFIDENCE" != "null" ]] && [[ -n "$CYCLE4_CONFIDENCE" ]]; then
+  VERIFY_AFTER_VALUE="${CYCLE4_CONFIDENCE}"
+fi
+
+echo "Metric: dataConfidenceScore"
+echo "beforeValue (Cycle #3 confidence): 65"
+echo "afterValue  (Cycle #4 confidence): ${VERIFY_AFTER_VALUE}"
+echo "targetDirection: up (higher confidence = improvement)"
+echo ""
 
 cat <<EOF
 POST /api/owner/finance/actions/${ACTION_ID}/verify
 Content-Type: application/json
 
 {
-  "beforeValue": null,
-  "afterValue": 0,
-  "targetDirection": "down",
-  "targetValue": 0,
+  "beforeValue": 65,
+  "afterValue": ${VERIFY_AFTER_VALUE},
+  "targetDirection": "up",
+  "targetValue": null,
   "evidence": ["${NEW_SNAPSHOT_ID}"],
   "disputed": false
 }
 
-NOTE: beforeValue=null because the original value (v1.receivables=${V1_RECEIVABLES}) was
-      unconfirmed/estimated. afterValue=0 per OWNER_CONFIRMED amendment.
-      targetDirection=down (reduction to zero).
+NOTE: beforeValue=65 is Cycle #3 dataConfidenceScore (pre-action baseline, confirmed at gate).
+      afterValue=${VERIFY_AFTER_VALUE} is Cycle #4 dataConfidenceScore (runtime, not hard-coded).
+      targetDirection="up" because owner confirmation raises the confidence score.
+      evidence=["${NEW_SNAPSHOT_ID}"] references the amended snapshot (semantically valid;
+        action.service.ts requires non-empty string[] only — no format constraint).
       DO NOT POST. Awaiting owner authorization.
 EOF
+
+if [[ "$VERIFY_AFTER_VALUE" == "null" ]]; then
+  echo ""
+  echo "WARNING: afterValue=null because Cycle #4 was not observed."
+  echo "         Do not submit this payload until Cycle #4 is confirmed and its"
+  echo "         dataConfidenceScore is known."
+fi
 
 # -----------------------------------------------------------
 # SECTION 14 — CYCLE HISTORY CHAIN CHECK
