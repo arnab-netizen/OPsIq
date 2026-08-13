@@ -15,6 +15,7 @@ import {
 } from "@/domain/owner-spine/contracts";
 import type { FinanceDiagnosisResult } from "./diagnosis";
 import { buildFinanceRecommendations, FINANCE_REC_TEMPLATES, type FinanceRecommendation } from "./recommendations";
+import { modifierAllowedForSeverity, type FinanceEffectivenessMap } from "./outcome-signals";
 
 /** Build a human-readable "because" rationale from source metric data. */
 function buildEvidenceRationale(
@@ -35,15 +36,20 @@ function buildEvidenceRationale(
  * Convert one recommendation into an OwnerAction. `survivalRiskScore` (the
  * business-level finance risk) raises the priority of actions when the business
  * is under survival pressure, so existential actions outrank growth ones.
+ * `effectivenessModifier` (optional, from Bayesian effectiveness shrinkage) adjusts
+ * confidence up/down based on historical outcomes — never applied to critical severity.
  */
 export function recommendationToOwnerAction(
   rec: FinanceRecommendation,
-  survivalRiskScore = 0
+  survivalRiskScore = 0,
+  effectivenessModifier = 0
 ): OwnerAction {
   const expectedImpactScore = clampScore(rec.expectedFinancialImpactScore);
   const effortScore = clampScore(rec.effortScore);
   const urgencyScore = clampScore(rec.urgencyScore);
-  const confidence = clampConfidence(rec.confidence);
+  // Critical findings are never influenced by effectiveness learning (deterministic safety rule).
+  const safeModifier = modifierAllowedForSeverity(rec.severity) ? effectivenessModifier : 0;
+  const confidence = clampConfidence(rec.confidence + safeModifier);
 
   const priorityScore = calculateOwnerPriorityScore({
     expectedImpactScore,
@@ -91,13 +97,26 @@ export interface FinanceActionPlan {
  * ranked by the Spine ranker (priority desc → impact → confidence → findingCode →
  * title), and `recommendedNextAction` is the top-ranked action. Findings without
  * a recommendation template are reported in `missingActionInputs` (never invented).
+ *
+ * `effectivenessMap` (optional) carries Bayesian-shrunk confidence modifiers from
+ * historical outcomes. Applied only to non-critical findings. Pass undefined or an
+ * empty map to run without effectiveness adjustment (cold-start / low-sample state).
  */
-export function planFinanceActionsFromDiagnosis(diagnosis: FinanceDiagnosisResult): FinanceActionPlan {
+export function planFinanceActionsFromDiagnosis(
+  diagnosis: FinanceDiagnosisResult,
+  effectivenessMap?: FinanceEffectivenessMap
+): FinanceActionPlan {
   const recommendations = buildFinanceRecommendations(diagnosis.findings);
   const survivalRiskScore = diagnosis.metrics.financialRiskScore;
 
   const actions = rankOwnerActions(
-    recommendations.map((r) => recommendationToOwnerAction(r, survivalRiskScore))
+    recommendations.map((r) =>
+      recommendationToOwnerAction(
+        r,
+        survivalRiskScore,
+        effectivenessMap?.get(r.findingCode)?.modifier ?? 0
+      )
+    )
   );
 
   const missingActionInputs = diagnosis.findings
