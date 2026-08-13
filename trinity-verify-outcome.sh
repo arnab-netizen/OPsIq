@@ -211,6 +211,51 @@ api_post_once() {
 require_jq
 
 # -----------------------------------------------------------
+# NUMERIC GATE SELF-TESTS — run before any credential prompts
+# Root-cause guard: jq 'tostring' without -r outputs JSON-encoded
+# string with surrounding double-quote chars ("65" not 65), so
+# Bash != comparison would always fail even on correct values.
+# Fix: use `jq -e '. == N'` — exits 0 iff value equals N numerically
+# (handles 65.0==65, null→1, string→1, missing→1 all correctly).
+# -----------------------------------------------------------
+_numeric_gate_selftest() {
+  local label="$1" json="$2" field="$3" expected="$4"
+  local rc
+  echo "$json" | jq -e --argjson e "$expected" ".${field} == \$e" >/dev/null 2>&1
+  rc=$?
+  if [[ "$rc" -ne 0 ]]; then
+    printf 'SELFTEST_FAIL: %s (json=%s field=%s expected=%s)\n' "$label" "$json" "$field" "$expected" >&2
+    exit 1
+  fi
+  echo "SELFTEST_PASS: ${label}"
+}
+_numeric_gate_selftest_fail() {
+  local label="$1" json="$2" field="$3" expected="$4"
+  local rc
+  echo "$json" | jq -e --argjson e "$expected" ".${field} == \$e" >/dev/null 2>&1
+  rc=$?
+  if [[ "$rc" -eq 0 ]]; then
+    printf 'SELFTEST_FAIL (should-reject-but-passed): %s (json=%s field=%s expected=%s)\n' "$label" "$json" "$field" "$expected" >&2
+    exit 1
+  fi
+  echo "SELFTEST_PASS: ${label}"
+}
+
+echo "--- numeric gate self-tests ---"
+_numeric_gate_selftest      "65==65"       '{"dataConfidenceScore":65}'    "dataConfidenceScore" 65
+_numeric_gate_selftest      "65.0==65"     '{"dataConfidenceScore":65.0}'  "dataConfidenceScore" 65
+_numeric_gate_selftest_fail "64!=65"       '{"dataConfidenceScore":64}'    "dataConfidenceScore" 65
+_numeric_gate_selftest_fail "66!=65"       '{"dataConfidenceScore":66}'    "dataConfidenceScore" 65
+_numeric_gate_selftest      "75==75"       '{"dataConfidenceScore":75}'    "dataConfidenceScore" 75
+_numeric_gate_selftest      "75.0==75"     '{"dataConfidenceScore":75.0}'  "dataConfidenceScore" 75
+_numeric_gate_selftest_fail "74!=75"       '{"dataConfidenceScore":74}'    "dataConfidenceScore" 75
+_numeric_gate_selftest_fail "76!=75"       '{"dataConfidenceScore":76}'    "dataConfidenceScore" 75
+_numeric_gate_selftest_fail "null-fails"   '{"dataConfidenceScore":null}'  "dataConfidenceScore" 65
+_numeric_gate_selftest_fail "str-fails"    '{"dataConfidenceScore":"65"}'  "dataConfidenceScore" 65
+echo "--- numeric gate self-tests PASSED ---"
+echo ""
+
+# -----------------------------------------------------------
 # SECTION 1 — MODE BANNER
 # -----------------------------------------------------------
 echo "============================================================"
@@ -390,8 +435,7 @@ echo "CYCLE3_HEALTH=${CYCLE3_HEALTH}"
 echo "CYCLE3_SURVIVAL=${CYCLE3_SURVIVAL}"
 echo "CYCLE3_SNAPSHOT_ID=${CYCLE3_SNAPSHOT_ID}"
 
-CYCLE3_CONF_INT="$(echo "$CYCLE3_CONFIDENCE_VAL" | jq 'floor | tostring' 2>/dev/null || echo "-1")"
-if [[ "$CYCLE3_CONF_INT" != "65" ]]; then
+if ! echo "$C3_BODY" | jq -e '.dataConfidenceScore == 65' >/dev/null 2>&1; then
   abort_with_report "GATE_FAIL: Cycle3 dataConfidenceScore=${CYCLE3_CONFIDENCE_VAL} — expected 65"
 fi
 
@@ -419,8 +463,7 @@ echo "CYCLE4_HEALTH=${CYCLE4_HEALTH}"
 echo "CYCLE4_SURVIVAL=${CYCLE4_SURVIVAL}"
 echo "CYCLE4_SNAPSHOT_ID=${CYCLE4_SNAPSHOT_ID_VAL}"
 
-CYCLE4_CONF_INT="$(echo "$CYCLE4_CONFIDENCE_VAL" | jq 'floor | tostring' 2>/dev/null || echo "-1")"
-if [[ "$CYCLE4_CONF_INT" != "75" ]]; then
+if ! echo "$C4_BODY" | jq -e '.dataConfidenceScore == 75' >/dev/null 2>&1; then
   abort_with_report "GATE_FAIL: Cycle4 dataConfidenceScore=${CYCLE4_CONFIDENCE_VAL} — expected 75"
 fi
 
