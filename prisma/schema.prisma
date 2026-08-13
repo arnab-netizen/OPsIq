@@ -2708,7 +2708,7 @@ model OwnerFinancialSnapshot {
   cycles               OwnerFinanceCycle[]
 
   // Version-aware uniqueness: one row per (business, period, version number)
-  @@unique([businessId, periodStart, periodEnd, version])
+  @@unique([businessId, periodStart, periodEnd, version], map: "owner_fin_snapshots_bus_period_version_key")
   @@index([workspaceId])
   @@index([businessId])
   @@index([periodEnd])
