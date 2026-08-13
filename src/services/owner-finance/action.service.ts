@@ -125,7 +125,7 @@ export async function updateFinanceAction(
           payload: { trigger: "action_completed", triggerActionId: actionId },
         });
       }
-    } catch (_err) {
+    } catch {
       // Re-diagnosis failure must not fail the action update — advisory only.
     }
   }

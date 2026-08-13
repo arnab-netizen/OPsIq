@@ -51,7 +51,6 @@ vi.mock("@/domain/owner-finance/data-confidence", () => ({
 import {
   amendFinancialSnapshot,
   listFinancialSnapshots,
-  getFinancialSnapshot,
   resolveCurrentSnapshotId,
   createFinancialSnapshot,
 } from "@/services/owner-finance/snapshot.service";

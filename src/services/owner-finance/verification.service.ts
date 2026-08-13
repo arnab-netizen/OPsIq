@@ -104,7 +104,7 @@ export async function recordFinanceVerification(
           payload: { trigger: "verification_success", triggerVerificationId: verification.id },
         });
       }
-    } catch (_err) {
+    } catch {
       // Re-diagnosis failure must not fail the verification record — advisory only.
     }
   }
