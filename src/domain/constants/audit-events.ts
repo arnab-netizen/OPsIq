@@ -278,6 +278,7 @@ export const AUDIT_EVENTS = {
 
   // Owner Finance (Module 2)
   OWNER_FINANCE_SNAPSHOT_RECORDED: "owner.finance_snapshot_recorded",
+  OWNER_FINANCE_SNAPSHOT_AMENDED: "owner.finance_snapshot_amended",
   OWNER_FINANCE_DIAGNOSIS_RUN: "owner.finance_diagnosis_run",
   OWNER_FINANCE_DIAGNOSIS_LOW_CONFIDENCE: "owner.finance_diagnosis_low_confidence",
   OWNER_FINANCE_ACTION_UPDATED: "owner.finance_action_updated",

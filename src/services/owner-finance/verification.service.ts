@@ -11,6 +11,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { verifyOutcome } from "@/domain/founder-recovery/verification";
+import { resolveCurrentSnapshotId } from "@/services/owner-finance/snapshot.service";
 import type { FinanceVerifyInput } from "@/domain/owner-finance/validation";
 
 export async function recordFinanceVerification(
@@ -71,17 +72,29 @@ export async function recordFinanceVerification(
     },
   });
 
-  // On verified success, trigger re-diagnosis to capture improved business state.
+  // On verified success, trigger re-diagnosis from the causally-linked snapshot (best-effort).
+  // Phase E fix: follow action.cycleId → cycle.snapshotId → current (non-superseded) version.
   if (result.reachedTarget) {
     try {
-      const latestSnapshot = await db.ownerFinancialSnapshot.findFirst({
-        where: { businessId: action.businessId, workspaceId },
-        orderBy: { periodEnd: "desc" },
-        select: { id: true },
+      let targetSnapshotId: string | undefined;
+      const cycle = await db.ownerFinanceCycle.findFirst({
+        where: { id: action.cycleId },
+        select: { snapshotId: true },
       });
-      if (latestSnapshot) {
+      if (cycle?.snapshotId) {
+        targetSnapshotId = await resolveCurrentSnapshotId(cycle.snapshotId);
+      }
+      if (!targetSnapshotId) {
+        const snap = await db.ownerFinancialSnapshot.findFirst({
+          where: { businessId: action.businessId, workspaceId, supersededById: null },
+          orderBy: { periodEnd: "desc" },
+          select: { id: true },
+        });
+        targetSnapshotId = snap?.id;
+      }
+      if (targetSnapshotId) {
         const { runFinanceDiagnosis } = await import("./diagnosis.service");
-        const newCycle = await runFinanceDiagnosis(action.businessId, latestSnapshot.id, actorId, workspaceId);
+        const newCycle = await runFinanceDiagnosis(action.businessId, targetSnapshotId, actorId, workspaceId);
         await emitAuditEvent({
           eventName: AUDIT_EVENTS.OWNER_FINANCE_VERIFICATION_REASSESSMENT_TRIGGERED,
           actorId,
