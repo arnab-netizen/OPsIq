@@ -8,25 +8,30 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ConflictError, NotFoundError } from "@/infra/errors";
 
-// ── Shared mocks ────────────────────────────────────────────────────────────
+// ── Shared mocks (vi.hoisted so they are available inside vi.mock factories) ─
 
-const mockTx = {
-  $queryRaw: vi.fn(),
-  ownerFinancialSnapshot: {
-    findFirst: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-  },
-};
+const { mockTx, mockDb } = vi.hoisted(() => {
+  const tx = {
+    $queryRaw: vi.fn(),
+    ownerFinancialSnapshot: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+  };
 
-const mockDb = {
-  $transaction: vi.fn((fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)),
-  ownerFinancialSnapshot: {
-    findFirst: vi.fn(),
-    findMany: vi.fn(),
-  },
-  ownerBusiness: { findFirst: vi.fn() },
-};
+  const db = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    $transaction: vi.fn((fn: (tx: any) => Promise<unknown>) => fn(tx)),
+    ownerFinancialSnapshot: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+    },
+    ownerBusiness: { findFirst: vi.fn() },
+  };
+
+  return { mockTx: tx, mockDb: db };
+});
 
 vi.mock("@/lib/db", () => ({ db: mockDb }));
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: vi.fn().mockResolvedValue(undefined) }));
@@ -138,9 +143,17 @@ describe("I2 — Historical reproducibility: original row preserved, only supers
 
     await amendFinancialSnapshot("snap-v1", { amendmentReason: "test", receivables: 1 }, "actor-1", "ws-1");
 
+    // Service generates newId = randomUUID() before the tx; that same id is passed to
+    // both create({ data: { id: newId } }) and update({ data: { supersededById: newId } }).
+    // Capture the id from the create args to verify the update uses the same value.
+    const createCall = mockTx.ownerFinancialSnapshot.create.mock.calls[0][0];
+    const generatedId = createCall.data.id as string;
     const updateCall = mockTx.ownerFinancialSnapshot.update.mock.calls[0][0];
     expect(updateCall.where).toEqual({ id: "snap-v1" });
-    expect(updateCall.data).toEqual({ supersededById: "snap-v2" });
+    // Only supersededById is mutated — no other fields on the original row
+    expect(updateCall.data).toEqual({ supersededById: generatedId });
+    expect(typeof generatedId).toBe("string");
+    expect(generatedId.length).toBeGreaterThan(0);
   });
 });
 
