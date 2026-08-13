@@ -73,6 +73,7 @@ const BASE_VERIFICATION = {
 
 type DbMock = {
   ownerFinanceAction: { findFirst: MockedFunction<any>; update: MockedFunction<any> };
+  ownerFinanceCycle: { findFirst: MockedFunction<any> };
   ownerFinancialSnapshot: { findFirst: MockedFunction<any> };
   ownerFinanceVerification: { create: MockedFunction<any> };
   ownerOperationsAction: { findFirst: MockedFunction<any>; update: MockedFunction<any> };
@@ -97,6 +98,7 @@ function makeDbMock(): DbMock {
   });
   return {
     ownerFinanceAction: makeTable(BASE_ACTION, { ...BASE_ACTION, status: "completed" }),
+    ownerFinanceCycle: { findFirst: vi.fn().mockResolvedValue({ snapshotId: "snap-1" }) },
     ownerFinancialSnapshot: { findFirst: vi.fn().mockResolvedValue(BASE_SNAPSHOT) },
     ownerFinanceVerification: { create: vi.fn().mockResolvedValue(BASE_VERIFICATION) },
 

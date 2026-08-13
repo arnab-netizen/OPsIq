@@ -2696,15 +2696,24 @@ model OwnerFinancialSnapshot {
   notes                String?
   dataConfidenceScore  Float               @map("data_confidence_score")
   missingCriticalData  Json                @map("missing_critical_data")
+  // Amendment versioning — same pattern as StartupIdeaRecord (reviseIdea)
+  version              Int                 @default(1)
+  supersededById       String?             @map("superseded_by_id") @db.Uuid
+  amendmentReason      String?             @map("amendment_reason") @db.Text
+  changedFields        Json?               @map("changed_fields")
+  amendedByActorId     String?             @map("amended_by_actor_id") @db.Uuid
   createdAt            DateTime            @default(now()) @map("created_at")
   updatedAt            DateTime            @updatedAt @map("updated_at")
   business             OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Cascade)
   cycles               OwnerFinanceCycle[]
 
-  @@unique([businessId, periodStart, periodEnd])
+  // Version-aware uniqueness: one row per (business, period, version number)
+  @@unique([businessId, periodStart, periodEnd, version], map: "owner_fin_snapshots_bus_period_version_key")
   @@index([workspaceId])
   @@index([businessId])
   @@index([periodEnd])
+  // Current-version lookups: supersededById IS NULL
+  @@index([businessId, supersededById])
   @@map("owner_financial_snapshots")
 }
 

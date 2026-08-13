@@ -17,6 +17,7 @@ import {
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
 import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
+import { resolveCurrentSnapshotId } from "@/services/owner-finance/snapshot.service";
 import type { FinanceActionUpdateInput } from "@/domain/owner-finance/validation";
 
 export async function updateFinanceAction(
@@ -91,16 +92,30 @@ export async function updateFinanceAction(
       payload: { businessId: updated.businessId, cycleId: updated.cycleId },
     });
 
-    // Attempt automatic re-diagnosis from the latest confirmed snapshot (best-effort; non-blocking).
+    // Attempt automatic re-diagnosis from the causally-linked snapshot (best-effort; non-blocking).
+    // Phase E fix: follow action.cycleId → cycle.snapshotId → current (non-superseded) version
+    // instead of blindly picking ORDER BY periodEnd DESC.
     try {
-      const latestSnapshot = await db.ownerFinancialSnapshot.findFirst({
-        where: { businessId: updated.businessId, workspaceId },
-        orderBy: { periodEnd: "desc" },
-        select: { id: true },
+      let targetSnapshotId: string | undefined;
+      const cycle = await db.ownerFinanceCycle.findFirst({
+        where: { id: updated.cycleId },
+        select: { snapshotId: true },
       });
-      if (latestSnapshot) {
+      if (cycle?.snapshotId) {
+        targetSnapshotId = await resolveCurrentSnapshotId(cycle.snapshotId);
+      }
+      // Fallback: current (non-superseded) snapshot for the business sorted by period
+      if (!targetSnapshotId) {
+        const snap = await db.ownerFinancialSnapshot.findFirst({
+          where: { businessId: updated.businessId, workspaceId, supersededById: null },
+          orderBy: { periodEnd: "desc" },
+          select: { id: true },
+        });
+        targetSnapshotId = snap?.id;
+      }
+      if (targetSnapshotId) {
         const { runFinanceDiagnosis } = await import("./diagnosis.service");
-        const newCycle = await runFinanceDiagnosis(updated.businessId, latestSnapshot.id, actorId, workspaceId);
+        const newCycle = await runFinanceDiagnosis(updated.businessId, targetSnapshotId, actorId, workspaceId);
         await emitAuditEvent({
           eventName: AUDIT_EVENTS.OWNER_FINANCE_REASSESSMENT_TRIGGERED,
           actorId,
@@ -110,7 +125,7 @@ export async function updateFinanceAction(
           payload: { trigger: "action_completed", triggerActionId: actionId },
         });
       }
-    } catch (_err) {
+    } catch {
       // Re-diagnosis failure must not fail the action update — advisory only.
     }
   }
