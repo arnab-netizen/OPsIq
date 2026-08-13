@@ -43,7 +43,7 @@ CYCLE3_ID="87b81bea-a753-4131-b63f-e83050891534"
 CYCLE4_ID="a3ccda30-63e3-4ecf-b4cd-ef752314d16a"
 V1_SNAPSHOT_ID="fd2d4e07-5f7b-4253-be23-a07d351069b8"
 V2_SNAPSHOT_ID="1cf66a33-c167-46c3-9c74-f558207d65e5"
-OWNER_EMAIL="arnab@firsttry.run"
+# No email hard-coded. OPSIQ_OWNER_EMAIL is set from environment or prompted below.
 
 # Verification inputs — source-verified:
 #   beforeValue:     Cycle #3 dataConfidenceScore = 65
@@ -193,9 +193,18 @@ if [[ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]]; then
   echo
 fi
 
+OPSIQ_OWNER_EMAIL="${OPSIQ_OWNER_EMAIL:-}"
+if [[ -z "$OPSIQ_OWNER_EMAIL" ]]; then
+  printf "OpsIQ owner email: "
+  read -r OPSIQ_OWNER_EMAIL
+fi
+if [[ -z "$OPSIQ_OWNER_EMAIL" ]]; then
+  abort_with_report "OPSIQ_OWNER_EMAIL cannot be empty."
+fi
+
 OPSIQ_OWNER_PASSWORD="${OPSIQ_OWNER_PASSWORD:-}"
 if [[ -z "$OPSIQ_OWNER_PASSWORD" ]]; then
-  read -rsp "Owner password for ${OWNER_EMAIL}: " OPSIQ_OWNER_PASSWORD
+  read -rsp "OpsIQ owner password: " OPSIQ_OWNER_PASSWORD
   echo
 fi
 
@@ -211,7 +220,7 @@ LOGIN_HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
   -H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
   -H "Content-Type: application/json" \
   -X POST \
-  -d "{\"email\":\"${OWNER_EMAIL}\",\"password\":\"${OPSIQ_OWNER_PASSWORD}\"}" \
+  -d "{\"email\":\"${OPSIQ_OWNER_EMAIL}\",\"password\":\"${OPSIQ_OWNER_PASSWORD}\"}" \
   "${BASE_URL}/api/auth/login")
 unset OPSIQ_OWNER_PASSWORD
 
@@ -252,6 +261,12 @@ echo "TARGET_WORKSPACE_AUTHORIZED=${TARGET_WORKSPACE_AUTHORIZED}"
 if [[ -z "$ACTOR_ID" ]]; then
   abort_with_report "GATE_FAIL: could not resolve actorId from /api/me"
 fi
+# Identity gate: authenticated email must match the entered credential.
+# Fail closed before any verification POST if mismatch.
+if [[ "$ACTOR_EMAIL_VAL" != "$OPSIQ_OWNER_EMAIL" ]]; then
+  abort_with_report "GATE_FAIL: /api/me email='${ACTOR_EMAIL_VAL}' does not match entered email '${OPSIQ_OWNER_EMAIL}'"
+fi
+echo "AUTH_EMAIL_RUNTIME_VERIFIED=YES"
 if [[ "$HIGHEST_ROLE" != "admin_or_portfolio_manager" ]]; then
   abort_with_report "GATE_FAIL: highestRole='${HIGHEST_ROLE}' — required 'admin_or_portfolio_manager'"
 fi
