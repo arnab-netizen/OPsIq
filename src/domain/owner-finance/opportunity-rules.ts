@@ -8,7 +8,7 @@
 import { clampScore, clampConfidence, type OwnerFinding, type OwnerSeverity } from "@/domain/owner-spine/contracts";
 import type { FinancialSnapshotInput, FinancialDerivedMetrics } from "./types";
 import type { FinanceThresholds } from "./thresholds";
-import { IMPORTANT_FIELDS, IMPORTANT_FIELD_LABELS } from "./data-confidence";
+import { IMPORTANT_FIELDS, IMPORTANT_FIELD_LABELS, fixedCostsCoveredByComponents } from "./data-confidence";
 
 interface OppArgs {
   code: string;
@@ -22,6 +22,7 @@ interface OppArgs {
   impactScore: number;
   urgencyScore: number;
   evidence: string[];
+  missingData?: string[];
   verificationMetric: string;
 }
 
@@ -40,12 +41,42 @@ function opportunity(args: OppArgs): OwnerFinding {
     urgencyScore: clampScore(args.urgencyScore),
     findingType: "opportunity",
     evidence: args.evidence,
-    missingData: [],
+    missingData: args.missingData ?? [],
     verificationMetric: args.verificationMetric,
   };
 }
 
 const pct = (v: number) => `${v}%`;
+
+/**
+ * Priority ordering for missing IMPORTANT finance inputs: earlier entries unlock
+ * more diagnostic signals in the current engine (risk findings + opportunity findings).
+ * Fields that only produce computed metrics (no current rule fires on them) rank last.
+ *
+ * Priority basis:
+ *   receivables       → receivablesPressurePct → FIN_HIGH_RECEIVABLES + FIN_OPP_RECEIVABLES_COLLECTION
+ *   payables          → payablesPressurePct    → FIN_HIGH_PAYABLES
+ *   discountAmount    → discountLeakagePct + costLeakageRatioPct → FIN_DISCOUNT_LEAKAGE + FIN_OPP_LEAKAGE_REDUCTION
+ *   refundAmount      → refundReworkLeakagePct + costLeakageRatioPct → FIN_REFUND_REWORK_LEAKAGE
+ *   costOfGoodsOrServices → grossMarginPct → FIN_NEGATIVE_GROSS_MARGIN
+ *   loanEmiDebtPayments   → debtServicePressurePct → FIN_HIGH_DEBT_PRESSURE
+ *   salaryPayroll     → payrollBurdenPct → FIN_HIGH_PAYROLL_BURDEN
+ *   fixedCosts        → fixedCostBurdenPct (but covered by components when any are present)
+ *   ownerWithdrawals, orderCount, customerCount → metric only (no current rule)
+ */
+const IMPORTANT_FIELD_PRIORITY_ORDER: (keyof typeof IMPORTANT_FIELD_LABELS)[] = [
+  "receivables",
+  "payables",
+  "discountAmount",
+  "refundAmount",
+  "costOfGoodsOrServices",
+  "loanEmiDebtPayments",
+  "salaryPayroll",
+  "fixedCosts",
+  "ownerWithdrawals",
+  "orderCount",
+  "customerCount",
+];
 
 export function buildFinanceOpportunityFindings(
   input: FinancialSnapshotInput,
@@ -187,16 +218,27 @@ export function buildFinanceOpportunityFindings(
 
   // Data quality improvement opportunity (confidence below 100)
   if (m.dataConfidenceScore < 100) {
-    const missingImportant = IMPORTANT_FIELDS.filter((f) => {
-      const v = input[f];
+    const coveredByComponents = fixedCostsCoveredByComponents(input);
+
+    // Build missing list in priority order:
+    //   1. Fields in IMPORTANT_FIELD_PRIORITY_ORDER that are missing (and not covered by components).
+    //   2. Any IMPORTANT_FIELDS not in the priority list (forward-compatibility catch-all).
+    function isMissingField(f: string): boolean {
+      if (f === "fixedCosts" && coveredByComponents) return false;
+      const v = input[f as keyof FinancialSnapshotInput];
       return v === null || v === undefined || (typeof v === "number" && !Number.isFinite(v));
-    });
+    }
+    const priorityOrdered = IMPORTANT_FIELD_PRIORITY_ORDER.filter(isMissingField);
+    const prioritySet = new Set(priorityOrdered);
+    const remaining = IMPORTANT_FIELDS.filter((f) => !prioritySet.has(f) && isMissingField(f));
+    const allMissingOrdered = [...priorityOrdered, ...remaining];
+
     // Use owner-facing labels (not camelCase keys) so the evidence line is actionable.
     const evidenceLine =
       m.missingRequiredInputs.length > 0
         ? `missing critical inputs: ${m.missingRequiredInputs.join(", ")}`
-        : missingImportant.length > 0
-        ? `provide for sharper diagnosis: ${missingImportant.map((f) => IMPORTANT_FIELD_LABELS[f] ?? f).join("; ")}`
+        : allMissingOrdered.length > 0
+        ? `provide for sharper diagnosis: ${allMissingOrdered.map((f) => IMPORTANT_FIELD_LABELS[f] ?? f).join("; ")}`
         : "snapshot may be stale — refresh the data";
     findings.push(
       opportunity({
@@ -211,6 +253,7 @@ export function buildFinanceOpportunityFindings(
         impactScore: clampScore(100 - m.dataConfidenceScore),
         urgencyScore: 20,
         evidence: [`dataConfidenceScore = ${m.dataConfidenceScore} < 100`, evidenceLine],
+        missingData: allMissingOrdered, // priority-ordered field keys for recommendation builder
         verificationMetric: "dataConfidenceScore",
       })
     );

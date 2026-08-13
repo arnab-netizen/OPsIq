@@ -552,9 +552,9 @@ describe("Trinity Services July 2026 — regression fixture (exact pilot data)",
     expect(m.fixedCostBurdenPct).toBe(55);
   });
 
-  it("TRINITY-3: survivalState = WATCH (confidence=65 < 70 canonical gate — UNKNOWN ≠ HEALTHY)", () => {
+  it("TRINITY-3: survivalState = SAFE (confidence=70 ≥ 70 canonical gate — fixedCosts now covered by rent+salaryPayroll components)", () => {
     const m = computeFinancialMetrics(FULL_TRINITY, { now: NOW });
-    expect(m.survivalState).toBe("WATCH");
+    expect(m.survivalState).toBe("SAFE");
   });
 
   it("TRINITY-4: no risk findings (all thresholds satisfied for laundry_local_service)", () => {
@@ -578,9 +578,9 @@ describe("Trinity Services July 2026 — regression fixture (exact pilot data)",
     expect(m.netProfit).toBe(119316);
   });
 
-  it("TRINITY-8: healthScore = 82 (ceiling(confidence=65)=82 — UNKNOWN ≠ HEALTHY, even for profitable business)", () => {
+  it("TRINITY-8: healthScore = 85 (ceiling(confidence=70)=85 — fixedCosts now covered by rent+salaryPayroll components)", () => {
     const r = diagnoseFinanceSnapshot(FULL_TRINITY, { now: NOW });
-    expect(r.domainScore.healthScore).toBe(82);
+    expect(r.domainScore.healthScore).toBe(85);
   });
 
   it("TRINITY-9: FIN_HIGH_FIXED_COST_BURDEN does NOT fire with laundry 55% threshold (it would at 50%)", () => {
