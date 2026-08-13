@@ -104,9 +104,9 @@ RESULT_MOVEMENT="null"
 # COOKIE JAR + CLEANUP
 # -----------------------------------------------------------
 JAR="$(mktemp /tmp/opsiq-verify-cjar-XXXXXX.txt)"
-TMPBODY_GET="/tmp/trinity-verify-get-body.tmp"
+CURL_ERR_FILE="/tmp/trinity-verify-curl-err.tmp"
 TMPBODY_POST="/tmp/trinity-verify-post-body.tmp"
-trap 'rm -f "$JAR" "$TMPBODY_GET" "$TMPBODY_POST"; echo "[cleanup] Cookie jar removed."' EXIT
+trap 'rm -f "$JAR" "$CURL_ERR_FILE" "$TMPBODY_POST"; echo "[cleanup] Cookie jar removed."' EXIT
 
 # -----------------------------------------------------------
 # HELPERS
@@ -125,35 +125,72 @@ require_jq() {
   fi
 }
 
-# GET with session cookie + bypass header; exits non-zero on HTTP error
+# GET: returns body via stdout; transport errors go to stderr.
+# No --fail or --fail-with-body — HTTP status is not checked here;
+# callers gate on extracted field values. Matches trinity-mutation-seq.sh do_get().
 api_get() {
   local url="$1"
-  curl -sf --fail-with-body \
-    -b "$JAR" \
-    -H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
-    -H "Accept: application/json" \
-    "$url"
-}
-
-# GET: saves body to TMPBODY_GET, returns HTTP status code
-api_get_with_status() {
-  local url="$1"
-  curl -s \
-    -o "$TMPBODY_GET" \
+  local tmpf curl_rc http_status body
+  tmpf="$(mktemp /tmp/trinity-verify-get-XXXXXX.tmp)"
+  curl_rc=0
+  http_status="$(curl --silent --show-error \
+    --connect-timeout 15 \
+    --max-time 60 \
+    -o "$tmpf" \
     -w "%{http_code}" \
     -b "$JAR" \
     -H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
     -H "Accept: application/json" \
-    "$url"
+    "$url" 2>"$CURL_ERR_FILE")" || curl_rc=$?
+  body="$(cat "$tmpf" 2>/dev/null || printf '')"
+  rm -f "$tmpf"
+  if [[ $curl_rc -ne 0 ]]; then
+    printf '[api_get transport error rc=%s url=%s] %s\n' \
+      "$curl_rc" "$url" "$(cat "$CURL_ERR_FILE" 2>/dev/null)" >&2
+    return 1
+  fi
+  printf '%s' "$body"
 }
 
-# POST: saves body to TMPBODY_POST, returns HTTP status code
+# GET: saves body to TMPBODY_POST area and returns HTTP status code.
+# Used only for the read-after-write path after an ambiguous POST.
+api_get_with_status() {
+  local url="$1"
+  local tmpf curl_rc
+  tmpf="$(mktemp /tmp/trinity-verify-raw-XXXXXX.tmp)"
+  curl_rc=0
+  local status
+  status="$(curl --silent --show-error \
+    --connect-timeout 15 \
+    --max-time 60 \
+    -o "$tmpf" \
+    -w "%{http_code}" \
+    -b "$JAR" \
+    -H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+    -H "Accept: application/json" \
+    "$url" 2>"$CURL_ERR_FILE")" || curl_rc=$?
+  cp "$tmpf" "$TMPBODY_POST" 2>/dev/null || true
+  rm -f "$tmpf"
+  if [[ $curl_rc -ne 0 ]]; then
+    printf 'CURL_ERROR_%s' "$curl_rc"
+    return 0
+  fi
+  printf '%s' "$status"
+}
+
+# POST: saves body to TMPBODY_POST, returns HTTP status code.
 # Called exactly once — caller must NOT retry.
 api_post_once() {
   local url="$1"
   local body="$2"
-  curl -s \
-    -o "$TMPBODY_POST" \
+  local tmpf curl_rc
+  tmpf="$(mktemp /tmp/trinity-verify-post-XXXXXX.tmp)"
+  curl_rc=0
+  local status
+  status="$(curl --silent --show-error \
+    --connect-timeout 15 \
+    --max-time 60 \
+    -o "$tmpf" \
     -w "%{http_code}" \
     -b "$JAR" \
     -H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
@@ -161,7 +198,14 @@ api_post_once() {
     -H "Accept: application/json" \
     -X POST \
     -d "$body" \
-    "$url"
+    "$url" 2>"$CURL_ERR_FILE")" || curl_rc=$?
+  cp "$tmpf" "$TMPBODY_POST" 2>/dev/null || true
+  rm -f "$tmpf"
+  if [[ $curl_rc -ne 0 ]]; then
+    printf 'CURL_ERROR_%s' "$curl_rc"
+    return 0
+  fi
+  printf '%s' "$status"
 }
 
 require_jq
@@ -579,7 +623,7 @@ elif [[ "$POST_HTTP_STATUS" =~ ^5 ]] || [[ -z "$POST_HTTP_STATUS" ]]; then
   echo ""
 
   RAW_STATUS="$(api_get_with_status "${BASE_URL}/api/owner/finance/actions/${ACTION_ID}")"
-  RAW_BODY="$(cat "$TMPBODY_GET" 2>/dev/null || echo "")"
+  RAW_BODY="$(cat "$TMPBODY_POST" 2>/dev/null || echo "")"
 
   echo "READ_AFTER_WRITE_HTTP_STATUS=${RAW_STATUS}"
   if [[ "$RAW_STATUS" == "200" ]]; then
