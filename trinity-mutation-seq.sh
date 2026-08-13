@@ -103,7 +103,8 @@ CYCLE4_ID=""
 ACTOR_ID=""
 ACTOR_EMAIL=""
 HIGHEST_ROLE=""
-RESOLVED_WORKSPACE_ID=""
+RESOLVED_WORKSPACE_IDS=""
+TARGET_WORKSPACE_AUTHORIZED="NO"
 
 # Snapshots
 SNAP_V1_BODY=""
@@ -180,11 +181,22 @@ JAR="$(mktemp /tmp/opsiq-cjar-XXXXXX.txt)"
 trap 'rm -f "$JAR"; echo "[cleanup] Cookie jar removed."' EXIT
 
 # -----------------------------------------------------------
-# SECTION 0d — CREDENTIAL PROMPTS (secure, never echoed)
+# SECTION 0d — PREFLIGHT-ONLY FLAG
+# -----------------------------------------------------------
+PREFLIGHT_ONLY=NO
+if [[ "${1:-}" == "--preflight-only" ]]; then
+  PREFLIGHT_ONLY=YES
+fi
+
+# -----------------------------------------------------------
+# SECTION 0e2 — CREDENTIAL PROMPTS (secure, never echoed)
 # -----------------------------------------------------------
 echo "============================================================"
 echo "TRINITY SERVICES — OWNER PILOT MUTATION SEQUENCE"
 echo "SCRIPT TIMESTAMP: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+if [[ "$PREFLIGHT_ONLY" == "YES" ]]; then
+  echo "MODE=PREFLIGHT_ONLY (no production mutations will be performed)"
+fi
 echo "============================================================"
 echo ""
 echo "[credentials] All inputs are read silently. Nothing will be echoed."
@@ -381,12 +393,21 @@ fi
 ACTOR_ID="$(echo "$ME_BODY" | jq -r '.user.id // empty')"
 ACTOR_EMAIL="$(echo "$ME_BODY" | jq -r '.user.email // empty')"
 HIGHEST_ROLE="$(echo "$ME_BODY" | jq -r '.highestRole // empty')"
-RESOLVED_WORKSPACE_ID="$(echo "$ME_BODY" | jq -r '.memberships[0].workspaceId // empty')"
+# Workspace IDs come from role assignments (scope="workspace", scopeId=workspaceId).
+# /api/me returns .roles[] from getRolesForUser() which selects scope="workspace" rows.
+# .memberships[] comes from getMembershipsForUser() which returns engagement memberships
+# (fields: id, engagementId, role, addedAt, addedBy) — NO workspaceId field. Do NOT use.
+RESOLVED_WORKSPACE_IDS="$(echo "$ME_BODY" | jq -r '[.roles[]? | select(.scope == "workspace") | .scopeId] | unique | join(",")')"
+TARGET_WORKSPACE_AUTHORIZED="NO"
+if echo "$RESOLVED_WORKSPACE_IDS" | grep -qF "$EXPECTED_WORKSPACE_ID"; then
+  TARGET_WORKSPACE_AUTHORIZED="YES"
+fi
 
 echo "ACTOR_ID=${ACTOR_ID}"
 echo "ACTOR_EMAIL=${ACTOR_EMAIL}"
 echo "HIGHEST_ROLE=${HIGHEST_ROLE}"
-echo "RESOLVED_WORKSPACE_ID=${RESOLVED_WORKSPACE_ID}"
+echo "RESOLVED_WORKSPACE_IDS=${RESOLVED_WORKSPACE_IDS}"
+echo "TARGET_WORKSPACE_AUTHORIZED=${TARGET_WORKSPACE_AUTHORIZED}"
 
 if [[ -z "$ACTOR_ID" ]]; then
   abort_with_report "GATE_FAIL: could not resolve actorId from /api/me"
@@ -396,8 +417,8 @@ if [[ "$HIGHEST_ROLE" != "admin_or_portfolio_manager" ]]; then
   abort_with_report "GATE_FAIL: highestRole='${HIGHEST_ROLE}' — required 'admin_or_portfolio_manager'"
 fi
 
-if [[ "$RESOLVED_WORKSPACE_ID" != "$EXPECTED_WORKSPACE_ID" ]]; then
-  abort_with_report "GATE_FAIL: workspaceId='${RESOLVED_WORKSPACE_ID}' — expected '${EXPECTED_WORKSPACE_ID}'"
+if [[ "$TARGET_WORKSPACE_AUTHORIZED" != "YES" ]]; then
+  abort_with_report "GATE_FAIL: expected workspace '${EXPECTED_WORKSPACE_ID}' not found in authenticated role scopes: '${RESOLVED_WORKSPACE_IDS}'"
 fi
 
 echo "GATE_AUTH=PASS"
@@ -518,6 +539,21 @@ echo ""
 echo "ALL PRE-WRITE GATES PASSED."
 echo "WRITE_COUNT_BEFORE_MUTATIONS=${WRITE_COUNT}"
 echo ""
+
+# -----------------------------------------------------------
+# PREFLIGHT-ONLY EXIT (if --preflight-only flag was passed)
+# -----------------------------------------------------------
+if [[ "$PREFLIGHT_ONLY" == "YES" ]]; then
+  echo "============================================================"
+  echo "PREFLIGHT_ONLY=YES"
+  echo "PRECONDITIONS=PASS"
+  echo "TARGET_WORKSPACE_AUTHORIZED=${TARGET_WORKSPACE_AUTHORIZED}"
+  echo "PRODUCTION_WRITES_PERFORMED=0"
+  echo "PREFLIGHT_RESULT=PASS"
+  echo "Exiting before any production mutation. Script complete."
+  echo "============================================================"
+  exit 0
+fi
 
 # -----------------------------------------------------------
 # SECTION 2 — WRITE 1: proposed → assigned
@@ -1197,7 +1233,7 @@ echo "============================================================"
 echo "TRINITY_JULY_AMENDMENT_AND_CYCLE4_RESULT"
 echo "============================================================"
 
-echo "OWNER_AUTH=YES (highestRole=${HIGHEST_ROLE}, workspaceId=${RESOLVED_WORKSPACE_ID})"
+echo "OWNER_AUTH=YES (highestRole=${HIGHEST_ROLE}, workspaceIds=${RESOLVED_WORKSPACE_IDS}, targetWorkspaceAuthorized=${TARGET_WORKSPACE_AUTHORIZED})"
 echo "PRECONDITIONS=ALL_PASSED"
 echo "ACTION_ASSIGNED=${ASSIGN_RESULT}"
 echo "ACTION_IN_PROGRESS=${IN_PROGRESS_RESULT}"
