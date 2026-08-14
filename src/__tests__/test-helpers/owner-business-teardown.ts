@@ -29,6 +29,8 @@ export async function teardownOwnerBusiness(businessId: string): Promise<void> {
   const where = { where: { businessId } };
 
   // Governed records: must be removed explicitly before the parent business.
+  // OwnerFinanceOutcomeSignal has a Restrict FK on verificationId — delete before the verification rows.
+  await db.ownerFinanceOutcomeSignal.deleteMany(where);
   await db.ownerFinanceVerification.deleteMany(where);
   await db.ownerCashflowVerification.deleteMany(where);
   await db.ownerSalesVerification.deleteMany(where);
