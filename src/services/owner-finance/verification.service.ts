@@ -109,5 +109,14 @@ export async function recordFinanceVerification(
     }
   }
 
+  // Best-effort: record outcome signal + governed learning candidate.
+  // Bridge failure must never fail the verification record itself.
+  try {
+    const { bridgeVerificationToLearning } = await import("./learning-bridge.service");
+    await bridgeVerificationToLearning(verification.id, workspaceId, actorId);
+  } catch {
+    // non-fatal — verification is already persisted
+  }
+
   return { verification, result };
 }

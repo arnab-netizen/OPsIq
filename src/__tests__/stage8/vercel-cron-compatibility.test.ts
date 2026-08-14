@@ -35,13 +35,24 @@ vi.mock("@/infra/scheduler", () => ({
 }));
 
 vi.mock("@/lib/db", () => ({
-  db: { alert: { findMany: alertFindMany } },
-
+  db: {
+    alert: { findMany: alertFindMany },
+    ownerFinanceVerification: { findMany: vi.fn().mockResolvedValue([]) },
+  },
   getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/services/alerts/alert-email-retry.service", () => ({
   retryEmailAlert,
+}));
+
+vi.mock("@/services/owner-finance/learning-bridge.service", () => ({
+  reconcileMissingFinanceLearningSignals: vi.fn().mockResolvedValue({
+    gapsFound: 0,
+    gapsBridged: 0,
+    gapsSkipped: 0,
+    errors: [],
+  }),
 }));
 
 vi.mock("@/infra/observability", () => ({ captureError: vi.fn() }));

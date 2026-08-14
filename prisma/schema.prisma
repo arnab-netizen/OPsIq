@@ -2453,6 +2453,7 @@ model OwnerBusiness {
   workingCapitalItems     OwnerWorkingCapitalItem[]
   archetypeMetrics        OwnerArchetypeMetric[]
   financeVerifications    OwnerFinanceVerification[]
+  financeOutcomeSignals   OwnerFinanceOutcomeSignal[]
   cashflowSnapshots       OwnerCashflowSnapshot[]
   cashflowCycles          OwnerCashflowCycle[]
   cashflowFindings        OwnerCashflowFinding[]
@@ -2807,6 +2808,7 @@ model OwnerFinanceAction {
   cycle                 OwnerFinanceCycle          @relation(fields: [cycleId], references: [id], onDelete: Cascade)
   finding               OwnerFinanceFinding?       @relation(fields: [findingId], references: [id], onDelete: SetNull)
   verifications         OwnerFinanceVerification[]
+  outcomeSignals        OwnerFinanceOutcomeSignal[]
 
   @@index([workspaceId])
   @@index([businessId])
@@ -2833,13 +2835,46 @@ model OwnerFinanceVerification {
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
   business           OwnerBusiness      @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  action             OwnerFinanceAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  action             OwnerFinanceAction        @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  outcomeSignal      OwnerFinanceOutcomeSignal?
 
   @@index([workspaceId])
   @@index([businessId])
   @@index([actionId])
   @@index([status])
   @@map("owner_finance_verifications")
+}
+
+// === Finance closed-loop learning — outcome signal query layer (Module 2 extension) ===
+// Each OwnerFinanceVerification produces at most one signal (@@unique guard).
+// Persists factual outcome for Bayesian effectiveness tracking.
+// The ControlledLearningCandidate (governance layer) is created separately via learning-bridge.
+model OwnerFinanceOutcomeSignal {
+  id                  String   @id @db.Uuid
+  workspaceId         String   @map("workspace_id") @db.Uuid
+  businessId          String   @map("business_id") @db.Uuid
+  verificationId      String   @unique @map("verification_id") @db.Uuid
+  actionId            String   @map("action_id") @db.Uuid
+  findingCode         String   @map("finding_code")
+  recommendationCode  String   @map("recommendation_code")
+  verificationStatus  String   @map("verification_status")
+  reachedTarget       Boolean  @map("reached_target")
+  beforeValue         Float?   @map("before_value")
+  afterValue          Float?   @map("after_value")
+  learningCandidateId String?  @map("learning_candidate_id")
+  recordedAt          DateTime @map("recorded_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  business            OwnerBusiness            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  verification        OwnerFinanceVerification @relation(fields: [verificationId], references: [id], onDelete: Restrict)
+  action              OwnerFinanceAction       @relation(fields: [actionId], references: [id], onDelete: Restrict)
+
+  @@unique([workspaceId, verificationId])
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([findingCode])
+  @@index([recommendationCode])
+  @@map("owner_finance_outcome_signals")
 }
 
 // === Module 5 — Cashflow Intelligence (cashflow-specific, additive) ===

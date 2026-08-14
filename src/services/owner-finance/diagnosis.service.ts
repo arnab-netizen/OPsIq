@@ -17,6 +17,7 @@ import { planFinanceActionsFromDiagnosis } from "@/domain/owner-finance/actions"
 import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import { mapBusinessTypeToFinanceIndustryTemplate } from "@/domain/owner-finance/thresholds";
 import { getFinancialSnapshot, rowToFinanceInput } from "./snapshot.service";
+import { getFinanceEffectivenessMap } from "./effectiveness.service";
 
 export async function runFinanceDiagnosis(
   businessId: string,
@@ -101,7 +102,18 @@ export async function runFinanceDiagnosis(
   }
 
   const diagnosis = diagnoseFinanceSnapshot(input);
-  const plan = planFinanceActionsFromDiagnosis(diagnosis);
+
+  // Query historical effectiveness signals for all finding codes in this diagnosis.
+  // Best-effort: a query failure falls back to an empty map (no modifier applied).
+  let effectivenessMap;
+  try {
+    const findingCodes = diagnosis.findings.map((f) => f.code);
+    effectivenessMap = await getFinanceEffectivenessMap(workspaceId, findingCodes);
+  } catch {
+    // Non-fatal: diagnosis proceeds without effectiveness adjustment
+  }
+
+  const plan = planFinanceActionsFromDiagnosis(diagnosis, effectivenessMap);
   const confidence = calculateDataConfidence(input);
 
   const previousCycle = await db.ownerFinanceCycle.findFirst({

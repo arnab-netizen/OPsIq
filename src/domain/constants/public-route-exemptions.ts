@@ -61,6 +61,7 @@ export const PUBLIC_ROUTE_EXEMPTIONS = {
     // compared, fail-closed / disabled when the token is unset). Invoked by the caller's scheduler.
     "/api/internal/reassessment-scan",
     "/api/internal/cron/scheduler", // Vercel Cron — authorized by CRON_SECRET bearer token (Vercel injects)
+    "/api/internal/finance-learning-reconcile", // Authorized by SCHEDULER_INTERNAL_TOKEN (same pattern as reassessment-scan)
   ],
   DIAGNOSTIC_KEY: [
     // Authorized by OPSIQ_DIAGNOSTIC_KEY header; disabled in production.
@@ -89,6 +90,7 @@ export const EXEMPTION_REASONS = {
   "/api/internal/cron/scheduler": "Vercel Cron endpoint - authorized by CRON_SECRET bearer token injected by Vercel, fail-closed when unset",
   "/api/internal/smoke-cleanup": "Smoke test cleanup - authorized by OPSIQ_DIAGNOSTIC_KEY, returns 404 in production (never exposed publicly)",
   "/api/internal/reassessment-scan": "Scheduler endpoint authorized by SCHEDULER_INTERNAL_TOKEN (constant-time compare, fail-closed when unset) instead of session auth",
+  "/api/internal/finance-learning-reconcile": "Scheduler endpoint authorized by SCHEDULER_INTERNAL_TOKEN (constant-time compare, fail-closed when unset) instead of session auth",
   "/api/internal/build-info": "Build metadata endpoint - safe public deployment info (commit SHA, environment)",
   "/api/internal/debug-engagements-p2007": "Internal debug and proof endpoint - development and testing only",
   "/api/internal/debug-engagements-prisma": "Internal debug and proof endpoint - development and testing only",
