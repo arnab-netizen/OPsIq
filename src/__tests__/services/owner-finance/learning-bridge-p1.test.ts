@@ -254,25 +254,28 @@ describe("MIN_SAMPLE end-to-end — below threshold produces zero modifier", () 
     expect(Math.abs(agg.modifier)).toBeLessThanOrEqual(MAX_MODIFIER);
   });
 
-  it("n=3 all-improved: modifier is positive and <= MAX_MODIFIER", () => {
-    // PRIOR_N=5, PRIOR_P=0.5: shrunk = (3 + 5×0.5)/(3+5) = 5.5/8 = 0.6875
-    // raw = 1.0; modifier = min(0.10, 0.6875 - 0.5) = +0.10
+  it("n=3 all-improved: modifier is positive and < MAX_MODIFIER", () => {
+    // PRIOR_N=5, PRIOR_P=0.5: shrunk = (3 + 2.5)/(3+5) = 5.5/8 = 0.6875
+    // deviation = 0.1875; modifier = clamp(0.1875 * 2 * 0.10, -0.10, 0.10) = 0.0375
     const signals: FinanceEffectivenessSignal[] = Array(3).fill({
       findingCode: "FIN_OPP_B", recommendationCode: "REC_B", reachedTarget: true,
     });
     const agg = computeEffectivenessAggregate("FIN_OPP_B", signals);
-    expect(agg.modifier).toBe(0.10);
-    expect(agg.modifier).toBeLessThanOrEqual(MAX_MODIFIER);
+    expect(agg.modifier).toBeCloseTo(0.0375, 10);
+    expect(agg.modifier).toBeGreaterThan(0);
+    expect(agg.modifier).toBeLessThan(MAX_MODIFIER);
   });
 
-  it("n=3 all-not-improved: modifier is negative and >= -MAX_MODIFIER", () => {
-    // shrunk = (0 + 5×0.5)/(3+5) = 2.5/8 = 0.3125; modifier = max(-0.10, 0.3125 - 0.5) = -0.10
+  it("n=3 all-not-improved: modifier is negative and > -MAX_MODIFIER", () => {
+    // shrunk = (0 + 2.5)/(3+5) = 2.5/8 = 0.3125
+    // deviation = -0.1875; modifier = clamp(-0.1875 * 2 * 0.10, -0.10, 0.10) = -0.0375
     const signals: FinanceEffectivenessSignal[] = Array(3).fill({
       findingCode: "FIN_OPP_C", recommendationCode: "REC_C", reachedTarget: false,
     });
     const agg = computeEffectivenessAggregate("FIN_OPP_C", signals);
-    expect(agg.modifier).toBe(-0.10);
-    expect(agg.modifier).toBeGreaterThanOrEqual(-MAX_MODIFIER);
+    expect(agg.modifier).toBeCloseTo(-0.0375, 10);
+    expect(agg.modifier).toBeLessThan(0);
+    expect(agg.modifier).toBeGreaterThan(-MAX_MODIFIER);
   });
 
   it("n=10, 5 improved: modifier ~ 0 (50% = prior → near-zero)", () => {
@@ -310,7 +313,11 @@ describe("MIN_SAMPLE end-to-end — below threshold produces zero modifier", () 
       findingCode: "FIN_OPP_HUGE", recommendationCode: "REC_HUGE", reachedTarget: true,
     });
     const agg = computeEffectivenessAggregate("FIN_OPP_HUGE", signals);
-    expect(agg.modifier).toBe(MAX_MODIFIER);
+    // Bayesian shrinkage: n=100 all-improved → shrunk=102.5/105≈0.97619,
+    // deviation≈0.47619, modifier=deviation×2×MAX_MODIFIER≈0.09524 (below cap).
+    expect(agg.modifier).toBeCloseTo(0.09524, 4);
+    expect(agg.modifier).toBeGreaterThan(0);
+    expect(agg.modifier).toBeLessThanOrEqual(MAX_MODIFIER);
   });
 
   it("modifier is floored at -MAX_MODIFIER even with very large n all-not-improved", () => {
@@ -318,7 +325,11 @@ describe("MIN_SAMPLE end-to-end — below threshold produces zero modifier", () 
       findingCode: "FIN_OPP_FAIL", recommendationCode: "REC_FAIL", reachedTarget: false,
     });
     const agg = computeEffectivenessAggregate("FIN_OPP_FAIL", signals);
-    expect(agg.modifier).toBe(-MAX_MODIFIER);
+    // Bayesian shrinkage: n=100 all-not-improved → shrunk=2.5/105≈0.02381,
+    // deviation≈-0.47619, modifier=deviation×2×MAX_MODIFIER≈-0.09524 (above floor).
+    expect(agg.modifier).toBeCloseTo(-0.09524, 4);
+    expect(agg.modifier).toBeLessThan(0);
+    expect(agg.modifier).toBeGreaterThanOrEqual(-MAX_MODIFIER);
   });
 });
 
