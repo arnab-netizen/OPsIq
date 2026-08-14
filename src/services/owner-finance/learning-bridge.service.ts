@@ -18,6 +18,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { createLearningCandidate } from "@/services/controlled-learning-candidate.service";
 import { extractReachedTargetFromVerification } from "@/domain/owner-finance/outcome-signals";
+import { Prisma } from "@/generated/prisma/client";
 
 export interface LearningBridgeResult {
   signalId: string | null;
@@ -86,24 +87,47 @@ export async function bridgeVerificationToLearning(
     targetDirection: verification.targetDirection,
   });
 
-  // Create the outcome signal (query layer)
+  // Create the outcome signal (query layer).
+  // Handle P2002 (unique constraint on verificationId) from a concurrent race:
+  // two callers can both pass the findUnique check before either writes; the
+  // second writer hits the constraint and we re-check to return gracefully.
   const signalId = randomUUID();
-  await db.ownerFinanceOutcomeSignal.create({
-    data: {
-      id: signalId,
-      workspaceId,
-      businessId: action.businessId,
-      verificationId,
-      actionId: action.id,
-      findingCode: action.findingCode,
-      recommendationCode: action.recommendationCode,
-      verificationStatus: verification.status,
-      reachedTarget,
-      beforeValue: verification.beforeValue,
-      afterValue: verification.afterValue,
-      recordedAt: verification.verifiedAt ?? new Date(),
-    },
-  });
+  try {
+    await db.ownerFinanceOutcomeSignal.create({
+      data: {
+        id: signalId,
+        workspaceId,
+        businessId: action.businessId,
+        verificationId,
+        actionId: action.id,
+        findingCode: action.findingCode,
+        recommendationCode: action.recommendationCode,
+        verificationStatus: verification.status,
+        reachedTarget,
+        beforeValue: verification.beforeValue,
+        afterValue: verification.afterValue,
+        recordedAt: verification.verifiedAt ?? new Date(),
+      },
+    });
+  } catch (createErr: unknown) {
+    if (
+      createErr instanceof Prisma.PrismaClientKnownRequestError &&
+      createErr.code === "P2002"
+    ) {
+      // Concurrent write won the race — re-read to return consistent signalId
+      const raceWinner = await db.ownerFinanceOutcomeSignal.findUnique({
+        where: { verificationId },
+        select: { id: true, learningCandidateId: true },
+      });
+      return {
+        signalId: raceWinner?.id ?? null,
+        candidateId: raceWinner?.learningCandidateId ?? null,
+        skipped: true,
+        reason: "already_recorded",
+      };
+    }
+    throw createErr;
+  }
 
   // Create the SEC-005 governance record (best-effort — CLC failure must not roll back signal)
   let candidateId: string | null = null;
