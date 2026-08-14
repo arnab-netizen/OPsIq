@@ -270,7 +270,7 @@ export async function reconcileMissingFinanceLearningSignals(
       }
     } catch (err) {
       result.errors.push(
-        `verificationId=${verificationId}: ${err instanceof Error ? err.message : String(err)}`
+        `verificationId=${verificationId}: ${String(err)}`
       );
     }
   }

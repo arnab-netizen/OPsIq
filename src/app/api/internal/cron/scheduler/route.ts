@@ -201,7 +201,7 @@ export async function GET(request: Request): Promise<NextResponse> {
           if (r.errors.length > 0) financeErrors.push(...r.errors);
         } catch (wsErr) {
           financeErrors.push(
-            `workspaceId=${workspaceId}: ${wsErr instanceof Error ? wsErr.message : String(wsErr)}`
+            `workspaceId=${workspaceId}: ${String(wsErr)}`
           );
           captureError(wsErr, {
             category: "UNEXPECTED_ERROR",

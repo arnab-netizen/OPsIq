@@ -52,6 +52,7 @@ export async function POST(req: Request): Promise<Response> {
       error instanceof Error ? error : new Error(String(error)),
       { context: "load" }
     );
-    return Response.json({ ok: false, error: governed.operatorMessage }, { status: 500 });
+    const body = { ok: false, error: governed.operatorMessage };
+    return Response.json(body, { status: 500 });
   }
 }
