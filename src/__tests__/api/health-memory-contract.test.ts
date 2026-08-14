@@ -98,6 +98,16 @@ vi.mock("@/infra/memory-pressure", async () => {
   return { ...actual, getMemoryPressure: mockGetMemoryPressure };
 });
 
+vi.mock("@/services/monitoring/migration-check", () => ({
+  checkMigrationReadiness: vi.fn().mockResolvedValue({
+    ready: true,
+    totalCommitted: 3,
+    applied: 3,
+    pending: 0,
+    failed: 0,
+  }),
+}));
+
 import { GET as healthGET } from "@/app/api/health/route";
 import { GET as readinessGET } from "@/app/api/readiness/route";
 import { GET as startupGET } from "@/app/api/startup/route";

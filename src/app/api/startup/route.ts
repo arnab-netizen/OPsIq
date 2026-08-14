@@ -1,7 +1,6 @@
 import { getMonitoringServiceInstance } from "@/middleware/monitoring.middleware";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { ensureStartupComplete } from "@/infra/startup-orchestrator";
 import { getStartupStatus } from "@/services/startup-status";
 import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
 
@@ -10,14 +9,6 @@ export const runtime = "nodejs";
 
 export const GET = async () => {
   try {
-    // Trigger startup sequence if NOT_STARTED (idempotent for READY/FAILED).
-    try {
-      await ensureStartupComplete();
-    } catch (error) {
-      logger.error("Startup checks failed", error);
-      // Fall through — getStartupStatus will report FAILED below.
-    }
-
     // Three independent invariants — none collapses into another:
     //   1. startup_sequence_complete: startup_status row is READY (DB reachable, config valid)
     //   2. migration_history_current: every committed migration dir has an applied row

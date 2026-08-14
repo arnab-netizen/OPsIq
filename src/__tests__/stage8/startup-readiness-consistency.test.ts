@@ -212,8 +212,8 @@ describe("Scenario 3: migrations current + startup incomplete → NOT READY", ()
     expect(body.startup_sequence_complete).toBe(false);
     // migrations are fine
     expect(body.database_migrated).toBe(true);
-    // ensureStartupComplete was triggered
-    expect(vi.mocked(orchestrator.ensureStartupComplete)).toHaveBeenCalledOnce();
+    // startup route is read-only — ensureStartupComplete must NOT be called
+    expect(vi.mocked(orchestrator.ensureStartupComplete)).not.toHaveBeenCalled();
   });
 
   it("returns HTTP 503 when startup is FAILED", async () => {
