@@ -2861,7 +2861,7 @@ model OwnerFinanceOutcomeSignal {
   reachedTarget       Boolean  @map("reached_target")
   beforeValue         Float?   @map("before_value")
   afterValue          Float?   @map("after_value")
-  learningCandidateId String?  @map("learning_candidate_id") @db.Uuid
+  learningCandidateId String?  @map("learning_candidate_id")
   recordedAt          DateTime @map("recorded_at")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")

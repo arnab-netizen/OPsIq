@@ -8,7 +8,11 @@ on:
         required: true
         type: string
       test_pattern:
-        description: 'Test file pattern (e.g., src/__tests__/services/benchmark/case-library.service.db.test.ts)'
+        description: |
+          Test file path — one file per dispatch. Known governance DB test files:
+          src/__tests__/services/owner-finance/effectiveness-eligibility.db.test.ts
+          src/__tests__/services/owner-finance/learning-bridge-concurrency.db.test.ts
+          src/__tests__/services/benchmark/case-library.service.db.test.ts
         required: true
         type: string
 

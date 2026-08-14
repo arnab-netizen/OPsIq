@@ -33,7 +33,9 @@ let businessId: string;
 let cycleId: string;
 let actionId: string;
 let verificationId: string;
-const ACTOR = "system-concurrency-test";
+// Fixed UUID used as actorId for audit_events (satisfies audit_events_actor_id_fkey → users.id).
+// A minimal User row is created in beforeEach and torn down in afterEach.
+const ACTOR = "00000000-0000-0000-0000-000000000099";
 
 beforeEach(async () => {
   workspaceId = randomUUID();
@@ -42,6 +44,14 @@ beforeEach(async () => {
   cycleId = randomUUID();
   actionId = randomUUID();
   verificationId = randomUUID();
+
+  // Ensure the test actor exists in the users table (upsert — safe if a prior test left it).
+  // audit_events.actor_id references users.id with ON DELETE RESTRICT.
+  await db.user.upsert({
+    where: { id: ACTOR },
+    create: { id: ACTOR, email: "system-concurrency-test@system.test", updatedAt: new Date() },
+    update: {},
+  });
 
   // ClientAccount.id is the FK target for ControlledLearningCandidate.workspaceId
   await db.clientAccount.create({
@@ -100,14 +110,19 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  // FK-safe teardown: signals (RESTRICT FK) → verifications (RESTRICT FK) →
-  // CLC audit entries → CLCs → business (cascades) → account
+  // FK-safe teardown order:
+  // 1. audit_events referencing ACTOR must go before the User row (ON DELETE RESTRICT)
+  // 2. signals (RESTRICT FK) → verifications (RESTRICT FK)
+  // 3. CLC audit entries → CLCs → business (cascades) → account
+  // 4. User row last (audit_events already gone)
+  await db.auditEvent.deleteMany({ where: { workspaceId } });
   await db.ownerFinanceOutcomeSignal.deleteMany({ where: { businessId } });
   await db.ownerFinanceVerification.deleteMany({ where: { businessId } });
   await db.controlledLearningCandidateAuditEntry.deleteMany({ where: { workspaceId } });
   await db.controlledLearningCandidate.deleteMany({ where: { workspaceId } });
   await db.ownerBusiness.delete({ where: { id: businessId } });
   await db.clientAccount.delete({ where: { id: workspaceId } });
+  await db.user.delete({ where: { id: ACTOR } });
 });
 
 // ─── Concurrency proof tests ──────────────────────────────────────────────────

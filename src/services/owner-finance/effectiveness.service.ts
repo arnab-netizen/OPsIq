@@ -72,7 +72,7 @@ export async function getFinanceEffectivenessMap(
       .map((r: { learningCandidateId: string | null }) => r.learningCandidateId)
       .filter((id: string | null): id is string => id !== null);
 
-    const promotedCandidates = await (db as any).controlledLearningCandidate.findMany({
+    const promotedCandidates = await db.controlledLearningCandidate.findMany({
       where: {
         id: { in: candidateIds },
         promotionLocked: true,
