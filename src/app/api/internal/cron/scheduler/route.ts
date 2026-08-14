@@ -1,17 +1,18 @@
 /**
- * Cron — persistent scheduler driver + email retry sweep.
+ * Cron — persistent scheduler driver + email retry sweep + finance learning gap sweep.
  *
  * Invoked by Vercel Cron (vercel.json) and/or any external scheduler that can
  * send the shared secret. Authenticated via Authorization: Bearer $CRON_SECRET,
  * compared in constant time; when CRON_SECRET is unset the request is rejected
  * (fail-closed). Vercel does NOT generate this value — the owner configures it.
  *
- * Two jobs per invocation:
- *   1. DatabaseSchedulerProvider.processDue()  — drains due scheduled tasks
- *   2. Alert email retry sweep                 — retries FAILED alerts below max attempts
+ * Three jobs per invocation:
+ *   1. DatabaseSchedulerProvider.processDue()           — drains due scheduled tasks
+ *   2. Alert email retry sweep                          — retries FAILED alerts below max attempts
+ *   3. Finance learning gap sweep                       — bridges verifications with no outcome signal
  *
  * CADENCE INDEPENDENCE
- * Both jobs are catch-up by construction, so a missed or infrequent invocation
+ * All jobs are catch-up by construction, so a missed or infrequent invocation
  * delays work but never drops it:
  *   - task claim selects `scheduled_for <= now` (not exact-time matching), and
  *     also reclaims `running` rows whose lease has expired;
@@ -29,6 +30,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
 import { retryEmailAlert } from "@/services/alerts/alert-email-retry.service";
+import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance/learning-bridge.service";
 import { captureError } from "@/infra/observability";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -163,6 +165,67 @@ export async function GET(request: Request): Promise<NextResponse> {
     );
     errors.push(`emailRetry: ${governed.operatorMessage}`);
     captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
+  }
+
+  // ─── 3. Finance learning gap sweep ───────────────────────────────────────
+  // Finds all workspaces that have OwnerFinanceVerifications in a terminal status
+  // with no corresponding OwnerFinanceOutcomeSignal, then bridges each gap
+  // idempotently. Mirrors the email retry sweep: single bounded pass, non-fatal
+  // per-workspace errors, catch-up semantics so a missed invocation is recovered.
+  if (Date.now() < deadline) {
+    try {
+      const BRIDGEABLE_STATUSES = ["verified_improved", "verified_not_improved", "disputed"];
+
+      // Collect distinct workspaceIds that have at least one un-bridged verification.
+      const gapWorkspaces = await db.ownerFinanceVerification.findMany({
+        where: {
+          status: { in: BRIDGEABLE_STATUSES },
+          outcomeSignal: null,
+        },
+        select: { workspaceId: true },
+        distinct: ["workspaceId"],
+      });
+
+      let financeGapsFound = 0;
+      let financeGapsBridged = 0;
+      let financeGapsSkipped = 0;
+      const financeErrors: string[] = [];
+
+      for (const { workspaceId } of gapWorkspaces) {
+        if (Date.now() >= deadline) break;
+        try {
+          const r = await reconcileMissingFinanceLearningSignals(workspaceId, CRON_ACTOR_ID);
+          financeGapsFound += r.gapsFound;
+          financeGapsBridged += r.gapsBridged;
+          financeGapsSkipped += r.gapsSkipped;
+          if (r.errors.length > 0) financeErrors.push(...r.errors);
+        } catch (wsErr) {
+          financeErrors.push(
+            `workspaceId=${workspaceId}: ${wsErr instanceof Error ? wsErr.message : String(wsErr)}`
+          );
+          captureError(wsErr, {
+            category: "UNEXPECTED_ERROR",
+            route: "/api/internal/cron/scheduler",
+          });
+        }
+      }
+
+      results.financeLearningGapSweep = {
+        workspacesChecked: gapWorkspaces.length,
+        gapsFound: financeGapsFound,
+        gapsBridged: financeGapsBridged,
+        gapsSkipped: financeGapsSkipped,
+        errors: financeErrors,
+      };
+      logger.info("Cron: finance learning gap sweep complete", results.financeLearningGapSweep as Record<string, unknown>);
+    } catch (err) {
+      const governed = classifyOperatorError(
+        err instanceof Error ? err : new Error(String(err)),
+        { context: "load" }
+      );
+      errors.push(`financeLearningGapSweep: ${governed.operatorMessage}`);
+      captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
+    }
   }
 
   // Cron must return 2xx for Vercel to consider the job succeeded.
