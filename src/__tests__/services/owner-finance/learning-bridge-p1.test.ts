@@ -7,7 +7,7 @@
  *  3. MIN_SAMPLE end-to-end: n < 3 produces modifier = 0
  *  4. Reconcile wiring classification
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   buildEffectivenessMap,
   computeEffectivenessAggregate,
