@@ -3,6 +3,7 @@ import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { ensureStartupComplete } from "@/infra/startup-orchestrator";
 import { getStartupStatus } from "@/services/startup-status";
+import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,36 +18,50 @@ export const GET = async () => {
       // Fall through — getStartupStatus will report FAILED below.
     }
 
-    // Canonical readiness model: the durable startup_status row, same source
-    // of truth as /api/readiness. This replaces the prior checkMigrationReadiness()
-    // filesystem scan, which reported false negatives whenever newly-committed
-    // migration directories had not yet been applied in the active deployment.
-    const startupStatus = await getStartupStatus();
-    const startupComplete = startupStatus.status === "READY";
+    // Three independent invariants — none collapses into another:
+    //   1. startup_sequence_complete: startup_status row is READY (DB reachable, config valid)
+    //   2. migration_history_current: every committed migration dir has an applied row
+    //   3. database_connected:        DB responds right now (liveness)
+    //
+    // runtime_ready requires ALL THREE. A READY startup row alone does NOT prove
+    // migration currency — checkDatabaseSchema() trusts Prisma initialization
+    // rather than verifying the migration table. Checking migrations here ensures
+    // this probe never silently masks a pending-migration gap.
 
-    // Runtime DB liveness check (not a migration diff).
+    const startupStatus = await getStartupStatus();
+    const startupSequenceComplete = startupStatus.status === "READY";
+
+    const migration = await checkMigrationReadiness();
+    const migrationHistoryCurrent = migration.ready;
+
     const monitoringService = getMonitoringServiceInstance();
     const monitoringCheck = await monitoringService.checkReadiness();
+    const databaseConnected = monitoringCheck.database_healthy;
 
-    const is_ready = startupComplete && monitoringCheck.database_healthy;
+    const is_ready = startupSequenceComplete && migrationHistoryCurrent && databaseConnected;
     const statusCode = is_ready ? 200 : 503;
 
     logger.debug("Startup probe executed", {
       startup_status: startupStatus.status,
-      database_healthy: monitoringCheck.database_healthy,
+      migration_history_current: migrationHistoryCurrent,
+      pending_migrations: migration.pending,
+      database_healthy: databaseConnected,
       is_ready,
     });
 
     return Response.json(
       {
         startup_status: startupStatus.status,
-        is_ready,
-        config_loaded: startupComplete,
-        // database_migrated reflects startup sequence success (schema validated,
-        // DB reachable) — not a raw filesystem-vs-DB migration directory diff.
-        database_migrated: startupComplete,
+        startup_sequence_complete: startupSequenceComplete,
+        // database_migrated: all committed migrations applied — not a proxy for startup
+        database_migrated: migrationHistoryCurrent,
+        migration_pending: migration.pending,
+        migration_failed: migration.failed,
+        database_connected: databaseConnected,
+        config_loaded: startupSequenceComplete,
         routes_registered: 91,
-        test_request_successful: monitoringCheck.database_healthy,
+        test_request_successful: databaseConnected,
+        is_ready,
       },
       {
         status: statusCode,
@@ -63,8 +78,12 @@ export const GET = async () => {
     return Response.json(
       {
         is_ready: false,
-        config_loaded: false,
+        startup_sequence_complete: false,
         database_migrated: false,
+        migration_pending: 0,
+        migration_failed: 0,
+        database_connected: false,
+        config_loaded: false,
         routes_registered: 0,
         test_request_successful: false,
         error: governed.operatorMessage,

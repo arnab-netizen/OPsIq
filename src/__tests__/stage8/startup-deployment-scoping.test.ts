@@ -91,6 +91,19 @@ vi.mock("@/lib/db", () => ({
   getDbInstance: vi.fn(async () => dbMock),
 }));
 
+// checkMigrationReadiness is now called inside performStartupChecks().
+// Stub it as fully-applied so deployment-scoping tests focus on instance-identity
+// logic, not filesystem migration state.
+vi.mock("@/services/monitoring/migration-check", () => ({
+  checkMigrationReadiness: vi.fn().mockResolvedValue({
+    ready: true,
+    totalCommitted: 10,
+    applied: 10,
+    pending: 0,
+    failed: 0,
+  }),
+}));
+
 /** Reload the startup modules so per-process module state does not leak. */
 async function loadStartupModules() {
   vi.resetModules();

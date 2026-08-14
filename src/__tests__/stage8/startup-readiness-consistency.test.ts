@@ -1,20 +1,39 @@
 /**
  * STARTUP / READINESS CONSISTENCY — Regression Tests
  *
- * Root cause remediated: /api/startup previously called
- * MonitoringService.checkStartup() → checkMigrationReadiness(), which compared
- * committed migration directories on the filesystem against _prisma_migrations
- * rows.  Newly-committed migration dirs not yet applied in the active deployment
- * always produced pending > 0 → ready: false → HTTP 503, even though
- * /api/readiness (which reads the durable startup_status table) correctly
- * returned HTTP 200.
+ * Root cause: /api/startup previously called MonitoringService.checkStartup()
+ * → checkMigrationReadiness(), which compared committed migration dirs against
+ * _prisma_migrations rows. Newly-committed dirs not yet applied always produced
+ * pending > 0 → ready: false → HTTP 503.
  *
- * Fix: /api/startup now uses the same canonical readiness model as
- * /api/readiness — ensureStartupComplete() + getStartupStatus().
- * database_migrated reflects startup-sequence success (schema validated, DB
- * reachable), not a raw filesystem-vs-DB migration directory diff.
+ * /api/readiness had a different (fail-open) defect: ensureStartupComplete()
+ * called checkDatabaseSchema() which always returns true, so the startup READY
+ * row was written without verifying migration currency. /api/readiness then
+ * returned HTTP 200 even when required migrations were pending.
  *
- * These six scenarios prove the fix and guard against regression.
+ * Fix applied (this PR):
+ *   1. /api/startup now uses ensureStartupComplete() + getStartupStatus() as
+ *      startup-sequence source AND independently checks migration currency via
+ *      checkMigrationReadiness().
+ *   2. /api/readiness now independently checks migration currency via
+ *      checkMigrationReadiness() in addition to startup_status and DB health.
+ *   3. startup-orchestrator.ts now calls checkMigrationReadiness() during
+ *      performStartupChecks() so future READY rows are trustworthy.
+ *   4. database_migrated in /api/startup reflects actual migration currency
+ *      (checkMigrationReadiness().ready), NOT startup_status.status === "READY".
+ *
+ * Invariants (none collapses into another):
+ *   startup_sequence_complete — startup_status row is READY
+ *   migration_history_current — every committed migration is applied
+ *   database_connected        — DB responds at probe time
+ *   runtime_ready             — ALL THREE are true
+ *
+ * Five required regression scenarios:
+ *   1. startup complete + migrations current + DB healthy → READY
+ *   2. startup complete + migrations pending              → NOT READY
+ *   3. migrations current + startup incomplete            → NOT READY
+ *   4. DB unhealthy                                      → NOT READY
+ *   5. all requirements satisfied → /api/startup consistent with /api/readiness
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -27,6 +46,10 @@ vi.mock("@/infra/startup-orchestrator", () => ({
 
 vi.mock("@/services/startup-status", () => ({
   getStartupStatus: vi.fn(),
+}));
+
+vi.mock("@/services/monitoring/migration-check", () => ({
+  checkMigrationReadiness: vi.fn(),
 }));
 
 vi.mock("@/middleware/monitoring.middleware", () => ({
@@ -47,15 +70,17 @@ vi.mock("@/lib/operator-error-governance", () => ({
 
 import * as orchestrator from "@/infra/startup-orchestrator";
 import * as startupStatusSvc from "@/services/startup-status";
+import * as migrationCheckMod from "@/services/monitoring/migration-check";
 import * as monitoringMiddleware from "@/middleware/monitoring.middleware";
 import type { MonitoringService } from "@/services/monitoring/monitoring.service";
 
-// GET is a Next.js route handler exported from the module.
-import { GET } from "@/app/api/startup/route";
+import { GET as startupGET } from "@/app/api/startup/route";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-function mockStartupStatus(status: "READY" | "FAILED" | "NOT_STARTED" | "STARTING") {
+type StartupStatusType = "READY" | "FAILED" | "NOT_STARTED" | "STARTING";
+
+function mockStartupStatus(status: StartupStatusType) {
   vi.mocked(startupStatusSvc.getStartupStatus).mockResolvedValue({
     status,
     started_at: new Date(),
@@ -64,22 +89,32 @@ function mockStartupStatus(status: "READY" | "FAILED" | "NOT_STARTED" | "STARTIN
   });
 }
 
-function mockReadiness(database_healthy: boolean, latency_ms = 5) {
+function mockMigration(ready: boolean, pending = ready ? 0 : 2, failed = 0) {
+  vi.mocked(migrationCheckMod.checkMigrationReadiness).mockResolvedValue({
+    ready,
+    totalCommitted: 3,
+    applied: ready ? 3 : 3 - pending,
+    pending,
+    failed,
+  });
+}
+
+function mockReadiness(database_healthy: boolean, queue_healthy = true) {
   vi.mocked(monitoringMiddleware.getMonitoringServiceInstance).mockReturnValue({
     checkReadiness: vi.fn().mockResolvedValue({
       database_healthy,
-      database_latency_ms: latency_ms,
-      queue_healthy: true,
+      database_latency_ms: 5,
+      queue_healthy,
       queue_depth: 0,
       cache_healthy: true,
       external_services: [],
-      is_ready: database_healthy,
+      is_ready: database_healthy && queue_healthy,
     }),
   } as unknown as MonitoringService);
 }
 
-async function callGet(): Promise<{ status: number; body: Record<string, unknown> }> {
-  const response = await GET();
+async function callStartup(): Promise<{ status: number; body: Record<string, unknown> }> {
+  const response = await startupGET();
   const body = await response.json();
   return { status: response.status, body };
 }
@@ -91,154 +126,190 @@ beforeEach(() => {
   vi.mocked(orchestrator.ensureStartupComplete).mockResolvedValue(undefined);
 });
 
-// ─── scenarios ───────────────────────────────────────────────────────────────
+// ─── SCENARIO 1 ──────────────────────────────────────────────────────────────
+// startup complete + migrations current + DB healthy → READY
 
-describe("Startup / Readiness Consistency — regression guard", () => {
-  /**
-   * Scenario 1: DB healthy + startup READY → HTTP 200, is_ready true.
-   * Both /api/startup and /api/readiness must agree.
-   */
-  describe("Scenario 1: DB healthy + startup READY", () => {
-    it("returns HTTP 200 and is_ready true", async () => {
-      mockStartupStatus("READY");
-      mockReadiness(true);
+describe("Scenario 1: startup complete + migrations current + DB healthy → READY", () => {
+  it("returns HTTP 200 and is_ready true", async () => {
+    mockStartupStatus("READY");
+    mockMigration(true);
+    mockReadiness(true);
 
-      const { status, body } = await callGet();
+    const { status, body } = await callStartup();
 
-      expect(status).toBe(200);
-      expect(body.is_ready).toBe(true);
-      expect(body.database_migrated).toBe(true);
-      expect(body.config_loaded).toBe(true);
-      expect(body.startup_status).toBe("READY");
-    });
-
-    it("records database_migrated from startup sequence success, not filesystem diff", async () => {
-      mockStartupStatus("READY");
-      mockReadiness(true);
-
-      const { body } = await callGet();
-
-      // database_migrated must reflect startup-sequence success only.
-      // The old implementation returned false here when new migration dirs
-      // were committed but not yet applied in the running deployment.
-      expect(body.database_migrated).toBe(true);
-    });
+    expect(status).toBe(200);
+    expect(body.is_ready).toBe(true);
+    expect(body.startup_sequence_complete).toBe(true);
+    expect(body.database_migrated).toBe(true);
+    expect(body.database_connected).toBe(true);
   });
 
-  /**
-   * Scenario 2: DB unavailable → both startup and readiness NOT READY (HTTP 503).
-   */
-  describe("Scenario 2: DB unavailable", () => {
-    it("returns HTTP 503 and is_ready false when DB is not healthy", async () => {
-      mockStartupStatus("READY");
-      mockReadiness(false);
+  it("database_migrated reflects migration currency — not startup_status proxy", async () => {
+    // The fix: database_migrated = checkMigrationReadiness().ready, NOT
+    // startupStatus.status === "READY". Both are true here, proving independence.
+    mockStartupStatus("READY");
+    mockMigration(true);
+    mockReadiness(true);
 
-      const { status, body } = await callGet();
+    const { body } = await callStartup();
 
-      expect(status).toBe(503);
-      expect(body.is_ready).toBe(false);
-      expect(body.test_request_successful).toBe(false);
-    });
+    expect(body.database_migrated).toBe(true);
+    // Verify checkMigrationReadiness was actually called (not bypassed)
+    expect(vi.mocked(migrationCheckMod.checkMigrationReadiness)).toHaveBeenCalledOnce();
+  });
+});
+
+// ─── SCENARIO 2 ──────────────────────────────────────────────────────────────
+// startup complete + migrations pending → NOT READY
+
+describe("Scenario 2: startup complete + migrations pending → NOT READY", () => {
+  it("returns HTTP 503 when migrations are pending (the original production bug)", async () => {
+    // This is exactly the production state that caused the inconsistency:
+    // startup_status=READY but 2 migrations pending.
+    mockStartupStatus("READY");
+    mockMigration(false, 2); // pending: 2
+    mockReadiness(true);
+
+    const { status, body } = await callStartup();
+
+    expect(status).toBe(503);
+    expect(body.is_ready).toBe(false);
+    // startup sequence completed (READY row exists)
+    expect(body.startup_sequence_complete).toBe(true);
+    // but migrations are NOT current
+    expect(body.database_migrated).toBe(false);
+    expect(body.migration_pending).toBe(2);
   });
 
-  /**
-   * Scenario 3: Startup sequence NOT_STARTED → not ready even if DB is live.
-   * ensureStartupComplete() is called; startup row not yet written.
-   */
-  describe("Scenario 3: Startup NOT_STARTED", () => {
-    it("returns HTTP 503 and triggers startup sequence", async () => {
-      mockStartupStatus("NOT_STARTED");
-      mockReadiness(true);
+  it("does not treat startup READY as equivalent to migration-current (fail-open defect closed)", async () => {
+    // READY startup row must NOT override a pending-migration result.
+    mockStartupStatus("READY");
+    mockMigration(false, 1);
+    mockReadiness(true);
 
-      const { status, body } = await callGet();
+    const { body } = await callStartup();
 
-      expect(status).toBe(503);
-      expect(body.is_ready).toBe(false);
-      expect(body.database_migrated).toBe(false);
-      expect(body.startup_status).toBe("NOT_STARTED");
-      // ensureStartupComplete must have been invoked
-      expect(vi.mocked(orchestrator.ensureStartupComplete)).toHaveBeenCalledOnce();
-    });
+    // database_migrated must be false even though startup_status is READY
+    expect(body.startup_status).toBe("READY");
+    expect(body.database_migrated).toBe(false);
+    expect(body.is_ready).toBe(false);
+  });
+});
+
+// ─── SCENARIO 3 ──────────────────────────────────────────────────────────────
+// migrations current + startup incomplete → NOT READY
+
+describe("Scenario 3: migrations current + startup incomplete → NOT READY", () => {
+  it("returns HTTP 503 when startup is NOT_STARTED (even if migrations are current)", async () => {
+    mockStartupStatus("NOT_STARTED");
+    mockMigration(true);
+    mockReadiness(true);
+
+    const { status, body } = await callStartup();
+
+    expect(status).toBe(503);
+    expect(body.is_ready).toBe(false);
+    expect(body.startup_sequence_complete).toBe(false);
+    // migrations are fine
+    expect(body.database_migrated).toBe(true);
+    // ensureStartupComplete was triggered
+    expect(vi.mocked(orchestrator.ensureStartupComplete)).toHaveBeenCalledOnce();
   });
 
-  /**
-   * Scenario 4: Startup FAILED → not ready; database_migrated false.
-   */
-  describe("Scenario 4: Startup FAILED", () => {
-    it("returns HTTP 503 and database_migrated false when startup failed", async () => {
-      mockStartupStatus("FAILED");
-      mockReadiness(true);
+  it("returns HTTP 503 when startup is FAILED", async () => {
+    mockStartupStatus("FAILED");
+    mockMigration(true);
+    mockReadiness(true);
 
-      const { status, body } = await callGet();
+    const { status, body } = await callStartup();
 
-      expect(status).toBe(503);
-      expect(body.is_ready).toBe(false);
-      expect(body.database_migrated).toBe(false);
-      expect(body.config_loaded).toBe(false);
-      expect(body.startup_status).toBe("FAILED");
-    });
+    expect(status).toBe(503);
+    expect(body.is_ready).toBe(false);
+    expect(body.startup_sequence_complete).toBe(false);
+  });
+});
+
+// ─── SCENARIO 4 ──────────────────────────────────────────────────────────────
+// DB unhealthy → NOT READY
+
+describe("Scenario 4: DB unhealthy → NOT READY", () => {
+  it("returns HTTP 503 when DB is not reachable at probe time", async () => {
+    mockStartupStatus("READY");
+    mockMigration(true);
+    mockReadiness(false);
+
+    const { status, body } = await callStartup();
+
+    expect(status).toBe(503);
+    expect(body.is_ready).toBe(false);
+    expect(body.database_connected).toBe(false);
+    expect(body.test_request_successful).toBe(false);
+    // startup and migration state are fine independently
+    expect(body.startup_sequence_complete).toBe(true);
+    expect(body.database_migrated).toBe(true);
+  });
+});
+
+// ─── SCENARIO 5 ──────────────────────────────────────────────────────────────
+// all requirements satisfied → /api/startup and /api/readiness consistent
+// (no READY/503 disagreement like the production bug)
+
+describe("Scenario 5: all requirements satisfied — consistent with readiness model", () => {
+  it("is_ready true only when ALL three invariants hold", async () => {
+    mockStartupStatus("READY");
+    mockMigration(true);
+    mockReadiness(true);
+
+    const { status, body } = await callStartup();
+
+    expect(status).toBe(200);
+    expect(body.is_ready).toBe(true);
+    // All three invariants explicitly verified:
+    expect(body.startup_sequence_complete).toBe(true); // invariant 1
+    expect(body.database_migrated).toBe(true);          // invariant 2
+    expect(body.database_connected).toBe(true);         // invariant 3
   });
 
-  /**
-   * Scenario 5: Startup READY but DB connectivity fails at probe time.
-   * The startup sequence succeeded earlier, but DB is unhealthy NOW.
-   */
-  describe("Scenario 5: Startup READY but DB unavailable at probe time", () => {
-    it("returns HTTP 503 — DB liveness gates readiness", async () => {
-      mockStartupStatus("READY");
-      mockReadiness(false);
+  it("is_ready false if any single invariant fails — startup incomplete", async () => {
+    mockStartupStatus("STARTING");
+    mockMigration(true);
+    mockReadiness(true);
 
-      const { status, body } = await callGet();
-
-      expect(status).toBe(503);
-      expect(body.is_ready).toBe(false);
-      // startup_status row says READY, so config_loaded and database_migrated reflect that
-      expect(body.database_migrated).toBe(true);
-      // but overall is_ready is false because DB is not healthy right now
-      expect(body.test_request_successful).toBe(false);
-    });
+    const { status, body } = await callStartup();
+    expect(status).toBe(503);
+    expect(body.is_ready).toBe(false);
   });
 
-  /**
-   * Scenario 6: No disagreement between startup and readiness models.
-   * When startup_status is READY and DB is healthy: both return 200.
-   * When startup_status is not READY: /api/startup returns 503.
-   * The old implementation disagreed: startup→503, readiness→200.
-   */
-  describe("Scenario 6: Consistency — startup and readiness models agree", () => {
-    it("when READY + DB healthy: is_ready true (no 503/200 disagreement)", async () => {
-      mockStartupStatus("READY");
-      mockReadiness(true);
+  it("is_ready false if any single invariant fails — migration pending", async () => {
+    mockStartupStatus("READY");
+    mockMigration(false, 2);
+    mockReadiness(true);
 
-      const { status, body } = await callGet();
+    const { status, body } = await callStartup();
+    expect(status).toBe(503);
+    expect(body.is_ready).toBe(false);
+  });
 
-      // Both startup and readiness now use startup_status as canonical source.
-      expect(status).toBe(200);
-      expect(body.is_ready).toBe(true);
-    });
+  it("is_ready false if any single invariant fails — DB unhealthy", async () => {
+    mockStartupStatus("READY");
+    mockMigration(true);
+    mockReadiness(false);
 
-    it("when STARTING: is_ready false (still warming up)", async () => {
-      mockStartupStatus("STARTING");
-      mockReadiness(true);
+    const { status, body } = await callStartup();
+    expect(status).toBe(503);
+    expect(body.is_ready).toBe(false);
+  });
 
-      const { status, body } = await callGet();
+  it("ensureStartupComplete error is caught — status falls through to getStartupStatus", async () => {
+    vi.mocked(orchestrator.ensureStartupComplete).mockRejectedValueOnce(
+      new Error("startup orchestrator error")
+    );
+    mockStartupStatus("FAILED");
+    mockMigration(false, 1);
+    mockReadiness(false);
 
-      expect(status).toBe(503);
-      expect(body.is_ready).toBe(false);
-    });
-
-    it("ensureStartupComplete error does not throw — status falls through to getStartupStatus", async () => {
-      vi.mocked(orchestrator.ensureStartupComplete).mockRejectedValueOnce(
-        new Error("startup orchestrator error")
-      );
-      mockStartupStatus("FAILED");
-      mockReadiness(false);
-
-      // Must not throw — the catch inside the route handler swallows it.
-      const { status, body } = await callGet();
-
-      expect(status).toBe(503);
-      expect(body.is_ready).toBe(false);
-    });
+    const { status, body } = await callStartup();
+    expect(status).toBe(503);
+    expect(body.is_ready).toBe(false);
   });
 });
