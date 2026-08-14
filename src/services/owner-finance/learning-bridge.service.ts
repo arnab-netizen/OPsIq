@@ -192,3 +192,64 @@ export async function bridgeVerificationToLearning(
 
   return { signalId, candidateId, skipped: false };
 }
+
+// Terminal verification statuses that produce a definitive learning outcome.
+// "inconclusive" and "unverified" are intentionally excluded — inconclusive has no
+// determined outcome; unverified means the verification hasn't been submitted yet.
+const BRIDGEABLE_VERIFICATION_STATUSES = ["verified_improved", "verified_not_improved", "disputed"] as const;
+
+export interface ReconcileResult {
+  gapsFound: number;
+  gapsBridged: number;
+  gapsSkipped: number;
+  errors: string[];
+}
+
+/**
+ * Durable recovery for bridge failures.
+ *
+ * Finds every OwnerFinanceVerification in terminal status that has no corresponding
+ * OwnerFinanceOutcomeSignal, then calls bridgeVerificationToLearning() for each.
+ * The bridge is idempotent, so any already-bridged verification is skipped safely.
+ *
+ * Call from a cron/admin endpoint to recover verifications that were persisted but
+ * whose bridge call failed (network error, transient DB error, etc.).
+ */
+export async function reconcileMissingFinanceLearningSignals(
+  workspaceId: string,
+  actorId: string
+): Promise<ReconcileResult> {
+  const gaps = await db.ownerFinanceVerification.findMany({
+    where: {
+      workspaceId,
+      status: { in: [...BRIDGEABLE_VERIFICATION_STATUSES] },
+      outcomeSignal: null,
+    },
+    select: { id: true },
+    orderBy: { verifiedAt: "asc" },
+  });
+
+  const result: ReconcileResult = {
+    gapsFound: gaps.length,
+    gapsBridged: 0,
+    gapsSkipped: 0,
+    errors: [],
+  };
+
+  for (const { id: verificationId } of gaps) {
+    try {
+      const bridgeResult = await bridgeVerificationToLearning(verificationId, workspaceId, actorId);
+      if (bridgeResult.skipped) {
+        result.gapsSkipped++;
+      } else {
+        result.gapsBridged++;
+      }
+    } catch (err) {
+      result.errors.push(
+        `verificationId=${verificationId}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  return result;
+}
