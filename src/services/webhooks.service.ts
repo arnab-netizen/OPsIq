@@ -359,7 +359,12 @@ export async function listWebhooks(workspaceId: string): Promise<Webhook[]> {
 export async function deleteWebhook(
   webhookId: string,
   workspaceId: string,
-  actorId: string = "system"
+  // No string default here: AuditEvent.actorId is @db.Uuid in Postgres, so a
+  // placeholder like "system" would fail the audit insert with an invalid-UUID
+  // error the first time this ran against a real database. Leaving it
+  // undefined when the caller has no actor flows correctly into
+  // emitAuditEvent's own `actorId ?? null` handling (nullable column).
+  actorId?: string
 ): Promise<void> {
   const webhook = webhookStore.getWebhook(webhookId);
 
