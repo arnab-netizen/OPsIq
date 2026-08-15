@@ -212,6 +212,13 @@ export const AUDIT_EVENTS = {
   ALERT_EMAIL_RETRY: "alert.email_retry",
   ALERT_EMAIL_PERMANENTLY_FAILED: "alert.email_permanently_failed",
 
+  // Notification (P0-01: truthful channel delivery)
+  NOTIFICATION_SENT: "notification.sent",
+
+  // Webhook (D3 / P0-02: audit field-name fix)
+  WEBHOOK_CREATED: "webhook.created",
+  WEBHOOK_DELETED: "webhook.deleted",
+
   // Learning
   LEARNING_RECORDED: "learning.recorded",
 

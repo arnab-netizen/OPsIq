@@ -123,12 +123,18 @@ interface EvidenceAssessment {
   reliabilityLevel: "low" | "medium" | "high" | "critical";
 }
 
-interface KPIAssessment {
+export interface KPIAssessment {
   kpiCount: number;
   healthyKPICount: number;
   degradedKPICount: number;
-  healthScore: number;
-  riskLevel: "low" | "medium" | "high" | "critical";
+  /**
+   * P0-03: null means KPI health could not be determined (query failure,
+   * unreachable data) — this is distinct from 0, which would mean "measured,
+   * and every KPI is degraded". Callers must not treat null as favorable;
+   * it must not increase a recommendation's confidence or lower its risk.
+   */
+  healthScore: number | null;
+  riskLevel: "low" | "medium" | "high" | "critical" | "unknown";
 }
 
 type AuditTrailEvent = {
@@ -316,7 +322,10 @@ async function evaluateEngagementEvidence(
   }
 }
 
-async function evaluateEngagementKPIHealth(
+// Exported (was module-private) so P0-03's fail-closed behavior can be unit
+// tested directly without standing up createRecommendation's full dependency
+// graph (capability checks, engagement lookup, audit, event emission, ...).
+export async function evaluateEngagementKPIHealth(
   engagementId: string,
   workspaceId: string
 ): Promise<KPIAssessment> {
@@ -350,13 +359,24 @@ async function evaluateEngagementKPIHealth(
       healthScore,
       riskLevel,
     };
-  } catch {
+  } catch (error) {
+    // P0-03: a failure to read KPI health data is not evidence the business is
+    // healthy. The previous behavior (healthScore: 1, riskLevel: "low") fabricated
+    // the single most optimistic possible reading on every DB error, schema drift,
+    // or transient failure, and persisted it onto the recommendation the owner
+    // reads. Report UNKNOWN instead — it must never raise a recommendation's
+    // confidence or lower its apparent risk (see createRecommendation below).
+    logger.warn("KPI health assessment unavailable — treating as unknown, not healthy", {
+      engagementId,
+      workspaceId,
+      error: String(error),
+    });
     return {
       kpiCount: 0,
       healthyKPICount: 0,
       degradedKPICount: 0,
-      healthScore: 1,
-      riskLevel: "low",
+      healthScore: null,
+      riskLevel: "unknown",
     };
   }
 }
@@ -449,7 +469,10 @@ export async function createRecommendation(
                 evidenceAssessment.validationScore * 100
               ),
               reliabilityLevel: evidenceAssessment.reliabilityLevel,
-              kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
+              kpiHealthScore:
+                kpiAssessment.healthScore === null
+                  ? null
+                  : Math.round(kpiAssessment.healthScore * 100),
               kpiRiskLevel: kpiAssessment.riskLevel,
               ...(constraintsConsidered && { constraintsConsidered }),
             },
@@ -485,7 +508,8 @@ export async function createRecommendation(
               description: input.description,
               evidenceValidationScore: String(evidenceAssessment.validationScore),
               reliabilityLevel: evidenceAssessment.reliabilityLevel,
-              kpiHealthScore: String(kpiAssessment.healthScore),
+              kpiHealthScore:
+                kpiAssessment.healthScore === null ? "unknown" : String(kpiAssessment.healthScore),
               kpiRiskLevel: kpiAssessment.riskLevel,
             },
             actorId: userId,
@@ -538,7 +562,8 @@ export async function createRecommendation(
         evidenceAssessment.validationScore * 100
       ),
       reliabilityLevel: evidenceAssessment.reliabilityLevel,
-      kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
+      kpiHealthScore:
+        kpiAssessment.healthScore === null ? null : Math.round(kpiAssessment.healthScore * 100),
       kpiRiskLevel: kpiAssessment.riskLevel,
       ...(constraintsConsidered && { constraintsConsidered }),
     },

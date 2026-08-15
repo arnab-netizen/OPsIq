@@ -37,6 +37,13 @@ export const POST = withCanonicalEnforcement(
       active: webhook.active,
       createdAt: webhook.createdAt.toISOString(),
       secret: webhook.secret,
+      dispatchStatus: webhook.dispatchStatus,
+      dispatchNote:
+        webhook.dispatchStatus === "not_configured"
+          ? "Registered, but no live OpsIQ event currently dispatches to it. " +
+            "POST /api/webhooks/{id}/test proves connectivity and signing only " +
+            "— it does not mean you will receive real production events yet."
+          : undefined,
     };
   },
   { requireWorkspace: true, requireCapabilities: [CAPABILITIES.WEBHOOK_MANAGE] }

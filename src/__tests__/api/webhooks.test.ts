@@ -1,4 +1,30 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// Mock withAuth to control authorization in tests
+vi.mock("@/lib/auth-guard", () => ({
+  withAuth: vi.fn(async (options) => {
+    return {
+      session: { userId: "test-user" },
+      policy: { capabilities: ["WEBHOOK_MANAGE"] },
+    };
+  }),
+}));
+
+// P0-02: registerWebhook/deleteWebhook now emit real, correctly-shaped audit
+// events (previously the snake_case field mismatch made emitAuditEvent take
+// its missing-workspaceId fail-safe branch and never touch the DB — that
+// silently hid the fact that this test file was never exercising it). Mock
+// it here so these tests still run without a live database, and capture
+// what's emitted so the audit-correctness assertions below have something
+// to check.
+const _emittedAuditEvents: Array<Record<string, unknown>> = [];
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: vi.fn((input: Record<string, unknown>) => {
+    _emittedAuditEvents.push(input);
+    return Promise.resolve("audit-event-id");
+  }),
+}));
+
 import {
   registerWebhook,
   testWebhookDelivery,
@@ -13,22 +39,13 @@ import {
   verifyWebhookSignature,
 } from "@/domain/webhooks/webhook-contracts";
 
-// Mock withAuth to control authorization in tests
-vi.mock("@/lib/auth-guard", () => ({
-  withAuth: vi.fn(async (options) => {
-    return {
-      session: { userId: "test-user" },
-      policy: { capabilities: ["WEBHOOK_MANAGE"] },
-    };
-  }),
-}));
-
 describe("D3: Implement Webhook Infrastructure", () => {
   const workspaceId = "550e8400-e29b-41d4-a716-446655440000";
   const actorId = "750e8400-e29b-41d4-a716-446655440002";
 
   beforeEach(() => {
     clearWebhooks();
+    _emittedAuditEvents.length = 0;
   });
 
   describe("Webhook Registration (POST /api/webhooks/subscribe)", () => {
@@ -775,6 +792,63 @@ describe("D3: Implement Webhook Infrastructure", () => {
       expect(workspace2List.some((w) => w.id === webhook2.id)).toBe(true);
       expect(workspace1List.some((w) => w.id === webhook2.id)).toBe(false);
       expect(workspace2List.some((w) => w.id === webhook1.id)).toBe(false);
+    });
+  });
+
+  describe("P0-02: Webhook Audit Correctness", () => {
+    it("emits a correctly-shaped WEBHOOK_CREATED audit event on registration", async () => {
+      const webhook = await registerWebhook(
+        workspaceId,
+        "https://example.com/webhooks",
+        ["action:created"],
+        actorId
+      );
+
+      const createEvents = _emittedAuditEvents.filter((e) => e.eventName === "webhook.created");
+      expect(createEvents).toHaveLength(1);
+      expect(createEvents[0]).toMatchObject({
+        workspaceId,
+        entityType: "webhook",
+        entityId: webhook.id,
+        actorId,
+      });
+      // The previous defect used snake_case keys the audit layer doesn't
+      // recognize (workspace_id/entity_type/...) — assert they're gone.
+      expect(createEvents[0]).not.toHaveProperty("workspace_id");
+      expect(createEvents[0]).not.toHaveProperty("entity_type");
+      expect(createEvents[0]).not.toHaveProperty("actor_id");
+    });
+
+    it("emits a correctly-shaped WEBHOOK_DELETED audit event on deletion, attributed to the deleting actor", async () => {
+      const webhook = await registerWebhook(
+        workspaceId,
+        "https://example.com/webhooks",
+        ["action:created"],
+        actorId
+      );
+      _emittedAuditEvents.length = 0;
+
+      await deleteWebhook(webhook.id, workspaceId, actorId);
+
+      const deleteEvents = _emittedAuditEvents.filter((e) => e.eventName === "webhook.deleted");
+      expect(deleteEvents).toHaveLength(1);
+      expect(deleteEvents[0]).toMatchObject({
+        workspaceId,
+        entityType: "webhook",
+        entityId: webhook.id,
+        actorId,
+      });
+    });
+
+    it("registration honestly discloses that live event dispatch is not configured", async () => {
+      const webhook = await registerWebhook(
+        workspaceId,
+        "https://example.com/webhooks",
+        ["action:created"],
+        actorId
+      );
+
+      expect(webhook.dispatchStatus).toBe("not_configured");
     });
   });
 });

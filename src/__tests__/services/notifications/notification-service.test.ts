@@ -3,10 +3,46 @@
  *
  * Validates multi-channel notification delivery, template rendering,
  * user preferences, and notification tracking.
+ *
+ * P0-01 (production trust/governance closure): channel delivery is no longer
+ * a `Math.random()` coin flip — EMAIL goes through the real Resend provider
+ * (mocked below, same pattern as alert-email-retry.test.ts), IN_APP is
+ * "delivered" by construction, and SMS/WEBHOOK are honestly "not_configured"
+ * (no real provider is wired for them). The mocks below default to a
+ * succeeding provider + a resolvable recipient so the large body of
+ * pre-existing behavioral tests (templates, preferences, pagination, etc.)
+ * keeps exercising a realistic "everything works" path without every test
+ * having to set that up itself.
  */
 
-import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, beforeAll, vi } from "vitest";
 import { ensureStartupStatusReady } from "../../test-helpers/startup-helper";
+
+let _fakeProvider: { send: ReturnType<typeof vi.fn> } | null = { send: vi.fn() };
+vi.mock("@/lib/integrations/email-provider", () => ({
+  getEmailProvider: vi.fn(() => _fakeProvider),
+}));
+
+let _fakeRecipientEmail: string | null = "recipient@example.com";
+vi.mock("@/lib/db", () => ({
+  db: {
+    user: {
+      findFirst: vi.fn(() =>
+        Promise.resolve(_fakeRecipientEmail ? { email: _fakeRecipientEmail } : null)
+      ),
+    },
+  },
+  getDbInstance: vi.fn().mockResolvedValue({}),
+}));
+
+const _emittedAuditEvents: Array<Record<string, unknown>> = [];
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: vi.fn((input: Record<string, unknown>) => {
+    _emittedAuditEvents.push(input);
+    return Promise.resolve("audit-event-id");
+  }),
+}));
+
 import {
   sendNotification,
   getNotification,
@@ -19,8 +55,6 @@ import {
   NotificationType,
   NotificationChannel,
   clearAllNotifications,
-  _setChannelDeliverySimulatorForTesting,
-  _resetChannelDeliverySimulatorForTesting,
 } from "@/services/notifications/notification-service";
 
 describe("Notification Service", () => {
@@ -30,12 +64,13 @@ describe("Notification Service", () => {
 
   beforeEach(() => {
     clearAllNotifications();
-    _setChannelDeliverySimulatorForTesting(() => true);
+    _fakeProvider = { send: vi.fn().mockResolvedValue({ id: "resend-test-id", accepted: true }) };
+    _fakeRecipientEmail = "recipient@example.com";
+    _emittedAuditEvents.length = 0;
   });
 
   afterEach(() => {
     clearAllNotifications();
-    _resetChannelDeliverySimulatorForTesting();
   });
 
   describe("Send Notification", () => {
@@ -363,7 +398,9 @@ describe("Notification Service", () => {
         sendAt: new Date(),
       });
 
-      expect(notif.status).toBe("sent");
+      // P0-01: an unsubscribed recipient means nothing was sent — that must
+      // be reported truthfully, not as "sent" (which it previously was).
+      expect(notif.status).toBe("unsubscribed");
       expect(notif.deliveryResults).toHaveLength(0);
     });
 
@@ -1064,6 +1101,255 @@ describe("Notification Service", () => {
       const page1 = await listUserNotifications("ws-123", "user-1", { limit: 25, offset: 0 });
       expect(page1.notifications.length).toBeLessThanOrEqual(25);
       expect(page1.total).toBe(100);
+    });
+  });
+
+  describe("P0-01: Truthful Channel Delivery", () => {
+    it("provider configured + accepts: EMAIL is 'sent' with a real providerMessageId, never 'delivered'", async () => {
+      _fakeProvider = { send: vi.fn().mockResolvedValue({ id: "resend-msg-abc", accepted: true }) };
+
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Test",
+        body: "Test body",
+        sendAt: new Date(),
+      });
+
+      expect(notif.status).toBe("sent");
+      expect(notif.deliveryResults[0]!.status).toBe("sent");
+      expect(notif.deliveryResults[0]!.status).not.toBe("delivered");
+      expect(notif.deliveryResults[0]!.providerMessageId).toBe("resend-msg-abc");
+      expect(_fakeProvider!.send).toHaveBeenCalledWith(
+        expect.objectContaining({ to: "recipient@example.com", subject: "Test" })
+      );
+    });
+
+    it("provider unavailable (no RESEND_API_KEY): EMAIL is 'not_configured', not fabricated success", async () => {
+      _fakeProvider = null; // getEmailProvider() returns null when RESEND_API_KEY is unset
+
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Test",
+        body: "Test body",
+        sendAt: new Date(),
+      });
+
+      expect(notif.status).toBe("not_configured");
+      expect(notif.deliveryResults[0]!.status).toBe("not_configured");
+      expect(notif.deliveryResults[0]!.error).toMatch(/RESEND_API_KEY/);
+    });
+
+    it("provider rejects (resolves but not accepted-shaped / throws a rejection error): EMAIL is 'failed' or 'retryable', never 'sent'", async () => {
+      _fakeProvider = { send: vi.fn().mockRejectedValue(new Error("Resend API error 400: invalid recipient")) };
+
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Test",
+        body: "Test body",
+        sendAt: new Date(),
+      });
+
+      expect(notif.status).toBe("failed");
+      expect(notif.deliveryResults[0]!.status).toBe("failed");
+      expect(notif.deliveryResults[0]!.error).toContain("invalid recipient");
+    });
+
+    it("provider throws a transient/network error: EMAIL is 'retryable', not silently dropped or marked sent", async () => {
+      _fakeProvider = { send: vi.fn().mockRejectedValue(new Error("ETIMEDOUT: network timeout")) };
+
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.CRITICAL_ALERT,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Critical",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      expect(notif.status).toBe("retryable");
+      expect(notif.deliveryResults[0]!.status).toBe("retryable");
+    });
+
+    it("missing credential is indistinguishable in effect from provider unavailable — both fail closed", async () => {
+      _fakeProvider = null;
+
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL, NotificationChannel.SMS, NotificationChannel.WEBHOOK],
+        subject: "Test",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      // Every channel here is honestly not_configured — none is marked sent.
+      expect(notif.deliveryResults.every((r) => r.status === "not_configured")).toBe(true);
+      expect(notif.status).toBe("not_configured");
+    });
+
+    it("SMS and WEBHOOK channels are always 'not_configured' — no provider exists for them in this codebase", async () => {
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.SMS, NotificationChannel.WEBHOOK],
+        subject: "Test",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      expect(notif.deliveryResults.map((r) => r.status)).toEqual(["not_configured", "not_configured"]);
+    });
+
+    it("IN_APP is genuinely 'delivered' by construction — no external transport, no simulated outcome", async () => {
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.IN_APP],
+        subject: "Test",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      expect(notif.status).toBe("delivered");
+      expect(notif.deliveryResults[0]!.status).toBe("delivered");
+    });
+
+    it("no recipient email on file: EMAIL is 'failed', not silently treated as sent", async () => {
+      _fakeRecipientEmail = null;
+
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-without-email",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Test",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      expect(notif.status).toBe("failed");
+      expect(_fakeProvider!.send).not.toHaveBeenCalled();
+    });
+
+    it("contains no Math.random-based simulation: 1000 identical sends with a working provider are all deterministically 'sent'", async () => {
+      _fakeProvider = { send: vi.fn().mockResolvedValue({ id: "deterministic-id", accepted: true }) };
+
+      const results = await Promise.all(
+        Array.from({ length: 1000 }, () =>
+          sendNotification({
+            workspaceId: "ws-123",
+            recipientId: "user-1",
+            type: NotificationType.ACTION_COMPLETED,
+            channels: [NotificationChannel.EMAIL],
+            subject: "Test",
+            body: "Body",
+            sendAt: new Date(),
+          })
+        )
+      );
+
+      // The old implementation had a 5% Math.random() failure rate — with a
+      // fixed working provider, delivery must never vary.
+      expect(results.every((n) => n.status === "sent")).toBe(true);
+    });
+
+    it("never reports 'delivered' for a channel that only proves provider acceptance", async () => {
+      _fakeProvider = { send: vi.fn().mockResolvedValue({ id: "msg-1", accepted: true }) };
+
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Test",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      expect(notif.deliveryResults.every((r) => r.status !== "delivered")).toBe(true);
+    });
+
+    it("emits an audit event when a channel truly sends or delivers", async () => {
+      await sendNotification({
+        workspaceId: "ws-audit-test",
+        recipientId: "user-1",
+        actorId: "actor-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL, NotificationChannel.IN_APP],
+        subject: "Test",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      const notificationAudits = _emittedAuditEvents.filter(
+        (e) => e.entityType === "notification" && e.workspaceId === "ws-audit-test"
+      );
+      // One real send (EMAIL, provider accepted) + one delivery (IN_APP) = 2 audit events.
+      expect(notificationAudits.length).toBe(2);
+      expect(notificationAudits.every((e) => e.actorId === "actor-1")).toBe(true);
+    });
+
+    it("does not emit an audit event for a not_configured or failed channel", async () => {
+      _fakeProvider = null;
+
+      await sendNotification({
+        workspaceId: "ws-audit-test-2",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL, NotificationChannel.SMS],
+        subject: "Test",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      const notificationAudits = _emittedAuditEvents.filter(
+        (e) => e.entityType === "notification" && e.workspaceId === "ws-audit-test-2"
+      );
+      expect(notificationAudits.length).toBe(0);
+    });
+
+    it("idempotent retry: a retryable failure followed by a caller-driven retry with a healthy provider succeeds cleanly", async () => {
+      _fakeProvider = { send: vi.fn().mockRejectedValue(new Error("503 Service Unavailable")) };
+
+      const firstAttempt = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Retry Test",
+        body: "Body",
+        sendAt: new Date(),
+      });
+      expect(firstAttempt.status).toBe("retryable");
+
+      // Caller retries (this service has no built-in queue — retry is the
+      // caller re-invoking sendNotification, same as it always was).
+      _fakeProvider = { send: vi.fn().mockResolvedValue({ id: "retry-success-id", accepted: true }) };
+
+      const secondAttempt = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Retry Test",
+        body: "Body",
+        sendAt: new Date(),
+      });
+      expect(secondAttempt.status).toBe("sent");
+      expect(secondAttempt.id).not.toBe(firstAttempt.id);
     });
   });
 });

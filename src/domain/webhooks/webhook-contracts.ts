@@ -36,6 +36,22 @@ export const WebhookSchema = z.object({
   lastDeliveryAt: z.date().optional().describe("Last successful delivery"),
   lastFailureAt: z.date().optional().describe("Last failed delivery attempt"),
   failureCount: z.number().int().default(0).describe("Consecutive failures"),
+  /**
+   * P0-02: whether registering this subscription causes real domain events
+   * to be dispatched to it. Registration, secret generation, signing, and
+   * POST /api/webhooks/{id}/test are all genuinely real (a real signed HTTP
+   * call is made) — but as of this field's introduction, no live domain
+   * mutation anywhere in the codebase (action:created, decision:updated,
+   * etc.) calls deliverWebhookEvent(). "not_configured" discloses that
+   * truthfully instead of letting a subscription look fully operational.
+   */
+  dispatchStatus: z
+    .enum(["not_configured", "wired"])
+    .default("not_configured")
+    .describe(
+      "\"not_configured\": registered, but no live event source dispatches to it yet. " +
+        "\"wired\": at least one real domain event is connected to deliverWebhookEvent()."
+    ),
 });
 
 export type Webhook = z.infer<typeof WebhookSchema>;

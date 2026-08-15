@@ -1,11 +1,42 @@
 /**
  * Notification Service
  *
- * Provides multi-channel notifications (email, SMS, webhook) with templates
- * and delivery tracking. Mock-backed for non-DB environments.
+ * Multi-channel notification dispatch with templates, preferences, and
+ * delivery tracking. Notification *records* (this file's storage layer) are
+ * in-memory — that was never the defect and is unchanged by this fix.
+ *
+ * Channel delivery truthfulness (P0-01 — production trust/governance
+ * closure): a notification must never be marked as successfully delivered
+ * unless a real provider actually accepted it, or the channel is one whose
+ * "delivery" IS local persistence (IN_APP):
+ *  - EMAIL is sent via the real Resend provider
+ *    (@/lib/integrations/email-provider, same provider alert-service.ts
+ *    already uses for real alert email). A successful call means Resend
+ *    ACCEPTED the message — Resend gives no synchronous inbox-delivery
+ *    confirmation, so the resulting channel status is "sent", never
+ *    "delivered". Missing RESEND_API_KEY or any provider error/throw fails
+ *    that channel closed ("not_configured" / "failed" / "retryable") —
+ *    never silently to a fabricated success.
+ *  - IN_APP is "delivered" by construction: the notification record itself
+ *    is what the in-app UI reads, so persisting it IS the delivery — no
+ *    external transport exists to fail.
+ *  - SMS and WEBHOOK have no real provider wired into this service today —
+ *    no SMS provider exists anywhere in this codebase, and generic
+ *    per-event webhook dispatch is a separate, not-yet-wired subsystem
+ *    (@/services/webhooks.service). Both are honestly reported
+ *    "not_configured"; nothing is sent and nothing claims otherwise.
+ *
+ * Previously, every channel's outcome was decided by
+ * `Math.random() > 0.05` — a coin flip presented to callers as a real
+ * delivery result. That has been removed entirely.
  */
 
 import { z } from "zod";
+import { db } from "@/lib/db";
+import { logger } from "@/infra/logger";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { getEmailProvider } from "@/lib/integrations/email-provider";
 
 export enum NotificationChannel {
   EMAIL = "email",
@@ -23,10 +54,40 @@ export enum NotificationType {
   EXPERIMENT_RESULT = "experiment_result",
 }
 
+/**
+ * Truthful channel/notification delivery states (P0-01):
+ *  - pending        — not yet attempted
+ *  - sent           — a real provider ACCEPTED the message (not proof of
+ *                      final inbox/endpoint delivery)
+ *  - delivered      — delivery is actually proven (IN_APP only today:
+ *                      storage IS delivery; reserved for email/SMS/webhook
+ *                      once a provider delivery-confirmation callback is
+ *                      wired — not claimed today)
+ *  - failed         — the provider explicitly rejected the message, or a
+ *                      non-retryable error occurred (e.g. no recipient
+ *                      address on file)
+ *  - retryable       — a transient error occurred; safe to retry
+ *  - not_configured — no real provider is wired for this channel; nothing
+ *                      was sent, and this is disclosed rather than hidden
+ *  - unsubscribed   — the recipient opted out of this notification type;
+ *                      nothing was sent, by the recipient's own choice
+ */
+export const ChannelDeliveryStatusSchema = z.enum([
+  "pending",
+  "sent",
+  "delivered",
+  "failed",
+  "retryable",
+  "not_configured",
+  "unsubscribed",
+]);
+export type ChannelDeliveryStatus = z.infer<typeof ChannelDeliveryStatusSchema>;
+
 export const NotificationSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
   recipientId: z.string(),
+  actorId: z.string().optional(),
   type: z.string(),
   channels: z.array(z.string()),
   subject: z.string(),
@@ -35,13 +96,14 @@ export const NotificationSchema = z.object({
   templateData: z.record(z.string(), z.unknown()).optional(),
   priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
   sendAt: z.date(),
-  status: z.enum(["pending", "sending", "sent", "failed", "bounced"]),
+  status: ChannelDeliveryStatusSchema,
   deliveryResults: z.array(
     z.object({
       channel: z.string(),
-      status: z.enum(["success", "failed", "bounced", "unsubscribed"]),
+      status: ChannelDeliveryStatusSchema,
       sentAt: z.date(),
       error: z.string().optional(),
+      providerMessageId: z.string().optional(),
     })
   ),
   createdAt: z.date(),
@@ -91,21 +153,102 @@ const notificationStore = new Map<string, Notification>();
 const templateStore = new Map<string, NotificationTemplate>();
 const preferencesStore = new Map<string, NotificationPreferences>();
 
-// Configurable channel delivery simulator for testing
-type ChannelDeliverySimulator = (channel: NotificationChannel, recipientId: string) => boolean | Promise<boolean>;
-
-const defaultChannelDeliverySimulator: ChannelDeliverySimulator = () => {
-  return Math.random() > 0.05;
+type ChannelDeliveryResult = {
+  channel: NotificationChannel;
+  status: ChannelDeliveryStatus;
+  sentAt: Date;
+  error?: string;
+  providerMessageId?: string;
 };
 
-let channelDeliverySimulator: ChannelDeliverySimulator = defaultChannelDeliverySimulator;
-
-export function _setChannelDeliverySimulatorForTesting(simulator: ChannelDeliverySimulator): void {
-  channelDeliverySimulator = simulator;
+function isRetryableProviderError(error: unknown): boolean {
+  const msg = String(error);
+  return /429|500|502|503|504|timeout|ECONNRESET|ETIMEDOUT|network/i.test(msg);
 }
 
-export function _resetChannelDeliverySimulatorForTesting(): void {
-  channelDeliverySimulator = defaultChannelDeliverySimulator;
+/**
+ * Deliver a notification to one channel and report a TRUTHFUL outcome.
+ * See the file header for exactly what each channel can and cannot prove.
+ */
+async function deliverToChannel(
+  channel: NotificationChannel,
+  notification: Pick<Notification, "workspaceId" | "recipientId" | "subject" | "body">
+): Promise<ChannelDeliveryResult> {
+  const sentAt = new Date();
+
+  if (channel === NotificationChannel.IN_APP) {
+    // Storing the notification record IS the delivery for in-app — there is
+    // no external transport that can fail, so this is genuinely "delivered".
+    return { channel, status: "delivered", sentAt };
+  }
+
+  if (channel === NotificationChannel.EMAIL) {
+    const provider = getEmailProvider();
+    if (!provider) {
+      return {
+        channel,
+        status: "not_configured",
+        sentAt,
+        error: "RESEND_API_KEY is not configured — email delivery is unavailable",
+      };
+    }
+
+    const recipient = await db.user
+      .findFirst({
+        where: {
+          id: notification.recipientId,
+          workspaceMemberships: { some: { workspaceId: notification.workspaceId, isActive: true } },
+        },
+        select: { email: true },
+      })
+      .catch(() => null);
+
+    if (!recipient?.email) {
+      return {
+        channel,
+        status: "failed",
+        sentAt,
+        error: "recipient has no email address in this workspace",
+      };
+    }
+
+    try {
+      const result = await provider.send({
+        to: recipient.email,
+        subject: notification.subject,
+        html: notification.body,
+      });
+      // Resend accepted the message — that is proof of acceptance, not proof
+      // of inbox delivery, so this is "sent", never "delivered".
+      return { channel, status: "sent", sentAt, providerMessageId: result.id };
+    } catch (error) {
+      return {
+        channel,
+        status: isRetryableProviderError(error) ? "retryable" : "failed",
+        sentAt,
+        error: String(error),
+      };
+    }
+  }
+
+  // SMS and WEBHOOK: no real delivery provider is wired into this service.
+  // Disclose that honestly instead of pretending the message went out.
+  return {
+    channel,
+    status: "not_configured",
+    sentAt,
+    error: `No delivery provider is configured for channel "${channel}"`,
+  };
+}
+
+function aggregateDeliveryStatus(results: ChannelDeliveryResult[]): ChannelDeliveryStatus {
+  if (results.length === 0) return "not_configured";
+  const statuses = new Set(results.map((r) => r.status));
+  if (statuses.size === 1) return results[0]!.status;
+  if (statuses.has("failed")) return "failed";
+  if (statuses.has("retryable")) return "retryable";
+  if (statuses.has("sent") || statuses.has("delivered")) return "sent";
+  return "not_configured";
 }
 
 /**
@@ -141,73 +284,51 @@ export async function sendNotification(
     return prefs.channels[ch] ?? true; // Default to true if not explicitly set
   });
 
-  // Check if notification type is unsubscribed
+  // Check if notification type is unsubscribed — nothing is sent, and this
+  // must not be reported as "sent" (it previously was).
   if (prefs?.unsubscribedTypes?.includes(notification.type as NotificationType)) {
-    validated.status = "sent";
+    validated.status = "unsubscribed";
     validated.deliveryResults = [];
     validated.updatedAt = new Date();
     notificationStore.set(id, validated);
     return validated;
   }
 
-  // Simulate delivery through each channel
-  const deliveryResults: Array<{
-    channel: NotificationChannel;
-    status: "success" | "failed" | "bounced" | "unsubscribed";
-    sentAt: Date;
-    error?: string;
-  }> = [];
+  const deliveryResults: ChannelDeliveryResult[] = [];
   for (const channel of activeChannels) {
-    const result = await simulateChannelDelivery(channel as NotificationChannel, validated);
+    const result = await deliverToChannel(channel as NotificationChannel, validated);
     deliveryResults.push(result);
+
+    if (result.status === "sent" || result.status === "delivered") {
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.NOTIFICATION_SENT,
+        workspaceId: validated.workspaceId,
+        actorId: validated.actorId,
+        entityType: "notification",
+        entityId: id,
+        payload: {
+          channel: result.channel,
+          type: validated.type,
+          status: result.status,
+          providerMessageId: result.providerMessageId,
+        },
+        visibility: "internal",
+      }).catch((auditError) => {
+        logger.error("Failed to emit audit event for notification delivery", {
+          notificationId: id,
+          channel: result.channel,
+          error: String(auditError),
+        });
+      });
+    }
   }
 
   validated.deliveryResults = deliveryResults;
-  validated.status = deliveryResults.every((r) => r.status === "success") ? "sent" : "failed";
+  validated.status = aggregateDeliveryStatus(deliveryResults);
   validated.updatedAt = new Date();
 
   notificationStore.set(id, validated);
   return validated;
-}
-
-/**
- * Simulate delivery to a specific channel
- */
-async function simulateChannelDelivery(
-  channel: NotificationChannel,
-  notification: Notification
-): Promise<{
-  channel: NotificationChannel;
-  status: "success" | "failed" | "bounced" | "unsubscribed";
-  sentAt: Date;
-  error?: string;
-}> {
-  // Use configurable simulator (default: 95% success rate)
-  const success = await channelDeliverySimulator(channel, notification.recipientId);
-
-  if (!success) {
-    return {
-      channel,
-      status: "failed",
-      sentAt: new Date(),
-      error: "Simulated delivery failure",
-    };
-  }
-
-  // Check for unsubscribe simulation based on recipient ID
-  if (notification.recipientId.includes("unsubscribed")) {
-    return {
-      channel,
-      status: "unsubscribed",
-      sentAt: new Date(),
-    };
-  }
-
-  return {
-    channel,
-    status: "success",
-    sentAt: new Date(),
-  };
 }
 
 /**
