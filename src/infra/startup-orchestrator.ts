@@ -8,6 +8,7 @@
 
 import { setStartupStatus, getStartupStatus, resolveInstanceId } from "@/services/startup-status";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
 
 let startupPromise: Promise<void> | null = null;
 const STARTUP_TIMEOUT_MS = 30000;
@@ -109,7 +110,28 @@ async function performStartupChecks(): Promise<void> {
     }
     logger.debug("✓ STARTUP: Database connectivity verified");
 
-    // Check 2: Schema validation
+    // Check 2: Migration currency — all committed migrations must be applied.
+    // Compares prisma/migrations/ directories against _prisma_migrations rows.
+    // Fail closed: if the migrations directory is absent (Vercel bundle gap) or
+    // the DB is unreachable, this returns ready:false and startup fails.
+    logger.debug("STARTUP: Checking migration history currency...");
+    const migrationStatus = await checkMigrationReadiness();
+    if (!migrationStatus.ready) {
+      throw new Error(
+        `Migration history is not current: ` +
+        `${migrationStatus.pending ?? 0} pending, ` +
+        `${migrationStatus.failed ?? 0} failed. ` +
+        `Run \`prisma migrate deploy\` to apply pending migrations. ` +
+        (migrationStatus.error ? `Error: ${migrationStatus.error}` : "")
+      );
+    }
+    logger.debug("✓ STARTUP: Migration history verified", {
+      totalCommitted: migrationStatus.totalCommitted,
+      applied: migrationStatus.applied,
+    });
+
+    // Check 3 (legacy label preserved): Schema validation
+    // With migration currency proven above, schema is trusted to be current.
     logger.debug("STARTUP: Checking database schema...");
     const schemaValid = await checkDatabaseSchema(dbInstance, logger);
     if (!schemaValid) {

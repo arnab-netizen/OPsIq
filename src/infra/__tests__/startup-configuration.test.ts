@@ -49,6 +49,20 @@ vi.mock("@/services/startup-status", () => ({
   resolveInstanceId: vi.fn(() => "test"),
 }));
 
+// performStartupChecks() calls checkMigrationReadiness() to verify migration
+// currency before writing a READY row. Mock it as always-current so tests
+// that exercise the startup orchestrator logic do not hit the real filesystem
+// or _prisma_migrations table (which has 166 pending on CI).
+vi.mock("@/services/monitoring/migration-check", () => ({
+  checkMigrationReadiness: vi.fn().mockResolvedValue({
+    ready: true,
+    totalCommitted: 3,
+    applied: 3,
+    pending: 0,
+    failed: 0,
+  }),
+}));
+
 import {
   checkStartupConfiguration,
   ensureStartupComplete,

@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
   // Vercel serverless functions (which only include traced files by default).
   outputFileTracingIncludes: {
     "/api/startup": ["./prisma/migrations/**"],
+    "/api/readiness": ["./prisma/migrations/**"],
   },
   poweredByHeader: false,
   turbopack: {
