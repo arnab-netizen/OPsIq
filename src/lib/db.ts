@@ -44,17 +44,25 @@ async function createPrismaClient() {
     const isTestEnv = !!(process.env.VITEST || process.env.NODE_ENV === "test");
     const pool = new pg.Pool({
       connectionString: databaseUrl,
-      ssl: databaseUrl.includes("sslmode=require")
-        ? { rejectUnauthorized: false }
-        : undefined,
+      // P0-15: no manual `ssl` override. node-postgres/pg-connection-string already
+      // parses `sslmode` (and channel_binding) from the connection string itself when
+      // `ssl` is left unset. The prior `{ rejectUnauthorized: false }` here actively
+      // disabled certificate verification instead of relying on the connection
+      // string's own sslmode=require (currently aliased to verify-full semantics) —
+      // a real weakening, and unrelated to the connectivity failures this fixes.
       // In test envs, connectionTimeoutMillis=0 (unlimited pool-queue wait) so cold-start
       // connection attempts block until Neon compute is ready. Production keeps 90s.
       connectionTimeoutMillis: isTestEnv ? 0 : 90000,
-      // In test envs, keep max=1 connection. The neonKeepalive heartbeat (in each test
-      // suite's beforeAll) sends SELECT 1 through this pool every 4s, keeping the single
-      // connection active. idleTimeoutMillis=300s (5 min) gives a wide safety margin so
-      // the connection is never removed even if the heartbeat misses a tick.
-      max: isTestEnv ? 1 : 10,
+      // P0-15 (Neon production connectivity root-cause): Prisma's official serverless
+      // guidance is connection_limit=1 per function instance, relying on an external
+      // pooler (Neon's PgBouncer / pooled endpoint) for fan-in across concurrent
+      // instances — the prior max:10 let a single cold instance alone open up to 10
+      // direct connections, multiplying instantly under concurrent cold starts and
+      // adding connection pressure during Neon's compute-wake window (source of the
+      // observed "Authentication timed out" / "Connection terminated unexpectedly"
+      // errors). This mirrors the max:1 already proven correct in the test-env branch
+      // below, for the identical Neon-suspend reason documented in its own comment.
+      max: isTestEnv ? 1 : 1,
       idleTimeoutMillis: isTestEnv ? 300000 : 120000,
       // TCP keepalive: prevents OS/NAT from silently dropping idle connections.
       keepAlive: true,
@@ -62,6 +70,19 @@ async function createPrismaClient() {
     });
     // Store pool reference so pingDatabase() can bypass Prisma's $extends() chain.
     globalForPrisma.pgPool = pool;
+
+    // P0-15: keeps this function instance alive long enough for Vercel to drain idle
+    // pool connections before the instance suspends, instead of the instance freezing
+    // mid-connection and later resuming with a now-dead socket (the documented cause
+    // of "Connection terminated unexpectedly" on resume). No-op outside a Vercel
+    // function; failure here must never block DB initialization.
+    try {
+      const { attachDatabasePool } = await import("@vercel/functions");
+      attachDatabasePool(pool);
+    } catch (error) {
+      console.warn("[DB] attachDatabasePool unavailable (non-Vercel runtime?)", String(error));
+    }
+
     const adapter = new PrismaPg(pool);
     const client = new PrismaClient({ adapter });
 
