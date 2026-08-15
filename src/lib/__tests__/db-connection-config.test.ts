@@ -96,6 +96,15 @@ function resetSingletonState() {
 }
 
 beforeEach(() => {
+  // Force a genuinely fresh @/lib/db module for every test, including the
+  // first: this suite runs alongside dozens of real .db.test.ts files that
+  // import the real (unmocked) @/lib/db singleton against real Postgres.
+  // Vitest's module cache is scoped per worker, not guaranteed fresh per
+  // file — without this, the very first test here can inherit an
+  // already-initialized real client from an earlier file on the same
+  // worker, bypassing the vi.mock("pg") below entirely. resetModules() in
+  // afterEach covers tests 2+; this covers test 1.
+  vi.resetModules();
   resetSingletonState();
   // Simulate a real deployment runtime despite running under Vitest: db.ts's
   // isTestEnv branch is what we're proving production does NOT take.
