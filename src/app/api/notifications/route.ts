@@ -31,7 +31,9 @@ const SendNotificationSchema = z.object({
 const ListNotificationsSchema = z.object({
   limit: z.number().int().min(1).max(100).default(50).optional(),
   offset: z.number().int().min(0).default(0).optional(),
-  status: z.enum(["pending", "sending", "sent", "failed", "bounced"]).optional(),
+  status: z
+    .enum(["pending", "sent", "delivered", "failed", "retryable", "not_configured", "unsubscribed"])
+    .optional(),
 });
 
 /**
@@ -51,6 +53,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   const notification = await sendNotification({
     ...parsed,
     workspaceId,
+    actorId: ctx.verifiedActorId,
   });
 
   return {

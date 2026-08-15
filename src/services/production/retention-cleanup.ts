@@ -1,5 +1,23 @@
 // Retention policy enforcement - cleanup old records
 // Triggered on startup and periodically
+//
+// P0-04 (production trust/governance closure): this function used to also
+// delete AuditEvent rows older than a TTL. That path was reachable from a
+// plain, unauthenticated GET /api/health (see src/app/api/health/route.ts)
+// and violated CLAUDE.md's governed-record rule ("Modifying audit_log rows
+// in any way" requires explicit owner authority — audit history is
+// append-only). The delete call also referenced a `createdAt` field that
+// does not exist on AuditEvent (only `occurredAt` does), so it silently
+// no-op'd via `.catch(() => ({ count: 0 }))` in every build to date — but it
+// was one correct field-name away from actually deleting governed audit
+// history on a schedule nobody authorized. It has been removed outright,
+// not "fixed", because audit records must not be deleted by this or any
+// other automatic process. If a genuinely governed audit-retention/archival
+// policy is ever needed, it must be its own explicitly authorized mechanism
+// (owner-approved policy, admin-triggered, itself audited) — never a side
+// effect of a health check. See src/infra/audit.ts's
+// `getAuditEventReadOnlyClient()` for a compile-time-safe way to read audit
+// history that cannot be used to delete or update it.
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
@@ -17,7 +35,6 @@ export async function cleanupOldRecords(): Promise<void> {
 
     const now = new Date();
     let totalDeletedOperatorItems = 0;
-    let totalDeletedAuditEvents = 0;
 
     // Delete operator items older than TTL (per workspace)
     const operatorCutoff = new Date(now);
@@ -36,24 +53,6 @@ export async function cleanupOldRecords(): Promise<void> {
 
     if (totalDeletedOperatorItems > 0) {
       logger.success({ message: `Deleted ${totalDeletedOperatorItems} expired operator items` });
-    }
-
-    // Delete audit events older than TTL (per workspace)
-    const auditCutoff = new Date(now);
-    auditCutoff.setDate(auditCutoff.getDate() - PRODUCTION_CONFIG.retention.auditEventTtlDays);
-
-    for (const workspace of workspaces) {
-      const deletedAuditEvents = await db.auditEvent.deleteMany({
-        where: {
-          workspaceId: workspace.id,
-          createdAt: { lt: auditCutoff },
-        },
-      }).catch(() => ({ count: 0 }));
-      totalDeletedAuditEvents += deletedAuditEvents.count;
-    }
-
-    if (totalDeletedAuditEvents > 0) {
-      logger.success({ message: `Deleted ${totalDeletedAuditEvents} expired audit events` });
     }
   } catch (error) {
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });

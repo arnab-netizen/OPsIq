@@ -31,11 +31,42 @@ function computeEventHash(eventId: string, workspaceId: string, eventName: strin
  */
 export type AuditClient = Pick<Prisma.TransactionClient, "auditEvent">;
 
+/**
+ * Read-only, compile-time-typed accessor for AuditEvent. Use this instead of
+ * reaching into `db.auditEvent` directly when a service needs to query audit
+ * history — `db` (src/lib/db.ts) is exported as an untyped Proxy, so
+ * `db.auditEvent.someMethod({ wrongField: ... })` compiles cleanly even when
+ * the method is destructive or the field doesn't exist on the real schema.
+ * This type has no delete/deleteMany/update/updateMany/upsert members, so a
+ * future retention/cleanup-style mutation against governed audit history
+ * cannot even be written through it, and every field reference used with it
+ * is checked against Prisma's generated AuditEvent shape.
+ *
+ * Added for P0-04: a retention-cleanup path called
+ * `db.auditEvent.deleteMany({ where: { createdAt: ... } })` — `createdAt`
+ * does not exist on AuditEvent (only `occurredAt` does) — and the mistake
+ * compiled cleanly because `db` is untyped. That delete path has been
+ * removed entirely (see src/services/production/retention-cleanup.ts); this
+ * accessor exists so the same class of mistake can't recur unnoticed.
+ */
+export type AuditEventReadOnlyClient = Pick<
+  Prisma.TransactionClient["auditEvent"],
+  "findFirst" | "findMany" | "findUnique" | "count"
+>;
+
+export function getAuditEventReadOnlyClient(): AuditEventReadOnlyClient {
+  return (db as unknown as { auditEvent: AuditEventReadOnlyClient }).auditEvent;
+}
+
 export async function emitAuditEvent(
   input: AuditEventInput,
   client?: AuditClient,
 ): Promise<string> {
-  const c = client ?? db;
+  // Typed explicitly (rather than left to inference) so every `c.auditEvent.*`
+  // call below is checked against Prisma's generated AuditEvent shape even
+  // when no transaction client is passed in and `client ?? db` would
+  // otherwise collapse to `any` (db.ts's `db` export is an untyped Proxy).
+  const c: AuditClient = client ?? (db as unknown as AuditClient);
   if (!input.workspaceId) {
     logger.warn("Audit event emitted without workspaceId - fail-safe activated", {
       eventName: input.eventName,

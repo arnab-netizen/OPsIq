@@ -3,10 +3,23 @@
  *
  * Handles webhook registration, delivery, retry logic, and signature verification.
  * In-memory mock store for now (ready for database persistence later).
+ *
+ * P0-02 (production trust/governance closure): registerWebhook/testWebhookDelivery/
+ * deliverWebhookEvent/deliverWithRetry all do real work when called — real HMAC
+ * secrets, real signed HTTP calls, real exponential-backoff retries. The defect was
+ * elsewhere: (a) registerWebhook/deleteWebhook emitted audit events with snake_case
+ * field names that don't match AuditEventInput, so emitAuditEvent silently took its
+ * missing-workspaceId fail-safe branch and wrote nothing — fixed below; (b) nothing
+ * in this codebase actually calls deliverWebhookEvent() for a real domain mutation
+ * yet, so a registered subscription does not receive real production events even
+ * though registration and the test-delivery endpoint both genuinely work — the
+ * `dispatchStatus` field on Webhook (see webhook-contracts.ts) discloses this
+ * truthfully instead of letting a subscription look fully operational.
  */
 
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   Webhook,
@@ -89,6 +102,9 @@ export async function registerWebhook(
     createdAt: new Date(),
     createdBy,
     failureCount: 0,
+    // See file header: registration is real, but no live domain event
+    // dispatches to a webhook yet — disclose that honestly.
+    dispatchStatus: "not_configured",
   };
 
   const validationErrors = validateWebhook(webhook);
@@ -100,14 +116,14 @@ export async function registerWebhook(
 
   // Emit audit event
   await emitAuditEvent({
-    workspace_id: workspaceId,
-    entity_type: "webhook",
-    entity_id: webhookId,
-    actor_id: createdBy,
-    action: "create",
-    status: "success",
-    details: { url, events },
-  } as any);
+    eventName: AUDIT_EVENTS.WEBHOOK_CREATED,
+    workspaceId,
+    entityType: "webhook",
+    entityId: webhookId,
+    actorId: createdBy,
+    payload: { url, events },
+    visibility: "internal",
+  });
 
   return webhook;
 }
@@ -340,7 +356,11 @@ export async function listWebhooks(workspaceId: string): Promise<Webhook[]> {
 /**
  * Delete webhook
  */
-export async function deleteWebhook(webhookId: string, workspaceId: string): Promise<void> {
+export async function deleteWebhook(
+  webhookId: string,
+  workspaceId: string,
+  actorId: string = "system"
+): Promise<void> {
   const webhook = webhookStore.getWebhook(webhookId);
 
   if (!webhook || webhook.workspaceId !== workspaceId) {
@@ -351,13 +371,13 @@ export async function deleteWebhook(webhookId: string, workspaceId: string): Pro
 
   // Emit audit event
   await emitAuditEvent({
-    workspace_id: workspaceId,
-    entity_type: "webhook",
-    entity_id: webhookId,
-    actor_id: "system",
-    action: "delete",
-    status: "success",
-  } as any);
+    eventName: AUDIT_EVENTS.WEBHOOK_DELETED,
+    workspaceId,
+    entityType: "webhook",
+    entityId: webhookId,
+    actorId,
+    visibility: "internal",
+  });
 }
 
 /**
