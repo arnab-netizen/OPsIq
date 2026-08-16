@@ -3,9 +3,48 @@ name: Migrate Production Database
 # Manual trigger only - no automatic runs. Production migrations are a
 # deliberate, human-gated operation. This workflow NEVER seeds, resets, or
 # performs any destructive operation; it only applies pending Prisma migrations.
+#
+# Two mutually exclusive modes, selected by the `mode` input:
+#
+#   mode=main (default, unchanged from the original single-mode workflow):
+#     Applies whatever migrations are pending on `origin/main`. Requires the
+#     checked-out SHA to be main itself or an ancestor of it — i.e. already
+#     merged, reviewed, CI-proven history. This is the normal path.
+#
+#   mode=reviewed_pr (P0-15 addition):
+#     Applies exactly ONE owner-authorized migration from an UNMERGED, exact,
+#     owner-named pull request SHA — for the narrow case where production
+#     schema must be migrated strictly before that PR merges (see
+#     docs/opsiq-governance/ for the P0-15 CAS remediation this mode exists
+#     for). This mode NEVER checks out, installs, or executes ANY code from
+#     the PR. It checks out `main` only, and the ONLY artifact taken from the
+#     PR is the exact bytes of one named migration.sql file, extracted via
+#     `git show <authorized_sha>:<path>` (a pure git-object read — no
+#     checkout, no execution) and verified byte-for-byte against an
+#     owner-declared SHA-256 checksum BEFORE it is ever placed on disk. All
+#     tooling that runs afterward (npm ci, prisma generate/validate/migrate
+#     deploy) is main's own trusted tooling operating on main's own trusted
+#     tree, with that one checksum-verified file overlaid into a fresh
+#     migrations/ subdirectory. Production credentials are never in scope for
+#     any step that touches PR-derived code, config, or scripts — only for
+#     the later, main-tooling-only steps, and only after every identity/CI/
+#     checksum/pending-set gate below has independently passed.
+#
+#     Scope limit: reviewed_pr mode can ONLY apply migration SQL. A PR that
+#     also needs prisma.config.ts, schema.prisma, or tooling changes applied
+#     before its migration is safe to run cannot use this mode — merge first
+#     and use mode=main instead.
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'Migration mode: main (merged history) or reviewed_pr (exact unmerged PR SHA, migration-only)'
+        required: true
+        default: 'main'
+        type: choice
+        options:
+          - main
+          - reviewed_pr
       environment:
         description: 'Target environment'
         required: true
@@ -17,14 +56,35 @@ on:
         description: 'Type "MIGRATE PRODUCTION" to confirm'
         required: true
         type: string
+      pr_number:
+        description: '[reviewed_pr mode only] Pull request number containing the reviewed migration'
+        required: false
+        type: string
+      authorized_sha:
+        description: '[reviewed_pr mode only] Exact PR head commit SHA the owner is authorizing (must match PR head exactly at run time)'
+        required: false
+        type: string
+      expected_migration:
+        description: '[reviewed_pr mode only] Exact migration directory name, e.g. 20260816000001_startup_status_claim_token'
+        required: false
+        type: string
+      expected_migration_sha256:
+        description: '[reviewed_pr mode only] Owner-authorized SHA-256 checksum of the migration.sql file content (required — no unchecksummed migration is ever applied)'
+        required: false
+        type: string
 
 concurrency:
   group: migrate-production
   cancel-in-progress: false
 
 jobs:
-  migrate:
-    name: Run Prisma Migrations on Production
+  # ─────────────────────────────────────────────────────────────────────────
+  # MODE=MAIN — unchanged from the original workflow. Applies pending
+  # migrations already on origin/main.
+  # ─────────────────────────────────────────────────────────────────────────
+  migrate-main:
+    name: Run Prisma Migrations on Production (main)
+    if: github.event.inputs.mode == 'main' || github.event.inputs.mode == ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
@@ -146,6 +206,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Mode | main |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Environment | production |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Timestamp | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Migration SHA | \`${MIGRATION_SHA:-unknown}\` |" >> "$GITHUB_STEP_SUMMARY"
@@ -161,3 +222,394 @@ jobs:
           echo "**Important:** Verify the production app is healthy after migrations." >> "$GITHUB_STEP_SUMMARY"
           echo "Recommended manual post-migration check: deploy f4e7ed10 to Vercel and confirm build succeeds." >> "$GITHUB_STEP_SUMMARY"
           echo "If migrations failed, consult docs/MIGRATION_DEPLOYMENT_RUNBOOK.md before redeploying." >> "$GITHUB_STEP_SUMMARY"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # MODE=REVIEWED_PR (P0-15 addition) — applies exactly one owner-authorized,
+  # checksum-verified migration from an unmerged PR SHA, without ever
+  # checking out, installing, or executing PR-authored code/config/scripts.
+  # See the module header comment above for the full design rationale.
+  # ─────────────────────────────────────────────────────────────────────────
+  migrate-reviewed-pr:
+    name: Run Prisma Migrations on Production (reviewed PR, migration-only)
+    if: github.event.inputs.mode == 'reviewed_pr'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+
+    # Non-secret, repo-declared expectation for the production identity
+    # gate (Phase 7). This is a coarse defense-in-depth check, not the
+    # primary authorization mechanism (that is PRODUCTION_DATABASE_URL
+    # itself, GitHub-secret-gated). Derived from prior read-only production
+    # topology investigation; update if the owner confirms a different
+    # value. A wrong value here fails the run closed, never open — if this
+    # ever blocks a legitimate migration, the fix is to correct the
+    # constant, not to remove the check.
+    env:
+      EXPECTED_PROD_HOST_SUFFIX: '.aws.neon.tech'
+      EXPECTED_PROD_REGION_HINT: 'us-east-2'
+      REQUIRED_CHECK_NAMES: 'branch-protection,build-and-test (20.x),bundle-validate / Non-DB Validation,lint (20.x),LANE_B — Local Postgres (throwaway)'
+
+    steps:
+      # ── Gate 0: explicit confirmation + required-input presence ──────────
+      - name: Confirm explicit intent
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "MIGRATE PRODUCTION" ]; then
+            echo "::error::Confirmation phrase not matched. Aborting."
+            exit 1
+          fi
+          echo "✓ Explicit confirmation received"
+
+      - name: Validate required reviewed_pr inputs are present
+        run: |
+          missing=""
+          [ -z "${{ github.event.inputs.pr_number }}" ] && missing="$missing pr_number"
+          [ -z "${{ github.event.inputs.authorized_sha }}" ] && missing="$missing authorized_sha"
+          [ -z "${{ github.event.inputs.expected_migration }}" ] && missing="$missing expected_migration"
+          [ -z "${{ github.event.inputs.expected_migration_sha256 }}" ] && missing="$missing expected_migration_sha256"
+          if [ -n "$missing" ]; then
+            echo "::error::reviewed_pr mode requires all of: pr_number, authorized_sha, expected_migration, expected_migration_sha256. Missing:$missing"
+            exit 1
+          fi
+          if ! echo "${{ github.event.inputs.authorized_sha }}" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "::error::authorized_sha must be a full 40-character hex commit SHA."
+            exit 1
+          fi
+          if ! echo "${{ github.event.inputs.expected_migration }}" | grep -qE '^[0-9]{14}_[a-z0-9_]+$'; then
+            echo "::error::expected_migration must match the repository's migration directory naming convention (e.g. 20260816000001_startup_status_claim_token)."
+            exit 1
+          fi
+          if ! echo "${{ github.event.inputs.expected_migration_sha256 }}" | grep -qE '^[0-9a-f]{64}$'; then
+            echo "::error::expected_migration_sha256 must be a 64-character lowercase hex SHA-256 digest."
+            exit 1
+          fi
+          echo "✓ All reviewed_pr inputs present and well-formed"
+
+      # ── Checkout MAIN ONLY. This job never checks out the PR's ref. ──────
+      - name: Checkout main (trusted tree only — never the PR)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      # ── Gate 1 (Phase 3): PR identity, via GitHub API only ────────────────
+      - name: 'Gate 1/6: PR identity verification'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
+          AUTHORIZED_SHA: ${{ github.event.inputs.authorized_sha }}
+        run: |
+          echo "=== Gate 1: PR identity ==="
+          PR_JSON=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}")
+
+          PR_STATE=$(echo "$PR_JSON" | jq -r '.state')
+          PR_MERGED=$(echo "$PR_JSON" | jq -r '.merged')
+          PR_DRAFT=$(echo "$PR_JSON" | jq -r '.draft')
+          PR_BASE_REF=$(echo "$PR_JSON" | jq -r '.base.ref')
+          PR_HEAD_SHA=$(echo "$PR_JSON" | jq -r '.head.sha')
+          PR_HEAD_REPO=$(echo "$PR_JSON" | jq -r '.head.repo.full_name // "UNKNOWN_OR_DELETED_FORK"')
+
+          echo "PR #$PR_NUMBER state=$PR_STATE merged=$PR_MERGED draft=$PR_DRAFT base=$PR_BASE_REF"
+          echo "PR head sha=$PR_HEAD_SHA head repo=$PR_HEAD_REPO"
+
+          if [ "$PR_STATE" != "open" ]; then
+            echo "::error::PR #$PR_NUMBER is not open (state=$PR_STATE). Refusing."
+            exit 1
+          fi
+          if [ "$PR_MERGED" != "false" ]; then
+            echo "::error::PR #$PR_NUMBER is already merged. reviewed_pr mode is for UNMERGED PRs only — use mode=main after merge."
+            exit 1
+          fi
+          if [ "$PR_BASE_REF" != "main" ]; then
+            echo "::error::PR #$PR_NUMBER base branch is '$PR_BASE_REF', not 'main'. Refusing."
+            exit 1
+          fi
+          if [ "$PR_HEAD_REPO" != "${{ github.repository }}" ]; then
+            echo "::error::PR #$PR_NUMBER head repo ('$PR_HEAD_REPO') is not this repository (${{ github.repository }}). Refusing a fork PR."
+            exit 1
+          fi
+          if [ "$PR_HEAD_SHA" != "$AUTHORIZED_SHA" ]; then
+            echo "::error::PR #$PR_NUMBER HEAD is $PR_HEAD_SHA, which does not match authorized_sha ($AUTHORIZED_SHA). The PR moved since authorization — refusing. Re-authorize at the new HEAD explicitly; this workflow never substitutes current HEAD for a stale authorization."
+            exit 1
+          fi
+          if [ "$PR_DRAFT" = "true" ]; then
+            echo "::notice::PR #$PR_NUMBER is a draft. Owner authorization for reviewed_pr mode is external to PR review state, so this is informational only, not a blocker."
+          fi
+
+          echo "✓ Gate 1 passed: PR #$PR_NUMBER is open, unmerged, based on main, same-repo (not a fork), and HEAD matches authorized_sha exactly."
+
+      # ── Gate 2 (Phase 4): required CI checks green at authorized_sha ─────
+      - name: 'Gate 2/6: CI evidence at authorized_sha'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUTHORIZED_SHA: ${{ github.event.inputs.authorized_sha }}
+        run: |
+          echo "=== Gate 2: required CI checks at $AUTHORIZED_SHA ==="
+          CHECKS_JSON=$(gh api "repos/${{ github.repository }}/commits/${AUTHORIZED_SHA}/check-runs" --paginate)
+
+          IFS=',' read -ra REQUIRED <<< "$REQUIRED_CHECK_NAMES"
+          FAILED=0
+          for name in "${REQUIRED[@]}"; do
+            CONCLUSION=$(echo "$CHECKS_JSON" | jq -r --arg n "$name" '[.check_runs[] | select(.name == $n)] | sort_by(.started_at) | last | .conclusion // "MISSING"')
+            echo "  $name -> $CONCLUSION"
+            if [ "$CONCLUSION" != "success" ]; then
+              echo "::error::Required check '$name' is not success at $AUTHORIZED_SHA (found: $CONCLUSION)."
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" = "1" ]; then
+            echo "::error::One or more required checks are not green at the exact authorized SHA. Refusing to proceed."
+            exit 1
+          fi
+          echo "✓ Gate 2 passed: all required checks are success at authorized_sha exactly."
+
+      # ── Gate 3 (Phase 5): migration content + checksum, via git plumbing ─
+      # git fetch here pulls the PR commit's OBJECTS into the local object
+      # database only — no checkout, nothing enters the working directory
+      # that any subsequent install/build step will read from. git show
+      # reads one blob directly out of the object database.
+      - name: 'Gate 3/6: migration content + checksum verification'
+        env:
+          AUTHORIZED_SHA: ${{ github.event.inputs.authorized_sha }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
+          EXPECTED_MIGRATION: ${{ github.event.inputs.expected_migration }}
+          EXPECTED_SHA256: ${{ github.event.inputs.expected_migration_sha256 }}
+        run: |
+          echo "=== Gate 3: migration content + checksum ==="
+          # Fetch by PR ref (always fetchable by GitHub convention), not a bare
+          # SHA (which depends on server-side allow-tip-sha1-in-want settings
+          # that are not guaranteed). Then re-verify the fetched tip is still
+          # exactly the authorized SHA — a second, independent check against
+          # the PR moving between Gate 1 and here (defense in depth; Gate 1
+          # already checked this via the API moments earlier).
+          git fetch origin "refs/pull/${PR_NUMBER}/head"
+          FETCHED_SHA=$(git rev-parse FETCH_HEAD)
+          if [ "$FETCHED_SHA" != "$AUTHORIZED_SHA" ]; then
+            echo "::error::PR #$PR_NUMBER's fetched HEAD ($FETCHED_SHA) no longer matches authorized_sha ($AUTHORIZED_SHA). The PR moved during this run. Refusing."
+            exit 1
+          fi
+          echo "✓ Re-verified fetched PR HEAD still matches authorized_sha"
+
+          MIGRATION_PATH="prisma/migrations/${EXPECTED_MIGRATION}/migration.sql"
+
+          # Require the migration to be part of the PR's actual delta vs main
+          # (not something already on main, not something unrelated).
+          DELTA_FILES=$(git diff origin/main.."$AUTHORIZED_SHA" --name-only)
+          if ! echo "$DELTA_FILES" | grep -qxF "$MIGRATION_PATH"; then
+            echo "::error::$MIGRATION_PATH is not part of the diff between origin/main and $AUTHORIZED_SHA. Refusing — the authorized migration must be introduced BY this PR."
+            exit 1
+          fi
+          echo "✓ $MIGRATION_PATH is present in the PR's delta vs main"
+
+          # Extract the exact bytes via git plumbing (no checkout, no execution).
+          mkdir -p "prisma/migrations/${EXPECTED_MIGRATION}"
+          if ! git show "${AUTHORIZED_SHA}:${MIGRATION_PATH}" > "$MIGRATION_PATH" 2>/tmp/git-show-err.txt; then
+            echo "::error::Could not read $MIGRATION_PATH at $AUTHORIZED_SHA:"
+            cat /tmp/git-show-err.txt
+            exit 1
+          fi
+
+          ACTUAL_SHA256=$(sha256sum "$MIGRATION_PATH" | awk '{print $1}')
+          echo "Expected SHA-256: $EXPECTED_SHA256"
+          echo "Actual   SHA-256: $ACTUAL_SHA256"
+          if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then
+            echo "::error::Migration content checksum mismatch. The file at $AUTHORIZED_SHA does not match the owner-authorized checksum. Refusing — this is the primary integrity gate and is never bypassed."
+            exit 1
+          fi
+          echo "✓ Gate 3 passed: migration content matches the owner-authorized SHA-256 exactly, and is part of the PR's delta."
+          echo "MIGRATION_SHA256=$ACTUAL_SHA256" >> "$GITHUB_ENV"
+
+      # ── Trusted tooling install — MAIN's package.json/lock ONLY ──────────
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies (main tree only, scripts disabled)
+        run: npm ci --ignore-scripts
+
+      - name: Prisma generate (main tooling, no secret yet)
+        run: npx prisma generate
+
+      - name: Prisma validate (main tooling, no secret yet)
+        run: npx prisma validate
+
+      # ── Preflight: secret presence + safety, same pattern as mode=main ───
+      - name: Preflight check - PRODUCTION_DATABASE_URL secret exists
+        run: |
+          if [ -z "${{ secrets.PRODUCTION_DATABASE_URL }}" ]; then
+            echo "::error::PRODUCTION_DATABASE_URL secret is missing or empty"
+            exit 1
+          fi
+          echo "✓ PRODUCTION_DATABASE_URL secret is configured"
+
+      - name: Remove local environment files
+        run: |
+          rm -f .env .env.local .env.production .env.staging .env.postgres .env.local.bak
+          echo "✓ Removed all local .env files to prevent placeholder contamination"
+
+      - name: Validate DATABASE_URL safety
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
+            echo "::error::DATABASE_URL contains placeholder value - secret not properly configured"
+            exit 1
+          fi
+          DB_HOST=$(node -e "try { const u = new URL(process.env.DATABASE_URL); console.log(u.hostname); } catch(e) { console.log('unparseable'); }" 2>/dev/null || echo "unparseable")
+          echo "Database host: $DB_HOST"
+          if echo "$DB_HOST" | grep -q '\-pooler\.'; then
+            echo "::error::DATABASE_URL hostname contains '-pooler.' — migrations require a DIRECT (non-pooler) Neon URL."
+            exit 1
+          fi
+          echo "✓ DATABASE_URL safety checks passed (host: $DB_HOST)"
+
+      # ── Gate 4 (Phase 7): production identity, redacted ───────────────────
+      - name: 'Gate 4/6: production identity verification (redacted)'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "=== Gate 4: production identity ==="
+          node -e "
+            const u = new URL(process.env.DATABASE_URL);
+            console.log('DB_HOST_CLASS=' + (u.hostname.includes('.neon.tech') ? 'NEON_DIRECT' : 'OTHER'));
+            console.log('DB_HOSTNAME_SUFFIX_MATCH=' + String(u.hostname.endsWith(process.env.EXPECTED_PROD_HOST_SUFFIX)));
+            console.log('DB_REGION_HINT_PRESENT=' + String(u.hostname.includes(process.env.EXPECTED_PROD_REGION_HINT)));
+            console.log('DB_NAME=' + u.pathname.replace(/^\//, ''));
+            console.log('DB_USER=' + (u.username ? u.username.replace(/./g, '*') : '(none)'));
+          " > identity.env
+          cat identity.env
+          SUFFIX_OK=$(grep DB_HOSTNAME_SUFFIX_MATCH identity.env | cut -d= -f2)
+          REGION_OK=$(grep DB_REGION_HINT_PRESENT identity.env | cut -d= -f2)
+          if [ "$SUFFIX_OK" != "true" ]; then
+            echo "::error::Database hostname does not end with the expected production suffix ($EXPECTED_PROD_HOST_SUFFIX). Refusing — this may be misconfigured or pointed at the wrong project."
+            exit 1
+          fi
+          if [ "$REGION_OK" != "true" ]; then
+            echo "::error::Database hostname does not contain the expected production region hint ($EXPECTED_PROD_REGION_HINT). Refusing."
+            exit 1
+          fi
+          echo "✓ Gate 4 passed: host suffix and region hint match the expected production identity (username/password never printed)."
+          rm -f identity.env
+
+      - name: Install postgresql-client (for read-only introspection)
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Capture pre-deploy startup_status row count (read-only)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          COUNT=$(psql "$DATABASE_URL" -tAc "SELECT COUNT(*) FROM \"startup_status\";" 2>/dev/null || echo "TABLE_NOT_FOUND")
+          echo "STARTUP_STATUS_ROW_COUNT_BEFORE=$COUNT" >> "$GITHUB_ENV"
+          echo "startup_status row count before: $COUNT"
+
+      # ── Gate 5 (Phase 6): exact pending-migration-set, via _prisma_migrations
+      #    directly rather than parsing `prisma migrate status` text output. ─
+      - name: 'Gate 5/6: exact pending migration set'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          EXPECTED_MIGRATION: ${{ github.event.inputs.expected_migration }}
+        run: |
+          echo "=== Gate 5: exact pending migration set ==="
+          APPLIED=$(psql "$DATABASE_URL" -tAc "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name;" 2>/dev/null | sort)
+          LOCAL=$(ls -1 prisma/migrations | grep -vE '^migration_lock\.toml$' | sort)
+
+          PENDING=$(comm -23 <(echo "$LOCAL") <(echo "$APPLIED") | sed '/^$/d')
+          PENDING_COUNT=$(echo "$PENDING" | grep -c . || true)
+
+          echo "Pending migrations (local minus applied):"
+          echo "$PENDING"
+          echo "Pending count: $PENDING_COUNT"
+
+          if [ "$PENDING_COUNT" -eq 0 ]; then
+            echo "::error::Zero pending migrations. $EXPECTED_MIGRATION appears already applied to production. STOPPING for human review rather than silently treating this as success — confirm via migration-status-after artifacts of a prior run before re-running."
+            exit 1
+          fi
+          if [ "$PENDING_COUNT" -gt 1 ]; then
+            echo "::error::More than one migration is pending ($PENDING_COUNT). reviewed_pr mode only ever authorizes exactly one. Refusing — investigate why production has additional unapplied migrations before running this workflow again."
+            exit 1
+          fi
+          if [ "$PENDING" != "$EXPECTED_MIGRATION" ]; then
+            echo "::error::The single pending migration ('$PENDING') is not the authorized one ('$EXPECTED_MIGRATION'). Refusing."
+            exit 1
+          fi
+          echo "✓ Gate 5 passed: exactly one pending migration, and it is the authorized one."
+
+      # ── Gate 6/6 is implicit: all five gates above must have exited 0 for
+      #    this step to run at all — GitHub Actions stops the job on the
+      #    first failing step by default. ─────────────────────────────────
+      - name: 'Deploy migration (all 5 gates passed)'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: npx prisma migrate deploy
+
+      - name: Verify migration status (post-deploy)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          EXPECTED_MIGRATION: ${{ github.event.inputs.expected_migration }}
+        run: |
+          echo "=== Post-deploy verification ==="
+          STATUS_OUTPUT=$(npx prisma migrate status 2>&1)
+          echo "$STATUS_OUTPUT" | tee migration-status-after.txt
+          if echo "$STATUS_OUTPUT" | grep -qiE 'pending|failed|not applied'; then
+            echo "::error::One or more migrations remain pending or failed after deploy."
+            exit 1
+          fi
+
+          FAILED_COUNT=$(psql "$DATABASE_URL" -tAc "SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NULL OR rolled_back_at IS NOT NULL;")
+          echo "FAILED_MIGRATIONS_AFTER=$FAILED_COUNT" >> "$GITHUB_ENV"
+          if [ "$FAILED_COUNT" != "0" ]; then
+            echo "::error::$FAILED_COUNT migration(s) show as failed/unfinished/rolled-back after deploy."
+            exit 1
+          fi
+
+          CHECKSUM=$(psql "$DATABASE_URL" -tAc "SELECT checksum FROM _prisma_migrations WHERE migration_name = '${EXPECTED_MIGRATION}';")
+          echo "MIGRATION_RECORDED_CHECKSUM=$CHECKSUM" >> "$GITHUB_ENV"
+
+          COL_EXISTS=$(psql "$DATABASE_URL" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='startup_status' AND column_name='claim_token');")
+          COL_TYPE=$(psql "$DATABASE_URL" -tAc "SELECT data_type FROM information_schema.columns WHERE table_name='startup_status' AND column_name='claim_token';")
+          COL_NULLABLE=$(psql "$DATABASE_URL" -tAc "SELECT is_nullable FROM information_schema.columns WHERE table_name='startup_status' AND column_name='claim_token';")
+          COL_DEFAULT=$(psql "$DATABASE_URL" -tAc "SELECT COALESCE(column_default, 'none') FROM information_schema.columns WHERE table_name='startup_status' AND column_name='claim_token';")
+          ROW_COUNT_AFTER=$(psql "$DATABASE_URL" -tAc "SELECT COUNT(*) FROM \"startup_status\";")
+
+          echo "CLAIM_TOKEN_COLUMN_EXISTS=$COL_EXISTS" >> "$GITHUB_ENV"
+          echo "CLAIM_TOKEN_TYPE=$COL_TYPE" >> "$GITHUB_ENV"
+          echo "CLAIM_TOKEN_NULLABLE=$COL_NULLABLE" >> "$GITHUB_ENV"
+          echo "CLAIM_TOKEN_DEFAULT=$COL_DEFAULT" >> "$GITHUB_ENV"
+          echo "STARTUP_STATUS_ROW_COUNT_AFTER=$ROW_COUNT_AFTER" >> "$GITHUB_ENV"
+
+          echo "claim_token exists=$COL_EXISTS type=$COL_TYPE nullable=$COL_NULLABLE default=$COL_DEFAULT"
+          echo "startup_status row count after: $ROW_COUNT_AFTER (before: $STARTUP_STATUS_ROW_COUNT_BEFORE)"
+
+          if [ "$ROW_COUNT_AFTER" != "$STARTUP_STATUS_ROW_COUNT_BEFORE" ]; then
+            echo "::error::startup_status row count changed ($STARTUP_STATUS_ROW_COUNT_BEFORE -> $ROW_COUNT_AFTER). This migration must be additive-schema-only; refusing to call this a clean result."
+            exit 1
+          fi
+          echo "✓ All post-deploy verification passed."
+
+      - name: Migration summary
+        if: always()
+        run: |
+          echo "## Production Database Migration Summary (reviewed_pr mode)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Mode | reviewed_pr |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| PR | #${{ github.event.inputs.pr_number }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Authorized SHA | \`${{ github.event.inputs.authorized_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Migration | ${{ github.event.inputs.expected_migration }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Migration SHA-256 | \`${MIGRATION_SHA256:-unknown}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Recorded checksum (_prisma_migrations) | \`${MIGRATION_RECORDED_CHECKSUM:-unknown}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| claim_token exists/type/nullable/default | ${CLAIM_TOKEN_COLUMN_EXISTS:-?} / ${CLAIM_TOKEN_TYPE:-?} / ${CLAIM_TOKEN_NULLABLE:-?} / ${CLAIM_TOKEN_DEFAULT:-?} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| startup_status row count before/after | ${STARTUP_STATUS_ROW_COUNT_BEFORE:-?} / ${STARTUP_STATUS_ROW_COUNT_AFTER:-?} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Failed migrations after | ${FAILED_MIGRATIONS_AFTER:-?} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Timestamp | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Triggered by | @${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Important:** PR #${{ github.event.inputs.pr_number }} is NOT merged by this workflow. Merge it separately once this migration is verified." >> "$GITHUB_STEP_SUMMARY"
+          echo "If migration failed, consult docs/MIGRATION_DEPLOYMENT_RUNBOOK.md before retrying." >> "$GITHUB_STEP_SUMMARY"
