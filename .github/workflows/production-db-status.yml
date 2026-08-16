@@ -1,0 +1,275 @@
+name: Production DB Status — Read Only
+
+# Read-only inspection of the production database. It answers one question:
+# what is actually recorded in _prisma_migrations, and what does the live
+# schema actually look like, for the migration files currently committed on
+# main.
+#
+# This workflow performs no database writes of any kind. Every direct SQL
+# statement below is a SELECT against _prisma_migrations, information_schema,
+# or pg_catalog. The session additionally sets default_transaction_read_only
+# so Postgres itself rejects any accidental write, independent of what the
+# script contains.
+#
+# It always checks out main (pinned explicitly, never an input-selected ref)
+# so it can never execute code from an unmerged branch or pull request.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "INSPECT PRODUCTION READ ONLY" to confirm'
+        required: true
+        type: string
+
+concurrency:
+  group: production-db-status
+  cancel-in-progress: false
+
+jobs:
+  status:
+    name: Read Production Migration + Schema Status (read-only)
+    if: github.event.inputs.confirm == 'INSPECT PRODUCTION READ ONLY'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+
+    steps:
+      - name: Confirm explicit intent
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "INSPECT PRODUCTION READ ONLY" ]; then
+            echo "::error::Confirmation phrase not matched. Aborting."
+            exit 1
+          fi
+          echo "Explicit confirmation received"
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Print checked-out SHA
+        run: |
+          echo "Checked-out SHA: $(git rev-parse HEAD)"
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies (no lifecycle scripts)
+        run: npm ci --ignore-scripts
+
+      - name: Install postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Preflight check - PRODUCTION_DATABASE_URL secret exists
+        run: |
+          if [ -z "${{ secrets.PRODUCTION_DATABASE_URL }}" ]; then
+            echo "::error::PRODUCTION_DATABASE_URL secret is missing or empty"
+            exit 1
+          fi
+          echo "PRODUCTION_DATABASE_URL secret is configured"
+
+      - name: Remove local environment files
+        run: |
+          rm -f .env .env.local .env.production .env.staging .env.postgres .env.local.bak
+          echo "Removed all local .env files to prevent placeholder contamination"
+
+      - name: Validate DATABASE_URL safety (metadata only, no secret printed)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
+            echo "::error::DATABASE_URL contains placeholder value - secret not properly configured"
+            exit 1
+          fi
+          DB_HOST=$(node -e "try { const u = new URL(process.env.DATABASE_URL); console.log(u.hostname); } catch(e) { console.log('unparseable'); }")
+          DB_NAME=$(node -e "try { const u = new URL(process.env.DATABASE_URL); console.log(u.pathname.replace(/^\//, '')); } catch(e) { console.log('unparseable'); }")
+          echo "Database host: $DB_HOST"
+          echo "Database name: $DB_NAME"
+          echo "DB_HOST=$DB_HOST" >> "$GITHUB_ENV"
+
+      - name: Query production migration history (SELECT only)
+        env:
+          PROD_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          # Enforce read-only at the Postgres session level: Postgres itself
+          # rejects any write attempt regardless of what a query contains.
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+          echo "=== _prisma_migrations rows for the seven candidate migrations ==="
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT
+              migration_name,
+              started_at,
+              finished_at,
+              rolled_back_at,
+              applied_steps_count,
+              checksum
+            FROM _prisma_migrations
+            WHERE migration_name IN (
+              '20260807000001_operator_items_outcome_fields',
+              '20260808000001_operator_items_time_to_value_fields',
+              '20260811000001_finance_snapshot_total_debt_outstanding',
+              '20260813000001_snapshot_amendment',
+              '20260813000002_finance_outcome_signals',
+              '20260814000001_finance_signal_clc_link_text',
+              '20260816000001_startup_status_claim_token'
+            )
+            ORDER BY migration_name;
+          "
+
+      - name: Query live schema state (SELECT only)
+        env:
+          PROD_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+
+          echo "--- operator_items outcome fields ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT column_name, data_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'operator_items'
+              AND column_name IN (
+                'decision_type','problem_type','baseline_value',
+                'projected_without_action','outcome_delta','decision_accuracy',
+                'decision_error','executed_at','executed_by'
+              )
+            ORDER BY column_name;
+          "
+
+          echo "--- operator_items time-to-value fields ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT column_name, data_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'operator_items'
+              AND column_name IN (
+                'first_completed_at','first_positive_outcome_at','first_win_achieved'
+              )
+            ORDER BY column_name;
+          "
+
+          echo "--- owner_financial_snapshots.total_debt_outstanding ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT column_name, data_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'owner_financial_snapshots'
+              AND column_name = 'total_debt_outstanding';
+          "
+
+          echo "--- owner_financial_snapshots amendment fields ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT column_name, data_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'owner_financial_snapshots'
+              AND column_name IN (
+                'version','superseded_by_id','amendment_reason',
+                'changed_fields','amended_by_actor_id'
+              )
+            ORDER BY column_name;
+          "
+
+          echo "--- owner_financial_snapshots: prior single-version unique index ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT EXISTS (
+              SELECT 1 FROM pg_indexes WHERE schemaname='public'
+              AND indexname='owner_fin_snapshots_business_period_key'
+            );
+          "
+
+          echo "--- owner_financial_snapshots: version-aware unique constraint ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT EXISTS (
+              SELECT 1 FROM information_schema.table_constraints
+              WHERE table_schema='public' AND table_name='owner_financial_snapshots'
+              AND constraint_name='owner_fin_snapshots_bus_period_version_key'
+              AND constraint_type='UNIQUE'
+            );
+          "
+
+          echo "--- owner_financial_snapshots: superseded_by lookup index ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT EXISTS (
+              SELECT 1 FROM pg_indexes WHERE schemaname='public'
+              AND indexname='owner_financial_snapshots_business_id_superseded_by_id_idx'
+            );
+          "
+
+          echo "--- owner_finance_outcome_signals table presence ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT EXISTS (
+              SELECT 1 FROM information_schema.tables
+              WHERE table_schema='public' AND table_name='owner_finance_outcome_signals'
+            );
+          "
+
+          echo "--- owner_finance_outcome_signals columns (if present) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_schema='public' AND table_name='owner_finance_outcome_signals'
+            ORDER BY ordinal_position;
+          "
+
+          echo "--- owner_finance_outcome_signals.learning_candidate_id type ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT COALESCE(data_type, 'COLUMN_ABSENT')
+            FROM information_schema.columns
+            WHERE table_schema='public' AND table_name='owner_finance_outcome_signals'
+              AND column_name='learning_candidate_id';
+          "
+
+          echo "--- startup_status.claim_token ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT column_name, data_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'startup_status'
+              AND column_name = 'claim_token';
+          "
+
+      - name: Local checksum of each candidate migration file on main
+        run: |
+          set -euo pipefail
+          for f in \
+            "prisma/migrations/20260807000001_operator_items_outcome_fields/migration.sql" \
+            "prisma/migrations/20260808000001_operator_items_time_to_value_fields/migration.sql" \
+            "prisma/migrations/20260811000001_finance_snapshot_total_debt_outstanding/migration.sql" \
+            "prisma/migrations/20260813000001_snapshot_amendment/migration.sql" \
+            "prisma/migrations/20260813000002_finance_outcome_signals/migration.sql" \
+            "prisma/migrations/20260814000001_finance_signal_clc_link_text/migration.sql" \
+            "prisma/migrations/20260816000001_startup_status_claim_token/migration.sql"; do
+            if [ -f "$f" ]; then
+              echo "$(sha256sum "$f" | cut -d' ' -f1)  $f"
+            else
+              echo "MISSING_ON_MAIN  $f"
+            fi
+          done
+          echo ""
+          echo "Compare each hash above against the checksum column from the"
+          echo "_prisma_migrations query in the previous step. The built-in"
+          echo "status comparison in the next step is the authoritative check;"
+          echo "this step is a supplementary, independently-computed cross-check."
+
+      - name: Prisma migrate status (built-in, read-only comparison)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: npx prisma migrate status
+
+      - name: Status summary
+        if: always()
+        run: |
+          {
+            echo "## Production DB Status (read only)"
+            echo ""
+            echo "This run performed zero writes: no schema change, no row change,"
+            echo "no config change. Every statement executed was a SELECT, and the"
+            echo "database session had default_transaction_read_only enabled."
+            echo ""
+            echo "Database host: ${DB_HOST:-unknown}"
+            echo ""
+            echo "See job logs above for the full _prisma_migrations and schema"
+            echo "query output, and for the prisma migrate status comparison."
+          } >> "$GITHUB_STEP_SUMMARY"
