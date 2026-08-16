@@ -1693,6 +1693,13 @@ model StartupStatus {
   error       String?
   version     String // app version that started up
   instanceId  String    @default("unknown") @map("instance_id")
+  // P0-15 (cross-instance startup race): opaque ownership token set atomically
+  // by claimStartup() when an instance wins the right to run startup checks for
+  // this deployment. completeStartup() only transitions STARTING -> READY/FAILED
+  // when the caller's token still matches this column, so a superseded straggler
+  // can never overwrite a newer claimant's result. Nullable: rows written before
+  // this column existed, and any row this feature has not yet claimed, have none.
+  claimToken  String?   @map("claim_token") @db.Uuid
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
 
   @@unique([instanceId])

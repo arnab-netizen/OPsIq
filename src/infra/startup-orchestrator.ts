@@ -6,12 +6,14 @@
  * Works across middleware, handlers, instances, restarts.
  */
 
-import { setStartupStatus, getStartupStatus, resolveInstanceId } from "@/services/startup-status";
+import { claimStartup, completeStartup, resolveInstanceId } from "@/services/startup-status";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
 
 let startupPromise: Promise<void> | null = null;
 const STARTUP_TIMEOUT_MS = 30000;
+const DB_CHECK_TIMEOUT_MS = 5000;
+const MIGRATION_READINESS_TIMEOUT_MS = 5000;
 
 /**
  * Orchestrate startup checks (runs ONCE per instance).
@@ -20,6 +22,17 @@ const STARTUP_TIMEOUT_MS = 30000;
  * State transitions:
  * NOT_STARTED → STARTING → READY (success)
  *            → STARTING → FAILED (error)
+ *
+ * P0-15 (cross-instance startup race): ownership of the STARTING → terminal
+ * transition is now decided by an atomic DB claim (see claimStartup() /
+ * completeStartup() in @/services/startup-status), not by each instance
+ * independently reading status and deciding what to do. This function keeps
+ * exactly one local-process fast path (the `startupPromise` in-flight check
+ * below) because that case is genuinely different from the cross-instance
+ * case: it is cheap, in-memory, and already correct — a second concurrent
+ * call INSIDE this same process while checks are still running here should
+ * just await the same in-flight promise. Everything else (another Vercel
+ * instance entirely) goes through the atomic claim.
  */
 export async function ensureStartupComplete(): Promise<void> {
   // Fail closed before anything else: a deployment runtime that cannot prove
@@ -27,27 +40,10 @@ export async function ensureStartupComplete(): Promise<void> {
   // Throws MissingDeploymentIdentityError, which callers already handle.
   resolveInstanceId();
 
-  const status = await getStartupStatus();
-
-  // Terminal success - no retry needed.
-  if (status.status === "READY") {
-    return; // Already ready
-  }
-
-  // Previously FAILED: re-evaluate rather than poisoning the instance forever.
-  //
-  // A FAILED state is most often caused by a since-corrected configuration
-  // problem (e.g. a missing env var that has now been supplied). Re-running the
-  // checks lets the instance recover to READY WITHOUT manual database deletion.
-  // This does NOT mask real failures: the re-run still performs the live
-  // database connectivity check, so a genuinely unhealthy instance fails again
-  // and is re-persisted as FAILED.
-  if (status.status === "FAILED") {
-    await runStartupChecksAndPersist();
-    return;
-  }
-
-  // Already starting - wait for in-flight promise.
+  // Same-process fast path: a second concurrent call while this exact
+  // process already has checks in flight waits for that result instead of
+  // attempting a new claim (which it would lose anyway, atomically, since
+  // the row is already STARTING under this process's own not-yet-stale claim).
   if (startupPromise) {
     await Promise.race([
       startupPromise,
@@ -55,20 +51,30 @@ export async function ensureStartupComplete(): Promise<void> {
         setTimeout(() => reject(new Error("Startup checks timed out")), STARTUP_TIMEOUT_MS)
       ),
     ]);
-    return; // startupPromise completed, now check status
+    return;
   }
 
-  // Not started yet - initiate startup.
-  await setStartupStatus("STARTING");
-  await runStartupChecksAndPersist();
+  const claim = await claimStartup();
+  if (claim.outcome !== "CLAIMED") {
+    // ALREADY_READY: a prior claimant already finished successfully, nothing
+    // to do. IN_PROGRESS: a different instance holds a live, non-stale claim
+    // right now — do NOT run checks, do NOT write STARTING/FAILED, do NOT
+    // busy-loop waiting on it. The existing readiness contract already treats
+    // "not yet READY" as a legitimate, retriable state (see /api/readiness),
+    // so the caller simply returns and the next probe/request re-checks.
+    return;
+  }
+
+  await runStartupChecksAndPersist(claim.claimToken);
 }
 
 /**
- * Run the startup checks once and persist the resulting durable status.
- * Clears the in-flight promise on completion so a subsequent call (e.g. a later
- * readiness probe after a config fix) can re-evaluate.
+ * Run the startup checks once and persist the resulting durable status via
+ * the claim this caller won. Clears the in-flight promise on completion so a
+ * subsequent call (e.g. a later readiness probe after a config fix) can
+ * re-evaluate and (if the row is by then FAILED or stale) claim again.
  */
-async function runStartupChecksAndPersist(): Promise<void> {
+async function runStartupChecksAndPersist(claimToken: string): Promise<void> {
   startupPromise = performStartupChecks();
   try {
     await Promise.race([
@@ -77,13 +83,16 @@ async function runStartupChecksAndPersist(): Promise<void> {
         setTimeout(() => reject(new Error("Startup checks timed out")), STARTUP_TIMEOUT_MS)
       ),
     ]);
-    // Success - persist to DB.
-    await setStartupStatus("READY", { completedAt: new Date() });
+    // Success - persist to DB, but only if this claim is still current.
+    await completeStartup(claimToken, "READY", { completedAt: new Date() });
   } catch (error) {
     const errorObj = error instanceof Error ? error : new Error(String(error));
     const errorMsg = errorObj.message;
-    // Persist failure to DB.
-    await setStartupStatus("FAILED", { error: errorMsg });
+    // Persist failure to DB, but only if this claim is still current — a
+    // straggler whose claim was reclaimed as stale must never overwrite a
+    // newer attempt's result. completeStartup() no-ops safely in that case;
+    // this instance's own caller still sees the throw below either way.
+    await completeStartup(claimToken, "FAILED", { error: errorMsg });
     throw errorObj;
   } finally {
     // Allow future re-evaluation (recovery) on the next call.
@@ -114,8 +123,26 @@ async function performStartupChecks(): Promise<void> {
     // Compares prisma/migrations/ directories against _prisma_migrations rows.
     // Fail closed: if the migrations directory is absent (Vercel bundle gap) or
     // the DB is unreachable, this returns ready:false and startup fails.
+    //
+    // P0-15 forensic audit finding: this was the one DB-bound check in the
+    // whole sequence with no timeout of its own — bounded only by the outer
+    // 30s STARTUP_TIMEOUT_MS race, which (unlike this check) does not cancel
+    // the underlying query; an orphaned query left running past that race
+    // cannot produce a stale completion write regardless (nothing re-awaits
+    // it after the race), but it could otherwise hold the pool's one (max:1)
+    // connection busy indefinitely. Bounding it explicitly, matching
+    // checkDatabase()'s existing pattern, makes the failure fast and
+    // attributable instead of silently riding the outer race to its limit.
     logger.debug("STARTUP: Checking migration history currency...");
-    const migrationStatus = await checkMigrationReadiness();
+    const migrationStatus = await Promise.race([
+      checkMigrationReadiness(),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Migration readiness check timed out after 5s")),
+          MIGRATION_READINESS_TIMEOUT_MS
+        )
+      ),
+    ]);
     if (!migrationStatus.ready) {
       throw new Error(
         `Migration history is not current: ` +
@@ -170,7 +197,9 @@ async function performStartupChecks(): Promise<void> {
 
     const duration = Date.now() - startTime;
     logger.info("✓ STARTUP: All checks passed", { duration_ms: duration });
-    // NOTE: setStartupState(READY) is called in ensureStartupComplete(), not here
+    // NOTE: durable completion (READY/FAILED) is persisted by completeStartup()
+    // in runStartupChecksAndPersist(), not here — this function only decides
+    // pass/fail and throws on failure.
   } catch (error) {
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     const errorMsg = governed.operatorMessage;
@@ -201,7 +230,7 @@ async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
     await Promise.race([
       dbInstance.$queryRawUnsafe("SELECT 1"),
       new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error("Database connectivity check timed out after 5s")), 5000)
+        setTimeout(() => reject(new Error("Database connectivity check timed out after 5s")), DB_CHECK_TIMEOUT_MS)
       ),
     ]);
     return true;

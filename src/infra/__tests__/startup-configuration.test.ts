@@ -22,7 +22,15 @@ const h = vi.hoisted(() => ({
   dbFails: false,
   persistedStatus: "FAILED" as "NOT_STARTED" | "STARTING" | "READY" | "FAILED",
   persistedError: "Configuration is invalid" as string | null,
-  setStartupStatus: vi.fn(async () => {}),
+  // P0-15: ensureStartupComplete() now goes through the atomic
+  // claimStartup()/completeStartup() pair instead of read-then-write
+  // getStartupStatus()/setStartupStatus(). These tests exercise a single,
+  // uncontended caller, so claimStartup() always simulates "CLAIMED" — the
+  // interesting behavior under test (recovery from a persisted FAILED state,
+  // and a real DB failure still persisting FAILED) lives entirely in what
+  // completeStartup() is called with.
+  claimStartup: vi.fn(),
+  completeStartup: vi.fn(async () => {}),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -43,7 +51,8 @@ vi.mock("@/services/startup-status", () => ({
     version: "test",
     instance_id: "test",
   })),
-  setStartupStatus: h.setStartupStatus,
+  claimStartup: h.claimStartup,
+  completeStartup: h.completeStartup,
   // ensureStartupComplete resolves the deployment-scoped instance key before
   // touching any status row, so the double must provide it too.
   resolveInstanceId: vi.fn(() => "test"),
@@ -75,7 +84,7 @@ describe("Bootable Production: startup configuration", () => {
     h.dbFails = false;
     h.persistedStatus = "FAILED";
     h.persistedError = "Configuration is invalid";
-    h.setStartupStatus.mockClear();
+    h.completeStartup.mockClear();
     // Start from a clean Stripe-free environment for each test.
     delete process.env.STRIPE_API_KEY;
     delete process.env.STRIPE_SECRET_KEY;
@@ -126,7 +135,12 @@ describe("Bootable Production: FAILED-state recovery", () => {
     h.dbFails = false;
     h.persistedStatus = "FAILED"; // simulate a previously poisoned instance
     h.persistedError = "Configuration is invalid";
-    h.setStartupStatus.mockClear();
+    h.claimStartup.mockReset().mockResolvedValue({
+      outcome: "CLAIMED",
+      claimToken: "test-claim-token",
+      instanceId: "test",
+    });
+    h.completeStartup.mockClear();
     delete process.env.STRIPE_API_KEY;
     delete process.env.STRIPE_SECRET_KEY;
     delete process.env.STRIPE_WEBHOOK_SECRET;
@@ -140,14 +154,14 @@ describe("Bootable Production: FAILED-state recovery", () => {
 
   it("re-evaluates a persisted FAILED state and recovers to READY when config is now valid (no manual DB deletion)", async () => {
     await expect(ensureStartupComplete()).resolves.toBeUndefined();
-    const transitions = h.setStartupStatus.mock.calls.map((c) => c[0]);
+    const transitions = h.completeStartup.mock.calls.map((c) => c[1]);
     expect(transitions).toContain("READY");
   });
 
   it("does not silently pass a real database failure: re-evaluation still fails and persists FAILED", async () => {
     h.dbFails = true;
     await expect(ensureStartupComplete()).rejects.toBeTruthy();
-    const transitions = h.setStartupStatus.mock.calls.map((c) => c[0]);
+    const transitions = h.completeStartup.mock.calls.map((c) => c[1]);
     expect(transitions).toContain("FAILED");
     expect(transitions).not.toContain("READY");
   });

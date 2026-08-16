@@ -16,13 +16,18 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     // Dynamic import in Node context only
     const { ensureStartupComplete } = await import("@/infra/startup-orchestrator");
-    const { getStartupState, StartupState: _StartupState } = await import("@/infra/startup-state");
 
     try {
       console.log("🚀 [INSTRUMENTATION] Triggering startup checks...");
       await ensureStartupComplete();
-      const state = getStartupState();
-      console.log(`✓ [INSTRUMENTATION] Server startup complete. State: ${state}`);
+      // P0-15: this used to log getStartupState() from @/infra/startup-state,
+      // a separate in-memory global that nothing in the real startup/claim
+      // path has ever written to — it always printed "NOT_STARTED" here
+      // regardless of the real outcome. The actual outcome (CLAIMED /
+      // STALE_CLAIM_RECLAIMED / ALREADY_READY / WAITING_ON_OTHER_INSTANCE /
+      // READY / FAILED / STALE_COMPLETION_IGNORED) is logged with full detail
+      // by claimStartup()/completeStartup() in @/services/startup-status.
+      console.log("✓ [INSTRUMENTATION] Startup sequence completed (see [STARTUP-STATUS] logs above for outcome)");
     } catch (error) {
       const msg = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage;
       console.error(`✗ [INSTRUMENTATION] Startup failed: ${msg}`);
