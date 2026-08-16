@@ -260,16 +260,21 @@ describe.skipIf(SKIP)("[db] [stage8] P0-15 startup_status claim CAS concurrency"
   });
 
   it("10. two different deployment IDs remain fully independent under concurrent claims", async () => {
+    // completeStartup() resolves its own instanceId from the CURRENT process
+    // env at call time — exactly like claimStartup() and like a real single
+    // process, which never changes deployment identity mid-lifetime. So each
+    // deployment's claim -> complete cycle must finish while ITS OWN env is
+    // still active, before switching to the next deployment; completing A
+    // after already switching to B would resolve against B's row instead.
     const keyA = enterDeployment(`dpl_claimA_${RUN}`);
     const claimA = await claimStartup();
     expect(claimA.outcome).toBe("CLAIMED");
+    await completeStartup((claimA as { claimToken: string }).claimToken, "READY", { completedAt: new Date() });
 
     const keyB = enterDeployment(`dpl_claimB_${RUN}`);
     expect(keyB).not.toBe(keyA);
     const claimB = await claimStartup();
     expect(claimB.outcome).toBe("CLAIMED");
-
-    await completeStartup((claimA as { claimToken: string }).claimToken, "READY", { completedAt: new Date() });
     await completeStartup((claimB as { claimToken: string }).claimToken, "FAILED", { error: "eB" });
 
     const rowA = await db.startupStatus.findUnique({ where: { instanceId: keyA } });
