@@ -1,0 +1,23 @@
+-- P0-15 (cross-instance startup race remediation): add an opaque, nullable
+-- claim-ownership token to startup_status.
+--
+-- Purely additive — no column dropped, no NOT NULL added, no default that
+-- rewrites existing rows, no data migration. Backward compatible with the
+-- currently-deployed application code:
+--   * OLD code never references "claim_token" in any generated query, so it
+--     is unaffected by this column's existence and continues writing its own
+--     deployment-scoped row exactly as before.
+--   * A row written by OLD code (or written before this migration ran) simply
+--     has claim_token = NULL, which the new claim/complete logic in
+--     src/services/startup-status.ts treats as "unclaimed" — never as a false
+--     match for any real claim token.
+--
+-- Required deployment order: this migration must be applied before the
+-- application code that calls claimStartup()/completeStartup() is deployed
+-- (standard "migrate first, then deploy" sequencing). If the new code somehow
+-- runs before this migration lands, claimStartup() detects the missing
+-- column via isMissingColumnError() and fails open exactly like the existing
+-- isMissingTableError() path already does for a missing startup_status table
+-- — logged at WARN, no crash, no false READY, startup checks still run
+-- in-process without a durable claim.
+ALTER TABLE "startup_status" ADD COLUMN "claim_token" UUID;
