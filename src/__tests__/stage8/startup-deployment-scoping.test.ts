@@ -28,6 +28,7 @@ interface Row {
   startedAt: Date;
   completedAt: Date | null;
   updatedAt: Date;
+  claimToken?: string | null;
 }
 
 interface InstanceWhere {
@@ -81,9 +82,66 @@ const dbMock = {
       const had = rows.delete(where.instanceId);
       return { count: had ? 1 : 0 };
     }),
+    // P0-15: completeStartup()'s atomic completion CAS.
+    updateMany: vi.fn(
+      async ({
+        where,
+        data,
+      }: {
+        where: { instanceId: string; status: string; claimToken: string };
+        data: Partial<Row>;
+      }) => {
+        const existing = rows.get(where.instanceId);
+        if (!existing || existing.status !== where.status || existing.claimToken !== where.claimToken) {
+          return { count: 0 };
+        }
+        Object.assign(existing, data, { updatedAt: new Date() });
+        return { count: 1 };
+      },
+    ),
   },
   workspace: { findUnique: workspaceFindUnique },
   $queryRawUnsafe: vi.fn(async () => [{ ok: 1 }]),
+  // P0-15: claimStartup()'s single atomic
+  // `INSERT ... ON CONFLICT ... WHERE ... RETURNING` statement. Positional
+  // interpolated values, in the exact order claimStartup() supplies them:
+  // [instanceId, now, version, instanceId, claimToken, now, now, staleThreshold].
+  // This mirrors real Postgres CAS semantics against the same in-memory `rows`
+  // map the rest of this fake uses — see the sibling real-Postgres suite
+  // (startup-status-claim-concurrency.db.test.ts) for the version of this
+  // proof that exercises actual row-level locking instead of a JS fake.
+  $queryRaw: vi.fn(async (_strings: TemplateStringsArray, ...values: unknown[]) => {
+    const [instanceId, now, version, , claimToken, , , staleThreshold] = values as [
+      string,
+      Date,
+      string,
+      string,
+      string,
+      Date,
+      Date,
+      Date,
+    ];
+    const existing = rows.get(instanceId);
+    const previousStatus = existing ? existing.status : null;
+    const claimable =
+      !existing ||
+      existing.status === "NOT_STARTED" ||
+      existing.status === "FAILED" ||
+      (existing.status === "STARTING" && existing.startedAt.getTime() < staleThreshold.getTime());
+    if (!claimable) return [];
+    const row: Row = {
+      instanceId,
+      status: "STARTING",
+      version,
+      error: null,
+      startedAt: now,
+      completedAt: null,
+      updatedAt: now,
+      claimToken,
+    };
+    rows.set(instanceId, row);
+    return [{ id: `fake-${instanceId}`, claim_token: claimToken, started_at: now, previous_status: previousStatus }];
+  }),
 };
 
 vi.mock("@/lib/db", () => ({

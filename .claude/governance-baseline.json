@@ -1,6 +1,6 @@
 {
   "_comment": "Frozen pre-existing governance findings on main. Any error-severity finding NOT listed here fails a strict scan. Deterministic (sorted, no timestamps). Regenerate with: npm run governance:scan -- --update-baseline",
-  "total_frozen": 30,
+  "total_frozen": 31,
   "findings": [
     {
       "type": "raw-error-message",
@@ -267,7 +267,16 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/startup-status.ts",
-      "line": 42,
+      "line": 48,
+      "severity": "error",
+      "code": "const msg = err instanceof Error ? err.message : String(err);",
+      "reason": "service-layer server-side log/classification string; not operator-rendered"
+    },
+    {
+      "type": "raw-error-message",
+      "category": "RAW ERROR MESSAGE",
+      "file": "src/services/startup-status.ts",
+      "line": 58,
       "severity": "error",
       "code": "const msg = err instanceof Error ? err.message : String(err);",
       "reason": "service-layer server-side log/classification string; not operator-rendered"

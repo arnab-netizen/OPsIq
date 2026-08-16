@@ -8,7 +8,7 @@
  * - Auditable
  */
 
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
@@ -31,6 +31,22 @@ function isMissingTableError(err: unknown): boolean {
     (msg.includes("startup_status") || msg.includes("startupStatus")) &&
     (msg.includes("does not exist") || msg.includes("Invalid"))
   );
+}
+
+/**
+ * True when a Prisma/Postgres error indicates a referenced column does not
+ * exist yet — specifically the case where application code that knows about
+ * claimStartup()/completeStartup() runs against a database the additive
+ * "claim_token" migration has not reached (deploy-before-migrate ordering
+ * mistake). Covers Prisma's P2022 ("column does not exist") and raw
+ * Postgres's 42703 ("undefined_column"), which surfaces through $queryRaw.
+ */
+function isMissingColumnError(err: unknown): boolean {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2022") return true;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes("42703") || msg.includes("does not exist") && msg.includes("claim_token");
 }
 
 /**
@@ -73,6 +89,34 @@ export const MAX_INSTANCE_ID_LENGTH = 128;
 
 /** Characters permitted verbatim in an explicit OPSIQ_INSTANCE_ID. */
 const SAFE_INSTANCE_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
+
+/**
+ * How long a claimed "STARTING" row is honored before another instance may
+ * reclaim it as abandoned (crashed/frozen claimant that never completed).
+ *
+ * Derived from this codebase's own startup budget, not chosen blindly:
+ * src/infra/startup-orchestrator.ts's STARTUP_TIMEOUT_MS (30_000ms) is the
+ * outer Promise.race a legitimate claimant is already bound by before it
+ * even attempts its terminal completeStartup() write. That write itself is a
+ * single, already-connected query (the DB connectivity check earlier in the
+ * same run establishes the pool's one connection first) so it normally lands
+ * in well under a second — but production evidence for this exact incident
+ * (P0-15) shows Neon-side auth/connection failures on the order of several
+ * seconds, not the full 90s pg.Pool connectionTimeoutMillis ceiling. 60_000ms
+ * (2x STARTUP_TIMEOUT_MS) comfortably covers "outer race gives up" + "the
+ * FAILED-path completion write itself lands" with margin, while staying far
+ * short of the 90s pool ceiling (so a legitimate-but-slow claimant is not
+ * prematurely reclaimed) and short enough that a genuinely abandoned claim
+ * (process killed before it could write anything) is recoverable within one
+ * normal cold-start cadence, not stuck indefinitely.
+ */
+export const STARTUP_CLAIM_LEASE_MS = 60_000;
+
+/** Discriminated result of an attempted startup claim. See claimStartup(). */
+export type StartupClaimResult =
+  | { outcome: "CLAIMED"; claimToken: string; instanceId: string }
+  | { outcome: "ALREADY_READY"; instanceId: string }
+  | { outcome: "IN_PROGRESS"; instanceId: string };
 
 /** Stable 32-hex digest used to derive bounded, non-reversible instance keys. */
 function digest(raw: string): string {
@@ -286,6 +330,186 @@ export async function setStartupStatus(
       logger.error("Failed to write startup status to DB", error, { status });
     }
     // Non-fatal: startup continues regardless. DB write failures do not block app startup.
+  }
+}
+
+/**
+ * Atomically claim ownership of a startup attempt for this deployment.
+ *
+ * P0-15 (cross-instance startup race): the old setStartupStatus()-based flow
+ * let every concurrently cold-starting Vercel instance of one deployment
+ * independently write "STARTING" and race to finish — including a straggler
+ * silently overwriting a sibling's already-committed "READY" with "FAILED"
+ * (no lock, no version check, plain last-write-wins upsert). This function
+ * replaces that unconditional write with a single atomic
+ * `INSERT ... ON CONFLICT (instance_id) DO UPDATE ... WHERE ...` statement:
+ * exactly one caller can ever win the row for a given claim window, and every
+ * other concurrent caller gets zero affected rows back — they must NOT run
+ * startup checks or write anything.
+ *
+ * Deliberately not a Postgres advisory lock: Neon's pooled endpoint runs
+ * PgBouncer in transaction mode, which does not support session-level
+ * advisory locks (Neon's own connection-pooling documentation lists this
+ * explicitly). A single conditional UPSERT has no such incompatibility.
+ *
+ * Returns:
+ *   CLAIMED       — caller now owns this startup attempt; pass claimToken to
+ *                    completeStartup() exactly once when checks finish.
+ *   ALREADY_READY — a prior claimant already finished successfully; treat
+ *                    startup as complete, do not run checks.
+ *   IN_PROGRESS   — another instance holds a live (non-stale) claim; do not
+ *                    run checks, do not write anything, do not busy-loop.
+ *                    Callers must not wait here — the existing readiness
+ *                    contract already treats "not yet READY" as a legitimate,
+ *                    retriable state (see /api/readiness), so the caller
+ *                    simply returns and lets the next probe/request re-check.
+ */
+export async function claimStartup(): Promise<StartupClaimResult> {
+  // Fail closed before anything else, same as setStartupStatus(): a missing
+  // deployment identity must propagate, never be swallowed into a claim
+  // attempt against a shared/ambiguous key.
+  const instanceId = resolveInstanceId();
+  const claimToken = randomUUID();
+  const now = new Date();
+  const staleThreshold = new Date(now.getTime() - STARTUP_CLAIM_LEASE_MS);
+  const version = resolveAppVersion();
+
+  try {
+    // The `previous` CTE captures the pre-existing row's status in the SAME
+    // statement/snapshot as the INSERT..ON CONFLICT below, purely so the log
+    // line can distinguish a fresh claim from a stale-claim reclaim — it is
+    // not part of the ownership decision itself (that is fully decided by
+    // the WHERE clause + affected-row count, atomically, independent of what
+    // this CTE reports).
+    const claimed = await db.$queryRaw<
+      Array<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>
+    >`
+      WITH "previous" AS (
+        SELECT "status" FROM "startup_status" WHERE "instance_id" = ${instanceId}
+      )
+      INSERT INTO "startup_status"
+        ("id", "status", "started_at", "completed_at", "error", "version", "instance_id", "claim_token", "updated_at")
+      VALUES
+        (gen_random_uuid(), 'STARTING', ${now}, NULL, NULL, ${version}, ${instanceId}, ${claimToken}, ${now})
+      ON CONFLICT ("instance_id") DO UPDATE SET
+        "status"       = 'STARTING',
+        "started_at"   = ${now},
+        "completed_at" = NULL,
+        "error"        = NULL,
+        "version"      = EXCLUDED."version",
+        "claim_token"  = EXCLUDED."claim_token",
+        "updated_at"   = ${now}
+      WHERE
+        "startup_status"."status" = 'NOT_STARTED'
+        OR "startup_status"."status" = 'FAILED'
+        OR ("startup_status"."status" = 'STARTING' AND "startup_status"."started_at" < ${staleThreshold})
+      RETURNING "id", "claim_token", "started_at", (SELECT "status" FROM "previous") AS "previous_status"
+    `;
+
+    if (claimed.length > 0) {
+      const won = claimed[0]!;
+      const label = won.previous_status === "STARTING" ? "STALE_CLAIM_RECLAIMED" : "CLAIMED";
+      logger.info(`[STARTUP-STATUS] ${label}`, {
+        instance: instanceId,
+        claimToken: won.claim_token,
+        previousStatus: won.previous_status,
+      });
+      return { outcome: "CLAIMED", claimToken: won.claim_token, instanceId };
+    }
+
+    // Lost the claim — classify why, purely for observability. This read is
+    // NOT part of the ownership decision (already made atomically above); a
+    // status change between the statements above only affects which log
+    // label is printed, never whether checks run or anything is written.
+    const current = await getStartupStatus();
+    if (current.status === "READY") {
+      logger.info("[STARTUP-STATUS] ALREADY_READY", { instance: instanceId });
+      return { outcome: "ALREADY_READY", instanceId };
+    }
+    logger.info("[STARTUP-STATUS] WAITING_ON_OTHER_INSTANCE", {
+      instance: instanceId,
+      currentStatus: current.status,
+    });
+    return { outcome: "IN_PROGRESS", instanceId };
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      logger.warn("startup_status table not found during claim — migration not yet applied");
+    } else if (isMissingColumnError(error)) {
+      logger.warn(
+        "startup_status.claim_token column not found during claim — " +
+          "additive migration 20260816000001_startup_status_claim_token not yet applied; " +
+          "run `prisma migrate deploy`. Startup checks will proceed without a durable claim."
+      );
+    } else if (isTransientConnectionError(error)) {
+      logger.warn("startup claim skipped — transient connection error (serverless cold-start)");
+    } else {
+      logger.error("Failed to claim startup ownership", error);
+    }
+    // Fail open on transient/schema-not-ready errors the same way the legacy
+    // read path does: treat as if no durable claim could be established, so
+    // the caller still runs its checks locally rather than being blocked
+    // forever by an infrastructure gap this table has never been allowed to
+    // gate on (startup_status has always been documented as non-critical).
+    return { outcome: "IN_PROGRESS", instanceId };
+  }
+}
+
+/**
+ * Complete a startup attempt this instance previously won via claimStartup().
+ *
+ * The transition to READY/FAILED only takes effect when the row is still
+ * exactly the claim this caller made (instanceId + status='STARTING' +
+ * matching claimToken). If a newer claimant has since reclaimed the row
+ * (this claim went stale and was reclaimed — see STARTUP_CLAIM_LEASE_MS),
+ * the WHERE clause matches zero rows and this call is a silent, safe no-op:
+ * a superseded straggler can never overwrite a newer owner's result, in
+ * either direction (a late FAILED cannot clobber a newer READY, and a late
+ * READY cannot clobber a newer attempt either).
+ */
+export async function completeStartup(
+  claimToken: string,
+  status: "READY" | "FAILED",
+  options?: { error?: string; completedAt?: Date }
+): Promise<void> {
+  const instanceId = resolveInstanceId();
+
+  try {
+    const result = await db.startupStatus.updateMany({
+      where: { instanceId, status: "STARTING", claimToken },
+      data: {
+        status,
+        error: options?.error || null,
+        completedAt: options?.completedAt ?? null,
+        updatedAt: new Date(),
+      },
+    });
+
+    if (result.count === 0) {
+      // Not a failure: this claim was superseded (reclaimed as stale) before
+      // this instance finished. Log and return — never throw merely because
+      // ownership moved on; the instance's OWN caller still sees and handles
+      // its own real check failure/success, this only guards the shared row.
+      logger.warn("[STARTUP-STATUS] STALE_COMPLETION_IGNORED", {
+        instance: instanceId,
+        attemptedStatus: status,
+      });
+      return;
+    }
+
+    logger.info(`[STARTUP-STATUS] ${status}`, {
+      instance: instanceId,
+      error: options?.error,
+    });
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      logger.warn("startup_status table not found — run `prisma migrate deploy` to create it", { status });
+    } else if (isTransientConnectionError(error)) {
+      logger.warn("startup completion write skipped — transient connection error (serverless cold-start)", { status });
+    } else {
+      logger.error("Failed to write startup completion to DB", error, { status });
+    }
+    // Non-fatal, matching setStartupStatus(): a completion write failure
+    // does not block the app from serving requests.
   }
 }
 

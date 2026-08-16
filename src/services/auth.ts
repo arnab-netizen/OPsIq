@@ -12,6 +12,13 @@ import { checkShadowRead } from "@/lib/runtime-shadow-read-enforcer";
 const SESSION_COOKIE_NAME = "opsiq_session";
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+/**
+ * Bound for the session-lookup query below, matching the 5s budget
+ * startup-orchestrator.ts's checkDatabase()/migration-readiness checks
+ * already use for a single DB round trip on a possibly-cold connection.
+ */
+const SESSION_QUERY_TIMEOUT_MS = 5000;
+
 export interface AuthenticatedUser {
   id: string;
   email: string;
@@ -53,10 +60,32 @@ export async function getSession(): Promise<SessionInfo | null> {
 
   if (!sessionToken) return null;
 
-  const session = await db.session.findUnique({
-    where: { token: sessionToken },
-    include: { user: true },
-  });
+  // P0-15 forensic finding: this was the one real, user-facing DB query on
+  // the root cold-start path with no bespoke timeout and no error handling —
+  // a slow/failed Neon connection here rode the raw pg.Pool 90s ceiling and
+  // then surfaced as an unhandled render exception. Bounded + caught here,
+  // exactly like every other DB-backed probe already does, with the SAME
+  // fallback this function already uses for "no valid session found": null.
+  // This is a fail-CLOSED change, not fail-open — a DB failure can only ever
+  // produce the same "not authenticated" outcome this function already
+  // returns for a missing/expired/revoked/inactive session; it can never
+  // produce an authenticated result. No new security state is introduced.
+  let session;
+  try {
+    session = await Promise.race([
+      db.session.findUnique({
+        where: { token: sessionToken },
+        include: { user: true },
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Session lookup timed out after 5s")), SESSION_QUERY_TIMEOUT_MS)
+      ),
+    ]);
+  } catch {
+    // Transient/timeout/connection failure: treat exactly like "no session
+    // found" below. Never inferred as authenticated.
+    return null;
+  }
 
   if (!session) return null;
 
