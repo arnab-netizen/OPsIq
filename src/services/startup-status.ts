@@ -11,7 +11,7 @@
 import { createHash, randomUUID } from "crypto";
 
 import { Prisma } from "@/generated/prisma/client";
-import { db } from "@/lib/db";
+import { db, getDbInstance } from "@/lib/db";
 import { logger } from "@/infra/logger";
 
 /**
@@ -53,6 +53,11 @@ function isMissingColumnError(err: unknown): boolean {
  * True when an error is a transient connection failure (e.g. Neon cold-start timeout).
  * These are downgraded to WARN because startup_status writes are non-critical and
  * the connection will succeed once the serverless endpoint finishes waking up.
+ *
+ * "Authentication timed out" (Prisma's pg driver adapter) and "timeout exceeded
+ * when trying to connect" (node-postgres's pg-pool, on connection-acquisition
+ * timeout) are both confirmed production signatures for this same Neon
+ * cold-start class, not just the four original TCP-level patterns.
  */
 function isTransientConnectionError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
@@ -60,7 +65,9 @@ function isTransientConnectionError(err: unknown): boolean {
     msg.includes("Connection terminated due to connection timeout") ||
     msg.includes("Connection terminated unexpectedly") ||
     msg.includes("connect ECONNREFUSED") ||
-    msg.includes("connect ETIMEDOUT")
+    msg.includes("connect ETIMEDOUT") ||
+    msg.includes("Authentication timed out") ||
+    msg.includes("timeout exceeded when trying to connect")
   );
 }
 
@@ -352,17 +359,32 @@ export async function setStartupStatus(
  * advisory locks (Neon's own connection-pooling documentation lists this
  * explicitly). A single conditional UPSERT has no such incompatibility.
  *
- * Returns:
+ * Returns (or throws — see below):
  *   CLAIMED       — caller now owns this startup attempt; pass claimToken to
  *                    completeStartup() exactly once when checks finish.
  *   ALREADY_READY — a prior claimant already finished successfully; treat
  *                    startup as complete, do not run checks.
- *   IN_PROGRESS   — another instance holds a live (non-stale) claim; do not
- *                    run checks, do not write anything, do not busy-loop.
- *                    Callers must not wait here — the existing readiness
- *                    contract already treats "not yet READY" as a legitimate,
- *                    retriable state (see /api/readiness), so the caller
- *                    simply returns and lets the next probe/request re-check.
+ *   IN_PROGRESS   — reserved for genuine claim contention: either another
+ *                    instance holds a live (non-stale) claim right now, or
+ *                    the durable claim table/column is a known, temporary
+ *                    rollout-compatibility gap (see isMissingTableError /
+ *                    isMissingColumnError below). Callers must not run
+ *                    checks, must not write anything, must not busy-loop —
+ *                    the existing readiness contract already treats "not
+ *                    yet READY" as a legitimate, retriable state (see
+ *                    /api/readiness), so the caller simply returns and lets
+ *                    the next probe/request re-check.
+ *
+ * Throws on any other failure (a transient DB/connection error, or a
+ * genuinely unexpected error such as a client method failing to resolve).
+ * IN_PROGRESS is a specific, governance-relevant assertion — "a live
+ * claimant exists elsewhere" — and neither case has evidence of that;
+ * returning it anyway would make ensureStartupComplete() silently skip
+ * every real startup check while instrumentation logs a false success (see
+ * the P0-15 cold-start $queryRaw incident this replaced). Callers already
+ * handle a thrown ensureStartupComplete()/claimStartup() the same way they
+ * handle any other startup failure (instrumentation logs "Startup failed";
+ * /api/readiness and /api/internal/startup report not-ready).
  */
 export async function claimStartup(): Promise<StartupClaimResult> {
   // Fail closed before anything else, same as setStartupStatus(): a missing
@@ -375,13 +397,25 @@ export async function claimStartup(): Promise<StartupClaimResult> {
   const version = resolveAppVersion();
 
   try {
+    // Resolve the initialized client explicitly via getDbInstance() rather
+    // than the lazy `db` proxy export. That proxy only correctly defers
+    // two-level access (db.<model>.<method>()) on a cold instance; a
+    // one-level top-level method access like db.$queryRaw instead returns
+    // an inner deferred-model proxy — not a callable function — and throws
+    // when invoked. getDbInstance() is the canonical initialization path
+    // used everywhere else this ordering matters (see
+    // checkMigrationReadiness()) and is safe to call unconditionally: it
+    // dedupes against any initialization already in flight and every caller
+    // resolves to the same singleton client.
+    const prisma = await getDbInstance();
+
     // The `previous` CTE captures the pre-existing row's status in the SAME
     // statement/snapshot as the INSERT..ON CONFLICT below, purely so the log
     // line can distinguish a fresh claim from a stale-claim reclaim — it is
     // not part of the ownership decision itself (that is fully decided by
     // the WHERE clause + affected-row count, atomically, independent of what
     // this CTE reports).
-    const claimed = await db.$queryRaw<
+    const claimed = await prisma.$queryRaw<
       Array<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>
     >`
       WITH "previous" AS (
@@ -433,24 +467,48 @@ export async function claimStartup(): Promise<StartupClaimResult> {
     return { outcome: "IN_PROGRESS", instanceId };
   } catch (error) {
     if (isMissingTableError(error)) {
+      // Known, temporary rollout-compatibility gap: this instance's view of
+      // the DB predates the startup_status migration entirely. The durable
+      // claim mechanism itself is unavailable, so there is nothing to
+      // atomically own here (or anywhere else) yet — every instance is in
+      // the same position until the migration lands. Reported as
+      // IN_PROGRESS (not thrown): this is an explicitly anticipated
+      // rollout state, never a claim-mechanism defect.
       logger.warn("startup_status table not found during claim — migration not yet applied");
-    } else if (isMissingColumnError(error)) {
+      return { outcome: "IN_PROGRESS", instanceId };
+    }
+    if (isMissingColumnError(error)) {
+      // Same rollout-compatibility class as above, narrower: only the
+      // additive claim_token column is missing (deploy-before-migrate
+      // ordering). Also an explicitly anticipated, temporary state.
       logger.warn(
         "startup_status.claim_token column not found during claim — " +
           "additive migration 20260816000001_startup_status_claim_token not yet applied; " +
-          "run `prisma migrate deploy`. Startup checks will proceed without a durable claim."
+          "run `prisma migrate deploy`."
       );
-    } else if (isTransientConnectionError(error)) {
-      logger.warn("startup claim skipped — transient connection error (serverless cold-start)");
-    } else {
-      logger.error("Failed to claim startup ownership", error);
+      return { outcome: "IN_PROGRESS", instanceId };
     }
-    // Fail open on transient/schema-not-ready errors the same way the legacy
-    // read path does: treat as if no durable claim could be established, so
-    // the caller still runs its checks locally rather than being blocked
-    // forever by an infrastructure gap this table has never been allowed to
-    // gate on (startup_status has always been documented as non-critical).
-    return { outcome: "IN_PROGRESS", instanceId };
+
+    // Everything else must fail closed, not fail open as IN_PROGRESS. Unlike
+    // the two rollout-compatibility cases above, neither a transient
+    // connection failure nor a genuinely unexpected error is evidence that
+    // "a live claimant exists elsewhere" — which is exactly what IN_PROGRESS
+    // asserts to the caller. Silently returning it here would make
+    // ensureStartupComplete() skip real checks while looking like a normal
+    // hand-off to another instance. Propagate instead: instrumentation.ts,
+    // /api/readiness, and /api/internal/startup already treat a thrown
+    // ensureStartupComplete()/claimStartup() as the startup failure it is.
+    if (isTransientConnectionError(error)) {
+      logger.warn(
+        "startup claim failed — transient connection error (serverless cold-start); failing closed",
+        { instance: instanceId, error: error instanceof Error ? error.message : String(error) }
+      );
+    } else {
+      logger.error("Failed to claim startup ownership — unexpected error; failing closed", error, {
+        instance: instanceId,
+      });
+    }
+    throw error instanceof Error ? error : new Error(String(error));
   }
 }
 

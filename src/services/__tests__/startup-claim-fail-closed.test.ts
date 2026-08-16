@@ -10,9 +10,21 @@
  *
  * The invariant under test: a DB failure during a claim attempt must never
  * produce a CLAIMED result (which would let the caller proceed to eventually
- * write READY) and a DB failure during completion must never crash the
- * caller — it must degrade to the same "not owned"/"skipped" outcomes the
- * legacy setStartupStatus() already used for a transient connection error.
+ * write READY), and a DB failure during completion must never crash the
+ * caller.
+ *
+ * claimStartup()'s error taxonomy (post cold-proxy-regression remediation):
+ *   - missing table / missing column (known rollout-compatibility gaps,
+ *     e.g. deploy-before-migrate ordering): IN_PROGRESS, unchanged.
+ *   - everything else — a transient connection failure (Neon cold-start
+ *     timeout) or a genuinely unexpected error — THROWS. IN_PROGRESS is a
+ *     specific claim ("a live claimant exists elsewhere") that neither case
+ *     has any evidence for; returning it instead would make
+ *     ensureStartupComplete() silently skip every real startup check while
+ *     instrumentation logs a false success (the exact production incident
+ *     this replaces — a TypeError from a client method that failed to
+ *     resolve was previously swallowed into IN_PROGRESS the same way a real
+ *     connection timeout was).
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -23,6 +35,7 @@ vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "");
 
 const queryRawMock = vi.fn();
 const updateManyMock = vi.fn();
+const getDbInstanceMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -31,30 +44,35 @@ vi.mock("@/lib/db", () => ({
       updateMany: (...args: unknown[]) => updateManyMock(...args),
     },
   },
+  getDbInstance: (...args: unknown[]) => getDbInstanceMock(...args),
 }));
 
 import { claimStartup, completeStartup } from "@/services/startup-status";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getDbInstanceMock.mockResolvedValue({
+    $queryRaw: (...args: unknown[]) => queryRawMock(...args),
+  });
 });
 
 describe("claimStartup() — fails closed when the database is unavailable", () => {
-  it("returns IN_PROGRESS (never CLAIMED) when the claim query throws a connection error", async () => {
+  it("throws (never CLAIMED, never IN_PROGRESS) when the claim query throws a connection error", async () => {
     queryRawMock.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"));
 
-    const result = await claimStartup();
-
-    expect(result.outcome).not.toBe("CLAIMED");
-    expect(result.outcome).toBe("IN_PROGRESS");
+    await expect(claimStartup()).rejects.toThrow("Connection terminated unexpectedly");
   });
 
-  it("returns IN_PROGRESS (never CLAIMED) when the claim query throws an auth-timeout error", async () => {
+  it("throws (never CLAIMED, never IN_PROGRESS) when the claim query throws an auth-timeout error", async () => {
     queryRawMock.mockRejectedValueOnce(new Error("DriverAdapterError: Authentication timed out"));
 
-    const result = await claimStartup();
+    await expect(claimStartup()).rejects.toThrow(/Authentication timed out/);
+  });
 
-    expect(result.outcome).not.toBe("CLAIMED");
+  it("throws when getDbInstance() itself rejects (DB unreachable before any query is sent)", async () => {
+    getDbInstanceMock.mockRejectedValueOnce(new Error("connect ETIMEDOUT"));
+
+    await expect(claimStartup()).rejects.toThrow("connect ETIMEDOUT");
   });
 
   it("returns IN_PROGRESS (never CLAIMED) when the claim_token column is missing (deploy-before-migrate)", async () => {
@@ -65,12 +83,24 @@ describe("claimStartup() — fails closed when the database is unavailable", () 
     const result = await claimStartup();
 
     expect(result.outcome).not.toBe("CLAIMED");
+    expect(result.outcome).toBe("IN_PROGRESS");
   });
 
-  it("never throws out of claimStartup() itself on a DB failure", async () => {
-    queryRawMock.mockRejectedValueOnce(new Error("timeout exceeded when trying to connect"));
+  it("throws — not IN_PROGRESS — on an unrecognized error message (e.g. a pg-pool acquisition timeout string this classifier doesn't know)", async () => {
+    queryRawMock.mockRejectedValueOnce(new Error("some genuinely unrecognized driver error"));
 
-    await expect(claimStartup()).resolves.toBeDefined();
+    await expect(claimStartup()).rejects.toThrow("some genuinely unrecognized driver error");
+  });
+
+  it("throws — never returns IN_PROGRESS — when the client method itself is not callable (the P0-15 cold-proxy regression this test guards against)", async () => {
+    // Simulates the exact production failure: db.$queryRaw resolved to a
+    // non-function value on a cold lazy proxy, so invoking it threw
+    // "TypeError: ... is not a function" before any SQL reached Postgres.
+    getDbInstanceMock.mockResolvedValueOnce({
+      $queryRaw: undefined,
+    });
+
+    await expect(claimStartup()).rejects.toThrow(TypeError);
   });
 });
 
