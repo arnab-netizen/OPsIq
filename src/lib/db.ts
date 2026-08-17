@@ -1,4 +1,5 @@
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import type { Prisma } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: any | undefined;
@@ -139,6 +140,49 @@ export async function getDbInstance() {
     dbInitPromise = getDb();
   }
   return dbInitPromise;
+}
+
+/**
+ * Run `fn` inside a Postgres transaction with a database-enforced
+ * statement_timeout, so a query that hangs (e.g. a stalled Neon connection
+ * mid-handshake) is actually cancelled server-side instead of merely
+ * abandoned client-side by a JS `Promise.race`.
+ *
+ * P0-15 pool-starvation gap: with `max: 1` in production, the whole app
+ * shares exactly one Postgres connection. A `Promise.race([query, timeout])`
+ * lets calling code move on after the JS timer fires, but does nothing to
+ * the underlying query — Postgres keeps executing it, and the pg.Pool
+ * client stays checked out (not released back to the pool) until that query
+ * eventually settles on its own, which can mean indefinitely. Every other
+ * request needing the sole connection queues behind it. `SET LOCAL
+ * statement_timeout` makes Postgres itself cancel the statement after
+ * `timeoutMs`: the client receives a real error over the same socket, the
+ * query promise settles, and the connection is returned to the pool usable.
+ *
+ * `SET LOCAL` scopes the timeout to this transaction only — it can never
+ * affect any other query on the shared pool, including legitimate
+ * long-running business/finance work elsewhere in the app. `timeoutMs` is
+ * interpolated directly into the SQL text because Postgres's `SET` command
+ * does not accept bind parameters; this is safe only because callers must
+ * pass a trusted internal constant, never a value derived from user input.
+ *
+ * Deliberately opt-in and narrowly used (startup claim, migration
+ * readiness, the DB readiness probe, session lookup) — never apply this as
+ * a blanket pool-level default.
+ */
+export async function withStatementTimeout<T>(
+  prisma: { $transaction: (fn: (tx: Prisma.TransactionClient) => Promise<T>) => Promise<T> },
+  timeoutMs: number,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>
+): Promise<T> {
+  const safeTimeoutMs = Math.trunc(timeoutMs);
+  if (!Number.isFinite(safeTimeoutMs) || safeTimeoutMs <= 0) {
+    throw new Error(`withStatementTimeout: timeoutMs must be a positive finite number, got ${timeoutMs}`);
+  }
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);
+    return fn(tx);
+  });
 }
 
 /**

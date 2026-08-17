@@ -40,6 +40,11 @@ vi.mock("@/lib/db", () => ({
       return [{ result: 1 }];
     }),
   })),
+  // Unit-level simplification: skip the real SET LOCAL statement_timeout
+  // transaction wrapping (proven separately against real Postgres in
+  // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
+  // callback with the same mocked client.
+  withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
 }));
 
 vi.mock("@/services/startup-status", () => ({

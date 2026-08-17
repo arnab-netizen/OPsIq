@@ -27,6 +27,11 @@ vi.mock("fs", async () => {
 
 vi.mock("@/lib/db", () => ({
   getDbInstance: vi.fn(),
+  // Unit-level simplification: skip the real SET LOCAL statement_timeout
+  // transaction wrapping (proven separately against real Postgres in
+  // src/__tests__/lib/db-statement-timeout.db.test.ts) and just invoke the
+  // callback with the same mocked client.
+  withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
 }));
 
 // Import mocked modules for type-safe access to mock functions.

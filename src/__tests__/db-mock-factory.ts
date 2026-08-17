@@ -182,6 +182,13 @@ export function createMockDbModule() {
     db: mockDb,
     getDbInstance: vi.fn().mockResolvedValue(mockDb),
     default: mockDb,
+    // Unit-level simplification of src/lib/db.ts's real withStatementTimeout():
+    // skip the SET LOCAL statement_timeout transaction wrapping (proven
+    // separately against real Postgres in
+    // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
+    // callback with the same mocked client, preserving every existing
+    // mock's control flow unchanged.
+    withStatementTimeout: vi.fn((prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma)),
   };
 }
 

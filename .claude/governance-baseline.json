@@ -267,7 +267,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/startup-status.ts",
-      "line": 48,
+      "line": 58,
       "severity": "error",
       "code": "const msg = err instanceof Error ? err.message : String(err);",
       "reason": "service-layer server-side log/classification string; not operator-rendered"
@@ -276,7 +276,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/startup-status.ts",
-      "line": 63,
+      "line": 73,
       "severity": "error",
       "code": "const msg = err instanceof Error ? err.message : String(err);",
       "reason": "service-layer server-side log/classification string; not operator-rendered"
@@ -285,7 +285,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/startup-status.ts",
-      "line": 504,
+      "line": 518,
       "severity": "error",
       "code": "{ instance: instanceId, error: error instanceof Error ? error.message : String(error) }",
       "reason": "service-layer server-side log/classification string; not operator-rendered"

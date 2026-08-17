@@ -24,10 +24,18 @@ vi.mock("next/headers", () => ({
 
 const findUniqueMock = vi.fn();
 
-vi.mock("@/lib/db", () => ({
-  db: { session: { findUnique: (...args: unknown[]) => findUniqueMock(...args) } },
-  getDbInstance: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("@/lib/db", () => {
+  const mockPrisma = { session: { findUnique: (...args: unknown[]) => findUniqueMock(...args) } };
+  return {
+    db: mockPrisma,
+    getDbInstance: vi.fn().mockResolvedValue(mockPrisma),
+    // Unit-level simplification: skip the real SET LOCAL statement_timeout
+    // transaction wrapping (proven separately against real Postgres in
+    // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
+    // callback with the same mocked client.
+    withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
+  };
+});
 
 vi.mock("@/lib/runtime-shadow-read-enforcer", () => ({
   checkShadowRead: vi.fn(),
