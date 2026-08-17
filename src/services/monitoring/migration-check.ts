@@ -1,6 +1,16 @@
 import path from "path";
 import * as fs from "fs";
-import { getDbInstance } from "@/lib/db";
+import { getDbInstance, withStatementTimeout } from "@/lib/db";
+
+/**
+ * Database-enforced bound for the migration-history query below, matching
+ * the caller's own 5s MIGRATION_READINESS_TIMEOUT_MS JS-side race
+ * (src/infra/startup-orchestrator.ts). Postgres cancels the statement
+ * itself if exceeded, so a stalled connection can never hold the shared
+ * pool's sole connection (max: 1) indefinitely — see withStatementTimeout()
+ * in src/lib/db.ts.
+ */
+const MIGRATION_QUERY_STATEMENT_TIMEOUT_MS = 5000;
 
 interface RawMigrationRow {
   migration_name: string;
@@ -70,8 +80,12 @@ export async function checkMigrationReadiness(): Promise<MigrationReadiness> {
 
   try {
     const prisma = await getDbInstance();
-    const rows = (await prisma.$queryRawUnsafe(
-      `SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations"`
+    const rows = (await withStatementTimeout(
+      prisma,
+      MIGRATION_QUERY_STATEMENT_TIMEOUT_MS,
+      (tx) => tx.$queryRawUnsafe(
+        `SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations"`
+      )
     )) as RawMigrationRow[];
 
     const appliedSet = new Set<string>();

@@ -147,6 +147,12 @@ const dbMock = {
 vi.mock("@/lib/db", () => ({
   db: dbMock,
   getDbInstance: vi.fn(async () => dbMock),
+  // Unit-level simplification: skip the real SET LOCAL statement_timeout
+  // transaction wrapping (proven separately against real Postgres in
+  // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
+  // callback with the same mocked client, preserving the in-memory CAS
+  // simulation above unchanged.
+  withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
 }));
 
 // checkMigrationReadiness is now called inside performStartupChecks().

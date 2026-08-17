@@ -45,6 +45,12 @@ vi.mock("@/lib/db", () => ({
     },
   },
   getDbInstance: (...args: unknown[]) => getDbInstanceMock(...args),
+  // Unit-level simplification: skip the real SET LOCAL statement_timeout
+  // transaction wrapping (proven separately against real Postgres in
+  // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
+  // callback with the same mocked client, preserving every existing mock's
+  // control flow unchanged.
+  withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
 }));
 
 import { claimStartup, completeStartup } from "@/services/startup-status";

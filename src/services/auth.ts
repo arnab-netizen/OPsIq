@@ -1,4 +1,4 @@
-import { db, getDbInstance } from "@/lib/db";
+import { db, getDbInstance, withStatementTimeout } from "@/lib/db";
 import type { UserRoleAssignment } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
 import type { PolicyContext } from "@/policies/capability-check";
@@ -18,6 +18,14 @@ const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
  * already use for a single DB round trip on a possibly-cold connection.
  */
 const SESSION_QUERY_TIMEOUT_MS = 5000;
+
+/**
+ * Database-enforced bound for the same query, applied in addition to the
+ * JS-side race above. Postgres cancels the statement itself if exceeded, so
+ * a stalled connection can never hold the shared pool's sole connection
+ * (max: 1) indefinitely — see withStatementTimeout() in src/lib/db.ts.
+ */
+const SESSION_STATEMENT_TIMEOUT_MS = 4000;
 
 export interface AuthenticatedUser {
   id: string;
@@ -53,7 +61,7 @@ export async function getSession(): Promise<SessionInfo | null> {
 
   // CRITICAL: Ensure database is initialized before ANY db access
   // This prevents the db Proxy from throwing "Database not initialized" errors
-  await getDbInstance();
+  const prisma = await getDbInstance();
 
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -73,10 +81,12 @@ export async function getSession(): Promise<SessionInfo | null> {
   let session;
   try {
     session = await Promise.race([
-      db.session.findUnique({
-        where: { token: sessionToken },
-        include: { user: true },
-      }),
+      withStatementTimeout(prisma, SESSION_STATEMENT_TIMEOUT_MS, (tx) =>
+        tx.session.findUnique({
+          where: { token: sessionToken },
+          include: { user: true },
+        })
+      ),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("Session lookup timed out after 5s")), SESSION_QUERY_TIMEOUT_MS)
       ),

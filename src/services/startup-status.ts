@@ -11,8 +11,18 @@
 import { createHash, randomUUID } from "crypto";
 
 import { Prisma } from "@/generated/prisma/client";
-import { db, getDbInstance } from "@/lib/db";
+import { db, getDbInstance, withStatementTimeout } from "@/lib/db";
 import { logger } from "@/infra/logger";
+
+/**
+ * Database-enforced bound for the atomic claim query below. Matches the
+ * existing 5s budget every other DB-backed startup probe already uses for a
+ * single round trip on a possibly-cold connection. Postgres cancels the
+ * statement itself if exceeded, so a stalled Neon connection can never hold
+ * the shared pool's sole connection (max: 1) indefinitely — see
+ * withStatementTimeout() in src/lib/db.ts.
+ */
+const CLAIM_STATEMENT_TIMEOUT_MS = 5000;
 
 /**
  * True when a Prisma error indicates the startup_status table does not exist.
@@ -415,9 +425,12 @@ export async function claimStartup(): Promise<StartupClaimResult> {
     // not part of the ownership decision itself (that is fully decided by
     // the WHERE clause + affected-row count, atomically, independent of what
     // this CTE reports).
-    const claimed = await prisma.$queryRaw<
-      Array<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>
-    >`
+    const claimed = await withStatementTimeout(
+      prisma,
+      CLAIM_STATEMENT_TIMEOUT_MS,
+      (tx) => tx.$queryRaw<
+        Array<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>
+      >`
       WITH "previous" AS (
         SELECT "status" FROM "startup_status" WHERE "instance_id" = ${instanceId}
       )
@@ -438,7 +451,8 @@ export async function claimStartup(): Promise<StartupClaimResult> {
         OR "startup_status"."status" = 'FAILED'
         OR ("startup_status"."status" = 'STARTING' AND "startup_status"."started_at" < ${staleThreshold})
       RETURNING "id", "claim_token", "started_at", (SELECT "status" FROM "previous") AS "previous_status"
-    `;
+    `
+    );
 
     if (claimed.length > 0) {
       const won = claimed[0]!;
