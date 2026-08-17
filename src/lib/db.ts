@@ -238,6 +238,33 @@ export const db = new Proxy({} as any, {
       globalForPrisma.prismaPromise = getDb();
     }
 
+    // Prisma's own top-level client methods ($queryRaw, $queryRawUnsafe,
+    // $executeRaw, $executeRawUnsafe, $transaction, $connect, $disconnect,
+    // $extends, $on, $use, ...) are always `$`-prefixed by convention — this
+    // is how Prisma itself avoids colliding with model delegate names (user,
+    // startupStatus, ...), and is stable across the whole Prisma Client API
+    // surface. A caller invoking one of these directly on a cold instance
+    // (e.g. db.$queryRaw`...`) needs a callable FUNCTION back, not a
+    // further-nested proxy: returning the two-level deferred-model proxy
+    // below for a one-level access made the caller's own invocation
+    // (`db.$queryRaw` used as a tag function) throw "is not a function"
+    // before any SQL was ever sent — the P0-15 cold-proxy regression
+    // (see src/services/startup-status.ts claimStartup(), the first caller
+    // to hit this). Detecting the `$` prefix and returning a directly
+    // callable deferred function closes this for every one-level call site
+    // project-wide, not just the one that happened to be discovered first.
+    if (typeof prop === "string" && prop.startsWith("$")) {
+      return function deferredTopLevelMethod(...args: any[]) {
+        return globalForPrisma.prismaPromise!.then(prisma => {
+          const method = Reflect.get(prisma, prop);
+          if (typeof method === "function") {
+            return method.apply(prisma, args);
+          }
+          return method;
+        });
+      };
+    }
+
     // Return a proxy for this property that defers to the actual model once ready
     // This allows db.user.findUnique(...) to work even if DB isn't initialized yet
     return new Proxy({}, {
