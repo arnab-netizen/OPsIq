@@ -299,18 +299,43 @@ describeIf(WITH_DB)("S7-DC1: DatabaseSchedulerProvider PostgreSQL lifecycle", ()
     expect(task?.workspaceId).toBe(wsId);
   });
 
-  // ── 17. No-handler task released ─────────────────────────────────────────
-  it("17. task with no registered handler is released back to pending", async () => {
+  // ── 17. No-handler task fails closed (bounded retry, then dead-letter) ────
+  it("17a. task with no registered handler is retried with backoff, not lost or looped forever", async () => {
     const past = new Date(Date.now() - 1000);
-    const id = await provider.schedule({ taskName: "dc1-test-nohandler", scheduledFor: past });
+    const id = await provider.schedule({
+      taskName: "dc1-test-nohandler",
+      scheduledFor: past,
+      maxAttempts: 3,
+    });
 
     const handlers = new Map<string, () => Promise<void>>();
+    const before = Date.now();
     const count = await provider.processDue(handlers);
-    expect(count).toBe(0);
+    expect(count).toBe(0); // not "processed" — it failed, it wasn't silently dropped either
 
     const task = await db.scheduledTask.findUnique({ where: { id } });
     expect(task?.status).toBe("pending");
     expect(task?.startedAt).toBeNull();
+    expect(task?.attempts).toBe(1);
+    expect(task?.lastError).toContain("No handler registered");
+    // Backoff applied — not immediately re-claimable, so this can never busy-loop.
+    expect(task!.scheduledFor.getTime()).toBeGreaterThan(before + 50_000);
+  });
+
+  it("17b. task with a permanently-unknown handler eventually fails closed to dead-letter", async () => {
+    const past = new Date(Date.now() - 1000);
+    const id = await provider.schedule({
+      taskName: "dc1-test-nohandler-deadletter",
+      scheduledFor: past,
+      maxAttempts: 1,
+    });
+
+    const handlers = new Map<string, () => Promise<void>>();
+    await provider.processDue(handlers);
+
+    const task = await db.scheduledTask.findUnique({ where: { id } });
+    expect(task?.status).toBe("dead_letter");
+    expect(task?.lastError).toContain("No handler registered");
   });
 
   // ── 18. Payload round-trip ────────────────────────────────────────────────

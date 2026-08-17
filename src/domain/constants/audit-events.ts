@@ -668,6 +668,16 @@ export const AUDIT_EVENTS = {
   CONSULTING_HEALTH_UPDATED: "consulting.health_updated",
   CONSULTING_DIMENSION_UPDATED: "consulting.dimension_updated",
   CONSULTING_ENGAGEMENT_EXPORTED: "consulting.engagement_exported",
+
+  // P0-08 — Canonical scheduled-task lifecycle
+  SCHEDULED_TASK_ENQUEUED: "scheduled_task.enqueued",
+  SCHEDULED_TASK_CLAIMED: "scheduled_task.claimed",
+  SCHEDULED_TASK_LEASE_RECLAIMED: "scheduled_task.lease_reclaimed",
+  SCHEDULED_TASK_STARTED: "scheduled_task.started",
+  SCHEDULED_TASK_SUCCEEDED: "scheduled_task.succeeded",
+  SCHEDULED_TASK_RETRY_SCHEDULED: "scheduled_task.retry_scheduled",
+  SCHEDULED_TASK_FAILED: "scheduled_task.failed",
+  SCHEDULED_TASK_DEAD_LETTERED: "scheduled_task.dead_lettered",
 } as const;
 
 export type AuditEventName =

@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { v4 as uuidv4 } from "uuid";
 
 export type TaskStatus =
@@ -20,8 +22,21 @@ export interface ScheduleTaskInput {
   idempotencyKey?: string;
 }
 
+/**
+ * Structural context handed to every task handler alongside its payload.
+ * `workspaceId` is sourced ONLY from the claimed task row itself (never from
+ * payload, which a producer could get wrong) — handlers MUST use this value,
+ * not a workspaceId embedded in payload, to satisfy workspace isolation.
+ */
+export interface TaskContext {
+  taskId: string;
+  taskName: string;
+  workspaceId: string | null;
+  attempt: number;
+}
+
 export interface TaskHandler {
-  (payload: Record<string, unknown> | null): Promise<void>;
+  (payload: Record<string, unknown> | null, context: TaskContext): Promise<void>;
 }
 
 export interface SchedulerProvider {
@@ -37,6 +52,48 @@ function retryDelaySeconds(attempt: number): number {
 }
 
 const LEASE_MS = 5 * 60 * 1000; // 5-minute processing lease
+
+/**
+ * Best-effort audit emission for scheduler lifecycle transitions. Audit
+ * writes must never abort or mask the scheduler's own outcome — a failure
+ * here is logged, not thrown. `emitAuditEvent` itself already fails safe
+ * (logs + skips) when workspaceId is absent, matching every other audit
+ * call site in this codebase; workspace-less task types simply do not
+ * produce audit history, which is an existing, established constraint of
+ * the audit subsystem, not something invented here.
+ *
+ * `actorId` is deliberately omitted (left undefined, persisted as NULL):
+ * `AuditEvent.actorId` has a `NOT DEFERRABLE` FK to `users.id` that Postgres
+ * only skips for NULL — a fabricated placeholder UUID (e.g. the well-known
+ * "00000000-…-0001" used elsewhere in this codebase as CRON_ACTOR_ID) is not
+ * a real user row and raises P2003 on write; see
+ * src/__tests__/stage8/private-owner-seed-audit-actor.db.test.ts, which uses
+ * that exact UUID as its canonical known-nonexistent fixture. `actorType:
+ * "system"` alone correctly conveys that no human initiated this event.
+ */
+async function auditTaskEvent(
+  eventName: (typeof AUDIT_EVENTS)[keyof typeof AUDIT_EVENTS],
+  task: { id: string; taskName: string; workspaceId: string | null; attempts?: number },
+  payload: Record<string, unknown>
+): Promise<void> {
+  if (!task.workspaceId) return;
+  try {
+    await emitAuditEvent({
+      eventName,
+      actorType: "system",
+      workspaceId: task.workspaceId,
+      entityType: "ScheduledTask",
+      entityId: task.id,
+      payload: { taskName: task.taskName, attempt: task.attempts, ...payload },
+      visibility: "internal",
+    });
+  } catch (err) {
+    logger.error("Failed to emit scheduled-task audit event (non-fatal)", err, {
+      eventName,
+      taskId: task.id,
+    });
+  }
+}
 
 export class DatabaseSchedulerProvider implements SchedulerProvider {
   async schedule(input: ScheduleTaskInput): Promise<string> {
@@ -78,6 +135,12 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
       workspaceId: input.workspaceId,
     });
 
+    await auditTaskEvent(
+      AUDIT_EVENTS.SCHEDULED_TASK_ENQUEUED,
+      { id: task.id, taskName: input.taskName, workspaceId: input.workspaceId ?? null },
+      { scheduledFor: input.scheduledFor.toISOString(), idempotencyKey: input.idempotencyKey ?? null }
+    );
+
     return task.id;
   }
 
@@ -93,24 +156,23 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
     const now = new Date();
     const leaseExpiry = new Date(now.getTime() + LEASE_MS);
 
-    // Atomic claim via raw SQL UPDATE … RETURNING.
-    // Only claim rows that are either:
-    //   (a) pending + scheduledFor <= now, OR
-    //   (b) running + lease expired (crash recovery)
+    // Atomic claim: select the batch under FOR UPDATE SKIP LOCKED, capturing
+    // each row's PRE-claim status, then update exactly those rows. Capturing
+    // previous_status per row (not just for logging, unlike the CTE in
+    // claimStartup()) is what lets processDue distinguish a fresh pending
+    // pickup from a stale-lease crash-recovery reclaim for audit purposes.
     const claimed = await db.$queryRaw<Array<{
       id: string;
       task_name: string;
       payload: unknown;
       attempts: number;
       max_attempts: number;
+      workspace_id: string | null;
+      previous_status: string;
     }>>`
-      UPDATE "scheduled_tasks"
-      SET "status"           = 'running',
-          "started_at"       = ${now},
-          "lease_expires_at" = ${leaseExpiry},
-          "attempts"         = "attempts" + 1
-      WHERE "id" IN (
-        SELECT "id" FROM "scheduled_tasks"
+      WITH "to_claim" AS (
+        SELECT "id", "status" AS "previous_status"
+        FROM "scheduled_tasks"
         WHERE (
           ("status" = 'pending'  AND "scheduled_for" <= ${now})
           OR
@@ -120,7 +182,16 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
         LIMIT 50
         FOR UPDATE SKIP LOCKED
       )
-      RETURNING "id", "task_name", "payload", "attempts", "max_attempts"
+      UPDATE "scheduled_tasks" t
+      SET "status"           = 'running',
+          "started_at"       = ${now},
+          "lease_expires_at" = ${leaseExpiry},
+          "attempts"         = t."attempts" + 1
+      FROM "to_claim"
+      WHERE t."id" = "to_claim"."id"
+      RETURNING
+        t."id", t."task_name", t."payload", t."attempts", t."max_attempts",
+        t."workspace_id", "to_claim"."previous_status"
     `;
 
     if (claimed.length === 0) return 0;
@@ -128,22 +199,47 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
     let processed = 0;
 
     for (const task of claimed) {
+      const wasReclaimed = task.previous_status === "running";
+      await auditTaskEvent(
+        wasReclaimed ? AUDIT_EVENTS.SCHEDULED_TASK_LEASE_RECLAIMED : AUDIT_EVENTS.SCHEDULED_TASK_CLAIMED,
+        { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
+        {}
+      );
+
       const handler = handlers.get(task.task_name);
+      const context: TaskContext = {
+        taskId: task.id,
+        taskName: task.task_name,
+        workspaceId: task.workspace_id,
+        attempt: task.attempts,
+      };
+
       if (!handler) {
+        // Unknown task type MUST fail closed — not cycle pending forever.
+        // Routed through the exact same retry/backoff/dead-letter path as a
+        // thrown handler error below, so a persistently-unknown task type
+        // becomes an owner-visible dead letter within maxAttempts, and a
+        // task enqueued moments before its handler is registered (rolling
+        // deploy) still gets a bounded number of retries first.
         logger.warn("No handler registered for task", {
           taskName: task.task_name,
           taskId: task.id,
         });
-        // Release back to pending so it can be retried after a handler is registered.
-        await db.scheduledTask.update({
-          where: { id: task.id },
-          data: { status: "pending", startedAt: null, leaseExpiresAt: null },
-        }).catch(() => {});
+        await this.recordFailure(
+          task,
+          new Error(`No handler registered for task type "${task.task_name}"`)
+        );
         continue;
       }
 
+      await auditTaskEvent(
+        AUDIT_EVENTS.SCHEDULED_TASK_STARTED,
+        { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
+        {}
+      );
+
       try {
-        await handler(task.payload as Record<string, unknown> | null);
+        await handler(task.payload as Record<string, unknown> | null, context);
         await db.scheduledTask.update({
           where: { id: task.id },
           data: {
@@ -152,55 +248,85 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
             leaseExpiresAt: null,
           },
         });
+        await auditTaskEvent(
+          AUDIT_EVENTS.SCHEDULED_TASK_SUCCEEDED,
+          { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
+          {}
+        );
         processed++;
       } catch (err) {
-        const governed = classifyOperatorError(
-          err instanceof Error ? err : new Error(String(err)),
-          { context: "load" }
-        );
-        const errorMessage = governed.operatorMessage;
-        // attempts was already incremented by the UPDATE above.
-        const attemptsDone = task.attempts;
-        const isDeadLetter = attemptsDone >= task.max_attempts;
-
-        if (isDeadLetter) {
-          await db.scheduledTask.update({
-            where: { id: task.id },
-            data: {
-              status: "dead_letter",
-              lastError: errorMessage,
-              leaseExpiresAt: null,
-            },
-          });
-        } else {
-          // Exponential backoff: schedule next attempt in the future.
-          const nextRun = new Date(
-            Date.now() + retryDelaySeconds(attemptsDone) * 1000
-          );
-          await db.scheduledTask.update({
-            where: { id: task.id },
-            data: {
-              status: "pending",
-              lastError: errorMessage,
-              scheduledFor: nextRun,
-              startedAt: null,
-              leaseExpiresAt: null,
-            },
-          });
-        }
-
-        logger.error("Task execution failed", {
-          taskId: task.id,
-          taskName: task.task_name,
-          attempts: attemptsDone,
-          maxAttempts: task.max_attempts,
-          isDeadLetter,
-          error: errorMessage,
-        });
+        await this.recordFailure(task, err);
       }
     }
 
     return processed;
+  }
+
+  /**
+   * Shared failure path for both a thrown handler error and an unknown
+   * task type. Decides retry-with-backoff vs dead-letter from
+   * attempts/maxAttempts (attempts was already incremented by the claim
+   * UPDATE), persists the transition, and emits the matching audit event.
+   */
+  private async recordFailure(
+    task: { id: string; task_name: string; workspace_id: string | null; attempts: number; max_attempts: number },
+    err: unknown
+  ): Promise<void> {
+    const governed = classifyOperatorError(
+      err instanceof Error ? err : new Error(String(err)),
+      { context: "load" }
+    );
+    const errorMessage = governed.operatorMessage;
+    const attemptsDone = task.attempts;
+    const isDeadLetter = attemptsDone >= task.max_attempts;
+
+    if (isDeadLetter) {
+      await db.scheduledTask.update({
+        where: { id: task.id },
+        data: {
+          status: "dead_letter",
+          lastError: errorMessage,
+          leaseExpiresAt: null,
+        },
+      });
+      await auditTaskEvent(
+        AUDIT_EVENTS.SCHEDULED_TASK_DEAD_LETTERED,
+        { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
+        { error: errorMessage, maxAttempts: task.max_attempts }
+      );
+    } else {
+      const nextRun = new Date(Date.now() + retryDelaySeconds(attemptsDone) * 1000);
+      await db.scheduledTask.update({
+        where: { id: task.id },
+        data: {
+          status: "pending",
+          lastError: errorMessage,
+          scheduledFor: nextRun,
+          startedAt: null,
+          leaseExpiresAt: null,
+        },
+      });
+      await auditTaskEvent(
+        AUDIT_EVENTS.SCHEDULED_TASK_RETRY_SCHEDULED,
+        { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
+        { error: errorMessage, nextRun: nextRun.toISOString() }
+      );
+    }
+
+    await auditTaskEvent(
+      AUDIT_EVENTS.SCHEDULED_TASK_FAILED,
+      { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
+      { error: errorMessage, isDeadLetter }
+    );
+
+    logger.error("Task execution failed", {
+      taskId: task.id,
+      taskName: task.task_name,
+      attempts: attemptsDone,
+      maxAttempts: task.max_attempts,
+      isDeadLetter,
+      error: errorMessage,
+    });
   }
 }
 
@@ -239,8 +365,15 @@ export class InMemorySchedulerProvider implements SchedulerProvider {
       task.status = "running";
       task.attempts++;
 
+      const context: TaskContext = {
+        taskId: id,
+        taskName: task.taskName,
+        workspaceId: task.workspaceId ?? null,
+        attempt: task.attempts,
+      };
+
       try {
-        await handler(task.payload ?? null);
+        await handler(task.payload ?? null, context);
         task.status = "completed";
         processed++;
       } catch (err) {
