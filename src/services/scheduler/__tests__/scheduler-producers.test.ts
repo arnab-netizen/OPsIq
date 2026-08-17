@@ -22,7 +22,9 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/infra/scheduler", () => ({
-  getScheduler: () => ({ schedule }),
+  DatabaseSchedulerProvider: class {
+    schedule = schedule;
+  },
 }));
 
 import {

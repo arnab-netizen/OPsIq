@@ -19,9 +19,18 @@
  * day-bucket for the workspace-level finance sweep), so a fresh attempt
  * always gets a fresh key instead of being silently blocked forever by an
  * already-completed row occupying the same key.
+ *
+ * Uses DatabaseSchedulerProvider directly, NOT getScheduler(): the latter is
+ * an env-configurable singleton (SCHEDULER_PROVIDER, defaulting to
+ * "in-memory" per src/lib/config.ts and .env.example, set explicitly nowhere
+ * in this repo's CI workflows or vercel.json) whose in-memory implementation
+ * stores tasks in a process-local Map that vanishes with the process — a
+ * durable producer enqueuing into it would silently produce nothing durable
+ * at all. The cron route's own drain side already avoids this exact trap by
+ * instantiating DatabaseSchedulerProvider explicitly; producers must match.
  */
 import { db } from "@/lib/db";
-import { getScheduler } from "@/infra/scheduler";
+import { DatabaseSchedulerProvider } from "@/infra/scheduler";
 import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE } from "@/infra/scheduler-handlers";
 
 const EMAIL_MAX_ATTEMPTS = 3;
@@ -41,7 +50,7 @@ export interface ProducerScanResult {
  * current attempt generation.
  */
 export async function enqueueDueEmailRetryTasks(): Promise<ProducerScanResult> {
-  const scheduler = getScheduler();
+  const scheduler = new DatabaseSchedulerProvider();
 
   const retriable = await db.alert.findMany({
     where: {
@@ -76,7 +85,7 @@ export async function enqueueDueEmailRetryTasks(): Promise<ProducerScanResult> {
  * occupy the idempotency key — a fresh gap tomorrow gets a fresh key.
  */
 export async function enqueueDueFinanceLearningBridgeTasks(): Promise<ProducerScanResult> {
-  const scheduler = getScheduler();
+  const scheduler = new DatabaseSchedulerProvider();
 
   const gapWorkspaces = await db.ownerFinanceVerification.findMany({
     where: {
