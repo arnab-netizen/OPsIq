@@ -1,47 +1,51 @@
 /**
- * Cron — persistent scheduler driver + email retry sweep + finance learning gap sweep.
+ * Cron — persistent scheduler driver.
  *
  * Invoked by Vercel Cron (vercel.json) and/or any external scheduler that can
  * send the shared secret. Authenticated via Authorization: Bearer $CRON_SECRET,
  * compared in constant time; when CRON_SECRET is unset the request is rejected
  * (fail-closed). Vercel does NOT generate this value — the owner configures it.
  *
- * Three jobs per invocation:
- *   1. DatabaseSchedulerProvider.processDue()           — drains due scheduled tasks
- *   2. Alert email retry sweep                          — retries FAILED alerts below max attempts
- *   3. Finance learning gap sweep                       — bridges verifications with no outcome signal
+ * P0-08: this route previously ran two independent, hand-rolled sweeps
+ * (email retry, finance-learning gap) inline, with their own bespoke retry
+ * semantics, bypassing the durable ScheduledTask claim/lease/backoff/
+ * dead-letter machinery and its handler registry entirely (which was passed
+ * an empty Map — dispatching nothing). Both are now canonical producers
+ * (src/services/scheduler/scheduler-producers.ts) that enqueue ScheduledTask
+ * rows for outstanding work, executed through the SAME processDue() drain as
+ * every other task type, via the real production handler registry
+ * (src/infra/scheduler-handlers.ts). One execution path, one retry/backoff/
+ * dead-letter contract, one audit trail.
  *
  * CADENCE INDEPENDENCE
  * All jobs are catch-up by construction, so a missed or infrequent invocation
  * delays work but never drops it:
+ *   - producers re-scan domain state (Alert.emailDeliveryStatus,
+ *     OwnerFinanceVerification.outcomeSignal) every invocation and enqueue
+ *     idempotently, so a missed tick just means more candidates next time;
  *   - task claim selects `scheduled_for <= now` (not exact-time matching), and
- *     also reclaims `running` rows whose lease has expired;
- *   - the email sweep selects every FAILED alert below max attempts, oldest first.
- * Each underlying pass is intentionally bounded (50 tasks / 20 emails) to keep a
- * single database statement small. At a low cron cadence one bounded pass could
- * leave a backlog until the next invocation, so this route drains in repeated
- * bounded passes under an explicit wall-clock budget. Per-pass semantics —
- * FOR UPDATE SKIP LOCKED, idempotency keys, exponential backoff, lease
- * expiry — are unchanged and still make concurrent invocations safe.
+ *     also reclaims `running` rows whose lease has expired.
+ * Each producer scan and each drain pass is intentionally bounded to keep a
+ * single database statement small. At a low cron cadence one bounded pass
+ * could leave a backlog until the next invocation, so this route drains in
+ * repeated bounded passes under an explicit wall-clock budget. Per-pass
+ * semantics — FOR UPDATE SKIP LOCKED, idempotency keys, exponential backoff,
+ * lease expiry — make concurrent invocations safe.
  */
 
 import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
-import { retryEmailAlert } from "@/services/alerts/alert-email-retry.service";
-import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance/learning-bridge.service";
+import { getProductionTaskHandlers } from "@/infra/scheduler-handlers";
+import { enqueueDueEmailRetryTasks, enqueueDueFinanceLearningBridgeTasks } from "@/services/scheduler/scheduler-producers";
 import { captureError } from "@/infra/observability";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
-const MAX_EMAIL_RETRIES_PER_TICK = 20;
-const CRON_ACTOR_ID = "00000000-0000-0000-0000-000000000001"; // system actor for audit events
-
 /**
  * Wall-clock budget for draining backlog in one invocation. Kept well under the
  * platform function timeout so the response is always returned normally; work
- * still outstanding when the budget is spent stays `pending`/`FAILED` and is
+ * still outstanding when the budget is spent stays `pending`/`dead_letter` and is
  * picked up by the next invocation.
  */
 const DRAIN_BUDGET_MS = 45_000;
@@ -69,20 +73,38 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const deadline = Date.now() + DRAIN_BUDGET_MS;
 
-  // ─── 1. Drain scheduled tasks ────────────────────────────────────────────
+  // ─── 1. Producers: enqueue canonical ScheduledTask rows for outstanding work ──
+  try {
+    const [emailScan, financeScan] = await Promise.all([
+      enqueueDueEmailRetryTasks(),
+      enqueueDueFinanceLearningBridgeTasks(),
+    ]);
+    results.producers = {
+      emailRetry: emailScan,
+      financeLearningBridge: financeScan,
+    };
+    logger.info("Cron: producer scans complete", results.producers as Record<string, unknown>);
+  } catch (err) {
+    const governed = classifyOperatorError(
+      err instanceof Error ? err : new Error(String(err)),
+      { context: "load" }
+    );
+    errors.push(`producers: ${governed.operatorMessage}`);
+    captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
+  }
+
+  // ─── 2. Drain scheduled tasks through the real handler registry ────────────
   try {
     const scheduler = new DatabaseSchedulerProvider();
-    // No application task handlers registered yet — pass empty map.
-    // Tasks enqueued by future services will add handlers here.
-    const handlers = new Map();
+    const handlers = getProductionTaskHandlers();
 
     let tasksProcessed = 0;
     let schedulerPasses = 0;
 
     // Repeat the bounded claim until a pass completes no work. A pass that
-    // completes nothing — including the current no-handler configuration, where
-    // claimed tasks are released back to `pending` — returns 0 and ends the
-    // loop, so this can never spin on undeliverable work.
+    // completes nothing — including an unknown task type, which now fails
+    // closed (bounded retry, then dead-letter) rather than looping forever —
+    // returns 0 and ends the loop, so this can never spin on undeliverable work.
     for (; schedulerPasses < MAX_DRAIN_PASSES; schedulerPasses++) {
       if (Date.now() >= deadline) break;
       const passProcessed = await scheduler.processDue(handlers);
@@ -92,6 +114,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     results.schedulerTasksProcessed = tasksProcessed;
     results.schedulerPasses = schedulerPasses;
+    results.handlerRegistrySize = handlers.size;
     logger.info("Cron: scheduler tick complete", { tasksProcessed, schedulerPasses });
   } catch (err) {
     const governed = classifyOperatorError(
@@ -100,132 +123,6 @@ export async function GET(request: Request): Promise<NextResponse> {
     );
     errors.push(`scheduler: ${governed.operatorMessage}`);
     captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
-  }
-
-  // ─── 2. Email retry sweep ─────────────────────────────────────────────────
-  try {
-    const EMAIL_MAX_ATTEMPTS = 3;
-
-    let attempted = 0;
-    let emailsSent = 0;
-    let emailsFailed = 0;
-    let emailsSkipped = 0;
-    let emailPasses = 0;
-
-    // Each pass claims one bounded page of retriable alerts. Every attempt is a
-    // state transition (SENT / SKIPPED, or FAILED with an incremented attempt
-    // count), so the retriable set strictly shrinks and the loop terminates.
-    for (; emailPasses < MAX_DRAIN_PASSES; emailPasses++) {
-      if (Date.now() >= deadline) break;
-
-      const retriable = await db.alert.findMany({
-        where: {
-          emailDeliveryStatus: "FAILED",
-          emailAttemptCount: { lt: EMAIL_MAX_ATTEMPTS },
-        },
-        select: { id: true, workspaceId: true },
-        take: MAX_EMAIL_RETRIES_PER_TICK,
-        orderBy: { emailLastAttemptAt: "asc" },
-      });
-
-      if (retriable.length === 0) break;
-      attempted += retriable.length;
-
-      for (const alert of retriable) {
-        try {
-          const result = await retryEmailAlert(alert.id, alert.workspaceId, CRON_ACTOR_ID);
-          if (result.status === "SENT") emailsSent++;
-          else if (result.status === "FAILED") emailsFailed++;
-          else emailsSkipped++;
-        } catch (alertErr) {
-          emailsFailed++;
-          captureError(alertErr, {
-            category: "UNEXPECTED_ERROR",
-            route: "/api/internal/cron/scheduler",
-          });
-        }
-      }
-
-      // A partial page means the backlog is exhausted for this invocation.
-      if (retriable.length < MAX_EMAIL_RETRIES_PER_TICK) break;
-    }
-
-    results.emailRetry = {
-      attempted,
-      sent: emailsSent,
-      failed: emailsFailed,
-      skipped: emailsSkipped,
-      passes: emailPasses,
-    };
-    logger.info("Cron: email retry sweep complete", results.emailRetry as Record<string, unknown>);
-  } catch (err) {
-    const governed = classifyOperatorError(
-      err instanceof Error ? err : new Error(String(err)),
-      { context: "load" }
-    );
-    errors.push(`emailRetry: ${governed.operatorMessage}`);
-    captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
-  }
-
-  // ─── 3. Finance learning gap sweep ───────────────────────────────────────
-  // Finds all workspaces that have OwnerFinanceVerifications in a terminal status
-  // with no corresponding OwnerFinanceOutcomeSignal, then bridges each gap
-  // idempotently. Mirrors the email retry sweep: single bounded pass, non-fatal
-  // per-workspace errors, catch-up semantics so a missed invocation is recovered.
-  if (Date.now() < deadline) {
-    try {
-      const BRIDGEABLE_STATUSES = ["verified_improved", "verified_not_improved", "disputed"];
-
-      // Collect distinct workspaceIds that have at least one un-bridged verification.
-      const gapWorkspaces = await db.ownerFinanceVerification.findMany({
-        where: {
-          status: { in: BRIDGEABLE_STATUSES },
-          outcomeSignal: null,
-        },
-        select: { workspaceId: true },
-        distinct: ["workspaceId"],
-      });
-
-      let financeGapsFound = 0;
-      let financeGapsBridged = 0;
-      let financeGapsSkipped = 0;
-      const financeErrors: string[] = [];
-
-      for (const { workspaceId } of gapWorkspaces) {
-        if (Date.now() >= deadline) break;
-        try {
-          const r = await reconcileMissingFinanceLearningSignals(workspaceId, CRON_ACTOR_ID);
-          financeGapsFound += r.gapsFound;
-          financeGapsBridged += r.gapsBridged;
-          financeGapsSkipped += r.gapsSkipped;
-          if (r.errors.length > 0) financeErrors.push(...r.errors);
-        } catch (wsErr) {
-          financeErrors.push(
-            `workspaceId=${workspaceId}: ${String(wsErr)}`
-          );
-          captureError(wsErr, {
-            category: "UNEXPECTED_ERROR",
-            route: "/api/internal/cron/scheduler",
-          });
-        }
-      }
-
-      results.financeLearningGapSweep = {
-        workspacesChecked: gapWorkspaces.length,
-        gapsFound: financeGapsFound,
-        gapsBridged: financeGapsBridged,
-        gapsSkipped: financeGapsSkipped,
-        errors: financeErrors,
-      };
-      logger.info("Cron: finance learning gap sweep complete", results.financeLearningGapSweep as Record<string, unknown>);
-    } catch (err) {
-      const governed = classifyOperatorError(
-        err instanceof Error ? err : new Error(String(err)),
-        { context: "load" }
-      );
-      errors.push(`financeLearningGapSweep: ${governed.operatorMessage}`);
-      captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
-    }
   }
 
   // Cron must return 2xx for Vercel to consider the job succeeded.
