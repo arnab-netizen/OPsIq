@@ -268,7 +268,11 @@ describe.skipIf(SKIP)("[db] P0-09 reassessment-scan scheduler — hostile proof"
     await expect(handler(null, { taskId: taskFail.id, taskName: TASK_NAME_REASSESSMENT_SCAN, workspaceId: workspaceFail, attempt: 1 })).resolves.toBeUndefined();
     await expect(handler(null, { taskId: taskOk.id, taskName: TASK_NAME_REASSESSMENT_SCAN, workspaceId: workspaceOk, attempt: 1 })).resolves.toBeUndefined();
 
-    expect((await listBudgetSnapshots(workspaceFail, businessOk)).length).toBe(0); // genuinely failed — cross-workspace reference
+    // listBudgetSnapshots() itself enforces the same cross-workspace ownership check (it also
+    // calls getBusiness() first) and would throw for the mismatched (workspaceFail, businessOk)
+    // pair rather than return an empty list — that throw is itself proof of isolation, but the
+    // point of this test is what got PERSISTED, so query the raw table directly instead.
+    expect(await db.budgetPlanSnapshot.count({ where: { workspaceId: workspaceFail } })).toBe(0); // genuinely failed — cross-workspace reference, nothing persisted
     expect((await listBudgetSnapshots(workspaceOk, businessOk)).length).toBeGreaterThan(0); // unaffected by the other workspace's failure
 
     // The workspaceFail budget action references businessOk, so it isn't covered by the
