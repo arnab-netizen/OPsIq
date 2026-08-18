@@ -10,8 +10,31 @@ export type TaskStatus =
   | "pending"
   | "running"
   | "completed"
+  | "completed_partial_failure"
   | "failed"
   | "dead_letter";
+
+/**
+ * A handler's own truthful account of its domain-level outcome, distinct
+ * from whether its Promise merely resolved. `processDue()` uses this to
+ * decide the ScheduledTask's final status — a resolved Promise alone is NOT
+ * sufficient evidence of business success (the false-success defect this
+ * type closes): a handler whose downstream domain call reports its own
+ * per-item failures (e.g. ReconcileResult.errors[], DueScanResult's
+ * per-business ok:false) must surface that as PARTIAL_FAILURE, not let it
+ * disappear into an undifferentiated "completed".
+ */
+export type HandlerOutcomeStatus = "SUCCESS" | "NO_WORK" | "PARTIAL_FAILURE";
+
+export interface HandlerResult {
+  status: HandlerOutcomeStatus;
+  /** Owner-visible summary. Required whenever status !== "SUCCESS" so the
+   *  automation-status surface has something truthful to show. */
+  summary?: string;
+  /** Machine-readable counts (e.g. { succeeded: 4, failed: 1 }) for callers
+   *  that want more than the summary string. */
+  counts?: Record<string, number>;
+}
 
 export interface ScheduleTaskInput {
   taskName: string;
@@ -36,7 +59,7 @@ export interface TaskContext {
 }
 
 export interface TaskHandler {
-  (payload: Record<string, unknown> | null, context: TaskContext): Promise<void>;
+  (payload: Record<string, unknown> | null, context: TaskContext): Promise<HandlerResult | void>;
 }
 
 export interface SchedulerProvider {
@@ -239,19 +262,31 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
       );
 
       try {
-        await handler(task.payload as Record<string, unknown> | null, context);
+        const outcome = await handler(task.payload as Record<string, unknown> | null, context);
+        const result: HandlerResult = outcome ?? { status: "SUCCESS" };
+        const isPartialFailure = result.status === "PARTIAL_FAILURE";
+
         await db.scheduledTask.update({
           where: { id: task.id },
           data: {
-            status: "completed",
+            status: isPartialFailure ? "completed_partial_failure" : "completed",
             completedAt: new Date(),
             leaseExpiresAt: null,
+            // `lastError` is repurposed here (not just for the dead-letter
+            // path) as "most recent owner-visible note on this task" — NULL
+            // for a clean SUCCESS/NO_WORK so it never falsely echoes a prior
+            // attempt's failure text once the task is genuinely clean.
+            lastError: isPartialFailure
+              ? result.summary ?? "Partial failure: handler reported PARTIAL_FAILURE with no summary"
+              : null,
           },
         });
         await auditTaskEvent(
-          AUDIT_EVENTS.SCHEDULED_TASK_SUCCEEDED,
+          isPartialFailure
+            ? AUDIT_EVENTS.SCHEDULED_TASK_PARTIAL_FAILURE
+            : AUDIT_EVENTS.SCHEDULED_TASK_SUCCEEDED,
           { id: task.id, taskName: task.task_name, workspaceId: task.workspace_id, attempts: task.attempts },
-          {}
+          { outcomeStatus: result.status, summary: result.summary, counts: result.counts }
         );
         processed++;
       } catch (err) {
@@ -373,8 +408,9 @@ export class InMemorySchedulerProvider implements SchedulerProvider {
       };
 
       try {
-        await handler(task.payload ?? null, context);
-        task.status = "completed";
+        const outcome = await handler(task.payload ?? null, context);
+        const result: HandlerResult = outcome ?? { status: "SUCCESS" };
+        task.status = result.status === "PARTIAL_FAILURE" ? "completed_partial_failure" : "completed";
         processed++;
       } catch (err) {
         const maxAttempts = task.maxAttempts ?? 3;

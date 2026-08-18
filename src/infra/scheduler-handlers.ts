@@ -11,7 +11,7 @@
  * (never from payload) and must use it — not any workspaceId that might
  * appear inside payload — for workspace isolation.
  */
-import type { TaskHandler } from "@/infra/scheduler";
+import type { TaskHandler, HandlerResult } from "@/infra/scheduler";
 import { retryEmailAlert } from "@/services/alerts/alert-email-retry.service";
 import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance/learning-bridge.service";
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
@@ -44,12 +44,17 @@ export const TASK_NAME_REASSESSMENT_SCAN = "reassessment-scan";
 /**
  * retryEmailAlert() never throws for a normal delivery outcome (it returns
  * SENT/FAILED/SKIPPED/ALREADY_TERMINAL and owns its own attempt-count/audit
- * trail on the Alert row) — so this handler completes the ScheduledTask
- * regardless of email outcome. A thrown NotFoundError/ConflictError here
- * means the producer enqueued a stale/invalid alertId, a genuine task-level
- * defect the scheduler's own retry/dead-letter path should govern.
+ * trail on the Alert row). A thrown NotFoundError/ConflictError here means
+ * the producer enqueued a stale/invalid alertId, a genuine task-level defect
+ * the scheduler's own retry/dead-letter path should govern.
+ *
+ * F-SCHED-FALSE-SUCCESS fix: a resolved Promise is not evidence of business
+ * success. FAILED is returned as PARTIAL_FAILURE — not lost (the Alert row's
+ * own emailDeliveryStatus/emailError durably records it independent of this
+ * ScheduledTask), but now also owner-visible on /owner/automation rather than
+ * only discoverable by reading the Alert record directly.
  */
-const alertEmailRetryHandler: TaskHandler = async (payload, context) => {
+const alertEmailRetryHandler: TaskHandler = async (payload, context): Promise<HandlerResult> => {
   const alertId = payload?.alertId;
   if (typeof alertId !== "string" || !alertId) {
     throw new Error("alert-email-retry task payload missing alertId");
@@ -57,7 +62,15 @@ const alertEmailRetryHandler: TaskHandler = async (payload, context) => {
   if (!context.workspaceId) {
     throw new Error("alert-email-retry task missing workspaceId — cannot enforce workspace isolation");
   }
-  await retryEmailAlert(alertId, context.workspaceId, CRON_ACTOR_ID);
+  const result = await retryEmailAlert(alertId, context.workspaceId, CRON_ACTOR_ID);
+  if (result.status === "FAILED") {
+    return {
+      status: "PARTIAL_FAILURE",
+      summary: `Alert ${alertId} email delivery failed (attempt ${result.attemptCount}): ${result.message ?? "no message"}`,
+      counts: { failed: 1 },
+    };
+  }
+  return { status: "SUCCESS" };
 };
 
 /**
@@ -67,12 +80,26 @@ const alertEmailRetryHandler: TaskHandler = async (payload, context) => {
  * partial per-workspace failure does not abort the tick; any verification
  * still gapped after this run is naturally picked up by the next day's
  * producer scan, since the gap query is state-driven, not queue-driven).
+ *
+ * F-SCHED-FALSE-SUCCESS fix: errors[] is now read, not discarded. A
+ * non-empty errors[] means the SEC-005-governed finance learning pipeline
+ * has an item that did not bridge — this must be visible, not silently
+ * absorbed into an undifferentiated "completed".
  */
-const financeLearningBridgeHandler: TaskHandler = async (_payload, context) => {
+const financeLearningBridgeHandler: TaskHandler = async (_payload, context): Promise<HandlerResult> => {
   if (!context.workspaceId) {
     throw new Error("finance-learning-bridge task missing workspaceId — cannot enforce workspace isolation");
   }
-  await reconcileMissingFinanceLearningSignals(context.workspaceId, CRON_ACTOR_ID);
+  const result = await reconcileMissingFinanceLearningSignals(context.workspaceId, CRON_ACTOR_ID);
+  if (result.errors.length > 0) {
+    return {
+      status: "PARTIAL_FAILURE",
+      summary: `${result.errors.length} of ${result.gapsFound} finance-learning-bridge gap(s) failed to bridge: ${result.errors.slice(0, 3).join("; ")}${result.errors.length > 3 ? ` (+${result.errors.length - 3} more)` : ""}`,
+      counts: { gapsFound: result.gapsFound, gapsBridged: result.gapsBridged, gapsSkipped: result.gapsSkipped, errors: result.errors.length },
+    };
+  }
+  if (result.gapsFound === 0) return { status: "NO_WORK" };
+  return { status: "SUCCESS", counts: { gapsFound: result.gapsFound, gapsBridged: result.gapsBridged } };
 };
 
 /**
@@ -85,15 +112,31 @@ const financeLearningBridgeHandler: TaskHandler = async (_payload, context) => {
  * pre-existing known-invalid CRON_ACTOR_ID sentinel (see that constant's own
  * doc comment above). scanDueReassessments never throws for a business-level
  * failure — it isolates and reports each business's outcome in its own
- * result array — so this handler completes whenever the scan itself runs;
- * a thrown error here means the scan's own DB read failed, a task-level
- * defect the scheduler's retry/dead-letter path should govern.
+ * result array.
+ *
+ * F-SCHED-FALSE-SUCCESS fix: a per-business ok:false is now read, not
+ * discarded. Without this, a business whose reassessment deterministically
+ * fails would be silently re-attempted every day forever with the
+ * ScheduledTask reporting "completed" each time — exactly the false-success
+ * pattern this fix closes. A thrown error here (the scan's own DB read
+ * failing) is still a task-level defect the scheduler's retry/dead-letter
+ * path should govern, unchanged.
  */
-const reassessmentScanHandler: TaskHandler = async (_payload, context) => {
+const reassessmentScanHandler: TaskHandler = async (_payload, context): Promise<HandlerResult> => {
   if (!context.workspaceId) {
     throw new Error("reassessment-scan task missing workspaceId — cannot enforce workspace isolation");
   }
-  await scanDueReassessments(new Date(), { actorId: SCHEDULER_SYSTEM_ACTOR, workspaceId: context.workspaceId });
+  const result = await scanDueReassessments(new Date(), { actorId: SCHEDULER_SYSTEM_ACTOR, workspaceId: context.workspaceId });
+  if (result.skipped > 0) {
+    const failedBusinessIds = result.businesses.filter((b) => !b.ok).map((b) => b.businessId);
+    return {
+      status: "PARTIAL_FAILURE",
+      summary: `${result.skipped} of ${result.scanned} due business reassessment(s) failed: ${failedBusinessIds.slice(0, 5).join(", ")}${failedBusinessIds.length > 5 ? ` (+${failedBusinessIds.length - 5} more)` : ""}`,
+      counts: { scanned: result.scanned, reassessed: result.reassessed, skipped: result.skipped },
+    };
+  }
+  if (result.scanned === 0) return { status: "NO_WORK" };
+  return { status: "SUCCESS", counts: { scanned: result.scanned, reassessed: result.reassessed } };
 };
 
 /** The one production handler registry — pass to processDue() unmodified. */

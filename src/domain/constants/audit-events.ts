@@ -675,6 +675,7 @@ export const AUDIT_EVENTS = {
   SCHEDULED_TASK_LEASE_RECLAIMED: "scheduled_task.lease_reclaimed",
   SCHEDULED_TASK_STARTED: "scheduled_task.started",
   SCHEDULED_TASK_SUCCEEDED: "scheduled_task.succeeded",
+  SCHEDULED_TASK_PARTIAL_FAILURE: "scheduled_task.partial_failure",
   SCHEDULED_TASK_RETRY_SCHEDULED: "scheduled_task.retry_scheduled",
   SCHEDULED_TASK_FAILED: "scheduled_task.failed",
   SCHEDULED_TASK_DEAD_LETTERED: "scheduled_task.dead_lettered",
