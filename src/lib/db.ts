@@ -169,9 +169,36 @@ export async function getDbInstance() {
  * Deliberately opt-in and narrowly used (startup claim, migration
  * readiness, the DB readiness probe, session lookup) — never apply this as
  * a blanket pool-level default.
+ *
+ * F-PROD-STARTUP-COLDSTART root cause: this function used to call
+ * `prisma.$transaction(fn)` with NO options object, so it silently inherited
+ * Prisma's own default `maxWait` (2000ms — the time Prisma's client allows to
+ * ACQUIRE/begin the transaction, separate from and BEFORE the `statement_timeout`
+ * set above ever gets a chance to matter) and default `timeout` (5000ms — the
+ * time the transaction body may run once begun). Neon's documented
+ * cold-compute-wake tail (median ~1.8s, p95 ~2.6s; this codebase's own prior
+ * production evidence cites "several seconds" under a concurrent cold-start
+ * burst) routinely exceeds that 2000ms `maxWait`, producing
+ * `PrismaClientKnownRequestError` P2028 ("Unable to start a transaction in
+ * the given time") — not a connection-pool-starvation or CAS-contention
+ * failure, a plain client-side acquisition-window that was too short for the
+ * database it talks to. `maxWait` is now explicit and sized for that tail;
+ * `timeout` is derived from the caller's own statement_timeout so Prisma's
+ * transaction-execution clock can never fire before the Postgres-side
+ * statement_timeout above would.
  */
+/**
+ * Exported so every caller's own outer JS-side race (checkDatabase(),
+ * checkMigrationReadiness(), getSession()) can derive a timeout that is
+ * guaranteed longer than withStatementTimeout()'s own worst case, instead of
+ * an independently-chosen constant silently drifting shorter than this one
+ * and re-introducing the exact bug this fix closes (an outer race firing
+ * before the inner, Postgres-aware timeout/error path ever gets a chance to).
+ */
+export const TRANSACTION_ACQUIRE_MAX_WAIT_MS = 10_000;
+
 export async function withStatementTimeout<T>(
-  prisma: { $transaction: (fn: (tx: Prisma.TransactionClient) => Promise<T>) => Promise<T> },
+  prisma: { $transaction: (fn: (tx: Prisma.TransactionClient) => Promise<T>, options?: { maxWait?: number; timeout?: number }) => Promise<T> },
   timeoutMs: number,
   fn: (tx: Prisma.TransactionClient) => Promise<T>
 ): Promise<T> {
@@ -179,10 +206,16 @@ export async function withStatementTimeout<T>(
   if (!Number.isFinite(safeTimeoutMs) || safeTimeoutMs <= 0) {
     throw new Error(`withStatementTimeout: timeoutMs must be a positive finite number, got ${timeoutMs}`);
   }
-  return prisma.$transaction(async (tx) => {
-    await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);
-    return fn(tx);
-  });
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);
+      return fn(tx);
+    },
+    {
+      maxWait: TRANSACTION_ACQUIRE_MAX_WAIT_MS,
+      timeout: Math.max(safeTimeoutMs + 2_000, 5_000),
+    }
+  );
 }
 
 /**
