@@ -244,10 +244,10 @@ describe.skipIf(SKIP)("[db] P0-09 reassessment-scan scheduler — hostile proof"
   });
 
   // ── 21. A failing business does not prevent an unrelated workspace's reassessment ──
-  it("21. a business missing required finance data does not prevent an unrelated workspace's task from succeeding", async () => {
+  it("21. a business that no longer exists does not prevent an unrelated workspace's task from succeeding", async () => {
     const workspaceFail = randomUUID();
     const workspaceOk = randomUUID();
-    const businessFail = await newBusiness(workspaceFail); // no seedFinance — assembleAssessment will fail for this one
+    const businessFail = randomUUID(); // no OwnerBusiness row — getBusiness() inside reassessBudget deterministically throws NotFoundError
     const businessOk = await newBusiness(workspaceOk);
     await seedFinance(workspaceOk, businessOk);
     await seedOverdueBudgetAction(workspaceFail, businessFail);
@@ -264,8 +264,12 @@ describe.skipIf(SKIP)("[db] P0-09 reassessment-scan scheduler — hostile proof"
     await expect(handler(null, { taskId: taskFail.id, taskName: TASK_NAME_REASSESSMENT_SCAN, workspaceId: workspaceFail, attempt: 1 })).resolves.toBeUndefined();
     await expect(handler(null, { taskId: taskOk.id, taskName: TASK_NAME_REASSESSMENT_SCAN, workspaceId: workspaceOk, attempt: 1 })).resolves.toBeUndefined();
 
-    expect((await listBudgetSnapshots(workspaceFail, businessFail)).length).toBe(0); // genuinely failed — no finance data
+    expect((await listBudgetSnapshots(workspaceFail, businessFail)).length).toBe(0); // genuinely failed — business does not exist
     expect((await listBudgetSnapshots(workspaceOk, businessOk)).length).toBeGreaterThan(0); // unaffected by the other workspace's failure
+
+    // businessFail was never a real OwnerBusiness row, so it isn't covered by the
+    // businessIds cleanup list below — remove its orphaned OwnerBudgetAction directly.
+    await db.ownerBudgetAction.deleteMany({ where: { workspaceId: workspaceFail } });
   });
 });
 
