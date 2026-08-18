@@ -31,7 +31,8 @@
  */
 import { db } from "@/lib/db";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
-import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE } from "@/infra/scheduler-handlers";
+import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_REASSESSMENT_SCAN } from "@/infra/scheduler-handlers";
+import { OPEN_BUDGET_ACTION_STATUSES } from "@/domain/owner-budget/action-mapping";
 
 const EMAIL_MAX_ATTEMPTS = 3;
 const BRIDGEABLE_STATUSES = ["verified_improved", "verified_not_improved", "disputed"] as const;
@@ -112,4 +113,41 @@ export async function enqueueDueFinanceLearningBridgeTasks(): Promise<ProducerSc
   }
 
   return { candidatesFound: gapWorkspaces.length, enqueued };
+}
+
+/**
+ * P0-09 — enqueue one reassessment-scan ScheduledTask per workspace that
+ * currently has at least one overdue, still-open OwnerBudgetAction. Scoped
+ * to the day bucket for the same reason as the finance-bridge producer above:
+ * a fresh gap tomorrow gets a fresh idempotency key rather than being
+ * permanently blocked by a terminal row from today's attempt. The handler
+ * (src/infra/scheduler-handlers.ts) re-scopes scanDueReassessments to this
+ * one workspace via the task's own claimed workspaceId — never from payload.
+ */
+export async function enqueueDueReassessmentScanTasks(): Promise<ProducerScanResult> {
+  const scheduler = new DatabaseSchedulerProvider();
+  const now = new Date();
+
+  const dueWorkspaces = await db.ownerBudgetAction.findMany({
+    where: { dueAt: { not: null, lte: now }, status: { in: Array.from(OPEN_BUDGET_ACTION_STATUSES) } },
+    select: { workspaceId: true },
+    distinct: ["workspaceId"],
+    take: MAX_ENQUEUE_PER_SCAN,
+  });
+
+  const dayBucket = now.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+
+  let enqueued = 0;
+  for (const { workspaceId } of dueWorkspaces) {
+    await scheduler.schedule({
+      taskName: TASK_NAME_REASSESSMENT_SCAN,
+      scheduledFor: now,
+      maxAttempts: 3,
+      workspaceId,
+      idempotencyKey: `${TASK_NAME_REASSESSMENT_SCAN}:${workspaceId}:${dayBucket}`,
+    });
+    enqueued++;
+  }
+
+  return { candidatesFound: dueWorkspaces.length, enqueued };
 }

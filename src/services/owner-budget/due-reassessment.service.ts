@@ -15,9 +15,9 @@ import { OPEN_BUDGET_ACTION_STATUSES } from "@/domain/owner-budget/action-mappin
 import { reassessBudget } from "./budget.service";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
 
-/** Deterministic system actor for scheduler-initiated reassessments (not a user). */
-export const SCHEDULER_SYSTEM_ACTOR = "00000000-0000-0000-0000-000000000000";
+export { SCHEDULER_SYSTEM_ACTOR };
 
 export interface DueScanResult {
   scanned: number;
@@ -36,12 +36,19 @@ function dueBucket(now: Date): string {
  * Workspace/business-scoped per target; system-actor attributed; failures are isolated (one bad business does not
  * abort the sweep). Returns a summary for the caller/route.
  */
-export async function scanDueReassessments(now: Date, opts: { limit?: number; actorId?: string } = {}): Promise<DueScanResult> {
+export async function scanDueReassessments(
+  now: Date,
+  opts: { limit?: number; actorId?: string; workspaceId?: string } = {}
+): Promise<DueScanResult> {
   const limit = opts.limit ?? 100;
   const actorId = opts.actorId ?? SCHEDULER_SYSTEM_ACTOR;
 
   const overdue = await db.ownerBudgetAction.findMany({
-    where: { dueAt: { not: null, lte: now }, status: { in: Array.from(OPEN_BUDGET_ACTION_STATUSES) } },
+    where: {
+      dueAt: { not: null, lte: now },
+      status: { in: Array.from(OPEN_BUDGET_ACTION_STATUSES) },
+      ...(opts.workspaceId ? { workspaceId: opts.workspaceId } : {}),
+    },
     select: { workspaceId: true, businessId: true },
     orderBy: { dueAt: "asc" },
     take: 2000,
