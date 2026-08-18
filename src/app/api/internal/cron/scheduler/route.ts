@@ -17,12 +17,20 @@
  * (src/infra/scheduler-handlers.ts). One execution path, one retry/backoff/
  * dead-letter contract, one audit trail.
  *
+ * P0-09: added the governed-reassessment producer/handler on the same path —
+ * an overdue, still-open OwnerBudgetAction now drives a durable, retried,
+ * audited, owner-visible scheduled reassessment per workspace, closing the
+ * loop the old standalone /api/internal/reassessment-scan route (still
+ * present, unattended-invocation gap now closed by this cron) never did on
+ * its own.
+ *
  * CADENCE INDEPENDENCE
  * All jobs are catch-up by construction, so a missed or infrequent invocation
  * delays work but never drops it:
  *   - producers re-scan domain state (Alert.emailDeliveryStatus,
- *     OwnerFinanceVerification.outcomeSignal) every invocation and enqueue
- *     idempotently, so a missed tick just means more candidates next time;
+ *     OwnerFinanceVerification.outcomeSignal, OwnerBudgetAction.dueAt) every
+ *     invocation and enqueue idempotently, so a missed tick just means more
+ *     candidates next time;
  *   - task claim selects `scheduled_for <= now` (not exact-time matching), and
  *     also reclaims `running` rows whose lease has expired.
  * Each producer scan and each drain pass is intentionally bounded to keep a
@@ -37,7 +45,11 @@ import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
 import { getProductionTaskHandlers } from "@/infra/scheduler-handlers";
-import { enqueueDueEmailRetryTasks, enqueueDueFinanceLearningBridgeTasks } from "@/services/scheduler/scheduler-producers";
+import {
+  enqueueDueEmailRetryTasks,
+  enqueueDueFinanceLearningBridgeTasks,
+  enqueueDueReassessmentScanTasks,
+} from "@/services/scheduler/scheduler-producers";
 import { captureError } from "@/infra/observability";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -75,13 +87,15 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   // ─── 1. Producers: enqueue canonical ScheduledTask rows for outstanding work ──
   try {
-    const [emailScan, financeScan] = await Promise.all([
+    const [emailScan, financeScan, reassessmentScan] = await Promise.all([
       enqueueDueEmailRetryTasks(),
       enqueueDueFinanceLearningBridgeTasks(),
+      enqueueDueReassessmentScanTasks(),
     ]);
     results.producers = {
       emailRetry: emailScan,
       financeLearningBridge: financeScan,
+      reassessmentScan,
     };
     logger.info("Cron: producer scans complete", results.producers as Record<string, unknown>);
   } catch (err) {

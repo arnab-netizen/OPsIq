@@ -14,6 +14,8 @@
 import type { TaskHandler } from "@/infra/scheduler";
 import { retryEmailAlert } from "@/services/alerts/alert-email-retry.service";
 import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance/learning-bridge.service";
+import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
+import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
 
 /**
  * System actor identity for domain calls made from a scheduled-task handler.
@@ -37,6 +39,7 @@ const CRON_ACTOR_ID = "00000000-0000-0000-0000-000000000001";
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
+export const TASK_NAME_REASSESSMENT_SCAN = "reassessment-scan";
 
 /**
  * retryEmailAlert() never throws for a normal delivery outcome (it returns
@@ -72,10 +75,32 @@ const financeLearningBridgeHandler: TaskHandler = async (_payload, context) => {
   await reconcileMissingFinanceLearningSignals(context.workspaceId, CRON_ACTOR_ID);
 };
 
+/**
+ * P0-09 — governed re-evaluation: overdue, still-open budget actions.
+ *
+ * Uses SCHEDULER_SYSTEM_ACTOR (not CRON_ACTOR_ID): scanDueReassessments's own
+ * default actor, correctly represented as a NULL/"system" audit actor by
+ * toAuditActor() (src/domain/owner-budget/system-actor.ts) throughout the
+ * reassessBudget call graph — the valid system/null actor model, not the
+ * pre-existing known-invalid CRON_ACTOR_ID sentinel (see that constant's own
+ * doc comment above). scanDueReassessments never throws for a business-level
+ * failure — it isolates and reports each business's outcome in its own
+ * result array — so this handler completes whenever the scan itself runs;
+ * a thrown error here means the scan's own DB read failed, a task-level
+ * defect the scheduler's retry/dead-letter path should govern.
+ */
+const reassessmentScanHandler: TaskHandler = async (_payload, context) => {
+  if (!context.workspaceId) {
+    throw new Error("reassessment-scan task missing workspaceId — cannot enforce workspace isolation");
+  }
+  await scanDueReassessments(new Date(), { actorId: SCHEDULER_SYSTEM_ACTOR, workspaceId: context.workspaceId });
+};
+
 /** The one production handler registry — pass to processDue() unmodified. */
 export function getProductionTaskHandlers(): Map<string, TaskHandler> {
   return new Map<string, TaskHandler>([
     [TASK_NAME_ALERT_EMAIL_RETRY, alertEmailRetryHandler],
     [TASK_NAME_FINANCE_LEARNING_BRIDGE, financeLearningBridgeHandler],
+    [TASK_NAME_REASSESSMENT_SCAN, reassessmentScanHandler],
   ]);
 }

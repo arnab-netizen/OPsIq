@@ -23,6 +23,7 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { toAuditActor } from "@/domain/owner-budget/system-actor";
 import type { BudgetSignal } from "@/domain/owner-budget/types";
 import {
   routeBudgetSignals,
@@ -74,7 +75,7 @@ export async function routeReassessmentSignals(params: RouteSignalsParams): Prom
     for (const route of routes) {
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.OWNER_BUDGET_SIGNAL_ROUTED,
-        actorId,
+        ...toAuditActor(actorId),
         workspaceId,
         entityType: "BudgetPlanSnapshot",
         entityId: businessId,
@@ -140,7 +141,7 @@ async function triggerFinanceReDiagnosis(params: {
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OWNER_BUDGET_CROSS_MODULE_REASSESSMENT_TRIGGERED,
-      actorId,
+      ...toAuditActor(actorId),
       workspaceId,
       entityType: "OwnerFinanceCycle",
       entityId: newCycle.id,

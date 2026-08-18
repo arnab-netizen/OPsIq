@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { getBusiness } from "@/services/founder-recovery/business.service";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { toAuditActor } from "@/domain/owner-budget/system-actor";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import {
   canTransition,
@@ -118,7 +119,7 @@ export async function syncBudgetActions(
   });
 
   for (const ev of auditQueue) {
-    await emitAuditEvent({ eventName: ev.eventName, actorId: input.actorId, workspaceId, entityType: "OwnerBudgetAction", entityId: ev.entityId, payload: ev.payload });
+    await emitAuditEvent({ eventName: ev.eventName, ...toAuditActor(input.actorId), workspaceId, entityType: "OwnerBudgetAction", entityId: ev.entityId, payload: ev.payload });
   }
 
   return { created, linked, skipped };

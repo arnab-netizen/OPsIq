@@ -16,6 +16,7 @@ import { getBusiness } from "@/services/founder-recovery/business.service";
 import { rowToFinanceInput } from "@/services/owner-finance/snapshot.service";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { toAuditActor } from "@/domain/owner-budget/system-actor";
 import {
   composeUpdatedPlan,
   evaluateSpend,
@@ -669,7 +670,7 @@ export async function reassessBudget(
     await emitAuditEvent(
       {
         eventName: AUDIT_EVENTS.OWNER_BUDGET_REASSESSED,
-        actorId: opts.actorId, workspaceId, entityType: "BudgetPlanSnapshot", entityId: businessId,
+        ...toAuditActor(opts.actorId), workspaceId, entityType: "BudgetPlanSnapshot", entityId: businessId,
         payload: { businessId, mode: plan.mode, trigger: opts.kind, decision: plan.decisionType },
       },
       tx
