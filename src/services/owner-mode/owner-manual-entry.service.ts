@@ -124,7 +124,15 @@ async function defaultEmitAudit(evt: { eventName: string; entityId: string; payl
   const { emitAuditEvent } = await import("@/infra/audit");
   await emitAuditEvent({
     eventName: evt.eventName as Parameters<typeof emitAuditEvent>[0]["eventName"],
-    actorId: (evt.payload.actorId as string) ?? "system",
+    // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): this event is
+    // always owner/human-initiated (manual data entry), never
+    // scheduler-initiated, so there is no legitimate "system" case to fall
+    // back to here. The former `?? "system"` fallback was dead code today
+    // (ManualEntryDeps.actorId is a required string, always populated into
+    // this payload below) but would have raised audit_events_actor_id_fkey
+    // on any future caller bug that left it unset, rather than surfacing
+    // that bug directly.
+    actorId: evt.payload.actorId as string,
     workspaceId: evt.payload.workspaceId as string,
     entityType: "OwnerDataIntake",
     entityId: evt.entityId,

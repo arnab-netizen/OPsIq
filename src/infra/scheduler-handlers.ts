@@ -17,26 +17,6 @@ import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
 import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
 
-/**
- * System actor identity for domain calls made from a scheduled-task handler.
- * Preserves EXACT parity with the actorId the previous inline cron-route
- * sweeps already passed to these same functions (route.ts's CRON_ACTOR_ID) —
- * "existing semantics preserved" per the P0-08 migration requirement.
- *
- * Known pre-existing gap (NOT introduced or fixed here — out of this PR's
- * root-cause scope): this UUID has never corresponded to a real `users` row
- * (see src/__tests__/stage8/private-owner-seed-audit-actor.db.test.ts, which
- * uses this exact value as its canonical known-nonexistent fixture for
- * proving the audit_events_actor_id_fkey FK constraint). retryEmailAlert()'s
- * and bridgeVerificationToLearning()'s own emitAuditEvent() calls using this
- * actorId may therefore already be failing their FK check silently (several
- * are wrapped in `.catch(() => {})`, one is not and is caught one level up
- * by reconcileMissingFinanceLearningSignals()'s per-item try/catch) — this
- * predates and is independent of the scheduler migration; the underlying
- * domain writes (Alert/OwnerFinanceOutcomeSignal) are unaffected either way.
- */
-const CRON_ACTOR_ID = "00000000-0000-0000-0000-000000000001";
-
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
 export const TASK_NAME_REASSESSMENT_SCAN = "reassessment-scan";
@@ -53,6 +33,15 @@ export const TASK_NAME_REASSESSMENT_SCAN = "reassessment-scan";
  * own emailDeliveryStatus/emailError durably records it independent of this
  * ScheduledTask), but now also owner-visible on /owner/automation rather than
  * only discoverable by reading the Alert record directly.
+ *
+ * F-AUDIT-CRON-ACTOR fix: previously passed the now-removed CRON_ACTOR_ID
+ * sentinel ("00000000-…-0001"), which never corresponded to a real `users`
+ * row and defaulted emitAuditEvent's actorType to "user", raising
+ * audit_events_actor_id_fkey on every call. Now passes SCHEDULER_SYSTEM_ACTOR
+ * (the same canonical sentinel reassessment-scan already uses), and
+ * retryEmailAlert()'s own emitAuditEvent calls route it through
+ * toAuditActor() to the correct {actorType:"system"}/NULL-actorId
+ * representation.
  */
 const alertEmailRetryHandler: TaskHandler = async (payload, context): Promise<HandlerResult> => {
   const alertId = payload?.alertId;
@@ -62,7 +51,7 @@ const alertEmailRetryHandler: TaskHandler = async (payload, context): Promise<Ha
   if (!context.workspaceId) {
     throw new Error("alert-email-retry task missing workspaceId — cannot enforce workspace isolation");
   }
-  const result = await retryEmailAlert(alertId, context.workspaceId, CRON_ACTOR_ID);
+  const result = await retryEmailAlert(alertId, context.workspaceId, SCHEDULER_SYSTEM_ACTOR);
   if (result.status === "FAILED") {
     return {
       status: "PARTIAL_FAILURE",
@@ -85,12 +74,16 @@ const alertEmailRetryHandler: TaskHandler = async (payload, context): Promise<Ha
  * non-empty errors[] means the SEC-005-governed finance learning pipeline
  * has an item that did not bridge — this must be visible, not silently
  * absorbed into an undifferentiated "completed".
+ *
+ * F-AUDIT-CRON-ACTOR fix: see alertEmailRetryHandler's doc comment above —
+ * identical fix, now passes SCHEDULER_SYSTEM_ACTOR instead of the removed
+ * CRON_ACTOR_ID sentinel.
  */
 const financeLearningBridgeHandler: TaskHandler = async (_payload, context): Promise<HandlerResult> => {
   if (!context.workspaceId) {
     throw new Error("finance-learning-bridge task missing workspaceId — cannot enforce workspace isolation");
   }
-  const result = await reconcileMissingFinanceLearningSignals(context.workspaceId, CRON_ACTOR_ID);
+  const result = await reconcileMissingFinanceLearningSignals(context.workspaceId, SCHEDULER_SYSTEM_ACTOR);
   if (result.errors.length > 0) {
     return {
       status: "PARTIAL_FAILURE",
@@ -105,14 +98,12 @@ const financeLearningBridgeHandler: TaskHandler = async (_payload, context): Pro
 /**
  * P0-09 — governed re-evaluation: overdue, still-open budget actions.
  *
- * Uses SCHEDULER_SYSTEM_ACTOR (not CRON_ACTOR_ID): scanDueReassessments's own
- * default actor, correctly represented as a NULL/"system" audit actor by
- * toAuditActor() (src/domain/owner-budget/system-actor.ts) throughout the
- * reassessBudget call graph — the valid system/null actor model, not the
- * pre-existing known-invalid CRON_ACTOR_ID sentinel (see that constant's own
- * doc comment above). scanDueReassessments never throws for a business-level
- * failure — it isolates and reports each business's outcome in its own
- * result array.
+ * Uses SCHEDULER_SYSTEM_ACTOR, correctly represented as a NULL/"system"
+ * audit actor by toAuditActor() (src/domain/owner-budget/system-actor.ts)
+ * throughout the reassessBudget call graph — the same canonical system-actor
+ * sentinel the other two handlers above now also use (F-AUDIT-CRON-ACTOR).
+ * scanDueReassessments never throws for a business-level failure — it
+ * isolates and reports each business's outcome in its own result array.
  *
  * F-SCHED-FALSE-SUCCESS fix: a per-business ok:false is now read, not
  * discarded. Without this, a business whose reassessment deterministically

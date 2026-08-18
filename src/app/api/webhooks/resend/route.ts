@@ -150,7 +150,10 @@ export async function POST(request: Request): Promise<NextResponse> {
         for (const alert of alerts) {
           await emitAuditEvent({
             eventName: AUDIT_EVENTS.ALERT_EMAIL_PERMANENTLY_FAILED,
-            actorId: "system",
+            // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): actorId
+            // omitted (NULL, FK-exempt) — a literal "system" string always
+            // violates AuditEvent.actorId's real FK to users.id.
+            actorType: "system",
             entityType: "alert",
             entityId: alert.id,
             workspaceId: alert.workspaceId,
