@@ -16,6 +16,10 @@ import { DatabaseSchedulerProvider, type TaskHandler } from "@/infra/scheduler";
 import { getProductionTaskHandlers, TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE } from "@/infra/scheduler-handlers";
 import { enqueueDueEmailRetryTasks, enqueueDueFinanceLearningBridgeTasks } from "@/services/scheduler/scheduler-producers";
 import { getSchedulerStatusForWorkspace } from "@/services/scheduler/scheduler-status.service";
+import { retryEmailAlert } from "@/services/alerts/alert-email-retry.service";
+import { resetEmailProvider } from "@/lib/integrations/email-provider";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
 
 const SKIP = !SHOULD_RUN_DB_TESTS;
 
@@ -409,6 +413,34 @@ describe.skipIf(SKIP)("[db] P0-08 scheduler — hostile proof", () => {
       const alert = await db.alert.findUnique({ where: { id: alertId } });
       expect(alert?.emailDeliveryStatus).toBe("FAILED"); // untouched, exactly as before a provider is configured
     });
+
+    // F-AUDIT-CRON-ACTOR: the scheduler always calls retryEmailAlert() with
+    // SCHEDULER_SYSTEM_ACTOR (never a real users.id) — proves the resulting
+    // audit event persists with the canonical system-actor shape instead of
+    // raising audit_events_actor_id_fkey, against a real Postgres FK.
+    // Reaches the SKIPPED branch (recipient lookup fails — beforeEach never
+    // creates a `users` row for `userId`), which never calls provider.send(),
+    // so no real network call to Resend happens despite RESEND_API_KEY being set.
+    it("emits the ALERT_EMAIL_RETRY audit event with the canonical system actor, not the raw scheduler sentinel", async () => {
+      process.env.RESEND_API_KEY = "test-fake-key-not-a-real-secret";
+      resetEmailProvider();
+      try {
+        const result = await retryEmailAlert(alertId, workspaceId, SCHEDULER_SYSTEM_ACTOR);
+        expect(result.status).toBe("SKIPPED");
+
+        const auditEvent = await db.auditEvent.findFirst({
+          where: { workspaceId, entityId: alertId, eventName: AUDIT_EVENTS.ALERT_EMAIL_RETRY },
+          orderBy: { occurredAt: "desc" },
+        });
+        expect(auditEvent).not.toBeNull();
+        expect(auditEvent?.actorType).toBe("system");
+        expect(auditEvent?.actorId).toBeNull();
+        expect(auditEvent?.actorId).not.toBe(SCHEDULER_SYSTEM_ACTOR);
+      } finally {
+        delete process.env.RESEND_API_KEY;
+        resetEmailProvider();
+      }
+    });
   });
 
   // ── 12. Migrated finance-learning-bridge semantics preserved ───────────────
@@ -419,7 +451,6 @@ describe.skipIf(SKIP)("[db] P0-08 scheduler — hostile proof", () => {
     let actionId: string;
     let verificationId: string;
     let snapshotId: string;
-    const ACTOR = "00000000-0000-0000-0000-000000000001";
 
     beforeEach(async () => {
       workspaceId = randomUUID();
@@ -429,11 +460,13 @@ describe.skipIf(SKIP)("[db] P0-08 scheduler — hostile proof", () => {
       actionId = randomUUID();
       verificationId = randomUUID();
 
-      await db.user.upsert({
-        where: { id: ACTOR },
-        create: { id: ACTOR, email: "p08-scheduler-system@system.test", updatedAt: new Date() },
-        update: {},
-      });
+      // F-AUDIT-CRON-ACTOR: this block used to upsert a real `users` row for
+      // the literal CRON_ACTOR_ID sentinel here, purely so the handler's old
+      // raw-actorId audit-event emit would not violate audit_events_actor_id_fkey.
+      // That seed compensated for the production defect and would silently
+      // mask any regression back to a raw-literal actor. Now that the handler
+      // passes SCHEDULER_SYSTEM_ACTOR through toAuditActor() (actorId omitted,
+      // actorType="system"), no such row is needed — see the assertion below.
       await db.clientAccount.create({ data: { id: workspaceId, name: "P0-08 Finance WS", updatedAt: new Date() } });
       await db.ownerBusiness.create({
         data: {
@@ -483,11 +516,6 @@ describe.skipIf(SKIP)("[db] P0-08 scheduler — hostile proof", () => {
       await db.controlledLearningCandidate.deleteMany({ where: { workspaceId } });
       await db.ownerBusiness.deleteMany({ where: { id: businessId } });
       await db.clientAccount.deleteMany({ where: { id: workspaceId } });
-      // Matches the reference cleanup in learning-bridge-concurrency.db.test.ts:
-      // this well-known UUID has documented significance elsewhere (see the
-      // comment on CRON_ACTOR_ID in scheduler-handlers.ts) as a canonical
-      // known-nonexistent fixture — never leave it behind as a real row.
-      await db.user.delete({ where: { id: ACTOR } }).catch(() => {});
     });
 
     it("the producer enqueues the gapped workspace and the real handler bridges the verification exactly as the direct call would", async () => {
@@ -508,6 +536,20 @@ describe.skipIf(SKIP)("[db] P0-08 scheduler — hostile proof", () => {
       const signal = await db.ownerFinanceOutcomeSignal.findUnique({ where: { verificationId } });
       expect(signal).toBeTruthy();
       expect(signal?.workspaceId).toBe(workspaceId);
+
+      // F-AUDIT-CRON-ACTOR: the handler reached "completed" (not dead-lettered
+      // by an audit_events_actor_id_fkey violation) with no seeded fake user
+      // row for any actor sentinel — proves the real fix, not a test-fixture
+      // workaround. The persisted audit event carries the canonical
+      // system-actor shape, not the raw non-existent SCHEDULER_SYSTEM_ACTOR UUID.
+      const auditEvent = await db.auditEvent.findFirst({
+        where: { workspaceId, eventName: AUDIT_EVENTS.OWNER_FINANCE_LEARNING_SIGNAL_RECORDED },
+        orderBy: { occurredAt: "desc" },
+      });
+      expect(auditEvent).not.toBeNull();
+      expect(auditEvent?.actorType).toBe("system");
+      expect(auditEvent?.actorId).toBeNull();
+      expect(auditEvent?.actorId).not.toBe(SCHEDULER_SYSTEM_ACTOR);
 
       // Idempotent re-run through the SAME path — the second producer scan
       // finds no gap (signal now exists) and enqueues nothing new.

@@ -14,6 +14,12 @@
  *  D6 — DTO leakage pattern: returning Prisma result directly without DTO transform
  *  D7 — Idempotency gap: upsert/create on governed records without idempotency key check
  *  D8 — Disabled TypeScript strict checks (ts-ignore on auth/workspace enforcement paths)
+ *  D9 — Sentinel/hardcoded actorId at an emitAuditEvent call site (F-AUDIT-CRON-ACTOR class):
+ *       AuditEvent.actorId has a real FK to users.id; a string literal (e.g. "system",
+ *       "webhook-system", a hardcoded UUID) can never be a real users row and always
+ *       raises audit_events_actor_id_fkey. The canonical contract is: human -> a real
+ *       actorId variable + actorType "user"; system -> actorId omitted (NULL) + actorType
+ *       "system" (see src/domain/owner-budget/system-actor.ts's toAuditActor()).
  *
  * Exit codes:
  *   0 — all scans pass (or only warnings)
@@ -31,6 +37,8 @@ const root = join(__dirname, '..');
 const SCAN_DIRS = [
   join(root, 'src', 'app', 'api'),
   join(root, 'src', 'services'),
+  join(root, 'src', 'infra'),
+  join(root, 'src', 'domain'),
 ];
 
 // Directories to exclude
@@ -241,6 +249,34 @@ function scanD8(file, lines) {
   }
 }
 
+// ─── D9: Sentinel/hardcoded actorId at an emitAuditEvent call site ───────────
+// A string-literal actorId (e.g. "system", "webhook-system", a hardcoded
+// UUID) can never satisfy AuditEvent.actorId's real FK to users.id — every
+// occurrence of this defect class found in this codebase (CRON_ACTOR_ID,
+// "system", "webhook-system") was a literal string, not a variable. Scans a
+// bounded window of lines following each emitAuditEvent( call for a
+// literal-string actorId field. The canonical fix is a real actorId variable
+// with actorType "user", or actorId omitted entirely with actorType
+// "system" — see toAuditActor() in src/domain/owner-budget/system-actor.ts.
+
+function scanD9(file, lines) {
+  const literalActorId = /actorId\s*:\s*["'`]/;
+  for (let i = 0; i < lines.length; i++) {
+    if (!/emitAuditEvent\s*\(/.test(lines[i])) continue;
+    const windowEnd = Math.min(lines.length, i + 20);
+    for (let j = i; j < windowEnd; j++) {
+      if (literalActorId.test(lines[j])) {
+        fail(
+          file, j + 1, 9,
+          `String-literal actorId passed to emitAuditEvent (${lines[j].trim()}) — AuditEvent.actorId has a real FK to users.id and a literal can never satisfy it. Use a real actorId variable with actorType "user", or omit actorId entirely with actorType "system" (see toAuditActor() in src/domain/owner-budget/system-actor.ts).`
+        );
+        break; // one violation per call site is enough signal
+      }
+      if (j > i && /^\s*\}\)/.test(lines[j])) break; // end of this emitAuditEvent(...) call
+    }
+  }
+}
+
 // ─── Run all scanners ─────────────────────────────────────────────────────────
 
 const allFiles = SCAN_DIRS.flatMap(dir => walkDir(dir));
@@ -259,6 +295,7 @@ for (const file of allFiles) {
   scanD6(file, lines);
   scanD7(file, lines);
   scanD8(file, lines);
+  scanD9(file, lines);
 }
 
 console.log(`\nScanned: ${filesScanned} files`);

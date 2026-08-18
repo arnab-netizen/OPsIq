@@ -200,7 +200,10 @@ function emitPrivateModeEntitlementEvent(workspaceId: string): void {
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.PRIVATE_MODE_ENTITLEMENT_ACTIVE,
         workspaceId,
-        actorId: "system",
+        // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): actorId must
+        // be omitted (NULL, FK-exempt), never a non-UUID literal like the
+        // former "system" string here — AuditEvent.actorId has a real FK to
+        // users.id that a literal string always violates.
         actorType: "system",
         entityType: "workspace",
         entityId: workspaceId,

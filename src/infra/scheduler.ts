@@ -88,8 +88,9 @@ const LEASE_MS = 5 * 60 * 1000; // 5-minute processing lease
  * `actorId` is deliberately omitted (left undefined, persisted as NULL):
  * `AuditEvent.actorId` has a `NOT DEFERRABLE` FK to `users.id` that Postgres
  * only skips for NULL — a fabricated placeholder UUID (e.g. the well-known
- * "00000000-…-0001" used elsewhere in this codebase as CRON_ACTOR_ID) is not
- * a real user row and raises P2003 on write; see
+ * "00000000-…-0001" sentinel, formerly used as scheduler-handlers.ts's
+ * CRON_ACTOR_ID before F-AUDIT-CRON-ACTOR removed it) is not a real user row
+ * and raises P2003 on write; see
  * src/__tests__/stage8/private-owner-seed-audit-actor.db.test.ts, which uses
  * that exact UUID as its canonical known-nonexistent fixture. `actorType:
  * "system"` alone correctly conveys that no human initiated this event.

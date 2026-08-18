@@ -6,6 +6,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { NotFoundError, ConflictError } from "@/infra/errors";
+import { toAuditActor } from "@/domain/owner-budget/system-actor";
 
 const EMAIL_MAX_ATTEMPTS = 3;
 const EMAIL_CLAIM_LEASE_MS = 5 * 60 * 1000;
@@ -28,6 +29,12 @@ export async function retryEmailAlert(
   actorId: string
 ): Promise<RetryEmailAlertResult> {
   enforceWorkspaceId(workspaceId, "retryEmailAlert", "Alert");
+  // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): the scheduler
+  // handler passes SCHEDULER_SYSTEM_ACTOR here, a sentinel that has never
+  // corresponded to a real users row. toAuditActor() maps it to
+  // {actorType:"system"} with actorId omitted (NULL, FK-exempt); any real
+  // human actorId passes through unchanged with actorType:"user".
+  const actor = toAuditActor(actorId);
 
   const alert = await db.alert.findFirst({
     where: { id: alertId, workspaceId },
@@ -79,7 +86,7 @@ export async function retryEmailAlert(
     });
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ALERT_EMAIL_RETRY,
-      actorId,
+      ...actor,
       entityType: "alert",
       entityId: alertId,
       workspaceId,
@@ -112,7 +119,7 @@ export async function retryEmailAlert(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ALERT_EMAIL_RETRY,
-    actorId,
+    ...actor,
     entityType: "alert",
     entityId: alertId,
     workspaceId,
@@ -144,7 +151,7 @@ export async function retryEmailAlert(
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ALERT_EMAIL_DELIVERED,
-      actorId,
+      ...actor,
       entityType: "alert",
       entityId: alertId,
       workspaceId,
@@ -184,7 +191,7 @@ export async function retryEmailAlert(
 
     await emitAuditEvent({
       eventName: isPermanentlyFailed ? AUDIT_EVENTS.ALERT_EMAIL_PERMANENTLY_FAILED : AUDIT_EVENTS.ALERT_EMAIL_FAILED,
-      actorId,
+      ...actor,
       entityType: "alert",
       entityId: alertId,
       workspaceId,

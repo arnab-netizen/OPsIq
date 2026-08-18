@@ -359,7 +359,14 @@ async function syncEntitlementsForSubscription(
     // Emit audit event for entitlement activation
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.SUBSCRIPTION_ACTIVATED,
-      actorId: "webhook-system",
+      // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): actorId
+      // omitted (NULL, FK-exempt) — the former literal "webhook-system"
+      // string always violated AuditEvent.actorId's real FK to users.id,
+      // making this emitAuditEvent call throw on every invocation and
+      // propagate out of syncEntitlementsForSubscription (line ~378) as a
+      // false failure of the whole entitlement sync, not just a lost audit
+      // record — an active correctness bug, not merely an audit-trail gap.
+      actorType: "system",
       entityType: "Subscription",
       entityId: subscription.id,
       payload: {
@@ -441,7 +448,9 @@ async function checkRetryThreshold(stripeEventId: string, attempts: number, type
       // Emit audit event for alerting
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.WEBHOOK_RETRY_THRESHOLD_EXCEEDED,
-        actorId: "webhook-system",
+        // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): see the
+        // identical fix in syncEntitlementsForSubscription above.
+        actorType: "system",
         entityType: "WebhookEvent",
         entityId: stripeEventId,
         payload: {

@@ -19,6 +19,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { createLearningCandidate } from "@/services/controlled-learning-candidate.service";
 import { extractReachedTargetFromVerification } from "@/domain/owner-finance/outcome-signals";
 import { Prisma } from "@/generated/prisma/client";
+import { toAuditActor } from "@/domain/owner-budget/system-actor";
 
 export interface LearningBridgeResult {
   signalId: string | null;
@@ -36,6 +37,13 @@ export async function bridgeVerificationToLearning(
   workspaceId: string,
   actorId: string
 ): Promise<LearningBridgeResult> {
+  // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): the scheduler
+  // handler passes SCHEDULER_SYSTEM_ACTOR here, a sentinel that has never
+  // corresponded to a real users row. toAuditActor() maps it to
+  // {actorType:"system"} with actorId omitted (NULL, FK-exempt); any real
+  // human actorId passes through unchanged with actorType:"user".
+  const actor = toAuditActor(actorId);
+
   // Idempotency check — if signal already recorded, return immediately
   const existing = await db.ownerFinanceOutcomeSignal.findUnique({
     where: { verificationId },
@@ -70,7 +78,7 @@ export async function bridgeVerificationToLearning(
   if (!verification || !verification.action) {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OWNER_FINANCE_LEARNING_SIGNAL_SKIPPED,
-      actorId,
+      ...actor,
       workspaceId,
       entityType: "OwnerFinanceVerification",
       entityId: verificationId,
@@ -199,7 +207,7 @@ export async function bridgeVerificationToLearning(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_FINANCE_LEARNING_SIGNAL_RECORDED,
-    actorId,
+    ...actor,
     workspaceId,
     entityType: "OwnerFinanceOutcomeSignal",
     entityId: signalId,
