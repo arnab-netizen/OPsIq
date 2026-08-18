@@ -265,8 +265,13 @@ describe.skipIf(SKIP)("[db] P0-09 reassessment-scan scheduler — hostile proof"
 
     // scanDueReassessments isolates per-business failure internally (try/catch, `skipped++`) — the
     // handler itself does not throw for a single bad business, so both claimed tasks complete.
-    await expect(handler(null, { taskId: taskFail.id, taskName: TASK_NAME_REASSESSMENT_SCAN, workspaceId: workspaceFail, attempt: 1 })).resolves.toBeUndefined();
-    await expect(handler(null, { taskId: taskOk.id, taskName: TASK_NAME_REASSESSMENT_SCAN, workspaceId: workspaceOk, attempt: 1 })).resolves.toBeUndefined();
+    // F-SCHED-FALSE-SUCCESS fix: the handler's own resolved value must now truthfully distinguish
+    // the two — a resolved Promise alone is no longer sufficient evidence of business success.
+    const outcomeFail = await handler(null, { taskId: taskFail.id, taskName: TASK_NAME_REASSESSMENT_SCAN, workspaceId: workspaceFail, attempt: 1 });
+    const outcomeOk = await handler(null, { taskId: taskOk.id, taskName: TASK_NAME_REASSESSMENT_SCAN, workspaceId: workspaceOk, attempt: 1 });
+    expect(outcomeFail?.status).toBe("PARTIAL_FAILURE");
+    expect(outcomeFail?.summary).toContain(businessOk); // owner-visible summary identifies which business failed
+    expect(outcomeOk?.status).toBe("SUCCESS");
 
     // listBudgetSnapshots() itself enforces the same cross-workspace ownership check (it also
     // calls getBusiness() first) and would throw for the mismatched (workspaceFail, businessOk)
@@ -277,6 +282,41 @@ describe.skipIf(SKIP)("[db] P0-09 reassessment-scan scheduler — hostile proof"
 
     // The workspaceFail budget action references businessOk, so it isn't covered by the
     // businessIds cleanup list below (that only deletes ownerBusiness rows) — remove it directly.
+    await db.ownerBudgetAction.deleteMany({ where: { workspaceId: workspaceFail } });
+  });
+
+  // ── 22. F-SCHED-FALSE-SUCCESS: the ScheduledTask row itself, and the owner-facing status
+  //        surface, must both reflect a partial failure — not an undifferentiated "completed" ──
+  it("22. a scan with one failing and one succeeding business persists a truthful ScheduledTask status and is visible on the owner automation-status surface", async () => {
+    const workspaceFail = randomUUID();
+    const workspaceOk = randomUUID();
+    const businessOk = await newBusiness(workspaceOk);
+    await seedFinance(workspaceOk, businessOk);
+    await seedOverdueBudgetAction(workspaceFail, businessOk);
+    await seedOverdueBudgetAction(workspaceOk, businessOk);
+
+    await enqueueDueReassessmentScanTasks();
+    const scheduler = new DatabaseSchedulerProvider();
+    await scheduler.processDue(getProductionTaskHandlers());
+
+    const taskFail = await db.scheduledTask.findFirstOrThrow({ where: { taskName: TASK_NAME_REASSESSMENT_SCAN, workspaceId: workspaceFail } });
+    const taskOk = await db.scheduledTask.findFirstOrThrow({ where: { taskName: TASK_NAME_REASSESSMENT_SCAN, workspaceId: workspaceOk } });
+
+    // The core false-success claim this closes: the failing workspace's task must NOT read
+    // "completed" identically to a fully-successful run — that indistinguishability was the defect.
+    expect(taskFail.status).toBe("completed_partial_failure");
+    expect(taskFail.status).not.toBe("completed");
+    expect(taskFail.lastError).not.toBeNull();
+    expect(taskOk.status).toBe("completed");
+    expect(taskOk.lastError).toBeNull();
+
+    const { getSchedulerStatusForWorkspace } = await import("@/services/scheduler/scheduler-status.service");
+    const statusFail = await getSchedulerStatusForWorkspace(workspaceFail);
+    expect(statusFail.partialFailure).toBeGreaterThanOrEqual(1);
+    expect(statusFail.recentPartialFailures.some((t) => t.id === taskFail.id)).toBe(true);
+    const statusOk = await getSchedulerStatusForWorkspace(workspaceOk);
+    expect(statusOk.partialFailure).toBe(0);
+
     await db.ownerBudgetAction.deleteMany({ where: { workspaceId: workspaceFail } });
   });
 });

@@ -9,6 +9,7 @@ interface SchedulerStatus {
   pending: number;
   running: number;
   deadLetter: number;
+  partialFailure: number;
   lastSuccess: { taskName: string; completedAt: string } | null;
   recentDeadLetters: Array<{
     id: string;
@@ -16,6 +17,12 @@ interface SchedulerStatus {
     lastError: string | null;
     attempts: number;
     maxAttempts: number;
+    updatedAt: string;
+  }>;
+  recentPartialFailures: Array<{
+    id: string;
+    taskName: string;
+    lastError: string | null;
     updatedAt: string;
   }>;
   nextScheduled: { taskName: string; scheduledFor: string } | null;
@@ -77,7 +84,7 @@ export default function OwnerAutomationPage() {
 
       {status && (
         <>
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-4 gap-4 mb-6">
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold">{status.pending}</div>
               <div className="text-xs uppercase text-muted-foreground">Pending</div>
@@ -85,6 +92,10 @@ export default function OwnerAutomationPage() {
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold">{status.running}</div>
               <div className="text-xs uppercase text-muted-foreground">Running</div>
+            </div>
+            <div className="border rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold">{status.partialFailure}</div>
+              <div className="text-xs uppercase text-muted-foreground">Partial failure</div>
             </div>
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold">{status.deadLetter}</div>
@@ -106,6 +117,35 @@ export default function OwnerAutomationPage() {
                 : "Nothing pending"}
             </div>
             <div className="text-xs text-muted-foreground">{status.cronCadence}</div>
+          </div>
+
+          <div className="border rounded-lg p-4 bg-white mb-4">
+            <h2 className="font-bold mb-3">Recent partial failures</h2>
+            <p className="text-xs text-muted-foreground mb-2">
+              These tasks ran and completed, but the work they did reported that
+              some of it did not succeed — a completed task here is not the same
+              as everything inside it having succeeded.
+            </p>
+            {status.recentPartialFailures.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No partial failures — every completed task&apos;s own work fully succeeded.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {status.recentPartialFailures.map((t) => (
+                  <div key={t.id} className="border-b pb-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <strong>{t.taskName}</strong>
+                      <Badge variant="warning">partial failure</Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(t.updatedAt).toLocaleString()}
+                    </div>
+                    {t.lastError && <p className="text-xs mt-1">{t.lastError}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="border rounded-lg p-4 bg-white">
