@@ -34,6 +34,10 @@ vi.mock("@/lib/db", () => {
     // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
     // callback with the same mocked client.
     withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
+    // F-PROD-STARTUP-COLDSTART: auth.ts now imports this named export at
+    // module scope (to derive its own outer race timeout) — a full module
+    // mock must provide every export the mocked module's callers use.
+    TRANSACTION_ACQUIRE_MAX_WAIT_MS: 10_000,
   };
 });
 
@@ -62,7 +66,12 @@ describe("getSession() — DB-failure resilience (P0-15)", () => {
 
     const result = await getSession();
     expect(result).toBeNull();
-  }, 8000);
+    // Test timeout (not an assertion) intentionally exceeds auth.ts's real
+    // SESSION_QUERY_TIMEOUT_MS (F-PROD-STARTUP-COLDSTART raised it from 5s to
+    // TRANSACTION_ACQUIRE_MAX_WAIT_MS+SESSION_STATEMENT_TIMEOUT_MS+3s = 17s,
+    // to tolerate Neon's cold-wake tail) so this test actually observes the
+    // real race settle instead of vitest's own runner cutting it off first.
+  }, 20_000);
 
   it("never returns an authenticated session on DB failure, even for a token that would otherwise be valid", async () => {
     // Sanity: prove the mock CAN return a valid session when the query succeeds,

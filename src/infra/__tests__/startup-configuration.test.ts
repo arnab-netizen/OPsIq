@@ -45,6 +45,10 @@ vi.mock("@/lib/db", () => ({
   // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
   // callback with the same mocked client.
   withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
+  // F-PROD-STARTUP-COLDSTART: startup-orchestrator.ts now imports this named
+  // export at module scope — a full module mock must provide every export
+  // the mocked module's callers use.
+  TRANSACTION_ACQUIRE_MAX_WAIT_MS: 10_000,
 }));
 
 vi.mock("@/services/startup-status", () => ({

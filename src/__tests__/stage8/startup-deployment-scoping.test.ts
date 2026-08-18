@@ -153,6 +153,13 @@ vi.mock("@/lib/db", () => ({
   // callback with the same mocked client, preserving the in-memory CAS
   // simulation above unchanged.
   withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
+  // F-PROD-STARTUP-COLDSTART: startup-orchestrator.ts now imports this named
+  // export at module scope (to derive its own outer race timeout) — a full
+  // module mock must provide every export the mocked module's callers use,
+  // regardless of whether this specific test exercises the maxWait path
+  // itself (that behavior has its own real-Postgres hostile proof in
+  // src/__tests__/lib/startup-coldstart-maxwait-hostile.db.test.ts).
+  TRANSACTION_ACQUIRE_MAX_WAIT_MS: 10_000,
 }));
 
 // checkMigrationReadiness is now called inside performStartupChecks().
