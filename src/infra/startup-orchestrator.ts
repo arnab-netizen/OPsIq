@@ -9,20 +9,33 @@
 import { claimStartup, completeStartup, resolveInstanceId } from "@/services/startup-status";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { checkMigrationReadiness } from "@/services/monitoring/migration-check";
-import { withStatementTimeout } from "@/lib/db";
+import { withStatementTimeout, TRANSACTION_ACQUIRE_MAX_WAIT_MS } from "@/lib/db";
 
 let startupPromise: Promise<void> | null = null;
 const STARTUP_TIMEOUT_MS = 30000;
-const DB_CHECK_TIMEOUT_MS = 5000;
-const MIGRATION_READINESS_TIMEOUT_MS = 5000;
 /**
- * Database-enforced bound for the readiness-probe query below, matching the
- * existing DB_CHECK_TIMEOUT_MS JS-side race. Postgres cancels the statement
- * itself if exceeded, so a stalled connection can never hold the shared
- * pool's sole connection (max: 1) indefinitely — see withStatementTimeout()
- * in src/lib/db.ts.
+ * Database-enforced bound for the readiness-probe query below. Postgres
+ * cancels the statement itself if exceeded, so a stalled connection can
+ * never hold the shared pool's sole connection (max: 1) indefinitely — see
+ * withStatementTimeout() in src/lib/db.ts.
  */
 const DB_CHECK_STATEMENT_TIMEOUT_MS = 4000;
+/**
+ * F-PROD-STARTUP-COLDSTART: this outer JS-side race MUST stay longer than
+ * withStatementTimeout()'s own worst case (its maxWait to acquire a
+ * connection, plus its own execution timeout) — otherwise this race fires
+ * first on a slow-but-legitimate cold start and reports the exact same
+ * false "unexpected error" outcome the inner fix was meant to prevent,
+ * silently undoing it. Derived from the shared constant, not an
+ * independent guess, so the two can never drift out of sync again.
+ */
+const DB_CHECK_TIMEOUT_MS = TRANSACTION_ACQUIRE_MAX_WAIT_MS + DB_CHECK_STATEMENT_TIMEOUT_MS + 3000;
+/**
+ * Same reasoning as DB_CHECK_TIMEOUT_MS above, sized against
+ * checkMigrationReadiness()'s own MIGRATION_QUERY_STATEMENT_TIMEOUT_MS
+ * (src/services/monitoring/migration-check.ts, currently 5000ms).
+ */
+const MIGRATION_READINESS_TIMEOUT_MS = TRANSACTION_ACQUIRE_MAX_WAIT_MS + 5000 + 3000;
 
 /**
  * Orchestrate startup checks (runs ONCE per instance).
@@ -147,7 +160,7 @@ async function performStartupChecks(): Promise<void> {
       checkMigrationReadiness(),
       new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error("Migration readiness check timed out after 5s")),
+          () => reject(new Error(`Migration readiness check timed out after ${MIGRATION_READINESS_TIMEOUT_MS}ms`)),
           MIGRATION_READINESS_TIMEOUT_MS
         )
       ),
@@ -239,7 +252,7 @@ async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
     await Promise.race([
       withStatementTimeout(dbInstance, DB_CHECK_STATEMENT_TIMEOUT_MS, (tx) => tx.$queryRawUnsafe("SELECT 1")),
       new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error("Database connectivity check timed out after 5s")), DB_CHECK_TIMEOUT_MS)
+        setTimeout(() => reject(new Error(`Database connectivity check timed out after ${DB_CHECK_TIMEOUT_MS}ms`)), DB_CHECK_TIMEOUT_MS)
       ),
     ]);
     return true;

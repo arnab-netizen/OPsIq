@@ -1,4 +1,4 @@
-import { db, getDbInstance, withStatementTimeout } from "@/lib/db";
+import { db, getDbInstance, withStatementTimeout, TRANSACTION_ACQUIRE_MAX_WAIT_MS } from "@/lib/db";
 import type { UserRoleAssignment } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
 import type { PolicyContext } from "@/policies/capability-check";
@@ -13,19 +13,21 @@ const SESSION_COOKIE_NAME = "opsiq_session";
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
- * Bound for the session-lookup query below, matching the 5s budget
- * startup-orchestrator.ts's checkDatabase()/migration-readiness checks
- * already use for a single DB round trip on a possibly-cold connection.
- */
-const SESSION_QUERY_TIMEOUT_MS = 5000;
-
-/**
- * Database-enforced bound for the same query, applied in addition to the
- * JS-side race above. Postgres cancels the statement itself if exceeded, so
- * a stalled connection can never hold the shared pool's sole connection
- * (max: 1) indefinitely — see withStatementTimeout() in src/lib/db.ts.
+ * Database-enforced bound for the session-lookup query below. Postgres
+ * cancels the statement itself if exceeded, so a stalled connection can
+ * never hold the shared pool's sole connection (max: 1) indefinitely — see
+ * withStatementTimeout() in src/lib/db.ts.
  */
 const SESSION_STATEMENT_TIMEOUT_MS = 4000;
+
+/**
+ * F-PROD-STARTUP-COLDSTART: this outer JS-side race MUST stay longer than
+ * withStatementTimeout()'s own worst case (its maxWait to acquire a
+ * connection, plus its own execution timeout) — otherwise this race fires
+ * first on a slow-but-legitimate cold start, undoing the inner fix. Derived
+ * from the shared constant so the two can never drift out of sync.
+ */
+const SESSION_QUERY_TIMEOUT_MS = TRANSACTION_ACQUIRE_MAX_WAIT_MS + SESSION_STATEMENT_TIMEOUT_MS + 3000;
 
 export interface AuthenticatedUser {
   id: string;
@@ -88,7 +90,7 @@ export async function getSession(): Promise<SessionInfo | null> {
         })
       ),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Session lookup timed out after 5s")), SESSION_QUERY_TIMEOUT_MS)
+        setTimeout(() => reject(new Error(`Session lookup timed out after ${SESSION_QUERY_TIMEOUT_MS}ms`)), SESSION_QUERY_TIMEOUT_MS)
       ),
     ]);
   } catch {
