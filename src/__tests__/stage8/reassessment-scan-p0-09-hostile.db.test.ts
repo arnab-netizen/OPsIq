@@ -30,7 +30,7 @@
  *
  * Requires: TEST_WITH_DB=true and a migrated local PostgreSQL instance.
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -61,12 +61,25 @@ function assertLocalUrl(): void {
   }
 }
 
+/** Real seeded users.id — createBusiness() emits its own audit event with this
+ * as actorId; a fresh unseeded randomUUID() here would FK-fail exactly like
+ * the ghost-actor bug this suite proves is fixed, but for an unrelated
+ * reason (createBusiness's own actor, not scanDueReassessments's). */
+const actor = randomUUID();
 const businessIds: string[] = [];
+
+beforeAll(async () => {
+  await db.user.upsert({
+    where: { id: actor },
+    update: {},
+    create: { id: actor, email: `p0-09-hostile-${actor}@example.com`, name: "P0-09 Hostile Test", isActive: true, updatedAt: new Date() },
+  });
+});
 
 async function newBusiness(workspaceId: string): Promise<string> {
   const b = await createBusiness(
     { name: "P0-09 Hostile Test", businessType: "generic_local_service", currency: "INR", b2cSupported: true, b2bSupported: false },
-    randomUUID(),
+    actor,
     workspaceId,
   );
   businessIds.push(b.id);
