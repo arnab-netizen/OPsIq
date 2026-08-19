@@ -64,6 +64,7 @@ const createdInstanceIds = new Set<string>();
 const globalForPrisma = globalThis as unknown as {
   prisma: unknown;
   prismaPromise: Promise<unknown> | undefined;
+  pgPool: unknown;
 };
 
 function enterDeployment(id: string): void {
@@ -100,13 +101,20 @@ describe.skipIf(SKIP)("[db] [stage8] P0-15 claimStartup() cold-proxy regression"
     enterDeployment(deploymentId);
 
     // Force the exact cold condition this regression guards against: no
-    // initialized client, no initialization in flight. vitest.setup.ts's
-    // global beforeAll already warmed globalForPrisma.prisma for this
-    // worker before any test ran — clearing it here, plus resetting the
-    // module graph so db.ts's own memoized dbInitPromise is also cleared,
-    // reproduces a genuinely cold instance's first access.
+    // initialized client, no pool, no initialization in flight. vitest.setup.ts's
+    // global beforeAll already warmed these singletons for this worker before
+    // any test ran — clearing them here, plus resetting the module graph so
+    // db.ts's own memoized dbInitPromise is also cleared, reproduces a
+    // genuinely cold instance's first access. pgPool must be cleared too
+    // (F-PROD-STARTUP-COLDSTART second-mechanism forensic): getRawPool()
+    // only calls getDbInstance() — which constructs both the pool and the
+    // Prisma client together — when globalForPrisma.pgPool is not yet set;
+    // leaving a warm pool from an earlier test in this worker would let
+    // claimStartup() silently skip Prisma initialization, which a genuinely
+    // fresh Vercel instance (nothing warm at all) never could.
     globalForPrisma.prisma = undefined;
     globalForPrisma.prismaPromise = undefined;
+    globalForPrisma.pgPool = undefined;
     vi.resetModules();
 
     const freshDb = await import("@/lib/db");
