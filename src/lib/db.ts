@@ -1,4 +1,5 @@
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { logger } from "@/infra/logger";
 import type { Prisma } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
@@ -220,16 +221,30 @@ export const TRANSACTION_ACQUIRE_MAX_WAIT_MS = 10_000;
  * single query involved is slow.
  *
  * Fix: serialize interactive-transaction ACQUISITION attempts within this
- * process with a simple FIFO async mutex. A caller that arrives while
- * another is still acquiring/running waits on a plain in-memory promise
- * (no fixed budget) instead of silently burning down its own maxWait clock
- * behind a caller it doesn't know about. Once the mutex is free, the
- * waiting caller starts its OWN full, fresh 10s maxWait window against a
- * pool connection that is now actually likely to be free. `maxWait` itself
- * is deliberately left untouched — per the recurrence investigation,
- * increasing it further is prohibited absent proof that acquisition latency
- * itself (not queuing) is the limiting factor, and this fix targets queuing
- * specifically, not acquisition latency.
+ * process with a bounded FIFO queue. A caller that arrives while another is
+ * still acquiring/running waits for its turn instead of silently burning
+ * down its own maxWait clock behind a caller it doesn't know about. Once
+ * free, the waiting caller starts its OWN full, fresh 10s maxWait window
+ * against a pool connection that is now actually likely to be free.
+ * `maxWait` itself is deliberately left untouched — per the recurrence
+ * investigation, increasing it further is prohibited absent proof that
+ * acquisition latency itself (not queuing) is the limiting factor, and this
+ * fix targets queuing specifically, not acquisition latency.
+ *
+ * PRE-MERGE HOSTILE CORRECTION: the queue wait itself must be bounded, not
+ * an unbounded in-memory promise wait — an unbounded wait would convert a
+ * finite Prisma P2028 acquisition failure into unbounded application-level
+ * head-of-line blocking, which is strictly worse and violates
+ * FINITE_FAILURE_BOUND. ACQUISITION_QUEUE_WAIT_MS bounds how long a caller
+ * may wait for its TURN before it even attempts acquisition; a caller that
+ * exceeds this throws AcquisitionQueueTimeoutError immediately rather than
+ * waiting indefinitely. Cancellation is safe: a timed-out waiter does NOT
+ * later acquire the mutex and run its work once its turn eventually
+ * arrives — see the `abandoned` handling below, which releases the turn to
+ * the next queued caller without ever invoking `fn`. This guarantees the
+ * queue can never deadlock on an abandoned slot, and a caller that has
+ * already reported failure to its own caller can never silently produce a
+ * late, unexpected side effect.
  *
  * This is process-local by design, matching the process-local scope of the
  * `pg.Pool` it protects: it does nothing for cross-instance contention
@@ -237,28 +252,123 @@ export const TRANSACTION_ACQUIRE_MAX_WAIT_MS = 10_000;
  * cross-instance callers never share this pool's sole connection in the
  * first place.
  */
-let acquisitionQueue: Promise<void> = Promise.resolve();
+
+/**
+ * Bound on how long a caller may wait for its TURN in the process-local
+ * acquisition queue before its own acquisition attempt even begins.
+ * Deliberately reuses TRANSACTION_ACQUIRE_MAX_WAIT_MS rather than
+ * introducing a second, independently-tunable magic number: a caller that
+ * cannot even reach the front of the queue within this window has no
+ * realistic chance of then also completing a fresh maxWait+timeout cycle
+ * within any reasonable caller-side budget, so failing fast here (with an
+ * explicit, typed error) is strictly better than letting it wait the full
+ * window for nothing.
+ *
+ * Every caller's OWN finite end-to-end worst case is therefore:
+ *   ACQUISITION_QUEUE_WAIT_MS + TRANSACTION_ACQUIRE_MAX_WAIT_MS + txnTimeout
+ * where txnTimeout is the `timeout` this function passes to $transaction()
+ * (Math.max(safeTimeoutMs + 2_000, 5_000) below). Any outer JS-side race a
+ * caller adds on top of withStatementTimeout() must exceed this sum — see
+ * DB_CHECK_TIMEOUT_MS, MIGRATION_READINESS_TIMEOUT_MS, and
+ * SESSION_QUERY_TIMEOUT_MS, all of which now derive from this constant for
+ * exactly that reason.
+ */
+export const ACQUISITION_QUEUE_WAIT_MS = TRANSACTION_ACQUIRE_MAX_WAIT_MS;
+
+/**
+ * Thrown when a caller could not even reach the front of the process-local
+ * acquisition queue within ACQUISITION_QUEUE_WAIT_MS. Distinct from Prisma's
+ * own P2028 ("Unable to start a transaction in the given time"): this error
+ * means the caller never got as far as attempting acquisition against the
+ * pool at all — it was still waiting behind other same-process callers.
+ * Callers must treat this exactly like any other withStatementTimeout()
+ * failure (fail closed) — none of the current call sites special-case it,
+ * matching every other unclassified failure already handled that way (see
+ * claimStartup()'s catch-all, getSession()'s catch, checkDatabase()'s
+ * catch).
+ */
+export class AcquisitionQueueTimeoutError extends Error {
+  constructor(waitedMs: number, queueDepthAtEnqueue: number) {
+    super(
+      `withStatementTimeout: timed out after ${waitedMs}ms waiting for the process-local ` +
+      `acquisition queue (bound=${ACQUISITION_QUEUE_WAIT_MS}ms, queueDepthAtEnqueue=${queueDepthAtEnqueue}). ` +
+      `The pool's sole connection was occupied by another caller in this process for longer ` +
+      `than this bound allows.`
+    );
+    this.name = "AcquisitionQueueTimeoutError";
+  }
+}
+
+interface QueueNode {
+  /** Resolves once all queue entries ahead of this one have released. */
+  turn: Promise<void>;
+  /** Hands off to the next queued entry. Must be called exactly once. */
+  release: () => void;
+}
+
+let acquisitionQueueTail: Promise<void> = Promise.resolve();
+let acquisitionQueueDepth = 0;
+
+function enqueueAcquisition(): QueueNode {
+  let release: () => void;
+  const settled = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const turn = acquisitionQueueTail;
+  acquisitionQueueTail = acquisitionQueueTail.then(() => settled);
+  return { turn, release: release! };
+}
 
 export async function withStatementTimeout<T>(
   prisma: { $transaction: (fn: (tx: Prisma.TransactionClient) => Promise<T>, options?: { maxWait?: number; timeout?: number }) => Promise<T> },
   timeoutMs: number,
-  fn: (tx: Prisma.TransactionClient) => Promise<T>
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  label = "unlabeled"
 ): Promise<T> {
   const safeTimeoutMs = Math.trunc(timeoutMs);
   if (!Number.isFinite(safeTimeoutMs) || safeTimeoutMs <= 0) {
     throw new Error(`withStatementTimeout: timeoutMs must be a positive finite number, got ${timeoutMs}`);
   }
 
-  let releaseTurn: () => void;
-  const myTurnDone = new Promise<void>((resolve) => {
-    releaseTurn = resolve;
+  const queueDepthAtEnqueue = ++acquisitionQueueDepth;
+  const node = enqueueAcquisition();
+  const enqueuedAt = Date.now();
+
+  let queueTimer: ReturnType<typeof setTimeout> | undefined;
+  const queueTimeout = new Promise<never>((_, reject) => {
+    queueTimer = setTimeout(() => {
+      reject(new AcquisitionQueueTimeoutError(Date.now() - enqueuedAt, queueDepthAtEnqueue));
+    }, ACQUISITION_QUEUE_WAIT_MS);
   });
-  const waitForMyTurn = acquisitionQueue;
-  acquisitionQueue = acquisitionQueue.then(() => myTurnDone);
-  await waitForMyTurn;
 
   try {
-    return await prisma.$transaction(
+    await Promise.race([node.turn, queueTimeout]);
+  } catch (err) {
+    // Abandon this slot WITHOUT ever running `fn`. `node.turn` will still
+    // resolve on its own schedule once every entry ahead of us releases
+    // (every entry's release() always fires, success or failure — see the
+    // finally block below and this same catch for the abandonment path
+    // itself) — attach a pass-through continuation so we release OUR slot
+    // the moment it becomes ours, letting whoever is queued behind us
+    // proceed. We never call `fn` here: a caller that has already been
+    // told it failed must never silently produce a late side effect.
+    void node.turn.then(node.release, node.release);
+    acquisitionQueueDepth--;
+    clearTimeout(queueTimer);
+    logger.warn("[db] withStatementTimeout acquisition-queue timeout", {
+      label,
+      waitedMs: Date.now() - enqueuedAt,
+      queueDepthAtEnqueue,
+      boundMs: ACQUISITION_QUEUE_WAIT_MS,
+    });
+    throw err;
+  }
+  clearTimeout(queueTimer);
+  acquisitionQueueDepth--;
+  const acquiredAt = Date.now();
+
+  try {
+    const result = await prisma.$transaction(
       async (tx) => {
         await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);
         return fn(tx);
@@ -268,8 +378,26 @@ export async function withStatementTimeout<T>(
         timeout: Math.max(safeTimeoutMs + 2_000, 5_000),
       }
     );
+    logger.debug("[db] withStatementTimeout completed", {
+      label,
+      queueDepthAtEnqueue,
+      queueWaitMs: acquiredAt - enqueuedAt,
+      transactionMs: Date.now() - acquiredAt,
+      outcome: "success",
+    });
+    return result;
+  } catch (err) {
+    logger.debug("[db] withStatementTimeout completed", {
+      label,
+      queueDepthAtEnqueue,
+      queueWaitMs: acquiredAt - enqueuedAt,
+      transactionMs: Date.now() - acquiredAt,
+      outcome: "error",
+      errorName: err instanceof Error ? err.name : typeof err,
+    });
+    throw err;
   } finally {
-    releaseTurn!();
+    node.release();
   }
 }
 

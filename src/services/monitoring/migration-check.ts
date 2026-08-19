@@ -10,7 +10,7 @@ import { getDbInstance, withStatementTimeout } from "@/lib/db";
  * pool's sole connection (max: 1) indefinitely — see withStatementTimeout()
  * in src/lib/db.ts.
  */
-const MIGRATION_QUERY_STATEMENT_TIMEOUT_MS = 5000;
+export const MIGRATION_QUERY_STATEMENT_TIMEOUT_MS = 5000;
 
 interface RawMigrationRow {
   migration_name: string;
@@ -85,7 +85,8 @@ export async function checkMigrationReadiness(): Promise<MigrationReadiness> {
       MIGRATION_QUERY_STATEMENT_TIMEOUT_MS,
       (tx) => tx.$queryRawUnsafe(
         `SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations"`
-      )
+      ),
+      "checkMigrationReadiness"
     )) as RawMigrationRow[];
 
     const appliedSet = new Set<string>();
