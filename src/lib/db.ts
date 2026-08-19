@@ -197,6 +197,48 @@ export async function getDbInstance() {
  */
 export const TRANSACTION_ACQUIRE_MAX_WAIT_MS = 10_000;
 
+/**
+ * F-PROD-STARTUP-COLDSTART recurrence (production evidence: identical P2028
+ * on the same deployment ~25min after deploy AND again ~6h later mid-steady
+ * once-per-minute traffic — a pattern the original "Neon cold-wake tail"
+ * explanation cannot account for on its own). Reproduced locally with real
+ * Postgres and NO Neon dependency: src/__tests__/lib/
+ * startup-coldstart-pool-contention-hostile.db.test.ts.
+ *
+ * Root cause: production's pg.Pool is `max: 1`, and at least four call
+ * sites (claimStartup(), checkDatabase(), checkMigrationReadiness(),
+ * getSession()) each independently call withStatementTimeout() ->
+ * prisma.$transaction({maxWait}). Prisma's maxWait clock starts the instant
+ * $transaction() is invoked and keeps ticking while queued for the pool's
+ * sole physical connection — it does not pause or reset. Two callers in the
+ * same process can genuinely race (e.g. instrumentation.ts's non-blocking
+ * register() -> ensureStartupComplete() -> claimStartup() against the very
+ * first real request's own getSession() call on a freshly-booted instance).
+ * When the first caller's connection hold time exceeds the second caller's
+ * REMAINING maxWait budget, the second fails with P2028 — even though the
+ * database itself is fully awake and healthy throughout, and even though no
+ * single query involved is slow.
+ *
+ * Fix: serialize interactive-transaction ACQUISITION attempts within this
+ * process with a simple FIFO async mutex. A caller that arrives while
+ * another is still acquiring/running waits on a plain in-memory promise
+ * (no fixed budget) instead of silently burning down its own maxWait clock
+ * behind a caller it doesn't know about. Once the mutex is free, the
+ * waiting caller starts its OWN full, fresh 10s maxWait window against a
+ * pool connection that is now actually likely to be free. `maxWait` itself
+ * is deliberately left untouched — per the recurrence investigation,
+ * increasing it further is prohibited absent proof that acquisition latency
+ * itself (not queuing) is the limiting factor, and this fix targets queuing
+ * specifically, not acquisition latency.
+ *
+ * This is process-local by design, matching the process-local scope of the
+ * `pg.Pool` it protects: it does nothing for cross-instance contention
+ * (each Vercel instance owns its own pool), which is correct because
+ * cross-instance callers never share this pool's sole connection in the
+ * first place.
+ */
+let acquisitionQueue: Promise<void> = Promise.resolve();
+
 export async function withStatementTimeout<T>(
   prisma: { $transaction: (fn: (tx: Prisma.TransactionClient) => Promise<T>, options?: { maxWait?: number; timeout?: number }) => Promise<T> },
   timeoutMs: number,
@@ -206,16 +248,29 @@ export async function withStatementTimeout<T>(
   if (!Number.isFinite(safeTimeoutMs) || safeTimeoutMs <= 0) {
     throw new Error(`withStatementTimeout: timeoutMs must be a positive finite number, got ${timeoutMs}`);
   }
-  return prisma.$transaction(
-    async (tx) => {
-      await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);
-      return fn(tx);
-    },
-    {
-      maxWait: TRANSACTION_ACQUIRE_MAX_WAIT_MS,
-      timeout: Math.max(safeTimeoutMs + 2_000, 5_000),
-    }
-  );
+
+  let releaseTurn: () => void;
+  const myTurnDone = new Promise<void>((resolve) => {
+    releaseTurn = resolve;
+  });
+  const waitForMyTurn = acquisitionQueue;
+  acquisitionQueue = acquisitionQueue.then(() => myTurnDone);
+  await waitForMyTurn;
+
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${safeTimeoutMs}`);
+        return fn(tx);
+      },
+      {
+        maxWait: TRANSACTION_ACQUIRE_MAX_WAIT_MS,
+        timeout: Math.max(safeTimeoutMs + 2_000, 5_000),
+      }
+    );
+  } finally {
+    releaseTurn!();
+  }
 }
 
 /**
