@@ -159,17 +159,25 @@ describe("enforcement and issuance are unchanged", () => {
     expect(src).not.toContain("revokeSession(actorId");
   });
 
-  it("10. login and session issuance are untouched by this change", async () => {
+  it("10. login and session issuance are untouched by the logout fix, and remain token-scoped (not user-id-scoped) after the F-PROD-STARTUP-COLDSTART getSession() raw-client migration", async () => {
     const authSrc = await import("node:fs").then((fs) =>
       fs.readFileSync("src/services/auth.ts", "utf-8")
     );
 
     // Issuance still resolves sessions by opaque token, not by user id.
-    expect(authSrc).toContain("where: { token: sessionToken }");
-    expect(authSrc).toContain("sessionId: session.id");
+    // getSession() migrated from a Prisma findUnique to a raw SQL JOIN as
+    // part of the F-PROD-STARTUP-COLDSTART second-mechanism forensic (see
+    // withRawStatementTimeout() in src/lib/db.ts) — the underlying contract
+    // (token-scoped lookup, sessionId populated from the session row's own
+    // id, never from the user id) is unchanged; only the query mechanism is.
+    expect(authSrc).toContain("WHERE s.token = $1");
+    expect(authSrc).toContain("sessionId: row.session_id");
     // Revocation is scoped to a single unrevoked session row.
     expect(authSrc).toContain("where: { id: session.sessionId, revokedAt: null }");
     // Bulk revocation by user must not have been introduced here.
     expect(authSrc).not.toContain("where: { userId }");
+    // The original defect class (resolving a session by user id) must not
+    // have reappeared in the new raw-SQL query shape either.
+    expect(authSrc).not.toContain("WHERE s.user_id = $1");
   });
 });

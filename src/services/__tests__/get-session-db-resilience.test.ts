@@ -22,26 +22,28 @@ vi.mock("next/headers", () => ({
   }),
 }));
 
-const findUniqueMock = vi.fn();
+const queryMock = vi.fn();
 
 vi.mock("@/lib/db", () => {
-  const mockPrisma = { session: { findUnique: (...args: unknown[]) => findUniqueMock(...args) } };
   return {
-    db: mockPrisma,
-    getDbInstance: vi.fn().mockResolvedValue(mockPrisma),
-    // Unit-level simplification: skip the real SET LOCAL statement_timeout
-    // transaction wrapping (proven separately against real Postgres in
-    // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
-    // callback with the same mocked client.
-    withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
-    // F-PROD-STARTUP-COLDSTART: auth.ts now imports this named export at
-    // module scope (to derive its own outer race timeout) — a full module
-    // mock must provide every export the mocked module's callers use.
-    TRANSACTION_ACQUIRE_MAX_WAIT_MS: 10_000,
-    // F-PROD-STARTUP-COLDSTART recurrence: auth.ts also derives
-    // SESSION_QUERY_TIMEOUT_MS from this at module scope — same reason as
-    // TRANSACTION_ACQUIRE_MAX_WAIT_MS above.
-    ACQUISITION_QUEUE_WAIT_MS: 10_000,
+    getRawPool: vi.fn().mockResolvedValue({
+      connect: vi.fn().mockResolvedValue({ query: (...args: unknown[]) => queryMock(...args) }),
+    }),
+    // Unit-level simplification: skip the real BEGIN/SET LOCAL statement_timeout/
+    // COMMIT wrapping (proven separately against real Postgres in
+    // src/lib/__tests__/db-statement-timeout.db.test.ts) and just acquire the
+    // mocked client via the same pool.connect() the real helper uses, then
+    // invoke the callback with it.
+    withRawStatementTimeout: async (
+      pool: { connect: () => Promise<{ query: (...args: unknown[]) => unknown }> },
+      _timeoutMs: number,
+      fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
+    ) => fn(await pool.connect()),
+    // F-PROD-STARTUP-COLDSTART second-mechanism forensic: auth.ts now imports
+    // this named export at module scope (to derive SESSION_QUERY_TIMEOUT_MS)
+    // — a full module mock must provide every export the mocked module's
+    // callers use.
+    POOL_CONNECTION_TIMEOUT_MS: 90_000,
   };
 });
 
@@ -58,42 +60,48 @@ beforeEach(() => {
 
 describe("getSession() — DB-failure resilience (P0-15)", () => {
   it("returns null (not a thrown error) when the session query throws a connection error", async () => {
-    findUniqueMock.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"));
+    queryMock.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"));
 
     await expect(getSession()).resolves.toBeNull();
   });
 
   it("returns null (not a thrown error) when the session query hangs past the bounded timeout", async () => {
-    findUniqueMock.mockImplementationOnce(
+    queryMock.mockImplementationOnce(
       () => new Promise(() => {}) // never resolves — must not hang the test or the caller
     );
 
     const result = await getSession();
     expect(result).toBeNull();
     // Test timeout (not an assertion) intentionally exceeds auth.ts's real
-    // SESSION_QUERY_TIMEOUT_MS. F-PROD-STARTUP-COLDSTART raised it from 5s to
-    // TRANSACTION_ACQUIRE_MAX_WAIT_MS+SESSION_STATEMENT_TIMEOUT_MS+3s = 17s
-    // (Neon cold-wake tail); the F-PROD-STARTUP-COLDSTART recurrence fix
-    // raised it further to ACQUISITION_QUEUE_WAIT_MS+TRANSACTION_ACQUIRE_MAX_WAIT_MS+
-    // SESSION_STATEMENT_TIMEOUT_MS+3s = 27s (bounded acquisition-queue wait),
-    // so this test actually observes the real race settle instead of
-    // vitest's own runner cutting it off first.
-  }, 30_000);
+    // SESSION_QUERY_TIMEOUT_MS. F-PROD-STARTUP-COLDSTART second-mechanism
+    // forensic: getSession() now derives this from
+    // POOL_CONNECTION_TIMEOUT_MS(90s)+SESSION_STATEMENT_TIMEOUT_MS(4s)+3s = 97s,
+    // matching the raw-client bound already used by claimStartup()/
+    // checkDatabase()/checkMigrationReadiness() — so this test actually
+    // observes the real race settle instead of vitest's own runner cutting
+    // it off first.
+  }, 100_000);
 
   it("never returns an authenticated session on DB failure, even for a token that would otherwise be valid", async () => {
     // Sanity: prove the mock CAN return a valid session when the query succeeds,
     // so the null result above is caused by the failure path, not a broken mock.
-    findUniqueMock.mockResolvedValueOnce({
-      id: "s1",
-      token: cookieHolder.token,
-      revokedAt: null,
-      expiresAt: new Date(Date.now() + 60_000),
-      user: { id: "u1", email: "a@b.com", name: "A", isActive: true },
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          session_id: "s1",
+          expires_at: new Date(Date.now() + 60_000),
+          revoked_at: null,
+          user_id: "u1",
+          user_email: "a@b.com",
+          user_name: "A",
+          user_is_active: true,
+        },
+      ],
     });
     await expect(getSession()).resolves.toMatchObject({ sessionId: "s1" });
 
     // Now the failure path — must be null, never a session object of any kind.
-    findUniqueMock.mockRejectedValueOnce(new Error("DriverAdapterError: Authentication timed out"));
+    queryMock.mockRejectedValueOnce(new Error("DriverAdapterError: Authentication timed out"));
     const failed = await getSession();
     expect(failed).toBeNull();
   });
@@ -101,6 +109,6 @@ describe("getSession() — DB-failure resilience (P0-15)", () => {
   it("still returns null (unchanged behavior) when there is no session cookie at all — no DB call attempted", async () => {
     cookieHolder.token = undefined;
     await expect(getSession()).resolves.toBeNull();
-    expect(findUniqueMock).not.toHaveBeenCalled();
+    expect(queryMock).not.toHaveBeenCalled();
   });
 });

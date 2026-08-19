@@ -1,4 +1,4 @@
-import { db, getDbInstance, withStatementTimeout, TRANSACTION_ACQUIRE_MAX_WAIT_MS, ACQUISITION_QUEUE_WAIT_MS } from "@/lib/db";
+import { db, getDbInstance, getRawPool, withRawStatementTimeout, POOL_CONNECTION_TIMEOUT_MS } from "@/lib/db";
 import type { UserRoleAssignment } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
 import type { PolicyContext } from "@/policies/capability-check";
@@ -16,19 +16,31 @@ const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
  * Database-enforced bound for the session-lookup query below. Postgres
  * cancels the statement itself if exceeded, so a stalled connection can
  * never hold the shared pool's sole connection (max: 1) indefinitely — see
- * withStatementTimeout() in src/lib/db.ts.
+ * withRawStatementTimeout() in src/lib/db.ts.
  */
 export const SESSION_STATEMENT_TIMEOUT_MS = 4000;
 
 /**
- * F-PROD-STARTUP-COLDSTART: this outer JS-side race MUST stay longer than
- * withStatementTimeout()'s own worst case — its ACQUISITION_QUEUE_WAIT_MS
- * queue-wait bound, plus its maxWait to acquire a connection once at the
- * front, plus its own execution timeout — otherwise this race fires first
- * on a slow-but-legitimate cold start, undoing the inner fix. Derived from
- * the shared constants so the two can never drift out of sync.
+ * F-PROD-STARTUP-COLDSTART second-mechanism forensic: getSession() no longer
+ * goes through Prisma's interactive $transaction() (withStatementTimeout()) —
+ * a per-caller audit found no multi-statement atomicity, snapshot, or
+ * row-lock requirement for its single findUnique-with-join read (session
+ * revocation/expiry are always separate prior-or-subsequent writes, never
+ * expected to be observed atomically with this read; workspace resolution
+ * always runs as its own later, independent query). It now uses
+ * withRawStatementTimeout() — a raw pg client bounded by the pool's own
+ * connectionTimeoutMillis (POOL_CONNECTION_TIMEOUT_MS) — matching
+ * claimStartup()/checkDatabase()/checkMigrationReadiness(). This outer
+ * JS-side race is a pure defensive backstop: it MUST stay longer than
+ * withRawStatementTimeout()'s own real worst case (POOL_CONNECTION_TIMEOUT_MS
+ * + SESSION_STATEMENT_TIMEOUT_MS), so it can only ever fire after the inner
+ * bound would already have settled — this is a read, so there is no orphaned-
+ * write risk from the outer race abandoning the caller either way, but a
+ * pure backstop that can never actually fire first is strictly simpler to
+ * reason about than one that could. Derived from the shared constant so the
+ * two can never drift out of sync.
  */
-export const SESSION_QUERY_TIMEOUT_MS = ACQUISITION_QUEUE_WAIT_MS + TRANSACTION_ACQUIRE_MAX_WAIT_MS + SESSION_STATEMENT_TIMEOUT_MS + 3000;
+export const SESSION_QUERY_TIMEOUT_MS = POOL_CONNECTION_TIMEOUT_MS + SESSION_STATEMENT_TIMEOUT_MS + 3000;
 
 export interface AuthenticatedUser {
   id: string;
@@ -58,13 +70,23 @@ export interface SessionInfo {
  * after PHASE F when legacy is fully stripped down.
  */
 
+interface RawSessionRow {
+  session_id: string;
+  expires_at: Date;
+  revoked_at: Date | null;
+  user_id: string;
+  user_email: string;
+  user_name: string | null;
+  user_is_active: boolean;
+}
+
 export async function getSession(): Promise<SessionInfo | null> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("getSession");
 
   // CRITICAL: Ensure database is initialized before ANY db access
   // This prevents the db Proxy from throwing "Database not initialized" errors
-  const prisma = await getDbInstance();
+  const pool = await getRawPool();
 
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -81,49 +103,64 @@ export async function getSession(): Promise<SessionInfo | null> {
   // produce the same "not authenticated" outcome this function already
   // returns for a missing/expired/revoked/inactive session; it can never
   // produce an authenticated result. No new security state is introduced.
-  let session;
+  //
+  // F-PROD-STARTUP-COLDSTART second-mechanism forensic: this single
+  // findUnique-with-join read no longer runs inside a Prisma interactive
+  // transaction — see withRawStatementTimeout()'s own doc comment and
+  // SESSION_QUERY_TIMEOUT_MS above for why. The single-statement JOIN below
+  // is the exact equivalent of the prior `session.findUnique({ include:
+  // { user: true } })`.
+  let row: RawSessionRow | undefined;
   try {
-    session = await Promise.race([
-      withStatementTimeout(prisma, SESSION_STATEMENT_TIMEOUT_MS, (tx) =>
-        tx.session.findUnique({
-          where: { token: sessionToken },
-          include: { user: true },
-        }),
+    const result = await Promise.race([
+      withRawStatementTimeout(
+        pool,
+        SESSION_STATEMENT_TIMEOUT_MS,
+        (client) =>
+          client.query<RawSessionRow>(
+            `SELECT s.id AS session_id, s.expires_at, s.revoked_at,
+                    u.id AS user_id, u.email AS user_email, u.name AS user_name, u.is_active AS user_is_active
+             FROM sessions s
+             JOIN users u ON u.id = s.user_id
+             WHERE s.token = $1`,
+            [sessionToken]
+          ),
         "getSession"
       ),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error(`Session lookup timed out after ${SESSION_QUERY_TIMEOUT_MS}ms`)), SESSION_QUERY_TIMEOUT_MS)
       ),
     ]);
+    row = result.rows[0];
   } catch {
     // Transient/timeout/connection failure: treat exactly like "no session
     // found" below. Never inferred as authenticated.
     return null;
   }
 
-  if (!session) return null;
+  if (!row) return null;
 
-  if (session.revokedAt) {
+  if (row.revoked_at) {
     return null;
   }
 
-  if (session.expiresAt < new Date()) {
+  if (row.expires_at < new Date()) {
     return null;
   }
 
-  if (!session.user.isActive) {
+  if (!row.user_is_active) {
     return null;
   }
 
   return {
     user: {
-      id: session.user.id,
-      email: session.user.email,
-      name: session.user.name,
-      isActive: session.user.isActive,
+      id: row.user_id,
+      email: row.user_email,
+      name: row.user_name,
+      isActive: row.user_is_active,
     },
-    sessionId: session.id,
-    expiresAt: session.expiresAt,
+    sessionId: row.session_id,
+    expiresAt: row.expires_at,
   };
 }
 

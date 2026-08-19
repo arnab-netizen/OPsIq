@@ -275,21 +275,21 @@ describe.skipIf(SKIP)("[db] F-PROD-STARTUP-COLDSTART recurrence: bounded max:1 p
     "5. FINITE END-TO-END BOUND: the documented formula holds against the REAL exported constants for all four call sites, and every outer race exceeds it",
     async () => {
       // F-PROD-STARTUP-COLDSTART second-mechanism forensic: claimStartup(),
-      // checkDatabase(), and checkMigrationReadiness() no longer go through
-      // withStatementTimeout()'s Prisma interactive transaction -- they use
-      // withRawStatementTimeout() (a bounded raw pg client), removing
-      // dependence on ACQUISITION_QUEUE_WAIT_MS/TRANSACTION_ACQUIRE_MAX_WAIT_MS
-      // for those three call sites. getSession() is unchanged (still via
-      // withStatementTimeout()) and keeps the original formula.
+      // checkDatabase(), checkMigrationReadiness(), and (as of the getSession()
+      // migration) getSession() no longer go through withStatementTimeout()'s
+      // Prisma interactive transaction -- they use withRawStatementTimeout()
+      // (a bounded raw pg client), removing dependence on
+      // ACQUISITION_QUEUE_WAIT_MS/TRANSACTION_ACQUIRE_MAX_WAIT_MS for all four
+      // call sites. withStatementTimeout() itself remains in src/lib/db.ts --
+      // this suite's other scenarios still use it directly as a real
+      // interactive-transaction pool-occupier, independent of what any
+      // production caller does.
       const { DB_CHECK_STATEMENT_TIMEOUT_MS, DB_CHECK_TIMEOUT_MS, MIGRATION_READINESS_TIMEOUT_MS } = await import("@/infra/startup-orchestrator");
       const { SESSION_STATEMENT_TIMEOUT_MS, SESSION_QUERY_TIMEOUT_MS } = await import("@/services/auth");
       const { MIGRATION_QUERY_STATEMENT_TIMEOUT_MS } = await import("@/services/monitoring/migration-check");
       const { POOL_CONNECTION_TIMEOUT_MS } = await import("@/lib/db");
 
       const rawWorstCase = (statementTimeoutMs: number) => POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + 3_000;
-      const interactiveTxnInnerTimeout = (statementTimeoutMs: number) => Math.max(statementTimeoutMs + 2_000, 5_000);
-      const interactiveTxnWorstCase = (statementTimeoutMs: number) =>
-        ACQUISITION_QUEUE_WAIT_MS + TRANSACTION_ACQUIRE_MAX_WAIT_MS + interactiveTxnInnerTimeout(statementTimeoutMs);
 
       // checkDatabase(): now bounded by the pool's own connection-timeout,
       // not Prisma's maxWait/acquisition-queue.
@@ -300,9 +300,11 @@ describe.skipIf(SKIP)("[db] F-PROD-STARTUP-COLDSTART recurrence: bounded max:1 p
       const migrationInner = rawWorstCase(MIGRATION_QUERY_STATEMENT_TIMEOUT_MS);
       expect(MIGRATION_READINESS_TIMEOUT_MS).toBe(migrationInner);
 
-      // getSession(): unchanged, still the interactive-transaction formula.
-      const sessionInner = interactiveTxnWorstCase(SESSION_STATEMENT_TIMEOUT_MS);
-      expect(SESSION_QUERY_TIMEOUT_MS).toBeGreaterThan(sessionInner);
+      // getSession(): same raw-client formula as of its own migration --
+      // its outer race is a pure defensive backstop that can only fire after
+      // withRawStatementTimeout()'s own bound would already have settled.
+      const sessionInner = rawWorstCase(SESSION_STATEMENT_TIMEOUT_MS);
+      expect(SESSION_QUERY_TIMEOUT_MS).toBe(sessionInner);
 
       // claimStartup(): deliberately has NO separate, shorter JS-side race
       // wrapping withRawStatementTimeout() -- an earlier version of this fix
@@ -391,8 +393,20 @@ describe.skipIf(SKIP)("[db] F-PROD-STARTUP-COLDSTART recurrence: bounded max:1 p
   );
 
   it(
-    "7a. the actual production race -- claimStartup() (register()) concurrent with a getSession()-shaped query, both started at once on a max:1 pool -- both succeed under ordinary (non-hostile) conditions",
+    "7a. LEGACY MECHANISM CHECK (no longer the actual production race -- see note below): withStatementTimeout()'s FIFO queue still serializes two concurrent Prisma-interactive-transaction callers on a max:1 pool correctly -- both succeed under ordinary (non-hostile) conditions",
     async () => {
+      // F-PROD-STARTUP-COLDSTART second-mechanism forensic: as of the
+      // getSession() migration, NEITHER claimStartup() nor getSession()
+      // actually calls withStatementTimeout() anymore -- both use the raw
+      // pool.connect()-based withRawStatementTimeout() instead (see
+      // src/lib/db.ts), which has no process-local FIFO queue at all (each
+      // caller simply waits on the pool's own real connection queue). This
+      // test no longer reproduces "the actual production race" as its
+      // original title claimed; it is kept as a regression check that
+      // withStatementTimeout()'s own queue mechanism (still exported,
+      // still real, still tested infrastructure for any future caller
+      // that needs Prisma interactive-transaction semantics) continues to
+      // work correctly for two genuinely concurrent callers.
       assertLocalUrl();
       const prisma = await getDbInstance();
       enterDeployment(`dpl_race_${RUN}`);
@@ -401,7 +415,7 @@ describe.skipIf(SKIP)("[db] F-PROD-STARTUP-COLDSTART recurrence: bounded max:1 p
 
       const [claimResult, sessionShapedResult] = await Promise.allSettled([
         claimStartup(),
-        withStatementTimeout(prisma, 4_000, (tx) => tx.session.findUnique({ where: { token: "nonexistent-token" } }), "getSession"),
+        withStatementTimeout(prisma, 4_000, (tx) => tx.session.findUnique({ where: { token: "nonexistent-token" } }), "legacy-queue-check"),
       ]);
 
       if (claimResult.status === "fulfilled" && (claimResult.value as { outcome: string }).outcome === "CLAIMED") {

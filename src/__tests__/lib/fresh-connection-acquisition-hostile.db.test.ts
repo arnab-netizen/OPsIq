@@ -44,7 +44,7 @@ import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
-import { withStatementTimeout, TRANSACTION_ACQUIRE_MAX_WAIT_MS } from "@/lib/db";
+import { withStatementTimeout, TRANSACTION_ACQUIRE_MAX_WAIT_MS, withRawStatementTimeout } from "@/lib/db";
 
 const SKIP = !SHOULD_RUN_DB_TESTS;
 
@@ -189,5 +189,36 @@ describe.skipIf(SKIP)("[db] second-mechanism forensic: fresh-pool first-connecti
       await client.$disconnect().catch(() => undefined);
     },
     10_000,
+  );
+
+  it(
+    "FIX PROVEN: the SAME fresh pool + 12s first-connection delay now SUCCEEDS via withRawStatementTimeout() instead of producing P2028",
+    async () => {
+      // Direct counterpart to the decisive failure test above, isolating the
+      // fix: the identical delayed-connect pool, but handed straight to
+      // withRawStatementTimeout() (no Prisma/PrismaPg adapter layer at all)
+      // instead of wrapped in a Prisma interactive transaction. Connection
+      // ACQUISITION is now bounded only by the pool's own real
+      // connectionTimeoutMillis (90s) -- a 12s delay is well inside it, so
+      // the operation succeeds instead of racing a separate, narrower clock.
+      const pool = createFreshPoolWithDelayedFirstConnect(12_000);
+
+      const start = Date.now();
+      const result = await withRawStatementTimeout(
+        pool,
+        2_000,
+        (client) => client.query<{ one: number }>("SELECT 1 AS one"),
+        "fix-proof",
+      );
+      const elapsed = Date.now() - start;
+
+      expect(result.rows).toEqual([{ one: 1 }]);
+      // Succeeded at ~12s -- past the old 10s Prisma-maxWait boundary that
+      // would have failed this exact scenario before the fix (see the
+      // decisive failure test above).
+      expect(elapsed).toBeGreaterThan(11_000);
+      expect(elapsed).toBeLessThan(14_000);
+    },
+    20_000,
   );
 });

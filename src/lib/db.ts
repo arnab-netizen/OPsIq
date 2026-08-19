@@ -291,10 +291,13 @@ export const TRANSACTION_ACQUIRE_MAX_WAIT_MS = 10_000;
  *   ACQUISITION_QUEUE_WAIT_MS + TRANSACTION_ACQUIRE_MAX_WAIT_MS + txnTimeout
  * where txnTimeout is the `timeout` this function passes to $transaction()
  * (Math.max(safeTimeoutMs + 2_000, 5_000) below). Any outer JS-side race a
- * caller adds on top of withStatementTimeout() must exceed this sum — see
- * DB_CHECK_TIMEOUT_MS, MIGRATION_READINESS_TIMEOUT_MS, and
- * SESSION_QUERY_TIMEOUT_MS, all of which now derive from this constant for
- * exactly that reason.
+ * caller adds on top of withStatementTimeout() must exceed this sum.
+ * (F-PROD-STARTUP-COLDSTART second-mechanism forensic: claimStartup(),
+ * checkDatabase(), checkMigrationReadiness(), and getSession() have since
+ * migrated off withStatementTimeout() entirely, onto withRawStatementTimeout()
+ * below — their own outer races now derive from POOL_CONNECTION_TIMEOUT_MS
+ * instead. This constant and its formula remain live for any future caller
+ * that still needs Prisma interactive-transaction semantics.)
  */
 export const ACQUISITION_QUEUE_WAIT_MS = TRANSACTION_ACQUIRE_MAX_WAIT_MS;
 
