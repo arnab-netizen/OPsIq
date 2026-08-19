@@ -49,6 +49,7 @@ interface SessionData {
   currentSystemRecId: string | null;
   currentOwnerDecisionId: string | null;
   currentBlueprintId: string | null;
+  businessId: string | null;
   ideas: IdeaRecord[];
 }
 
@@ -284,6 +285,23 @@ export default function StartupSessionPage({
         return;
       }
       await loadSession();
+    } catch {
+      setPageMsg("Network error");
+    }
+  }
+
+  async function handleActivate() {
+    setPageMsg(null);
+    try {
+      const res = await fetch(`/api/owner/startup/sessions/${sessionId}/activate`, {
+        method: "POST",
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setPageMsg(d.error ?? "Failed to activate as a business");
+        return;
+      }
+      window.location.href = `/owner/home?businessId=${d.businessId}`;
     } catch {
       setPageMsg("Network error");
     }
@@ -638,6 +656,23 @@ export default function StartupSessionPage({
               No execution blueprint yet. Approve an idea and record a GO decision to create one.
             </p>
           )}
+
+          {session.businessId ? (
+            <p data-testid="handoff-complete" style={{ marginTop: "1rem" }}>
+              This session has been activated as a real business.{" "}
+              <a href={`/owner/home?businessId=${session.businessId}`} data-testid="handoff-business-link">
+                Go to the business
+              </a>
+              .
+            </p>
+          ) : session.status === "EXECUTION_PLANNED" ? (
+            <div style={{ marginTop: "1rem" }}>
+              <p>Execution is planned. Activate this session to create the real, operating business it describes.</p>
+              <button onClick={handleActivate} data-testid="activate-business-btn" style={btnStyle}>
+                Activate as Business
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
 

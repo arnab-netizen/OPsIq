@@ -63,6 +63,10 @@ describe("startup-lifecycle", () => {
     it("VALIDATION_IN_PROGRESS → SCREENING is valid (return for more evidence)", () => {
       expect(() => assertValidTransition("VALIDATION_IN_PROGRESS", "SCREENING")).not.toThrow();
     });
+
+    it("EXECUTION_PLANNED → ACTIVE is valid (F-STARTUP-NO-HANDOFF business handoff)", () => {
+      expect(() => assertValidTransition("EXECUTION_PLANNED", "ACTIVE")).not.toThrow();
+    });
   });
 
   describe("assertValidTransition — invalid transitions throw", () => {
@@ -77,6 +81,10 @@ describe("startup-lifecycle", () => {
 
     it("APPROVED → REJECTED throws (must go through OWNER_DECISION_REQUIRED)", () => {
       expect(() => assertValidTransition("APPROVED", "REJECTED")).toThrow(/Invalid state transition/);
+    });
+
+    it("APPROVED → ACTIVE throws (must go through EXECUTION_PLANNED)", () => {
+      expect(() => assertValidTransition("APPROVED", "ACTIVE")).toThrow(/Invalid state transition/);
     });
 
     it("DRAFT → SCREENING skips CONTEXT_CAPTURE and IDEA_GENERATION", () => {
@@ -115,6 +123,13 @@ describe("startup-lifecycle", () => {
 
     it("returns empty array for unknown status", () => {
       expect(getValidNextStatuses("UNKNOWN_STATUS" as StartupSessionStatus)).toEqual([]);
+    });
+
+    it("EXECUTION_PLANNED includes ACTIVE alongside the existing STALE_REAPPROVAL_REQUIRED path", () => {
+      const nexts = getValidNextStatuses("EXECUTION_PLANNED");
+      expect(nexts).toContain("ACTIVE");
+      expect(nexts).toContain("STALE_REAPPROVAL_REQUIRED");
+      expect(nexts.length).toBe(2);
     });
   });
 
