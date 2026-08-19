@@ -285,7 +285,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/startup-status.ts",
-      "line": 518,
+      "line": 519,
       "severity": "error",
       "code": "{ instance: instanceId, error: error instanceof Error ? error.message : String(error) }",
       "reason": "service-layer server-side log/classification string; not operator-rendered"
