@@ -176,46 +176,78 @@ describe.skipIf(SKIP)("[db] getSession() semantic correctness against real Postg
 });
 
 describe.skipIf(SKIP)("[db] getSession() fresh-connection acquisition timing and pool reuse", () => {
-  let realConnect: typeof Pool.prototype.connect;
+  const pools: Pool[] = [];
 
   beforeEach(() => {
     assertLocalUrl();
-    realConnect = Pool.prototype.connect;
   });
 
   afterEach(async () => {
-    Pool.prototype.connect = realConnect;
+    while (pools.length) {
+      const p = pools.pop()!;
+      await p.end().catch(() => undefined);
+    }
     await cleanup();
   });
 
   /**
-   * Patches Pool.prototype.connect globally so the singleton pool getSession()
-   * constructs on its next cold access has its FIRST connect() call delayed
-   * by delayMs before delegating to the real implementation (which still
-   * succeeds normally). Restored in afterEach. This is the same technique
-   * proven in src/__tests__/lib/fresh-connection-acquisition-hostile.db.test.ts,
-   * applied at the prototype level because getSession() uses the module
-   * singleton pool (via getRawPool()), not an injectable one.
+   * Real pg.Pool against local Postgres, with its connect() wrapped so the
+   * FIRST call is delayed by delayMs before delegating to the real
+   * connect() -- which still succeeds normally. Same instance-level
+   * technique already proven in
+   * src/__tests__/lib/fresh-connection-acquisition-hostile.db.test.ts.
+   * Deliberately NOT prototype-patching + vi.resetModules(): resetModules()
+   * gives db.ts's own dynamic `await import("pg")` a fresh, separate `pg`
+   * module instance whose Pool class is a different object than any
+   * statically-imported reference captured before the reset, so a
+   * prototype patch captured pre-reset silently does not apply post-reset
+   * (confirmed by direct reproduction: the delay never took effect, and
+   * calling the pre-reset unbound method against a post-reset instance
+   * threw "Cannot read properties of undefined (reading 'then')"). Setting
+   * globalForPrisma.pgPool directly to an already-constructed, already-
+   * wrapped instance sidesteps the mismatch entirely: getRawPool()'s own
+   * guard (`if (!globalForPrisma.pgPool)`) sees it already set and returns
+   * it as-is, regardless of which `pg` module instance is currently loaded.
    */
-  function delayFirstConnectGlobally(delayMs: number): void {
-    let consumed = false;
-    Pool.prototype.connect = function (this: Pool, ...args: unknown[]) {
-      if (!consumed) {
-        consumed = true;
+  function createDelayedPool(delayMs: number): Pool {
+    const url = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL ?? "";
+    const pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 90_000 });
+    pools.push(pool);
+
+    const realConnect = pool.connect.bind(pool);
+    let firstCallConsumed = false;
+    (pool as unknown as { connect: typeof pool.connect }).connect = ((...args: unknown[]) => {
+      if (!firstCallConsumed) {
+        firstCallConsumed = true;
         return new Promise((resolve, reject) => {
           setTimeout(() => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only pg.Pool.connect overload forwarding
-            (realConnect as any).apply(this, args).then(resolve, reject);
+            (realConnect as any)(...args).then(resolve, reject);
           }, delayMs);
         });
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only pg.Pool.connect overload forwarding
-      return (realConnect as any).apply(this, args);
-    } as typeof Pool.prototype.connect;
+      return (realConnect as any)(...args);
+    }) as typeof pool.connect;
+
+    return pool;
+  }
+
+  /** Forces a genuinely cold singleton, pre-seeded with the given pool. */
+  function goColdWithPool(pool: Pool) {
+    const globalForPrisma = globalThis as unknown as {
+      prisma: unknown;
+      prismaPromise: unknown;
+      pgPool: unknown;
+    };
+    globalForPrisma.prisma = undefined;
+    globalForPrisma.prismaPromise = undefined;
+    globalForPrisma.pgPool = pool;
+    vi.resetModules();
   }
 
   /** Forces a genuinely cold singleton: no pool, no Prisma client, no init in flight. */
-  async function goCold() {
+  function goCold() {
     const globalForPrisma = globalThis as unknown as {
       prisma: unknown;
       prismaPromise: unknown;
@@ -230,8 +262,8 @@ describe.skipIf(SKIP)("[db] getSession() fresh-connection acquisition timing and
   it(
     "a fresh connection delayed 12s (>old 10s Prisma maxWait, <90s pool connectionTimeoutMillis) now SUCCEEDS instead of failing",
     async () => {
-      await goCold();
-      delayFirstConnectGlobally(12_000);
+      const pool = createDelayedPool(12_000);
+      goColdWithPool(pool);
       const { getSession } = await import("@/services/auth");
 
       const user = await makeUser();
@@ -255,7 +287,7 @@ describe.skipIf(SKIP)("[db] getSession() fresh-connection acquisition timing and
   it(
     "pool is reusable immediately after a successful getSession() call",
     async () => {
-      await goCold();
+      goCold();
       const { getSession } = await import("@/services/auth");
 
       const user = await makeUser();
@@ -278,21 +310,33 @@ describe.skipIf(SKIP)("[db] getSession() fresh-connection acquisition timing and
   );
 
   it(
-    "pool is reusable after a query-level statement-timeout cancellation, and the cancellation itself fails closed (null, not a crash)",
+    "getSession() correctly queues behind a legitimate slow holder on the shared max:1 pool and still succeeds, and the pool remains reusable afterward",
     async () => {
-      await goCold();
+      // NOTE ON SCOPE: this proves acquisition-queueing behavior (max:1 pool
+      // contention), not statement_timeout cancellation of getSession()'s
+      // OWN query -- that query is a single fast indexed lookup with no
+      // practical way to make it exceed SESSION_STATEMENT_TIMEOUT_MS from a
+      // test without a DB-side trick. The cancellation mechanism itself
+      // (SET statement_timeout / SQLSTATE 57014 / reset-or-discard) is
+      // exhaustively proven generically, against withRawStatementTimeout()
+      // directly, in db-raw-statement-timeout-hostile.db.test.ts -- getSession()
+      // shares that exact helper, so re-proving cancellation here would be
+      // redundant, not additive.
+      goCold();
       const { getSession } = await import("@/services/auth");
       const { getRawPool, withRawStatementTimeout } = await import("@/lib/db");
 
-      // Occupy the shared max:1 pool connection with a slow query past
-      // SESSION_STATEMENT_TIMEOUT_MS (4s), forcing getSession()'s own query
-      // to be cancelled server-side by its statement_timeout rather than
-      // hang. Uses the same real raw-client mechanism, not a mock.
+      // Occupy the shared max:1 pool's sole connection with a real, slower
+      // query for ~2s. Test-env's pool has connectionTimeoutMillis=0
+      // (unlimited acquisition wait, matching db.ts's own test-env
+      // behavior), so getSession() must wait behind the holder rather than
+      // failing -- proving it correctly uses the pool's own real connection
+      // queue instead of any separate, narrower acquisition budget.
       const pool = await getRawPool();
       const holderPromise = withRawStatementTimeout(
         pool,
-        6_000,
-        (client) => client.query("SELECT pg_sleep(5)"),
+        5_000,
+        (client) => client.query("SELECT pg_sleep(2)"),
         "holder",
       );
 
@@ -300,22 +344,21 @@ describe.skipIf(SKIP)("[db] getSession() fresh-connection acquisition timing and
       const token = await makeSession(user.id);
       cookieHolder.token = token;
 
-      // getSession() queues behind the holder on the pool's own real
-      // connection queue (max:1); once it acquires, its 4s statement_timeout
-      // cancels its own query well before the holder's 5s sleep finishes --
-      // proving the cancellation is server-side and caller-specific, not a
-      // shared/global effect on the holder.
-      const result = await getSession();
-      expect(result).toBeNull();
-
-      await holderPromise.catch(() => undefined);
-
-      // Pool must still be healthy and reusable after the cancellation.
       const start = Date.now();
-      const after = await getSession();
+      const result = await getSession();
       const elapsed = Date.now() - start;
+
+      expect(result?.user.id).toBe(user.id);
+      expect(elapsed).toBeGreaterThan(1_500);
+
+      await holderPromise;
+
+      // Pool must still be healthy and reusable after the contention.
+      const start2 = Date.now();
+      const after = await getSession();
+      const elapsed2 = Date.now() - start2;
       expect(after?.user.id).toBe(user.id);
-      expect(elapsed).toBeLessThan(2_000);
+      expect(elapsed2).toBeLessThan(2_000);
     },
     20_000,
   );
