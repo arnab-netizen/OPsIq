@@ -262,13 +262,24 @@ describe.skipIf(SKIP)("[db] getSession() fresh-connection acquisition timing and
   it(
     "a fresh connection delayed 12s (>old 10s Prisma maxWait, <90s pool connectionTimeoutMillis) now SUCCEEDS instead of failing",
     async () => {
-      const pool = createDelayedPool(12_000);
-      goColdWithPool(pool);
-      const { getSession } = await import("@/services/auth");
-
+      // Seed BEFORE going cold. goColdWithPool() below resets
+      // globalForPrisma.prisma/prismaPromise to undefined; any db.* access
+      // (Prisma, via the top-level static `db` import) AFTER that reset
+      // would find them unset and silently trigger its own fresh
+      // createPrismaClient() call -- via the ORIGINAL (pre-reset) module
+      // instance's own closures -- which constructs a brand-new real pool
+      // and overwrites globalForPrisma.pgPool, clobbering the delayed pool
+      // just injected below. Seeding first means the ONLY database access
+      // after the reset is getSession() itself, which (per its own
+      // implementation) never touches the Prisma `db` client at all --
+      // only getRawPool()/withRawStatementTimeout().
       const user = await makeUser();
       const token = await makeSession(user.id);
       cookieHolder.token = token;
+
+      const pool = createDelayedPool(12_000);
+      goColdWithPool(pool);
+      const { getSession } = await import("@/services/auth");
 
       const start = Date.now();
       const result = await getSession();
@@ -326,23 +337,38 @@ describe.skipIf(SKIP)("[db] getSession() fresh-connection acquisition timing and
       const { getSession } = await import("@/services/auth");
       const { getRawPool, withRawStatementTimeout } = await import("@/lib/db");
 
+      // getRawPool() here fully initializes globalForPrisma.prisma/pgPool
+      // (it awaits getDbInstance() to completion) BEFORE any seeding
+      // happens, so the seeding below's db.* Prisma access finds
+      // globalForPrisma.prisma already set and reuses it directly instead
+      // of triggering its own competing createPrismaClient() call.
+      const pool = await getRawPool();
+
+      // Seed BEFORE occupying the pool with the holder. db.user.create()/
+      // db.session.create() route through this SAME shared max:1 pool --
+      // the whole point of the P0-15 single-pool architecture -- so
+      // seeding AFTER starting the holder would itself queue behind it and
+      // silently consume the holder's 2s wait before getSession() ever
+      // runs, producing a false "elapsed=1ms" pass that proves nothing.
+      const user = await makeUser();
+      const token = await makeSession(user.id);
+      cookieHolder.token = token;
+
       // Occupy the shared max:1 pool's sole connection with a real, slower
       // query for ~2s. Test-env's pool has connectionTimeoutMillis=0
       // (unlimited acquisition wait, matching db.ts's own test-env
       // behavior), so getSession() must wait behind the holder rather than
       // failing -- proving it correctly uses the pool's own real connection
-      // queue instead of any separate, narrower acquisition budget.
-      const pool = await getRawPool();
+      // queue instead of any separate, narrower acquisition budget. No
+      // await happens between this call and getSession() below, so pg's
+      // pool synchronously books the sole slot for the holder before
+      // getSession()'s own pool.connect() call is ever made.
       const holderPromise = withRawStatementTimeout(
         pool,
         5_000,
         (client) => client.query("SELECT pg_sleep(2)"),
         "holder",
       );
-
-      const user = await makeUser();
-      const token = await makeSession(user.id);
-      cookieHolder.token = token;
 
       const start = Date.now();
       const result = await getSession();
