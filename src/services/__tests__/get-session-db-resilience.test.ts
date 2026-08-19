@@ -38,6 +38,10 @@ vi.mock("@/lib/db", () => {
     // module scope (to derive its own outer race timeout) — a full module
     // mock must provide every export the mocked module's callers use.
     TRANSACTION_ACQUIRE_MAX_WAIT_MS: 10_000,
+    // F-PROD-STARTUP-COLDSTART recurrence: auth.ts also derives
+    // SESSION_QUERY_TIMEOUT_MS from this at module scope — same reason as
+    // TRANSACTION_ACQUIRE_MAX_WAIT_MS above.
+    ACQUISITION_QUEUE_WAIT_MS: 10_000,
   };
 });
 
@@ -67,11 +71,14 @@ describe("getSession() — DB-failure resilience (P0-15)", () => {
     const result = await getSession();
     expect(result).toBeNull();
     // Test timeout (not an assertion) intentionally exceeds auth.ts's real
-    // SESSION_QUERY_TIMEOUT_MS (F-PROD-STARTUP-COLDSTART raised it from 5s to
-    // TRANSACTION_ACQUIRE_MAX_WAIT_MS+SESSION_STATEMENT_TIMEOUT_MS+3s = 17s,
-    // to tolerate Neon's cold-wake tail) so this test actually observes the
-    // real race settle instead of vitest's own runner cutting it off first.
-  }, 20_000);
+    // SESSION_QUERY_TIMEOUT_MS. F-PROD-STARTUP-COLDSTART raised it from 5s to
+    // TRANSACTION_ACQUIRE_MAX_WAIT_MS+SESSION_STATEMENT_TIMEOUT_MS+3s = 17s
+    // (Neon cold-wake tail); the F-PROD-STARTUP-COLDSTART recurrence fix
+    // raised it further to ACQUISITION_QUEUE_WAIT_MS+TRANSACTION_ACQUIRE_MAX_WAIT_MS+
+    // SESSION_STATEMENT_TIMEOUT_MS+3s = 27s (bounded acquisition-queue wait),
+    // so this test actually observes the real race settle instead of
+    // vitest's own runner cutting it off first.
+  }, 30_000);
 
   it("never returns an authenticated session on DB failure, even for a token that would otherwise be valid", async () => {
     // Sanity: prove the mock CAN return a valid session when the query succeeds,

@@ -160,6 +160,12 @@ vi.mock("@/lib/db", () => ({
   // itself (that behavior has its own real-Postgres hostile proof in
   // src/__tests__/lib/startup-coldstart-maxwait-hostile.db.test.ts).
   TRANSACTION_ACQUIRE_MAX_WAIT_MS: 10_000,
+  // F-PROD-STARTUP-COLDSTART recurrence: startup-orchestrator.ts also derives
+  // DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS from this at module
+  // scope — same reason as TRANSACTION_ACQUIRE_MAX_WAIT_MS above (its own
+  // real-Postgres hostile proof is in
+  // src/__tests__/lib/startup-coldstart-pool-contention-hostile.db.test.ts).
+  ACQUISITION_QUEUE_WAIT_MS: 10_000,
 }));
 
 // checkMigrationReadiness is now called inside performStartupChecks().

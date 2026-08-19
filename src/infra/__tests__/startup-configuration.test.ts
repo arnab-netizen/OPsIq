@@ -49,6 +49,10 @@ vi.mock("@/lib/db", () => ({
   // export at module scope — a full module mock must provide every export
   // the mocked module's callers use.
   TRANSACTION_ACQUIRE_MAX_WAIT_MS: 10_000,
+  // F-PROD-STARTUP-COLDSTART recurrence: startup-orchestrator.ts also derives
+  // DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS from this at module
+  // scope — same reason as TRANSACTION_ACQUIRE_MAX_WAIT_MS above.
+  ACQUISITION_QUEUE_WAIT_MS: 10_000,
 }));
 
 vi.mock("@/services/startup-status", () => ({
