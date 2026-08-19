@@ -72,3 +72,28 @@ export const startupValidateRequestSchema = z.object({
 });
 
 export type StartupValidateRequest = z.infer<typeof startupValidateRequestSchema>;
+
+/**
+ * Owner-supplied screening profile (BusinessFitProfile), used by the SCREEN
+ * action (POST .../analysis/route.ts). NOT the same concept as PATCH
+ * .../profile/route.ts's `profileData` — that endpoint versions a separate,
+ * intentionally free-form owner context bag (e.g. wealthGoalAnnualCents,
+ * availableWeeklyHours) with no fixed shape; do not reuse this schema there.
+ * riskTolerance is uppercase here (distinct from startupIntakeSchema's
+ * lowercase riskTolerance above) to match the domain's existing
+ * BusinessFitProfile convention; callers deriving this from intake must
+ * case-convert explicitly.
+ */
+export const startupScreeningProfileSchema = z
+  .object({
+    capitalAvailableCents: z.number().nullable().optional(),
+    ownerHoursPerWeek: z.number().nullable().optional(),
+    riskTolerance: z.enum(["LOW", "MEDIUM", "HIGH"]).nullable().optional(),
+    location: z.string().nullable().optional(),
+    cashRunwayMonthsAvailable: z.number().nullable().optional(),
+    minimumMonthlyIncomeNeededCents: z.number().nullable().optional(),
+    priorIndustryExperience: z.boolean().nullable().optional(),
+    regulatoryExperience: z.boolean().nullable().optional(),
+    existingNetworkStrength: z.number().nullable().optional(),
+  })
+  .strict();

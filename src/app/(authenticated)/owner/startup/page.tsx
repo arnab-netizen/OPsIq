@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Input, Select, Button } from "@/ui/primitives";
 
 interface SessionSummary {
   sessionId: string;
@@ -33,11 +34,60 @@ const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Active",
 };
 
+const RISK_TOLERANCE_OPTIONS = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+
+const FAST_CASH_OPTIONS = [
+  { value: "fast_cash", label: "Fast cash" },
+  { value: "long_term_scale", label: "Long-term scale" },
+];
+
+/** Parses a comma-separated free-text field into a trimmed, non-empty string array — or null when blank. */
+function parseListField(raw: string): string[] | null {
+  const items = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  return items.length > 0 ? items : null;
+}
+
+/** Parses a numeric field, returning null (never NaN or 0) when blank — honest-by-default, matching startupIntakeSchema. */
+function parseNumberField(raw: string): number | null {
+  if (raw.trim() === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 export default function StartupModePage() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [pageMsg, setPageMsg] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [label, setLabel] = useState("");
+
+  // Owner-supplied startup intake (src/domain/owner-strategy/startup-mode.validation.ts:
+  // startupIntakeSchema). Every field is genuinely optional there — an owner who leaves
+  // a field blank here submits an honest null, not a fabricated value.
+  const [location, setLocation] = useState("");
+  const [capitalAvailable, setCapitalAvailable] = useState("");
+  const [monthlySurvivalNeed, setMonthlySurvivalNeed] = useState("");
+  const [hoursPerWeekAvailable, setHoursPerWeekAvailable] = useState("");
+  const [targetMonthlyIncome, setTargetMonthlyIncome] = useState("");
+  const [skills, setSkills] = useState("");
+  const [existingAssets, setExistingAssets] = useState("");
+  const [preferredIndustries, setPreferredIndustries] = useState("");
+  const [riskTolerance, setRiskTolerance] = useState("");
+  const [fastCashVsScale, setFastCashVsScale] = useState("");
+  const [canSell, setCanSell] = useState(false);
+  const [canOperateDaily, setCanOperateDaily] = useState(false);
+
+  // First candidate idea (src/domain/owner-strategy/startup-mode.validation.ts:
+  // startupIdeaSchema requires at least one idea with a real name/industry; further
+  // ideas and structural detail are added later via the session's Ideas tab).
+  const [ideaName, setIdeaName] = useState("");
+  const [ideaIndustry, setIdeaIndustry] = useState("");
 
   useEffect(() => {
     fetch("/api/owner/startup/sessions")
@@ -48,6 +98,10 @@ export default function StartupModePage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    if (!ideaName.trim() || !ideaIndustry.trim()) {
+      setPageMsg("A starting idea name and industry are required.");
+      return;
+    }
     setCreating(true);
     setPageMsg(null);
     try {
@@ -57,13 +111,20 @@ export default function StartupModePage() {
         body: JSON.stringify({
           sessionLabel: label || null,
           intake: {
-            location: null,
-            capitalAvailable: null,
-            hoursPerWeekAvailable: null,
-            riskTolerance: null,
-            skills: [],
+            location: location.trim() || null,
+            capitalAvailable: parseNumberField(capitalAvailable),
+            monthlySurvivalNeed: parseNumberField(monthlySurvivalNeed),
+            hoursPerWeekAvailable: parseNumberField(hoursPerWeekAvailable),
+            targetMonthlyIncome: parseNumberField(targetMonthlyIncome),
+            skills: parseListField(skills),
+            existingAssets: parseListField(existingAssets),
+            preferredIndustries: parseListField(preferredIndustries),
+            riskTolerance: riskTolerance || null,
+            fastCashVsScale: fastCashVsScale || null,
+            canSell,
+            canOperateDaily,
           },
-          ideas: [{ name: "Placeholder", industry: "General", structural: {} }],
+          ideas: [{ name: ideaName.trim(), industry: ideaIndustry.trim(), structural: {} }],
         }),
       });
       const data = await res.json();
@@ -94,30 +155,145 @@ export default function StartupModePage() {
         </div>
       )}
 
-      <form onSubmit={handleCreate} style={{ display: "flex", gap: "0.75rem", marginBottom: "2rem" }}>
-        <input
-          type="text"
-          placeholder="Session label (optional)"
+      <form
+        onSubmit={handleCreate}
+        data-testid="startup-intake-form"
+        className="flex flex-col gap-4 mb-8 rounded-lg border border-border p-4"
+      >
+        <Input
+          label="Session label (optional)"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          style={{ flex: 1, padding: "0.5rem", borderRadius: 4, border: "1px solid #ccc" }}
           data-testid="startup-session-label-input"
         />
-        <button
+
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Idea name"
+            value={ideaName}
+            onChange={(e) => setIdeaName(e.target.value)}
+            data-testid="startup-idea-name-input"
+            required
+          />
+          <Input
+            label="Idea industry"
+            value={ideaIndustry}
+            onChange={(e) => setIdeaIndustry(e.target.value)}
+            data-testid="startup-idea-industry-input"
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Location"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            data-testid="startup-intake-location-input"
+          />
+          <Select
+            label="Risk tolerance"
+            value={riskTolerance}
+            onChange={(e) => setRiskTolerance(e.target.value)}
+            options={RISK_TOLERANCE_OPTIONS}
+            placeholder="Not specified"
+            data-testid="startup-intake-risk-tolerance-select"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Capital available"
+            type="number"
+            value={capitalAvailable}
+            onChange={(e) => setCapitalAvailable(e.target.value)}
+            data-testid="startup-intake-capital-input"
+          />
+          <Input
+            label="Monthly survival need"
+            type="number"
+            value={monthlySurvivalNeed}
+            onChange={(e) => setMonthlySurvivalNeed(e.target.value)}
+            data-testid="startup-intake-survival-need-input"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Hours per week available"
+            type="number"
+            value={hoursPerWeekAvailable}
+            onChange={(e) => setHoursPerWeekAvailable(e.target.value)}
+            data-testid="startup-intake-hours-input"
+          />
+          <Input
+            label="Target monthly income"
+            type="number"
+            value={targetMonthlyIncome}
+            onChange={(e) => setTargetMonthlyIncome(e.target.value)}
+            data-testid="startup-intake-target-income-input"
+          />
+        </div>
+
+        <Input
+          label="Skills (comma-separated)"
+          value={skills}
+          onChange={(e) => setSkills(e.target.value)}
+          hint="e.g. sales, plumbing, bookkeeping"
+          data-testid="startup-intake-skills-input"
+        />
+        <Input
+          label="Existing assets (comma-separated)"
+          value={existingAssets}
+          onChange={(e) => setExistingAssets(e.target.value)}
+          hint="e.g. van, workshop, existing customer list"
+          data-testid="startup-intake-assets-input"
+        />
+        <Input
+          label="Preferred industries (comma-separated)"
+          value={preferredIndustries}
+          onChange={(e) => setPreferredIndustries(e.target.value)}
+          data-testid="startup-intake-preferred-industries-input"
+        />
+
+        <Select
+          label="Priority"
+          value={fastCashVsScale}
+          onChange={(e) => setFastCashVsScale(e.target.value)}
+          options={FAST_CASH_OPTIONS}
+          placeholder="Not specified"
+          data-testid="startup-intake-priority-select"
+        />
+
+        <div className="flex gap-6">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={canSell}
+              onChange={(e) => setCanSell(e.target.checked)}
+              data-testid="startup-intake-can-sell-checkbox"
+            />
+            Comfortable selling
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={canOperateDaily}
+              onChange={(e) => setCanOperateDaily(e.target.checked)}
+              data-testid="startup-intake-can-operate-checkbox"
+            />
+            Can operate day-to-day
+          </label>
+        </div>
+
+        <Button
           type="submit"
           disabled={creating}
           data-testid="create-startup-session-btn"
-          style={{
-            padding: "0.5rem 1.25rem",
-            background: "#2563eb",
-            color: "#fff",
-            border: "none",
-            borderRadius: 4,
-            cursor: creating ? "not-allowed" : "pointer",
-          }}
+          className="self-start"
         >
           {creating ? "Creating…" : "New Session"}
-        </button>
+        </Button>
       </form>
 
       {sessions.length === 0 ? (

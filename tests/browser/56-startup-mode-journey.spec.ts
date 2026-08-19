@@ -130,14 +130,19 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
         data: {
           action: "SCREEN",
           ideaId: E2E_PHASE5_IDEA_ID,
+          // Field names/units match startupScreeningProfileSchema
+          // (src/domain/owner-strategy/startup-mode.validation.ts) exactly --
+          // it's now .strict(), so a mismatched key (this payload previously
+          // used capitalAvailable/cashReserveMonths/minimumMonthlyIncome/
+          // skills, none of which are screening-profile fields) is rejected
+          // instead of silently dropped.
           profile: {
-            capitalAvailable: 50000,
+            capitalAvailableCents: 5_000_000,
             ownerHoursPerWeek: 20,
             riskTolerance: "MEDIUM",
             location: "Australia",
-            cashReserveMonths: 6,
-            minimumMonthlyIncome: 3000,
-            skills: ["sales"],
+            cashRunwayMonthsAvailable: 6,
+            minimumMonthlyIncomeNeededCents: 300_000,
           },
         },
       }

@@ -17,6 +17,7 @@ import {
   recordHypothesisResult,
   createSystemRecommendation,
 } from "@/services/owner-strategy/startup-session.service";
+import { startupScreeningProfileSchema } from "@/domain/owner-strategy/startup-mode.validation";
 import type { EconomicInputs } from "@/domain/owner-strategy/startup-economics";
 import type { ReadinessInputs } from "@/domain/owner-strategy/startup-readiness";
 
@@ -51,18 +52,6 @@ const baseSchema = z.object({
   resultSummary: z.string().optional(),
 });
 
-const profileSchema = z.object({
-  capitalAvailableCents: z.number().nullable().optional(),
-  ownerHoursPerWeek: z.number().nullable().optional(),
-  riskTolerance: z.enum(["LOW", "MEDIUM", "HIGH"]).nullable().optional(),
-  location: z.string().nullable().optional(),
-  cashRunwayMonthsAvailable: z.number().nullable().optional(),
-  minimumMonthlyIncomeNeededCents: z.number().nullable().optional(),
-  priorIndustryExperience: z.boolean().nullable().optional(),
-  regulatoryExperience: z.boolean().nullable().optional(),
-  existingNetworkStrength: z.number().nullable().optional(),
-});
-
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const rawBody = await parseRequestBody(ctx.request!, baseSchema.passthrough());
@@ -71,7 +60,7 @@ export const POST = withCanonicalEnforcement(
     switch (action) {
       case "SCREEN": {
         if (!ideaId) throw new ValidationError("ideaId required for SCREEN");
-        const profile = profileSchema.parse(rawBody.profile ?? {});
+        const profile = startupScreeningProfileSchema.parse(rawBody.profile ?? {});
         const result = await screenIdeaRecord(
           ctx.verifiedWorkspaceId,
           params.sessionId,
