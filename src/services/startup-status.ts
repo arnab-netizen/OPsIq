@@ -451,7 +451,8 @@ export async function claimStartup(): Promise<StartupClaimResult> {
         OR "startup_status"."status" = 'FAILED'
         OR ("startup_status"."status" = 'STARTING' AND "startup_status"."started_at" < ${staleThreshold})
       RETURNING "id", "claim_token", "started_at", (SELECT "status" FROM "previous") AS "previous_status"
-    `
+    `,
+      "claimStartup"
     );
 
     if (claimed.length > 0) {
