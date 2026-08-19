@@ -11,7 +11,7 @@
 import { createHash, randomUUID } from "crypto";
 
 import { Prisma } from "@/generated/prisma/client";
-import { db, getDbInstance, withStatementTimeout } from "@/lib/db";
+import { db, withRawStatementTimeout, getRawPool } from "@/lib/db";
 import { logger } from "@/infra/logger";
 
 /**
@@ -20,9 +20,50 @@ import { logger } from "@/infra/logger";
  * single round trip on a possibly-cold connection. Postgres cancels the
  * statement itself if exceeded, so a stalled Neon connection can never hold
  * the shared pool's sole connection (max: 1) indefinitely — see
- * withStatementTimeout() in src/lib/db.ts.
+ * withRawStatementTimeout() in src/lib/db.ts.
  */
 const CLAIM_STATEMENT_TIMEOUT_MS = 5000;
+
+/**
+ * F-PROD-STARTUP-COLDSTART second-mechanism forensic: claimStartup() is
+ * called directly by ensureStartupComplete() BEFORE runStartupChecksAndPersist()'s
+ * own STARTUP_TIMEOUT_MS race begins (src/infra/startup-orchestrator.ts) —
+ * unlike checkDatabase()/checkMigrationReadiness(), nothing else bounds this
+ * specific call's total duration.
+ *
+ * An earlier version of this fix added a second, shorter JS-side
+ * Promise.race here (deliberately below the pool's own connectionTimeoutMillis,
+ * for platform-safety reasons). Hostile testing caught a real bug in that
+ * approach before it shipped: unlike withRawStatementTimeout()'s own
+ * pool-enforced bound (which genuinely cancels the pending connect()
+ * attempt), a bare Promise.race does NOT cancel the loser — pg.Pool has no
+ * public API to cancel a specific pending connect() call on demand. When
+ * the shorter race "won" by timing out, the real claim attempt kept running
+ * in the background and, once the pool connection eventually freed up,
+ * silently succeeded and wrote a STARTING row that the original caller
+ * (which had already treated the attempt as failed) never learned about —
+ * an orphaned claim, worse than the P2028 recurrence this fix exists to
+ * close. See src/__tests__/lib/startup-coldstart-pool-contention-hostile.db.test.ts,
+ * scenario 6a, for the reproduction.
+ *
+ * claimStartup() therefore relies solely on withRawStatementTimeout()'s own
+ * bound — the pool's real, safely-cancelling connectionTimeoutMillis
+ * (POOL_CONNECTION_TIMEOUT_MS, src/lib/db.ts) plus CLAIM_STATEMENT_TIMEOUT_MS
+ * for execution — exactly the same reasoning already applied to
+ * checkDatabase()/checkMigrationReadiness()'s outer races (both deliberately
+ * sized to exceed the pool's own timeout rather than race shorter than it).
+ * OWNER_ACTION_REQUIRED: this repository's actual configured Vercel function
+ * execution ceiling (maxDuration) is not independently verified this round
+ * (see the F-PROD-STARTUP-COLDSTART second-mechanism forensic report) — a
+ * genuinely slow connection could in principle run this call up to the
+ * pool's full ~90s+5s bound, which may or may not fit within the platform's
+ * actual limit. A SAFE shorter bound (one that does not risk the orphaned-
+ * write bug above) would require either confirming that limit, or a more
+ * involved abandonment-safe design (tracking cancellation and having a
+ * late-completing claim defensively mark itself FAILED rather than leaving
+ * it STARTING) — not implemented this round to avoid speculative complexity
+ * without a proven need.
+ */
 
 /**
  * True when a Prisma error indicates the startup_status table does not exist.
@@ -407,17 +448,16 @@ export async function claimStartup(): Promise<StartupClaimResult> {
   const version = resolveAppVersion();
 
   try {
-    // Resolve the initialized client explicitly via getDbInstance() rather
-    // than the lazy `db` proxy export. That proxy only correctly defers
-    // two-level access (db.<model>.<method>()) on a cold instance; a
-    // one-level top-level method access like db.$queryRaw instead returns
-    // an inner deferred-model proxy — not a callable function — and throws
-    // when invoked. getDbInstance() is the canonical initialization path
-    // used everywhere else this ordering matters (see
-    // checkMigrationReadiness()) and is safe to call unconditionally: it
-    // dedupes against any initialization already in flight and every caller
-    // resolves to the same singleton client.
-    const prisma = await getDbInstance();
+    // F-PROD-STARTUP-COLDSTART second-mechanism forensic: this atomic CAS
+    // is already a single statement with no multi-statement transactional
+    // requirement (see the per-caller audit in the forensic report), so it
+    // runs via withRawStatementTimeout() — a bounded raw pg client, not a
+    // Prisma interactive transaction — removing dependence on Prisma's
+    // separate, narrower maxWait acquisition race. getRawPool() ensures the
+    // pool (shared with the Prisma client other functions in this module
+    // use via the `db` proxy) is initialized; safe to call unconditionally,
+    // it dedupes against any initialization already in flight.
+    const pool = await getRawPool();
 
     // The `previous` CTE captures the pre-existing row's status in the SAME
     // statement/snapshot as the INSERT..ON CONFLICT below, purely so the log
@@ -425,35 +465,52 @@ export async function claimStartup(): Promise<StartupClaimResult> {
     // not part of the ownership decision itself (that is fully decided by
     // the WHERE clause + affected-row count, atomically, independent of what
     // this CTE reports).
-    const claimed = await withStatementTimeout(
-      prisma,
+    // Deliberately NOT wrapped in an additional, shorter JS-side
+    // Promise.race: unlike a JS timer, that would NOT cancel the underlying
+    // pool.connect() attempt — pg.Pool has no public API to cancel a
+    // specific pending connect() call on demand. A shorter race would only
+    // abandon the CALLER's wait while the real attempt kept running in the
+    // background, and if it later succeeded, it would silently write a
+    // STARTING claim no caller is still watching (an orphaned claim,
+    // discovered and root-caused during this investigation's own hostile
+    // testing — see the F-PROD-STARTUP-COLDSTART second-mechanism forensic
+    // report). withRawStatementTimeout()'s own bound (the pool's real,
+    // safely-cancelling connectionTimeoutMillis, plus CLAIM_STATEMENT_TIMEOUT_MS
+    // for execution) is the sole, correct bound for this call — exactly the
+    // same reasoning already applied to checkDatabase()/
+    // checkMigrationReadiness()'s outer races, which are deliberately sized
+    // to exceed the pool's own timeout rather than race shorter than it.
+    const claimResult = await withRawStatementTimeout(
+      pool,
       CLAIM_STATEMENT_TIMEOUT_MS,
-      (tx) => tx.$queryRaw<
-        Array<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>
-      >`
-      WITH "previous" AS (
-        SELECT "status" FROM "startup_status" WHERE "instance_id" = ${instanceId}
-      )
-      INSERT INTO "startup_status"
-        ("id", "status", "started_at", "completed_at", "error", "version", "instance_id", "claim_token", "updated_at")
-      VALUES
-        (gen_random_uuid(), 'STARTING', ${now}, NULL, NULL, ${version}, ${instanceId}, ${claimToken}, ${now})
-      ON CONFLICT ("instance_id") DO UPDATE SET
-        "status"       = 'STARTING',
-        "started_at"   = ${now},
-        "completed_at" = NULL,
-        "error"        = NULL,
-        "version"      = EXCLUDED."version",
-        "claim_token"  = EXCLUDED."claim_token",
-        "updated_at"   = ${now}
-      WHERE
-        "startup_status"."status" = 'NOT_STARTED'
-        OR "startup_status"."status" = 'FAILED'
-        OR ("startup_status"."status" = 'STARTING' AND "startup_status"."started_at" < ${staleThreshold})
-      RETURNING "id", "claim_token", "started_at", (SELECT "status" FROM "previous") AS "previous_status"
-    `,
-      "claimStartup"
+      (client) => client.query<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>(
+        `
+        WITH "previous" AS (
+          SELECT "status" FROM "startup_status" WHERE "instance_id" = $1
+        )
+        INSERT INTO "startup_status"
+          ("id", "status", "started_at", "completed_at", "error", "version", "instance_id", "claim_token", "updated_at")
+        VALUES
+          (gen_random_uuid(), 'STARTING', $2, NULL, NULL, $3, $1, $4, $2)
+        ON CONFLICT ("instance_id") DO UPDATE SET
+          "status"       = 'STARTING',
+          "started_at"   = $2,
+          "completed_at" = NULL,
+          "error"        = NULL,
+          "version"      = EXCLUDED."version",
+          "claim_token"  = EXCLUDED."claim_token",
+          "updated_at"   = $2
+        WHERE
+          "startup_status"."status" = 'NOT_STARTED'
+          OR "startup_status"."status" = 'FAILED'
+          OR ("startup_status"."status" = 'STARTING' AND "startup_status"."started_at" < $5)
+        RETURNING "id", "claim_token", "started_at", (SELECT "status" FROM "previous") AS "previous_status"
+        `,
+        [instanceId, now, version, claimToken, staleThreshold],
+      ),
+      "claimStartup",
     );
+    const claimed = claimResult.rows;
 
     if (claimed.length > 0) {
       const won = claimed[0]!;

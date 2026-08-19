@@ -274,47 +274,66 @@ describe.skipIf(SKIP)("[db] F-PROD-STARTUP-COLDSTART recurrence: bounded max:1 p
   it(
     "5. FINITE END-TO-END BOUND: the documented formula holds against the REAL exported constants for all four call sites, and every outer race exceeds it",
     async () => {
+      // F-PROD-STARTUP-COLDSTART second-mechanism forensic: claimStartup(),
+      // checkDatabase(), and checkMigrationReadiness() no longer go through
+      // withStatementTimeout()'s Prisma interactive transaction -- they use
+      // withRawStatementTimeout() (a bounded raw pg client), removing
+      // dependence on ACQUISITION_QUEUE_WAIT_MS/TRANSACTION_ACQUIRE_MAX_WAIT_MS
+      // for those three call sites. getSession() is unchanged (still via
+      // withStatementTimeout()) and keeps the original formula.
       const { DB_CHECK_STATEMENT_TIMEOUT_MS, DB_CHECK_TIMEOUT_MS, MIGRATION_READINESS_TIMEOUT_MS } = await import("@/infra/startup-orchestrator");
       const { SESSION_STATEMENT_TIMEOUT_MS, SESSION_QUERY_TIMEOUT_MS } = await import("@/services/auth");
       const { MIGRATION_QUERY_STATEMENT_TIMEOUT_MS } = await import("@/services/monitoring/migration-check");
+      const { POOL_CONNECTION_TIMEOUT_MS } = await import("@/lib/db");
 
-      const innerTxnTimeout = (statementTimeoutMs: number) => Math.max(statementTimeoutMs + 2_000, 5_000);
-      const innerWorstCase = (statementTimeoutMs: number) =>
-        ACQUISITION_QUEUE_WAIT_MS + TRANSACTION_ACQUIRE_MAX_WAIT_MS + innerTxnTimeout(statementTimeoutMs);
+      const rawWorstCase = (statementTimeoutMs: number) => POOL_CONNECTION_TIMEOUT_MS + statementTimeoutMs + 3_000;
+      const interactiveTxnInnerTimeout = (statementTimeoutMs: number) => Math.max(statementTimeoutMs + 2_000, 5_000);
+      const interactiveTxnWorstCase = (statementTimeoutMs: number) =>
+        ACQUISITION_QUEUE_WAIT_MS + TRANSACTION_ACQUIRE_MAX_WAIT_MS + interactiveTxnInnerTimeout(statementTimeoutMs);
 
-      // checkDatabase(): outer race must exceed withStatementTimeout()'s own worst case.
-      const checkDatabaseInner = innerWorstCase(DB_CHECK_STATEMENT_TIMEOUT_MS);
-      expect(DB_CHECK_TIMEOUT_MS).toBeGreaterThan(checkDatabaseInner);
+      // checkDatabase(): now bounded by the pool's own connection-timeout,
+      // not Prisma's maxWait/acquisition-queue.
+      const checkDatabaseInner = rawWorstCase(DB_CHECK_STATEMENT_TIMEOUT_MS);
+      expect(DB_CHECK_TIMEOUT_MS).toBe(checkDatabaseInner);
 
-      // checkMigrationReadiness(): same invariant, using its own statement timeout.
-      const migrationInner = innerWorstCase(MIGRATION_QUERY_STATEMENT_TIMEOUT_MS);
-      expect(MIGRATION_READINESS_TIMEOUT_MS).toBeGreaterThan(migrationInner);
+      // checkMigrationReadiness(): same, using its own statement timeout.
+      const migrationInner = rawWorstCase(MIGRATION_QUERY_STATEMENT_TIMEOUT_MS);
+      expect(MIGRATION_READINESS_TIMEOUT_MS).toBe(migrationInner);
 
-      // getSession(): same invariant.
-      const sessionInner = innerWorstCase(SESSION_STATEMENT_TIMEOUT_MS);
+      // getSession(): unchanged, still the interactive-transaction formula.
+      const sessionInner = interactiveTxnWorstCase(SESSION_STATEMENT_TIMEOUT_MS);
       expect(SESSION_QUERY_TIMEOUT_MS).toBeGreaterThan(sessionInner);
 
-      // claimStartup(): no outer JS race exists at the ensureStartupComplete()
-      // call site (documented, not an oversight -- see startup-status.ts) --
-      // its own finite worst-case IS the caller-facing bound. Document it
-      // here as a concrete, finite number derived the same way.
-      const CLAIM_STATEMENT_TIMEOUT_MS = 5_000; // src/services/startup-status.ts
-      const claimStartupWorstCaseMs = innerWorstCase(CLAIM_STATEMENT_TIMEOUT_MS);
-      expect(Number.isFinite(claimStartupWorstCaseMs)).toBe(true);
-      expect(claimStartupWorstCaseMs).toBe(10_000 + 10_000 + 7_000); // = 27_000
+      // claimStartup(): deliberately has NO separate, shorter JS-side race
+      // wrapping withRawStatementTimeout() -- an earlier version of this fix
+      // added one and hostile testing caught a real bug: a bare Promise.race
+      // does not cancel pool.connect(), so a shorter race would abandon the
+      // caller while the real claim kept running in the background and
+      // could later silently succeed, writing an orphaned STARTING row no
+      // caller was still watching. claimStartup()'s bound is therefore the
+      // pool's own real, safely-cancelling POOL_CONNECTION_TIMEOUT_MS plus
+      // its statement timeout -- same reasoning as checkDatabase()/
+      // checkMigrationReadiness() above, not a separate, smaller number.
+      expect(POOL_CONNECTION_TIMEOUT_MS).toBe(90_000);
     },
   );
 
   it(
-    "6a. NO FALSE READY: when queue acquisition fails, claimStartup() propagates the failure -- never a false CLAIMED",
+    "6a. NO FALSE READY / NO ORPHANED CLAIM: claimStartup() tolerates contention well past the OLD queue-based ceiling without ever producing an orphaned background write",
     async () => {
       assertLocalUrl();
       const prisma = await getDbInstance();
       enterDeployment(`dpl_no_false_ready_${RUN}`);
 
-      // Occupy the sole connection for 13s -- long enough that a concurrent
-      // claimStartup() attempt cannot reach the front of the queue within
-      // ACQUISITION_QUEUE_WAIT_MS (10s).
+      // F-PROD-STARTUP-COLDSTART second-mechanism forensic: claimStartup()
+      // now uses withRawStatementTimeout() -- a raw pool.connect(), not the
+      // withStatementTimeout()/acquisitionQueue mechanism this suite's other
+      // scenarios exercise -- so it no longer queues behind THAT mechanism's
+      // ACQUISITION_QUEUE_WAIT_MS (10s) bound, and has no separate outer race
+      // of its own (see the "5." test above for why). A 13s holder -- which
+      // would have forced the OLD mechanism's 10s ceiling to fail -- must now
+      // succeed instead, waiting behind the holder via the pool's own real
+      // connection queue.
       const holder = withStatementTimeout(prisma, 20_000, (tx) => tx.$queryRaw`SELECT pg_sleep(13)::text AS slept`, "holder");
       await new Promise((resolve) => setTimeout(resolve, 200));
 
@@ -322,19 +341,24 @@ describe.skipIf(SKIP)("[db] F-PROD-STARTUP-COLDSTART recurrence: bounded max:1 p
       const key = resolveInstanceId();
       createdInstanceIds.add(key);
 
-      await expect(claimStartup()).rejects.toThrow();
+      const claimStart = Date.now();
+      const claim = await claimStartup();
+      const claimElapsed = Date.now() - claimStart;
 
-      // No row was written claiming READY/STARTING as a side effect of the
-      // failed attempt -- the failure is truthful, not a partial write.
-      const row = await db.startupStatus.findUnique({ where: { instanceId: key } });
-      expect(row).toBeNull();
+      expect(claim.outcome).toBe("CLAIMED");
+      // Waited roughly for the holder to finish (~12.8s) then completed
+      // quickly -- proves it queued behind the pool's real connection
+      // rather than failing at the old ~10-17s ceiling.
+      expect(claimElapsed).toBeGreaterThan(11_000);
+      expect(claimElapsed).toBeLessThan(16_000);
+
+      // Exactly one row exists -- no orphaned/duplicate write from any
+      // abandoned-then-later-completed attempt.
+      const rows = await db.startupStatus.findMany({ where: { instanceId: key } });
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe("STARTING");
 
       await holder;
-
-      // A subsequent, unhurried claim now succeeds normally -- the failed
-      // attempt did not poison anything.
-      const claim = await claimStartup();
-      expect(claim.outcome).toBe("CLAIMED");
     },
     25_000,
   );

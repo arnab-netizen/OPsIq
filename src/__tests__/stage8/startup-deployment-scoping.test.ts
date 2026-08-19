@@ -102,23 +102,29 @@ const dbMock = {
   },
   workspace: { findUnique: workspaceFindUnique },
   $queryRawUnsafe: vi.fn(async () => [{ ok: 1 }]),
-  // P0-15: claimStartup()'s single atomic
-  // `INSERT ... ON CONFLICT ... WHERE ... RETURNING` statement. Positional
-  // interpolated values, in the exact order claimStartup() supplies them:
-  // [instanceId, now, version, instanceId, claimToken, now, now, staleThreshold].
-  // This mirrors real Postgres CAS semantics against the same in-memory `rows`
-  // map the rest of this fake uses — see the sibling real-Postgres suite
-  // (startup-status-claim-concurrency.db.test.ts) for the version of this
-  // proof that exercises actual row-level locking instead of a JS fake.
-  $queryRaw: vi.fn(async (_strings: TemplateStringsArray, ...values: unknown[]) => {
-    const [instanceId, now, version, , claimToken, , , staleThreshold] = values as [
+};
+
+// F-PROD-STARTUP-COLDSTART second-mechanism forensic: claimStartup() and
+// checkDatabase() now run against a raw pg client (getRawPool() +
+// withRawStatementTimeout()) instead of a Prisma interactive transaction —
+// see src/lib/db.ts. This single `query` fake stands in for both real call
+// sites sharing the same client contract:
+//   - checkDatabase(): client.query("SELECT 1") — result discarded.
+//   - claimStartup(): the atomic `INSERT ... ON CONFLICT ... WHERE ...
+//     RETURNING` statement with positional $1-$5 params, in the exact order
+//     claimStartup() supplies them: [instanceId, now, version, claimToken,
+//     staleThreshold]. This mirrors real Postgres CAS semantics against the
+//     same in-memory `rows` map the rest of this fake uses — see the
+//     sibling real-Postgres suite (startup-status-claim-concurrency.db.test.ts)
+//     for the version of this proof that exercises actual row-level locking
+//     instead of a JS fake.
+const rawQueryMock = vi.fn(async (text: string, values: unknown[] = []) => {
+  if (text.includes("INSERT INTO") && text.includes("startup_status")) {
+    const [instanceId, now, version, claimToken, staleThreshold] = values as [
       string,
       Date,
       string,
       string,
-      string,
-      Date,
-      Date,
       Date,
     ];
     const existing = rows.get(instanceId);
@@ -128,7 +134,7 @@ const dbMock = {
       existing.status === "NOT_STARTED" ||
       existing.status === "FAILED" ||
       (existing.status === "STARTING" && existing.startedAt.getTime() < staleThreshold.getTime());
-    if (!claimable) return [];
+    if (!claimable) return { rows: [] };
     const row: Row = {
       instanceId,
       status: "STARTING",
@@ -140,32 +146,42 @@ const dbMock = {
       claimToken,
     };
     rows.set(instanceId, row);
-    return [{ id: `fake-${instanceId}`, claim_token: claimToken, started_at: now, previous_status: previousStatus }];
-  }),
-};
+    return {
+      rows: [{ id: `fake-${instanceId}`, claim_token: claimToken, started_at: now, previous_status: previousStatus }],
+    };
+  }
+  // checkDatabase()'s plain "SELECT 1" ping — content is discarded by the caller.
+  return { rows: [{ "?column?": 1 }] };
+});
 
 vi.mock("@/lib/db", () => ({
   db: dbMock,
+  // performStartupChecks() still resolves the Prisma client via getDbInstance()
+  // for checkDatabaseSchema()/checkPrivateWorkspaceExists() (dbMock.workspace) —
+  // only checkDatabase()'s own connectivity ping moved to the raw client below.
   getDbInstance: vi.fn(async () => dbMock),
-  // Unit-level simplification: skip the real SET LOCAL statement_timeout
-  // transaction wrapping (proven separately against real Postgres in
-  // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
-  // callback with the same mocked client, preserving the in-memory CAS
-  // simulation above unchanged.
-  withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
-  // F-PROD-STARTUP-COLDSTART: startup-orchestrator.ts now imports this named
-  // export at module scope (to derive its own outer race timeout) — a full
-  // module mock must provide every export the mocked module's callers use,
-  // regardless of whether this specific test exercises the maxWait path
-  // itself (that behavior has its own real-Postgres hostile proof in
-  // src/__tests__/lib/startup-coldstart-maxwait-hostile.db.test.ts).
-  TRANSACTION_ACQUIRE_MAX_WAIT_MS: 10_000,
-  // F-PROD-STARTUP-COLDSTART recurrence: startup-orchestrator.ts also derives
-  // DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS from this at module
-  // scope — same reason as TRANSACTION_ACQUIRE_MAX_WAIT_MS above (its own
-  // real-Postgres hostile proof is in
+  getRawPool: vi.fn(async () => ({
+    connect: vi.fn(async () => ({ query: rawQueryMock })),
+  })),
+  // Unit-level simplification: skip the real BEGIN/SET LOCAL statement_timeout/
+  // COMMIT wrapping (proven separately against real Postgres in
+  // src/lib/__tests__/db-statement-timeout.db.test.ts) and just acquire the
+  // mocked client via the same pool.connect() the real helper uses, then
+  // invoke the callback with it, preserving the in-memory CAS simulation
+  // above unchanged.
+  withRawStatementTimeout: async (
+    pool: { connect: () => Promise<{ query: (...args: unknown[]) => unknown }> },
+    _timeoutMs: number,
+    fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
+  ) => fn(await pool.connect()),
+  // F-PROD-STARTUP-COLDSTART second-mechanism forensic: startup-orchestrator.ts
+  // now imports this named export at module scope (to derive
+  // DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS) — a full module mock
+  // must provide every export the mocked module's callers use, regardless of
+  // whether this specific test exercises the timeout path itself (that
+  // behavior has its own real-Postgres hostile proof in
   // src/__tests__/lib/startup-coldstart-pool-contention-hostile.db.test.ts).
-  ACQUISITION_QUEUE_WAIT_MS: 10_000,
+  POOL_CONNECTION_TIMEOUT_MS: 90_000,
 }));
 
 // checkMigrationReadiness is now called inside performStartupChecks().

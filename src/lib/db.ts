@@ -9,6 +9,16 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /**
+ * Production pg.Pool connectionTimeoutMillis. Exported so callers of
+ * withRawStatementTimeout() (and their own outer JS-side races) can derive
+ * an accurate bound from the real, single source of truth instead of an
+ * independently-chosen constant silently drifting out of sync — the exact
+ * failure mode the withStatementTimeout()/TRANSACTION_ACQUIRE_MAX_WAIT_MS
+ * pairing above already guards against.
+ */
+export const POOL_CONNECTION_TIMEOUT_MS = 90_000;
+
+/**
  * Detect if URL is a Neon endpoint (serverless PostgreSQL)
  * Neon endpoints have:
  * - neon.tech or neon.database in hostname
@@ -54,7 +64,7 @@ async function createPrismaClient() {
       // a real weakening, and unrelated to the connectivity failures this fixes.
       // In test envs, connectionTimeoutMillis=0 (unlimited pool-queue wait) so cold-start
       // connection attempts block until Neon compute is ready. Production keeps 90s.
-      connectionTimeoutMillis: isTestEnv ? 0 : 90000,
+      connectionTimeoutMillis: isTestEnv ? 0 : POOL_CONNECTION_TIMEOUT_MS,
       // P0-15 (Neon production connectivity root-cause): Prisma's official serverless
       // guidance is connection_limit=1 per function instance, relying on an external
       // pooler (Neon's PgBouncer / pooled endpoint) for fan-in across concurrent
@@ -141,6 +151,19 @@ export async function getDbInstance() {
     dbInitPromise = getDb();
   }
   return dbInitPromise;
+}
+
+/**
+ * Raw pg.Pool accessor for withRawStatementTimeout() callers. Ensures the
+ * pool has been constructed (via getDbInstance(), which also creates the
+ * Prisma client that shares this same pool) before returning it — same
+ * initialization pattern already used by pingDatabase()/heartbeatPool().
+ */
+export async function getRawPool() {
+  if (!globalForPrisma.pgPool) {
+    await getDbInstance();
+  }
+  return globalForPrisma.pgPool;
 }
 
 /**
@@ -398,6 +421,116 @@ export async function withStatementTimeout<T>(
     throw err;
   } finally {
     node.release();
+  }
+}
+
+/**
+ * F-PROD-STARTUP-COLDSTART second-mechanism forensic (production evidence:
+ * a P2028 recurrence on the merged PR #322 deployment with NO
+ * AcquisitionQueueTimeoutError anywhere in the logs — i.e. not a
+ * same-process queuing case at all — on a deployment whose raw logs show
+ * every ~60s poll re-triggering a brand-new pg.Pool). Reproduced directly:
+ * src/__tests__/lib/fresh-connection-acquisition-hostile.db.test.ts proves
+ * that prisma.$transaction({maxWait: 10_000}) races its own maxWait clock
+ * against the FIRST-EVER physical connection attempt on a fresh pool,
+ * completely independent of whether that connection would have succeeded
+ * well within the pool's own much longer connectionTimeoutMillis (90s in
+ * production). A fresh pool whose first connection takes anywhere from 10s
+ * to 90s — plausible under ordinary network/TLS/auth latency, unrelated to
+ * same-process contention or Neon compute-wake — always produces P2028
+ * through that path, even though the connection itself was never actually
+ * going to fail.
+ *
+ * withStatementTimeout() only needs an interactive transaction to run `SET
+ * LOCAL statement_timeout` before the real query — none of its current
+ * callers (claimStartup, checkDatabase, checkMigrationReadiness) need
+ * actual multi-statement transactional semantics; each is already a single
+ * atomic statement (see the per-caller audit in the F-PROD-STARTUP-
+ * COLDSTART second-mechanism forensic report). This function runs `fn`
+ * against a single checked-out raw pg client with a bounded SESSION-level
+ * statement_timeout instead — connection ACQUISITION is now bounded only
+ * by the pool's own connectionTimeoutMillis (a pre-existing, unchanged
+ * setting; this is not "raising maxWait", it is removing dependence on
+ * Prisma's separate, narrower acquisition-race mechanism entirely for
+ * these call sites), and query EXECUTION is still bounded by a genuine
+ * Postgres-side statement_timeout exactly as before.
+ *
+ * Client release is failure-aware: a Postgres statement_timeout
+ * cancellation (SQLSTATE 57014) leaves the SESSION itself healthy (no
+ * explicit BEGIN was ever issued, so there is no aborted transaction to
+ * roll back) — the timeout is reset and the client is safely returned to
+ * the pool for reuse, which matters under production's max:1 pool where
+ * discarding a still-healthy connection would force the next caller to pay
+ * a full fresh-connection cost (the exact failure mode this function
+ * exists to avoid) for no reason. Any OTHER error is treated as
+ * potentially leaving the connection in an unknown state and the client is
+ * released with the error, telling pg.Pool to discard rather than reuse it.
+ */
+const POSTGRES_QUERY_CANCELED_SQLSTATE = "57014";
+
+export interface RawQueryClient {
+  query: <T = unknown>(text: string, values?: readonly unknown[]) => Promise<{ rows: T[] }>;
+}
+
+export async function withRawStatementTimeout<T>(
+  pool: { connect: () => Promise<RawQueryClient & { release: (err?: Error) => void }> },
+  timeoutMs: number,
+  fn: (client: RawQueryClient) => Promise<T>,
+  label = "unlabeled"
+): Promise<T> {
+  const safeTimeoutMs = Math.trunc(timeoutMs);
+  if (!Number.isFinite(safeTimeoutMs) || safeTimeoutMs <= 0) {
+    throw new Error(`withRawStatementTimeout: timeoutMs must be a positive finite number, got ${timeoutMs}`);
+  }
+
+  const acquireStart = Date.now();
+  const client = await pool.connect();
+  const acquiredAt = Date.now();
+
+  try {
+    await client.query(`SET statement_timeout = ${safeTimeoutMs}`);
+    const result = await fn(client);
+    await client.query(`SET statement_timeout = DEFAULT`);
+    client.release();
+    logger.debug("[db] withRawStatementTimeout completed", {
+      label,
+      acquireMs: acquiredAt - acquireStart,
+      executionMs: Date.now() - acquiredAt,
+      outcome: "success",
+    });
+    return result;
+  } catch (err) {
+    const sqlState = (err as { code?: unknown } | null)?.code;
+    const isQueryCancellation = sqlState === POSTGRES_QUERY_CANCELED_SQLSTATE;
+    const errorObj = err instanceof Error ? err : new Error(String(err));
+
+    if (isQueryCancellation) {
+      try {
+        await client.query(`SET statement_timeout = DEFAULT`);
+        client.release();
+      } catch {
+        // Reset itself failed on a client we already know is in a
+        // questionable state -- discard rather than risk returning a
+        // poisoned connection to the shared pool.
+        client.release(errorObj);
+      }
+    } else {
+      // Connection-level or otherwise unclassified failure -- the
+      // session's state is not trustworthy; discard so pg.Pool
+      // establishes a fresh connection for the next caller instead of
+      // reusing a possibly-broken one.
+      client.release(errorObj);
+    }
+
+    logger.debug("[db] withRawStatementTimeout completed", {
+      label,
+      acquireMs: acquiredAt - acquireStart,
+      executionMs: Date.now() - acquiredAt,
+      outcome: "error",
+      errorName: errorObj.name,
+      wasQueryCancellation: isQueryCancellation,
+    });
+    throw errorObj;
   }
 }
 
