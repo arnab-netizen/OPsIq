@@ -33,56 +33,63 @@ vi.stubEnv("VERCEL", "1");
 vi.stubEnv("VERCEL_DEPLOYMENT_ID", "dpl_test_fail_closed");
 vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "");
 
-const queryRawMock = vi.fn();
+const queryMock = vi.fn();
 const updateManyMock = vi.fn();
-const getDbInstanceMock = vi.fn();
+const connectMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   db: {
-    $queryRaw: (...args: unknown[]) => queryRawMock(...args),
     startupStatus: {
       updateMany: (...args: unknown[]) => updateManyMock(...args),
     },
   },
-  getDbInstance: (...args: unknown[]) => getDbInstanceMock(...args),
-  // Unit-level simplification: skip the real SET LOCAL statement_timeout
-  // transaction wrapping (proven separately against real Postgres in
-  // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
-  // callback with the same mocked client, preserving every existing mock's
-  // control flow unchanged.
-  withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
+  getRawPool: vi.fn().mockResolvedValue({
+    connect: (...args: unknown[]) => connectMock(...args),
+  }),
+  // Unit-level simplification: skip the real BEGIN/SET LOCAL statement_timeout/
+  // COMMIT wrapping (proven separately against real Postgres in
+  // src/lib/__tests__/db-statement-timeout.db.test.ts) and just acquire the
+  // mocked client via the same pool.connect() the real helper uses, then
+  // invoke the callback with it — preserving every existing mock's control
+  // flow (a connect() rejection or a query() rejection both propagate
+  // exactly as they would through the real helper).
+  withRawStatementTimeout: async (
+    pool: { connect: () => Promise<{ query: (...args: unknown[]) => unknown }> },
+    _timeoutMs: number,
+    fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
+  ) => fn(await pool.connect()),
 }));
 
 import { claimStartup, completeStartup } from "@/services/startup-status";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  getDbInstanceMock.mockResolvedValue({
-    $queryRaw: (...args: unknown[]) => queryRawMock(...args),
+  connectMock.mockResolvedValue({
+    query: (...args: unknown[]) => queryMock(...args),
   });
 });
 
 describe("claimStartup() — fails closed when the database is unavailable", () => {
   it("throws (never CLAIMED, never IN_PROGRESS) when the claim query throws a connection error", async () => {
-    queryRawMock.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"));
+    queryMock.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"));
 
     await expect(claimStartup()).rejects.toThrow("Connection terminated unexpectedly");
   });
 
   it("throws (never CLAIMED, never IN_PROGRESS) when the claim query throws an auth-timeout error", async () => {
-    queryRawMock.mockRejectedValueOnce(new Error("DriverAdapterError: Authentication timed out"));
+    queryMock.mockRejectedValueOnce(new Error("DriverAdapterError: Authentication timed out"));
 
     await expect(claimStartup()).rejects.toThrow(/Authentication timed out/);
   });
 
-  it("throws when getDbInstance() itself rejects (DB unreachable before any query is sent)", async () => {
-    getDbInstanceMock.mockRejectedValueOnce(new Error("connect ETIMEDOUT"));
+  it("throws when pool.connect() itself rejects (DB unreachable before any query is sent)", async () => {
+    connectMock.mockRejectedValueOnce(new Error("connect ETIMEDOUT"));
 
     await expect(claimStartup()).rejects.toThrow("connect ETIMEDOUT");
   });
 
   it("returns IN_PROGRESS (never CLAIMED) when the claim_token column is missing (deploy-before-migrate)", async () => {
-    queryRawMock.mockRejectedValueOnce(
+    queryMock.mockRejectedValueOnce(
       new Error('column "claim_token" of relation "startup_status" does not exist')
     );
 
@@ -93,17 +100,18 @@ describe("claimStartup() — fails closed when the database is unavailable", () 
   });
 
   it("throws — not IN_PROGRESS — on an unrecognized error message (e.g. a pg-pool acquisition timeout string this classifier doesn't know)", async () => {
-    queryRawMock.mockRejectedValueOnce(new Error("some genuinely unrecognized driver error"));
+    queryMock.mockRejectedValueOnce(new Error("some genuinely unrecognized driver error"));
 
     await expect(claimStartup()).rejects.toThrow("some genuinely unrecognized driver error");
   });
 
-  it("throws — never returns IN_PROGRESS — when the client method itself is not callable (the P0-15 cold-proxy regression this test guards against)", async () => {
-    // Simulates the exact production failure: db.$queryRaw resolved to a
-    // non-function value on a cold lazy proxy, so invoking it threw
-    // "TypeError: ... is not a function" before any SQL reached Postgres.
-    getDbInstanceMock.mockResolvedValueOnce({
-      $queryRaw: undefined,
+  it("throws — never returns IN_PROGRESS — when the client's query method itself is not callable (the P0-15 cold-proxy regression this test guards against, now exercised via the raw pg client contract)", async () => {
+    // Simulates a client object whose expected .query() resolved to a
+    // non-function value (the same failure class the original Prisma lazy-
+    // proxy regression produced), so invoking it throws "TypeError: ... is
+    // not a function" before any SQL reaches Postgres.
+    connectMock.mockResolvedValueOnce({
+      query: undefined,
     });
 
     await expect(claimStartup()).rejects.toThrow(TypeError);

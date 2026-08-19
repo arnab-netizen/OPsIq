@@ -34,25 +34,35 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/db", () => ({
-  getDbInstance: vi.fn(async () => ({
-    $queryRawUnsafe: vi.fn(async () => {
-      if (h.dbFails) throw new Error("Connection refused");
-      return [{ result: 1 }];
-    }),
+  // performStartupChecks() still resolves the Prisma client via getDbInstance()
+  // for checkDatabaseSchema()/checkPrivateWorkspaceExists() — only
+  // checkDatabase()'s own connectivity ping moved to the raw client below.
+  // OPSIQ_PRIVATE_WORKSPACE_ID is unset in these tests, so an empty stub
+  // (never dereferenced) is sufficient.
+  getDbInstance: vi.fn(async () => ({})),
+  getRawPool: vi.fn(async () => ({
+    connect: vi.fn(async () => ({
+      query: vi.fn(async () => {
+        if (h.dbFails) throw new Error("Connection refused");
+        return { rows: [{ result: 1 }] };
+      }),
+    })),
   })),
-  // Unit-level simplification: skip the real SET LOCAL statement_timeout
-  // transaction wrapping (proven separately against real Postgres in
-  // src/lib/__tests__/db-statement-timeout.db.test.ts) and just invoke the
-  // callback with the same mocked client.
-  withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
-  // F-PROD-STARTUP-COLDSTART: startup-orchestrator.ts now imports this named
-  // export at module scope — a full module mock must provide every export
-  // the mocked module's callers use.
-  TRANSACTION_ACQUIRE_MAX_WAIT_MS: 10_000,
-  // F-PROD-STARTUP-COLDSTART recurrence: startup-orchestrator.ts also derives
-  // DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS from this at module
-  // scope — same reason as TRANSACTION_ACQUIRE_MAX_WAIT_MS above.
-  ACQUISITION_QUEUE_WAIT_MS: 10_000,
+  // Unit-level simplification: skip the real BEGIN/SET LOCAL statement_timeout/
+  // COMMIT wrapping (proven separately against real Postgres in
+  // src/lib/__tests__/db-statement-timeout.db.test.ts) and just acquire the
+  // mocked client via the same pool.connect() the real helper uses, then
+  // invoke the callback with it.
+  withRawStatementTimeout: async (
+    pool: { connect: () => Promise<{ query: (...args: unknown[]) => unknown }> },
+    _timeoutMs: number,
+    fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
+  ) => fn(await pool.connect()),
+  // F-PROD-STARTUP-COLDSTART second-mechanism forensic: startup-orchestrator.ts
+  // now imports this named export at module scope (to derive
+  // DB_CHECK_TIMEOUT_MS/MIGRATION_READINESS_TIMEOUT_MS) — a full module mock
+  // must provide every export the mocked module's callers use.
+  POOL_CONNECTION_TIMEOUT_MS: 90_000,
 }));
 
 vi.mock("@/services/startup-status", () => ({

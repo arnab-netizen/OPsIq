@@ -26,12 +26,17 @@ vi.mock("fs", async () => {
 });
 
 vi.mock("@/lib/db", () => ({
-  getDbInstance: vi.fn(),
-  // Unit-level simplification: skip the real SET LOCAL statement_timeout
-  // transaction wrapping (proven separately against real Postgres in
-  // src/__tests__/lib/db-statement-timeout.db.test.ts) and just invoke the
-  // callback with the same mocked client.
-  withStatementTimeout: (prisma: unknown, _timeoutMs: number, fn: (tx: unknown) => unknown) => fn(prisma),
+  getRawPool: vi.fn(),
+  // Unit-level simplification: skip the real BEGIN/SET LOCAL statement_timeout/
+  // COMMIT wrapping (proven separately against real Postgres in
+  // src/__tests__/lib/db-statement-timeout.db.test.ts) and just acquire the
+  // mocked client via the same pool.connect() the real helper uses, then
+  // invoke the callback with it.
+  withRawStatementTimeout: async (
+    pool: { connect: () => Promise<{ query: (...args: unknown[]) => unknown }> },
+    _timeoutMs: number,
+    fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
+  ) => fn(await pool.connect()),
 }));
 
 // Import mocked modules for type-safe access to mock functions.
@@ -64,13 +69,11 @@ function setupFs(dirs = COMMITTED_DIRS) {
 }
 
 function setupDb(rows: ReturnType<typeof makeRow>[]) {
-  const mockPrisma = {
-    $queryRawUnsafe: vi.fn().mockResolvedValue(rows),
-  };
-  vi.mocked(dbMod.getDbInstance).mockResolvedValue(
-    mockPrisma as unknown as Awaited<ReturnType<typeof dbMod.getDbInstance>>
-  );
-  return mockPrisma;
+  const query = vi.fn().mockResolvedValue({ rows });
+  vi.mocked(dbMod.getRawPool).mockResolvedValue({
+    connect: vi.fn().mockResolvedValue({ query }),
+  } as unknown as Awaited<ReturnType<typeof dbMod.getRawPool>>);
+  return { query };
 }
 
 beforeEach(() => {
@@ -192,9 +195,9 @@ describe("checkMigrationReadiness", () => {
   });
 
   describe("Case 7: DB unreachable", () => {
-    it("returns ready: false when getDbInstance rejects", async () => {
+    it("returns ready: false when getRawPool rejects", async () => {
       setupFs();
-      vi.mocked(dbMod.getDbInstance).mockRejectedValue(
+      vi.mocked(dbMod.getRawPool).mockRejectedValue(
         new Error("Cannot connect to database")
       );
 
@@ -206,14 +209,12 @@ describe("checkMigrationReadiness", () => {
       expect(result.error).toContain("Cannot connect to database");
     });
 
-    it("returns ready: false when $queryRawUnsafe throws", async () => {
+    it("returns ready: false when the raw query throws", async () => {
       setupFs();
-      const mockPrisma = {
-        $queryRawUnsafe: vi.fn().mockRejectedValue(new Error("relation _prisma_migrations does not exist")),
-      };
-      vi.mocked(dbMod.getDbInstance).mockResolvedValue(
-        mockPrisma as unknown as Awaited<ReturnType<typeof dbMod.getDbInstance>>
-      );
+      const query = vi.fn().mockRejectedValue(new Error("relation _prisma_migrations does not exist"));
+      vi.mocked(dbMod.getRawPool).mockResolvedValue({
+        connect: vi.fn().mockResolvedValue({ query }),
+      } as unknown as Awaited<ReturnType<typeof dbMod.getRawPool>>);
 
       const result = await checkMigrationReadiness();
 

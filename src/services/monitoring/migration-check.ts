@@ -1,14 +1,19 @@
 import path from "path";
 import * as fs from "fs";
-import { getDbInstance, withStatementTimeout } from "@/lib/db";
+import { withRawStatementTimeout, getRawPool } from "@/lib/db";
 
 /**
  * Database-enforced bound for the migration-history query below, matching
- * the caller's own 5s MIGRATION_READINESS_TIMEOUT_MS JS-side race
+ * the caller's own MIGRATION_READINESS_TIMEOUT_MS JS-side race
  * (src/infra/startup-orchestrator.ts). Postgres cancels the statement
  * itself if exceeded, so a stalled connection can never hold the shared
- * pool's sole connection (max: 1) indefinitely — see withStatementTimeout()
- * in src/lib/db.ts.
+ * pool's sole connection (max: 1) indefinitely — see withRawStatementTimeout()
+ * in src/lib/db.ts. This query no longer runs inside a Prisma interactive
+ * transaction (F-PROD-STARTUP-COLDSTART second-mechanism forensic — see
+ * withRawStatementTimeout()'s own doc comment): it is a single read-only
+ * SELECT with no multi-statement consistency requirement, so removing the
+ * transaction wrapper removes dependence on Prisma's separate, narrower
+ * maxWait acquisition race for this call site.
  */
 export const MIGRATION_QUERY_STATEMENT_TIMEOUT_MS = 5000;
 
@@ -79,15 +84,16 @@ export async function checkMigrationReadiness(): Promise<MigrationReadiness> {
   }
 
   try {
-    const prisma = await getDbInstance();
-    const rows = (await withStatementTimeout(
-      prisma,
+    const pool = await getRawPool();
+    const result = (await withRawStatementTimeout(
+      pool,
       MIGRATION_QUERY_STATEMENT_TIMEOUT_MS,
-      (tx) => tx.$queryRawUnsafe(
+      (client) => client.query(
         `SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations"`
       ),
       "checkMigrationReadiness"
-    )) as RawMigrationRow[];
+    )) as { rows: RawMigrationRow[] };
+    const rows = result.rows;
 
     const appliedSet = new Set<string>();
     let failed = 0;
