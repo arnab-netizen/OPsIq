@@ -24,7 +24,15 @@ name: Migrate Production Database
 #                      from main. Every other step (npm ci, prisma generate,
 #                      prisma migrate deploy, secret handling) runs
 #                      identically to MAIN mode, against main's own trusted
-#                      node_modules/prisma installation.
+#                      node_modules/prisma installation. Additionally, the
+#                      caller must pin the exact expected production DB
+#                      hostname (expected_database_host, bare hostname
+#                      only); the workflow parses PRODUCTION_DATABASE_URL's
+#                      actual hostname at runtime and aborts before any
+#                      migration deploy on any mismatch -- a syntactically
+#                      valid direct Neon URL belonging to the wrong
+#                      project/branch would otherwise pass the existing
+#                      placeholder/pooler checks undetected.
 #
 # TRANSIENT STATE NOTE (PINNED_PREDEPLOY): after a pinned migration is
 # applied, production's _prisma_migrations table will contain a migration
@@ -72,6 +80,10 @@ on:
         type: string
       migration_sha256:
         description: '[PINNED_PREDEPLOY only] SHA-256 checksum of the migration.sql file, as authorized by the owner'
+        required: false
+        type: string
+      expected_database_host:
+        description: '[PINNED_PREDEPLOY only] Exact owner-authorized production DB hostname, bare hostname only (e.g. ep-xxxx.region.aws.neon.tech) — never a full URL, credentials, path, or query string'
         required: false
         type: string
 
@@ -312,6 +324,13 @@ jobs:
           echo "✓ DATABASE_URL safety checks passed (host: $DB_HOST)"
           echo "Note: this same secret and the same placeholder/pooler checks above apply identically in both MAIN and PINNED_PREDEPLOY mode — there is no mode-specific database target."
 
+      - name: Verify exact production database host matches owner-pinned expectation
+        if: inputs.mode == 'PINNED_PREDEPLOY'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: node scripts/validate-expected-db-host.mjs
+
       - name: Check pending migrations (pre-deploy)
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
@@ -377,6 +396,7 @@ jobs:
             echo "| Source SHA (git-object read only, never checked out) | \`${{ inputs.source_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Pinned migration | \`${{ inputs.migration_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Migration checksum | \`${{ inputs.migration_sha256 }}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Expected DB host (owner-pinned, exact-match enforced) | \`${{ inputs.expected_database_host }}\` |" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "| Operation | prisma migrate deploy (no seed, no reset) |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
