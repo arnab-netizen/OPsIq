@@ -120,7 +120,17 @@ describe("migrate-production.yml — PINNED_PREDEPLOY safety controls", () => {
   });
 
   it("18. Enforces exactly one pending migration before deploy in PINNED_PREDEPLOY mode", () => {
-    expect(src).toContain("requires exactly one pending migration");
+    // The pre-deploy gate delegates this enforcement to
+    // classify-migrate-status.mjs (see migrate-workflow-preflight-errexit-safety.test.ts
+    // for the classifier's own governance/hostile tests) rather than
+    // inline shell parsing.
+    expect(src).toContain("node scripts/classify-migrate-status.mjs");
+    const classifierSrc = readFileSync(
+      join(process.cwd(), "scripts/classify-migrate-status.mjs"),
+      "utf-8"
+    );
+    expect(classifierSrc).toContain("MULTIPLE_PENDING");
+    expect(classifierSrc).toContain("Expected exactly one pending migration");
   });
 
   it("19. DATABASE_URL placeholder/pooler checks are shared — no mode-specific database target exists", () => {
