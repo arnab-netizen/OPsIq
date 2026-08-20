@@ -43,6 +43,10 @@ const KNOWN_PREFIXES: Array<{
   { prefix: "capture-", classification: "GOVERNANCE" },
   { prefix: "check-", classification: "GOVERNANCE" },
   { prefix: "ci-", classification: "GOVERNANCE" },
+  // classify-migrate-status.mjs classifies `prisma migrate status` output
+  // (exit code + text) into a fixed enum via string matching. No HTTP
+  // calls, no database access, no mutation of any governed record.
+  { prefix: "classify-", classification: "GOVERNANCE" },
   { prefix: "deployment-", classification: "GOVERNANCE" },
   { prefix: "diagnose-", classification: "GOVERNANCE" },
   { prefix: "export-", classification: "GOVERNANCE" },
