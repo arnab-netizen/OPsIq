@@ -129,4 +129,39 @@ describe("production-db-status.yml — read-only safety controls", () => {
     expect(src).not.toMatch(/neon\.tech\/api/i);
     expect(src).not.toContain("vercel env");
   });
+
+  it("20. Queries owner_startup_session.business_id (F-STARTUP-NO-HANDOFF, PR #326) via SELECT only", () => {
+    const idx = src.indexOf("owner_startup_session.business_id");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 400);
+    expect(block).toMatch(/SELECT/i);
+    expect(block).toContain("information_schema.columns");
+    expect(block).toContain("table_name = 'owner_startup_session'");
+  });
+
+  it("21. Queries the owner_startup_session_business_id_key index definition (proves UNIQUE from data, not asserted in source)", () => {
+    expect(src).toContain("owner_startup_session_business_id_key");
+    const idx = src.indexOf("owner_startup_session_business_id_key index definition");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 300);
+    expect(block).toMatch(/SELECT/i);
+    expect(block).toContain("pg_indexes");
+  });
+
+  it("22. Queries owner_startup_session row count and non-null business_id count via SELECT only", () => {
+    const idx = src.indexOf("owner_startup_session row count");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 550);
+    expect(block).toMatch(/SELECT/i);
+    expect(block).toContain("COUNT(*)");
+    expect(block).toContain("FROM owner_startup_session");
+  });
+
+  it("23. Includes 20260819000001_startup_session_business_handoff in the _prisma_migrations lookup, and documents its expected MISSING_ON_MAIN transient state", () => {
+    expect(src).toContain("'20260819000001_startup_session_business_handoff'");
+    expect(src).toContain("MISSING_ON_MAIN");
+    const idx = src.indexOf("20260819000001_startup_session_business_handoff is included");
+    expect(idx).toBeGreaterThan(-1);
+    expect(src.slice(idx, idx + 400)).toMatch(/PINNED_PREDEPLOY/);
+  });
 });
