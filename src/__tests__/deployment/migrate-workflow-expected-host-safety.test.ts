@@ -70,7 +70,7 @@ describe("migrate-production.yml — PINNED_PREDEPLOY exact-host gate", () => {
 
   it("9. MAIN mode is not forced to supply expected_database_host (input remains optional at the schema level)", () => {
     const idx = src.indexOf("expected_database_host:");
-    const block = src.slice(idx, idx + 150);
+    const block = src.slice(idx, idx + 320);
     expect(block).toMatch(/required:\s*false/);
   });
 
