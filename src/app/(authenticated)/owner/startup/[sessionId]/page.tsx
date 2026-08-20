@@ -29,10 +29,21 @@ interface OwnerDecision {
   supersededById: string | null;
 }
 
+/** Owner-supplied startup intake, captured once at session creation (see
+ * src/domain/owner-strategy/startup-mode.validation.ts:startupIntakeSchema).
+ * Every field is honestly nullable — an owner may not have supplied it. */
+interface StartupIntake {
+  location: string | null;
+  capitalAvailable: number | null;
+  riskTolerance: "low" | "medium" | "high" | null;
+  hoursPerWeekAvailable: number | null;
+}
+
 interface SessionData {
   id: string;
   sessionLabel: string | null;
   status: string;
+  intake: StartupIntake;
   profileVersion: number;
   currentProfileVersionId: string | null;
   currentSystemRecId: string | null;
@@ -281,6 +292,19 @@ export default function StartupSessionPage({
   async function handleScreenIdea(ideaId: string) {
     setPageMsg(null);
     try {
+      // Screen using the owner's own intake, captured once at session
+      // creation — never re-asked, never fabricated. capitalAvailable is a
+      // plain currency amount in the intake domain (see
+      // src/domain/owner-strategy/startup-mode.ts's direct arithmetic use);
+      // the screening profile expects cents, hence the explicit conversion.
+      // riskTolerance is lowercase in startupIntakeSchema ("low"/"medium"/
+      // "high") but uppercase in the analysis route's profileSchema
+      // ("LOW"/"MEDIUM"/"HIGH") — case-converted here, not re-validated as a
+      // new enum, since both sides already independently enforce the same
+      // three values.
+      const intake = session?.intake;
+      const capitalAvailableCents =
+        intake?.capitalAvailable != null ? Math.round(intake.capitalAvailable * 100) : null;
       const res = await fetch(`/api/owner/startup/sessions/${sessionId}/analysis`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -288,9 +312,10 @@ export default function StartupSessionPage({
           action: "SCREEN",
           ideaId,
           profile: {
-            capitalAvailableCents: null,
-            ownerHoursPerWeek: null,
-            riskTolerance: null,
+            capitalAvailableCents,
+            ownerHoursPerWeek: intake?.hoursPerWeekAvailable ?? null,
+            riskTolerance: intake?.riskTolerance ? intake.riskTolerance.toUpperCase() : null,
+            location: intake?.location ?? null,
           },
         }),
       });
