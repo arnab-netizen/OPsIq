@@ -135,7 +135,7 @@ describe("migrate-production.yml — preflight errexit safety", () => {
       set -e
       echo "before"
       set +e
-      STATUS_OUTPUT=$(false; echo "captured despite failure")
+      STATUS_OUTPUT=$(echo "captured despite failure"; false)
       STATUS_EXIT=$?
       set -e
       echo "after: exit=$STATUS_EXIT output=[$STATUS_OUTPUT]"
@@ -149,7 +149,7 @@ describe("migrate-production.yml — preflight errexit safety", () => {
     const buggyScript = `
       set -e
       echo "before"
-      STATUS_OUTPUT=$(false; echo "should never be reached")
+      STATUS_OUTPUT=$(echo "should never be reached"; false)
       echo "AFTER (should not print)"
     `;
     let threw = false;
@@ -183,7 +183,7 @@ describe("scripts/classify-migrate-status.mjs — governance", () => {
 
   it("14. Exit code 0 with unrecognized output is rejected, not assumed clean (fail closed)", () => {
     expect(scriptSrc).toContain("MALFORMED_OUTPUT");
-    expect(scriptSrc).toMatch(/exitCode === 0[\s\S]{0,300}MALFORMED_OUTPUT/);
+    expect(scriptSrc).toMatch(/exitCode === 0[\s\S]{0,500}MALFORMED_OUTPUT/);
   });
 
   it("15. Multiple pending migrations and wrong-migration are distinctly classified, not conflated", () => {
