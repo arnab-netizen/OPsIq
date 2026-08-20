@@ -336,19 +336,22 @@ jobs:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
           echo "=== Pre-deploy migration status ==="
+          # `prisma migrate status` exits non-zero whenever migrations are
+          # pending -- the EXPECTED state here. Capturing it via
+          # `VAR=$(cmd)` under the shell's default `set -e` would abort
+          # THIS LINE ITSELF before any of the parsing below (or the
+          # trailing `exit 0`) ever ran. set +e / capture / restore set -e
+          # is the safe idiom; the classifier below is the actual gate.
+          set +e
           STATUS_OUTPUT=$(npx prisma migrate status 2>&1)
+          STATUS_EXIT=$?
+          set -e
           echo "$STATUS_OUTPUT" | tee migration-status-before.txt
-          echo "=== End pre-deploy status ==="
+          echo "=== End pre-deploy status (exit $STATUS_EXIT) ==="
 
           if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
-            PENDING_NAMES=$(echo "$STATUS_OUTPUT" | grep -oE '[0-9]{14}_[a-zA-Z0-9_]+' | sort -u)
-            PENDING_COUNT=$(echo "$PENDING_NAMES" | grep -c . || true)
-            if [ "$PENDING_COUNT" != "1" ] || [ "$PENDING_NAMES" != "${{ inputs.migration_name }}" ]; then
-              echo "::error::PINNED_PREDEPLOY requires exactly one pending migration (${{ inputs.migration_name }}) before deploy. Found:"
-              echo "$PENDING_NAMES"
-              exit 1
-            fi
-            echo "✓ Exactly one pending migration confirmed: ${{ inputs.migration_name }}"
+            STATUS_EXIT="$STATUS_EXIT" STATUS_OUTPUT="$STATUS_OUTPUT" EXPECTED_MIGRATION_NAME="${{ inputs.migration_name }}" node scripts/classify-migrate-status.mjs
+            echo "PREFLIGHT_PASSED=true" >> "$GITHUB_ENV"
           fi
           # Exit 0 to allow the deploy step to run; the deploy step is authoritative.
           exit 0
@@ -356,14 +359,22 @@ jobs:
       - name: Deploy migrations
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-        run: npx prisma migrate deploy
+        run: |
+          echo "DEPLOY_STARTED=true" >> "$GITHUB_ENV"
+          npx prisma migrate deploy
+          echo "DEPLOY_SUCCEEDED=true" >> "$GITHUB_ENV"
 
       - name: Verify migration status (post-deploy)
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
           echo "=== Post-deploy migration status ==="
+          # Same errexit hazard as the pre-deploy check above -- a failed
+          # deploy leaves migrations pending/failed, which makes this
+          # capture itself exit non-zero under set -e if not guarded.
+          set +e
           STATUS_OUTPUT=$(npx prisma migrate status 2>&1)
+          set -e
           echo "$STATUS_OUTPUT" | tee migration-status-after.txt
           echo "=== End post-deploy status ==="
           # Fail if any migration is not applied.
@@ -372,6 +383,7 @@ jobs:
             exit 1
           fi
           echo "✓ All migrations applied successfully"
+          echo "POST_VERIFY_SUCCEEDED=true" >> "$GITHUB_ENV"
 
       - name: Structural post-migration verification (version-controlled, parameterized query — no arbitrary SQL)
         if: inputs.mode == 'PINNED_PREDEPLOY'
@@ -391,6 +403,10 @@ jobs:
           echo "| Mode | ${{ inputs.mode }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Timestamp | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Migration SHA (checked-out, always main) | \`${MIGRATION_SHA:-unknown}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Preflight passed | ${PREFLIGHT_PASSED:-false} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Deploy started | ${DEPLOY_STARTED:-false} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Deploy succeeded | ${DEPLOY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Post-verify succeeded | ${POST_VERIFY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
             echo "| Source PR | #${{ inputs.source_pr }} |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Source SHA (git-object read only, never checked out) | \`${{ inputs.source_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
@@ -407,7 +423,27 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
+          echo "### Result" >> "$GITHUB_STEP_SUMMARY"
+          # Success language is derived from actual step outcomes, never
+          # from mode alone -- a preflight-only failure must never claim
+          # the migration was applied (see incident: the pre-deploy status
+          # capture could previously abort the job under bash's default
+          # set -e before prisma migrate deploy ever ran, while this
+          # always()-run summary still unconditionally printed "Production
+          # now has <migration> applied").
+          if [ "${DEPLOY_SUCCEEDED:-false}" == "true" ] && [ "${POST_VERIFY_SUCCEEDED:-false}" == "true" ]; then
+            if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
+              echo "Production now has \`${{ inputs.migration_name }}\` applied." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "Production migrations applied successfully." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          elif [ "${DEPLOY_STARTED:-false}" != "true" ]; then
+            echo "**MIGRATION_NOT_EXECUTED** — preflight did not pass; \`prisma migrate deploy\` was never run. No production schema mutation occurred in this run." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**MIGRATION_RESULT_UNCERTAIN_OR_FAILED** — deploy was started but did not both complete and pass post-verification. Inspect this job's logs and migration-status-after.txt (if present) before taking any action. Do not assume the migration is applied." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ] && [ "${DEPLOY_SUCCEEDED:-false}" == "true" ] && [ "${POST_VERIFY_SUCCEEDED:-false}" == "true" ]; then
             echo "### Transient state — expected until source PR merges" >> "$GITHUB_STEP_SUMMARY"
             echo "Production now has \`${{ inputs.migration_name }}\` applied, but that migration folder" >> "$GITHUB_STEP_SUMMARY"
             echo "does not yet exist in \`main\`. Anyone running \`prisma migrate status\` against" >> "$GITHUB_STEP_SUMMARY"
