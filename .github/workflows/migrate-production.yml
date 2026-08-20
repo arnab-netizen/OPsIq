@@ -3,6 +3,39 @@ name: Migrate Production Database
 # Manual trigger only - no automatic runs. Production migrations are a
 # deliberate, human-gated operation. This workflow NEVER seeds, resets, or
 # performs any destructive operation; it only applies pending Prisma migrations.
+#
+# Two modes:
+#   MAIN            - applies whatever pending migrations already exist in
+#                      main's own prisma/migrations directory. Unchanged
+#                      behavior from the original single-mode workflow.
+#   PINNED_PREDEPLOY - applies exactly ONE additional, owner-authorized
+#                      migration from an exact, unmerged PR commit SHA,
+#                      before that PR is merged. Used only when application
+#                      code slated to ship AFTER this migration requires the
+#                      column/table to already exist (new code reading a
+#                      column the current schema lacks). The unmerged
+#                      commit's application code and scripts are NEVER
+#                      checked out or executed while this workflow holds
+#                      PRODUCTION_DATABASE_URL -- only the single named
+#                      migration.sql file is read, via a git-object-level
+#                      read (git show), verified against a GitHub-API
+#                      provenance check and a caller-supplied checksum, then
+#                      copied into the working tree that was checked out
+#                      from main. Every other step (npm ci, prisma generate,
+#                      prisma migrate deploy, secret handling) runs
+#                      identically to MAIN mode, against main's own trusted
+#                      node_modules/prisma installation.
+#
+# TRANSIENT STATE NOTE (PINNED_PREDEPLOY): after a pinned migration is
+# applied, production's _prisma_migrations table will contain a migration
+# whose folder does not yet exist in main's prisma/migrations directory.
+# This is a deliberate, temporary, and expected state: `prisma migrate
+# status` run by anyone against production between now and the source PR's
+# merge will report that migration as present in the database but not
+# found locally. That is NOT corruption and requires NO manual repair --
+# it reconciles automatically the moment the source PR merges into main
+# (the migration folder then exists in both places). Do not run `prisma
+# migrate resolve` or hand-edit `_prisma_migrations` in response to this.
 on:
   workflow_dispatch:
     inputs:
@@ -13,10 +46,38 @@ on:
         type: choice
         options:
           - production
+      mode:
+        description: 'MAIN (migrations already in main) or PINNED_PREDEPLOY (one owner-authorized migration from an exact unmerged PR SHA)'
+        required: true
+        default: 'MAIN'
+        type: choice
+        options:
+          - MAIN
+          - PINNED_PREDEPLOY
       confirm:
-        description: 'Type "MIGRATE PRODUCTION" to confirm'
+        description: 'MAIN: type "MIGRATE PRODUCTION". PINNED_PREDEPLOY: type "MIGRATE PRODUCTION PINNED PREDEPLOY".'
         required: true
         type: string
+      source_pr:
+        description: '[PINNED_PREDEPLOY only] Source PR number the migration comes from'
+        required: false
+        type: string
+      source_sha:
+        description: '[PINNED_PREDEPLOY only] Exact 40-char commit SHA authorized by the owner (must equal the PR''s current head SHA)'
+        required: false
+        type: string
+      migration_name:
+        description: '[PINNED_PREDEPLOY only] Migration folder name, e.g. 20260819000001_startup_session_business_handoff'
+        required: false
+        type: string
+      migration_sha256:
+        description: '[PINNED_PREDEPLOY only] SHA-256 checksum of the migration.sql file, as authorized by the owner'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
 
 concurrency:
   group: migrate-production
@@ -26,21 +87,76 @@ jobs:
   migrate:
     name: Run Prisma Migrations on Production
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     environment: production
 
     steps:
+      - name: Validate mode input
+        run: |
+          case "${{ inputs.mode }}" in
+            MAIN|PINNED_PREDEPLOY) ;;
+            *)
+              echo "::error::Invalid mode '${{ inputs.mode }}'. Must be MAIN or PINNED_PREDEPLOY."
+              exit 1
+              ;;
+          esac
+          echo "✓ Mode: ${{ inputs.mode }}"
+
       - name: Confirm explicit intent
         run: |
-          if [ "${{ github.event.inputs.confirm }}" != "MIGRATE PRODUCTION" ]; then
-            echo "::error::Confirmation phrase not matched. Aborting."
+          if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
+            if [ "${{ github.event.inputs.confirm }}" != "MIGRATE PRODUCTION PINNED PREDEPLOY" ]; then
+              echo "::error::PINNED_PREDEPLOY mode requires the confirm input to be exactly \"MIGRATE PRODUCTION PINNED PREDEPLOY\". Aborting."
+              exit 1
+            fi
+          else
+            if [ "${{ github.event.inputs.confirm }}" != "MIGRATE PRODUCTION" ]; then
+              echo "::error::Confirmation phrase not matched. Aborting."
+              exit 1
+            fi
+          fi
+          echo "✓ Explicit confirmation received for mode ${{ inputs.mode }}"
+
+      - name: Validate PINNED_PREDEPLOY inputs
+        if: inputs.mode == 'PINNED_PREDEPLOY'
+        run: |
+          SOURCE_PR="${{ inputs.source_pr }}"
+          SOURCE_SHA="${{ inputs.source_sha }}"
+          MIGRATION_NAME="${{ inputs.migration_name }}"
+          MIGRATION_SHA256="${{ inputs.migration_sha256 }}"
+
+          if [ -z "$SOURCE_PR" ] || [ -z "$SOURCE_SHA" ] || [ -z "$MIGRATION_NAME" ] || [ -z "$MIGRATION_SHA256" ]; then
+            echo "::error::PINNED_PREDEPLOY mode requires source_pr, source_sha, migration_name, and migration_sha256 to all be set."
             exit 1
           fi
-          echo "✓ Explicit confirmation received"
+          if ! echo "$SOURCE_PR" | grep -qE '^[0-9]+$'; then
+            echo "::error::source_pr must be a plain PR number (digits only). Got: $SOURCE_PR"
+            exit 1
+          fi
+          if ! echo "$SOURCE_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "::error::source_sha must be a full 40-character lowercase hex commit SHA. Got: $SOURCE_SHA"
+            exit 1
+          fi
+          if ! echo "$MIGRATION_NAME" | grep -qE '^[0-9]{14}_[a-zA-Z0-9_]+$'; then
+            echo "::error::migration_name must match Prisma's <14-digit-timestamp>_<name> convention (digits, letters, underscores only). Got: $MIGRATION_NAME"
+            exit 1
+          fi
+          case "$MIGRATION_NAME" in
+            *..*|*/*|*' '*)
+              echo "::error::migration_name contains disallowed characters ('..', '/', or whitespace) — refusing to use it in a path."
+              exit 1
+              ;;
+          esac
+          if ! echo "$MIGRATION_SHA256" | grep -qE '^[0-9a-f]{64}$'; then
+            echo "::error::migration_sha256 must be a 64-character lowercase hex SHA-256 checksum. Got: $MIGRATION_SHA256"
+            exit 1
+          fi
+          echo "✓ PINNED_PREDEPLOY inputs validated: PR #$SOURCE_PR @ $SOURCE_SHA, migration=$MIGRATION_NAME"
 
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Print and verify checked-out SHA
@@ -50,12 +166,98 @@ jobs:
           echo "Checked-out SHA: $CURRENT_SHA"
           echo "origin/main SHA: $MAIN_SHA"
           # Verify the checked-out commit is an ancestor of (or equal to) main.
+          # This workflow always checks out main directly (see "ref: main"
+          # above); this check documents and enforces that invariant rather
+          # than trusting the pin alone.
           if ! git merge-base --is-ancestor "$CURRENT_SHA" "$MAIN_SHA" && [ "$CURRENT_SHA" != "$MAIN_SHA" ]; then
             echo "::error::Checked-out SHA ($CURRENT_SHA) is not an ancestor of origin/main. Aborting."
             exit 1
           fi
           echo "✓ SHA ancestry verified"
           echo "MIGRATION_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
+
+      - name: Verify source PR/SHA provenance via GitHub API
+        if: inputs.mode == 'PINNED_PREDEPLOY'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_JSON=$(gh api "repos/${{ github.repository }}/pulls/${{ inputs.source_pr }}")
+          PR_HEAD_SHA=$(echo "$PR_JSON" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>process.stdout.write(JSON.parse(d).head.sha))")
+          PR_BASE_REF=$(echo "$PR_JSON" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>process.stdout.write(JSON.parse(d).base.ref))")
+          PR_STATE=$(echo "$PR_JSON" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>process.stdout.write(JSON.parse(d).state))")
+          PR_MERGED=$(echo "$PR_JSON" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>process.stdout.write(String(JSON.parse(d).merged)))")
+          PR_HEAD_REPO_FULL=$(echo "$PR_JSON" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const j=JSON.parse(d);process.stdout.write(j.head.repo?j.head.repo.full_name:'')})")
+
+          echo "PR #${{ inputs.source_pr }}: head=$PR_HEAD_SHA base=$PR_BASE_REF state=$PR_STATE merged=$PR_MERGED head_repo=$PR_HEAD_REPO_FULL"
+
+          if [ "$PR_HEAD_SHA" != "${{ inputs.source_sha }}" ]; then
+            echo "::error::source_sha does not match PR #${{ inputs.source_pr }}'s current head SHA ($PR_HEAD_SHA). The PR may have advanced since authorization, or the SHA is wrong. Refusing."
+            exit 1
+          fi
+          if [ "$PR_BASE_REF" != "main" ]; then
+            echo "::error::PR #${{ inputs.source_pr }} does not target main (base=$PR_BASE_REF). Refusing."
+            exit 1
+          fi
+          if [ "$PR_STATE" != "open" ]; then
+            echo "::error::PR #${{ inputs.source_pr }} is not open (state=$PR_STATE). If it already merged, use MAIN mode instead. Refusing."
+            exit 1
+          fi
+          if [ "$PR_HEAD_REPO_FULL" != "${{ github.repository }}" ]; then
+            echo "::error::PR #${{ inputs.source_pr }} head is not in this repository (found: '$PR_HEAD_REPO_FULL'). Refusing to fetch from an external fork."
+            exit 1
+          fi
+          echo "✓ Source PR/SHA provenance verified via GitHub API"
+
+      - name: Fetch pinned commit object (git object only — no checkout)
+        if: inputs.mode == 'PINNED_PREDEPLOY'
+        run: |
+          git fetch --no-tags origin "${{ inputs.source_sha }}"
+          if ! git cat-file -e "${{ inputs.source_sha }}^{commit}" 2>/dev/null; then
+            echo "::error::source_sha ${{ inputs.source_sha }} could not be fetched as a valid commit object."
+            exit 1
+          fi
+          echo "✓ Pinned commit object fetched into the local object store (working tree unchanged — still main)"
+
+      - name: Extract ONLY the verified migration file via git-object read (no checkout, no execution)
+        if: inputs.mode == 'PINNED_PREDEPLOY'
+        run: |
+          MIG_NAME="${{ inputs.migration_name }}"
+          FILES=$(git ls-tree -r --name-only "${{ inputs.source_sha }}" -- "prisma/migrations/$MIG_NAME")
+          FILE_COUNT=$(echo "$FILES" | grep -c . || true)
+          if [ "$FILE_COUNT" != "1" ] || [ "$FILES" != "prisma/migrations/$MIG_NAME/migration.sql" ]; then
+            echo "::error::Expected exactly one file (migration.sql) in prisma/migrations/$MIG_NAME at ${{ inputs.source_sha }}. Found:"
+            echo "$FILES"
+            exit 1
+          fi
+          git show "${{ inputs.source_sha }}:prisma/migrations/$MIG_NAME/migration.sql" > /tmp/pinned-migration.sql
+          echo "✓ Extracted single migration.sql via 'git show' object read — no checkout of ${{ inputs.source_sha }}, no script from it executed"
+
+      - name: Verify extracted migration checksum
+        if: inputs.mode == 'PINNED_PREDEPLOY'
+        run: |
+          ACTUAL_SHA256=$(sha256sum /tmp/pinned-migration.sql | awk '{print $1}')
+          if [ "$ACTUAL_SHA256" != "${{ inputs.migration_sha256 }}" ]; then
+            echo "::error::Checksum mismatch. Expected ${{ inputs.migration_sha256 }}, got $ACTUAL_SHA256. Refusing to apply unverified content."
+            exit 1
+          fi
+          echo "✓ Migration checksum verified: $ACTUAL_SHA256"
+
+      - name: Verify migration-chain integrity against main and materialize verified file
+        if: inputs.mode == 'PINNED_PREDEPLOY'
+        run: |
+          MIG_NAME="${{ inputs.migration_name }}"
+          if [ -d "prisma/migrations/$MIG_NAME" ]; then
+            echo "::error::Migration $MIG_NAME already exists in main — it is already merged. Use MAIN mode instead."
+            exit 1
+          fi
+          LAST_LOCAL=$(ls prisma/migrations | grep -E '^[0-9]{14}_' | sort | tail -1)
+          if [ -n "$LAST_LOCAL" ] && [ "$(printf '%s\n%s\n' "$LAST_LOCAL" "$MIG_NAME" | sort | tail -1)" != "$MIG_NAME" ]; then
+            echo "::error::$MIG_NAME does not sort after the latest migration already in main ($LAST_LOCAL). Migration-chain integrity violated — refusing."
+            exit 1
+          fi
+          mkdir -p "prisma/migrations/$MIG_NAME"
+          cp /tmp/pinned-migration.sql "prisma/migrations/$MIG_NAME/migration.sql"
+          echo "✓ Chain integrity verified ($MIG_NAME sorts after ${LAST_LOCAL:-<none>}); verified file materialized into the main-derived working tree"
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
@@ -108,14 +310,27 @@ jobs:
             exit 1
           fi
           echo "✓ DATABASE_URL safety checks passed (host: $DB_HOST)"
+          echo "Note: this same secret and the same placeholder/pooler checks above apply identically in both MAIN and PINNED_PREDEPLOY mode — there is no mode-specific database target."
 
       - name: Check pending migrations (pre-deploy)
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
           echo "=== Pre-deploy migration status ==="
-          npx prisma migrate status 2>&1 | tee migration-status-before.txt
+          STATUS_OUTPUT=$(npx prisma migrate status 2>&1)
+          echo "$STATUS_OUTPUT" | tee migration-status-before.txt
           echo "=== End pre-deploy status ==="
+
+          if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
+            PENDING_NAMES=$(echo "$STATUS_OUTPUT" | grep -oE '[0-9]{14}_[a-zA-Z0-9_]+' | sort -u)
+            PENDING_COUNT=$(echo "$PENDING_NAMES" | grep -c . || true)
+            if [ "$PENDING_COUNT" != "1" ] || [ "$PENDING_NAMES" != "${{ inputs.migration_name }}" ]; then
+              echo "::error::PINNED_PREDEPLOY requires exactly one pending migration (${{ inputs.migration_name }}) before deploy. Found:"
+              echo "$PENDING_NAMES"
+              exit 1
+            fi
+            echo "✓ Exactly one pending migration confirmed: ${{ inputs.migration_name }}"
+          fi
           # Exit 0 to allow the deploy step to run; the deploy step is authoritative.
           exit 0
 
@@ -139,6 +354,13 @@ jobs:
           fi
           echo "✓ All migrations applied successfully"
 
+      - name: Structural post-migration verification (version-controlled, parameterized query — no arbitrary SQL)
+        if: inputs.mode == 'PINNED_PREDEPLOY'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          MIGRATION_NAME: ${{ inputs.migration_name }}
+        run: node scripts/verify-pinned-migration.mjs
+
       - name: Migration summary
         if: always()
         run: |
@@ -147,8 +369,15 @@ jobs:
           echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Environment | production |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Mode | ${{ inputs.mode }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Timestamp | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Migration SHA | \`${MIGRATION_SHA:-unknown}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Migration SHA (checked-out, always main) | \`${MIGRATION_SHA:-unknown}\` |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
+            echo "| Source PR | #${{ inputs.source_pr }} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Source SHA (git-object read only, never checked out) | \`${{ inputs.source_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Pinned migration | \`${{ inputs.migration_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Migration checksum | \`${{ inputs.migration_sha256 }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "| Operation | prisma migrate deploy (no seed, no reset) |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ -f migration-status-after.txt ]; then
@@ -158,6 +387,17 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Important:** Verify the production app is healthy after migrations." >> "$GITHUB_STEP_SUMMARY"
-          echo "Recommended manual post-migration check: deploy f4e7ed10 to Vercel and confirm build succeeds." >> "$GITHUB_STEP_SUMMARY"
-          echo "If migrations failed, consult docs/MIGRATION_DEPLOYMENT_RUNBOOK.md before redeploying." >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
+            echo "### Transient state — expected until source PR merges" >> "$GITHUB_STEP_SUMMARY"
+            echo "Production now has \`${{ inputs.migration_name }}\` applied, but that migration folder" >> "$GITHUB_STEP_SUMMARY"
+            echo "does not yet exist in \`main\`. Anyone running \`prisma migrate status\` against" >> "$GITHUB_STEP_SUMMARY"
+            echo "production before PR #${{ inputs.source_pr }} merges will see it reported as" >> "$GITHUB_STEP_SUMMARY"
+            echo "\"applied but not found locally\" — this is expected and requires no action." >> "$GITHUB_STEP_SUMMARY"
+            echo "It reconciles automatically once PR #${{ inputs.source_pr }} merges into main." >> "$GITHUB_STEP_SUMMARY"
+            echo "Do NOT run \`prisma migrate resolve\` or hand-edit \`_prisma_migrations\` in response to this." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "**Important:** Verify the production app is healthy after migrations (e.g. \`/api/health\`, \`/api/readiness\`)." >> "$GITHUB_STEP_SUMMARY"
+          echo "If \`prisma migrate deploy\` reported a failed migration, do not re-run this workflow blindly:" >> "$GITHUB_STEP_SUMMARY"
+          echo "inspect the failure in migration-status-after.txt, fix the underlying issue, then apply" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`prisma migrate resolve --applied <name>\` or \`--rolled-back <name>\` as appropriate before retrying." >> "$GITHUB_STEP_SUMMARY"
