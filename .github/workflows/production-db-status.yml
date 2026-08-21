@@ -99,7 +99,13 @@ jobs:
           PGOPTIONS: "-c default_transaction_read_only=on"
         run: |
           set -euo pipefail
-          echo "=== _prisma_migrations rows for the seven candidate migrations ==="
+          echo "=== _prisma_migrations rows for the eight candidate migrations ==="
+          # 20260819000001_startup_session_business_handoff is included even
+          # though its migration folder does not exist on main yet (PR #326
+          # is unmerged) -- it was applied to production via migrate-production.yml's
+          # PINNED_PREDEPLOY mode ahead of that PR's merge, per owner authorization.
+          # The local-checksum step below correctly reports it MISSING_ON_MAIN
+          # until #326 merges; that is the expected transient state, not an error.
           psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
             SELECT
               migration_name,
@@ -116,7 +122,8 @@ jobs:
               '20260813000001_snapshot_amendment',
               '20260813000002_finance_outcome_signals',
               '20260814000001_finance_signal_clc_link_text',
-              '20260816000001_startup_status_claim_token'
+              '20260816000001_startup_status_claim_token',
+              '20260819000001_startup_session_business_handoff'
             )
             ORDER BY migration_name;
           "
@@ -228,6 +235,31 @@ jobs:
             FROM information_schema.columns
             WHERE table_schema = 'public' AND table_name = 'startup_status'
               AND column_name = 'claim_token';
+          "
+
+          echo "--- owner_startup_session.business_id (F-STARTUP-NO-HANDOFF, PR #326) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT column_name, data_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'owner_startup_session'
+              AND column_name = 'business_id';
+          "
+
+          echo "--- owner_startup_session_business_id_key index definition (must show UNIQUE) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT indexname, indexdef
+            FROM pg_indexes
+            WHERE schemaname = 'public' AND indexname = 'owner_startup_session_business_id_key';
+          "
+
+          echo "--- owner_startup_session row count and non-null business_id count ---"
+          echo "--- (this migration is purely additive; pre/post row count must be identical," \
+               "and business_id must be NULL on every existing row since no code that writes it has merged) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT
+              COUNT(*) AS total_rows,
+              COUNT(*) FILTER (WHERE business_id IS NOT NULL) AS non_null_business_id_rows
+            FROM owner_startup_session;
           "
 
       - name: Local checksum of each candidate migration file on main
