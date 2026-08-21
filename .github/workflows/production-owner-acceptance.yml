@@ -135,7 +135,7 @@ jobs:
         if: always()
         run: rm -f /tmp/.opsiq-acceptance-session-tokens
 
-      - name: Upload acceptance evidence (traces/screenshots/report)
+      - name: Upload acceptance evidence (screenshots/sanitized network+console logs/report)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -152,5 +152,5 @@ jobs:
             echo "BASE_URL: \`$BASE_URL\`"
             echo "Checked-out SHA: \`$(git rev-parse HEAD)\`"
             echo ""
-            echo "See the uploaded \`production-acceptance-evidence\` artifact for the full HTML report, per-failure traces, and checkpoint screenshots."
+            echo "See the uploaded \`production-acceptance-evidence\` artifact for the full HTML report, checkpoint/failure screenshots, and sanitized network/console logs. No raw Playwright trace is ever captured or uploaded for this suite (RAW_PLAYWRIGHT_TRACE_UPLOAD=0)."
           } >> "$GITHUB_STEP_SUMMARY"

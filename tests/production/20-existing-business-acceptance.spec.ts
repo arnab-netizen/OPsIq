@@ -23,7 +23,8 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { readFileSync, writeFileSync } from "fs";
 import { authenticateProductionOwner } from "./helpers/production-auth";
-import { startTracing, captureOnFailure, checkpointScreenshot, finalizeTracing } from "./helpers/evidence";
+import { startEvidenceCollection, captureOnFailure, checkpointScreenshot, finalizeEvidence } from "./helpers/evidence";
+import { runFinanceDiagnosisAndAwaitResult } from "./helpers/finance-diagnosis";
 
 const SPEC_NAME = "phase01-existing-business";
 
@@ -57,8 +58,6 @@ function registerFinanceDialogHandler(page: Page) {
     await dialog.dismiss();
   });
 }
-
-test.describe.configure({ mode: "serial" });
 
 test.describe("PROD-01 — Existing-business Owner journey live production acceptance", () => {
   let context: BrowserContext;
@@ -98,7 +97,7 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
     watchPage(page);
     registerFinanceDialogHandler(page);
     await authenticateProductionOwner(page);
-    await startTracing(context);
+    await startEvidenceCollection(context, page, SPEC_NAME);
   });
 
   test.beforeEach(() => {
@@ -110,11 +109,19 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
   });
 
   test.afterAll(async () => {
-    await finalizeTracing(context);
+    await finalizeEvidence(context, SPEC_NAME);
     if (context) await context.close();
   });
 
   // ─── Trinity Services: read-only discovery + data/diagnosis visibility ──
+  //
+  // Nested in its own serial block (not the file-wide serial chain run #5's
+  // harness used) so a Trinity-domain failure can never suppress the
+  // unrelated Finance-domain tests below, or vice versa -- only a real
+  // intra-domain dependency (e.g. 01-02 needs 01-01's Trinity discovery)
+  // still cascades, scoped to its own domain.
+  test.describe("Trinity Services (read-only)", () => {
+    test.describe.configure({ mode: "serial" });
 
   test("01-01 — locate Trinity Services in the real business selector (or skip Trinity steps if unavailable)", async () => {
     await page.goto("/owner/home", { waitUntil: "networkidle" });
@@ -170,8 +177,17 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
     await page.goto(`/owner/finance?businessId=${trinityBusinessId}`, { waitUntil: "networkidle" });
     await checkpointScreenshot(context, page, SPEC_NAME, "trinity-finance-recommendation");
   });
+  }); // end Trinity Services (read-only)
 
   // ─── Acceptance business: full Finance closed loop (real UI mutations) ──
+  //
+  // Its own serial block: 01-05 needs 01-04's navigation, 01-06 needs
+  // 01-05's snapshot, 01-07/01-08 need 01-06's diagnosis -- a real
+  // intra-domain dependency chain -- but a failure here must never suppress
+  // 01-09/01-10 (cross-cutting reporting, outside any serial block below)
+  // or, if a future domain suite runs in this same file, that suite either.
+  test.describe("Finance closed loop (acceptance business)", () => {
+    test.describe.configure({ mode: "serial" });
 
   test("01-04 — navigate to Finance for the dedicated acceptance business", async () => {
     await page.goto(`/owner/finance?businessId=${acceptanceBusinessId}`, { waitUntil: "networkidle" });
@@ -202,10 +218,7 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
   });
 
   test("01-06 — real UI: run finance diagnosis and see a visible diagnosis result (not merely a 200 response)", async () => {
-    await page.getByRole("button", { name: "Run finance diagnosis" }).click();
-    await page.waitForLoadState("networkidle");
-    const body = await page.textContent("body");
-    expect(body).toMatch(/Latest diagnosis|Findings \(/);
+    await runFinanceDiagnosisAndAwaitResult(page, acceptanceBusinessId);
     await checkpointScreenshot(context, page, SPEC_NAME, "diagnosis-result");
     expect(fatalErrors()).toHaveLength(0);
   });
@@ -239,12 +252,15 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
   });
 
   test("01-08 — reassessment: running diagnosis again produces a second, owner-visible cycle in history", async () => {
-    await page.getByRole("button", { name: "Run finance diagnosis" }).click();
-    await page.waitForLoadState("networkidle");
-    const body = await page.textContent("body");
-    expect(body).toMatch(/Cycle #2|Diagnosis history/);
+    await runFinanceDiagnosisAndAwaitResult(page, acceptanceBusinessId);
+    await expect(page.locator("body")).toContainText(/Cycle #2|Diagnosis history/, { timeout: 15000 });
     expect(fatalErrors()).toHaveLength(0);
   });
+  }); // end Finance closed loop (acceptance business)
+
+  // ─── Cross-cutting reporting: always runs, regardless of which domain(s)
+  // above failed -- deliberately outside either serial block so a Trinity
+  // or Finance failure never prevents an accurate summary/5xx check. ──
 
   test("01-09 — no 5xx responses were observed anywhere in this journey", () => {
     expect(networkFailures).toEqual([]);
