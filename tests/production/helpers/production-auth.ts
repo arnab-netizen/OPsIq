@@ -36,10 +36,35 @@ export async function authenticateProductionOwner(page: Page): Promise<Productio
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
 
-  await Promise.all([
-    page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 15000 }),
+  // Wait for the login API's own response first, not for navigation. On a
+  // rejected login (401 or otherwise) the app never navigates away from
+  // /login, so waiting on navigation alone surfaces a real credential
+  // rejection as an opaque 15s timeout. Racing on the response itself lets
+  // a failure be diagnosed and reported immediately and precisely.
+  const [loginResponse] = await Promise.all([
+    page.waitForResponse(
+      (res) => res.url().includes("/api/auth/login") && res.request().method() === "POST",
+      { timeout: 15000 }
+    ),
     page.click('button[type="submit"]'),
   ]);
+
+  if (!loginResponse.ok()) {
+    let classification = "unknown";
+    try {
+      const body = await loginResponse.json();
+      classification = body?.classification ?? body?.error ?? "unknown";
+    } catch {
+      // Response body wasn't JSON -- classification stays "unknown".
+    }
+    // Deliberately excludes email/password -- never include credential
+    // values in a thrown error (it can end up in the JSON reporter output).
+    throw new Error(`Production Owner login rejected: HTTP ${loginResponse.status()} / ${classification}`);
+  }
+
+  // The login API succeeded; wait for the resulting client-side redirect to
+  // actually complete before proceeding.
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 15000 });
 
   const cookies = await page.context().cookies();
   const sessionCookie = cookies.find((c) => c.name.includes("session") || c.name.includes("auth"));
