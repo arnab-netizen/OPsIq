@@ -1,0 +1,189 @@
+name: Production Owner Acceptance (LIVE)
+
+# Real browser acceptance run against the LIVE production OpsIQ deployment.
+# This is a SEPARATE evidence lane from owner-e2e.yml (which runs against a
+# freshly-built app + throwaway Postgres): that lane proves the code path
+# works in a controlled environment, this lane proves the actual deployed
+# production app behaves the same way for a real Owner account. Neither
+# supersedes the other -- both are required.
+#
+# Scope (current): tests/production/10-startup-mode-acceptance.spec.ts
+# (Startup Mode handoff, PR #325/#326) and
+# tests/production/20-existing-business-acceptance.spec.ts (existing-business
+# owner journey: Trinity Services read-only + the one dedicated acceptance
+# business the Startup Mode spec creates).
+#
+# Fails closed if PRODUCTION_ACCEPTANCE_EMAIL/PASSWORD secrets are absent, if
+# BASE_URL does not resolve to the exact checked-out main commit in the
+# production environment, or if production is unhealthy/not ready. Retries
+# are disabled in playwright.production.config.ts -- a flaky first run is a
+# defect to investigate, not a pass on retry.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "RUN PRODUCTION ACCEPTANCE" to confirm'
+        required: true
+        type: string
+
+concurrency:
+  group: production-owner-acceptance
+  cancel-in-progress: false
+
+env:
+  BASE_URL: https://o-ps-iq.vercel.app
+
+jobs:
+  acceptance:
+    name: Live Production Owner Acceptance
+    if: github.event.inputs.confirm == 'RUN PRODUCTION ACCEPTANCE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+
+    steps:
+      - name: Confirm explicit intent
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "RUN PRODUCTION ACCEPTANCE" ]; then
+            echo "::error::Confirmation phrase not matched. Aborting."
+            exit 1
+          fi
+          echo "Explicit confirmation received"
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Print checked-out SHA
+        run: echo "Checked-out SHA: $(git rev-parse HEAD)"
+
+      - name: Preflight check - production acceptance credentials exist
+        run: |
+          if [ -z "${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}" ] || [ -z "${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}" ]; then
+            echo "::error::PRODUCTION_ACCEPTANCE_EMAIL and/or PRODUCTION_ACCEPTANCE_PASSWORD secret is missing or empty. Refusing to run (fail-closed)."
+            exit 1
+          fi
+          echo "Production acceptance credentials are configured"
+
+      - name: Verify BASE_URL resolves to the exact checked-out commit in production (BLOCKED_STALE_PRODUCTION_TARGET otherwise)
+        run: |
+          set -euo pipefail
+          CHECKED_OUT_SHA=$(git rev-parse HEAD)
+          BUILD_INFO=$(curl -sS --max-time 15 "$BASE_URL/api/internal/build-info")
+          echo "build-info response: $BUILD_INFO"
+          DEPLOYED_SHA=$(node -e "try{console.log(JSON.parse(process.argv[1]).commit)}catch(e){console.log('unparseable')}" "$BUILD_INFO")
+          DEPLOYED_ENV=$(node -e "try{console.log(JSON.parse(process.argv[1]).environment)}catch(e){console.log('unparseable')}" "$BUILD_INFO")
+          echo "Checked-out (expected) SHA: $CHECKED_OUT_SHA"
+          echo "Deployed (actual) SHA:      $DEPLOYED_SHA"
+          echo "Deployed environment:       $DEPLOYED_ENV"
+          if [ "$DEPLOYED_ENV" != "production" ]; then
+            echo "::error::BLOCKED_STALE_PRODUCTION_TARGET -- BASE_URL environment is '$DEPLOYED_ENV', not 'production'."
+            exit 1
+          fi
+          if [ "$DEPLOYED_SHA" != "$CHECKED_OUT_SHA" ]; then
+            echo "::error::BLOCKED_STALE_PRODUCTION_TARGET -- BASE_URL is serving commit $DEPLOYED_SHA but current main is $CHECKED_OUT_SHA. Aborting -- do not run acceptance against a stale or unexpected target."
+            exit 1
+          fi
+          echo "BASE_URL verified: serving the exact checked-out main commit, in the production environment."
+
+      - name: Verify production is healthy and ready (non-destructive)
+        run: |
+          set -euo pipefail
+          HEALTH_CODE=$(curl -sS --max-time 15 -o /tmp/health.json -w "%{http_code}" "$BASE_URL/api/health")
+          echo "Health ($HEALTH_CODE): $(cat /tmp/health.json)"
+          if [ "$HEALTH_CODE" != "200" ]; then
+            echo "::error::BLOCKED_PRE_FLIGHT -- /api/health returned $HEALTH_CODE"
+            exit 1
+          fi
+          READY_CODE=$(curl -sS --max-time 15 -o /tmp/ready.json -w "%{http_code}" "$BASE_URL/api/readiness")
+          echo "Readiness ($READY_CODE): $(cat /tmp/ready.json)"
+          if [ "$READY_CODE" != "200" ] || ! grep -q '"is_ready":true' /tmp/ready.json; then
+            echo "::error::BLOCKED_PRE_FLIGHT -- /api/readiness not ready"
+            exit 1
+          fi
+          echo "Production pre-flight passed."
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run live production acceptance suite
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          PRODUCTION_ACCEPTANCE_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          PRODUCTION_ACCEPTANCE_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+        run: npx playwright test --config=playwright.production.config.ts
+
+      - name: Verify no credential/session leakage in captured evidence (fail-closed)
+        if: always()
+        env:
+          LEAK_CHECK_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+        run: |
+          set -uo pipefail
+          FOUND=0
+          NEEDLES=("$LEAK_CHECK_PASSWORD")
+          if [ -f /tmp/.opsiq-acceptance-session-tokens ]; then
+            while IFS= read -r TOKEN; do
+              [ -n "$TOKEN" ] && NEEDLES+=("$TOKEN")
+            done < /tmp/.opsiq-acceptance-session-tokens
+          fi
+          if [ -d production-test-results ]; then
+            while IFS= read -r -d '' f; do
+              for NEEDLE in "${NEEDLES[@]}"; do
+                [ -z "$NEEDLE" ] && continue
+                case "$f" in
+                  *.zip)
+                    if unzip -p "$f" 2>/dev/null | grep -qF -- "$NEEDLE"; then
+                      echo "::error::Sensitive value found inside trace archive: $f"
+                      FOUND=1
+                    fi
+                    ;;
+                  *)
+                    if grep -qF -- "$NEEDLE" "$f" 2>/dev/null; then
+                      echo "::error::Sensitive value found inside artifact: $f"
+                      FOUND=1
+                    fi
+                    ;;
+                esac
+              done
+            done < <(find production-test-results -type f \( -name "*.zip" -o -name "*.png" -o -name "*.webm" -o -name "*.json" -o -name "*.html" \) -print0)
+          fi
+          if [ "$FOUND" == "1" ]; then
+            echo "::error::Credential or session-token leak detected in captured evidence. Failing closed."
+            exit 1
+          fi
+          echo "No credential/session-token leakage detected in captured evidence."
+
+      - name: Remove session-token scratch file (never part of the uploaded artifact)
+        if: always()
+        run: rm -f /tmp/.opsiq-acceptance-session-tokens
+
+      - name: Upload acceptance evidence (traces/screenshots/report)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-acceptance-evidence
+          path: production-test-results
+          retention-days: 14
+
+      - name: Acceptance summary
+        if: always()
+        run: |
+          {
+            echo "## Live Production Owner Acceptance"
+            echo ""
+            echo "BASE_URL: \`$BASE_URL\`"
+            echo "Checked-out SHA: \`$(git rev-parse HEAD)\`"
+            echo ""
+            echo "See the uploaded \`production-acceptance-evidence\` artifact for the full HTML report, per-failure traces, and checkpoint screenshots."
+          } >> "$GITHUB_STEP_SUMMARY"
