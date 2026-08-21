@@ -598,6 +598,7 @@ export const AUDIT_EVENTS = {
   STARTUP_EXECUTION_AUTHORIZATION_DENIED: "startup.execution_authorization_denied",
   STARTUP_APPROVAL_BECAME_STALE: "startup.approval_became_stale",
   STARTUP_EXECUTION_PLAN_SUPERSEDED: "startup.execution_plan_superseded",
+  STARTUP_SESSION_HANDED_OFF_TO_BUSINESS: "startup.session_handed_off_to_business",
   // Bundle 3.9 — Process Intelligence and SOP Management
   SOP_TRAINING_ASSIGNED: "sop.training_assigned",
   SOP_TRAINING_COMPLETED: "sop.training_completed",

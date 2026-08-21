@@ -21,7 +21,7 @@ export type StartupSessionStatus =
   | "REJECTED"
   | "EXECUTION_PLANNED"
   | "STALE_REAPPROVAL_REQUIRED"
-  | "ACTIVE"; // legacy
+  | "ACTIVE"; // real target of the F-STARTUP-NO-HANDOFF business handoff (see EXECUTION_PLANNED transitions below); its own outbound edges remain legacy reassessment paths
 
 export const VALID_TRANSITIONS: Map<StartupSessionStatus, StartupSessionStatus[]> = new Map([
   ["DRAFT", ["CONTEXT_CAPTURE"]],
@@ -38,7 +38,7 @@ export const VALID_TRANSITIONS: Map<StartupSessionStatus, StartupSessionStatus[]
   ["MODIFICATION_REQUIRED", ["SCREENING", "IDEA_GENERATION", "CONTEXT_CAPTURE"]],
   ["ON_HOLD", ["OWNER_DECISION_REQUIRED", "REJECTED"]],
   ["REJECTED", []],
-  ["EXECUTION_PLANNED", ["STALE_REAPPROVAL_REQUIRED"]],
+  ["EXECUTION_PLANNED", ["STALE_REAPPROVAL_REQUIRED", "ACTIVE"]],
   ["STALE_REAPPROVAL_REQUIRED", ["OWNER_DECISION_REQUIRED", "REJECTED"]],
   ["ACTIVE", ["CONTEXT_CAPTURE", "SCREENING", "OWNER_DECISION_REQUIRED"]], // legacy path
 ]);

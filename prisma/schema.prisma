@@ -1713,11 +1713,12 @@ model StartupStatus {
 // Workspace-scoped. Ideas are Cascade-deleted with their session.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// A persisted startup validation session — full lifecycle from DRAFT through EXECUTION_PLANNED.
+/// A persisted startup validation session — full lifecycle from DRAFT through
+/// EXECUTION_PLANNED to ACTIVE (a real OwnerBusiness handed off, see businessId).
 /// Status: DRAFT | CONTEXT_CAPTURE | DISCOVERY | IDEA_GENERATION | SCREENING |
 ///   VALIDATION_PLANNED | VALIDATION_IN_PROGRESS | ECONOMICS_REVIEW | READINESS_REVIEW |
 ///   OWNER_DECISION_REQUIRED | APPROVED | MODIFICATION_REQUIRED | ON_HOLD | REJECTED |
-///   EXECUTION_PLANNED | STALE_REAPPROVAL_REQUIRED | ACTIVE (legacy)
+///   EXECUTION_PLANNED | STALE_REAPPROVAL_REQUIRED | ACTIVE
 model OwnerStartupSession {
   id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId             String   @map("workspace_id") @db.Uuid
@@ -1736,6 +1737,12 @@ model OwnerStartupSession {
   validationResult        Json?    @map("validation_result")
   /// Name of the recommended idea (or null when none qualified).
   recommendedName         String?  @map("recommended_name")
+  /// F-STARTUP-NO-HANDOFF: the OwnerBusiness this session was handed off to on
+  /// activation (status -> ACTIVE). Soft FK, matching the existing businessId
+  /// convention used elsewhere (e.g. OwnerComplianceItem) rather than a formal
+  /// Prisma relation. @unique enforces at most one business per session at the
+  /// DB level — the idempotency backstop for handOffStartupSessionToBusiness().
+  businessId              String?  @unique @map("business_id") @db.Uuid
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
@@ -2786,34 +2793,34 @@ model OwnerFinanceFinding {
 }
 
 model OwnerFinanceAction {
-  id                    String                     @id @db.Uuid
-  workspaceId           String                     @map("workspace_id") @db.Uuid
-  businessId            String                     @map("business_id") @db.Uuid
-  cycleId               String                     @map("cycle_id") @db.Uuid
-  findingId             String?                    @map("finding_id") @db.Uuid
-  recommendationCode    String                     @map("recommendation_code")
-  findingCode           String                     @map("finding_code")
+  id                    String                      @id @db.Uuid
+  workspaceId           String                      @map("workspace_id") @db.Uuid
+  businessId            String                      @map("business_id") @db.Uuid
+  cycleId               String                      @map("cycle_id") @db.Uuid
+  findingId             String?                     @map("finding_id") @db.Uuid
+  recommendationCode    String                      @map("recommendation_code")
+  findingCode           String                      @map("finding_code")
   title                 String
   description           String
-  ownerRole             String                     @map("owner_role")
-  status                String                     @default("proposed")
-  priorityScore         Float                      @map("priority_score")
-  effortScore           Float                      @map("effort_score")
-  expectedImpactScore   Float                      @map("expected_impact_score")
+  ownerRole             String                      @map("owner_role")
+  status                String                      @default("proposed")
+  priorityScore         Float                       @map("priority_score")
+  effortScore           Float                       @map("effort_score")
+  expectedImpactScore   Float                       @map("expected_impact_score")
   confidence            Float
-  verificationMetric    String                     @map("verification_metric")
-  verificationMethod    String                     @map("verification_method")
-  expectedTimeframeDays Int                        @map("expected_timeframe_days")
-  dueAt                 DateTime?                  @map("due_at")
-  assignedTo            String?                    @map("assigned_to") @db.Uuid
-  completedAt           DateTime?                  @map("completed_at")
-  completionNotes       String?                    @map("completion_notes")
-  completionEvidence    Json?                      @map("completion_evidence")
-  createdAt             DateTime                   @default(now()) @map("created_at")
-  updatedAt             DateTime                   @updatedAt @map("updated_at")
-  business              OwnerBusiness              @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  cycle                 OwnerFinanceCycle          @relation(fields: [cycleId], references: [id], onDelete: Cascade)
-  finding               OwnerFinanceFinding?       @relation(fields: [findingId], references: [id], onDelete: SetNull)
+  verificationMetric    String                      @map("verification_metric")
+  verificationMethod    String                      @map("verification_method")
+  expectedTimeframeDays Int                         @map("expected_timeframe_days")
+  dueAt                 DateTime?                   @map("due_at")
+  assignedTo            String?                     @map("assigned_to") @db.Uuid
+  completedAt           DateTime?                   @map("completed_at")
+  completionNotes       String?                     @map("completion_notes")
+  completionEvidence    Json?                       @map("completion_evidence")
+  createdAt             DateTime                    @default(now()) @map("created_at")
+  updatedAt             DateTime                    @updatedAt @map("updated_at")
+  business              OwnerBusiness               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  cycle                 OwnerFinanceCycle           @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  finding               OwnerFinanceFinding?        @relation(fields: [findingId], references: [id], onDelete: SetNull)
   verifications         OwnerFinanceVerification[]
   outcomeSignals        OwnerFinanceOutcomeSignal[]
 
@@ -2826,23 +2833,23 @@ model OwnerFinanceAction {
 }
 
 model OwnerFinanceVerification {
-  id                 String             @id @db.Uuid
-  workspaceId        String             @map("workspace_id") @db.Uuid
-  businessId         String             @map("business_id") @db.Uuid
-  actionId           String             @map("action_id") @db.Uuid
-  verificationMetric String             @map("verification_metric")
-  beforeValue        Float?             @map("before_value")
-  afterValue         Float?             @map("after_value")
-  targetDirection    String             @map("target_direction")
-  targetValue        Float?             @map("target_value")
-  status             String             @default("unverified")
+  id                 String                     @id @db.Uuid
+  workspaceId        String                     @map("workspace_id") @db.Uuid
+  businessId         String                     @map("business_id") @db.Uuid
+  actionId           String                     @map("action_id") @db.Uuid
+  verificationMetric String                     @map("verification_metric")
+  beforeValue        Float?                     @map("before_value")
+  afterValue         Float?                     @map("after_value")
+  targetDirection    String                     @map("target_direction")
+  targetValue        Float?                     @map("target_value")
+  status             String                     @default("unverified")
   confidence         Float
   evidence           Json
-  verifiedAt         DateTime?          @map("verified_at")
-  createdAt          DateTime           @default(now()) @map("created_at")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
-  business           OwnerBusiness      @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  action             OwnerFinanceAction        @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  verifiedAt         DateTime?                  @map("verified_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+  business           OwnerBusiness              @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action             OwnerFinanceAction         @relation(fields: [actionId], references: [id], onDelete: Restrict)
   outcomeSignal      OwnerFinanceOutcomeSignal?
 
   @@index([workspaceId])
@@ -2857,21 +2864,21 @@ model OwnerFinanceVerification {
 // Persists factual outcome for Bayesian effectiveness tracking.
 // The ControlledLearningCandidate (governance layer) is created separately via learning-bridge.
 model OwnerFinanceOutcomeSignal {
-  id                  String   @id @db.Uuid
-  workspaceId         String   @map("workspace_id") @db.Uuid
-  businessId          String   @map("business_id") @db.Uuid
-  verificationId      String   @unique @map("verification_id") @db.Uuid
-  actionId            String   @map("action_id") @db.Uuid
-  findingCode         String   @map("finding_code")
-  recommendationCode  String   @map("recommendation_code")
-  verificationStatus  String   @map("verification_status")
-  reachedTarget       Boolean  @map("reached_target")
-  beforeValue         Float?   @map("before_value")
-  afterValue          Float?   @map("after_value")
-  learningCandidateId String?  @map("learning_candidate_id")
-  recordedAt          DateTime @map("recorded_at")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                  String                   @id @db.Uuid
+  workspaceId         String                   @map("workspace_id") @db.Uuid
+  businessId          String                   @map("business_id") @db.Uuid
+  verificationId      String                   @unique @map("verification_id") @db.Uuid
+  actionId            String                   @map("action_id") @db.Uuid
+  findingCode         String                   @map("finding_code")
+  recommendationCode  String                   @map("recommendation_code")
+  verificationStatus  String                   @map("verification_status")
+  reachedTarget       Boolean                  @map("reached_target")
+  beforeValue         Float?                   @map("before_value")
+  afterValue          Float?                   @map("after_value")
+  learningCandidateId String?                  @map("learning_candidate_id")
+  recordedAt          DateTime                 @map("recorded_at")
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
   business            OwnerBusiness            @relation(fields: [businessId], references: [id], onDelete: Restrict)
   verification        OwnerFinanceVerification @relation(fields: [verificationId], references: [id], onDelete: Restrict)
   action              OwnerFinanceAction       @relation(fields: [actionId], references: [id], onDelete: Restrict)
