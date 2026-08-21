@@ -57,7 +57,8 @@ jobs:
           ref: main
 
       - name: Print checked-out SHA
-        run: echo "Checked-out SHA: $(git rev-parse HEAD)"
+        run: |
+          echo "Checked-out SHA: $(git rev-parse HEAD)"
 
       - name: Preflight check - production acceptance credentials exist
         run: |
