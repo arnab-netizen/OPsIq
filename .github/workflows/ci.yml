@@ -168,10 +168,44 @@ jobs:
       run_bundle_validator: true
       run_recurrence_scanners: true
 
+  # Root cause: PR #332 merged a workflow file with a YAML syntax error (a
+  # single-line `run:` value containing an unquoted colon) that no existing
+  # check caught -- governance tests in this repo assert string content via
+  # readFileSync/indexOf, they never parse the YAML, so a file can pass every
+  # string check while still being unparseable by GitHub Actions itself.
+  # GitHub's own behavior on such a file is silent and easy to miss: the
+  # workflow still registers (state: active) via a lenient pre-scan, but
+  # falls back to the raw file path as its display name (the declared
+  # `name:` key can never be extracted), never appears under its intended
+  # name in the Actions sidebar, and its direct /actions/workflows/<file>.yml
+  # URL 404s. Scoped to changed files only (a repo-wide actionlint run
+  # surfaced pre-existing, unrelated findings in several older workflows
+  # this fix does not touch).
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate changed workflow YAML with actionlint
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=50 2>/dev/null || true
+          CHANGED=$(git diff --name-only origin/main...HEAD -- '.github/workflows/*.yml' '.github/workflows/*.yaml' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No workflow files changed in this PR -- skipping actionlint."
+            exit 0
+          fi
+          echo "Changed workflow files:"
+          echo "$CHANGED"
+          curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
+          echo "$CHANGED" | xargs ./actionlint
+
   branch-protection:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    needs: [build-and-test, lint, bundle-validate]
+    needs: [build-and-test, lint, bundle-validate, actionlint]
     steps:
       - name: PR check passed
         run: echo "All required checks passed"
