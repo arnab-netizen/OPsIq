@@ -66,20 +66,30 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
   let acceptanceBusinessId = "";
   let trinityBusinessId: string | null = null;
   let trinityFound = false;
+  // Non-null only when this suite must not proceed. Distinguishes a real
+  // upstream failure (10-startup-mode-acceptance.spec.ts didn't produce a
+  // usable acceptance business) from this suite's own defects -- every
+  // test below skips with this exact reason rather than throwing from
+  // beforeAll, which would otherwise surface as an opaque, unrelated
+  // "Cannot read properties of undefined" crash instead of a clear
+  // BLOCKED_UPSTREAM classification.
+  let blockedUpstreamReason: string | null = null;
 
   test.beforeAll(async ({ browser }) => {
-    let handoffIds: { handoffBusinessId?: string };
+    let handoffIds: { handoffBusinessId?: string; succeeded?: boolean };
     try {
       handoffIds = JSON.parse(
         readFileSync("production-test-results/evidence/phase13-startup-mode-ids.json", "utf-8")
       );
     } catch {
-      throw new Error(
-        "phase13-startup-mode-ids.json not found -- 10-startup-mode-acceptance.spec.ts must run first to create the single dedicated acceptance business this suite reuses."
-      );
+      blockedUpstreamReason =
+        "BLOCKED_UPSTREAM: phase13-startup-mode-ids.json not found -- 10-startup-mode-acceptance.spec.ts did not run or did not complete its afterAll.";
+      return;
     }
-    if (!handoffIds.handoffBusinessId) {
-      throw new Error("phase13-startup-mode-ids.json exists but has no handoffBusinessId.");
+    if (!handoffIds.succeeded || !handoffIds.handoffBusinessId) {
+      blockedUpstreamReason =
+        "BLOCKED_UPSTREAM: 10-startup-mode-acceptance.spec.ts did not produce a usable acceptance business (see that spec's own results, e.g. AUTH_LOGIN failure) -- this suite's mutating steps have no business to run against.";
+      return;
     }
     acceptanceBusinessId = handoffIds.handoffBusinessId;
 
@@ -91,13 +101,17 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
     await startTracing(context);
   });
 
+  test.beforeEach(() => {
+    test.skip(blockedUpstreamReason !== null, blockedUpstreamReason ?? undefined);
+  });
+
   test.afterEach(async ({}, testInfo) => {
     await captureOnFailure(context, page, testInfo, SPEC_NAME);
   });
 
   test.afterAll(async () => {
     await finalizeTracing(context);
-    await context.close();
+    if (context) await context.close();
   });
 
   // ─── Trinity Services: read-only discovery + data/diagnosis visibility ──
@@ -132,7 +146,7 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
     await page.goto(`/owner/home?businessId=${trinityBusinessId}`, { waitUntil: "networkidle" });
     const body = await page.textContent("body");
     expect(body).toBeTruthy();
-    await checkpointScreenshot(page, SPEC_NAME, "trinity-owner-home");
+    await checkpointScreenshot(context, page, SPEC_NAME, "trinity-owner-home");
     expect(fatalErrors()).toHaveLength(0);
   });
 
@@ -154,7 +168,7 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
     expect(typeof rec.expectedImpactScore, "DATA_GROUNDING: must carry a numeric impact score").toBe("number");
     expect(rec.verificationMetric, "SAFE_EXECUTABILITY: must name how it will be verified").toBeTruthy();
     await page.goto(`/owner/finance?businessId=${trinityBusinessId}`, { waitUntil: "networkidle" });
-    await checkpointScreenshot(page, SPEC_NAME, "trinity-finance-recommendation");
+    await checkpointScreenshot(context, page, SPEC_NAME, "trinity-finance-recommendation");
   });
 
   // ─── Acceptance business: full Finance closed loop (real UI mutations) ──
@@ -183,7 +197,7 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
     await page.locator('input[name="receivablesOverdue"]').fill("15000");
     await page.getByRole("button", { name: /Save snapshot/ }).click();
     await page.waitForLoadState("networkidle");
-    await checkpointScreenshot(page, SPEC_NAME, "snapshot-saved");
+    await checkpointScreenshot(context, page, SPEC_NAME, "snapshot-saved");
     expect(fatalErrors()).toHaveLength(0);
   });
 
@@ -192,7 +206,7 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
     await page.waitForLoadState("networkidle");
     const body = await page.textContent("body");
     expect(body).toMatch(/Latest diagnosis|Findings \(/);
-    await checkpointScreenshot(page, SPEC_NAME, "diagnosis-result");
+    await checkpointScreenshot(context, page, SPEC_NAME, "diagnosis-result");
     expect(fatalErrors()).toHaveLength(0);
   });
 
@@ -213,14 +227,14 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
     await card.getByRole("button", { name: "Complete" }).click();
     await page.waitForLoadState("networkidle");
     await expect(card).toContainText("completed");
-    await checkpointScreenshot(page, SPEC_NAME, "action-completed");
+    await checkpointScreenshot(context, page, SPEC_NAME, "action-completed");
 
     await card.getByRole("button", { name: "Verify outcome" }).click();
     await page.waitForLoadState("networkidle");
     await expect(
       card.locator("text=/verified_improved|verified_not_improved|inconclusive|disputed/")
     ).toBeVisible();
-    await checkpointScreenshot(page, SPEC_NAME, "action-verified");
+    await checkpointScreenshot(context, page, SPEC_NAME, "action-verified");
     expect(fatalErrors()).toHaveLength(0);
   });
 

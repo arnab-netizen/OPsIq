@@ -89,16 +89,25 @@ describe("production-owner-acceptance.yml — live-production safety controls", 
   it("11. Scans captured evidence for the password value and fails closed on any match, including inside trace archives", () => {
     const idx = src.indexOf("Verify no credential/session leakage");
     expect(idx).toBeGreaterThan(-1);
-    const block = src.slice(idx, idx + 2000);
+    const block = src.slice(idx, idx + 400);
+    // The scan logic itself is extracted to scripts/verify-no-secret-leak.sh
+    // (independently unit-tested in verify-no-secret-leak-script.test.ts
+    // against synthetic fixtures) -- this step only needs to invoke it with
+    // the password wired in as an env var.
     expect(block).toContain("secrets.PRODUCTION_ACCEPTANCE_PASSWORD");
-    expect(block).toContain("unzip -p");
-    expect(block).toContain("exit 1");
+    expect(block).toContain("scripts/verify-no-secret-leak.sh");
+    const scriptSrc = readFileSync(
+      join(process.cwd(), "scripts/verify-no-secret-leak.sh"),
+      "utf-8"
+    );
+    expect(scriptSrc).toContain("unzip -p");
+    expect(scriptSrc).toContain("exit 1");
   });
 
   it("12. Also scans for the live session-token value(s), not only the password", () => {
     expect(src).toContain(".opsiq-acceptance-session-tokens");
     const idx = src.indexOf("Verify no credential/session leakage");
-    const scanBlock = src.slice(idx, idx + 2000);
+    const scanBlock = src.slice(idx, idx + 400);
     expect(scanBlock).toContain(".opsiq-acceptance-session-tokens");
   });
 

@@ -129,41 +129,7 @@ jobs:
         if: always()
         env:
           LEAK_CHECK_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
-        run: |
-          set -uo pipefail
-          FOUND=0
-          NEEDLES=("$LEAK_CHECK_PASSWORD")
-          if [ -f /tmp/.opsiq-acceptance-session-tokens ]; then
-            while IFS= read -r TOKEN; do
-              [ -n "$TOKEN" ] && NEEDLES+=("$TOKEN")
-            done < /tmp/.opsiq-acceptance-session-tokens
-          fi
-          if [ -d production-test-results ]; then
-            while IFS= read -r -d '' f; do
-              for NEEDLE in "${NEEDLES[@]}"; do
-                [ -z "$NEEDLE" ] && continue
-                case "$f" in
-                  *.zip)
-                    if unzip -p "$f" 2>/dev/null | grep -qF -- "$NEEDLE"; then
-                      echo "::error::Sensitive value found inside trace archive: $f"
-                      FOUND=1
-                    fi
-                    ;;
-                  *)
-                    if grep -qF -- "$NEEDLE" "$f" 2>/dev/null; then
-                      echo "::error::Sensitive value found inside artifact: $f"
-                      FOUND=1
-                    fi
-                    ;;
-                esac
-              done
-            done < <(find production-test-results -type f \( -name "*.zip" -o -name "*.png" -o -name "*.webm" -o -name "*.json" -o -name "*.html" \) -print0)
-          fi
-          if [ "$FOUND" == "1" ]; then
-            echo "::error::Credential or session-token leak detected in captured evidence. Failing closed."
-            exit 1
-          fi
-          echo "No credential/session-token leakage detected in captured evidence."
+        run: bash scripts/verify-no-secret-leak.sh production-test-results /tmp/.opsiq-acceptance-session-tokens
 
       - name: Remove session-token scratch file (never part of the uploaded artifact)
         if: always()

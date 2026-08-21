@@ -23,14 +23,24 @@ export default defineConfig({
   ],
   use: {
     baseURL: process.env.BASE_URL,
-    // Nominal -- this suite manages its own tracing/screenshot/video
-    // explicitly (see tests/production/helpers/evidence.ts) because it
-    // shares one authenticated context/page across a serial journey
-    // (matching this repo's established tests/browser/ pattern), which
-    // falls outside the built-in page/context fixtures these settings
-    // normally attach to.
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
+    // MUST stay 'off'. Run #32509563234 proved that Playwright's built-in
+    // trace/screenshot recording starts at context-creation time -- i.e.
+    // browser.newContext() inherits and applies these `use` options as
+    // context-construction defaults regardless of whether the context was
+    // created via the built-in page/context fixtures or manually (as this
+    // suite does, in tests/production/helpers/evidence.ts, to share one
+    // authenticated context/page across a serial journey). That happens
+    // BEFORE authenticateProductionOwner() ever runs, so with `trace:
+    // 'retain-on-failure'` here, Playwright's own automatic trace recorded
+    // -- and, on the login failure in that run, retained and attached to
+    // the HTML report -- the POST /api/auth/login network request body,
+    // which contains the plaintext password. This suite's manual tracing
+    // (evidence.ts: startTracing() is called only AFTER login succeeds) is
+    // the ONLY tracing/screenshot mechanism that may run. Do not re-enable
+    // either setting here without first re-verifying, in a real run, that
+    // no capture occurs before login completes.
+    trace: 'off',
+    screenshot: 'off',
   },
   projects: [
     {

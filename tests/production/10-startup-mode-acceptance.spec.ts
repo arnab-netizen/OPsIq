@@ -61,15 +61,25 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
 
   test.afterAll(async () => {
     await finalizeTracing(context);
+    // succeeded reflects whether the handoff actually completed (a real
+    // UUID businessId), not merely whether the file could be written --
+    // 20-existing-business-acceptance.spec.ts uses this to distinguish a
+    // genuine upstream failure (BLOCKED_UPSTREAM) from a real business ID.
     writeFileSync(
       `production-test-results/evidence/${SPEC_NAME}-ids.json`,
       JSON.stringify(
-        { acceptanceTag: ACCEPTANCE_TAG, handoffSessionId, handoffIdeaId, handoffBusinessId },
+        {
+          acceptanceTag: ACCEPTANCE_TAG,
+          handoffSessionId,
+          handoffIdeaId,
+          handoffBusinessId,
+          succeeded: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(handoffBusinessId),
+        },
         null,
         2
       )
     );
-    await context.close();
+    if (context) await context.close();
   });
 
   // ─── AUTH proof block ─────────────────────────────────────────────────
@@ -184,7 +194,7 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
     await page.click("[data-testid='tab-blueprint']");
     await expect(page.locator("[data-testid='blueprint-id']")).toBeVisible();
     await expect(page.locator("[data-testid='activate-business-btn']")).toHaveCount(0);
-    await checkpointScreenshot(page, SPEC_NAME, "before-execution-planned-no-button");
+    await checkpointScreenshot(context, page, SPEC_NAME, "before-execution-planned-no-button");
   });
 
   test("13-05 — transition to EXECUTION_PLANNED and the Activate button becomes visible", async () => {
@@ -196,7 +206,7 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
     await page.reload({ waitUntil: "networkidle" });
     await page.click("[data-testid='tab-blueprint']");
     await expect(page.locator("[data-testid='activate-business-btn']")).toBeVisible();
-    await checkpointScreenshot(page, SPEC_NAME, "execution-planned-button-visible");
+    await checkpointScreenshot(context, page, SPEC_NAME, "execution-planned-button-visible");
   });
 
   test("13-06 — click Activate as Business (real browser click) and land on the resulting OwnerBusiness", async () => {
@@ -210,7 +220,7 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
 
     await page.waitForLoadState("networkidle");
     await expect(page.locator("body")).toContainText(ACCEPTANCE_TAG);
-    await checkpointScreenshot(page, SPEC_NAME, "activated-owner-home");
+    await checkpointScreenshot(context, page, SPEC_NAME, "activated-owner-home");
     expect(fatalErrors()).toHaveLength(0);
   });
 
@@ -218,7 +228,7 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
     await page.goto(`/owner/finance?businessId=${handoffBusinessId}`, { waitUntil: "networkidle" });
     const body = await page.textContent("body");
     expect(body).toBeTruthy();
-    await checkpointScreenshot(page, SPEC_NAME, "finance-domain-opens");
+    await checkpointScreenshot(context, page, SPEC_NAME, "finance-domain-opens");
     expect(fatalErrors()).toHaveLength(0);
   });
 
