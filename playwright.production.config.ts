@@ -23,22 +23,31 @@ export default defineConfig({
   ],
   use: {
     baseURL: process.env.BASE_URL,
-    // MUST stay 'off'. Run #32509563234 proved that Playwright's built-in
-    // trace/screenshot recording starts at context-creation time -- i.e.
-    // browser.newContext() inherits and applies these `use` options as
-    // context-construction defaults regardless of whether the context was
-    // created via the built-in page/context fixtures or manually (as this
-    // suite does, in tests/production/helpers/evidence.ts, to share one
-    // authenticated context/page across a serial journey). That happens
-    // BEFORE authenticateProductionOwner() ever runs, so with `trace:
-    // 'retain-on-failure'` here, Playwright's own automatic trace recorded
-    // -- and, on the login failure in that run, retained and attached to
-    // the HTML report -- the POST /api/auth/login network request body,
-    // which contains the plaintext password. This suite's manual tracing
-    // (evidence.ts: startTracing() is called only AFTER login succeeds) is
-    // the ONLY tracing/screenshot mechanism that may run. Do not re-enable
-    // either setting here without first re-verifying, in a real run, that
-    // no capture occurs before login completes.
+    // MUST stay 'off'. RAW_PLAYWRIGHT_TRACE_UPLOAD=0 for this suite,
+    // permanently -- two separate incidents proved raw Playwright
+    // trace/screenshot capture is unsafe for a LIVE PRODUCTION run:
+    //  - Run #32509563234: browser.newContext() inherits `use.trace`/
+    //    `use.screenshot` as context-CREATION-time defaults regardless of
+    //    whether the context is built-in-fixture or manually created (as
+    //    this suite does, in tests/production/helpers/evidence.ts, to share
+    //    one authenticated context/page across a serial journey). With
+    //    `trace: 'retain-on-failure'` that meant Playwright's own automatic
+    //    recording started BEFORE authenticateProductionOwner() ever ran,
+    //    capturing the login POST body -- the plaintext password -- on that
+    //    run's login failure.
+    //  - Run #32528037515: even after fixing the above (auth now always
+    //    completes before any capture starts), a raw trace of AUTHENTICATED
+    //    activity still recorded the live session's Cookie header on every
+    //    request -- inherently unavoidable for any raw trace of real
+    //    authenticated work, and exactly what the leak scanner is designed
+    //    to catch (correctly, that run failed closed on it).
+    // tests/production/helpers/evidence.ts therefore never calls
+    // context.tracing.* at all -- it captures only pixel screenshots (this
+    // app never renders a token/password on screen) and a SANITIZED
+    // network/console log (method, pathname, status, duration -- never
+    // headers, cookies, or bodies). Do not re-enable trace/screenshot here;
+    // that would defeat the sanitized-evidence design regardless of when
+    // capture starts.
     trace: 'off',
     screenshot: 'off',
   },

@@ -16,7 +16,7 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { writeFileSync, mkdirSync } from "fs";
 import { authenticateProductionOwner, logoutProductionOwner } from "./helpers/production-auth";
-import { startTracing, captureOnFailure, checkpointScreenshot, finalizeTracing } from "./helpers/evidence";
+import { startEvidenceCollection, captureOnFailure, checkpointScreenshot, finalizeEvidence } from "./helpers/evidence";
 
 const SPEC_NAME = "phase13-startup-mode";
 const ACCEPTANCE_TAG = `OPSIQ Production Acceptance - ${new Date().toISOString().slice(0, 19)}Z`;
@@ -49,10 +49,10 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
     context = await browser.newContext();
     page = await context.newPage();
     watchPage(page);
-    // Auth happens BEFORE tracing starts so the login POST (containing the
-    // password) is never captured in a trace.
+    // Auth happens BEFORE evidence collection starts -- no raw Playwright
+    // trace is ever produced for this suite (see helpers/evidence.ts).
     await authenticateProductionOwner(page);
-    await startTracing(context);
+    await startEvidenceCollection(context, page, SPEC_NAME);
   });
 
   test.afterEach(async ({}, testInfo) => {
@@ -60,7 +60,7 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   });
 
   test.afterAll(async () => {
-    await finalizeTracing(context);
+    await finalizeEvidence(context, SPEC_NAME);
     // succeeded reflects whether the handoff actually completed (a real
     // UUID businessId), not merely whether the file could be written --
     // 20-existing-business-acceptance.spec.ts uses this to distinguish a
