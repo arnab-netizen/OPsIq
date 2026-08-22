@@ -132,4 +132,74 @@ describe("[db] Owner Finance services", () => {
 
     await teardownOwnerBusiness(businessId);
   });
+
+  // ---------------------------------------------------------------------
+  // Run #6 forensic reproduction: completing an action deterministically
+  // triggers an automatic re-diagnosis (action.service.ts's "On action
+  // completion ... trigger re-diagnosis from latest snapshot"), which
+  // creates a NEW OwnerFinanceCycle whose fresh "proposed" actions become
+  // the dashboard's `latestCycle`. A live-production acceptance test that
+  // re-reads the dashboard/action-list after completing an action will
+  // observe a DIFFERENT (new) action, not a reversion of the original one
+  // -- the original action's own row is untouched and stays "completed"
+  // permanently. This is not a bug: it is the documented, intentional
+  // "route into governed re-evaluation of ... recommendation and action
+  // priority" behavior this codebase is built around. Proven here end to
+  // end against real Postgres, not just by reading the source.
+  // ---------------------------------------------------------------------
+  it("[db] completing an action stays completed on its own row even though a new latest cycle is created", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createFinancialSnapshot(businessId, leakySnapshot(), actor, workspaceId);
+    const cycle1 = await runFinanceDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle1.actions[0];
+    expect(action.status).toBe("proposed");
+
+    await updateFinanceAction(action.id, { status: "assigned" }, actor, workspaceId);
+    await updateFinanceAction(action.id, { status: "in_progress" }, actor, workspaceId);
+    const completed = await updateFinanceAction(
+      action.id,
+      { status: "completed", completionNotes: "hostile-test completion", completionEvidence: ["ref"] },
+      actor,
+      workspaceId
+    );
+    expect(completed.status).toBe("completed");
+
+    // The original action's OWN row is permanently "completed" -- fetching
+    // it directly (the same call the fixed Playwright test uses) never
+    // shows a reversion, regardless of what the dashboard now shows.
+    const reread = await db.ownerFinanceAction.findUnique({ where: { id: action.id } });
+    expect(reread?.status).toBe("completed");
+    expect(reread?.completedAt).not.toBeNull();
+
+    // A NEW cycle was created automatically -- the deterministic mechanism
+    // behind the apparent "reversion to proposed."
+    const allCycles = await db.ownerFinanceCycle.findMany({
+      where: { businessId, workspaceId },
+      orderBy: { sequenceNumber: "asc" },
+      include: { actions: true },
+    });
+    expect(allCycles.length).toBe(2);
+    expect(allCycles[0].id).toBe(cycle1.id);
+    const cycle2 = allCycles[1];
+    expect(cycle2.sequenceNumber).toBe(cycle1.sequenceNumber + 1);
+    expect(cycle2.actions.length).toBeGreaterThan(0);
+    // Every action in the fresh cycle starts "proposed" -- including,
+    // deterministically, one with the same title/priority as the just-
+    // completed action, since the re-diagnosis ran against the SAME
+    // unchanged snapshot. This is exactly what a `.first()`-by-priority
+    // locator would observe as an apparent "reversion."
+    for (const a of cycle2.actions) expect(a.status).toBe("proposed");
+    const regenerated = cycle2.actions.find((a) => a.title === action.title);
+    expect(regenerated, "re-diagnosis on unchanged data regenerates the same finding/action").toBeTruthy();
+    expect(regenerated!.id).not.toBe(action.id); // a DIFFERENT row, not the same one reset
+
+    // The dashboard now shows cycle #2 as "latest" -- confirming the exact
+    // mechanism a UI/Playwright test would observe after completing.
+    const dash = await getFinanceDashboard(workspaceId, businessId);
+    expect(dash.latestCycle?.id).toBe(cycle2.id);
+    expect(dash.latestCycle?.actions[0]?.status).toBe("proposed");
+
+    await teardownOwnerBusiness(businessId);
+  });
 });

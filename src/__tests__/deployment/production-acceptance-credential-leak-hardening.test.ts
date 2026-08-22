@@ -35,7 +35,9 @@ import {
   captureOnFailure,
   checkpointScreenshot,
   finalizeEvidence,
+  recordApiCall,
   startEvidenceCollection,
+  timedApiCall,
 } from "../../../tests/production/helpers/evidence";
 import { authenticateProductionOwner } from "../../../tests/production/helpers/production-auth";
 
@@ -309,5 +311,154 @@ describe("(a)+(b) authenticateProductionOwner() — 401 classified immediately, 
     } catch (err) {
       expect((err as Error).message).not.toContain(EMAIL);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Run #32568877293 (run #6) forensic closure: page.on("request"/...) events
+// never fire for page.request.* calls (Playwright's Node-side APIRequestContext
+// is invisible to browser-page network events), so any spec dominated by
+// direct-API setup/verification calls produced an empty sanitized network
+// log. recordApiCall()/timedApiCall() close this gap; every page.request.*
+// call site in both production spec files must report itself through them.
+// ---------------------------------------------------------------------------
+describe("(h) run #6 — page.request.* traffic is captured via recordApiCall()/timedApiCall(), not silently dropped", () => {
+  const SPEC = "spec-api-call-capture-test";
+
+  afterEach(() => {
+    rmSync(join(process.cwd(), "production-test-results", "evidence", SPEC), { recursive: true, force: true });
+  });
+
+  it("recordApiCall() writes a sanitized entry (method/pathname/status/duration only) once collection has started for the context", async () => {
+    const page = { on: vi.fn(), screenshot: vi.fn().mockResolvedValue(undefined) } as unknown as Page;
+    const context = {} as BrowserContext;
+    startEvidenceCollection(context, page, SPEC);
+
+    recordApiCall(context, "GET", "/api/owner/finance/actions/:actionId", 200, 42);
+    await finalizeEvidence(context, SPEC);
+
+    const written = readFileSync(
+      join(process.cwd(), "production-test-results", "evidence", SPEC, `${SPEC}-network-log.json`),
+      "utf-8"
+    );
+    const entries = JSON.parse(written);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      method: "GET",
+      pathname: "/api/owner/finance/actions/:actionId",
+      status: 200,
+      durationMs: 42,
+      label: "page.request",
+    });
+  });
+
+  it("recordApiCall() is a safe no-op when collection was never started for the context (e.g. login failed before startEvidenceCollection ran)", () => {
+    const untrackedContext = {} as BrowserContext;
+    expect(() => recordApiCall(untrackedContext, "GET", "/api/x", 200, 1)).not.toThrow();
+    expect(() => recordApiCall(undefined, "GET", "/api/x", 200, 1)).not.toThrow();
+  });
+
+  it("timedApiCall() times the call, records it via recordApiCall(), and returns the underlying response unchanged", async () => {
+    const page = { on: vi.fn(), screenshot: vi.fn().mockResolvedValue(undefined) } as unknown as Page;
+    const context = {} as BrowserContext;
+    startEvidenceCollection(context, page, SPEC);
+
+    const fakeResponse = { status: () => 201, ok: () => true };
+    const result = await timedApiCall(context, "POST", "/api/owner/startup/sessions", async () => fakeResponse);
+    expect(result).toBe(fakeResponse);
+
+    await finalizeEvidence(context, SPEC);
+    const written = readFileSync(
+      join(process.cwd(), "production-test-results", "evidence", SPEC, `${SPEC}-network-log.json`),
+      "utf-8"
+    );
+    const entries = JSON.parse(written);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].method).toBe("POST");
+    expect(entries[0].pathname).toBe("/api/owner/startup/sessions");
+    expect(entries[0].status).toBe(201);
+    expect(typeof entries[0].durationMs).toBe("number");
+  });
+
+  it("every page.request.(get|post|patch|put|delete) call site in both production spec files is wrapped in timedApiCall(...), not called bare", () => {
+    // A bare call reads as `page.request.get(` etc. immediately after
+    // whitespace/`=`/`(` with no intervening `timedApiCall(` -- approximated
+    // here by scanning every page.request.* occurrence and requiring the
+    // nearest preceding "timedApiCall(" to be closer than the nearest
+    // preceding top-level statement boundary. Simpler and just as precise
+    // for this fixed pair of files: every page.request.* occurrence's
+    // enclosing line (or the few lines above it, for a multi-line call) must
+    // contain "timedApiCall(" somewhere before it within the same statement.
+    for (const [name, src] of [
+      ["10-startup-mode-acceptance.spec.ts", STARTUP_SPEC_SRC],
+      ["20-existing-business-acceptance.spec.ts", EXISTING_BUSINESS_SPEC_SRC],
+    ] as const) {
+      const callRegex = /page\.request\.(get|post|patch|put|delete)\(/g;
+      let match: RegExpExecArray | null;
+      let checked = 0;
+      while ((match = callRegex.exec(src)) !== null) {
+        checked++;
+        // Look back up to 200 chars for the nearest "timedApiCall(" -- every
+        // real call site in these files wraps page.request.* within a few
+        // lines via `timedApiCall(context, METHOD, "route", () => page.request...)`.
+        const windowStart = Math.max(0, match.index - 200);
+        const preceding = src.slice(windowStart, match.index);
+        expect(
+          preceding,
+          `${name}: page.request.${match[1]}( at offset ${match.index} is not wrapped in timedApiCall(...)`
+        ).toContain("timedApiCall(");
+      }
+      // Sanity: both files genuinely use page.request.* -- this test would
+      // pass vacuously (and silently stop proving anything) if it didn't.
+      expect(checked, `${name}: expected at least one page.request.* call site`).toBeGreaterThan(0);
+    }
+  });
+
+  it("logoutProductionOwner() accepts and forwards the BrowserContext so its logout POST is captured too", () => {
+    const authSrc = readFileSync(
+      join(process.cwd(), "tests/production/helpers/production-auth.ts"),
+      "utf-8"
+    );
+    expect(authSrc).toMatch(/export async function logoutProductionOwner\(page: Page, context\?: BrowserContext\)/);
+    expect(authSrc).toContain("timedApiCall(context,");
+    expect(STARTUP_SPEC_SRC).toMatch(/logoutProductionOwner\(page,\s*context\)/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Run #32568877293 (run #6) forensic closure: 01-07 must never classify a
+// completed-action transition by re-inspecting a `.first()`-by-priority
+// dashboard/card locator -- action.service.ts's completion side effect
+// (automatic re-diagnosis) deterministically regenerates a same-title/
+// priority action in a NEW cycle, so a `.first()` locator captured before
+// completion can silently re-resolve to a DIFFERENT, still-"proposed" row
+// afterward (proven end to end in
+// src/__tests__/owner-finance/services.db.test.ts). The fix: capture the
+// action's own id before mutating, then verify completion by polling that
+// exact id via a direct API GET.
+// ---------------------------------------------------------------------------
+describe("(i) run #6 — 01-07 verifies action completion by id, not by re-reading a .first() card", () => {
+  it("captures the action's own id from the dashboard before clicking Complete", () => {
+    const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test("01-07');
+    expect(idx).toBeGreaterThan(-1);
+    const clickIdx = EXISTING_BUSINESS_SPEC_SRC.indexOf('name: "Complete"', idx);
+    expect(clickIdx).toBeGreaterThan(idx);
+    const setup = EXISTING_BUSINESS_SPEC_SRC.slice(idx, clickIdx);
+    expect(setup).toMatch(/const actionId: string = /);
+  });
+
+  it("polls the action's own id via a direct GET (not the card) to confirm 'completed', using expect(...).toPass for auto-retry instead of a fixed timing window", () => {
+    const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test("01-07');
+    const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 3000);
+    expect(block).toMatch(/await expect\(async \(\) => \{[\s\S]*?\}\)\.toPass\(\{ timeout: \d+ \}\)/);
+    expect(block).toMatch(/\/api\/owner\/finance\/actions\/\$\{actionId\}/);
+  });
+
+  it("does not assert the completed status via card.toContainText('completed') (only 'assigned'/'in_progress', which are pre-reassessment states, use the card)", () => {
+    const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test("01-07');
+    const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 3000);
+    expect(block).not.toMatch(/expect\(card\)\.toContainText\(["']completed["']\)/);
+    expect(block).toMatch(/expect\(card\)\.toContainText\(["']assigned["']\)/);
+    expect(block).toMatch(/expect\(card\)\.toContainText\(["']in_progress["']\)/);
   });
 });

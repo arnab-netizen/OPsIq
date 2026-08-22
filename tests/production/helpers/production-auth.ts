@@ -8,9 +8,10 @@
  * (see helpers/evidence.ts) so the login request's credentials are never
  * captured in a trace/HAR.
  */
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { appendFileSync, mkdirSync } from "fs";
+import { timedApiCall } from "./evidence";
 
 export interface ProductionSession {
   sessionCookieName: string;
@@ -77,8 +78,14 @@ export async function authenticateProductionOwner(page: Page): Promise<Productio
 }
 
 /** Revokes the session server-side (POST /api/auth/logout) so a subsequent
- * navigation to a protected route can prove the redirect-to-login behavior. */
-export async function logoutProductionOwner(page: Page): Promise<void> {
-  const res = await page.request.post("/api/auth/logout");
+ * navigation to a protected route can prove the redirect-to-login behavior.
+ * `context` is optional (and, if passed but collection was never started for
+ * it, a no-op) so this stays callable from any future context that hasn't
+ * wired up evidence collection -- but every current call site passes it, so
+ * this call is captured in the sanitized network log like every other
+ * page.request.* call in this suite (see helpers/evidence.ts's module
+ * header re: run #32568877293). */
+export async function logoutProductionOwner(page: Page, context?: BrowserContext): Promise<void> {
+  const res = await timedApiCall(context, "POST", "/api/auth/logout", () => page.request.post("/api/auth/logout"));
   expect(res.ok(), `Logout request failed: ${res.status()}`).toBe(true);
 }

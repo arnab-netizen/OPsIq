@@ -29,6 +29,19 @@
  * a given context (e.g. login/setup failed before startEvidenceCollection()
  * ran) -- teardown never throws a misleading secondary error on top of a
  * real setup failure.
+ *
+ * Run #32568877293 (run #6) proved page.on("request"/...) listeners never
+ * fire for calls made through page.request.get/post/patch() -- Playwright's
+ * Node-side APIRequestContext is a separate HTTP client from the browser's
+ * own network stack and is invisible to page-level network events, even
+ * though this suite uses page.request.* extensively (session/state setup,
+ * read-only assertions, direct-API verification). That produced empty
+ * sanitized network logs whenever a spec's activity was dominated by such
+ * calls. recordApiCall()/timedApiCall() close this gap: every
+ * page.request.* call site in this suite must additionally report itself
+ * here (see call sites in 10-startup-mode-acceptance.spec.ts and
+ * 20-existing-business-acceptance.spec.ts) so the sanitized log reflects
+ * the full picture, not just browser-originated fetches.
  */
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
@@ -117,6 +130,51 @@ export function startEvidenceCollection(context: BrowserContext, page: Page, spe
   page.on("console", (msg) => {
     state.console.push({ timestamp: new Date().toISOString(), type: msg.type(), text: msg.text() });
   });
+}
+
+/**
+ * Records a page.request.* call into the sanitized network log. page.on()
+ * events never fire for these (see module header) -- this is the only way
+ * to capture them. Same sanitization contract as the automatic collector:
+ * method/pathname/status/duration only, never headers/cookies/bodies. No-op
+ * if collection was never started for this context.
+ */
+export function recordApiCall(
+  context: BrowserContext | undefined,
+  method: string,
+  pathname: string,
+  status: number | null,
+  durationMs: number
+): void {
+  if (!context || !collectionStartedFor.has(context)) return;
+  const state = evidenceState.get(context);
+  if (!state) return;
+  state.network.push({
+    timestamp: new Date().toISOString(),
+    method,
+    pathname,
+    status,
+    durationMs,
+    label: "page.request",
+  });
+}
+
+/**
+ * Times and records a page.request.* call in one step. `pathname` is
+ * supplied by the caller (not derived from a live response url) so it can
+ * be a stable, parameter-free route pattern (e.g. "/api/owner/startup/
+ * sessions/:sessionId") rather than embedding a UUID.
+ */
+export async function timedApiCall<T extends { status(): number }>(
+  context: BrowserContext | undefined,
+  method: string,
+  pathname: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const startedAt = Date.now();
+  const res = await fn();
+  recordApiCall(context, method, pathname, res.status(), Date.now() - startedAt);
+  return res;
 }
 
 /** Call from a serial suite's afterEach(async ({}, testInfo) => ...). No-ops

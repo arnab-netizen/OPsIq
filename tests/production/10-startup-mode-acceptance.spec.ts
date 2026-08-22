@@ -16,7 +16,13 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { writeFileSync, mkdirSync } from "fs";
 import { authenticateProductionOwner, logoutProductionOwner } from "./helpers/production-auth";
-import { startEvidenceCollection, captureOnFailure, checkpointScreenshot, finalizeEvidence } from "./helpers/evidence";
+import {
+  startEvidenceCollection,
+  captureOnFailure,
+  checkpointScreenshot,
+  finalizeEvidence,
+  timedApiCall,
+} from "./helpers/evidence";
 
 const SPEC_NAME = "phase13-startup-mode";
 const ACCEPTANCE_TAG = `OPSIQ Production Acceptance - ${new Date().toISOString().slice(0, 19)}Z`;
@@ -94,8 +100,8 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   });
 
   test("AUTH-03 — unauthorized access to a nonexistent workspace-scoped resource is rejected, not silently allowed", async () => {
-    const res = await page.request.get(
-      "/api/owner/startup/sessions/00000000-0000-0000-0000-000000000000"
+    const res = await timedApiCall(context, "GET", "/api/owner/startup/sessions/:sessionId", () =>
+      page.request.get("/api/owner/startup/sessions/00000000-0000-0000-0000-000000000000")
     );
     expect([403, 404]).toContain(res.status());
   });
@@ -103,24 +109,28 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   // ─── Phase 13: Startup Mode real browser handoff journey ──────────────
 
   test("13-01 — create a clearly-tagged Startup acceptance session + idea", async () => {
-    const created = await page.request.post("/api/owner/startup/sessions", {
-      data: {
-        sessionLabel: ACCEPTANCE_TAG,
-        intake: {
-          location: "Australia",
-          capitalAvailable: null,
-          hoursPerWeekAvailable: null,
-          riskTolerance: null,
-          skills: [],
+    const created = await timedApiCall(context, "POST", "/api/owner/startup/sessions", () =>
+      page.request.post("/api/owner/startup/sessions", {
+        data: {
+          sessionLabel: ACCEPTANCE_TAG,
+          intake: {
+            location: "Australia",
+            capitalAvailable: null,
+            hoursPerWeekAvailable: null,
+            riskTolerance: null,
+            skills: [],
+          },
+          ideas: [{ name: ACCEPTANCE_TAG, industry: "Automotive Services", structural: {} }],
         },
-        ideas: [{ name: ACCEPTANCE_TAG, industry: "Automotive Services", structural: {} }],
-      },
-    });
+      })
+    );
     expect(created.status()).toBe(201);
     handoffSessionId = (await created.json()).sessionId;
     expect(handoffSessionId).toBeTruthy();
 
-    const sessionRes = await page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`);
+    const sessionRes = await timedApiCall(context, "GET", "/api/owner/startup/sessions/:sessionId", () =>
+      page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`)
+    );
     expect(sessionRes.status()).toBe(200);
     handoffIdeaId = (await sessionRes.json()).session.ideas[0].id;
     expect(handoffIdeaId).toBeTruthy();
@@ -128,63 +138,77 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
 
   test("13-02 — drive the session through screening and the required lifecycle statuses up to APPROVED", async () => {
     for (const status of ["CONTEXT_CAPTURE", "DISCOVERY", "IDEA_GENERATION", "SCREENING"]) {
-      const res = await page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, {
-        data: { status },
-      });
+      const res = await timedApiCall(context, "PATCH", "/api/owner/startup/sessions/:sessionId", () =>
+        page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, { data: { status } })
+      );
       expect(res.status()).toBe(200);
     }
 
-    const screenRes = await page.request.post(
-      `/api/owner/startup/sessions/${handoffSessionId}/analysis`,
-      {
-        data: {
-          action: "SCREEN",
-          ideaId: handoffIdeaId,
-          profile: {
-            capitalAvailableCents: 5_000_000,
-            ownerHoursPerWeek: 20,
-            riskTolerance: "MEDIUM",
-            location: "Australia",
-            cashRunwayMonthsAvailable: 6,
-            minimumMonthlyIncomeNeededCents: 300_000,
+    const screenRes = await timedApiCall(
+      context,
+      "POST",
+      "/api/owner/startup/sessions/:sessionId/analysis",
+      () =>
+        page.request.post(`/api/owner/startup/sessions/${handoffSessionId}/analysis`, {
+          data: {
+            action: "SCREEN",
+            ideaId: handoffIdeaId,
+            profile: {
+              capitalAvailableCents: 5_000_000,
+              ownerHoursPerWeek: 20,
+              riskTolerance: "MEDIUM",
+              location: "Australia",
+              cashRunwayMonthsAvailable: 6,
+              minimumMonthlyIncomeNeededCents: 300_000,
+            },
           },
-        },
-      }
+        })
     );
     expect(screenRes.status()).toBe(200);
 
     for (const status of ["ECONOMICS_REVIEW", "READINESS_REVIEW", "OWNER_DECISION_REQUIRED"]) {
-      const res = await page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, {
-        data: { status },
-      });
+      const res = await timedApiCall(context, "PATCH", "/api/owner/startup/sessions/:sessionId", () =>
+        page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, { data: { status } })
+      );
       expect(res.status()).toBe(200);
     }
   });
 
   test("13-03 — record GO decision and create the execution blueprint", async () => {
-    const decisionRes = await page.request.post(
-      `/api/owner/startup/sessions/${handoffSessionId}/decision`,
-      { data: { ideaId: handoffIdeaId, decisionType: "GO", rationale: `${ACCEPTANCE_TAG} approval` } }
+    const decisionRes = await timedApiCall(
+      context,
+      "POST",
+      "/api/owner/startup/sessions/:sessionId/decision",
+      () =>
+        page.request.post(`/api/owner/startup/sessions/${handoffSessionId}/decision`, {
+          data: { ideaId: handoffIdeaId, decisionType: "GO", rationale: `${ACCEPTANCE_TAG} approval` },
+        })
     );
     expect(decisionRes.status()).toBe(201);
     const ownerDecisionId = (await decisionRes.json()).ownerDecisionId;
     expect(ownerDecisionId).toBeTruthy();
 
-    const approveRes = await page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, {
-      data: { status: "APPROVED" },
-    });
+    const approveRes = await timedApiCall(context, "PATCH", "/api/owner/startup/sessions/:sessionId", () =>
+      page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, { data: { status: "APPROVED" } })
+    );
     expect(approveRes.status()).toBe(200);
 
-    const bpRes = await page.request.post(`/api/owner/startup/sessions/${handoffSessionId}/blueprint`, {
-      data: {
-        ideaId: handoffIdeaId,
-        ownerDecisionId,
-        objectiveTitle: `Launch ${ACCEPTANCE_TAG}`,
-        objectiveDescription: "Live production acceptance execution blueprint",
-        targetMetricName: "monthly_revenue_cents",
-        targetValue: 500000,
-      },
-    });
+    const bpRes = await timedApiCall(
+      context,
+      "POST",
+      "/api/owner/startup/sessions/:sessionId/blueprint",
+      () =>
+        page.request.post(`/api/owner/startup/sessions/${handoffSessionId}/blueprint`, {
+          data: {
+            ideaId: handoffIdeaId,
+            ownerDecisionId,
+            objectiveTitle: `Launch ${ACCEPTANCE_TAG}`,
+            objectiveDescription: "Live production acceptance execution blueprint",
+            targetMetricName: "monthly_revenue_cents",
+            targetValue: 500000,
+          },
+        })
+    );
     expect(bpRes.status()).toBe(201);
     expect((await bpRes.json()).executionPlanId).toBeTruthy();
   });
@@ -198,9 +222,11 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   });
 
   test("13-05 — transition to EXECUTION_PLANNED and the Activate button becomes visible", async () => {
-    const res = await page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, {
-      data: { status: "EXECUTION_PLANNED" },
-    });
+    const res = await timedApiCall(context, "PATCH", "/api/owner/startup/sessions/:sessionId", () =>
+      page.request.patch(`/api/owner/startup/sessions/${handoffSessionId}`, {
+        data: { status: "EXECUTION_PLANNED" },
+      })
+    );
     expect(res.status()).toBe(200);
 
     await page.reload({ waitUntil: "networkidle" });
@@ -254,8 +280,12 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   });
 
   test("13-10 — session-level GET confirms exactly one linked business across repeated reads (no duplicate on revisit)", async () => {
-    const res1 = await page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`);
-    const res2 = await page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`);
+    const res1 = await timedApiCall(context, "GET", "/api/owner/startup/sessions/:sessionId", () =>
+      page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`)
+    );
+    const res2 = await timedApiCall(context, "GET", "/api/owner/startup/sessions/:sessionId", () =>
+      page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`)
+    );
     const body1 = await res1.json();
     const body2 = await res2.json();
     expect(body1.session.businessId).toBe(handoffBusinessId);
@@ -274,14 +304,18 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
   // ─── Logout / re-login proof (runs last so it doesn't disrupt the journey) ──
 
   test("AUTH-04 — logout revokes the session; the session-scoped API rejects the old cookie", async () => {
-    await logoutProductionOwner(page);
-    const res = await page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`);
+    await logoutProductionOwner(page, context);
+    const res = await timedApiCall(context, "GET", "/api/owner/startup/sessions/:sessionId", () =>
+      page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`)
+    );
     expect([401, 403]).toContain(res.status());
   });
 
   test("AUTH-05 — re-login succeeds and the acceptance business remains visible", async () => {
     await authenticateProductionOwner(page);
-    const res = await page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`);
+    const res = await timedApiCall(context, "GET", "/api/owner/startup/sessions/:sessionId", () =>
+      page.request.get(`/api/owner/startup/sessions/${handoffSessionId}`)
+    );
     expect(res.status()).toBe(200);
     expect((await res.json()).session.businessId).toBe(handoffBusinessId);
   });
