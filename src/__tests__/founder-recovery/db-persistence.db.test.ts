@@ -172,6 +172,97 @@ describe("[db] Owner Recovery persistence", () => {
     expect(persisted.baselineValue).toBe(30);
   });
 
+  // ---------------------------------------------------------------------
+  // GAP-RECOVERY-01: founder-recovery predated the owner-mode safety gate
+  // rollout (EH-01/EH-02) that every other domain action service
+  // (finance/cashflow/sales/marketing/operations/sop/strategy/budget)
+  // already passes through, and was never wired to it -- material
+  // transitions (in_progress/completed) went unguarded. This proves the
+  // gate is now actually enforced end to end against real Postgres, not
+  // merely wired (a call that never fires would pass a static-source
+  // check but not this).
+  // ---------------------------------------------------------------------
+  it("[db] blocks a material recovery-action transition when a do-not-repeat rule is active for scope:recovery", async () => {
+    const workspaceId = ws();
+    const business = await createBusiness(
+      { name: "Gate Laundry", businessType: "laundry_local_service", currency: "INR" },
+      actor,
+      workspaceId
+    );
+    const snap = await createSnapshot(business.id, failingPeriod1() as any, actor, workspaceId);
+    const cycle = await runCycle(business.id, snap.id, actor, workspaceId);
+    const action: any = cycle.actions[0];
+
+    // proposed -> assigned is not a material transition (not in
+    // MATERIAL_ACTION_STATUSES) -- the gate only applies from here on.
+    const assigned = await updateRecoveryAction(
+      action.id,
+      { status: "assigned", version: action.version },
+      actor,
+      workspaceId
+    );
+
+    await db.ownerDoNotRepeatRule.create({
+      data: {
+        workspaceId,
+        businessId: business.id,
+        memoryKey: "scope:recovery",
+        summary: "Do not repeat this recovery move",
+        reason: "Tried before and failed for this business",
+        blocksRepetition: true,
+        active: true,
+      },
+    });
+
+    await expect(
+      updateRecoveryAction(action.id, { status: "in_progress", version: assigned.version }, actor, workspaceId)
+    ).rejects.toThrow(/do-not-repeat/i);
+
+    // The action's own row is untouched -- the gate blocked before any write.
+    const reread = await db.recoveryAction.findUnique({ where: { id: action.id } });
+    expect(reread?.status).toBe("assigned");
+  });
+
+  it("[db] allows a material recovery-action transition once the do-not-repeat rule carries a changed-context override", async () => {
+    const workspaceId = ws();
+    const business = await createBusiness(
+      { name: "Gate Override Laundry", businessType: "laundry_local_service", currency: "INR" },
+      actor,
+      workspaceId
+    );
+    const snap = await createSnapshot(business.id, failingPeriod1() as any, actor, workspaceId);
+    const cycle = await runCycle(business.id, snap.id, actor, workspaceId);
+    const action: any = cycle.actions[0];
+
+    const assigned = await updateRecoveryAction(
+      action.id,
+      { status: "assigned", version: action.version },
+      actor,
+      workspaceId
+    );
+
+    await db.ownerDoNotRepeatRule.create({
+      data: {
+        workspaceId,
+        businessId: business.id,
+        memoryKey: "scope:recovery",
+        summary: "Do not repeat this recovery move",
+        reason: "Tried before and failed for this business",
+        blocksRepetition: true,
+        active: true,
+        changedContextExplanation: "New supplier, different cost structure this time",
+      },
+    });
+
+    const updated = await updateRecoveryAction(
+      action.id,
+      { status: "in_progress", version: assigned.version },
+      actor,
+      workspaceId
+    );
+    expect(updated.status).toBe("in_progress");
+  });
+
   it("[db] rejects an invalid status transition", async () => {
     const workspaceId = ws();
     const business = await createBusiness(
