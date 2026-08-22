@@ -41,7 +41,7 @@ import { registerActionDialogHandler } from "./helpers/dialog-handler";
 import { createJourneyWatch } from "./helpers/journey-watchers";
 
 const SPEC_NAME = "phase24-cashflow";
-const { consoleErrors, networkFailures, watchPage, fatalErrors } = createJourneyWatch();
+const { networkFailures, watchPage, fatalErrors } = createJourneyWatch();
 
 test.describe("PROD-24 — Cashflow Owner journey live production acceptance", () => {
   let context: BrowserContext;

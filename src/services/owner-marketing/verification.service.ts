@@ -71,5 +71,32 @@ export async function recordMarketingVerification(
     },
   });
 
+  // On verified success, trigger re-diagnosis to capture improved business
+  // state -- matches every other owner-domain verification service
+  // (finance/sales/sop); marketing was missing this mechanism entirely.
+  if (result.reachedTarget) {
+    try {
+      const latestSnapshot = await db.ownerMarketingSnapshot.findFirst({
+        where: { businessId: action.businessId, workspaceId },
+        orderBy: { periodEnd: "desc" },
+        select: { id: true },
+      });
+      if (latestSnapshot) {
+        const { runMarketingDiagnosis } = await import("./diagnosis.service");
+        const newCycle = await runMarketingDiagnosis(action.businessId, latestSnapshot.id, actorId, workspaceId);
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.OWNER_MARKETING_VERIFICATION_REASSESSMENT_TRIGGERED,
+          actorId,
+          workspaceId,
+          entityType: "OwnerMarketingCycle",
+          entityId: newCycle.id,
+          payload: { trigger: "verification_success", triggerVerificationId: verification.id },
+        });
+      }
+    } catch (_err) {
+      // Re-diagnosis failure must not fail the verification record — advisory only.
+    }
+  }
+
   return { verification, result };
 }

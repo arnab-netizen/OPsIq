@@ -39,7 +39,7 @@ import { registerActionDialogHandler } from "./helpers/dialog-handler";
 import { createJourneyWatch } from "./helpers/journey-watchers";
 
 const SPEC_NAME = "phase23-strategy";
-const { consoleErrors, networkFailures, watchPage, fatalErrors } = createJourneyWatch();
+const { networkFailures, watchPage, fatalErrors } = createJourneyWatch();
 
 test.describe("PROD-23 — Strategy Owner journey live production acceptance", () => {
   let context: BrowserContext;
