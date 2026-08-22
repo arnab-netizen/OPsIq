@@ -79,6 +79,43 @@ export async function updateMarketingAction(
     payload: { status: updated.status, assignedTo: updated.assignedTo },
   });
 
+  // On action completion, emit a dedicated event and trigger re-diagnosis from
+  // latest snapshot -- matches every other owner-domain action service
+  // (finance/cashflow/sales/operations/sop/strategy); marketing was missing
+  // this mechanism entirely.
+  if (updated.status === "completed") {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OWNER_MARKETING_ACTION_COMPLETED,
+      actorId,
+      workspaceId,
+      entityType: "OwnerMarketingAction",
+      entityId: actionId,
+      payload: { businessId: updated.businessId, cycleId: updated.cycleId },
+    });
+
+    try {
+      const latestSnapshot = await db.ownerMarketingSnapshot.findFirst({
+        where: { businessId: updated.businessId, workspaceId },
+        orderBy: { periodEnd: "desc" },
+        select: { id: true },
+      });
+      if (latestSnapshot) {
+        const { runMarketingDiagnosis } = await import("./diagnosis.service");
+        const newCycle = await runMarketingDiagnosis(updated.businessId, latestSnapshot.id, actorId, workspaceId);
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.OWNER_MARKETING_REASSESSMENT_TRIGGERED,
+          actorId,
+          workspaceId,
+          entityType: "OwnerMarketingCycle",
+          entityId: newCycle.id,
+          payload: { trigger: "action_completed", triggerActionId: actionId },
+        });
+      }
+    } catch (_err) {
+      // Re-diagnosis failure must not fail the action update — advisory only.
+    }
+  }
+
   return updated;
 }
 

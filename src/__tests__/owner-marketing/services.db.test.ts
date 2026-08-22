@@ -159,4 +159,80 @@ describe("[db] Owner Marketing services", () => {
 
     await teardownOwnerBusiness(businessId);
   });
+
+  // ---------------------------------------------------------------------
+  // GAP-MARKETING-01: found during the full-domain-acceptance investigation
+  // -- unlike finance/sales/operations/sop/strategy, marketing's
+  // action.service.ts/verification.service.ts never triggered re-diagnosis
+  // on action completion or verified success. Marketing was the only
+  // domain missing this mechanism entirely (confirmed against
+  // audit-events.ts: OWNER_MARKETING_ACTION_COMPLETED and
+  // OWNER_MARKETING_REASSESSMENT_TRIGGERED did not exist before this fix,
+  // while every sibling domain already had the full set). Proves the
+  // completion-triggered path here, mirroring the equivalent Finance/Sales
+  // proof.
+  // ---------------------------------------------------------------------
+  it("[db] completing an action triggers re-diagnosis, creating a new latest cycle", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createMarketingSnapshot(businessId, wastingSnapshot(), actor, workspaceId);
+    const cycle1 = await runMarketingDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle1.actions[0];
+    expect(action.status).toBe("proposed");
+
+    await updateMarketingAction(action.id, { status: "assigned" }, actor, workspaceId);
+    await updateMarketingAction(action.id, { status: "in_progress" }, actor, workspaceId);
+    const completed = await updateMarketingAction(
+      action.id,
+      { status: "completed", completionNotes: "hostile-test completion", completionEvidence: ["ref"] },
+      actor,
+      workspaceId
+    );
+    expect(completed.status).toBe("completed");
+
+    // The original action's own row is permanently "completed".
+    const reread = await db.ownerMarketingAction.findUnique({ where: { id: action.id } });
+    expect(reread?.status).toBe("completed");
+    expect(reread?.completedAt).not.toBeNull();
+
+    // A NEW cycle was created automatically by the newly-added re-diagnosis
+    // trigger -- this is the mechanism that was missing before this fix.
+    const allCycles = await db.ownerMarketingCycle.findMany({
+      where: { businessId, workspaceId },
+      orderBy: { sequenceNumber: "asc" },
+    });
+    expect(allCycles.length).toBe(2);
+    expect(allCycles[0].id).toBe(cycle1.id);
+    expect(allCycles[1].sequenceNumber).toBe(cycle1.sequenceNumber + 1);
+
+    const dash = await getMarketingDashboard(workspaceId, businessId);
+    expect(dash.latestCycle?.id).toBe(allCycles[1].id);
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] a verified-improved outcome triggers re-diagnosis, creating a new latest cycle", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createMarketingSnapshot(businessId, wastingSnapshot(), actor, workspaceId);
+    const cycle1 = await runMarketingDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle1.actions[0];
+
+    const { result } = await recordMarketingVerification(
+      action.id,
+      { beforeValue: 2, afterValue: 25, targetDirection: "up", targetValue: 20 },
+      actor,
+      workspaceId
+    );
+    expect(result.reachedTarget).toBe(true);
+
+    const allCycles = await db.ownerMarketingCycle.findMany({
+      where: { businessId, workspaceId },
+      orderBy: { sequenceNumber: "asc" },
+    });
+    expect(allCycles.length).toBe(2);
+    expect(allCycles[1].sequenceNumber).toBe(cycle1.sequenceNumber + 1);
+
+    await teardownOwnerBusiness(businessId);
+  });
 });
