@@ -69,4 +69,15 @@ export const MATERIAL_GATE_PATHS: readonly MaterialGatePath[] = [
     enforcingSymbol: "enforceOwnerActionGates",
     rationale: "Budget action transitions (in_progress/completed) must pass the owner-mode safety gate (cash/cashflow/compliance/do-not-repeat).",
   },
+  // GAP-RECOVERY-01 — founder-recovery predates the owner-mode gate rollout (which
+  // targeted finance/cashflow/sales/marketing/operations/strategy/sop) and was never
+  // wired to it. Recovery actions transitioned through their own status machine with
+  // NO gate, same class of gap the gate itself was built to close for every other
+  // owner-domain action service.
+  {
+    id: "owner.recovery.action",
+    file: "src/services/founder-recovery/action.service.ts",
+    enforcingSymbol: "enforceOwnerActionGates",
+    rationale: "Recovery action transitions (in_progress/completed) must pass the owner-mode safety gate, same as every other owner-domain action service.",
+  },
 ] as const;

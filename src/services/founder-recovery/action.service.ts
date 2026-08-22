@@ -15,6 +15,7 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
+import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
 
 export interface UpdateRecoveryActionInput {
   status?: string;
@@ -56,6 +57,13 @@ export async function updateRecoveryAction(
       );
     }
     const to = input.status;
+
+    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a
+    // material transition, same as every other owner-domain action service
+    // (finance/cashflow/sales/marketing/operations/sop/strategy/budget).
+    // Recovery predates that gate rollout and was never wired to it -- this
+    // closes that gap without changing any other behavior.
+    await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "recovery", toStatus: to });
 
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;

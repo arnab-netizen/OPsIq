@@ -78,6 +78,12 @@ describe("material gate registry — structural assertions", () => {
     const p = MATERIAL_GATE_PATHS.find((x) => x.id === "owner.strategy.action");
     expect(p?.file).toBe("src/services/owner-strategy/action.service.ts");
   });
+  it("owner.recovery.action is registered with enforceOwnerActionGates and targets the correct file", () => {
+    const p = MATERIAL_GATE_PATHS.find((x) => x.id === "owner.recovery.action");
+    expect(p).toBeDefined();
+    expect(p?.enforcingSymbol).toBe("enforceOwnerActionGates");
+    expect(p?.file).toBe("src/services/founder-recovery/action.service.ts");
+  });
   it("all path IDs are lowercase (no uppercase letters)", () => {
     for (const p of MATERIAL_GATE_PATHS) {
       expect(p.id).toBe(p.id.toLowerCase());
