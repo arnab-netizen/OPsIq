@@ -355,7 +355,10 @@ export const AUDIT_EVENTS = {
   OWNER_MARKETING_SNAPSHOT_RECORDED: "owner.marketing_snapshot_recorded",
   OWNER_MARKETING_DIAGNOSIS_RUN: "owner.marketing_diagnosis_run",
   OWNER_MARKETING_ACTION_UPDATED: "owner.marketing_action_updated",
+  OWNER_MARKETING_ACTION_COMPLETED: "owner.marketing_action_completed",
+  OWNER_MARKETING_REASSESSMENT_TRIGGERED: "owner.marketing_reassessment_triggered",
   OWNER_MARKETING_OUTCOME_VERIFIED: "owner.marketing_outcome_verified",
+  OWNER_MARKETING_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.marketing_verification_reassessment_triggered",
 
   OWNER_STRATEGY_SNAPSHOT_RECORDED: "owner.strategy_snapshot_recorded",
   OWNER_STRATEGY_DIAGNOSIS_RUN: "owner.strategy_diagnosis_run",
