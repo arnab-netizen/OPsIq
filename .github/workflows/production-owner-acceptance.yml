@@ -10,10 +10,11 @@ name: Production Owner Acceptance (LIVE)
 # Scope (current): tests/production/10-startup-mode-acceptance.spec.ts
 # (Startup Mode handoff, PR #325/#326); tests/production/20-existing-business-
 # acceptance.spec.ts (existing-business owner journey: Trinity Services
-# read-only + the one dedicated acceptance business the Startup Mode spec
-# creates, Finance closed loop); and the full-domain-acceptance expansion
-# (each domain independently isolated, reusing the same acceptance
-# business): tests/production/21-sales-acceptance.spec.ts,
+# read-only + Finance closed loop); and the full-domain-acceptance expansion
+# (each domain independently isolated, on its OWN dedicated synthetic
+# acceptance business created via tests/production/helpers/domain-business.ts
+# -- never a shared business across domains, see that helper's header for
+# why): tests/production/21-sales-acceptance.spec.ts,
 # 22-operations-acceptance.spec.ts, 23-strategy-acceptance.spec.ts,
 # 24-cashflow-acceptance.spec.ts. Playwright discovers every *.spec.ts file
 # under testDir (tests/production) automatically -- this list is
