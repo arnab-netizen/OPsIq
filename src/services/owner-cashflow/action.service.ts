@@ -79,6 +79,43 @@ export async function updateCashflowAction(
     payload: { status: updated.status, assignedTo: updated.assignedTo },
   });
 
+  // On action completion, emit a dedicated event and trigger re-diagnosis from
+  // latest snapshot -- matches every other owner-domain action service
+  // (finance/sales/operations/sop/strategy/marketing); cashflow was missing
+  // this mechanism entirely.
+  if (updated.status === "completed") {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OWNER_CASHFLOW_ACTION_COMPLETED,
+      actorId,
+      workspaceId,
+      entityType: "OwnerCashflowAction",
+      entityId: actionId,
+      payload: { businessId: updated.businessId, cycleId: updated.cycleId },
+    });
+
+    try {
+      const latestSnapshot = await db.ownerCashflowSnapshot.findFirst({
+        where: { businessId: updated.businessId, workspaceId },
+        orderBy: { periodEnd: "desc" },
+        select: { id: true },
+      });
+      if (latestSnapshot) {
+        const { runCashflowDiagnosis } = await import("./diagnosis.service");
+        const newCycle = await runCashflowDiagnosis(updated.businessId, latestSnapshot.id, actorId, workspaceId);
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.OWNER_CASHFLOW_REASSESSMENT_TRIGGERED,
+          actorId,
+          workspaceId,
+          entityType: "OwnerCashflowCycle",
+          entityId: newCycle.id,
+          payload: { trigger: "action_completed", triggerActionId: actionId },
+        });
+      }
+    } catch {
+      // Re-diagnosis failure must not fail the action update — advisory only.
+    }
+  }
+
   return updated;
 }
 
