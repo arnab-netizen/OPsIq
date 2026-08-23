@@ -100,6 +100,45 @@ export async function updateRecoveryAction(
     payload: { status: updated.status, assignedToUserId: updated.assignedToUserId },
   });
 
+  // Mandatory adaptive re-evaluation (CLAUDE.md): a completed recovery
+  // action is exactly the "failed implementation" / "resolved critical
+  // blocker" class of event that must route into a fresh diagnosis cycle,
+  // mirroring every other owner-domain action service (finance/cashflow/
+  // sales/marketing/operations/strategy). Recovery predates that pattern
+  // and was never wired to it -- this closes that gap without changing any
+  // other behavior.
+  if (updated.status === "completed") {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.RECOVERY_ACTION_COMPLETED,
+      actorId,
+      workspaceId,
+      entityType: "RecoveryAction",
+      entityId: actionId,
+      payload: { businessId: updated.businessId, cycleId: updated.cycleId },
+    });
+    try {
+      const latestSnapshot = await db.ownerMetricSnapshot.findFirst({
+        where: { businessId: updated.businessId, workspaceId },
+        orderBy: { periodEnd: "desc" },
+        select: { id: true },
+      });
+      if (latestSnapshot) {
+        const { runCycle } = await import("./cycle.service");
+        const newCycle = await runCycle(updated.businessId, latestSnapshot.id, actorId, workspaceId);
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.RECOVERY_REASSESSMENT_TRIGGERED,
+          actorId,
+          workspaceId,
+          entityType: "RecoveryCycle",
+          entityId: newCycle.id,
+          payload: { businessId: updated.businessId, trigger: "action_completed", triggerActionId: actionId },
+        });
+      }
+    } catch {
+      // Re-diagnosis failure must not fail the action update -- advisory only.
+    }
+  }
+
   return updated;
 }
 
