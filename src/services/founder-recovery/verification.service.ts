@@ -79,5 +79,33 @@ export async function recordVerification(
     },
   });
 
+  // Mandatory adaptive re-evaluation (CLAUDE.md): a verified-improved
+  // outcome is new critical evidence that must route into a fresh
+  // diagnosis cycle, mirroring every other owner-domain verification
+  // service (finance/cashflow/sales/marketing/operations/strategy).
+  if (result.reachedTarget) {
+    try {
+      const latestSnapshot = await db.ownerMetricSnapshot.findFirst({
+        where: { businessId: action.businessId, workspaceId },
+        orderBy: { periodEnd: "desc" },
+        select: { id: true },
+      });
+      if (latestSnapshot) {
+        const { runCycle } = await import("./cycle.service");
+        const newCycle = await runCycle(action.businessId, latestSnapshot.id, actorId, workspaceId);
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.RECOVERY_VERIFICATION_REASSESSMENT_TRIGGERED,
+          actorId,
+          workspaceId,
+          entityType: "RecoveryCycle",
+          entityId: newCycle.id,
+          payload: { businessId: action.businessId, trigger: "verification_success", triggerVerificationId: verification.id },
+        });
+      }
+    } catch {
+      // Re-diagnosis failure must not fail the verification record -- advisory only.
+    }
+  }
+
   return { verification, result };
 }

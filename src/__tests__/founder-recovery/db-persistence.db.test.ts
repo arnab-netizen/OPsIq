@@ -335,6 +335,88 @@ describe("[db] Owner Recovery persistence", () => {
     expect(dashB.businesses.map((b: any) => b.id)).not.toContain(business.id);
   });
 
+  // ---------------------------------------------------------------------
+  // Reassessment gap: founder-recovery's action/verification services never
+  // triggered automatic re-diagnosis (unlike every other owner-domain
+  // action/verification service -- finance/cashflow/sales/marketing/
+  // operations/strategy). This is the mandatory adaptive re-evaluation rule
+  // in CLAUDE.md (a completed action / verified-improved outcome is exactly
+  // the "resolved critical blocker" / "new critical evidence" class of
+  // event that must route into a fresh diagnosis cycle). Proves the fix
+  // against real Postgres -- a call that were merely wired but never fired
+  // would pass a static-source check but not this.
+  // ---------------------------------------------------------------------
+  it("[db] completing a recovery action triggers re-diagnosis, creating a new latest cycle", async () => {
+    const workspaceId = ws();
+    const business = await createBusiness(
+      { name: "Reassess Laundry", businessType: "laundry_local_service", currency: "INR" },
+      actor,
+      workspaceId
+    );
+    const snap = await createSnapshot(business.id, failingPeriod1() as any, actor, workspaceId);
+    const cycle1 = await runCycle(business.id, snap.id, actor, workspaceId);
+
+    const before = await db.recoveryCycle.findMany({ where: { businessId: business.id, workspaceId } });
+    expect(before).toHaveLength(1);
+
+    const repeatAction: any = cycle1.actions.find((a: any) => a.metricToMove === "repeatCustomerRatePct");
+    expect(repeatAction).toBeTruthy();
+    const a1 = await updateRecoveryAction(repeatAction.id, { status: "assigned", version: repeatAction.version }, actor, workspaceId);
+    const a2 = await updateRecoveryAction(repeatAction.id, { status: "in_progress", version: a1.version }, actor, workspaceId);
+    await updateRecoveryAction(
+      repeatAction.id,
+      { status: "completed", version: a2.version, completionNotes: "Reactivation campaign sent", actualOutcome: "Repeat rate climbed" },
+      actor,
+      workspaceId
+    );
+
+    const afterCompletion = await db.recoveryCycle.findMany({
+      where: { businessId: business.id, workspaceId },
+      orderBy: { cycleNumber: "desc" },
+    });
+    expect(afterCompletion).toHaveLength(2);
+    expect(afterCompletion[0].cycleNumber).toBe(2);
+    expect(afterCompletion[0].previousCycleId).toBe(cycle1.id);
+  });
+
+  it("[db] a verified-improved outcome triggers re-diagnosis, creating a further new latest cycle", async () => {
+    const workspaceId = ws();
+    const business = await createBusiness(
+      { name: "Reassess Verify Laundry", businessType: "laundry_local_service", currency: "INR" },
+      actor,
+      workspaceId
+    );
+    const snap = await createSnapshot(business.id, failingPeriod1() as any, actor, workspaceId);
+    const cycle1 = await runCycle(business.id, snap.id, actor, workspaceId);
+
+    const repeatAction: any = cycle1.actions.find((a: any) => a.metricToMove === "repeatCustomerRatePct");
+    const a1 = await updateRecoveryAction(repeatAction.id, { status: "assigned", version: repeatAction.version }, actor, workspaceId);
+    const a2 = await updateRecoveryAction(repeatAction.id, { status: "in_progress", version: a1.version }, actor, workspaceId);
+    await updateRecoveryAction(
+      repeatAction.id,
+      { status: "completed", version: a2.version, completionNotes: "Reactivation campaign sent", actualOutcome: "Repeat rate climbed" },
+      actor,
+      workspaceId
+    );
+
+    // Completion above already triggered its own reassessment (cycle #2,
+    // proven by the previous test) -- confirm that baseline here too, then
+    // isolate the verification-triggered effect as a further, distinct
+    // increment on top of it.
+    const afterCompletion = await db.recoveryCycle.findMany({ where: { businessId: business.id, workspaceId } });
+    expect(afterCompletion).toHaveLength(2);
+
+    const { result } = await recordVerification(repeatAction.id, { afterValue: 60 }, actor, workspaceId);
+    expect(result.reachedTarget).toBe(true);
+
+    const afterVerification = await db.recoveryCycle.findMany({
+      where: { businessId: business.id, workspaceId },
+      orderBy: { cycleNumber: "desc" },
+    });
+    expect(afterVerification).toHaveLength(3);
+    expect(afterVerification[0].cycleNumber).toBe(3);
+  });
+
   it("[db] rejects a duplicate snapshot for the same business/period", async () => {
     const workspaceId = ws();
     const business = await createBusiness(

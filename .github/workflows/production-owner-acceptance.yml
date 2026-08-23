@@ -16,10 +16,11 @@ name: Production Owner Acceptance (LIVE)
 # -- never a shared business across domains, see that helper's header for
 # why): tests/production/21-sales-acceptance.spec.ts,
 # 22-operations-acceptance.spec.ts, 23-strategy-acceptance.spec.ts,
-# 24-cashflow-acceptance.spec.ts, 25-marketing-acceptance.spec.ts. Playwright
-# discovers every *.spec.ts file under testDir (tests/production)
-# automatically -- this list is documentation, not a file-selection gate;
-# keep it in sync as domains are added.
+# 24-cashflow-acceptance.spec.ts, 25-marketing-acceptance.spec.ts,
+# 26-recovery-acceptance.spec.ts. Playwright discovers every *.spec.ts file
+# under testDir (tests/production) automatically -- this list is
+# documentation, not a file-selection gate; keep it in sync as domains are
+# added.
 #
 # Fails closed if PRODUCTION_ACCEPTANCE_EMAIL/PASSWORD secrets are absent, if
 # BASE_URL does not resolve to the exact checked-out main commit in the

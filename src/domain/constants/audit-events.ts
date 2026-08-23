@@ -281,7 +281,10 @@ export const AUDIT_EVENTS = {
   OWNER_METRIC_SNAPSHOT_RECORDED: "owner.metric_snapshot_recorded",
   RECOVERY_CYCLE_RUN: "owner.recovery_cycle_run",
   RECOVERY_ACTION_UPDATED: "owner.recovery_action_updated",
+  RECOVERY_ACTION_COMPLETED: "owner.recovery_action_completed",
+  RECOVERY_REASSESSMENT_TRIGGERED: "owner.recovery_reassessment_triggered",
   RECOVERY_OUTCOME_VERIFIED: "owner.recovery_outcome_verified",
+  RECOVERY_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.recovery_verification_reassessment_triggered",
 
   // Owner Finance (Module 2)
   OWNER_FINANCE_SNAPSHOT_RECORDED: "owner.finance_snapshot_recorded",
