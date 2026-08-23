@@ -122,6 +122,7 @@ export default function OwnerHomePage() {
             { label: "Data Intake", href: "/owner/intake" },
             { label: "Recovery", href: "/owner/recovery" },
             { label: "Approvals", href: "/owner/approvals" },
+            { label: "Learning", href: "/owner/learning" },
             { label: "Delegation", href: "/owner/tasks" },
             { label: "Automation", href: "/owner/automation" },
           ].map(({ label, href }) => (
