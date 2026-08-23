@@ -27,7 +27,7 @@
  * from every other domain spec file.
  */
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
-import { readFileSync, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
 import { authenticateProductionOwner } from "./helpers/production-auth";
 import {
   startEvidenceCollection,
@@ -39,6 +39,7 @@ import {
 import { runDomainDiagnosisAndAwaitResult } from "./helpers/domain-diagnosis";
 import { registerActionDialogHandler } from "./helpers/dialog-handler";
 import { createJourneyWatch } from "./helpers/journey-watchers";
+import { resolveOrCreateDomainBusiness } from "./helpers/domain-business";
 
 const SPEC_NAME = "phase24-cashflow";
 const { networkFailures, watchPage, fatalErrors } = createJourneyWatch();
@@ -52,29 +53,23 @@ test.describe("PROD-24 — Cashflow Owner journey live production acceptance", (
   let blockedUpstreamReason: string | null = null;
 
   test.beforeAll(async ({ browser }) => {
-    let handoffIds: { handoffBusinessId?: string; succeeded?: boolean };
-    try {
-      handoffIds = JSON.parse(
-        readFileSync("production-test-results/evidence/phase13-startup-mode-ids.json", "utf-8")
-      );
-    } catch {
-      blockedUpstreamReason =
-        "BLOCKED_UPSTREAM: phase13-startup-mode-ids.json not found -- 10-startup-mode-acceptance.spec.ts did not run or did not complete its afterAll.";
-      return;
-    }
-    if (!handoffIds.succeeded || !handoffIds.handoffBusinessId) {
-      blockedUpstreamReason =
-        "BLOCKED_UPSTREAM: 10-startup-mode-acceptance.spec.ts did not produce a usable acceptance business -- this suite's mutating steps have no business to run against.";
-      return;
-    }
-    acceptanceBusinessId = handoffIds.handoffBusinessId;
-
     context = await browser.newContext();
     page = await context.newPage();
     watchPage(page);
     registerActionDialogHandler(page);
     await authenticateProductionOwner(page);
     await startEvidenceCollection(context, page, SPEC_NAME);
+
+    // Cashflow gets its OWN dedicated acceptance business -- never the
+    // shared Startup handoff business, and never another domain's business.
+    // See helpers/domain-business.ts's header for the root cause this fixes.
+    try {
+      acceptanceBusinessId = await resolveOrCreateDomainBusiness(context, page, "cashflow");
+    } catch (e) {
+      blockedUpstreamReason = `BLOCKED_SETUP: could not create Cashflow's dedicated acceptance business: ${
+        e instanceof Error ? e.message : String(e)
+      }`;
+    }
   });
 
   test.beforeEach(() => {

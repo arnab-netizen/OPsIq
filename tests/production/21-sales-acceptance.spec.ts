@@ -24,17 +24,17 @@
  *
  * This file never sends a mutating request (POST/PATCH) carrying
  * trinityBusinessId -- Trinity Services is read-only, verifiable by
- * reading this file. It reuses the ONE dedicated acceptance business
- * created by 10-startup-mode-acceptance.spec.ts for every mutating step,
- * matching this suite's established "one dedicated acceptance business,
- * reused across every domain" convention (see
- * 20-existing-business-acceptance.spec.ts's own header for the rationale).
- * Independently isolated from that file's own Trinity/Finance sections --
- * a Sales failure here can never suppress Finance, Startup, or any other
- * domain's tests, and vice versa.
+ * reading this file. It uses its OWN dedicated acceptance business
+ * (created via helpers/domain-business.ts, never Startup's handoff
+ * business or another domain's business) for every mutating step --
+ * see that helper's header for why sharing one business across domains
+ * is unsafe. Independently isolated from 20-existing-business-
+ * acceptance.spec.ts's own Trinity/Finance sections -- a Sales failure
+ * here can never suppress Finance, Startup, or any other domain's tests,
+ * and vice versa.
  */
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
-import { readFileSync, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
 import { authenticateProductionOwner } from "./helpers/production-auth";
 import {
   startEvidenceCollection,
@@ -46,6 +46,7 @@ import {
 import { runDomainDiagnosisAndAwaitResult } from "./helpers/domain-diagnosis";
 import { registerActionDialogHandler } from "./helpers/dialog-handler";
 import { createJourneyWatch } from "./helpers/journey-watchers";
+import { resolveOrCreateDomainBusiness } from "./helpers/domain-business";
 
 const SPEC_NAME = "phase21-sales";
 const { consoleErrors, networkFailures, watchPage, fatalErrors } = createJourneyWatch();
@@ -57,36 +58,28 @@ test.describe("PROD-21 — Sales Owner journey live production acceptance", () =
   let trinityBusinessId: string | null = null;
   let trinityFound = false;
   // Non-null only when this suite must not proceed -- distinguishes a real
-  // upstream failure (10-startup-mode-acceptance.spec.ts didn't produce a
-  // usable acceptance business) from this suite's own defects, matching
-  // 20-existing-business-acceptance.spec.ts's established BLOCKED_UPSTREAM
-  // pattern.
+  // setup failure (auth, or this domain's own dedicated business could not
+  // be created) from this suite's own test defects.
   let blockedUpstreamReason: string | null = null;
 
   test.beforeAll(async ({ browser }) => {
-    let handoffIds: { handoffBusinessId?: string; succeeded?: boolean };
-    try {
-      handoffIds = JSON.parse(
-        readFileSync("production-test-results/evidence/phase13-startup-mode-ids.json", "utf-8")
-      );
-    } catch {
-      blockedUpstreamReason =
-        "BLOCKED_UPSTREAM: phase13-startup-mode-ids.json not found -- 10-startup-mode-acceptance.spec.ts did not run or did not complete its afterAll.";
-      return;
-    }
-    if (!handoffIds.succeeded || !handoffIds.handoffBusinessId) {
-      blockedUpstreamReason =
-        "BLOCKED_UPSTREAM: 10-startup-mode-acceptance.spec.ts did not produce a usable acceptance business (see that spec's own results, e.g. AUTH_LOGIN failure) -- this suite's mutating steps have no business to run against.";
-      return;
-    }
-    acceptanceBusinessId = handoffIds.handoffBusinessId;
-
     context = await browser.newContext();
     page = await context.newPage();
     watchPage(page);
     registerActionDialogHandler(page);
     await authenticateProductionOwner(page);
     await startEvidenceCollection(context, page, SPEC_NAME);
+
+    // Sales gets its OWN dedicated acceptance business -- never the shared
+    // Startup handoff business, and never another domain's business. See
+    // helpers/domain-business.ts's header for the root cause this fixes.
+    try {
+      acceptanceBusinessId = await resolveOrCreateDomainBusiness(context, page, "sales");
+    } catch (e) {
+      blockedUpstreamReason = `BLOCKED_SETUP: could not create Sales's dedicated acceptance business: ${
+        e instanceof Error ? e.message : String(e)
+      }`;
+    }
   });
 
   test.beforeEach(() => {

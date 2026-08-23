@@ -21,7 +21,7 @@
  * steps are explicitly skipped (not silently passed) with a clear reason.
  */
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
-import { readFileSync, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
 import { authenticateProductionOwner } from "./helpers/production-auth";
 import {
   startEvidenceCollection,
@@ -31,6 +31,7 @@ import {
   timedApiCall,
 } from "./helpers/evidence";
 import { runFinanceDiagnosisAndAwaitResult } from "./helpers/finance-diagnosis";
+import { resolveOrCreateDomainBusiness } from "./helpers/domain-business";
 
 const SPEC_NAME = "phase01-existing-business";
 
@@ -71,39 +72,32 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
   let acceptanceBusinessId = "";
   let trinityBusinessId: string | null = null;
   let trinityFound = false;
-  // Non-null only when this suite must not proceed. Distinguishes a real
-  // upstream failure (10-startup-mode-acceptance.spec.ts didn't produce a
-  // usable acceptance business) from this suite's own defects -- every
-  // test below skips with this exact reason rather than throwing from
-  // beforeAll, which would otherwise surface as an opaque, unrelated
-  // "Cannot read properties of undefined" crash instead of a clear
-  // BLOCKED_UPSTREAM classification.
+  // Non-null only when this suite must not proceed -- distinguishes a real
+  // setup failure (auth, or this domain's own dedicated business could not
+  // be created) from this suite's own test defects. Every test below skips
+  // with this exact reason rather than throwing from beforeAll, which would
+  // otherwise surface as an opaque, unrelated "Cannot read properties of
+  // undefined" crash instead of a clear BLOCKED classification.
   let blockedUpstreamReason: string | null = null;
 
   test.beforeAll(async ({ browser }) => {
-    let handoffIds: { handoffBusinessId?: string; succeeded?: boolean };
-    try {
-      handoffIds = JSON.parse(
-        readFileSync("production-test-results/evidence/phase13-startup-mode-ids.json", "utf-8")
-      );
-    } catch {
-      blockedUpstreamReason =
-        "BLOCKED_UPSTREAM: phase13-startup-mode-ids.json not found -- 10-startup-mode-acceptance.spec.ts did not run or did not complete its afterAll.";
-      return;
-    }
-    if (!handoffIds.succeeded || !handoffIds.handoffBusinessId) {
-      blockedUpstreamReason =
-        "BLOCKED_UPSTREAM: 10-startup-mode-acceptance.spec.ts did not produce a usable acceptance business (see that spec's own results, e.g. AUTH_LOGIN failure) -- this suite's mutating steps have no business to run against.";
-      return;
-    }
-    acceptanceBusinessId = handoffIds.handoffBusinessId;
-
     context = await browser.newContext();
     page = await context.newPage();
     watchPage(page);
     registerFinanceDialogHandler(page);
     await authenticateProductionOwner(page);
     await startEvidenceCollection(context, page, SPEC_NAME);
+
+    // Finance gets its OWN dedicated acceptance business -- never the shared
+    // Startup handoff business, and never another domain's business. See
+    // helpers/domain-business.ts's header for the root cause this fixes.
+    try {
+      acceptanceBusinessId = await resolveOrCreateDomainBusiness(context, page, "finance");
+    } catch (e) {
+      blockedUpstreamReason = `BLOCKED_SETUP: could not create Finance's dedicated acceptance business: ${
+        e instanceof Error ? e.message : String(e)
+      }`;
+    }
   });
 
   test.beforeEach(() => {

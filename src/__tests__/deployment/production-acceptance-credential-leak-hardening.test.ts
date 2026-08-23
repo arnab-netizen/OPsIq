@@ -87,16 +87,36 @@ describe("(g) explicit evidence collection starts only after login succeeds", ()
 });
 
 // ---------------------------------------------------------------------------
-// (e) BLOCKED_UPSTREAM classification, not an unrelated crash
+// (e) BLOCKED_SETUP classification, not an unrelated crash
+//
+// Superseded by the acceptance-business-isolation fix: 20-existing-business-
+// acceptance.spec.ts no longer reads the shared Startup handoff fixture (see
+// tests/production/helpers/domain-business.ts's header for why sharing one
+// business across domains is unsafe) -- it resolves its OWN dedicated
+// Finance business instead. The BLOCKED classification behavior these tests
+// protect (a setup failure skips cleanly via test.skip(), never crashes out
+// of beforeAll with an unrelated exception) still applies, just to a
+// different failure source.
 // ---------------------------------------------------------------------------
-describe("(e) 20-existing-business-acceptance.spec.ts — BLOCKED_UPSTREAM when the handoff fixture is absent/unsuccessful", () => {
-  it("declares a BLOCKED_UPSTREAM reason string for a missing fixture file", () => {
-    expect(EXISTING_BUSINESS_SPEC_SRC).toContain("BLOCKED_UPSTREAM");
-    expect(EXISTING_BUSINESS_SPEC_SRC).toMatch(/phase13-startup-mode-ids\.json not found/);
+describe("(e) 20-existing-business-acceptance.spec.ts — BLOCKED_SETUP when its dedicated business cannot be created", () => {
+  it("declares a BLOCKED_SETUP reason string naming the underlying error", () => {
+    expect(EXISTING_BUSINESS_SPEC_SRC).toContain("BLOCKED_SETUP");
+    expect(EXISTING_BUSINESS_SPEC_SRC).toMatch(
+      /could not create Finance's dedicated acceptance business/
+    );
+    expect(EXISTING_BUSINESS_SPEC_SRC).toMatch(/e instanceof Error \? e\.message : String\(e\)/);
   });
 
-  it("declares a distinct BLOCKED_UPSTREAM reason when the fixture exists but the handoff did not succeed", () => {
-    expect(EXISTING_BUSINESS_SPEC_SRC).toMatch(/!handoffIds\.succeeded\s*\|\|\s*!handoffIds\.handoffBusinessId/);
+  it("no longer reads the shared Startup handoff fixture (the root cause this superseded)", () => {
+    expect(EXISTING_BUSINESS_SPEC_SRC).not.toContain("phase13-startup-mode-ids.json");
+    expect(EXISTING_BUSINESS_SPEC_SRC).not.toMatch(/handoffBusinessId/);
+  });
+
+  it("resolves its own dedicated business via resolveOrCreateDomainBusiness", () => {
+    expect(EXISTING_BUSINESS_SPEC_SRC).toContain('from "./helpers/domain-business"');
+    expect(EXISTING_BUSINESS_SPEC_SRC).toMatch(
+      /resolveOrCreateDomainBusiness\(context, page, "finance"\)/
+    );
   });
 
   it("skips via test.skip() in beforeEach, not by throwing out of beforeAll", () => {
@@ -105,12 +125,12 @@ describe("(e) 20-existing-business-acceptance.spec.ts — BLOCKED_UPSTREAM when 
     );
   });
 
-  it("reads the fixture inside a try/catch, so a missing/malformed file cannot throw an unrelated exception out of beforeAll", () => {
+  it("resolves the dedicated business inside a try/catch, so a creation failure cannot throw an unrelated exception out of beforeAll", () => {
     const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf("test.beforeAll(async ({ browser })");
     expect(idx).toBeGreaterThan(-1);
     const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 800);
     expect(block).toContain("try {");
-    expect(block).toContain("readFileSync(");
+    expect(block).toContain("resolveOrCreateDomainBusiness(");
     expect(block).toContain("} catch");
   });
 });
