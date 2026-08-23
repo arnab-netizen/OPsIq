@@ -339,6 +339,8 @@ export default function OwnerCommandCenterPage() {
             { label: "Data Intake", href: "/owner/intake", domain: null },
             { label: "Trust", href: "/owner/trust", domain: null },
             { label: "Recovery", href: "/owner/recovery", domain: "recovery" },
+            { label: "Delegation", href: "/owner/tasks", domain: null },
+            { label: "Automation", href: "/owner/automation", domain: null },
           ].map(({ label, href, domain }) => {
             const isRecommended = domain !== null && next?.domain === domain;
             return (
