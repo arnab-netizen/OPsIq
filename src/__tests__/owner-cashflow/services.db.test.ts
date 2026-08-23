@@ -76,6 +76,39 @@ function crisisSnapshot() {
   };
 }
 
+function distressedButActionableSnapshot() {
+  // Deliberately distressed enough to guarantee findings + actions (high overdue
+  // receivables, payables/owner-withdrawal pressure), but stays at cashflowState
+  // AT_RISK, not CRITICAL/INSOLVENT_RISK -- unlike crisisSnapshot() above.
+  //
+  // This matters here specifically: cashflow is a FINANCE_SENSITIVE domain in
+  // owner-action-gate.service.ts's DOMAIN_SENSITIVITY map, and
+  // enforceOwnerActionGates() blocks material transitions (in_progress/completed)
+  // for FINANCE_SENSITIVE domains once the business's cashflowState reaches
+  // CRITICAL or INSOLVENT_RISK (evaluateCashSafetyGate's UNSAFE_FOR_SPEND
+  // threshold). crisisSnapshot() deliberately reaches INSOLVENT_RISK, which is
+  // correct for the diagnosis/verification tests above (they never transition
+  // past "assigned"/"proposed") but would make the reassessment tests below --
+  // which walk a real action through assigned→in_progress→completed -- fail on
+  // the pre-existing, correct, intentional safety gate, not on the reassessment
+  // fix under test. Confirmed via direct computation (diagnoseCashflowSnapshot)
+  // before writing these tests, not assumed.
+  return {
+    periodStart: "2026-05-01",
+    periodEnd: "2026-05-31",
+    currency: "INR",
+    cashInHand: 50000,
+    dailyCollections: 2000,
+    receivables: 40000,
+    receivablesOverdue: 30000,
+    payables: 15000,
+    salaryDue: 10000,
+    rentDue: 8000,
+    upcomingEmi: 3000,
+    ownerWithdrawal: 10000,
+  };
+}
+
 describe("[db] Owner Cashflow services", () => {
   it("[db] persists snapshot -> diagnosis -> findings -> actions and a dashboard reads them", async () => {
     const workspaceId = ws();
@@ -161,6 +194,84 @@ describe("[db] Owner Cashflow services", () => {
     const snap = await createCashflowSnapshot(businessId, crisisSnapshot(), actor, workspaceId);
 
     await expect(getCashflowSnapshot(snap.id, ws())).rejects.toThrow();
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  // ---------------------------------------------------------------------
+  // GAP-CASHFLOW-01: found during the full-domain-acceptance investigation
+  // -- unlike finance/sales/operations/sop/strategy/marketing, cashflow's
+  // action.service.ts/verification.service.ts never triggered re-diagnosis
+  // on action completion or verified success. Cashflow was the only
+  // remaining domain missing this mechanism entirely (confirmed against
+  // audit-events.ts: OWNER_CASHFLOW_ACTION_COMPLETED and
+  // OWNER_CASHFLOW_REASSESSMENT_TRIGGERED did not exist before this fix,
+  // while every sibling domain already had the full set). Same class of
+  // gap as Marketing (PR #339); Cashflow's own model/snapshot semantics
+  // (OwnerCashflowSnapshot/OwnerCashflowCycle, "down"-direction targets)
+  // were verified directly from source before writing this fix, not
+  // assumed from Marketing's code.
+  // ---------------------------------------------------------------------
+  it("[db] completing an action triggers re-diagnosis, creating a new latest cycle", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createCashflowSnapshot(businessId, distressedButActionableSnapshot(), actor, workspaceId);
+    const cycle1 = await runCashflowDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle1.actions[0];
+    expect(action.status).toBe("proposed");
+
+    await updateCashflowAction(action.id, { status: "assigned" }, actor, workspaceId);
+    await updateCashflowAction(action.id, { status: "in_progress" }, actor, workspaceId);
+    const completed = await updateCashflowAction(
+      action.id,
+      { status: "completed", completionNotes: "hostile-test completion", completionEvidence: ["ref"] },
+      actor,
+      workspaceId
+    );
+    expect(completed.status).toBe("completed");
+
+    // The original action's own row is permanently "completed".
+    const reread = await db.ownerCashflowAction.findUnique({ where: { id: action.id } });
+    expect(reread?.status).toBe("completed");
+    expect(reread?.completedAt).not.toBeNull();
+
+    // A NEW cycle was created automatically by the newly-added re-diagnosis
+    // trigger -- this is the mechanism that was missing before this fix.
+    const allCycles = await db.ownerCashflowCycle.findMany({
+      where: { businessId, workspaceId },
+      orderBy: { sequenceNumber: "asc" },
+    });
+    expect(allCycles.length).toBe(2);
+    expect(allCycles[0].id).toBe(cycle1.id);
+    expect(allCycles[1].sequenceNumber).toBe(cycle1.sequenceNumber + 1);
+
+    const dash = await getCashflowDashboard(workspaceId, businessId);
+    expect(dash.latestCycle?.id).toBe(allCycles[1].id);
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] a verified-improved outcome triggers re-diagnosis, creating a new latest cycle", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createCashflowSnapshot(businessId, distressedButActionableSnapshot(), actor, workspaceId);
+    const cycle1 = await runCashflowDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle1.actions[0];
+
+    const { result } = await recordCashflowVerification(
+      action.id,
+      { beforeValue: 45, afterValue: 20, targetDirection: "down", targetValue: 25 },
+      actor,
+      workspaceId
+    );
+    expect(result.reachedTarget).toBe(true);
+
+    const allCycles = await db.ownerCashflowCycle.findMany({
+      where: { businessId, workspaceId },
+      orderBy: { sequenceNumber: "asc" },
+    });
+    expect(allCycles.length).toBe(2);
+    expect(allCycles[1].sequenceNumber).toBe(cycle1.sequenceNumber + 1);
 
     await teardownOwnerBusiness(businessId);
   });

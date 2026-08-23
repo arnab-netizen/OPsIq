@@ -71,5 +71,33 @@ export async function recordCashflowVerification(
     },
   });
 
+  // On verified success, trigger re-diagnosis to capture improved business
+  // state -- matches every other owner-domain verification service
+  // (finance/sales/sop/marketing); cashflow was missing this mechanism
+  // entirely.
+  if (result.reachedTarget) {
+    try {
+      const latestSnapshot = await db.ownerCashflowSnapshot.findFirst({
+        where: { businessId: action.businessId, workspaceId },
+        orderBy: { periodEnd: "desc" },
+        select: { id: true },
+      });
+      if (latestSnapshot) {
+        const { runCashflowDiagnosis } = await import("./diagnosis.service");
+        const newCycle = await runCashflowDiagnosis(action.businessId, latestSnapshot.id, actorId, workspaceId);
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.OWNER_CASHFLOW_VERIFICATION_REASSESSMENT_TRIGGERED,
+          actorId,
+          workspaceId,
+          entityType: "OwnerCashflowCycle",
+          entityId: newCycle.id,
+          payload: { trigger: "verification_success", triggerVerificationId: verification.id },
+        });
+      }
+    } catch {
+      // Re-diagnosis failure must not fail the verification record — advisory only.
+    }
+  }
+
   return { verification, result };
 }
