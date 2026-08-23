@@ -121,6 +121,7 @@ export default function OwnerHomePage() {
             { label: "Strategy", href: "/owner/strategy" },
             { label: "Data Intake", href: "/owner/intake" },
             { label: "Recovery", href: "/owner/recovery" },
+            { label: "Approvals", href: "/owner/approvals" },
             { label: "Learning", href: "/owner/learning" },
           ].map(({ label, href }) => (
             <Link key={href} href={href}>
