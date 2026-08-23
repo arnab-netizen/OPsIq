@@ -121,6 +121,7 @@ export default function OwnerHomePage() {
             { label: "Strategy", href: "/owner/strategy" },
             { label: "Data Intake", href: "/owner/intake" },
             { label: "Recovery", href: "/owner/recovery" },
+            { label: "Approvals", href: "/owner/approvals" },
           ].map(({ label, href }) => (
             <Link key={href} href={href}>
               <Button className="min-h-[44px] text-xs py-1 px-2">{label}</Button>
