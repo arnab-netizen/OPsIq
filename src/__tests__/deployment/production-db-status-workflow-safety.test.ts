@@ -164,4 +164,51 @@ describe("production-db-status.yml — read-only safety controls", () => {
     expect(idx).toBeGreaterThan(-1);
     expect(src.slice(idx, idx + 400)).toMatch(/PINNED_PREDEPLOY/);
   });
+
+  it("24. Queries approval_requests_workspace_id_idx via pg_indexes SELECT only, scoped to public.approval_requests", () => {
+    const idx = src.indexOf("approval_requests_workspace_id_idx (expected exactly 1 row");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 400);
+    expect(block).toMatch(/SELECT/i);
+    expect(block).toContain("pg_indexes");
+    expect(block).toContain("schemaname = 'public'");
+    expect(block).toContain("tablename = 'approval_requests'");
+    expect(block).toContain("indexname = 'approval_requests_workspace_id_idx'");
+  });
+
+  it("25. Queries approval_requests_workspace_id_fkey identity (source/target table+column, not just constraint-name existence) via SELECT only", () => {
+    const idx = src.indexOf("approval_requests_workspace_id_fkey identity (source/target");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 1700);
+    expect(block).toMatch(/SELECT/i);
+    expect(block).toContain("pg_constraint");
+    expect(block).toContain("con.conname = 'approval_requests_workspace_id_fkey'");
+    // Proves it resolves actual source/target columns via system-catalog joins,
+    // not merely a string match on the constraint's name.
+    expect(block).toContain("pg_attribute att ON att.attrelid = con.conrelid");
+    expect(block).toContain("pg_attribute fatt ON fatt.attrelid = con.confrelid");
+    expect(block).toContain("frel.relname AS target_table");
+    expect(block).toContain("fatt.attname AS target_column");
+    expect(block).not.toMatch(SQL_MUTATION_PATTERN);
+  });
+
+  it("26. Queries approval_requests rows with a NULL workspace_id via SELECT COUNT(*) only, distinct from the unmappable-row join query", () => {
+    const idx = src.indexOf("approval_requests rows with a NULL workspace_id");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 300);
+    expect(block).toMatch(/SELECT\s+COUNT\(\*\)/i);
+    expect(block).toContain("FROM approval_requests WHERE workspace_id IS NULL");
+  });
+
+  it("27. Queries the 20260824000001_approval_request_workspace_anchor applied-migration row via SELECT only, checking finished_at/rolled_back_at", () => {
+    const idx = src.indexOf("20260824000001_approval_request_workspace_anchor applied-migration row");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 400);
+    expect(block).toMatch(/SELECT/i);
+    expect(block).toContain("FROM _prisma_migrations");
+    expect(block).toContain("migration_name = '20260824000001_approval_request_workspace_anchor'");
+    expect(block).toContain("finished_at");
+    expect(block).toContain("rolled_back_at");
+    expect(block).toContain("applied_steps_count");
+  });
 });
