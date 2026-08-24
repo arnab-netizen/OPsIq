@@ -1,0 +1,321 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { Badge, Button, Input, Select } from "@/ui/primitives";
+
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
+
+const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  PENDING: "muted",
+  APPROVED: "success",
+  REJECTED: "destructive",
+  DEFERRED: "warning",
+};
+
+const EVIDENCE_TYPES = [
+  { value: "document", label: "Document" },
+  { value: "photo", label: "Photo" },
+  { value: "data", label: "Data" },
+  { value: "testimony", label: "Testimony" },
+];
+
+async function api(path: string, init?: RequestInit) {
+  const res = await fetch(path, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
+  return data;
+}
+
+function newIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `idem-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+export default function OwnerApprovalsPage() {
+  const [businesses, setBusinesses] = useState<any[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [approvals, setApprovals] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [evidenceFormFor, setEvidenceFormFor] = useState<string | null>(null);
+
+  const loadApprovals = useCallback(async (businessId: string | null, status: string) => {
+    if (!businessId) {
+      setApprovals([]);
+      return;
+    }
+    const qs = new URLSearchParams({ businessId });
+    if (status) qs.set("status", status);
+    const data = await api(`/api/owner/approval?${qs.toString()}`);
+    setApprovals(data.approvals ?? []);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const list = await api("/api/owner/recovery/businesses");
+        setBusinesses(list);
+        const first = list[0]?.id ?? null;
+        setSelected(first);
+        await loadApprovals(first, "");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load");
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // Intentional one-shot mount effect -- loadApprovals is called directly
+    // above with the freshly-resolved business id rather than depending on
+    // `selected` state, which would not yet be updated in this same tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!selected) return;
+    loadApprovals(selected, statusFilter).catch((e) =>
+      setError(e instanceof Error ? e.message : "Failed to load approvals")
+    );
+  }, [selected, statusFilter, loadApprovals]);
+
+  async function createApprovalRequest(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!selected) return;
+    setBusy(true);
+    setError(null);
+    const fd = new FormData(e.currentTarget);
+    const body: Record<string, unknown> = {
+      idempotencyKey: newIdempotencyKey(),
+      businessId: selected,
+    };
+    const actionId = fd.get("actionId");
+    const actionDomain = fd.get("actionDomain");
+    if (actionId && typeof actionId === "string" && actionId.trim()) body.actionId = actionId.trim();
+    if (actionDomain && typeof actionDomain === "string" && actionDomain.trim()) body.actionDomain = actionDomain.trim();
+    try {
+      await api("/api/owner/approval", { method: "POST", body: JSON.stringify(body) });
+      setShowCreateForm(false);
+      await loadApprovals(selected, statusFilter);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create approval request");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function decide(approval: any, decision: "APPROVED" | "REJECTED" | "DEFERRED") {
+    setBusy(true);
+    setError(null);
+    try {
+      const rationale = window.prompt(`Rationale for ${decision} (optional):`) || undefined;
+      await api("/api/owner/approval", {
+        method: "PATCH",
+        body: JSON.stringify({ action: "decide", approvalId: approval.id, decision, rationale }),
+      });
+      await loadApprovals(selected, statusFilter);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to record decision");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitEvidence(e: React.FormEvent<HTMLFormElement>, approvalId: string) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const fd = new FormData(e.currentTarget);
+    const body: Record<string, unknown> = {
+      action: "submit_evidence",
+      approvalId,
+      evidenceType: fd.get("evidenceType"),
+      description: fd.get("description"),
+    };
+    const sourceUrl = fd.get("sourceUrl");
+    if (sourceUrl && typeof sourceUrl === "string" && sourceUrl.trim()) body.sourceUrl = sourceUrl.trim();
+    try {
+      await api("/api/owner/approval", { method: "PATCH", body: JSON.stringify(body) });
+      setEvidenceFormFor(null);
+      await loadApprovals(selected, statusFilter);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to submit evidence");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function initiateAppeal(approval: any) {
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/owner/approval", {
+        method: "PATCH",
+        body: JSON.stringify({
+          action: "initiate_appeal",
+          idempotencyKey: newIdempotencyKey(),
+          priorApprovalId: approval.id,
+        }),
+      });
+      await loadApprovals(selected, statusFilter);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to initiate appeal");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (loading) return <div className="p-8">Loading approvals workspace…</div>;
+
+  return (
+    <div className="mx-auto max-w-5xl py-8 px-4">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Owner Approvals</h1>
+          <p className="text-muted-foreground text-sm">
+            Review evidence, decide, and track appeals for consulting approval requests -- one decision at a time.
+          </p>
+        </div>
+        <Button onClick={() => setShowCreateForm((s) => !s)} disabled={!selected}>
+          + New approval request
+        </Button>
+      </div>
+
+      {error && (
+        <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      {businesses.length === 0 ? (
+        <div className="border rounded-lg p-8 text-center text-muted-foreground">
+          No businesses yet. Create one from any domain page (e.g. Recovery) to begin tracking approvals.
+        </div>
+      ) : (
+        <>
+          <div className="mb-6 flex items-end gap-3">
+            <div className="w-72">
+              <Select
+                name="businessSelector"
+                label="Business"
+                value={selected ?? undefined}
+                onChange={(e: any) => setSelected(e.target.value)}
+                options={businesses.map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
+              />
+            </div>
+            <div className="w-48">
+              <Select
+                name="statusFilter"
+                label="Status"
+                value={statusFilter}
+                onChange={(e: any) => setStatusFilter(e.target.value)}
+                options={[
+                  { value: "", label: "All statuses" },
+                  { value: "PENDING", label: "Pending" },
+                  { value: "APPROVED", label: "Approved" },
+                  { value: "REJECTED", label: "Rejected" },
+                  { value: "DEFERRED", label: "Deferred" },
+                ]}
+              />
+            </div>
+          </div>
+
+          {showCreateForm && (
+            <form onSubmit={createApprovalRequest} className="mb-6 border rounded-lg p-4 bg-white space-y-3">
+              <h2 className="font-semibold">New approval request</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Input name="actionDomain" label="Related domain (optional)" placeholder="e.g. finance" />
+                <Input name="actionId" label="Related action id (optional)" placeholder="—" />
+              </div>
+              <Button type="submit" disabled={busy}>{busy ? "Creating…" : "Create approval request"}</Button>
+            </form>
+          )}
+
+          {approvals.length === 0 ? (
+            <div className="border rounded-lg p-8 text-center text-muted-foreground">
+              No approval requests match this filter.
+            </div>
+          ) : (
+            <section className="space-y-4">
+              {approvals.map((a) => (
+                <div key={a.id} className="border rounded-lg p-4 bg-white">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-xs uppercase text-muted-foreground">
+                        {a.actionDomain ? `${a.actionDomain} · ` : ""}
+                        {a.actionId ?? "no linked action"}
+                      </div>
+                      {a.appealOfId && (
+                        <div className="text-xs text-muted-foreground">Appeal of approval {a.appealOfId}</div>
+                      )}
+                      {a.rationale && <div className="text-sm mt-1">{a.rationale}</div>}
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={STATUS_VARIANT[a.status] || "muted"}>{a.status}</Badge>
+                      {a.rescopeTriggered && (
+                        <div className="text-xs text-destructive mt-1">Rescope triggered</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <h3 className="text-sm font-semibold mb-2">Evidence ({a.evidences.length})</h3>
+                    <div className="space-y-2">
+                      {a.evidences.map((ev: any) => (
+                        <div key={ev.id} className="border-l-4 pl-3 py-1" style={{ borderColor: "#94a3b8" }}>
+                          <div className="text-xs font-medium">{ev.evidenceType}</div>
+                          <div className="text-xs text-muted-foreground">{ev.description}</div>
+                          {ev.sourceUrl && (
+                            <a href={ev.sourceUrl} className="text-xs underline" target="_blank" rel="noreferrer">
+                              {ev.sourceUrl}
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {(a.status === "PENDING" || a.status === "DEFERRED") && (
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                      <Button onClick={() => setEvidenceFormFor((id) => (id === a.id ? null : a.id))} disabled={busy}>
+                        {evidenceFormFor === a.id ? "Cancel evidence" : "Submit evidence"}
+                      </Button>
+                      <Button onClick={() => decide(a, "APPROVED")} disabled={busy}>Approve</Button>
+                      <Button onClick={() => decide(a, "REJECTED")} disabled={busy}>Reject</Button>
+                      <Button onClick={() => decide(a, "DEFERRED")} disabled={busy}>Defer</Button>
+                    </div>
+                  )}
+                  {a.status === "REJECTED" && (
+                    <div className="mt-3">
+                      <Button onClick={() => initiateAppeal(a)} disabled={busy}>Initiate appeal</Button>
+                    </div>
+                  )}
+
+                  {evidenceFormFor === a.id && (
+                    <form
+                      onSubmit={(e) => submitEvidence(e, a.id)}
+                      className="mt-3 border rounded-lg p-3 bg-background space-y-3"
+                    >
+                      <div className="grid grid-cols-2 gap-3">
+                        <Select name="evidenceType" label="Evidence type" required options={EVIDENCE_TYPES} />
+                        <Input name="sourceUrl" label="Source URL (optional)" placeholder="https://…" />
+                      </div>
+                      <Input name="description" label="Description" required />
+                      <Button type="submit" disabled={busy}>{busy ? "Submitting…" : "Save evidence"}</Button>
+                    </form>
+                  )}
+                </div>
+              ))}
+            </section>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
