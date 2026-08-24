@@ -7,9 +7,10 @@
  * all three new spec files: exact-action-id verification (not a
  * `.first()` card), every page.request.* wrapped in timedApiCall(...), no
  * Trinity mutation, and reuse of the shared harness helpers rather than
- * per-file redefinition. Operations and Strategy each also have a
- * reassessment test (22-07/23-07); Cashflow deliberately does not (see
- * 24-cashflow-acceptance.spec.ts's own header for why).
+ * per-file redefinition. All three (Operations, Strategy, Cashflow) now
+ * have a reassessment test (22-07/23-07/24-07) -- Cashflow's product gap
+ * was closed in a separate PR (mirroring Marketing's own fix) and this
+ * spec file's coverage was updated to match once that landed.
  */
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -17,7 +18,7 @@ import { join } from "path";
 const SPECS = [
   { name: "22-operations-acceptance.spec.ts", prefix: "22", apiPrefix: "/api/owner/operations", actionsSection: "Operations actions", hasReassessmentTest: true },
   { name: "23-strategy-acceptance.spec.ts", prefix: "23", apiPrefix: "/api/owner/strategy", actionsSection: "Strategy actions", hasReassessmentTest: true },
-  { name: "24-cashflow-acceptance.spec.ts", prefix: "24", apiPrefix: "/api/owner/cashflow", actionsSection: "Cashflow actions", hasReassessmentTest: false },
+  { name: "24-cashflow-acceptance.spec.ts", prefix: "24", apiPrefix: "/api/owner/cashflow", actionsSection: "Cashflow actions", hasReassessmentTest: true },
 ] as const;
 
 const SRC = new Map(
@@ -107,15 +108,13 @@ describe.each(SPECS)("$name — never mutates Trinity Services", (spec) => {
   });
 });
 
-describe("22/23-only — reassessment test exists; 24 (Cashflow) deliberately omits it", () => {
-  it("Operations (22-07) and Strategy (23-07) each have a reassessment test", () => {
-    expect(SRC.get("22-operations-acceptance.spec.ts")).toContain('test("22-07');
-    expect(SRC.get("23-strategy-acceptance.spec.ts")).toContain('test("23-07');
-  });
+describe.each(SPECS.filter((s) => s.hasReassessmentTest))(
+  "$name — has a reassessment test",
+  (spec) => {
+    const src = SRC.get(spec.name)!;
 
-  it("Cashflow's spec file documents why no reassessment test exists (no fabricated coverage)", () => {
-    const cashflowSrc = SRC.get("24-cashflow-acceptance.spec.ts")!;
-    expect(cashflowSrc).not.toMatch(/test\("24-07 — reassessment/);
-    expect(cashflowSrc).toMatch(/do NOT trigger automatic re-diagnosis/i);
-  });
-});
+    it(`contains a "${spec.prefix}-07 — reassessment" test`, () => {
+      expect(src).toMatch(new RegExp(`test\\("${spec.prefix}-07 — reassessment`));
+    });
+  }
+);

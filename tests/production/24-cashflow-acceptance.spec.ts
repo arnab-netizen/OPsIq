@@ -8,18 +8,16 @@
  * page, real snapshot intake, deterministic diagnosis, finding->action
  * generation, and a full gated action lifecycle.
  *
- * IMPORTANT, deliberately NOT asserted here: unlike Finance/Sales/
- * Operations/Strategy, owner-cashflow/action.service.ts and
- * verification.service.ts do NOT trigger automatic re-diagnosis on action
- * completion or verified success (confirmed by source investigation) --
- * this is a genuine gap distinct from Marketing's (which had the same gap
- * and was fixed in a separate PR), tracked for a future fix, NOT bundled
- * into this harness-only PR. Because there is no completion-triggered
- * reassessment for Cashflow today, 24-06 verifies Complete/Verify by the
- * action's own exact id anyway (not a `.first()` card) -- this is strictly
- * more robust regardless of whether reassessment exists, and makes this
- * test forward-compatible with a future fix to that gap without needing
- * to be rewritten. "Learning" is Finance-only and not claimed here.
+ * UPDATED once the reassessment gap below was closed: owner-cashflow/
+ * action.service.ts and verification.service.ts now trigger automatic
+ * re-diagnosis on action completion and on verified success, mirroring
+ * Finance/Sales/Operations/Strategy (fixed in a separate product PR,
+ * hostile-DB-proven against real Postgres there). 24-06 verifies Complete/
+ * Verify by the action's own exact id (not a `.first()` card) precisely
+ * because completing it now deterministically creates a new
+ * OwnerCashflowCycle -- the same convention used by every other domain
+ * spec for this reason. 24-07 asserts that reassessment actually fired.
+ * "Learning" remains Finance-only and is not claimed here.
  *
  * This file never sends a mutating request (POST/PATCH) carrying
  * trinityBusinessId. It reuses the ONE dedicated acceptance business
@@ -190,12 +188,14 @@ test.describe("PROD-24 — Cashflow Owner journey live production acceptance", (
       test.skip(count === 0, "SKIPPED_NO_ACTIONS_GENERATED: this diagnosis produced zero findings/actions for the synthetic snapshot -- not a defect, but not exercisable this run.");
       const card = actionCards.first();
 
-      // Capture this action's own id before any mutation. Cashflow does
-      // NOT currently trigger reassessment on completion (unlike Finance/
-      // Sales/Operations/Strategy) -- verifying by exact id anyway is
-      // strictly more robust and forward-compatible with a future fix to
-      // that gap, and matches the harness convention established for
-      // every other domain.
+      // Capture this action's own id before any mutation -- completing an
+      // action deterministically triggers an automatic re-diagnosis
+      // (updateCashflowAction -> runCashflowDiagnosis), creating a NEW
+      // OwnerCashflowCycle whose fresh "proposed" actions become the
+      // dashboard's latestCycle, including a regenerated action with the
+      // same title/priority as this one. Verify Complete/Verify against
+      // this exact id, not by re-inspecting the (now possibly different)
+      // dashboard action list.
       const dashboardBefore = await timedApiCall(context, "GET", "/api/owner/cashflow/dashboard", () =>
         page.request.get(`/api/owner/cashflow/dashboard?businessId=${acceptanceBusinessId}`)
       );
@@ -237,13 +237,33 @@ test.describe("PROD-24 — Cashflow Owner journey live production acceptance", (
       await checkpointScreenshot(context, page, SPEC_NAME, "action-verified");
       expect(fatalErrors()).toHaveLength(0);
     });
+
+    test("24-07 — reassessment: completing the action above already triggered a second, owner-visible cycle in history", async () => {
+      // Unlike the pre-fix behavior this file used to document, Cashflow's
+      // action.service.ts now re-runs diagnosis automatically on completion
+      // (24-06's Complete click already triggered this) and again on
+      // verified success. Assert that visible effect directly, rather than
+      // re-running diagnosis manually -- re-running here would mask whether
+      // the automatic reassessment actually fired.
+      await page.reload({ waitUntil: "networkidle" });
+      const dashboardAfter = await timedApiCall(context, "GET", "/api/owner/cashflow/dashboard", () =>
+        page.request.get(`/api/owner/cashflow/dashboard?businessId=${acceptanceBusinessId}`)
+      );
+      const body = await dashboardAfter.json();
+      expect(
+        Array.isArray(body.cycleHistory) ? body.cycleHistory.length : 0,
+        "completing the action above should have auto-triggered a second OwnerCashflowCycle via the reassessment mechanism (action.service.ts)"
+      ).toBeGreaterThanOrEqual(2);
+      await expect(page.locator("body")).toContainText(/Cycle #2|Diagnosis history/);
+      expect(fatalErrors()).toHaveLength(0);
+    });
   });
 
-  test("24-07 — no 5xx responses were observed anywhere in this journey", () => {
+  test("24-08 — no 5xx responses were observed anywhere in this journey", () => {
     expect(networkFailures).toEqual([]);
   });
 
-  test("24-08 — record findings for the acceptance report", () => {
+  test("24-09 — record findings for the acceptance report", () => {
     writeFileSync(
       `production-test-results/evidence/${SPEC_NAME}-summary.json`,
       JSON.stringify(
