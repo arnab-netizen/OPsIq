@@ -1262,6 +1262,7 @@ model Workspace {
   clientAccounts        ClientAccount[]
   leadRecords           LeadRecord[]
   alerts                Alert[]
+  approvalRequests      ApprovalRequest[]
 
   @@map("workspaces")
 }
@@ -1654,6 +1655,11 @@ model OwnerAttentionEvent {
 
 model ApprovalRequest {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// SCHEMA-01: direct workspace anchor (previously WORKSPACE_SCOPED_INDIRECT via operatorItemId ->
+  /// operatorItem.workspaceId only). Deterministically backfilled — see
+  /// prisma/migrations/20260824000001_approval_request_workspace_anchor. NOT NULL from creation
+  /// forward: requestApproval() always sets it from the parent operator item's workspace.
+  workspaceId      String       @map("workspace_id") @db.Uuid
   operatorItemId   String       @map("operator_item_id") @db.Uuid
   requestedBy      String       @map("requested_by") @db.Uuid
   requestedAt      DateTime     @default(now()) @map("requested_at")
@@ -1662,6 +1668,7 @@ model ApprovalRequest {
   approvalDecision String?      @map("approval_decision")
   approvedAt       DateTime?    @map("approved_at")
   createdAt        DateTime     @default(now()) @map("created_at")
+  workspace        Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   operatorItem     OperatorItem @relation(fields: [operatorItemId], references: [id], onDelete: Cascade)
   requester        User         @relation("approval_requests_requested_by", fields: [requestedBy], references: [id])
   approver         User         @relation("approval_requests_approver", fields: [approverUserId], references: [id])
@@ -1670,6 +1677,7 @@ model ApprovalRequest {
   @@index([approvalStatus])
   @@index([approverUserId, approvalStatus])
   @@index([requestedAt])
+  @@index([workspaceId])
   @@map("approval_requests")
 }
 

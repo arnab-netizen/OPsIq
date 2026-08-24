@@ -86,7 +86,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     it("[db] requestApproval persists a pending record AND emits an APPROVAL_REQUESTED audit event", async () => {
       const operatorItemId = await seedOperatorItem();
-      const req = await requestApproval(operatorItemId, requesterId, approverId);
+      const req = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
 
       expect(req.id).toBeTruthy();
       expect(req.approvalStatus).toBe("pending");
@@ -99,8 +99,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     it("[db] requestApproval is idempotent — a duplicate call returns the same record and emits no second audit", async () => {
       const operatorItemId = await seedOperatorItem();
-      const first = await requestApproval(operatorItemId, requesterId, approverId);
-      const second = await requestApproval(operatorItemId, requesterId, approverId);
+      const first = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
+      const second = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
 
       expect(second.id).toBe(first.id);
       const count = await db.approvalRequest.count({ where: { operatorItemId } });
@@ -110,9 +110,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     it("[db] approveOutcome moves pending → approved and emits an APPROVAL_GRANTED audit event", async () => {
       const operatorItemId = await seedOperatorItem();
-      const req = await requestApproval(operatorItemId, requesterId, approverId);
+      const req = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
 
-      const result = await approveOutcome(req.id, approverId, "Looks good");
+      const result = await approveOutcome(workspaceId, req.id, approverId, "Looks good");
       expect(result.approved).toBe(true);
 
       const row = await db.approvalRequest.findUnique({ where: { id: req.id } });
@@ -124,9 +124,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     it("[db] rejectOutcome moves pending → rejected and emits an APPROVAL_DENIED audit event", async () => {
       const operatorItemId = await seedOperatorItem();
-      const req = await requestApproval(operatorItemId, requesterId, approverId);
+      const req = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
 
-      const result = await rejectOutcome(req.id, approverId, "Too risky");
+      const result = await rejectOutcome(workspaceId, req.id, approverId, "Too risky");
       expect(result.approved).toBe(false);
       expect(result.reason).toBe("Too risky");
 
@@ -137,10 +137,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     it("[db] an approved request cannot be silently flipped to rejected (status guard)", async () => {
       const operatorItemId = await seedOperatorItem();
-      const req = await requestApproval(operatorItemId, requesterId, approverId);
-      await approveOutcome(req.id, approverId, "Approved");
+      const req = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
+      await approveOutcome(workspaceId, req.id, approverId, "Approved");
 
-      const flip = await rejectOutcome(req.id, approverId, "Trying to reverse");
+      const flip = await rejectOutcome(workspaceId, req.id, approverId, "Trying to reverse");
       expect(flip.approved).toBe(false);
       expect(flip.reason).toMatch(/already approved/i);
 
@@ -152,10 +152,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     it("[db] a rejected request cannot be silently flipped to approved (status guard)", async () => {
       const operatorItemId = await seedOperatorItem();
-      const req = await requestApproval(operatorItemId, requesterId, approverId);
-      await rejectOutcome(req.id, approverId, "Rejected");
+      const req = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
+      await rejectOutcome(workspaceId, req.id, approverId, "Rejected");
 
-      const flip = await approveOutcome(req.id, approverId, "Trying to approve after reject");
+      const flip = await approveOutcome(workspaceId, req.id, approverId, "Trying to approve after reject");
       expect(flip.approved).toBe(false);
       expect(flip.reason).toMatch(/cannot approve/i);
 
@@ -166,14 +166,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     it("[db] repeated approve is idempotent — second approve does not re-stamp or emit a second audit", async () => {
       const operatorItemId = await seedOperatorItem();
-      const req = await requestApproval(operatorItemId, requesterId, approverId);
+      const req = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
 
-      const first = await approveOutcome(req.id, approverId, "Approved");
+      const first = await approveOutcome(workspaceId, req.id, approverId, "Approved");
       expect(first.approved).toBe(true);
       const afterFirst = await db.approvalRequest.findUnique({ where: { id: req.id } });
       const firstApprovedAt = afterFirst?.approvedAt?.getTime();
 
-      const second = await approveOutcome(req.id, approverId, "Approved again");
+      const second = await approveOutcome(workspaceId, req.id, approverId, "Approved again");
       expect(second.approved).toBe(true);
       expect(second.reason).toMatch(/already recorded/i);
 
@@ -185,13 +185,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     it("[db] an unauthorized actor cannot approve or reject, mutates nothing, and emits no audit", async () => {
       const operatorItemId = await seedOperatorItem();
-      const req = await requestApproval(operatorItemId, requesterId, approverId);
+      const req = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
 
-      const badApprove = await approveOutcome(req.id, otherUserId, "sneaky approve");
+      const badApprove = await approveOutcome(workspaceId, req.id, otherUserId, "sneaky approve");
       expect(badApprove.approved).toBe(false);
       expect(badApprove.reason).toMatch(/not authorized/i);
 
-      const badReject = await rejectOutcome(req.id, otherUserId, "sneaky reject");
+      const badReject = await rejectOutcome(workspaceId, req.id, otherUserId, "sneaky reject");
       expect(badReject.approved).toBe(false);
       expect(badReject.reason).toMatch(/not authorized/i);
 
@@ -203,26 +203,26 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     it("[db] invalid transition returns a controlled result, never a raw 500", async () => {
       const operatorItemId = await seedOperatorItem();
-      const req = await requestApproval(operatorItemId, requesterId, approverId);
-      await approveOutcome(req.id, approverId, "Approved");
+      const req = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
+      await approveOutcome(workspaceId, req.id, approverId, "Approved");
 
       // Approving an already-approved (idempotent) and rejecting it (blocked) both resolve to
       // controlled results — no thrown PrismaClientValidationError / raw 500.
-      await expect(approveOutcome(req.id, approverId, "again")).resolves.toMatchObject({ approved: true });
-      await expect(rejectOutcome(req.id, approverId, "reverse")).resolves.toMatchObject({ approved: false });
+      await expect(approveOutcome(workspaceId, req.id, approverId, "again")).resolves.toMatchObject({ approved: true });
+      await expect(rejectOutcome(workspaceId, req.id, approverId, "reverse")).resolves.toMatchObject({ approved: false });
       // A non-existent request id also resolves controlled (not-found), not a throw.
-      await expect(approveOutcome(randomUUID(), approverId, "x")).resolves.toMatchObject({ approved: false });
+      await expect(approveOutcome(workspaceId, randomUUID(), approverId, "x")).resolves.toMatchObject({ approved: false });
     });
 
     it("[db] concurrent approve + reject on the same pending request: exactly one wins (compare-and-set)", async () => {
       const operatorItemId = await seedOperatorItem();
-      const req = await requestApproval(operatorItemId, requesterId, approverId);
+      const req = await requestApproval(workspaceId, operatorItemId, requesterId, approverId);
 
       // Fire both transitions concurrently. The status-guarded updateMany makes exactly one match the
       // still-pending row; the loser matches zero rows and returns a controlled non-transition result.
       const [approveRes, rejectRes] = await Promise.all([
-        approveOutcome(req.id, approverId, "concurrent approve"),
-        rejectOutcome(req.id, approverId, "concurrent reject"),
+        approveOutcome(workspaceId, req.id, approverId, "concurrent approve"),
+        rejectOutcome(workspaceId, req.id, approverId, "concurrent reject"),
       ]);
 
       const row = await db.approvalRequest.findUnique({ where: { id: req.id } });
