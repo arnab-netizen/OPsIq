@@ -14,6 +14,7 @@ const {
   mockEvidenceCreate,
   mockAssignmentFindFirst,
   mockAssignmentUpdate,
+  mockOwnerBusinessFindFirst,
   mockEmitAuditEvent,
 } = vi.hoisted(() => ({
   mockFindFirst: vi.fn(),
@@ -23,6 +24,7 @@ const {
   mockEvidenceCreate: vi.fn(),
   mockAssignmentFindFirst: vi.fn().mockResolvedValue(null),
   mockAssignmentUpdate: vi.fn(),
+  mockOwnerBusinessFindFirst: vi.fn(),
   mockEmitAuditEvent: vi.fn(),
 }));
 
@@ -40,6 +42,9 @@ vi.mock("@/lib/db", () => ({
     ownerActionAssignment: {
       findFirst: mockAssignmentFindFirst,
       update: mockAssignmentUpdate,
+    },
+    ownerBusiness: {
+      findFirst: mockOwnerBusinessFindFirst,
     },
   },
 
@@ -112,6 +117,12 @@ function makeEvidenceRow(overrides: Partial<Record<string, unknown>> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockEmitAuditEvent.mockResolvedValue(undefined);
+  // Default: BIZ_ID belongs to WS_A. createApproval() now verifies this
+  // before writing (workspace-boundary hardening) -- every test in this
+  // file that calls createApproval uses WS_A/BIZ_ID, so one default
+  // covers all of them; a test intentionally proving cross-workspace
+  // rejection would override this per-call.
+  mockOwnerBusinessFindFirst.mockResolvedValue({ id: BIZ_ID, workspaceId: WS_A });
 });
 
 // ─── 1. Static enforcement: source-code invariants ───────────────────────────

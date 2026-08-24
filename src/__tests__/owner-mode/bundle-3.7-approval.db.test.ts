@@ -11,6 +11,9 @@
  *  - initiateAppeal: linked via appealOfId to prior REJECTED approval
  *  - Appeal on non-REJECTED status rejected with ValidationError
  *  - workspace isolation: cross-workspace approval not accessible
+ *  - createApproval: rejects a businessId belonging to a different
+ *    workspace (workspace-boundary hardening -- the UI's business
+ *    selector is not authorization)
  *
  * Run: TEST_WITH_DB=true npx vitest run src/__tests__/owner-mode/bundle-3.7-approval.db.test.ts
  */
@@ -26,12 +29,15 @@ import {
   initiateAppeal,
   getApproval,
 } from "@/services/owner-mode/approval-resolution.service";
+import { createBusiness } from "@/services/founder-recovery/business.service";
+import { teardownOwnerBusiness } from "@/__tests__/test-helpers/owner-business-teardown";
 import { ValidationError, NotFoundError } from "@/infra/errors";
 
 const actor = randomUUID();
 const workspaceId = randomUUID();
-const businessId = randomUUID();
 const otherWorkspace = randomUUID();
+let businessId: string;
+let otherWorkspaceBusinessId: string;
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   "[db] Bundle 3.7 — ApprovalResolution lifecycle (ephemeral PostgreSQL)",
@@ -48,12 +54,29 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
           updatedAt: new Date(),
         },
       });
+      // createApproval() now enforces that businessId belongs to the
+      // caller's own workspace -- every test below needs a REAL
+      // OwnerBusiness row, not a bare randomUUID() standing in for one.
+      const business = await createBusiness(
+        { name: "Approval Test Business", businessType: "generic_local_service", currency: "INR" },
+        actor,
+        workspaceId
+      );
+      businessId = business.id;
+      const otherBusiness = await createBusiness(
+        { name: "Other Workspace Business", businessType: "generic_local_service", currency: "INR" },
+        actor,
+        otherWorkspace
+      );
+      otherWorkspaceBusinessId = otherBusiness.id;
     });
 
     afterAll(async () => {
       await db.ownerApprovalEvidence.deleteMany({ where: { workspaceId } });
       await db.ownerApprovalRequest.deleteMany({ where: { workspaceId } });
       await db.auditEvent.deleteMany({ where: { actorId: actor } });
+      await teardownOwnerBusiness(businessId);
+      await teardownOwnerBusiness(otherWorkspaceBusinessId);
       await db.user.delete({ where: { id: actor } });
     });
 
@@ -91,6 +114,35 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       });
       expect(second.id).toBe(first.id);
       expect(second.businessId).toBe(businessId);
+    });
+
+    it("createApproval: rejects a businessId belonging to a different workspace", async () => {
+      await expect(
+        createApproval({
+          workspaceId,
+          actorId: actor,
+          idempotencyKey: "approval-cross-workspace-business-001",
+          businessId: otherWorkspaceBusinessId,
+        })
+      ).rejects.toThrow(NotFoundError);
+
+      // Confirm nothing was persisted -- the ownership check must block
+      // the write, not merely reject a later read of it.
+      const leaked = await db.ownerApprovalRequest.findFirst({
+        where: { workspaceId, idempotencyKey: "approval-cross-workspace-business-001" },
+      });
+      expect(leaked).toBeNull();
+    });
+
+    it("createApproval: rejects a wholly nonexistent businessId", async () => {
+      await expect(
+        createApproval({
+          workspaceId,
+          actorId: actor,
+          idempotencyKey: "approval-nonexistent-business-001",
+          businessId: randomUUID(),
+        })
+      ).rejects.toThrow(NotFoundError);
     });
 
     it("submitEvidence: evidence appended (append-only), credibilityScore excluded from DTO", async () => {

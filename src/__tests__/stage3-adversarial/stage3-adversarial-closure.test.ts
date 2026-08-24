@@ -27,6 +27,7 @@ const {
   mockApprovalCreate,
   mockApprovalUpdate,
   mockEvidenceCreate,
+  mockOwnerBusinessFindFirst,
   mockOnboardingFindFirst,
   mockOnboardingCreate,
   mockOnboardingUpdate,
@@ -47,6 +48,7 @@ const {
   mockApprovalCreate: vi.fn(),
   mockApprovalUpdate: vi.fn(),
   mockEvidenceCreate: vi.fn(),
+  mockOwnerBusinessFindFirst: vi.fn(),
   mockOnboardingFindFirst: vi.fn(),
   mockOnboardingCreate: vi.fn(),
   mockOnboardingUpdate: vi.fn(),
@@ -80,6 +82,9 @@ vi.mock("@/lib/db", () => ({
     },
     ownerApprovalEvidence: {
       create: mockEvidenceCreate,
+    },
+    ownerBusiness: {
+      findFirst: mockOwnerBusinessFindFirst,
     },
     ownerOnboarding: {
       findFirst: mockOnboardingFindFirst,
@@ -244,6 +249,7 @@ describe("workspace isolation — cross-bundle", () => {
 
   it("WS_A approval idempotency check uses WS_A scope", async () => {
     mockApprovalFindFirst.mockResolvedValue(null);
+    mockOwnerBusinessFindFirst.mockResolvedValue({ id: BIZ_ID, workspaceId: WS_A });
     mockApprovalCreate.mockResolvedValue({
       id: "ap1", workspaceId: WS_A, idempotencyKey: "ik1", businessId: BIZ_ID,
       actionId: null, actionDomain: null, requestedBy: ACTOR_A, status: "PENDING",
@@ -508,6 +514,7 @@ describe("audit completeness — every material mutation emits audit event", () 
 
   it("createApproval emits audit event", async () => {
     mockApprovalFindFirst.mockResolvedValue(null);
+    mockOwnerBusinessFindFirst.mockResolvedValue({ id: BIZ_ID, workspaceId: WS_A });
     mockApprovalCreate.mockResolvedValue({
       id: "ap1", workspaceId: WS_A, idempotencyKey: "ik1", businessId: BIZ_ID,
       actionId: null, actionDomain: null, requestedBy: ACTOR_A, status: "PENDING",

@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { getBusiness } from "@/services/founder-recovery/business.service";
 
 // ─── Status machine ──────────────────────────────────────────────────────────
 
@@ -200,6 +201,18 @@ export async function createApproval(input: CreateApprovalInput): Promise<Public
     select: approvalSelect,
   });
   if (existing) return toPublicDTO(existing as ApprovalRow);
+
+  // Ownership check (workspace-boundary hardening): the UI's business
+  // selector is not authorization. Without this, a caller who knows
+  // another workspace's businessId could create an approval request
+  // attributed to a business they do not own, matching every other
+  // domain's create-flow convention (see founder-recovery/business.service's
+  // own getBusiness() docstring: "Ensure ownership before update"). Runs
+  // after the idempotency short-circuit above so a replayed create with
+  // the same idempotencyKey never re-validates a (possibly now-stale)
+  // businessId argument -- matching this function's own existing
+  // idempotent-replay contract.
+  await getBusiness(businessId, workspaceId);
 
   const row = await db.ownerApprovalRequest.create({
     data: {
