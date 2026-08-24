@@ -263,22 +263,31 @@ jobs:
           "
 
       - name: Query approval_requests workspace-anchor forensics (SELECT only)
-        # SCHEMA-01 pre-migration forensics for 20260824000001_approval_request_workspace_anchor
-        # (PR #351, unmerged as of this query -- workspace_id does not exist on approval_requests
-        # yet). Establishes, from the live production database rather than schema constraints
-        # alone: (1) the current approval_requests row count, (2) whether workspace_id already
-        # exists (must be ABSENT pre-merge -- if present, something already ran this migration
-        # out of band and that must be investigated before proceeding), and (3) the deterministic
-        # backfill proof's live-data claim -- that every approval_requests row's operator_item_id
-        # resolves to an operator_items row with a non-null workspace_id, via the exact LEFT JOIN
-        # the migration's own backfill UPDATE uses. UNMAPPABLE_ROWS must be 0.
+        # SCHEMA-01 forensics for 20260824000001_approval_request_workspace_anchor (PR #351).
+        # Originally written pre-migration (workspace_id absent, PR #351 unmerged); the migration
+        # was subsequently applied to production via migrate-production.yml's PINNED_PREDEPLOY
+        # mode ahead of PR #351's merge, per owner authorization (run 32730772782,
+        # 2026-08-24T13:08:05Z). The first four queries below remain valid as an ongoing baseline
+        # check regardless of migration state (column presence now reads its post-migration type
+        # instead of COLUMN_ABSENT; the unmappable-row query and row count are unaffected).
+        #
+        # The four queries after that are POST-migration structural proof, added to close a gap
+        # migrate-production.yml's own verify-pinned-migration.mjs does not cover: that script
+        # only confirms the _prisma_migrations row for the migration name; it does not
+        # independently query approval_requests_workspace_id_idx, the
+        # approval_requests_workspace_id_fkey identity/target, or the post-NOT-NULL data state.
+        # Read-only, single hardcoded statement per query (no arbitrary SQL), same pattern as
+        # every other query in this file.
         env:
           PROD_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           PGOPTIONS: "-c default_transaction_read_only=on"
         run: |
           set -euo pipefail
 
-          echo "--- approval_requests.workspace_id column presence (must be ABSENT pre-merge) ---"
+          echo "--- approval_requests.workspace_id column presence/type ---"
+          echo "--- (data type printed if present; COLUMN_ABSENT reads as zero output rows below," \
+               "since the WHERE clause matches no information_schema.columns row when the column" \
+               "does not exist -- COALESCE never gets a row to apply to in that case) ---"
           psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
             SELECT COALESCE(data_type, 'COLUMN_ABSENT')
             FROM information_schema.columns
@@ -310,6 +319,54 @@ jobs:
             FROM _prisma_migrations
             WHERE finished_at IS NULL
             ORDER BY started_at;
+          "
+
+          echo "--- approval_requests_workspace_id_idx (expected exactly 1 row, covering workspace_id) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT indexname, indexdef
+            FROM pg_indexes
+            WHERE schemaname = 'public'
+              AND tablename = 'approval_requests'
+              AND indexname = 'approval_requests_workspace_id_idx';
+          "
+
+          echo "--- approval_requests_workspace_id_fkey identity (source/target columns + actions, not just name) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT
+              con.conname AS constraint_name,
+              CASE con.contype WHEN 'f' THEN 'FOREIGN KEY' ELSE con.contype::text END AS constraint_type,
+              rel.relname AS source_table,
+              att.attname AS source_column,
+              frel.relname AS target_table,
+              fatt.attname AS target_column,
+              CASE con.confdeltype
+                WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE'
+                WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' ELSE con.confdeltype::text
+              END AS delete_action,
+              CASE con.confupdtype
+                WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE'
+                WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' ELSE con.confupdtype::text
+              END AS update_action
+            FROM pg_constraint con
+            JOIN pg_namespace ns ON ns.oid = con.connamespace
+            JOIN pg_class rel ON rel.oid = con.conrelid
+            JOIN pg_class frel ON frel.oid = con.confrelid
+            JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = con.conkey[1]
+            JOIN pg_attribute fatt ON fatt.attrelid = con.confrelid AND fatt.attnum = con.confkey[1]
+            WHERE ns.nspname = 'public'
+              AND con.conname = 'approval_requests_workspace_id_fkey';
+          "
+
+          echo "--- approval_requests rows with a NULL workspace_id (must be 0; post-NOT-NULL data-state proof, distinct from the unmappable-row query above) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT COUNT(*) FROM approval_requests WHERE workspace_id IS NULL;
+          "
+
+          echo "--- 20260824000001_approval_request_workspace_anchor applied-migration row (expected exactly 1, finished_at set, rolled_back_at null) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT migration_name, finished_at, rolled_back_at, applied_steps_count
+            FROM _prisma_migrations
+            WHERE migration_name = '20260824000001_approval_request_workspace_anchor';
           "
 
       - name: Local checksum of each candidate migration file on main
