@@ -262,6 +262,56 @@ jobs:
             FROM owner_startup_session;
           "
 
+      - name: Query approval_requests workspace-anchor forensics (SELECT only)
+        # SCHEMA-01 pre-migration forensics for 20260824000001_approval_request_workspace_anchor
+        # (PR #351, unmerged as of this query -- workspace_id does not exist on approval_requests
+        # yet). Establishes, from the live production database rather than schema constraints
+        # alone: (1) the current approval_requests row count, (2) whether workspace_id already
+        # exists (must be ABSENT pre-merge -- if present, something already ran this migration
+        # out of band and that must be investigated before proceeding), and (3) the deterministic
+        # backfill proof's live-data claim -- that every approval_requests row's operator_item_id
+        # resolves to an operator_items row with a non-null workspace_id, via the exact LEFT JOIN
+        # the migration's own backfill UPDATE uses. UNMAPPABLE_ROWS must be 0.
+        env:
+          PROD_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+
+          echo "--- approval_requests.workspace_id column presence (must be ABSENT pre-merge) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT COALESCE(data_type, 'COLUMN_ABSENT')
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'approval_requests'
+              AND column_name = 'workspace_id';
+          "
+
+          echo "--- approval_requests row count ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT COUNT(*) FROM approval_requests;
+          "
+
+          echo "--- approval_requests unmappable-row count (must be 0) ---"
+          echo "--- a row is unmappable if its operator_item_id has no matching operator_items row," \
+               "or that operator_items row has a NULL workspace_id ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT COUNT(*)
+            FROM approval_requests ar
+            LEFT JOIN operator_items oi ON oi.id = ar.operator_item_id
+            WHERE oi.id IS NULL OR oi.workspace_id IS NULL;
+          "
+
+          echo "--- any currently-pending migration, of any name (baseline sanity check) ---"
+          echo "--- expected: zero rows right now, since 20260824000001_approval_request_workspace_anchor" \
+               "is not yet on main -- prisma migrate status (next step) is the authoritative check" \
+               "once it lands ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT migration_name, started_at, finished_at, rolled_back_at
+            FROM _prisma_migrations
+            WHERE finished_at IS NULL
+            ORDER BY started_at;
+          "
+
       - name: Local checksum of each candidate migration file on main
         run: |
           set -euo pipefail
