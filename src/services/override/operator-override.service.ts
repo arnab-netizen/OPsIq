@@ -111,6 +111,7 @@ export async function recordOperatorOverride(
     await tx.overrideRecord.create({
       data: {
         id: overrideRecordId,
+        workspaceId,
         operatorItemId,
         originalAction: item.action,
         overriddenAction,
