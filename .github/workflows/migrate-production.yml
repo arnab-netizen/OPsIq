@@ -54,6 +54,24 @@ name: Migrate Production Database
 # PINNED_PREDEPLOY did before this control existed. expected_database_host
 # is therefore now a required input and the host-identity check runs
 # unconditionally for every dispatch, not just PINNED_PREDEPLOY.
+#
+# MAIN-MODE EXACT-ONE-PENDING GATE: MAIN mode previously had no automated
+# check that exactly the intended migration -- and only it -- was pending
+# before `prisma migrate deploy` ran; it only logged `prisma migrate
+# status` output for a human to read, then deployed unconditionally.
+# migration_name is therefore now a required input for MAIN mode too (not
+# just PINNED_PREDEPLOY): the caller must state which migration this
+# dispatch is authorized to apply. Two checks now gate MAIN mode before
+# deploy: (1) migration_name must already exist as a folder in main's own
+# prisma/migrations (checked out by this workflow) -- MAIN mode only ever
+# applies what is already committed to main, so a name that isn't there is
+# refused outright; (2) the same version-controlled classifier PINNED_PREDEPLOY
+# already used (scripts/classify-migrate-status.mjs) is now invoked
+# unconditionally for both modes, requiring PREFLIGHT_CLASSIFICATION=
+# PENDING_EXPECTED for exactly migration_name -- zero pending, multiple
+# pending, a different migration pending, a failed prior migration, a
+# database connection error, or unparseable `prisma migrate status` output
+# all abort the job before `prisma migrate deploy` is ever reached.
 on:
   workflow_dispatch:
     inputs:
@@ -85,8 +103,8 @@ on:
         required: false
         type: string
       migration_name:
-        description: '[PINNED_PREDEPLOY only] Migration folder name, e.g. 20260819000001_startup_session_business_handoff'
-        required: false
+        description: 'Required for both modes. Migration folder name that must be the sole pending migration before deploy, e.g. 20260819000001_startup_session_business_handoff. MAIN mode requires this folder to already exist in main; PINNED_PREDEPLOY requires it to NOT yet exist there (see Verify migration-chain integrity).'
+        required: true
         type: string
       migration_sha256:
         description: '[PINNED_PREDEPLOY only] SHA-256 checksum of the migration.sql file, as authorized by the owner'
@@ -175,6 +193,27 @@ jobs:
           fi
           echo "✓ PINNED_PREDEPLOY inputs validated: PR #$SOURCE_PR @ $SOURCE_SHA, migration=$MIGRATION_NAME"
 
+      - name: Validate MAIN inputs
+        if: inputs.mode == 'MAIN'
+        run: |
+          MIGRATION_NAME="${{ inputs.migration_name }}"
+
+          if [ -z "$MIGRATION_NAME" ]; then
+            echo "::error::MAIN mode requires migration_name to be set (the migration this dispatch is authorized to apply)."
+            exit 1
+          fi
+          if ! echo "$MIGRATION_NAME" | grep -qE '^[0-9]{14}_[a-zA-Z0-9_]+$'; then
+            echo "::error::migration_name must match Prisma's <14-digit-timestamp>_<name> convention (digits, letters, underscores only). Got: $MIGRATION_NAME"
+            exit 1
+          fi
+          case "$MIGRATION_NAME" in
+            *..*|*/*|*' '*)
+              echo "::error::migration_name contains disallowed characters ('..', '/', or whitespace) — refusing to use it in a path."
+              exit 1
+              ;;
+          esac
+          echo "✓ MAIN inputs validated: migration=$MIGRATION_NAME"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -197,6 +236,20 @@ jobs:
           fi
           echo "✓ SHA ancestry verified"
           echo "MIGRATION_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
+
+      - name: Verify migration exists on current main
+        if: inputs.mode == 'MAIN'
+        run: |
+          MIG_NAME="${{ inputs.migration_name }}"
+          if [ ! -d "prisma/migrations/$MIG_NAME" ]; then
+            echo "::error::Migration $MIG_NAME does not exist in checked-out main's prisma/migrations directory. MAIN mode only applies migrations already committed to main -- refusing to proceed against a migration_name that isn't there. If this migration is still on an unmerged PR, use PINNED_PREDEPLOY instead."
+            exit 1
+          fi
+          if [ ! -f "prisma/migrations/$MIG_NAME/migration.sql" ]; then
+            echo "::error::prisma/migrations/$MIG_NAME exists but does not contain migration.sql."
+            exit 1
+          fi
+          echo "✓ $MIG_NAME confirmed present in main's prisma/migrations directory"
 
       - name: Verify source PR/SHA provenance via GitHub API
         if: inputs.mode == 'PINNED_PREDEPLOY'
@@ -348,9 +401,9 @@ jobs:
           # `prisma migrate status` exits non-zero whenever migrations are
           # pending -- the EXPECTED state here. Capturing it via
           # `VAR=$(cmd)` under the shell's default `set -e` would abort
-          # THIS LINE ITSELF before any of the parsing below (or the
-          # trailing `exit 0`) ever ran. set +e / capture / restore set -e
-          # is the safe idiom; the classifier below is the actual gate.
+          # THIS LINE ITSELF before any of the parsing below ever ran.
+          # set +e / capture / restore set -e is the safe idiom; the
+          # classifier below is the actual gate.
           set +e
           STATUS_OUTPUT=$(npx prisma migrate status 2>&1)
           STATUS_EXIT=$?
@@ -358,12 +411,14 @@ jobs:
           echo "$STATUS_OUTPUT" | tee migration-status-before.txt
           echo "=== End pre-deploy status (exit $STATUS_EXIT) ==="
 
-          if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
-            STATUS_EXIT="$STATUS_EXIT" STATUS_OUTPUT="$STATUS_OUTPUT" EXPECTED_MIGRATION_NAME="${{ inputs.migration_name }}" node scripts/classify-migrate-status.mjs
-            echo "PREFLIGHT_PASSED=true" >> "$GITHUB_ENV"
-          fi
-          # Exit 0 to allow the deploy step to run; the deploy step is authoritative.
-          exit 0
+          # Both modes now require exactly migration_name to be the sole
+          # pending migration before deploy is allowed to run. A non-zero
+          # exit here (from the classifier's own process.exit(1), fail
+          # closed on anything other than PREFLIGHT_CLASSIFICATION=
+          # PENDING_EXPECTED) fails this step under set -e, which stops the
+          # job before the Deploy migrations step below is ever reached.
+          STATUS_EXIT="$STATUS_EXIT" STATUS_OUTPUT="$STATUS_OUTPUT" EXPECTED_MIGRATION_NAME="${{ inputs.migration_name }}" node scripts/classify-migrate-status.mjs
+          echo "PREFLIGHT_PASSED=true" >> "$GITHUB_ENV"
 
       - name: Deploy migrations
         env:
@@ -417,10 +472,10 @@ jobs:
           echo "| Deploy succeeded | ${DEPLOY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Post-verify succeeded | ${POST_VERIFY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Expected DB host (owner-pinned, exact-match enforced — both modes) | \`${{ inputs.expected_database_host }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Migration (owner-authorized, exact-one-pending enforced — both modes) | \`${{ inputs.migration_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
             echo "| Source PR | #${{ inputs.source_pr }} |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Source SHA (git-object read only, never checked out) | \`${{ inputs.source_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Pinned migration | \`${{ inputs.migration_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Migration checksum | \`${{ inputs.migration_sha256 }}\` |" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "| Operation | prisma migrate deploy (no seed, no reset) |" >> "$GITHUB_STEP_SUMMARY"

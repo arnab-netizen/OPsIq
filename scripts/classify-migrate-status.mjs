@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 /**
  * Classifies `npx prisma migrate status`'s (exit code, output) for
- * migrate-production.yml's PINNED_PREDEPLOY pre-deploy gate.
+ * migrate-production.yml's pre-deploy gate, shared unchanged by both
+ * dispatch modes (MAIN and PINNED_PREDEPLOY) -- this script has no
+ * mode-specific branching; the workflow supplies the same
+ * EXPECTED_MIGRATION_NAME contract for either mode's authorized migration.
  *
  * Incident this closes: the gate previously captured status via
  * `STATUS_OUTPUT=$(npx prisma migrate status 2>&1)` under the shell's
  * default `set -e`. Prisma exits non-zero whenever migrations are pending
- * -- the EXPECTED state for PINNED_PREDEPLOY, since a migration was just
- * materialized specifically to become pending -- so that assignment
+ * -- the EXPECTED state here, whether that pending migration was just
+ * materialized specifically for PINNED_PREDEPLOY or was already committed
+ * to main and simply not yet deployed for MAIN mode -- so that assignment
  * itself aborted the step before any of the intended pending-migration
- * parsing/validation logic, or the trailing `exit 0`, ever ran.
+ * parsing/validation logic ever ran.
  *
  * Prisma's CLI has no structured/JSON `migrate status` output, so this is
  * a strict ALLOW-LIST classifier: only PENDING_EXPECTED -- exactly the
