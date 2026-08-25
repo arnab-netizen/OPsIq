@@ -756,6 +756,11 @@ model OperatorItem {
 
 model OverrideRecord {
   id               String       @id @db.Uuid
+  /// SCHEMA-01: direct workspace anchor (previously WORKSPACE_SCOPED_INDIRECT via operatorItemId ->
+  /// operatorItem.workspaceId only). Deterministically backfilled — see
+  /// prisma/migrations/20260825000001_override_record_workspace_anchor. NOT NULL from creation
+  /// forward: recordOperatorOverride() always sets it from the parent operator item's workspace.
+  workspaceId      String       @map("workspace_id") @db.Uuid
   operatorItemId   String       @map("operator_item_id") @db.Uuid
   originalAction   String       @map("original_action")
   overriddenAction String       @map("overridden_action")
@@ -763,11 +768,13 @@ model OverrideRecord {
   overriddenBy     String       @map("overridden_by") @db.Uuid
   createdAt        DateTime     @default(now()) @map("created_at")
   revokedAt        DateTime?    @map("revoked_at")
+  workspace        Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   operatorItem     OperatorItem @relation(fields: [operatorItemId], references: [id], onDelete: Cascade)
   user             User         @relation(fields: [overriddenBy], references: [id])
 
   @@index([operatorItemId])
   @@index([overriddenBy])
+  @@index([workspaceId])
   @@map("override_records")
 }
 
@@ -1263,6 +1270,7 @@ model Workspace {
   leadRecords           LeadRecord[]
   alerts                Alert[]
   approvalRequests      ApprovalRequest[]
+  overrideRecords       OverrideRecord[]
 
   @@map("workspaces")
 }

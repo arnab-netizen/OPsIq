@@ -35,7 +35,7 @@ const WORKSPACE_OWNED_MODELS = new Set<string>([
   "ControlledLearningPrivacyControl", "ControlledLearningRegressionResult", "ControlledLearningRejection", "ControlledLearningRetentionPolicy", "ControlledLearningReview", "ControlledLearningRollbackEvent",
   "ControlledLearningRolloutFlag", "DelegatedTask", "Engagement", "Escalation", "ExternalConnection", "ExternalConnectionConsent",
   "ExternalDataLineage", "ExternalImportTemplate", "ExternalRawRecord", "FactReviewAction", "FundedInitiativeOutcome", "OperatorItem",
-  "OwnerActionOutcome", "OwnerApprovalMemory", "OwnerArchetypeMetric", "OwnerAttentionEvent", "OwnerBudgetAction", "OwnerBudgetOverride",
+  "OverrideRecord", "OwnerActionOutcome", "OwnerApprovalMemory", "OwnerArchetypeMetric", "OwnerAttentionEvent", "OwnerBudgetAction", "OwnerBudgetOverride",
   "OwnerBusiness", "OwnerCapacitySnapshot", "OwnerCashflowAction", "OwnerCashflowCycle", "OwnerCashflowFinding", "OwnerCashflowSnapshot",
   "OwnerCashflowVerification", "OwnerComplianceItem", "OwnerDataIntake", "OwnerDoNotRepeatRule", "OwnerEmployeeWorkloadSnapshot", "OwnerEquipment",
   "OwnerFinanceAction", "OwnerFinanceCycle", "OwnerFinanceFinding", "OwnerFinanceVerification", "OwnerFinancialSnapshot", "OwnerGuidanceSnapshot",

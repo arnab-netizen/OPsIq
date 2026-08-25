@@ -40,6 +40,12 @@ describe("recordOperatorOverride (governed) [db]", () => {
   beforeEach(async () => {
     workspaceId = randomUUID();
     actorId = randomUUID();
+    // SCHEMA-01: override_records.workspace_id now carries a real FK to workspaces(id) (unlike
+    // operator_items.workspace_id, which is a bare unscoped column) -- a real Workspace row is
+    // required for overrideRecord.create() to succeed.
+    await db.workspace.create({
+      data: { id: workspaceId, name: "Override Test WS", slug: `override-test-${workspaceId}` },
+    });
     await db.user.create({
       data: { id: actorId, email: `${actorId}@test.local`, isActive: true, updatedAt: new Date() },
     });
@@ -51,6 +57,7 @@ describe("recordOperatorOverride (governed) [db]", () => {
     await db.auditEvent.deleteMany({ where: { workspaceId } }).catch(() => {});
     await db.operatorItem.deleteMany({ where: { workspaceId } }).catch(() => {});
     await db.user.delete({ where: { id: actorId } }).catch(() => {});
+    await db.workspace.delete({ where: { id: workspaceId } }).catch(() => {});
   });
 
   it("applies a valid override: durable record + action change + audit", async () => {
@@ -72,6 +79,9 @@ describe("recordOperatorOverride (governed) [db]", () => {
     expect(record).toBeTruthy();
     expect(record?.reason).toContain("Owner judgment");
     expect(record?.overriddenBy).toBe(actorId);
+    // SCHEMA-01: the direct workspace anchor is set from the already-verified parent item's
+    // workspace, not merely present via the indirect operatorItemId -> operatorItem.workspaceId chain.
+    expect(record?.workspaceId).toBe(workspaceId);
 
     const audit = await db.auditEvent.findFirst({
       where: { workspaceId, entityId: itemId, eventName: "override.approved" },
@@ -167,5 +177,28 @@ describe("recordOperatorOverride (governed) [db]", () => {
         role: "admin",
       }),
     ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("SCHEMA-01: DB backstop rejects a bare overrideRecord.create with no workspaceId, bypassing the service layer entirely", async () => {
+    // Proves the DB-level invariant (src/lib/prisma-workspace-enforcement.ts), not just the
+    // service-layer check recordOperatorOverride() already performs -- a caller that skips the
+    // service entirely (a future migration script, an ad-hoc admin tool) is still blocked.
+    await expect(
+      db.overrideRecord.create({
+        data: {
+          id: randomUUID(),
+          operatorItemId: itemId,
+          originalAction: "Original action",
+          overriddenAction: "unscoped write",
+          reason: "hostile: no workspaceId in data",
+          overriddenBy: actorId,
+        } as never,
+      }),
+    ).rejects.toThrow(/WORKSPACE ISOLATION VIOLATION/);
+
+    const record = await db.overrideRecord.findFirst({
+      where: { operatorItemId: itemId, overriddenAction: "unscoped write" },
+    });
+    expect(record).toBeNull(); // nothing was persisted
   });
 });
