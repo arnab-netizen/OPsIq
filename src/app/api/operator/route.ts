@@ -148,6 +148,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
       // Check if approval is required for high-impact decisions
       const approvalCheck = await canCompleteWithApprovalStatus(
+        workspaceId,
         id,
         item.impactExpected
       );
@@ -159,6 +160,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       const adminUserId = actorId;
       if (item.impactExpected > 100000 && adminUserId) {
         await enforceApprovalRequirement(
+          workspaceId,
           id,
           item.impactExpected,
           actorId || "unknown",

@@ -4,8 +4,8 @@ Generated from `prisma/schema.prisma`. Basis for the DB backstop (`src/lib/prism
 
 ## Classes
 
-### WORKSPACE_SCOPED_DIRECT (117 models — required `workspaceId` column)
-Enforced by the DB backstop (create requires workspaceId; no all-tenant bulk mutation) AND by the service layer for by-id writes/reads. Full list is the `WORKSPACE_OWNED_MODELS` set in `src/lib/prisma-workspace-enforcement.ts` (e.g. OperatorItem, Engagement, Recommendation, BusinessConditionProfile, DelegatedTask, Proof, all Owner*/Recovery* models, WorkspaceMembership, BillingAccount, UsageEvent, CanonicalEvent, SpendEntry, …).
+### WORKSPACE_SCOPED_DIRECT (118 models — required `workspaceId` column)
+Enforced by the DB backstop (create requires workspaceId; no all-tenant bulk mutation) AND by the service layer for by-id writes/reads. Full list is the `WORKSPACE_OWNED_MODELS` set in `src/lib/prisma-workspace-enforcement.ts` (e.g. OperatorItem, Engagement, Recommendation, BusinessConditionProfile, DelegatedTask, Proof, all Owner*/Recovery* models, WorkspaceMembership, BillingAccount, UsageEvent, CanonicalEvent, SpendEntry, …). `ApprovalRequest` moved here from WORKSPACE_SCOPED_INDIRECT — see SCHEMA-01 note below.
 
 ### AUDIT_OR_PROOF_MODEL (nullable `workspaceId` — EXCLUDED from DB backstop, documented exemption)
 - `AuditEvent` — appended by system paths and cleaned up tenant-agnostically; nullable workspaceId by design. Enforcing workspaceId-in-create would break audit append/cleanup. Exempt.
@@ -14,8 +14,10 @@ Enforced by the DB backstop (create requires workspaceId; no all-tenant bulk mut
 
 ### WORKSPACE_SCOPED_INDIRECT (no direct `workspaceId`; scoped via a parent relation)
 - `Action`, `Evidence`, `EvidenceItem`, `Finding` → scoped via `engagementId` → `engagement.workspaceId`.
-- `ApprovalRequest`, `OverrideRecord`, `DecisionSnapshot` → scoped via their parent (operatorItem/engagement).
+- `OverrideRecord`, `DecisionSnapshot` → scoped via their parent (operatorItem/engagement).
 Enforced at the service/route layer (`assertEngagementAccess`, `enforceWorkspaceScoping`). SCHEMA-01 tracks adding a direct `workspaceId` to these for a DB-level guarantee.
+
+**SCHEMA-01 (closed for `ApprovalRequest`, prisma/migrations/20260824000001_approval_request_workspace_anchor):** `ApprovalRequest` (`src/services/approval/workflow.ts` — the legacy operator approval table, distinct from `OwnerApprovalRequest`) now has a required direct `workspaceId`, deterministically backfilled via `operatorItemId` → `operator_items.workspace_id` (both legs have been NOT NULL, FK-enforced, since table creation — no ambiguous row was possible). It is registered in `WORKSPACE_OWNED_MODELS` and every exported function in `workflow.ts` takes a required `workspaceId` and filters by it. `OverrideRecord` and `DecisionSnapshot` remain open (out of scope for this change — SCHEMA-01 tracks them separately, one root-cause class at a time).
 
 ### USER_OR_MEMBERSHIP_SCOPED
 - `User` — created at signup BEFORE any workspace exists; membership-scoped, NOT directly workspace-owned. **Deliberately not in the DB backstop set** (would break signup). Access controlled via `workspaceMembership`.

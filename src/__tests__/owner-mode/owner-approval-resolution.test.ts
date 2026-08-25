@@ -151,6 +151,7 @@ describe("enforceApprovalRequirement with owner context", () => {
   it("auto-handles a high-impact approval when remembered (no approval request created)", async () => {
     const { deps } = makeDeps({ instruction: null, memoryReusable: true });
     const result = await enforceApprovalRequirement(
+      "ws1",
       "op1",
       200000, // above APPROVAL_THRESHOLD
       "user1",
@@ -166,7 +167,7 @@ describe("enforceApprovalRequirement with owner context", () => {
 
   it("returns no approval needed below threshold without consulting owner memory", async () => {
     const { deps } = makeDeps({ instruction: null, memoryReusable: true });
-    const result = await enforceApprovalRequirement("op1", 1, "user1", "approver1", baseInput, deps);
+    const result = await enforceApprovalRequirement("ws1", "op1", 1, "user1", "approver1", baseInput, deps);
     expect(result.requiresApproval).toBe(false);
     expect(result.autoHandled).toBeUndefined();
   });

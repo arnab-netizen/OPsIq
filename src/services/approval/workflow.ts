@@ -26,9 +26,12 @@ export interface ApprovalDecision {
 export const APPROVAL_THRESHOLD = 100000;
 
 /**
- * Resolve the workspace that owns an approval request's operator item. ApprovalRequest has no
- * workspace column of its own (it is scoped through the operator item), so audit-event workspace
- * isolation is derived here. Throws NotFoundError if the operator item is missing.
+ * Resolve the workspace that owns an operator item, straight from the DB. Used by
+ * requestApproval() to verify a caller-supplied workspaceId actually matches the operator
+ * item's real workspace before a new ApprovalRequest.workspaceId is ever written — the same
+ * DB-derived-not-caller-trusted check used elsewhere in the codebase for cross-workspace
+ * attribution (e.g. OwnerApprovalRequest.createApproval()'s getBusiness(businessId,
+ * workspaceId) check). Throws NotFoundError if the operator item is missing.
  */
 async function resolveApprovalWorkspaceId(operatorItemId: string): Promise<string> {
   const item = await db.operatorItem.findUnique({
@@ -40,16 +43,27 @@ async function resolveApprovalWorkspaceId(operatorItemId: string): Promise<strin
 }
 
 export async function requestApproval(
+  workspaceId: string,
   operatorItemId: string,
   requestedBy: string,
   approverId: string
 ): Promise<ApprovalRequest> {
-  const existingRequest = await db.approvalRequest.findUnique({
+  // WORKSPACE-ISOLATION: verify the operator item actually belongs to the caller's workspace
+  // BEFORE ever creating a governed record under it. This is derived from the DB (the operator
+  // item's own workspaceId), never trusted from the caller's workspaceId argument alone — a
+  // caller cannot attribute a new approval to its own workspace by pairing a foreign
+  // operatorItemId with its own workspaceId. Fails closed as a not-found (never leaks whether
+  // the operator item exists in another workspace).
+  const actualWorkspaceId = await resolveApprovalWorkspaceId(operatorItemId);
+  if (actualWorkspaceId !== workspaceId) {
+    throw new NotFoundError("OperatorItem", operatorItemId);
+  }
+
+  const existingRequest = await db.approvalRequest.findFirst({
     where: {
-      operatorItemId_approverUserId: {
-        operatorItemId,
-        approverUserId: approverId,
-      },
+      operatorItemId,
+      approverUserId: approverId,
+      workspaceId,
     },
   });
 
@@ -60,14 +74,13 @@ export async function requestApproval(
     return existingRequest;
   }
 
-  const workspaceId = await resolveApprovalWorkspaceId(operatorItemId);
-
   // AUDIT-01: create the governed approval record and emit its creation audit event inside one
   // transaction. A failed audit write rolls the create back (fail-closed) so a high-value approval
   // record can never exist without an audit trail.
   const created = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const request = await tx.approvalRequest.create({
       data: {
+        workspaceId,
         operatorItemId,
         requestedBy,
         approverUserId: approverId,
@@ -106,12 +119,16 @@ export async function requestApproval(
 }
 
 export async function approveOutcome(
+  workspaceId: string,
   approvalRequestId: string,
   approverId: string,
   decision: string
 ): Promise<{ approved: boolean; reason: string }> {
-  const request = await db.approvalRequest.findUnique({
-    where: { id: approvalRequestId },
+  // WORKSPACE-ISOLATION: scope the read by workspaceId. A caller in another workspace gets the
+  // same "not found" result as a nonexistent id — the record's existence in a foreign workspace
+  // is never revealed.
+  const request = await db.approvalRequest.findFirst({
+    where: { id: approvalRequestId, workspaceId },
   });
 
   if (!request) {
@@ -128,18 +145,18 @@ export async function approveOutcome(
     };
   }
 
-  const workspaceId = await resolveApprovalWorkspaceId(request.operatorItemId);
   const now = new Date();
 
   // AUDIT-01 + CONC-01 + status guard: transition via a status-guarded updateMany (only a row that
-  // is STILL pending transitions) inside one transaction with the audit event. This makes concurrent
-  // approve/reject race-safe (exactly one wins), makes re-approve a no-op rather than a re-stamp,
-  // prevents silently flipping an already-rejected record to approved, and rolls the state change
-  // back if the audit write fails (fail-closed).
+  // is STILL pending, AND still in the caller's workspace, transitions) inside one transaction with
+  // the audit event. This makes concurrent approve/reject race-safe (exactly one wins), makes
+  // re-approve a no-op rather than a re-stamp, prevents silently flipping an already-rejected record
+  // to approved, rolls the state change back if the audit write fails (fail-closed), and — combined
+  // with the workspace-scoped read above — prevents a cross-workspace update entirely.
   let granted = false;
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const res = await tx.approvalRequest.updateMany({
-      where: { id: approvalRequestId, approvalStatus: "pending" },
+      where: { id: approvalRequestId, workspaceId, approvalStatus: "pending" },
       data: {
         approvalStatus: "approved",
         approvalDecision: decision,
@@ -176,7 +193,7 @@ export async function approveOutcome(
   }
 
   // count === 0: the request was not pending. Distinguish idempotent replay from a blocked flip.
-  const current = await db.approvalRequest.findUnique({ where: { id: approvalRequestId } });
+  const current = await db.approvalRequest.findFirst({ where: { id: approvalRequestId, workspaceId } });
   if (current?.approvalStatus === "approved") {
     return { approved: true, reason: "Approval already recorded" };
   }
@@ -187,12 +204,14 @@ export async function approveOutcome(
 }
 
 export async function rejectOutcome(
+  workspaceId: string,
   approvalRequestId: string,
   approverId: string,
   decision: string
 ): Promise<{ approved: boolean; reason: string }> {
-  const request = await db.approvalRequest.findUnique({
-    where: { id: approvalRequestId },
+  // WORKSPACE-ISOLATION: scope the read by workspaceId — see approveOutcome.
+  const request = await db.approvalRequest.findFirst({
+    where: { id: approvalRequestId, workspaceId },
   });
 
   if (!request) {
@@ -209,16 +228,15 @@ export async function rejectOutcome(
     };
   }
 
-  const workspaceId = await resolveApprovalWorkspaceId(request.operatorItemId);
-
   // AUDIT-01 + CONC-01 + status guard: reject via a status-guarded updateMany (only a STILL-pending
-  // row transitions) inside one transaction with the audit event. Prevents silently flipping an
-  // already-approved record to rejected, makes repeated reject idempotent, is concurrency-safe, and
-  // rolls the state change back if the audit write fails (fail-closed).
+  // row, AND still in the caller's workspace, transitions) inside one transaction with the audit
+  // event. Prevents silently flipping an already-approved record to rejected, makes repeated reject
+  // idempotent, is concurrency-safe, and rolls the state change back if the audit write fails
+  // (fail-closed).
   let rejected = false;
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const res = await tx.approvalRequest.updateMany({
-      where: { id: approvalRequestId, approvalStatus: "pending" },
+      where: { id: approvalRequestId, workspaceId, approvalStatus: "pending" },
       data: {
         approvalStatus: "rejected",
         approvalDecision: decision,
@@ -254,7 +272,7 @@ export async function rejectOutcome(
   }
 
   // count === 0: the request was not pending. Distinguish idempotent replay from a blocked flip.
-  const current = await db.approvalRequest.findUnique({ where: { id: approvalRequestId } });
+  const current = await db.approvalRequest.findFirst({ where: { id: approvalRequestId, workspaceId } });
   if (current?.approvalStatus === "rejected") {
     return { approved: false, reason: current.approvalDecision || decision };
   }
@@ -265,10 +283,11 @@ export async function rejectOutcome(
 }
 
 export async function getApprovalStatus(
+  workspaceId: string,
   operatorItemId: string
 ): Promise<ApprovalStatus> {
   const requests = await db.approvalRequest.findMany({
-    where: { operatorItemId },
+    where: { operatorItemId, workspaceId },
   });
 
   if (requests.length === 0) {
@@ -297,6 +316,7 @@ export async function requiresApproval(impactExpected: number): Promise<boolean>
 }
 
 export async function enforceApprovalRequirement(
+  workspaceId: string,
   operatorItemId: string,
   impactExpected: number,
   requestedBy: string,
@@ -339,7 +359,7 @@ export async function enforceApprovalRequirement(
     }
   }
 
-  const approval = await requestApproval(operatorItemId, requestedBy, approverId);
+  const approval = await requestApproval(workspaceId, operatorItemId, requestedBy, approverId);
 
   return {
     requiresApproval: true,
@@ -349,6 +369,7 @@ export async function enforceApprovalRequirement(
 }
 
 export async function canCompleteWithApprovalStatus(
+  workspaceId: string,
   operatorItemId: string,
   impactExpected: number
 ): Promise<{ allowed: boolean; reason?: string }> {
@@ -356,7 +377,7 @@ export async function canCompleteWithApprovalStatus(
     return { allowed: true };
   }
 
-  const status = await getApprovalStatus(operatorItemId);
+  const status = await getApprovalStatus(workspaceId, operatorItemId);
 
   if (status.rejected) {
     return {
