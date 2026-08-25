@@ -44,6 +44,16 @@ name: Migrate Production Database
 # it reconciles automatically the moment the source PR merges into main
 # (the migration folder then exists in both places). Do not run `prisma
 # migrate resolve` or hand-edit `_prisma_migrations` in response to this.
+#
+# EXACT-HOST GATE (both modes): the owner-pinned expected_database_host
+# comparison originally shipped as a PINNED_PREDEPLOY-only control. Both
+# modes mutate the same production database via the same
+# PRODUCTION_DATABASE_URL secret and are equally exposed to a syntactically
+# valid direct (non-pooler) Neon URL that happens to point at the wrong
+# project/branch -- MAIN mode had no more protection against that than
+# PINNED_PREDEPLOY did before this control existed. expected_database_host
+# is therefore now a required input and the host-identity check runs
+# unconditionally for every dispatch, not just PINNED_PREDEPLOY.
 on:
   workflow_dispatch:
     inputs:
@@ -83,8 +93,8 @@ on:
         required: false
         type: string
       expected_database_host:
-        description: '[PINNED_PREDEPLOY only] Exact owner-authorized production DB hostname, bare hostname only (e.g. ep-xxxx.region.aws.neon.tech) — never a full URL, credentials, path, or query string'
-        required: false
+        description: 'Required for both modes. Exact owner-authorized production DB hostname, bare hostname only (e.g. ep-xxxx.region.aws.neon.tech) — never a full URL, credentials, path, or query string'
+        required: true
         type: string
 
 permissions:
@@ -325,7 +335,6 @@ jobs:
           echo "Note: this same secret and the same placeholder/pooler checks above apply identically in both MAIN and PINNED_PREDEPLOY mode — there is no mode-specific database target."
 
       - name: Verify exact production database host matches owner-pinned expectation
-        if: inputs.mode == 'PINNED_PREDEPLOY'
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
@@ -407,12 +416,12 @@ jobs:
           echo "| Deploy started | ${DEPLOY_STARTED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Deploy succeeded | ${DEPLOY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Post-verify succeeded | ${POST_VERIFY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Expected DB host (owner-pinned, exact-match enforced — both modes) | \`${{ inputs.expected_database_host }}\` |" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
             echo "| Source PR | #${{ inputs.source_pr }} |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Source SHA (git-object read only, never checked out) | \`${{ inputs.source_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Pinned migration | \`${{ inputs.migration_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Migration checksum | \`${{ inputs.migration_sha256 }}\` |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Expected DB host (owner-pinned, exact-match enforced) | \`${{ inputs.expected_database_host }}\` |" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "| Operation | prisma migrate deploy (no seed, no reset) |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
