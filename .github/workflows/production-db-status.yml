@@ -369,6 +369,118 @@ jobs:
             WHERE migration_name = '20260824000001_approval_request_workspace_anchor';
           "
 
+      - name: Query override_records workspace-anchor forensics (SELECT only)
+        # SCHEMA-01 forensics for 20260825000001_override_record_workspace_anchor (PR #354, merged
+        # cea1df29902668678c1bd8f05e3e730454427590). Unlike the approval_requests forensics above
+        # (added AFTER that migration had already reached production via PINNED_PREDEPLOY),
+        # override_records's migration has NOT yet been applied to production as of this query's
+        # addition -- PR #354 is already merged, so PINNED_PREDEPLOY (which requires an OPEN,
+        # UNMERGED source PR) is not the applicable mode here; MAIN mode is. Every query below is
+        # therefore deliberately written to be safe in BOTH states: pre-migration (workspace_id
+        # column absent) and post-migration (present, NOT NULL, indexed, FK-constrained). The same
+        # workflow run serves as both the pre-migration preflight proof and, run again after the
+        # owner authorizes and dispatches MAIN-mode migrate-production.yml, the post-migration
+        # closure proof. Read-only, single hardcoded statement per query (no arbitrary SQL), same
+        # pattern as every other query in this file.
+        env:
+          PROD_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+
+          echo "--- A. override_records.workspace_id presence/type/nullability ---"
+          echo "--- (zero output rows below IS the absence proof pre-migration -- the WHERE clause" \
+               "matches no information_schema.columns row when the column does not exist) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT column_name, data_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'override_records'
+              AND column_name = 'workspace_id';
+          "
+
+          echo "--- B. override_records total row count ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT COUNT(*) FROM override_records;
+          "
+
+          echo "--- C. override_records unmappable-row count (must be 0) ---"
+          echo "--- a row is unmappable if its operator_item_id has no matching operator_items row," \
+               "or that operator_items row has a NULL workspace_id -- references only" \
+               "operator_item_id/operator_items.workspace_id, both of which exist regardless of" \
+               "override_records' own migration state ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT COUNT(*)
+            FROM override_records o
+            LEFT JOIN operator_items oi
+              ON oi.id = o.operator_item_id
+            WHERE oi.id IS NULL
+               OR oi.workspace_id IS NULL;
+          "
+
+          echo "--- D. override_records rows with workspace_id IS NULL (post-migration data-state proof) ---"
+          echo "--- referencing override_records.workspace_id directly would fail to PARSE if the" \
+               "column does not exist yet (unlike a missing-row information_schema lookup), so" \
+               "column existence is checked first via a query that can never fail, and the NULL-count" \
+               "query only runs if that check is true; both statements are static and hardcoded, the" \
+               "shell only chooses which one to run ---"
+          COLUMN_EXISTS=$(psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+            SELECT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'override_records'
+                AND column_name = 'workspace_id'
+            );
+          ")
+          if [ "$COLUMN_EXISTS" = "t" ]; then
+            psql "$PROD_URL" -v ON_ERROR_STOP=1 -tAc "
+              SELECT COUNT(*) FROM override_records WHERE workspace_id IS NULL;
+            "
+          else
+            echo "COLUMN_ABSENT"
+          fi
+
+          echo "--- E. 20260825000001_override_record_workspace_anchor migration state (0 rows = not yet applied/pending) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT migration_name, started_at, finished_at, rolled_back_at, applied_steps_count
+            FROM _prisma_migrations
+            WHERE migration_name = '20260825000001_override_record_workspace_anchor';
+          "
+
+          echo "--- F. override_records_workspace_id_idx presence (expected 0 rows pre-migration, exactly 1 post) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT indexname, indexdef
+            FROM pg_indexes
+            WHERE schemaname = 'public'
+              AND tablename = 'override_records'
+              AND indexname = 'override_records_workspace_id_idx';
+          "
+
+          echo "--- G. override_records_workspace_id_fkey identity (source/target columns + actions, not just name; expected 0 rows pre-migration, exactly 1 post) ---"
+          psql "$PROD_URL" -v ON_ERROR_STOP=1 -c "
+            SELECT
+              con.conname AS constraint_name,
+              CASE con.contype WHEN 'f' THEN 'FOREIGN KEY' ELSE con.contype::text END AS constraint_type,
+              rel.relname AS source_table,
+              att.attname AS source_column,
+              frel.relname AS target_table,
+              fatt.attname AS target_column,
+              CASE con.confdeltype
+                WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE'
+                WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' ELSE con.confdeltype::text
+              END AS delete_action,
+              CASE con.confupdtype
+                WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE'
+                WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' ELSE con.confupdtype::text
+              END AS update_action
+            FROM pg_constraint con
+            JOIN pg_namespace ns ON ns.oid = con.connamespace
+            JOIN pg_class rel ON rel.oid = con.conrelid
+            JOIN pg_class frel ON frel.oid = con.confrelid
+            JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = con.conkey[1]
+            JOIN pg_attribute fatt ON fatt.attrelid = con.confrelid AND fatt.attnum = con.confkey[1]
+            WHERE ns.nspname = 'public'
+              AND con.conname = 'override_records_workspace_id_fkey';
+          "
+
       - name: Local checksum of each candidate migration file on main
         run: |
           set -euo pipefail

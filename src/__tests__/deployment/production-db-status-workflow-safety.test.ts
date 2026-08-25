@@ -211,4 +211,91 @@ describe("production-db-status.yml — read-only safety controls", () => {
     expect(block).toContain("rolled_back_at");
     expect(block).toContain("applied_steps_count");
   });
+
+  it("28. Queries override_records.workspace_id presence/type/nullability via SELECT only (query A)", () => {
+    const idx = src.indexOf("A. override_records.workspace_id presence/type/nullability");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 700);
+    expect(block).toMatch(/SELECT/i);
+    expect(block).toContain("information_schema.columns");
+    expect(block).toContain("table_name = 'override_records'");
+    expect(block).toContain("column_name = 'workspace_id'");
+    expect(block).toContain("is_nullable");
+  });
+
+  it("29. Queries override_records total row count via SELECT COUNT(*) only (query B)", () => {
+    const idx = src.indexOf("B. override_records total row count");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 200);
+    expect(block).toMatch(/SELECT\s+COUNT\(\*\)/i);
+    expect(block).toContain("FROM override_records;");
+  });
+
+  it("30. Queries override_records unmappable-row count via a LEFT JOIN on operator_items only (query C) — never references override_records.workspace_id, so it is safe pre-migration", () => {
+    const idx = src.indexOf("C. override_records unmappable-row count");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 800);
+    expect(block).toMatch(/SELECT\s+COUNT\(\*\)/i);
+    expect(block).toContain("FROM override_records o");
+    expect(block).toContain("LEFT JOIN operator_items oi");
+    expect(block).toContain("oi.id = o.operator_item_id");
+    expect(block).toContain("oi.id IS NULL");
+    expect(block).toContain("oi.workspace_id IS NULL");
+    expect(block).not.toContain("o.workspace_id");
+  });
+
+  it("31. Queries override_records rows with workspace_id IS NULL only after confirming the column exists (query D) — never a bare unguarded reference that would fail to parse pre-migration", () => {
+    const idx = src.indexOf("D. override_records rows with workspace_id IS NULL");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 1300);
+    expect(block).toMatch(/SELECT\s+EXISTS/i);
+    expect(block).toContain("information_schema.columns");
+    expect(block).toContain("COLUMN_EXISTS");
+    expect(block).toMatch(/if\s*\[\s*"\$COLUMN_EXISTS"\s*=\s*"t"\s*\]/);
+    expect(block).toContain("SELECT COUNT(*) FROM override_records WHERE workspace_id IS NULL;");
+    expect(block).toContain("COLUMN_ABSENT");
+    expect(block).not.toMatch(SQL_MUTATION_PATTERN);
+  });
+
+  it("32. Queries the 20260825000001_override_record_workspace_anchor migration state via SELECT only (query E)", () => {
+    const idx = src.indexOf("E. 20260825000001_override_record_workspace_anchor migration state");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 400);
+    expect(block).toMatch(/SELECT/i);
+    expect(block).toContain("FROM _prisma_migrations");
+    expect(block).toContain("migration_name = '20260825000001_override_record_workspace_anchor'");
+  });
+
+  it("33. Queries override_records_workspace_id_idx via pg_indexes SELECT only, scoped to public.override_records (query F)", () => {
+    const idx = src.indexOf("F. override_records_workspace_id_idx presence");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 400);
+    expect(block).toMatch(/SELECT/i);
+    expect(block).toContain("pg_indexes");
+    expect(block).toContain("schemaname = 'public'");
+    expect(block).toContain("tablename = 'override_records'");
+    expect(block).toContain("indexname = 'override_records_workspace_id_idx'");
+  });
+
+  it("34. Queries override_records_workspace_id_fkey identity (source/target table+column, not just constraint-name existence) via SELECT only (query G)", () => {
+    const idx = src.indexOf("G. override_records_workspace_id_fkey identity (source/target");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 1700);
+    expect(block).toMatch(/SELECT/i);
+    expect(block).toContain("pg_constraint");
+    expect(block).toContain("con.conname = 'override_records_workspace_id_fkey'");
+    expect(block).toContain("pg_attribute att ON att.attrelid = con.conrelid");
+    expect(block).toContain("pg_attribute fatt ON fatt.attrelid = con.confrelid");
+    expect(block).toContain("frel.relname AS target_table");
+    expect(block).toContain("fatt.attname AS target_column");
+    expect(block).not.toMatch(SQL_MUTATION_PATTERN);
+  });
+
+  it("35. The override_records forensics step documents that PINNED_PREDEPLOY does not apply (PR #354 is already merged) and MAIN mode is the correct path", () => {
+    const idx = src.indexOf("Query override_records workspace-anchor forensics");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 900);
+    expect(block).toMatch(/PR #354, merged/);
+    expect(block).toMatch(/MAIN mode is/);
+  });
 });
