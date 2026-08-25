@@ -28,11 +28,12 @@ describe("migrate-production.yml — PINNED_PREDEPLOY exact-host gate", () => {
     expect(block).toMatch(/never a full URL/i);
   });
 
-  it("3. A dedicated step verifies the exact host match, gated to PINNED_PREDEPLOY", () => {
+  it("3. A dedicated step verifies the exact host match, unconditionally for every mode (MAIN and PINNED_PREDEPLOY are equally exposed to a wrong-project direct URL)", () => {
     const stepIdx = src.indexOf("Verify exact production database host matches owner-pinned expectation");
     expect(stepIdx).toBeGreaterThan(-1);
-    const stepBlock = src.slice(stepIdx, stepIdx + 300);
-    expect(stepBlock).toMatch(/if:\s*inputs\.mode == 'PINNED_PREDEPLOY'/);
+    const nextStepIdx = src.indexOf("- name:", stepIdx + 10);
+    const stepBlock = src.slice(stepIdx, nextStepIdx);
+    expect(stepBlock).not.toMatch(/if:\s*inputs\.mode/);
   });
 
   it("4. The exact-host step runs the version-controlled validation script (no arbitrary SQL, no inline arbitrary logic)", () => {
@@ -68,19 +69,25 @@ describe("migrate-production.yml — PINNED_PREDEPLOY exact-host gate", () => {
     expect(src).toContain("-pooler.");
   });
 
-  it("9. MAIN mode is not forced to supply expected_database_host (input remains optional at the schema level)", () => {
+  it("9. expected_database_host is required at the schema level — both modes must supply it (unlike the genuinely PINNED_PREDEPLOY-only fields)", () => {
     const idx = src.indexOf("expected_database_host:");
     const block = src.slice(idx, idx + 320);
-    expect(block).toMatch(/required:\s*false/);
+    expect(block).toMatch(/required:\s*true/);
   });
 
-  it("10. Migration summary records the pinned expected host only under PINNED_PREDEPLOY, never unconditionally", () => {
+  it("10. Migration summary records the pinned expected host unconditionally, for every mode, not just PINNED_PREDEPLOY", () => {
     const summaryIdx = src.indexOf("Migration summary");
     const rowIdx = src.indexOf("Expected DB host", summaryIdx);
     expect(rowIdx).toBeGreaterThan(summaryIdx);
+    // The row must NOT be inside the `if PINNED_PREDEPLOY` conditional block:
+    // the nearest preceding "if PINNED_PREDEPLOY" must belong to a DIFFERENT,
+    // already-closed conditional (i.e. a `fi` appears between it and this row).
     const precedingIf = src.lastIndexOf('inputs.mode }}" == "PINNED_PREDEPLOY"', rowIdx);
-    expect(precedingIf).toBeGreaterThan(summaryIdx);
-    expect(precedingIf).toBeLessThan(rowIdx);
+    if (precedingIf > summaryIdx) {
+      const fiBetween = src.indexOf("fi", precedingIf);
+      expect(fiBetween).toBeGreaterThan(-1);
+      expect(fiBetween).toBeLessThan(rowIdx);
+    }
   });
 });
 
