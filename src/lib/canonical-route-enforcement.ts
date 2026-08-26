@@ -714,6 +714,16 @@ export function withCanonicalEnforcement(
       const operationName = options?.operationName;
 
       let classifiedError: ClassifiedApiError;
+      // Only true for a genuine AppError subclass (ValidationError,
+      // NotFoundError, ForbiddenError, etc. -- see src/infra/errors.ts)
+      // reporting a 4xx status: those are deliberately thrown, by
+      // construction carry an owner-safe message (never a stack trace, SQL,
+      // or provider payload), and exist specifically so the real reason for
+      // a rejected request can be shown. A 5xx AppError (e.g.
+      // ServiceUnavailableError) and any unclassified/raw exception keep
+      // the generic message below -- this flag intentionally does not
+      // widen to those cases.
+      let isKnownSafeClientError = false;
 
       if (hasClassification(error)) {
         // Error already has classification/stage, preserve it
@@ -737,6 +747,7 @@ export function withCanonicalEnforcement(
           statusCode,
           error
         );
+        isKnownSafeClientError = statusCode >= 400 && statusCode < 500;
       } else {
         // Raw unclassified error - use namespace-specific fallback
         const fallbackClassification = errorNamespace
@@ -816,7 +827,11 @@ export function withCanonicalEnforcement(
       });
 
       const responseBody: any = {
-        error: "Internal server error",
+        // A known, owner-safe 4xx AppError (e.g. ValidationError) exposes
+        // its real message so the client can act on it; any 5xx or
+        // unclassified/raw exception keeps the generic message -- never
+        // exposes a stack, SQL, provider payload, or other internal detail.
+        error: isKnownSafeClientError ? classifiedError.message : "Internal server error",
         correlationId: finalCorrelationId,
         classification: classifiedError.classification,
         stage: classifiedError.stage,
