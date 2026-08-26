@@ -17,7 +17,10 @@ name: Production Owner Acceptance (LIVE)
 # why): tests/production/21-sales-acceptance.spec.ts,
 # 22-operations-acceptance.spec.ts, 23-strategy-acceptance.spec.ts,
 # 24-cashflow-acceptance.spec.ts, 25-marketing-acceptance.spec.ts,
-# 26-recovery-acceptance.spec.ts. Playwright discovers every *.spec.ts file
+# 26-recovery-acceptance.spec.ts; and tests/production/27-growth-pricing-
+# acceptance.spec.ts (Growth Pricing owner UI, PR #359 -- workspace-scoped,
+# not per-business, so it mutates price-tier data directly rather than via
+# helpers/domain-business.ts). Playwright discovers every *.spec.ts file
 # under testDir (tests/production) automatically -- this list is
 # documentation, not a file-selection gate; keep it in sync as domains are
 # added.

@@ -226,7 +226,7 @@ export default function OwnerGrowthPricingPage() {
             const canApprove = t.approvalStatus !== "approved" && t.status !== "ARCHIVED";
             const canSupersede = !t.supersededById && t.status !== "ARCHIVED";
             return (
-              <div key={t.id} className="border rounded-lg p-4 bg-white">
+              <div key={t.id} className="border rounded-lg p-4 bg-white" data-testid={`price-tier-${t.id}`}>
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="text-sm font-semibold">{t.name} <span className="text-muted-foreground font-normal">v{t.version}</span></div>
