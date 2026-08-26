@@ -77,7 +77,26 @@ export async function getSalesDashboard(
         findings: { orderBy: { severity: "asc" } },
         actions: {
           include: { verifications: { orderBy: { createdAt: "desc" } } },
-          orderBy: { priorityScore: "desc" },
+          // Deterministic total order: priorityScore is clamped to [0,100]
+          // (calculateOwnerPriorityScore), so ties at the ceiling are a real,
+          // expected occurrence whenever multiple critical findings coexist
+          // -- not an edge case. A single-key orderBy has no guaranteed
+          // return order for tied rows across repeated SELECTs, so an
+          // unrelated UPDATE (e.g. an Assign PATCH) can change which tied
+          // row Postgres returns first on the very next read, silently
+          // reordering the owner-visible action list. The first 5 keys
+          // mirror rankOwnerActions()'s tiebreak chain (contracts.ts); `id`
+          // is added as the final key because rankOwnerActions()'s own
+          // comparator does not terminate in a unique key (OwnerAction.id
+          // is optional there) and is therefore not itself a total order.
+          orderBy: [
+            { priorityScore: "desc" },
+            { expectedImpactScore: "desc" },
+            { confidence: "desc" },
+            { findingCode: "asc" },
+            { title: "asc" },
+            { id: "asc" },
+          ],
         },
       },
     }),

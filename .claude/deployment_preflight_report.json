@@ -1,19 +1,19 @@
 {
-  "timestamp": "2026-08-26T12:17:30.238Z",
+  "timestamp": "2026-08-26T16:28:27.681Z",
   "node_version": "v22.22.2",
   "npm_version": "10.9.7",
   "environment_checks": [
     {
       "name": "NODE_ENV",
       "category": "REQUIRED",
-      "present": true,
-      "value": "[SET]"
+      "present": false,
+      "value": "[NOT SET]"
     },
     {
       "name": "DATABASE_URL",
       "category": "REQUIRED",
-      "present": false,
-      "value": "[NOT SET]"
+      "present": true,
+      "value": "[SET]"
     },
     {
       "name": "NEXT_PUBLIC_APP_URL",
@@ -24,8 +24,8 @@
     {
       "name": "SKIP_ENV_VALIDATION",
       "category": "LOCAL_ONLY",
-      "present": true,
-      "value": "[SET]"
+      "present": false,
+      "value": "[NOT SET]"
     },
     {
       "name": "STRIPE_SECRET_KEY",
@@ -76,10 +76,11 @@
     "package_lock_exists": true
   },
   "prisma_schema_valid": true,
-  "prisma_migrations_status": "DATABASE_URL_NOT_SET",
+  "prisma_migrations_status": "ERROR",
   "overall_status": "BLOCKED",
   "blockers": [
-    "Required env DATABASE_URL not set"
+    "Required env NODE_ENV not set",
+    "Failed to check migration status"
   ],
   "warnings": [
     "External runtime env NEXT_PUBLIC_APP_URL not set - will be needed at deployment"
