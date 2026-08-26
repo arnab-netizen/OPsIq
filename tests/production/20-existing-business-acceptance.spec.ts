@@ -226,31 +226,29 @@ test.describe("PROD-01 — Existing-business Owner journey live production accep
   });
 
   test("01-07 — action lifecycle: Assign -> Start -> Complete -> Verify outcome, each step's owner-visible status confirmed", async () => {
-    const actionCards = page.locator("section", { hasText: "Finance actions" }).locator(".border.rounded.p-3");
-    const count = await actionCards.count();
+    const actionsSection = page.locator("section", { hasText: "Finance actions" });
+    const count = await actionsSection.locator(".border.rounded.p-3").count();
     test.skip(count === 0, "SKIPPED_NO_ACTIONS_GENERATED: this diagnosis produced zero findings/actions for the synthetic snapshot -- not a defect, but not exercisable this run.");
-    const card = actionCards.first();
 
-    // Capture this action's own id before any mutation. Required because
-    // completing an action deterministically triggers an automatic
-    // re-diagnosis (updateFinanceAction -> runFinanceDiagnosis, see
-    // src/services/owner-finance/action.service.ts's "On action completion
-    // ... trigger re-diagnosis from latest snapshot") -- proven end-to-end
-    // against real Postgres in
-    // src/__tests__/owner-finance/services.db.test.ts. That creates a NEW
-    // OwnerFinanceCycle whose fresh "proposed" actions become the
-    // dashboard's latestCycle, including (deterministically, since the
-    // underlying snapshot is unchanged) a regenerated action with the SAME
-    // title/priority as this one. Run #32568877293 (run #6) observed
-    // exactly this: after clicking Complete, `.first()`-by-priority
-    // re-resolved to that NEW, different, still-"proposed" action -- an
-    // apparent "reversion" that is not one; this action's own row is
-    // completed permanently and is verified directly by id below, not by
-    // re-inspecting the (now different) dashboard action list.
+    // Capture this action's own id AND title before any mutation, and
+    // locate its card by title from here on -- never by position. Required
+    // because completing an action deterministically triggers an automatic
+    // re-diagnosis (updateFinanceAction -> runFinanceDiagnosis) that creates
+    // a NEW cycle with a regenerated, same-titled action -- run #32568877293
+    // (run #6) observed `.first()`-by-priority re-resolving to that new,
+    // still-"proposed" action after Complete; this action's own row is
+    // verified directly by id below instead. Finance also shares the same
+    // priorityScore-tie-vulnerable dashboard query as the 5 domains that
+    // failed live-acceptance run 32953759246 (now closed via a deterministic
+    // orderBy) -- title-based lookup makes Assign/Start immune regardless.
     const dashboardBefore = await timedApiCall(context, "GET", "/api/owner/finance/dashboard", () =>
       page.request.get(`/api/owner/finance/dashboard?businessId=${acceptanceBusinessId}`)
     );
-    const actionId: string = (await dashboardBefore.json()).latestCycle.actions[0].id;
+    const targetAction = (await dashboardBefore.json()).latestCycle.actions[0];
+    const actionId: string = targetAction.id;
+    const actionTitle: string = targetAction.title;
+    const card = actionsSection.locator(".border.rounded.p-3", { hasText: actionTitle });
+    await expect(card, "exactly one action card must match the captured title").toHaveCount(1);
 
     await card.getByRole("button", { name: "Assign" }).click();
     await page.waitForLoadState("networkidle");
