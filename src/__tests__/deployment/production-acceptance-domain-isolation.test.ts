@@ -20,6 +20,18 @@ const PROD_DIR = join(process.cwd(), "tests/production");
 // file must resolve its OWN dedicated business instead.
 const STARTUP_SPEC = "10-startup-mode-acceptance.spec.ts";
 
+// Specs whose domain has no per-business concept at all -- resolving a
+// dedicated business for them would create a business the domain's API
+// never references, contributing nothing to isolation (there is no
+// cross-business collision risk to isolate against). Each entry requires
+// the exempted spec's own header comment to state this explicitly.
+// Growth Pricing: PricingEngine keys every record by workspaceId only (see
+// src/services/growth/pricing-engine.ts) -- no businessId anywhere in its
+// schema or API routes. Exempt from the business-isolation checks below,
+// but NOT from the trinityBusinessId / cross-domain-file-read checks,
+// which still apply and would still catch a real regression.
+const WORKSPACE_SCOPED_SPECS = new Set(["27-growth-pricing-acceptance.spec.ts"]);
+
 function isAcceptanceSpec(filename: string): boolean {
   return /^\d+-.*-acceptance\.spec\.ts$/.test(filename);
 }
@@ -28,6 +40,10 @@ function mutatingDomainSpecFiles(): string[] {
   return readdirSync(PROD_DIR)
     .filter((f) => isAcceptanceSpec(f) && f !== STARTUP_SPEC)
     .sort();
+}
+
+function businessIsolatedDomainSpecFiles(): string[] {
+  return mutatingDomainSpecFiles().filter((f) => !WORKSPACE_SCOPED_SPECS.has(f));
 }
 
 const DOMAIN_BUSINESS_SRC = readFileSync(join(PROD_DIR, "helpers/domain-business.ts"), "utf-8");
@@ -54,12 +70,13 @@ describe("domain-business.ts helper -- correctness and evidence-safety", () => {
 
 describe("every existing mutating-domain acceptance spec -- resolves its own isolated business", () => {
   const files = mutatingDomainSpecFiles();
+  const businessIsolatedFiles = businessIsolatedDomainSpecFiles();
 
   it("found at least the 5 already-migrated domain spec files (sanity check the glob itself works)", () => {
-    expect(files.length).toBeGreaterThanOrEqual(5);
+    expect(businessIsolatedFiles.length).toBeGreaterThanOrEqual(5);
   });
 
-  it.each(files)("%s imports and calls resolveOrCreateDomainBusiness (does not read the shared Startup handoff file)", (file) => {
+  it.each(businessIsolatedFiles)("%s imports and calls resolveOrCreateDomainBusiness (does not read the shared Startup handoff file)", (file) => {
     const src = readFileSync(join(PROD_DIR, file), "utf-8");
     expect(src, `${file} must import resolveOrCreateDomainBusiness from ./helpers/domain-business`).toContain(
       'from "./helpers/domain-business"'
@@ -80,7 +97,7 @@ describe("every existing mutating-domain acceptance spec -- resolves its own iso
 
   it("every file resolves a domain string that appears nowhere else (no two specs share a domain)", () => {
     const usedDomains: string[] = [];
-    for (const file of files) {
+    for (const file of businessIsolatedFiles) {
       const src = readFileSync(join(PROD_DIR, file), "utf-8");
       const match = src.match(/resolveOrCreateDomainBusiness\(\s*context\s*,\s*page\s*,\s*"([a-z]+)"/);
       expect(match, `${file} must call resolveOrCreateDomainBusiness with a literal domain string`).toBeTruthy();
