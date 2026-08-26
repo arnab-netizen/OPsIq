@@ -199,25 +199,33 @@ test.describe("PROD-21 — Sales Owner journey live production acceptance", () =
     });
 
     test("21-06 — action lifecycle: Assign -> Start -> Complete -> Verify outcome, each step's owner-visible status confirmed", async () => {
-      const actionCards = page.locator("section", { hasText: "Sales actions" }).locator(".border.rounded.p-3");
-      const count = await actionCards.count();
+      const actionsSection = page.locator("section", { hasText: "Sales actions" });
+      const count = await actionsSection.locator(".border.rounded.p-3").count();
       test.skip(count === 0, "SKIPPED_NO_ACTIONS_GENERATED: this diagnosis produced zero findings/actions for the synthetic snapshot -- not a defect, but not exercisable this run.");
-      const card = actionCards.first();
 
-      // Capture this action's own id before any mutation -- completing an
-      // action deterministically triggers an automatic re-diagnosis
-      // (updateSalesAction -> runSalesDiagnosis, mirrors
+      // Capture this action's own id AND title before any mutation, and
+      // locate its card by title from here on -- never by position.
+      // Completing an action deterministically triggers an automatic
+      // re-diagnosis (updateSalesAction -> runSalesDiagnosis, mirrors
       // owner-finance/action.service.ts's identical mechanism, root-caused
-      // in workflow run #32568877293 / PR #336). That creates a NEW
-      // OwnerSalesCycle whose fresh "proposed" actions become the
-      // dashboard's latestCycle, including a regenerated action with the
-      // same title/priority as this one. Verify Complete/Verify against
-      // this exact id, not by re-inspecting the (now possibly different)
-      // dashboard action list.
+      // in workflow run #32568877293 / PR #336), which creates a NEW
+      // OwnerSalesCycle. Separately (workflow run 32953759246), when
+      // multiple actions tie at the priorityScore [0,100] clamp ceiling (a
+      // real, common occurrence for a "deliberately stressed" scenario with
+      // several simultaneous critical findings), a plain `.first()` locator
+      // can silently resolve to a DIFFERENT, untouched action after any
+      // mutation reorders the tied rows -- the dashboard query's ordering
+      // was made fully deterministic to fix that, but this test also stops
+      // relying on card position at all, so it verifies "this exact action
+      // transitioned" independently of whether the list's order is stable.
       const dashboardBefore = await timedApiCall(context, "GET", "/api/owner/sales/dashboard", () =>
         page.request.get(`/api/owner/sales/dashboard?businessId=${acceptanceBusinessId}`)
       );
-      const actionId: string = (await dashboardBefore.json()).latestCycle.actions[0].id;
+      const targetAction = (await dashboardBefore.json()).latestCycle.actions[0];
+      const actionId: string = targetAction.id;
+      const actionTitle: string = targetAction.title;
+      const card = actionsSection.locator(".border.rounded.p-3", { hasText: actionTitle });
+      await expect(card, "exactly one action card must match the captured title").toHaveCount(1);
 
       await card.getByRole("button", { name: "Assign" }).click();
       await page.waitForLoadState("networkidle");

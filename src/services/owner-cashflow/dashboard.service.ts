@@ -77,7 +77,22 @@ export async function getCashflowDashboard(
         findings: { orderBy: { severity: "asc" } },
         actions: {
           include: { verifications: { orderBy: { createdAt: "desc" } } },
-          orderBy: { priorityScore: "desc" },
+          // Deterministic total order -- see owner-sales/dashboard.service.ts
+          // for the full incident writeup. priorityScore ties at the [0,100]
+          // clamp ceiling are real and expected; a single-key orderBy has no
+          // guaranteed return order for tied rows, so an unrelated UPDATE
+          // (e.g. Assign) can silently reorder the owner-visible list on the
+          // very next read. `id` terminates the chain because
+          // rankOwnerActions()'s own comparator (contracts.ts) is not
+          // itself a total order (OwnerAction.id is optional there).
+          orderBy: [
+            { priorityScore: "desc" },
+            { expectedImpactScore: "desc" },
+            { confidence: "desc" },
+            { findingCode: "asc" },
+            { title: "asc" },
+            { id: "asc" },
+          ],
         },
       },
     }),

@@ -179,15 +179,29 @@ test.describe("PROD-23 — Strategy Owner journey live production acceptance", (
     });
 
     test("23-06 — action lifecycle: Assign -> Start -> Complete -> Verify outcome, each step's owner-visible status confirmed", async () => {
-      const actionCards = page.locator("section", { hasText: "Strategy actions" }).locator(".border.rounded.p-3");
-      const count = await actionCards.count();
+      const actionsSection = page.locator("section", { hasText: "Strategy actions" });
+      const count = await actionsSection.locator(".border.rounded.p-3").count();
       test.skip(count === 0, "SKIPPED_NO_ACTIONS_GENERATED: this evaluation produced zero findings/actions for the synthetic scenario -- not a defect, but not exercisable this run.");
-      const card = actionCards.first();
 
+      // Capture this action's own id AND title before any mutation, and
+      // locate its card by title from here on -- never by position. When
+      // multiple actions tie at the priorityScore [0,100] clamp ceiling (a
+      // real, common occurrence for a "deliberately stressed" scenario with
+      // several simultaneous critical findings), a plain `.first()` locator
+      // can silently resolve to a DIFFERENT, untouched action after any
+      // mutation reorders the tied rows (workflow run 32953759246) -- the
+      // dashboard query's ordering was made fully deterministic to fix
+      // that, but this test also stops relying on card position at all, so
+      // it verifies "this exact action transitioned" independently of
+      // whether the list's order is stable.
       const dashboardBefore = await timedApiCall(context, "GET", "/api/owner/strategy/dashboard", () =>
         page.request.get(`/api/owner/strategy/dashboard?businessId=${acceptanceBusinessId}`)
       );
-      const actionId: string = (await dashboardBefore.json()).latestCycle.actions[0].id;
+      const targetAction = (await dashboardBefore.json()).latestCycle.actions[0];
+      const actionId: string = targetAction.id;
+      const actionTitle: string = targetAction.title;
+      const card = actionsSection.locator(".border.rounded.p-3", { hasText: actionTitle });
+      await expect(card, "exactly one action card must match the captured title").toHaveCount(1);
 
       await card.getByRole("button", { name: "Assign" }).click();
       await page.waitForLoadState("networkidle");
