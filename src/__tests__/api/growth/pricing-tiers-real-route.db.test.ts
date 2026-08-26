@@ -146,6 +146,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     });
 
     afterEach(async () => {
+      // Every PricingEngine mutation emits an AuditEvent FK'd to the actor
+      // (onDelete: Restrict) -- must be deleted before the user, or the
+      // final deleteMany below throws a foreign key violation.
+      await db.auditEvent.deleteMany({ where: { actorId } });
       await db.growthPriceTier.deleteMany({
         where: { workspaceId: { in: [workspaceA, workspaceB] } },
       });
@@ -240,20 +244,39 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         "@/app/api/growth/pricing-tiers/route"
       );
 
+      testActorIdForMock = actorId;
       testWorkspaceIdForMock = workspaceA;
       const createResponse = await createPost(makeRequest(CREATE_BODY_WITH_FEATURES), {
         params: Promise.resolve({}),
       });
       const created = await createResponse.json();
 
-      await db.workspaceMembership.create({
-        data: { userId: actorId, workspaceId: workspaceB, role: "admin", isActive: true },
+      // verifiedWorkspaceId is resolved server-side from the authenticated
+      // user's OWN earliest workspaceMembership row (canonical-route-
+      // enforcement.ts orders by addedAt asc) -- it is never taken from the
+      // policy-context mock's scopeId. A second membership row for the SAME
+      // actor would therefore still resolve to workspace A (the earlier
+      // membership), not workspace B, making this assertion vacuous. A
+      // genuinely separate actor -- who only ever has a workspace B
+      // membership -- is required to exercise real cross-workspace isolation.
+      const actorIdB = randomUUID();
+      await db.user.create({
+        data: { id: actorIdB, email: `${actorIdB}@example.com`, updatedAt: new Date() },
       });
+      await db.workspaceMembership.create({
+        data: { userId: actorIdB, workspaceId: workspaceB, role: "admin", isActive: true },
+      });
+      testActorIdForMock = actorIdB;
       testWorkspaceIdForMock = workspaceB;
 
-      const listResponseB = await listGet(makeGetRequest(), { params: Promise.resolve({}) });
-      const listB = await listResponseB.json();
-      expect(listB.find((t: { id: string }) => t.id === created.id)).toBeUndefined();
+      try {
+        const listResponseB = await listGet(makeGetRequest(), { params: Promise.resolve({}) });
+        const listB = await listResponseB.json();
+        expect(listB.find((t: { id: string }) => t.id === created.id)).toBeUndefined();
+      } finally {
+        await db.workspaceMembership.deleteMany({ where: { userId: actorIdB } });
+        await db.user.deleteMany({ where: { id: actorIdB } });
+      }
     });
 
     it("safe-error policy: a raw internal Error thrown by the handler is NEVER exposed to the client", async () => {

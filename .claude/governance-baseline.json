@@ -132,7 +132,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/infra/classified-error.ts",
-      "line": 129,
+      "line": 137,
       "severity": "error",
       "code": "if (typeof adapterError.message === \"string\") {",
       "reason": "infra error classification/logging; not operator-rendered"
@@ -141,7 +141,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/infra/classified-error.ts",
-      "line": 236,
+      "line": 252,
       "severity": "error",
       "code": "if (typeof adapterError.message === \"string\") {",
       "reason": "infra error classification/logging; not operator-rendered"
@@ -150,7 +150,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/infra/classified-error.ts",
-      "line": 316,
+      "line": 332,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error);",
       "reason": "infra error classification/logging; not operator-rendered"
