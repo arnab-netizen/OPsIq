@@ -97,3 +97,26 @@ export const startupScreeningProfileSchema = z
     existingNetworkStrength: z.number().nullable().optional(),
   })
   .strict();
+
+/**
+ * Close a StartupInitiative's funded outcome (F-STARTUP-OUTCOME-LOOP). Mirrors
+ * the owner-budget `InitiativeCloseInput` contract exactly (same fields, same
+ * semantics) so classification reuses classifyBudgetOutcome unchanged.
+ * `outcomeVerified` is required (no default) — the owner must explicitly say
+ * whether the impact numbers below are verified; an unverified outcome is
+ * never silently treated as a success by the classifier.
+ */
+export const startupInitiativeCloseSchema = z
+  .object({
+    cancelled: z.boolean().optional(),
+    overridden: z.boolean().optional(),
+    externalFactor: z.boolean().optional(),
+    outcomeVerified: z.boolean(),
+    expectedImpact: z.number().finite().nullable().optional(),
+    actualImpact: z.number().finite().nullable().optional(),
+    expectedSpend: z.number().finite().nonnegative().nullable().optional(),
+    actualSpend: z.number().finite().nonnegative().nullable().optional(),
+    note: z.string().max(2000).optional(),
+  })
+  .strict();
+export type StartupInitiativeCloseInput = z.infer<typeof startupInitiativeCloseSchema>;
