@@ -124,11 +124,13 @@ if gunzip -c "$BACKUP_FILE" | psql \
   RESTORED_DB_URL="${RESTORED_DB_URL}${QUERY_SUFFIX}"
 
   TABLE_COUNT=$(psql "$RESTORED_DB_URL" -t -c \
-    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" \
+    "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'public';" \
     | tr -d ' ')
   echo "Tables in restored database: $TABLE_COUNT" | tee -a "$LOG_FILE"
 
-  if [ "$TABLE_COUNT" -eq 0 ]; then
+  if [ "$TABLE_COUNT" -gt 0 ]; then
+    echo "Database contains $TABLE_COUNT tables" | tee -a "$LOG_FILE"
+  else
     echo "RESTORE VERIFICATION FAILED: no tables found in restored database" | tee -a "$LOG_FILE"
     exit 1
   fi
