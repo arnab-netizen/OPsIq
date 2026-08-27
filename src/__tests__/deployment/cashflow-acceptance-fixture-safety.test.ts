@@ -17,15 +17,16 @@ import type { CashflowSnapshotInput } from "@/domain/owner-cashflow/types";
 import {
   CASHFLOW_INSOLVENT_FIXTURE,
   CASHFLOW_SAFE_FIXTURE,
+  insolventFixturePeriod,
+  safeFixturePeriod,
   type CashflowFixtureFields,
+  type FixturePeriod,
 } from "../../../tests/production/fixtures/cashflow-fixtures";
 
-function toSnapshotInput(fields: CashflowFixtureFields): CashflowSnapshotInput {
-  const periodEnd = new Date();
-  const periodStart = new Date(periodEnd.getFullYear(), periodEnd.getMonth() - 1, periodEnd.getDate());
+function toSnapshotInput(fields: CashflowFixtureFields, period: FixturePeriod): CashflowSnapshotInput {
   return {
-    periodStart: periodStart.toISOString().slice(0, 10),
-    periodEnd: periodEnd.toISOString().slice(0, 10),
+    periodStart: period.periodStart,
+    periodEnd: period.periodEnd,
     currency: "INR",
     cashInHand: Number(fields.cashInHand),
     bankBalance: Number(fields.bankBalance),
@@ -49,26 +50,26 @@ function toSnapshotInput(fields: CashflowFixtureFields): CashflowSnapshotInput {
 
 describe("Cashflow acceptance fixtures -- cashflowState proven against the real domain functions", () => {
   it("CASHFLOW_INSOLVENT_FIXTURE computes cashflowState=INSOLVENT_RISK (the safety-gate test's fixture MUST be blocked)", () => {
-    const diagnosis = diagnoseCashflowSnapshot(toSnapshotInput(CASHFLOW_INSOLVENT_FIXTURE));
+    const diagnosis = diagnoseCashflowSnapshot(toSnapshotInput(CASHFLOW_INSOLVENT_FIXTURE, insolventFixturePeriod(new Date())));
     expect(diagnosis.metrics.cashflowState).toBe("INSOLVENT_RISK");
   });
 
   it("CASHFLOW_SAFE_FIXTURE computes cashflowState=AT_RISK, not CRITICAL/INSOLVENT_RISK (the closed-loop test's fixture MUST NOT be blocked)", () => {
-    const diagnosis = diagnoseCashflowSnapshot(toSnapshotInput(CASHFLOW_SAFE_FIXTURE));
+    const diagnosis = diagnoseCashflowSnapshot(toSnapshotInput(CASHFLOW_SAFE_FIXTURE, safeFixturePeriod(new Date())));
     expect(diagnosis.metrics.cashflowState).toBe("AT_RISK");
     expect(diagnosis.metrics.cashflowState).not.toBe("CRITICAL");
     expect(diagnosis.metrics.cashflowState).not.toBe("INSOLVENT_RISK");
   });
 
   it("CASHFLOW_SAFE_FIXTURE still produces at least one real, actionable Cashflow action", () => {
-    const diagnosis = diagnoseCashflowSnapshot(toSnapshotInput(CASHFLOW_SAFE_FIXTURE));
+    const diagnosis = diagnoseCashflowSnapshot(toSnapshotInput(CASHFLOW_SAFE_FIXTURE, safeFixturePeriod(new Date())));
     const plan = planCashflowActionsFromDiagnosis(diagnosis);
     expect(plan.actions.length).toBeGreaterThan(0);
     expect(plan.actions.some((a) => a.findingCode === "CF_HIGH_OVERDUE_RECEIVABLES")).toBe(true);
   });
 
   it("CASHFLOW_SAFE_FIXTURE's classification is not an accident of a single signal being exactly at the threshold (clear margin, not borderline)", () => {
-    const diagnosis = diagnoseCashflowSnapshot(toSnapshotInput(CASHFLOW_SAFE_FIXTURE));
+    const diagnosis = diagnoseCashflowSnapshot(toSnapshotInput(CASHFLOW_SAFE_FIXTURE, safeFixturePeriod(new Date())));
     // cashRunwayDays must be null (not burning) -- proves runway signals play
     // no part in this fixture's classification, isolating overdue-receivables
     // as the one deliberate trigger.

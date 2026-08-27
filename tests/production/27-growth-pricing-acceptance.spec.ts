@@ -112,11 +112,32 @@ test.describe("PROD-27 — Growth Pricing owner UI live production acceptance", 
     // growth-pricing-acceptance-required-fields.test.ts, which fails
     // statically if this fill is ever removed.
     await page.locator('textarea[name="features"]').fill(TIER_FEATURE);
-    await page.getByRole("button", { name: "Create price tier (draft)" }).click();
-    await page.waitForLoadState("networkidle");
 
-    const created = await findTierByName(page, TIER_NAME);
-    expect(created, "Created tier must be present via the API, not only the UI").toBeTruthy();
+    // waitForLoadState("networkidle") can settle in the brief JS-only gap
+    // between the CREATE POST resolving and the client's own follow-up
+    // reload (loadAll()) starting -- the same INDETERMINATE_TEST_
+    // SYNCHRONIZATION_DEFECT class documented in helpers/domain-diagnosis.ts.
+    // A live acceptance run against this exact code proved it: the create
+    // POST returned 201 (real DB write succeeded), but the error-context
+    // snapshot at the moment of failure showed the create form already
+    // dismissed (past the POST) with the "+ New price tier" button still
+    // disabled and the tier count still 0 -- the client was mid-loadAll(),
+    // not failing to create. Wait for the CREATE response itself (proves
+    // the mutation succeeded), then poll the read side via .toPass()
+    // instead of a single-shot check.
+    const [createResponse] = await Promise.all([
+      page.waitForResponse(
+        (res) => new URL(res.url()).pathname === "/api/growth/pricing-tiers" && res.request().method() === "POST"
+      ),
+      page.getByRole("button", { name: "Create price tier (draft)" }).click(),
+    ]);
+    expect(createResponse.status(), `Create tier request failed: HTTP ${createResponse.status()}`).toBe(201);
+
+    let created: AcceptanceTierRecord | null = null;
+    await expect(async () => {
+      created = await findTierByName(page, TIER_NAME);
+      expect(created, "Created tier must be present via the API, not only the UI").toBeTruthy();
+    }).toPass({ timeout: 15000 });
     createdTierId = created!.id;
     expect(created!.features, "Submitted feature must be persisted, not silently dropped").toContain(TIER_FEATURE);
 
@@ -159,11 +180,24 @@ test.describe("PROD-27 — Growth Pricing owner UI live production acceptance", 
 
     await supersedeForm.locator('input[name="name"]').fill(SUPERSEDED_TIER_NAME);
     await featuresTextarea.fill(`${prefilled}\n${SUPERSEDED_TIER_FEATURE}`);
-    await supersedeForm.getByRole("button", { name: "Create new version" }).click();
-    await page.waitForLoadState("networkidle");
 
-    const superseded = await findTierByName(page, SUPERSEDED_TIER_NAME);
-    expect(superseded, "Superseding tier must be present via the API, not only the UI").toBeTruthy();
+    // Same INDETERMINATE_TEST_SYNCHRONIZATION_DEFECT class as 27-02's create
+    // flow (networkidle can settle before supersede's own follow-up reload
+    // starts) -- wait for the SUPERSEDE response itself, then poll the read
+    // side via .toPass() instead of a single-shot check.
+    const [supersedeResponse] = await Promise.all([
+      page.waitForResponse(
+        (res) => /\/api\/growth\/pricing-tiers\/[^/]+\/supersede$/.test(new URL(res.url()).pathname) && res.request().method() === "POST"
+      ),
+      supersedeForm.getByRole("button", { name: "Create new version" }).click(),
+    ]);
+    expect(supersedeResponse.status(), `Supersede request failed: HTTP ${supersedeResponse.status()}`).toBe(201);
+
+    let superseded: AcceptanceTierRecord | null = null;
+    await expect(async () => {
+      superseded = await findTierByName(page, SUPERSEDED_TIER_NAME);
+      expect(superseded, "Superseding tier must be present via the API, not only the UI").toBeTruthy();
+    }).toPass({ timeout: 15000 });
     supersededTierId = superseded!.id;
     expect(superseded!.features, "New version must retain the original feature").toContain(TIER_FEATURE);
     expect(superseded!.features, "New version must carry the newly-added feature").toContain(SUPERSEDED_TIER_FEATURE);
