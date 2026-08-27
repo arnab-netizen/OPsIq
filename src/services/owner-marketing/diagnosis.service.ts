@@ -145,7 +145,18 @@ export async function getMarketingDiagnosis(cycleId: string, workspaceId: string
       findings: { orderBy: { severity: "asc" } },
       actions: {
         include: { verifications: { orderBy: { createdAt: "desc" } } },
-        orderBy: { priorityScore: "desc" },
+        // Deterministic total order: priorityScore is clamped to [0,100], so
+        // ties at the ceiling are a real, expected occurrence -- a single-key
+        // orderBy has no guaranteed return order for tied rows across
+        // repeated SELECTs. Same fix/rationale as dashboard.service.ts (PR #361).
+        orderBy: [
+          { priorityScore: "desc" },
+          { expectedImpactScore: "desc" },
+          { confidence: "desc" },
+          { findingCode: "asc" },
+          { title: "asc" },
+          { id: "asc" },
+        ],
       },
     },
   });
@@ -173,7 +184,14 @@ export async function listMarketingCycleActions(cycleId: string, workspaceId: st
   if (!cycle) throw new NotFoundError("OwnerMarketingCycle", cycleId);
   return db.ownerMarketingAction.findMany({
     where: { cycleId, workspaceId },
-    orderBy: { priorityScore: "desc" },
+    orderBy: [
+      { priorityScore: "desc" },
+      { expectedImpactScore: "desc" },
+      { confidence: "desc" },
+      { findingCode: "asc" },
+      { title: "asc" },
+      { id: "asc" },
+    ],
     include: { verifications: { orderBy: { createdAt: "desc" } } },
   });
 }

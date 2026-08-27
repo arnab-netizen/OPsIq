@@ -86,7 +86,18 @@ function flattenVerifications(cycle: any, domain: OwnerDomain): OwnerHomeVerific
 const spineCycleInclude = {
   findings: { orderBy: { severity: "asc" } },
   actions: {
-    orderBy: { priorityScore: "desc" },
+    // Deterministic total order: priorityScore is clamped to [0,100], so
+    // ties at the ceiling are a real, expected occurrence -- a single-key
+    // orderBy has no guaranteed return order for tied rows across
+    // repeated SELECTs. Same fix/rationale as dashboard.service.ts (PR #361).
+    orderBy: [
+      { priorityScore: "desc" },
+      { expectedImpactScore: "desc" },
+      { confidence: "desc" },
+      { findingCode: "asc" },
+      { title: "asc" },
+      { id: "asc" },
+    ],
     include: { verifications: { orderBy: { createdAt: "desc" } } },
   },
 } as const;
