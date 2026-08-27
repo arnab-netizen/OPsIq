@@ -1,0 +1,145 @@
+name: Backup Restore Rehearsal (Isolated)
+
+# Proves a production backup produced by scheduled-backup.yml is actually
+# restorable -- not just that pg_dump exited 0 -- by restoring it into a
+# disposable postgres:16 GitHub Actions SERVICE CONTAINER that is created
+# fresh for this job and destroyed the moment the job ends.
+#
+# THIS WORKFLOW NEVER CONNECTS TO PRODUCTION. It has no
+# PRODUCTION_DATABASE_URL / STAGING_DATABASE_URL reference anywhere. Its
+# only inputs are (a) a past backup artifact, already sitting in GitHub
+# Actions storage, and (b) a same-repo, ephemeral container. This mirrors
+# the existing LANE_B pattern in .github/workflows/db-verification.yml
+# (a throwaway postgres:16 service container, "not Neon, not production").
+#
+# Verification here is layered, deliberately going beyond "the restore
+# command exited 0":
+#   1. checksum verification of the downloaded artifact (restore-database.sh)
+#   2. gzip container integrity (restore-database.sh)
+#   3. pg_dump completion-marker check, catching truncated dumps (restore-database.sh)
+#   4. table + row count assertions with a hard failure on an empty schema (restore-database.sh)
+#   5. an INDEPENDENT post-restore query in this workflow (not trusting the
+#      script's own self-report) re-deriving the restored db name from the
+#      dump and re-querying information_schema directly.
+#
+# Runs monthly as a standing recovery drill, and on demand.
+
+on:
+  schedule:
+    # Monthly recovery drill, 1st of the month, 07:00 UTC.
+    - cron: '0 7 1 * *'
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Optional: exact scheduled-backup.yml run ID to rehearse. Leave blank to auto-select the most recent successful run.'
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: backup-restore-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    name: Restore Rehearsal (throwaway container)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rehearsal_target
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rehearsal_target"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y postgresql-client
+          psql --version
+
+      - name: Resolve source backup run
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          INPUT_RUN_ID="${{ inputs.source_run_id }}"
+          if [ -n "$INPUT_RUN_ID" ]; then
+            RUN_ID="$INPUT_RUN_ID"
+          else
+            RUN_ID=$(gh run list --repo "${{ github.repository }}" --workflow=scheduled-backup.yml --status=success --limit 1 --json databaseId --jq '.[0].databaseId')
+          fi
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "::error::No successful scheduled-backup.yml run found to rehearse. Run scheduled-backup.yml at least once first."
+            exit 1
+          fi
+          echo "Rehearsing backup from scheduled-backup.yml run $RUN_ID"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download backup artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.resolve.outputs.run_id }}
+          name: opsiq-production-backup-${{ steps.resolve.outputs.run_id }}
+          path: downloaded-backup
+
+      - name: Restore into throwaway container
+        id: restore
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/rehearsal_target
+        run: |
+          BACKUP_FILE=$(ls downloaded-backup/opsiq_backup_*.sql.gz | head -1)
+          if [ -z "$BACKUP_FILE" ]; then
+            echo "::error::No backup file found in downloaded artifact"
+            exit 1
+          fi
+          echo "backup_file=$BACKUP_FILE" >> "$GITHUB_OUTPUT"
+          bash scripts/restore-database.sh "$BACKUP_FILE" verify
+
+      - name: Independent post-restore schema/data verification
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: |
+          BACKUP_FILE="${{ steps.restore.outputs.backup_file }}"
+          RESTORED_DB=$(zgrep -m1 -oP '(?<=\\connect )\S+' "$BACKUP_FILE")
+          echo "Independently re-querying restored database: $RESTORED_DB (not trusting restore-database.sh's own self-report)"
+
+          TABLES=$(psql -d "$RESTORED_DB" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
+          COLUMNS=$(psql -d "$RESTORED_DB" -tAc "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public';")
+          CONSTRAINTS=$(psql -d "$RESTORED_DB" -tAc "SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_schema = 'public';")
+
+          echo "Independent verification: $TABLES tables, $COLUMNS columns, $CONSTRAINTS constraints in public schema"
+
+          if [ "$TABLES" -lt 1 ] || [ "$COLUMNS" -lt 1 ]; then
+            echo "::error::Independent post-restore verification found an empty or missing schema"
+            exit 1
+          fi
+          echo "PASS: restored schema is structurally non-empty and independently confirmed."
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "Restore rehearsal PASSED against an isolated, disposable postgres:16 container."
+          echo "Source backup: scheduled-backup.yml run ${{ steps.resolve.outputs.run_id }}"
+          echo "Production was never contacted by this workflow."
