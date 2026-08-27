@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input } from "@/ui/primitives";
+import { Badge, Button, Input, Textarea } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- dynamic dashboard payloads are untyped */
 
@@ -61,11 +61,25 @@ export default function OwnerGrowthPricingPage() {
     })();
   }, [loadAll]);
 
-  function tierInputFromForm(fd: FormData): Record<string, unknown> {
+  // Governed price tiers must always declare at least one feature (domain
+  // invariant, see PricingEngine.createPriceTier's validatePriceTier call)
+  // -- this is never fabricated on the owner's behalf; a submission with
+  // no non-empty lines is blocked client-side with a clear message instead.
+  function parseFeatures(fd: FormData): string[] {
+    const raw = fd.get("features");
+    if (typeof raw !== "string") return [];
+    return raw
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+  }
+
+  function tierInputFromForm(fd: FormData, features: string[]): Record<string, unknown> {
     const body: Record<string, unknown> = {
       name: fd.get("name"),
       entryPrice: Number(fd.get("entryPrice")),
       maxPrice: Number(fd.get("maxPrice")),
+      features,
     };
     const currency = fd.get("currency");
     if (currency && typeof currency === "string" && currency.trim()) body.currency = currency.trim().toUpperCase();
@@ -84,13 +98,18 @@ export default function OwnerGrowthPricingPage() {
 
   async function createTier(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setBusy(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
+    const features = parseFeatures(fd);
+    if (features.length === 0) {
+      setError("At least one feature is required.");
+      return;
+    }
+    setBusy(true);
     try {
       await api("/api/growth/pricing-tiers", {
         method: "POST",
-        body: JSON.stringify(tierInputFromForm(fd)),
+        body: JSON.stringify(tierInputFromForm(fd, features)),
       });
       setShowCreateForm(false);
       await loadAll();
@@ -116,13 +135,18 @@ export default function OwnerGrowthPricingPage() {
 
   async function supersede(e: React.FormEvent<HTMLFormElement>, tierId: string) {
     e.preventDefault();
-    setBusy(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
+    const features = parseFeatures(fd);
+    if (features.length === 0) {
+      setError("At least one feature is required.");
+      return;
+    }
+    setBusy(true);
     try {
       await api(`/api/growth/pricing-tiers/${tierId}/supersede`, {
         method: "POST",
-        body: JSON.stringify(tierInputFromForm(fd)),
+        body: JSON.stringify(tierInputFromForm(fd, features)),
       });
       setSupersedeFormFor(null);
       await loadAll();
@@ -212,6 +236,7 @@ export default function OwnerGrowthPricingPage() {
             <Input name="customerSegment" label="Customer segment (optional)" />
             <Input name="channel" label="Channel (optional)" />
           </div>
+          <Textarea name="features" label="Features (one per line, at least one required)" required rows={3} placeholder={"e.g.\nPriority support\nSSO"} />
           <Button type="submit" disabled={busy}>{busy ? "Creating…" : "Create price tier (draft)"}</Button>
         </form>
       )}
@@ -269,6 +294,13 @@ export default function OwnerGrowthPricingPage() {
                       <Input name="variableCost" label="Variable cost (optional)" type="number" step="0.01" min="0" defaultValue={t.variableCost ?? undefined} />
                       <Input name="allocatedCost" label="Allocated cost (optional)" type="number" step="0.01" min="0" defaultValue={t.allocatedCost ?? undefined} />
                     </div>
+                    <Textarea
+                      name="features"
+                      label="Features (one per line, at least one required)"
+                      required
+                      rows={3}
+                      defaultValue={(t.features ?? []).join("\n")}
+                    />
                     <Button type="submit" disabled={busy}>{busy ? "Creating…" : "Create new version"}</Button>
                   </form>
                 )}

@@ -92,12 +92,20 @@ export function extractSafePrismaError(error: unknown): Record<string, unknown> 
   // Get first line of message only
   if (typeof obj.message === "string") {
     const firstLine = obj.message.split("\n")[0];
-    // Remove query details if present (sanitize field/arg names)
+    // Remove query details if present (sanitize field/arg names), then
+    // scrub connection-string-shaped credentials the same way
+    // driverAdapterErrorMessage/driverAdapterErrorCauseMessage below do --
+    // this message can originate from an arbitrary caught error, not only
+    // a Prisma validation error, so it must never carry a raw secret.
     const safeMessage = firstLine
       .replace(/Unknown arg `[^`]*` in.*/, "Unknown field in query")
       .replace(/Unknown field `[^`]*` in.*/, "Unknown field in model")
       .replace(/`[^`]*` doesn't exist/, "Field doesn't exist")
-      .replace(/Unknown field name.*/, "Unknown field");
+      .replace(/Unknown field name.*/, "Unknown field")
+      .replace(/[a-z][a-z0-9+.-]*:\/\/[^\s]+/gi, (match: string) => `${match.split("://")[0]}://***`)
+      .replace(/password[=:]\S+/gi, "password=***")
+      .replace(/token[=:]\S+/gi, "token=***")
+      .replace(/key[=:]\S+/gi, "key=***");
     if (safeMessage.length > 0) {
       result.safeMessage = safeMessage.slice(0, 300); // Limit length
     }
@@ -199,12 +207,20 @@ export function extractSafeKnownError(error: unknown): Record<string, unknown> {
   // Get first line of message only
   if (typeof obj.message === "string") {
     const firstLine = obj.message.split("\n")[0];
-    // Remove query details if present (sanitize field/arg names)
+    // Remove query details if present (sanitize field/arg names), then
+    // scrub connection-string-shaped credentials the same way
+    // driverAdapterErrorMessage/driverAdapterErrorCauseMessage below do --
+    // this message can originate from an arbitrary caught error, not only
+    // a Prisma validation error, so it must never carry a raw secret.
     const safeMessage = firstLine
       .replace(/Unknown arg `[^`]*` in.*/, "Unknown field in query")
       .replace(/Unknown field `[^`]*` in.*/, "Unknown field in model")
       .replace(/`[^`]*` doesn't exist/, "Field doesn't exist")
-      .replace(/Unknown field name.*/, "Unknown field");
+      .replace(/Unknown field name.*/, "Unknown field")
+      .replace(/[a-z][a-z0-9+.-]*:\/\/[^\s]+/gi, (match: string) => `${match.split("://")[0]}://***`)
+      .replace(/password[=:]\S+/gi, "password=***")
+      .replace(/token[=:]\S+/gi, "token=***")
+      .replace(/key[=:]\S+/gi, "key=***");
     if (safeMessage.length > 0) {
       result.safeMessage = safeMessage.slice(0, 300); // Limit length
     }

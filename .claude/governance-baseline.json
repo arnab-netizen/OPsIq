@@ -1,6 +1,6 @@
 {
   "_comment": "Frozen pre-existing governance findings on main. Any error-severity finding NOT listed here fails a strict scan. Deterministic (sorted, no timestamps). Regenerate with: npm run governance:scan -- --update-baseline",
-  "total_frozen": 32,
+  "total_frozen": 33,
   "findings": [
     {
       "type": "raw-error-message",
@@ -132,7 +132,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/infra/classified-error.ts",
-      "line": 129,
+      "line": 137,
       "severity": "error",
       "code": "if (typeof adapterError.message === \"string\") {",
       "reason": "infra error classification/logging; not operator-rendered"
@@ -141,7 +141,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/infra/classified-error.ts",
-      "line": 236,
+      "line": 252,
       "severity": "error",
       "code": "if (typeof adapterError.message === \"string\") {",
       "reason": "infra error classification/logging; not operator-rendered"
@@ -150,7 +150,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/infra/classified-error.ts",
-      "line": 316,
+      "line": 332,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error);",
       "reason": "infra error classification/logging; not operator-rendered"
@@ -204,7 +204,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 731,
+      "line": 741,
       "severity": "error",
       "code": "const errorMessage = error instanceof Error ? error.message : String(error);",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -213,7 +213,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 748,
+      "line": 759,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error),",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -222,10 +222,19 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 814,
+      "line": 825,
       "severity": "error",
       "code": "errorMessage: error instanceof Error ? error.message : String(error),",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
+    },
+    {
+      "type": "raw-error-message",
+      "category": "RAW ERROR MESSAGE",
+      "file": "src/lib/canonical-route-enforcement.ts",
+      "line": 834,
+      "severity": "error",
+      "code": "error: isKnownSafeClientError ? classifiedError.message : \"Internal server error\",",
+      "reason": "deliberate, gated client-facing exposure (PR #362): isKnownSafeClientError is true only for a genuine AppError subclass reporting a 4xx status (e.g. ValidationError), which by construction carries an owner-safe message with no stack/SQL/provider payload; 5xx and unclassified/raw errors are excluded and still receive the generic \"Internal server error\" message"
     },
     {
       "type": "raw-error-message",
