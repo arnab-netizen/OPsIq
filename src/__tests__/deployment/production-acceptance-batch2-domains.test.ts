@@ -8,17 +8,25 @@
  * `.first()` card), every page.request.* wrapped in timedApiCall(...), no
  * Trinity mutation, and reuse of the shared harness helpers rather than
  * per-file redefinition. All three (Operations, Strategy, Cashflow) now
- * have a reassessment test (22-07/23-07/24-07) -- Cashflow's product gap
- * was closed in a separate PR (mirroring Marketing's own fix) and this
- * spec file's coverage was updated to match once that landed.
+ * have a reassessment test -- Cashflow's product gap was closed in a
+ * separate PR (mirroring Marketing's own fix) and this spec file's coverage
+ * was updated to match once that landed.
+ *
+ * OPSIQ-LIVE-ACCEPTANCE-CORRECTION Finding 1: Cashflow's action-lifecycle and
+ * reassessment tests moved from 24-06/24-07 to 24-09/24-10 once the file
+ * split into a safety-gate fixture (24-04..24-06, proves a material action
+ * is REFUSED at cashflowState=INSOLVENT_RISK) and a separate closed-loop
+ * fixture (24-07..24-10, proves the full lifecycle completes when the
+ * fixture's state does not require a block) -- see that file's header.
+ * Operations/Strategy are unaffected and keep their original numbering.
  */
 import { readFileSync } from "fs";
 import { join } from "path";
 
 const SPECS = [
-  { name: "22-operations-acceptance.spec.ts", prefix: "22", apiPrefix: "/api/owner/operations", actionsSection: "Operations actions", hasReassessmentTest: true },
-  { name: "23-strategy-acceptance.spec.ts", prefix: "23", apiPrefix: "/api/owner/strategy", actionsSection: "Strategy actions", hasReassessmentTest: true },
-  { name: "24-cashflow-acceptance.spec.ts", prefix: "24", apiPrefix: "/api/owner/cashflow", actionsSection: "Cashflow actions", hasReassessmentTest: true },
+  { name: "22-operations-acceptance.spec.ts", prefix: "22", apiPrefix: "/api/owner/operations", actionsSection: "Operations actions", hasReassessmentTest: true, actionLifecycleTest: "22-06", reassessmentTest: "22-07" },
+  { name: "23-strategy-acceptance.spec.ts", prefix: "23", apiPrefix: "/api/owner/strategy", actionsSection: "Strategy actions", hasReassessmentTest: true, actionLifecycleTest: "23-06", reassessmentTest: "23-07" },
+  { name: "24-cashflow-acceptance.spec.ts", prefix: "24", apiPrefix: "/api/owner/cashflow", actionsSection: "Cashflow actions", hasReassessmentTest: true, actionLifecycleTest: "24-09", reassessmentTest: "24-10" },
 ] as const;
 
 const SRC = new Map(
@@ -27,10 +35,10 @@ const SRC = new Map(
 
 describe.each(SPECS)("$name — action lifecycle verifies by exact id, not a .first() card", (spec) => {
   const src = SRC.get(spec.name)!;
-  // Locate the "action lifecycle" test block by its known step number
-  // (e.g. "22-06", "23-06", "24-06" -- the 6th numbered test in every one
-  // of these files, immediately after navigate/snapshot/diagnosis).
-  const testMarker = `test("${spec.prefix}-06`;
+  // Locate the "action lifecycle" (Assign -> Start -> Complete -> Verify)
+  // test block by its known step number -- see spec.actionLifecycleTest's
+  // per-file override above for why this isn't always "$prefix-06".
+  const testMarker = `test("${spec.actionLifecycleTest}`;
 
   it("captures the action's own id from the dashboard before clicking Complete", () => {
     const idx = src.indexOf(testMarker);
@@ -113,8 +121,24 @@ describe.each(SPECS.filter((s) => s.hasReassessmentTest))(
   (spec) => {
     const src = SRC.get(spec.name)!;
 
-    it(`contains a "${spec.prefix}-07 — reassessment" test`, () => {
-      expect(src).toMatch(new RegExp(`test\\("${spec.prefix}-07 — reassessment`));
+    it(`contains a "${spec.reassessmentTest} — reassessment" test`, () => {
+      expect(src).toMatch(new RegExp(`test\\("${spec.reassessmentTest} — reassessment`));
     });
   }
 );
+
+describe("24-cashflow-acceptance.spec.ts — the safety-gate test never asserts a blocked fixture's action succeeds", () => {
+  const src = SRC.get("24-cashflow-acceptance.spec.ts")!;
+
+  it('24-06 (SAFETY-GATE ACCEPTANCE) asserts the action REMAINS "assigned" after Start, and never asserts "in_progress"/"completed" for it', () => {
+    const idx = src.indexOf('test("24-06');
+    expect(idx).toBeGreaterThan(-1);
+    const nextTestIdx = src.indexOf('test("24-07', idx);
+    expect(nextTestIdx).toBeGreaterThan(idx);
+    const block = src.slice(idx, nextTestIdx);
+    expect(block).toMatch(/await expect\(card\)\.toContainText\(["']assigned["']\)/);
+    expect(block).not.toMatch(/toContainText\(["']in_progress["']\)/);
+    expect(block).not.toMatch(/toContainText\(["']completed["']\)/);
+    expect(block, "the refusal must be asserted as a 409, not a success").toMatch(/\.status\(\)\)\.toBe\(409\)/);
+  });
+});
