@@ -245,11 +245,17 @@ export async function closeStartupInitiative(
       });
     }
   } catch (err) {
+    let errorMessage: string;
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    } else {
+      errorMessage = String(err);
+    }
     logger.warn("Startup initiative BCP re-evaluation failed (non-blocking)", {
       workspaceId,
       businessId: result.businessId,
       initiativeId,
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage,
     });
   }
 
