@@ -265,14 +265,25 @@ describe("D4: Backup/Restore Procedure - Script Testing", () => {
       expect(testUrl).toContain(parts.database);
     });
 
-    it("should support PGPASSWORD environment variable", () => {
+    it("should pass DATABASE_URL directly to pg_dump as a connection URI, not hand-parse it into PG* vars", () => {
+      // ROOT-CAUSE FIX (2026-08-27): the script previously hand-parsed
+      // DATABASE_URL into PGUSER/PGHOST/PGPORT/PGDATABASE via grep -oP,
+      // which silently fell back to "localhost" for any URL with no
+      // explicit port -- exactly this repo's real Neon connection-string
+      // shape. pg_dump/psql accept a full connection URI natively via
+      // libpq, correctly parsing host/port/user/password/dbname AND query
+      // params (sslmode, channel_binding) the regex chain silently
+      // dropped. This is a recurrence guard: the old PG*-export pattern
+      // must never come back.
       const scriptPath = path.join(SCRIPT_DIR, "backup-database.sh");
       const content = fs.readFileSync(scriptPath, "utf-8");
 
-      expect(content).toContain("export PGPASSWORD");
-      expect(content).toContain("PGUSER");
-      expect(content).toContain("PGHOST");
-      expect(content).toContain("PGPORT");
+      expect(content).not.toContain("export PGPASSWORD");
+      expect(content).not.toContain("export PGUSER");
+      expect(content).not.toContain("export PGHOST");
+      expect(content).not.toContain("export PGPORT");
+      expect(content).toContain("pg_dump");
+      expect(content).toContain('"$DATABASE_URL"');
     });
   });
 
