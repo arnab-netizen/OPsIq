@@ -18,6 +18,18 @@
  * the create-tier form is reachable and functional, and the approve/
  * supersede controls render and work for real existing data -- the exact
  * evidence requested before marking that closure PRODUCTION_PROVEN.
+ *
+ * OPSIQ-LIVE-ACCEPTANCE-CORRECTION Finding 2: workflow run 33043774531 proved
+ * 27-02 was a stale-test defect, not a product defect. PR #362 correctly
+ * added a REQUIRED "Features (one per line, at least one required)" textarea
+ * to the create form (matching PricingEngine.createPriceTier's real
+ * validatePriceTier invariant), but this spec's 27-02 never filled it --
+ * native browser required-field validation silently stopped the form from
+ * ever submitting, so no tier was ever created. 27-02 and 27-04 now fill a
+ * real, uniquely acceptance-scoped feature value and prove it round-trips
+ * through the real API, not just the UI. See growth-pricing-acceptance-
+ * required-fields.test.ts for the static regression guard against this
+ * recurring.
  */
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { writeFileSync } from "fs";
@@ -28,15 +40,27 @@ import { createJourneyWatch } from "./helpers/journey-watchers";
 const SPEC_NAME = "phase27-growth-pricing";
 const { networkFailures, watchPage, fatalErrors } = createJourneyWatch();
 
-// Unique per run so repeated dispatches never collide on tier name.
+// Unique per run so repeated dispatches never collide on tier name/feature.
 const TIER_NAME = `Acceptance Tier ${Date.now()}`;
 const SUPERSEDED_TIER_NAME = `${TIER_NAME} v2`;
+const TIER_FEATURE = `Acceptance feature ${Date.now()}`;
+const SUPERSEDED_TIER_FEATURE = `${TIER_FEATURE} v2`;
 
-async function findTierIdByName(page: Page, name: string): Promise<string | null> {
+interface AcceptanceTierRecord {
+  id: string;
+  name: string;
+  features: string[];
+  status: string;
+  approvalStatus: string;
+  supersededById: string | null;
+}
+
+/** Full persisted tier record by name, via the real API (never inferred from the UI alone). */
+async function findTierByName(page: Page, name: string): Promise<AcceptanceTierRecord | null> {
   const res = await page.request.get("/api/growth/pricing-tiers/analysis");
   if (!res.ok()) return null;
-  const tiers = (await res.json()).tiers as Array<{ id: string; name: string }>;
-  return tiers.find((t) => t.name === name)?.id ?? null;
+  const tiers = (await res.json()).tiers as AcceptanceTierRecord[];
+  return tiers.find((t) => t.name === name) ?? null;
 }
 
 test.describe("PROD-27 — Growth Pricing owner UI live production acceptance", () => {
@@ -76,16 +100,25 @@ test.describe("PROD-27 — Growth Pricing owner UI live production acceptance", 
     expect(fatalErrors()).toHaveLength(0);
   });
 
-  test("27-02 — create-tier form is reachable and creates a real price tier", async () => {
+  test("27-02 — create-tier form is reachable and creates a real price tier with a real submitted feature", async () => {
     await page.getByRole("button", { name: "+ New price tier" }).click();
     await page.locator('input[name="name"]').fill(TIER_NAME);
     await page.locator('input[name="entryPrice"]').fill("100");
     await page.locator('input[name="maxPrice"]').fill("500");
+    // The Features textarea is a REQUIRED, no-default field (PricingEngine.
+    // createPriceTier enforces "at least one feature" server-side via
+    // validatePriceTier). Leaving it empty stops native browser required-
+    // field validation from ever submitting the form -- see
+    // growth-pricing-acceptance-required-fields.test.ts, which fails
+    // statically if this fill is ever removed.
+    await page.locator('textarea[name="features"]').fill(TIER_FEATURE);
     await page.getByRole("button", { name: "Create price tier (draft)" }).click();
     await page.waitForLoadState("networkidle");
 
-    createdTierId = await findTierIdByName(page, TIER_NAME);
-    expect(createdTierId, "Created tier must be present via the API, not only the UI").toBeTruthy();
+    const created = await findTierByName(page, TIER_NAME);
+    expect(created, "Created tier must be present via the API, not only the UI").toBeTruthy();
+    createdTierId = created!.id;
+    expect(created!.features, "Submitted feature must be persisted, not silently dropped").toContain(TIER_FEATURE);
 
     const tierCard = page.getByTestId(`price-tier-${createdTierId}`);
     await expect(tierCard).toBeVisible();
@@ -104,17 +137,40 @@ test.describe("PROD-27 — Growth Pricing owner UI live production acceptance", 
     expect(fatalErrors()).toHaveLength(0);
   });
 
-  test("27-04 — supersede control renders and creates a new, distinctly-versioned tier", async () => {
+  test("27-04 — supersede control is pre-populated with existing features, adds a real new one, and creates a new distinctly-versioned tier", async () => {
     test.skip(createdTierId === null, "No tier id captured from 27-02 -- cannot exercise supersede.");
+    const originalTier = await findTierByName(page, TIER_NAME);
+    expect(originalTier, "Original tier must still be resolvable via the API before superseding").toBeTruthy();
+
     const tierCard = page.getByTestId(`price-tier-${createdTierId}`);
     await tierCard.getByRole("button", { name: "Supersede (new version)" }).click();
     const supersedeForm = tierCard.locator("form");
+
+    // The supersede form's Features textarea is required too, but pre-filled
+    // from the existing tier's persisted features (page.tsx's defaultValue) --
+    // prove that pre-population is real (not empty, not fabricated) before
+    // adding to it.
+    const featuresTextarea = supersedeForm.locator('textarea[name="features"]');
+    const prefilled = await featuresTextarea.inputValue();
+    expect(
+      prefilled.split("\n").map((s) => s.trim()).filter(Boolean),
+      "Supersede form must be pre-populated with the ORIGINAL tier's persisted features"
+    ).toEqual(originalTier!.features);
+
     await supersedeForm.locator('input[name="name"]').fill(SUPERSEDED_TIER_NAME);
+    await featuresTextarea.fill(`${prefilled}\n${SUPERSEDED_TIER_FEATURE}`);
     await supersedeForm.getByRole("button", { name: "Create new version" }).click();
     await page.waitForLoadState("networkidle");
 
-    supersededTierId = await findTierIdByName(page, SUPERSEDED_TIER_NAME);
-    expect(supersededTierId, "Superseding tier must be present via the API, not only the UI").toBeTruthy();
+    const superseded = await findTierByName(page, SUPERSEDED_TIER_NAME);
+    expect(superseded, "Superseding tier must be present via the API, not only the UI").toBeTruthy();
+    supersededTierId = superseded!.id;
+    expect(superseded!.features, "New version must retain the original feature").toContain(TIER_FEATURE);
+    expect(superseded!.features, "New version must carry the newly-added feature").toContain(SUPERSEDED_TIER_FEATURE);
+
+    const oldTier = await findTierByName(page, TIER_NAME);
+    expect(oldTier?.status, "Old tier must be archived once superseded").toBe("ARCHIVED");
+    expect(oldTier?.supersededById, "Old tier's supersededById must point at the new version").toBe(supersededTierId);
 
     const newTierCard = page.getByTestId(`price-tier-${supersededTierId}`);
     await expect(newTierCard).toBeVisible();
