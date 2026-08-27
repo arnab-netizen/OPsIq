@@ -1,0 +1,124 @@
+name: Scheduled Production Database Backup
+
+# Automated cadence for the P2 "Backup/recovery automation" item in
+# docs/opsiq/status/CURRENT_MAIN_CLOSURE_REGISTER.md. Runs scripts/
+# backup-database.sh (root-cause-fixed 2026-08-27 -- see that file's
+# header) against the production Neon database on a daily schedule, then
+# uploads the checksummed, integrity-verified backup as a GitHub Actions
+# artifact.
+#
+# WHY THIS AND NOT AN EXTERNAL BUCKET: this repo has no AWS/S3 (or other
+# external storage) account or credential today. Adding one is an
+# infrastructure decision -- and a new secret -- that belongs to the
+# owner (see the runbook at docs/DATABASE_BACKUP_RECOVERY_RUNBOOK.md,
+# "Storage target decision"). GitHub Actions artifacts require no new secret, no new
+# vendor, and no new infrastructure: this repo is private
+# (arnab-netizen/OPsIq) and already uses actions/upload-artifact@v4
+# elsewhere. `retention-days` below is GitHub's own enforced, bounded
+# expiry -- it satisfies "retention policy, not unbounded accumulation"
+# without any pruning logic of our own. scripts/cleanup-old-backups.sh is
+# NOT invoked by this workflow: it prunes a persistent local directory,
+# and a GitHub Actions runner has no such persistent disk between runs --
+# every backup this workflow ever produces lives only as a GitHub
+# artifact, expired by GitHub itself. cleanup-old-backups.sh stays in the
+# repo for the alternate scenario (self-hosted runner or external storage
+# target with a persistent mount) where a local retention sweep would
+# actually have something to prune.
+#
+# SECRET REUSE, NOT A NEW SECRET: uses secrets.PRODUCTION_DATABASE_URL,
+# the same secret migrate-production.yml already uses -- confirmed by
+# that workflow's own preflight comment to be the DIRECT (non-pooler)
+# production endpoint, which is exactly what pg_dump needs (Neon's own
+# guidance is to avoid pg_dump over a pooled connection).
+#
+# WHAT THIS DOES NOT DO: it does not restore anything, and it never
+# touches any target other than the production database it reads from
+# (read-only pg_dump). The restore path -- and the only place anything is
+# ever written back -- is exercised exclusively by
+# .github/workflows/restore-rehearsal.yml, against a disposable
+# in-workflow container, never against production.
+
+on:
+  schedule:
+    # Daily, off the top of the hour. Times are UTC.
+    - cron: '17 6 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-production-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Backup Production Database
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Preflight check - PRODUCTION_DATABASE_URL secret exists
+        run: |
+          if [ -z "${{ secrets.PRODUCTION_DATABASE_URL }}" ]; then
+            echo "::error::PRODUCTION_DATABASE_URL secret is missing or empty"
+            exit 1
+          fi
+          echo "PRODUCTION_DATABASE_URL secret is configured"
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y postgresql-client
+          pg_dump --version
+
+      - name: Run backup
+        id: backup
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          mkdir -p backup-output
+          bash scripts/backup-database.sh backup-output 9
+          BACKUP_FILE=$(ls -t backup-output/opsiq_backup_*.sql.gz | head -1)
+          echo "backup_file=$BACKUP_FILE" >> "$GITHUB_OUTPUT"
+          echo "backup_name=$(basename "$BACKUP_FILE")" >> "$GITHUB_OUTPUT"
+
+      - name: Assert checksum file was produced
+        run: |
+          if [ ! -f "${{ steps.backup.outputs.backup_file }}.sha256" ]; then
+            echo "::error::No .sha256 checksum file produced alongside the backup"
+            exit 1
+          fi
+          echo "Checksum file present: $(cat "${{ steps.backup.outputs.backup_file }}.sha256")"
+
+      # Bounded retention: GitHub deletes this artifact automatically after
+      # retention-days. No unbounded accumulation, no pruning script needed
+      # for this storage target (see header comment).
+      - name: Upload backup artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opsiq-production-backup-${{ github.run_id }}
+          path: backup-output/
+          retention-days: 35
+          if-no-files-found: error
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opsiq-production-backup-FAILED-${{ github.run_id }}
+          path: backup-output/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "Backup completed: ${{ steps.backup.outputs.backup_name }}"
+          echo "Stored as GitHub Actions artifact 'opsiq-production-backup-${{ github.run_id }}', expires in 35 days."
+          echo "To restore-rehearse this exact backup, dispatch restore-rehearsal.yml with run_id=${{ github.run_id }}."
