@@ -49,7 +49,12 @@ import { runDomainDiagnosisAndAwaitResult } from "./helpers/domain-diagnosis";
 import { registerActionDialogHandler } from "./helpers/dialog-handler";
 import { createJourneyWatch } from "./helpers/journey-watchers";
 import { resolveOrCreateDomainBusiness } from "./helpers/domain-business";
-import { CASHFLOW_INSOLVENT_FIXTURE, CASHFLOW_SAFE_FIXTURE } from "./fixtures/cashflow-fixtures";
+import {
+  CASHFLOW_INSOLVENT_FIXTURE,
+  CASHFLOW_SAFE_FIXTURE,
+  insolventFixturePeriod,
+  safeFixturePeriod,
+} from "./fixtures/cashflow-fixtures";
 
 const SPEC_NAME = "phase24-cashflow";
 const { networkFailures, watchPage, fatalErrors } = createJourneyWatch();
@@ -165,11 +170,7 @@ test.describe("PROD-24 — Cashflow Owner journey live production acceptance", (
     });
 
     test("24-04 — real UI: add a cashflow snapshot with deliberately stressed synthetic inputs (safety-gate fixture)", async () => {
-      const today = new Date();
-      const periodEnd = today.toISOString().slice(0, 10);
-      const periodStart = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
-        .toISOString()
-        .slice(0, 10);
+      const { periodStart, periodEnd } = insolventFixturePeriod(new Date());
       await fillCashflowSnapshotForm(page, periodStart, periodEnd, CASHFLOW_INSOLVENT_FIXTURE);
       await checkpointScreenshot(context, page, SPEC_NAME, "snapshot-saved-insolvent");
       expect(fatalErrors()).toHaveLength(0);
@@ -271,17 +272,17 @@ test.describe("PROD-24 — Cashflow Owner journey live production acceptance", (
     });
 
     test("24-07 — real UI: add a second, dedicated cashflow snapshot whose canonical state does not require a safety-gate block", async () => {
-      const today = new Date();
-      const periodStart = today.toISOString().slice(0, 10);
-      // Strictly later than 24-04's periodEnd (today) so both the manual
-      // "Run cashflow diagnosis" click below and the automatic reassessment
-      // triggered by 24-09's Complete deterministically resolve THIS
-      // snapshot as "latest by periodEnd" -- dashboard.service.ts and
-      // action.service.ts's re-diagnosis both order by periodEnd desc, and a
-      // same-day tie against 24-04's snapshot would be non-deterministic.
-      const periodEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
-        .toISOString()
-        .slice(0, 10);
+      // periodEnd is strictly later than 24-04's periodEnd (see
+      // safeFixturePeriod's own comment) so both the manual "Run cashflow
+      // diagnosis" click below and the automatic reassessment triggered by
+      // 24-09's Complete deterministically resolve THIS snapshot as "latest
+      // by periodEnd" -- dashboard.service.ts and action.service.ts's
+      // re-diagnosis both order by periodEnd desc, and a same-day tie
+      // against 24-04's snapshot would be non-deterministic. The period
+      // LENGTH is kept the same ~30 days as the insolvent fixture -- see
+      // safeFixturePeriod's comment for why shortening it changes this
+      // fixture's cashflowState classification.
+      const { periodStart, periodEnd } = safeFixturePeriod(new Date());
       await fillCashflowSnapshotForm(page, periodStart, periodEnd, CASHFLOW_SAFE_FIXTURE);
       await checkpointScreenshot(context, page, SPEC_NAME, "snapshot-saved-safe");
       expect(fatalErrors()).toHaveLength(0);

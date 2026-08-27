@@ -100,3 +100,49 @@ export const CASHFLOW_SAFE_FIXTURE: CashflowFixtureFields = {
   taxDue: "500",
   ownerWithdrawal: "1000",
 };
+
+export interface FixturePeriod {
+  periodStart: string; // ISO date (YYYY-MM-DD)
+  periodEnd: string; // ISO date (YYYY-MM-DD)
+}
+
+/**
+ * Reporting period for CASHFLOW_INSOLVENT_FIXTURE: a ~30-day period ending
+ * "today" (`reference`). Shared by the live Playwright spec (24-04) and
+ * cashflow-acceptance-fixture-safety.test.ts so both always diagnose the
+ * exact same period length -- see safeFixturePeriod()'s comment for why the
+ * period LENGTH, not just its end date, changes this fixture's classification.
+ */
+export function insolventFixturePeriod(reference: Date): FixturePeriod {
+  const periodEnd = reference;
+  const periodStart = new Date(periodEnd.getFullYear(), periodEnd.getMonth() - 1, periodEnd.getDate());
+  return {
+    periodStart: periodStart.toISOString().slice(0, 10),
+    periodEnd: periodEnd.toISOString().slice(0, 10),
+  };
+}
+
+/**
+ * Reporting period for CASHFLOW_SAFE_FIXTURE: periodEnd must be strictly
+ * LATER than insolventFixturePeriod(reference)'s periodEnd (`reference`
+ * itself) so dashboard.service.ts's "latest snapshot by periodEnd" and
+ * action.service.ts's re-diagnosis-on-complete both deterministically pick
+ * THIS fixture's snapshot, never a same-day tie against the insolvent one.
+ *
+ * The period must ALSO stay ~30 days long, matching the insolvent fixture --
+ * workflow run 33089xxxxx (24-08) proved that shortening it to "reference to
+ * reference+1 day" (a 2-day period) while keeping the same nearTermObligations
+ * total pushes dailyObligations from ~161/day to 2500/day, dropping
+ * cashRunwayDays under criticalCashRunwayDays (14) and reclassifying this
+ * fixture as CRITICAL -- the exact severity this fixture exists to be BELOW.
+ * A short period is not a safe way to win the periodEnd tiebreak; a later
+ * END date on an equally long period is.
+ */
+export function safeFixturePeriod(reference: Date): FixturePeriod {
+  const periodEnd = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate() + 1);
+  const periodStart = new Date(periodEnd.getFullYear(), periodEnd.getMonth() - 1, periodEnd.getDate());
+  return {
+    periodStart: periodStart.toISOString().slice(0, 10),
+    periodEnd: periodEnd.toISOString().slice(0, 10),
+  };
+}
