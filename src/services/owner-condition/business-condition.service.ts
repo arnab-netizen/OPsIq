@@ -24,6 +24,24 @@ import {
 } from "@/domain/owner-spine/contracts";
 import { computeMissingInputsWithPriority, type MissingInput } from "@/domain/owner-finance/data-confidence";
 
+/**
+ * Deterministic total order for a domain's per-cycle actions. priorityScore
+ * is clamped to [0,100] (calculateOwnerPriorityScore), so ties at the
+ * ceiling are a real, expected occurrence whenever multiple critical
+ * findings coexist -- a single-key orderBy has no guaranteed return order
+ * for tied rows across repeated SELECTs, which is exactly what caused the
+ * top-action non-determinism fixed by PR #361's dashboard.service.ts
+ * change. Same 6-key sequence as that fix.
+ */
+const TOP_ACTION_ORDER_BY = [
+  { priorityScore: "desc" as const },
+  { expectedImpactScore: "desc" as const },
+  { confidence: "desc" as const },
+  { findingCode: "asc" as const },
+  { title: "asc" as const },
+  { id: "asc" as const },
+];
+
 /** Map a persisted finance cycle row to a spine DomainScore (pure). */
 export function financeCycleToDomainScore(cycle: any): DomainScore {
   return {
@@ -383,7 +401,10 @@ export async function getBusinessCondition(
       orderBy: { sequenceNumber: "desc" },
       include: {
         findings: { orderBy: { severity: "asc" } },
-        actions: { orderBy: { priorityScore: "desc" } },
+        // Deterministic total order: priorityScore is clamped to [0,100], so
+        // ties at the ceiling are a real, expected occurrence. Same fix/
+        // rationale as dashboard.service.ts (PR #361).
+        actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
     db.ownerFinancialSnapshot.findFirst({
@@ -405,7 +426,7 @@ export async function getBusinessCondition(
       orderBy: { sequenceNumber: "desc" },
       include: {
         findings: { orderBy: { severity: "asc" } },
-        actions: { orderBy: { priorityScore: "desc" } },
+        actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
     db.ownerSalesCycle.findFirst({
@@ -413,7 +434,7 @@ export async function getBusinessCondition(
       orderBy: { sequenceNumber: "desc" },
       include: {
         findings: { orderBy: { severity: "asc" } },
-        actions: { orderBy: { priorityScore: "desc" } },
+        actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
     db.ownerOperationsCycle.findFirst({
@@ -421,7 +442,7 @@ export async function getBusinessCondition(
       orderBy: { sequenceNumber: "desc" },
       include: {
         findings: { orderBy: { severity: "asc" } },
-        actions: { orderBy: { priorityScore: "desc" } },
+        actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
     db.ownerSopCycle.findFirst({
@@ -429,7 +450,7 @@ export async function getBusinessCondition(
       orderBy: { sequenceNumber: "desc" },
       include: {
         findings: { orderBy: { severity: "asc" } },
-        actions: { orderBy: { priorityScore: "desc" } },
+        actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
     db.ownerMarketingCycle.findFirst({
@@ -437,7 +458,7 @@ export async function getBusinessCondition(
       orderBy: { sequenceNumber: "desc" },
       include: {
         findings: { orderBy: { severity: "asc" } },
-        actions: { orderBy: { priorityScore: "desc" } },
+        actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
     db.ownerStrategyCycle.findFirst({
@@ -445,7 +466,7 @@ export async function getBusinessCondition(
       orderBy: { sequenceNumber: "desc" },
       include: {
         findings: { orderBy: { severity: "asc" } },
-        actions: { orderBy: { priorityScore: "desc" } },
+        actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
   ]);

@@ -1,12 +1,26 @@
 #!/bin/bash
 
 # Restore PostgreSQL Database from Backup
-# Usage: ./restore-database.sh <backup-file> [verification]
+# Usage: ./restore-database.sh <backup-file> [verify]
 # Example: ./restore-database.sh /backups/opsiq/opsiq_backup_2026-05-12_10-30-00.sql.gz verify
 #
-# Restores database from gzipped SQL dump
-# Optional: verify checksum against .sha256 file if present
-# WARNING: This will DROP and recreate the database
+# Restores database from a gzipped SQL dump produced by backup-database.sh.
+# Optional: verify checksum against the accompanying .sha256 file.
+# WARNING: this restores a `pg_dump --create` dump, which embeds
+# `DROP DATABASE IF EXISTS <name>` / `CREATE DATABASE <name>` /
+# `\connect <name>` statements for the SOURCE database's own name. The
+# database that ends up dropped-and-recreated is therefore the one named
+# INSIDE the dump, not whatever dbname appears in this script's
+# DATABASE_URL -- DATABASE_URL here only supplies which SERVER (host/port/
+# credentials) to connect to. Never point this at a server that also hosts
+# a same-named production database unless that is the deliberate target.
+#
+# ROOT-CAUSE FIX (2026-08-27): removed the same fragile grep -oP
+# DATABASE_URL parsing chain that backup-database.sh had (see that file's
+# header for the full explanation) -- it silently resolved to "localhost"
+# for any URL without an explicit port, which is the real shape of this
+# repo's Neon secrets. psql now receives DATABASE_URL directly as a
+# connection URI.
 
 set -euo pipefail
 
@@ -28,24 +42,18 @@ if [ -z "${DATABASE_URL:-}" ]; then
   exit 1
 fi
 
-# Parse DATABASE_URL
-PGPASSWORD=$(echo "$DATABASE_URL" | grep -oP '(?<=:).*(?=@)' | cut -d':' -f2 || true)
-PGUSER=$(echo "$DATABASE_URL" | grep -oP '(?<=//).*(?=:)' || echo "postgres")
-PGHOST=$(echo "$DATABASE_URL" | grep -oP '(?<=@).*(?=:)' || echo "localhost")
-PGPORT=$(echo "$DATABASE_URL" | grep -oP '(?<=:)[0-9]+(?=/)' || echo "5432")
-PGDATABASE=$(echo "$DATABASE_URL" | grep -oP '(?<=/)[^/?]+' || echo "opsiq")
+if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
+  echo "ERROR: DATABASE_URL contains a placeholder value - secret not properly configured" | tee -a "$LOG_FILE"
+  exit 1
+fi
 
-# Export for psql
-export PGPASSWORD
-export PGUSER
-export PGHOST
-export PGPORT
+REDACTED_URL=$(echo "$DATABASE_URL" | sed -E 's#(://[^:/@]+:)[^@]+(@)#\1***\2#')
 
 echo "Starting database restore..." | tee "$LOG_FILE"
 echo "Backup file: $BACKUP_FILE" | tee -a "$LOG_FILE"
-echo "Target database: $PGDATABASE on $PGHOST:$PGPORT" | tee -a "$LOG_FILE"
+echo "Target server: $REDACTED_URL" | tee -a "$LOG_FILE"
 
-# Verify backup integrity if requested or .sha256 file exists
+# --- Integrity verification before touching any database ---
 if [ "$VERIFY" = "verify" ] || [ -f "${BACKUP_FILE}.sha256" ]; then
   echo "Verifying backup integrity..." | tee -a "$LOG_FILE"
 
@@ -54,55 +62,108 @@ if [ "$VERIFY" = "verify" ] || [ -f "${BACKUP_FILE}.sha256" ]; then
     COMPUTED_CHECKSUM=$(sha256sum "$BACKUP_FILE" | awk '{print $1}')
 
     if [ "$STORED_CHECKSUM" = "$COMPUTED_CHECKSUM" ]; then
-      echo "✓ Checksum verified: $COMPUTED_CHECKSUM" | tee -a "$LOG_FILE"
+      echo "Checksum verified: $COMPUTED_CHECKSUM" | tee -a "$LOG_FILE"
     else
-      echo "✗ Checksum mismatch!" | tee -a "$LOG_FILE"
+      echo "Checksum mismatch!" | tee -a "$LOG_FILE"
       echo "Expected: $STORED_CHECKSUM" | tee -a "$LOG_FILE"
       echo "Got: $COMPUTED_CHECKSUM" | tee -a "$LOG_FILE"
       exit 1
     fi
   else
-    echo "Warning: No .sha256 file found, skipping checksum verification" | tee -a "$LOG_FILE"
+    echo "ERROR: verify requested but no .sha256 file found alongside backup" | tee -a "$LOG_FILE"
+    exit 1
   fi
 fi
 
-# Decompress and restore
+if ! gzip -t "$BACKUP_FILE" 2>> "$LOG_FILE"; then
+  echo "ERROR: backup file fails gzip integrity test (corrupt or truncated)" | tee -a "$LOG_FILE"
+  exit 1
+fi
+echo "gzip integrity check passed" | tee -a "$LOG_FILE"
+
+if ! zgrep -q -- '-- PostgreSQL database dump complete' "$BACKUP_FILE"; then
+  echo "ERROR: pg_dump completion marker not found in backup - dump is truncated/incomplete" | tee -a "$LOG_FILE"
+  exit 1
+fi
+echo "pg_dump completion marker present - dump is complete" | tee -a "$LOG_FILE"
+
+# Decompress and restore. DATABASE_URL supplies the SERVER only (see
+# header note above) -- the dump's own --create/--if-exists statements
+# select the actual database via \connect.
 echo "Restoring database (this may take several minutes)..." | tee -a "$LOG_FILE"
 START_TIME=$(date +%s)
 
 if gunzip -c "$BACKUP_FILE" | psql \
-  -h "$PGHOST" \
-  -p "$PGPORT" \
-  -U "$PGUSER" \
+  "$DATABASE_URL" \
   -v ON_ERROR_STOP=1 \
-  --exit-on-error \
   2>> "$LOG_FILE"; then
 
   END_TIME=$(date +%s)
   DURATION=$((END_TIME - START_TIME))
 
-  echo "✓ Restore completed successfully" | tee -a "$LOG_FILE"
+  echo "Restore command completed" | tee -a "$LOG_FILE"
   echo "Duration: ${DURATION}s" | tee -a "$LOG_FILE"
 
-  # Verify restore by checking database exists and has tables
-  QUERY="SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'public';"
-  TABLE_COUNT=$(psql \
-    -h "$PGHOST" \
-    -p "$PGPORT" \
-    -U "$PGUSER" \
-    -d "$PGDATABASE" \
-    -t -c "$QUERY" | tr -d ' ')
+  # --- Restored-schema/data verification (not just "psql exited 0") ---
+  # The restored database's actual name comes from inside the dump (see
+  # header note), so re-derive it from the dump text itself rather than
+  # from DATABASE_URL, then connect to it on the same server to inspect
+  # what actually landed.
+  RESTORED_DB=$(zgrep -m1 -oP '(?<=\\connect )\S+' "$BACKUP_FILE" || true)
+  if [ -z "$RESTORED_DB" ]; then
+    echo "WARNING: could not determine restored database name from dump; skipping schema/data verification" | tee -a "$LOG_FILE"
+    exit 0
+  fi
+  echo "Restored database name (from dump): $RESTORED_DB" | tee -a "$LOG_FILE"
 
+  # Build a connection URI to the restored database on the same server by
+  # substituting only the path component of DATABASE_URL.
+  SERVER_BASE=$(echo "$DATABASE_URL" | sed -E 's#(://[^/]+/)[^?]*(\?.*)?$#\1#')
+  RESTORED_DB_URL="${SERVER_BASE}${RESTORED_DB}"
+  QUERY_SUFFIX=$(echo "$DATABASE_URL" | grep -oP '\?.*$' || true)
+  RESTORED_DB_URL="${RESTORED_DB_URL}${QUERY_SUFFIX}"
+
+  TABLE_COUNT=$(psql "$RESTORED_DB_URL" -t -c \
+    "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'public';" \
+    | tr -d ' ')
   echo "Tables in restored database: $TABLE_COUNT" | tee -a "$LOG_FILE"
 
   if [ "$TABLE_COUNT" -gt 0 ]; then
-    echo "✓ Database restore verified: database contains $TABLE_COUNT tables" | tee -a "$LOG_FILE"
-    exit 0
+    echo "Database contains $TABLE_COUNT tables" | tee -a "$LOG_FILE"
   else
-    echo "✗ Restore verification failed: no tables found in database" | tee -a "$LOG_FILE"
+    echo "RESTORE VERIFICATION FAILED: no tables found in restored database" | tee -a "$LOG_FILE"
     exit 1
   fi
+
+  # Data-presence check: at least one user table must contain at least one
+  # row. An empty-but-schema-correct restore (e.g. dump captured schema
+  # only, or every table happened to be empty at dump time) is a distinct
+  # failure mode from "psql exited 0" and would not be caught by the table
+  # count alone.
+  TOTAL_ROWS=$(psql "$RESTORED_DB_URL" -t -c "
+    DO \$\$
+    DECLARE
+      r RECORD;
+      total BIGINT := 0;
+      cnt BIGINT;
+    BEGIN
+      FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' LOOP
+        EXECUTE format('SELECT COUNT(*) FROM %I.%I', 'public', r.tablename) INTO cnt;
+        total := total + cnt;
+      END LOOP;
+      RAISE NOTICE 'TOTAL_ROWS=%', total;
+    END \$\$;
+  " 2>&1 | grep -oP '(?<=TOTAL_ROWS=)[0-9]+' || echo "0")
+  echo "Total rows across all public-schema tables: $TOTAL_ROWS" | tee -a "$LOG_FILE"
+
+  if [ "$TOTAL_ROWS" -eq 0 ]; then
+    echo "RESTORE VERIFICATION WARNING: schema restored but zero rows found across all tables" | tee -a "$LOG_FILE"
+    echo "This may be expected for a schema-only source, or may indicate a truncated/incomplete dump." | tee -a "$LOG_FILE"
+  fi
+
+  echo "Database restore verified: $TABLE_COUNT tables, $TOTAL_ROWS total rows" | tee -a "$LOG_FILE"
+  exit 0
 else
-  echo "✗ Restore failed - see log for details" | tee -a "$LOG_FILE"
+  echo "Restore failed - see log for details" | tee -a "$LOG_FILE"
   exit 1
 fi
