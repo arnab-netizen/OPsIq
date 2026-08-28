@@ -101,6 +101,39 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -qq
           sudo apt-get install -qq -y postgresql-client
+
+          # ROOT-CAUSE FIX #2 (2026-08-28, same day as the PGDG-repo fix
+          # above): installing the PGDG package does NOT make its pg_dump
+          # take over the bare `pg_dump` command on this runner image.
+          # Confirmed directly on a real dispatch (run 33203186884):
+          # postgresql-client-18 installed real binaries at
+          # /usr/lib/postgresql/18/bin, but `pg_dump --version` right
+          # after this same install step still printed "16.15 (Ubuntu
+          # 16.15-1.pgdg24.04+2)" -- this runner image already carries
+          # Ubuntu's own postgresql-client, and /usr/bin/pg_dump's
+          # wrapper/alternative was never repointed at the newly
+          # installed PGDG version by the plain `apt-get install` above.
+          # Stop trusting PATH resolution of the bare `pg_dump` command:
+          # find the highest-versioned client actually installed under
+          # /usr/lib/postgresql (Debian/Ubuntu's own real-binary
+          # location for every postgresql-client-<N> package) and
+          # prepend ITS bin directory to PATH directly, then verify the
+          # override actually took effect before proceeding -- fail
+          # closed rather than silently falling back to the wrong binary
+          # a second time.
+          PG_CLIENT_VERSION=$(ls /usr/lib/postgresql | sort -V | tail -1)
+          if [ -z "$PG_CLIENT_VERSION" ] || [ ! -x "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin/pg_dump" ]; then
+            echo "::error::Could not locate an installed PGDG pg_dump binary under /usr/lib/postgresql"
+            exit 1
+          fi
+          echo "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin" >> "$GITHUB_PATH"
+          export PATH="/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin:$PATH"
+
+          RESOLVED_PG_DUMP=$(command -v pg_dump)
+          if [ "$RESOLVED_PG_DUMP" != "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin/pg_dump" ]; then
+            echo "::error::pg_dump resolves to $RESOLVED_PG_DUMP, not the PGDG client at /usr/lib/postgresql/${PG_CLIENT_VERSION}/bin/pg_dump -- PATH override did not take effect"
+            exit 1
+          fi
           pg_dump --version
 
       - name: Run backup
