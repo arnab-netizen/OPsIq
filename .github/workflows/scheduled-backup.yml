@@ -70,8 +70,35 @@ jobs:
           fi
           echo "PRODUCTION_DATABASE_URL secret is configured"
 
+      # ROOT-CAUSE FIX (2026-08-28): the first real dispatch of this workflow
+      # failed instantly with "pg_dump: error: aborting because of server
+      # version mismatch" (server version: 18.6, pg_dump version: 16.15).
+      # pg_dump hard-refuses to dump FROM a server whose major version is
+      # NEWER than the pg_dump binary itself (the reverse direction --
+      # dumping an older server with a newer pg_dump -- is fine and is
+      # pg_dump's normal supported mode). Ubuntu 24.04's own default apt
+      # repo caps `postgresql-client` at major version 16, which is now
+      # older than Neon's actual running server (18). Every OTHER workflow
+      # in this repo that touches Neon (production-db-status.yml,
+      # reset-staging-db.yml, resolve-failed-migration.yml) only runs
+      # `psql`, which has no such version gate -- this is the first
+      # workflow to invoke `pg_dump` against the real database, which is
+      # why this defect was invisible until now.
+      #
+      # Fix: install from the official PostgreSQL (PGDG) apt repository
+      # instead of Ubuntu's, and take its unversioned `postgresql-client`
+      # metapackage rather than pinning a specific major version -- PGDG
+      # tracks the current stable major, so this stays ahead of Neon's own
+      # server version over time instead of re-breaking on Neon's next
+      # major upgrade.
       - name: Install PostgreSQL client
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y curl ca-certificates
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -qq
           sudo apt-get install -qq -y postgresql-client
           pg_dump --version
