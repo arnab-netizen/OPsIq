@@ -40,7 +40,19 @@ jobs:
   validate:
     name: Non-DB Validation
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Same defect class already fixed in ci.yml's build-and-test job (see that
+    # job's comment): a 25-minute job cap was killing this job during its own
+    # successful cleanup, right after every test had already passed -- not a
+    # timeout on a hanging step, but the job itself running out of room.
+    # Confirmed directly: two consecutive runs on the same PR both completed
+    # "1069 passed | 2 skipped" / "30001 passed | 155 skipped" with zero
+    # failures, then hit `##[error]The operation was canceled.` seconds later
+    # during "Cleaning up test environment...". This job runs MORE steps
+    # before the test suite than ci.yml's version (governance/auth/recurrence
+    # scanners, tsc, prisma validate, bundle manifest + Stage 7 evidence
+    # validators), so its overhead is at least as large. 40 matches ci.yml's
+    # value and gives the same real margin.
+    timeout-minutes: 40
 
     env:
       TEST_WITH_DB: "false"
