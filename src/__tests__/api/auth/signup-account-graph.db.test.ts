@@ -114,8 +114,27 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
     expect(workspaces).toHaveLength(1);
   });
 
-  it("[db] degenerate workspace names (whitespace/punctuation/emoji) never collide", async () => {
-    const names = ["   ", "!!!---...", "🚀🚀🚀"];
+  it("[db] a whitespace-only workspace name is rejected outright (nothing to slug)", async () => {
+    const email = `empty-name-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    await expect(
+      signup({ email, password: "password123", workspaceName: "   " })
+    ).rejects.toMatchObject({ name: "BadRequestError", statusCode: 400 });
+
+    const users = await db.user.findMany({ where: { email } });
+    expect(users).toHaveLength(0);
+  });
+
+  it("[db] a name with surrounding whitespace is stored trimmed", async () => {
+    const email = `trim-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    createdEmails.push(email);
+    const res = await signup({ email, password: "password123", workspaceName: "  Acme Corp  " });
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.workspace.name).toBe("Acme Corp");
+  });
+
+  it("[db] degenerate-but-non-empty workspace names (punctuation/emoji, still valid display names) never collide", async () => {
+    const names = ["!!!---...", "🚀🚀🚀"];
     const emails: string[] = [];
 
     for (const name of names) {
@@ -131,8 +150,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
       (await db.workspaceMembership.findMany({ where: { userId: { in: users.map((u: { id: string }) => u.id) } } }))
         .map((m: { workspaceId: string }) => m.workspaceId)
     );
-    // Three distinct signups with degenerate names must produce three distinct workspaces.
-    expect(workspaceIds.size).toBe(3);
+    // Two distinct signups with degenerate names must produce two distinct workspaces.
+    expect(workspaceIds.size).toBe(2);
   });
 
   it("[db] a concurrent duplicate-email double-submit yields exactly one durable account graph", async () => {

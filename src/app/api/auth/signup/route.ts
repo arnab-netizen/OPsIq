@@ -19,7 +19,20 @@ export const runtime = "nodejs";
 const signupSchema = z.object({
   email: z.email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  workspaceName: z.string().min(1, "Workspace name is required"),
+  // Trimmed before length checks, so a whitespace-only name is rejected as
+  // empty rather than accepted verbatim. 100 matches the bound already
+  // established for workspace names elsewhere in this domain (see the
+  // now-disabled onboarding-workspace route's own schema). A punctuation-only
+  // or emoji-only name is deliberately still accepted as a display name here
+  // — rejecting it would be a naming restriction this task wasn't asked to
+  // add — but it can never collide with another workspace's slug, since slug
+  // derivation always falls back to a safe ASCII base plus the workspace's
+  // own generated id (see slug_generate below).
+  workspaceName: z
+    .string()
+    .trim()
+    .min(1, "Workspace name is required")
+    .max(100, "Workspace name must be 100 characters or fewer"),
 });
 
 // Bounds the Postgres-side statement_timeout applied inside the account-graph

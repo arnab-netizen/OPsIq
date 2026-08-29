@@ -1,119 +1,163 @@
 /**
- * POST /api/onboarding/workspace — legacy-onboarding-misuse guard (DB-backed).
+ * POST /api/onboarding/workspace — REAL route + REAL canonical-route-enforcement.
  *
- * Public signup owns initial-workspace creation. This route must now refuse
- * to create a second workspace for an actor who already has one (closing the
- * "onboarding creates Workspace B" defect), while still working as the
- * explicit recovery path for a genuinely zero-workspace account — and when
- * it does create a workspace, it must also grant a matching UserRoleAssignment
- * (the pre-fix route created a WorkspaceMembership with no role assignment at
- * all, leaving the new workspace's own creator with zero capabilities in it).
+ * `withCanonicalEnforcement` is NOT mocked here (unlike
+ * src/__tests__/api/owner/tender/screen.test.ts-style tests) — this exercises
+ * the actual auth/workspace/capability pipeline the real wrapper runs,
+ * against a real database, exactly the way the hostile audit demanded route
+ * reachability be proven rather than assumed.
  *
- * `withCanonicalEnforcement` is mocked to a pass-through (same pattern as
- * src/__tests__/api/owner/tender/screen.test.ts) so this test exercises the
- * route's own logic against a real database, not the auth/session wrapper.
+ * Two facts this pins:
+ *
+ * 1. An actor who already has an active workspace membership (e.g. a
+ *    just-signed-up owner) can direct-POST this endpoint and it can never
+ *    create a second workspace for them — the endpoint is unconditionally
+ *    disabled (FeatureDisabledError, 501) before it does anything.
+ *
+ * 2. A session with ZERO active workspace memberships never even reaches
+ *    this route's handler: `withCanonicalEnforcement`'s workspace-resolution
+ *    step (STEP 1.5 in canonical-route-enforcement.ts) unconditionally looks
+ *    up an active WorkspaceMembership and throws a 403
+ *    ("workspace_context_invalid") before the handler runs — regardless of
+ *    `requireWorkspace: false`. This is the exact defect a prior revision of
+ *    this workstream missed: a "recovery form" calling this endpoint for a
+ *    zero-workspace user was dead code, since the request never gets past
+ *    the wrapper. Only `@/services/auth`'s fact-gathering functions are
+ *    mocked (same technique as
+ *    src/__tests__/api/growth/pricing-tiers-real-route.db.test.ts) so the
+ *    wrapper's own membership lookup runs for real against real DB rows.
+ *
+ * In both cases the database is asserted to gain no new Workspace.
  */
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { randomUUID } from "crypto";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
-vi.mock("@/lib/canonical-route-enforcement", () => ({
-  withCanonicalEnforcement: (handler: (ctx: unknown) => unknown) => handler,
+let mockActorId = randomUUID();
+let mockWorkspaceId: string | null = null;
+/** Toggle between "this session has an active membership" and "it has none". */
+let mockHasMembership = true;
+
+vi.mock("@/services/auth", () => ({
+  getSessionFact: vi.fn(async () => ({
+    valid: true,
+    session: {
+      user: { id: mockActorId, email: "test@example.com", name: "Test User", isActive: true },
+      sessionId: "test-session",
+      expiresAt: new Date(Date.now() + 86400000),
+    },
+    invalidReason: undefined,
+  })),
+  getSession: vi.fn(async () => ({
+    user: { id: mockActorId, email: "test@example.com", name: "Test User", isActive: true },
+    sessionId: "test-session",
+    expiresAt: new Date(Date.now() + 86400000),
+  })),
+  getPolicyContextFact: vi.fn(async () => ({
+    valid: true,
+    policy: {
+      userId: mockActorId,
+      roles: mockHasMembership
+        ? [{ role: "admin_or_portfolio_manager", scope: "workspace", scopeId: mockWorkspaceId }]
+        : [],
+      engagementMemberships: [],
+    },
+    invalidReason: undefined,
+  })),
+  getPolicyContext: vi.fn(async () => ({
+    userId: mockActorId,
+    roles: mockHasMembership
+      ? [{ role: "admin_or_portfolio_manager", scope: "workspace", scopeId: mockWorkspaceId }]
+      : [],
+    engagementMemberships: [],
+  })),
 }));
 
-function ctx(actorId: string, body: Record<string, unknown>) {
-  return {
-    verifiedActorId: actorId,
-    request: { json: async () => body },
-  };
+function makeRequest(body: unknown): NextRequest {
+  return new NextRequest("https://example.com/api/onboarding/workspace", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/onboarding/workspace — recovery guard", () => {
-  const cleanupUserIds: string[] = [];
-  const cleanupWorkspaceIds: string[] = [];
-
-  afterEach(async () => {
-    if (cleanupUserIds.length > 0) {
-      await db.userRoleAssignment.deleteMany({ where: { userId: { in: cleanupUserIds } } });
-      await db.workspaceMembership.deleteMany({ where: { userId: { in: cleanupUserIds } } });
-    }
-    // The recovery route emits an audit event referencing the actor/workspace;
-    // both FKs must be cleared before the rows they reference.
-    await db.auditEvent.deleteMany({
-      where: {
-        OR: [
-          { actorId: { in: cleanupUserIds.length > 0 ? cleanupUserIds : [""] } },
-          { workspaceId: { in: cleanupWorkspaceIds.length > 0 ? cleanupWorkspaceIds : [""] } },
-        ],
-      },
+describe.skipIf(!SHOULD_RUN_DB_TESTS)(
+  "[db] POST /api/onboarding/workspace — REAL route + REAL canonical-route-enforcement",
+  () => {
+    beforeEach(() => {
+      mockActorId = randomUUID();
+      mockWorkspaceId = null;
+      mockHasMembership = true;
     });
-    if (cleanupWorkspaceIds.length > 0) {
-      await db.workspace.deleteMany({ where: { id: { in: cleanupWorkspaceIds } } });
-    }
-    if (cleanupUserIds.length > 0) {
-      await db.user.deleteMany({ where: { id: { in: cleanupUserIds } } });
-    }
-    cleanupUserIds.length = 0;
-    cleanupWorkspaceIds.length = 0;
-  });
 
-  async function makeUser(): Promise<string> {
-    const userId = randomUUID();
-    await db.user.create({
-      data: { id: userId, email: `${userId}@example.com`, isActive: true, updatedAt: new Date() },
+    afterEach(async () => {
+      if (mockWorkspaceId) {
+        await db.auditEvent.deleteMany({ where: { workspaceId: mockWorkspaceId } });
+        await db.userRoleAssignment.deleteMany({ where: { userId: mockActorId } });
+        await db.workspaceMembership.deleteMany({ where: { userId: mockActorId } });
+        await db.workspace.deleteMany({ where: { id: mockWorkspaceId } });
+      }
+      await db.user.deleteMany({ where: { id: mockActorId } });
     });
-    cleanupUserIds.push(userId);
-    return userId;
+
+    it("[db] an already-onboarded actor's direct POST cannot create Workspace B — disabled before any DB write", async () => {
+      mockWorkspaceId = randomUUID();
+      await db.user.create({ data: { id: mockActorId, email: `${mockActorId}@example.com`, updatedAt: new Date() } });
+      await db.workspace.create({
+        data: { id: mockWorkspaceId, name: "Existing WS", slug: `existing-${mockWorkspaceId.slice(0, 8)}`, isActive: true },
+      });
+      await db.workspaceMembership.create({
+        data: { workspaceId: mockWorkspaceId, userId: mockActorId, role: "owner", isActive: true },
+      });
+      await db.userRoleAssignment.create({
+        data: {
+          id: randomUUID(),
+          userId: mockActorId,
+          role: "admin_or_portfolio_manager",
+          scope: "workspace",
+          scopeId: mockWorkspaceId,
+          isActive: true,
+        },
+      });
+
+      const { POST } = await import("@/app/api/onboarding/workspace/route");
+      const res = await POST(
+        makeRequest({ name: "Second Workspace", slug: `second-${randomUUID().slice(0, 8)}` }),
+        { params: Promise.resolve({}) }
+      );
+
+      expect(res.status).toBe(501);
+
+      const workspaces = await db.workspace.findMany({ where: { createdBy: mockActorId } });
+      expect(workspaces).toHaveLength(0);
+      const memberships = await db.workspaceMembership.findMany({ where: { userId: mockActorId } });
+      expect(memberships).toHaveLength(1);
+      expect(memberships[0].workspaceId).toBe(mockWorkspaceId);
+    });
+
+    it("[db] a zero-active-membership session never reaches the handler — the wrapper itself 403s first", async () => {
+      mockHasMembership = false;
+      await db.user.create({ data: { id: mockActorId, email: `${mockActorId}@example.com`, updatedAt: new Date() } });
+      // Deliberately create no WorkspaceMembership row for this actor — the
+      // real STEP 1.5 membership lookup in canonical-route-enforcement.ts
+      // must find none.
+
+      const { POST } = await import("@/app/api/onboarding/workspace/route");
+      const res = await POST(
+        makeRequest({ name: "My Workspace", slug: `my-ws-${randomUUID().slice(0, 8)}` }),
+        { params: Promise.resolve({}) }
+      );
+
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body.classification).toContain("workspace_context_invalid");
+
+      const workspaces = await db.workspace.findMany({ where: { createdBy: mockActorId } });
+      expect(workspaces).toHaveLength(0);
+      const memberships = await db.workspaceMembership.findMany({ where: { userId: mockActorId } });
+      expect(memberships).toHaveLength(0);
+    });
   }
-
-  it("[db] an actor with an existing active membership cannot create a second workspace", async () => {
-    const { POST } = await import("@/app/api/onboarding/workspace/route");
-    const actorId = await makeUser();
-
-    const firstWorkspace = await db.workspace.create({
-      data: { id: randomUUID(), name: "Existing WS", slug: `existing-${randomUUID().slice(0, 8)}`, isActive: true },
-    });
-    cleanupWorkspaceIds.push(firstWorkspace.id);
-    await db.workspaceMembership.create({
-      data: { workspaceId: firstWorkspace.id, userId: actorId, role: "owner", isActive: true },
-    });
-
-    await expect(
-      POST(
-        ctx(actorId, {
-          name: "Second Workspace",
-          slug: `second-${randomUUID().slice(0, 8)}`,
-        }) as never
-      )
-    ).rejects.toMatchObject({ name: "ConflictError", statusCode: 409 });
-
-    const memberships = await db.workspaceMembership.findMany({ where: { userId: actorId } });
-    expect(memberships).toHaveLength(1);
-    expect(memberships[0].workspaceId).toBe(firstWorkspace.id);
-  });
-
-  it("[db] a zero-workspace actor can recover: workspace + membership + role assignment all created", async () => {
-    const { POST } = await import("@/app/api/onboarding/workspace/route");
-    const actorId = await makeUser();
-    const slug = `recovered-${randomUUID().slice(0, 8)}`;
-
-    const result = (await POST(
-      ctx(actorId, { name: "Recovered Workspace", slug }) as never
-    )) as { workspaceId: string; slug: string };
-
-    cleanupWorkspaceIds.push(result.workspaceId);
-    expect(result.slug).toBe(slug);
-
-    const membership = await db.workspaceMembership.findFirst({
-      where: { userId: actorId, workspaceId: result.workspaceId },
-    });
-    expect(membership?.isActive).toBe(true);
-
-    const roleAssignment = await db.userRoleAssignment.findFirst({
-      where: { userId: actorId, isActive: true },
-    });
-    expect(roleAssignment?.scope).toBe("workspace");
-    expect(roleAssignment?.scopeId).toBe(result.workspaceId);
-  });
-});
+);
