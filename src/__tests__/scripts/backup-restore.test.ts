@@ -374,6 +374,52 @@ describe("D4: Backup/Restore Procedure - Script Testing", () => {
     });
   });
 
+  describe("PG18 Restore Version Parity (2026-08-29)", () => {
+    // Root cause: production (Neon) is PostgreSQL 18.6, and pg_dump 18.6's
+    // plain-format dumps include `SET transaction_timeout = 0;` in their
+    // standard preamble (`transaction_timeout` is a PG17+ GUC). The
+    // rehearsal target was postgres:16, which rejects that statement --
+    // proven directly from a real dispatch's service-container log
+    // (run 33237998708): `ERROR: unrecognized configuration parameter
+    // "transaction_timeout"`. These are recurrence guards for the fix:
+    // production-major parity in the rehearsal target, plus a fail-closed
+    // pre-restore assertion so a future major mismatch fails clearly
+    // instead of reproducing the same "Broken pipe" investigation.
+    const WORKFLOW_PATH = path.join(process.cwd(), ".github", "workflows", "restore-rehearsal.yml");
+
+    it("restore rehearsal target should be postgres:18, not postgres:16", () => {
+      const content = fs.readFileSync(WORKFLOW_PATH, "utf-8");
+      expect(content).toContain("image: postgres:18");
+      expect(content).not.toContain("image: postgres:16");
+    });
+
+    it("restore rehearsal should install a PGDG PostgreSQL client, not rely on Ubuntu's default postgresql-client", () => {
+      const content = fs.readFileSync(WORKFLOW_PATH, "utf-8");
+      expect(content).toContain("apt.postgresql.org/pub/repos/apt");
+      expect(content).toContain("PSQL_CLIENT_MAJOR");
+    });
+
+    it("restore rehearsal should assert source/target PostgreSQL major-version parity before restoring", () => {
+      const content = fs.readFileSync(WORKFLOW_PATH, "utf-8");
+      expect(content).toContain("SOURCE_DUMP_MAJOR");
+      expect(content).toContain("TARGET_SERVER_MAJOR");
+      expect(content).toContain("RESTORE_VERSION_PARITY_FAIL");
+      // The parity-assertion step must run before the restore step, not after.
+      const parityIndex = content.indexOf("Assert source/target PostgreSQL version parity");
+      const restoreIndex = content.indexOf("Restore into throwaway container");
+      expect(parityIndex).toBeGreaterThan(-1);
+      expect(restoreIndex).toBeGreaterThan(-1);
+      expect(parityIndex).toBeLessThan(restoreIndex);
+    });
+
+    it("restore-database.sh should surface real PostgreSQL diagnostic lines on failure, not just the broken-pipe symptom", () => {
+      const scriptPath = path.join(SCRIPT_DIR, "restore-database.sh");
+      const content = fs.readFileSync(scriptPath, "utf-8");
+      expect(content).toContain("PostgreSQL diagnostic lines");
+      expect(content).toContain("ERROR:|FATAL:|DETAIL:|HINT:");
+    });
+  });
+
   describe("Integration Scenarios", () => {
     it("should support backup → verify → restore workflow", () => {
       // Verify scripts exist and are executable
