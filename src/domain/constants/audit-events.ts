@@ -5,6 +5,7 @@ export const AUDIT_EVENTS = {
   USER_LOGIN_FAILED: "user.login_failed",
   USER_CREATED: "user.created",
   USER_UPDATED: "user.updated",
+  WORKSPACE_CREATED: "workspace.created",
   USER_DEACTIVATED: "user.deactivated",
   USER_REACTIVATED: "user.reactivated",
 
