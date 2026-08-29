@@ -16,8 +16,68 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ROOT-CAUSE FIX (2026-08-29): this workflow ran its full DB suite
+  # unconditionally on every push to main regardless of what changed --
+  # confirmed directly on a real merge (PR #373, a 1-line whitespace fix to
+  # one workflow file) costing 2595s (~43 min) of full-DB-suite runtime for
+  # a change with zero DB/schema/runtime impact. This classifier computes
+  # actual risk from the push's real diff so the expensive job below only
+  # runs when the change could plausibly need it. A manual workflow_dispatch
+  # always runs the full suite regardless of classification -- that path
+  # exists specifically for disaster-recovery re-verification of main
+  # ("is main actually green"), which the classifier's job is not to
+  # second-guess. See scripts/ci-risk-classifier.mjs for the rule set.
+  classify:
+    name: Classify change risk
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_full_suite: ${{ steps.decide.outputs.run_full_suite }}
+      risk_class: ${{ steps.decide.outputs.risk_class }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Determine changed files and classify risk
+        id: decide
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch -- always runs the full suite regardless of risk class (disaster-recovery re-verification path, not a normal push)."
+            echo "risk_class=MANUAL_DISPATCH" >> "$GITHUB_OUTPUT"
+            echo "run_full_suite=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # ROOT-CAUSE FIX (owner correction pass, 2026-08-29, Issue 3 --
+          # "a potential safety-critical classifier defect"): this MUST use
+          # the push event's own before/after commit identities, never a
+          # diff against origin/main computed after checkout, because in a
+          # job triggered BY this same push origin/main may already equal
+          # the new HEAD -- producing a false-empty diff that silently skips
+          # full validation on a risky change. classifyPushEvent() in
+          # scripts/ci-risk-classifier.mjs implements this with an explicit
+          # zero-SHA guard and a fail-safe (any git failure resolving the
+          # range classifies UNKNOWN/full, never "no changes"). Proven by 5
+          # real-git-repo PUSH TEST scenarios in
+          # src/__tests__/workflows/ci-risk-classifier.test.ts.
+          node scripts/ci-risk-classifier.mjs --push "${{ github.event.before }}" "${{ github.event.after }}" > /tmp/classify_output.txt
+          cat /tmp/classify_output.txt
+          RISK_CLASS=$(grep '^risk_class=' /tmp/classify_output.txt | cut -d= -f2)
+          RUN_FULL=$(grep '^run_main_integration_full_suite=' /tmp/classify_output.txt | cut -d= -f2)
+          echo "risk_class=$RISK_CLASS" >> "$GITHUB_OUTPUT"
+          echo "run_full_suite=$RUN_FULL" >> "$GITHUB_OUTPUT"
+
   full-suite:
     name: Full DB Integration Suite
+    needs: classify
+    if: needs.classify.outputs.run_full_suite == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 110
 
@@ -200,3 +260,28 @@ jobs:
         with:
           files: ./coverage/coverage-final.json
           fail_ci_if_error: false
+
+  # Always runs, regardless of whether full-suite ran, was skipped, or
+  # failed -- this is the "cheap summary job" that makes the classifier's
+  # decision and outcome visible without requiring anyone to dig through
+  # the classify job's own logs.
+  summary:
+    name: Main Integration Summary
+    needs: [classify, full-suite]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record outcome
+        run: |
+          set -euo pipefail
+          RESULT="${{ needs['full-suite'].result }}"
+          if [ "${{ needs.classify.outputs.run_full_suite }}" = "true" ]; then
+            if [ "$RESULT" = "success" ]; then
+              echo "MAIN_INTEGRATION_EXECUTED_BY_RISK_CLASS=${{ needs.classify.outputs.risk_class }}" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::Main Integration full suite required (risk class ${{ needs.classify.outputs.risk_class }}) but did not succeed (result: $RESULT)"
+              exit 1
+            fi
+          else
+            echo "MAIN_INTEGRATION_SKIPPED_BY_RISK_CLASS=${{ needs.classify.outputs.risk_class }}" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi

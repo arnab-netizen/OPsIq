@@ -35,6 +35,21 @@ on:
         required: false
         default: ''
         type: string
+      run_test_suite:
+        description: >-
+          Run the non-DB vitest suite in this call. Default true for any
+          caller other than ci.yml. ci.yml's own build-and-test job already
+          runs this exact suite in the same PR -- ci.yml passes false here
+          to stop paying for the identical ~28,000-test run twice per PR
+          (confirmed duplicate: both jobs ran
+          `vitest run --maxWorkers 1 --exclude '**/*.db.test.ts' ...`,
+          consistently taking ~25 minutes each in parallel, e.g. PR #374's
+          real CI run). This is a drift from this repo's own documented
+          target (docs/audits/2026-07-12/FINAL_CI_ARCHITECTURE.md: the
+          suite runs once), not an intentional design -- restoring that.
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   validate:
@@ -128,6 +143,7 @@ jobs:
         continue-on-error: false
 
       - name: Run non-DB test suite
+        if: inputs.run_test_suite
         run: |
           if [ -n "${{ inputs.test_pattern }}" ]; then
             npx vitest run --maxWorkers 1 ${{ inputs.test_pattern }}
