@@ -165,5 +165,24 @@ if gunzip -c "$BACKUP_FILE" | psql \
   exit 0
 else
   echo "Restore failed - see log for details" | tee -a "$LOG_FILE"
+  # ROOT-CAUSE FIX (2026-08-29): psql's own stderr (captured above into
+  # LOG_FILE) always contains the real underlying error line when the
+  # SERVER rejects a statement (e.g. "psql:<stdin>:N: ERROR:  ..."), but
+  # this pipeline's visible top-level failure is `gzip: stdout: Broken
+  # pipe` -- gunzip's own SIGPIPE symptom from psql exiting early under
+  # -v ON_ERROR_STOP=1, not the actual cause. That broken-pipe line was
+  # the only thing visible without digging through this log by hand
+  # (confirmed directly on a real dispatch: the real cause, a rejected
+  # `SET transaction_timeout = 0;` statement, was only found by pulling
+  # the Postgres service container's own separate log). Surface the real
+  # PostgreSQL diagnostic lines here instead, so a future failure shows
+  # the exact DB error directly. LOG_FILE never contains the dump's SQL
+  # content or DATABASE_URL unredacted (see REDACTED_URL above and the
+  # gzip/psql invocations, which never echo the dump itself into this
+  # file), so this extraction cannot leak business data or credentials.
+  echo "--- PostgreSQL diagnostic lines from restore log ---" | tee -a "$LOG_FILE"
+  if ! grep -E 'psql:|ERROR:|FATAL:|DETAIL:|HINT:' "$LOG_FILE"; then
+    echo "(no psql/ERROR/FATAL/DETAIL/HINT lines found in restore log)" | tee -a "$LOG_FILE"
+  fi
   exit 1
 fi

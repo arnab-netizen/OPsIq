@@ -2,23 +2,28 @@ name: Backup Restore Rehearsal (Isolated)
 
 # Proves a production backup produced by scheduled-backup.yml is actually
 # restorable -- not just that pg_dump exited 0 -- by restoring it into a
-# disposable postgres:16 GitHub Actions SERVICE CONTAINER that is created
+# disposable postgres:18 GitHub Actions SERVICE CONTAINER that is created
 # fresh for this job and destroyed the moment the job ends.
 #
 # THIS WORKFLOW NEVER CONNECTS TO PRODUCTION. It has no
 # PRODUCTION_DATABASE_URL / STAGING_DATABASE_URL reference anywhere. Its
 # only inputs are (a) a past backup artifact, already sitting in GitHub
-# Actions storage, and (b) a same-repo, ephemeral container. This mirrors
-# the existing LANE_B pattern in .github/workflows/db-verification.yml
-# (a throwaway postgres:16 service container, "not Neon, not production").
+# Actions storage, and (b) a same-repo, ephemeral container. Note this
+# target is intentionally NOT the same postgres:16 image used by the
+# generic application-test-database workflows (db-verification.yml and
+# friends) -- see the PG18-PARITY comment on the `services:` block below
+# for why this one specific workflow needs to track production's actual
+# major version instead.
 #
 # Verification here is layered, deliberately going beyond "the restore
 # command exited 0":
 #   1. checksum verification of the downloaded artifact (restore-database.sh)
 #   2. gzip container integrity (restore-database.sh)
 #   3. pg_dump completion-marker check, catching truncated dumps (restore-database.sh)
-#   4. table + row count assertions with a hard failure on an empty schema (restore-database.sh)
-#   5. an INDEPENDENT post-restore query in this workflow (not trusting the
+#   4. source-dump-major == target-server-major parity assertion, BEFORE
+#      the restore even starts (this workflow, see PG18-PARITY below)
+#   5. table + row count assertions with a hard failure on an empty schema (restore-database.sh)
+#   6. an INDEPENDENT post-restore query in this workflow (not trusting the
 #      script's own self-report) re-deriving the restored db name from the
 #      dump and re-querying information_schema directly.
 #
@@ -50,8 +55,27 @@ jobs:
     timeout-minutes: 20
 
     services:
+      # PG18-PARITY (2026-08-29): a real dispatch of this workflow (run
+      # 33237998708) proved a genuine restore failure here, NOT a symptom of
+      # the earlier artifact-name whitespace bug. Production (Neon) is
+      # PostgreSQL 18.6, and pg_dump 18.6's plain-format dumps include
+      # `SET transaction_timeout = 0;` in their standard preamble --
+      # `transaction_timeout` is a PG17+ GUC. Restoring into the previous
+      # postgres:16 target failed immediately with the server's own
+      # "unrecognized configuration parameter" error (confirmed directly
+      # from the service container's own log, not guessed), which is a real
+      # PostgreSQL major-version incompatibility, not the earlier bug. The
+      # visible "gzip: stdout: Broken pipe" was a downstream symptom of
+      # psql exiting on that error under -v ON_ERROR_STOP=1, not the cause.
+      #
+      # This target intentionally tracks production's PostgreSQL major
+      # version (18) so this workflow rehearses production-major parity, not
+      # just "some restore succeeds." db-verification.yml and the other
+      # generic application-test-database workflows intentionally stay on
+      # postgres:16 -- that is unrelated generic app-test infrastructure,
+      # not a production recovery rehearsal, and is out of scope here.
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -69,11 +93,46 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # PG18-PARITY (2026-08-29): Ubuntu's own default postgresql-client
+      # package caps at major 16 (older than production's actual major, 18),
+      # and even after installing PGDG's package alongside it, this runner
+      # image's bare `psql`/`pg_dump` commands do not repoint at the newly
+      # installed version -- proven directly on scheduled-backup.yml
+      # (see that workflow's own PATH-override comment, PRs #371/#372).
+      # Reuse that exact proven approach here instead of re-deriving it:
+      # install from the official PGDG apt repo, then explicitly locate and
+      # PATH-prepend the real installed binary directory rather than
+      # trusting bare-command PATH resolution.
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update -qq
+          sudo apt-get install -qq -y curl ca-certificates
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
           sudo apt-get install -qq -y postgresql-client
+
+          PG_CLIENT_VERSION=$(ls /usr/lib/postgresql | sort -V | tail -1)
+          if [ -z "$PG_CLIENT_VERSION" ] || [ ! -x "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin/psql" ]; then
+            echo "::error::Could not locate an installed PGDG psql binary under /usr/lib/postgresql"
+            exit 1
+          fi
+          echo "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin" >> "$GITHUB_PATH"
+          export PATH="/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin:$PATH"
+
+          RESOLVED_PSQL=$(command -v psql)
+          if [ "$RESOLVED_PSQL" != "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin/psql" ]; then
+            echo "::error::psql resolves to $RESOLVED_PSQL, not the PGDG client at /usr/lib/postgresql/${PG_CLIENT_VERSION}/bin/psql -- PATH override did not take effect"
+            exit 1
+          fi
           psql --version
+
+          if [ "$PG_CLIENT_VERSION" -lt 18 ]; then
+            echo "::error::PSQL_CLIENT_MAJOR=$PG_CLIENT_VERSION, expected >= 18 to match production's PostgreSQL major version"
+            exit 1
+          fi
 
       - name: Resolve source backup run
         id: resolve
@@ -119,16 +178,58 @@ jobs:
           name: opsiq-production-backup-${{ steps.resolve.outputs.run_id }}
           path: downloaded-backup
 
-      - name: Restore into throwaway container
-        id: restore
+      # PG18-PARITY (2026-08-29): fail BEFORE the restore starts if the
+      # dump's source major version and the disposable target server's major
+      # version don't match, instead of letting the restore run partway and
+      # abort on a confusing mid-stream SQL error (as run 33237998708 did).
+      # This also gives fail-fast behavior the next time Neon changes
+      # production's major version: this workflow will say exactly why it
+      # refused, instead of reproducing the same "Broken pipe" investigation.
+      - name: Assert source/target PostgreSQL version parity
+        id: parity
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/rehearsal_target
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: postgres
         run: |
           BACKUP_FILE=$(ls downloaded-backup/opsiq_backup_*.sql.gz | head -1)
           if [ -z "$BACKUP_FILE" ]; then
             echo "::error::No backup file found in downloaded artifact"
             exit 1
           fi
+          echo "backup_file=$BACKUP_FILE" >> "$GITHUB_OUTPUT"
+
+          SOURCE_DUMP_MAJOR=$(zgrep -m1 -oP '(?<=Dumped from database version )[0-9]+' "$BACKUP_FILE" || true)
+          if [ -z "$SOURCE_DUMP_MAJOR" ]; then
+            echo "::error::Could not determine SOURCE_DUMP_MAJOR from the dump's own header (expected a 'Dumped from database version' line) -- refusing to restore an unidentifiable dump."
+            exit 1
+          fi
+
+          TARGET_SERVER_VERSION=$(psql -d postgres -tAc "SHOW server_version;")
+          TARGET_SERVER_MAJOR=$(echo "$TARGET_SERVER_VERSION" | grep -oP '^[0-9]+')
+          if [ -z "$TARGET_SERVER_MAJOR" ]; then
+            echo "::error::Could not determine TARGET_SERVER_MAJOR from the disposable container's own SHOW server_version output ('$TARGET_SERVER_VERSION')."
+            exit 1
+          fi
+
+          echo "SOURCE_DUMP_MAJOR=$SOURCE_DUMP_MAJOR"
+          echo "TARGET_SERVER_MAJOR=$TARGET_SERVER_MAJOR"
+          echo "source_dump_major=$SOURCE_DUMP_MAJOR" >> "$GITHUB_OUTPUT"
+          echo "target_server_major=$TARGET_SERVER_MAJOR" >> "$GITHUB_OUTPUT"
+
+          if [ "$SOURCE_DUMP_MAJOR" != "$TARGET_SERVER_MAJOR" ]; then
+            echo "::error::RESTORE_VERSION_PARITY_FAIL: dump is from PostgreSQL major $SOURCE_DUMP_MAJOR but the disposable rehearsal target is major $TARGET_SERVER_MAJOR. Refusing to restore a mismatched-major dump -- update this workflow's postgres: service image to match production's current major version."
+            exit 1
+          fi
+          echo "RESTORE_VERSION_PARITY: PASS ($SOURCE_DUMP_MAJOR == $TARGET_SERVER_MAJOR)"
+
+      - name: Restore into throwaway container
+        id: restore
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/rehearsal_target
+        run: |
+          BACKUP_FILE="${{ steps.parity.outputs.backup_file }}"
           echo "backup_file=$BACKUP_FILE" >> "$GITHUB_OUTPUT"
           bash scripts/restore-database.sh "$BACKUP_FILE" verify
 
@@ -158,6 +259,7 @@ jobs:
       - name: Summary
         if: success()
         run: |
-          echo "Restore rehearsal PASSED against an isolated, disposable postgres:16 container."
+          echo "Restore rehearsal PASSED against an isolated, disposable postgres:18 container."
           echo "Source backup: scheduled-backup.yml run ${{ steps.resolve.outputs.run_id }}"
+          echo "Version parity: SOURCE_DUMP_MAJOR=${{ steps.parity.outputs.source_dump_major }} == TARGET_SERVER_MAJOR=${{ steps.parity.outputs.target_server_major }}"
           echo "Production was never contacted by this workflow."
