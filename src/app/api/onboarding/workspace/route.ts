@@ -1,50 +1,39 @@
-import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { db } from "@/lib/db";
-import { z } from "zod";
+import { FeatureDisabledError } from "@/infra/errors";
 
-const CreateWorkspaceSchema = z.object({
-  name: z.string().min(3).max(100),
-  slug: z.string().min(3).max(50).regex(/^[a-z0-9-]+$/),
-  description: z.string().optional(),
-});
-
+/**
+ * Disabled fail-closed. Public signup now owns initial-workspace creation
+ * exclusively (one atomic transaction: User, Workspace, WorkspaceMembership,
+ * UserRoleAssignment, Session).
+ *
+ * This route cannot legitimately serve either audience it previously tried
+ * to serve:
+ *  - An already-onboarded actor (≥1 active WorkspaceMembership) must never
+ *    create a second initial workspace here — that was the "Workspace B"
+ *    defect this whole workstream exists to close.
+ *  - A genuinely zero-workspace actor can never even reach this handler:
+ *    `withCanonicalEnforcement`'s workspace-resolution step (STEP 1.5 in
+ *    canonical-route-enforcement.ts) unconditionally looks up an active
+ *    WorkspaceMembership for the session's user and throws a 403 before the
+ *    handler runs at all if none exists — regardless of `requireWorkspace`.
+ *    There is no code path through this wrapper for a zero-membership user,
+ *    so a self-service "recovery" flow through this endpoint was dead on
+ *    arrival. A real recovery mechanism for a legacy zero-workspace account
+ *    (if production evidence ever shows one is needed) is a separate,
+ *    explicitly-authorized future workstream — not a bypass of canonical
+ *    workspace enforcement.
+ *
+ * Additional-workspace creation as a legitimate authenticated feature would
+ * need its own separate, explicitly-authorized surface; this route is not
+ * repurposed into one.
+ */
 export const POST = withCanonicalEnforcement(
-  async (ctx: CanonicalAuthContext) => {
-    const actorId = ctx.verifiedActorId;
-
-    const body = await ctx.request?.json();
-    const input = CreateWorkspaceSchema.parse(body);
-
-    const existing = await db.workspace.findUnique({
-      where: { slug: input.slug },
-    });
-
-    if (existing) {
-      throw new Error("Workspace slug already exists");
-    }
-
-    const workspace = await db.workspace.create({
-      data: {
-        name: input.name,
-        slug: input.slug,
-        description: input.description,
-        createdBy: actorId,
-        workspaceMemberships: {
-          create: {
-            userId: actorId,
-            role: "admin",
-            addedBy: actorId,
-          },
-        },
-      },
-    });
-
-    return {
-      workspaceId: workspace.id,
-      slug: workspace.slug,
-      message: "Workspace created successfully",
-    };
+  async () => {
+    throw new FeatureDisabledError(
+      "Workspace creation via onboarding",
+      "initial workspace creation now belongs exclusively to signup; additional workspace creation requires a future separately-authorized feature"
+    );
   },
   { requireWorkspace: false, requireCapabilities: [CAPABILITIES.OWNER_ONBOARD] }
 );

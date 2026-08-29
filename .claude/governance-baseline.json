@@ -6,7 +6,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/auth/signup/route.ts",
-      "line": 156,
+      "line": 212,
       "severity": "error",
       "code": "const errorMessage = error instanceof Error ? error.message : \"Unknown error\";",
       "reason": "auth route server-side log/context string; not operator-rendered"

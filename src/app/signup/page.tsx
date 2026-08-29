@@ -37,7 +37,7 @@ export default function SignupPage() {
         throw new Error(data.error || "Signup failed");
       }
 
-      router.push("/onboarding");
+      router.push("/owner/data");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
