@@ -420,6 +420,48 @@ describe("D4: Backup/Restore Procedure - Script Testing", () => {
     });
   });
 
+  describe("Independent post-restore verification does not abort on a benign zgrep -m1 broken pipe (2026-08-29)", () => {
+    // Root cause: `zgrep -m1` stops reading after its first match, which
+    // SIGPIPEs the internal gzip decompressor zgrep spawns -- printing
+    // "gzip: stdout: Broken pipe" and returning a non-zero exit from zgrep
+    // itself. Under this step's `bash -e`, that aborted the whole
+    // "Independent post-restore schema/data verification" step before its
+    // actual verification queries ever ran -- confirmed directly on the
+    // first-ever restore rehearsal dispatch to reach a real `\connect` line
+    // in a real production-shaped dump (run 33259802720, exit code 2,
+    // immediately after the prior step's own restore had already succeeded
+    // with 242 tables / 2356 rows). The identical extraction already
+    // guarded against this exact hazard two other places in this codebase
+    // (SOURCE_DUMP_MAJOR a few lines above it in this same file, and
+    // scripts/restore-database.sh's own RESTORED_DB extraction) -- this was
+    // the one remaining unguarded instance, confirmed via a repo-wide grep
+    // for the same `zgrep -m1` pattern (no others exist).
+    const WORKFLOW_PATH = path.join(process.cwd(), ".github", "workflows", "restore-rehearsal.yml");
+
+    it("the independent verification step's RESTORED_DB extraction tolerates a benign zgrep -m1 broken-pipe exit", () => {
+      const content = fs.readFileSync(WORKFLOW_PATH, "utf-8");
+      const idx = content.indexOf("Independent post-restore schema/data verification");
+      expect(idx).toBeGreaterThan(-1);
+      const stepBody = content.slice(idx, idx + 2000);
+      expect(stepBody).toContain("RESTORED_DB=$(zgrep -m1 -oP '(?<=\\\\connect )\\S+' \"$BACKUP_FILE\" || true)");
+    });
+
+    it("RECURRENCE GUARD: every zgrep -m1 extraction in the repo is followed by || true", () => {
+      const files = [
+        WORKFLOW_PATH,
+        path.join(SCRIPT_DIR, "restore-database.sh"),
+      ];
+      for (const file of files) {
+        const content = fs.readFileSync(file, "utf-8");
+        const matches = content.match(/zgrep -m1 -oP[^\n]*/g) ?? [];
+        expect(matches.length).toBeGreaterThan(0);
+        for (const line of matches) {
+          expect(line, `${file}: "${line}" is missing || true`).toContain("|| true");
+        }
+      }
+    });
+  });
+
   describe("Portable Ownership/ACL-Neutral Backup Format (2026-08-29)", () => {
     // Root cause: a real restore of a genuine production backup failed with
     // `ERROR: role "neondb_owner" does not exist`, then `ERROR: role

@@ -241,7 +241,22 @@ jobs:
           PGPASSWORD: postgres
         run: |
           BACKUP_FILE="${{ steps.restore.outputs.backup_file }}"
-          RESTORED_DB=$(zgrep -m1 -oP '(?<=\\connect )\S+' "$BACKUP_FILE")
+          # ROOT-CAUSE FIX (2026-08-29): `zgrep -m1` stops reading after its
+          # first match, which SIGPIPEs the internal gzip decompressor zgrep
+          # spawns internally -- printing "gzip: stdout: Broken pipe" to
+          # stderr and returning a non-zero exit from zgrep itself. Under
+          # this step's `bash -e`, that aborted the whole step before the
+          # verification queries below ever ran (confirmed directly on the
+          # first-ever restore rehearsal dispatch to get this far, run
+          # 33259802720, exit code 2, immediately after a genuinely
+          # successful restore in the prior step). The identical extraction
+          # already correctly guards against this two ways elsewhere in this
+          # exact codebase -- line ~203 of this same file
+          # (SOURCE_DUMP_MAJOR=$(zgrep -m1 ... || true)) and
+          # scripts/restore-database.sh:112 -- this was the one remaining
+          # unguarded instance (confirmed via a repo-wide grep for the same
+          # pattern; no others exist).
+          RESTORED_DB=$(zgrep -m1 -oP '(?<=\\connect )\S+' "$BACKUP_FILE" || true)
           echo "Independently re-querying restored database: $RESTORED_DB (not trusting restore-database.sh's own self-report)"
 
           TABLES=$(psql -d "$RESTORED_DB" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
