@@ -40,6 +40,44 @@
 # Added `--clean` -- this also matches what a `--create` dump is meant to
 # do (DROP DATABASE IF EXISTS + CREATE DATABASE), which restore-database.sh
 # already assumed.
+#
+# ROOT-CAUSE FIX (2026-08-29): a real restore of a genuine production
+# backup (run 33238853041) failed with `ERROR: role "neondb_owner" does
+# not exist`, then (after that role was manually created) `ERROR: role
+# "neon_superuser" does not exist` -- both from pg_dump's own default
+# behavior of emitting `ALTER ... OWNER TO <source-role>` and
+# `GRANT ... TO <source-role>` / `ALTER DEFAULT PRIVILEGES ... TO
+# <source-role>` statements for every one of the dump's 242 tables and
+# their indexes, functions, and types. `neondb_owner`, `neon_superuser`,
+# and `cloud_admin` (referenced once, in an ALTER DEFAULT PRIVILEGES
+# statement) are Neon's own platform-internal roles -- confirmed via a
+# full-dump role/extension/schema inventory that they are never created
+# by the dump itself (a single-database pg_dump only ever references
+# roles, never creates them; role creation is `pg_dumpall
+# --globals-only`'s job, which this backup does not run) and via a
+# repository-wide search that OpsIQ's own runtime code has zero
+# dependency on any of them (no SET ROLE, SESSION AUTHORIZATION,
+# current_user check, or hardcoded role name anywhere in src/** or
+# prisma/**). Neon's own official migration documentation independently
+# confirms this exact failure mode and its fix: "plan for -O / --no-owner
+# on pg_restore so restores do not depend on matching role OIDs."
+#
+# Confirmed locally (real Postgres, not simulated) that these ownership/
+# ACL statements are purely cosmetic metadata, never structural: a
+# diagnostic restore that continued past every error still created all
+# 242 tables, 725+ indexes, 8 enum types, 3 functions, 3 triggers, and
+# the pgcrypto extension without any of them depending on the missing
+# roles. Fix: `--no-owner --no-acl` removes these source-role-referencing
+# statements from the dump entirely, so every object's owner becomes
+# whichever role performs the restore -- eliminating this defect class
+# permanently rather than requiring the restore side to keep bootstrapping
+# stub roles for whatever provider-internal roles Neon references today
+# (and risking a repeat of this exact incident if Neon references a new
+# one in the future). Verified end-to-end locally: a --no-owner --no-acl
+# dump of the same 242-table/2354-row database restores with zero errors
+# into a completely fresh database with zero roles created beyond the
+# connecting user, and all restored objects end up owned by that single
+# connecting role as expected.
 
 set -euo pipefail
 
@@ -102,6 +140,8 @@ if pg_dump \
   --create \
   --clean \
   --if-exists \
+  --no-owner \
+  --no-acl \
   --blobs \
   2>> "$LOG_FILE" | gzip -"$COMPRESSION_LEVEL" > "$BACKUP_PATH"; then
 

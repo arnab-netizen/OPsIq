@@ -61,8 +61,18 @@ describe("CI capacity — the non-DB suite has room to finish", () => {
     expect(suiteStep?.["continue-on-error"] ?? false).toBe(false);
   });
 
-  it("the step is not made conditional", () => {
-    expect(suiteStep).not.toHaveProperty("if");
+  // Superseded by the CI risk classifier (owner correction pass, 2026-08-29):
+  // this step is now intentionally conditional on
+  // needs.classify.outputs.suite_mode == 'BROAD_NON_DB' -- exactly the tiers
+  // for which the broad suite is warranted, never RECOVERY_INFRA_ONLY or
+  // DOCS_ONLY. The invariant this test now protects is narrower and more
+  // precise than "unconditional": the condition must be this exact
+  // classifier output, not some other gate that could accidentally admit
+  // more (or fewer) tiers than intended. See
+  // src/__tests__/workflows/ci-risk-classifier.test.ts for the classifier's
+  // own tier-to-suiteMode proof.
+  it("the step's condition is exactly the classifier's BROAD_NON_DB suite mode, not some other gate", () => {
+    expect(suiteStep?.if).toBe("needs.classify.outputs.suite_mode == 'BROAD_NON_DB'");
   });
 });
 

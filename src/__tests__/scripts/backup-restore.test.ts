@@ -420,6 +420,37 @@ describe("D4: Backup/Restore Procedure - Script Testing", () => {
     });
   });
 
+  describe("Portable Ownership/ACL-Neutral Backup Format (2026-08-29)", () => {
+    // Root cause: a real restore of a genuine production backup failed with
+    // `ERROR: role "neondb_owner" does not exist`, then `ERROR: role
+    // "neon_superuser" does not exist` -- pg_dump's default behavior emits
+    // `ALTER ... OWNER TO`/`GRANT ...`/`ALTER DEFAULT PRIVILEGES ...`
+    // statements referencing Neon's own platform-internal roles
+    // (neondb_owner, neon_superuser, cloud_admin), none of which are ever
+    // created by a single-database pg_dump and none of which OpsIQ's
+    // runtime has any dependency on (confirmed by a full repo search: zero
+    // hits for SET ROLE/SESSION AUTHORIZATION/current_user checks/hardcoded
+    // role names anywhere in src/** or prisma/**). Confirmed locally these
+    // statements are purely cosmetic: a real restore that continued past
+    // every such error still created all 242 tables, 725+ indexes, 8 enum
+    // types, 3 functions, 3 triggers, and the pgcrypto extension
+    // successfully. This matches Neon's own official migration guidance:
+    // "plan for -O / --no-owner on pg_restore so restores do not depend on
+    // matching role OIDs." Fix: `--no-owner --no-acl` on pg_dump removes
+    // these statements at the source, eliminating the defect class
+    // permanently instead of requiring the restore side to keep
+    // bootstrapping whichever provider-internal roles Neon references
+    // today. Verified end-to-end locally: a --no-owner --no-acl dump
+    // restores with zero errors into a completely fresh database with zero
+    // roles created beyond the connecting user.
+    it("backup script should dump without source-role ownership/ACL statements", () => {
+      const scriptPath = path.join(SCRIPT_DIR, "backup-database.sh");
+      const content = fs.readFileSync(scriptPath, "utf-8");
+      expect(content).toContain("--no-owner");
+      expect(content).toContain("--no-acl");
+    });
+  });
+
   describe("Integration Scenarios", () => {
     it("should support backup → verify → restore workflow", () => {
       // Verify scripts exist and are executable

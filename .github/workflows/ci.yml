@@ -20,7 +20,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ROOT-CAUSE FIX (2026-08-29): main-integration.yml previously ran its full
+  # DB suite unconditionally on every push to main -- confirmed directly on
+  # a real merge (PR #373, a 1-line whitespace fix to one workflow file)
+  # costing 2595s (~43 min) of full-DB-suite runtime for a change with zero
+  # DB/schema/runtime impact. This classifier is the "cheap always-running
+  # classifier" step that determines actual risk from the changed-file list
+  # so downstream jobs (this workflow's own non-DB suite, and
+  # main-integration.yml's DB suite) can scale their validation to that
+  # risk instead of always running everything. Highest-risk-touched-path
+  # wins; anything unrecognized classifies as UNKNOWN, the same maximum
+  # tier as explicitly risky files (package.json, tsconfig, etc.) --
+  # ambiguous is never treated as cheap. See scripts/ci-risk-classifier.mjs
+  # for the full rule set and its hostile-audit test coverage.
+  classify:
+    name: Classify change risk
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      risk_class: ${{ steps.classify.outputs.risk_class }}
+      run_non_db_suite: ${{ steps.classify.outputs.run_non_db_suite }}
+      suite_mode: ${{ steps.classify.outputs.suite_mode }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Determine changed files and classify risk
+        id: classify
+        run: |
+          set -euo pipefail
+          git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" > /tmp/changed_files.txt
+          echo "Changed files in this PR:"
+          cat /tmp/changed_files.txt
+          node scripts/ci-risk-classifier.mjs < /tmp/changed_files.txt >> "$GITHUB_OUTPUT"
+
   build-and-test:
+    needs: classify
     runs-on: ubuntu-latest
     # Must stay strictly greater than the non-DB suite step cap below plus setup.
     # A step timeout is only reachable if the job outlives it: with a 25-minute job
@@ -87,10 +129,46 @@ jobs:
         run: node scripts/ci-governance-check.mjs
         continue-on-error: false
 
+      - name: Run targeted recovery validation (RECOVERY_INFRA_ONLY tier; no broad suite)
+        if: needs.classify.outputs.suite_mode == 'TARGETED_RECOVERY'
+        # ROOT-CAUSE FIX (owner correction pass, 2026-08-29, Issue 2): the
+        # first version of this classifier gave RECOVERY_INFRA_ONLY the same
+        # ~28,000-test broad suite as every other non-DOCS_ONLY tier,
+        # defeating the entire point of a recovery-only tier -- that suite is
+        # not materially relevant to a backup/restore-workflow-only change.
+        # This runs only the recovery-specific test files, the classifier's
+        # own tests (which this tier's changes can themselves break), and a
+        # shell-syntax check on any changed .sh scripts. Proven never to run
+        # the broad suite by src/__tests__/workflows/ci-risk-classifier.test.ts.
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          npx vitest run --maxWorkers 1 \
+            src/__tests__/scripts/backup-restore.test.ts \
+            src/__tests__/workflows/ci-risk-classifier.test.ts
+          CHANGED_SH=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" -- '*.sh' || true)
+          if [ -n "$CHANGED_SH" ]; then
+            echo "Shell syntax check (bash -n) on changed scripts:"
+            echo "$CHANGED_SH"
+            echo "$CHANGED_SH" | xargs -r -n1 bash -n
+          else
+            echo "No changed .sh scripts in this PR."
+          fi
+        env:
+          TEST_WITH_DB: "false"
+          NODE_ENV: test
+
       - name: Run non-DB test suite (blocking; DB tests and quarantine excluded)
+        if: needs.classify.outputs.suite_mode == 'BROAD_NON_DB'
         # DB tests self-skip when TEST_WITH_DB != 'true', but we also explicitly
         # exclude *.db.test.ts files so the intent is unambiguous.
         # Full DB suite runs on push-to-main in main-integration.yml.
+        # Skipped entirely for a DOCS_ONLY change (see the classify job
+        # above) -- a change with zero executable content cannot fail this
+        # suite, and running it anyway would be exactly the "pointless CI"
+        # this classifier exists to eliminate. RECOVERY_INFRA_ONLY gets its
+        # own targeted step above instead of this one (owner correction pass,
+        # 2026-08-29, Issue 2).
         #
         # ─── Why 30 and not 20 ────────────────────────────────────────────────
         # NON_DB_SUITE_TIMEOUT_HEADROOM_EXHAUSTED. The suite grew to ~28,460 tests
@@ -161,12 +239,16 @@ jobs:
 
   # Calls the reusable PR validation workflow with bundle manifest validation enabled.
   # This proves the reusable_ci_workflow component is wired into the PR gate.
+  # run_test_suite: false -- build-and-test above already runs this exact
+  # suite in the same PR; see reusable-pr-validation.yml's run_test_suite
+  # input comment for the confirmed-duplicate evidence this removes.
   bundle-validate:
     uses: ./.github/workflows/reusable-pr-validation.yml
     with:
       node_version: '20.x'
       run_bundle_validator: true
       run_recurrence_scanners: true
+      run_test_suite: false
 
   # Root cause: PR #332 merged a workflow file with a YAML syntax error (a
   # single-line `run:` value containing an unquoted colon) that no existing
@@ -202,10 +284,67 @@ jobs:
           curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
           echo "$CHANGED" | xargs ./actionlint
 
+  # HOSTILE-AUDIT FIX (owner correction pass, 2026-08-29, Issue 9; semantics
+  # corrected 2026-08-29): this job had `needs: [...]` but a plain
+  # `if: github.event_name == 'pull_request'` with no success()/`.result`
+  # check present in the expression.
+  #
+  # Precise mechanism (corrected -- an earlier version of this comment
+  # mischaracterized it as the custom `if:` "replacing" the success gate,
+  # which is not how GitHub Actions actually behaves): GitHub Actions
+  # applies an IMPLICIT `&& success()` to a job's `if:` condition whenever
+  # that condition does not itself reference one of the status-check
+  # functions (`success()`, `always()`, `cancelled()`, `failure()`). The old
+  # condition here referenced none, so it was actually evaluated as
+  # `success() && github.event_name == 'pull_request'` -- meaning that if
+  # build-and-test, lint, bundle-validate, or actionlint FAILED, this job's
+  # effective condition was false and the job was SKIPPED, not executed.
+  # The defect is what GitHub does with that skip: a SKIPPED job/check is
+  # reported to the checks API as a passing (non-blocking) conclusion, and
+  # GitHub's required-status-checks branch protection treats a skipped
+  # required check as satisfying "required to pass." So the one required PR
+  # gate still reported green after a real upstream failure -- via a skip
+  # being treated as success, not via this job's body actually executing
+  # despite failure.
+  #
+  # `if: ${{ always() && github.event_name == 'pull_request' }}` forces this
+  # job to always run to a terminal state instead of being skipped, and the
+  # step below explicitly inspects every direct dependency's `.result` and
+  # fails closed on anything other than literally "success" (covering
+  # failure, cancelled, and skipped uniformly). This closes all three
+  # failure modes the owner named: never silently skipped (always()
+  # guarantees the job body executes), never permanently pending (it always
+  # reaches a terminal pass/fail), and never falsely green (any non-success
+  # dependency result fails this job, and a job that actually FAILS -- as
+  # opposed to being skipped -- is what correctly blocks merge). Same idiom
+  # already used in main-integration.yml's `summary` job. Regression-tested
+  # by executing this exact step's script against all 9 named scenarios in
+  # src/__tests__/ci-cd/ci-trigger-governance.test.ts.
   branch-protection:
-    if: github.event_name == 'pull_request'
+    if: ${{ always() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
-    needs: [build-and-test, lint, bundle-validate, actionlint]
+    needs: [classify, build-and-test, lint, bundle-validate, actionlint]
     steps:
-      - name: PR check passed
-        run: echo "All required checks passed"
+      - name: Verify all required jobs succeeded (fail closed)
+        run: |
+          set -euo pipefail
+          FAILED=0
+          for entry in \
+            "classify:${{ needs.classify.result }}" \
+            "build-and-test:${{ needs.build-and-test.result }}" \
+            "lint:${{ needs.lint.result }}" \
+            "bundle-validate:${{ needs.bundle-validate.result }}" \
+            "actionlint:${{ needs.actionlint.result }}"; do
+            name="${entry%%:*}"
+            status="${entry#*:}"
+            echo "$name -> $status"
+            if [ "$status" != "success" ]; then
+              echo "::error::Required job '$name' did not succeed (status: $status)"
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" -ne 0 ]; then
+            echo "One or more required checks did not succeed -- branch-protection fails closed."
+            exit 1
+          fi
+          echo "All required checks passed"
