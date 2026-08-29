@@ -12,6 +12,7 @@ import { cookies } from "next/headers";
 import * as bcrypt from "bcryptjs";
 import { ROLES } from "@/domain/constants/roles";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -190,10 +191,11 @@ const handleSignup = async (request: NextRequest) => {
         visibility: "internal",
       });
     } catch (auditError) {
-      console.error(
-        "[SIGNUP_AUDIT_FAILURE]",
-        auditError instanceof Error ? auditError.message : String(auditError)
+      const governed = classifyOperatorError(
+        auditError instanceof Error ? auditError : new Error(String(auditError)),
+        { context: "load" }
       );
+      console.error("[SIGNUP_AUDIT_FAILURE]", governed.technicalDetails);
     }
 
     currentStage = "response";
