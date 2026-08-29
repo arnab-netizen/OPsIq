@@ -80,7 +80,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          INPUT_RUN_ID="${{ inputs.source_run_id }}"
+          # ROOT-CAUSE FIX (2026-08-28): a real manual dispatch with
+          # source_run_id set to "    33209651554" (leading whitespace,
+          # from pasting the run ID into the GitHub UI's dispatch form)
+          # propagated those spaces all the way into the artifact name
+          # passed to actions/download-artifact@v4 below --
+          # "opsiq-production-backup-    33209651554" instead of the real
+          # "opsiq-production-backup-33209651554" -- so the download failed
+          # with "Artifact not found" even though the exact right backup
+          # run and artifact genuinely existed. Neither the
+          # workflow_dispatch input nor this step ever trimmed or
+          # validated the value. Strip all whitespace and hard-validate
+          # the resolved ID is a plain positive integer before using it
+          # anywhere -- fail closed on anything else, rather than passing
+          # a malformed value through to the artifact/run lookups below.
+          INPUT_RUN_ID=$(echo "${{ inputs.source_run_id }}" | tr -d '[:space:]')
           if [ -n "$INPUT_RUN_ID" ]; then
             RUN_ID="$INPUT_RUN_ID"
           else
@@ -88,6 +102,10 @@ jobs:
           fi
           if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
             echo "::error::No successful scheduled-backup.yml run found to rehearse. Run scheduled-backup.yml at least once first."
+            exit 1
+          fi
+          if ! echo "$RUN_ID" | grep -qE '^[0-9]+$'; then
+            echo "::error::Resolved run ID '$RUN_ID' is not a plain positive integer -- refusing to use it as an artifact/run identifier."
             exit 1
           fi
           echo "Rehearsing backup from scheduled-backup.yml run $RUN_ID"
