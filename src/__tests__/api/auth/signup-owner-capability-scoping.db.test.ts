@@ -105,7 +105,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(roleAssignments[0].scopeId).toBe(workspaceId);
     });
 
-    it("[db] a signup-derived owner is DENIED (403) at the real route for CLIENT_VIEW and ENGAGEMENT_VIEW", async () => {
+    it("[db] a signup-derived owner is DENIED (403) at the real route for CLIENT_VIEW, ENGAGEMENT_VIEW, and LEAD_VIEW", async () => {
       await signup("Client Denial Co");
       // jar.token now holds this user's real session cookie (set by the real
       // signup route) -- getSession()/getPolicyContext() resolve it for real.
@@ -119,6 +119,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         params: Promise.resolve({}),
       } as never);
       expect(engagementsRes.status).toBe(403);
+
+      // /api/leads GET requires CAPABILITIES.LEAD_VIEW via the same
+      // withCanonicalEnforcement pattern as clients/engagements -- direct proof,
+      // not inferred by route-family analogy.
+      const { GET: leadsGET } = await import("@/app/api/leads/route");
+      const leadsRes = await leadsGET(getRequest("/api/leads"), { params: Promise.resolve({}) } as never);
+      expect(leadsRes.status).toBe(403);
     });
 
     it("[db] the same signup-derived owner is ALLOWED (200) at the real OWNER_VIEW route", async () => {
@@ -129,7 +136,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(res.status).toBe(200);
     });
 
-    it("[db] a portfolio-manager fixture (WorkspaceMembership.role='admin', built at DB/test-setup level, not via signup) retains ALLOW (200) for CLIENT_VIEW and ENGAGEMENT_VIEW", async () => {
+    it("[db] a portfolio-manager fixture (WorkspaceMembership.role='admin', built at DB/test-setup level, not via signup) retains ALLOW (200) for CLIENT_VIEW, ENGAGEMENT_VIEW, and LEAD_VIEW", async () => {
       const userId = randomUUID();
       const workspaceId = randomUUID();
       const sessionToken = `pm-fixture-${randomUUID()}`;
@@ -171,6 +178,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         params: Promise.resolve({}),
       } as never);
       expect(engagementsRes.status).toBe(200);
+
+      const { GET: leadsGET } = await import("@/app/api/leads/route");
+      const leadsRes = await leadsGET(getRequest("/api/leads"), { params: Promise.resolve({}) } as never);
+      expect(leadsRes.status).toBe(200);
     });
 
     it("[db] cross-workspace isolation: a second owner's own workspace context is independently derived (also DENIED CLIENT_VIEW, not leaked/upgraded by the first)", async () => {
