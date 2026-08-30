@@ -1,6 +1,7 @@
 "use client";
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { toHttpResponseError } from "@/lib/operator-safe-errors";
 import { useEffect, useState } from "react";
 
 interface Entity {
@@ -20,7 +21,7 @@ export default function EntityPage() {
       try {
         const response = await fetch("/api/entity");
         if (!response.ok) {
-          throw new Error("Failed to fetch entities");
+          throw await toHttpResponseError(response);
         }
         const data = await response.json();
         setEntities(data);

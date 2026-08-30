@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { toHttpResponseError } from "@/lib/operator-safe-errors";
 
 interface DecisionEvidencePage {
   params: {
@@ -96,7 +97,7 @@ export default function DecisionEvidencePage({ params }: DecisionEvidencePage) {
         setIsLoading(true);
         const response = await fetch(`/api/engagements/${engagementId}/decision-evidence`);
         if (!response.ok) {
-          throw new Error("Failed to load decision evidence");
+          throw await toHttpResponseError(response);
         }
         const data = await response.json();
         setEvidence(data.data);
