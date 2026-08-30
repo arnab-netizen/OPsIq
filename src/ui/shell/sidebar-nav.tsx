@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { CAPABILITIES, type CapabilityName } from "@/domain/constants/capabilities";
 
 /**
  * Owner navigation.
@@ -26,6 +27,16 @@ interface NavItem {
   href: string;
   /** Only shown to users with the OWNER_VIEW capability. */
   requiresOwner?: boolean;
+  /**
+   * Only shown to users whose resolved capability set (role -> ROLE_CAPABILITIES, the same
+   * source `canViewOwnerRecovery` reads OWNER_VIEW from) includes this capability. Named per
+   * item rather than one shared flag because the consultant-facing surfaces below are backed by
+   * different capabilities on their own API routes (e.g. /clients requires CLIENT_VIEW, /leads
+   * requires LEAD_VIEW) — this keeps the nav gate in parity with the real per-route requirement
+   * instead of a single coarse "consultant" bit that would over- or under-hide relative to what
+   * the backend actually allows.
+   */
+  requiresCapability?: CapabilityName;
   /** If true, show a live unread-alert badge next to the label. */
   showAlertBadge?: boolean;
 }
@@ -93,11 +104,19 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "Inventory", href: "/owner/inventory", requiresOwner: true },
       { label: "Procurement", href: "/owner/procurement", requiresOwner: true },
       { label: "Vendors", href: "/owner/vendor", requiresOwner: true },
-      { label: "Consulting dashboard", href: "/dashboard" },
-      { label: "Clients", href: "/clients" },
-      { label: "Engagements", href: "/engagements" },
-      { label: "Leads", href: "/leads" },
-      { label: "People", href: "/users" },
+      {
+        label: "Consulting dashboard",
+        href: "/dashboard",
+        requiresCapability: CAPABILITIES.ENGAGEMENT_VIEW,
+      },
+      { label: "Clients", href: "/clients", requiresCapability: CAPABILITIES.CLIENT_VIEW },
+      {
+        label: "Engagements",
+        href: "/engagements",
+        requiresCapability: CAPABILITIES.ENGAGEMENT_VIEW,
+      },
+      { label: "Leads", href: "/leads", requiresCapability: CAPABILITIES.LEAD_VIEW },
+      { label: "People", href: "/users", requiresCapability: CAPABILITIES.USER_VIEW },
       { label: "Settings", href: "/settings" },
     ],
   },
@@ -121,13 +140,23 @@ export function resolveActiveHref(pathname: string, hrefs: string[] = ALL_HREFS)
 
 export function SidebarNav({
   canViewOwnerRecovery = false,
+  capabilities = [],
   onLinkClick,
 }: {
   canViewOwnerRecovery?: boolean;
+  /**
+   * The signed-in user's resolved capability set (same ROLE_CAPABILITIES resolution the
+   * authenticated layout already runs for `canViewOwnerRecovery` — see
+   * src/app/(authenticated)/layout.tsx). Drives `requiresCapability` gating below. Defaults to
+   * empty so a caller that omits it (existing tests included) sees only ungated and
+   * requiresOwner-gated items, never a capability-gated item it didn't explicitly grant.
+   */
+  capabilities?: readonly string[];
   onLinkClick?: () => void;
 }) {
   const pathname = usePathname();
   const [unreadAlertCount, setUnreadAlertCount] = useState(0);
+  const capabilitySet = new Set(capabilities);
 
   useEffect(() => {
     if (!canViewOwnerRecovery) return;
@@ -170,7 +199,9 @@ export function SidebarNav({
     <nav className="flex flex-col gap-1 px-3 py-4" aria-label="Main">
       {NAV_SECTIONS.map((section) => {
         const visibleItems = section.items.filter(
-          (item) => !item.requiresOwner || canViewOwnerRecovery,
+          (item) =>
+            (!item.requiresOwner || canViewOwnerRecovery) &&
+            (!item.requiresCapability || capabilitySet.has(item.requiresCapability)),
         );
         if (visibleItems.length === 0) return null;
 

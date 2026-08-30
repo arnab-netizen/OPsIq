@@ -8,9 +8,16 @@ interface AppShellProps {
   children: ReactNode;
   userName?: string | null;
   canViewOwnerRecovery?: boolean;
+  /** The signed-in user's resolved capability set — see SidebarNav's `capabilities` prop. */
+  capabilities?: readonly string[];
 }
 
-export function AppShell({ children, userName, canViewOwnerRecovery = false }: AppShellProps) {
+export function AppShell({
+  children,
+  userName,
+  canViewOwnerRecovery = false,
+  capabilities = [],
+}: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
@@ -19,7 +26,7 @@ export function AppShell({ children, userName, canViewOwnerRecovery = false }: A
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
         <aside className="hidden w-60 flex-shrink-0 border-r border-border bg-accent/50 md:block overflow-y-auto">
-          <SidebarNav canViewOwnerRecovery={canViewOwnerRecovery} />
+          <SidebarNav canViewOwnerRecovery={canViewOwnerRecovery} capabilities={capabilities} />
         </aside>
 
         {/* Mobile drawer */}
@@ -34,6 +41,7 @@ export function AppShell({ children, userName, canViewOwnerRecovery = false }: A
             >
               <SidebarNav
                 canViewOwnerRecovery={canViewOwnerRecovery}
+                capabilities={capabilities}
                 onLinkClick={() => setDrawerOpen(false)}
               />
             </div>
