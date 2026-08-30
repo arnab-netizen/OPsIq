@@ -469,6 +469,9 @@ class GovernanceScanner {
     if (f.endsWith("/canonical-route-enforcement.ts")) {
       return "route-wrapper internal error classification (ClassifiedApiError construction)";
     }
+    if (f.endsWith("/lib/operator-safe-errors.ts")) {
+      return "governance-implementation internal error classification (this file IS toOperatorSafeError/classifyByMessage, not a caller bypassing it)";
+    }
     if (f.includes("/infra/")) {
       return "infra error classification/logging; not operator-rendered";
     }
