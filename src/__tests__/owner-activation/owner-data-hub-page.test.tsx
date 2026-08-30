@@ -3,7 +3,7 @@
  * links to the existing intake surfaces, and never fabricates completeness.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, cleanup, screen, waitFor } from "@testing-library/react";
+import { render, cleanup, screen, waitFor, fireEvent } from "@testing-library/react";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
@@ -170,5 +170,77 @@ describe("with a business", () => {
     );
     render(<OwnerDataHubPage />);
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+  });
+});
+
+describe("editing an existing business's type", () => {
+  function mockWithEditableBusiness(businessType = "generic_local_service") {
+    const patchCalls: Array<{ url: string; body: unknown }> = [];
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (url.includes("/api/owner/recovery/businesses/")) {
+        patchCalls.push({ url, body: init?.body ? JSON.parse(init.body as string) : null });
+        return json({ id: "b1", businessType: "hospitality_food_service" });
+      }
+      if (url.includes("/api/owner/businesses")) {
+        return json({ businesses: [{ id: "b1", name: "Test Co", currency: "GBP", businessType }] });
+      }
+      return json(ONBOARDING);
+    });
+    return patchCalls;
+  }
+
+  it("renders the current business type via the canonical 8-option list, not a duplicated one", async () => {
+    mockWithEditableBusiness("retail_storefront");
+    render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-business-type-editor")).toBeTruthy());
+    const editor = screen.getByTestId("data-hub-business-type-editor");
+    const select = editor.querySelector("select") as HTMLSelectElement;
+    expect(select.value).toBe("retail_storefront");
+    const optionValues = Array.from(select.options).map((o) => o.value);
+    expect(optionValues).toEqual([
+      "laundry_local_service",
+      "generic_local_service",
+      "retail_service_hybrid",
+      "retail_storefront",
+      "field_mobile_service",
+      "appointment_capacity_service",
+      "hospitality_food_service",
+      "b2b_project_contract_service",
+    ]);
+  });
+
+  it("changing the selection PATCHes the governed business-update endpoint and confirms success", async () => {
+    const patchCalls = mockWithEditableBusiness("generic_local_service");
+    render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-business-type-editor")).toBeTruthy());
+    const select = screen.getByTestId("data-hub-business-type-editor").querySelector("select")!;
+
+    fireEvent.change(select, { target: { value: "hospitality_food_service" } });
+
+    await waitFor(() => expect(patchCalls).toHaveLength(1));
+    expect(patchCalls[0].url).toBe("/api/owner/recovery/businesses/b1");
+    expect(patchCalls[0].body).toEqual({ businessType: "hospitality_food_service" });
+    await waitFor(() =>
+      expect(screen.getByTestId("data-hub-business-type-editor").textContent).toMatch(/saved/i),
+    );
+  });
+
+  it("shows an error without crashing when the PATCH fails", async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/api/owner/recovery/businesses/")) return json({ error: "boom" }, false);
+      if (url.includes("/api/owner/businesses")) {
+        return json({ businesses: [{ id: "b1", name: "Test Co", currency: "GBP", businessType: "generic_local_service" }] });
+      }
+      return json(ONBOARDING);
+    });
+    render(<OwnerDataHubPage />);
+    await waitFor(() => expect(screen.getByTestId("data-hub-business-type-editor")).toBeTruthy());
+    const select = screen.getByTestId("data-hub-business-type-editor").querySelector("select")!;
+
+    fireEvent.change(select, { target: { value: "hospitality_food_service" } });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("data-hub-business-type-editor").querySelector('[role="alert"]')).toBeTruthy(),
+    );
   });
 });

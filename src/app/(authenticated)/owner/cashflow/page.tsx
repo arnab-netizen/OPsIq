@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -241,11 +242,7 @@ export default function OwnerCashflowPage() {
               name="businessType"
               label="Business type"
               required
-              options={[
-                { value: "laundry_local_service", label: "Laundry / local service" },
-                { value: "generic_local_service", label: "Generic local service" },
-                { value: "retail_service_hybrid", label: "Retail / service hybrid" },
-              ]}
+              options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
             <Input name="currency" label="Currency" defaultValue="INR" required />
