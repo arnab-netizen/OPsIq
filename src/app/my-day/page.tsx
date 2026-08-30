@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { OperatorItem } from '@/domain/operator/types';
 import { classifyOperatorError } from '@/lib/operator-error-governance';
+import { httpResponseErrorFromBody } from '@/lib/operator-safe-errors';
 
 interface MyDayResponse {
   items: OperatorItem[];
@@ -35,8 +36,11 @@ export default function MyDayPage() {
       const data = (await response.json()) as MyDayResponse | MyDayError;
 
       if (!response.ok) {
-        const errorData = data as MyDayError;
-        const governed = classifyOperatorError(new Error(errorData.error || 'Failed to fetch My Day items'), { context: "load" });
+        // Classify from the real HTTP status, not a synthetic "Failed to
+        // fetch My Day items" fallback -- that fallback text collided with
+        // the classifier's network-error keyword check, so any status with
+        // no `error` field in the body rendered as a connectivity failure.
+        const governed = classifyOperatorError(httpResponseErrorFromBody(response.status, data), { context: "load" });
         setError(governed.operatorMessage);
         setItems([]);
         return;

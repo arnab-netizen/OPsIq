@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { toHttpResponseError } from "@/lib/operator-safe-errors";
 
 interface ScenarioResult {
   impactExpected: number;
@@ -36,7 +37,7 @@ export default function ScenarioPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to run scenario");
+        throw await toHttpResponseError(response);
       }
 
       const data = await response.json();

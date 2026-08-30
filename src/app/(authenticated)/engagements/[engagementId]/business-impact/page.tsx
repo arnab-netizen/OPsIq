@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { toHttpResponseError } from "@/lib/operator-safe-errors";
 
 interface DetailData {
   impactLevel: string;
@@ -48,7 +49,7 @@ export default function BusinessImpactPage() {
           `/api/engagements/${engagementId}/business-impact/detail`
         );
         if (!response.ok) {
-          throw new Error("Failed to load business impact details");
+          throw await toHttpResponseError(response);
         }
         const result = await response.json();
         setData(result.data);

@@ -1,6 +1,7 @@
 'use client';
 
 import { classifyOperatorError } from '@/lib/operator-error-governance';
+import { httpResponseErrorFromBody } from '@/lib/operator-safe-errors';
 import { useState, useEffect } from 'react';
 import { OperatorItem } from '@/domain/operator/types';
 import { calculateBadges, getBadgeVariant } from '@/services/badges/engine';
@@ -29,8 +30,12 @@ export default function OperatorQueuePage() {
         const data = (await response.json()) as QueueResponse | QueueError;
 
         if (!response.ok) {
-          const errorData = data as QueueError;
-          const governed = classifyOperatorError(new Error(errorData.error || 'Failed to fetch queue'), { context: "load" });
+          // Classify from the real HTTP status, not a synthetic "Failed to
+          // fetch queue" fallback -- that fallback text collided with the
+          // classifier's network-error keyword check, so any status (401,
+          // 403, 500, ...) with no `error` field in the body rendered as a
+          // connectivity failure instead of the real one.
+          const governed = classifyOperatorError(httpResponseErrorFromBody(response.status, data), { context: "load" });
           setError(governed.operatorMessage);
           setItems([]);
           return;

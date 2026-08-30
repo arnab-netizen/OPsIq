@@ -1,6 +1,7 @@
 "use client";
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { toHttpResponseError } from "@/lib/operator-safe-errors";
 import { useEffect, useState } from "react";
 import { AccuracyPanel } from "@/components/AccuracyPanel";
 
@@ -35,7 +36,7 @@ export default function CalibrationPage() {
       try {
         const response = await fetch("/api/calibration");
         if (!response.ok) {
-          throw new Error("Failed to fetch calibration data");
+          throw await toHttpResponseError(response);
         }
         const data = await response.json();
         setData(data);

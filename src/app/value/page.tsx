@@ -1,6 +1,7 @@
 'use client';
 
 import { classifyOperatorError } from '@/lib/operator-error-governance';
+import { toHttpResponseError } from '@/lib/operator-safe-errors';
 import { useState, useEffect } from 'react';
 
 interface ValueMetrics {
@@ -27,7 +28,7 @@ export default function ValuePage() {
 
         const response = await fetch('/api/value/7day');
         if (!response.ok) {
-          throw new Error('Failed to fetch metrics');
+          throw await toHttpResponseError(response);
         }
 
         const data: ApiResponse = await response.json();

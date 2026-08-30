@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { toHttpResponseError } from "@/lib/operator-safe-errors";
 
 interface ReportData {
   totalImpact: number;
@@ -21,7 +22,12 @@ export default function ReportPage() {
       try {
         const response = await fetch("/api/report");
         if (!response.ok) {
-          throw new Error("Failed to fetch report");
+          // Preserve the real HTTP status and the server's governed error
+          // message instead of discarding them behind a generic message --
+          // a generic "Failed to fetch report" string collided with the
+          // classifier's network-error keyword check below, so a 401/403/500
+          // response always rendered as "Couldn't connect to the server."
+          throw await toHttpResponseError(response);
         }
         const data = await response.json();
         setReport(data);
