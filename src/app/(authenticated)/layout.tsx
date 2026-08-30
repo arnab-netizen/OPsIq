@@ -29,7 +29,7 @@ export default async function AuthenticatedLayout({
     if (policy) {
       const caps = new Set<string>();
       for (const r of policy.roles) {
-        for (const c of getCapabilitiesForRole(r.role)) caps.add(c);
+        for (const c of getCapabilitiesForRole(r.role, policy.workspaceRole)) caps.add(c);
       }
       canViewOwnerRecovery = caps.has(CAPABILITIES.OWNER_VIEW);
       capabilities = Array.from(caps);

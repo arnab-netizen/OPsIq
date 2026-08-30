@@ -206,6 +206,48 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
   ],
 };
 
+// ─── Self-serve owner scoping ───────────────────────────────────────────────
+//
+// POST /api/auth/signup is, today, the ONLY production-reachable path that
+// creates a UserRoleAssignment (it always grants ADMIN_OR_PORTFOLIO_MANAGER)
+// -- the admin-granted /api/users/[userId]/roles route requires a pre-existing
+// system_admin, which nothing in production creates. That one role was
+// designed to cover two distinct personas (a real consulting-firm admin/
+// portfolio manager AND, via this same signup form, a self-serve SMB owner
+// running their own business), so its full ~46-capability bundle includes
+// consulting-firm-only capabilities (CLIENT_*, ENGAGEMENT_*, LEAD_*,
+// DELIVERABLE_*, FINDING_*, USER_CREATE/UPDATE/ASSIGN_ROLE, etc.) that a
+// self-serve owner has no legitimate use for -- their entire Owner Mode
+// surface (home/cockpit, finance, customers, operations, cashflow, strategy,
+// sales, marketing, inventory/vendors, risk/compliance, business setup,
+// recovery) is gated solely by OWNER_VIEW/OWNER_MANAGE/OWNER_ONBOARD plus
+// SOP_MANAGE, USER_VIEW (People page) and the file capabilities.
+//
+// signup also sets WorkspaceMembership.role = "owner" -- a value nothing else
+// in production ever writes (verified: the only other production write path,
+// employee-lifecycle.service.ts, never touches `role`; the other value seen
+// anywhere, "admin", comes only from infra/seed.ts's dev/demo seeding). That
+// makes it a safe, unambiguous, already-persisted discriminator: an
+// ADMIN_OR_PORTFOLIO_MANAGER assignment on a workspace whose membership role
+// is "owner" is provably a self-serve signup, and can be narrowed to this
+// smaller bundle at derivation time with ZERO changes to any stored
+// UserRoleAssignment row. A legitimately-provisioned portfolio manager (any
+// future/internal-ops path that sets a WorkspaceMembership.role other than
+// "owner") keeps the full bundle unchanged.
+const OWNER_SCOPED_CAPABILITIES: readonly CapabilityName[] = [
+  CAPABILITIES.USER_VIEW,
+  CAPABILITIES.FILE_UPLOAD,
+  CAPABILITIES.FILE_VIEW,
+  CAPABILITIES.FILE_DELETE,
+  CAPABILITIES.OWNER_VIEW,
+  CAPABILITIES.OWNER_MANAGE,
+  CAPABILITIES.OWNER_ONBOARD,
+  CAPABILITIES.SOP_MANAGE,
+];
+
+/** The WorkspaceMembership.role value POST /api/auth/signup writes for every self-serve signup. */
+const SELF_SERVE_OWNER_WORKSPACE_ROLE = "owner";
+
 // ─── Internal-only capability guard ─────────────────────────────────────────
 
 /** Capabilities that client roles must never access */
@@ -254,11 +296,37 @@ export interface PolicyContext {
     engagementId: string;
     role: RoleName;
   }>;
+  /**
+   * The actor's WorkspaceMembership.role for the workspace this context was resolved
+   * against (see services/auth.ts::getPolicyContext, which fetches it in the same query
+   * that already verifies active membership). Used only to narrow
+   * ADMIN_OR_PORTFOLIO_MANAGER to its self-serve-owner-safe subset -- see
+   * OWNER_SCOPED_CAPABILITIES above. Undefined/null when no single-workspace context was
+   * resolved (falls back to the role's full capability bundle).
+   */
+  workspaceRole?: string | null;
 }
 
 // ─── Capability Resolution ──────────────────────────────────────────────────
 
-export function getCapabilitiesForRole(role: RoleName): readonly CapabilityName[] {
+/**
+ * Resolve a role's effective capability set. `workspaceRole` -- the caller's
+ * WorkspaceMembership.role in the workspace this check is scoped to -- narrows
+ * ADMIN_OR_PORTFOLIO_MANAGER down to OWNER_SCOPED_CAPABILITIES when it is a
+ * self-serve signup ("owner"); any other role, or no workspace context at all,
+ * gets the full bundle unchanged. This is the single authoritative place that
+ * performs this narrowing -- do not duplicate it elsewhere.
+ */
+export function getCapabilitiesForRole(
+  role: RoleName,
+  workspaceRole?: string | null
+): readonly CapabilityName[] {
+  if (
+    role === ROLES.ADMIN_OR_PORTFOLIO_MANAGER &&
+    workspaceRole === SELF_SERVE_OWNER_WORKSPACE_ROLE
+  ) {
+    return OWNER_SCOPED_CAPABILITIES;
+  }
   return ROLE_CAPABILITIES[role] ?? [];
 }
 
@@ -269,7 +337,7 @@ export function hasCapability(
 ): boolean {
   // Check global role assignments
   for (const assignment of ctx.roles) {
-    const caps = ROLE_CAPABILITIES[assignment.role];
+    const caps = getCapabilitiesForRole(assignment.role, ctx.workspaceRole);
     if (!caps) continue;
     if (!caps.includes(capability)) continue;
 

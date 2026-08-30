@@ -209,10 +209,12 @@ export async function getPolicyContext(workspaceId?: string): Promise<PolicyCont
   // Verify user has membership in the target workspace
   const membership = await db.workspaceMembership.findUnique({
     where: { workspaceId_userId: { workspaceId: resolvedWorkspaceId, userId: session.user.id } },
-    // Phase 5C: select ONLY isActive (the sole field consumed). A default select would read every
-    // workspace_memberships column and 500 under schema drift; this narrow read is drift-safe and
-    // behavior-preserving.
-    select: { isActive: true },
+    // Phase 5C: select ONLY isActive and role (the fields consumed). A default select would read
+    // every workspace_memberships column and 500 under schema drift; this narrow read is
+    // drift-safe and behavior-preserving. `role` is added here (same query, no extra round trip)
+    // so PolicyContext.workspaceRole can narrow ADMIN_OR_PORTFOLIO_MANAGER's self-serve-owner
+    // capability set -- see capability-check.ts's OWNER_SCOPED_CAPABILITIES.
+    select: { isActive: true, role: true },
   });
 
   if (!membership || !membership.isActive) return null;
@@ -247,6 +249,7 @@ export async function getPolicyContext(workspaceId?: string): Promise<PolicyCont
       engagementId: em.engagementId,
       role: em.role as RoleName,
     })),
+    workspaceRole: membership.role,
   };
 }
 
