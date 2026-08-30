@@ -10,6 +10,11 @@ export const BUSINESS_TYPES = [
   "laundry_local_service",
   "generic_local_service",
   "retail_service_hybrid",
+  "retail_storefront",
+  "field_mobile_service",
+  "appointment_capacity_service",
+  "hospitality_food_service",
+  "b2b_project_contract_service",
 ] as const;
 export type BusinessType = (typeof BUSINESS_TYPES)[number];
 

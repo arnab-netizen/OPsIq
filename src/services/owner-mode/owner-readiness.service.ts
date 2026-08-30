@@ -54,7 +54,8 @@ export async function getOwnerReadiness(deps: OwnerReadinessDeps): Promise<Owner
   const business = rows.business as { businessType?: string; operatingModel?: string | null } | null;
 
   const profileType = mapBusinessTypeToProfile(business?.businessType);
-  const ownerRole = mapOperatingModelToRole(business?.operatingModel, profileType === "multi_location_smb");
+  // Multi-location is an owner-role signal derived from operatingModel text only, never from archetype.
+  const ownerRole = mapOperatingModelToRole(business?.operatingModel, false);
   const suppliedCategories = rowsToSuppliedCategories(rows);
 
   const wbp = await getOwnerWholeBusinessPlan(deps);

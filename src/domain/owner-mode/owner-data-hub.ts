@@ -193,9 +193,14 @@ export const OWNER_DATA_CATEGORY_COUNT = OWNER_INPUT_CATEGORIES.length;
  * business-profile form can never offer a value the governed create endpoint would reject.
  */
 export const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
-  laundry_local_service: "Laundry or similar local service",
+  laundry_local_service: "Laundry / dry cleaning",
   generic_local_service: "Local service business",
-  retail_service_hybrid: "Retail, or retail plus services",
+  retail_service_hybrid: "Retail + services",
+  retail_storefront: "Retail store",
+  field_mobile_service: "Mobile / field service",
+  appointment_capacity_service: "Appointment-based service",
+  hospitality_food_service: "Restaurant / food service",
+  b2b_project_contract_service: "B2B project / contract service",
 };
 
 export const BUSINESS_TYPE_OPTIONS: ReadonlyArray<{ value: BusinessType; label: string }> =

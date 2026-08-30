@@ -66,12 +66,13 @@ export async function updateBusiness(
   workspaceId: string
 ) {
   // Ensure ownership before update (workspace-scoped).
-  await getBusiness(businessId, workspaceId);
+  const before = await getBusiness(businessId, workspaceId);
 
   const updated = await db.ownerBusiness.update({
     where: { id: businessId },
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.businessType !== undefined ? { businessType: input.businessType } : {}),
       ...(input.location !== undefined ? { location: input.location } : {}),
       ...(input.operatingModel !== undefined ? { operatingModel: input.operatingModel } : {}),
       ...(input.b2cSupported !== undefined ? { b2cSupported: input.b2cSupported } : {}),
@@ -81,13 +82,26 @@ export async function updateBusiness(
     },
   });
 
+  // Changing the SMB archetype changes owner-pilot input requirements, readiness, and guidance
+  // downstream (see smb-archetype.ts) — recording before/after values on this one field, not just
+  // that it changed, gives the archetype-change audit trail Issue 5/12 required without a new event
+  // type. Recomputation happens implicitly on the next read (mapBusinessTypeToProfile / readiness are
+  // derived fresh every time); this update never triggers diagnosis/reassessment.
+  const businessTypeChanged =
+    input.businessType !== undefined && input.businessType !== before.businessType;
+
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_BUSINESS_UPDATED,
     actorId,
     workspaceId,
     entityType: "OwnerBusiness",
     entityId: businessId,
-    payload: { fields: Object.keys(input) },
+    payload: {
+      fields: Object.keys(input),
+      ...(businessTypeChanged
+        ? { businessTypeChange: { field: "businessType", from: before.businessType, to: input.businessType } }
+        : {}),
+    },
   });
 
   return updated;

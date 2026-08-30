@@ -4,7 +4,7 @@
  */
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prefetchOwnerDomainRows } from "@/services/owner-mode/owner-db-providers";
-import { mapBusinessTypeToProfile, mapOperatingModelToRole } from "@/services/owner-mode/owner-onboarding.service";
+import { mapOperatingModelToRole } from "@/services/owner-mode/owner-onboarding.service";
 import { getOwnerWholeBusinessPlan } from "@/services/owner-mode/owner-whole-business-plan.service";
 import {
   resolveActionAssignment,
@@ -56,8 +56,8 @@ export async function getOwnerActionAssignment(deps: OwnerActionAssignmentDeps):
     return { workspaceId, businessId, found: false, generatedFromRuntime: true, dominantConstraint: wbp.dominantConstraint, assignment: null, proofRequired: [], reassessmentTriggers: [], delegatedWork: [] };
   }
 
-  const profileType = mapBusinessTypeToProfile(business.businessType);
-  const ownerRole = mapOperatingModelToRole(business.operatingModel, profileType === "multi_location_smb");
+  // Multi-location is an owner-role signal derived from operatingModel text only, never from archetype.
+  const ownerRole = mapOperatingModelToRole(business.operatingModel, false);
   const map = CONSTRAINT_KIND[wbp.dominantConstraint] ?? { kind: "financial_decision" as ActionKind, risk: "medium" as RiskClass };
 
   const assignment = resolveActionAssignment({

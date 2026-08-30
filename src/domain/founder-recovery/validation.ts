@@ -22,6 +22,7 @@ export type BusinessCreateInput = z.infer<typeof businessCreateSchema>;
 
 export const businessUpdateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
+  businessType: z.enum(BUSINESS_TYPES).optional(),
   location: z.string().max(200).optional(),
   operatingModel: z.string().max(200).optional(),
   b2cSupported: z.boolean().optional(),

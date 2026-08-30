@@ -15,6 +15,7 @@ import {
   type OwnerRole,
   type OnboardingState,
 } from "@/domain/owner-mode/owner-onboarding";
+import { resolveSmbArchetype } from "@/domain/owner-mode/smb-archetype";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { intakeDomainToCategory } from "@/domain/owner-mode/input-record-parser";
 
@@ -26,15 +27,16 @@ export interface OwnerOnboardingDeps {
   freshnessDays?: number;
 }
 
-/** Map a free-text business type to a canonical onboarding profile. */
+/**
+ * Resolve a persisted businessType to its onboarding archetype via the one authoritative SMB
+ * archetype config (`smb-archetype.ts`) — deterministic exact-match lookup, never regex inference. A
+ * legacy/unrecognized persisted string fails safe to `generic_local_service`; the API boundary
+ * (`businessCreateSchema`/`businessUpdateSchema`, both `z.enum(BUSINESS_TYPES)`) is what actually keeps
+ * unknown values out — this function's fallback only matters for a value already persisted outside
+ * that validation.
+ */
 export function mapBusinessTypeToProfile(businessType: string | null | undefined): BusinessProfileType {
-  const s = (businessType ?? "").toLowerCase();
-  if (/laundr|dry.?clean|launder/.test(s)) return "laundry_drycleaning";
-  if (/clean|housekeep|maid|janitor/.test(s)) return "housekeeping_cleaning";
-  if (/b2b|contract|facilit|institutional/.test(s)) return "b2b_contract_service";
-  if (/multi|branch|chain|outlet|franchise/.test(s)) return "multi_location_smb";
-  if (/remote/.test(s)) return "remote_owner_service";
-  return "generic";
+  return resolveSmbArchetype(businessType);
 }
 
 /** Map operating model + branch signal to a canonical owner role. */
@@ -104,12 +106,14 @@ export async function getOwnerOnboardingState(deps: OwnerOnboardingDeps): Promis
   const business = rows.business as { name?: string; businessType?: string; operatingModel?: string | null; b2bSupported?: boolean } | null;
 
   if (!business) {
-    const empty = computeOnboardingState({ businessName: "", profileType: "generic", ownerRole: "owner_operated", suppliedCategories: [] });
+    const empty = computeOnboardingState({ businessName: "", profileType: "generic_local_service", ownerRole: "owner_operated", suppliedCategories: [] });
     return { ...empty, workspaceId, businessId, found: false, generatedFromRuntime: true, suppliedCategories: [] };
   }
 
   const profileType = mapBusinessTypeToProfile(business.businessType);
-  const role = mapOperatingModelToRole(business.operatingModel, profileType === "multi_location_smb");
+  // Multi-location is an owner-role signal, not a vertical/archetype one — detected purely from
+  // operatingModel text (mapOperatingModelToRole's own /multi|branch/ check), never from businessType.
+  const role = mapOperatingModelToRole(business.operatingModel, false);
   const supplied = rowsToSuppliedCategories(rows);
 
   const state = computeOnboardingState({
