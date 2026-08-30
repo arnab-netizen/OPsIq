@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button } from "@/ui/primitives";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- guidance payload is the service contract (untyped here); load() on mount is intentional */
 
@@ -28,33 +29,83 @@ async function api(path: string) {
 const STATUS_VARIANT = (s: string): "success" | "default" | "warning" | "destructive" =>
   s === "CRITICAL" ? "destructive" : s === "DANGER" ? "warning" : s === "WATCH" ? "default" : "success";
 
-/** Owner Now View — the Real-Time 360° guided decision surface (Module 41). */
+/**
+ * Owner Now View — the Real-Time 360° guided decision surface (Module 41).
+ *
+ * Business context: GET /api/owner/now-view accepts an optional `?businessId=` that scopes the
+ * finance/cashflow/quality/retention/growth signals (owner-now-view.service.ts `scope = businessId
+ * ? { workspaceId, businessId } : { workspaceId }`). Previously this page never sent one, so with 2+
+ * businesses the service silently fell back to the single MOST-RECENT row per domain across the
+ * whole workspace — cash could reflect one business while quality reflected another, with no owner
+ * visibility into which. Fetching the business list here (same pattern as onboarding/data/approvals)
+ * and passing an explicit businessId makes that selection visible and owner-controlled, and routes
+ * those signals through the safer per-business `scope`.
+ *
+ * NOT business-scoped by this businessId (workspace-wide regardless of selection, confirmed by
+ * reading owner-now-view.service.ts): staff/owner workload, supplier/capacity signals, process
+ * intelligence + corrections + SOP/training, the proof-risk gaming/credibility/adjudication queue,
+ * and the process-execution task bridge — all derived from workspaceId-only queries. Switching
+ * business here does not change those; this is a known, documented limitation of this endpoint's
+ * shape, not something a page-level selector can fix without a service-level change.
+ */
 export default function OwnerNowViewPage() {
+  const [businesses, setBusinesses] = useState<any[]>([]);
+  const [businessId, setBusinessId] = useState<string | null>(null);
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Request-sequence guard: this page did not previously support switching business (no selector
+  // existed), so adding one newly makes rapid A→B switching reachable. A stale in-flight response
+  // for a business the owner has since switched away from must not overwrite the newer selection.
+  const requestSeq = useRef(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (bizId?: string | null) => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
-      setData(await api("/api/owner/now-view"));
+      const qs = bizId ? `?businessId=${encodeURIComponent(bizId)}` : "";
+      const result = await api(`/api/owner/now-view${qs}`);
+      if (requestSeq.current !== seq) return; // a newer request has since started — discard this stale response
+      setData(result);
     } catch (e) {
+      if (requestSeq.current !== seq) return;
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      if (requestSeq.current === seq) setLoading(false);
     }
   }, []);
 
+  const loadBusinesses = useCallback(async () => {
+    try {
+      const res = await api("/api/owner/businesses");
+      const list: any[] = Array.isArray(res?.businesses) ? res.businesses : [];
+      setBusinesses(list);
+      const active = list.find((b) => b.isActive) ?? list[0] ?? null;
+      const id = active?.id ?? null;
+      setBusinessId(id);
+      await load(id);
+    } catch {
+      // Business list is a progressive enhancement for the selector only — if it fails, still
+      // load the workspace-default now-view so the page remains usable.
+      await load(null);
+    }
+  }, [load]);
+
   useEffect(() => {
-    void load();
+    void loadBusinesses();
+  }, [loadBusinesses]);
+
+  const onSwitchBusiness = useCallback((id: string) => {
+    setBusinessId(id);
+    void load(id);
   }, [load]);
 
   if (loading) return <main style={{ padding: 24 }}>Loading your Owner Now View…</main>;
   if (error) return (
     <main style={{ padding: 24 }}>
       <p style={{ color: "#b91c1c" }}>{error}</p>
-      <Button onClick={() => void load()}>Retry</Button>
+      <Button onClick={() => void load(businessId)}>Retry</Button>
     </main>
   );
   if (!data) return null;
@@ -66,14 +117,23 @@ export default function OwnerNowViewPage() {
   return (
     <main style={{ padding: 24, maxWidth: 920, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
       <CanonicalCockpitLink from="Now View" />
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <h1 style={{ margin: 0 }}>Owner Now View</h1>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <Link href="/owner/process-intelligence" data-testid="process-intelligence-link">Where the process is breaking</Link>
           <Link href="/owner/adjudication" data-testid="proof-risk-queue-link">Proof-risk review queue</Link>
-          <Button onClick={() => void load()}>Refresh</Button>
+          <Button onClick={() => void load(businessId)}>Refresh</Button>
         </div>
       </header>
+
+      <BusinessContextSelector businesses={businesses} selectedId={businessId} onChange={onSwitchBusiness} />
+      <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+        Business selection scopes cash, finance, quality and retention signals below. Staff workload,
+        supply/capacity, process-breakdown, and proof-risk signals are workspace-wide and do not change
+        with this selection — see{" "}
+        <Link href="/owner/process-intelligence">Where the process is breaking</Link> and{" "}
+        <Link href="/owner/adjudication">the proof-risk queue</Link> for those.
+      </p>
 
       <section style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Badge variant={STATUS_VARIANT(view.businessHealth)}>Health: {view.businessHealth}</Badge>

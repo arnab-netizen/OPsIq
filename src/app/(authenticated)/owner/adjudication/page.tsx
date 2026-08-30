@@ -6,6 +6,17 @@
  * submits each governed decision through the canonical `POST /api/proof-risk/adjudicate` route. No
  * business logic lives here: the queue is built server-side and the outcome effects are enforced by
  * the backend service. Errors are shown safely; no raw internal error is exposed.
+ *
+ * Business-context decision (verified against owner-now-view.service.ts): NO selector, by design.
+ * `/api/owner/proof-risk/queue` nominally accepts `?businessId=` and threads it into `getOwnerNowView`,
+ * but every field `buildAdjudicationQueue` actually consumes (reusedProofFindings, topGamingSignal,
+ * topCredibilityConcern, timingEvidence, proofRiskAdjudications) is derived from
+ * `deps.db.proof.findMany({ where: { workspaceId } })` — workspace-wide, with no businessId filter
+ * anywhere in that path. The businessId param is a no-op for this queue. This is also an active
+ * decision/workflow surface (the owner is mid-review of specific findings); adjudication decisions are
+ * submitted by `sourceRef`/`proofIds`, not businessId, so nothing about the workflow is business-scoped
+ * to switch safely between. A business selector would imply switching businesses changes which findings
+ * are queued, which it provably does not — it was deliberately not added.
  */
 
 import { useCallback, useEffect, useState } from "react";
