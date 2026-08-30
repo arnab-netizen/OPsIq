@@ -94,7 +94,8 @@ export function planManualEntry(
   suppliedAfter: OwnerInputCategory[];
 } {
   const profileType = mapBusinessTypeToProfile(business.businessType);
-  const ownerRole = mapOperatingModelToRole(business.operatingModel, profileType === "multi_location_smb");
+  // Multi-location is an owner-role signal derived from operatingModel text only, never from archetype.
+  const ownerRole = mapOperatingModelToRole(business.operatingModel, false);
 
   const confidenceBefore = buildInputGuidance({ profileType, ownerRole, suppliedCategories: priorSupplied }).overallConfidence;
   // A confirmed record counts toward supplied data; an unconfirmed import does not yet.

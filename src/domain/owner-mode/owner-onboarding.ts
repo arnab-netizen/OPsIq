@@ -22,19 +22,17 @@ import {
   isCriticalCategory,
 } from "@/domain/owner-mode/input-catalog";
 import type { Confidence } from "@/services/owner-mode/owner-domain-ingestion";
+import { type SmbArchetype, SMB_ARCHETYPES, SMB_ARCHETYPE_CONFIG } from "@/domain/owner-mode/smb-archetype";
 
-export type BusinessProfileType =
-  | "laundry_drycleaning"
-  | "housekeeping_cleaning"
-  | "remote_owner_service"
-  | "b2b_contract_service"
-  | "multi_location_smb"
-  | "generic";
-
-export const BUSINESS_PROFILE_TYPES: readonly BusinessProfileType[] = [
-  "laundry_drycleaning", "housekeeping_cleaning", "remote_owner_service",
-  "b2b_contract_service", "multi_location_smb", "generic",
-] as const;
+/**
+ * `BusinessProfileType` is the SMB archetype key (see `smb-archetype.ts`, the single authoritative
+ * requirements table). This alias preserves the name for the existing consumers of this module
+ * (`owner-readiness.service.ts`, `owner-input-guidance.service.ts`, `owner-manual-entry.service.ts`,
+ * `owner-action-assignment.service.ts`, `input-guidance.ts`, `readiness-score.ts`) so they keep
+ * compiling unchanged — there is no second, independently-maintained profile taxonomy underneath it.
+ */
+export type BusinessProfileType = SmbArchetype;
+export const BUSINESS_PROFILE_TYPES: readonly BusinessProfileType[] = SMB_ARCHETYPES;
 
 export type OwnerRole = "owner_operated" | "manager_run" | "remote_owner" | "multi_location";
 
@@ -51,44 +49,20 @@ export interface ProfileInputRequirements {
 /** Categories every business needs for a first survival-grade read (never fewer than these). */
 const UNIVERSAL_MINIMUM: OwnerInputCategory[] = ["revenue_sales", "expenses", "cash_debt"];
 
-/** Per-profile additions to the minimum + the recommended tier. */
-const PROFILE_REQUIREMENTS: Record<BusinessProfileType, { minAdd: OwnerInputCategory[]; recommended: OwnerInputCategory[] }> = {
-  laundry_drycleaning: {
-    minAdd: ["equipment_logs", "fixed_costs"],
-    recommended: ["customer_count", "complaints_reviews", "payroll", "marketing", "proof_completion"],
-  },
-  housekeeping_cleaning: {
-    minAdd: ["payroll", "staff_attendance"],
-    recommended: ["staff_rota", "complaints_reviews", "customer_count", "proof_completion", "sops_checklists"],
-  },
-  remote_owner_service: {
-    minAdd: ["payroll", "proof_completion"],
-    recommended: ["staff_attendance", "sops_checklists", "complaints_reviews", "staff_training", "delivery_records"],
-  },
-  b2b_contract_service: {
-    minAdd: ["b2b_contracts", "fixed_costs"],
-    recommended: ["delivery_records", "vendor_invoices", "payroll", "proof_completion", "tax_compliance"],
-  },
-  multi_location_smb: {
-    minAdd: ["branch_records", "fixed_costs"],
-    recommended: ["payroll", "staff_attendance", "customer_count", "complaints_reviews", "proof_completion"],
-  },
-  generic: {
-    minAdd: [],
-    recommended: ["fixed_costs", "payroll", "customer_count", "complaints_reviews", "proof_completion"],
-  },
-};
-
 function uniq<T>(xs: T[]): T[] {
   return Array.from(new Set(xs));
 }
 
 /**
- * Required inputs for a profile + role. Business type changes the minimum and recommended tiers; the
- * role can add requirements (remote/manager-run ⇒ proof + SOP; multi-location ⇒ branch records).
+ * Required inputs for an archetype + role. The archetype (`SMB_ARCHETYPE_CONFIG`, the one authoritative
+ * requirements table) changes the minimum and recommended tiers; the role can add requirements
+ * (remote/manager-run ⇒ proof + SOP; multi-location ⇒ branch records) — this role overlay is
+ * orthogonal to and always applied on top of the archetype's own tiers, regardless of what the
+ * archetype itself defaults a category to (multi-location's `branch_records` is never structurally
+ * required by any archetype, but the role overlay unconditionally adds it here).
  */
 export function requiredInputsForProfile(type: BusinessProfileType, role: OwnerRole): ProfileInputRequirements {
-  const base = PROFILE_REQUIREMENTS[type];
+  const base = SMB_ARCHETYPE_CONFIG[type];
   const roleMinAdd: OwnerInputCategory[] =
     role === "remote_owner" || role === "manager_run"
       ? ["proof_completion"]
@@ -102,7 +76,7 @@ export function requiredInputsForProfile(type: BusinessProfileType, role: OwnerR
         ? ["staff_attendance", "customer_count"]
         : [];
 
-  const minimumRequired = uniq([...UNIVERSAL_MINIMUM, ...base.minAdd, ...roleMinAdd]);
+  const minimumRequired = uniq([...UNIVERSAL_MINIMUM, ...base.requiredAdd, ...roleMinAdd]);
   const recommended = uniq([...base.recommended, ...roleRecommended]).filter((c) => !minimumRequired.includes(c));
   const optional = (Object.keys(INPUT_CATALOG) as OwnerInputCategory[]).filter(
     (c) => !minimumRequired.includes(c) && !recommended.includes(c),
@@ -253,7 +227,7 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
   if (input.ownerRole === "remote_owner" || input.ownerRole === "manager_run") {
     whatNotToDo.push("Do not mark delegated work complete without proof — you are not on site to verify it.");
   }
-  if (input.profileType === "multi_location_smb" || input.ownerRole === "multi_location") {
+  if (input.ownerRole === "multi_location") {
     whatNotToDo.push("Do not judge the whole business on one branch — review each branch's records separately.");
   }
   if (whatNotToDo.length === 0) {
@@ -300,6 +274,6 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
     nextBestUpload,
     proofExpectation,
     delegationGuidance,
-    multiLocation: input.profileType === "multi_location_smb" || input.ownerRole === "multi_location",
+    multiLocation: input.ownerRole === "multi_location",
   };
 }

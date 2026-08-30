@@ -16,7 +16,7 @@
  * onboarding contract.
  */
 /* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the established owner-page pattern */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Select } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -33,6 +33,7 @@ const FETCH_TIMEOUT_MS = 10_000;
 interface BusinessLite {
   id: string;
   name: string;
+  businessType?: string;
   currency?: string;
 }
 
@@ -185,6 +186,64 @@ function CreateBusinessPanel({ onCreated }: { onCreated: () => void }) {
           {busy ? "Saving…" : "Save business profile"}
         </Button>
       </form>
+    </div>
+  );
+}
+
+/**
+ * Lets the owner change an existing business's type through the existing governed PATCH endpoint
+ * (`PATCH /api/owner/recovery/businesses/[businessId]`, `updateBusiness`). No second update path —
+ * this only ever sends `{ businessType }`, the same shape the DB-backed archetype tests exercise.
+ */
+function BusinessTypeEditor({ business, onUpdated }: { business: BusinessLite; onUpdated: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  async function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const value = e.target.value;
+    if (value === business.businessType) return;
+    setBusy(true);
+    setError(null);
+    setSaved(false);
+    try {
+      await api(`/api/owner/recovery/businesses/${business.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ businessType: value }),
+      });
+      setSaved(true);
+      onUpdated();
+    } catch (err) {
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), {
+        context: "save",
+      });
+      setError(governed.operatorMessage);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="w-72" data-testid="data-hub-business-type-editor">
+      <Select
+        name="businessType"
+        label="Business type"
+        value={business.businessType ?? ""}
+        onChange={handleChange}
+        disabled={busy}
+        options={[...BUSINESS_TYPE_OPTIONS]}
+      />
+      {busy && <p className="mt-1 text-xs text-muted-foreground">Saving…</p>}
+      {saved && !busy && !error && (
+        <p className="mt-1 text-xs text-green-700" role="status">
+          Saved.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="mt-1 text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -410,6 +469,10 @@ export default function OwnerDataHubPage() {
   const [state, setState] = useState<OnboardingView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const selectedRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
 
   const loadState = useCallback(async (businessId: string) => {
     try {
@@ -431,8 +494,12 @@ export default function OwnerDataHubPage() {
       const list: BusinessLite[] = res.businesses ?? [];
       setBusinesses(list);
       if (list.length > 0) {
-        setSelected(list[0].id);
-        await loadState(list[0].id);
+        // Reloading (e.g. after editing the currently-selected business's type) must not silently
+        // jump the owner back to their first business — keep the current selection if it still exists.
+        const stillValid = list.some((b) => b.id === selectedRef.current);
+        const targetId = stillValid ? (selectedRef.current as string) : list[0].id;
+        setSelected(targetId);
+        await loadState(targetId);
       }
     } catch (e) {
       const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), {
@@ -457,6 +524,11 @@ export default function OwnerDataHubPage() {
       recommended: state.requirements?.recommended ?? [],
     });
   }, [state]);
+
+  const selectedBusiness = useMemo(
+    () => businesses?.find((b) => b.id === selected) ?? null,
+    [businesses, selected],
+  );
 
   const hasBusiness = (businesses?.length ?? 0) > 0;
 
@@ -486,20 +558,30 @@ export default function OwnerDataHubPage() {
 
       {!loading && hasBusiness && (
         <div className="mt-6 space-y-8">
-          {businesses && businesses.length > 1 && (
-            <div className="w-72">
-              <Select
-                name="businessSelector"
-                label="Business"
-                value={selected ?? undefined}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                  setSelected(e.target.value);
-                  void loadState(e.target.value);
+          <div className="flex flex-wrap gap-4">
+            {businesses && businesses.length > 1 && (
+              <div className="w-72">
+                <Select
+                  name="businessSelector"
+                  label="Business"
+                  value={selected ?? undefined}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                    setSelected(e.target.value);
+                    void loadState(e.target.value);
+                  }}
+                  options={businesses.map((b) => ({ value: b.id, label: b.name }))}
+                />
+              </div>
+            )}
+            {selectedBusiness && (
+              <BusinessTypeEditor
+                business={selectedBusiness}
+                onUpdated={() => {
+                  void load();
                 }}
-                options={businesses.map((b) => ({ value: b.id, label: b.name }))}
               />
-            </div>
-          )}
+            )}
+          </div>
 
           {state && <ReadinessBand state={state} />}
           <WaysToAdd />
