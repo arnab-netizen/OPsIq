@@ -68,10 +68,21 @@ describe("pilot rehearsal packs — module contract assertions", () => {
 });
 
 describe("pilot rehearsal packs (5)", () => {
-  it("covers the five required business profiles", () => {
+  it("covers five distinct archetype+role pilot scenarios", () => {
     expect(PILOT_PACKS).toHaveLength(5);
-    expect(PILOT_PACKS.map((p) => p.profileType).sort()).toEqual(
-      ["b2b_contract_service", "housekeeping_cleaning", "laundry_drycleaning", "multi_location_smb", "remote_owner_service"].sort(),
+    // Multi-location and remote-owner are OwnerRole overlays, not vertical archetypes (see
+    // owner-onboarding.ts) — those two packs intentionally share the generic archetype and are
+    // distinguished by ownerRole instead, so uniqueness is asserted on the (archetype, role) pair.
+    const combos = PILOT_PACKS.map((p) => `${p.profileType}:${p.ownerRole}`).sort();
+    expect(new Set(combos).size).toBe(5);
+    expect(combos).toEqual(
+      [
+        "b2b_project_contract_service:owner_operated",
+        "field_mobile_service:owner_operated",
+        "generic_local_service:multi_location",
+        "generic_local_service:remote_owner",
+        "laundry_local_service:owner_operated",
+      ].sort(),
     );
   });
 

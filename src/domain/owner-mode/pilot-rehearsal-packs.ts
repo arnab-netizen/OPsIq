@@ -62,7 +62,7 @@ export const PILOT_PACKS: PilotPack[] = [
   {
     id: "laundry",
     label: "Laundry / dry cleaning (owner-operated)",
-    profileType: "laundry_drycleaning",
+    profileType: "laundry_local_service",
     ownerRole: "owner_operated",
     minimalSupplied: ["revenue_sales", "expenses", "cash_debt"],
     improvedSupplied: ["revenue_sales", "expenses", "cash_debt", "fixed_costs", "equipment_logs", "proof_completion", "customer_count"],
@@ -80,7 +80,7 @@ export const PILOT_PACKS: PilotPack[] = [
   {
     id: "housekeeping",
     label: "Housekeeping / cleaning (owner-operated, staff-heavy)",
-    profileType: "housekeeping_cleaning",
+    profileType: "field_mobile_service",
     ownerRole: "owner_operated",
     minimalSupplied: ["revenue_sales", "expenses", "cash_debt"],
     improvedSupplied: ["revenue_sales", "expenses", "cash_debt", "payroll", "staff_attendance", "complaints_reviews", "proof_completion"],
@@ -98,7 +98,9 @@ export const PILOT_PACKS: PilotPack[] = [
   {
     id: "remote_service",
     label: "Remote-owner staff-managed service business",
-    profileType: "remote_owner_service",
+    // Remote-owner behavior is an OwnerRole overlay (see owner-onboarding.ts), not a vertical archetype
+    // — this pack's differentiation is entirely from ownerRole below, so it uses the generic archetype.
+    profileType: "generic_local_service",
     ownerRole: "remote_owner",
     minimalSupplied: ["revenue_sales", "expenses", "cash_debt"],
     improvedSupplied: ["revenue_sales", "expenses", "cash_debt", "payroll", "proof_completion", "sops_checklists", "staff_attendance"],
@@ -116,7 +118,7 @@ export const PILOT_PACKS: PilotPack[] = [
   {
     id: "b2b_contract",
     label: "B2B contract-heavy local service business",
-    profileType: "b2b_contract_service",
+    profileType: "b2b_project_contract_service",
     ownerRole: "owner_operated",
     minimalSupplied: ["revenue_sales", "expenses", "cash_debt"],
     improvedSupplied: ["revenue_sales", "expenses", "cash_debt", "b2b_contracts", "fixed_costs", "delivery_records", "proof_completion"],
@@ -134,7 +136,9 @@ export const PILOT_PACKS: PilotPack[] = [
   {
     id: "multi_location",
     label: "Multi-location / branch-style small business",
-    profileType: "multi_location_smb",
+    // Multi-location is an OwnerRole overlay (see owner-onboarding.ts), not a vertical archetype —
+    // this pack's differentiation is entirely from ownerRole below, so it uses the generic archetype.
+    profileType: "generic_local_service",
     ownerRole: "multi_location",
     minimalSupplied: ["revenue_sales", "expenses", "cash_debt"],
     improvedSupplied: ["revenue_sales", "expenses", "cash_debt", "branch_records", "fixed_costs", "payroll", "proof_completion", "customer_count"],
