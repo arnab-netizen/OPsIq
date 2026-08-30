@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Select } from "@/ui/primitives";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic trust payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -127,15 +128,11 @@ export default function OwnerTrustPage() {
       ) : (
         <>
           <div className="mb-4 flex flex-wrap gap-4 items-end">
-            <div className="w-72">
-              <Select
-                name="businessSelector"
-                label="Business"
-                value={selectedBusiness ?? undefined}
-                onChange={(e: any) => loadOverview(e.target.value)}
-                options={businesses.map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
-              />
-            </div>
+            <BusinessContextSelector
+              businesses={businesses}
+              selectedId={selectedBusiness}
+              onChange={(businessId) => loadOverview(businessId)}
+            />
             {cycles.length > 0 && (
               <div className="w-72">
                 <Select

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select } from "@/ui/primitives";
+import { Badge, Button } from "@/ui/primitives";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- runtime onboarding payload is untyped; fetch-on-mount is intentional */
 
@@ -105,16 +106,14 @@ export default function OwnerOnboardingPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 w-full sm:w-72">
-            <Select
-              name="businessSelector"
-              label="Business"
-              value={selected ?? undefined}
-              onChange={(e: any) => {
-                setSelected(e.target.value);
-                loadState(e.target.value);
+          <div className="mb-6">
+            <BusinessContextSelector
+              businesses={businesses ?? []}
+              selectedId={selected}
+              onChange={(businessId) => {
+                setSelected(businessId);
+                loadState(businessId);
               }}
-              options={(businesses ?? []).map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
             />
           </div>
 

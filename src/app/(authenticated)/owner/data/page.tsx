@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Select } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import {
   buildOwnerDataHubView,
   inputTargetForCategory,
@@ -559,20 +560,14 @@ export default function OwnerDataHubPage() {
       {!loading && hasBusiness && (
         <div className="mt-6 space-y-8">
           <div className="flex flex-wrap gap-4">
-            {businesses && businesses.length > 1 && (
-              <div className="w-72">
-                <Select
-                  name="businessSelector"
-                  label="Business"
-                  value={selected ?? undefined}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                    setSelected(e.target.value);
-                    void loadState(e.target.value);
-                  }}
-                  options={businesses.map((b) => ({ value: b.id, label: b.name }))}
-                />
-              </div>
-            )}
+            <BusinessContextSelector
+              businesses={businesses ?? []}
+              selectedId={selected}
+              onChange={(businessId) => {
+                setSelected(businessId);
+                void loadState(businessId);
+              }}
+            />
             {selectedBusiness && (
               <BusinessTypeEditor
                 business={selectedBusiness}

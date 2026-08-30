@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Input, Select } from "@/ui/primitives";
 import { sourceQualityTier, type IntakeSource } from "@/domain/owner-intake/types";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -184,13 +185,11 @@ export default function OwnerIntakePage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 w-72">
-            <Select
-              name="businessSelector"
-              label="Business"
-              value={selected ?? undefined}
-              onChange={(e: any) => { setPreview(null); load(e.target.value); }}
-              options={businesses.map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
+          <div className="mb-6">
+            <BusinessContextSelector
+              businesses={businesses}
+              selectedId={selected}
+              onChange={(businessId) => { setPreview(null); load(businessId); }}
             />
           </div>
 

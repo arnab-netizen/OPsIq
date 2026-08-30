@@ -24,11 +24,33 @@ function readOwnerPage(rel: string): string {
 }
 
 const MIGRATED_PAGES: Record<string, string> = {
+  // Phase 1 (prior session)
   home: "home/page.tsx",
   "command center (root)": "page.tsx",
   finance: "finance/page.tsx",
   cashflow: "cashflow/page.tsx",
   customers: "customers/page.tsx",
+  // Phase 2 (this session) — Family A canonical-Select duplicates
+  sales: "sales/page.tsx",
+  operations: "operations/page.tsx",
+  execution: "execution/page.tsx",
+  marketing: "marketing/page.tsx",
+  strategy: "strategy/page.tsx",
+  recovery: "recovery/page.tsx",
+  data: "data/page.tsx",
+  approvals: "approvals/page.tsx",
+  budget: "budget/page.tsx",
+  onboarding: "onboarding/page.tsx",
+  trust: "trust/page.tsx",
+  intake: "intake/page.tsx",
+  // Phase 2 (this session) — Family B raw unlabeled <select> duplicates
+  vendor: "vendor/page.tsx",
+  inventory: "inventory/page.tsx",
+  procurement: "procurement/page.tsx",
+  "marketing campaigns": "marketing/campaigns/page.tsx",
+  wealth: "wealth/page.tsx",
+  // Phase 2 (this session) — Family C labelled raw <select> duplicate
+  "manual entry": "manual-entry/page.tsx",
 };
 
 describe("Business-context selector migration — migrated pages", () => {
@@ -84,6 +106,80 @@ describe("Business-context selector migration — negative control (workspace-sc
     const src = readOwnerPage("portfolio/page.tsx");
     expect(src).not.toContain("BusinessContextSelector");
     expect(src).not.toContain('name="businessSelector"');
+  });
+
+  it("owner/alerts (workspace-scoped, proven via getAlerts(workspaceId, userId) — no per-business filter) was NOT given a business selector", () => {
+    const src = readOwnerPage("alerts/page.tsx");
+    expect(src).not.toContain("BusinessContextSelector");
+    expect(src).not.toContain('name="businessSelector"');
+  });
+
+  it("owner/goals (workspace-level financial goal, proven via getActiveGoal(workspaceId)) was NOT given a business selector", () => {
+    const src = readOwnerPage("goals/page.tsx");
+    expect(src).not.toContain("BusinessContextSelector");
+    expect(src).not.toContain('name="businessSelector"');
+  });
+
+  it("owner/growth-pricing (workspace-wide pricing-tier catalog) was NOT given a business selector", () => {
+    const src = readOwnerPage("growth-pricing/page.tsx");
+    expect(src).not.toContain("BusinessContextSelector");
+    expect(src).not.toContain('name="businessSelector"');
+  });
+});
+
+describe("Business-context selector migration — Phase 2 duplicates, Family B/C shapes (raw <select>)", () => {
+  it("vendor no longer hand-rolls a raw <select> keyed on selectedBizId", () => {
+    const src = readOwnerPage("vendor/page.tsx");
+    expect(src).not.toMatch(/<select[^>]*\n?\s*value=\{selectedBizId/);
+  });
+
+  for (const [label, rel] of Object.entries({
+    inventory: "inventory/page.tsx",
+    procurement: "procurement/page.tsx",
+    "marketing campaigns": "marketing/campaigns/page.tsx",
+  })) {
+    it(`${label} no longer hand-rolls a raw <select> keyed on businessId ?? ""`, () => {
+      const src = readOwnerPage(rel);
+      expect(src).not.toMatch(/<select[^>]*\n?\s*value=\{businessId \?\? ""\}/);
+    });
+  }
+
+  it("manual-entry no longer hand-rolls its labelled raw <select data-testid=\"manual-entry-business\">", () => {
+    const src = readOwnerPage("manual-entry/page.tsx");
+    expect(src).not.toContain('data-testid="manual-entry-business"');
+    expect(src).toContain("<BusinessContextSelector");
+  });
+});
+
+describe("Business-context selector migration — Phase 2 special routes (business-scoped backend, page-level decision)", () => {
+  it("owner/now: SWITCHABLE_SELECTOR — renders BusinessContextSelector and fetches the business list", () => {
+    const src = readOwnerPage("now/page.tsx");
+    expect(src).toContain("<BusinessContextSelector");
+    expect(src).toContain("/api/owner/businesses");
+    expect(src).toContain("businessId=");
+  });
+
+  it("owner/now: implements a request-sequence guard against stale out-of-order now-view responses", () => {
+    const src = readOwnerPage("now/page.tsx");
+    expect(src).toContain("requestSeq");
+  });
+
+  it("owner/process-intelligence: NO_CHANGE_CORRECT — deliberately has no business selector (workspace-scoped processIntelligence)", () => {
+    const src = readOwnerPage("process-intelligence/page.tsx");
+    expect(src).not.toContain("<BusinessContextSelector");
+    expect(src).toContain("NO selector, by design");
+  });
+
+  it("owner/cockpit: NO_CHANGE_CORRECT — deliberately has no business selector (workspace-scoped process-execution bridge)", () => {
+    const src = readOwnerPage("cockpit/page.tsx");
+    expect(src).not.toContain("<BusinessContextSelector");
+    expect(src).toContain("NO selector, by design");
+  });
+
+  it("owner/adjudication: NO_CHANGE_CORRECT — deliberately has no business selector (workspace-scoped proof-risk queue)", () => {
+    const src = readOwnerPage("adjudication/page.tsx");
+    expect(src).not.toContain("<BusinessContextSelector");
+    expect(src).toContain("NO selector, by design");
   });
 });
 
