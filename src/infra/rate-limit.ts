@@ -93,3 +93,12 @@ export const MUTATION_RATE_LIMIT: RateLimitConfig = {
   windowMs: 60 * 1000, // 1 minute
   maxAttempts: 30,
 };
+
+// Deliberately tighter than LOGIN_RATE_LIMIT: unlike a failed login, each
+// forgot-password request that reaches the "user exists" branch sends a real
+// email, so this bounds both inbox-bombing a target address and needless
+// Resend spend, not just brute-force guessing.
+export const PASSWORD_RESET_RATE_LIMIT: RateLimitConfig = {
+  windowMs: 60 * 60 * 1000, // 1 hour
+  maxAttempts: 5,
+};

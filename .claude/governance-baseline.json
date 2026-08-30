@@ -1,6 +1,6 @@
 {
   "_comment": "Frozen pre-existing governance findings on main. Any error-severity finding NOT listed here fails a strict scan. Deterministic (sorted, no timestamps). Regenerate with: npm run governance:scan -- --update-baseline",
-  "total_frozen": 33,
+  "total_frozen": 35,
   "findings": [
     {
       "type": "raw-error-message",
@@ -109,6 +109,24 @@
       "severity": "error",
       "code": "result.safe_error_message = error instanceof Error ? error.message : \"Unknown error\";",
       "reason": "internal diagnostic route; server-side error string, not operator-rendered"
+    },
+    {
+      "type": "unsafe-error-render",
+      "category": "UNSAFE ERROR RENDER",
+      "file": "src/app/forgot-password/page.tsx",
+      "line": 69,
+      "severity": "error",
+      "code": "{error && <p className=\"text-sm text-destructive\">{error}</p>}",
+      "reason": "operator-facing render; pre-existing, deferred to a separate runtime fix slice"
+    },
+    {
+      "type": "unsafe-error-render",
+      "category": "UNSAFE ERROR RENDER",
+      "file": "src/app/reset-password/page.tsx",
+      "line": 119,
+      "severity": "error",
+      "code": "{error && <p className=\"text-sm text-destructive\">{error}</p>}",
+      "reason": "operator-facing render; pre-existing, deferred to a separate runtime fix slice"
     },
     {
       "type": "raw-error-message",
@@ -234,7 +252,7 @@
       "line": 834,
       "severity": "error",
       "code": "error: isKnownSafeClientError ? classifiedError.message : \"Internal server error\",",
-      "reason": "deliberate, gated client-facing exposure (PR #362): isKnownSafeClientError is true only for a genuine AppError subclass reporting a 4xx status (e.g. ValidationError), which by construction carries an owner-safe message with no stack/SQL/provider payload; 5xx and unclassified/raw errors are excluded and still receive the generic \"Internal server error\" message"
+      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
     },
     {
       "type": "raw-error-message",

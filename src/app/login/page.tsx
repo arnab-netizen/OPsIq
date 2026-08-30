@@ -3,6 +3,7 @@
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useOperatorMutation } from "@/hooks/useOperatorMutation";
 
 export const dynamic = "force-dynamic";
@@ -106,6 +107,12 @@ export default function LoginPage() {
             Sign in
           </Button>
         </form>
+
+        <p className="text-center text-sm text-muted-foreground">
+          <Link href="/forgot-password" className="text-primary hover:underline">
+            Forgot your password?
+          </Link>
+        </p>
       </div>
     </div>
   );

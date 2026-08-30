@@ -8,6 +8,8 @@ export const AUDIT_EVENTS = {
   WORKSPACE_CREATED: "workspace.created",
   USER_DEACTIVATED: "user.deactivated",
   USER_REACTIVATED: "user.reactivated",
+  PASSWORD_RESET_REQUESTED: "user.password_reset_requested",
+  PASSWORD_RESET_COMPLETED: "user.password_reset_completed",
 
   // Roles
   ROLE_ASSIGNED: "role.assigned",
