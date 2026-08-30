@@ -1,7 +1,18 @@
 /**
  * Non-DB mock tests for:
- *   GET  /api/users  — list users (USER_VIEW, service-actor only)
+ *   GET  /api/users  — list users (USER_VIEW, any actor holding the capability)
  *   POST /api/users  — create a user (USER_CREATE, idempotency required)
+ *
+ * GET previously carried a redundant, broken `ctx.verifiedActorType !== "service"`
+ * guard inside the handler. It was broken because withCanonicalEnforcement (see
+ * canonical-route-enforcement.ts) never produces `verifiedActorType: "service"` for
+ * an HTTP request -- it is hardcoded to "user" -- so the guard rejected every real
+ * caller unconditionally, human or otherwise. Authorization for this route is (and
+ * always was, via `requireCapabilities: [CAPABILITIES.USER_VIEW]` below) owned
+ * entirely by the canonical wrapper, the same pattern the sibling routes
+ * GET /api/users/[userId], /roles, and /memberships use with no actor-type guard
+ * at all. The guard has been removed; see "actor type is not a GET authorization
+ * concern" below for the regression test.
  *
  * Pattern: vi.hoisted() + wrapper mock + vi.resetAllMocks() per canonical Bundle 7.
  */
@@ -211,10 +222,18 @@ describe("Users Routes — non-DB mock tests", () => {
       expect(mockCreateUser).not.toHaveBeenCalled();
     });
 
-    it("throws when verifiedActorType is not service", async () => {
-      await expect(
-        usersGet(makeCtx({ verifiedActorType: "user" }))
-      ).rejects.toThrow();
+    it("actor type is not a GET authorization concern: a 'user' actor succeeds identically to a 'service' actor", async () => {
+      // Regression test for the removed `verifiedActorType !== "service"` guard,
+      // which used to throw for every real (always-"user") caller. Authorization
+      // is the wrapper's requireCapabilities declaration (asserted above), not
+      // anything the handler itself inspects on ctx.verifiedActorType.
+      mockListUsers.mockResolvedValueOnce(LIST_RESULT);
+      const resultForUser = await usersGet(makeCtx({ verifiedActorType: "user" }));
+      expect(resultForUser).toEqual(LIST_RESULT);
+
+      mockListUsers.mockResolvedValueOnce(LIST_RESULT);
+      const resultForService = await usersGet(makeCtx({ verifiedActorType: "service" }));
+      expect(resultForService).toEqual(LIST_RESULT);
     });
 
     it("workspace isolation: consecutive GETs use respective workspaceIds", async () => {

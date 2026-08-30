@@ -24,10 +24,13 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
 
-    if (ctx.verifiedActorType !== "service") {
-      throw new UnauthorizedError("Internal only");
-    }
-
+    // Access is gated by the USER_VIEW capability declared below (enforced by the
+    // canonical wrapper before this handler runs), the same pattern used by the
+    // sibling routes GET /api/users/[userId], /roles, and /memberships. There is
+    // no actor-type carve-out here: withCanonicalEnforcement never produces a
+    // "service" verifiedActorType for an HTTP request (it is always "user" — see
+    // canonical-route-enforcement.ts), so a `verifiedActorType !== "service"` guard
+    // would reject every real caller, human or otherwise.
     const params = parseSearchParams(ctx.request?.url || "", listUsersSchema);
     const result = await listUsers(workspaceId, params);
 

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Table, Badge, LoadingState, ErrorState } from "@/ui/primitives";
 import { formatRole } from "@/domain/constants/role-labels";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { toHttpResponseError } from "@/lib/operator-safe-errors";
 
 interface UserRow {
   id: string;
@@ -68,8 +69,12 @@ export default function UsersPage() {
     try {
       const res = await fetch("/api/users?limit=50");
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error?.message ?? "Failed to load users");
+        // Preserve the real HTTP status and the server's governed error
+        // message instead of discarding them behind a generic message -- a
+        // 403 (missing USER_VIEW capability) or 401 must render as its own
+        // distinguishable, actionable message, not collapse into "Couldn't
+        // load that data" alongside a genuine server/network failure.
+        throw await toHttpResponseError(res);
       }
       const json = await res.json();
       setData(json);
