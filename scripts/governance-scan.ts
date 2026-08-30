@@ -165,7 +165,15 @@ class GovernanceScanner {
         if (
           line.includes("toOperatorSafeError") ||
           line.includes("classifyOperatorError") ||
-          line.includes("renderOperatorError")
+          line.includes("renderOperatorError") ||
+          // classifyByMessage is the private internal classifier inside
+          // operator-safe-errors.ts itself (not exported, only called from
+          // toOperatorSafeError/classifyHttpResponseError in that same
+          // file) -- passing error.message into it IS the governance step,
+          // not a bypass of it. Without this, `return classifyByMessage(
+          // error.message.toLowerCase(), ...)` false-positives on the
+          // broad err*message return-statement pattern above.
+          line.includes("classifyByMessage")
         ) {
           continue; // Already governed
         }
