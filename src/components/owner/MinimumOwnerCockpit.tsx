@@ -142,9 +142,9 @@ export interface MinimumOwnerCockpitProps {
 function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinancePriority; primary: boolean }) {
   const testId = primary ? "cockpit-finance-priority-primary" : "cockpit-finance-priority-secondary";
   return (
-    <div data-testid={testId} style={{ border: "1px solid #e5e7eb", borderRadius: primary ? 10 : 8, padding: primary ? 18 : 12, display: "flex", flexDirection: "column", gap: 8 }}>
+    <div data-testid={testId} style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: primary ? 10 : 8, padding: primary ? 18 : 12, display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.4 }}>
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.4 }}>
           {primary ? "From your latest finance diagnosis" : "Latest finance diagnosis"}
         </span>
         <Badge variant={SURVIVAL_VARIANT[priority.survivalState] ?? "default"}>{priority.survivalState.replace(/_/g, " ")}</Badge>
@@ -152,14 +152,14 @@ function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinanc
       {priority.topAction ? (
         <>
           <strong data-testid="cockpit-finance-priority-title" style={{ fontSize: primary ? 17 : 14 }}>{priority.topAction.title}</strong>
-          <p style={{ margin: 0, fontSize: 13, color: "#374151" }}>{priority.topAction.description}</p>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>{priority.topAction.description}</p>
         </>
       ) : (
-        <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
+        <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
           A finance diagnosis ran for {priority.businessName || "your business"} but has no ranked action yet.
         </p>
       )}
-      <a href="/owner/finance" style={{ fontSize: 12, color: "#2563eb", textDecoration: "underline" }}>
+      <a href="/owner/finance" style={{ fontSize: 12, color: "var(--primary)", textDecoration: "underline" }}>
         See the full finance diagnosis →
       </a>
     </div>
@@ -194,39 +194,39 @@ const PUBLIC_SIGNAL_STATUS_LABEL: Record<string, string> = {
 function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsResponse }) {
   const active = signals.publicSignalStatus !== "NONE";
   return (
-    <details data-testid="cockpit-signals-group" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+    <details data-testid="cockpit-signals-group" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
       <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
         Outside signals
-        <span style={{ fontWeight: 400, color: "#6b7280" }}> — {PUBLIC_SIGNAL_STATUS_LABEL[signals.publicSignalStatus] ?? signals.publicSignalStatus}</span>
+        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {PUBLIC_SIGNAL_STATUS_LABEL[signals.publicSignalStatus] ?? signals.publicSignalStatus}</span>
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
         {!active ? (
-          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-signals-none">No outside signals for this workspace right now.</p>
+          <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-none">No outside signals for this workspace right now.</p>
         ) : (
           <>
             {signals.topPublicSignalAction && (
               <p style={{ margin: 0 }} data-testid="cockpit-signals-action"><strong>Next step:</strong> {signals.topPublicSignalAction}</p>
             )}
-            <p style={{ margin: 0, color: "#374151" }} data-testid="cockpit-signals-why">{signals.whyThisMatters}</p>
-            <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-signals-quality">
+            <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-why">{signals.whyThisMatters}</p>
+            <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-quality">
               Source quality: {signals.sourceQualitySummary} · Evidence: {signals.evidenceStrengthSummary}
             </p>
             {signals.missingData.length > 0 && (
-              <p style={{ margin: 0, color: "#b45309" }} data-testid="cockpit-signals-missing">Missing data: {signals.missingData.slice(0, 3).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--warning)" }} data-testid="cockpit-signals-missing">Missing data: {signals.missingData.slice(0, 3).join("; ")}</p>
             )}
             {signals.validationRequired && (
-              <p style={{ margin: 0, color: "#b45309" }} data-testid="cockpit-signals-validation">Public signals are unverified until validated.</p>
+              <p style={{ margin: 0, color: "var(--warning)" }} data-testid="cockpit-signals-validation">Public signals are unverified until validated.</p>
             )}
             {signals.blockedUnsafeActions.length > 0 && (
-              <p style={{ margin: 0, color: "#b45309" }} data-testid="cockpit-signals-blocked">Blocked: {signals.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--warning)" }} data-testid="cockpit-signals-blocked">Blocked: {signals.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
             )}
             {signals.ownerApprovalRequired && (
-              <p style={{ margin: 0, color: "#b91c1c" }} data-testid="cockpit-signals-approval">Owner approval is required before material action.</p>
+              <p style={{ margin: 0, color: "var(--destructive)" }} data-testid="cockpit-signals-approval">Owner approval is required before material action.</p>
             )}
           </>
         )}
-        <p style={{ margin: "2px 0 0", color: "#6b7280", fontStyle: "italic" }} data-testid="cockpit-signals-noingest">{signals.noLiveIngestionStatement}</p>
-        <p style={{ margin: 0, color: "#6b7280", fontStyle: "italic" }} data-testid="cockpit-signals-caveat">{signals.uncertaintyCaveat}</p>
+        <p style={{ margin: "2px 0 0", color: "var(--muted-foreground)", fontStyle: "italic" }} data-testid="cockpit-signals-noingest">{signals.noLiveIngestionStatement}</p>
+        <p style={{ margin: 0, color: "var(--muted-foreground)", fontStyle: "italic" }} data-testid="cockpit-signals-caveat">{signals.uncertaintyCaveat}</p>
       </div>
     </details>
   );
@@ -338,11 +338,11 @@ function ExecutionLifecycleSection({
 
   const renderItem = (item: ExecutionLifecycleItem, i: number, groupPrefix: string) => (
     <li key={item.taskKey} data-testid={`${groupPrefix}-${i}`}
-      style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 6, paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>
+      style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 6, paddingBottom: 8, borderBottom: "1px solid var(--border)" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <Badge variant={SEVERITY_VARIANT(item.severity)}>{item.severity}</Badge>
         <span style={{ fontWeight: 600 }}>{item.ownerVisibleSummary}</span>
-        <span style={{ color: "#6b7280", fontSize: 12 }}>{item.status}</span>
+        <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{item.status}</span>
       </div>
       {item.verificationClassification && (
         <span data-testid={`cockpit-verification-classification-${item.taskKey}`}>
@@ -352,13 +352,13 @@ function ExecutionLifecycleSection({
         </span>
       )}
       {item.progressPct !== null && (
-        <span style={{ fontSize: 12, color: "#6b7280" }}>Progress: {item.progressPct}%{item.blockerActive ? " — Blocked" : ""}</span>
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Progress: {item.progressPct}%{item.blockerActive ? " — Blocked" : ""}</span>
       )}
       {item.expectedBenefit && (
-        <span style={{ fontSize: 12, color: "#374151" }}>Expected benefit: {item.expectedBenefit}</span>
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Expected benefit: {item.expectedBenefit}</span>
       )}
       {!item.evidenceComplete && item.requiredEvidence.length > 0 && (
-        <span style={{ fontSize: 12, color: "#b45309" }}>Evidence needed: {item.requiredEvidence.join("; ")}</span>
+        <span style={{ fontSize: 12, color: "var(--warning)" }}>Evidence needed: {item.requiredEvidence.join("; ")}</span>
       )}
       {onAction && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -374,7 +374,7 @@ function ExecutionLifecycleSection({
             <button type="button" data-testid={`cockpit-action-RECORD_PROGRESS-${item.taskKey}`} disabled={busy}
               aria-label={`Record progress: ${item.ownerVisibleSummary}`}
               onClick={() => clickPhase3(item.taskKey, "RECORD_PROGRESS")}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: busy ? "default" : "pointer" }}>
               Record progress
             </button>
           )}
@@ -397,56 +397,56 @@ function ExecutionLifecycleSection({
         </div>
       )}
       {pending?.taskKey === item.taskKey && (
-        <div data-testid="cockpit-phase3-action-form" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div data-testid="cockpit-phase3-action-form" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: 10, display: "flex", flexDirection: "column", gap: 6 }}>
           <span style={{ fontSize: 12, fontWeight: 600 }}>{ACTION_LABEL[pending.action] ?? pending.action}</span>
           {pending.action === "RECORD_PROGRESS" && (
             <>
-              <label style={{ fontSize: 12, color: "#374151" }}>
+              <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 Progress % (0–100, optional)
                 <input type="number" min={0} max={100} value={progressPct}
                   onChange={(e) => setProgressPct(e.target.value)} data-testid="cockpit-progress-pct-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
-              <label style={{ fontSize: 12, color: "#374151" }}>
+              <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 Stage label (optional)
                 <input type="text" value={stage}
                   onChange={(e) => setStage(e.target.value)} data-testid="cockpit-stage-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
-              <label style={{ fontSize: 12, color: "#374151" }}>
+              <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 Note (optional)
                 <input type="text" value={reason}
                   onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
             </>
           )}
           {pending.action === "RECORD_OUTCOME" && (
             <>
-              <label style={{ fontSize: 12, color: "#374151" }}>
+              <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 Outcome
                 <select value={outcomeStatus} onChange={(e) => setOutcomeStatus(e.target.value)}
                   data-testid="cockpit-outcome-status-select"
-                  style={{ display: "block", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }}>
+                  style={{ display: "block", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }}>
                   {OUTCOME_STATUS_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </label>
-              <label style={{ fontSize: 12, color: "#374151" }}>
+              <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 Outcome notes (optional)
                 <input type="text" value={reason}
                   onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
             </>
           )}
           {pending.action === "VERIFY_OUTCOME" && (
-            <label style={{ fontSize: 12, color: "#374151" }}>
+            <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
               Verification notes (optional)
               <input type="text" value={reason}
                 onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
-                style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }} />
+                style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
             </label>
           )}
           <div style={{ display: "flex", gap: 6 }}>
@@ -456,7 +456,7 @@ function ExecutionLifecycleSection({
               Confirm
             </button>
             <button type="button" data-testid="cockpit-phase3-cancel" onClick={resetForm}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer" }}>
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}>
               Cancel
             </button>
           </div>
@@ -468,7 +468,7 @@ function ExecutionLifecycleSection({
   const total = lifecycle.requiresDecision.length + lifecycle.inExecution.length + lifecycle.awaitingVerification.length;
 
   return (
-    <details data-testid="cockpit-execution-lifecycle" open={total > 0} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+    <details data-testid="cockpit-execution-lifecycle" open={total > 0} style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
       <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
         Execution lifecycle{total > 0 ? ` (${total} active)` : ""}
         {lifecycle.totalPendingVerification > 0 && (
@@ -480,44 +480,44 @@ function ExecutionLifecycleSection({
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
         <details data-testid="cockpit-requires-decision-group" open={lifecycle.requiresDecision.length > 0}
           style={{ borderLeft: "3px solid #fef3c7", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#92400e" }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--warning)" }}>
             Requires your decision ({lifecycle.requiresDecision.length})
           </summary>
           {lifecycle.requiresDecision.length === 0
-            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>No tasks awaiting your decision.</p>
+            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--muted-foreground)" }}>No tasks awaiting your decision.</p>
             : <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
                 {lifecycle.requiresDecision.map((item, i) => renderItem(item, i, "cockpit-requires-decision"))}
               </ul>}
         </details>
         <details data-testid="cockpit-in-execution-group" open={lifecycle.inExecution.length > 0}
           style={{ borderLeft: "3px solid #dbeafe", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#1d4ed8" }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>
             In execution ({lifecycle.inExecution.length})
           </summary>
           {lifecycle.inExecution.length === 0
-            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>No tasks currently in execution.</p>
+            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--muted-foreground)" }}>No tasks currently in execution.</p>
             : <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
                 {lifecycle.inExecution.map((item, i) => renderItem(item, i, "cockpit-in-execution"))}
               </ul>}
         </details>
         <details data-testid="cockpit-awaiting-verification-group" open={lifecycle.awaitingVerification.length > 0}
           style={{ borderLeft: "3px solid #fde68a", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#b45309" }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--warning)" }}>
             Awaiting verification ({lifecycle.awaitingVerification.length})
           </summary>
           {lifecycle.awaitingVerification.length === 0
-            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>No tasks awaiting verification.</p>
+            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--muted-foreground)" }}>No tasks awaiting verification.</p>
             : <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
                 {lifecycle.awaitingVerification.map((item, i) => renderItem(item, i, "cockpit-awaiting-verification"))}
               </ul>}
         </details>
         <details data-testid="cockpit-recently-verified-group"
           style={{ borderLeft: "3px solid #d1fae5", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#15803d" }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--success)" }}>
             Recently verified ({lifecycle.recentlyVerified.length})
           </summary>
           {lifecycle.recentlyVerified.length === 0
-            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>No recently verified outcomes.</p>
+            ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--muted-foreground)" }}>No recently verified outcomes.</p>
             : <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
                 {lifecycle.recentlyVerified.map((item, i) => renderItem(item, i, "cockpit-recently-verified"))}
               </ul>}
@@ -536,8 +536,8 @@ const PORTFOLIO_DECISION_LABEL: Record<string, string> = {
   ESCALATE: "BINDING CONSTRAINT",
 };
 const PORTFOLIO_DECISION_COLOR: Record<string, string> = {
-  EXECUTE_NOW: "#16a34a", DELAY: "#b45309", CANCEL: "#dc2626",
-  MERGE: "#7c3aed", SPLIT: "#0284c7", ESCALATE: "#b91c1c",
+  EXECUTE_NOW: "var(--success)", DELAY: "var(--warning)", CANCEL: "var(--destructive)",
+  MERGE: "var(--primary)", SPLIT: "var(--primary)", ESCALATE: "var(--destructive)",
 };
 
 function BusinessOperatingSystemSection({
@@ -584,10 +584,10 @@ function BusinessOperatingSystemSection({
   };
 
   return (
-    <details open data-testid="cockpit-bos-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+    <details open data-testid="cockpit-bos-section" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
       <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
         Goals &amp; objectives
-        <span style={{ fontWeight: 400, color: "#6b7280" }}>
+        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>
           {" "}
           — {bos.totalActiveObjectives > 0
             ? `${bos.totalActiveObjectives} active objective${bos.totalActiveObjectives !== 1 ? "s" : ""}`
@@ -597,10 +597,10 @@ function BusinessOperatingSystemSection({
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
         {/* Health counts */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }} data-testid="cockpit-bos-health-counts">
-          {bos.objectiveHealthCounts.ON_TRACK > 0 && <span style={{ color: "#16a34a" }}>{bos.objectiveHealthCounts.ON_TRACK} on track</span>}
-          {bos.objectiveHealthCounts.AT_RISK > 0 && <span style={{ color: "#b45309" }}>{bos.objectiveHealthCounts.AT_RISK} at risk</span>}
-          {bos.objectiveHealthCounts.BLOCKED > 0 && <span style={{ color: "#dc2626" }}>{bos.objectiveHealthCounts.BLOCKED} blocked</span>}
-          {bos.objectiveHealthCounts.CRITICAL > 0 && <span style={{ color: "#7f1d1d" }}>{bos.objectiveHealthCounts.CRITICAL} critical</span>}
+          {bos.objectiveHealthCounts.ON_TRACK > 0 && <span style={{ color: "var(--success)" }}>{bos.objectiveHealthCounts.ON_TRACK} on track</span>}
+          {bos.objectiveHealthCounts.AT_RISK > 0 && <span style={{ color: "var(--warning)" }}>{bos.objectiveHealthCounts.AT_RISK} at risk</span>}
+          {bos.objectiveHealthCounts.BLOCKED > 0 && <span style={{ color: "var(--destructive)" }}>{bos.objectiveHealthCounts.BLOCKED} blocked</span>}
+          {bos.objectiveHealthCounts.CRITICAL > 0 && <span style={{ color: "var(--destructive)", fontWeight: 600 }}>{bos.objectiveHealthCounts.CRITICAL} critical</span>}
         </div>
 
         {/* Run Arbitration */}
@@ -610,12 +610,12 @@ function BusinessOperatingSystemSection({
               data-testid="cockpit-bos-run-arbitration"
               onClick={() => void handleRunArbitration()}
               disabled={busy || overrideSubmitting}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #6b7280", cursor: "pointer", background: "#f9fafb" }}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
             >
               Run arbitration
             </button>
             {bos.latestArbitration && (
-              <span style={{ fontSize: 11, color: "#6b7280" }}>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                 Last: {new Date(bos.latestArbitration.arbitratedAt).toLocaleDateString()}
                 {bos.latestArbitration.dominantConstraint ? ` · ${bos.latestArbitration.dominantConstraint}` : ""}
               </span>
@@ -623,7 +623,7 @@ function BusinessOperatingSystemSection({
           </div>
         )}
         {!onBosAction && bos.latestArbitration && (
-          <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }} data-testid="cockpit-bos-arbitration">
+          <p style={{ margin: 0, fontSize: 12, color: "var(--muted-foreground)" }} data-testid="cockpit-bos-arbitration">
             Last arbitration: {new Date(bos.latestArbitration.arbitratedAt).toLocaleDateString()}
             {bos.latestArbitration.dominantConstraint ? ` · Dominant constraint: ${bos.latestArbitration.dominantConstraint}` : ""}
           </p>
@@ -637,7 +637,7 @@ function BusinessOperatingSystemSection({
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: healthColor(o.health), flexShrink: 0, display: "inline-block" }} />
                   <span style={{ flex: 1 }}>{o.title}</span>
-                  <span style={{ color: "#6b7280", fontSize: 12 }}>{o.objectiveType}</span>
+                  <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{o.objectiveType}</span>
                   {o.candidateType === "EXTERNAL_OPPORTUNITY" && (
                     <Badge variant="default" data-testid={`cockpit-bos-candidate-type-${o.objectiveId}`}>External</Badge>
                   )}
@@ -646,14 +646,14 @@ function BusinessOperatingSystemSection({
                   <div style={{ display: "flex", gap: 6, paddingLeft: 16 }}>
                     <span
                       data-testid={`cockpit-bos-portfolio-decision-${o.objectiveId}`}
-                      style={{ fontSize: 11, color: PORTFOLIO_DECISION_COLOR[o.portfolioDecision] ?? "#6b7280", fontWeight: 600 }}
+                      style={{ fontSize: 11, color: PORTFOLIO_DECISION_COLOR[o.portfolioDecision] ?? "var(--muted-foreground)", fontWeight: 600 }}
                     >
                       {o.hasOverride ? "OWNER OVERRIDE" : (PORTFOLIO_DECISION_LABEL[o.portfolioDecision] ?? o.portfolioDecision)}
                     </span>
                     {o.portfolioRationale && (
                       <span
                         data-testid={`cockpit-bos-portfolio-rationale-${o.objectiveId}`}
-                        style={{ fontSize: 11, color: "#6b7280" }}
+                        style={{ fontSize: 11, color: "var(--muted-foreground)" }}
                       >
                         — {o.portfolioRationale}
                       </span>
@@ -666,7 +666,7 @@ function BusinessOperatingSystemSection({
         )}
 
         {/* System summary row */}
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", color: "#6b7280", fontSize: 12 }}>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", color: "var(--muted-foreground)", fontSize: 12 }}>
           <span data-testid="cockpit-bos-pools">{bos.activePoolCount} resource pool{bos.activePoolCount !== 1 ? "s" : ""}{bos.resourceUtilizationPct !== null ? ` · ${bos.resourceUtilizationPct}% utilized` : ""}</span>
           <span data-testid="cockpit-bos-constraints">{bos.activeConstraintCount} active constraint{bos.activeConstraintCount !== 1 ? "s" : ""}</span>
           <span data-testid="cockpit-bos-kpis">{bos.kpiCount} KPI{bos.kpiCount !== 1 ? "s" : ""} tracked</span>
@@ -688,7 +688,7 @@ function BusinessOperatingSystemSection({
                         data-testid={`cockpit-bos-resolve-constraint-${c.constraintId}`}
                         onClick={() => void handleConstraintAction(c.constraintId, "RESOLVE")}
                         disabled={busy}
-                        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, border: "1px solid #6b7280", cursor: "pointer", background: "#f9fafb" }}
+                        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
                       >
                         Resolve
                       </button>
@@ -696,7 +696,7 @@ function BusinessOperatingSystemSection({
                         data-testid={`cockpit-bos-accept-constraint-${c.constraintId}`}
                         onClick={() => void handleConstraintAction(c.constraintId, "ACCEPT")}
                         disabled={busy}
-                        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, border: "1px solid #6b7280", cursor: "pointer", background: "#f9fafb" }}
+                        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
                       >
                         Accept
                       </button>
@@ -714,7 +714,7 @@ function BusinessOperatingSystemSection({
             <strong style={{ fontSize: 12 }}>Top risks:</strong>
             <ul style={{ margin: "4px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 2 }}>
               {bos.topRisks.map((r) => (
-                <li key={r.riskId} data-testid={`cockpit-bos-risk-${r.riskId}`} style={{ fontSize: 12, color: "#374151" }}>
+                <li key={r.riskId} data-testid={`cockpit-bos-risk-${r.riskId}`} style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                   <Badge variant={r.severity >= 50 ? "destructive" : r.severity >= 25 ? "warning" : "muted"}>{r.severity}</Badge>
                   {" "}{r.title}
                 </li>
@@ -741,12 +741,12 @@ function BusinessOperatingSystemSection({
               <button
                 data-testid="cockpit-bos-override-open"
                 onClick={() => setOverrideOpen(true)}
-                style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #b45309", color: "#b45309", cursor: "pointer", background: "transparent" }}
+                style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--warning)", color: "var(--warning)", cursor: "pointer", background: "transparent" }}
               >
                 Record owner override
               </button>
             ) : (
-              <div data-testid="cockpit-bos-override-form" style={{ display: "flex", flexDirection: "column", gap: 6, border: "1px solid #e5e7eb", borderRadius: 6, padding: 10 }}>
+              <div data-testid="cockpit-bos-override-form" style={{ display: "flex", flexDirection: "column", gap: 6, border: "1px solid var(--border)", background: "var(--card)", borderRadius: 6, padding: 10 }}>
                 <label style={{ fontSize: 12, fontWeight: 600 }}>
                   Decision
                   <select
@@ -770,7 +770,7 @@ function BusinessOperatingSystemSection({
                     value={overrideRationale}
                     onChange={(e) => setOverrideRationale(e.target.value)}
                     rows={3}
-                    style={{ display: "block", width: "100%", marginTop: 4, fontSize: 12, fontFamily: "inherit", padding: 6, borderRadius: 4, border: "1px solid #d1d5db", resize: "vertical" }}
+                    style={{ display: "block", width: "100%", marginTop: 4, fontSize: 12, fontFamily: "inherit", padding: 6, borderRadius: 4, border: "1px solid var(--border)", resize: "vertical", background: "var(--background)", color: "var(--foreground)" }}
                     placeholder="Why are you overriding the system recommendation?"
                   />
                 </label>
@@ -786,7 +786,7 @@ function BusinessOperatingSystemSection({
                   <button
                     data-testid="cockpit-bos-override-cancel"
                     onClick={() => { setOverrideOpen(false); setOverrideRationale(""); }}
-                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #6b7280", cursor: "pointer", background: "transparent" }}
+                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "transparent", color: "var(--foreground)" }}
                   >
                     Cancel
                   </button>
@@ -797,7 +797,7 @@ function BusinessOperatingSystemSection({
         )}
 
         {bos.totalActiveObjectives === 0 && (
-          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-bos-empty">You haven&apos;t set any goals yet. Add one to see progress and risk here.</p>
+          <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-bos-empty">You haven&apos;t set any goals yet. Add one to see progress and risk here.</p>
         )}
       </div>
     </details>
@@ -815,31 +815,31 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
     }, "LOW");
 
   return (
-    <details data-testid="cockpit-business-condition-group" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+    <details data-testid="cockpit-business-condition-group" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
       <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
         Business condition
-        <span style={{ fontWeight: 400, color: "#6b7280" }}> — highest risk: {RISK_LEVEL_LABEL[worstLevel] ?? worstLevel}</span>
+        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — highest risk: {RISK_LEVEL_LABEL[worstLevel] ?? worstLevel}</span>
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
         {knownFields.length === 0 ? (
-          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-condition-nodata">No business condition data available yet — add cashflow and workload records to enable this panel.</p>
+          <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-condition-nodata">No business condition data available yet — add cashflow and workload records to enable this panel.</p>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "4px 12px" }}>
             {knownFields.map((k) => (
               <span key={k} style={{ display: "flex", gap: 6, alignItems: "center" }} data-testid={`cockpit-condition-${k}`}>
                 <Badge variant={RISK_VARIANT(condition[k])}>{RISK_LEVEL_LABEL[condition[k]] ?? condition[k]}</Badge>
-                <span style={{ color: "#374151" }}>{CONDITION_FIELD_LABEL[k]}</span>
+                <span style={{ color: "var(--muted-foreground)" }}>{CONDITION_FIELD_LABEL[k]}</span>
               </span>
             ))}
           </div>
         )}
         {unknownCount > 0 && (
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }} data-testid="cockpit-condition-missing">
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--muted-foreground)" }} data-testid="cockpit-condition-missing">
             {unknownCount} dimension{unknownCount > 1 ? "s" : ""} need more data to assess.
           </p>
         )}
         {dataFreshnessWeak && (
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#b45309", fontStyle: "italic" }} data-testid="cockpit-condition-stale">
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--warning)", fontStyle: "italic" }} data-testid="cockpit-condition-stale">
             Data confidence is low — some signals may be stale. Update cashflow and workload records for a fresh assessment.
           </p>
         )}
@@ -852,14 +852,14 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
 function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }) {
   const inProgress = recovery.recoveryStatus !== "NONE";
   return (
-    <details data-testid="cockpit-recovery-group" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+    <details data-testid="cockpit-recovery-group" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
       <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
         Recovery status
-        <span style={{ fontWeight: 400, color: "#6b7280" }}> — {RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</span>
+        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</span>
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
         {!inProgress ? (
-          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-recovery-none">No recovery is in progress right now.</p>
+          <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-none">No recovery is in progress right now.</p>
         ) : (
           <>
             <div data-testid="cockpit-recovery-state" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -871,21 +871,21 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
               <p style={{ margin: 0 }} data-testid="cockpit-recovery-bottleneck"><strong>Next step:</strong> {recovery.topRecoveryBottleneck}</p>
             )}
             {recovery.requiredEvidence.length > 0 && (
-              <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-recovery-evidence">Evidence required: {recovery.requiredEvidence.slice(0, 3).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-evidence">Evidence required: {recovery.requiredEvidence.slice(0, 3).join("; ")}</p>
             )}
-            <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-recovery-reassessment">{recovery.requiredReassessment}</p>
+            <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-reassessment">{recovery.requiredReassessment}</p>
             {recovery.blockedUnsafeActions.length > 0 && (
-              <p style={{ margin: 0, color: "#b45309" }} data-testid="cockpit-recovery-blocked">Blocked: {recovery.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--warning)" }} data-testid="cockpit-recovery-blocked">Blocked: {recovery.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
             )}
             {recovery.ownerApprovalRequired && (
-              <p style={{ margin: 0, color: "#b91c1c" }} data-testid="cockpit-recovery-approval">This action requires owner approval.</p>
+              <p style={{ margin: 0, color: "var(--destructive)" }} data-testid="cockpit-recovery-approval">This action requires owner approval.</p>
             )}
             {recovery.linkedProcessExecutionTaskIds.length > 0 && (
-              <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-recovery-linked">{recovery.linkedProcessExecutionTaskIds.length} linked governed task(s) — act on them in your top action above.</p>
+              <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-linked">{recovery.linkedProcessExecutionTaskIds.length} linked governed task(s) — act on them in your top action above.</p>
             )}
           </>
         )}
-        <p style={{ margin: "2px 0 0", color: "#6b7280", fontStyle: "italic" }} data-testid="cockpit-recovery-caveat">{recovery.noGuaranteeStatement} {recovery.uncertaintyCaveat}</p>
+        <p style={{ margin: "2px 0 0", color: "var(--muted-foreground)", fontStyle: "italic" }} data-testid="cockpit-recovery-caveat">{recovery.noGuaranteeStatement} {recovery.uncertaintyCaveat}</p>
       </div>
     </details>
   );
@@ -903,13 +903,13 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
   // fabrication, so it takes the primary slot here (F3). ──
   if (!top) {
     return (
-      <section data-testid="cockpit-clean" style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+      <section data-testid="cockpit-clean" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 10, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
         {financeTopPriority ? (
           <FinanceTopPriorityCard priority={financeTopPriority} primary />
         ) : (
           <div>
             <strong>No urgent action needs your attention right now.</strong>
-            <p style={{ margin: "6px 0 0", color: "#6b7280", fontSize: 13 }}>
+            <p style={{ margin: "6px 0 0", color: "var(--muted-foreground)", fontSize: 13 }}>
               OpsIQ has nothing that requires an owner decision at the moment. This view stays empty until a
               governed action is ready — nothing is invented to fill the space.
             </p>
@@ -971,9 +971,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 720 }}>
 
       {/* 1. Top Priority Action */}
-      <div data-testid="cockpit-top-action" style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div data-testid="cockpit-top-action" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 10, padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.4 }}>Your top priority now</span>
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.4 }}>Your top priority now</span>
           <Badge variant={SEVERITY_VARIANT(top.severity)}>{top.severity}</Badge>
         </div>
         <strong data-testid="cockpit-top-action-title" style={{ fontSize: 17 }}>{top.ownerVisibleSummary}</strong>
@@ -983,7 +983,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <span style={{ fontSize: 13, fontWeight: 600 }}>Why this is first</span>
           <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
             {whyBullets.map((b, i) => (
-              <li key={i} data-testid="cockpit-why-bullet" style={{ fontSize: 13, color: "#374151" }}>{b}</li>
+              <li key={i} data-testid="cockpit-why-bullet" style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{b}</li>
             ))}
           </ul>
         </div>
@@ -992,20 +992,20 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         <div data-testid="cockpit-owner-decision" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>Required owner decision:</span>
           <Badge variant={isOwner ? "destructive" : "default"}>{APPROVAL_LABEL[top.approvalLevel] ?? top.approvalLevel}</Badge>
-          {isOwner && <span data-testid="cockpit-cannot-automate" style={{ fontSize: 12, color: "#b91c1c" }}>This cannot be automated.</span>}
+          {isOwner && <span data-testid="cockpit-cannot-automate" style={{ fontSize: 12, color: "var(--destructive)" }}>This cannot be automated.</span>}
         </div>
 
         {/* 4. Evidence Required */}
         {!isBlockedUnsafe && !isMonitorOnly && (
           <div data-testid="cockpit-evidence" style={{ fontSize: 13 }}>
             <span style={{ fontWeight: 600 }}>Evidence required before completion.</span>{" "}
-            <span style={{ color: "#6b7280" }}>{top.requiredEvidence.length ? top.requiredEvidence.join("; ") : "—"}</span>
+            <span style={{ color: "var(--muted-foreground)" }}>{top.requiredEvidence.length ? top.requiredEvidence.join("; ") : "—"}</span>
           </div>
         )}
 
         {/* 7. Next Reassessment */}
-        <div data-testid="cockpit-reassessment" style={{ fontSize: 13, color: "#6b7280" }}>
-          <span style={{ fontWeight: 600, color: "#374151" }}>Completion will trigger reassessment.</span>{" "}
+        <div data-testid="cockpit-reassessment" style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+          <span style={{ fontWeight: 600, color: "var(--muted-foreground)" }}>Completion will trigger reassessment.</span>{" "}
           {top.reassessmentTrigger}
         </div>
 
@@ -1031,7 +1031,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             </div>
             {secondaryMore.length > 0 && (
               <details data-testid="cockpit-more-actions">
-                <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>{secondaryMore.length} more action(s)</summary>
+                <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--muted-foreground)" }}>{secondaryMore.length} more action(s)</summary>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
                   {secondaryMore.map((a) => (
                     <button key={a} type="button" data-testid={`cockpit-action-${a}`} disabled={busy}
@@ -1045,27 +1045,27 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             )}
             {/* Labelled inline input — replaces window.prompt(). */}
             {pending && (
-              <div data-testid="cockpit-action-form" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+              <div data-testid="cockpit-action-form" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 600 }}>{ACTION_LABEL[pending] ?? pending}</span>
                 {needsEvidence(pending) && (
-                  <label style={{ fontSize: 12, color: "#374151" }}>
+                  <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                     Evidence reference(s), comma-separated{pending === "SUBMIT_EVIDENCE" ? " (required)" : ""}
                     <input data-testid="cockpit-evidence-input" value={evidenceText} onChange={(e) => setEvidenceText(e.target.value)}
-                      style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }} />
+                      style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--background)", color: "var(--foreground)" }} />
                   </label>
                 )}
                 {needsReason(pending) && (
-                  <label style={{ fontSize: 12, color: "#374151" }}>
+                  <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                     Reason (optional)
                     <input data-testid="cockpit-reason-input" value={reasonText} onChange={(e) => setReasonText(e.target.value)}
-                      style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }} />
+                      style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--background)", color: "var(--foreground)" }} />
                   </label>
                 )}
                 {isDelegate(pending) && (
-                  <label style={{ fontSize: 12, color: "#374151" }}>
+                  <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                     Delegate to
                     <select data-testid="cockpit-delegate-select" value={delegateRole} onChange={(e) => setDelegateRole(e.target.value as "MANAGER" | "STAFF")}
-                      style={{ display: "block", marginTop: 4, padding: "6px 8px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }}>
+                      style={{ display: "block", marginTop: 4, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--background)", color: "var(--foreground)" }}>
                       <option value="MANAGER">Manager</option>
                       <option value="STAFF">Staff</option>
                     </select>
@@ -1075,13 +1075,13 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
                   <button type="button" data-testid="cockpit-confirm" disabled={busy} onClick={() => submit(pending)}
                     style={{ fontSize: 13, padding: "6px 14px", borderRadius: 6, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>Confirm</button>
                   <button type="button" data-testid="cockpit-cancel" onClick={() => setPending(null)}
-                    style={{ fontSize: 13, padding: "6px 14px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer" }}>Cancel</button>
+                    style={{ fontSize: 13, padding: "6px 14px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}>Cancel</button>
                 </div>
               </div>
             )}
           </div>
         )}
-        {terminal && <p data-testid="cockpit-terminal" style={{ margin: 0, fontSize: 12, color: "#16a34a" }}>This task is {top.status.toLowerCase()}.</p>}
+        {terminal && <p data-testid="cockpit-terminal" style={{ margin: 0, fontSize: 12, color: "var(--success)" }}>This task is {top.status.toLowerCase()}.</p>}
 
         {/* Start Work — dedicated button for canStart=true tasks (Phase 2 Signal F) */}
         {top.canStart && onStartWork && (
@@ -1099,26 +1099,26 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         )}
 
         {/* 6. Blocked / Not Allowed */}
-        <div data-testid="cockpit-blocked" style={{ borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
+        <div data-testid="cockpit-blocked" style={{ borderTop: "1px solid var(--border)", paddingTop: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>Blocked / not allowed</span>
           {isBlockedUnsafe ? (
-            <p data-testid="cockpit-blocked-unsafe" style={{ margin: "4px 0 0", fontSize: 13, color: "#b45309" }}>
+            <p data-testid="cockpit-blocked-unsafe" style={{ margin: "4px 0 0", fontSize: 13, color: "var(--warning)" }}>
               No action is available because this would require an unsafe external step.
               {top.notActionableReason ? ` ${top.notActionableReason}` : ""}
             </p>
           ) : isMonitorOnly ? (
-            <p data-testid="cockpit-monitor-note" style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
+            <p data-testid="cockpit-monitor-note" style={{ margin: "4px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>
               This is monitor-only because no safe action is needed.
               {top.notActionableReason ? ` ${top.notActionableReason}` : ""}
             </p>
           ) : actionsToAvoid.length > 0 ? (
             <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
               {actionsToAvoid.slice(0, 3).map((a, i) => (
-                <li key={i} data-testid="cockpit-avoid" style={{ fontSize: 13, color: "#b45309" }}>{a}</li>
+                <li key={i} data-testid="cockpit-avoid" style={{ fontSize: 13, color: "var(--warning)" }}>{a}</li>
               ))}
             </ul>
           ) : (
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>
               OpsIQ never takes an external action for you. It won&apos;t contact customers, submit tenders,
               spend, discount, or contract on its own.
             </p>
@@ -1127,12 +1127,12 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       </div>
 
       {/* 8. Secondary Actions (collapsed) */}
-      <details data-testid="cockpit-secondary-group" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <details data-testid="cockpit-secondary-group" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
         <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
           Other actions{secondaryRoutes.length ? ` (${secondaryRoutes.length})` : ""}
         </summary>
         {secondaryRoutes.length === 0 ? (
-          <p style={{ margin: "8px 0 0", fontSize: 13, color: "#6b7280" }}>No other governed actions right now.</p>
+          <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>No other governed actions right now.</p>
         ) : (
           <ul style={{ margin: "8px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
             {secondaryRoutes.slice(0, 3).map((r) => (
@@ -1141,44 +1141,44 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
                 <span>{r.ownerVisibleSummary}</span>
               </li>
             ))}
-            {secondaryRoutes.length > 3 && <li style={{ fontSize: 12, color: "#6b7280" }}>+{secondaryRoutes.length - 3} more</li>}
+            {secondaryRoutes.length > 3 && <li style={{ fontSize: 12, color: "var(--muted-foreground)" }}>+{secondaryRoutes.length - 3} more</li>}
           </ul>
         )}
       </details>
 
       {/* 9. Monitor-only (collapsed) */}
-      <details data-testid="cockpit-monitor-group" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <details data-testid="cockpit-monitor-group" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
         <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
           Monitor only{monitorRoutes.length ? ` (${monitorRoutes.length})` : ""}
         </summary>
         {monitorRoutes.length === 0 ? (
-          <p style={{ margin: "8px 0 0", fontSize: 13, color: "#6b7280" }}>Nothing to monitor right now.</p>
+          <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>Nothing to monitor right now.</p>
         ) : (
           <ul style={{ margin: "8px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
             {monitorRoutes.slice(0, 3).map((r) => (
-              <li key={r.taskKey} data-testid="cockpit-monitor-item" style={{ fontSize: 13, color: "#6b7280" }}>{r.ownerVisibleSummary}</li>
+              <li key={r.taskKey} data-testid="cockpit-monitor-item" style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{r.ownerVisibleSummary}</li>
             ))}
-            {monitorRoutes.length > 3 && <li style={{ fontSize: 12, color: "#6b7280" }}>+{monitorRoutes.length - 3} more</li>}
+            {monitorRoutes.length > 3 && <li style={{ fontSize: 12, color: "var(--muted-foreground)" }}>+{monitorRoutes.length - 3} more</li>}
           </ul>
         )}
       </details>
 
       {/* Goal Attention Signal — Phase 2 Signal A */}
       {goalAttentionSignal && (
-        <div data-testid="cockpit-goal-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+        <div data-testid="cockpit-goal-section" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: 14, fontWeight: 600 }}>Goal</span>
             <span data-testid="cockpit-goal-state" data-cockpit-goal-state={goalAttentionSignal.state} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#fef2f2" : goalAttentionSignal.state === "ON_TRACK" ? "#f0fdf4" : "#fafafa", color: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#b91c1c" : goalAttentionSignal.state === "ON_TRACK" ? "#15803d" : "#6b7280" }}>
               {goalAttentionSignal.state.replace(/_/g, " ")}
             </span>
-            {goalAttentionSignal.goalTitle && <span style={{ fontSize: 13, color: "#374151" }}>{goalAttentionSignal.goalTitle}</span>}
+            {goalAttentionSignal.goalTitle && <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{goalAttentionSignal.goalTitle}</span>}
           </div>
           {goalAttentionSignal.gapToClose !== null && (
-            <p data-testid="cockpit-goal-gap" style={{ margin: "6px 0 0", fontSize: 13, color: "#374151" }}>
+            <p data-testid="cockpit-goal-gap" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>
               Gap to close: {goalAttentionSignal.targetCurrency ?? ""} {goalAttentionSignal.gapToClose.toLocaleString()}
             </p>
           )}
-          <p data-testid="cockpit-goal-explanation" style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280", fontStyle: "italic" }}>{goalAttentionSignal.beginnerExplanation}</p>
+          <p data-testid="cockpit-goal-explanation" style={{ margin: "4px 0 0", fontSize: 13, color: "var(--muted-foreground)", fontStyle: "italic" }}>{goalAttentionSignal.beginnerExplanation}</p>
         </div>
       )}
 
@@ -1192,18 +1192,18 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* Profit Leak — Phase 2 Signal B */}
       {topProfitLeak && (
-        <div data-testid="cockpit-profit-leak-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+        <div data-testid="cockpit-profit-leak-section" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>Profit leak detected</span>
           <div style={{ marginTop: 6, fontSize: 13, display: "flex", flexDirection: "column", gap: 4 }}>
-            <span data-testid="cockpit-profit-leak-area" style={{ color: "#374151" }}>Area: {topProfitLeak.domain}</span>
+            <span data-testid="cockpit-profit-leak-area" style={{ color: "var(--muted-foreground)" }}>Area: {topProfitLeak.domain}</span>
             {topProfitLeak.estimatedImpact.rangeLow !== undefined && (
-              <span data-testid="cockpit-profit-leak-impact" style={{ color: "#b91c1c" }}>
+              <span data-testid="cockpit-profit-leak-impact" style={{ color: "var(--destructive)" }}>
                 Estimated impact: {topProfitLeak.estimatedImpact.rangeLow.toLocaleString()}
                 {topProfitLeak.estimatedImpact.rangeHigh !== undefined ? ` – ${topProfitLeak.estimatedImpact.rangeHigh.toLocaleString()}` : ""}
               </span>
             )}
             {topProfitLeak.ownerExplanation && (
-              <span style={{ color: "#6b7280", fontStyle: "italic" }}>{topProfitLeak.ownerExplanation}</span>
+              <span style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>{topProfitLeak.ownerExplanation}</span>
             )}
           </div>
         </div>
@@ -1211,13 +1211,13 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* Policy Attention Signal — Phase 2 Signal C */}
       {policyAttentionSignal && (
-        <div data-testid="cockpit-policy-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+        <div data-testid="cockpit-policy-section" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: 14, fontWeight: 600 }}>Operating policies</span>
-            <span data-testid="cockpit-policy-triggered-blocks" style={{ fontSize: 12, color: policyAttentionSignal.triggeredBlockCount > 0 ? "#b91c1c" : "#6b7280", fontWeight: policyAttentionSignal.triggeredBlockCount > 0 ? 600 : 400 }}>
+            <span data-testid="cockpit-policy-triggered-blocks" style={{ fontSize: 12, color: policyAttentionSignal.triggeredBlockCount > 0 ? "var(--destructive)" : "var(--muted-foreground)", fontWeight: policyAttentionSignal.triggeredBlockCount > 0 ? 600 : 400 }}>
               {policyAttentionSignal.triggeredBlockCount} blocked
             </span>
-            <span data-testid="cockpit-policy-triggered-warnings" style={{ fontSize: 12, color: policyAttentionSignal.triggeredWarningCount > 0 ? "#b45309" : "#6b7280" }}>
+            <span data-testid="cockpit-policy-triggered-warnings" style={{ fontSize: 12, color: policyAttentionSignal.triggeredWarningCount > 0 ? "var(--warning)" : "var(--muted-foreground)" }}>
               {policyAttentionSignal.triggeredWarningCount} warning{policyAttentionSignal.triggeredWarningCount !== 1 ? "s" : ""}
             </span>
           </div>
@@ -1225,8 +1225,8 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             {policyAttentionSignal.details.map((d, i) => (
               <li key={d.policyKey} data-testid={`cockpit-policy-detail-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center" }}>
                 <Badge variant={d.decision === "BLOCK" ? "destructive" : d.decision === "WARN" ? "warning" : "muted"}>{d.decision}</Badge>
-                <span style={{ color: "#374151" }}>{d.label}</span>
-                {d.hasActiveOverride && <span style={{ color: "#6b7280", fontSize: 12 }}>(override active)</span>}
+                <span style={{ color: "var(--muted-foreground)" }}>{d.label}</span>
+                {d.hasActiveOverride && <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>(override active)</span>}
               </li>
             ))}
           </ul>
@@ -1234,14 +1234,14 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       )}
 
       {/* Trend Alerts — Phase 2 Signal D */}
-      <div data-testid="cockpit-trend-alerts-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <div data-testid="cockpit-trend-alerts-section" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
         <span style={{ fontSize: 14, fontWeight: 600 }}>Trend alerts</span>
         {trendAlerts === null || trendAlerts === undefined ? (
-          <p data-testid="cockpit-trend-alerts-state" data-cockpit-trend-alerts-state="INSUFFICIENT_DATA" style={{ margin: "6px 0 0", fontSize: 13, color: "#6b7280" }}>
+          <p data-testid="cockpit-trend-alerts-state" data-cockpit-trend-alerts-state="INSUFFICIENT_DATA" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>
             Not enough metric history yet for trend alerts. Record at least two periods.
           </p>
         ) : trendAlerts.length === 0 ? (
-          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#16a34a" }}>No trend alerts — metrics moving in a healthy direction.</p>
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--success)" }}>No trend alerts — metrics moving in a healthy direction.</p>
         ) : (
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
             {trendAlerts.map((alert, i) => (
@@ -1249,7 +1249,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
                 <Badge data-testid={`cockpit-trend-alert-${i}-severity`} variant={alert.severity === "critical" ? "destructive" : "warning"}>
                   {alert.severity}
                 </Badge>
-                <span style={{ color: "#374151" }}>{alert.description}</span>
+                <span style={{ color: "var(--muted-foreground)" }}>{alert.description}</span>
               </li>
             ))}
           </ul>
@@ -1278,24 +1278,24 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       )}
 
       {/* Active Escalations — Phase 2 Signal G */}
-      <div data-testid="cockpit-escalations-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <div data-testid="cockpit-escalations-section" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
         <span style={{ fontSize: 14, fontWeight: 600 }}>Escalations</span>
         {activeEscalations === null || activeEscalations === undefined ? (
-          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#6b7280" }}>Escalation data unavailable.</p>
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>Escalation data unavailable.</p>
         ) : activeEscalations.length === 0 ? (
-          <p data-testid="cockpit-escalations-state" data-cockpit-escalations-state="NONE" style={{ margin: "6px 0 0", fontSize: 13, color: "#16a34a" }}>No open escalations.</p>
+          <p data-testid="cockpit-escalations-state" data-cockpit-escalations-state="NONE" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--success)" }}>No open escalations.</p>
         ) : (
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
             {activeEscalations.map((esc) => (
               <li key={esc.id} data-testid={`cockpit-escalation-${esc.id}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <Badge variant={esc.severity === "CRITICAL" ? "destructive" : "warning"}>{esc.severity}</Badge>
-                <span style={{ color: "#374151", flex: 1 }}>{esc.title}</span>
+                <span style={{ color: "var(--muted-foreground)", flex: 1 }}>{esc.title}</span>
                 {onAcknowledgeEscalation && (
                   <button
                     type="button"
                     data-testid={`cockpit-escalation-ack-${esc.id}`}
                     onClick={() => onAcknowledgeEscalation(esc.id)}
-                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer" }}
+                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}
                   >
                     Acknowledge
                   </button>
@@ -1322,9 +1322,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} />}
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
-      <details data-testid="cockpit-proof-drawer" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <details data-testid="cockpit-proof-drawer" style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 8, padding: "10px 14px" }}>
         <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>View proof &amp; details</summary>
-        <div style={{ marginTop: 8, fontSize: 12, color: "#6b7280", display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted-foreground)", display: "flex", flexDirection: "column", gap: 6 }}>
           <span><strong>Done when:</strong> {top.completionCriteria}</span>
           {top.evidenceRefs.length > 0
             ? <span data-testid="cockpit-proof-refs" style={{ wordBreak: "break-all" }}>Evidence: {top.evidenceRefs.slice(0, 8).join(", ")}</span>

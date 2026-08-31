@@ -211,7 +211,7 @@ export default function OwnerCockpitPage() {
   if (loading) return <main style={{ padding: 24 }}><CardDashboardSkeleton label="Loading your cockpit" sections={2} /></main>;
   if (error) return (
     <main style={{ padding: 24 }}>
-      <p style={{ color: "#b91c1c" }}>{error}</p>
+      <p style={{ color: "var(--destructive)" }}>{error}</p>
       <Button onClick={() => void load()}>Retry</Button>
     </main>
   );
@@ -220,10 +220,10 @@ export default function OwnerCockpitPage() {
     <main style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <header style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
         <h1 style={{ margin: 0, fontSize: 22 }}>Your cockpit</h1>
-        <span style={{ fontSize: 13, color: "#6b7280" }}>One clear next step, with the proof and the safety limits.</span>
+        <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>One clear next step, with the proof and the safety limits.</span>
         <Button onClick={() => void load()} disabled={busy}>Refresh</Button>
       </header>
-      {message && <p data-testid="cockpit-message" style={{ margin: 0, fontSize: 13, color: "#374151" }}>{message}</p>}
+      {message && <p data-testid="cockpit-message" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>{message}</p>}
       {/* G8: Startup Mode entry point — server-authoritative role gating at /owner/startup */}
       <nav aria-label="Owner mode navigation" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Button
