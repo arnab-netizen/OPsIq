@@ -250,8 +250,17 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
     { id: "choose_type", label: "Choose your business type", complete: true },
     { id: "choose_role", label: "Choose how you run it", complete: true },
     { id: "enter_minimum_data", label: "Enter the minimum business data", complete: minimumComplete },
-    { id: "review_missing_data", label: "Review what data is missing", complete: input.suppliedCategories.length > 0 },
-    { id: "see_confidence", label: "See your confidence before diagnosis", complete: input.suppliedCategories.length > 0 },
+    // F8: these two used to be labeled as owner ACTIONS ("Review what data is missing", "See your
+    // confidence before diagnosis") but their completion condition was never tied to the owner
+    // actually reviewing or viewing anything — it is the exact same condition as `enter_minimum_data`
+    // one step up (any category supplied at all), so the moment that step completes, these ticked
+    // green too without the owner doing the distinct thing their old label claimed. There is no
+    // persisted "viewed this page" signal to gate on (and adding one is out of scope — no new
+    // onboarding-progress table), so the honest fix is a label that describes what actually became
+    // true — the missing-data list and the confidence score now reflect real data — not an action
+    // that was never actually observed.
+    { id: "review_missing_data", label: "Your missing-data list now reflects real data", complete: input.suppliedCategories.length > 0 },
+    { id: "see_confidence", label: "Your confidence score now reflects real data", complete: input.suppliedCategories.length > 0 },
     { id: "run_first_diagnosis", label: "Run your first diagnosis", complete: canRunFirstDiagnosis },
     { id: "see_first_action", label: "See your first recommended action", complete: canRunFirstDiagnosis },
   ];
