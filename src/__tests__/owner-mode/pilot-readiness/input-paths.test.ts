@@ -171,4 +171,40 @@ describe("DB/provider path reflects confirmed intakes", () => {
     expect(intakeDomainToCategory(null)).toBeNull();
     expect(intakeDomainToCategory("revenue_sales")).toBe("revenue_sales");
   });
+
+  // F1 root-cause proof: a confirmed manual-entry NOTE (no real snapshot number, no period/currency —
+  // exactly what manual-entry's revenue/cash-pressure sections collect, per
+  // owner-manual-entry-form.ts's MANUAL_ENTRY_SECTIONS) must never satisfy a financial-snapshot-backed
+  // readiness item on its own. Only a real OwnerFinancialSnapshot/cashflow/working-capital field can.
+  it("a confirmed intake alone does NOT credit financial-snapshot-backed categories (revenue/expenses/fixed_costs/payroll/cash_debt)", () => {
+    const supplied = rowsToSuppliedCategories(
+      rows({
+        confirmedIntakeDomains: ["revenue_sales", "expenses", "fixed_costs", "payroll", "cash_debt"],
+      }),
+    );
+    expect(supplied).not.toContain("revenue_sales");
+    expect(supplied).not.toContain("expenses");
+    expect(supplied).not.toContain("fixed_costs");
+    expect(supplied).not.toContain("payroll");
+    expect(supplied).not.toContain("cash_debt");
+  });
+
+  it("a real financial snapshot (not a confirmed intake) still credits those exact categories", () => {
+    const supplied = rowsToSuppliedCategories(
+      rows({
+        finance: { revenue: 10000, costOfGoods: 4000, fixedCosts: 2000, payroll: 3000, cashOnHand: 500 } as never,
+      }),
+    );
+    expect(supplied).toContain("revenue_sales");
+    expect(supplied).toContain("expenses");
+    expect(supplied).toContain("fixed_costs");
+    expect(supplied).toContain("payroll");
+    expect(supplied).toContain("cash_debt");
+  });
+
+  it("a confirmed intake still credits non-financial-snapshot categories exactly as before (no regression)", () => {
+    const supplied = rowsToSuppliedCategories(rows({ confirmedIntakeDomains: ["staff_rota", "customer_count"] }));
+    expect(supplied).toContain("staff_rota");
+    expect(supplied).toContain("customer_count");
+  });
 });

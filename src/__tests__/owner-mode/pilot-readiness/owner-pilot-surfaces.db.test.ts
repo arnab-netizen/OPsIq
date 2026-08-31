@@ -117,29 +117,58 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] owner-pilot surfaces (live DB)", () 
     expect(action.assignment!.responsibleParty.length).toBeGreaterThan(0);
   });
 
-  it("[db] manual input path persists a scoped intake and RAISES confidence", async () => {
+  it("[db] manual input path persists a scoped intake and RAISES confidence for a non-financial category", async () => {
+    // F1: revenue_sales/expenses/payroll/cash_debt are financial-snapshot-backed — a bare confirmed
+    // note (no periodStart/periodEnd/currency, exactly what manual-entry's own sections collect) must
+    // NOT satisfy them (see the DB-free proof in input-paths.test.ts). staff_attendance is not
+    // snapshot-backed, so a confirmed manual note remains its real, legitimate supplied signal.
     const before = await getOwnerInputGuidance({ db: prisma, workspaceId, businessId: weakBusinessId, now: NOW });
 
     const res = await submitManualEntry(
-      { workspaceId, businessId: weakBusinessId, record: { workspaceId, businessId: weakBusinessId, category: "revenue_sales", source: "manual", fields: { revenue: 450000 } } },
+      { workspaceId, businessId: weakBusinessId, record: { workspaceId, businessId: weakBusinessId, category: "staff_attendance", source: "manual", fields: { note: "owner covers most shifts personally" } } },
       { db: prisma, now: NOW, actorId: userId },
     );
     expect(res.ok).toBe(true);
 
-    const row = await prisma.ownerDataIntake.findFirst({ where: { workspaceId, businessId: weakBusinessId, targetDomain: "revenue_sales", ownerConfirmed: true } });
+    const row = await prisma.ownerDataIntake.findFirst({ where: { workspaceId, businessId: weakBusinessId, targetDomain: "staff_attendance", ownerConfirmed: true } });
     expect(row).not.toBeNull();
 
-    // The confidence read path now counts the confirmed intake → revenue_sales is supplied.
+    // The confidence read path now counts the confirmed intake → staff_attendance is supplied.
     const onboardingAfter = await getOwnerOnboardingState({ db: prisma, workspaceId, businessId: weakBusinessId, now: NOW });
-    expect(onboardingAfter.missingMinimum.find((m) => m.category === "revenue_sales")).toBeUndefined();
+    expect(onboardingAfter.missingMinimum.find((m) => m.category === "staff_attendance")).toBeUndefined();
 
-    // Supply the rest of the minimum → confidence strictly improves vs. the weak baseline.
-    for (const cat of ["expenses", "cash_debt", "payroll", "staff_attendance"] as const) {
-      await submitManualEntry(
-        { workspaceId, businessId: weakBusinessId, record: { workspaceId, businessId: weakBusinessId, category: cat, source: "manual", fields: { value: 1000 } } },
-        { db: prisma, now: NOW, actorId: userId },
-      );
-    }
+    // A bare confirmed note for a financial-snapshot-backed category must NOT clear it from missing.
+    const bareFinanceNote = await submitManualEntry(
+      { workspaceId, businessId: weakBusinessId, record: { workspaceId, businessId: weakBusinessId, category: "revenue_sales", source: "manual", fields: { note: "sales flat vs last month" } } },
+      { db: prisma, now: NOW, actorId: userId },
+    );
+    expect(bareFinanceNote.ok).toBe(true);
+    const afterBareNote = await getOwnerOnboardingState({ db: prisma, workspaceId, businessId: weakBusinessId, now: NOW });
+    expect(afterBareNote.missingMinimum.find((m) => m.category === "revenue_sales")).toBeDefined();
+
+    // The REAL structured entry point — a real financial snapshot, same shape /owner/finance submits —
+    // is what actually clears revenue_sales/expenses/payroll/cash_debt from missing.
+    const { createFinancialSnapshot } = await import("@/services/owner-finance/snapshot.service");
+    await createFinancialSnapshot(
+      weakBusinessId,
+      {
+        periodStart: "2026-01-01",
+        periodEnd: "2026-01-31",
+        currency: "USD",
+        revenue: 450000,
+        costOfGoodsOrServices: 120000,
+        salaryPayroll: 60000,
+        cashOnHand: 30000,
+      } as never,
+      userId,
+      workspaceId,
+    );
+    const afterSnapshot = await getOwnerOnboardingState({ db: prisma, workspaceId, businessId: weakBusinessId, now: NOW });
+    expect(afterSnapshot.missingMinimum.find((m) => m.category === "revenue_sales")).toBeUndefined();
+    expect(afterSnapshot.missingMinimum.find((m) => m.category === "expenses")).toBeUndefined();
+    expect(afterSnapshot.missingMinimum.find((m) => m.category === "payroll")).toBeUndefined();
+    expect(afterSnapshot.missingMinimum.find((m) => m.category === "cash_debt")).toBeUndefined();
+
     const after = await getOwnerInputGuidance({ db: prisma, workspaceId, businessId: weakBusinessId, now: NOW });
     expect(CONF[after.overallConfidence]).toBeGreaterThan(CONF[before.overallConfidence]);
   });

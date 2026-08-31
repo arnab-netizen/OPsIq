@@ -94,6 +94,26 @@ describe("mobile usability of owner-pilot surfaces", () => {
     }
   });
 
+  // F7: at 390×844 the severity-pill row in "What data is still missing" collided/overflowed because
+  // its `justify-between` flex row had no `flex-wrap` (unlike the two sibling header rows in the same
+  // file, which already carry it) — a long label + a Badge in a non-wrapping row cannot shrink below
+  // content width. Proven at the source level (no browser needed for this specific regression: it is
+  // a missing Tailwind class, not a runtime layout computation) — every `justify-between` row in this
+  // file must wrap, and the label sharing a row with a severity Badge must not force a fixed width.
+  it("every 'justify-between' flex row in onboarding wraps at narrow widths (no severity-pill overflow)", () => {
+    const onboarding = read(FILES.onboarding);
+    const justifyBetweenRows = onboarding.match(/className="flex[^"]*justify-between[^"]*"/g) ?? [];
+    expect(justifyBetweenRows.length).toBeGreaterThan(0);
+    for (const row of justifyBetweenRows) {
+      expect(row).toMatch(/flex-wrap/);
+    }
+  });
+
+  it("the missing-data severity label allows wrapping instead of forcing overflow", () => {
+    const onboarding = read(FILES.onboarding);
+    expect(onboarding).toMatch(/min-w-0 break-words text-sm font-medium/);
+  });
+
   it("the onboarding + command-center surfaces expose the owner-pilot test ids used by mobile e2e", () => {
     const onboarding = read(FILES.onboarding);
     expect(onboarding).toMatch(/data-testid="owner-onboarding"/);

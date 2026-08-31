@@ -113,6 +113,18 @@ describe("process-intelligence — v1", () => {
     expect(r.topFinding?.expectedImpactType).toBe("NONE");
   });
 
+  // F6: first-run/zero-data owner-facing copy must not use internal-sounding jargon
+  // ("anti-gaming pattern", "proof-review queue pressure", "Process Intelligence sharpens as the
+  // chain fills in") — this is exactly the DATA_INSUFFICIENT zero-data finding a brand-new owner sees.
+  it("9b. (F6) zero-data finding copy uses plain owner language, not internal jargon", () => {
+    const r = buildProcessIntelligence(inp());
+    const missing = r.topFinding?.missingData.join(" ") ?? "";
+    const action = r.topFinding?.recommendedCorrectiveAction ?? "";
+    expect(missing).not.toMatch(/anti-gaming pattern/i);
+    expect(missing).not.toMatch(/proof-review queue pressure/i);
+    expect(action).not.toMatch(/Process Intelligence sharpens as the chain fills in/i);
+  });
+
   it("10. inputs are per-workspace (no cross-workspace contamination) — workspaceId flows through", () => {
     const r = buildProcessIntelligence(inp({ workspaceId: "ws-OTHER", ownerBottleneckItems: 9 }));
     expect(r.findings.every((f) => f.workspaceId === "ws-OTHER")).toBe(true);

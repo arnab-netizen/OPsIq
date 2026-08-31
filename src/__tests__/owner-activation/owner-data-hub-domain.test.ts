@@ -40,26 +40,52 @@ describe("owner data hub — grouping covers the whole catalog", () => {
 });
 
 describe("owner data hub — every category has a reachable input surface", () => {
-  it("routes each category to manual entry or upload, never to a dead end", () => {
+  it("routes each category to a real structured entry point (finance snapshot, manual entry, or upload), never to a dead end", () => {
     for (const category of OWNER_INPUT_CATEGORIES) {
       const target = inputTargetForCategory(category);
-      expect(["manual-entry", "upload"]).toContain(target.route);
+      expect(["finance-snapshot", "manual-entry", "upload"]).toContain(target.route);
       expect(target.href.startsWith("/owner/")).toBe(true);
       expect(target.actionLabel.length).toBeGreaterThan(0);
     }
   });
 
-  it("deep-links to the manual-entry section when the form covers the category", () => {
+  it("deep-links to the manual-entry section when the form covers the category and it is not financial-snapshot-backed", () => {
     const covered = MANUAL_ENTRY_SECTIONS[0];
     const target = inputTargetForCategory(covered.category);
     expect(target.route).toBe("manual-entry");
     expect(target.href).toBe(`/owner/manual-entry#${covered.id}`);
   });
 
-  it("falls back to the governed upload path when no manual-entry section exists", () => {
-    const uncovered = OWNER_INPUT_CATEGORIES.find((c) => manualEntrySectionForCategory(c) === null);
+  it("falls back to the governed upload path when no manual-entry section exists and the category is not financial-snapshot-backed", () => {
+    const uncovered = OWNER_INPUT_CATEGORIES.find(
+      (c) => manualEntrySectionForCategory(c) === null && inputTargetForCategory(c).route !== "finance-snapshot",
+    );
     expect(uncovered).toBeDefined();
     expect(inputTargetForCategory(uncovered!).href).toBe("/owner/intake");
+  });
+
+  // F1: the readiness engine reads revenue/expenses/fixed costs/payroll/cash-debt-EMI exclusively
+  // from the real OwnerFinancialSnapshot (see owner-onboarding.service.ts's
+  // FINANCIAL_SNAPSHOT_BACKED_CATEGORIES) — so their CTA must point at /owner/finance's real
+  // structured snapshot form, never at a manual-entry note or a generic upload page.
+  it("routes every financial-snapshot-backed category straight to /owner/finance", () => {
+    for (const category of ["revenue_sales", "expenses", "fixed_costs", "payroll", "cash_debt"] as const) {
+      const target = inputTargetForCategory(category);
+      expect(target.route).toBe("finance-snapshot");
+      expect(target.href).toBe("/owner/finance");
+    }
+  });
+
+  // F5: `staff_attendance`'s only two real data paths are a persisted OwnerCapacitySnapshot
+  // (equipment/revenue-utilization data, not per-employee attendance) and a confirmed manual-entry
+  // note under the "Owner workload" section — neither is real staff attendance/output data, so the
+  // owner-facing label must not claim it collects that.
+  it("staff_attendance is honestly labeled 'Owner workload', matching the one real manual-entry section that feeds it", () => {
+    expect(INPUT_CATALOG.staff_attendance.label).toBe("Owner workload");
+    expect(INPUT_CATALOG.staff_attendance.label).not.toMatch(/attendance/i);
+    expect(INPUT_CATALOG.staff_attendance.label).not.toMatch(/output/i);
+    const section = MANUAL_ENTRY_SECTIONS.find((s) => s.category === "staff_attendance")!;
+    expect(section.title).toBe("Owner workload");
   });
 });
 

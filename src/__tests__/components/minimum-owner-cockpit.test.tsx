@@ -153,6 +153,56 @@ describe("MinimumOwnerCockpit", () => {
     expect(queryByTestId("cockpit-top-action-title")).toBeNull();
   });
 
+  // F3 — cockpit surfaces the Finance diagnosis's top action, without overwriting an urgent governed issue.
+  const financePriority = {
+    businessId: "biz-1", businessName: "Test Biz", cycleId: "cycle-1", generatedAt: "2026-06-30T00:00:00Z",
+    survivalState: "WATCH", overallHealthScore: 60,
+    topAction: { id: "act-1", title: "Fix your thin gross margin", description: "Raise price or cut cost of goods.", priorityScore: 90 },
+  };
+
+  it("18b. (F3) clean state (no governed route) surfaces the finance diagnosis's top action as primary", () => {
+    const { getByTestId, queryByTestId } = render(
+      <MinimumOwnerCockpit
+        bridge={{ routes: [], topRoute: null, summary: { total: 0, ownerApproval: 0, managerStaff: 0, dataTasks: 0, monitorOnly: 0 } }}
+        financeTopPriority={financePriority}
+        onAction={noop}
+      />,
+    );
+    expect(getByTestId("cockpit-finance-priority-primary").textContent).toMatch(/fix your thin gross margin/i);
+    expect(queryByTestId("cockpit-finance-priority-secondary")).toBeNull();
+  });
+
+  it("18c. (F3) a real actionable governed route stays primary; the finance action still surfaces, but only as secondary", () => {
+    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view()} financeTopPriority={financePriority} onAction={noop} />);
+    // The governed route keeps the primary "top priority" slot — untouched, never overwritten.
+    expect(getByTestId("cockpit-top-action-title").textContent).toMatch(/approve the process correction/i);
+    // The finance action is still visible, just as a secondary signal.
+    expect(getByTestId("cockpit-finance-priority-secondary").textContent).toMatch(/fix your thin gross margin/i);
+  });
+
+  it("18d. (F3) with no finance diagnosis available, nothing finance-related renders (no fabrication)", () => {
+    const { queryByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={noop} />);
+    expect(queryByTestId("cockpit-finance-priority-primary")).toBeNull();
+    expect(queryByTestId("cockpit-finance-priority-secondary")).toBeNull();
+  });
+
+  // F6: zero-data owner-facing copy must not read as internal jargon ("Business Operating System —
+  // 0 active objectives").
+  it("18e. (F6) the goals section uses plain owner language for zero objectives, not internal jargon", () => {
+    const bos = {
+      totalActiveObjectives: 0,
+      objectiveHealthCounts: { ON_TRACK: 0, AT_RISK: 0, BLOCKED: 0, CRITICAL: 0 },
+      topObjectives: [], activePoolCount: 0, resourceUtilizationPct: null,
+      latestArbitration: null, latestArbitrationOverride: null, topRisks: [],
+      activeConstraints: [], activeConstraintCount: 0, kpiCount: 0, costAttributionCoverage: null,
+    };
+    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view()} businessOperatingSystem={bos} onAction={noop} />);
+    const section = getByTestId("cockpit-bos-section");
+    expect(section.textContent).not.toMatch(/0 active objectives/i);
+    expect(section.textContent).toMatch(/goals/i);
+    expect(getByTestId("cockpit-bos-empty").textContent).not.toMatch(/business operating system/i);
+  });
+
   it("19. frozen / not-built capabilities are not shown as available", () => {
     const { container } = render(<MinimumOwnerCockpit bridge={view()} onAction={noop} />);
     expect(container.innerHTML).not.toMatch(/billing|subscription|product hunt|connect your (bank|accounting|pos|crm)|local mode|shadow pilot/i);

@@ -112,8 +112,10 @@ describe("with a business", () => {
     expect(missing.textContent).toContain("Expense records");
     expect(missing.textContent).toContain("know if work is actually profitable");
     expect(missing.textContent).toContain("margin, cost control");
-    // Direct link to the surface that fixes it.
-    expect(missing.querySelector("a")!.getAttribute("href")).toMatch(/^\/owner\/(manual-entry|intake)/);
+    // F1: "Expense records" is financial-snapshot-backed — the readiness engine reads it exclusively
+    // from a real OwnerFinancialSnapshot, so the CTA must point at the real structured entry point
+    // (/owner/finance's "+ Add financial snapshot" form), never manual-entry or a generic upload.
+    expect(missing.querySelector("a")!.getAttribute("href")).toBe("/owner/finance");
   });
 
   it("renders all four category groups with real supplied counts", async () => {
@@ -159,7 +161,11 @@ describe("with a business", () => {
     await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
     expect(container.querySelector('[data-testid="data-hub-insufficient"]')).toBeNull();
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toContain("/diagnosis");
+    // F2: /diagnosis requires CAPABILITIES.ENGAGEMENT_CREATE, which a self-serve owner (the only
+    // audience for this owner-only page) never holds — it always 403s for them. /owner/finance is
+    // their real, working first-diagnosis flow.
+    expect(hrefs).toContain("/owner/finance");
+    expect(hrefs).not.toContain("/diagnosis");
   });
 
   it("surfaces an error without crashing when the onboarding call fails", async () => {

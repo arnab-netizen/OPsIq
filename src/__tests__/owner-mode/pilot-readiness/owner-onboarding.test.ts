@@ -141,4 +141,28 @@ describe("owner onboarding", () => {
     expect(typeof state.firstAction).toBe("string");
     expect(typeof state.proofExpectation).toBe("string");
   });
+
+  // F8: "review_missing_data" and "see_confidence" used to be labeled as owner ACTIONS ("Review what
+  // data is missing", "See your confidence before diagnosis") but completed from the exact same
+  // condition as `enter_minimum_data` one step earlier — VISIT_ONLY in effect, since the owner never
+  // had to do anything distinct from the previous step for these to tick green. There is no persisted
+  // "viewed this page" signal to gate on (no new onboarding-progress table), so the fix is honest
+  // labels that describe what actually became true, not an action that was never observed.
+  it("review_missing_data / see_confidence labels no longer claim an owner action that was never observed", () => {
+    const state = computeOnboardingState({ ...base, suppliedCategories: [] });
+    const reviewStep = state.steps.find((s) => s.id === "review_missing_data")!;
+    const confidenceStep = state.steps.find((s) => s.id === "see_confidence")!;
+    expect(reviewStep.label).not.toMatch(/^Review /i);
+    expect(confidenceStep.label).not.toMatch(/^See your confidence before diagnosis$/i);
+    expect(reviewStep.complete).toBe(false);
+    expect(confidenceStep.complete).toBe(false);
+  });
+
+  it("review_missing_data / see_confidence still complete the moment any real category is supplied (same condition, honest label)", () => {
+    const state = computeOnboardingState({ ...base, suppliedCategories: ["revenue_sales"] });
+    const reviewStep = state.steps.find((s) => s.id === "review_missing_data")!;
+    const confidenceStep = state.steps.find((s) => s.id === "see_confidence")!;
+    expect(reviewStep.complete).toBe(true);
+    expect(confidenceStep.complete).toBe(true);
+  });
 });
