@@ -412,3 +412,20 @@ export function getActorHierarchyLevel(ctx: PolicyContext): number {
 export function hasInternalAccess(ctx: PolicyContext): boolean {
   return ctx.roles.some((r) => !isClientRole(r.role));
 }
+
+/**
+ * The single authoritative check for "is this actor a self-serve owner" (F2/F4). Deliberately NOT
+ * `ctx.workspaceRole === "owner"` directly — that string is an internal signup-time implementation
+ * detail (see `SELF_SERVE_OWNER_WORKSPACE_ROLE` above), and duplicating it as a second check
+ * elsewhere is exactly the drift `getCapabilitiesForRole`'s own doc comment warns against. Instead
+ * this reads the SAME resolved capability set every other check in this file reads: a self-serve
+ * owner holds `OWNER_VIEW` (the narrowed `OWNER_SCOPED_CAPABILITIES` bundle always includes it) but
+ * never `ENGAGEMENT_CREATE` (an `INTERNAL_ONLY_CAPABILITIES` entry the narrowing strips, and the full
+ * consultant/admin bundle always carries) — so a consultant or admin who also happens to hold
+ * `OWNER_VIEW` is correctly excluded. Used to route owner-only first-run UI (dashboard's
+ * "Run your first diagnosis" CTA, the root `/` redirect) without re-deriving role logic in a page or
+ * component.
+ */
+export function isSelfServeOwnerContext(ctx: PolicyContext): boolean {
+  return hasCapability(ctx, CAPABILITIES.OWNER_VIEW) && !hasCapability(ctx, CAPABILITIES.ENGAGEMENT_CREATE);
+}
