@@ -58,7 +58,7 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
   const supportingFigures = summary.supportingFigures ?? [];
 
   return (
-    <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white mb-6" data-testid="owner-supervisor-summary">
+    <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-supervisor-summary">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="text-xs uppercase text-muted-foreground">OpsIQ supervisor summary</div>
         <div className="flex flex-wrap gap-2">

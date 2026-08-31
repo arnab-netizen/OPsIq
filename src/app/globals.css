@@ -15,6 +15,17 @@
   --accent: #f8fafc;
   --ring: #3b82f6;
   --radius: 0.5rem;
+  /* Raised surface (cards, sections, panels) — distinct from --background (the page/app
+     surface) so a card can visually lift off the page even when both are pale in light
+     mode, and so it tracks the theme instead of staying hardcoded white. Pairs with
+     --card-foreground the same way --muted/--muted-foreground and --primary/--primary-
+     foreground already pair in this file. See docs/opsiq-governance for the audit that
+     added these (P0/P1 visual-system closure): raised content previously hardcoded
+     `bg-white`, which stayed opaque white in dark mode while its text tracked
+     `--foreground` (which turns near-white in dark mode) — producing near-invisible
+     white-on-white text. */
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
 }
 
 @theme inline {
@@ -31,6 +42,8 @@
   --color-warning: var(--warning);
   --color-accent: var(--accent);
   --color-ring: var(--ring);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -50,6 +63,12 @@
     --warning: #f59e0b;
     --accent: #1e293b;
     --ring: #60a5fa;
+    /* Same elevated-surface role as light mode's --card, but a shade lighter than
+       --background (#0f172a) so raised cards still read as "lifted" in dark mode —
+       reusing the existing --muted dark value keeps this to one deliberate shade
+       instead of inventing a new one-off color. */
+    --card: #1e293b;
+    --card-foreground: var(--foreground);
   }
 }
 

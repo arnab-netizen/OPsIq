@@ -159,7 +159,7 @@ export default function ConsultingEnginePage() {
             ← Back
           </Link>
 
-          <div className="border rounded-lg p-6 bg-white shadow-sm">
+          <div className="border rounded-lg p-6 bg-card shadow-sm">
             <h1 className="text-3xl font-bold text-foreground mb-4">Insufficient Data</h1>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <p className="text-amber-900 font-semibold mb-2">Cannot run consulting engine</p>
@@ -190,7 +190,7 @@ export default function ConsultingEnginePage() {
           ← Back
         </Link>
 
-        <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
+        <div className="border rounded-lg p-6 bg-card shadow-sm mb-6">
           <h1 className="text-3xl font-bold text-foreground mb-2">Decision Memo</h1>
           {memo && <p className="text-sm text-muted-foreground mb-4">ID: {memo.engagementId}</p>}
 
@@ -263,7 +263,7 @@ export default function ConsultingEnginePage() {
         </div>
 
         {result.data.recommendations.length > 0 && (
-          <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
+          <div className="border rounded-lg p-6 bg-card shadow-sm mb-6">
             <h2 className="text-xl font-bold text-foreground mb-4">
               Recommendations ({result.data.recommendations.length})
             </h2>
@@ -283,7 +283,7 @@ export default function ConsultingEnginePage() {
         )}
 
         {result.data.actions.length > 0 && (
-          <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
+          <div className="border rounded-lg p-6 bg-card shadow-sm mb-6">
             <h2 className="text-xl font-bold text-foreground mb-4">
               Actions ({result.data.actions.length})
             </h2>
@@ -327,7 +327,7 @@ export default function ConsultingEnginePage() {
 
   return (
     <div className="mx-auto max-w-2xl py-8 px-4">
-      <div className="border rounded-lg p-6 bg-white shadow-sm">
+      <div className="border rounded-lg p-6 bg-card shadow-sm">
         <h1 className="text-3xl font-bold text-foreground mb-2">Consulting Engine</h1>
         <p className="text-muted-foreground text-sm mb-6">
           Run the consulting engine analysis on an existing engagement. Requires at least one approved finding.

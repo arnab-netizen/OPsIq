@@ -636,7 +636,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
           </div>
 
           {/* Commitment Status Details */}
-          <div className="mt-4 rounded bg-white/30 p-3">
+          <div className="mt-4 rounded bg-card/30 p-3">
             <p className="text-xs font-medium text-foreground">Commitment Status</p>
             <p className="mt-1 text-xs text-muted-foreground">
               {data.drift.requiredAction.commitment.status === "pending" &&
@@ -700,7 +700,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
           </div>
 
           {/* Action Metadata */}
-          <div className="mt-3 space-y-1 rounded bg-white/50 p-2">
+          <div className="mt-3 space-y-1 rounded bg-card/50 p-2">
             <p className="text-xs font-medium text-muted-foreground">Type: {data.drift.requiredAction.action.type}</p>
             <p className="text-xs font-medium text-muted-foreground">ID: {data.drift.requiredAction.action.entityId}</p>
           </div>
@@ -993,7 +993,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
           </p>
           <div className="mt-3 space-y-2">
             {data.overdueActions.slice(0, 3).map((action) => (
-              <div key={action.id} className="flex items-start justify-between rounded bg-white p-2">
+              <div key={action.id} className="flex items-start justify-between rounded bg-card p-2">
                 <div className="flex-1">
                   <p className="text-xs font-medium">{action.title}</p>
                   {action.dueDate && (
@@ -1025,7 +1025,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
           </p>
           <div className="mt-3 space-y-2">
             {data.criticalActions.slice(0, 3).map((action) => (
-              <div key={action.id} className="flex items-start justify-between rounded bg-white p-2">
+              <div key={action.id} className="flex items-start justify-between rounded bg-card p-2">
                 <div className="flex-1">
                   <p className="text-xs font-medium">{action.title}</p>
                   <p className="text-xs text-muted-foreground capitalize">{action.status}</p>

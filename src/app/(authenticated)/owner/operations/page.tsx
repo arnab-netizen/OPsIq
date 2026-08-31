@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -267,7 +267,7 @@ export default function OwnerOperationsPage() {
     }
   }
 
-  if (loading) return <div className="p-8">Loading operations workspace…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading operations workspace" />;
 
   const businesses: any[] = dashboard?.businesses ?? [];
   const currentBusiness = businesses.find((b) => b.id === selected) || null;
@@ -294,7 +294,7 @@ export default function OwnerOperationsPage() {
       )}
 
       {showBusinessForm && (
-        <form onSubmit={createBusiness} className="mb-6 border rounded-lg p-4 bg-white space-y-3">
+        <form onSubmit={createBusiness} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
           <h2 className="font-semibold">Create a business</h2>
           <div className="grid grid-cols-2 gap-3">
             <Input name="name" label="Business name" required />
@@ -334,7 +334,7 @@ export default function OwnerOperationsPage() {
           </div>
 
           {showSnapshotForm && (
-            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-white space-y-3">
+            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">
                 Operations snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
@@ -378,7 +378,7 @@ export default function OwnerOperationsPage() {
           </div>
 
           {showCapacityForm && (
-            <form data-testid="capacity-form" onSubmit={addCapacity} className="mb-4 border rounded-lg p-4 bg-white space-y-3">
+            <form data-testid="capacity-form" onSubmit={addCapacity} className="mb-4 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">Capacity snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}</h2>
               <div className="grid grid-cols-2 gap-3">
                 <Input name="currentRevenue" label="Current revenue at this capacity" type="number" required data-testid="capacity-currentRevenue" />
@@ -391,7 +391,7 @@ export default function OwnerOperationsPage() {
           {capacityResult && <div className="mb-4 text-sm text-success" data-testid="capacity-result">{capacityResult}</div>}
 
           {showWorkloadForm && (
-            <form data-testid="workload-form" onSubmit={addWorkload} className="mb-4 border rounded-lg p-4 bg-white space-y-3">
+            <form data-testid="workload-form" onSubmit={addWorkload} className="mb-4 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">Owner workload snapshot</h2>
               <div className="grid grid-cols-2 gap-3">
                 <Input name="ownerMinutesPerDay" label="Owner minutes/day on ops" type="number" required data-testid="workload-ownerMinutes" />
@@ -449,10 +449,10 @@ function OperationsCycleView({
   const state = score?.operationsState ?? cycle.operationsState;
   return (
     <div className="space-y-6">
-      <div className="border rounded-lg p-4 bg-white flex items-center justify-between">
+      <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
         <div>
           <div className="text-xs uppercase text-muted-foreground">Latest diagnosis · cycle #{cycle.sequenceNumber}</div>
-          <div className="text-lg font-semibold">
+          <div className="text-lg font-semibold tabular-nums">
             Health {Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Risk {Math.round(score?.riskScore ?? cycle.riskScore)}/100 · Opportunity {Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100
           </div>
         </div>
@@ -471,7 +471,7 @@ function OperationsCycleView({
       )}
 
       {recommended && (
-        <div className="border rounded-lg p-4 bg-white">
+        <div className="border rounded-lg p-4 bg-card">
           <div className="text-xs uppercase text-muted-foreground">Recommended next operations action</div>
           <div className="font-semibold">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
@@ -481,7 +481,7 @@ function OperationsCycleView({
         </div>
       )}
 
-      <section className="border rounded-lg p-4 bg-white">
+      <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">Findings ({cycle.findings.length})</h2>
         {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No operations issues detected.</p>}
         <div className="space-y-3">
@@ -509,7 +509,7 @@ function OperationsCycleView({
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-white">
+      <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">Operations actions ({cycle.actions.length})</h2>
         <div className="space-y-3">
           {cycle.actions.map((a: any) => {
@@ -552,7 +552,7 @@ function OperationsCycleView({
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-white">
+      <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">Diagnosis history</h2>
         <div className="space-y-1 text-sm">
           {history.map((c: any) => (

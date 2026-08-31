@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic owner-home payload is untyped; load() fetch-on-mount is intentional */
@@ -54,7 +54,7 @@ async function api(path: string) {
 function DangerCard({ label, danger }: { label: string; danger: any }) {
   const level = danger?.level ?? "unknown";
   return (
-    <div className="border rounded-lg p-3 bg-white">
+    <div className="border rounded-lg p-3 bg-card">
       <div className="text-xs uppercase text-muted-foreground">{label}</div>
       <div className="mt-1 flex items-center gap-2">
         <Badge variant={DANGER_VARIANT[level] || "muted"}>{level === "unknown" ? "no data" : level}</Badge>
@@ -96,7 +96,7 @@ export default function OwnerHomePage() {
     load();
   }, [load]);
 
-  if (loading) return <div className="p-6">Loading owner home…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading owner home" />;
 
   const businesses: any[] = data?.businesses ?? [];
   const s = data?.summary ?? null;
@@ -185,7 +185,7 @@ export default function OwnerHomePage() {
           ) : (
             <div className="space-y-5">
               {/* Business health */}
-              <section className="border rounded-lg p-4 bg-white text-center">
+              <section className="border rounded-lg p-4 bg-card text-center">
                 <div className="text-xs uppercase text-muted-foreground">Business health</div>
                 <div className="mt-1 flex flex-wrap justify-center gap-2">
                   <Badge variant={HEALTH_VARIANT(s.businessHealthScore)}>
@@ -208,7 +208,7 @@ export default function OwnerHomePage() {
               </section>
 
               {/* Today's required actions */}
-              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-white">
+              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Today&apos;s required actions</div>
                 {s.requiredActions.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No open actions from diagnosed domains — run a diagnosis in each domain to see required actions.</p>
@@ -245,7 +245,7 @@ export default function OwnerHomePage() {
               {/* Top risks + opportunities side-by-side on tablet */}
               <div className="md:grid md:grid-cols-2 md:gap-4 space-y-5 md:space-y-0">
               {/* Top 3 risks */}
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-card">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Top risks</div>
                 {s.top3Risks.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No risks from diagnosed domains — run a domain diagnosis to surface risks.</p>
@@ -265,7 +265,7 @@ export default function OwnerHomePage() {
               </section>
 
               {/* Top 3 opportunities */}
-              <section className="border rounded-lg p-4 bg-white md:mt-0">
+              <section className="border rounded-lg p-4 bg-card md:mt-0">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Top opportunities</div>
                 {s.top3Opportunities.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No opportunities from diagnosed domains — run a domain diagnosis to surface opportunities.</p>
@@ -286,7 +286,7 @@ export default function OwnerHomePage() {
               </div>
 
               {/* Last verified improvement */}
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-card">
                 <div className="text-xs uppercase text-muted-foreground">Last verified improvement</div>
                 {s.lastVerifiedImprovement ? (
                   <div className="mt-1 text-sm">

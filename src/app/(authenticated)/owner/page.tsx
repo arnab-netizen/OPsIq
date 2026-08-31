@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select } from "@/ui/primitives";
+import { Badge, Button, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { PriorityCommandStrip } from "@/components/owner/PriorityCommandStrip";
 import { SupervisorSummary } from "@/components/owner/SupervisorSummary";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
@@ -146,7 +146,7 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
   };
 
   return (
-    <section className="border rounded-lg p-4 bg-white" data-testid="owner-actions">
+    <section className="border rounded-lg p-4 bg-card" data-testid="owner-actions">
       <div className="text-xs uppercase text-muted-foreground mb-3">Owner actions</div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-2">
@@ -297,7 +297,7 @@ export default function OwnerCommandCenterPage() {
     load();
   }, [load]);
 
-  if (loading) return <div className="p-8">Loading owner command center…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading owner command center" />;
   if (error && !data) return (
     <div className="mx-auto max-w-5xl py-8 px-4">
       <div className="rounded-md border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
@@ -393,7 +393,7 @@ export default function OwnerCommandCenterPage() {
           {priorities?.found && <PriorityCommandStrip cards={priorities.cards} />}
 
           {wbp?.found && (
-            <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white mb-6" data-testid="owner-whole-business-plan">
+            <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-whole-business-plan">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div className="text-xs uppercase text-muted-foreground">Whole-business plan (live runtime)</div>
                 <div className="flex flex-wrap gap-2">
@@ -488,7 +488,7 @@ export default function OwnerCommandCenterPage() {
           )}
 
           {readiness?.found && (
-            <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white mb-6" data-testid="owner-readiness-score">
+            <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-readiness-score">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div className="text-xs uppercase text-muted-foreground">Owner pilot readiness</div>
                 <div className="flex flex-wrap gap-2">
@@ -525,7 +525,7 @@ export default function OwnerCommandCenterPage() {
           )}
 
           {guidance?.found && (
-            <section className="border rounded-lg p-4 bg-white mb-6" data-testid="owner-input-guidance">
+            <section className="border rounded-lg p-4 bg-card mb-6" data-testid="owner-input-guidance">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div className="text-xs uppercase text-muted-foreground">Improve accuracy</div>
                 <span data-testid="guidance-confidence"><Badge variant="muted">Confidence: {guidance.overallConfidence}</Badge></span>
@@ -567,7 +567,7 @@ export default function OwnerCommandCenterPage() {
           )}
 
           {actionPlan?.found && actionPlan.assignment && (
-            <section className="border rounded-lg p-4 bg-white mb-6" data-testid="owner-action-plan">
+            <section className="border rounded-lg p-4 bg-card mb-6" data-testid="owner-action-plan">
               <div className="text-xs uppercase text-muted-foreground mb-2">Action &amp; proof</div>
               <div className="text-sm font-medium mb-2" data-testid="action-title">{actionPlan.assignment.actionTitle}</div>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -604,7 +604,7 @@ export default function OwnerCommandCenterPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-card">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Business condition</div>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant={HEALTH_VARIANT(profile.overallHealthScore)}>
@@ -637,7 +637,7 @@ export default function OwnerCommandCenterPage() {
               </section>
 
               {control && (
-                <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white" data-testid="owner-control-center">
+                <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card" data-testid="owner-control-center">
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-xs uppercase text-muted-foreground">OpsIQ control center</div>
                     <div className="flex flex-wrap gap-2">
@@ -733,7 +733,7 @@ export default function OwnerCommandCenterPage() {
                 </div>
               )}
 
-              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-white">
+              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
                 <div className="text-xs uppercase text-muted-foreground">Do this next</div>
                 {next ? (
                   <>
@@ -767,7 +767,7 @@ export default function OwnerCommandCenterPage() {
                 )}
               </section>
 
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-card">
                 <h2 className="font-bold mb-3">Domain scores</h2>
                 <div className="space-y-2">
                   {(profile.domainScores ?? []).map((d: any) => {
@@ -793,7 +793,7 @@ export default function OwnerCommandCenterPage() {
                 </div>
               </section>
 
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-card">
                 <h2 className="font-bold mb-1">Reassessment</h2>
                 {data.lastDiagnosedAt && (
                   <div className="text-xs text-muted-foreground mb-2 space-y-0.5">

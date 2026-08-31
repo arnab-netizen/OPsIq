@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
 
 interface SchedulerStatus {
   workspaceId: string;
@@ -58,7 +58,7 @@ export default function OwnerAutomationPage() {
     load();
   }, [load]);
 
-  if (loading) return <div className="p-8">Loading automation status…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading automation status" />;
 
   return (
     <div className="mx-auto max-w-3xl py-8 px-4">
@@ -119,7 +119,7 @@ export default function OwnerAutomationPage() {
             <div className="text-xs text-muted-foreground">{status.cronCadence}</div>
           </div>
 
-          <div className="border rounded-lg p-4 bg-white mb-4">
+          <div className="border rounded-lg p-4 bg-card mb-4">
             <h2 className="font-bold mb-3">Recent partial failures</h2>
             <p className="text-xs text-muted-foreground mb-2">
               These tasks ran and completed, but the work they did reported that
@@ -148,7 +148,7 @@ export default function OwnerAutomationPage() {
             )}
           </div>
 
-          <div className="border rounded-lg p-4 bg-white">
+          <div className="border rounded-lg p-4 bg-card">
             <h2 className="font-bold mb-3">Recent dead-letters</h2>
             {status.recentDeadLetters.length === 0 ? (
               <p className="text-sm text-muted-foreground">

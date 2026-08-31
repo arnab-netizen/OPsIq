@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { sourceQualityTier, type IntakeSource } from "@/domain/owner-intake/types";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -108,7 +108,7 @@ export default function OwnerIntakePage() {
     }
   }
 
-  if (loading) return <div className="p-8">Loading data intake…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading data intake" />;
 
   const businesses: any[] = dashboard?.businesses ?? [];
   const intakes: any[] = dashboard?.intakes ?? [];
@@ -194,7 +194,7 @@ export default function OwnerIntakePage() {
           </div>
 
           {showUpload && (
-            <form onSubmit={upload} className="mb-6 border rounded-lg p-4 bg-white space-y-3">
+            <form onSubmit={upload} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">Upload data</h2>
               <div className="grid grid-cols-2 gap-3">
                 <Select name="targetDomain" label="Target domain" required options={TARGET_DOMAINS.map((d) => ({ value: d, label: d }))} />
@@ -218,7 +218,7 @@ export default function OwnerIntakePage() {
 
           {preview && <IntakeCandidate intake={preview} busy={busy} onConfirm={confirm} />}
 
-          <section className="border rounded-lg p-4 bg-white">
+          <section className="border rounded-lg p-4 bg-card">
             <h2 className="font-bold mb-3">Intake history ({intakes.length})</h2>
             {intakes.length === 0 && <p className="text-sm text-muted-foreground">No uploads yet.</p>}
             <div className="space-y-2">
@@ -253,7 +253,7 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
   const errors: any[] = intake.errorReport ?? [];
   const records: any[] = intake.records ?? [];
   return (
-    <section className="border-2 border-foreground/10 rounded-lg p-4 bg-white mb-6 space-y-3">
+    <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card mb-6 space-y-3">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase text-muted-foreground">Candidate — review before confirming</div>
         <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted"}>{intake.validationStatus}</Badge>

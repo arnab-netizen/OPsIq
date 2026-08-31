@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic portfolio payload is untyped; load() fetch-on-mount is intentional */
 
@@ -50,7 +50,7 @@ export default function OwnerPortfolioPage() {
     load();
   }, [load]);
 
-  if (loading) return <div className="p-8">Loading portfolio…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading portfolio" />;
 
   const businesses: any[] = view?.businesses ?? [];
   const byId = (id: string | null) => businesses.find((b) => b.businessId === id)?.name ?? "—";
@@ -82,7 +82,7 @@ export default function OwnerPortfolioPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <section className="border rounded-lg p-4 bg-white">
+          <section className="border rounded-lg p-4 bg-card">
             <div className="text-xs uppercase text-muted-foreground mb-2">Portfolio health</div>
             <div className="flex flex-wrap gap-2 items-center">
               <Badge variant={HEALTH_VARIANT(view.portfolioHealthScore)}>
@@ -92,7 +92,7 @@ export default function OwnerPortfolioPage() {
             </div>
           </section>
 
-          <section className="border rounded-lg p-4 bg-white">
+          <section className="border rounded-lg p-4 bg-card">
             <h2 className="font-bold mb-3">Cross-business ranking</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div>Most urgent: <strong>{byId(ranking.mostUrgentBusinessId)}</strong></div>
@@ -104,7 +104,7 @@ export default function OwnerPortfolioPage() {
           </section>
 
           {Array.isArray(view.top3Priorities) && view.top3Priorities.length > 0 && (
-            <section className="border-2 border-foreground/10 rounded-lg p-4 bg-white">
+            <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
               <div className="text-xs uppercase text-muted-foreground mb-2">Today&apos;s top 3 priorities</div>
               <div className="space-y-2">
                 {view.top3Priorities.map((p: any, i: number) => (
@@ -120,7 +120,7 @@ export default function OwnerPortfolioPage() {
           )}
 
           {view.investmentRecommendation && (
-            <section className="border rounded-lg p-4 bg-white">
+            <section className="border rounded-lg p-4 bg-card">
               <div className="text-xs uppercase text-muted-foreground">Investment recommendation</div>
               <div className="font-semibold">{view.investmentRecommendation.businessName}</div>
               <p className="text-xs text-muted-foreground">{view.investmentRecommendation.reason}</p>
@@ -128,7 +128,7 @@ export default function OwnerPortfolioPage() {
           )}
 
           {Array.isArray(view.riskAlerts) && view.riskAlerts.length > 0 && (
-            <section className="border rounded-lg p-4 bg-white">
+            <section className="border rounded-lg p-4 bg-card">
               <h2 className="font-bold mb-3">Risk alerts</h2>
               <div className="space-y-2">
                 {view.riskAlerts.map((a: any, i: number) => (
@@ -141,7 +141,7 @@ export default function OwnerPortfolioPage() {
             </section>
           )}
 
-          <section className="border rounded-lg p-4 bg-white">
+          <section className="border rounded-lg p-4 bg-card">
             <h2 className="font-bold mb-3">Businesses (most urgent first)</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Textarea } from "@/ui/primitives";
+import { Badge, Button, Input, Textarea, CardDashboardSkeleton } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- dynamic dashboard payloads are untyped */
 
@@ -157,7 +157,7 @@ export default function OwnerGrowthPricingPage() {
     }
   }
 
-  if (loading) return <div className="p-8">Loading growth pricing workspace…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading growth pricing workspace" />;
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
@@ -208,7 +208,7 @@ export default function OwnerGrowthPricingPage() {
       )}
 
       {gapAnalysis && (gapAnalysis.gaps.length > 0 || gapAnalysis.overlaps.length > 0) && (
-        <div className="mb-6 border rounded-lg p-4 bg-white space-y-2">
+        <div className="mb-6 border rounded-lg p-4 bg-card space-y-2">
           <h2 className="text-sm font-semibold">Pricing gap &amp; overlap analysis (active tiers)</h2>
           {gapAnalysis.gaps.map((g: any, i: number) => (
             <div key={`gap-${i}`} className="text-xs text-muted-foreground">
@@ -224,7 +224,7 @@ export default function OwnerGrowthPricingPage() {
       )}
 
       {showCreateForm && (
-        <form onSubmit={createTier} className="mb-6 border rounded-lg p-4 bg-white space-y-3">
+        <form onSubmit={createTier} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
           <h2 className="font-semibold">New price tier</h2>
           <div className="grid grid-cols-2 gap-3">
             <Input name="name" label="Tier name" required />
@@ -251,7 +251,7 @@ export default function OwnerGrowthPricingPage() {
             const canApprove = t.approvalStatus !== "approved" && t.status !== "ARCHIVED";
             const canSupersede = !t.supersededById && t.status !== "ARCHIVED";
             return (
-              <div key={t.id} className="border rounded-lg p-4 bg-white" data-testid={`price-tier-${t.id}`}>
+              <div key={t.id} className="border rounded-lg p-4 bg-card" data-testid={`price-tier-${t.id}`}>
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="text-sm font-semibold">{t.name} <span className="text-muted-foreground font-normal">v{t.version}</span></div>

@@ -81,8 +81,8 @@ function AlertCard({
         isResolved
           ? "border-border bg-muted/30 opacity-70"
           : !isRead
-          ? "border-foreground/20 bg-white shadow-sm"
-          : "border-border bg-white"
+          ? "border-foreground/20 bg-card shadow-sm"
+          : "border-border bg-card"
       }`}
       data-testid="alert-card"
     >
@@ -221,7 +221,7 @@ export default function OwnerAlertsPage() {
           <select
             value={severity}
             onChange={(e) => setSeverity(e.target.value as "" | AlertSeverity)}
-            className="border rounded px-2 py-2 text-sm min-h-[44px] bg-white"
+            className="border rounded px-2 py-2 text-sm min-h-[44px] bg-card"
             aria-label="Filter by severity"
           >
             <option value="">All severities</option>
