@@ -76,7 +76,7 @@ export function manualEntrySectionForCategory(category: OwnerInputCategory): str
   return section ? section.id : null;
 }
 
-export type OwnerDataInputRoute = "manual-entry" | "upload";
+export type OwnerDataInputRoute = "manual-entry" | "upload" | "finance-snapshot";
 
 export interface CategoryInputTarget {
   /** Which surface can accept this category. */
@@ -88,10 +88,35 @@ export interface CategoryInputTarget {
 }
 
 /**
- * Where the owner supplies this category. Categories the manual-entry form covers go to the form
- * (lower effort, works on a phone); everything else goes to the governed upload path.
+ * Categories the readiness engine reads exclusively from a real `OwnerFinancialSnapshot` row (see
+ * `FINANCIAL_SNAPSHOT_BACKED_CATEGORIES` in `owner-onboarding.service.ts`). A confirmed manual-entry
+ * note can never satisfy these, so the CTA must point at the real structured entry point — the
+ * "+ Add financial snapshot" form on `/owner/finance` — never at manual-entry or a generic upload
+ * (F1). This is the presentation-layer mirror of that same readiness rule; both read the identical
+ * category set so the CTA and the readiness computation can never drift apart.
+ */
+const FINANCE_SNAPSHOT_CATEGORIES: ReadonlySet<OwnerInputCategory> = new Set([
+  "revenue_sales",
+  "expenses",
+  "fixed_costs",
+  "payroll",
+  "cash_debt",
+]);
+
+/**
+ * Where the owner supplies this category. Financial-snapshot-backed categories go to the real
+ * structured snapshot form on `/owner/finance` (the only place that can satisfy their readiness
+ * check); categories the manual-entry form covers go to the form (lower effort, works on a phone);
+ * everything else goes to the governed upload path.
  */
 export function inputTargetForCategory(category: OwnerInputCategory): CategoryInputTarget {
+  if (FINANCE_SNAPSHOT_CATEGORIES.has(category)) {
+    return {
+      route: "finance-snapshot",
+      href: "/owner/finance",
+      actionLabel: "Add snapshot",
+    };
+  }
   const sectionId = manualEntrySectionForCategory(category);
   if (sectionId) {
     return {
