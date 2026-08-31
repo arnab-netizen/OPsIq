@@ -295,15 +295,15 @@ export function buildProcessIntelligence(input: ProcessIntelligenceInput): Proce
   if (out.length === 0) {
     const missing: string[] = [];
     if (!input.complaintRework) missing.push("no complaint/rework or operational-event data");
-    if (!gaming || gaming.signalType === "DATA_INSUFFICIENT") missing.push("no active anti-gaming pattern");
-    if ((input.weakProofCount ?? 0) === 0) missing.push("no proof-review queue pressure");
+    if (!gaming || gaming.signalType === "DATA_INSUFFICIENT") missing.push("no unusual approval pattern found yet");
+    if ((input.weakProofCount ?? 0) === 0) missing.push("no backlog of proof waiting on review");
     base({
       findingType: "DATA_INSUFFICIENT", severity: "LOW", confidence: "NEEDS_DATA",
       affectedStage: "NONE", affectedActorId: null, affectedManagerId: null,
       supportingProofIds: [], supportingOperationalEventIds: [], supportingEscalationIds: [], supportingAdjudicationIds: [],
       relatedProfitLeak: null, relatedConstraint: null, relatedSLO: null,
       ownerExplanation: "No process breakdown is established yet — not enough linked events/signals to point to a failing stage.",
-      recommendedCorrectiveAction: "Keep recording proofs, reviews, escalations, and complaint/rework events; Process Intelligence sharpens as the chain fills in.",
+      recommendedCorrectiveAction: "Keep recording proofs, reviews, escalations, and complaint/rework events; OpsIQ's picture of your operations gets clearer as you add more.",
       expectedImpactType: "NONE", requiredApprovalLevel: "MANAGER",
       missingData: missing.length ? missing : ["insufficient linked process evidence"],
     });
