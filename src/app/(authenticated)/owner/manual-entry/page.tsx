@@ -9,7 +9,7 @@
  */
 /* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the intentional owner-page pattern */
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/ui/primitives";
+import { Button, FormSkeleton } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import {
   MANUAL_ENTRY_SECTIONS, MANUAL_ENTRY_WARNING, MANUAL_ENTRY_SAFE_COPY,
@@ -125,7 +125,7 @@ export default function OwnerManualEntryPage() {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  if (loading) return <main className="p-6">Loading…</main>;
+  if (loading) return <main className="mx-auto max-w-3xl p-4 sm:p-6"><FormSkeleton label="Loading" fields={5} /></main>;
   if (error) return (
     <main className="p-6">
       <p data-testid="manual-entry-error" className="text-red-700">{error}</p>

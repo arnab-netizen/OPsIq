@@ -3,6 +3,7 @@
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { MetricSummarySkeleton } from "@/ui/primitives";
 
 interface Metrics {
   summary: {
@@ -71,7 +72,7 @@ export default function DashboardImpactPage() {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Impact Dashboard</h1>
-        <div className="text-gray-500">Loading...</div>
+        <MetricSummarySkeleton label="Loading impact metrics" tiles={4} />
       </div>
     );
   }
@@ -102,7 +103,7 @@ export default function DashboardImpactPage() {
           <div className="text-xs font-semibold text-gray-500 uppercase mb-2">
             Total Approved Impact
           </div>
-          <div className="text-3xl font-bold text-green-600 mb-2">
+          <div className="text-3xl font-bold text-green-600 mb-2 tabular-nums">
             ₹{(approvedImpact / 1000000).toFixed(2)}M
           </div>
           <div className="text-sm text-gray-600">
@@ -120,7 +121,7 @@ export default function DashboardImpactPage() {
           <div className="text-xs font-semibold text-gray-500 uppercase mb-2">
             Total Blocked Impact
           </div>
-          <div className="text-3xl font-bold text-red-600 mb-2">
+          <div className="text-3xl font-bold text-red-600 mb-2 tabular-nums">
             ₹{(blockedImpact / 1000000).toFixed(2)}M
           </div>
           <div className="text-sm text-gray-600">
@@ -173,7 +174,7 @@ export default function DashboardImpactPage() {
           <div className="space-y-3">
             <div>
               <div className="text-xs text-gray-600 mb-1">Approved Decisions</div>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-green-600 tabular-nums">
                 {metrics.confidence.avgConfidenceApproved !== null
                   ? `${(metrics.confidence.avgConfidenceApproved * 100).toFixed(0)}%`
                   : "—"}
@@ -181,7 +182,7 @@ export default function DashboardImpactPage() {
             </div>
             <div>
               <div className="text-xs text-gray-600 mb-1">Blocked Decisions</div>
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-2xl font-bold text-red-600 tabular-nums">
                 {metrics.confidence.avgConfidenceBlocked !== null
                   ? `${(metrics.confidence.avgConfidenceBlocked * 100).toFixed(0)}%`
                   : "—"}
@@ -195,7 +196,7 @@ export default function DashboardImpactPage() {
           <div className="text-xs font-semibold text-gray-500 uppercase mb-4">
             Total Expected Impact
           </div>
-          <div className="text-2xl font-bold text-gray-900 mb-4">
+          <div className="text-2xl font-bold text-gray-900 mb-4 tabular-nums">
             ₹{(totalImpact / 1000000).toFixed(2)}M
           </div>
           <div className="space-y-2 text-sm">

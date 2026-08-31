@@ -20,7 +20,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/ui/primitives";
+import { Button, CardDashboardSkeleton } from "@/ui/primitives";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
 import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
@@ -208,7 +208,7 @@ export default function OwnerCockpitPage() {
     }
   }, [load]);
 
-  if (loading) return <main style={{ padding: 24 }}>Loading your cockpit…</main>;
+  if (loading) return <main style={{ padding: 24 }}><CardDashboardSkeleton label="Loading your cockpit" sections={2} /></main>;
   if (error) return (
     <main style={{ padding: 24 }}>
       <p style={{ color: "#b91c1c" }}>{error}</p>
