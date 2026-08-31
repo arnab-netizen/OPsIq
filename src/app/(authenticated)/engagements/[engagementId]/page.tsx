@@ -126,7 +126,7 @@ export default async function EngagementDetailPage({
             </div>
             <h1 className="mt-2 text-3xl font-bold text-foreground">{engagement.title}</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              <Link href={`/clients/${engagement.clientAccount.id}`} className="text-primary hover:underline">
+              <Link href={`/clients/${engagement.clientAccount.id}`} className="text-[var(--primary-text)] hover:underline">
                 {engagement.clientAccount.name}
               </Link>
               {engagement.clientAccount.industry && ` — ${engagement.clientAccount.industry}`}

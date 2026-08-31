@@ -98,7 +98,7 @@ export default function BusinessImpactPage() {
         <p className="text-sm text-destructive">{error}</p>
         <button
           onClick={() => router.back()}
-          className="mt-2 text-sm text-primary underline"
+          className="mt-2 text-sm text-[var(--primary-text)] underline"
         >
           Go back
         </button>
@@ -117,7 +117,7 @@ export default function BusinessImpactPage() {
   const colorMap: Record<string, string> = {
     existential: "text-destructive",
     critical: "text-destructive",
-    high: "text-warning",
+    high: "text-[var(--warning-text)]",
     medium: "text-muted-foreground",
     low: "text-muted-foreground",
   };
@@ -140,7 +140,7 @@ export default function BusinessImpactPage() {
         <h1 className="text-2xl font-bold">Business Impact Analysis</h1>
         <button
           onClick={() => router.back()}
-          className="text-sm text-primary underline"
+          className="text-sm text-[var(--primary-text)] underline"
         >
           ← Back to Dashboard
         </button>
@@ -268,19 +268,19 @@ export default function BusinessImpactPage() {
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             {/* If Completed */}
             <div className="rounded border border-success/30 bg-success/5 p-3">
-              <p className="text-sm font-semibold text-success">If Completed ✓</p>
+              <p className="text-sm font-semibold text-[var(--success-text)]">If Completed ✓</p>
               <div className="mt-2 space-y-2 text-xs">
                 <div>
                   <p className="text-muted-foreground">Impact Level</p>
                   <p className="font-medium">
                     {deltaData.current.impactLevel} →{" "}
-                    <span className="text-success">{deltaData.ifCompleted.impactLevel}</span>
+                    <span className="text-[var(--success-text)]">{deltaData.ifCompleted.impactLevel}</span>
                   </p>
                 </div>
                 {deltaData.ifCompleted.estimatedLossReduction && (
                   <div>
                     <p className="text-muted-foreground">Loss Reduction</p>
-                    <p className="font-medium text-success">
+                    <p className="font-medium text-[var(--success-text)]">
                       -${(deltaData.ifCompleted.estimatedLossReduction / 1000).toFixed(0)}K
                     </p>
                   </div>
@@ -298,13 +298,13 @@ export default function BusinessImpactPage() {
 
             {/* If Delayed */}
             <div className="rounded border border-warning/30 bg-warning/5 p-3">
-              <p className="text-sm font-semibold text-warning">If Delayed ⏳</p>
+              <p className="text-sm font-semibold text-[var(--warning-text)]">If Delayed ⏳</p>
               <div className="mt-2 space-y-2 text-xs">
                 <div>
                   <p className="text-muted-foreground">Impact Level</p>
                   <p className="font-medium">
                     {deltaData.current.impactLevel} →{" "}
-                    <span className="text-warning">{deltaData.ifDelayed.impactLevel}</span>
+                    <span className="text-[var(--warning-text)]">{deltaData.ifDelayed.impactLevel}</span>
                   </p>
                 </div>
                 <div>
@@ -314,7 +314,7 @@ export default function BusinessImpactPage() {
                 {deltaData.ifDelayed.additionalLoss && (
                   <div>
                     <p className="text-muted-foreground">Additional Loss</p>
-                    <p className="font-medium text-warning">
+                    <p className="font-medium text-[var(--warning-text)]">
                       +${(deltaData.ifDelayed.additionalLoss / 1000).toFixed(0)}K
                     </p>
                   </div>

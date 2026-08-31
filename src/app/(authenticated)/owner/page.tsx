@@ -165,7 +165,7 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
             {taskBusy ? "Completing…" : "Complete task"}
           </Button>
           {taskResult && (
-            <p className={`text-xs ${taskResult.ok ? "text-success" : "text-destructive"}`}>{taskResult.text}</p>
+            <p className={`text-xs ${taskResult.ok ? "text-[var(--success-text)]" : "text-destructive"}`}>{taskResult.text}</p>
           )}
         </div>
 
@@ -185,7 +185,7 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
             {apprBusy ? "Resolving…" : "Resolve approval"}
           </Button>
           {apprResult && (
-            <p className={`text-xs ${apprResult.ok ? "text-success" : "text-muted-foreground"}`}>{apprResult.text}</p>
+            <p className={`text-xs ${apprResult.ok ? "text-[var(--success-text)]" : "text-muted-foreground"}`}>{apprResult.text}</p>
           )}
         </div>
 
@@ -204,7 +204,7 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
             {oppBusy ? "Deciding…" : "Decide"}
           </Button>
           {oppResult && (
-            <p className={`text-xs ${oppResult.ok ? "text-success" : "text-muted-foreground"}`}>{oppResult.text}</p>
+            <p className={`text-xs ${oppResult.ok ? "text-[var(--success-text)]" : "text-muted-foreground"}`}>{oppResult.text}</p>
           )}
         </div>
       </div>
@@ -465,7 +465,7 @@ export default function OwnerCommandCenterPage() {
                 <strong>Critical / red domains:</strong>{" "}
                 {wbp.redDomains.length > 0
                   ? <span className="text-destructive">{wbp.redDomains.join(", ")}</span>
-                  : <span className="text-success">none red</span>}
+                  : <span className="text-[var(--success-text)]">none red</span>}
                 <span className="text-muted-foreground"> · {wbp.domainHealth.length} domains assessed</span>
               </div>
 
@@ -542,7 +542,7 @@ export default function OwnerCommandCenterPage() {
                 )}
               </div>
               {!guidance.canProceedWithStrongRecommendation && (
-                <p className="text-xs text-warning mb-2" data-testid="guidance-must-wait">
+                <p className="text-xs text-[var(--warning-text)] mb-2" data-testid="guidance-must-wait">
                   Strong recommendations are paused until the critical data below is supplied.
                 </p>
               )}
@@ -561,7 +561,7 @@ export default function OwnerCommandCenterPage() {
                 </ul>
               )}
               <div className="mt-2">
-                <Link href="/owner/onboarding" className="text-xs text-primary underline">See full setup guidance →</Link>
+                <Link href="/owner/onboarding" className="text-xs text-[var(--primary-text)] underline">See full setup guidance →</Link>
               </div>
             </section>
           )}
@@ -799,7 +799,7 @@ export default function OwnerCommandCenterPage() {
                   <div className="text-xs text-muted-foreground mb-2 space-y-0.5">
                     <div>Last diagnosed: {new Date(data.lastDiagnosedAt).toLocaleDateString()}</div>
                     {data.nextReassessmentDue && (
-                      <div className={new Date(data.nextReassessmentDue) <= new Date() ? "text-warning font-medium" : ""}>
+                      <div className={new Date(data.nextReassessmentDue) <= new Date() ? "text-[var(--warning-text)] font-medium" : ""}>
                         Next reassessment {new Date(data.nextReassessmentDue) <= new Date() ? "overdue" : "due"}:{" "}
                         {new Date(data.nextReassessmentDue).toLocaleDateString()}
                         {data.reassessmentCadenceDays != null && <> (every {data.reassessmentCadenceDays} days)</>}

@@ -388,7 +388,7 @@ export default function OwnerOperationsPage() {
               <Button type="submit" disabled={busy} data-testid="capacity-submit">{busy ? "Saving…" : "Save capacity"}</Button>
             </form>
           )}
-          {capacityResult && <div className="mb-4 text-sm text-success" data-testid="capacity-result">{capacityResult}</div>}
+          {capacityResult && <div className="mb-4 text-sm text-[var(--success-text)]" data-testid="capacity-result">{capacityResult}</div>}
 
           {showWorkloadForm && (
             <form data-testid="workload-form" onSubmit={addWorkload} className="mb-4 border rounded-lg p-4 bg-card space-y-3">
@@ -401,7 +401,7 @@ export default function OwnerOperationsPage() {
               <Button type="submit" disabled={busy} data-testid="workload-submit">{busy ? "Saving…" : "Save workload"}</Button>
             </form>
           )}
-          {workloadResult && <div className="mb-4 text-sm text-success" data-testid="workload-result">{workloadResult}</div>}
+          {workloadResult && <div className="mb-4 text-sm text-[var(--success-text)]" data-testid="workload-result">{workloadResult}</div>}
 
           {!dashboard?.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">

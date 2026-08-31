@@ -248,7 +248,7 @@ export default function BundleDetailPage({
                 render: (item: any) => (
                   <Link
                     href={`/engagements/${engagementId}/evidence/${item.evidenceItem.id}`}
-                    className="font-medium text-primary hover:underline"
+                    className="font-medium text-[var(--primary-text)] hover:underline"
                   >
                     {item.evidenceItem.title}
                   </Link>

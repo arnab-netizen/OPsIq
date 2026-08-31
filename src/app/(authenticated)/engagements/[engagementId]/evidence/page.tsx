@@ -205,7 +205,7 @@ export default function EvidenceVaultPage({
                 render: (item: EvidenceItem) => (
                   <Link
                     href={`/engagements/${engagementId}/evidence/${item.id}`}
-                    className="font-medium text-primary hover:underline"
+                    className="font-medium text-[var(--primary-text)] hover:underline"
                   >
                     {item.title}
                   </Link>

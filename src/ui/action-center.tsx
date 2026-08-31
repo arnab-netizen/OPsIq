@@ -230,7 +230,7 @@ export function ActionCenter({
             <div className="flex items-center gap-2">
               <span>Due:</span>
               <span
-                className={isOverdue(action.dueDate) ? "text-warning font-medium" : ""}
+                className={isOverdue(action.dueDate) ? "text-[var(--warning-text)] font-medium" : ""}
               >
                 {new Date(action.dueDate).toLocaleDateString()}
               </span>
@@ -238,7 +238,7 @@ export function ActionCenter({
           )}
           <div className="flex items-center gap-2">
             <span>Evidence:</span>
-            <span className={evidence ? "text-success font-medium" : "text-muted-foreground"}>
+            <span className={evidence ? "text-[var(--success-text)] font-medium" : "text-muted-foreground"}>
               {evidence ? "✓ Linked" : "Not linked"}
             </span>
           </div>
@@ -296,7 +296,7 @@ export function ActionCenter({
                     <span className="text-xs text-destructive">*reason</span>
                   )}
                   {needsEvidence && (
-                    <span className="text-xs text-warning">*evidence</span>
+                    <span className="text-xs text-[var(--warning-text)]">*evidence</span>
                   )}
                 </div>
               );
@@ -376,7 +376,7 @@ export function ActionCenter({
       {/* Overdue Actions */}
       {grouped.overdue.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-base font-semibold text-warning">
+          <h3 className="text-base font-semibold text-[var(--warning-text)]">
             Overdue ({grouped.overdue.length})
           </h3>
           <div className="space-y-3">
@@ -400,7 +400,7 @@ export function ActionCenter({
       {/* Completed Actions */}
       {grouped.completed.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-base font-semibold text-success">
+          <h3 className="text-base font-semibold text-[var(--success-text)]">
             Completed ({grouped.completed.length})
           </h3>
           <div className="space-y-3">

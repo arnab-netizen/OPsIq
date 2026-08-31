@@ -289,7 +289,7 @@ export default function CustomersPage() {
                   <td className="px-4 py-3">
                     <button
                       onClick={() => openEdit(customer)}
-                      className="text-primary hover:underline text-sm"
+                      className="text-[var(--primary-text)] hover:underline text-sm"
                     >
                       Edit
                     </button>

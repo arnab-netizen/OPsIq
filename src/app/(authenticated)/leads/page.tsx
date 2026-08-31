@@ -81,7 +81,7 @@ export default async function LeadsPage({
                 }) => (
                   <tr key={lead.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
-                      <Link href={`/leads/${lead.id}`} className="font-medium text-foreground hover:text-primary">
+                      <Link href={`/leads/${lead.id}`} className="font-medium text-foreground hover:text-[var(--primary-text)]">
                         {lead.companyName}
                       </Link>
                     </td>

@@ -166,7 +166,7 @@ export function FileUploadForm({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-primary hover:underline"
+                    className="text-[var(--primary-text)] hover:underline"
                   >
                     click to browse
                   </button>

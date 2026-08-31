@@ -182,7 +182,7 @@ export default function ProcurementPage() {
                     <td className="px-4 py-2 flex gap-2">
                       {nextStatus && (
                         <button
-                          className="text-primary text-xs hover:underline"
+                          className="text-[var(--primary-text)] text-xs hover:underline"
                           onClick={() => handleTransition(order.id, nextStatus)}
                         >
                           Mark {nextStatus}

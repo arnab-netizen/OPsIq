@@ -86,7 +86,7 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
         )}
         <div className="rounded-md border p-2 text-sm" data-testid="supervisor-owner-delegate">
           <strong>Owner vs delegate:</strong>{" "}
-          {summary.ownerDecisionRequired ? <span className="text-warning">{summary.ownerDecisionRequired}</span> : "OpsIQ + staff can carry this with proof."}
+          {summary.ownerDecisionRequired ? <span className="text-[var(--warning-text)]">{summary.ownerDecisionRequired}</span> : "OpsIQ + staff can carry this with proof."}
           {summary.delegateToStaff.length > 0 && (
             <div className="text-xs text-muted-foreground mt-1">Delegate: {summary.delegateToStaff[0]}</div>
           )}

@@ -46,7 +46,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         </div>
         <p className="text-xs text-muted-foreground">
           Contact beta support:{" "}
-          <a href="mailto:support@opsiq.com" className="text-primary hover:underline">
+          <a href="mailto:support@opsiq.com" className="text-[var(--primary-text)] hover:underline">
             support@opsiq.com
           </a>
         </p>

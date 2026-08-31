@@ -316,11 +316,11 @@ export default function RisksPage() {
                     <div className="flex gap-3">
                       <button
                         onClick={() => openEdit(risk)}
-                        className="text-primary hover:underline text-sm"
+                        className="text-[var(--primary-text)] hover:underline text-sm"
                       >
                         Edit
                       </button>
-                      <Link href={`/owner/risks/${risk.id}`} className="text-primary hover:underline text-sm">
+                      <Link href={`/owner/risks/${risk.id}`} className="text-[var(--primary-text)] hover:underline text-sm">
                         View
                       </Link>
                     </div>

@@ -54,7 +54,7 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-primary">OpsIQ</h1>
+        <h1 className="text-lg font-bold text-[var(--primary-text)]">OpsIQ</h1>
         <span className="hidden text-xs text-muted-foreground sm:inline">
           Governed Business Intervention OS
         </span>

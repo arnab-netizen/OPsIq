@@ -77,7 +77,7 @@ export default async function ClientsPage({
                 }) => (
                   <tr key={client.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
-                      <Link href={`/clients/${client.id}`} className="font-medium text-foreground hover:text-primary">
+                      <Link href={`/clients/${client.id}`} className="font-medium text-foreground hover:text-[var(--primary-text)]">
                         {client.name}
                       </Link>
                     </td>

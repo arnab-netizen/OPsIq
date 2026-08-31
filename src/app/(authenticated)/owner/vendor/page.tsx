@@ -313,7 +313,7 @@ export default function VendorPage() {
                       {vendor.approvalStatus === "PENDING_REVIEW" && (
                         <button
                           onClick={() => handleApprove(vendor.id)}
-                          className="text-primary hover:underline text-sm"
+                          className="text-[var(--primary-text)] hover:underline text-sm"
                         >
                           Approve
                         </button>

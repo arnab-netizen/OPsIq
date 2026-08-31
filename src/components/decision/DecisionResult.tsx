@@ -200,7 +200,7 @@ export function DecisionResultComponent({ result: initialResult }: DecisionResul
                     <span className="font-mono">{violation.actual}</span>
                   </div>
                   {violation.overrideAllowed && (
-                    <div className="text-xs text-warning pt-1 border-t border-destructive/20">
+                    <div className="text-xs text-[var(--warning-text)] pt-1 border-t border-destructive/20">
                       Override allowed with approval
                     </div>
                   )}

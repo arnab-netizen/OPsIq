@@ -517,7 +517,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
             </p>
           )}
           {data.executionCertainty.risks.length > 0 && (
-            <p className="text-xs text-warning">
+            <p className="text-xs text-[var(--warning-text)]">
               {data.executionCertainty.risks.length} risk(s)
             </p>
           )}
@@ -726,7 +726,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
                 className={`text-sm font-medium ${
                   data.drift.severity === "critical" || data.drift.severity === "high"
                     ? "text-destructive"
-                    : "text-warning"
+                    : "text-[var(--warning-text)]"
                 }`}
               >
                 ⚠️ Needs Attention — Execution Drift Detected
@@ -794,19 +794,19 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
 
           {actionDelta && (
             <div className="mt-4 border-t border-border pt-3">
-              <p className="text-xs font-medium text-success">What happens if you act:</p>
+              <p className="text-xs font-medium text-[var(--success-text)]">What happens if you act:</p>
               <div className="mt-2 flex items-center gap-3">
                 <div>
                   <p className="text-xs text-muted-foreground">Impact Level</p>
                   <p className="text-sm font-semibold capitalize">
                     {actionDelta.current.impactLevel} →{" "}
-                    <span className="text-success">{actionDelta.ifCompleted.impactLevel}</span>
+                    <span className="text-[var(--success-text)]">{actionDelta.ifCompleted.impactLevel}</span>
                   </p>
                 </div>
                 {actionDelta.ifCompleted.estimatedLossReduction && (
                   <div>
                     <p className="text-xs text-muted-foreground">Loss Reduction</p>
-                    <p className="text-sm font-semibold text-success">
+                    <p className="text-sm font-semibold text-[var(--success-text)]">
                       -${(actionDelta.ifCompleted.estimatedLossReduction / 1000).toFixed(0)}K
                     </p>
                   </div>
@@ -820,7 +820,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
                     );
                   }
                 }}
-                className="mt-2 text-xs text-primary underline hover:no-underline"
+                className="mt-2 text-xs text-[var(--primary-text)] underline hover:no-underline"
               >
                 See consequences →
               </button>
@@ -887,9 +887,9 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
               <p
                 className={`mt-1 text-lg font-bold ${
                   data.businessImpact.recoveryImpact.recoveryProbability === "high"
-                    ? "text-success"
+                    ? "text-[var(--success-text)]"
                     : data.businessImpact.recoveryImpact.recoveryProbability === "medium"
-                      ? "text-warning"
+                      ? "text-[var(--warning-text)]"
                       : "text-destructive"
                 }`}
               >
@@ -966,7 +966,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
 
           {data.businessImpact.opportunities.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs font-medium uppercase text-success">Opportunities</p>
+              <p className="text-xs font-medium uppercase text-[var(--success-text)]">Opportunities</p>
               <ul className="mt-2 space-y-1">
                 {data.businessImpact.opportunities.map((opp, i) => (
                   <li key={i} className="text-xs text-muted-foreground">
@@ -1020,7 +1020,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
               : ""
           }`}
         >
-          <p className="text-sm font-medium text-warning">
+          <p className="text-sm font-medium text-[var(--warning-text)]">
             🔥 {data.criticalActions.length} Critical Action(s)
           </p>
           <div className="mt-3 space-y-2">
@@ -1030,7 +1030,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
                   <p className="text-xs font-medium">{action.title}</p>
                   <p className="text-xs text-muted-foreground capitalize">{action.status}</p>
                 </div>
-                <span className="ml-2 text-xs font-medium text-warning">Critical</span>
+                <span className="ml-2 text-xs font-medium text-[var(--warning-text)]">Critical</span>
               </div>
             ))}
           </div>
@@ -1109,7 +1109,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
                         <p className="text-xs text-muted-foreground">
                           {outcome.delta}
                           {outcome.valueRecoveredINR !== null && outcome.valueRecoveredINR > 0 && (
-                            <span className="ml-1 font-semibold text-success">
+                            <span className="ml-1 font-semibold text-[var(--success-text)]">
                               +₹{(outcome.valueRecoveredINR / 1000).toFixed(0)}K
                             </span>
                           )}

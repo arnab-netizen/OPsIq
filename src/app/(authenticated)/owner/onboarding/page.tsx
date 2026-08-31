@@ -196,7 +196,7 @@ export default function OwnerOnboardingPage() {
                           <p className="text-xs text-muted-foreground">Affects: {m.decisionAffected}</p>
                           <Link
                             href={target.href}
-                            className="mt-2 inline-block text-xs font-medium text-primary underline hover:no-underline"
+                            className="mt-2 inline-block text-xs font-medium text-[var(--primary-text)] underline hover:no-underline"
                           >
                             {target.actionLabel} {m.label.toLowerCase()} →
                           </Link>

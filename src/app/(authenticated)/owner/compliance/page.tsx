@@ -300,7 +300,7 @@ export default function CompliancePage() {
                   <td className="px-4 py-3 text-muted-foreground">{item.jurisdiction ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{item.obligationOwner ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <Link href={`/owner/compliance/${item.id}`} className="text-primary hover:underline text-sm">
+                    <Link href={`/owner/compliance/${item.id}`} className="text-[var(--primary-text)] hover:underline text-sm">
                       View
                     </Link>
                   </td>

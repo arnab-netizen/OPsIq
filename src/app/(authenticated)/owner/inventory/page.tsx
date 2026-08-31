@@ -183,7 +183,7 @@ export default function InventoryPage() {
                     </td>
                     <td className="px-4 py-2">
                       <button
-                        className="text-primary text-xs hover:underline"
+                        className="text-[var(--primary-text)] text-xs hover:underline"
                         onClick={() => openEdit(item)}
                       >
                         Edit

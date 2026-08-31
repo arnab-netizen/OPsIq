@@ -179,7 +179,7 @@ export default function OwnerIntakePage() {
       {businesses.length === 0 ? (
         <div className="border rounded-lg p-8 text-center text-muted-foreground">
           <p>No business profile yet, so there is nowhere to put uploaded data.</p>
-          <Link href="/owner/data" className="mt-2 inline-block font-medium text-primary underline hover:no-underline">
+          <Link href="/owner/data" className="mt-2 inline-block font-medium text-[var(--primary-text)] underline hover:no-underline">
             Add your business profile →
           </Link>
         </div>

@@ -77,7 +77,7 @@ function ResetPasswordForm() {
           <p className="text-sm text-destructive">
             This password reset link is invalid or missing its token.
           </p>
-          <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+          <Link href="/forgot-password" className="text-sm text-[var(--primary-text)] hover:underline">
             Request a new reset link
           </Link>
         </div>
@@ -129,7 +129,7 @@ function ResetPasswordForm() {
         )}
 
         <p className="text-center text-sm text-muted-foreground">
-          <Link href="/login" className="text-primary hover:underline">
+          <Link href="/login" className="text-[var(--primary-text)] hover:underline">
             Back to sign in
           </Link>
         </p>

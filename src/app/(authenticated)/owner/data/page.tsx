@@ -410,7 +410,7 @@ function MissingCritical({ items }: { items: MissingMinimumView[] }) {
               </p>
               <Link
                 href={target.href}
-                className="mt-2 inline-block text-sm font-medium text-primary underline hover:no-underline"
+                className="mt-2 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline"
               >
                 {target.actionLabel} {item.label.toLowerCase()} →
               </Link>
@@ -459,7 +459,7 @@ function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
                 </div>
                 <Link
                   href={cat.target.href}
-                  className="whitespace-nowrap rounded-md border border-border px-3 py-2 text-sm font-medium text-primary hover:bg-muted"
+                  className="whitespace-nowrap rounded-md border border-border px-3 py-2 text-sm font-medium text-[var(--primary-text)] hover:bg-muted"
                 >
                   {cat.status === "supplied" ? "Update" : cat.target.actionLabel}
                 </Link>

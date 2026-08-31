@@ -290,7 +290,7 @@ export default function EvidenceDetailPage({
                 href={`/engagements/${engagementId}/evidence/bundles/${item.bundleId}`}
                 className="block rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors"
               >
-                <p className="text-sm text-primary hover:underline">
+                <p className="text-sm text-[var(--primary-text)] hover:underline">
                   View bundle
                 </p>
               </Link>

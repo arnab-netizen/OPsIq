@@ -180,7 +180,7 @@ export default function CampaignsPage() {
                   <td className="px-4 py-2 text-right">{roi(c)}</td>
                   <td className="px-4 py-2">
                     <button
-                      className="text-primary text-xs hover:underline"
+                      className="text-[var(--primary-text)] text-xs hover:underline"
                       onClick={() => openEdit(c)}
                     >
                       Edit

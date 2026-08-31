@@ -180,7 +180,7 @@ export default function OwnerTasksPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/owner/tasks/${task.id}`} className="text-primary hover:underline text-sm">
+                    <Link href={`/owner/tasks/${task.id}`} className="text-[var(--primary-text)] hover:underline text-sm">
                       View
                     </Link>
                   </td>

@@ -110,7 +110,7 @@ export function TrustVerificationPanel({
           >
             <p className="text-xs md:text-sm font-medium">
               Verification Status:{' '}
-              <span className={result.valid ? 'text-success' : 'text-destructive'}>
+              <span className={result.valid ? 'text-[var(--success-text)]' : 'text-destructive'}>
                 {result.valid ? '✓ Valid' : '✗ Invalid'}
               </span>
             </p>
@@ -126,7 +126,7 @@ export function TrustVerificationPanel({
             <div className="rounded-lg border border-border bg-muted p-2 md:p-3">
               <p className="text-xs md:text-sm">
                 <span className="font-medium">Hash Match:</span>{' '}
-                <span className={result.hashMatches ? 'text-success' : 'text-destructive'}>
+                <span className={result.hashMatches ? 'text-[var(--success-text)]' : 'text-destructive'}>
                   {result.hashMatches ? '✓ Verified' : '✗ Mismatch'}
                 </span>
               </p>
@@ -138,7 +138,7 @@ export function TrustVerificationPanel({
             <div className="rounded-lg border border-border bg-muted p-2 md:p-3">
               <p className="text-xs md:text-sm">
                 <span className="font-medium">HMAC Signature (Legacy):</span>{' '}
-                <span className={result.signatureValid ? 'text-success' : 'text-muted-foreground'}>
+                <span className={result.signatureValid ? 'text-[var(--success-text)]' : 'text-muted-foreground'}>
                   {result.signatureValid ? '✓ Valid' : '○ Not verified'}
                 </span>
               </p>
@@ -150,7 +150,7 @@ export function TrustVerificationPanel({
             <div className="rounded-lg border border-border bg-muted p-2 md:p-3">
               <p className="text-xs md:text-sm">
                 <span className="font-medium">Asymmetric Signature:</span>{' '}
-                <span className={result.asymmetricValid ? 'text-success' : 'text-muted-foreground'}>
+                <span className={result.asymmetricValid ? 'text-[var(--success-text)]' : 'text-muted-foreground'}>
                   {result.asymmetricValid ? '✓ Valid' : '○ Not verified'}
                 </span>
               </p>
@@ -176,7 +176,7 @@ export function TrustVerificationPanel({
             </p>
             <div className="space-y-1 text-xs leading-relaxed">
               {result.valid ? (
-                <p className="text-success">
+                <p className="text-[var(--success-text)]">
                   ✓ This decision has passed integrity verification.
                 </p>
               ) : (

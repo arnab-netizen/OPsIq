@@ -135,7 +135,7 @@ export default async function ClientDetailPage({
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             View engagements for this client on the{" "}
-            <Link href={`/engagements?clientId=${client.id}`} className="text-primary hover:underline">
+            <Link href={`/engagements?clientId=${client.id}`} className="text-[var(--primary-text)] hover:underline">
               engagements page
             </Link>.
           </p>
