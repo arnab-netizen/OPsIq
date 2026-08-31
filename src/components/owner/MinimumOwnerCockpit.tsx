@@ -24,6 +24,16 @@ import type { DerivedBusinessConditionSignals } from "@/services/business-condit
 import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
+import type { CockpitFinancePriority } from "@/services/owner-guidance/cockpit-finance-priority.service";
+
+/** Same survival-state palette as /owner/finance (owner/finance/page.tsx's SURVIVAL_VARIANT) — kept local since that page is a separate client bundle. */
+const SURVIVAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  SAFE: "success",
+  WATCH: "default",
+  AT_RISK: "warning",
+  CRITICAL: "destructive",
+  INSOLVENT_RISK: "destructive",
+};
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -115,6 +125,45 @@ export interface MinimumOwnerCockpitProps {
   businessOperatingSystem?: BusinessOperatingSystemView | null;
   /** Phase 4 — BOS action: run-arbitration | override | resolve-constraint | accept-constraint. */
   onBosAction?: (action: string, payload: Record<string, unknown>) => Promise<void>;
+  /**
+   * F3 — the latest fresh Finance-diagnosis top action for the currently resolvable business (see
+   * `cockpit-finance-priority.service.ts` for scoping + freshness rules). Precedence: the governed
+   * process-execution bridge's `topRoute` (an actionable CRITICAL/HIGH/MEDIUM/LOW governed route)
+   * always wins the primary "Your top priority now" slot when one exists — this never overwrites an
+   * urgent existing governed issue. When there is no actionable bridge route (the clean state, or a
+   * MONITOR_ONLY-only route), the Finance diagnosis's own top action is what fills the primary slot
+   * instead of a bare "nothing to do" message. When a governed route IS primary, the Finance action
+   * still surfaces as a secondary signal card (same tier as `topProfitLeak`), so it is never hidden.
+   */
+  financeTopPriority?: CockpitFinancePriority | null;
+}
+
+/** F3: the Finance-diagnosis top-action card, shared by the primary (clean-state) and secondary renders. */
+function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinancePriority; primary: boolean }) {
+  const testId = primary ? "cockpit-finance-priority-primary" : "cockpit-finance-priority-secondary";
+  return (
+    <div data-testid={testId} style={{ border: "1px solid #e5e7eb", borderRadius: primary ? 10 : 8, padding: primary ? 18 : 12, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 12, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.4 }}>
+          {primary ? "From your latest finance diagnosis" : "Latest finance diagnosis"}
+        </span>
+        <Badge variant={SURVIVAL_VARIANT[priority.survivalState] ?? "default"}>{priority.survivalState.replace(/_/g, " ")}</Badge>
+      </div>
+      {priority.topAction ? (
+        <>
+          <strong data-testid="cockpit-finance-priority-title" style={{ fontSize: primary ? 17 : 14 }}>{priority.topAction.title}</strong>
+          <p style={{ margin: 0, fontSize: 13, color: "#374151" }}>{priority.topAction.description}</p>
+        </>
+      ) : (
+        <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
+          A finance diagnosis ran for {priority.businessName || "your business"} but has no ranked action yet.
+        </p>
+      )}
+      <a href="/owner/finance" style={{ fontSize: 12, color: "#2563eb", textDecoration: "underline" }}>
+        See the full finance diagnosis →
+      </a>
+    </div>
+  );
 }
 
 const RECOVERY_STATUS_LABEL: Record<string, string> = {
@@ -537,8 +586,13 @@ function BusinessOperatingSystemSection({
   return (
     <details open data-testid="cockpit-bos-section" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
       <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
-        Business Operating System
-        <span style={{ fontWeight: 400, color: "#6b7280" }}> — {bos.totalActiveObjectives} active objective{bos.totalActiveObjectives !== 1 ? "s" : ""}</span>
+        Goals &amp; objectives
+        <span style={{ fontWeight: 400, color: "#6b7280" }}>
+          {" "}
+          — {bos.totalActiveObjectives > 0
+            ? `${bos.totalActiveObjectives} active objective${bos.totalActiveObjectives !== 1 ? "s" : ""}`
+            : "no objectives set yet"}
+        </span>
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
         {/* Health counts */}
@@ -743,7 +797,7 @@ function BusinessOperatingSystemSection({
         )}
 
         {bos.totalActiveObjectives === 0 && (
-          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-bos-empty">No active objectives — add objectives via the business operating system to enable this view.</p>
+          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-bos-empty">You haven&apos;t set any goals yet. Add one to see progress and risk here.</p>
         )}
       </div>
     </details>
@@ -837,24 +891,30 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, financeTopPriority = null }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
   const [reasonText, setReasonText] = useState("");
   const [delegateRole, setDelegateRole] = useState<"MANAGER" | "STAFF">("MANAGER");
 
-  // ── Clean state: no fabricated top action. ──
+  // ── Clean state: no governed process-execution route. Nothing is fabricated to fill the primary
+  // slot — but a real Finance diagnosis, when one exists, is a real prioritized recommendation, not a
+  // fabrication, so it takes the primary slot here (F3). ──
   if (!top) {
     return (
       <section data-testid="cockpit-clean" style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-        <div>
-          <strong>No urgent action needs your attention right now.</strong>
-          <p style={{ margin: "6px 0 0", color: "#6b7280", fontSize: 13 }}>
-            OpsIQ has nothing that requires an owner decision at the moment. This view stays empty until a
-            governed action is ready — nothing is invented to fill the space.
-          </p>
-        </div>
+        {financeTopPriority ? (
+          <FinanceTopPriorityCard priority={financeTopPriority} primary />
+        ) : (
+          <div>
+            <strong>No urgent action needs your attention right now.</strong>
+            <p style={{ margin: "6px 0 0", color: "#6b7280", fontSize: 13 }}>
+              OpsIQ has nothing that requires an owner decision at the moment. This view stays empty until a
+              governed action is ready — nothing is invented to fill the space.
+            </p>
+          </div>
+        )}
         {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} />}
         {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} onBosAction={onBosAction} busy={busy} />}
         {recovery && <RecoverySection recovery={recovery} />}
@@ -1121,6 +1181,14 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <p data-testid="cockpit-goal-explanation" style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280", fontStyle: "italic" }}>{goalAttentionSignal.beginnerExplanation}</p>
         </div>
       )}
+
+      {/*
+        Finance diagnosis top action (F3) — secondary here because a real governed process-execution
+        route (`top`, rendered above as "Your top priority now") is currently primary; never
+        overwrites it. Shown whenever a fresh diagnosis exists, including when `top` is itself only
+        MONITOR_ONLY (nothing actionable in the governed queue) so the owner still sees it prominently.
+      */}
+      {financeTopPriority && <FinanceTopPriorityCard priority={financeTopPriority} primary={isMonitorOnly} />}
 
       {/* Profit Leak — Phase 2 Signal B */}
       {topProfitLeak && (
