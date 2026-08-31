@@ -179,7 +179,7 @@ function routeFor(findingType: ProcessFindingType, f: ProcessFinding): Correctio
     case "DATA_INSUFFICIENT":
       return f.missingData.length > 0
         ? [{ correctionType: "COLLECT_MISSING_DATA", title: "Record the missing inputs",
-            instruction: `Record the missing inputs: ${f.missingData.join("; ")}. Process Intelligence sharpens as the chain fills in.` }]
+            instruction: `Record the missing inputs: ${f.missingData.join("; ")}. OpsIQ's picture of your operations gets clearer as you add more.` }]
         : [{ correctionType: "NO_ACTION_DATA_INSUFFICIENT", title: "No corrective action yet",
             instruction: "No corrective action — there is not enough linked evidence to act on yet." }];
     default:

@@ -24,6 +24,10 @@ const mocks = vi.hoisted(() => ({
   listLeakageEvents: vi.fn(),
   getLeakageSummary: vi.fn(),
   getOwnerNowView: vi.fn(),
+  // F3: the route additively merges in the Finance-diagnosis priority bridge. Mocked (resolving
+  // null, matching "no finance diagnosis" as the deterministic default) for the same DB-free
+  // route-contract isolation this file already gives every other now-view dependency.
+  getCockpitFinancePriority: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@/lib/canonical-route-enforcement", () => ({
@@ -51,6 +55,10 @@ vi.mock("@/services/owner-mode/waste-leakage.service", () => ({
 
 vi.mock("@/services/owner-guidance/owner-now-view.service", () => ({
   getOwnerNowView: mocks.getOwnerNowView,
+}));
+
+vi.mock("@/services/owner-guidance/cockpit-finance-priority.service", () => ({
+  getCockpitFinancePriority: mocks.getCockpitFinancePriority,
 }));
 
 // ─── Route imports (after mocks) ─────────────────────────────────────────────
@@ -465,10 +473,10 @@ describe("[now-view] GET /api/owner/now-view — handler", () => {
     expect(opts?.requireWorkspace).toBe(true);
   });
 
-  it("returns service result directly (no canonicalJson wrapper)", async () => {
+  it("returns service result directly (no canonicalJson wrapper), plus the additive F3 finance-priority field", async () => {
     mocks.getOwnerNowView.mockResolvedValue(SAMPLE_NOW_VIEW);
     const res = await nowViewGet(makeGetCtx(`https://x/api/owner/now-view`));
-    expect(res).toEqual(SAMPLE_NOW_VIEW);
+    expect(res).toEqual({ ...SAMPLE_NOW_VIEW, financeTopPriority: null });
   });
 
   it("calls getOwnerNowView with verified workspaceId", async () => {

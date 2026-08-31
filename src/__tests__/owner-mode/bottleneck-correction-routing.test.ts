@@ -165,6 +165,16 @@ describe("bottleneck-correction-routing", () => {
     expect(types(noMissing)).toEqual(["NO_ACTION_DATA_INSUFFICIENT"]);
   });
 
+  // F6: the owner-facing instruction for a zero-data COLLECT_MISSING_DATA correction must not use
+  // the internal name "Process Intelligence" as if the owner already knows what that is.
+  it("10b. (F6) COLLECT_MISSING_DATA instruction uses plain owner language, not the internal 'Process Intelligence' name", () => {
+    const withMissing = buildProcessCorrections(analysis([finding({
+      findingType: "DATA_INSUFFICIENT", severity: "LOW", confidence: "NEEDS_DATA", affectedStage: "NONE",
+      expectedImpactType: "NONE", missingData: ["no complaint/rework data"],
+    })]), WS);
+    expect(withMissing.corrections[0].instruction).not.toMatch(/Process Intelligence sharpens as the chain fills in/i);
+  });
+
   it("11. governance: only the NO_ACTION no-op is auto-executable; every real correction is PROPOSED", () => {
     const r = buildProcessCorrections(analysis([
       finding({ findingType: "REWORK_LOOP", affectedActorId: "op-2", supportingOperationalEventIds: ["e1"] }),

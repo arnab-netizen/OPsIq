@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
+import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- runtime onboarding payload is untyped; fetch-on-mount is intentional */
 
@@ -176,16 +178,25 @@ export default function OwnerOnboardingPage() {
                 <section className="border rounded-lg p-4 bg-white" data-testid="onboarding-missing">
                   <div className="text-xs uppercase text-muted-foreground mb-2">What data is still missing</div>
                   <ul className="space-y-3">
-                    {state.missingMinimum.map((m: any) => (
-                      <li key={m.category} className="rounded-md border p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-medium">{m.label}</span>
-                          <Badge variant={SEVERITY_VARIANT[m.severity] ?? "muted"}>{m.severity}</Badge>
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">{m.why}</p>
-                        <p className="text-xs text-muted-foreground">Affects: {m.decisionAffected}</p>
-                      </li>
-                    ))}
+                    {state.missingMinimum.map((m: any) => {
+                      const target = inputTargetForCategory(m.category as OwnerInputCategory);
+                      return (
+                        <li key={m.category} className="rounded-md border p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="min-w-0 break-words text-sm font-medium">{m.label}</span>
+                            <Badge variant={SEVERITY_VARIANT[m.severity] ?? "muted"}>{m.severity}</Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">{m.why}</p>
+                          <p className="text-xs text-muted-foreground">Affects: {m.decisionAffected}</p>
+                          <Link
+                            href={target.href}
+                            className="mt-2 inline-block text-xs font-medium text-primary underline hover:no-underline"
+                          >
+                            {target.actionLabel} {m.label.toLowerCase()} →
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </section>
               )}
@@ -208,7 +219,15 @@ export default function OwnerOnboardingPage() {
                   <strong>Next best upload:</strong>{" "}
                   {state.nextBestUpload ? state.nextBestUpload.replace(/_/g, " ") : "you have what you need to start"}
                   <div className="mt-2">
-                    <Link href="/owner/intake"><Button className="min-h-[44px]">Add this data →</Button></Link>
+                    <Link
+                      href={
+                        state.nextBestUpload
+                          ? inputTargetForCategory(state.nextBestUpload as OwnerInputCategory).href
+                          : "/owner/intake"
+                      }
+                    >
+                      <Button className="min-h-[44px]">Add this data →</Button>
+                    </Link>
                   </div>
                 </div>
                 <div className="rounded-md border p-3 text-sm bg-white" data-testid="onboarding-proof">

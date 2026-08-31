@@ -19,6 +19,26 @@ import { resolveSmbArchetype } from "@/domain/owner-mode/smb-archetype";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { intakeDomainToCategory } from "@/domain/owner-mode/input-record-parser";
 
+/**
+ * Categories readiness reads directly from a REAL financial snapshot (`rows.finance` /
+ * `rows.cashflow` / `rows.wcItems`, checked below). A confirmed manual-entry note tagged with one of
+ * these categories must NEVER also credit it — that would let a free-text note with no real number
+ * (manual-entry's revenue/cash sections only require a short note; the amount field is optional, and
+ * the note carries no periodStart/periodEnd/currency, so `materializeIntake` can never turn it into a
+ * real `OwnerFinancialSnapshot` row) satisfy a readiness item the diagnosis engine actually needs
+ * structured numbers for (F1). Every other category in `CATEGORY_TO_SNAPSHOT_DOMAIN` still has no
+ * direct structured check in this function, so a confirmed intake remains its only real signal —
+ * this exclusion is scoped to exactly the categories checked directly against real snapshot fields
+ * below, not the whole finance/sales/operations/sop/marketing snapshot-domain surface.
+ */
+const FINANCIAL_SNAPSHOT_BACKED_CATEGORIES: ReadonlySet<OwnerInputCategory> = new Set([
+  "revenue_sales",
+  "expenses",
+  "fixed_costs",
+  "payroll",
+  "cash_debt",
+]);
+
 export interface OwnerOnboardingDeps {
   db: PrismaClient;
   workspaceId: string;
@@ -78,10 +98,12 @@ export function rowsToSuppliedCategories(rows: OwnerDomainRows): OwnerInputCateg
   if (rows.compliance && rows.compliance.length > 0) out.add("tax_compliance");
   if (rows.proofs && rows.proofs.length > 0) out.add("proof_completion");
   if (rows.standingCount && rows.standingCount > 0) out.add("sops_checklists");
-  // Owner-confirmed manual/import intakes (the real input paths) count as supplied data.
+  // Owner-confirmed manual/import intakes (the real input paths) count as supplied data — EXCEPT for
+  // the financial-snapshot-backed categories above, which already have a direct real-data check and
+  // must never be satisfied by a bare confirmed note (F1: manual-entry notes are not structured data).
   for (const domain of rows.confirmedIntakeDomains ?? []) {
     const cat = intakeDomainToCategory(domain);
-    if (cat) out.add(cat);
+    if (cat && !FINANCIAL_SNAPSHOT_BACKED_CATEGORIES.has(cat)) out.add(cat);
   }
   return Array.from(out);
 }

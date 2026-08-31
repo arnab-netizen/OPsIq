@@ -106,12 +106,22 @@ export const INPUT_CATALOG: Record<OwnerInputCategory, OwnerInputCategoryMeta> =
     recommendationAtRiskIfMissing: "Hiring or rota changes can be unaffordable without payroll.",
     ownerEffort: "low", privacyNote: "Sensitive staff cost; internal-only, never client-visible.",
   },
+  // F5: this category is labeled by its key (`staff_attendance`) but neither real data path that can
+  // satisfy it actually measures staff attendance or output. It is satisfied by (a) a persisted
+  // `OwnerCapacitySnapshot` — bottleneck/revenue utilization data, not per-employee attendance — or
+  // (b) a confirmed manual-entry note under the "Owner workload" section (`owner_workload` in
+  // owner-manual-entry-form.ts), which is explicitly about where the OWNER's own time goes, not
+  // staff records. There is no real staff-attendance/output entry point or model in this codebase
+  // (OwnerEmployeeWorkloadSnapshot exists but is workspace-scoped only, has no businessId, and no
+  // API route ever calls its persistence service — it is unused). Building one is out of scope here
+  // (no schema change), so per the task's explicit fallback this item is relabeled to match what it
+  // actually measures rather than left claiming attendance/output data it never collects.
   staff_attendance: {
-    category: "staff_attendance", label: "Staff attendance / output",
-    why: "Attendance and output show real capacity and where work actually gets done.",
+    category: "staff_attendance", label: "Owner workload",
+    why: "Where your own time and attention go shows how close the business is to overload and what capacity signal OpsIQ can actually see.",
     decisionAffected: "capacity, delegation, and accountability",
     confidenceDomain: "equipment_capacity", expectedConfidenceGain: "medium",
-    recommendationAtRiskIfMissing: "Capacity and delegation advice can over-promise without attendance.",
+    recommendationAtRiskIfMissing: "Capacity and delegation advice can over-promise without a sense of owner workload.",
     ownerEffort: "medium", privacyNote: "Internal-only operational record.",
   },
   staff_rota: {

@@ -3,6 +3,25 @@ import { cookies } from "next/headers";
 import { Badge } from "@/ui/primitives";
 import FirstDiagnosisCta from "@/components/dashboard/FirstDiagnosisCta";
 import OwnerActivationPanel from "@/components/dashboard/OwnerActivationPanel";
+import { getPolicyContext } from "@/services/auth";
+import { isSelfServeOwnerContext } from "@/policies/capability-check";
+
+/**
+ * F2: resolve the correct "Run your first diagnosis" target server-side, from the SAME centralized
+ * policy check every other owner-gate in this app uses (no permission logic duplicated in this page
+ * or in FirstDiagnosisCta). A self-serve owner never holds ENGAGEMENT_CREATE, so /diagnosis always
+ * 403s for them — /owner/finance is their real, working first-diagnosis flow. Any other actor
+ * (consultant/admin) keeps the existing /diagnosis target unchanged.
+ */
+async function firstDiagnosisHref(): Promise<string> {
+  try {
+    const policy = await getPolicyContext();
+    if (policy && isSelfServeOwnerContext(policy)) return "/owner/finance";
+  } catch {
+    // Fail closed to the existing (consultant/admin) behavior — never break the dashboard over this.
+  }
+  return "/diagnosis";
+}
 
 // UI-01: this server component fetches its own protected API, which authenticates from
 // the session cookie. A server-side fetch does NOT inherit the incoming request cookies,
@@ -88,10 +107,11 @@ async function fetchAllFindings() {
 }
 
 export default async function DashboardPage() {
-  const [engagements, allActions, allFindings] = await Promise.all([
+  const [engagements, allActions, allFindings, diagnosisCtaHref] = await Promise.all([
     fetchEngagements(),
     fetchAllActions(),
     fetchAllFindings(),
+    firstDiagnosisHref(),
   ]);
 
   const activeEngagements = engagements.filter((e: any) => e.status === "active");
@@ -165,7 +185,7 @@ export default async function DashboardPage() {
             <p className="mt-4 text-sm text-muted-foreground">
               No active engagements. <Link href="/engagements/new" className="text-primary hover:underline">Create one</Link>
             </p>
-            <FirstDiagnosisCta />
+            <FirstDiagnosisCta href={diagnosisCtaHref} />
           </>
         )}
       </div>

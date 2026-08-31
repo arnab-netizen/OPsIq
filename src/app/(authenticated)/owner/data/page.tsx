@@ -286,7 +286,15 @@ function ReadinessBand({ state }: { state: OnboardingView }) {
           <p className="mt-1">
             It will be limited to what you have supplied so far, and it will say so.
           </p>
-          <Link href="/diagnosis" className="mt-2 inline-block font-medium underline hover:no-underline">
+          {/*
+            F2: this page is owner-only (nav-gated, requiresOwner), and a self-serve owner never
+            holds CAPABILITIES.ENGAGEMENT_CREATE (the consultant/admin-only capability
+            `POST /api/diagnosis` requires — see policies/capability-check.ts's
+            INTERNAL_ONLY_CAPABILITIES). Linking to /diagnosis here always 403s. /owner/finance's
+            "+ Add financial snapshot" -> "Run finance diagnosis" is the real, working owner
+            first-diagnosis flow.
+          */}
+          <Link href="/owner/finance" className="mt-2 inline-block font-medium underline hover:no-underline">
             Run my first assessment →
           </Link>
         </div>
