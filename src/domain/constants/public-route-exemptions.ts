@@ -51,6 +51,8 @@ export const PUBLIC_ROUTE_EXEMPTIONS = {
     "/api/auth/login", // User login - credentials validated instead of auth token
     "/api/auth/logout", // Logout - accepts both authenticated and unauthenticated
     "/api/auth/signup", // User signup - public registration endpoint, no auth required
+    "/api/auth/forgot-password", // Password-reset request - public and enumeration-resistant by design (the caller isn't logged in)
+    "/api/auth/reset-password", // Password-reset redemption - authorized by the single-use, hashed, expiring reset token, not session auth
   ],
   WEBHOOK_SIGNED: [
     "/api/webhooks/stripe", // Signature verification is mandatory
@@ -85,6 +87,8 @@ export const EXEMPTION_REASONS = {
   "/api/auth/login": "User authentication endpoint - validates credentials instead of auth token",
   "/api/auth/logout": "Session termination - accepts both authenticated and unauthenticated requests",
   "/api/auth/signup": "User signup endpoint - public registration, no auth required",
+  "/api/auth/forgot-password": "Password-reset request endpoint - public and enumeration-resistant by design (a locked-out user isn't logged in); rate-limited per IP and email",
+  "/api/auth/reset-password": "Password-reset redemption endpoint - authorized by the single-use, sha256-hashed, 1-hour-expiring reset token from the emailed link, not session auth; rate-limited per IP",
   "/api/webhooks/stripe": "Webhook with mandatory HMAC-SHA256 signature verification - Stripe signature validates request legitimacy",
   "/api/webhooks/resend": "Email webhook with HMAC-SHA256 (svix) signature verification + timestamp tolerance - fail-closed when RESEND_WEBHOOK_SECRET unset",
   "/api/internal/cron/scheduler": "Vercel Cron endpoint - authorized by CRON_SECRET bearer token injected by Vercel, fail-closed when unset",

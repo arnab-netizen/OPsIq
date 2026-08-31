@@ -982,6 +982,26 @@ model Session {
   @@map("sessions")
 }
 
+/// Password-reset tokens. Only a sha256 hash of the raw token is ever stored
+/// (the raw token exists only in the emailed link and the client's one-time
+/// request) so a database read can never itself grant a reset. usedAt makes
+/// redemption strictly one-time; expiresAt bounds the window an unredeemed
+/// token remains valid for. See resetPassword() in src/services/auth.ts.
+model PasswordResetToken {
+  id        String    @id @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  ipAddress String?   @map("ip_address")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
 model ShockEvent {
   id           String     @id @db.Uuid
   engagementId String     @map("engagement_id") @db.Uuid
@@ -1166,6 +1186,7 @@ model User {
   recommendationsLegacyApprovedBy RecommendationLegacy[] @relation("recommendations_legacy_approved_byTousers") @ignore
   recommendationsLegacyCreatedBy  RecommendationLegacy[] @relation("recommendations_legacy_created_byTousers") @ignore
   sessions                        Session[]
+  passwordResetTokens             PasswordResetToken[]
   userRoleAssignments             UserRoleAssignment[]
   workspaceMemberships            WorkspaceMembership[]
   approvalRequestsRequested       ApprovalRequest[]      @relation("approval_requests_requested_by")
