@@ -4,6 +4,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { EmptyState, TableListSkeleton } from "@/ui/primitives";
 
 interface Decision {
   id: string;
@@ -168,24 +169,26 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
         )}
 
         {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="text-gray-500">Loading decisions...</div>
-          </div>
+          <TableListSkeleton label="Loading decisions" />
         ) : decisions.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No decisions found</p>
-            {selectedStatus && (
-              <button
-                onClick={() => {
+          selectedStatus ? (
+            <EmptyState
+              title="No decisions match this filter"
+              description="Try a different status, or clear the filter to see all decisions."
+              primaryAction={{
+                label: "Clear filter",
+                onClick: () => {
                   setSelectedStatus("");
                   setPage(0);
-                }}
-                className="mt-4 text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
+                },
+              }}
+            />
+          ) : (
+            <EmptyState
+              title="No decisions yet"
+              description="Decisions the system flags for your review will appear here."
+            />
+          )
         ) : (
           <>
             {/* Decision List - Mobile/Tablet/Desktop */}
