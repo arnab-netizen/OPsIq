@@ -173,10 +173,19 @@ describe("MinimumOwnerCockpit uses theme-aware CSS custom properties instead of 
     expect(dnrBlock![0]).toMatch(/background:\s*"#fffbeb"/);
   });
 
-  it("status-color lookup tables reuse the existing --success/--warning/--destructive/--primary tokens instead of one-off hex", () => {
-    expect(source).toMatch(/EXECUTE_NOW:\s*"var\(--success\)"/);
-    expect(source).toMatch(/DELAY:\s*"var\(--warning\)"/);
+  it("status-color lookup tables reuse the existing --destructive token (unaffected by the semantic-color-closure text-token split) and the new readable-text tokens for success/warning/primary", () => {
+    // PR #385 residual "semantic-color-closure": PORTFOLIO_DECISION_COLOR's
+    // EXECUTE_NOW/DELAY/MERGE/SPLIT entries feed plain (non-fill) text color on
+    // a <span> with no own background, so they were migrated from the bare
+    // --success/--warning/--primary tokens (calibrated for control/badge FILL
+    // use, not plain text) to the -text variants. CANCEL/ESCALATE use
+    // --destructive, which was not part of that role collision and keeps its
+    // original token unchanged.
+    expect(source).toMatch(/EXECUTE_NOW:\s*"var\(--success-text\)"/);
+    expect(source).toMatch(/DELAY:\s*"var\(--warning-text\)"/);
     expect(source).toMatch(/CANCEL:\s*"var\(--destructive\)"/);
+    expect(source).toMatch(/MERGE:\s*"var\(--primary-text\)"/);
+    expect(source).toMatch(/SPLIT:\s*"var\(--primary-text\)"/);
   });
 
   it("form inputs/selects/textareas resolve their border, background, and text color via CSS variables", () => {

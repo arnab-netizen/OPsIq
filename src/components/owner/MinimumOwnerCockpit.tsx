@@ -159,7 +159,7 @@ function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinanc
           A finance diagnosis ran for {priority.businessName || "your business"} but has no ranked action yet.
         </p>
       )}
-      <a href="/owner/finance" style={{ fontSize: 12, color: "var(--primary)", textDecoration: "underline" }}>
+      <a href="/owner/finance" style={{ fontSize: 12, color: "var(--primary-text)", textDecoration: "underline" }}>
         See the full finance diagnosis →
       </a>
     </div>
@@ -212,13 +212,13 @@ function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsRespons
               Source quality: {signals.sourceQualitySummary} · Evidence: {signals.evidenceStrengthSummary}
             </p>
             {signals.missingData.length > 0 && (
-              <p style={{ margin: 0, color: "var(--warning)" }} data-testid="cockpit-signals-missing">Missing data: {signals.missingData.slice(0, 3).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-missing">Missing data: {signals.missingData.slice(0, 3).join("; ")}</p>
             )}
             {signals.validationRequired && (
-              <p style={{ margin: 0, color: "var(--warning)" }} data-testid="cockpit-signals-validation">Public signals are unverified until validated.</p>
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-validation">Public signals are unverified until validated.</p>
             )}
             {signals.blockedUnsafeActions.length > 0 && (
-              <p style={{ margin: 0, color: "var(--warning)" }} data-testid="cockpit-signals-blocked">Blocked: {signals.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-blocked">Blocked: {signals.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
             )}
             {signals.ownerApprovalRequired && (
               <p style={{ margin: 0, color: "var(--destructive)" }} data-testid="cockpit-signals-approval">Owner approval is required before material action.</p>
@@ -358,7 +358,7 @@ function ExecutionLifecycleSection({
         <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Expected benefit: {item.expectedBenefit}</span>
       )}
       {!item.evidenceComplete && item.requiredEvidence.length > 0 && (
-        <span style={{ fontSize: 12, color: "var(--warning)" }}>Evidence needed: {item.requiredEvidence.join("; ")}</span>
+        <span style={{ fontSize: 12, color: "var(--warning-text)" }}>Evidence needed: {item.requiredEvidence.join("; ")}</span>
       )}
       {onAction && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -480,7 +480,7 @@ function ExecutionLifecycleSection({
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
         <details data-testid="cockpit-requires-decision-group" open={lifecycle.requiresDecision.length > 0}
           style={{ borderLeft: "3px solid #fef3c7", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--warning)" }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--warning-text)" }}>
             Requires your decision ({lifecycle.requiresDecision.length})
           </summary>
           {lifecycle.requiresDecision.length === 0
@@ -491,7 +491,7 @@ function ExecutionLifecycleSection({
         </details>
         <details data-testid="cockpit-in-execution-group" open={lifecycle.inExecution.length > 0}
           style={{ borderLeft: "3px solid #dbeafe", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--primary-text)" }}>
             In execution ({lifecycle.inExecution.length})
           </summary>
           {lifecycle.inExecution.length === 0
@@ -502,7 +502,7 @@ function ExecutionLifecycleSection({
         </details>
         <details data-testid="cockpit-awaiting-verification-group" open={lifecycle.awaitingVerification.length > 0}
           style={{ borderLeft: "3px solid #fde68a", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--warning)" }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--warning-text)" }}>
             Awaiting verification ({lifecycle.awaitingVerification.length})
           </summary>
           {lifecycle.awaitingVerification.length === 0
@@ -513,7 +513,7 @@ function ExecutionLifecycleSection({
         </details>
         <details data-testid="cockpit-recently-verified-group"
           style={{ borderLeft: "3px solid #d1fae5", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--success)" }}>
+          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--success-text)" }}>
             Recently verified ({lifecycle.recentlyVerified.length})
           </summary>
           {lifecycle.recentlyVerified.length === 0
@@ -536,8 +536,8 @@ const PORTFOLIO_DECISION_LABEL: Record<string, string> = {
   ESCALATE: "BINDING CONSTRAINT",
 };
 const PORTFOLIO_DECISION_COLOR: Record<string, string> = {
-  EXECUTE_NOW: "var(--success)", DELAY: "var(--warning)", CANCEL: "var(--destructive)",
-  MERGE: "var(--primary)", SPLIT: "var(--primary)", ESCALATE: "var(--destructive)",
+  EXECUTE_NOW: "var(--success-text)", DELAY: "var(--warning-text)", CANCEL: "var(--destructive)",
+  MERGE: "var(--primary-text)", SPLIT: "var(--primary-text)", ESCALATE: "var(--destructive)",
 };
 
 function BusinessOperatingSystemSection({
@@ -597,8 +597,8 @@ function BusinessOperatingSystemSection({
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
         {/* Health counts */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }} data-testid="cockpit-bos-health-counts">
-          {bos.objectiveHealthCounts.ON_TRACK > 0 && <span style={{ color: "var(--success)" }}>{bos.objectiveHealthCounts.ON_TRACK} on track</span>}
-          {bos.objectiveHealthCounts.AT_RISK > 0 && <span style={{ color: "var(--warning)" }}>{bos.objectiveHealthCounts.AT_RISK} at risk</span>}
+          {bos.objectiveHealthCounts.ON_TRACK > 0 && <span style={{ color: "var(--success-text)" }}>{bos.objectiveHealthCounts.ON_TRACK} on track</span>}
+          {bos.objectiveHealthCounts.AT_RISK > 0 && <span style={{ color: "var(--warning-text)" }}>{bos.objectiveHealthCounts.AT_RISK} at risk</span>}
           {bos.objectiveHealthCounts.BLOCKED > 0 && <span style={{ color: "var(--destructive)" }}>{bos.objectiveHealthCounts.BLOCKED} blocked</span>}
           {bos.objectiveHealthCounts.CRITICAL > 0 && <span style={{ color: "var(--destructive)", fontWeight: 600 }}>{bos.objectiveHealthCounts.CRITICAL} critical</span>}
         </div>
@@ -741,7 +741,7 @@ function BusinessOperatingSystemSection({
               <button
                 data-testid="cockpit-bos-override-open"
                 onClick={() => setOverrideOpen(true)}
-                style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--warning)", color: "var(--warning)", cursor: "pointer", background: "transparent" }}
+                style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--warning)", color: "var(--warning-text)", cursor: "pointer", background: "transparent" }}
               >
                 Record owner override
               </button>
@@ -839,7 +839,7 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
           </p>
         )}
         {dataFreshnessWeak && (
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--warning)", fontStyle: "italic" }} data-testid="cockpit-condition-stale">
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--warning-text)", fontStyle: "italic" }} data-testid="cockpit-condition-stale">
             Data confidence is low — some signals may be stale. Update cashflow and workload records for a fresh assessment.
           </p>
         )}
@@ -875,7 +875,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
             )}
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-reassessment">{recovery.requiredReassessment}</p>
             {recovery.blockedUnsafeActions.length > 0 && (
-              <p style={{ margin: 0, color: "var(--warning)" }} data-testid="cockpit-recovery-blocked">Blocked: {recovery.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-recovery-blocked">Blocked: {recovery.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
             )}
             {recovery.ownerApprovalRequired && (
               <p style={{ margin: 0, color: "var(--destructive)" }} data-testid="cockpit-recovery-approval">This action requires owner approval.</p>
@@ -1081,7 +1081,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             )}
           </div>
         )}
-        {terminal && <p data-testid="cockpit-terminal" style={{ margin: 0, fontSize: 12, color: "var(--success)" }}>This task is {top.status.toLowerCase()}.</p>}
+        {terminal && <p data-testid="cockpit-terminal" style={{ margin: 0, fontSize: 12, color: "var(--success-text)" }}>This task is {top.status.toLowerCase()}.</p>}
 
         {/* Start Work — dedicated button for canStart=true tasks (Phase 2 Signal F) */}
         {top.canStart && onStartWork && (
@@ -1102,7 +1102,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         <div data-testid="cockpit-blocked" style={{ borderTop: "1px solid var(--border)", paddingTop: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>Blocked / not allowed</span>
           {isBlockedUnsafe ? (
-            <p data-testid="cockpit-blocked-unsafe" style={{ margin: "4px 0 0", fontSize: 13, color: "var(--warning)" }}>
+            <p data-testid="cockpit-blocked-unsafe" style={{ margin: "4px 0 0", fontSize: 13, color: "var(--warning-text)" }}>
               No action is available because this would require an unsafe external step.
               {top.notActionableReason ? ` ${top.notActionableReason}` : ""}
             </p>
@@ -1114,7 +1114,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           ) : actionsToAvoid.length > 0 ? (
             <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
               {actionsToAvoid.slice(0, 3).map((a, i) => (
-                <li key={i} data-testid="cockpit-avoid" style={{ fontSize: 13, color: "var(--warning)" }}>{a}</li>
+                <li key={i} data-testid="cockpit-avoid" style={{ fontSize: 13, color: "var(--warning-text)" }}>{a}</li>
               ))}
             </ul>
           ) : (
@@ -1217,7 +1217,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             <span data-testid="cockpit-policy-triggered-blocks" style={{ fontSize: 12, color: policyAttentionSignal.triggeredBlockCount > 0 ? "var(--destructive)" : "var(--muted-foreground)", fontWeight: policyAttentionSignal.triggeredBlockCount > 0 ? 600 : 400 }}>
               {policyAttentionSignal.triggeredBlockCount} blocked
             </span>
-            <span data-testid="cockpit-policy-triggered-warnings" style={{ fontSize: 12, color: policyAttentionSignal.triggeredWarningCount > 0 ? "var(--warning)" : "var(--muted-foreground)" }}>
+            <span data-testid="cockpit-policy-triggered-warnings" style={{ fontSize: 12, color: policyAttentionSignal.triggeredWarningCount > 0 ? "var(--warning-text)" : "var(--muted-foreground)" }}>
               {policyAttentionSignal.triggeredWarningCount} warning{policyAttentionSignal.triggeredWarningCount !== 1 ? "s" : ""}
             </span>
           </div>
@@ -1241,7 +1241,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             Not enough metric history yet for trend alerts. Record at least two periods.
           </p>
         ) : trendAlerts.length === 0 ? (
-          <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--success)" }}>No trend alerts — metrics moving in a healthy direction.</p>
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--success-text)" }}>No trend alerts — metrics moving in a healthy direction.</p>
         ) : (
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
             {trendAlerts.map((alert, i) => (
@@ -1283,7 +1283,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         {activeEscalations === null || activeEscalations === undefined ? (
           <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>Escalation data unavailable.</p>
         ) : activeEscalations.length === 0 ? (
-          <p data-testid="cockpit-escalations-state" data-cockpit-escalations-state="NONE" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--success)" }}>No open escalations.</p>
+          <p data-testid="cockpit-escalations-state" data-cockpit-escalations-state="NONE" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--success-text)" }}>No open escalations.</p>
         ) : (
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
             {activeEscalations.map((esc) => (
