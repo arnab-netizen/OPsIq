@@ -46,7 +46,7 @@ import { SidebarNav } from "@/ui/shell/sidebar-nav";
 
 afterEach(() => cleanup());
 
-const CONSULTANT_LABELS = ["Consulting dashboard", "Clients", "Engagements", "Leads", "People"];
+const CONSULTANT_LABELS = ["Consulting workspace", "Clients", "Engagements", "Leads", "People"];
 
 function hrefsOf(container: HTMLElement): (string | null)[] {
   return Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
@@ -74,12 +74,12 @@ describe("sidebar nav — consultant-facing items are capability-gated, not unga
     expect(queryByText("People")).toBeNull();
   });
 
-  it("still shows Engagements/Consulting dashboard to a client-side role that legitimately holds ENGAGEMENT_VIEW (parity with what the /engagements API route actually allows)", () => {
+  it("still shows Engagements/Consulting workspace to a client-side role that legitimately holds ENGAGEMENT_VIEW (parity with what the /engagements API route actually allows)", () => {
     const caps = Array.from(getCapabilitiesForRole(ROLES.CLIENT_TEAM_MEMBER));
     expect(caps).toContain(CAPABILITIES.ENGAGEMENT_VIEW);
     const { queryByText } = render(<SidebarNav canViewOwnerRecovery={false} capabilities={caps} />);
     expect(queryByText("Engagements")).not.toBeNull();
-    expect(queryByText("Consulting dashboard")).not.toBeNull();
+    expect(queryByText("Consulting workspace")).not.toBeNull();
   });
 
   it("hides all five consultant-facing items from VIEWER except Engagements/dashboard, matching VIEWER's real capability set", () => {
@@ -153,10 +153,10 @@ describe("sidebar nav — owner-only and shared/ungated items are unaffected by 
     expect(queryByText("Money")).toBeNull();
   });
 
-  it("shared, ungated items (Diagnosis, Decisions, Check a decision, What if…, Reports, Settings) remain visible to everyone with no capabilities at all", () => {
+  it("shared, ungated items (Diagnosis, Decision Inbox, Check a decision, What if…, Reports, Settings) remain visible to everyone with no capabilities at all", () => {
     const { queryByText } = render(<SidebarNav canViewOwnerRecovery={false} capabilities={[]} />);
     expect(queryByText("Diagnosis")).not.toBeNull();
-    expect(queryByText("Decisions")).not.toBeNull();
+    expect(queryByText("Decision Inbox")).not.toBeNull();
     expect(queryByText("Check a decision")).not.toBeNull();
     expect(queryByText("What if…")).not.toBeNull();
     expect(queryByText("Reports")).not.toBeNull();

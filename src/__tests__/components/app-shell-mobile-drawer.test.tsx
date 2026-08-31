@@ -42,7 +42,8 @@ function openDrawer() {
 
 /**
  * Links actually reachable by Tab right now — i.e. not sitting inside a closed native
- * `<details>` section (SidebarNav groups the "Growth & strategy" / "Records & settings"
+ * `<details>` section (SidebarNav groups the "Growth & strategy" / "Records" / "Consulting" /
+ * "Administration"
  * sections that way; a real browser removes their content from the tab order without any
  * `display:none` in markup, so a plain querySelectorAll("a") over-counts). Mirrors the
  * same reachability rule the trap itself uses (src/ui/primitives/use-dialog-a11y.ts).

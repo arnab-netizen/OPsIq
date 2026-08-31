@@ -6,9 +6,9 @@ import { useEffect, useState } from "react";
 import { CAPABILITIES, type CapabilityName } from "@/domain/constants/capabilities";
 
 /**
- * Owner navigation.
+ * Owner / consulting / admin navigation — persona-sectioned single sidebar (IA Model B).
  *
- * Two changes from the previous flat list, both deliberate:
+ * Three changes from the previous flat/grouped list:
  *
  * 1. GROUPED, not flat. A single ungrouped list of 21 equal-weight links gave the owner no signal
  *    about where to start, and buried the data-entry path at position 14. The primary path
@@ -18,6 +18,30 @@ import { CAPABILITIES, type CapabilityName } from "@/domain/constants/capabiliti
  * 2. LONGEST-MATCH active state. The previous `pathname.startsWith(item.href)` test highlighted
  *    "/dashboard" while the user was on "/dashboard/inbox". Active state is now the single
  *    longest-matching entry, so a child route never lights up its unrelated parent.
+ *
+ * 3. PERSONA-SECTIONED. The former "Records & settings" section mixed pure owner record-keeping
+ *    with consulting-only surfaces (Clients/Engagements/Leads/consulting dashboard) that most
+ *    signed-in users can never open. Those now live in their own "Consulting" section, and a new
+ *    "Administration" section surfaces the previously nav-orphaned /admin/billing route to
+ *    SYSTEM_ADMIN holders. Nothing changed about WHO can see an item — every gate below is the
+ *    same `requiresOwner`/`requiresCapability` check as before (or, for /admin/billing, the same
+ *    per-item capability pattern already used for Clients/Engagements/Leads/People) — only WHERE
+ *    it renders changed. Because a section that ends up with zero visible items renders nothing
+ *    (see the `visibleItems.length === 0` check below), "Consulting" and "Administration"
+ *    automatically disappear for the self-serve owner population that holds neither set of
+ *    capabilities — this is what makes it a persona-sectioned single sidebar (Model B) rather
+ *    than a capability-filtered flat list (Model A) or a separate owner/consulting mode switch
+ *    (Model C): one sidebar, sections that only exist when the signed-in capability set makes
+ *    them relevant, no separate "mode" the user has to toggle.
+ *
+ *    Today that "Consulting" section is dormant for real production traffic: the only
+ *    production-reachable role-assignment path (POST /api/auth/signup) always grants
+ *    ADMIN_OR_PORTFOLIO_MANAGER narrowed to OWNER_SCOPED_CAPABILITIES (see
+ *    src/policies/capability-check.ts), which holds none of CLIENT_VIEW/ENGAGEMENT_VIEW/
+ *    LEAD_VIEW — a genuine consultant/portfolio-manager capability set is reachable only via an
+ *    existing SYSTEM_ADMIN (dev/demo seeding), which nothing in production creates yet. The
+ *    section is kept, correctly gated, and ready for whenever that path exists — it is not
+ *    removed just because it is unpopulated today.
  *
  * Routes are grouped, not removed — every previously reachable deep link still works.
  */
@@ -77,7 +101,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "Alerts", href: "/owner/alerts", requiresOwner: true, showAlertBadge: true },
       { label: "Tasks", href: "/owner/tasks", requiresOwner: true },
-      { label: "Decisions", href: "/dashboard/inbox" },
+      { label: "Decision Inbox", href: "/dashboard/inbox" },
       { label: "Execution & SOP", href: "/owner/execution", requiresOwner: true },
       { label: "Check a decision", href: "/decision" },
     ],
@@ -96,7 +120,7 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     id: "records",
-    title: "Records & settings",
+    title: "Records",
     collapsedByDefault: true,
     items: [
       { label: "Reports", href: "/report" },
@@ -104,8 +128,21 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "Inventory", href: "/owner/inventory", requiresOwner: true },
       { label: "Procurement", href: "/owner/procurement", requiresOwner: true },
       { label: "Vendors", href: "/owner/vendor", requiresOwner: true },
+      { label: "People", href: "/users", requiresCapability: CAPABILITIES.USER_VIEW },
+      { label: "Settings", href: "/settings" },
+    ],
+  },
+  {
+    // Consulting-only surfaces, split out of the former "Records & settings" grab-bag so a
+    // self-serve owner (who holds none of these capabilities) never sees this section at all —
+    // see the file-level comment above for why it renders as empty today for real production
+    // traffic, and is kept anyway.
+    id: "consulting",
+    title: "Consulting",
+    collapsedByDefault: true,
+    items: [
       {
-        label: "Consulting dashboard",
+        label: "Consulting workspace",
         href: "/dashboard",
         requiresCapability: CAPABILITIES.ENGAGEMENT_VIEW,
       },
@@ -116,8 +153,23 @@ const NAV_SECTIONS: NavSection[] = [
         requiresCapability: CAPABILITIES.ENGAGEMENT_VIEW,
       },
       { label: "Leads", href: "/leads", requiresCapability: CAPABILITIES.LEAD_VIEW },
-      { label: "People", href: "/users", requiresCapability: CAPABILITIES.USER_VIEW },
-      { label: "Settings", href: "/settings" },
+    ],
+  },
+  {
+    // SYSTEM_ADMIN-only. /admin/billing already enforces CAPABILITIES.SYSTEM_ADMIN server-side
+    // (src/app/api/admin/billing/diagnostics/route.ts) but, before this change, had no link
+    // anywhere in the app — it was reachable only by typing the URL. This section gives it the
+    // same per-item capability-gated nav entry every other capability-gated route already has;
+    // it introduces no new authorization, only a link to an existing, already-gated route.
+    id: "admin",
+    title: "Administration",
+    collapsedByDefault: true,
+    items: [
+      {
+        label: "Billing diagnostics",
+        href: "/admin/billing",
+        requiresCapability: CAPABILITIES.SYSTEM_ADMIN,
+      },
     ],
   },
 ];
