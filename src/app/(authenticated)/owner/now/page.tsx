@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Badge, Button } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -101,7 +101,7 @@ export default function OwnerNowViewPage() {
     void load(id);
   }, [load]);
 
-  if (loading) return <main style={{ padding: 24 }}>Loading your Owner Now View…</main>;
+  if (loading) return <CardDashboardSkeleton sections={4} label="Loading your Owner Now View" />;
   if (error) return (
     <main style={{ padding: 24 }}>
       <p style={{ color: "#b91c1c" }}>{error}</p>

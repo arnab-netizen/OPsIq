@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Modal, Input, Select, Textarea } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type ComplianceKind = "licence" | "permit" | "insurance" | "tax" | "document";
@@ -244,7 +244,7 @@ export default function CompliancePage() {
         </select>
       </div>
 
-      {loading && <p className="text-muted-foreground text-sm">Loading…</p>}
+      {loading && <TableListSkeleton label="Loading compliance items" />}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {!loading && !error && items.length === 0 && (

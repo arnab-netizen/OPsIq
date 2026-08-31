@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { toHttpResponseError } from "@/lib/operator-safe-errors";
+import { DetailPageSkeleton } from "@/ui/primitives";
 
 interface DetailData {
   impactLevel: string;
@@ -88,11 +89,7 @@ export default function BusinessImpactPage() {
   }, [actionId]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <p className="text-muted-foreground">Loading business impact analysis...</p>
-      </div>
-    );
+    return <DetailPageSkeleton label="Loading business impact analysis" />;
   }
 
   if (error) {

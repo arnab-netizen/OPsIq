@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Button, Badge, Table, LoadingState, ErrorState } from "@/ui/primitives";
+import { Button, Badge, Table, LoadingState, ErrorState, DetailPageSkeleton } from "@/ui/primitives";
 import { AddEvidenceToBundleForm } from "./add-evidence-form";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
@@ -123,7 +123,7 @@ export default function BundleDetailPage({
   }
 
   if (isLoading) {
-    return <LoadingState message="Loading bundle..." />;
+    return <DetailPageSkeleton label="Loading bundle" />;
   }
 
   if (error) {

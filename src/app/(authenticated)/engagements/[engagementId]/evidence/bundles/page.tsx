@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Button, Table, LoadingState, EmptyState, ErrorState } from "@/ui/primitives";
+import { Button, Table, LoadingState, EmptyState, ErrorState, TableListSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { CreateBundleForm } from "./create-bundle-form";
 
@@ -138,7 +138,7 @@ export default function BundlesPage({
           />
         )}
 
-        {isLoading && !error && <LoadingState message="Loading bundles..." />}
+        {isLoading && !error && <TableListSkeleton label="Loading bundles" />}
 
         {!isLoading && !error && bundles.length === 0 && (
           <EmptyState

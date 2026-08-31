@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/ui/primitives";
+import { Button, CardDashboardSkeleton } from "@/ui/primitives";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CashProfitPanel, OpportunityPanel, ValidationPanel, PortfolioPanel, OpportunityOperatingPanel, ValidationOutcomePanel, OpportunityExecutionPanel, ProcessExecutionBridgePanel, CockpitGroup, CockpitSubsection, type ProcessExecutionBridgeView, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView, type CashProfitProtectionView, type ExternalOpportunityView, type OpportunityValidationView, type OpportunityPortfolioView, type OpportunityOperatingView, type ValidationOutcomeView, type OpportunityExecutionView } from "@/components/owner/ProcessIntelligencePanel";
 
@@ -174,7 +174,7 @@ export default function OwnerProcessIntelligencePage() {
         recommended correction. Everything else is grouped below; open a group only when you need it.
       </p>
 
-      {loading && <p>Loading the process view…</p>}
+      {loading && <CardDashboardSkeleton sections={5} label="Loading the process view" />}
       {error && (
         <div>
           <p style={{ color: "#b91c1c" }} data-testid="pi-error">{error}</p>

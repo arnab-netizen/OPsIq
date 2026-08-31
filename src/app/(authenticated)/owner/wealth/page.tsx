@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- command-center payload is the service contract (typed server-side in WealthCommandCenter); rendered read-only here. load() on mount is intentional. */
@@ -59,7 +59,7 @@ export default function OwnerWealthPage() {
     void load();
   }, [load]);
 
-  if (loading) return <main style={{ padding: 24 }}>Loading your Wealth Command Center…</main>;
+  if (loading) return <CardDashboardSkeleton sections={4} label="Loading your Wealth Command Center" />;
   if (error)
     return (
       <main style={{ padding: 24 }}>

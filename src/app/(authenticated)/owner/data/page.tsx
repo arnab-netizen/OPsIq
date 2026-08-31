@@ -18,7 +18,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the established owner-page pattern */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select } from "@/ui/primitives";
+import { Badge, Button, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import {
@@ -551,7 +551,7 @@ export default function OwnerDataHubPage() {
         </p>
       </header>
 
-      {loading && <p className="mt-8 text-sm text-muted-foreground">Loading your setup…</p>}
+      {loading && <div className="mt-8"><CardDashboardSkeleton sections={4} label="Loading your setup" /></div>}
 
       {!loading && error && (
         <p role="alert" className="mt-6 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">

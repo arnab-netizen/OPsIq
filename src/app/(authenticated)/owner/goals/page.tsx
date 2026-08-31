@@ -11,7 +11,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Modal, Input, Select } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, DetailPageSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type TargetType = "PROFIT" | "REVENUE" | "NET_WORTH" | "MULTIPLE";
@@ -168,7 +168,7 @@ export default function GoalsPage() {
         </Button>
       </div>
 
-      {loading && <p className="text-muted-foreground text-sm">Loading…</p>}
+      {loading && <DetailPageSkeleton label="Loading financial goal" />}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {!loading && !error && !goal && (

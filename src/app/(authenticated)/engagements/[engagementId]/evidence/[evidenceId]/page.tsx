@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Button, Badge, LoadingState, ErrorState } from "@/ui/primitives";
+import { Button, Badge, LoadingState, ErrorState, DetailPageSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface EvidenceDetail {
@@ -96,7 +96,7 @@ export default function EvidenceDetailPage({
   }
 
   if (isLoading) {
-    return <LoadingState message="Loading evidence..." />;
+    return <DetailPageSkeleton label="Loading evidence" />;
   }
 
   if (error) {

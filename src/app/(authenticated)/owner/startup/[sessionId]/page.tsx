@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { use } from "react";
+import { DetailPageSkeleton } from "@/ui/primitives";
 
 interface IdeaRecord {
   id: string;
@@ -391,9 +392,16 @@ export default function StartupSessionPage({
   }
 
   if (!session) {
+    if (pageMsg) {
+      return (
+        <div style={{ padding: "2rem" }} data-testid="startup-session-loading">
+          {pageMsg}
+        </div>
+      );
+    }
     return (
-      <div style={{ padding: "2rem" }} data-testid="startup-session-loading">
-        {pageMsg ?? "Loading…"}
+      <div data-testid="startup-session-loading">
+        <DetailPageSkeleton label="Loading startup session" />
       </div>
     );
   }

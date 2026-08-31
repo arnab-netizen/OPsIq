@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Badge, LoadingState, ErrorState } from "@/ui/primitives";
+import { Badge, ErrorState, CardDashboardSkeleton } from "@/ui/primitives";
 import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { formatRole } from "@/domain/constants/role-labels";
@@ -58,7 +58,7 @@ export default function SettingsPage() {
     fetchProfile();
   }, []);
 
-  if (loading) return <LoadingState message="Loading profile..." />;
+  if (loading) return <CardDashboardSkeleton sections={4} label="Loading profile" />;
   if (errorDetails) return <ErrorState message={errorDetails} />; // classifyOperatorError
   if (!me) {
     return (

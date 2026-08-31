@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Badge } from "@/ui/primitives";
+import { Badge, DetailPageSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { toHttpResponseError } from "@/lib/operator-safe-errors";
 
@@ -113,7 +113,7 @@ export default function DecisionEvidencePage({ params }: DecisionEvidencePage) {
   }, [engagementId]);
 
   if (isLoading) {
-    return <div className="p-6 text-center">Loading decision evidence...</div>;
+    return <DetailPageSkeleton label="Loading decision evidence" />;
   }
 
   if (error) {

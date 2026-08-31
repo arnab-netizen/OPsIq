@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Button, Badge, Table, LoadingState, EmptyState, ErrorState } from "@/ui/primitives";
+import { Button, Badge, Table, LoadingState, EmptyState, ErrorState, TableListSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { ManualEvidenceForm } from "./manual-evidence-form";
 import { FileUploadForm } from "./file-upload-form";
@@ -174,7 +174,7 @@ export default function EvidenceVaultPage({
           />
         )}
 
-        {isLoading && !error && <LoadingState message="Loading evidence..." />}
+        {isLoading && !error && <TableListSkeleton label="Loading evidence" />}
 
         {!isLoading && !error && evidence.length === 0 && (
           <EmptyState

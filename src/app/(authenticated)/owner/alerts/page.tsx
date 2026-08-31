@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button } from "@/ui/primitives";
+import { Badge, Button, TableListSkeleton } from "@/ui/primitives";
 
 type AlertSeverity = "low" | "medium" | "high" | "critical";
 type AlertType = "blocked" | "threshold_breach" | "execution_failure";
@@ -244,7 +244,7 @@ export default function OwnerAlertsPage() {
       )}
 
       {loading ? (
-        <div className="text-sm text-muted-foreground py-8 text-center">Loading alerts…</div>
+        <TableListSkeleton label="Loading alerts" />
       ) : error ? (
         <div className="rounded-md border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive mb-4">
           {error}
