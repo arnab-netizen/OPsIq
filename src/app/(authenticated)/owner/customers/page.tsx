@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Modal, Input, Select, Textarea } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 interface Business {
   id: string;
@@ -206,19 +207,13 @@ export default function CustomersPage() {
         </Button>
       </div>
 
-      {businesses.length > 1 && (
-        <div className="mb-4">
-          <select
-            value={selectedBizId ?? ""}
-            onChange={(e) => handleBizChange(e.target.value)}
-            className="rounded border border-border bg-background px-3 py-1.5 text-sm"
-          >
-            {businesses.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
+      <div className="mb-4">
+        <BusinessContextSelector
+          businesses={businesses}
+          selectedId={selectedBizId}
+          onChange={handleBizChange}
+        />
+      </div>
 
       {!loading && businesses.length === 0 && (
         <p className="text-muted-foreground text-sm">

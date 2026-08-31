@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button } from "@/ui/primitives";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- command-center payload is the service contract (typed server-side in WealthCommandCenter); rendered read-only here. load() on mount is intentional. */
 
@@ -81,20 +82,13 @@ export default function OwnerWealthPage() {
         <Link href="/owner"><Button>Command Center</Button></Link>
       </div>
 
-      {businesses.length > 1 && (
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 13, marginRight: 8 }}>Business:</label>
-          <select
-            value={businessId ?? ""}
-            onChange={(e) => void load(e.target.value)}
-            style={{ padding: 6, borderRadius: 6 }}
-          >
-            {businesses.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
+      <div style={{ marginBottom: 16 }}>
+        <BusinessContextSelector
+          businesses={businesses}
+          selectedId={businessId}
+          onChange={(id) => void load(id)}
+        />
+      </div>
 
       {cc.provisional && (
         <p style={{ color: "#b45309", fontSize: 13, marginBottom: 12 }}>

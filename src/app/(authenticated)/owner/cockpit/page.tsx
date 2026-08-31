@@ -5,6 +5,17 @@
  * loop. It reads GET /api/owner/now-view (the server-computed payload) and drives owner actions through
  * POST /api/owner/process-execution (applyProcessExecutionAction). No business logic, no duplicate backend:
  * the server re-derives + re-checks every action. Presentation + safety layout live in MinimumOwnerCockpit.
+ *
+ * Business-context decision (verified against owner-now-view.service.ts and process-execution-bridge.ts):
+ * NO selector, by design. `processExecution` (the task bridge this page drives START/action/progress
+ * against) is built via `buildProcessExecutionBridge(processCorrections, cashProfitProtection,
+ * workspaceId, ...)` — workspace-scoped, not businessId-scoped — and every mutation here is submitted by
+ * `taskKey` (POST /api/owner/process-execution never sends a businessId; the server resolves task
+ * ownership from the task record itself). This is a workspace-wide execution queue, the same shape as
+ * /owner/tasks, not a per-business view a selector could correctly narrow. It is also an active
+ * decision/workflow surface (in-progress task actions) — letting the owner "switch business" mid-task
+ * here would not change which tasks are shown (they aren't scoped that way) and could wrongly imply the
+ * in-flight task itself moved, which is unsafe. A business selector was deliberately not added.
  */
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */

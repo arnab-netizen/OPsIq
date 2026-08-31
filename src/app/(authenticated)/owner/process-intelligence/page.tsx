@@ -5,6 +5,16 @@
  * the Owner Now View payload (`/api/owner/now-view`, which already carries the server-computed
  * `processIntelligence` block) and renders it via ProcessIntelligencePanel. No business logic here: the
  * finding is built server-side. Errors are shown safely; no raw internal error is exposed.
+ *
+ * Business-context decision (verified against owner-now-view.service.ts): NO selector, by design.
+ * processIntelligence / processCorrections / sopChecklistCorrections / trainingAssignments /
+ * sopTrainingEffectiveness / ownerWorkloadReduction / processExecution are all built from
+ * `deps.db.proof.findMany({ where: { workspaceId } })` and passed `workspaceId` (never `businessId`)
+ * into buildProcessIntelligence/buildProcessCorrections/etc. This is a workspace-wide process-quality
+ * queue, not a per-business view — the `now-view` endpoint's optional `?businessId=` does not affect
+ * any field this page renders. Adding a business selector here would imply switching business changes
+ * this queue, which it provably does not; that would misrepresent an aggregate as single-business,
+ * the exact failure mode this route was reviewed to avoid.
  */
 
 import { useCallback, useEffect, useState } from "react";

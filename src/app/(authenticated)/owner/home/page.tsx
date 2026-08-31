@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select } from "@/ui/primitives";
+import { Badge, Button } from "@/ui/primitives";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic owner-home payload is untyped; load() fetch-on-mount is intentional */
 
@@ -169,12 +170,10 @@ export default function OwnerHomePage() {
       ) : (
         <>
           <div className="mb-4">
-            <Select
-              name="businessSelector"
-              label="Business"
-              value={selected ?? undefined}
-              onChange={(e: any) => load(e.target.value)}
-              options={businesses.map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
+            <BusinessContextSelector
+              businesses={businesses}
+              selectedId={selected}
+              onChange={(businessId) => load(businessId)}
             />
           </div>
 

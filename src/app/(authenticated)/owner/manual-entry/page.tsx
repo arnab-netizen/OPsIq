@@ -10,6 +10,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the intentional owner-page pattern */
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/ui/primitives";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import {
   MANUAL_ENTRY_SECTIONS, MANUAL_ENTRY_WARNING, MANUAL_ENTRY_SAFE_COPY,
   validateManualEntry, buildManualEntryFields, type ManualEntrySection, type ManualFieldValue,
@@ -156,15 +157,11 @@ export default function OwnerManualEntryPage() {
         </p>
       ) : (
         <>
-          {businesses.length > 1 && (
-            <label className="flex flex-col gap-1 text-sm text-gray-700">
-              <span>Business</span>
-              <select data-testid="manual-entry-business" className="w-full rounded-md border border-gray-300 p-2 text-sm sm:w-72"
-                value={businessId ?? ""} onChange={(e) => setBusinessId(e.target.value)}>
-                {businesses.map((b) => <option key={b.id} value={b.id}>{b.name ?? b.id}</option>)}
-              </select>
-            </label>
-          )}
+          <BusinessContextSelector
+            businesses={businesses.map((b) => ({ id: b.id, name: b.name ?? b.id }))}
+            selectedId={businessId}
+            onChange={(id) => setBusinessId(id)}
+          />
 
           {businessId && (
             <>

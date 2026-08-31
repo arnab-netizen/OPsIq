@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Input, Select } from "@/ui/primitives";
 import { assessWorkingCapitalAgeing } from "@/domain/owner-budget/working-capital-ageing";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic budget plan payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -254,13 +255,11 @@ export default function OwnerBudgetPlanPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 w-72">
-            <Select
-              name="businessSelector"
-              label="Business"
-              value={selected ?? undefined}
-              onChange={(e: any) => load(e.target.value)}
-              options={list.map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
+          <div className="mb-6">
+            <BusinessContextSelector
+              businesses={list}
+              selectedId={selected}
+              onChange={(businessId) => load(businessId)}
             />
           </div>
 

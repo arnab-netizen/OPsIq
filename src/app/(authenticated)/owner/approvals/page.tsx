@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { Badge, Button, Input, Select } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -200,15 +201,11 @@ export default function OwnerApprovalsPage() {
       ) : (
         <>
           <div className="mb-6 flex items-end gap-3">
-            <div className="w-72">
-              <Select
-                name="businessSelector"
-                label="Business"
-                value={selected ?? undefined}
-                onChange={(e: any) => setSelected(e.target.value)}
-                options={businesses.map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
-              />
-            </div>
+            <BusinessContextSelector
+              businesses={businesses}
+              selectedId={selected}
+              onChange={(businessId) => setSelected(businessId)}
+            />
             <div className="w-48">
               <Select
                 name="statusFilter"

@@ -5,6 +5,7 @@ import { Button } from "@/ui/primitives/button";
 import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 async function apiFetch(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -130,17 +131,11 @@ export default function InventoryPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Inventory</h1>
         <div className="flex gap-3 items-center">
-          {businesses.length > 1 && (
-            <select
-              className="border rounded px-3 py-1 text-sm"
-              value={businessId ?? ""}
-              onChange={(e) => setBusinessId(e.target.value)}
-            >
-              {businesses.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          )}
+          <BusinessContextSelector
+            businesses={businesses}
+            selectedId={businessId}
+            onChange={(id) => setBusinessId(id)}
+          />
           <Button onClick={openCreate}>+ Add Item</Button>
         </div>
       </div>

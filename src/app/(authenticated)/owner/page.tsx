@@ -6,6 +6,7 @@ import { Badge, Button, Select } from "@/ui/primitives";
 import { PriorityCommandStrip } from "@/components/owner/PriorityCommandStrip";
 import { SupervisorSummary } from "@/components/owner/SupervisorSummary";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
+import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic command-center payload is untyped; load() fetch-on-mount is intentional */
 
@@ -373,13 +374,11 @@ export default function OwnerCommandCenterPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 w-72">
-            <Select
-              name="businessSelector"
-              label="Business"
-              value={selected ?? undefined}
-              onChange={(e: any) => load(e.target.value)}
-              options={businessList.map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
+          <div className="mb-6">
+            <BusinessContextSelector
+              businesses={businessList}
+              selectedId={selected}
+              onChange={(businessId) => load(businessId)}
             />
           </div>
 
