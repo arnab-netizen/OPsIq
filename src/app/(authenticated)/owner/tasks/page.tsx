@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button } from "@/ui/primitives";
+import { Badge, Button, EmptyState, TableListSkeleton } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
@@ -125,11 +125,23 @@ export default function OwnerTasksPage() {
       </div>
 
       {/* Task list */}
-      {loading && <p className="text-muted-foreground text-sm">Loading…</p>}
+      {loading && <TableListSkeleton label="Loading" rows={4} />}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {!loading && !error && tasks.length === 0 && (
-        <p className="text-muted-foreground text-sm">No tasks found.</p>
+        statusFilter ? (
+          <EmptyState
+            title="No tasks match this filter"
+            description={`No delegated tasks have status "${STATUS_LABELS[statusFilter as keyof typeof STATUS_LABELS] ?? statusFilter}".`}
+            primaryAction={{ label: "Clear filter", onClick: () => setStatusFilter("") }}
+          />
+        ) : (
+          <EmptyState
+            title="No tasks delegated yet"
+            description="Delegate a task to hand off work with a clear owner, deadline, and expected proof."
+            primaryAction={{ label: "+ New Task", href: "/owner/tasks/new" }}
+          />
+        )
       )}
 
       {!loading && !error && tasks.length > 0 && (

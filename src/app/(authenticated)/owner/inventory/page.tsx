@@ -2,6 +2,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/ui/primitives/button";
+import { EmptyState } from "@/ui/primitives/states";
 import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -145,7 +146,11 @@ export default function InventoryPage() {
       )}
 
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No stock items found.</p>
+        <EmptyState
+          title="No stock items yet"
+          description="Add your first stock item to start tracking on-hand quantity and reorder points."
+          primaryAction={{ label: "+ Add Item", onClick: openCreate }}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm" data-testid="inventory-table">

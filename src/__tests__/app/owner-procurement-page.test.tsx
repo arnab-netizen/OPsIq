@@ -132,7 +132,7 @@ describe("ProcurementPage", () => {
     expect(true).toBe(true);
   });
 
-  it("shows No purchase orders found when list is empty", async () => {
+  it("shows a true-empty state (with a create CTA) when the business has no purchase orders yet", async () => {
     fetchMock.mockImplementation((input: string | URL) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url.includes("/api/owner/recovery/businesses")) {
@@ -144,7 +144,7 @@ describe("ProcurementPage", () => {
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
     const { findByText } = render(<ProcurementPage />);
-    await findByText("No purchase orders found.");
+    await findByText("No purchase orders yet");
   });
 
   it("opens create modal when + New PO is clicked", async () => {

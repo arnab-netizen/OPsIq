@@ -11,7 +11,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Modal, Input, Select, Textarea } from "@/ui/primitives";
+import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -232,9 +232,11 @@ export default function VendorPage() {
       </div>
 
       {!loading && businesses.length === 0 && (
-        <p className="text-muted-foreground text-sm">
-          No business found. Create a business in the Finance section first.
-        </p>
+        <EmptyState
+          title="No business set up yet"
+          description="Vendors are tracked per business. Set up your business in Finance first."
+          primaryAction={{ label: "Go to Finance", href: "/owner/finance" }}
+        />
       )}
 
       <div className="flex gap-3 mb-6 flex-wrap">
@@ -250,11 +252,23 @@ export default function VendorPage() {
         </select>
       </div>
 
-      {loading && <p className="text-muted-foreground text-sm">Loading…</p>}
+      {loading && <TableListSkeleton label="Loading" rows={4} />}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {!loading && !error && selectedBizId && visibleVendors.length === 0 && (
-        <p className="text-muted-foreground text-sm">No vendors found.</p>
+        statusFilter ? (
+          <EmptyState
+            title="No vendors match this filter"
+            description={`No vendors have status "${statusFilter}".`}
+            primaryAction={{ label: "Clear filter", onClick: () => setStatusFilter("") }}
+          />
+        ) : (
+          <EmptyState
+            title="No vendors yet"
+            description="Add your first vendor to start tracking approval status and spend."
+            primaryAction={{ label: "+ New Vendor", onClick: openCreate }}
+          />
+        )
       )}
 
       {!loading && !error && visibleVendors.length > 0 && (
