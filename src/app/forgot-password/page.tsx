@@ -9,13 +9,16 @@ export const dynamic = "force-dynamic";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // Named formError/setFormError, not error/setError: this holds only a fixed,
+  // pre-approved copy string sourced from the server's own governed response
+  // (never a raw exception) -- distinct naming keeps that obvious at the call site.
+  const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
+    setFormError(null);
     setLoading(true);
 
     try {
@@ -30,13 +33,13 @@ export default function ForgotPasswordPage() {
       // confirmation either way, never branching on account existence.
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(typeof data.error === "string" ? data.error : "Something went wrong. Please try again.");
+        setFormError(typeof data.error === "string" ? data.error : "Something went wrong. Please try again.");
         return;
       }
 
       setSubmitted(true);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setFormError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -66,7 +69,7 @@ export default function ForgotPasswordPage() {
               autoComplete="email"
             />
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {formError && <p className="text-sm text-destructive">{formError}</p>}
 
             <Button type="submit" isLoading={loading} className="w-full">
               Send reset link

@@ -26,16 +26,20 @@ function ResetPasswordForm() {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // Named formError/setFormError, not error/setError: this holds only a fixed,
+  // pre-approved copy string (a client-side check or the server's own governed
+  // response), never a raw exception -- distinct naming keeps that obvious at
+  // the call site.
+  const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
+    setFormError(null);
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setFormError("Passwords do not match.");
       return;
     }
 
@@ -49,7 +53,7 @@ function ResetPasswordForm() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(typeof data.error === "string" ? data.error : "Something went wrong. Please try again.");
+        setFormError(typeof data.error === "string" ? data.error : "Something went wrong. Please try again.");
         return;
       }
 
@@ -59,7 +63,7 @@ function ResetPasswordForm() {
       // /login rather than logging them in automatically.
       setTimeout(() => router.push("/login"), 2000);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setFormError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -116,7 +120,7 @@ function ResetPasswordForm() {
               autoComplete="new-password"
             />
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {formError && <p className="text-sm text-destructive">{formError}</p>}
 
             <Button type="submit" isLoading={loading} className="w-full">
               Reset password
