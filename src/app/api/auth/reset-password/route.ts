@@ -5,7 +5,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { parseRequestBody } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { requireRateLimit, RateLimitError, PASSWORD_RESET_RATE_LIMIT } from "@/infra/rate-limit";
+import { requirePgRateLimit, RateLimitError, PASSWORD_RESET_RATE_LIMIT } from "@/infra/rate-limit";
 import { ValidationError, BadRequestError } from "@/infra/errors";
 import { z } from "zod/v4";
 import * as bcrypt from "bcryptjs";
@@ -34,7 +34,7 @@ export const POST = async (request: NextRequest) => {
     const { token, password } = await parseRequestBody(request, resetPasswordSchema);
 
     const ip = request.headers.get("x-forwarded-for") ?? "unknown";
-    requireRateLimit(`password-reset-redeem:${ip}`, PASSWORD_RESET_RATE_LIMIT);
+    await requirePgRateLimit(`password-reset-redeem:${ip}`, PASSWORD_RESET_RATE_LIMIT);
 
     const tokenHash = createHash("sha256").update(token).digest("hex");
 

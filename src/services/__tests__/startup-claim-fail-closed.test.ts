@@ -58,6 +58,7 @@ vi.mock("@/lib/db", () => ({
     _timeoutMs: number,
     fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
   ) => fn(await pool.connect()),
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 import { claimStartup, completeStartup } from "@/services/startup-status";

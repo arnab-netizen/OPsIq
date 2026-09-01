@@ -54,6 +54,19 @@ export async function cleanupOldRecords(): Promise<void> {
     if (totalDeletedOperatorItems > 0) {
       logger.success({ message: `Deleted ${totalDeletedOperatorItems} expired operator items` });
     }
+
+    // Prune stale PG-backed rate-limit buckets (not a governed record -- pure
+    // infrastructure state, safe to delete). Global, not workspace-scoped: these
+    // rows are keyed by raw client IP/email for the public identity endpoints
+    // (see src/infra/rate-limit.ts), which have no workspace association.
+    const rateLimitCutoff = new Date(now);
+    rateLimitCutoff.setDate(rateLimitCutoff.getDate() - PRODUCTION_CONFIG.retention.rateLimitBucketTtlDays);
+    const deletedBuckets = await db.rateLimitBucket.deleteMany({
+      where: { updatedAt: { lt: rateLimitCutoff } },
+    }).catch(() => ({ count: 0 }));
+    if (deletedBuckets.count > 0) {
+      logger.success({ message: `Deleted ${deletedBuckets.count} stale rate-limit buckets` });
+    }
   } catch (error) {
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error(`Retention cleanup failed: ${governed.operatorMessage}`);

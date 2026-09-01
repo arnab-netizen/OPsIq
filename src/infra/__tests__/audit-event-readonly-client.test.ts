@@ -27,6 +27,7 @@ vi.mock("@/lib/db", () => ({
       // would throw "is not a function", failing the test loudly.
     },
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 import { getAuditEventReadOnlyClient } from "@/infra/audit";

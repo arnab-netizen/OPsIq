@@ -17,40 +17,53 @@ import * as child_process from "child_process";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-function rg(pattern: string, dirs: string[], extra: string[] = []): string[] {
-  const args = [
-    "--files-with-matches",
-    ...extra,
-    "-e",
-    pattern,
-    ...dirs,
-  ];
-  try {
-    const result = child_process.spawnSync("rg", args, { encoding: "utf8" });
-    if (result.status !== 0 && result.status !== 1) return [];
-    return (result.stdout || "").split("\n").filter(Boolean).sort();
-  } catch {
-    return [];
+// FATAL, not a gate result: every gate below depends on `rg` actually running.
+// rg's own exit codes are 0 (matches found) or 1 (no matches) -- both are
+// legitimate results. Anything else (spawn failure because the binary isn't
+// on PATH, a killed process, an unexpected exit code) means the search never
+// really happened, and previously this was silently treated as "0 matches"
+// by every gate, i.e. every gate reported PASS regardless of real repo state.
+// That is worse than not running the scan at all: it looked like coverage
+// that wasn't there. Fail the whole script loudly instead.
+function assertRgAvailable(): void {
+  const probe = child_process.spawnSync("rg", ["--version"], { encoding: "utf8" });
+  if (probe.error || probe.status !== 0) {
+    console.error(
+      "FATAL: `rg` (ripgrep) is not available or failed to run.\n" +
+      "Every gate in this script depends on rg -- without it, gates would " +
+      "silently report 0 violations regardless of real repo state, which is " +
+      "a false PASS, not a real one. Install ripgrep before running this scan " +
+      "(see .github/workflows/ci.yml's ripgrep setup step)."
+    );
+    process.exit(1);
   }
 }
 
-function rgLines(pattern: string, dirs: string[], extra: string[] = []): string[] {
-  const args = [
-    "--no-heading",
-    "--with-filename",
-    "--line-number",
-    ...extra,
-    "-e",
-    pattern,
-    ...dirs,
-  ];
-  try {
-    const result = child_process.spawnSync("rg", args, { encoding: "utf8" });
-    if (result.status !== 0 && result.status !== 1) return [];
-    return (result.stdout || "").split("\n").filter(Boolean).sort();
-  } catch {
-    return [];
+function runRg(args: string[]): string[] {
+  const result = child_process.spawnSync("rg", args, { encoding: "utf8" });
+  if (result.error) {
+    console.error(`FATAL: rg failed to run: ${result.error.message}`);
+    process.exit(1);
   }
+  // 0 = matches found, 1 = no matches -- both legitimate. Anything else
+  // (2 = usage/regex error, null = killed) is a real failure, not "no matches".
+  if (result.status !== 0 && result.status !== 1) {
+    console.error(
+      `FATAL: rg exited with unexpected status ${result.status}.\n` +
+      `stderr: ${result.stderr || "(none)"}\n` +
+      `args: ${args.join(" ")}`
+    );
+    process.exit(1);
+  }
+  return (result.stdout || "").split("\n").filter(Boolean).sort();
+}
+
+function rg(pattern: string, dirs: string[], extra: string[] = []): string[] {
+  return runRg(["--files-with-matches", ...extra, "-e", pattern, ...dirs]);
+}
+
+function rgLines(pattern: string, dirs: string[], extra: string[] = []): string[] {
+  return runRg(["--no-heading", "--with-filename", "--line-number", ...extra, "-e", pattern, ...dirs]);
 }
 
 function normalize(p: string): string {
@@ -224,6 +237,8 @@ function gate(
   });
   results.push({ id, name, passed: fresh.length === 0, violations: fresh });
 }
+
+assertRgAvailable();
 
 // ─── gate 01: x-workspace-id reads in route/service production code ───────────
 

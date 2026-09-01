@@ -19,7 +19,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // values assigned directly as object properties inside the factory (as
 // opposed to referenced lazily inside a nested closure) must be created via
 // vi.hoisted() to avoid a temporal-dead-zone error at module load.
-const { auditEventOps, operatorItemDeleteMany } = vi.hoisted(() => ({
+const { auditEventOps, operatorItemDeleteMany, rateLimitBucketDeleteMany } = vi.hoisted(() => ({
   auditEventOps: {
     delete: vi.fn(),
     deleteMany: vi.fn(),
@@ -28,6 +28,7 @@ const { auditEventOps, operatorItemDeleteMany } = vi.hoisted(() => ({
     upsert: vi.fn(),
   },
   operatorItemDeleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+  rateLimitBucketDeleteMany: vi.fn().mockResolvedValue({ count: 0 }),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -37,6 +38,9 @@ vi.mock("@/lib/db", () => ({
     },
     operatorItem: {
       deleteMany: (...args: unknown[]) => operatorItemDeleteMany(...args),
+    },
+    rateLimitBucket: {
+      deleteMany: (...args: unknown[]) => rateLimitBucketDeleteMany(...args),
     },
     auditEvent: auditEventOps,
   },
@@ -71,6 +75,7 @@ describe("P0-04: retention cleanup never touches AuditEvent destructively", () =
     auditEventOps.updateMany.mockClear();
     auditEventOps.upsert.mockClear();
     operatorItemDeleteMany.mockClear();
+    rateLimitBucketDeleteMany.mockClear();
   });
 
   it("does not call auditEvent.deleteMany, .delete, .update, .updateMany, or .upsert on a single run", async () => {
@@ -89,6 +94,27 @@ describe("P0-04: retention cleanup never touches AuditEvent destructively", () =
     expect(operatorItemDeleteMany).toHaveBeenCalled();
     const call = operatorItemDeleteMany.mock.calls[0]![0] as { where: { status: unknown } };
     expect(call.where.status).toEqual({ in: ["done", "failed", "blocked"] });
+  });
+
+  it("also prunes stale rate-limit buckets globally (not workspace-scoped -- these rows are keyed by raw client IP/email, not workspaceId)", async () => {
+    await cleanupOldRecords();
+
+    expect(rateLimitBucketDeleteMany).toHaveBeenCalledTimes(1);
+    const call = rateLimitBucketDeleteMany.mock.calls[0]![0] as {
+      where: { updatedAt: { lt: Date } };
+    };
+    expect(call.where.updatedAt.lt).toBeInstanceOf(Date);
+    // Default TTL is 7 days -- assert the cutoff lands within a few seconds of "now - 7d"
+    // rather than asserting an exact timestamp (flaky under real clock jitter).
+    const expectedCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    expect(Math.abs(call.where.updatedAt.lt.getTime() - expectedCutoff)).toBeLessThan(5000);
+  });
+
+  it("does not throw even if rateLimitBucket.deleteMany fails (existing resilience preserved)", async () => {
+    rateLimitBucketDeleteMany.mockRejectedValueOnce(new Error("db error"));
+
+    await expect(cleanupOldRecords()).resolves.toBeUndefined();
+    expect(auditEventOps.deleteMany).not.toHaveBeenCalled();
   });
 
   it("simulated repeated GET /api/health polling: 50 sequential cleanup runs never touch AuditEvent destructively", async () => {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, getDbInstance } from "@/lib/db";
 import { logger } from "@/infra/logger";
-import { classifyError, reportError } from "@/infra/error-tracking";
+import { captureError } from "@/infra/observability";
 import { cleanupOldRecords } from "@/services/production/retention-cleanup";
 import { isStartupComplete } from "@/infra/startup-state";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -32,8 +32,7 @@ export async function GET(): Promise<NextResponse> {
   if (startup_complete && now - lastCleanupTime > 6 * 60 * 60 * 1000) {
     lastCleanupTime = now;
     cleanupOldRecords().catch((err) => {
-      const classified = classifyError(err, { operation: "retention-cleanup" });
-      reportError(classified);
+      captureError(err, { route: "/api/health" });
       logger.error("Retention cleanup failed", err);
     });
   }
@@ -47,8 +46,7 @@ export async function GET(): Promise<NextResponse> {
       await db.$queryRawUnsafe("SELECT 1");
       checks.database = { status: "healthy", latencyMs: Date.now() - dbStart };
     } catch (error) {
-      const classified = classifyError(error, { check: "database" });
-      reportError(classified);
+      captureError(error, { route: "/api/health" });
       const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
       checks.database = {
         status: "unhealthy",
@@ -97,14 +95,13 @@ export async function GET(): Promise<NextResponse> {
     level: memory.level,
   };
   if (isMemoryExhausted(memory) || isMemoryWarning(memory)) {
-    const classified = classifyError(
+    captureError(
       new Error(
         `Memory pressure ${memory.level}: heapUsed is ` +
           `${memory.heapHeadroomUsedPercent.toFixed(2)}% of the V8 heap limit`
       ),
-      { check: "memory", level: memory.level }
+      { route: "/api/health" }
     );
-    reportError(classified);
   }
 
   // Uptime check

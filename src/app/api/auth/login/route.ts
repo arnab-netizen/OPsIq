@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { parseRequestBody } from "@/lib/validation";
+import { parseRequestBody, identityEmailSchema } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { UnauthorizedError } from "@/infra/errors";
-import { requireRateLimit, LOGIN_RATE_LIMIT } from "@/infra/rate-limit";
+import { requirePgRateLimit, RateLimitError, LOGIN_RATE_LIMIT } from "@/infra/rate-limit";
 import { getSessionCookieName, getSessionDurationMs } from "@/services/auth";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const loginSchema = z.object({
-  email: z.email(),
+  email: identityEmailSchema,
   password: z.string().min(1),
 });
 
@@ -37,8 +37,8 @@ export const POST = async (request: NextRequest) => {
 
     // Rate limit by IP + email to prevent brute force
     stage = "rate_limit";
-    requireRateLimit(`login:${ip}`, LOGIN_RATE_LIMIT);
-    requireRateLimit(`login:${email}`, LOGIN_RATE_LIMIT);
+    await requirePgRateLimit(`login:${ip}`, LOGIN_RATE_LIMIT);
+    await requirePgRateLimit(`login:${email}`, LOGIN_RATE_LIMIT);
     console.log("[LOGIN] RATE_LIMIT_OK");
 
     // Database initialization - ensure DB is ready before operations
@@ -201,6 +201,20 @@ export const POST = async (request: NextRequest) => {
         error: "Invalid email or password",
         classification: "invalid_credentials"
       }, { status: 401 });
+    }
+
+    // Matches the same RateLimitError -> 429 handling already established in
+    // signup and forgot-password: without this, requirePgRateLimit's throw fell
+    // through to the generic 500 branch below, so a client that legitimately
+    // hit the limiter (or a caller probing it) saw "Internal Server Error"
+    // with the internal stage/classification strings instead of a standard,
+    // retryable 429 -- wrong HTTP semantics and needless internal-detail
+    // exposure on a publicly-reachable, unauthenticated endpoint.
+    if (error instanceof RateLimitError) {
+      return Response.json(
+        { error: "Too many login attempts. Please wait and try again.", classification: "rate_limit_exceeded" },
+        { status: 429, headers: { "Retry-After": String(error.details?.retryAfterSeconds ?? 900) } }
+      );
     }
 
     return Response.json(

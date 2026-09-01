@@ -8,13 +8,13 @@ import {
   deactivateUser,
   reactivateUser,
 } from "@/services/user";
-import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { parseRequestBody, parseOrThrow, uuidSchema, identityEmailSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 
 const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
-  email: z.email().optional(),
+  email: identityEmailSchema.optional(),
   version: z.number().int().min(1),
 });
 

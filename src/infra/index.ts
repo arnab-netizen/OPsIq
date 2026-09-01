@@ -19,8 +19,7 @@ export { getStorageProvider, type StorageProvider, type StoredFile } from "./sto
 export { getScheduler, type SchedulerProvider, type ScheduleTaskInput, type TaskHandler } from "./scheduler";
 export { withIdempotency, type IdempotencyResult } from "./idempotency";
 export {
-  checkRateLimit,
-  requireRateLimit,
+  requirePgRateLimit,
   RateLimitError,
   LOGIN_RATE_LIMIT,
   MUTATION_RATE_LIMIT,

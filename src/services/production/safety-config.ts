@@ -17,6 +17,15 @@ export const PRODUCTION_CONFIG = {
     auditEventTtlDays: parseInt(process.env.AUDIT_EVENT_TTL_DAYS || "90"),
     lifecycleEventTtlDays: parseInt(process.env.LIFECYCLE_EVENT_TTL_DAYS || "365"),
     decisionLifecycleTtlDays: parseInt(process.env.DECISION_LIFECYCLE_TTL_DAYS || "30"),
+    // Far longer than any configured rate-limit window (the widest is 1 hour) --
+    // a bucket untouched this long has long since fully refilled and carries no
+    // useful state, so it's safe to prune. Needed because login/signup/password-reset
+    // key their PG-backed buckets by raw client IP + email (see
+    // src/infra/rate-limit.ts requirePgRateLimit), which is much higher-cardinality
+    // than the workspace/business-scoped keys the primitive was first used for, and
+    // checkPgRateLimit itself never deletes rows -- without this, rate_limit_buckets
+    // grows without bound under real public traffic.
+    rateLimitBucketTtlDays: parseInt(process.env.RATE_LIMIT_BUCKET_TTL_DAYS || "7"),
   },
 
   // Deduplication: detect duplicate decisions within N seconds
