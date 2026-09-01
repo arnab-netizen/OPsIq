@@ -14,7 +14,7 @@ authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 authorized_branch: "claude/opsiq-stage-7-loop-main"
 authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 
-# ─── Authorized evidence subject SHA (owner decision D-12) ───────────────────
+# ─── Authorized evidence subject SHA (owner decision D-13) ───────────────────
 # The single commit every Stage 7 evidence artifact must describe. An artifact
 # whose subject_sha is any other commit is refused with SUBJECT_SHA_NOT_AUTHORIZED,
 # because evidence captured against another commit does not describe this one.
@@ -27,43 +27,58 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 # and it proves nothing on its own — required_evidence below remains null, every
 # invariant remains PENDING, and Stage 7 remains open.
 #
-# D-12 supersedes D-11 (b8bace4fe13b5140ea03f86fc571888f52481b75). D-11 was the
-# merge commit of PR #283 (Vercel governance-only deployment control). D-12 advances
-# the subject to the merge commit of PR #285, which added permanent CI trigger
-# hardening and recovery controls. The governance-only deployment-control script
-# (scripts/vercel-ignore-build.mjs) remains active and enforced.
-# Authorized by the owner on 2026-08-07.
-closure_subject_sha: "036c526940f349d7d06e05635f29c064c78ba71b"
+# D-13 supersedes D-12 (036c526940f349d7d06e05635f29c064c78ba71b). D-12 was the
+# merge commit of PR #285 (permanent CI trigger hardening and recovery controls).
+# D-13 advances the subject to the merge commit of PR #386, which closed the
+# technical pre-beta readiness gate: identity email canonicalization, distributed
+# Postgres rate limiting for the public identity routes (login/signup/forgot-
+# password), a real login rate-limit info-disclosure fix (internal pipeline
+# stage/classification strings no longer leak to unauthenticated callers),
+# production health-check observability rewired onto the real Sentry-backed
+# capture path, and an A7.7 governance-scan integrity fix (the 20-gate scan was
+# silently reporting PASS on any CI runner without ripgrep installed).
+# Authorized by the owner on 2026-09-01.
+#
+# This also resolves the "D-13" naming inconsistency noted during Stage 7
+# reconciliation: commit 184d2515 (authored the same day D-12 was decided)
+# left forward-reference comments in scripts/lib/evidence-artifact.mjs and
+# .github/workflows/stage7-capture.yml naming "D-13" as the next subject-sha
+# decision, without an actual D-13 ever existing in this amendments ladder.
+# This is that decision — the label is now real, not a dangling placeholder.
+closure_subject_sha: "a2d7266018d74d45790c89427ef193a66bc367ad"
 closure_subject_sha_authorization:
-  decision: "D-12"
+  decision: "D-13"
   authorized_by: "owner"
-  authorized_date: "2026-08-07"
-  authorization_text: "AUTHORIZE_STAGE7_SUBJECT_SHA: 036c526940f349d7d06e05635f29c064c78ba71b"
-  supersedes: "D-11"
-  superseded_sha: "b8bace4fe13b5140ea03f86fc571888f52481b75"
-  pr_that_produced_sha: "285"
-  pr_head: "a1bcaeeabe22e216abdc15a7dd8041043bb5d6f9"
-  main_integration_run: "31152964750"
+  authorized_date: "2026-09-01"
+  authorization_text: "AUTHORIZE_STAGE7_SUBJECT_SHA: a2d7266018d74d45790c89427ef193a66bc367ad"
+  supersedes: "D-12"
+  superseded_sha: "036c526940f349d7d06e05635f29c064c78ba71b"
+  pr_that_produced_sha: "386"
+  pr_head: "c3d4d5ece09d878e5edaf7b14c1b3143909c6c63"
+  main_integration_run: "33491321460"
   main_integration_conclusion: "success"
-  main_integration_tested_sha: "036c526940f349d7d06e05635f29c064c78ba71b"
-  vercel_production_deployment: "dpl_14RgWwfdbpp6RWgzY3ncVqE25VQf"
+  main_integration_tested_sha: "a2d7266018d74d45790c89427ef193a66bc367ad"
+  vercel_production_deployment: "dpl_AJkuRQ2f7YdxHP4a1mSMo2xmSrnD"
   vercel_production_state: "READY"
-  vercel_production_commit_sha: "036c526940f349d7d06e05635f29c064c78ba71b"
+  vercel_production_commit_sha: "a2d7266018d74d45790c89427ef193a66bc367ad"
   rationale: >-
-    Merge commit of PR #285 (permanent CI trigger hardening and recovery controls),
-    simultaneously: current main HEAD; Main Integration green (run 31152964750,
-    success, 036c526940f349d7d06e05635f29c064c78ba71b tested); Vercel production
-    deployment dpl_14RgWwfdbpp6RWgzY3ncVqE25VQf READY at merge SHA
-    036c526940f349d7d06e05635f29c064c78ba71b (alias o-ps-iq.vercel.app).
-    Supersedes D-11 (b8bace4f). The governance-only deployment-control script
-    (scripts/vercel-ignore-build.mjs, wired via vercel.json ignoreCommand) remains
-    active and enforced.
+    Merge commit of PR #386 (technical pre-beta readiness gate: identity/session/
+    recovery-proof closure), simultaneously: current main HEAD; Main Integration
+    green (run 33491321460, success, a2d7266018d74d45790c89427ef193a66bc367ad
+    tested, full DB integration suite including Stage 6/Stage 7 acceptance
+    integrity gates); Vercel production deployment dpl_AJkuRQ2f7YdxHP4a1mSMo2xmSrnD
+    READY at merge SHA a2d7266018d74d45790c89427ef193a66bc367ad
+    (alias o-ps-iq.vercel.app). Supersedes D-12 (036c5269). The governance-only
+    deployment-control script (scripts/vercel-ignore-build.mjs, wired via
+    vercel.json ignoreCommand) remains active and enforced. Owner authorization
+    received verbatim: "AUTHORIZE_STAGE7_SUBJECT_SHA:
+    a2d7266018d74d45790c89427ef193a66bc367ad".
   # Recorded limitations. Stated rather than assumed, because an unverified claim
   # in a governance record is worse than an absent one.
   unverified:
     production_alias_binding: >-
       The alias o-ps-iq.vercel.app was reported as bound to deployment
-      dpl_14RgWwfdbpp6RWgzY3ncVqE25VQf by the Vercel API. Independent DNS
+      dpl_AJkuRQ2f7YdxHP4a1mSMo2xmSrnD by the Vercel API. Independent DNS
       resolution was not performed; the alias binding is recorded as API-reported only.
     git_commit_signature: >-
       Deployment-side Git commit signature verification was NOT checked.
@@ -503,6 +518,30 @@ amendments:
       (D-12, 2026-08-07, PR #285 merge). PR #285 introduced permanent CI trigger
       hardening and recovery controls. Stage 7 status PENDING, all invariants PENDING,
       required_evidence null — no closure evidence changed.
+  - id: A12
+    date: "2026-09-01"
+    applied_in: "claude/stage7-d13-subject-sha-and-d4"
+    authority: "owner decision D-13, authorized 2026-09-01"
+    summary: >-
+      closure_subject_sha updated from 036c526940f349d7d06e05635f29c064c78ba71b
+      (D-12, 2026-08-07, PR #285 merge) to a2d7266018d74d45790c89427ef193a66bc367ad
+      (D-13, 2026-09-01, PR #386 merge). PR #386 closed the technical pre-beta
+      readiness gate (identity/session/recovery-proof). Stage 7 status PENDING,
+      all invariants PENDING, required_evidence null — no closure evidence changed.
+  - id: A4
+    date: "2026-09-01"
+    applied_in: "claude/stage7-d13-subject-sha-and-d4"
+    authority: "owner decision D-4, authorized 2026-09-01"
+    summary: >-
+      Set s7_i11_environment_target to 'ci' (GitHub Actions CI). The 9-scenario
+      S7-I11 adversarial suite (src/__tests__/completion-factory/
+      stage7-evidence-artifact.test.ts, stage7-ed25519-hostile.test.ts) already
+      runs there on every push; no separate isolated environment was stood up.
+      Owner authorization received verbatim: "D-4: ci". Stage 7 status PENDING,
+      all invariants PENDING, required_evidence null — no closure evidence changed.
+      This amendment does not itself capture S7-I11 evidence; it only unblocks
+      dispatching that capture (still separately gated on closure_subject_sha
+      authorization and Stage 7 evidence-signing key provisioning).
 
 # Amendments identified during reconciliation that are NOT applied, because the owner
 # decision they depend on has not been issued. Listed so they cannot be silently lost.
@@ -513,23 +552,16 @@ deferred_amendments:
   - id: A2
     blocked_by_owner_decision: "D-3 (and D-2 for the migration half)"
     summary: "Rewrite S7-I3 executable_evidence. As written it names scripts/deployment-preflight.mjs 'against live environment', which that script cannot do: it reads local process.env and exits 0 on WARNING."
-  - id: A4
-    blocked_by_owner_decision: D-4
-    summary: "Add isolated_environment target for S7-I11. environment_model.staging_or_isolated_simulation names a purpose, not a target."
 
 # ─── S7-I11 isolated environment target (owner decision D-4) ──────────────────
-# Populated when owner makes decision D-4 and amendment A4 is applied.
+# Set by amendment A4 above (authorized 2026-09-01).
 # Rules enforced by scripts/lib/d4-governance-resolver.mjs:
 #   - Must be present and non-empty (TARGET_ABSENT if missing)
 #   - Must NOT be 'isolated_simulation' or 'staging_or_isolated_simulation'
 #     (those are purpose labels, not concrete targets — TARGET_IS_GENERIC if supplied)
 #   - Valid values: 'ci' (GitHub Actions CI), or a custom concrete identifier
-# To apply D-4:
-#   1. Remove the A4 entry from deferred_amendments above.
-#   2. Add A4 to the amendments list with the decision date and authority.
-#   3. Uncomment and populate s7_i11_environment_target below.
-#   4. Ensure the capture artifact's environment field matches this value exactly.
-# s7_i11_environment_target: <OWNER PROVIDES AFTER D-4 IS DECIDED>
+# Ensure the capture artifact's environment field matches this value exactly.
+s7_i11_environment_target: "ci"
 
 evidence_standard: docs/opsiq/evidence/stage-7/README.md
 
