@@ -287,3 +287,37 @@ describe("the 11 justified inline/tiny loaders were NOT touched by the loading-s
     });
   }
 });
+
+/**
+ * dashboard/inbox straggler — the same bg-white + theme-following-text P0 mechanism,
+ * found by the mandatory post-fix repo-wide scan on a file this whole closure pass had
+ * already migrated for an unrelated reason (its true/filtered empty-state split), which
+ * is exactly why it slipped through the earlier bg-white sweep: it wasn't in that sweep's
+ * baseline file list at all.
+ *
+ * Only the page's outer wrapper (`min-h-screen bg-white`) is the actual defect: it's the
+ * ancestor background behind the theme-following `EmptyState` primitive (`bg-muted/20`
+ * over whatever's beneath it, `text-foreground`/`text-muted-foreground` children) shown
+ * on the true/filtered-empty paths — composited dark-mode contrast measured at 1.42:1
+ * (title) / 1.73:1 (description) before the fix. The header bar and per-decision list-item
+ * card ALSO use a literal `bg-white`, but each pairs it with its own hardcoded
+ * `text-gray-900`/`text-gray-500` — the same self-consistent, not-broken pattern this PR's
+ * P1 audit already classified and left alone on ~19 other legacy files elsewhere in the
+ * app (see the "self-consistent" describe blocks above). Fixing only the wrapper — not
+ * those two — matches that established precedent exactly.
+ */
+describe("dashboard/inbox's outer wrapper uses bg-card, not the broken bg-white", () => {
+  const relPath = "src/app/(authenticated)/dashboard/inbox/inbox-client.tsx";
+
+  it("the page's outer min-h-screen wrapper (the EmptyState's ancestor background) uses bg-card", () => {
+    const source = read(relPath);
+    expect(source).toMatch(/<div className="min-h-screen bg-card">/);
+    expect(source).not.toMatch(/<div className="min-h-screen bg-white">/);
+  });
+
+  it("the header bar and decision-item card keep their own self-consistent bg-white + text-gray pairing (not this defect class, left alone by design)", () => {
+    const source = read(relPath);
+    expect(source).toMatch(/bg-white border-b border-gray-200 sticky top-0/);
+    expect(source).toMatch(/block bg-white border border-gray-200 rounded-lg/);
+  });
+});
