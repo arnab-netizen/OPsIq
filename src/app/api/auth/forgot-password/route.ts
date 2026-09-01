@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { parseRequestBody, identityEmailSchema } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { requireRateLimit, RateLimitError, PASSWORD_RESET_RATE_LIMIT } from "@/infra/rate-limit";
+import { requirePgRateLimit, RateLimitError, PASSWORD_RESET_RATE_LIMIT } from "@/infra/rate-limit";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
 import { ValidationError } from "@/infra/errors";
@@ -36,8 +36,8 @@ export const POST = async (request: NextRequest) => {
     const { email } = await parseRequestBody(request, forgotPasswordSchema);
 
     const ip = request.headers.get("x-forwarded-for") ?? "unknown";
-    requireRateLimit(`password-reset:${ip}`, PASSWORD_RESET_RATE_LIMIT);
-    requireRateLimit(`password-reset:${email}`, PASSWORD_RESET_RATE_LIMIT);
+    await requirePgRateLimit(`password-reset:${ip}`, PASSWORD_RESET_RATE_LIMIT);
+    await requirePgRateLimit(`password-reset:${email}`, PASSWORD_RESET_RATE_LIMIT);
 
     const user = await db.user.findUnique({ where: { email } });
 

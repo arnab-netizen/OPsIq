@@ -4,7 +4,7 @@ import { parseRequestBody, identityEmailSchema } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { UnauthorizedError } from "@/infra/errors";
-import { requireRateLimit, RateLimitError, LOGIN_RATE_LIMIT } from "@/infra/rate-limit";
+import { requirePgRateLimit, RateLimitError, LOGIN_RATE_LIMIT } from "@/infra/rate-limit";
 import { getSessionCookieName, getSessionDurationMs } from "@/services/auth";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
@@ -37,8 +37,8 @@ export const POST = async (request: NextRequest) => {
 
     // Rate limit by IP + email to prevent brute force
     stage = "rate_limit";
-    requireRateLimit(`login:${ip}`, LOGIN_RATE_LIMIT);
-    requireRateLimit(`login:${email}`, LOGIN_RATE_LIMIT);
+    await requirePgRateLimit(`login:${ip}`, LOGIN_RATE_LIMIT);
+    await requirePgRateLimit(`login:${email}`, LOGIN_RATE_LIMIT);
     console.log("[LOGIN] RATE_LIMIT_OK");
 
     // Database initialization - ensure DB is ready before operations
@@ -204,7 +204,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Matches the same RateLimitError -> 429 handling already established in
-    // signup and forgot-password: without this, requireRateLimit's throw fell
+    // signup and forgot-password: without this, requirePgRateLimit's throw fell
     // through to the generic 500 branch below, so a client that legitimately
     // hit the limiter (or a caller probing it) saw "Internal Server Error"
     // with the internal stage/classification strings instead of a standard,

@@ -1,5 +1,5 @@
 import { TooManyRequestsError } from "@/infra/errors";
-import { logger } from "@/infra/logger";
+import { checkPgRateLimit } from "@/infra/rate-limiter-pg";
 
 export class RateLimitError extends TooManyRequestsError {
   constructor(retryAfterSeconds: number) {
@@ -11,67 +11,39 @@ export class RateLimitError extends TooManyRequestsError {
   }
 }
 
-interface RateLimitEntry {
-  count: number;
-  windowStart: number;
-}
-
 interface RateLimitConfig {
   windowMs: number;
   maxAttempts: number;
 }
 
-const store = new Map<string, RateLimitEntry>();
-
-let lastCleanup = Date.now();
-const CLEANUP_INTERVAL_MS = 60_000;
-
-function cleanup(windowMs: number): void {
-  const now = Date.now();
-  if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
-  lastCleanup = now;
-  for (const [key, entry] of store) {
-    if (now - entry.windowStart > windowMs * 2) {
-      store.delete(key);
-    }
-  }
-}
-
-export function checkRateLimit(
-  key: string,
-  config: RateLimitConfig
-): { allowed: boolean; remaining: number; retryAfterSeconds: number } {
-  const now = Date.now();
-  cleanup(config.windowMs);
-
-  const entry = store.get(key);
-
-  if (!entry || now - entry.windowStart > config.windowMs) {
-    store.set(key, { count: 1, windowStart: now });
-    return { allowed: true, remaining: config.maxAttempts - 1, retryAfterSeconds: 0 };
-  }
-
-  entry.count++;
-
-  if (entry.count > config.maxAttempts) {
-    const retryAfterSeconds = Math.ceil(
-      (entry.windowStart + config.windowMs - now) / 1000
-    );
-    logger.warn("Rate limit exceeded", { key, count: entry.count, maxAttempts: config.maxAttempts });
-    return { allowed: false, remaining: 0, retryAfterSeconds };
-  }
-
-  return {
-    allowed: true,
-    remaining: config.maxAttempts - entry.count,
-    retryAfterSeconds: 0,
-  };
-}
-
-export function requireRateLimit(key: string, config: RateLimitConfig): void {
-  const result = checkRateLimit(key, config);
+/**
+ * Distributed, serverless-safe rate limit check for public identity endpoints
+ * (login, signup, forgot-password, reset-password). Backed by checkPgRateLimit
+ * (S7-DC11) instead of an in-process Map: a Map-based limiter is
+ * instance-local, so on Vercel every concurrent/cold-started instance sees its
+ * own empty bucket and the effective limit becomes N x the configured value
+ * for N concurrent instances -- the exact split-brain gap that let a
+ * pre-beta audit trivially exceed the configured attempt ceiling.
+ *
+ * windowMs/maxAttempts (fixed-window semantics) are converted to the token
+ * bucket's continuous capacity/refillPerSecond: capacity = maxAttempts,
+ * refillPerSecond = maxAttempts / (windowMs / 1000). This also removes the
+ * fixed-window "burst at the window boundary" artifact of the old
+ * implementation (2x maxAttempts obtainable by an attacker who times requests
+ * either side of the window edge).
+ *
+ * Fails open on DB error (see checkPgRateLimit) -- rate limiting is
+ * best-effort abuse control, not the security gate; auth itself is DB-backed
+ * and fails closed independently.
+ */
+export async function requirePgRateLimit(key: string, config: RateLimitConfig): Promise<void> {
+  const windowSeconds = config.windowMs / 1000;
+  const result = await checkPgRateLimit(key, {
+    capacity: config.maxAttempts,
+    refillPerSecond: config.maxAttempts / windowSeconds,
+  });
   if (!result.allowed) {
-    throw new RateLimitError(result.retryAfterSeconds);
+    throw new RateLimitError(result.retryAfterSeconds ?? Math.ceil(windowSeconds));
   }
 }
 

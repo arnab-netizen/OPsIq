@@ -283,11 +283,11 @@ const handleSignup = async (request: NextRequest) => {
 export const POST = async (request: NextRequest) => {
   const clientIp = request.headers.get("x-forwarded-for") ?? "unknown";
   if (clientIp !== "unknown") {
-    const { requireRateLimit, RateLimitError, LOGIN_RATE_LIMIT } = await import(
+    const { requirePgRateLimit, RateLimitError, LOGIN_RATE_LIMIT } = await import(
       "@/infra/rate-limit"
     );
     try {
-      requireRateLimit(`signup:${clientIp}`, LOGIN_RATE_LIMIT);
+      await requirePgRateLimit(`signup:${clientIp}`, LOGIN_RATE_LIMIT);
     } catch (error) {
       if (error instanceof RateLimitError) {
         return Response.json(
