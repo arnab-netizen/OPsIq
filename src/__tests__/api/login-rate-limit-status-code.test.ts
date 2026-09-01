@@ -27,7 +27,7 @@ function makeReq(email: string, ip?: string): Request {
 }
 
 describe("login route rate limiting (status code)", () => {
-  it("returns 429 (not 500) once the login rate limit is exceeded for one IP+email pair", async () => {
+  it("[db] returns 429 (not 500) once the login rate limit is exceeded for one IP+email pair", async () => {
     const ip = "203.0.113.201"; // TEST-NET-3, unique to this test
     const email = "login-rate-limit-status-code@example.com";
 
@@ -50,7 +50,7 @@ describe("login route rate limiting (status code)", () => {
     expect(sawStatus).toBe(429);
   });
 
-  it("a fresh distinct IP+email pair is not immediately rate-limited", async () => {
+  it("[db] a fresh distinct IP+email pair is not immediately rate-limited", async () => {
     const res = await POST(
       makeReq("login-rate-limit-fresh@example.com", "198.51.100.201") as never
     );
