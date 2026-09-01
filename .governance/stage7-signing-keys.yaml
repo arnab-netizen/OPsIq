@@ -30,7 +30,7 @@ version: "1"
 keys:
   - key_id: "stage7-evidence-v1"
     algorithm: "Ed25519"
-    status: "pending_owner_provisioning"
+    status: "active"
     note: >
       Production signing key for Stage 7 evidence artifacts.
       AUTH_SHA model: the capture workflow reads this registry from the AUTH_SHA
@@ -48,6 +48,6 @@ keys:
            as a repository secret so the capture workflow can fire repository_dispatch.
       Artifacts captured before provisioning are permanently UNVERIFIED and cannot
       back a PROVEN invariant.
-    # public_key_spki_der_base64: <OWNER PROVIDES THIS — SEE GENERATION INSTRUCTIONS ABOVE>
-    added_by: "pending_owner_action"
-    not_before: "pending"
+    public_key_spki_der_base64: "MCowBQYDK2VwAyEAUz2VS2kBVF1PhY7HXBFyohGspFRfuq1p/HTjZAiUS/U="
+    added_by: "arnab-netizen"
+    not_before: "2026-09-01"
