@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { db, withStatementTimeout } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
-import { parseRequestBody } from "@/lib/validation";
+import { parseRequestBody, identityEmailSchema } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { BadRequestError, ConflictError } from "@/infra/errors";
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const signupSchema = z.object({
-  email: z.email("Invalid email address"),
+  email: identityEmailSchema,
   password: z.string().min(8, "Password must be at least 8 characters"),
   // Trimmed before length checks, so a whitespace-only name is rejected as
   // empty rather than accepted verbatim. 100 matches the bound already

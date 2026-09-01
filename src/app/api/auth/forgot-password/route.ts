@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { randomBytes, createHash } from "crypto";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { parseRequestBody } from "@/lib/validation";
+import { parseRequestBody, identityEmailSchema } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { requireRateLimit, RateLimitError, PASSWORD_RESET_RATE_LIMIT } from "@/infra/rate-limit";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const forgotPasswordSchema = z.object({
-  email: z.email(),
+  email: identityEmailSchema,
 });
 
 /** One hour — long enough for a real user to act on the email, short enough to bound the exposure window. */

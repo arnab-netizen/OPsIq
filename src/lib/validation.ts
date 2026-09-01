@@ -48,6 +48,24 @@ export async function parseRequestBody<T>(
 
 export const uuidSchema = z.string().uuid();
 
+// Canonical identity-email schema. `User.email` carries only a plain,
+// case-sensitive `@unique` constraint in the schema (no functional
+// `lower(email)` index) — Postgres therefore treats "Test@Example.com" and
+// "test@example.com" as two distinct rows. Application-layer normalization
+// is the sole guarantee against case-variant (or whitespace-padded)
+// duplicate identities, so every route that creates, updates, or looks up a
+// User by email MUST validate the field through this schema — never a bare
+// `z.email()`. Trim + lowercase run BEFORE the email-format check (via
+// `.pipe`), so a padded address like " test@example.com " is normalized and
+// accepted as the same identity rather than rejected outright, and the
+// value the handler receives downstream is always the canonical form that
+// is safe to persist or query.
+export const identityEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.email("Invalid email address"));
+
 export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).default(0),

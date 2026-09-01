@@ -4,11 +4,11 @@ import { createUser, listUsers } from "@/services/user";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { withIdempotency } from "@/infra/idempotency";
 import { z } from "zod/v4";
-import { paginationSchema } from "@/lib/validation";
+import { paginationSchema, identityEmailSchema } from "@/lib/validation";
 import { UnauthorizedError } from "@/infra/errors";
 
 const createUserSchema = z.object({
-  email: z.email(),
+  email: identityEmailSchema,
   name: z.string().min(1).optional(),
 });
 
