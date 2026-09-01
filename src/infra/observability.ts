@@ -167,6 +167,7 @@ export function captureError(error: unknown, context: ObservabilityContext = {})
       JSON.stringify({
         observability: "error",
         category,
+        timestamp: new Date().toISOString(),
         route: context.route,
         userId: context.userId,
         workspaceId: context.workspaceId,
