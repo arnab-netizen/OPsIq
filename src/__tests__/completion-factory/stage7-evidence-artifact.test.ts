@@ -300,14 +300,18 @@ describe("Stage 7 evidence — an interactive session cannot produce evidence", 
   });
 
   it("a CI-produced artifact is UNVERIFIED until provenance is checked, never ACCEPTED", () => {
-    const { dir } = captureArtifact();
+    // Unsigned (signature: null → ABSENT), so this claim holds regardless of
+    // whether the production key registry is active: explainAcceptance()
+    // reports "provenance not checked" independently of the signature reason,
+    // and an ABSENT signature can never reach ACCEPTED either way.
+    const { dir } = captureArtifact({ signed: false });
 
-    const permissive = validate(dir);
+    const permissive = validate(dir, { key: false });
     expect(permissive.status).toBe(0);
     expect(permissive.stdout).toContain("UNVERIFIED");
     expect(permissive.stdout).toContain("0 accepted");
 
-    const strict = validate(dir, { requireAccepted: true });
+    const strict = validate(dir, { requireAccepted: true, key: false });
     expect(strict.status).toBe(1);
     expect(strict.stdout).toContain("provenance not checked");
   });
@@ -675,10 +679,12 @@ describe("Stage 7 evidence — hostile audit", () => {
   });
 
   it("attack: superseding an artifact that does not exist", () => {
-    const { artifact } = captureArtifact();
+    // Unsigned (signature: null → ABSENT, never a validation "violation"), so the
+    // chain check is reached on its own merits rather than being skipped because
+    // an unrelated signature violation already short-circuits the chain-check
+    // pass — true regardless of whether the production key registry is active.
+    const { artifact } = captureArtifact({ signed: false });
     const forged = rederiveId({ ...artifact, supersedes: "evd_" + "a".repeat(32) });
-    // Validated without the signing key, so the chain check is reached on its own
-    // merits rather than riding on the signature failure the tamper also causes.
     const result = validate(stage(forged), { key: false });
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("which is not present in");
@@ -1038,10 +1044,16 @@ describe("Stage 7 AUTH_SHA model — validator --from-auth-sha-registry flag", (
   });
 
   it("treats an artifact as UNVERIFIED when the registry at AUTH_SHA has no active keys", () => {
-    // Use HEAD as authorization_manifest_sha. The repo's key registry has
-    // status: pending_owner_provisioning at HEAD → no active keys → UNCHECKED → UNVERIFIED.
-    const headSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
-    const input = { ...baseInput(), authorization_manifest_sha: headSha };
+    // Use a fixed, permanently-immutable historical commit as authorization_manifest_sha
+    // rather than the branch's own HEAD: HEAD's registry state depends on what this
+    // branch or main has done since (it may itself be the commit that activates the
+    // production key), which would make this assertion depend on unrelated repo history.
+    // This is the merge commit of PR #387 (96685e88), confirmed to carry
+    // status: pending_owner_provisioning in .governance/stage7-signing-keys.yaml at
+    // that exact commit — no active keys → UNCHECKED → UNVERIFIED, and immutable
+    // because git history never changes underneath an already-merged commit.
+    const knownPendingRegistrySha = "96685e88a57611861b4afa436c0d109fe775d92a";
+    const input = { ...baseInput(), authorization_manifest_sha: knownPendingRegistrySha };
     const artifact = callLib("buildEvidenceArtifact", [input, { signingKey: SIGNING_KEY_PEM }]) as Artifact;
     const dir = stage(artifact);
     const result = runNode(validatorScript, ["--dir", dir, "--from-auth-sha-registry"]);
