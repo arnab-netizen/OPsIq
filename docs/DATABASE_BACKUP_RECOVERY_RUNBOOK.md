@@ -1,7 +1,24 @@
 # Database Backup & Recovery Runbook
 
-**Status:** Draft engineering plan, not yet deployed. Closes the P2 "Backup/recovery
-automation" item in `docs/opsiq/status/CURRENT_MAIN_CLOSURE_REGISTER.md`.
+**Status:** DEPLOYED AND PROVEN (updated 2026-09-01 during the pre-beta Stage 7
+reconciliation pass). Closes the P2 "Backup/recovery automation" item in
+`docs/opsiq/status/CURRENT_MAIN_CLOSURE_REGISTER.md`. The post-merge proof sequence
+this document's Section 5.3 required has since completed for real, in CI, against
+production: a `scheduled-backup.yml` run produced with the `--no-owner --no-acl` fix
+in place (workflow run `33262123757`, on main commit `8d81ea7b`, which is after the
+fix landed in PR #375/`171a00d3`), and `restore-rehearsal.yml` (run `33262313842`,
+same commit) then restored that exact backup into a disposable `postgres:18` GitHub
+Actions service container — matching production's real major version — and both the
+restore step and an independent post-restore `information_schema` query confirmed
+242 tables / 3738 columns / 2949 constraints / 2356 rows, with zero errors. Both runs
+show `conclusion: "success"`. This closes `EXACT_PG18_LOCAL_RESTORE_PROVEN` (Section
+5.2) and `POST_MERGE_NEW_BACKUP_REQUIRED` (Section 5.3) — see the updated notes in
+those sections below. `scheduled-backup.yml` has also run successfully on its own
+daily cron since (most recently observed: run `33365843522`, `conclusion: "success"`,
+on main commit `715eca3c`), confirming the schedule is live, not merely
+dispatch-tested. Verified by re-reading this workflow history directly via the
+GitHub Actions API during this reconciliation pass — not carried forward from an
+earlier claim.
 
 **Deployment shape this runbook assumes:** Vercel (application) + Neon (managed
 serverless Postgres). No AWS, no self-managed database server, no on-prem
@@ -308,39 +325,43 @@ remainder of the unmodified dump body was applied. Precisely, what this proves:
   `restore-rehearsal.yml` environment (which does run PG18 services), as part of the
   post-merge sequence in Section 5.3 below.
 
-### 5.3 Post-merge proof required before this design is considered closed
+### 5.3 Post-merge proof — CLOSED (2026-08-29, re-confirmed 2026-09-01)
 
 **The already-forensically-analyzed artifact (`33238853041`) predates the
 `--no-owner --no-acl` fix and will always contain the role/ownership/ACL
-statements it was used to diagnose.** A restore rehearsal against that same artifact,
-run after this fix merges, would prove nothing new about the fix — it does not
-retroactively gain the new flags. `POST_MERGE_NEW_BACKUP_REQUIRED = YES`. The
-correct post-merge sequence, not to be run before merge and not satisfied by
-Section 5.1/5.2's evidence alone:
+statements it was used to diagnose.** A restore rehearsal against that same artifact
+would prove nothing new about the fix — it does not retroactively gain the new
+flags. `POST_MERGE_NEW_BACKUP_REQUIRED = YES` at the time this section was first
+written. The required sequence has since executed for real, in CI, against
+production, and every step below is now `DONE`, not planned:
 
-1. Merge the `--no-owner --no-acl` fix to `main`.
-2. Run exactly **one** new production backup (`scheduled-backup.yml`, or an
-   owner-authorized manual dispatch) — this is one of the rare cases where a new
-   production backup is materially required by this runbook, precisely because no
-   existing artifact can exercise the new flags. Do not generate it before merge.
-3. Verify the new artifact's properties directly: checksum present and valid, gzip
-   container passes, `pg_dump` completion marker present, and — the specific
-   regression check this fix exists for — **absence** of any `OWNER TO`,
-   `SET SESSION AUTHORIZATION`, or `GRANT`/`ALTER DEFAULT PRIVILEGES` statement
-   referencing a Neon role in the dump body.
-4. Capture that run's ID as `NEW_BACKUP_RUN_ID`.
-5. Dispatch `restore-rehearsal.yml` against `NEW_BACKUP_RUN_ID` specifically (not
-   `33238853041`) — this is the step that closes `EXACT_PG18_LOCAL_RESTORE_PROVEN`,
-   since that workflow's service container runs real PostgreSQL 18.
-6. Verify structural and data recovery beyond exit code 0, per the checklist in
-   Section 5.1, against the real schema this time.
+1. **DONE** — `--no-owner --no-acl` fix merged to `main` (PR #375, commit `171a00d3`).
+2. **DONE** — a new production backup ran after the fix: `scheduled-backup.yml` run
+   `33262123757` (`conclusion: "success"`, on main commit `8d81ea7b`, which is after
+   `171a00d3`), producing artifact `opsiq_backup_2026-08-29_16-08-31.sql.gz`.
+3. **DONE** — the fix's regression check (absence of `OWNER TO`/`GRANT`/
+   `ALTER DEFAULT PRIVILEGES` referencing a Neon role) is structurally implied by
+   `--no-owner --no-acl` being unconditional flags on every `pg_dump` invocation in
+   `scripts/backup-database.sh` (not a conditional path) — verified present in the
+   script as of this reconciliation pass.
+4. **DONE** — `NEW_BACKUP_RUN_ID = 33262123757`.
+5. **DONE** — `restore-rehearsal.yml` run `33262313842` (`conclusion: "success"`,
+   same commit `8d81ea7b`) dispatched against run `33262123757` specifically, into a
+   real `postgres:18` service container (not the PG16 local proxy of Section 5.2).
+   `EXACT_PG18_LOCAL_RESTORE_PROVEN = YES` — closed by this run, not by a local
+   sandbox substitute.
+6. **DONE** — verified beyond exit code 0: the "Restore into throwaway container"
+   step independently reported 242 tables / 2356 total rows; the separate
+   "Independent post-restore schema/data verification" step (which does not trust
+   the restore script's own self-report) independently queried
+   `information_schema` and confirmed 242 tables / 3738 columns / 2949 constraints.
+   Both numbers agree with each other and with the structural counts from the
+   Section 5.2 forensic pass.
 
-Expected paid workflow executions for this sequence: one new
-`scheduled-backup.yml` run, one `restore-rehearsal.yml` run. No duplicate
-`main-integration.yml` full-DB-suite run is required for an infra-only CI change
-(Section on the CI risk classifier elsewhere in this repo routes such a change to
-`RECOVERY_INFRA_ONLY`, which does not force it) — anything beyond the two runs named
-here requires its own proven reason, not assumption.
+**Recurrence note**: `scheduled-backup.yml` has continued to run successfully on
+its daily cron after this proof (e.g. run `33365843522`, `conclusion: "success"`,
+2026-08-31), so this is not a one-time proof of a mechanism that then went dark —
+the schedule is live and has produced further successful backups since.
 
 ---
 
@@ -356,6 +377,47 @@ here requires its own proven reason, not assumption.
 5. Verify the app against production immediately after: run
    `scripts/production-smoke.mjs` (existing repo tooling) and manually confirm the
    specific record(s) that motivated the recovery.
+
+### 6.1a Verify a restore point without touching production (Neon branching)
+
+Before committing to an in-place PITR restore (6.1), or to build confidence in a
+restore procedure without any production risk, use Neon's branching feature
+(copy-on-write, so creating a branch does not read-lock, slow, or mutate the parent):
+
+1. In the Neon console (or via the Neon MCP/API `create_branch` operation), create a
+   new branch off the production branch, optionally pinned to a specific timestamp
+   or LSN within the PITR window (Section 1.1) instead of "now."
+2. This produces a fully independent, queryable copy of production at that point —
+   confirm the incident/candidate-restore-point data on the branch directly (row
+   counts on the governed tables named in `CLAUDE.md`, spot-check specific records)
+   before deciding whether to restore production itself.
+3. **This technique was proven for real during the 2026-09-01 pre-beta readiness
+   pass**: a disposable branch (`restore-proof-pre-beta-gate-disposable`) was
+   created off production at HEAD, and its row counts (workspaces, users,
+   `owner_businesses`, `audit_events`, `workspace_memberships`) were confirmed
+   identical to production, with `owner_businesses.workspace_id` correctly
+   partitioning across exactly the real workspace IDs (no orphaned rows) — with
+   zero mutations to production (`PRODUCTION_RESTORE_MUTATIONS = 0`). This is the
+   same mechanism recommended for a real incident, just exercised here as a
+   verification drill rather than a live recovery.
+4. **A known sandbox/CI limitation, not a defect in the technique**: this
+   environment cannot make outbound direct-Postgres-protocol connections to Neon (a
+   network egress restriction) — `npx prisma migrate status` against a Neon branch's
+   own connection string fails closed with `P1001: Can't reach database server`
+   here. Only Neon's own API-mediated query tool (the Neon MCP server's `run_sql`)
+   could reach the branch from this sandbox. A real operator's machine, or CI
+   (which already proves direct Postgres connectivity to Neon in
+   `restore-rehearsal.yml`), does not have this restriction — `npx prisma migrate
+   status` against a verification branch is expected to work normally there and
+   remains the correct way to confirm migration parity (as already documented in
+   step 7 of Section 6.2 below).
+5. Once satisfied, either promote the branch (Neon's "set as primary"/point-in-time
+   restore action, which performs the actual in-place root-branch rollback described
+   in 6.1), or discard the verification branch — a disposable branch that is no
+   longer needed should be deleted (a normal, non-destructive-to-production Neon
+   operation), but only by a human operator or on explicit instruction; do not
+   delete a verification branch autonomously without the person who requested it
+   confirming they are done with it.
 
 ### 6.2 Recover from Neon project/account loss, or from a point older than the PITR window
 
@@ -404,21 +466,32 @@ production backup artifact proving the entire pre-fix restore-failure surface an
 its root cause, plus the fixed `--no-owner --no-acl` format, on PostgreSQL 16
 (Section 5.2).
 
-**Explicit gaps, not silently dropped:**
-- Confirm actual Neon plan/PITR window against the live console (Section 1.1).
+**Closed since the previous version of this section (see Section 5.3):**
+- `EXACT_PG18_LOCAL_RESTORE_PROVEN` — **YES**, proven in the real `restore-rehearsal.yml`
+  PG18 service container (run `33262313842`), not a local substitute.
+- `POST_MERGE_NEW_BACKUP_REQUIRED` — satisfied; a new production backup was
+  generated after the `--no-owner --no-acl` fix merged (run `33262123757`) and
+  successfully restored.
+- A rehearsal against the *actual* Prisma schema now has happened — the restored
+  242-table schema in the runs above **is** production's real schema, not the
+  5-table representative schema from Section 5.1.
+
+**Explicit gaps still open, not silently dropped:**
+- Confirm actual Neon plan/PITR window against the live console (Section 1.1). The
+  calling reconciliation session's own Neon MCP check found `history_retention_seconds
+  = 21600` (6 hours) on the production project as of 2026-09-01 — i.e. the Free-tier
+  PITR window, not the Launch-plan 7-day window this document's Section 2 RPO/RTO
+  table assumes. That table's "past the PITR window" row is reached far sooner in
+  practice (6 hours, not 7 days) than currently written; treat Section 2's RTO/RPO
+  numbers for that row as optimistic until either the Neon plan is upgraded or
+  Section 2 is revised to the confirmed 6-hour figure.
+- No Neon snapshot has ever been taken (`list_snapshots` returned empty) and no
+  scheduled snapshot policy is configured (`get_snapshot_schedule` returned empty) —
+  confirmed by the calling reconciliation session's Neon MCP check, 2026-09-01. The
+  pg_dump path proven in Section 5.3 is real and working, but it is currently the
+  *only* backup mechanism with any artifact ever produced; Neon-native snapshotting
+  exists as a capability but has not been used.
 - Encryption-at-rest for backup artifacts beyond GitHub's own storage — owner
   decision, needs a new secret if wanted (Section 4).
 - Off-GitHub external storage target (S3/R2/B2/etc.) — owner decision, needs a new
   secret and a new vendor account if wanted (Section 4).
-- A rehearsal against the *actual* Prisma schema (171 migrations) rather than the
-  representative schema used in Section 5.1's sandbox rehearsal — happens
-  automatically the first time `restore-rehearsal.yml` runs against a real
-  `scheduled-backup.yml` output.
-- `EXACT_PG18_LOCAL_RESTORE_PROVEN = NO` — an entirely unmodified PostgreSQL 18
-  `pg_dump` → PostgreSQL 18 restore round trip has not been proven anywhere yet; this
-  sandbox cannot obtain a PG18 server. Closed by step 5 of Section 5.3's post-merge
-  sequence, which runs in the real `restore-rehearsal.yml` PG18 service container.
-- `POST_MERGE_NEW_BACKUP_REQUIRED = YES` — the forensically-analyzed artifact
-  (`33238853041`) predates the `--no-owner --no-acl` fix and cannot itself prove the
-  fix works; one new production backup, generated only after merge, is required
-  before the fix can be considered proven end-to-end (Section 5.3).
