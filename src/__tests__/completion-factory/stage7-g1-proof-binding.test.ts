@@ -45,8 +45,8 @@ const { privateKey: SIGNING_KEY } = generateKeyPairSync('ed25519', {
   publicKeyEncoding: { type: 'spki', format: 'pem' },
 });
 const SUBJECT_SHA = "f129fb8633b38230c16fb44aed8f5f90c8f4b8a9";
-/** Owner decision D-12, 2026-08-07: the one commit Stage 7 evidence may describe. */
-const AUTHORIZED_SUBJECT_SHA = "036c526940f349d7d06e05635f29c064c78ba71b";
+/** Owner decision D-13, 2026-09-01: the one commit Stage 7 evidence may describe. */
+const AUTHORIZED_SUBJECT_SHA = "a2d7266018d74d45790c89427ef193a66bc367ad";
 
 const CANONICAL_IDS = Array.from({ length: 16 }, (_, i) => `S7-I${i + 1}`);
 
@@ -839,12 +839,14 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
   });
 
   /**
-   * D-12 replaced the D-11 assertion (PR #283 merge SHA b8bace4f). PR #285
-   * introduced permanent CI trigger hardening and recovery controls, making 036c5269
-   * the stable production subject; the owner authorized 036c5269 as the new subject
-   * SHA. The guarantee worth holding is narrower and stricter: exactly one commit
-   * is authorized, it is the one the owner named, and authorizing it moved nothing
-   * else in the contract.
+   * D-13 replaced the D-12 assertion (PR #285 merge SHA 036c5269). PR #386
+   * closed the technical pre-beta readiness gate (identity email canonicalization,
+   * distributed Postgres rate limiting, a login rate-limit info-disclosure fix,
+   * production health-check observability, and an A7.7 governance-scan integrity
+   * fix), making a2d72660 the stable production subject; the owner authorized
+   * a2d72660 as the new subject SHA. The guarantee worth holding is narrower and
+   * stricter: exactly one commit is authorized, it is the one the owner named,
+   * and authorizing it moved nothing else in the contract.
    */
   it("the live contract authorizes exactly the owner-named subject SHA", () => {
     const raw = YAML.load(
@@ -914,14 +916,14 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
     const auth = raw.closure_subject_sha_authorization as Record<string, unknown>;
-    expect(auth.decision).toBe("D-12");
+    expect(auth.decision).toBe("D-13");
     // The SHA the owner authorized must be the SHA CI tested and the SHA production
     // deployed. A record that names three different commits records nothing.
     expect(raw.closure_subject_sha).toBe(AUTHORIZED_SUBJECT_SHA);
     expect(auth.main_integration_tested_sha).toBe(AUTHORIZED_SUBJECT_SHA);
     expect(auth.vercel_production_commit_sha).toBe(AUTHORIZED_SUBJECT_SHA);
-    expect(auth.main_integration_run).toBe("31152964750");
-    expect(auth.vercel_production_deployment).toBe("dpl_14RgWwfdbpp6RWgzY3ncVqE25VQf");
+    expect(auth.main_integration_run).toBe("33491321460");
+    expect(auth.vercel_production_deployment).toBe("dpl_AJkuRQ2f7YdxHP4a1mSMo2xmSrnD");
     // The limitations must stay recorded, not quietly dropped once inconvenient.
     const unverified = auth.unverified as Record<string, string>;
     expect(unverified.production_alias_binding).toMatch(/API-reported only/);
