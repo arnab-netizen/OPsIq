@@ -2,24 +2,26 @@
  * Factory Stage 7 — Ed25519 signing hostile audit
  *
  * Nine adversarial failure scenarios that must each fail safely, visibly, and
- * recoverably. All keys are ephemeral: generated at suite initialisation, never
- * written to disk or committed. Production signing key generation is a later
- * owner action.
+ * recoverably. Tested directly against the pure signing library
+ * (scripts/lib/evidence-artifact.mjs) with explicitly supplied ephemeral key
+ * material — never through the CLI validator, whose key registry precedence
+ * (real production registry over any test-supplied key, once the registry is
+ * active) is covered separately in stage7-registry-precedence.test.ts. All keys
+ * here are ephemeral: generated at suite initialisation, never written to disk
+ * or committed. Production signing key generation is a separate, owner-only
+ * action recorded in .governance/stage7-signing-keys.yaml.
  *
  * Design and threat model: docs/opsiq/evidence/stage-7/EVIDENCE_ARTIFACT_SPEC.md
  * Key registry: .governance/stage7-signing-keys.yaml
  */
 
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { generateKeyPairSync } from "crypto";
 import { spawnSync } from "child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { join } from "path";
-import { tmpdir } from "os";
 
 const root = join(__dirname, "..", "..", "..");
 const libPath = join(root, "scripts", "lib", "evidence-artifact.mjs");
-const validatorScript = join(root, "scripts", "validate-evidence-artifacts.mjs");
 
 // ─── Ephemeral key pairs ──────────────────────────────────────────────────────
 
@@ -37,17 +39,7 @@ const { privateKey: ATTACKER_PRIVATE_KEY, publicKey: ATTACKER_PUBLIC_KEY } =
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const tempDirs: string[] = [];
-afterAll(() => {
-  for (const d of tempDirs) rmSync(d, { recursive: true, force: true });
-});
-
-function makeTempDir(): string {
-  const d = mkdtempSync(join(tmpdir(), "s7-hostile-"));
-  tempDirs.push(d);
-  return d;
-}
-
+/** Evaluate a pure library export in a subprocess, so the shipped .mjs is what runs. */
 function callLib(exportName: string, argsJson: unknown[]): unknown {
   const script = `
     import * as lib from ${JSON.stringify(libPath)};
@@ -65,23 +57,6 @@ function callLib(exportName: string, argsJson: unknown[]): unknown {
   });
   if (result.status !== 0) throw new Error(`${exportName} threw: ${result.stderr}`);
   return JSON.parse(result.stdout);
-}
-
-function runValidator(dir: string, signingKey: string | null): { status: number | null; stdout: string; stderr: string } {
-  const result = spawnSync("node", [validatorScript, "--dir", dir], {
-    encoding: "utf8",
-    cwd: root,
-    env: {
-      PATH: process.env.PATH ?? "",
-      HOME: process.env.HOME ?? "",
-      ...(signingKey ? { EVIDENCE_SIGNING_KEY: signingKey } : {}),
-    },
-  });
-  return {
-    status: result.status,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  };
 }
 
 function baseInput() {
@@ -115,18 +90,22 @@ function buildArtifact(signingKey: string | null, opts: Record<string, unknown> 
   return callLib("buildEvidenceArtifact", [{ ...baseInput(), ...opts }, signOpts]) as Record<string, unknown>;
 }
 
-function stageArtifact(artifact: Record<string, unknown>): string {
-  const dir = makeTempDir();
-  const outDir = join(dir, "artifacts");
-  mkdirSync(outDir, { recursive: true });
-  const id = artifact.artifact_id as string;
-  writeFileSync(join(outDir, `${id}.json`), JSON.stringify(artifact, null, 2), "utf8");
-  return outDir;
-}
-
 function rederiveId(artifact: Record<string, unknown>): Record<string, unknown> {
   const id = callLib("computeArtifactId", [artifact]) as string;
   return { ...artifact, artifact_id: id };
+}
+
+/** verifySignature() against explicitly supplied ephemeral key material. */
+function verifyWith(artifact: Record<string, unknown>, signingKey: string | null): string {
+  return callLib("verifySignature", [artifact, signingKey]) as string;
+}
+
+/** Structural violations (algorithm, content-hash, etc.) — independent of any key registry. */
+function structuralViolations(artifact: Record<string, unknown>, signingKey: string | null = null): string[] {
+  const result = callLib("validateEvidenceArtifact", [artifact, signingKey ? { signingKey } : {}]) as {
+    violations: string[];
+  };
+  return result.violations;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -137,20 +116,13 @@ describe("Stage 7 — Ed25519 hostile audit (S7-I11)", () => {
   // ── Scenario 1: wrong private key ──────────────────────────────────────────
   it("H-01: artifact signed with attacker private key does not verify against legitimate key", () => {
     const artifact = buildArtifact(ATTACKER_PRIVATE_KEY);
-    const dir = stageArtifact(artifact);
-    const { status, stdout } = runValidator(dir, LEGITIMATE_PRIVATE_KEY);
-    expect(status).toBe(1);
-    expect(stdout).toContain("signature does not verify");
+    expect(verifyWith(artifact, LEGITIMATE_PUBLIC_KEY)).toBe("INVALID");
   });
 
   // ── Scenario 2: wrong public key presented directly ─────────────────────────
   it("H-02: verification with the attacker public key rejects a legitimately signed artifact", () => {
     const artifact = buildArtifact(LEGITIMATE_PRIVATE_KEY);
-    const dir = stageArtifact(artifact);
-    // Validator given attacker's PUBLIC key — cannot verify legitimate signature.
-    const { status, stdout } = runValidator(dir, ATTACKER_PUBLIC_KEY);
-    expect(status).toBe(1);
-    expect(stdout).toContain("signature does not verify");
+    expect(verifyWith(artifact, ATTACKER_PUBLIC_KEY)).toBe("INVALID");
   });
 
   // ── Scenario 3: unknown key_id in registry lookup ───────────────────────────
@@ -186,10 +158,7 @@ describe("Stage 7 — Ed25519 hostile audit (S7-I11)", () => {
       ...artifact,
       signature: { ...(artifact.signature as Record<string, unknown>), key_id: "evd-mutated-key-id" },
     });
-    const dir = stageArtifact(tampered);
-    const { status, stdout } = runValidator(dir, LEGITIMATE_PRIVATE_KEY);
-    expect(status).toBe(1);
-    expect(stdout).toContain("signature does not verify");
+    expect(verifyWith(tampered, LEGITIMATE_PUBLIC_KEY)).toBe("INVALID");
   });
 
   // ── Scenario 5: algorithm field mutated ─────────────────────────────────────
@@ -199,21 +168,16 @@ describe("Stage 7 — Ed25519 hostile audit (S7-I11)", () => {
       ...artifact,
       signature: { ...(artifact.signature as Record<string, unknown>), algorithm: "HMAC-SHA256" },
     });
-    const dir = stageArtifact(tampered);
-    const { status, stdout } = runValidator(dir, LEGITIMATE_PRIVATE_KEY);
-    expect(status).toBe(1);
-    // Wrong algorithm is a structural INVALID, not just a failed verify.
-    expect(stdout).toMatch(/signature.*algorithm|algorithm.*invalid/i);
+    // Wrong algorithm is a structural violation, not just a failed verify.
+    const violations = structuralViolations(tampered, LEGITIMATE_PUBLIC_KEY);
+    expect(violations.some((v) => /signature\.algorithm/.test(v))).toBe(true);
   });
 
   // ── Scenario 6: result field mutated ────────────────────────────────────────
   it("H-06: mutating result from FAIL to PASS invalidates the signature", () => {
     const failing = buildArtifact(LEGITIMATE_PRIVATE_KEY, { result: "FAIL" });
     const tampered = rederiveId({ ...failing, result: "PASS" });
-    const dir = stageArtifact(tampered);
-    const { status, stdout } = runValidator(dir, LEGITIMATE_PRIVATE_KEY);
-    expect(status).toBe(1);
-    expect(stdout).toContain("signature does not verify");
+    expect(verifyWith(tampered, LEGITIMATE_PUBLIC_KEY)).toBe("INVALID");
   });
 
   // ── Scenario 7: observation raw mutated ─────────────────────────────────────
@@ -227,10 +191,9 @@ describe("Stage 7 — Ed25519 hostile audit (S7-I11)", () => {
       },
     };
     const rederived = rederiveId(tampered);
-    const dir = stageArtifact(rederived);
-    const { status, stdout } = runValidator(dir, LEGITIMATE_PRIVATE_KEY);
-    expect(status).toBe(1);
-    expect(stdout).toContain("content_hash does not hash observation.raw");
+    const violations = structuralViolations(rederived, LEGITIMATE_PUBLIC_KEY);
+    expect(violations.some((v) => v.includes("content_hash does not hash observation.raw"))).toBe(true);
+    expect(verifyWith(rederived, LEGITIMATE_PUBLIC_KEY)).toBe("INVALID");
   });
 
   // ── Scenario 8: authorization_manifest_sha mutated ──────────────────────────
@@ -242,20 +205,14 @@ describe("Stage 7 — Ed25519 hostile audit (S7-I11)", () => {
       ...artifact,
       authorization_manifest_sha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     });
-    const dir = stageArtifact(tampered);
-    const { status, stdout } = runValidator(dir, LEGITIMATE_PRIVATE_KEY);
-    expect(status).toBe(1);
-    expect(stdout).toContain("signature does not verify");
+    expect(verifyWith(tampered, LEGITIMATE_PUBLIC_KEY)).toBe("INVALID");
   });
 
   // ── Scenario 9: subject_sha mutated ─────────────────────────────────────────
   it("H-09: mutating subject_sha with id re-derived still fails on signature", () => {
     const artifact = buildArtifact(LEGITIMATE_PRIVATE_KEY);
     const tampered = rederiveId({ ...artifact, subject_sha: "c".repeat(40) });
-    const dir = stageArtifact(tampered);
-    const { status, stdout } = runValidator(dir, LEGITIMATE_PRIVATE_KEY);
-    expect(status).toBe(1);
-    expect(stdout).toContain("signature does not verify");
+    expect(verifyWith(tampered, LEGITIMATE_PUBLIC_KEY)).toBe("INVALID");
   });
 });
 
@@ -266,15 +223,13 @@ describe("Stage 7 — Ed25519 hostile audit (S7-I11)", () => {
 describe("Stage 7 — Ed25519 fail-closed properties", () => {
   it("verifySignature with null signingKey returns UNCHECKED, not VERIFIED", () => {
     const artifact = buildArtifact(LEGITIMATE_PRIVATE_KEY);
-    const state = callLib("verifySignature", [artifact, null]);
-    expect(state).toBe("UNCHECKED");
+    expect(verifyWith(artifact, null)).toBe("UNCHECKED");
   });
 
   it("unsigned artifact (signature: null) returns ABSENT, not UNCHECKED", () => {
     const artifact = buildArtifact(null);
     expect((artifact as Record<string, unknown>).signature).toBeNull();
-    const state = callLib("verifySignature", [artifact, LEGITIMATE_PRIVATE_KEY]);
-    expect(state).toBe("ABSENT");
+    expect(verifyWith(artifact, LEGITIMATE_PRIVATE_KEY)).toBe("ABSENT");
   });
 
   it("signature with a 127-hex value (one byte short) is INVALID", () => {
@@ -286,8 +241,7 @@ describe("Stage 7 — Ed25519 fail-closed properties", () => {
         value: "a".repeat(127),
       },
     });
-    const state = callLib("verifySignature", [truncated, LEGITIMATE_PRIVATE_KEY]);
-    expect(state).toBe("INVALID");
+    expect(verifyWith(truncated, LEGITIMATE_PRIVATE_KEY)).toBe("INVALID");
   });
 
   it("signature with uppercase hex is INVALID", () => {
@@ -300,25 +254,19 @@ describe("Stage 7 — Ed25519 fail-closed properties", () => {
         value: sig.toUpperCase(),
       },
     });
-    const state = callLib("verifySignature", [uppercased, LEGITIMATE_PRIVATE_KEY]);
     // Uppercase hex does not match the HEX128 pattern → INVALID.
-    expect(state).toBe("INVALID");
+    expect(verifyWith(uppercased, LEGITIMATE_PRIVATE_KEY)).toBe("INVALID");
   });
 
   it("a legitimately signed artifact verifies VERIFIED against its own public key", () => {
     const artifact = buildArtifact(LEGITIMATE_PRIVATE_KEY);
-    const state = callLib("verifySignature", [artifact, LEGITIMATE_PUBLIC_KEY]);
-    expect(state).toBe("VERIFIED");
+    expect(verifyWith(artifact, LEGITIMATE_PUBLIC_KEY)).toBe("VERIFIED");
   });
 
-  it("a legitimately signed artifact verifies VERIFIED when validator receives private key", () => {
+  it("a legitimately signed artifact verifies VERIFIED when given the private key directly", () => {
+    // verifySignature() derives the public key from a private key and accepts a
+    // public key directly with identical results — both paths must converge.
     const artifact = buildArtifact(LEGITIMATE_PRIVATE_KEY);
-    const dir = stageArtifact(artifact);
-    // Validator derives public key from private key — both paths must converge.
-    const { status, stdout } = runValidator(dir, LEGITIMATE_PRIVATE_KEY);
-    // Status 0 = structural pass; UNVERIFIED because provenance is not checked.
-    expect(status).toBe(0);
-    expect(stdout).not.toContain("signature does not verify");
-    expect(stdout).not.toContain("REJECTED");
+    expect(verifyWith(artifact, LEGITIMATE_PRIVATE_KEY)).toBe("VERIFIED");
   });
 });
