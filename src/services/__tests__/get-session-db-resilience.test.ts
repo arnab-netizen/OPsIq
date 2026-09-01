@@ -44,6 +44,7 @@ vi.mock("@/lib/db", () => {
     // — a full module mock must provide every export the mocked module's
     // callers use.
     POOL_CONNECTION_TIMEOUT_MS: 90_000,
+    getDbInstance: vi.fn().mockResolvedValue({}),
   };
 });
 

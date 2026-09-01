@@ -19,6 +19,7 @@ vi.mock("@/lib/db", () => ({
     alert: { findMany: (...args: unknown[]) => alertFindMany(...args) },
     ownerFinanceVerification: { findMany: (...args: unknown[]) => verificationFindMany(...args) },
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/infra/scheduler", () => ({

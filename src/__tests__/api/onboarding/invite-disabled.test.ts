@@ -27,6 +27,7 @@ vi.mock("@/lib/db", () => ({
     workspaceMembership: { create: mockMembershipCreate },
     workspace: { findUnique: vi.fn() },
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 describe("POST /api/onboarding/invite — disabled fail-closed", () => {

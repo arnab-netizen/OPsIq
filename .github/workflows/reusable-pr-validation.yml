@@ -94,6 +94,15 @@ jobs:
             sleep $((i*10))
           done
 
+      # governance:scan:a77 shells out to the `rg` binary and was silently
+      # reporting every gate as PASS on runners that don't have it (ubuntu-latest
+      # does not ship ripgrep by default) -- a spawn failure was indistinguishable
+      # from "0 matches found". The script now fails loudly instead of silently
+      # passing (see scripts/a77-prevention-gates.ts's assertRgAvailable), so this
+      # step is required for that gate to run at all, not just to run correctly.
+      - name: Install ripgrep (required by governance:scan:a77)
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Governance compliance scan
         run: npm run governance:scan:strict
         continue-on-error: false

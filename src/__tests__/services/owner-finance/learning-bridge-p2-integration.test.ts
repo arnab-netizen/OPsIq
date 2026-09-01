@@ -40,6 +40,7 @@ vi.mock("@/lib/db", () => ({
       update: mocks.updateSignal,
     },
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/services/controlled-learning-candidate.service", () => ({
