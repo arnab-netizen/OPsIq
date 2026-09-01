@@ -41,7 +41,7 @@ export default function LandingPage() {
           <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
             Sign in
           </Link>
-          <Link href="/signup" className="text-sm font-medium text-primary hover:underline">
+          <Link href="/signup" className="text-sm font-medium text-[var(--primary-text)] hover:underline">
             Start free
           </Link>
         </nav>
@@ -83,13 +83,13 @@ export default function LandingPage() {
       <footer className="mx-auto w-full max-w-5xl px-6 py-8 text-center text-sm text-muted-foreground">
         <p>Free beta &mdash; no credit card required.</p>
         <nav aria-label="Legal and support" className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-          <Link href="/privacy" className="text-primary hover:underline">
+          <Link href="/privacy" className="text-[var(--primary-text)] hover:underline">
             Privacy
           </Link>
-          <Link href="/terms" className="text-primary hover:underline">
+          <Link href="/terms" className="text-[var(--primary-text)] hover:underline">
             Terms
           </Link>
-          <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[var(--primary-text)] hover:underline">
             Support
           </a>
         </nav>

@@ -253,7 +253,7 @@ export function RecommendationsManager({
       {/* High Recommendations */}
       {highRecommendations.length > 0 && (
         <div className="rounded-lg border border-warning/50 bg-warning/5 p-4">
-          <h4 className="font-semibold text-warning">High ({highRecommendations.length})</h4>
+          <h4 className="font-semibold text-[var(--warning-text)]">High ({highRecommendations.length})</h4>
           <div className="mt-3 space-y-2">
             {highRecommendations.map((rec) => (
               <div

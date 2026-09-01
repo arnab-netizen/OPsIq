@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -208,7 +208,7 @@ export default function OwnerCashflowPage() {
     }
   }
 
-  if (loading) return <div className="p-8">Loading cashflow workspace…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading cashflow workspace" />;
 
   const businesses: any[] = dashboard?.businesses ?? [];
   const currentBusiness = businesses.find((b) => b.id === selected) || null;
@@ -235,7 +235,7 @@ export default function OwnerCashflowPage() {
       )}
 
       {showBusinessForm && (
-        <form onSubmit={createBusiness} className="mb-6 border rounded-lg p-4 bg-white space-y-3">
+        <form onSubmit={createBusiness} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
           <h2 className="font-semibold">Create a business</h2>
           <div className="grid grid-cols-2 gap-3">
             <Input name="name" label="Business name" required />
@@ -275,7 +275,7 @@ export default function OwnerCashflowPage() {
           </div>
 
           {showSnapshotForm && (
-            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-white space-y-3">
+            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">
                 Cashflow snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
@@ -351,10 +351,10 @@ function CashflowCycleView({
   const state = score?.cashflowState ?? cycle.cashflowState;
   return (
     <div className="space-y-6">
-      <div className="border rounded-lg p-4 bg-white flex items-center justify-between">
+      <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
         <div>
           <div className="text-xs uppercase text-muted-foreground">Latest diagnosis · cycle #{cycle.sequenceNumber}</div>
-          <div className="text-lg font-semibold">
+          <div className="text-lg font-semibold tabular-nums">
             Health {Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Danger {Math.round(score?.riskScore ?? cycle.dangerScore)}/100 · Opportunity {Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100
           </div>
         </div>
@@ -373,7 +373,7 @@ function CashflowCycleView({
       )}
 
       {recommended && (
-        <div className="border rounded-lg p-4 bg-white">
+        <div className="border rounded-lg p-4 bg-card">
           <div className="text-xs uppercase text-muted-foreground">Recommended next cash action</div>
           <div className="font-semibold">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
@@ -383,7 +383,7 @@ function CashflowCycleView({
         </div>
       )}
 
-      <section className="border rounded-lg p-4 bg-white">
+      <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">Findings ({cycle.findings.length})</h2>
         {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No cashflow issues detected.</p>}
         <div className="space-y-3">
@@ -411,7 +411,7 @@ function CashflowCycleView({
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-white">
+      <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">Cashflow actions ({cycle.actions.length})</h2>
         <div className="space-y-3">
           {cycle.actions.map((a: any) => {
@@ -454,7 +454,7 @@ function CashflowCycleView({
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-white">
+      <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">Diagnosis history</h2>
         <div className="space-y-1 text-sm">
           {history.map((c: any) => (

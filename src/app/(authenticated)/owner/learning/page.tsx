@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- dynamic dashboard payloads are untyped */
 
@@ -190,7 +190,7 @@ export default function OwnerLearningGovernancePage() {
     }
   }
 
-  if (loading) return <div className="p-8">Loading learning governance workspace…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading learning governance workspace" />;
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
@@ -221,7 +221,7 @@ export default function OwnerLearningGovernancePage() {
             const canReject = !c.promotionLocked;
             const isExpanded = expanded === c.id;
             return (
-              <div key={c.id} className="border rounded-lg p-4 bg-white">
+              <div key={c.id} className="border rounded-lg p-4 bg-card">
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">

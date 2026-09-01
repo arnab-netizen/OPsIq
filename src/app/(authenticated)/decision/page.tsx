@@ -414,7 +414,7 @@ export default function DecisionPage() {
           <div className="rounded-lg border border-success bg-success/5 p-4 md:p-6 mb-6 md:mb-8">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <h2 className="text-base md:text-lg font-semibold text-success mb-1">
+                <h2 className="text-base md:text-lg font-semibold text-[var(--success-text)] mb-1">
                   ✓ Decision Approved
                 </h2>
                 <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">

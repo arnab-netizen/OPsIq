@@ -2,6 +2,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/ui/primitives/button";
+import { EmptyState } from "@/ui/primitives/states";
 import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -146,7 +147,11 @@ export default function ProcurementPage() {
       )}
 
       {orders.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No purchase orders found.</p>
+        <EmptyState
+          title="No purchase orders yet"
+          description="Create your first purchase order to start tracking spend and delivery against a vendor."
+          primaryAction={{ label: "+ New PO", onClick: openCreate }}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm" data-testid="procurement-table">
@@ -177,7 +182,7 @@ export default function ProcurementPage() {
                     <td className="px-4 py-2 flex gap-2">
                       {nextStatus && (
                         <button
-                          className="text-primary text-xs hover:underline"
+                          className="text-[var(--primary-text)] text-xs hover:underline"
                           onClick={() => handleTransition(order.id, nextStatus)}
                         >
                           Mark {nextStatus}

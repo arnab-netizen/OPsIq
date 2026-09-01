@@ -3,6 +3,7 @@
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { toHttpResponseError } from "@/lib/operator-safe-errors";
 import { useEffect, useState } from "react";
+import { TableListSkeleton } from "@/ui/primitives";
 
 interface Entity {
   id: string;
@@ -53,7 +54,7 @@ export default function EntityPage() {
     <div style={{ padding: "20px", fontFamily: "sans-serif", maxWidth: "800px" }}>
       <h1>Entities</h1>
 
-      {loading && <p>Loading entities...</p>}
+      {loading && <TableListSkeleton label="Loading entities" />}
 
       {error && (
         <div

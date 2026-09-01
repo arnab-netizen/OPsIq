@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { assessWorkingCapitalAgeing } from "@/domain/owner-budget/working-capital-ageing";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -207,7 +207,7 @@ export default function OwnerBudgetPlanPage() {
     }
   }
 
-  if (loading) return <div className="p-8">Loading Budget &amp; Profit Plan…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading Budget & Profit Plan" />;
 
   const list: any[] = businesses ?? [];
   const mode = guidance?.mode ?? plan?.mode ?? null;
@@ -270,7 +270,7 @@ export default function OwnerBudgetPlanPage() {
           ) : (
             <div className="space-y-6">
               {/* 1 + 2: Mode + confidence */}
-              <section className="border rounded-lg p-4 bg-white flex flex-wrap items-center justify-between gap-3">
+              <section className="border rounded-lg p-4 bg-card flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Current budget mode</div>
                   <div className="flex items-center gap-2 mt-1">
@@ -293,7 +293,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* 3: What changed */}
               {plan?.whatChanged && (
-                <section className="border rounded-lg p-4 bg-white">
+                <section className="border rounded-lg p-4 bg-card">
                   <div className="text-xs uppercase text-muted-foreground">What changed</div>
                   <div className="text-sm">
                     <strong>{plan.whatChanged.field}</strong>
@@ -307,7 +307,7 @@ export default function OwnerBudgetPlanPage() {
               )}
 
               {/* 4: Next best action */}
-              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-white">
+              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
                 <div className="text-xs uppercase text-muted-foreground">Next best action</div>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="default">{plan?.decisionType ?? guidance?.decisionType ?? "—"}</Badge>
@@ -323,7 +323,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* 5: Forecast */}
               {forecast?.hasData && (
-                <section className="border rounded-lg p-4 bg-white">
+                <section className="border rounded-lg p-4 bg-card">
                   <h2 className="font-bold mb-2">Cash forecast</h2>
                   <div className="flex flex-wrap gap-2 text-sm">
                     <Badge variant="muted">7-day {Math.round(forecast.sevenDayCash)}</Badge>
@@ -348,7 +348,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* 6: Fund allocation */}
               {Array.isArray(plan?.fundAllocationChanges) && plan.fundAllocationChanges.length > 0 && (
-                <section className="border rounded-lg p-4 bg-white">
+                <section className="border rounded-lg p-4 bg-card">
                   <h2 className="font-bold mb-2">Fund allocation</h2>
                   <ul className="space-y-1 text-sm">
                     {plan.fundAllocationChanges.map((c: string, i: number) => (<li key={i} className="text-muted-foreground">• {c}</li>))}
@@ -357,7 +357,7 @@ export default function OwnerBudgetPlanPage() {
               )}
 
               {/* 7: Spend governance */}
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-card">
                 <h2 className="font-bold mb-2">Spend governance</h2>
                 {Array.isArray(plan?.spendRestrictions) && plan.spendRestrictions.length > 0 ? (
                   <ul className="space-y-1 text-sm">
@@ -379,7 +379,7 @@ export default function OwnerBudgetPlanPage() {
               </section>
 
               {/* 8: Accountability */}
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-card">
                 <h2 className="font-bold mb-2">Accountability</h2>
                 {Array.isArray(plan?.accountableRoles) && plan.accountableRoles.length > 0 && (
                   <div className="text-sm text-muted-foreground">Accountable: {plan.accountableRoles.join(", ")}</div>
@@ -400,7 +400,7 @@ export default function OwnerBudgetPlanPage() {
               </section>
 
               {/* 9: Generated actions (advisory plan snapshot) */}
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-card">
                 <h2 className="font-bold mb-1">Generated actions <span className="text-xs font-normal text-muted-foreground">(advisory plan snapshot)</span></h2>
                 <p className="text-xs text-muted-foreground mb-2">These are the advisory recommendations from the current plan snapshot. On reassessment they are persisted/linked as governed execution tasks — shown separately below.</p>
                 {actions.length === 0 ? <p className="text-sm text-muted-foreground">No actions generated.</p> : (
@@ -423,7 +423,7 @@ export default function OwnerBudgetPlanPage() {
               </section>
 
               {/* 9b: Execution tasks (persisted, governed owner action records) */}
-              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-white">
+              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
                 <h2 className="font-bold mb-1">Execution tasks <span className="text-xs font-normal text-muted-foreground">(persisted · governed)</span></h2>
                 <p className="text-xs text-muted-foreground mb-2">
                   Real persisted owner action records linked from the advisory actions above. These use the shared owner action lifecycle (proposed → assigned → in&nbsp;progress → completed), are workspace-scoped and audited, and completing one feeds budget learning. Reassessment links existing open tasks instead of duplicating them.
@@ -464,7 +464,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* What not to do */}
               {Array.isArray(plan?.whatNotToDo) && plan.whatNotToDo.length > 0 && (
-                <section className="border rounded-lg p-4 bg-white">
+                <section className="border rounded-lg p-4 bg-card">
                   <h2 className="font-bold mb-2">What not to do now</h2>
                   <ul className="space-y-1 text-sm">
                     {plan.whatNotToDo.map((w: string, i: number) => (<li key={i} className="text-muted-foreground">• {w}</li>))}
@@ -473,7 +473,7 @@ export default function OwnerBudgetPlanPage() {
               )}
 
               {/* 9c: Working-capital ageing — owner-entered (manual / import-ready) */}
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-card">
                 <div className="flex items-center justify-between">
                   <h2 className="font-bold">Working capital — receivables &amp; payables ageing</h2>
                   <Button onClick={() => setShowWcForm((s) => !s)}>{showWcForm ? "Cancel" : "Add receivable/payable"}</Button>
@@ -538,7 +538,7 @@ export default function OwnerBudgetPlanPage() {
               </section>
 
               {/* 10: Owner override */}
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-card">
                 <div className="flex items-center justify-between">
                   <h2 className="font-bold">Owner override</h2>
                   <Button onClick={() => setShowOverride((s) => !s)}>{showOverride ? "Cancel" : "Override this plan"}</Button>

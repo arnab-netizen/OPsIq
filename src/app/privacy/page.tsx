@@ -8,7 +8,7 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-2xl px-6 py-12 text-foreground">
-      <Link href="/" className="text-sm text-primary hover:underline">
+      <Link href="/" className="text-sm text-[var(--primary-text)] hover:underline">
         &larr; Back to OpsIQ
       </Link>
       <h1 className="mt-6 text-3xl font-bold tracking-tight">Privacy</h1>
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
         <p>
           You can request help, or guidance on deleting your data or account, at any time during beta
           by emailing{" "}
-          <a href="mailto:support@opsiq.com" className="text-primary hover:underline">
+          <a href="mailto:support@opsiq.com" className="text-[var(--primary-text)] hover:underline">
             support@opsiq.com
           </a>
           .

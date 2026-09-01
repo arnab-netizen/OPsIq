@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FirstValueDTO } from "@/lib/first-value/first-value.dto";
 import { toOperatorSafeError } from "@/lib/operator-safe-errors";
+import { CardDashboardSkeleton } from "@/ui/primitives";
 
 export default function FirstValuePage() {
   const [firstValue, setFirstValue] = useState<FirstValueDTO | null>(null);
@@ -30,11 +31,7 @@ export default function FirstValuePage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading first-value visibility...</p>
-      </div>
-    );
+    return <CardDashboardSkeleton sections={4} label="Loading first-value visibility" />;
   }
 
   if (error) {
@@ -105,7 +102,7 @@ export default function FirstValuePage() {
 
       {/* Business Snapshot */}
       {firstValue.businessSnapshot && (
-        <div className="p-6 bg-white border border-gray-200 rounded-lg">
+        <div className="p-6 bg-card border border-gray-200 rounded-lg">
           <h2 className="text-xl font-bold mb-4">Business Snapshot</h2>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -150,7 +147,7 @@ export default function FirstValuePage() {
 
       {/* Top Risks */}
       {firstValue.topRisks.length > 0 && (
-        <div className="p-6 bg-white border border-gray-200 rounded-lg">
+        <div className="p-6 bg-card border border-gray-200 rounded-lg">
           <h2 className="text-xl font-bold mb-4">Top Risks</h2>
           <div className="space-y-3">
             {firstValue.topRisks.map((risk) => (
@@ -177,7 +174,7 @@ export default function FirstValuePage() {
 
       {/* Top Opportunities */}
       {firstValue.topOpportunities.length > 0 && (
-        <div className="p-6 bg-white border border-gray-200 rounded-lg">
+        <div className="p-6 bg-card border border-gray-200 rounded-lg">
           <h2 className="text-xl font-bold mb-4">Top Opportunities</h2>
           <div className="space-y-3">
             {firstValue.topOpportunities.map((opp) => (
@@ -294,7 +291,7 @@ export default function FirstValuePage() {
       )}
 
       {/* Data Readiness */}
-      <div className="p-6 bg-white border border-gray-200 rounded-lg">
+      <div className="p-6 bg-card border border-gray-200 rounded-lg">
         <h3 className="font-bold mb-4">Data Readiness</h3>
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">

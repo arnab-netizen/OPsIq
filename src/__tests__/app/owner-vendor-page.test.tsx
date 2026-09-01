@@ -173,7 +173,7 @@ describe("VendorPage", () => {
     expect(reasonLabel).toBeTruthy();
   });
 
-  it("shows No vendors found when list is empty", async () => {
+  it("shows a true-empty state (with a create CTA) when the business has no vendors yet", async () => {
     fetchMock.mockImplementation((input: string | URL) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url.includes("/api/owner/recovery/businesses")) {
@@ -185,7 +185,7 @@ describe("VendorPage", () => {
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
     const { findByText } = render(<VendorPage />);
-    await findByText("No vendors found.");
+    await findByText("No vendors yet");
   });
 
   it("shows business selector when multiple businesses exist", async () => {

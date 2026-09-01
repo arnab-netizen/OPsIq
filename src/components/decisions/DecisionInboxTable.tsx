@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge } from "@/ui/primitives";
+import { Badge, EmptyState, TableListSkeleton } from "@/ui/primitives";
 
 interface Decision {
   id: string;
@@ -51,7 +51,7 @@ export function DecisionInboxTable() {
     return "bg-gray-100 text-gray-800";
   };
 
-  if (loading) return <div className="p-4">Loading decisions...</div>;
+  if (loading) return <TableListSkeleton label="Loading decisions" />;
 
   return (
     <div className="space-y-4">
@@ -82,61 +82,70 @@ export function DecisionInboxTable() {
         </button>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="px-4 py-2 text-left font-medium">Decision</th>
-              <th className="px-4 py-2 text-left font-medium">Problem</th>
-              <th className="px-4 py-2 text-right font-medium">Impact</th>
-              <th className="px-4 py-2 text-center font-medium">Confidence</th>
-              <th className="px-4 py-2 text-center font-medium">Status</th>
-              <th className="px-4 py-2 text-left font-medium">Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-4 text-center text-gray-500">
-                  No decisions found
-                </td>
-              </tr>
-            ) : (
-              filtered.map((decision) => (
-                <tr key={decision.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2">
-                    <Link
-                      href={`/decisions/${decision.id}`}
-                      className="text-blue-600 hover:underline font-mono text-xs"
-                    >
-                      {decision.id.slice(0, 8)}...
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-xs max-w-xs truncate">{decision.problem}</td>
-                  <td className="px-4 py-2 text-right font-mono">
-                    ₹{(decision.impactExpected / 1000).toFixed(0)}k
-                  </td>
-                  <td className="px-4 py-2 text-center text-xs">
-                    {(decision.confidence * 100).toFixed(0)}%
-                  </td>
-                  <td className="px-4 py-2 text-center">
-                    <Badge className={statusColor(decision.status)}>
-                      {decision.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-2 text-xs text-gray-500">
-                    {new Date(decision.createdAt).toLocaleDateString()}
-                  </td>
+      {filtered.length === 0 ? (
+        decisions.length === 0 ? (
+          <EmptyState
+            title="No decisions yet"
+            description="Decisions the system flags for your review will appear here."
+          />
+        ) : (
+          <EmptyState
+            title="No decisions match this filter"
+            description="Try a different status, or clear the filter to see all decisions."
+            primaryAction={{ label: "Clear filter", onClick: () => setFilter("all") }}
+          />
+        )
+      ) : (
+        <>
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium">Decision</th>
+                  <th className="px-4 py-2 text-left font-medium">Problem</th>
+                  <th className="px-4 py-2 text-right font-medium">Impact</th>
+                  <th className="px-4 py-2 text-center font-medium">Confidence</th>
+                  <th className="px-4 py-2 text-center font-medium">Status</th>
+                  <th className="px-4 py-2 text-left font-medium">Created</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {filtered.map((decision) => (
+                  <tr key={decision.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-2">
+                      <Link
+                        href={`/decisions/${decision.id}`}
+                        className="text-blue-600 hover:underline font-mono text-xs"
+                      >
+                        {decision.id.slice(0, 8)}...
+                      </Link>
+                    </td>
+                    <td className="px-4 py-2 text-xs max-w-xs truncate">{decision.problem}</td>
+                    <td className="px-4 py-2 text-right font-mono">
+                      ₹{(decision.impactExpected / 1000).toFixed(0)}k
+                    </td>
+                    <td className="px-4 py-2 text-center text-xs">
+                      {(decision.confidence * 100).toFixed(0)}%
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <Badge className={statusColor(decision.status)}>
+                        {decision.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-2 text-xs text-gray-500">
+                      {new Date(decision.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      <div className="text-xs text-gray-500 p-4 bg-gray-50 rounded">
-        Showing {filtered.length} of {decisions.length} decisions
-      </div>
+          <div className="text-xs text-gray-500 p-4 bg-gray-50 rounded">
+            Showing {filtered.length} of {decisions.length} decisions
+          </div>
+        </>
+      )}
     </div>
   );
 }

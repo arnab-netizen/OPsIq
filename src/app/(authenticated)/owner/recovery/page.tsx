@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -198,7 +198,7 @@ export default function OwnerRecoveryPage() {
     }
   }
 
-  if (loading) return <div className="p-8">Loading recovery workspace…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading recovery workspace" />;
 
   const businesses: any[] = dashboard?.businesses ?? [];
   const currentBusiness = businesses.find((b) => b.id === selected) || null;
@@ -223,7 +223,7 @@ export default function OwnerRecoveryPage() {
       )}
 
       {showBusinessForm && (
-        <form onSubmit={createBusiness} className="mb-6 border rounded-lg p-4 bg-white space-y-3">
+        <form onSubmit={createBusiness} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
           <h2 className="font-semibold">Create a business</h2>
           <div className="grid grid-cols-2 gap-3">
             <Input name="name" label="Business name" required />
@@ -263,7 +263,7 @@ export default function OwnerRecoveryPage() {
           </div>
 
           {showSnapshotForm && (
-            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-white space-y-3">
+            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">
                 Metric snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
@@ -319,7 +319,7 @@ function RecoveryCycleView({
 }) {
   return (
     <div className="space-y-6">
-      <div className="border rounded-lg p-4 bg-white flex items-center justify-between">
+      <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
         <div>
           <div className="text-xs uppercase text-muted-foreground">Latest cycle #{cycle.cycleNumber}</div>
           <div className="text-lg font-semibold">{cycle.summary}</div>
@@ -334,7 +334,7 @@ function RecoveryCycleView({
         </div>
       </div>
 
-      <section className="border rounded-lg p-4 bg-white">
+      <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">Findings ({cycle.findings.length})</h2>
         {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No threshold breaches.</p>}
         <div className="space-y-3">
@@ -360,7 +360,7 @@ function RecoveryCycleView({
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-white">
+      <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">Recovery actions ({cycle.actions.length})</h2>
         <div className="space-y-3">
           {cycle.actions.map((a: any) => {
@@ -402,7 +402,7 @@ function RecoveryCycleView({
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-white">
+      <section className="border rounded-lg p-4 bg-card">
         <h2 className="font-bold mb-3">Cycle history</h2>
         <div className="space-y-1 text-sm">
           {history.map((c: any) => (

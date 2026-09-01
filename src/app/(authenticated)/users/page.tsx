@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Table, Badge, LoadingState, ErrorState } from "@/ui/primitives";
+import { Table, Badge, ErrorState, EmptyState, TableListSkeleton } from "@/ui/primitives";
 import { formatRole } from "@/domain/constants/role-labels";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { toHttpResponseError } from "@/lib/operator-safe-errors";
@@ -90,7 +90,7 @@ export default function UsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  if (loading) return <LoadingState message="Loading users..." />;
+  if (loading) return <TableListSkeleton label="Loading users" />;
   if (errorDetails) return <ErrorState message={errorDetails} onRetry={fetchUsers} />; // classifyOperatorError
 
   const users = data?.users ?? [];
@@ -153,7 +153,12 @@ export default function UsersPage() {
           ]}
           data={users}
           keyExtractor={(row) => row.id}
-          emptyMessage="No users found"
+          emptyState={
+            <EmptyState
+              title="No users yet"
+              description="Users appear here once they sign up or are added to a workspace."
+            />
+          }
         />
       </div>
     </div>

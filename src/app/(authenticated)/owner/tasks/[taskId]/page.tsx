@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Badge, Button } from "@/ui/primitives";
+import { Badge, Button, DetailPageSkeleton } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
 import { ProofStatus, ProofType } from "@/domain/execution/proof";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -227,7 +227,7 @@ export default function TaskDetailPage() {
     }
   }
 
-  if (loading) return <div className="px-4 py-8 text-muted-foreground text-sm">Loading…</div>;
+  if (loading) return <DetailPageSkeleton label="Loading" />;
   if (error) return <div className="px-4 py-8 text-destructive text-sm">{error}</div>;
   if (!task) return <div className="px-4 py-8 text-muted-foreground text-sm">Task not found.</div>;
 

@@ -11,7 +11,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Modal, Input, Select, Textarea } from "@/ui/primitives";
+import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -216,9 +216,11 @@ export default function CustomersPage() {
       </div>
 
       {!loading && businesses.length === 0 && (
-        <p className="text-muted-foreground text-sm">
-          No business found. Create a business in the Finance section first.
-        </p>
+        <EmptyState
+          title="No business set up yet"
+          description="Customers are tracked per business. Set up your business in Finance first."
+          primaryAction={{ label: "Go to Finance", href: "/owner/finance" }}
+        />
       )}
 
       <div className="flex gap-3 mb-6 flex-wrap">
@@ -234,11 +236,23 @@ export default function CustomersPage() {
         </select>
       </div>
 
-      {loading && <p className="text-muted-foreground text-sm">Loading…</p>}
+      {loading && <TableListSkeleton label="Loading" rows={4} />}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {!loading && !error && selectedBizId && visibleCustomers.length === 0 && (
-        <p className="text-muted-foreground text-sm">No customers found.</p>
+        segmentFilter ? (
+          <EmptyState
+            title="No customers match this filter"
+            description={`No customers are in the "${segmentFilter}" segment.`}
+            primaryAction={{ label: "Clear filter", onClick: () => handleSegmentFilter("") }}
+          />
+        ) : (
+          <EmptyState
+            title="No customers yet"
+            description="Add your first customer to start tracking segments, lifetime value, and purchase history."
+            primaryAction={{ label: "+ New Customer", onClick: openCreate }}
+          />
+        )
       )}
 
       {!loading && !error && visibleCustomers.length > 0 && (
@@ -275,7 +289,7 @@ export default function CustomersPage() {
                   <td className="px-4 py-3">
                     <button
                       onClick={() => openEdit(customer)}
-                      className="text-primary hover:underline text-sm"
+                      className="text-[var(--primary-text)] hover:underline text-sm"
                     >
                       Edit
                     </button>

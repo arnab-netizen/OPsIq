@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button } from "@/ui/primitives";
+import { Badge, Button, TableListSkeleton } from "@/ui/primitives";
 
 type AlertSeverity = "low" | "medium" | "high" | "critical";
 type AlertType = "blocked" | "threshold_breach" | "execution_failure";
@@ -81,8 +81,8 @@ function AlertCard({
         isResolved
           ? "border-border bg-muted/30 opacity-70"
           : !isRead
-          ? "border-foreground/20 bg-white shadow-sm"
-          : "border-border bg-white"
+          ? "border-foreground/20 bg-card shadow-sm"
+          : "border-border bg-card"
       }`}
       data-testid="alert-card"
     >
@@ -221,7 +221,7 @@ export default function OwnerAlertsPage() {
           <select
             value={severity}
             onChange={(e) => setSeverity(e.target.value as "" | AlertSeverity)}
-            className="border rounded px-2 py-2 text-sm min-h-[44px] bg-white"
+            className="border rounded px-2 py-2 text-sm min-h-[44px] bg-card"
             aria-label="Filter by severity"
           >
             <option value="">All severities</option>
@@ -244,7 +244,7 @@ export default function OwnerAlertsPage() {
       )}
 
       {loading ? (
-        <div className="text-sm text-muted-foreground py-8 text-center">Loading alerts…</div>
+        <TableListSkeleton label="Loading alerts" />
       ) : error ? (
         <div className="rounded-md border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive mb-4">
           {error}

@@ -175,7 +175,7 @@ export default async function DashboardPage() {
               </Link>
             ))}
             {activeEngagements.length > 5 && (
-              <Link href="/engagements" className="text-xs text-primary hover:underline">
+              <Link href="/engagements" className="text-xs text-[var(--primary-text)] hover:underline">
                 View all {activeEngagements.length} engagements →
               </Link>
             )}
@@ -183,7 +183,7 @@ export default async function DashboardPage() {
         ) : (
           <>
             <p className="mt-4 text-sm text-muted-foreground">
-              No active engagements. <Link href="/engagements/new" className="text-primary hover:underline">Create one</Link>
+              No active engagements. <Link href="/engagements/new" className="text-[var(--primary-text)] hover:underline">Create one</Link>
             </p>
             <FirstDiagnosisCta href={diagnosisCtaHref} />
           </>
@@ -249,7 +249,7 @@ export default async function DashboardPage() {
       {/* ─── Blocked Actions ───────────────────────────────────────────── */}
       {blockedActions.length > 0 && (
         <div className="mt-8 rounded-lg border border-warning/50 bg-warning/5 p-6">
-          <h2 className="text-lg font-semibold text-warning">
+          <h2 className="text-lg font-semibold text-[var(--warning-text)]">
             ⚡ Blocked Actions ({blockedActions.length})
           </h2>
           <div className="mt-4 space-y-2">
@@ -264,7 +264,7 @@ export default async function DashboardPage() {
                     <h3 className="text-sm font-medium text-foreground">{a.title}</h3>
                     <p className="text-xs text-muted-foreground">{a.engagementCode}</p>
                     {a.blockageReason && (
-                      <p className="mt-1 text-xs text-warning">{a.blockageReason}</p>
+                      <p className="mt-1 text-xs text-[var(--warning-text)]">{a.blockageReason}</p>
                     )}
                   </div>
                 </div>

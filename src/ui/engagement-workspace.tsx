@@ -165,7 +165,7 @@ export function EngagementWorkspace({
               <div>
                 <dt className="text-sm text-muted-foreground">Client</dt>
                 <dd>
-                  <Link href={`/clients/${engagement.clientAccount.id}`} className="text-primary hover:underline">
+                  <Link href={`/clients/${engagement.clientAccount.id}`} className="text-[var(--primary-text)] hover:underline">
                     {engagement.clientAccount.name}
                   </Link>
                 </dd>
@@ -322,7 +322,7 @@ export function EngagementWorkspace({
             </div>
             {openActions.length === 0 && blockedActions.length === 0 && findings.length === 0 && (
               <div className="mt-6 rounded-lg border border-success/20 bg-success/5 p-4">
-                <p className="text-sm text-success">Engagement is ready for closure review.</p>
+                <p className="text-sm text-[var(--success-text)]">Engagement is ready for closure review.</p>
               </div>
             )}
           </div>

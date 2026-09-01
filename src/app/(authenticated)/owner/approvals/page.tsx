@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
-import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -172,7 +172,7 @@ export default function OwnerApprovalsPage() {
     }
   }
 
-  if (loading) return <div className="p-8">Loading approvals workspace…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading approvals workspace" />;
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
@@ -224,7 +224,7 @@ export default function OwnerApprovalsPage() {
           </div>
 
           {showCreateForm && (
-            <form onSubmit={createApprovalRequest} className="mb-6 border rounded-lg p-4 bg-white space-y-3">
+            <form onSubmit={createApprovalRequest} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">New approval request</h2>
               <div className="grid grid-cols-2 gap-3">
                 <Input name="actionDomain" label="Related domain (optional)" placeholder="e.g. finance" />
@@ -241,7 +241,7 @@ export default function OwnerApprovalsPage() {
           ) : (
             <section className="space-y-4">
               {approvals.map((a) => (
-                <div key={a.id} className="border rounded-lg p-4 bg-white">
+                <div key={a.id} className="border rounded-lg p-4 bg-card">
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="text-xs uppercase text-muted-foreground">

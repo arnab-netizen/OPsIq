@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Badge, Button, Modal, Input, Select, Textarea } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, Textarea, DetailPageSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type RiskStatus = "IDENTIFIED" | "ASSESSED" | "MITIGATING" | "ACCEPTED" | "RESOLVED" | "CLOSED";
@@ -169,7 +169,7 @@ export default function RiskDetailPage() {
     }
   }
 
-  if (loading) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-muted-foreground text-sm">Loading…</p></div>;
+  if (loading) return <DetailPageSkeleton label="Loading" />;
   if (error) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-destructive text-sm">{error}</p></div>;
   if (!risk) return null;
 

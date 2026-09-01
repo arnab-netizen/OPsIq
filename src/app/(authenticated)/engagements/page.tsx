@@ -92,17 +92,17 @@ export default async function EngagementsPage({
                 }) => (
                   <tr key={eng.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
-                      <Link href={`/engagements/${eng.id}`} className="font-mono text-xs font-medium text-primary hover:underline">
+                      <Link href={`/engagements/${eng.id}`} className="font-mono text-xs font-medium text-[var(--primary-text)] hover:underline">
                         {eng.code}
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/engagements/${eng.id}`} className="font-medium text-foreground hover:text-primary">
+                      <Link href={`/engagements/${eng.id}`} className="font-medium text-foreground hover:text-[var(--primary-text)]">
                         {eng.title}
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/clients/${eng.clientAccount.id}`} className="text-muted-foreground hover:text-primary">
+                      <Link href={`/clients/${eng.clientAccount.id}`} className="text-muted-foreground hover:text-[var(--primary-text)]">
                         {eng.clientAccount.name}
                       </Link>
                     </td>

@@ -12,6 +12,17 @@ interface TableProps<T> {
   data: T[];
   keyExtractor: (row: T) => string;
   emptyMessage?: string;
+  /**
+   * Richer empty-state content (e.g. a primitives-layer `<EmptyState />` with a
+   * title/description/CTA, or a true/filtered-empty distinction) rendered in
+   * place of the default bare-text row when `data` is empty. Optional and
+   * purely additive — every existing caller that only passes `emptyMessage`
+   * keeps its current bare-text row unchanged. The base `Table` primitive
+   * deliberately does not hardcode any CTA copy itself (e.g. "Create X") —
+   * that stays the caller's responsibility so this stays safe for generic,
+   * filtered, read-only, and admin tables alike.
+   */
+  emptyState?: ReactNode;
 }
 
 export function Table<T>({
@@ -19,8 +30,12 @@ export function Table<T>({
   data,
   keyExtractor,
   emptyMessage = "No data available",
+  emptyState,
 }: TableProps<T>) {
   if (data.length === 0) {
+    if (emptyState) {
+      return <>{emptyState}</>;
+    }
     return (
       <div className="flex items-center justify-center rounded-lg border border-border bg-muted/30 py-12">
         <p className="text-sm text-muted-foreground">{emptyMessage}</p>

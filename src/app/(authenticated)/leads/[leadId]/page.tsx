@@ -98,7 +98,7 @@ export default async function LeadDetailPage({
           <div className="rounded-lg border border-border p-6">
             <h2 className="text-lg font-semibold text-foreground">Converted Client</h2>
             <p className="mt-2 text-sm">
-              <Link href={`/clients/${lead.client.id}`} className="text-primary hover:underline">
+              <Link href={`/clients/${lead.client.id}`} className="text-[var(--primary-text)] hover:underline">
                 {lead.client.name}
               </Link>
             </p>
@@ -109,7 +109,7 @@ export default async function LeadDetailPage({
           <div className="rounded-lg border border-border p-6">
             <h2 className="text-lg font-semibold text-foreground">Linked Engagement</h2>
             <p className="mt-2 text-sm">
-              <Link href={`/engagements/${lead.engagement.id}`} className="text-primary hover:underline">
+              <Link href={`/engagements/${lead.engagement.id}`} className="text-[var(--primary-text)] hover:underline">
                 {lead.engagement.code} — {lead.engagement.title}
               </Link>
             </p>

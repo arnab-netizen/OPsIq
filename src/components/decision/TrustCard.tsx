@@ -71,9 +71,9 @@ export function TrustCard({
 
   const getAccuracyColor = (accuracy: number | null) => {
     if (accuracy === null) return 'text-muted-foreground';
-    if (accuracy >= 0.9 && accuracy <= 1.1) return 'text-success';
-    if (accuracy < 0.9) return 'text-warning';
-    return 'text-warning';
+    if (accuracy >= 0.9 && accuracy <= 1.1) return 'text-[var(--success-text)]';
+    if (accuracy < 0.9) return 'text-[var(--warning-text)]';
+    return 'text-[var(--warning-text)]';
   };
 
   const getAccuracyLabel = (accuracy: number | null) => {
@@ -125,7 +125,7 @@ export function TrustCard({
               {valueInfo.totalDelta > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-foreground">Financial Gain</span>
-                  <span className="text-lg font-bold text-success">
+                  <span className="text-lg font-bold text-[var(--success-text)]">
                     {formatCurrency(valueInfo.totalDelta)}
                   </span>
                 </div>
@@ -141,7 +141,7 @@ export function TrustCard({
               {valueInfo.roi !== null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-foreground">ROI</span>
-                  <span className={`text-lg font-bold ${valueInfo.roi >= 1 ? 'text-success' : 'text-destructive'}`}>
+                  <span className={`text-lg font-bold ${valueInfo.roi >= 1 ? 'text-[var(--success-text)]' : 'text-destructive'}`}>
                     {(valueInfo.roi * 100).toFixed(0)}%
                   </span>
                 </div>
@@ -155,8 +155,8 @@ export function TrustCard({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-foreground">System Reliability</span>
                 <span className={`text-lg font-bold ${
-                  metrics.weightedAccuracy * 100 >= 80 ? 'text-success' :
-                  metrics.weightedAccuracy * 100 >= 60 ? 'text-warning' :
+                  metrics.weightedAccuracy * 100 >= 80 ? 'text-[var(--success-text)]' :
+                  metrics.weightedAccuracy * 100 >= 60 ? 'text-[var(--warning-text)]' :
                   'text-destructive'
                 }`}>
                   {(metrics.weightedAccuracy * 100).toFixed(0)}%
@@ -172,7 +172,7 @@ export function TrustCard({
           <div className="border-b border-border pb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">Success Rate</span>
-              <span className={`text-lg font-bold ${metrics.successRate !== null && metrics.successRate >= 70 ? 'text-success' : metrics.successRate !== null && metrics.successRate >= 50 ? 'text-warning' : 'text-destructive'}`}>
+              <span className={`text-lg font-bold ${metrics.successRate !== null && metrics.successRate >= 70 ? 'text-[var(--success-text)]' : metrics.successRate !== null && metrics.successRate >= 50 ? 'text-[var(--warning-text)]' : 'text-destructive'}`}>
                 {metrics.successRate !== null ? `${metrics.successRate.toFixed(1)}%` : 'N/A'}
               </span>
             </div>

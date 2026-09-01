@@ -141,7 +141,7 @@ describe("CustomersPage", () => {
     expect(title).toBeTruthy();
   });
 
-  it("shows No customers found when list is empty", async () => {
+  it("shows a true-empty state (with a create CTA) when the business has no customers yet", async () => {
     fetchMock.mockImplementation((input: string | URL) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url.includes("/api/owner/recovery/businesses")) {
@@ -153,7 +153,7 @@ describe("CustomersPage", () => {
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
     const { findByText } = render(<CustomersPage />);
-    await findByText("No customers found.");
+    await findByText("No customers yet");
   });
 
   it("submits new customer via POST", async () => {

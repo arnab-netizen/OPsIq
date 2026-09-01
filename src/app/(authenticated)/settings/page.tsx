@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Badge, LoadingState, ErrorState } from "@/ui/primitives";
+import { Badge, ErrorState, CardDashboardSkeleton } from "@/ui/primitives";
 import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { formatRole } from "@/domain/constants/role-labels";
@@ -58,7 +58,7 @@ export default function SettingsPage() {
     fetchProfile();
   }, []);
 
-  if (loading) return <LoadingState message="Loading profile..." />;
+  if (loading) return <CardDashboardSkeleton sections={4} label="Loading profile" />;
   if (errorDetails) return <ErrorState message={errorDetails} />; // classifyOperatorError
   if (!me) {
     return (
@@ -86,7 +86,7 @@ export default function SettingsPage() {
           <h2 className="text-lg font-semibold text-foreground">Data and account help</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             To request data or account deletion during beta, contact{" "}
-            <a href="mailto:support@opsiq.com" className="text-primary hover:underline">
+            <a href="mailto:support@opsiq.com" className="text-[var(--primary-text)] hover:underline">
               support@opsiq.com
             </a>
             .

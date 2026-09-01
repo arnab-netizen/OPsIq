@@ -15,6 +15,46 @@
   --accent: #f8fafc;
   --ring: #3b82f6;
   --radius: 0.5rem;
+  /* Raised surface (cards, sections, panels) — distinct from --background (the page/app
+     surface) so a card can visually lift off the page even when both are pale in light
+     mode, and so it tracks the theme instead of staying hardcoded white. Pairs with
+     --card-foreground the same way --muted/--muted-foreground and --primary/--primary-
+     foreground already pair in this file. See docs/opsiq-governance for the audit that
+     added these (P0/P1 visual-system closure): raised content previously hardcoded
+     `bg-white`, which stayed opaque white in dark mode while its text tracked
+     `--foreground` (which turns near-white in dark mode) — producing near-invisible
+     white-on-white text. */
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  /* Readable-text variants of --primary/--warning/--success — a THIRD role, distinct from
+     both the base token (a control/accent/badge FILL color, e.g. a button's background or a
+     Badge's own bg-token/10 tinted pill) and the existing -foreground tokens (text-on-fill,
+     e.g. white text on a solid --primary button). These are for plain body/link/status TEXT
+     that sits directly on --background/--card. The base tokens were never calibrated for that
+     job: --primary's dark value is 3.98:1 on --card (fails AA's 4.5:1), and --warning/
+     --success's LIGHT values are 3.19-3.30:1 on white (also fails). Values below are chosen so
+     each passes 4.5:1 against BOTH --background and --card in BOTH themes, while staying in the
+     same recognizable hue family as the base token. Do not repoint --primary/--warning/
+     --success/--destructive or their -foreground pairs to these — every button, badge, border,
+     icon, and focus ring keeps using exactly what it uses today. See docs/opsiq-governance for
+     the audit (PR #385 residual "semantic-color-closure") that added these.
+
+     Deliberately NOT registered in the `@theme inline` block below (unlike --primary/--warning/
+     --success and every other token here): this Tailwind v4 + Turbopack toolchain silently drops
+     a custom property's @media-scoped override once that property is also mapped through
+     `@theme inline` — verified by direct inspection of the compiled CSS output, where the dark
+     block's declaration for a theme-inline-mapped new token vanished entirely while its :root
+     (light) declaration survived, and every already-registered token (--primary, --card, etc.)
+     kept working. Consumers reach these three tokens as raw CSS custom properties — inline
+     `style={{ color: "var(--primary-text)" }}` (as this file's own consumers already do for
+     --card/--border/etc.) or the Tailwind arbitrary-value form `text-[var(--primary-text)]` —
+     which both resolve `var(--primary-text)` at paint time and correctly pick up the @media
+     override; neither goes through the broken `@theme inline` pipeline. Do not "fix" this by
+     adding --color-primary-text/--color-warning-text/--color-success-text entries below without
+     re-verifying the compiled dark block still contains these three declarations. */
+  --primary-text: #1e40af;
+  --warning-text: #b45309;
+  --success-text: #15803d;
 }
 
 @theme inline {
@@ -31,6 +71,8 @@
   --color-warning: var(--warning);
   --color-accent: var(--accent);
   --color-ring: var(--ring);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -50,6 +92,21 @@
     --warning: #f59e0b;
     --accent: #1e293b;
     --ring: #60a5fa;
+    /* Same elevated-surface role as light mode's --card, but a shade lighter than
+       --background (#0f172a) so raised cards still read as "lifted" in dark mode —
+       reusing the existing --muted dark value keeps this to one deliberate shade
+       instead of inventing a new one-off color. */
+    --card: #1e293b;
+    --card-foreground: var(--foreground);
+    /* Dark-mode values for the readable-text tokens (see :root for the full rationale).
+       --primary-text is lightened from --primary's dark value (#3b82f6, 3.98:1 on --card) to
+       #60a5fa (5.75:1 on --card, 7.02:1 on --background) — still unmistakably the same blue.
+       --warning-text/--success-text reuse the existing dark --warning/--success values as-is:
+       those already pass AA in dark mode (6.81:1 / 6.42:1 on --card) so no change is needed
+       there — only their LIGHT values needed a darker shade for AA; see :root. */
+    --primary-text: #60a5fa;
+    --warning-text: #f59e0b;
+    --success-text: #22c55e;
   }
 }
 

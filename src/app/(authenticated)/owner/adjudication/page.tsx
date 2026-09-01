@@ -21,7 +21,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/ui/primitives";
+import { Button, TableListSkeleton } from "@/ui/primitives";
 import { AdjudicationQueue, type QueueItemView, type OutcomeOption, type AdjudicationResult } from "@/components/owner/AdjudicationQueue";
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -129,7 +129,7 @@ export default function OwnerAdjudicationPage() {
         </p>
       )}
 
-      {loading && <p>Loading the review queue…</p>}
+      {loading && <TableListSkeleton label="Loading the review queue" />}
       {error && (
         <div>
           <p style={{ color: "#b91c1c" }} data-testid="queue-error">{error}</p>

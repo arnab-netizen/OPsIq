@@ -4,6 +4,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { toHttpResponseError } from "@/lib/operator-safe-errors";
 import { useEffect, useState } from "react";
 import { AccuracyPanel } from "@/components/AccuracyPanel";
+import { CardDashboardSkeleton } from "@/ui/primitives";
 
 interface CalibrationRecord {
   id: string;
@@ -55,7 +56,7 @@ export default function CalibrationPage() {
     <div style={{ padding: "20px", fontFamily: "sans-serif", maxWidth: "800px" }}>
       <h1>Calibration Dashboard</h1>
 
-      {loading && <p>Loading...</p>}
+      {loading && <CardDashboardSkeleton sections={2} label="Loading calibration dashboard" />}
 
       {error && (
         <div

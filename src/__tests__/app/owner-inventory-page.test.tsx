@@ -119,7 +119,7 @@ describe("InventoryPage", () => {
     await findByText("7d");
   });
 
-  it("shows No stock items found when list is empty", async () => {
+  it("shows a true-empty state (with a create CTA) when the business has no stock items yet", async () => {
     fetchMock.mockImplementation((input: string | URL) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url.includes("/api/owner/recovery/businesses")) {
@@ -131,7 +131,7 @@ describe("InventoryPage", () => {
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
     const { findByText } = render(<InventoryPage />);
-    await findByText("No stock items found.");
+    await findByText("No stock items yet");
   });
 
   it("opens create modal when + Add Item is clicked", async () => {

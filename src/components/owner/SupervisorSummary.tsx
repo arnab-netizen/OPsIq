@@ -58,7 +58,7 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
   const supportingFigures = summary.supportingFigures ?? [];
 
   return (
-    <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white mb-6" data-testid="owner-supervisor-summary">
+    <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-supervisor-summary">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="text-xs uppercase text-muted-foreground">OpsIQ supervisor summary</div>
         <div className="flex flex-wrap gap-2">
@@ -86,7 +86,7 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
         )}
         <div className="rounded-md border p-2 text-sm" data-testid="supervisor-owner-delegate">
           <strong>Owner vs delegate:</strong>{" "}
-          {summary.ownerDecisionRequired ? <span className="text-warning">{summary.ownerDecisionRequired}</span> : "OpsIQ + staff can carry this with proof."}
+          {summary.ownerDecisionRequired ? <span className="text-[var(--warning-text)]">{summary.ownerDecisionRequired}</span> : "OpsIQ + staff can carry this with proof."}
           {summary.delegateToStaff.length > 0 && (
             <div className="text-xs text-muted-foreground mt-1">Delegate: {summary.delegateToStaff[0]}</div>
           )}

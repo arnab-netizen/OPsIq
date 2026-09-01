@@ -123,7 +123,7 @@ describe("CampaignsPage", () => {
     await findByText("200%");
   });
 
-  it("shows No campaigns found when list is empty", async () => {
+  it("shows a true-empty state (with a create CTA) when the business has no campaigns yet", async () => {
     fetchMock.mockImplementation((input: string | URL) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url.includes("/api/owner/recovery/businesses")) {
@@ -135,7 +135,7 @@ describe("CampaignsPage", () => {
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
     const { findByText } = render(<CampaignsPage />);
-    await findByText("No campaigns found.");
+    await findByText("No campaigns yet");
   });
 
   it("opens create modal when + New Campaign is clicked", async () => {

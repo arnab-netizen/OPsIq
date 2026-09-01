@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { classifyOperatorError } from '@/lib/operator-error-governance';
+import { MetricSummarySkeleton } from '@/ui/primitives';
 
 interface ActionItem {
   decisionId: string;
@@ -78,7 +79,11 @@ export default function ControlTodayPage() {
   }, []);
 
   if (loading) {
-    return <div style={{ padding: '20px' }}>Loading...</div>;
+    return (
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+        <MetricSummarySkeleton tiles={3} label="Loading control dashboard" />
+      </div>
+    );
   }
 
   if (error) {

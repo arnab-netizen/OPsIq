@@ -1,4 +1,36 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
+
+export interface EmptyStateActionSpec {
+  label: string;
+  onClick?: () => void;
+  href?: string;
+}
+
+function EmptyStateActionButton({
+  action,
+  variant,
+}: {
+  action: EmptyStateActionSpec;
+  variant: "primary" | "outline";
+}) {
+  const classes =
+    variant === "primary"
+      ? "inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+      : "inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted";
+  if (action.href) {
+    return (
+      <Link href={action.href} className={classes}>
+        {action.label}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={action.onClick} className={classes}>
+      {action.label}
+    </button>
+  );
+}
 
 export function LoadingState({ message = "Loading..." }: { message?: string }) {
   return (
@@ -28,35 +60,63 @@ export function LoadingState({ message = "Loading..." }: { message?: string }) {
   );
 }
 
+const DEFAULT_EMPTY_ICON = (
+  <svg
+    className="h-12 w-12 text-muted-foreground/50"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+    />
+  </svg>
+);
+
+/**
+ * Shared empty-state primitive.
+ *
+ * Deliberately does not hardcode copy for "true empty" vs "filtered empty" vs
+ * "permission denied" vs "error" — each call site owns its own title/description
+ * so a zero-data first-run message is never confused with a filtered-out-of-results
+ * message. See docs/opsiq-governance for the audit that consolidated this (P2
+ * visual-system closure): several owner pages previously rendered a single bare
+ * "No X found." string regardless of whether data never existed or a filter just
+ * hid it, which pointed the same (missing) call-to-action at both situations.
+ */
 export function EmptyState({
   title = "Nothing here yet",
   description,
+  icon,
+  primaryAction,
+  secondaryAction,
   action,
 }: {
   title?: string;
   description?: string;
+  icon?: ReactNode;
+  primaryAction?: EmptyStateActionSpec;
+  secondaryAction?: EmptyStateActionSpec;
+  /** Legacy freeform action slot — prefer primaryAction/secondaryAction for new call sites. */
   action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 py-12 px-6 text-center">
-      <svg
-        className="h-12 w-12 text-muted-foreground/50"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth="1"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-        />
-      </svg>
+      {icon ?? DEFAULT_EMPTY_ICON}
       <h3 className="mt-4 text-sm font-medium text-foreground">{title}</h3>
       {description && (
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
       )}
-      {action && <div className="mt-4">{action}</div>}
+      {(primaryAction || secondaryAction) && (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {primaryAction && <EmptyStateActionButton action={primaryAction} variant="primary" />}
+          {secondaryAction && <EmptyStateActionButton action={secondaryAction} variant="outline" />}
+        </div>
+      )}
+      {!primaryAction && !secondaryAction && action && <div className="mt-4">{action}</div>}
     </div>
   );
 }

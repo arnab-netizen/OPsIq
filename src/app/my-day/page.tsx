@@ -194,7 +194,7 @@ export default function MyDayPage() {
                       <span
                         className={`text-xs font-semibold uppercase ${
                           item.status === 'in_progress'
-                            ? 'text-primary'
+                            ? 'text-[var(--primary-text)]'
                             : 'text-muted-foreground'
                         }`}
                       >

@@ -321,7 +321,7 @@ export function FindingsManager({
       {/* High Findings */}
       {highFindings.length > 0 && (
         <div className="rounded-lg border border-warning/50 bg-warning/5 p-4">
-          <h4 className="font-semibold text-warning">High ({highFindings.length})</h4>
+          <h4 className="font-semibold text-[var(--warning-text)]">High ({highFindings.length})</h4>
           <div className="mt-3 space-y-2">
             {highFindings.map((finding) => (
               <div

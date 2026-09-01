@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select } from "@/ui/primitives";
+import { Badge, Button, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic trust payloads are untyped; load() fetch-on-mount is intentional */
@@ -95,7 +95,7 @@ export default function OwnerTrustPage() {
     }
   }, []);
 
-  if (loading) return <div className="p-8">Loading trust &amp; explainability…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading trust & explainability" />;
 
   const businesses: any[] = overview?.businesses ?? [];
   const cycles: any[] = overview?.cycles ?? [];
@@ -174,7 +174,7 @@ export default function OwnerTrustPage() {
                 </div>
               ) : (
                 (cards ?? []).map((c: any) => (
-                  <section key={c.findingCode} className="border rounded-lg p-4 bg-white space-y-3">
+                  <section key={c.findingCode} className="border rounded-lg p-4 bg-card space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="font-bold">{c.whatWasDetected}</div>
@@ -240,7 +240,7 @@ export default function OwnerTrustPage() {
               )}
 
               {audit && (
-                <section className="border-2 border-foreground/10 rounded-lg p-4 bg-white">
+                <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
                   <h2 className="font-bold mb-3">Audit trail — {audit.entityId}</h2>
                   {audit.events.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No audit events for this entity.</p>

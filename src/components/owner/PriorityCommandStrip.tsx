@@ -35,7 +35,7 @@ export function PriorityCommandStrip({ cards }: { cards: PriorityCardView[] }) {
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c, i) => (
-          <div key={c.id} className="rounded-lg border p-3 bg-white" data-testid={`priority-card-${i}`}>
+          <div key={c.id} className="rounded-lg border p-3 bg-card" data-testid={`priority-card-${i}`}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <Badge variant={SEVERITY_VARIANT[c.severity] ?? "muted"}>{c.severity}</Badge>
               <span className="text-[11px] uppercase text-muted-foreground">Priority {i + 1}</span>

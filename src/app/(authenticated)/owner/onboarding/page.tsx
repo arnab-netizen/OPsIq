@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
@@ -83,7 +83,7 @@ export default function OwnerOnboardingPage() {
     load();
   }, [load]);
 
-  if (loading) return <div className="p-8">Loading onboarding…</div>;
+  if (loading) return <CardDashboardSkeleton label="Loading onboarding" />;
 
   return (
     <div className="mx-auto max-w-3xl py-8 px-4" data-testid="owner-onboarding">
@@ -120,11 +120,14 @@ export default function OwnerOnboardingPage() {
           </div>
 
           {readiness?.found && (
-            <section className="border rounded-lg p-4 bg-white mb-6" data-testid="onboarding-readiness">
+            <section className="border rounded-lg p-4 bg-card mb-6" data-testid="onboarding-readiness">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-xs uppercase text-muted-foreground">Owner pilot readiness</div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={readiness.overallScore >= 70 ? "success" : readiness.overallScore >= 40 ? "warning" : "destructive"}>
+                  <Badge
+                    variant={readiness.overallScore >= 70 ? "success" : readiness.overallScore >= 40 ? "warning" : "destructive"}
+                    className="tabular-nums"
+                  >
                     {Math.round(readiness.overallScore)}/100
                   </Badge>
                   <Badge variant={readiness.pilotReady ? "success" : "warning"}>
@@ -143,7 +146,7 @@ export default function OwnerOnboardingPage() {
           {state?.found && (
             <div className="space-y-6">
               {/* Steps */}
-              <section className="border rounded-lg p-4 bg-white" data-testid="onboarding-steps">
+              <section className="border rounded-lg p-4 bg-card" data-testid="onboarding-steps">
                 <div className="text-xs uppercase text-muted-foreground mb-3">Your setup steps</div>
                 <ol className="space-y-2">
                   {state.steps.map((s: any) => (
@@ -151,14 +154,17 @@ export default function OwnerOnboardingPage() {
                       <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${s.complete ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"}`}>
                         {s.complete ? "✓" : "•"}
                       </span>
-                      <span className={s.complete ? "text-foreground" : "text-muted-foreground"}>{s.label}</span>
+                      {/* Completed steps are de-emphasized (muted) relative to the still-active
+                          one, which stays full-strength — legible either way, but visual weight
+                          follows what still needs the owner's attention. */}
+                      <span className={s.complete ? "text-muted-foreground" : "text-foreground font-medium"}>{s.label}</span>
                     </li>
                   ))}
                 </ol>
               </section>
 
               {/* Confidence before diagnosis */}
-              <section className="border rounded-lg p-4 bg-white" data-testid="onboarding-confidence">
+              <section className="border rounded-lg p-4 bg-card" data-testid="onboarding-confidence">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs uppercase text-muted-foreground">Confidence before diagnosis</div>
                   <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted"}>
@@ -175,7 +181,7 @@ export default function OwnerOnboardingPage() {
 
               {/* Missing minimum data */}
               {state.missingMinimum.length > 0 && (
-                <section className="border rounded-lg p-4 bg-white" data-testid="onboarding-missing">
+                <section className="border rounded-lg p-4 bg-card" data-testid="onboarding-missing">
                   <div className="text-xs uppercase text-muted-foreground mb-2">What data is still missing</div>
                   <ul className="space-y-3">
                     {state.missingMinimum.map((m: any) => {
@@ -190,7 +196,7 @@ export default function OwnerOnboardingPage() {
                           <p className="text-xs text-muted-foreground">Affects: {m.decisionAffected}</p>
                           <Link
                             href={target.href}
-                            className="mt-2 inline-block text-xs font-medium text-primary underline hover:no-underline"
+                            className="mt-2 inline-block text-xs font-medium text-[var(--primary-text)] underline hover:no-underline"
                           >
                             {target.actionLabel} {m.label.toLowerCase()} →
                           </Link>
@@ -202,7 +208,7 @@ export default function OwnerOnboardingPage() {
               )}
 
               {/* First action + what not to do */}
-              <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white" data-testid="onboarding-first-action">
+              <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card" data-testid="onboarding-first-action">
                 <div className="text-xs uppercase text-muted-foreground mb-1">Your first action</div>
                 <p className="text-sm font-medium">{state.firstAction}</p>
                 {state.whatNotToDo.length > 0 && (
@@ -215,7 +221,7 @@ export default function OwnerOnboardingPage() {
 
               {/* Next best upload + proof + delegation */}
               <section className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-md border p-3 text-sm bg-white" data-testid="onboarding-next-upload">
+                <div className="rounded-md border p-3 text-sm bg-card" data-testid="onboarding-next-upload">
                   <strong>Next best upload:</strong>{" "}
                   {state.nextBestUpload ? state.nextBestUpload.replace(/_/g, " ") : "you have what you need to start"}
                   <div className="mt-2">
@@ -230,13 +236,13 @@ export default function OwnerOnboardingPage() {
                     </Link>
                   </div>
                 </div>
-                <div className="rounded-md border p-3 text-sm bg-white" data-testid="onboarding-proof">
+                <div className="rounded-md border p-3 text-sm bg-card" data-testid="onboarding-proof">
                   <strong>Proof you&apos;ll need:</strong>
                   <p className="text-muted-foreground mt-1">{state.proofExpectation}</p>
                 </div>
               </section>
 
-              <section className="rounded-md border p-3 text-sm bg-white" data-testid="onboarding-delegation">
+              <section className="rounded-md border p-3 text-sm bg-card" data-testid="onboarding-delegation">
                 <strong>How OpsIQ helps you delegate:</strong>
                 <p className="text-muted-foreground mt-1">{state.delegationGuidance}</p>
               </section>

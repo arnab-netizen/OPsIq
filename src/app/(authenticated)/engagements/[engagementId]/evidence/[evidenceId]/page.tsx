@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Button, Badge, LoadingState, ErrorState } from "@/ui/primitives";
+import { Button, Badge, LoadingState, ErrorState, DetailPageSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface EvidenceDetail {
@@ -96,7 +96,7 @@ export default function EvidenceDetailPage({
   }
 
   if (isLoading) {
-    return <LoadingState message="Loading evidence..." />;
+    return <DetailPageSkeleton label="Loading evidence" />;
   }
 
   if (error) {
@@ -290,7 +290,7 @@ export default function EvidenceDetailPage({
                 href={`/engagements/${engagementId}/evidence/bundles/${item.bundleId}`}
                 className="block rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors"
               >
-                <p className="text-sm text-primary hover:underline">
+                <p className="text-sm text-[var(--primary-text)] hover:underline">
                   View bundle
                 </p>
               </Link>

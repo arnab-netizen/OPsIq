@@ -122,7 +122,7 @@ export default function DiagnosisPage() {
           ← Back to Diagnosis
         </Link>
 
-        <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
+        <div className="border rounded-lg p-6 bg-card shadow-sm mb-6">
           <h1 className="text-3xl font-bold text-foreground mb-2">Diagnosis Results</h1>
           <p className="text-muted-foreground text-sm mb-4">
             Engagement ID: {result.engagementId}
@@ -195,7 +195,7 @@ export default function DiagnosisPage() {
         </div>
 
         {result.findings.length > 0 && (
-          <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
+          <div className="border rounded-lg p-6 bg-card shadow-sm mb-6">
             <h2 className="text-xl font-bold text-foreground mb-4">Key Findings ({result.findings.length})</h2>
             <div className="space-y-3">
               {result.findings.map((finding) => (
@@ -225,7 +225,7 @@ export default function DiagnosisPage() {
         )}
 
         {result.recommendations.length > 0 && (
-          <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
+          <div className="border rounded-lg p-6 bg-card shadow-sm mb-6">
             <h2 className="text-xl font-bold text-foreground mb-4">
               Recommendations ({result.recommendations.length})
             </h2>
@@ -251,7 +251,7 @@ export default function DiagnosisPage() {
         )}
 
         {result.actionPlan.length > 0 && (
-          <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
+          <div className="border rounded-lg p-6 bg-card shadow-sm mb-6">
             <h2 className="text-xl font-bold text-foreground mb-4">Action Plan ({result.actionPlan.length})</h2>
 
             {result.actionPlan.filter(a => a.urgency === "immediate").length > 0 && (
@@ -279,7 +279,7 @@ export default function DiagnosisPage() {
                             <strong className="text-foreground">Bottleneck:</strong> {action.bottleneck}
                           </p>
                         )}
-                        <div className="text-xs bg-white border rounded p-2">
+                        <div className="text-xs bg-card border rounded p-2">
                           <strong>Success metric:</strong> {action.successMetric}
                         </div>
                       </div>
@@ -313,7 +313,7 @@ export default function DiagnosisPage() {
                             <strong className="text-foreground">Bottleneck:</strong> {action.bottleneck}
                           </p>
                         )}
-                        <div className="text-xs bg-white border rounded p-2">
+                        <div className="text-xs bg-card border rounded p-2">
                           <strong>Success metric:</strong> {action.successMetric}
                         </div>
                       </div>
@@ -325,7 +325,7 @@ export default function DiagnosisPage() {
         )}
 
         {result.whatNotToDoYet && result.whatNotToDoYet.length > 0 && (
-          <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
+          <div className="border rounded-lg p-6 bg-card shadow-sm mb-6">
             <h2 className="text-xl font-bold text-foreground mb-3">What not to do yet</h2>
             <ul className="space-y-2">
               {result.whatNotToDoYet.map((item, idx) => (

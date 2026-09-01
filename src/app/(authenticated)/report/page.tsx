@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { toHttpResponseError } from "@/lib/operator-safe-errors";
+import { CardDashboardSkeleton } from "@/ui/primitives";
 
 interface ReportData {
   totalImpact: number;
@@ -46,7 +47,7 @@ export default function ReportPage() {
     <div style={{ padding: "20px", fontFamily: "sans-serif", maxWidth: "800px" }}>
       <h1>Report</h1>
 
-      {loading && <p>Loading report...</p>}
+      {loading && <CardDashboardSkeleton sections={2} label="Loading report" />}
 
       {error && (
         <div

@@ -99,7 +99,7 @@ export function ExecutionCertaintyCard({ engagementId }: ExecutionCertaintyCardP
         <div className="rounded-lg border border-warning/30 bg-warning/5 p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium uppercase text-warning">
+              <p className="text-xs font-medium uppercase text-[var(--warning-text)]">
                 Execution Risk: HIGH — Override Applied
               </p>
               <div className="mt-2 flex items-baseline gap-2">
@@ -130,7 +130,7 @@ export function ExecutionCertaintyCard({ engagementId }: ExecutionCertaintyCardP
               </p>
             )}
             {data.risks.length > 0 && (
-              <p className="text-xs text-warning">
+              <p className="text-xs text-[var(--warning-text)]">
                 {data.risks.length} risk(s)
               </p>
             )}
@@ -171,7 +171,7 @@ export function ExecutionCertaintyCard({ engagementId }: ExecutionCertaintyCardP
             </div>
           )}
           {data.risks.length > 0 && (
-            <p className="text-xs text-warning">
+            <p className="text-xs text-[var(--warning-text)]">
               {data.risks.length} risk(s)
             </p>
           )}
@@ -199,7 +199,7 @@ export function ExecutionCertaintyCard({ engagementId }: ExecutionCertaintyCardP
           </p>
         )}
         {data.risks.length > 0 && (
-          <p className="text-xs text-warning">
+          <p className="text-xs text-[var(--warning-text)]">
             {data.risks.length} risk(s)
           </p>
         )}

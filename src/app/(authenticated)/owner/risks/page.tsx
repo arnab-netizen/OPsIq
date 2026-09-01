@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Modal, Input, Select, Textarea } from "@/ui/primitives";
+import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type RiskCategory = "OPERATIONAL" | "FINANCIAL" | "MARKET" | "COMPLIANCE" | "EXECUTION" | "STRATEGIC";
@@ -258,11 +258,29 @@ export default function RisksPage() {
         </select>
       </div>
 
-      {loading && <p className="text-muted-foreground text-sm">Loading…</p>}
+      {loading && <TableListSkeleton label="Loading" rows={4} />}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {!loading && !error && visibleRisks.length === 0 && (
-        <p className="text-muted-foreground text-sm">No risks found.</p>
+        categoryFilter || statusFilter ? (
+          <EmptyState
+            title="No risks match these filters"
+            description="No registered risks fit the selected category and status."
+            primaryAction={{
+              label: "Clear filters",
+              onClick: () => {
+                setCategoryFilter("");
+                setStatusFilter("");
+              },
+            }}
+          />
+        ) : (
+          <EmptyState
+            title="No risks logged yet"
+            description="Log a risk to track its category, severity, and mitigation status in one register."
+            primaryAction={{ label: "+ New Risk", onClick: openCreate }}
+          />
+        )
       )}
 
       {!loading && !error && visibleRisks.length > 0 && (
@@ -298,11 +316,11 @@ export default function RisksPage() {
                     <div className="flex gap-3">
                       <button
                         onClick={() => openEdit(risk)}
-                        className="text-primary hover:underline text-sm"
+                        className="text-[var(--primary-text)] hover:underline text-sm"
                       >
                         Edit
                       </button>
-                      <Link href={`/owner/risks/${risk.id}`} className="text-primary hover:underline text-sm">
+                      <Link href={`/owner/risks/${risk.id}`} className="text-[var(--primary-text)] hover:underline text-sm">
                         View
                       </Link>
                     </div>
