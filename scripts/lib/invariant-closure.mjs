@@ -428,6 +428,13 @@ export function evaluateInvariantClosure(manifest, options = {}) {
     dir: options.evidenceDir ?? pathJoin(options.repoRoot ?? process.cwd(), EVIDENCE_ARTIFACTS_DIR),
     signingKey: options.signingKey ?? null,
     provenance: options.provenance ?? null,
+    // D-4/A4 S7-I11 enforcement reads its authorized environment target out of the
+    // raw contract text. The governing contract here is the one being evaluated, so
+    // an artifact cited as proof must satisfy the D-4 of the contract citing it.
+    // Absent raw YAML the guard fails closed, which is the correct default.
+    resolveClosureManifest: typeof options.manifestYaml === 'string' && options.manifestYaml.length > 0
+      ? () => options.manifestYaml
+      : null,
   });
   const supersededIds = collectSupersededIds(evidenceIndex.records, evidenceIndex.byId);
 

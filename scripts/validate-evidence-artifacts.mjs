@@ -136,6 +136,33 @@ function loadKeyRegistryAtSha(sha) {
   return parseKeyRegistryYaml(result.stdout);
 }
 
+/**
+ * Read factory-stage-7-closure.yaml at a given AUTH_SHA, memoized per SHA.
+ *
+ * Same AUTH_SHA reasoning as loadKeyRegistryAtSha above: governance is authored on
+ * main, and the working tree is at INF_SHA, so the manifest must be read from the
+ * commit the artifact itself names in authorization_manifest_sha. The D-4/A4 S7-I11
+ * guard inside the validator reads its authorized environment target from this.
+ *
+ * Returns null when the SHA is malformed or the blob cannot be read; the guard then
+ * fails closed with MANIFEST_UNREADABLE rather than this helper guessing a target.
+ *
+ * @param {string|null} sha  40-character lowercase commit SHA
+ * @returns {string|null} manifest YAML content, or null
+ */
+const closureManifestBySha = new Map();
+function loadClosureManifestAtSha(sha) {
+  if (typeof sha !== 'string' || !/^[0-9a-f]{40}$/.test(sha)) return null;
+  if (closureManifestBySha.has(sha)) return closureManifestBySha.get(sha);
+  const result = spawnSync(
+    'git', ['show', `${sha}:docs/opsiq/bundles/factory-stage-7-closure.yaml`],
+    { cwd: repoRoot, encoding: 'utf8' },
+  );
+  const manifest = result.status === 0 ? result.stdout : null;
+  closureManifestBySha.set(sha, manifest);
+  return manifest;
+}
+
 const githubToken = process.env.GH_TOKEN?.trim() || process.env.GITHUB_TOKEN?.trim() || null;
 const ownerLogins = (process.env.EVIDENCE_OWNER_LOGINS ?? '')
   .split(',')
@@ -241,6 +268,10 @@ const { records, byId } = loadEvidenceArtifactIndex({
   dir: options.dir,
   signingKey: options.fromAuthShaRegistry ? null : signingKey,
   displayRoot: repoRoot,
+  // D-4/A4 S7-I11 enforcement needs the governance manifest from each artifact's own
+  // AUTH_SHA. Without this the guard refuses every S7-I11 artifact as
+  // MANIFEST_UNREADABLE, including one this repository just produced correctly.
+  resolveClosureManifest: loadClosureManifestAtSha,
 });
 
 // --from-auth-sha-registry: load each artifact's key registry from its own

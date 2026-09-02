@@ -160,7 +160,15 @@ jobs:
             S7-I11)
               echo "lane=LANE_E" >> "$GITHUB_OUTPUT"
               echo "proof_type=simulation_adversarial" >> "$GITHUB_OUTPUT"
-              echo "environment=isolated_simulation" >> "$GITHUB_OUTPUT"
+              # Owner decision D-4 authorizes exactly one concrete environment target
+              # for S7-I11: s7_i11_environment_target: "ci" in
+              # factory-stage-7-closure.yaml. The artifact builder enforces equality
+              # against that field, and 'isolated_simulation' is additionally listed in
+              # GENERIC_ENVIRONMENT_LABELS as a purpose category rather than a concrete
+              # target, so it can never satisfy D-4. This names the governed EXECUTION
+              # ENVIRONMENT; the assertion below still describes what the suites do —
+              # isolated adversarial simulation — which remains factually true.
+              echo "environment=ci" >> "$GITHUB_OUTPUT"
               echo "method=test_run" >> "$GITHUB_OUTPUT"
               echo "assertion=Nine adversarial failure scenarios each fail safely, visibly, and recoverably in isolated simulation." >> "$GITHUB_OUTPUT"
               echo "command=npx vitest run src/__tests__/completion-factory/stage7-evidence-artifact.test.ts src/__tests__/completion-factory/stage7-ed25519-hostile.test.ts --reporter=default" >> "$GITHUB_OUTPUT"

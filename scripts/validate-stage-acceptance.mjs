@@ -112,20 +112,20 @@ function loadBundleManifest(bundleId) {
   try {
     raw = readFileSync(path, 'utf8');
   } catch {
-    return { manifest: null, error: null, missing: true };
+    return { manifest: null, manifestYaml: null, error: null, missing: true };
   }
   let parsed;
   try {
     parsed = yamlLoad(raw);
   } catch (e) {
-    return { manifest: null, error: `${path}: ${e.message}`, missing: false };
+    return { manifest: null, manifestYaml: null, error: `${path}: ${e.message}`, missing: false };
   }
   // An empty file parses to undefined. Treat anything that is not a mapping as
   // unreadable rather than as "nothing to check".
   if (parsed === null || parsed === undefined) {
-    return { manifest: null, error: `${path}: file is empty — no manifest to validate`, missing: false };
+    return { manifest: null, manifestYaml: null, error: `${path}: file is empty — no manifest to validate`, missing: false };
   }
-  return { manifest: parsed, error: null, missing: false };
+  return { manifest: parsed, manifestYaml: raw, error: null, missing: false };
 }
 
 function checkStage(stageKey) {
@@ -166,9 +166,9 @@ function checkStage(stageKey) {
     // a development_bundle with post_merge_evidence) skip invariant evaluation.
     const isStageClosure = artifact_type === 'factory_stage_closure';
     const isGoverned = requiresInvariantProof(id);
-    const { manifest, error: manifestError, missing: manifestMissing } = (isStageClosure || isGoverned)
+    const { manifest, manifestYaml, error: manifestError, missing: manifestMissing } = (isStageClosure || isGoverned)
       ? loadBundleManifest(id)
-      : { manifest: null, error: null, missing: true };
+      : { manifest: null, manifestYaml: null, error: null, missing: true };
 
     if (manifestError) {
       console.error(`  ❌ ${id}: cannot parse stage-closure manifest — ${manifestError}`);
@@ -182,7 +182,9 @@ function checkStage(stageKey) {
     // being quietly disarmed now and closed later.
     let closure = null;
     if (manifest) {
-      closure = evaluateInvariantClosure(manifest, { bundleId: id, evidenceDir });
+      // manifestYaml carries the raw contract text the D-4/A4 S7-I11 guard reads its
+      // authorized environment target from. Parsed YAML alone cannot satisfy it.
+      closure = evaluateInvariantClosure(manifest, { bundleId: id, evidenceDir, manifestYaml });
       for (const violation of closure.structuralViolations) {
         console.error(`  ❌ ${violation}`);
         violations++;
