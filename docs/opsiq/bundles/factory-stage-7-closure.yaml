@@ -14,7 +14,7 @@ authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 authorized_branch: "claude/opsiq-stage-7-loop-main"
 authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 
-# ─── Authorized evidence subject SHA (owner decision D-14) ───────────────────
+# ─── Authorized evidence subject SHA (owner decision D-15) ───────────────────
 # The single commit every Stage 7 evidence artifact must describe. An artifact
 # whose subject_sha is any other commit is refused with SUBJECT_SHA_NOT_AUTHORIZED,
 # because evidence captured against another commit does not describe this one.
@@ -27,16 +27,18 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 # and it proves nothing on its own — required_evidence below remains null, every
 # invariant remains PENDING, and Stage 7 remains open.
 #
-# D-14 supersedes D-13 as the ACTIVE evidence subject authorization. D-13 remains
-# historical and is not rewritten: it authorized a2d7266018d74d45790c89427ef193a66bc367ad
-# on 2026-09-01, and amendment A12 below still records it as decided.
+# D-15 supersedes D-14 as the ACTIVE evidence subject authorization. D-14 remains
+# historical and is not rewritten: it authorized 1fdc318414fd7669ed5e5ef86727800e2847c2ee
+# on 2026-09-02, and amendment A13 below still records it as decided. D-13 likewise
+# remains historical in A12.
 #
 # Subject lineage: D-12 (036c5269, PR #285 merge, permanent CI trigger hardening and
 # recovery controls) -> D-13 (a2d72660, PR #386 merge, technical pre-beta readiness
 # gate: identity email canonicalization, distributed Postgres rate limiting for the
 # public identity routes, a login rate-limit info-disclosure fix, production
 # health-check observability rewired onto the real Sentry-backed capture path, and an
-# A7.7 governance-scan integrity fix) -> D-14 (1fdc3184, this decision).
+# A7.7 governance-scan integrity fix) -> D-14 (1fdc3184, PR #394 merge, the first
+# subject carrying #391-#394) -> D-15 (a19d226d, this decision).
 #
 # D-13 also resolved the "D-13" naming inconsistency noted during Stage 7
 # reconciliation: commit 184d2515 (authored the same day D-12 was decided) left
@@ -60,56 +62,78 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 #        be reached and no artifact could ever reach ACCEPTED.
 # D-14's subject 1fdc3184 is the merge commit of #394 and contains all four.
 # Authorized by the owner on 2026-09-02.
-closure_subject_sha: "1fdc318414fd7669ed5e5ef86727800e2847c2ee"
+#
+# Why the subject had to advance again. The first real S7-I11 capture ran against
+# D-14 (workflow run 33633377692) and was REFUSED. The refusal was correct in
+# direction but wrong in fact: the observation command executed fully and passed
+# 74/74 across 2 files, and the PR #392 execution-validity marker still rejected it,
+# because GitHub Actions colourises vitest and the summary line arrived as
+#   ESC[2m Test Files ESC[22m ESC[1mESC[32m2 passed ...
+# so "Test Files" was followed by an escape sequence rather than the digit the marker
+# required. Nothing was fabricated — no artifact, no evidence branch, no evidence PR,
+# no repository_dispatch, no verifier run — but every LANE_E capture was blocked.
+#
+# PR #396 repaired it by matching the validity markers against an ANSI-normalised COPY
+# while the artifact continues to consume the raw observation bytes, so the signed
+# evidence stays verbatim. D-15's subject a19d226d is the merge commit of #396: the
+# first commit carrying the complete known capture-path repair set #391, #392, #393,
+# #394 and #396, and the exact SHA production is deployed at.
+# Authorized by the owner on 2026-09-02.
+closure_subject_sha: "a19d226d784d4eb48bf239ca5c5320f12efac541"
 closure_subject_sha_authorization:
-  decision: "D-14"
+  decision: "D-15"
   authorized_by: "owner"
   authorized_date: "2026-09-02"
-  authorization_text: "AUTHORIZE_STAGE7_SUBJECT_SHA: 1fdc318414fd7669ed5e5ef86727800e2847c2ee"
-  supersedes: "D-13"
-  superseded_sha: "a2d7266018d74d45790c89427ef193a66bc367ad"
-  pr_that_produced_sha: "394"
-  pr_head: "5e39afc1334bf849a21ef3ce9077486ed6838139"
-  main_integration_run: "33625433823"
+  authorization_text: "AUTHORIZE_STAGE7_SUBJECT_SHA: a19d226d784d4eb48bf239ca5c5320f12efac541"
+  supersedes: "D-14"
+  superseded_sha: "1fdc318414fd7669ed5e5ef86727800e2847c2ee"
+  pr_that_produced_sha: "396"
+  pr_head: "62ed6f092e69659a1f5db14dc86d5ddbb04d01a5"
+  main_integration_run: "33652199820"
   main_integration_conclusion: "success"
-  main_integration_tested_sha: "1fdc318414fd7669ed5e5ef86727800e2847c2ee"
-  vercel_production_deployment: "dpl_8ihJm7a9v2xGY9n5UdsV1zzNVExD"
+  main_integration_tested_sha: "a19d226d784d4eb48bf239ca5c5320f12efac541"
+  vercel_production_deployment: "dpl_HJVUbKFenEcfK6QAV9zqQHwtrYvs"
   vercel_production_state: "READY"
-  vercel_production_commit_sha: "1fdc318414fd7669ed5e5ef86727800e2847c2ee"
+  vercel_production_commit_sha: "a19d226d784d4eb48bf239ca5c5320f12efac541"
   rationale: >-
-    Merge commit of PR #394 (capture -> trusted-verifier repository_dispatch contract
-    repair), simultaneously: current main HEAD; Main Integration green (run
-    33625433823, success, 1fdc318414fd7669ed5e5ef86727800e2847c2ee tested, risk class
+    Merge commit of PR #396 (ANSI-normalised observation-validity matching),
+    simultaneously: current main HEAD; Main Integration green (run 33652199820,
+    success, a19d226d784d4eb48bf239ca5c5320f12efac541 tested, risk class
     APPLICATION_NON_DB — the full DB integration suite was skipped by the risk
     classifier's own decision, not executed); Vercel production deployment
-    dpl_8ihJm7a9v2xGY9n5UdsV1zzNVExD READY at merge SHA
-    1fdc318414fd7669ed5e5ef86727800e2847c2ee (alias o-ps-iq.vercel.app), created
-    2026-09-02T11:35:56Z, ready 2026-09-02T11:38:25Z. This is the first subject to
-    contain the complete Stage 7 capture-path repair set: PR #391 (vitest 4 reporter
-    compatibility), PR #392 (vitest execution-validity fail-closed gate), PR #393
-    (Stage 7 node-probe terminal-verdict integrity gate) and PR #394 (trusted-verifier
-    repository_dispatch contract). Supersedes D-13 (a2d72660). The governance-only
-    deployment-control script (scripts/vercel-ignore-build.mjs, wired via vercel.json
-    ignoreCommand) remains active and enforced. Owner authorization received verbatim:
-    "AUTHORIZE_STAGE7_SUBJECT_SHA: 1fdc318414fd7669ed5e5ef86727800e2847c2ee".
+    dpl_HJVUbKFenEcfK6QAV9zqQHwtrYvs READY at merge SHA
+    a19d226d784d4eb48bf239ca5c5320f12efac541 (alias o-ps-iq.vercel.app), created
+    2026-09-02T16:00:31Z, ready 2026-09-02T16:03:02Z. PR #396 touched
+    .github/workflows/stage7-capture.yml, which is outside the governance prefixes,
+    so Vercel built and deployed it: production is at the exact authorized SHA
+    rather than merely code-equivalent. This is the first subject carrying the
+    complete known Stage 7 capture-path repair set: PR #391 (vitest 4 reporter
+    compatibility), #392 (execution-validity fail-closed gate), #393 (node-probe
+    terminal-verdict integrity gate), #394 (trusted-verifier repository_dispatch
+    contract) and #396 (ANSI-normalised validity matching with the raw observation
+    preserved for evidence). Supersedes D-14 (1fdc3184). The governance-only
+    deployment-control script (scripts/vercel-ignore-build.mjs, wired via
+    vercel.json ignoreCommand) remains active and enforced. Owner authorization
+    received verbatim: "AUTHORIZE_STAGE7_SUBJECT_SHA:
+    a19d226d784d4eb48bf239ca5c5320f12efac541".
   # Recorded limitations. Stated rather than assumed, because an unverified claim
   # in a governance record is worse than an absent one.
   unverified:
     production_alias_binding: >-
       The alias o-ps-iq.vercel.app is reported as bound to deployment
-      dpl_8ihJm7a9v2xGY9n5UdsV1zzNVExD by the Vercel API, and an unauthenticated
+      dpl_HJVUbKFenEcfK6QAV9zqQHwtrYvs by the Vercel API, and an unauthenticated
       GET https://o-ps-iq.vercel.app/api/health returned HTTP 200 with status
       "healthy" and environment "production". Independent DNS resolution and
       certificate-chain inspection were NOT performed, so the binding of that
       hostname to that deployment is API-reported plus liveness-observed, not
       independently proven.
     git_commit_signature: >-
-      The GitHub API reports commit 1fdc318414fd7669ed5e5ef86727800e2847c2ee as
-      verified (reason "valid"), and Vercel records githubCommitVerification
-      "verified" for the deployment. Local `git log --show-signature` returns status
-      E (cannot check) because signing key B5690EEEBB952194 is not present in this
-      environment's keyring. The signature is therefore provider-attested, NOT
-      independently verified here.
+      Vercel records githubCommitVerification "verified" for deployment
+      dpl_HJVUbKFenEcfK6QAV9zqQHwtrYvs at commit
+      a19d226d784d4eb48bf239ca5c5320f12efac541. Local `git log --show-signature`
+      returns status E (cannot check) because the GitHub web-flow signing key is not
+      present in this environment's keyring. The signature is therefore
+      provider-attested, NOT independently verified here.
   deployment_success_is_not_readiness: >-
     Vercel deployment state 'READY' means the deployment completed. It is not
     application readiness, not Owner Mode readiness, and not Stage 7 progress.
@@ -571,6 +595,25 @@ amendments:
       amendment A12 above still records it. Stage 7 status PENDING, all invariants
       PENDING, required_evidence null — no closure evidence changed, no invariant
       made PROVEN, and no evidence captured by this amendment.
+  - id: A14
+    date: "2026-09-02"
+    applied_in: "governance/stage7-d15-subject-sha"
+    authority: "owner decision D-15, authorized 2026-09-02"
+    summary: >-
+      closure_subject_sha advanced from 1fdc318414fd7669ed5e5ef86727800e2847c2ee
+      (D-14, 2026-09-02, PR #394 merge) to a19d226d784d4eb48bf239ca5c5320f12efac541
+      (D-15, 2026-09-02, PR #396 merge). The new subject is the exact
+      production-deployed SHA containing the ANSI-normalised Stage 7
+      observation-validity repair from PR #396. The first S7-I11 attempt against D-14
+      (run 33633377692) safely REFUSED a genuine 74/74 passing observation because
+      GitHub Actions ANSI sequences split the vitest execution-summary marker; no
+      artifact, evidence branch, evidence PR, repository_dispatch or verifier run was
+      produced. PR #396 corrected validity matching by evaluating markers against an
+      ANSI-normalised copy while preserving the raw observation bytes used for
+      evidence. D-14 remains historical and unmodified; amendment A13 above still
+      records it. Stage 7 status PENDING, all invariants PENDING, required_evidence
+      null — no closure evidence changed, no invariant made PROVEN, and no evidence
+      captured by this amendment.
   - id: A4
     date: "2026-09-01"
     applied_in: "claude/stage7-d13-subject-sha-and-d4"
