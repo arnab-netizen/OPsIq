@@ -220,7 +220,19 @@ if (leaked.length > 0) {
 // `resolveCaptureAuthorization` is injected with real git I/O here; tests inject
 // fixture functions directly into the library — no runtime env var bypass exists.
 
+// The governance manifest is read from origin/main (AUTH_SHA) exactly once and
+// memoized. Two consumers depend on it: the OPTION A authorization gate below and
+// the D-4/A4 S7-I11 environment guard inside buildEvidenceArtifact. Reading once
+// and handing both the same string makes their governance input byte-identical by
+// construction, so a manifest that changed mid-run cannot authorize the capture
+// under one revision and enforce D-4 under another.
+//
+// The read stays lazy and still throws from inside this function, so
+// resolveCaptureAuthorization keeps wrapping a failure in its own OPTION A message.
+let closureManifestYaml = null;
+
 function fetchMainManifest() {
+  if (closureManifestYaml !== null) return closureManifestYaml;
   const result = spawnSync(
     'git', ['show', 'origin/main:docs/opsiq/bundles/factory-stage-7-closure.yaml'],
     { cwd: repoRoot, encoding: 'utf8' },
@@ -228,7 +240,8 @@ function fetchMainManifest() {
   if (result.status !== 0) {
     throw new Error(result.stderr?.trim() || 'git show exited non-zero');
   }
-  return result.stdout;
+  closureManifestYaml = result.stdout;
+  return closureManifestYaml;
 }
 
 function resolveMainSha() {
@@ -325,7 +338,11 @@ const artifact = buildEvidenceArtifact(
     result,
     supersedes: args.supersedes ?? null,
   },
-  { signingKey, signingKeyId },
+  // closureManifestYaml carries the D-4/A4 authorized S7-I11 environment target.
+  // It is the same string the authorization gate above consumed. The builder reads
+  // the target out of it; there is no parameter through which a caller could supply
+  // a target directly, and this script exposes no flag that reaches it.
+  { signingKey, signingKeyId, closureManifestYaml },
 );
 
 // Verify with the public key registry from AUTH_SHA, not just the private key.
@@ -334,6 +351,10 @@ const artifact = buildEvidenceArtifact(
 const { violations } = validateEvidenceArtifact(artifact, {
   signingKey: keyRegistry,
   fileName: `${artifact.artifact_id}.json`,
+  // Same governance bytes the builder and the authorization gate consumed. The
+  // validator re-runs the D-4/A4 S7-I11 guard, so omitting this would refuse the
+  // artifact the builder just accepted.
+  closureManifestYaml,
 });
 if (violations.length > 0) {
   console.error('REFUSED: the assembled artifact does not satisfy the evidence schema. Nothing was written.');

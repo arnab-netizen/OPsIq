@@ -1222,9 +1222,23 @@ function collectArtifactFiles(dir, prefix = '') {
  * @param {string|Map<string,string>|null} [options.signingKey]  enables signature verification
  * @param {Map<string,string>} [options.provenance] artifact_id -> PROVENANCE_STATE
  * @param {string} [options.displayRoot]      root that reported paths are shown against
+ * @param {((authorizationManifestSha: string|null) => string|null)|null} [options.resolveClosureManifest]
+ *   Optional. Given an artifact's own `authorization_manifest_sha`, returns the
+ *   factory-stage-7-closure.yaml content at that commit. Supplied to the validator as
+ *   `closureManifestYaml`, which the D-4/A4 S7-I11 guard reads its authorized
+ *   environment target from.
+ *
+ *   Resolution is per artifact, and deliberately keyed on the artifact's OWN AUTH_SHA
+ *   rather than the working tree — the same reasoning as the existing
+ *   `--from-auth-sha-registry` key-registry pass in validate-evidence-artifacts.mjs:
+ *   the working tree is at INF_SHA, which is not where governance is authored.
+ *
+ *   When omitted, `closureManifestYaml` stays null and the S7-I11 guard fails closed
+ *   with MANIFEST_UNREADABLE. That is the correct default: a caller that supplies no
+ *   governance input has not demonstrated a resolved D-4.
  * @returns {{ records: object[], byId: Map<string, object>, duplicates: string[] }}
  */
-export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance = null, displayRoot = process.cwd() } = {}) {
+export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance = null, displayRoot = process.cwd(), resolveClosureManifest = null } = {}) {
   const records = [];
   const byId = new Map();
   const duplicates = [];
@@ -1249,7 +1263,21 @@ export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance =
       continue;
     }
 
-    const { violations, signatureState } = validateEvidenceArtifact(parsed, { signingKey, fileName: name });
+    // Resolve this artifact's governance manifest from the AUTH_SHA it names. A
+    // resolver failure is not fatal here: it yields null, and the S7-I11 guard then
+    // fails closed on its own terms rather than this loop inventing a verdict.
+    let closureManifestYaml = null;
+    if (resolveClosureManifest) {
+      try {
+        closureManifestYaml = resolveClosureManifest(
+          typeof parsed?.authorization_manifest_sha === 'string' ? parsed.authorization_manifest_sha : null,
+        );
+      } catch {
+        closureManifestYaml = null;
+      }
+    }
+
+    const { violations, signatureState } = validateEvidenceArtifact(parsed, { signingKey, fileName: name, closureManifestYaml });
     const scoped = violations.map((v) => `${relPath}: ${v}`);
     const artifactId = typeof parsed?.artifact_id === 'string' ? parsed.artifact_id : null;
 
