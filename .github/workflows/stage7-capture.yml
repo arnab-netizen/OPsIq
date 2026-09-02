@@ -203,20 +203,66 @@ jobs:
         id: observe
         env:
           OBSERVATION_COMMAND: ${{ steps.contract.outputs.command }}
+          METHOD: ${{ steps.contract.outputs.method }}
           DEPLOYMENT_ID: ${{ inputs.deployment_id }}
         run: |
           set -euo pipefail
           obs_file="$RUNNER_TEMP/observation.txt"
-          # Execute the hardcoded observation command. result = PASS if exit 0, FAIL otherwise.
-          # Caller cannot override the command, result, or observation content.
-          if eval "$OBSERVATION_COMMAND" > "$obs_file" 2>&1; then
-            echo "result=PASS" >> "$GITHUB_OUTPUT"
-          else
-            echo "result=FAIL" >> "$GITHUB_OUTPUT"
-          fi
+          # Execute the hardcoded observation command and hold its exit status
+          # INTERNALLY. Nothing is written to $GITHUB_OUTPUT until the observation
+          # has been validated below: an exit status is only evidence of an
+          # assertion outcome once we know an observation actually took place.
+          # Caller cannot override the command, method, result, or observation content.
+          observed_exit=0
+          eval "$OBSERVATION_COMMAND" > "$obs_file" 2>&1 || observed_exit=$?
+
           if [ ! -s "$obs_file" ]; then
             echo "REFUSED: observation command produced no output" >&2
             exit 1
+          fi
+
+          # ── Fail-closed test-runner validity gate ────────────────────────────
+          # A non-zero exit means "the assertion did not hold" ONLY when the runner
+          # actually executed tests. A vitest run that dies during startup — removed
+          # or misspelled reporter, unknown CLI option, config parse error,
+          # unresolvable module, no matching test files — also exits non-zero and
+          # also writes to stderr, which is redirected into $obs_file. The
+          # empty-output guard above therefore does not catch it, and without this
+          # gate that non-observation is captured, signed, filed as an evidence PR
+          # and handed to the trusted verifier as an observed invariant FAIL.
+          #
+          # Marker: vitest prints its "Test Files <n> ..." summary on a passing run
+          # and on a genuinely failing run, and never when it aborts before
+          # executing. The match is case-sensitive on purpose — vitest's
+          # "No test files found" message is lowercase, and that case must refuse.
+          #
+          # Scoped to vitest invocations, not to method alone: S7-I12 is also
+          # method=test_run but runs a node probe, which emits no vitest summary.
+          # Both METHOD and OBSERVATION_COMMAND come from the hardcoded contract
+          # matrix, so neither this scope nor the gate is caller-reachable.
+          case "$OBSERVATION_COMMAND" in
+            *"vitest run"*) observation_runner="vitest" ;;
+            *)              observation_runner="other"  ;;
+          esac
+
+          if [ "$METHOD" = "test_run" ] && [ "$observation_runner" = "vitest" ]; then
+            if ! grep -qE '(^|[[:space:]])Test Files[[:space:]]+[0-9]+' "$obs_file"; then
+              echo "REFUSED: the vitest run did not execute any tests." >&2
+              echo "No test-execution summary was found in the observation output, so a" >&2
+              echo "non-zero exit here reflects a runner or configuration failure, not an" >&2
+              echo "observed assertion failure. Nothing was observed, so there is nothing" >&2
+              echo "to capture: no artifact, no evidence PR, no verifier dispatch." >&2
+              echo "--- observation output (first 40 lines) ---" >&2
+              head -40 "$obs_file" >&2
+              exit 1
+            fi
+          fi
+
+          # Only now is the exit status meaningful as an observed result.
+          if [ "$observed_exit" -eq 0 ]; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
           fi
           echo "observation_file=$obs_file" >> "$GITHUB_OUTPUT"
 
