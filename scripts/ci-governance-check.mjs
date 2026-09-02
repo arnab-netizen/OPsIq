@@ -185,8 +185,64 @@ if (verifierContent) {
   check(hasCorrectEventType, 'stage7-trusted-verifier.yml repository_dispatch must specify types: [stage7-verify-artifacts]');
 }
 
+// 13. The stage7-capture CALLER must match the verifier's declared trigger.
+//     Rule 12 governs only the verifier side. On 2026-08-xx the verifier was
+//     converted to repository_dispatch to satisfy rule 12 while stage7-capture was
+//     left POSTing the workflow_dispatch envelope — a dispatch that can never
+//     arrive, discovered only by a manual audit. A one-sided rule cannot see that,
+//     so the pairing itself is now governed: trigger, endpoint, event type and
+//     payload envelope are checked together, on both files, as one contract.
+const captureContent = readWorkflow('stage7-capture.yml');
+if (captureContent && verifierContent) {
+  const usesRepoDispatchEndpoint = /api\.github\.com\/repos\/\$\{?REPO\}?\/dispatches/.test(captureContent);
+  check(
+    usesRepoDispatchEndpoint,
+    'stage7-capture.yml must dispatch the trusted verifier via POST /repos/$REPO/dispatches — the verifier declares repository_dispatch and reads client_payload',
+  );
+
+  const usesWorkflowDispatchEndpoint = /actions\/workflows\/stage7-trusted-verifier\.yml\/dispatches/.test(captureContent);
+  check(
+    !usesWorkflowDispatchEndpoint,
+    'stage7-capture.yml must NOT POST to the workflow_dispatch endpoint for stage7-trusted-verifier.yml — that trigger does not exist on the verifier and the endpoint requires Actions: write',
+  );
+
+  check(
+    /event_type["' ]*[:=][^\n]*stage7-verify-artifacts|--arg\s+event_type\s+"stage7-verify-artifacts"/.test(captureContent),
+    "stage7-capture.yml dispatch payload must set event_type to 'stage7-verify-artifacts' to match the verifier's repository_dispatch types",
+  );
+
+  check(
+    /client_payload/.test(captureContent),
+    'stage7-capture.yml dispatch payload must use a client_payload envelope — the verifier reads github.event.client_payload.*',
+  );
+
+  // Every client_payload field the verifier consumes must be one the caller sends.
+  const consumed = [...verifierContent.matchAll(/github\.event\.client_payload\.([A-Za-z0-9_]+)/g)]
+    .map((m) => m[1]);
+  const consumedUnique = [...new Set(consumed)];
+  const payloadBlock = (/client_payload:\s*\{([^}]*)\}/.exec(captureContent) || [null, ''])[1];
+  for (const field of consumedUnique) {
+    check(
+      new RegExp(`\\b${field}\\b`).test(payloadBlock),
+      `stage7-capture.yml client_payload must supply '${field}' — stage7-trusted-verifier.yml reads github.event.client_payload.${field}`,
+    );
+  }
+
+  // The capture job must not have widened its grant to keep a workflow_dispatch
+  // call alive. repository_dispatch needs Contents: write, which it already holds.
+  const capturePerms = (/^permissions:\n((?:\s{2}\S.*\n)+)/m.exec(captureContent) || [null, ''])[1];
+  check(
+    !/actions:\s*write/.test(capturePerms),
+    'stage7-capture.yml must NOT grant actions: write — repository_dispatch needs only contents: write (rule 12 rationale)',
+  );
+  check(
+    /contents:\s*write/.test(capturePerms),
+    'stage7-capture.yml must grant contents: write — required by POST /repos/{owner}/{repo}/dispatches',
+  );
+}
+
 // Summary
-const rulesChecked = SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 11;
+const rulesChecked = SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 12;
 if (violations === 0) {
   console.log(`✓ CI governance check passed (${rulesChecked} rules checked)`);
   process.exit(0);
