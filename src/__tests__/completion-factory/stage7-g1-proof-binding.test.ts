@@ -45,8 +45,8 @@ const { privateKey: SIGNING_KEY } = generateKeyPairSync('ed25519', {
   publicKeyEncoding: { type: 'spki', format: 'pem' },
 });
 const SUBJECT_SHA = "f129fb8633b38230c16fb44aed8f5f90c8f4b8a9";
-/** Owner decision D-14, 2026-09-02: the one commit Stage 7 evidence may describe. */
-const AUTHORIZED_SUBJECT_SHA = "1fdc318414fd7669ed5e5ef86727800e2847c2ee";
+/** Owner decision D-15, 2026-09-02: the one commit Stage 7 evidence may describe. */
+const AUTHORIZED_SUBJECT_SHA = "a19d226d784d4eb48bf239ca5c5320f12efac541";
 
 const CANONICAL_IDS = Array.from({ length: 16 }, (_, i) => `S7-I${i + 1}`);
 
@@ -839,8 +839,11 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
   });
 
   /**
-   * D-14 (2026-09-02, PR #394 merge SHA 1fdc3184) is the current subject: the first
-   * commit carrying the complete Stage 7 capture-path repair set (#391-#394).
+   * D-15 (2026-09-02, PR #396 merge SHA a19d226d) is the current subject: the first
+   * commit carrying the complete known capture-path repair set (#391-#394 plus #396),
+   * and the exact SHA production is deployed at. It superseded D-14 (1fdc3184) after
+   * the first real S7-I11 capture on D-14 safely refused a genuine 74/74 passing
+   * observation — GitHub Actions ANSI sequences split the vitest summary marker.
    *
    * D-13 replaced the D-12 assertion (PR #285 merge SHA 036c5269). PR #386
    * closed the technical pre-beta readiness gate (identity email canonicalization,
@@ -919,24 +922,24 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
     const auth = raw.closure_subject_sha_authorization as Record<string, unknown>;
-    expect(auth.decision).toBe("D-14");
-    // D-13 is not erased by supersession — the record must still name what it replaced.
-    expect(auth.supersedes).toBe("D-13");
-    expect(auth.superseded_sha).toBe("a2d7266018d74d45790c89427ef193a66bc367ad");
+    expect(auth.decision).toBe("D-15");
+    // A superseded decision is not erased — the record must still name what it replaced.
+    expect(auth.supersedes).toBe("D-14");
+    expect(auth.superseded_sha).toBe("1fdc318414fd7669ed5e5ef86727800e2847c2ee");
     // The SHA the owner authorized must be the SHA CI tested and the SHA production
     // deployed. A record that names three different commits records nothing.
     expect(raw.closure_subject_sha).toBe(AUTHORIZED_SUBJECT_SHA);
     expect(auth.main_integration_tested_sha).toBe(AUTHORIZED_SUBJECT_SHA);
     expect(auth.vercel_production_commit_sha).toBe(AUTHORIZED_SUBJECT_SHA);
-    expect(auth.main_integration_run).toBe("33625433823");
-    expect(auth.vercel_production_deployment).toBe("dpl_8ihJm7a9v2xGY9n5UdsV1zzNVExD");
+    expect(auth.main_integration_run).toBe("33652199820");
+    expect(auth.vercel_production_deployment).toBe("dpl_HJVUbKFenEcfK6QAV9zqQHwtrYvs");
     // The limitations must stay recorded, not quietly dropped once inconvenient.
     const unverified = auth.unverified as Record<string, string>;
     // Pinned to the substance, not one decision's phrasing: the record must still say
     // that independent DNS resolution was not done, and must still stop short of
-    // claiming the binding is proven. D-13 said "API-reported only"; D-14 adds an
-    // observed liveness probe and says "not independently proven". Either satisfies
-    // this; silently dropping the limitation does not.
+    // claiming the binding is proven. D-13 said "API-reported only"; D-14 and D-15
+    // add an observed liveness probe and say "not independently proven". Any of those
+    // satisfies this; silently dropping the limitation does not.
     expect(unverified.production_alias_binding).toMatch(/DNS resolution/i);
     expect(unverified.production_alias_binding).toMatch(/not performed/i);
     expect(unverified.production_alias_binding).toMatch(/not independently proven|API-reported only/i);
