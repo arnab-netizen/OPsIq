@@ -20,7 +20,7 @@
  * Following the repo idiom in src/__tests__/deployment/migrate-workflow-*.test.ts:
  * static-source assertions plus genuine execution of the extracted idiom.
  */
-import { readFileSync, writeFileSync, mkdtempSync, chmodSync, rmSync } from "fs";
+import { readFileSync, writeFileSync, mkdtempSync, chmodSync, rmSync, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { spawnSync } from "child_process";
@@ -157,10 +157,81 @@ const PROBE_UNHANDLED_EXCEPTION = [
   "",
 ].join("\n");
 
+/**
+ * The genuine colourised summary block GitHub Actions produced for S7-I11 in
+ * capture run 33633377692 — the run that was falsely refused. Reproduced here as
+ * the exact escape sequences the runner emitted, so the regression is anchored to
+ * observed reality rather than to a guess about how vitest colourises.
+ *
+ * Note where the escapes fall: "Test Files" is followed by a space and then
+ * ESC[22m, NOT by the digit the pre-fix marker required.
+ */
+const REAL_CI_ANSI_PASS = [
+  "",
+  "\x1b[7m RUN \x1b[27m \x1b[36mv4.1.7\x1b[39m \x1b[90m/home/runner/work/OPsIq/OPsIq\x1b[39m",
+  "",
+  " \x1b[32m✓\x1b[39m src/__tests__/completion-factory/stage7-evidence-artifact.test.ts \x1b[2m(59 tests)\x1b[22m \x1b[90m4722ms\x1b[39m",
+  " \x1b[32m✓\x1b[39m src/__tests__/completion-factory/stage7-ed25519-hostile.test.ts \x1b[2m(15 tests)\x1b[22m \x1b[90m975ms\x1b[39m",
+  "",
+  "\x1b[2m Test Files \x1b[22m \x1b[1m\x1b[32m2 passed\x1b[39m\x1b[22m\x1b[90m (2)\x1b[39m",
+  "\x1b[2m      Tests \x1b[22m \x1b[1m\x1b[32m74 passed\x1b[39m\x1b[22m\x1b[90m (74)\x1b[39m",
+  "",
+].join("\n");
+
+/** Same colourisation, but a genuinely failing assertion. */
+const REAL_CI_ANSI_FAIL = [
+  "",
+  "\x1b[7m RUN \x1b[27m \x1b[36mv4.1.7\x1b[39m",
+  "",
+  "\x1b[31m FAIL \x1b[39m src/__tests__/completion-factory/stage7-audit-check.test.ts > audit > attributes",
+  "\x1b[31mAssertionError: expected 'observed' to be 'expected'\x1b[39m",
+  "",
+  "\x1b[2m Test Files \x1b[22m \x1b[1m\x1b[31m1 failed\x1b[39m\x1b[22m\x1b[90m (1)\x1b[39m",
+  "\x1b[2m      Tests \x1b[22m \x1b[1m\x1b[31m1 failed\x1b[39m\x1b[90m | 19 passed (20)\x1b[39m",
+  "",
+].join("\n");
+
+/** Colourised startup error — no summary block is ever printed. */
+const REAL_CI_ANSI_STARTUP_ERROR = [
+  "",
+  "\x1b[31m⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯\x1b[39m",
+  "\x1b[31mError: Failed to load custom Reporter from basic\x1b[39m",
+  "  [cause]: Error: Failed to load url basic. Does the file exist?",
+  "",
+].join("\n");
+
+/** Colourised "no test files" — lowercase, and must stay invalid. */
+const REAL_CI_ANSI_NO_TEST_FILES = [
+  "",
+  "\x1b[7m RUN \x1b[27m \x1b[36mv4.1.7\x1b[39m",
+  "",
+  "\x1b[33mNo test files found, exiting with code 1\x1b[39m",
+  "",
+].join("\n");
+
+/** Colourised Stage 7 node-probe output, verdict wrapped in SGR sequences. */
+const ANSI_PROBE_PASS = [
+  "\x1b[32m[PASS]\x1b[39m runbook_step_1_documented: true",
+  "\x1b[1mChecks: 28 PASS, 0 FAIL\x1b[22m",
+  "",
+  "\x1b[32mRESULT: PASS\x1b[39m",
+  "",
+].join("\n");
+
+const ANSI_PROBE_FAIL = [
+  "\x1b[31m[FAIL]\x1b[39m recovery_completed: false",
+  "\x1b[1mChecks: 27 PASS, 1 FAIL\x1b[22m",
+  "",
+  "\x1b[31mRESULT: FAIL\x1b[39m",
+  "",
+].join("\n");
+
 interface StepResult {
   status: number;
   stderr: string;
   outputs: Record<string, string>;
+  /** Bytes of $RUNNER_TEMP/observation.txt as the step left them, if it survived. */
+  observationFileContent: string | null;
 }
 
 /**
@@ -211,7 +282,9 @@ function runObservationStep(opts: {
       const eq = line.indexOf("=");
       if (eq > 0) outputs[line.slice(0, eq)] = line.slice(eq + 1);
     }
-    return { status: proc.status ?? -1, stderr: proc.stderr ?? "", outputs };
+    const obsPath = join(dir, "observation.txt");
+    const observationFileContent = existsSync(obsPath) ? readFileSync(obsPath, "utf-8") : null;
+    return { status: proc.status ?? -1, stderr: proc.stderr ?? "", outputs, observationFileContent };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -273,6 +346,24 @@ describe("stage7-capture.yml — fail-closed test-runner validity gate", () => {
       expect(cmd).toBe("node scripts/stage7-probes/s7-i12-runbook-recovery.mjs");
       expect(cmd.includes("vitest run")).toBe(false);
       expect(cmd.startsWith("node scripts/stage7-probes/")).toBe(true);
+    });
+
+    it("evaluates both validity gates against an ANSI-normalised copy, not the raw evidence", () => {
+      expect(OBSERVATION_SCRIPT).toContain('validation_file="$RUNNER_TEMP/observation.normalized.txt"');
+      // Gates read the copy...
+      expect(OBSERVATION_SCRIPT).toMatch(/Test Files\[\[:space:\]\]\+\[0-9\]\+' "\$validation_file"/);
+      expect(OBSERVATION_SCRIPT).toMatch(/RESULT:.*' "\$validation_file"/);
+      // ...while the artifact still consumes the raw observation.
+      expect(OBSERVATION_SCRIPT).toContain('echo "observation_file=$obs_file"');
+      // The raw file is never overwritten by the normalisation.
+      expect(OBSERVATION_SCRIPT).not.toMatch(/>\s*"\$obs_file"\s*$/m);
+    });
+
+    it("strips only CSI sequences, never arbitrary text", () => {
+      // ESC '[' , digits/semicolons, one ASCII final byte. A '[' or digit with no
+      // leading ESC is untouched, and a malformed escape is left in place.
+      expect(OBSERVATION_SCRIPT).toContain("[0-9;]*[A-Za-z]//g");
+      expect(OBSERVATION_SCRIPT).toContain("LC_ALL=C sed");
     });
 
     it("anchors the node-probe verdict match to a whole line", () => {
@@ -571,6 +662,139 @@ describe("stage7-capture.yml — fail-closed test-runner validity gate", () => {
       expect(r.status).not.toBe(0);
       expect(r.stderr).toContain("not a governed Stage 7 observation");
       expect(r.outputs.result).toBeUndefined();
+    });
+
+    // ── ANSI normalisation (capture run 33633377692 false-refusal regression) ──
+    it("25. the REAL colourised CI output that was falsely refused now yields PASS", () => {
+      const r = runObservationStep({
+        command: VITEST_COMMAND,
+        method: "test_run",
+        stubOutput: REAL_CI_ANSI_PASS,
+        stubExit: 0,
+      });
+      expect(r.status).toBe(0);
+      expect(r.outputs.result).toBe("PASS");
+    });
+
+    it("26. the pre-fix marker genuinely could not match those bytes", () => {
+      // Guards the premise of test 25: if this ever starts matching, the runner
+      // stopped colourising and test 25 would pass for the wrong reason.
+      expect(REAL_CI_ANSI_PASS).toMatch(/Test Files/);
+      expect(REAL_CI_ANSI_PASS).not.toMatch(/(^|\s)Test Files\s+[0-9]+/);
+    });
+
+    it("27. colourised legitimate assertion failure -> result=FAIL", () => {
+      const r = runObservationStep({
+        command: VITEST_COMMAND,
+        method: "test_run",
+        stubOutput: REAL_CI_ANSI_FAIL,
+        stubExit: 1,
+      });
+      expect(r.status).toBe(0);
+      expect(r.outputs.result).toBe("FAIL");
+    });
+
+    it("28. colourised startup failure -> REFUSED", () => {
+      const r = runObservationStep({
+        command: VITEST_COMMAND,
+        method: "test_run",
+        stubOutput: REAL_CI_ANSI_STARTUP_ERROR,
+        stubExit: 1,
+        stubStream: "stderr",
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("did not execute any tests");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("29. colourised 'No test files found' -> REFUSED (case-sensitivity survives stripping)", () => {
+      const r = runObservationStep({
+        command: VITEST_COMMAND,
+        method: "test_run",
+        stubOutput: REAL_CI_ANSI_NO_TEST_FILES,
+        stubExit: 1,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("30. colourised node RESULT: PASS + exit 0 -> result=PASS", () => {
+      const r = runObservationStep({
+        command: NODE_PROBE_COMMAND,
+        method: "test_run",
+        stubOutput: ANSI_PROBE_PASS,
+        stubExit: 0,
+      });
+      expect(r.status).toBe(0);
+      expect(r.outputs.result).toBe("PASS");
+    });
+
+    it("31. colourised node RESULT: FAIL + non-zero exit -> result=FAIL", () => {
+      const r = runObservationStep({
+        command: NODE_PROBE_COMMAND,
+        method: "test_run",
+        stubOutput: ANSI_PROBE_FAIL,
+        stubExit: 1,
+      });
+      expect(r.status).toBe(0);
+      expect(r.outputs.result).toBe("FAIL");
+    });
+
+    it("32. colourised node verdict/exit mismatch still REFUSES", () => {
+      const pass1 = runObservationStep({
+        command: NODE_PROBE_COMMAND, method: "test_run", stubOutput: ANSI_PROBE_PASS, stubExit: 1,
+      });
+      expect(pass1.status).not.toBe(0);
+      expect(pass1.outputs.result).toBeUndefined();
+
+      const fail0 = runObservationStep({
+        command: NODE_PROBE_COMMAND, method: "test_run", stubOutput: ANSI_PROBE_FAIL, stubExit: 0,
+      });
+      expect(fail0.status).not.toBe(0);
+      expect(fail0.outputs.result).toBeUndefined();
+    });
+
+    it("33. the signed observation keeps the RAW bytes — normalisation is copy-only", () => {
+      const r = runObservationStep({
+        command: VITEST_COMMAND,
+        method: "test_run",
+        stubOutput: REAL_CI_ANSI_PASS,
+        stubExit: 0,
+      });
+      expect(r.status).toBe(0);
+      // The artifact consumes observation.txt; it must still carry the escapes.
+      expect(r.observationFileContent).toBe(REAL_CI_ANSI_PASS);
+      expect(r.observationFileContent).toContain("\x1b[");
+      // And the step must hand the artifact the raw file, not the normalised copy.
+      expect(r.outputs.observation_file).toMatch(/observation\.txt$/);
+      expect(r.outputs.observation_file).not.toMatch(/normalized/);
+    });
+
+    it("34. stripping does not manufacture a marker from unrelated prose", () => {
+      const r = runObservationStep({
+        command: VITEST_COMMAND,
+        method: "test_run",
+        // Escapes sit between the words; removing them yields "TestFiles1", not the marker.
+        stubOutput: "Test\x1b[0mFiles\x1b[0m1\nnothing executed\n",
+        stubExit: 1,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("35. non-ANSI observations behave exactly as before", () => {
+      const pass = runObservationStep({
+        command: VITEST_COMMAND, method: "test_run", stubOutput: VITEST_PASS_OUTPUT, stubExit: 0,
+      });
+      expect(pass.outputs.result).toBe("PASS");
+      const fail = runObservationStep({
+        command: VITEST_COMMAND, method: "test_run", stubOutput: VITEST_FAIL_OUTPUT, stubExit: 1,
+      });
+      expect(fail.outputs.result).toBe("FAIL");
+      const probe = runObservationStep({
+        command: NODE_PROBE_COMMAND, method: "test_run", stubOutput: PROBE_PASS_OUTPUT, stubExit: 0,
+      });
+      expect(probe.outputs.result).toBe("PASS");
     });
 
     it("12. the refusal surfaces the observation output for diagnosis", () => {
