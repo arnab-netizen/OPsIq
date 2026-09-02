@@ -240,9 +240,16 @@ jobs:
           # method=test_run but runs a node probe, which emits no vitest summary.
           # Both METHOD and OBSERVATION_COMMAND come from the hardcoded contract
           # matrix, so neither this scope nor the gate is caller-reachable.
+          #
+          # Classification is exhaustive over the matrix as it stands: 6 entries are
+          # Stage 7 node probes (S7-I1, S7-I2, S7-I4, S7-I5, S7-I10-LANE_C, S7-I12)
+          # and 2 are vitest (S7-I10-LANE_E, S7-I11). Anything else is unclassified
+          # and refuses — a future observation command no validity gate governs is
+          # exactly the hole this step exists to close.
           case "$OBSERVATION_COMMAND" in
-            *"vitest run"*) observation_runner="vitest" ;;
-            *)              observation_runner="other"  ;;
+            *"vitest run"*)                 observation_runner="vitest" ;;
+            "node scripts/stage7-probes/"*) observation_runner="stage7_node_probe" ;;
+            *)                              observation_runner="unclassified" ;;
           esac
 
           if [ "$METHOD" = "test_run" ] && [ "$observation_runner" = "vitest" ]; then
@@ -256,6 +263,69 @@ jobs:
               head -40 "$obs_file" >&2
               exit 1
             fi
+
+          elif [ "$observation_runner" = "stage7_node_probe" ]; then
+            # ── Stage 7 node-probe terminal-verdict gate ─────────────────────────
+            # Every probe under scripts/stage7-probes/ ends its governed run by
+            # printing exactly one terminal verdict line and exiting to match:
+            #   console.log("\nRESULT: PASS"); process.exit(0);
+            #   console.log("\nRESULT: FAIL"); process.exit(1);
+            # Its unhandled-error path prints "Unhandled error: ..." and exits 1
+            # WITHOUT a verdict line. So a module-resolution failure, a syntax
+            # error, a missing dependency, a Node loader failure or any uncaught
+            # exception is distinguishable from a governed FAIL by the absence of
+            # that line — and without this gate all of them were captured, signed
+            # and filed as an observed invariant FAIL.
+            #
+            # The match is anchored to a whole line so the probes' own per-check
+            # lines ("[PASS] database_check_status: ...") and their summary line
+            # ("Checks: 10 PASS, 0 FAIL") cannot be mistaken for a verdict.
+            verdict_count=$(grep -cE '^[[:space:]]*RESULT:[[:space:]]+(PASS|FAIL)[[:space:]]*$' "$obs_file" || true)
+            pass_count=$(grep -cE '^[[:space:]]*RESULT:[[:space:]]+PASS[[:space:]]*$' "$obs_file" || true)
+            fail_count=$(grep -cE '^[[:space:]]*RESULT:[[:space:]]+FAIL[[:space:]]*$' "$obs_file" || true)
+
+            if [ "$verdict_count" -eq 0 ]; then
+              echo "REFUSED: the Stage 7 probe did not reach a controlled verdict." >&2
+              echo "No 'RESULT: PASS' or 'RESULT: FAIL' terminal line was found, so the" >&2
+              echo "probe never completed its own verdict protocol — this is an" >&2
+              echo "infrastructure or runtime failure, not an observation. Nothing was" >&2
+              echo "observed, so there is nothing to capture." >&2
+              echo "--- observation output (first 40 lines) ---" >&2
+              head -40 "$obs_file" >&2
+              exit 1
+            fi
+
+            if [ "$verdict_count" -ne 1 ]; then
+              echo "REFUSED: the Stage 7 probe emitted $verdict_count terminal verdict lines" >&2
+              echo "($pass_count PASS, $fail_count FAIL). A governed observation carries exactly" >&2
+              echo "one verdict; more than one means the probe did not terminate through a" >&2
+              echo "single controlled path and the observation is not trustworthy." >&2
+              echo "--- observation output (first 40 lines) ---" >&2
+              head -40 "$obs_file" >&2
+              exit 1
+            fi
+
+            if [ "$pass_count" -eq 1 ] && [ "$observed_exit" -ne 0 ]; then
+              echo "REFUSED: the Stage 7 probe declared 'RESULT: PASS' but exited $observed_exit." >&2
+              echo "The verdict and the exit status disagree, so one of them is wrong and" >&2
+              echo "neither can be signed as evidence." >&2
+              exit 1
+            fi
+
+            if [ "$fail_count" -eq 1 ] && [ "$observed_exit" -eq 0 ]; then
+              echo "REFUSED: the Stage 7 probe declared 'RESULT: FAIL' but exited 0." >&2
+              echo "The verdict and the exit status disagree, so one of them is wrong and" >&2
+              echo "neither can be signed as evidence." >&2
+              exit 1
+            fi
+
+          else
+            echo "REFUSED: observation command is not a governed Stage 7 observation." >&2
+            echo "It is neither a vitest run nor a scripts/stage7-probes/ node probe, so no" >&2
+            echo "validity gate governs its output and its exit status cannot be trusted as" >&2
+            echo "a verdict. Add the command to the classification above before capturing." >&2
+            echo "command: $OBSERVATION_COMMAND" >&2
+            exit 1
           fi
 
           # Only now is the exit status meaningful as an observed result.

@@ -100,6 +100,63 @@ const VITEST_NO_TEST_FILES = [
   "",
 ].join("\n");
 
+/**
+ * Stage 7 node probes end a governed run with exactly one terminal verdict line
+ * and an exit status that agrees with it. Their per-check lines and summary line
+ * both contain the words PASS and FAIL and must NOT be mistaken for a verdict.
+ */
+const PROBE_PASS_OUTPUT = [
+  "=== S7-I12 RUNBOOK RECOVERY PROBE ===",
+  "[PASS] runbook_step_1_documented: true",
+  "[PASS] recovery_completed_without_undocumented_steps: true",
+  "",
+  "=== OBSERVATION SUMMARY ===",
+  "Checks: 28 PASS, 0 FAIL",
+  "",
+  "RESULT: PASS",
+  "",
+].join("\n");
+
+const PROBE_FAIL_OUTPUT = [
+  "=== S7-I12 RUNBOOK RECOVERY PROBE ===",
+  "[PASS] runbook_step_1_documented: true",
+  "[FAIL] recovery_completed_without_undocumented_steps: false",
+  "",
+  "=== OBSERVATION SUMMARY ===",
+  "Checks: 27 PASS, 1 FAIL",
+  "",
+  "RESULT: FAIL",
+  "",
+].join("\n");
+
+/** Verbatim shape of the probes' unhandled-error path: no verdict line. */
+const PROBE_MODULE_NOT_FOUND = [
+  "node:internal/modules/esm/resolve:275",
+  "  throw new ERR_MODULE_NOT_FOUND(",
+  "        ^",
+  "Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/runner/work/OPsIq/scripts/lib/probe-http.mjs'",
+  "    at finalizeResolution (node:internal/modules/esm/resolve:275:11)",
+  "  code: 'ERR_MODULE_NOT_FOUND'",
+  "",
+].join("\n");
+
+const PROBE_SYNTAX_ERROR = [
+  "file:///home/runner/work/OPsIq/scripts/stage7-probes/s7-i1-health-probe.mjs:41",
+  "  const { ok = await probe(",
+  "                    ^^^^^",
+  "SyntaxError: Unexpected token 'await'",
+  "    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)",
+  "",
+].join("\n");
+
+const PROBE_UNHANDLED_EXCEPTION = [
+  "=== S7-I1 HEALTH PROBE ===",
+  "[PASS] endpoint_reachable: true",
+  "Unhandled error: TypeError: Cannot read properties of undefined (reading 'status')",
+  "    at main (file:///home/runner/work/OPsIq/scripts/stage7-probes/s7-i1-health-probe.mjs:118:22)",
+  "",
+].join("\n");
+
 interface StepResult {
   status: number;
   stderr: string;
@@ -189,6 +246,41 @@ describe("stage7-capture.yml — fail-closed test-runner validity gate", () => {
       expect(OBSERVATION_SCRIPT).not.toMatch(/grep -[a-z]*i[a-z]*E? .*Test Files/i);
     });
 
+    it("classifies every hardcoded matrix command as vitest or a Stage 7 node probe", () => {
+      // Nothing may fall through to the unclassified refusal today; if a future
+      // matrix entry does, this test names it rather than letting it reach capture.
+      const block = src.slice(
+        src.indexOf('case "$INVARIANT_ID" in'),
+        src.indexOf('*)\n              echo "REFUSED:'),
+      );
+      const commands = [...block.matchAll(/echo "command=([^"]*)"/g)].map((m) => m[1]);
+      expect(commands.length).toBe(8);
+      const classify = (c: string) =>
+        c.includes("vitest run")
+          ? "vitest"
+          : c.startsWith("node scripts/stage7-probes/")
+            ? "stage7_node_probe"
+            : "unclassified";
+      expect(commands.filter((c) => classify(c) === "unclassified")).toEqual([]);
+      expect(commands.filter((c) => classify(c) === "vitest").length).toBe(2);
+      expect(commands.filter((c) => classify(c) === "stage7_node_probe").length).toBe(6);
+    });
+
+    it("classifies the S7-I12 command as a node probe, not vitest, despite method=test_run", () => {
+      const block = src.slice(src.indexOf("S7-I12)"), src.indexOf("S7-I12)") + 900);
+      expect(block).toContain('echo "method=test_run"');
+      const cmd = /echo "command=([^"]*)"/.exec(block)?.[1] ?? "";
+      expect(cmd).toBe("node scripts/stage7-probes/s7-i12-runbook-recovery.mjs");
+      expect(cmd.includes("vitest run")).toBe(false);
+      expect(cmd.startsWith("node scripts/stage7-probes/")).toBe(true);
+    });
+
+    it("anchors the node-probe verdict match to a whole line", () => {
+      expect(OBSERVATION_SCRIPT).toContain(
+        "^[[:space:]]*RESULT:[[:space:]]+(PASS|FAIL)[[:space:]]*$",
+      );
+    });
+
     it("never emits BLOCKED or NOT_TESTED artifacts in place of refusing", () => {
       expect(OBSERVATION_SCRIPT).not.toContain("result=BLOCKED");
       expect(OBSERVATION_SCRIPT).not.toContain("result=NOT_TESTED");
@@ -246,44 +338,44 @@ describe("stage7-capture.yml — fail-closed test-runner validity gate", () => {
       expect(r.outputs.result).toBeUndefined();
     });
 
-    it("5. S7-I12 node probe (method=test_run, not vitest) is unaffected on failure", () => {
+    it("5. S7-I12 node probe with a controlled FAIL verdict -> result=FAIL", () => {
       const r = runObservationStep({
         command: NODE_PROBE_COMMAND,
         method: "test_run",
-        stubOutput: "runbook recovery probe: step 3 did not recover\n",
+        stubOutput: PROBE_FAIL_OUTPUT,
         stubExit: 1,
       });
       expect(r.status).toBe(0);
       expect(r.outputs.result).toBe("FAIL");
     });
 
-    it("6. S7-I12 node probe is unaffected on success", () => {
+    it("6. S7-I12 node probe with a controlled PASS verdict -> result=PASS", () => {
       const r = runObservationStep({
         command: NODE_PROBE_COMMAND,
         method: "test_run",
-        stubOutput: "runbook recovery probe: recovered using documented steps\n",
+        stubOutput: PROBE_PASS_OUTPUT,
         stubExit: 0,
       });
       expect(r.status).toBe(0);
       expect(r.outputs.result).toBe("PASS");
     });
 
-    it("7. LANE_C http_probe failure is unaffected -> result=FAIL", () => {
+    it("7. LANE_C http_probe with a controlled FAIL verdict -> result=FAIL", () => {
       const r = runObservationStep({
         command: "node scripts/stage7-probes/s7-i1-health-probe.mjs",
         method: "http_probe",
-        stubOutput: "health probe: expected 200, received 503\n",
+        stubOutput: "health probe: expected 200, received 503\n\nRESULT: FAIL\n",
         stubExit: 1,
       });
       expect(r.status).toBe(0);
       expect(r.outputs.result).toBe("FAIL");
     });
 
-    it("8. LANE_C db_query success is unaffected -> result=PASS", () => {
+    it("8. LANE_C db_query with a controlled PASS verdict -> result=PASS", () => {
       const r = runObservationStep({
         command: "node scripts/stage7-probes/s7-i2-migration-check.mjs",
         method: "db_query",
-        stubOutput: "0 pending migrations\n",
+        stubOutput: "0 pending migrations\n\nRESULT: PASS\n",
         stubExit: 0,
       });
       expect(r.status).toBe(0);
@@ -323,6 +415,161 @@ describe("stage7-capture.yml — fail-closed test-runner validity gate", () => {
       });
       expect(r.status).not.toBe(0);
       expect(r.stderr).toContain("REFUSED");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    // ── Stage 7 node-probe terminal-verdict gate ────────────────────────────
+    it("13. node probe: exit 1 with no verdict line -> REFUSED", () => {
+      const r = runObservationStep({
+        command: NODE_PROBE_COMMAND,
+        method: "test_run",
+        stubOutput: "runbook recovery probe: step 3 did not recover\n",
+        stubExit: 1,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("did not reach a controlled verdict");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("14. node probe: exit 0 with no verdict line -> REFUSED", () => {
+      const r = runObservationStep({
+        command: NODE_PROBE_COMMAND,
+        method: "test_run",
+        stubOutput: "runbook recovery probe: recovered using documented steps\n",
+        stubExit: 0,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("did not reach a controlled verdict");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("15. node probe: RESULT: PASS but non-zero exit -> REFUSED", () => {
+      const r = runObservationStep({
+        command: NODE_PROBE_COMMAND,
+        method: "test_run",
+        stubOutput: PROBE_PASS_OUTPUT,
+        stubExit: 1,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("declared 'RESULT: PASS' but exited 1");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("16. node probe: RESULT: FAIL but exit 0 -> REFUSED", () => {
+      const r = runObservationStep({
+        command: NODE_PROBE_COMMAND,
+        method: "test_run",
+        stubOutput: PROBE_FAIL_OUTPUT,
+        stubExit: 0,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("declared 'RESULT: FAIL' but exited 0");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("17. node probe: both PASS and FAIL verdicts present -> REFUSED", () => {
+      const r = runObservationStep({
+        command: NODE_PROBE_COMMAND,
+        method: "test_run",
+        stubOutput: "checks ran\n\nRESULT: PASS\nRESULT: FAIL\n",
+        stubExit: 1,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("2 terminal verdict lines");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("18. node probe: duplicate PASS verdicts -> REFUSED", () => {
+      const r = runObservationStep({
+        command: NODE_PROBE_COMMAND,
+        method: "test_run",
+        stubOutput: "checks ran\n\nRESULT: PASS\nRESULT: PASS\n",
+        stubExit: 0,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("2 terminal verdict lines");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("19. node probe: ERR_MODULE_NOT_FOUND on stderr only -> REFUSED", () => {
+      const r = runObservationStep({
+        command: "node scripts/stage7-probes/s7-i1-health-probe.mjs",
+        method: "http_probe",
+        stubOutput: PROBE_MODULE_NOT_FOUND,
+        stubExit: 1,
+        stubStream: "stderr",
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("did not reach a controlled verdict");
+      expect(r.stderr).toContain("ERR_MODULE_NOT_FOUND");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("20. node probe: SyntaxError before main() -> REFUSED", () => {
+      const r = runObservationStep({
+        command: "node scripts/stage7-probes/s7-i1-health-probe.mjs",
+        method: "http_probe",
+        stubOutput: PROBE_SYNTAX_ERROR,
+        stubExit: 1,
+        stubStream: "stderr",
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("did not reach a controlled verdict");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("21. node probe: unhandled exception after partial output -> REFUSED", () => {
+      const r = runObservationStep({
+        command: "node scripts/stage7-probes/s7-i1-health-probe.mjs",
+        method: "http_probe",
+        stubOutput: PROBE_UNHANDLED_EXCEPTION,
+        stubExit: 1,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("did not reach a controlled verdict");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("22. node probe: per-check and summary lines are not mistaken for a verdict", () => {
+      // "[PASS] x: true" and "Checks: 28 PASS, 0 FAIL" both contain PASS/FAIL.
+      const r = runObservationStep({
+        command: NODE_PROBE_COMMAND,
+        method: "test_run",
+        stubOutput: [
+          "[PASS] runbook_step_1_documented: true",
+          "[FAIL] recovery_completed: false",
+          "Checks: 27 PASS, 1 FAIL",
+          "RESULT: PASS is what a compliant probe would print",
+          "",
+        ].join("\n"),
+        stubExit: 0,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("did not reach a controlled verdict");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("23. node probe: empty output is refused before the verdict gate", () => {
+      const r = runObservationStep({
+        command: NODE_PROBE_COMMAND,
+        method: "test_run",
+        stubOutput: "",
+        stubExit: 1,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("produced no output");
+      expect(r.outputs.result).toBeUndefined();
+    });
+
+    it("24. an unclassified observation command is refused", () => {
+      const r = runObservationStep({
+        command: "bash scripts/some-future-observation.sh",
+        method: "test_run",
+        stubOutput: "RESULT: PASS\n",
+        stubExit: 0,
+      });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("not a governed Stage 7 observation");
       expect(r.outputs.result).toBeUndefined();
     });
 
