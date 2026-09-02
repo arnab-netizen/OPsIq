@@ -1,6 +1,6 @@
 name: Stage 7 — Trusted Evidence Verifier
 
-# ─── Trigger: workflow_dispatch ───────────────────────────────────────────────
+# ─── Trigger: repository_dispatch (type stage7-verify-artifacts) ──────────────
 # This workflow runs ONLY on main. It verifies evidence artifacts submitted via
 # PRs without ever executing code from those PRs in a privileged context.
 #
@@ -18,11 +18,16 @@ name: Stage 7 — Trusted Evidence Verifier
 #   - The signing key is never exposed to artifact-submitting PRs.
 #   - Posts the result as a Commit Status on the live PR HEAD SHA.
 #
-# Callers: stage7-capture dispatches workflow_dispatch with inputs
-#   { pr_number, head_sha, artifact_ids }
-# using GITHUB_TOKEN — no PAT required. workflow_dispatch does not loop
-# (GITHUB_TOKEN triggering workflow_dispatch on the same repo is permitted;
-# only automatic triggers — push, pull_request — are blocked to prevent loops).
+# Callers: stage7-capture POSTs /repos/{owner}/{repo}/dispatches with
+#   { event_type: "stage7-verify-artifacts",
+#     client_payload: { pr_number, head_sha, artifact_ids } }
+# using GITHUB_TOKEN — no PAT required. That endpoint needs only Contents: write,
+# so the capture job never has to hold Actions: write (ci-governance-check rule 12).
+# repository_dispatch does not loop: it is one of the two events GITHUB_TOKEN may
+# raise, while the automatic triggers — push, pull_request — stay blocked.
+# The caller/verifier pairing is enforced by ci-governance-check rule 12 and by
+# src/__tests__/completion-factory/stage7-dispatch-contract.test.ts; changing the
+# trigger here without changing the caller is exactly the drift they exist to catch.
 #
 # PR-A remediation (DEFECT 8 updated audit — 20 requirements):
 #  1.  Workflow runs on main — YES (checkout ref: main).
