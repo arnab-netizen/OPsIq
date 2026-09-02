@@ -154,7 +154,7 @@ jobs:
               echo "environment=isolated_simulation" >> "$GITHUB_OUTPUT"
               echo "method=test_run" >> "$GITHUB_OUTPUT"
               echo "assertion=Simulation confirms all six audit attribution fields present; no raw payload in audit records across all simulated paths." >> "$GITHUB_OUTPUT"
-              echo "command=npx vitest run src/__tests__/completion-factory/stage7-audit-check.test.ts --reporter=basic" >> "$GITHUB_OUTPUT"
+              echo "command=npx vitest run src/__tests__/completion-factory/stage7-audit-check.test.ts --reporter=default" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=false" >> "$GITHUB_OUTPUT"
               ;;
             S7-I11)
@@ -163,7 +163,7 @@ jobs:
               echo "environment=isolated_simulation" >> "$GITHUB_OUTPUT"
               echo "method=test_run" >> "$GITHUB_OUTPUT"
               echo "assertion=Nine adversarial failure scenarios each fail safely, visibly, and recoverably in isolated simulation." >> "$GITHUB_OUTPUT"
-              echo "command=npx vitest run src/__tests__/completion-factory/stage7-evidence-artifact.test.ts src/__tests__/completion-factory/stage7-ed25519-hostile.test.ts --reporter=basic" >> "$GITHUB_OUTPUT"
+              echo "command=npx vitest run src/__tests__/completion-factory/stage7-evidence-artifact.test.ts src/__tests__/completion-factory/stage7-ed25519-hostile.test.ts --reporter=default" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=false" >> "$GITHUB_OUTPUT"
               ;;
             S7-I12)
