@@ -14,7 +14,7 @@ authorized_from_sha: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 authorized_branch: "claude/opsiq-stage-7-loop-main"
 authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 
-# ─── Authorized evidence subject SHA (owner decision D-15) ───────────────────
+# ─── Authorized evidence subject SHA (owner decision D-16) ───────────────────
 # The single commit every Stage 7 evidence artifact must describe. An artifact
 # whose subject_sha is any other commit is refused with SUBJECT_SHA_NOT_AUTHORIZED,
 # because evidence captured against another commit does not describe this one.
@@ -27,10 +27,10 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 # and it proves nothing on its own — required_evidence below remains null, every
 # invariant remains PENDING, and Stage 7 remains open.
 #
-# D-15 supersedes D-14 as the ACTIVE evidence subject authorization. D-14 remains
-# historical and is not rewritten: it authorized 1fdc318414fd7669ed5e5ef86727800e2847c2ee
-# on 2026-09-02, and amendment A13 below still records it as decided. D-13 likewise
-# remains historical in A12.
+# D-16 supersedes D-15 as the ACTIVE evidence subject authorization. D-15 remains
+# historical and is not rewritten: it authorized a19d226d784d4eb48bf239ca5c5320f12efac541
+# on 2026-09-02, and amendment A14 below still records it as decided. D-14 and D-13
+# likewise remain historical in A13 and A12.
 #
 # Subject lineage: D-12 (036c5269, PR #285 merge, permanent CI trigger hardening and
 # recovery controls) -> D-13 (a2d72660, PR #386 merge, technical pre-beta readiness
@@ -38,7 +38,8 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 # public identity routes, a login rate-limit info-disclosure fix, production
 # health-check observability rewired onto the real Sentry-backed capture path, and an
 # A7.7 governance-scan integrity fix) -> D-14 (1fdc3184, PR #394 merge, the first
-# subject carrying #391-#394) -> D-15 (a19d226d, this decision).
+# subject carrying #391-#394) -> D-15 (a19d226d, PR #396 merge, ANSI-normalised
+# observation-validity matching) -> D-16 (789768b9, this decision).
 #
 # D-13 also resolved the "D-13" naming inconsistency noted during Stage 7
 # reconciliation: commit 184d2515 (authored the same day D-12 was decided) left
@@ -79,58 +80,86 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 # first commit carrying the complete known capture-path repair set #391, #392, #393,
 # #394 and #396, and the exact SHA production is deployed at.
 # Authorized by the owner on 2026-09-02.
-closure_subject_sha: "a19d226d784d4eb48bf239ca5c5320f12efac541"
+#
+# Why the subject had to advance a third time. D-15's subject a19d226d predates two
+# credential-disclosure repairs on the observation path itself, and evidence captured
+# against it would have carried credential material into append-only artifacts:
+#   #403 the S7-I4 and S7-I5 probes printed the configured owner email into the raw
+#        observation; it is now reported as a `set | not set` boolean;
+#   #404 S7-I4 additionally printed the first 8 characters of the LIVE owner session
+#        cookie (`sessionToken.slice(0, 8)`) into the raw observation. Everything a
+#        probe prints is hashed, signed and committed to the artifacts directory, and
+#        artifacts are append-only, so a correction is a new artifact rather than an
+#        edit — the disclosure could not have been withdrawn.
+# Neither prefix carried proof value: `login_session_cookie_set` already records that
+# a cookie was obtained and the flag checks assert its hardening, so no invariant
+# assertion depended on either value. The token is still parsed, held and sent on the
+# authenticated, logout and revocation requests; only the output is redacted.
+#
+# D-16's subject 789768b9 is the merge commit of #404: the first commit carrying the
+# complete known capture-path repair set #391, #392, #393, #394, #396, #401, #402,
+# #403 and #404, and the exact SHA production is deployed at.
+# Authorized by the owner on 2026-09-03.
+closure_subject_sha: "789768b99d5e8996c3f48671b188fa5ba0c51d04"
 closure_subject_sha_authorization:
-  decision: "D-15"
+  decision: "D-16"
   authorized_by: "owner"
-  authorized_date: "2026-09-02"
-  authorization_text: "AUTHORIZE_STAGE7_SUBJECT_SHA: a19d226d784d4eb48bf239ca5c5320f12efac541"
-  supersedes: "D-14"
-  superseded_sha: "1fdc318414fd7669ed5e5ef86727800e2847c2ee"
-  pr_that_produced_sha: "396"
-  pr_head: "62ed6f092e69659a1f5db14dc86d5ddbb04d01a5"
-  main_integration_run: "33652199820"
+  authorized_date: "2026-09-03"
+  authorization_text: "D16_SUBJECT_SHA= 789768b99d5e8996c3f48671b188fa5ba0c51d04"
+  supersedes: "D-15"
+  superseded_sha: "a19d226d784d4eb48bf239ca5c5320f12efac541"
+  pr_that_produced_sha: "404"
+  pr_head: "9831100438ad64590af8d2ad1b3d2bb33443e86d"
+  main_integration_run: "33781637673"
   main_integration_conclusion: "success"
-  main_integration_tested_sha: "a19d226d784d4eb48bf239ca5c5320f12efac541"
-  vercel_production_deployment: "dpl_HJVUbKFenEcfK6QAV9zqQHwtrYvs"
+  main_integration_tested_sha: "789768b99d5e8996c3f48671b188fa5ba0c51d04"
+  vercel_production_deployment: "dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC"
   vercel_production_state: "READY"
-  vercel_production_commit_sha: "a19d226d784d4eb48bf239ca5c5320f12efac541"
+  vercel_production_commit_sha: "789768b99d5e8996c3f48671b188fa5ba0c51d04"
   rationale: >-
-    Merge commit of PR #396 (ANSI-normalised observation-validity matching),
-    simultaneously: current main HEAD; Main Integration green (run 33652199820,
-    success, a19d226d784d4eb48bf239ca5c5320f12efac541 tested, risk class
-    APPLICATION_NON_DB — the full DB integration suite was skipped by the risk
-    classifier's own decision, not executed); Vercel production deployment
-    dpl_HJVUbKFenEcfK6QAV9zqQHwtrYvs READY at merge SHA
-    a19d226d784d4eb48bf239ca5c5320f12efac541 (alias o-ps-iq.vercel.app), created
-    2026-09-02T16:00:31Z, ready 2026-09-02T16:03:02Z. PR #396 touched
-    .github/workflows/stage7-capture.yml, which is outside the governance prefixes,
-    so Vercel built and deployed it: production is at the exact authorized SHA
-    rather than merely code-equivalent. This is the first subject carrying the
-    complete known Stage 7 capture-path repair set: PR #391 (vitest 4 reporter
-    compatibility), #392 (execution-validity fail-closed gate), #393 (node-probe
-    terminal-verdict integrity gate), #394 (trusted-verifier repository_dispatch
-    contract) and #396 (ANSI-normalised validity matching with the raw observation
-    preserved for evidence). Supersedes D-14 (1fdc3184). The governance-only
+    Merge commit of PR #404 (S7-I4 session-cookie value withheld from the
+    observation), simultaneously: current main HEAD; Main Integration green
+    (run 33781637673, success, 789768b99d5e8996c3f48671b188fa5ba0c51d04 tested,
+    risk class APPLICATION_NON_DB, tier 3, suiteMode BROAD_NON_DB — the classifier
+    emitted runNonDbSuite=true and runMainIntegrationFullSuite=false, so the Full DB
+    Integration Suite job was skipped by the risk classifier's own decision and did
+    NOT execute; the non-DB validation did run and passed in the PR #404 gate);
+    Vercel production deployment dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC READY at merge SHA
+    789768b99d5e8996c3f48671b188fa5ba0c51d04 (alias o-ps-iq.vercel.app), created
+    2026-09-03T16:56:46Z, ready 2026-09-03T16:59:54Z, and GET
+    /api/internal/build-info at that alias returned commit
+    789768b99d5e8996c3f48671b188fa5ba0c51d04 with environment "production", so
+    production is at the exact authorized SHA rather than merely code-equivalent.
+    This is the first subject carrying the complete known Stage 7 capture-path
+    repair set together with both observation credential-disclosure repairs:
+    PR #391 (vitest 4 reporter compatibility), #392 (execution-validity fail-closed
+    gate), #393 (node-probe terminal-verdict integrity gate), #394 (trusted-verifier
+    repository_dispatch contract), #396 (ANSI-normalised validity matching with the
+    raw observation preserved for evidence), #401 (governed LANE_C capture inputs and
+    S7-I1 fail-closed), #402 (closure-time protected evidence context), #403 (owner
+    email redacted from evidence observations) and #404 (session cookie value
+    withheld from the observation). Supersedes D-15 (a19d226d). The governance-only
     deployment-control script (scripts/vercel-ignore-build.mjs, wired via
     vercel.json ignoreCommand) remains active and enforced. Owner authorization
-    received verbatim: "AUTHORIZE_STAGE7_SUBJECT_SHA:
-    a19d226d784d4eb48bf239ca5c5320f12efac541".
+    received verbatim: "D16_SUBJECT_SHA=
+    789768b99d5e8996c3f48671b188fa5ba0c51d04".
   # Recorded limitations. Stated rather than assumed, because an unverified claim
   # in a governance record is worse than an absent one.
   unverified:
     production_alias_binding: >-
       The alias o-ps-iq.vercel.app is reported as bound to deployment
-      dpl_HJVUbKFenEcfK6QAV9zqQHwtrYvs by the Vercel API, and an unauthenticated
+      dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC by the Vercel API, and an unauthenticated
       GET https://o-ps-iq.vercel.app/api/health returned HTTP 200 with status
-      "healthy" and environment "production". Independent DNS resolution and
+      "healthy" and environment "production", while GET
+      /api/internal/build-info at the same alias returned commit
+      789768b99d5e8996c3f48671b188fa5ba0c51d04. Independent DNS resolution and
       certificate-chain inspection were NOT performed, so the binding of that
       hostname to that deployment is API-reported plus liveness-observed, not
       independently proven.
     git_commit_signature: >-
       Vercel records githubCommitVerification "verified" for deployment
-      dpl_HJVUbKFenEcfK6QAV9zqQHwtrYvs at commit
-      a19d226d784d4eb48bf239ca5c5320f12efac541. Local `git log --show-signature`
+      dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC at commit
+      789768b99d5e8996c3f48671b188fa5ba0c51d04. Local `git log --show-signature`
       returns status E (cannot check) because the GitHub web-flow signing key is not
       present in this environment's keyring. The signature is therefore
       provider-attested, NOT independently verified here.
@@ -614,6 +643,30 @@ amendments:
       records it. Stage 7 status PENDING, all invariants PENDING, required_evidence
       null — no closure evidence changed, no invariant made PROVEN, and no evidence
       captured by this amendment.
+  - id: A15
+    date: "2026-09-03"
+    applied_in: "governance/stage7-d16-subject-sha"
+    authority: "owner decision D-16, authorized 2026-09-03"
+    summary: >-
+      closure_subject_sha advanced from a19d226d784d4eb48bf239ca5c5320f12efac541
+      (D-15, 2026-09-02, PR #396 merge) to 789768b99d5e8996c3f48671b188fa5ba0c51d04
+      (D-16, 2026-09-03, PR #404 merge). The new subject is the exact
+      production-deployed SHA and the first carrying both observation
+      credential-disclosure repairs: PR #403 removed the configured owner email from
+      the S7-I4 and S7-I5 raw observations, and PR #404 removed the 8-character
+      prefix of the live owner session cookie from the S7-I4 raw observation. Because
+      artifacts are append-only, evidence captured against a19d226d would have
+      committed that credential material permanently. Neither redaction changed what
+      any invariant asserts: all 17 S7-I4 verdicts, including the failing ones, are
+      unchanged, and the session token is still parsed, held and sent on the
+      authenticated, logout and revocation requests. Main Integration for the new
+      subject (run 33781637673) succeeded with risk class APPLICATION_NON_DB; its
+      Full DB Integration Suite was skipped by the classifier's own decision
+      (runMainIntegrationFullSuite=false) and did NOT execute, so no DB verification
+      is claimed by this amendment. D-15 remains historical and unmodified; amendment
+      A14 above still records it. Stage 7 status PENDING, all invariants PENDING,
+      required_evidence null — no closure evidence changed, no invariant made PROVEN,
+      and no evidence captured by this amendment.
   - id: A4
     date: "2026-09-01"
     applied_in: "claude/stage7-d13-subject-sha-and-d4"
