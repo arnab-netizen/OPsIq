@@ -7,32 +7,53 @@
  * Assertion: Deployed SHA matches authorized candidate;
  *            production health probe returns 200.
  *
- * Required env vars:
- *   DEPLOYMENT_ID      — Vercel deployment id (dpl_...)
- *   VERCEL_TOKEN       — (optional) Vercel API token; enables SHA cross-check
- *   CLOSURE_SUBJECT_SHA — authorized SHA from factory-stage-7-closure.yaml;
- *                        defaults to the D-12 authorized value when not set
+ * ─── Why this probe may never PASS without comparing a SHA ───────────────────
+ * The assertion is about identity. Before PR-G2 the probe could satisfy it
+ * without ever obtaining the deployed SHA: `CLOSURE_SUBJECT_SHA` fell back to a
+ * hardcoded D-12 value, an absent `VERCEL_TOKEN` recorded
+ * `sha_verification: "SKIPPED"` as a PASSING observation, and the base URL fell
+ * back to a compiled-in production alias. Run with the environment the capture
+ * workflow actually supplied, it reported `10 PASS, 0 FAIL` and `RESULT: PASS`
+ * while the deployed SHA matched neither the stale default nor the governed
+ * subject. That is a signable LANE_C artifact asserting an identity nobody
+ * checked.
  *
- * Derived env vars (alternatives to DEPLOYMENT_ID-based resolution):
- *   PROBE_BASE_URL     — override: probe this URL directly (must be the exact deployment)
+ * Every one of those fallbacks is gone. There is now no path on which the
+ * deployed SHA is unknown and the result is PASS.
+ *
+ * ─── Where the deployed SHA comes from ───────────────────────────────────────
+ * `GET {PROBE_BASE_URL}/api/internal/build-info` — the repository's existing
+ * first-party deployed-identity authority (src/app/api/internal/build-info/route.ts),
+ * already used for exactly this purpose by
+ * .github/workflows/production-owner-acceptance.yml. It reports the deployed
+ * commit and the Vercel environment, needs no credential, and is served by the
+ * deployment being probed, so it cannot describe some other deployment. A Vercel
+ * API token is therefore NOT required to verify identity, and none is invented.
+ *
+ * Required env vars:
+ *   CLOSURE_SUBJECT_SHA — the exact commit this capture is authorized against.
+ *                         Supplied by the capture workflow as GITHUB_SHA, which
+ *                         the OPTION A gate has independently proved equals the
+ *                         authorized closure_subject_sha at AUTH_SHA. No default.
+ *   PROBE_BASE_URL      — the production endpoint to probe. No default.
+ *   DEPLOYMENT_ID       — Vercel deployment id (dpl_...), recorded by the contract.
+ *
+ * Optional env vars:
+ *   VERCEL_TOKEN        — when present, adds a Vercel control-plane cross-check
+ *                         (readyState + meta.githubCommitSha). Its absence never
+ *                         weakens the verdict, because identity is already
+ *                         established from build-info; when it IS supplied, any
+ *                         disagreement fails.
  *
  * Exit 0 = PASS. Non-zero = FAIL. Observations on stdout.
  */
 
-import { readFileSync } from "fs";
-import { resolve, dirname } from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const projectRoot = resolve(__dirname, "..", "..");
-
-const D12_AUTHORIZED_SHA = "036c526940f349d7d06e05635f29c064c78ba71b";
-const DEFAULT_PRODUCTION_URL = "https://o-ps-iq.vercel.app";
+const SHA40 = /^[0-9a-f]{40}$/;
 
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID ?? "";
 const VERCEL_TOKEN = process.env.VERCEL_TOKEN ?? "";
-const CLOSURE_SUBJECT_SHA = process.env.CLOSURE_SUBJECT_SHA ?? D12_AUTHORIZED_SHA;
-const PROBE_BASE_URL_OVERRIDE = process.env.PROBE_BASE_URL ?? "";
+const CLOSURE_SUBJECT_SHA = process.env.CLOSURE_SUBJECT_SHA ?? "";
+const PROBE_BASE_URL = process.env.PROBE_BASE_URL ?? "";
 
 const observations = [];
 let failed = false;
@@ -48,62 +69,138 @@ function fail(label, value) {
   record(label, value, false);
 }
 
-async function resolveDeploymentUrl() {
-  if (PROBE_BASE_URL_OVERRIDE) {
-    record("probe_base_url_source", "PROBE_BASE_URL override");
-    return PROBE_BASE_URL_OVERRIDE;
+/**
+ * Fail-closed configuration gate. The capture workflow refuses before reaching
+ * this probe when a governed input is missing; this is the second line, so the
+ * probe is also safe to run by hand without inventing an identity to compare
+ * against.
+ *
+ * @returns {boolean} true when the probe holds everything identity needs
+ */
+function verifyConfiguration() {
+  let ok = true;
+
+  if (!CLOSURE_SUBJECT_SHA) {
+    fail(
+      "closure_subject_sha_present",
+      "MISSING — CLOSURE_SUBJECT_SHA is not set. S7-I1 asserts that the deployed " +
+        "SHA matches the authorized candidate; with no authorized candidate there " +
+        "is nothing to match and no default may be assumed."
+    );
+    ok = false;
+  } else if (!SHA40.test(CLOSURE_SUBJECT_SHA)) {
+    fail(
+      "closure_subject_sha_wellformed",
+      `MALFORMED — '${CLOSURE_SUBJECT_SHA}' is not a 40-character lowercase commit SHA`
+    );
+    ok = false;
+  } else {
+    record("closure_subject_sha_present", CLOSURE_SUBJECT_SHA);
   }
 
-  if (VERCEL_TOKEN && DEPLOYMENT_ID) {
-    try {
-      const res = await fetch(
-        `https://api.vercel.com/v13/deployments/${encodeURIComponent(DEPLOYMENT_ID)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${VERCEL_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (!res.ok) {
-        record(
-          "vercel_api_response",
-          `HTTP ${res.status} — using default production URL`,
-          true
-        );
-        return DEFAULT_PRODUCTION_URL;
-      }
-      const data = await res.json();
-      const deploymentUrl = data.url ? `https://${data.url}` : null;
-      if (!deploymentUrl) {
-        record("vercel_deployment_url", "null — using default", true);
-        return DEFAULT_PRODUCTION_URL;
-      }
-      record("vercel_deployment_url", deploymentUrl);
-      return deploymentUrl;
-    } catch (err) {
-      record("vercel_api_error", String(err), true);
-      return DEFAULT_PRODUCTION_URL;
-    }
+  if (!PROBE_BASE_URL) {
+    fail(
+      "probe_base_url_present",
+      "MISSING — PROBE_BASE_URL is not set. The endpoint under observation must be " +
+        "named by the caller; a compiled-in production alias would let this probe " +
+        "report on a target the capture never selected."
+    );
+    ok = false;
+  } else {
+    record("probe_base_url", PROBE_BASE_URL);
   }
 
-  record(
-    "probe_base_url_source",
-    "no VERCEL_TOKEN or PROBE_BASE_URL — using default production alias"
-  );
-  return DEFAULT_PRODUCTION_URL;
+  return ok;
 }
 
-async function verifySha(deploymentId) {
+/**
+ * Establish the deployed identity from the deployment itself.
+ *
+ * This is the check the whole invariant rests on, so every way it can fail to
+ * produce a compared SHA is a FAIL: unreachable endpoint, non-JSON body, absent
+ * or "unknown" commit, wrong environment, or a commit that is not the authorized
+ * subject.
+ *
+ * @returns {Promise<string|null>} the verified deployed SHA, or null on failure
+ */
+async function verifyDeployedIdentity() {
+  const url = `${PROBE_BASE_URL.replace(/\/$/, "")}/api/internal/build-info`;
+  record("build_info_url", url);
+
+  let body;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    record("build_info_http_status", res.status, res.status === 200);
+    if (res.status !== 200) {
+      fail("build_info_unavailable", `Expected 200 from ${url}, got ${res.status}`);
+      return null;
+    }
+    body = await res.json();
+  } catch (err) {
+    fail("build_info_error", String(err));
+    return null;
+  }
+
+  const deployedEnv = body.environment ?? "MISSING";
+  const envIsProduction = deployedEnv === "production";
+  record("deployed_environment", deployedEnv, envIsProduction);
+  if (!envIsProduction) {
+    fail(
+      "deployed_environment_not_production",
+      `environment='${deployedEnv}' — LANE_C evidence is only observed in production`
+    );
+  }
+
+  const deployedSha = typeof body.commit === "string" ? body.commit : "";
+  if (!SHA40.test(deployedSha)) {
+    fail(
+      "deployed_sha_unresolvable",
+      `build-info reported commit='${deployedSha || "MISSING"}' — the deployed SHA ` +
+        "could not be established, so deployment identity is unverified"
+    );
+    return null;
+  }
+  record("deployed_sha", deployedSha);
+
+  const shaMatch = deployedSha === CLOSURE_SUBJECT_SHA;
+  record(
+    "sha_matches_closure_subject",
+    `deployed=${deployedSha} authorized=${CLOSURE_SUBJECT_SHA}`,
+    shaMatch
+  );
+  if (!shaMatch) {
+    fail(
+      "sha_mismatch_detail",
+      `Deployed SHA ${deployedSha} does not match authorized candidate ${CLOSURE_SUBJECT_SHA}`
+    );
+    return null;
+  }
+
+  return deployedSha;
+}
+
+/**
+ * Optional Vercel control-plane cross-check.
+ *
+ * Identity is already established from build-info, so an absent token weakens
+ * nothing and is recorded as "not requested" rather than as a passing check.
+ * When a token IS supplied the caller has asked for the stronger check, so any
+ * failure or disagreement fails the observation.
+ */
+async function crossCheckVercelDeployment(deploymentId) {
   if (!VERCEL_TOKEN) {
     record(
-      "sha_verification",
-      "SKIPPED — VERCEL_TOKEN not set; cannot verify SHA via API"
+      "vercel_cross_check",
+      "NOT_REQUESTED — no VERCEL_TOKEN supplied; deployed identity was established " +
+        "from the deployment's own build-info endpoint"
     );
     return;
   }
   if (!deploymentId) {
-    fail("sha_verification", "SKIPPED — DEPLOYMENT_ID not set; SHA unverifiable");
+    fail("vercel_cross_check", "VERCEL_TOKEN supplied but DEPLOYMENT_ID is not set");
     return;
   }
 
@@ -122,30 +219,24 @@ async function verifySha(deploymentId) {
       return;
     }
     const data = await res.json();
+
     const deployedSha = data.meta?.githubCommitSha ?? data.gitSource?.sha ?? null;
     record("vercel_deployed_sha", deployedSha ?? "NOT_FOUND", !!deployedSha);
-    if (deployedSha) {
-      const shaMatch = deployedSha === CLOSURE_SUBJECT_SHA;
-      record(
-        "sha_matches_closure_subject",
-        `deployed=${deployedSha} authorized=${CLOSURE_SUBJECT_SHA}`,
-        shaMatch
+    if (!deployedSha) {
+      fail("vercel_deployed_sha_absent", "Vercel reported no commit SHA for this deployment");
+    } else if (deployedSha !== CLOSURE_SUBJECT_SHA) {
+      fail(
+        "vercel_sha_mismatch_detail",
+        `Vercel deployment ${deploymentId} reports ${deployedSha}, not the authorized ` +
+          `candidate ${CLOSURE_SUBJECT_SHA}`
       );
-      if (!shaMatch) {
-        fail(
-          "sha_mismatch_detail",
-          `Deployed SHA ${deployedSha} does not match authorized candidate ${CLOSURE_SUBJECT_SHA}`
-        );
-      }
+    } else {
+      record("vercel_sha_matches_closure_subject", deployedSha);
     }
 
     const deploymentState = data.readyState ?? data.state ?? "UNKNOWN";
     const deploymentReady = deploymentState === "READY";
-    record(
-      "vercel_deployment_state",
-      deploymentState,
-      deploymentReady
-    );
+    record("vercel_deployment_state", deploymentState, deploymentReady);
     if (!deploymentReady) {
       fail("deployment_not_ready", `State is ${deploymentState}, expected READY`);
     }
@@ -208,14 +299,27 @@ async function probeHealth(baseUrl) {
 async function main() {
   console.log("=== S7-I1: Exact private deployment identity ===");
   console.log(`DEPLOYMENT_ID: ${DEPLOYMENT_ID || "(not set)"}`);
-  console.log(`CLOSURE_SUBJECT_SHA: ${CLOSURE_SUBJECT_SHA}`);
+  console.log(`CLOSURE_SUBJECT_SHA: ${CLOSURE_SUBJECT_SHA || "(not set)"}`);
+  console.log(`PROBE_BASE_URL: ${PROBE_BASE_URL || "(not set)"}`);
   console.log(`VERCEL_TOKEN: ${VERCEL_TOKEN ? "set" : "not set"}`);
   console.log("");
 
-  const baseUrl = await resolveDeploymentUrl();
-
-  await verifySha(DEPLOYMENT_ID);
-  await probeHealth(baseUrl);
+  // Configuration first: without an authorized subject or a named endpoint there
+  // is no identity question to answer, and answering it anyway is the defect.
+  if (verifyConfiguration()) {
+    const verifiedSha = await verifyDeployedIdentity();
+    await crossCheckVercelDeployment(DEPLOYMENT_ID);
+    if (verifiedSha) {
+      await probeHealth(PROBE_BASE_URL);
+    } else {
+      record(
+        "health_probe_skipped",
+        "deployment identity was not established — health of an unidentified " +
+          "deployment says nothing about this invariant",
+        false
+      );
+    }
+  }
 
   console.log("\n=== OBSERVATION SUMMARY ===");
   const passes = observations.filter((o) => o.pass).length;
