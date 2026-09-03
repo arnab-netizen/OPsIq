@@ -428,13 +428,24 @@ export function evaluateInvariantClosure(manifest, options = {}) {
     dir: options.evidenceDir ?? pathJoin(options.repoRoot ?? process.cwd(), EVIDENCE_ARTIFACTS_DIR),
     signingKey: options.signingKey ?? null,
     provenance: options.provenance ?? null,
+    // Signature verification against the registry that was authoritative at each
+    // artifact's OWN AUTH_SHA. Without it the only options are the working-tree
+    // registry (an INF_SHA binding) or a merged key set (which would let a key
+    // active at one AUTH_SHA verify an artifact bound to another) — see
+    // scripts/lib/closure-evidence-context.mjs. Absent, signatures stay UNCHECKED
+    // and nothing reaches ACCEPTED, which is the correct fail-closed default.
+    resolveSigningKey: typeof options.resolveSigningKey === 'function' ? options.resolveSigningKey : null,
     // D-4/A4 S7-I11 enforcement reads its authorized environment target out of the
     // raw contract text. The governing contract here is the one being evaluated, so
     // an artifact cited as proof must satisfy the D-4 of the contract citing it.
     // Absent raw YAML the guard fails closed, which is the correct default.
-    resolveClosureManifest: typeof options.manifestYaml === 'string' && options.manifestYaml.length > 0
-      ? () => options.manifestYaml
-      : null,
+    // Per-artifact AUTH_SHA resolution when the caller supplies it; otherwise the
+    // raw text of the contract being evaluated, unchanged from before.
+    resolveClosureManifest: typeof options.resolveClosureManifest === 'function'
+      ? options.resolveClosureManifest
+      : (typeof options.manifestYaml === 'string' && options.manifestYaml.length > 0
+        ? () => options.manifestYaml
+        : null),
   });
   const supersededIds = collectSupersededIds(evidenceIndex.records, evidenceIndex.byId);
 

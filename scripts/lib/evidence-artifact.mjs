@@ -1236,9 +1236,22 @@ function collectArtifactFiles(dir, prefix = '') {
  *   When omitted, `closureManifestYaml` stays null and the S7-I11 guard fails closed
  *   with MANIFEST_UNREADABLE. That is the correct default: a caller that supplies no
  *   governance input has not demonstrated a resolved D-4.
+ * @param {((authorizationManifestSha: string|null) => (string|Map<string,string>|null))|null} [options.resolveSigningKey]
+ *   Optional. Given an artifact's own `authorization_manifest_sha`, returns the key
+ *   material its signature must verify against. Takes precedence over `signingKey`
+ *   for that artifact; when it returns null the signature stays UNCHECKED.
+ *
+ *   Per artifact, and keyed on the artifact's OWN AUTH_SHA, for the same reason
+ *   `resolveClosureManifest` is: governance is authored on main and the working tree
+ *   is at INF_SHA. A single `signingKey` cannot express that — it would have to be
+ *   either the working-tree registry (an INF_SHA binding, which is the thing
+ *   --from-auth-sha-registry exists to avoid) or the union of several AUTH_SHA
+ *   registries, which would let a key active at one AUTH_SHA verify an artifact
+ *   bound to a different one. Neither preserves the binding, so the resolution has
+ *   to happen per artifact, here.
  * @returns {{ records: object[], byId: Map<string, object>, duplicates: string[] }}
  */
-export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance = null, displayRoot = process.cwd(), resolveClosureManifest = null } = {}) {
+export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance = null, displayRoot = process.cwd(), resolveClosureManifest = null, resolveSigningKey = null } = {}) {
   const records = [];
   const byId = new Map();
   const duplicates = [];
@@ -1277,7 +1290,21 @@ export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance =
       }
     }
 
-    const { violations, signatureState } = validateEvidenceArtifact(parsed, { signingKey, fileName: name, closureManifestYaml });
+    // Key material for THIS artifact, resolved from the AUTH_SHA it names when a
+    // resolver is supplied. Falls back to the index-wide signingKey otherwise, so
+    // every existing caller keeps its current behaviour exactly.
+    let artifactSigningKey = signingKey;
+    if (resolveSigningKey) {
+      try {
+        artifactSigningKey = resolveSigningKey(
+          typeof parsed?.authorization_manifest_sha === 'string' ? parsed.authorization_manifest_sha : null,
+        ) ?? null;
+      } catch {
+        artifactSigningKey = null;
+      }
+    }
+
+    const { violations, signatureState } = validateEvidenceArtifact(parsed, { signingKey: artifactSigningKey, fileName: name, closureManifestYaml });
     const scoped = violations.map((v) => `${relPath}: ${v}`);
     const artifactId = typeof parsed?.artifact_id === 'string' ? parsed.artifact_id : null;
 

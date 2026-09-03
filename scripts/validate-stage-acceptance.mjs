@@ -43,6 +43,13 @@ import {
   requiresInvariantProof,
   summarizeInvariantClosure,
 } from './lib/invariant-closure.mjs';
+import { loadEvidenceArtifactIndex } from './lib/evidence-artifact.mjs';
+import {
+  createAuthShaResolvers,
+  githubTokenFromEnv,
+  ownerLoginsFromEnv,
+  resolveProvenanceStates,
+} from './lib/closure-evidence-context.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -93,6 +100,23 @@ try {
   console.error(`Cannot read ledger: ${e.message}`);
   process.exit(1);
 }
+
+// ─── Closure-time protected evidence context (PR-G3) ─────────────────────────
+// An artifact only reaches ACCEPTED when its signature verified against the
+// registry authoritative at its AUTH_SHA and its provenance cross-checked. This
+// gate previously supplied neither, so a cryptographically valid, correctly bound
+// artifact resolved UNVERIFIED and could never close the stage — a gate refusing
+// evidence it was never given the means to check.
+//
+// Resolution is per artifact and keyed on the artifact's own AUTH_SHA; the
+// working tree is at INF_SHA, which is not where governance is authored.
+const authShaResolvers = createAuthShaResolvers({ repoRoot: root });
+const githubToken = githubTokenFromEnv();
+const ownerLogins = ownerLoginsFromEnv();
+// Populated lazily: only a CLOSED governed contract that actually cites evidence
+// needs the network, so nothing is spent when there is nothing to verify.
+let provenanceStates = new Map();
+const provenanceNotes = [];
 
 const stages = ledger.stages || {};
 let violations = 0;
@@ -184,7 +208,15 @@ function checkStage(stageKey) {
     if (manifest) {
       // manifestYaml carries the raw contract text the D-4/A4 S7-I11 guard reads its
       // authorized environment target from. Parsed YAML alone cannot satisfy it.
-      closure = evaluateInvariantClosure(manifest, { bundleId: id, evidenceDir, manifestYaml });
+      closure = evaluateInvariantClosure(manifest, {
+        bundleId: id,
+        evidenceDir,
+        manifestYaml,
+        // Protected context — without it nothing can ever be ACCEPTED.
+        resolveSigningKey: authShaResolvers.resolveSigningKey,
+        resolveClosureManifest: authShaResolvers.resolveClosureManifest,
+        provenance: provenanceStates,
+      });
       for (const violation of closure.structuralViolations) {
         console.error(`  ❌ ${violation}`);
         violations++;
@@ -258,6 +290,33 @@ function checkStage(stageKey) {
         console.log(`  · ${id}: status=${status} (not yet closed)`);
       }
     }
+  }
+}
+
+// Resolve provenance for whatever evidence is present, once, before any stage is
+// evaluated. evaluateInvariantClosure is synchronous and takes a ready map, and
+// the cross-check needs the network, so it has to happen here.
+//
+// Nothing is fetched when the directory is empty, which is the state today: an
+// empty artifact directory is neither a pass nor a failure.
+{
+  const { records } = loadEvidenceArtifactIndex({
+    dir: evidenceDir,
+    displayRoot: root,
+    resolveSigningKey: authShaResolvers.resolveSigningKey,
+    resolveClosureManifest: authShaResolvers.resolveClosureManifest,
+  });
+  if (records.length > 0) {
+    const { provenance, checked, reasons } = await resolveProvenanceStates({
+      records,
+      repoRoot: root,
+      githubToken,
+      ownerLogins,
+      readArtifact: (record) => JSON.parse(readFileSync(record.absolutePath, 'utf8')),
+    });
+    provenanceStates = provenance;
+    if (!checked) provenanceNotes.push(...reasons);
+    else provenanceNotes.push(...reasons.slice(0, 5));
   }
 }
 
