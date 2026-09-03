@@ -27,6 +27,13 @@ import {
   evaluateInvariantClosure,
   summarizeInvariantClosure,
 } from './lib/invariant-closure.mjs';
+import { loadEvidenceArtifactIndex, EVIDENCE_ARTIFACTS_DIR } from './lib/evidence-artifact.mjs';
+import {
+  createAuthShaResolvers,
+  githubTokenFromEnv,
+  ownerLoginsFromEnv,
+  resolveProvenanceStates,
+} from './lib/closure-evidence-context.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -49,6 +56,33 @@ function loadYaml(filePath) {
 }
 
 // ─── Load and validate each bundle manifest ───────────────────────────────────
+
+// ─── Closure-time protected evidence context (PR-G3) ─────────────────────────
+// This gate previously called evaluateInvariantClosure with { bundleId } alone, so
+// the evidence directory defaulted to the process cwd and the D-4/A4 guard had no
+// contract text: a CLOSED contract citing a valid artifact failed with
+// "S7-I11 proof blocked by D-4 enforcement (MANIFEST_UNREADABLE)". It now reads
+// the same context the canonical Stage 7 closure path does, so the two gates
+// cannot hold different opinions about the same artifact.
+const evidenceDir = join(root, EVIDENCE_ARTIFACTS_DIR);
+const authShaResolvers = createAuthShaResolvers({ repoRoot: root });
+const provenanceStates = await (async () => {
+  const { records } = loadEvidenceArtifactIndex({
+    dir: evidenceDir,
+    displayRoot: root,
+    resolveSigningKey: authShaResolvers.resolveSigningKey,
+    resolveClosureManifest: authShaResolvers.resolveClosureManifest,
+  });
+  if (records.length === 0) return new Map();
+  const { provenance } = await resolveProvenanceStates({
+    records,
+    repoRoot: root,
+    githubToken: githubTokenFromEnv(),
+    ownerLogins: ownerLoginsFromEnv(),
+    readArtifact: (record) => JSON.parse(readFileSync(record.absolutePath, 'utf8')),
+  });
+  return provenance;
+})();
 
 const bundleFiles = readdirSync(bundlesDir)
   .filter(f => f.endsWith('.yaml'))
@@ -97,7 +131,18 @@ for (const file of bundleFiles) {
   // contract is governed is decided by the validator-owned registry keyed on the
   // bundle id, never by anything the manifest declares, so a manifest cannot opt
   // itself out by dropping closure_conditions or by deleting invariants.
-  const closureResult = evaluateInvariantClosure(parsed, { bundleId: id });
+  const closureResult = evaluateInvariantClosure(parsed, {
+    bundleId: id,
+    // The contract's own raw text: the D-4/A4 guard reads its authorized
+    // environment target out of it, and parsed YAML cannot satisfy that.
+    // Raw contract text, read here because the loop keeps only the parsed YAML and
+    // the D-4/A4 guard matches on the text.
+    manifestYaml: readFileSync(path, 'utf8'),
+    evidenceDir,
+    resolveSigningKey: authShaResolvers.resolveSigningKey,
+    resolveClosureManifest: authShaResolvers.resolveClosureManifest,
+    provenance: provenanceStates,
+  });
   for (const violation of closureResult.structuralViolations) {
     fail(`${file}: ${violation}`);
   }
