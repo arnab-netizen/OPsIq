@@ -143,7 +143,14 @@ async function testOwnerLogin(baseUrl) {
   record("session_cookie_httponly", isHttpOnly, isHttpOnly);
   record("session_cookie_samesite_set", isSameSiteLax || /samesite/i.test(rawCookie));
 
-  console.log(`  Session cookie obtained (first 8 chars): ${sessionToken.slice(0, 8)}...`);
+  // ─── Session credential: report acquisition, never any of its value ─────────
+  // Everything this probe prints becomes the raw observation, which is hashed,
+  // signed and committed to the artifacts directory — permanently, since
+  // artifacts are append-only. A prefix of a live session cookie is credential
+  // material and carries no proof: `login_session_cookie_set` above already
+  // records that a cookie was obtained, and the flag checks assert its
+  // hardening. The token stays in memory for the authenticated requests below.
+  console.log("  Session cookie obtained (value withheld from observation)");
   return sessionToken;
 }
 
