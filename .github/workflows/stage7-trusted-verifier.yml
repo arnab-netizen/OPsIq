@@ -11,9 +11,12 @@ name: Stage 7 — Trusted Evidence Verifier
 #   - Fetches artifact files from the live PR HEAD as RAW DATA via the GitHub
 #     Contents API (single-file reads), never by checking out the PR branch.
 #   - Verifies the PR diff is add-only and confined to the canonical artifacts dir.
+#   - Requires the set of artifact ids the PR adds to equal, exactly, the set the
+#     dispatch payload names — so no file in the evidence PR is left unexamined.
 #   - Validates the fetched data using the validator on main with
 #     --from-auth-sha-registry so the key registry is loaded from each artifact's
-#     authorization_manifest_sha, never from the working-tree registry.
+#     authorization_manifest_sha, never from the working-tree registry, and with
+#     --require-accepted so an unverified signature blocks instead of passing.
 #   - The PR code is never executed in this job.
 #   - The signing key is never exposed to artifact-submitting PRs.
 #   - Posts the result as a Commit Status on the live PR HEAD SHA.
@@ -45,8 +48,10 @@ name: Stage 7 — Trusted Evidence Verifier
 # 11.  statuses:write for Commit Status API — YES (posts to stage7-evidence-trusted-verification).
 # 12.  Provenance cross-check requires GH_TOKEN — YES (passed via env).
 # 13.  Owner logins allowlist configurable — YES (EVIDENCE_OWNER_LOGINS secret).
-# 14.  Only evd_ artifact ids accepted — YES (pattern filter).
-# 15.  Empty artifact list = error status, not pass — YES (validator handles it).
+# 14.  Only evd_ artifact ids accepted — YES (pattern filter; a non-canonical id
+#      refuses the whole verification rather than being skipped).
+# 15.  Empty artifact list = error status, not pass — YES (set-equality step
+#      refuses an empty payload; assert step fails on a zero fetch count).
 # 16.  Dispatcher identity is not trusted as owner identity — YES (inputs not used for identity).
 # 17.  Result posted as Commit Status on the independently resolved live HEAD SHA —
 #      YES (replaces prior issue-comment approach; post step runs with if: always()).
@@ -54,6 +59,22 @@ name: Stage 7 — Trusted Evidence Verifier
 # 19.  Live PR HEAD SHA resolved independently from GitHub API — YES (resolve_pr step;
 #      payload head_sha used only as fallback for error-state status posting).
 # 20.  PR diff verified add-only inside canonical artifacts directory — YES (addonly step).
+#
+# PR-G1 remediation (pre-D16 closure audit — trusted-verifier soundness):
+# 21.  Success requires ACCEPTED, not merely non-REJECTED — YES (--require-accepted).
+#      A revoked, inactive, pending_owner_provisioning, unknown or unreadable
+#      AUTH_SHA key leaves the signature UNCHECKED; UNVERIFIED now blocks.
+# 22.  PR artifact set == payload artifact set, exactly — YES (addonly step).
+#      Not subset, not superset: an artifact added to the PR but absent from the
+#      payload, or named in the payload but absent from the PR, refuses.
+# 23.  Multi-id payloads parse one id per record — YES (addonly step). The prior
+#      `tr ',' '\n' | tr -d '[:space:]'` deleted the newlines it had just inserted
+#      and collapsed every id into a single unparseable token.
+# 24.  A truncated file listing refuses — YES (addonly step compares the listing
+#      length against the PR's own changed_files). This step does not paginate, so
+#      it must never conclude set equality from a prefix of the diff.
+# 25.  An artifact that cannot be fetched refuses — YES (fetch step). A skip would
+#      reopen the gap requirement 22 closes.
 
 on:
   repository_dispatch:
@@ -124,21 +145,56 @@ jobs:
             echo "         Using live head_sha for verification and status posting."
           fi
 
-          echo "live_head_sha=$LIVE_HEAD_SHA" >> "$GITHUB_OUTPUT"
-          echo "Resolved PR #$PR_NUMBER HEAD: $LIVE_HEAD_SHA"
+          # changed_files is the PR's own count of the whole diff. The next step
+          # lists files one page at a time (100 max) and must prove exact set
+          # equality over the WHOLE diff, so it needs an independent total to
+          # check its listing against. Resolved here because this is the only
+          # step that reads the PR object.
+          CHANGED_FILES=$(echo "$PR_RESPONSE" | jq -r '.changed_files')
 
-      # Verify the PR diff is add-only and every changed file is inside the
-      # canonical artifacts directory. Any modification, deletion, or file outside
-      # the directory is a violation — evidence branches are append-only by contract.
-      - name: Verify PR is add-only inside canonical artifacts directory
+          echo "live_head_sha=$LIVE_HEAD_SHA" >> "$GITHUB_OUTPUT"
+          echo "changed_files=$CHANGED_FILES" >> "$GITHUB_OUTPUT"
+          echo "Resolved PR #$PR_NUMBER HEAD: $LIVE_HEAD_SHA ($CHANGED_FILES changed file(s))"
+
+      # ── Add-only, path confinement, and EXACT artifact-set equality ─────────
+      #
+      # A trusted-verification success is a statement about the whole evidence PR,
+      # not about whichever artifacts the dispatch payload happened to name. Before
+      # this step enforced set equality, the two were checked independently: the
+      # diff was checked for add-only/path confinement, and the payload ids were
+      # validated — but nothing required them to describe the same set. A PR that
+      # added a second artifact file the payload did not name passed, and that file
+      # was never fetched, never parsed and never verified, yet the PR carried a
+      # green stage7-evidence-trusted-verification status.
+      #
+      # The invariant this step now enforces:
+      #
+      #   { artifact ids added by the PR } == { artifact ids named by the payload }
+      #
+      # Exact equality — not subset, not superset. Every added file must be a
+      # canonically named artifact directly inside the artifacts directory, every
+      # payload entry must be a canonical id, neither side may repeat an id, and
+      # the two sets must agree. Anything else refuses.
+      - name: Verify PR is add-only, path-confined, and matches the payload exactly
         id: addonly
         if: steps.resolve_pr.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.client_payload.pr_number }}
           REPO: ${{ github.repository }}
+          CHANGED_FILES: ${{ steps.resolve_pr.outputs.changed_files }}
+          ARTIFACT_IDS_RAW: ${{ github.event.client_payload.artifact_ids }}
         run: |
           set -euo pipefail
+
+          ARTIFACT_DIR_PREFIX="docs/opsiq/evidence/stage-7/artifacts/"
+          CANONICAL_ID='^evd_[0-9a-f]{32}$'
+
+          VIOLATIONS=""
+          violate() {
+            echo "VIOLATION: $*" >&2
+            VIOLATIONS="yes"
+          }
 
           FILES_RESPONSE=$(curl -sS -f \
             -H "Authorization: Bearer $GH_TOKEN" \
@@ -146,54 +202,153 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/files?per_page=100")
 
-          VIOLATIONS=""
+          # ── Completeness gate ─────────────────────────────────────────────
+          # One page holds at most 100 entries and this step deliberately does not
+          # paginate. Set equality is a claim about the entire diff, so a listing
+          # that cannot be shown to be complete must refuse rather than conclude
+          # from a prefix. A governed evidence PR carries exactly one file — the
+          # producer action refuses unless the staging area holds exactly the
+          # artifact — so this gate never fires on the governed path; it exists
+          # because the PR is untrusted data and may not be the governed one.
+          LISTED_COUNT=$(echo "$FILES_RESPONSE" | jq -r 'length')
+          if ! [[ "$CHANGED_FILES" =~ ^[0-9]+$ ]]; then
+            violate "the PR object did not report changed_files ('$CHANGED_FILES'), so the file listing cannot be shown to be complete"
+          elif [ "$LISTED_COUNT" -ne "$CHANGED_FILES" ]; then
+            violate "the PR reports $CHANGED_FILES changed file(s) but the listing returned $LISTED_COUNT — the diff is truncated and cannot be verified as a whole"
+          fi
+
+          # ── Per-file: added, path-confined, canonically named ─────────────
+          PR_IDS="$RUNNER_TEMP/pr-artifact-ids.txt"
+          : > "$PR_IDS"
           while IFS=$'\t' read -r status filename; do
+            if [ -z "${filename:-}" ]; then
+              continue
+            fi
             if [ "$status" != "added" ]; then
-              echo "VIOLATION: '$filename' status='$status' (must be 'added')" >&2
-              VIOLATIONS="yes"
+              violate "'$filename' status='$status' (must be 'added')"
             fi
-            if [[ "$filename" != docs/opsiq/evidence/stage-7/artifacts/* ]]; then
-              echo "VIOLATION: '$filename' is outside docs/opsiq/evidence/stage-7/artifacts/" >&2
-              VIOLATIONS="yes"
+            if [[ "$filename" != "$ARTIFACT_DIR_PREFIX"* ]]; then
+              violate "'$filename' is outside $ARTIFACT_DIR_PREFIX"
+              continue
             fi
+            rest="${filename#"$ARTIFACT_DIR_PREFIX"}"
+            if [[ "$rest" == */* ]]; then
+              violate "'$filename' is nested below $ARTIFACT_DIR_PREFIX — an artifact sits directly in that directory or it is not resolvable as proof"
+              continue
+            fi
+            if [[ "$rest" != *.json ]]; then
+              violate "'$filename' is not a .json artifact file"
+              continue
+            fi
+            id="${rest%.json}"
+            if ! [[ "$id" =~ $CANONICAL_ID ]]; then
+              violate "'$filename' is not named <artifact_id>.json with a canonical artifact id (evd_<32 lowercase hex>)"
+              continue
+            fi
+            printf '%s\n' "$id" >> "$PR_IDS"
           done < <(echo "$FILES_RESPONSE" | jq -r '.[] | [.status, .filename] | @tsv')
+
+          # ── Payload ids: parsed preserving record boundaries ──────────────
+          # `tr ',' '\n' | tr -d '[:space:]'` collapsed every id into one token,
+          # because the second tr removed the newlines the first one inserted. Any
+          # payload naming more than one artifact was therefore refused wholesale.
+          # Trimming per line keeps one id per record and makes an empty record —
+          # a leading, trailing or doubled comma — an explicit refusal.
+          PAYLOAD_IDS="$RUNNER_TEMP/payload-artifact-ids.txt"
+          : > "$PAYLOAD_IDS"
+          if [ -z "${ARTIFACT_IDS_RAW:-}" ]; then
+            violate "client_payload.artifact_ids is empty — no artifact was named for verification"
+          else
+            while IFS= read -r raw_id; do
+              id="$(printf '%s' "$raw_id" | sed 's/^[[:blank:]]*//; s/[[:blank:]]*$//')"
+              if [ -z "$id" ]; then
+                violate "client_payload.artifact_ids contains an empty entry — a leading, trailing or doubled comma is not an artifact id"
+                continue
+              fi
+              if ! [[ "$id" =~ $CANONICAL_ID ]]; then
+                violate "client_payload.artifact_ids entry '$id' is not a canonical artifact id (evd_<32 lowercase hex>)"
+                continue
+              fi
+              printf '%s\n' "$id" >> "$PAYLOAD_IDS"
+            done < <(printf '%s\n' "$ARTIFACT_IDS_RAW" | tr ',' '\n')
+          fi
+
+          # ── No repeats on either side ─────────────────────────────────────
+          DUP_PR=$(sort "$PR_IDS" | uniq -d | tr '\n' ' ')
+          if [ -n "${DUP_PR// /}" ]; then
+            violate "the PR adds the same artifact id more than once: $DUP_PR"
+          fi
+          DUP_PAYLOAD=$(sort "$PAYLOAD_IDS" | uniq -d | tr '\n' ' ')
+          if [ -n "${DUP_PAYLOAD// /}" ]; then
+            violate "client_payload.artifact_ids names the same artifact id more than once: $DUP_PAYLOAD"
+          fi
+
+          # ── Exact set equality ────────────────────────────────────────────
+          sort -u "$PR_IDS" > "$RUNNER_TEMP/pr-ids.sorted"
+          sort -u "$PAYLOAD_IDS" > "$RUNNER_TEMP/payload-ids.sorted"
+          ONLY_PR=$(comm -23 "$RUNNER_TEMP/pr-ids.sorted" "$RUNNER_TEMP/payload-ids.sorted" | tr '\n' ' ')
+          ONLY_PAYLOAD=$(comm -13 "$RUNNER_TEMP/pr-ids.sorted" "$RUNNER_TEMP/payload-ids.sorted" | tr '\n' ' ')
+          if [ -n "${ONLY_PR// /}" ]; then
+            violate "the PR adds artifact(s) the dispatch payload does not name: $ONLY_PR — every artifact in an evidence PR must be verified, so an unnamed one is never left unexamined"
+          fi
+          if [ -n "${ONLY_PAYLOAD// /}" ]; then
+            violate "the dispatch payload names artifact(s) the PR does not add: $ONLY_PAYLOAD"
+          fi
+
+          EXPECTED_COUNT=$(wc -l < "$RUNNER_TEMP/payload-ids.sorted" | tr -d '[:space:]')
+          if [ "$EXPECTED_COUNT" -eq 0 ]; then
+            violate "no canonical artifact id survived validation — there is nothing to verify, which is an error and never a pass"
+          fi
 
           if [ -n "$VIOLATIONS" ]; then
             echo "add_only=false" >> "$GITHUB_OUTPUT"
+            echo "expected_count=0" >> "$GITHUB_OUTPUT"
+            echo "artifact_ids=" >> "$GITHUB_OUTPUT"
           else
             echo "add_only=true" >> "$GITHUB_OUTPUT"
+            echo "expected_count=$EXPECTED_COUNT" >> "$GITHUB_OUTPUT"
+            echo "artifact_ids=$(tr '\n' ',' < "$RUNNER_TEMP/payload-ids.sorted" | sed 's/,$//')" >> "$GITHUB_OUTPUT"
+            echo "PR artifact set == payload artifact set ($EXPECTED_COUNT artifact(s))."
           fi
 
       # Fetch each named artifact as raw data from the live PR HEAD SHA via the
       # GitHub Contents API. The PR branch is never checked out. The fetched
       # bytes are written into a temporary directory outside the workspace.
+      #
+      # The id list comes from the set-equality step, which has already proved it
+      # is exactly the set of artifacts the PR adds. A skip here would silently
+      # reopen the gap that step just closed — an artifact that cannot be fetched
+      # is an artifact that cannot be verified — so every failure refuses.
       - name: Fetch artifact files from PR (data only — no code execution)
         id: fetch
-        if: steps.resolve_pr.outcome == 'success'
+        if: >
+          steps.resolve_pr.outcome == 'success' &&
+          steps.addonly.outputs.add_only == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LIVE_HEAD_SHA: ${{ steps.resolve_pr.outputs.live_head_sha }}
-          ARTIFACT_IDS_RAW: ${{ github.event.client_payload.artifact_ids }}
+          ARTIFACT_IDS: ${{ steps.addonly.outputs.artifact_ids }}
+          EXPECTED_COUNT: ${{ steps.addonly.outputs.expected_count }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
           ARTIFACT_DIR="$RUNNER_TEMP/fetched-artifacts"
           mkdir -p "$ARTIFACT_DIR"
-
-          if [ -z "$ARTIFACT_IDS_RAW" ]; then
-            echo "No artifact_ids in payload — nothing to verify."
-            echo "artifact_dir=$ARTIFACT_DIR" >> "$GITHUB_OUTPUT"
-            echo "count=0" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          echo "artifact_dir=$ARTIFACT_DIR" >> "$GITHUB_OUTPUT"
+          echo "count=0" >> "$GITHUB_OUTPUT"
 
           count=0
-          for id in $(echo "$ARTIFACT_IDS_RAW" | tr ',' '\n' | tr -d '[:space:]'); do
-            # Strict allowlist: canonical artifact id pattern only.
-            if ! [[ "$id" =~ ^evd_[0-9a-f]{32}$ ]]; then
-              echo "REFUSED: '$id' is not a canonical artifact id (evd_<32hex>) — skipping." >&2
+          while IFS= read -r id; do
+            if [ -z "$id" ]; then
               continue
+            fi
+
+            # Strict allowlist, re-asserted at the point of use so this step is
+            # safe to read on its own: no path traversal reaches the request URL.
+            if ! [[ "$id" =~ ^evd_[0-9a-f]{32}$ ]]; then
+              echo "REFUSED: '$id' is not a canonical artifact id (evd_<32hex>)." >&2
+              exit 1
             fi
 
             ARTIFACT_PATH="docs/opsiq/evidence/stage-7/artifacts/${id}.json"
@@ -207,31 +362,46 @@ jobs:
               "https://api.github.com/repos/$REPO/contents/$ARTIFACT_PATH?ref=$LIVE_HEAD_SHA")
 
             if [ "$HTTP_STATUS" != "200" ]; then
-              echo "WARNING: Could not fetch $ARTIFACT_PATH at $LIVE_HEAD_SHA (HTTP $HTTP_STATUS) — skipping." >&2
+              echo "REFUSED: could not fetch $ARTIFACT_PATH at $LIVE_HEAD_SHA (HTTP $HTTP_STATUS)." >&2
+              echo "         The PR adds this artifact, so it must be verifiable; a fetch that" >&2
+              echo "         cannot be completed is a refusal, never a skipped artifact." >&2
               rm -f "$TARGET"
-              continue
+              exit 1
             fi
 
             count=$((count + 1))
             echo "Fetched $id (HTTP $HTTP_STATUS)"
-          done
+          done < <(printf '%s\n' "$ARTIFACT_IDS" | tr ',' '\n')
 
-          echo "artifact_dir=$ARTIFACT_DIR" >> "$GITHUB_OUTPUT"
+          if [ "$count" -ne "$EXPECTED_COUNT" ]; then
+            echo "REFUSED: fetched $count artifact(s) but the verified set holds $EXPECTED_COUNT." >&2
+            exit 1
+          fi
+
           echo "count=$count" >> "$GITHUB_OUTPUT"
 
       # Validate using the validator from main.
       # --from-auth-sha-registry: load each artifact's key registry from its own
       #   authorization_manifest_sha via git show — NEVER from the working-tree
       #   registry (which is at INF_SHA, not AUTH_SHA).
+      # --require-accepted: block on UNVERIFIED as well as REJECTED.
+      #   Without it the validator blocked only on REJECTED, and an artifact whose
+      #   AUTH_SHA registry holds no ACTIVE key — revoked, still
+      #   pending_owner_provisioning, or the registry file absent at that commit —
+      #   leaves the signature UNCHECKED, which classifies as UNVERIFIED, which was
+      #   not blocking. The verifier then posted `success` and described the
+      #   artifact as "signature verified" when the signature had never been
+      #   checked at all. Trusted verification must mean ACCEPTED, and ACCEPTED
+      #   requires a signature that verified against a registered ACTIVE key.
       # --require-provenance: cross-check each artifact against its named GitHub
       #   Actions run via the GitHub API.
-      - name: Validate fetched artifacts (from-auth-sha-registry + provenance)
+      - name: Validate fetched artifacts (accepted + from-auth-sha-registry + provenance)
         id: validate
         if: >
           steps.resolve_pr.outcome == 'success' &&
+          steps.addonly.outputs.add_only == 'true' &&
           steps.fetch.outcome == 'success' &&
-          steps.fetch.outputs.count != '0' &&
-          steps.addonly.outputs.add_only == 'true'
+          steps.fetch.outputs.count != '0'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -240,6 +410,7 @@ jobs:
           node scripts/validate-evidence-artifacts.mjs \
             --dir "${{ steps.fetch.outputs.artifact_dir }}" \
             --from-auth-sha-registry \
+            --require-accepted \
             --require-provenance
 
       # Post the verification result as a Commit Status on the independently
@@ -273,18 +444,22 @@ jobs:
             exit 0
           fi
 
+          # Order matters: the add-only / set-equality gate is evaluated before the
+          # fetch count, because a set mismatch skips the fetch step entirely and
+          # would otherwise be reported as "nothing examined" rather than as the
+          # PR-shape violation it is.
           if [ "${RESOLVE_OUTCOME:-}" != "success" ]; then
             STATE="error"
             DESCRIPTION="Could not resolve live PR HEAD — verification aborted."
-          elif [ "${FETCH_COUNT:-0}" = "0" ]; then
-            STATE="error"
-            DESCRIPTION="No verifiable artifact ids in payload — nothing examined."
           elif [ "${ADD_ONLY:-false}" != "true" ]; then
             STATE="failure"
-            DESCRIPTION="PR contains non-add changes or files outside artifacts directory."
+            DESCRIPTION="PR is not add-only inside the artifacts directory, or its artifact set does not match the payload."
+          elif [ "${FETCH_COUNT:-0}" = "0" ]; then
+            STATE="error"
+            DESCRIPTION="No artifact could be fetched from the PR head — nothing examined."
           elif [ "${VALIDATE_OUTCOME:-}" = "success" ]; then
             STATE="success"
-            DESCRIPTION="All artifacts ACCEPTED: structural + signature + provenance verified."
+            DESCRIPTION="PR adds exactly the artifacts named; all are ACCEPTED (structural + signature + provenance)."
           elif [ "${VALIDATE_OUTCOME:-}" = "failure" ]; then
             STATE="failure"
             DESCRIPTION="One or more artifacts REJECTED or UNVERIFIED."
@@ -327,11 +502,11 @@ jobs:
           if [ "${RESOLVE_OUTCOME:-}" != "success" ]; then
             echo "FAILED: PR HEAD resolution failed." >&2; exit 1
           fi
+          if [ "${ADD_ONLY:-false}" != "true" ]; then
+            echo "FAILED: PR add-only / path-confinement / payload set-equality check rejected." >&2; exit 1
+          fi
           if [ "${FETCH_COUNT:-0}" = "0" ]; then
             echo "FAILED: No artifacts fetched." >&2; exit 1
-          fi
-          if [ "${ADD_ONLY:-false}" != "true" ]; then
-            echo "FAILED: PR add-only check rejected." >&2; exit 1
           fi
           if [ "${VALIDATE_OUTCOME:-skipped}" != "success" ]; then
             echo "FAILED: Artifact validation outcome: ${VALIDATE_OUTCOME:-skipped}." >&2; exit 1
