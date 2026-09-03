@@ -59,6 +59,15 @@ permissions:
   actions: read
   pull-requests: write
 
+# Canonical production endpoint for LANE_C observation. Single source, matching
+# .github/workflows/production-owner-acceptance.yml, which already treats
+# https://o-ps-iq.vercel.app as the governed production target and verifies it
+# against /api/internal/build-info. The probes must be TOLD which endpoint they
+# are observing: a compiled-in default let S7-I1 report on a target the capture
+# never selected.
+env:
+  PROBE_BASE_URL: https://o-ps-iq.vercel.app
+
 jobs:
   capture:
     runs-on: ubuntu-latest
@@ -106,6 +115,7 @@ jobs:
               echo "assertion=Deployed SHA matches authorized candidate; production health probe returns 200." >> "$GITHUB_OUTPUT"
               echo "command=node scripts/stage7-probes/s7-i1-health-probe.mjs" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=PROBE_BASE_URL CLOSURE_SUBJECT_SHA" >> "$GITHUB_OUTPUT"
               ;;
             S7-I2)
               echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
@@ -115,6 +125,7 @@ jobs:
               echo "assertion=All approved migrations applied; zero pending migrations confirmed against production DB." >> "$GITHUB_OUTPUT"
               echo "command=node scripts/stage7-probes/s7-i2-migration-check.mjs" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=PRODUCTION_DATABASE_URL" >> "$GITHUB_OUTPUT"
               ;;
             # S7-I3 is intentionally absent from this matrix.
             # Deferred amendment A2, blocked by owner decisions D-2/D-3:
@@ -129,6 +140,7 @@ jobs:
               echo "assertion=Owner login, logout, session expiry, and unauthorized-user rejection all confirmed on production deployment." >> "$GITHUB_OUTPUT"
               echo "command=node scripts/stage7-probes/s7-i4-auth-check.mjs" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD" >> "$GITHUB_OUTPUT"
               ;;
             S7-I5)
               echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
@@ -138,6 +150,7 @@ jobs:
               echo "assertion=Cross-workspace rejection confirmed on production; secret values absent from all owner-visible API responses and health output." >> "$GITHUB_OUTPUT"
               echo "command=node scripts/stage7-probes/s7-i5-boundary-check.mjs" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD" >> "$GITHUB_OUTPUT"
               ;;
             S7-I10-LANE_C)
               echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
@@ -147,6 +160,7 @@ jobs:
               echo "assertion=All six attribution fields present in audit records for pilot transitions; no raw payload copied into any audit record." >> "$GITHUB_OUTPUT"
               echo "command=node scripts/stage7-probes/s7-i10-audit-check-lane-c.mjs" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD" >> "$GITHUB_OUTPUT"
               ;;
             S7-I10-LANE_E)
               echo "lane=LANE_E" >> "$GITHUB_OUTPUT"
@@ -156,6 +170,7 @@ jobs:
               echo "assertion=Simulation confirms all six audit attribution fields present; no raw payload in audit records across all simulated paths." >> "$GITHUB_OUTPUT"
               echo "command=npx vitest run src/__tests__/completion-factory/stage7-audit-check.test.ts --reporter=default" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=false" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=" >> "$GITHUB_OUTPUT"
               ;;
             S7-I11)
               echo "lane=LANE_E" >> "$GITHUB_OUTPUT"
@@ -173,6 +188,7 @@ jobs:
               echo "assertion=Nine adversarial failure scenarios each fail safely, visibly, and recoverably in isolated simulation." >> "$GITHUB_OUTPUT"
               echo "command=npx vitest run src/__tests__/completion-factory/stage7-evidence-artifact.test.ts src/__tests__/completion-factory/stage7-ed25519-hostile.test.ts --reporter=default" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=false" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=" >> "$GITHUB_OUTPUT"
               ;;
             S7-I12)
               echo "lane=LANE_E" >> "$GITHUB_OUTPUT"
@@ -182,6 +198,7 @@ jobs:
               echo "assertion=Staged failure introduced; recovery confirmed following DEPLOYMENT_RUNBOOK.md without undocumented steps." >> "$GITHUB_OUTPUT"
               echo "command=node scripts/stage7-probes/s7-i12-runbook-recovery.mjs" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=false" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=" >> "$GITHUB_OUTPUT"
               ;;
             *)
               echo "REFUSED: '$INVARIANT_ID' is not a supported invariant_id for CI capture." >&2
@@ -207,12 +224,97 @@ jobs:
             exit 1
           fi
 
+      # ── Governed-input preflight (fail-closed, BEFORE the observation) ───────
+      #
+      # A LANE_C probe that is handed no credentials does not fail to observe —
+      # it observes that it has no credentials, prints its own governed
+      # "RESULT: FAIL", and exits 1. The verdict gate downstream cannot tell that
+      # apart from a real product failure, so the capture would sign, file and
+      # verify an artifact asserting the invariant FAILED when nothing about the
+      # product was ever exercised. Observed for S7-I2, S7-I4, S7-I5 and
+      # S7-I10-LANE_C against the environment this workflow used to supply.
+      #
+      # This step therefore REFUSES before the probe runs. A refusal produces no
+      # observation, no artifact, no evidence PR and no verifier dispatch — the
+      # correct outcome for "the capture environment was not configured", and a
+      # different outcome from "the invariant does not hold".
+      #
+      # The names below are the logical inputs the contract matrix declares per
+      # invariant. Only presence is tested. No value is ever printed.
+      - name: Preflight governed capture inputs
+        env:
+          INVARIANT_ID: ${{ inputs.invariant_id }}
+          REQUIRED_INPUTS: ${{ steps.contract.outputs.required_inputs }}
+          PROBE_BASE_URL: ${{ env.PROBE_BASE_URL }}
+          CLOSURE_SUBJECT_SHA: ${{ github.sha }}
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PROBE_OWNER_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          PROBE_OWNER_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${REQUIRED_INPUTS// /}" ]; then
+            echo "$INVARIANT_ID declares no governed capture inputs (LANE_E)."
+            exit 0
+          fi
+
+          missing=""
+          for name in $REQUIRED_INPUTS; do
+            # Indirect expansion: presence only. The value is never echoed.
+            if [ -z "${!name:-}" ]; then
+              missing="$missing $name"
+            else
+              echo "  present: $name"
+            fi
+          done
+
+          if [ -n "${missing// /}" ]; then
+            echo "REFUSED: $INVARIANT_ID cannot be captured — missing governed capture input(s):$missing" >&2
+            echo "" >&2
+            echo "These are inputs the observation environment must supply, not assertions about" >&2
+            echo "the product. Running the probe without them would produce a governed" >&2
+            echo "'RESULT: FAIL' that describes the capture environment, and that FAIL would be" >&2
+            echo "signed, filed as an evidence PR and verified as though the invariant did not" >&2
+            echo "hold. Nothing was observed, so nothing is captured." >&2
+            echo "" >&2
+            echo "Provision the corresponding repository secrets and re-dispatch." >&2
+            exit 1
+          fi
+
+          echo "All governed capture inputs for $INVARIANT_ID are present."
+
       - name: Run observation (hardcoded command — not caller-supplied)
         id: observe
         env:
           OBSERVATION_COMMAND: ${{ steps.contract.outputs.command }}
           METHOD: ${{ steps.contract.outputs.method }}
           DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+          # ── Governed LANE_C observation inputs ───────────────────────────────
+          # The workflow supplies what the governed probes actually require. It
+          # does not let a probe invent a default: S7-I1 previously fell back to a
+          # hardcoded D-12 subject SHA and a compiled-in production alias, and so
+          # could report PASS without ever comparing a deployed SHA.
+          #
+          # CLOSURE_SUBJECT_SHA is GITHUB_SHA — the exact commit this capture runs
+          # against — and never a copy of the manifest value. capture-evidence.mjs's
+          # OPTION A gate independently proves GITHUB_SHA equals closure_subject_sha
+          # at AUTH_SHA, so the probe compares the live deployment against the same
+          # authorized subject the artifact is bound to, with no second source to
+          # drift from.
+          #
+          # Secrets follow the existing repository convention (the same names
+          # production-owner-acceptance.yml uses). They are passed as env, never
+          # interpolated into a run body, and never echoed.
+          PROBE_BASE_URL: ${{ env.PROBE_BASE_URL }}
+          CLOSURE_SUBJECT_SHA: ${{ github.sha }}
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_DIRECT_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PROBE_OWNER_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          PROBE_OWNER_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          # Optional. Absent, S7-I1 still establishes deployed identity from the
+          # deployment's own /api/internal/build-info. Present, it additionally
+          # cross-checks the Vercel control plane and any disagreement fails.
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
           obs_file="$RUNNER_TEMP/observation.txt"
