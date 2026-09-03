@@ -11,7 +11,8 @@
  * Required env vars:
  *   DEPLOYMENT_ID          — Vercel deployment id
  *   PROBE_BASE_URL         — (alternative) direct URL override
- *   PROBE_OWNER_EMAIL      — owner email
+ *   PROBE_OWNER_EMAIL      — owner email. Used to authenticate; never emitted
+ *                            to the observation.
  *   PROBE_OWNER_PASSWORD   — owner password
  *
  * Optional env vars:
@@ -280,7 +281,9 @@ async function testInternalErrorDoesNotLeakStack(baseUrl) {
 async function main() {
   console.log("=== S7-I5: Live tenant and secret boundary ===");
   console.log(`DEPLOYMENT_ID: ${DEPLOYMENT_ID || "(not set)"}`);
-  console.log(`PROBE_OWNER_EMAIL: ${OWNER_EMAIL || "(not set)"}`);
+  // Presence only. The address is used to authenticate and is never printed:
+  // this line is copied verbatim into the signed observation.
+  console.log(`PROBE_OWNER_EMAIL: ${OWNER_EMAIL ? "set" : "not set"}`);
 
   if (!OWNER_EMAIL || !OWNER_PASSWORD) {
     fail(

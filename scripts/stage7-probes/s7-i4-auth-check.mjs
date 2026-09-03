@@ -10,7 +10,8 @@
  * Required env vars:
  *   DEPLOYMENT_ID          — Vercel deployment id (for URL resolution)
  *   PROBE_BASE_URL         — (alternative) direct URL override
- *   PROBE_OWNER_EMAIL      — owner email on the production deployment
+ *   PROBE_OWNER_EMAIL      — owner email on the production deployment. Used to
+ *                            authenticate; never emitted to the observation.
  *   PROBE_OWNER_PASSWORD   — owner password on the production deployment
  *
  * Optional env vars:
@@ -111,7 +112,19 @@ async function testOwnerLogin(baseUrl) {
   }
 
   record("login_response_has_user", "user" in body, "user" in body);
-  record("login_response_user_email", body.user?.email ?? "MISSING", body.user?.email === OWNER_EMAIL);
+
+  // ─── Owner identity: assert the binding, never record the identifier ────────
+  // The assertion S7-I4 needs is "the account that logged in is the configured
+  // owner". That is a comparison, and a comparison can be evidenced by its
+  // outcome. Recording the address itself put the owner's email into a signed,
+  // committed artifact and into the evidence PR that carries it — a disclosure
+  // the invariant never required. Owner decision: no owner identifier appears
+  // verbatim in signed evidence.
+  const returnedEmail = body.user?.email;
+  const returnedIsString = typeof returnedEmail === "string" && returnedEmail.length > 0;
+  const ownerIdentityMatches = returnedIsString && returnedEmail === OWNER_EMAIL;
+  record("login_response_user_has_email", returnedIsString, returnedIsString);
+  record("login_response_user_matches_configured_owner", ownerIdentityMatches, ownerIdentityMatches);
 
   const setCookies = extractSetCookieHeader(res.headers);
   const sessionToken = parseCookieToken(setCookies);
@@ -314,7 +327,9 @@ async function testRevokedSessionRejection(baseUrl, sessionToken) {
 async function main() {
   console.log("=== S7-I4: Private owner authentication and workspace binding ===");
   console.log(`DEPLOYMENT_ID: ${DEPLOYMENT_ID || "(not set)"}`);
-  console.log(`PROBE_OWNER_EMAIL: ${OWNER_EMAIL || "(not set)"}`);
+  // Presence only. The address is used to authenticate and is never printed:
+  // this line is copied verbatim into the signed observation.
+  console.log(`PROBE_OWNER_EMAIL: ${OWNER_EMAIL ? "set" : "not set"}`);
 
   if (!OWNER_EMAIL || !OWNER_PASSWORD) {
     fail(
