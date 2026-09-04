@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_436e1924c6aa5968673e149b34c10640",
+  "invariant_id": "S7-I10",
+  "lane": "LANE_E",
+  "proof_type": "simulation_and_production_audit_check",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "isolated_simulation",
+  "method": "test_run",
+  "captured_at_utc": "2026-09-04T13:03:39.411Z",
+  "subject_sha": "789768b99d5e8996c3f48671b188fa5ba0c51d04",
+  "authorization_manifest_sha": "31a8e711b77c6c0010db82b3b03cdf4b858cca9f",
+  "deployment_id": null,
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d16",
+    "job": "capture",
+    "run_id": "33875876703",
+    "run_number": 4,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-04T13:02:31Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "npx vitest run src/__tests__/completion-factory/stage7-audit-check.test.ts --reporter=default"
+  },
+  "observation": {
+    "raw": "\n\u001b[1m\u001b[30m\u001b[46m RUN \u001b[49m\u001b[39m\u001b[22m \u001b[36mv4.1.7 \u001b[39m\u001b[90m/home/runner/work/OPsIq/OPsIq\u001b[39m\n\n\n📊 Initializing test environment...\n  → .env.test not found, using defaults\n  → Wrote direct Neon URL to .env.test for test worker propagation\n  → Database URL: postgresql:***@localhost:5432/opsiq_dev?schema=public\n  → Generating Prisma client...\n  ✓ Prisma Client generated\n  ℹ DATABASE_URL not configured for local testing, skipping DB initialization\n✓ Test environment ready\n\n\u001b[90mstdout\u001b[2m | src/__tests__/completion-factory/stage7-audit-check.test.ts\n\u001b[22m\u001b[39m◇ injected env (5) from .env.test // tip: ◈ secrets for agents [www.dotenvx.com]\n\n \u001b[32m✓\u001b[39m src/__tests__/completion-factory/stage7-audit-check.test.ts \u001b[2m(\u001b[22m\u001b[2m20 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 10\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m20 passed\u001b[39m\u001b[22m\u001b[90m (20)\u001b[39m\n\u001b[2m   Start at \u001b[22m 13:03:31\n\u001b[2m   Duration \u001b[22m 7.01s\u001b[2m (transform 36ms, setup 73ms, import 26ms, tests 10ms, environment 711ms)\u001b[22m\n\n\n📊 Cleaning up test environment...\n  ✓ Removed temporary .env.test\n  ℹ Skipping DB disconnect (TEST_WITH_DB not set)\n",
+    "content_hash": "sha256:bb400d0072932f73e53f9f062c0551dcea12a1481f9dc1b3bd5fba9fa2ab996f",
+    "byte_length": 1198,
+    "truncated": false
+  },
+  "assertion": "Simulation confirms all six audit attribution fields present; no raw payload in audit records across all simulated paths.",
+  "result": "PASS",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "f101122766e8b3cb7d41f9f0875e255ee44043c9ceaf1d9272a9a3efab91fcd01eeddd7a357b49213f4f19294cb4a77ebe7aae7eeddac411b3672945daf93407"
+  }
+}
