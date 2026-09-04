@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_88b80ddc39170c4a38f7147994df2011",
+  "invariant_id": "S7-I5",
+  "lane": "LANE_C",
+  "proof_type": "production_boundary_check",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "production",
+  "method": "http_probe",
+  "captured_at_utc": "2026-09-04T13:22:40.386Z",
+  "subject_sha": "789768b99d5e8996c3f48671b188fa5ba0c51d04",
+  "authorization_manifest_sha": "31a8e711b77c6c0010db82b3b03cdf4b858cca9f",
+  "deployment_id": "dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC",
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d16",
+    "job": "capture",
+    "run_id": "33877625278",
+    "run_number": 8,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-04T13:21:41Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "node scripts/stage7-probes/s7-i5-boundary-check.mjs"
+  },
+  "observation": {
+    "raw": "=== S7-I5: Live tenant and secret boundary ===\nDEPLOYMENT_ID: dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC\nPROBE_OWNER_EMAIL: set\n[PASS] probe_base_url: \"https://o-ps-iq.vercel.app\"\n\nTest: health endpoint does not leak secrets\n[PASS] health_response_no_secrets: true\n[PASS] health_does_not_expose_env_vars: true\n\nTest: cross-workspace request rejected\n[PASS] cross_workspace_rejected_unauthenticated: 401\n\nTest: malformed requests do not leak stack traces or internal detail\n[PASS] malformed_request_no_stack_trace: true\n[PASS] malformed_request_no_raw_error: true\n[PASS] owner_session_obtained: true\n\nTest: /api/operator does not leak secrets\n[PASS] /api/operator_auth_required: 403\n\nTest: /api/audit does not leak secrets\n[PASS] /api/audit_auth_required: 403\n\nTest: /api/report does not leak secrets\n[PASS] /api/report_auth_required: 403\n[PASS] workspace_binding_test: \"SKIPPED — no workspace ID from login response\"\n\n=== OBSERVATION SUMMARY ===\nChecks: 11 PASS, 0 FAIL\n\nRESULT: PASS\n",
+    "content_hash": "sha256:8959ace6bb054dd88436e550b098cd1a14549e0b19ddbbd46e0a480910bebcf9",
+    "byte_length": 976,
+    "truncated": false
+  },
+  "assertion": "Cross-workspace rejection confirmed on production; secret values absent from all owner-visible API responses and health output.",
+  "result": "PASS",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "29d0ab46e52afeaca1c2e125a68405e610796d5fbc1939d061dfa9d19c7c78a32b9b09d517ab288b8cbf6368d3e7430362fb1406a4209bbbb7bf0e8e7f092c03"
+  }
+}
