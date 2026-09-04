@@ -103,6 +103,11 @@ describe("[db] Owner Trust service", () => {
     for (const e of events) {
       expect(e.entityId).toBe(cycle.id);
       expect(typeof e.occurredAt).toBe("string");
+      // S7-I10 needs workspace attribution on the owner-facing surface. Read
+      // back off the persisted row here, against a real database, so this also
+      // proves the column is actually populated by the emit path rather than
+      // merely reflected from the caller's argument.
+      expect(e.workspaceId).toBe(workspaceId);
     }
 
     await db.ownerBusiness.delete({ where: { id: businessId } });

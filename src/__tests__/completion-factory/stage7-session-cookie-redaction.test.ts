@@ -74,17 +74,25 @@ const srv = createServer((req, res) => {
       try { p = JSON.parse(b); } catch {}
       if (p.email !== OWNER || p.password !== PW) return j({ error: "Invalid credentials" }, 401);
       revoked = false;
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toUTCString();
       const h = COOKIE === ""
         ? {}
-        : { "set-cookie": "opsiq_session=" + COOKIE + "; HttpOnly; SameSite=Lax; Path=/" };
+        : { "set-cookie": "opsiq_session=" + COOKIE + "; HttpOnly; Secure; SameSite=Lax; Path=/; Expires=" + expires };
       return j({ user: { id: "u1", email: RETURNED, workspaceId: "w1" } }, 200, h);
     }
     if (req.url.startsWith("/api/auth/logout")) {
       revoked = true;
       return j({ success: true }, 200, { "set-cookie": "opsiq_session=; Max-Age=0; Path=/" });
     }
-    if (req.url.startsWith("/api/operator"))
-      return hasValidSession ? j({ ok: true }) : j({ error: "Unauthorized" }, 401);
+    // The authenticated-session target is the OWNER_VIEW route the designated
+    // owner is actually entitled to — see the s7-i4 probe header for why it is
+    // no longer /api/operator (ACTION_VIEW), whose 403 for a scoped owner is
+    // intended product behaviour rather than a rejected session.
+    if (req.url.startsWith("/api/owner/home"))
+      return hasValidSession ? j({ businesses: [], selectedBusinessId: null, hasData: false }) : j({ error: "Unauthorized" }, 401);
+    // Owner-visible audit read, used by the cross-workspace scoping check.
+    if (req.url.startsWith("/api/owner/trust/audit-trail"))
+      return hasValidSession ? j({ entityId: "e", events: [] }) : j({ error: "Unauthorized" }, 401);
     if (req.url.startsWith("/api/health"))
       return j({ status: "healthy", timestamp: "t", checks: { database: { status: "healthy" } } });
     return j({ error: "not found" }, 404);
@@ -136,6 +144,11 @@ function runProbe(baseUrl: string): { output: string; exitCode: number } {
       PROBE_BASE_URL: baseUrl,
       PROBE_OWNER_EMAIL: SENTINEL_EMAIL,
       PROBE_OWNER_PASSWORD: SENTINEL_PASSWORD,
+      // Cross-workspace rejection fails closed without a foreign-workspace
+      // fixture. Supplied here so these redaction cases exercise the full
+      // sequence rather than aborting on a missing prerequisite.
+      PROBE_FOREIGN_WORKSPACE_ID: "22222222-2222-4222-8222-222222222222",
+      PROBE_FOREIGN_ENTITY_ID: "33333333-3333-4333-8333-333333333333",
     },
   });
   return { output: `${r.stdout ?? ""}${r.stderr ?? ""}`, exitCode: r.status ?? -1 };
@@ -233,11 +246,12 @@ describe("the session cookie is still acquired and used", () => {
   it("sends the token on the authenticated, logout and revocation requests", async () => {
     const { output, exitCode } = await probeWith();
     // Each of these can only pass if the probe presented the real cookie value.
-    expect(output).toMatch(/\[PASS\] protected_route_with_session: 200/);
+    expect(output).toMatch(/\[PASS\] owner_route_with_session: 200/);
     expect(output).toMatch(/\[PASS\] logout_http_status: 200/);
     expect(output).toMatch(/\[PASS\] revoked_session_rejected: 401/);
     expect(output).toMatch(/\[PASS\] session_cookie_httponly: true/);
     expect(output).toMatch(/\[PASS\] session_cookie_samesite_set: true/);
+    expect(output).toMatch(/\[PASS\] session_cookie_secure: true/);
     expect(exitCode).toBe(0);
   }, 60000);
 });
@@ -248,14 +262,16 @@ describe("S7-I4 verdicts are unchanged by the redaction", () => {
    * captured against these same stub configurations. Redacting an output line
    * must not move any assertion, and must never turn a failure into a pass.
    */
-  it("successful login: all 17 checks pass, RESULT PASS", async () => {
+  it("successful login: every check passes, RESULT PASS", async () => {
     const { output, exitCode } = await probeWith();
     expect(verdicts(output)).toEqual({
       probe_base_url: true,
+      owner_entitled_route_under_test: true,
       rejection_http_status: true,
       rejection_does_not_leak_credentials: true,
       wrong_password_http_status: true,
       unauthenticated_request_rejected: true,
+      unknown_session_rejected: true,
       login_http_status: true,
       login_response_has_user: true,
       login_response_user_has_email: true,
@@ -263,7 +279,14 @@ describe("S7-I4 verdicts are unchanged by the redaction", () => {
       login_session_cookie_set: true,
       session_cookie_httponly: true,
       session_cookie_samesite_set: true,
-      protected_route_with_session: true,
+      session_cookie_secure: true,
+      session_cookie_expiry_attribute_present: true,
+      session_cookie_expiry_bounded_to_configured_lifetime: true,
+      owner_route_with_session: true,
+      cross_workspace_fixture_configured: true,
+      cross_workspace_status_safe: true,
+      cross_workspace_response_excludes_foreign_workspace: true,
+      cross_workspace_returns_no_foreign_records: true,
       logout_http_status: true,
       logout_response_success: true,
       logout_clears_session_cookie: true,
@@ -291,8 +314,8 @@ describe("S7-I4 verdicts are unchanged by the redaction", () => {
     const { output, exitCode } = await probeWith({ invalidate: true });
     const v = verdicts(output);
     expect(v.login_session_cookie_set).toBe(true);
-    expect(v.protected_route_with_session).toBe(false);
-    expect(v.session_not_accepted).toBe(false);
+    expect(v.owner_route_with_session).toBe(false);
+    expect(v.owner_session_not_accepted_on_entitled_route).toBe(false);
     expect(output).toMatch(/RESULT: FAIL/);
     expect(exitCode).toBe(1);
   }, 60000);

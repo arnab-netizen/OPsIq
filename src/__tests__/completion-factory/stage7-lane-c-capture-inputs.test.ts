@@ -474,29 +474,37 @@ describe("S7-I1 — PASS requires a compared deployed SHA (B3)", () => {
     expect(r.result).toBe("FAIL");
   });
 
-  it("passes on an exact SHA match with a healthy deployment, without a Vercel token", () => {
+  // The deployed SHA is still compared from build-info exactly as before. What
+  // changed is that build-info alone is no longer SUFFICIENT: S7-I1's canonical
+  // evidence names a deployment dashboard, so the control-plane credential is now
+  // a required input rather than an optional strengthening. The full PASS path,
+  // with a stubbed control plane, lives in stage7-machine-probe-integrity.test.ts.
+  it("compares the deployed SHA but refuses to pass without a deployment dashboard", () => {
     setStub({ commit: SUBJECT });
     const r = runProbe({
       PROBE_BASE_URL: baseUrl,
       CLOSURE_SUBJECT_SHA: SUBJECT,
       DEPLOYMENT_ID: "dpl_fixture",
     });
-    expect(r.result).toBe("PASS");
-    expect(r.exitCode).toBe(0);
-    expect(r.out).toContain("sha_matches_closure_subject");
+    // The comparison happened...
+    expect(r.out).toMatch(/\[PASS\] sha_matches_closure_subject/);
+    expect(r.out).toMatch(new RegExp(`deployed=${SUBJECT}`));
+    // ...and the missing second authority is what withholds the verdict.
+    expect(r.result).toBe("FAIL");
+    expect(r.out).toContain("vercel_control_plane_credential");
   });
 
   it("never reports PASS alongside an unverified SHA", () => {
     setStub({ commit: SUBJECT });
-    const passing = runProbe({
+    const r = runProbe({
       PROBE_BASE_URL: baseUrl,
       CLOSURE_SUBJECT_SHA: SUBJECT,
       DEPLOYMENT_ID: "dpl_fixture",
     });
-    expect(passing.result).toBe("PASS");
     // The B3 signature: a skipped verification recorded as a passing observation.
-    expect(passing.out).not.toContain("SKIPPED");
-    expect(passing.out).toMatch(new RegExp(`deployed=${SUBJECT}`));
+    expect(r.out).not.toContain("SKIPPED");
+    expect(r.out).not.toContain("NOT_REQUESTED");
+    expect(r.out).toMatch(new RegExp(`deployed=${SUBJECT}`));
   });
 
   it("carries no hardcoded historical subject to fall back to", () => {
