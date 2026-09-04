@@ -164,7 +164,22 @@ export async function getBusinessTrustOverview(
   return { businesses: businessList, selectedBusinessId, cycles };
 }
 
-/** Read the governed audit trail for an entity (who changed what, when). */
+/**
+ * Read the governed audit trail for an entity (who changed what, when).
+ *
+ * `workspaceId` is emitted from the PERSISTED audit row (`e.workspaceId`), never
+ * echoed from the caller's argument. Stage 7 S7-I10 requires attribution to
+ * workspace, actor, time, source evidence, affected record and result; the
+ * owner-facing DTO previously carried five of those six and omitted the
+ * workspace, so no owner-accessible route could evidence workspace attribution
+ * at all (the internal /api/audit routes that do are, by design, denied to a
+ * scoped owner). Reading it back off the row rather than reflecting the
+ * parameter is what makes it evidence: `queryAuditEvents` hard-filters
+ * `where: { workspaceId }` against the wrapper's verified workspace, so every
+ * row returned here provably carries that workspace and a caller can neither
+ * select nor influence the value. No other persisted audit column is added —
+ * `previousHash` and `correlationId` stay internal.
+ */
 export async function getEntityAuditTrail(
   entityId: string,
   workspaceId: string,
@@ -173,6 +188,7 @@ export async function getEntityAuditTrail(
   const events = await queryAuditEvents({ workspaceId, entityId, limit: opts.limit ?? 50 });
   return events.map((e: any) => ({
     id: e.id,
+    workspaceId: e.workspaceId,
     eventName: e.eventName,
     entityType: e.entityType,
     entityId: e.entityId,

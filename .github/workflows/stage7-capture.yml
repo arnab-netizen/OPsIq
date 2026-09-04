@@ -140,17 +140,29 @@ jobs:
               echo "assertion=Owner login, logout, session expiry, and unauthorized-user rejection all confirmed on production deployment." >> "$GITHUB_OUTPUT"
               echo "command=node scripts/stage7-probes/s7-i4-auth-check.mjs" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
-              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD" >> "$GITHUB_OUTPUT"
+              # Cross-workspace rejection is a literal S7-I4 requirement and cannot be
+              # evidenced without a record that really lives in another workspace: an
+              # anonymous request proves only anonymous rejection, and a fabricated uuid is
+              # indistinguishable from a nonexistent record. Declared here so the capture
+              # refuses up front rather than producing a signed FAIL about its own fixtures.
+              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD PROBE_FOREIGN_WORKSPACE_ID PROBE_FOREIGN_ENTITY_ID" >> "$GITHUB_OUTPUT"
               ;;
             S7-I5)
               echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
               echo "proof_type=production_boundary_check" >> "$GITHUB_OUTPUT"
               echo "environment=production" >> "$GITHUB_OUTPUT"
               echo "method=http_probe" >> "$GITHUB_OUTPUT"
-              echo "assertion=Cross-workspace rejection confirmed on production; secret values absent from all owner-visible API responses and health output." >> "$GITHUB_OUTPUT"
+              # Restores the audit-events clause. The canonical executable_evidence in
+              # docs/opsiq/bundles/factory-stage-7-closure.yaml reads "...owner-visible API
+              # responses, health output, and audit events"; this string had silently
+              # dropped the third surface, so the artifact under-stated the invariant it
+              # claimed to evidence.
+              echo "assertion=Cross-workspace rejection confirmed on production; secret values absent from all owner-visible API responses, health output, and audit events." >> "$GITHUB_OUTPUT"
               echo "command=node scripts/stage7-probes/s7-i5-boundary-check.mjs" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
-              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD" >> "$GITHUB_OUTPUT"
+              # PROBE_PILOT_ENTITY_ID gives the audit-events clause real records to scan;
+              # the foreign pair gives cross-workspace isolation a real foreign record.
+              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD PROBE_PILOT_ENTITY_ID PROBE_FOREIGN_WORKSPACE_ID PROBE_FOREIGN_ENTITY_ID" >> "$GITHUB_OUTPUT"
               ;;
             S7-I10-LANE_C)
               echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
@@ -160,7 +172,10 @@ jobs:
               echo "assertion=All six attribution fields present in audit records for pilot transitions; no raw payload copied into any audit record." >> "$GITHUB_OUTPUT"
               echo "command=node scripts/stage7-probes/s7-i10-audit-check-lane-c.mjs" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
-              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD" >> "$GITHUB_OUTPUT"
+              # The assertion is scoped to PILOT TRANSITIONS. Naming the governed pilot
+              # record is what makes the inspected trail that record's transition history
+              # rather than whatever audit rows the workspace happens to contain.
+              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD PROBE_PILOT_ENTITY_ID" >> "$GITHUB_OUTPUT"
               ;;
             S7-I10-LANE_E)
               echo "lane=LANE_E" >> "$GITHUB_OUTPUT"
@@ -250,6 +265,12 @@ jobs:
           PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           PROBE_OWNER_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
           PROBE_OWNER_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          # Stage 7 boundary/audit fixtures. Record and workspace identifiers, carried as
+          # secrets so GitHub masks them if any future step were to echo one; presence is
+          # all this step ever tests.
+          PROBE_PILOT_ENTITY_ID: ${{ secrets.STAGE7_PILOT_ENTITY_ID }}
+          PROBE_FOREIGN_WORKSPACE_ID: ${{ secrets.STAGE7_FOREIGN_WORKSPACE_ID }}
+          PROBE_FOREIGN_ENTITY_ID: ${{ secrets.STAGE7_FOREIGN_ENTITY_ID }}
         run: |
           set -euo pipefail
 
@@ -311,6 +332,15 @@ jobs:
           DATABASE_DIRECT_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           PROBE_OWNER_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
           PROBE_OWNER_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          # Stage 7 boundary/audit fixtures — see the preflight step. S7-I4 and S7-I5
+          # need a record in a workspace the designated owner is NOT in to evidence
+          # cross-workspace rejection at all; S7-I5 and S7-I10 need the governed pilot
+          # record whose transition history carries real audit events. The probes fail
+          # closed on their own when these are absent, and the preflight above refuses
+          # earlier still, so neither can be quietly skipped into a passing observation.
+          PROBE_PILOT_ENTITY_ID: ${{ secrets.STAGE7_PILOT_ENTITY_ID }}
+          PROBE_FOREIGN_WORKSPACE_ID: ${{ secrets.STAGE7_FOREIGN_WORKSPACE_ID }}
+          PROBE_FOREIGN_ENTITY_ID: ${{ secrets.STAGE7_FOREIGN_ENTITY_ID }}
           # Optional. Absent, S7-I1 still establishes deployed identity from the
           # deployment's own /api/internal/build-info. Present, it additionally
           # cross-checks the Vercel control plane and any disagreement fails.

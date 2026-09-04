@@ -2,10 +2,14 @@
 /**
  * S7-I10 (LANE_C) — Audit and provenance completeness (production)
  *
- * LANE_C production audit check.
- *
- * Assertion: All six attribution fields present in audit records for pilot
- *            transitions; no raw payload copied into any audit record.
+ * Governed statement (docs/opsiq/bundles/factory-stage-7-closure.yaml):
+ *   Material owner decisions, approvals, executions, state transitions,
+ *   provider actions and outcome records must be attributable to: workspace,
+ *   actor, time, source evidence, affected record, and result.
+ *   Protected raw payloads must not be copied into audit records.
+ * Governed executable evidence:
+ *   audit records for PILOT TRANSITIONS inspected; all six attribution fields
+ *   present; no raw payload copied into audit record.
  *
  * Six required attribution fields per audit record:
  *   1. workspaceId  — which workspace the event belongs to
@@ -15,12 +19,38 @@
  *   5. entityId     — which specific entity was affected
  *   6. eventName    — what action occurred (result/outcome proxy)
  *
+ * ─── Why the owner-facing audit route, not /api/audit ──────────────────────
+ * This probe previously read `/api/audit` (falling back to `/api/audit/events`)
+ * with an owner session. `/api/audit` is declared
+ * `requireCapabilities: [CAPABILITIES.AUDIT_VIEW]` and `/api/audit/events`
+ * `[CAPABILITIES.SYSTEM_VIEW_AUDIT]`. Neither capability belongs to the scoped
+ * self-serve owner — and neither belongs to the UN-narrowed
+ * `admin_or_portfolio_manager` bundle either: both are held only by
+ * `system_admin`. They are internal/operator audit surfaces by construction, so
+ * the 403 they returned was correct product behaviour recorded as a failed
+ * invariant.
+ *
+ * The owner-facing equivalent is `/api/owner/trust/audit-trail?entityId=`:
+ * `requireCapabilities: [CAPABILITIES.OWNER_VIEW]`, `requireWorkspace: true`,
+ * read-only, workspace-scoped through `queryAuditEvents`, which hard-filters
+ * `where: { workspaceId }` against the wrapper's verified workspace.
+ *
+ * Its DTO previously carried five of the six attribution fields and omitted
+ * `workspaceId`; that field is now emitted from the persisted audit row (see
+ * getEntityAuditTrail in src/services/owner-trust/trust.service.ts), so the
+ * owner-accessible surface can evidence workspace attribution without granting
+ * the owner any internal capability.
+ *
  * Required env vars:
  *   DEPLOYMENT_ID          — Vercel deployment id
  *   PROBE_BASE_URL         — (alternative) direct URL override
  *   PROBE_OWNER_EMAIL      — owner email. Used to authenticate; never emitted
  *                            to the observation.
  *   PROBE_OWNER_PASSWORD   — owner password
+ *   PROBE_PILOT_ENTITY_ID  — uuid of the governed pilot record whose transition
+ *                            history is being inspected. REQUIRED: the
+ *                            invariant is about pilot transitions, not about
+ *                            whatever audit rows happen to exist.
  *
  * Optional env vars:
  *   VERCEL_TOKEN           — enables URL resolution from DEPLOYMENT_ID
@@ -34,24 +64,90 @@ const VERCEL_TOKEN = process.env.VERCEL_TOKEN ?? "";
 const PROBE_BASE_URL_OVERRIDE = process.env.PROBE_BASE_URL ?? "";
 const OWNER_EMAIL = process.env.PROBE_OWNER_EMAIL ?? "";
 const OWNER_PASSWORD = process.env.PROBE_OWNER_PASSWORD ?? "";
+const PILOT_ENTITY_ID = process.env.PROBE_PILOT_ENTITY_ID ?? "";
 
-// Patterns that indicate a raw payload was copied into an audit record
-// (secrets, credentials, internal implementation details)
+/** Owner-visible, workspace-scoped audit read. OWNER_VIEW + requireWorkspace. */
+const OWNER_AUDIT_ROUTE = "/api/owner/trust/audit-trail";
+
+const SIX_ATTRIBUTION_FIELDS = [
+  "workspaceId",
+  "actorId",
+  "occurredAt",
+  "entityType",
+  "entityId",
+  "eventName",
+];
+
+/**
+ * Action segments that denote a governed STATE TRANSITION.
+ *
+ * The invariant is scoped to "audit records for pilot transitions". The prior
+ * revision accepted any audit row at all, so a workspace containing only
+ * incidental rows (a login, a metrics access) would have satisfied a check
+ * about decisions, approvals, executions and state transitions. Event names are
+ * `<entity>.<action>`; this is the action allow-list, drawn from the governed
+ * vocabulary in src/domain/constants/audit-events.ts. Read/access-shaped
+ * actions are deliberately excluded.
+ */
+const TRANSITION_ACTIONS = new Set([
+  "accepted", "activated", "approved", "blocked", "cancelled", "closed",
+  "completed", "created", "deactivated", "decided", "denied", "evaluated",
+  "executed", "execution_failed", "execution_started", "execution_success",
+  "failed", "granted", "initialized", "issued", "locked", "overridden",
+  "promoted", "reactivated", "recorded", "rejected", "requested", "resolved",
+  "state_initialized", "status_changed", "submitted", "superseded",
+  "transitioned", "unblocked", "validated", "verified",
+]);
+
+function isTransitionEvent(eventName) {
+  if (typeof eventName !== "string") return false;
+  const dot = eventName.lastIndexOf(".");
+  if (dot < 0) return false;
+  return TRANSITION_ACTIONS.has(eventName.slice(dot + 1));
+}
+
+/**
+ * Patterns that indicate a raw payload was copied into an audit record.
+ * Hardened to cover the governed classes: database URLs, password material,
+ * authorization/bearer values, private keys, signing-key material and OAuth
+ * access/refresh tokens.
+ */
 const RAW_PAYLOAD_PATTERNS = [
   /sk-[A-Za-z0-9_-]{20,}/,
-  /-----BEGIN.*PRIVATE KEY-----/,
+  /-----BEGIN[^-]*PRIVATE KEY-----/,
   /postgres:\/\/[^@]+@/,
   /postgresql:\/\/[^@]+@/,
+  /neon:\/\/[^@]+@/,
+  /mysql:\/\/[^@]+@/,
   /SIGNING_KEY/i,
+  /EVIDENCE_SIGNING_KEY/i,
   /DATABASE_URL/i,
+  /AUTH_SECRET/i,
+  /CRON_SECRET/i,
+  /OPSIQ_DIAGNOSTIC_KEY/i,
   /hashedPassword/i,
-  /password.*:\s*["'][^"']{8,}["']/i,
+  /\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}/,          // bcrypt hash
+  /password\s*[:=]\s*["'][^"']{8,}["']/i,
+  // Matches "Authorization: Bearer <tok>" and bare "bearer <tok>" as they appear
+  // once JSON-encoded, where the separator is a quote/colon/space run rather than
+  // a bare colon.
+  /\b(?:authorization|bearer)\b["'\s:=]+(?:bearer\s+)?[A-Za-z0-9._-]{20,}/i,
+  /\b(?:access|refresh)_token\b["'\s]*[:=]["'\s]*[^"'\s]{16,}/i,
+  /\bgh[pusor]_[A-Za-z0-9]{20,}/,                 // GitHub token forms
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\./, // JWT
 ];
+
+/** An audit payload larger than this is treated as a raw request copy. */
+const MAX_PAYLOAD_BYTES = 10000;
 
 const observations = [];
 let failed = false;
 
-function record(label, value, pass = true) {
+/** Record one observation. `pass` is REQUIRED and has no default. */
+function record(label, value, pass) {
+  if (typeof pass !== "boolean") {
+    throw new Error(`record("${label}") requires an explicit boolean verdict`);
+  }
   observations.push({ label, value, pass });
   console.log(`[${pass ? "PASS" : "FAIL"}] ${label}: ${JSON.stringify(value)}`);
   if (!pass) failed = true;
@@ -110,15 +206,15 @@ async function getOwnerSession(baseUrl) {
 }
 
 function checkSixAttributionFields(event, index) {
-  const SIX_FIELDS = ["workspaceId", "actorId", "occurredAt", "entityType", "entityId", "eventName"];
   const missing = [];
-  for (const field of SIX_FIELDS) {
-    if (!event[field]) missing.push(field);
+  for (const field of SIX_ATTRIBUTION_FIELDS) {
+    const value = event[field];
+    if (value === null || value === undefined || value === "") missing.push(field);
   }
   if (missing.length > 0) {
     fail(
       `event_${index}_missing_attribution_fields`,
-      { missing, eventName: event.eventName ?? "UNKNOWN", entityId: event.entityId ?? "UNKNOWN" }
+      { missing, eventName: event.eventName ?? "UNKNOWN" }
     );
     return false;
   }
@@ -136,8 +232,7 @@ function checkNoRawPayload(event, index) {
       return false;
     }
   }
-  // Also ensure payload is not excessively large (raw request copies would be large)
-  if (payloadStr.length > 10000) {
+  if (payloadStr.length > MAX_PAYLOAD_BYTES) {
     fail(
       `event_${index}_payload_suspiciously_large`,
       { bytes: payloadStr.length, eventName: event.eventName }
@@ -147,8 +242,14 @@ function checkNoRawPayload(event, index) {
   return true;
 }
 
-async function fetchAuditEvents(baseUrl, sessionToken, limit = 50) {
-  const url = `${baseUrl}/api/audit?limit=${limit}`;
+/**
+ * Fetch the governed audit trail for the configured pilot entity from the
+ * owner-facing route. There is deliberately NO fallback endpoint: the previous
+ * revision fell through to `/api/audit/events`, an internal route the owner
+ * cannot reach, which only turned one authorization denial into two.
+ */
+async function fetchOwnerAuditEvents(baseUrl, sessionToken) {
+  const url = `${baseUrl}${OWNER_AUDIT_ROUTE}?entityId=${encodeURIComponent(PILOT_ENTITY_ID)}`;
   let res;
   try {
     res = await fetch(url, {
@@ -158,17 +259,17 @@ async function fetchAuditEvents(baseUrl, sessionToken, limit = 50) {
       },
     });
   } catch (err) {
-    fail("audit_api_network_error", String(err));
+    fail("owner_audit_network_error", String(err));
     return null;
   }
 
-  record("audit_api_http_status", res.status, [200, 404].includes(res.status));
-  if (res.status === 404) {
-    record("audit_events_count", 0, true);
-    return [];
-  }
-  if (res.status !== 200) {
-    fail("audit_api_failed", `HTTP ${res.status}`);
+  const ok = res.status === 200;
+  record("owner_audit_http_status", res.status, ok);
+  if (!ok) {
+    fail(
+      "owner_audit_unavailable",
+      `Expected 200 from ${OWNER_AUDIT_ROUTE} (OWNER_VIEW, workspace-scoped); got ${res.status}`
+    );
     return null;
   }
 
@@ -176,31 +277,17 @@ async function fetchAuditEvents(baseUrl, sessionToken, limit = 50) {
   try {
     body = await res.json();
   } catch {
-    fail("audit_api_not_json", "Failed to parse response");
+    fail("owner_audit_not_json", "Failed to parse owner audit-trail response");
     return null;
   }
 
-  const events = body.events ?? [];
-  record("audit_events_count", events.length);
+  const events = body?.events ?? [];
+  if (!Array.isArray(events)) {
+    fail("owner_audit_events_not_array", typeof events);
+    return null;
+  }
+  record("audit_events_count", events.length, true);
   return events;
-}
-
-async function fetchAuditEventsAlternate(baseUrl, sessionToken, limit = 50) {
-  // Try alternate endpoint if primary fails
-  const url = `${baseUrl}/api/audit/events?limit=${limit}`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        Cookie: `opsiq_session=${sessionToken}`,
-        Accept: "application/json",
-      },
-    });
-    if (res.status === 200) {
-      const body = await res.json();
-      return body.events ?? body.data ?? [];
-    }
-  } catch { /* fall through */ }
-  return null;
 }
 
 async function main() {
@@ -209,6 +296,8 @@ async function main() {
   // Presence only. The address is used to authenticate and is never printed:
   // this line is copied verbatim into the signed observation.
   console.log(`PROBE_OWNER_EMAIL: ${OWNER_EMAIL ? "set" : "not set"}`);
+  // A record identifier: presence only, never emitted.
+  console.log(`PROBE_PILOT_ENTITY_ID: ${PILOT_ENTITY_ID ? "set" : "not set"}`);
 
   if (!OWNER_EMAIL || !OWNER_PASSWORD) {
     fail(
@@ -219,45 +308,67 @@ async function main() {
     process.exit(1);
   }
 
+  if (!PILOT_ENTITY_ID) {
+    fail(
+      "pilot_entity_prerequisite_missing",
+      "REFUSED: PROBE_PILOT_ENTITY_ID must name the governed pilot record " +
+        "whose transitions are inspected. S7-I10 is scoped to pilot " +
+        "transitions; an arbitrary audit row cannot evidence it."
+    );
+    console.log("\nRESULT: FAIL");
+    process.exit(1);
+  }
+
   const baseUrl = await resolveBaseUrl();
-  record("probe_base_url", baseUrl);
+  record("probe_base_url", baseUrl, true);
+  record("owner_audit_route_under_test", OWNER_AUDIT_ROUTE, true);
 
   let sessionToken;
   try {
     sessionToken = await getOwnerSession(baseUrl);
-    record("owner_session_obtained", true);
+    record("owner_session_obtained", true, true);
   } catch (err) {
     fail("owner_login_failed", String(err));
     console.log("\nRESULT: FAIL");
     process.exit(1);
   }
 
-  let events = await fetchAuditEvents(baseUrl, sessionToken);
+  const events = await fetchOwnerAuditEvents(baseUrl, sessionToken);
   if (!events) {
-    // Try alternate endpoint
-    const alt = await fetchAuditEventsAlternate(baseUrl, sessionToken);
-    if (alt) {
-      events = alt;
-      record("audit_events_from_alternate_endpoint", events.length);
-    } else {
-      fail("audit_events_unavailable", "Both audit endpoints returned unusable responses");
-      console.log("\nRESULT: FAIL");
-      process.exit(1);
-    }
+    console.log("\nRESULT: FAIL");
+    process.exit(1);
   }
 
+  // Zero events is NOT a pass. S7-I10 requires real pilot transitions to have
+  // been captured; an empty set evidences nothing. Preserved deliberately.
   if (events.length === 0) {
-    // Zero events may mean no pilot activity yet — this is not a PASS for S7-I10
     fail(
       "no_audit_events",
-      "Zero audit events found. S7-I10 requires at least one pilot transition " +
-        "to be captured before this invariant can be verified."
+      "Zero audit events found for the configured pilot entity. S7-I10 " +
+        "requires at least one pilot transition to be captured before this " +
+        "invariant can be verified."
     );
     console.log("\nRESULT: FAIL");
     process.exit(1);
   }
 
-  // Check each event for the six attribution fields and no raw payload
+  // ─── Qualifying pilot transitions ────────────────────────────────────────
+  const transitionCount = events.filter((e) => isTransitionEvent(e.eventName)).length;
+  record(
+    "qualifying_pilot_transition_events",
+    `${transitionCount}/${events.length} are state transitions`,
+    transitionCount > 0
+  );
+  if (transitionCount === 0) {
+    fail(
+      "no_qualifying_pilot_transition",
+      "The configured pilot entity has audit rows but none is a governed " +
+        "state transition. S7-I10 is about decisions, approvals, executions " +
+        "and state transitions, not incidental audit activity."
+    );
+  }
+
+  // ─── Attribution completeness and raw-payload absence, every record ──────
   let allFieldsPresent = true;
   let allClean = true;
   let compliantCount = 0;
@@ -278,18 +389,21 @@ async function main() {
   );
   record(
     "no_raw_payload_in_audit_records",
-    `${events.filter((_, i) => allClean).length} checked`,
+    `${events.length} records checked`,
     allClean
   );
 
-  // Verify visibility field is present (should be internal or owner)
-  const visibilityMissing = events.filter(
-    (e) => !e.visibility || !["internal", "owner", "public"].includes(e.visibility)
+  // ─── Workspace attribution is single-valued and server-derived ───────────
+  // Every row comes from a query hard-filtered on the wrapper's verified
+  // workspace, so a second distinct workspaceId in one response would mean the
+  // scoping had been bypassed. Reported as a count, never as an identifier.
+  const distinctWorkspaces = new Set(
+    events.map((e) => e.workspaceId).filter((w) => w !== null && w !== undefined)
   );
   record(
-    "all_events_have_visibility",
-    visibilityMissing.length === 0 ? "OK" : `${visibilityMissing.length} missing`,
-    visibilityMissing.length === 0
+    "audit_events_single_workspace_attribution",
+    `${distinctWorkspaces.size} distinct workspaceId across ${events.length} records`,
+    distinctWorkspaces.size === 1
   );
 
   console.log("\n=== OBSERVATION SUMMARY ===");
