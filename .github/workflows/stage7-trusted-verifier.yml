@@ -85,9 +85,24 @@ on:
     # (Actions: write), eliminating the privilege escalation identified in the
     # ci-governance-check rule 12.
 
+# This block is explicit, so every permission it does not name resolves to none.
+# pull-requests was unnamed, and the two steps that read the PR object —
+# "Resolve live PR HEAD SHA" (GET /pulls/{n}) and the add-only/set-equality gate
+# (GET /pulls/{n}/files) — are refused HTTP 403 on a private repository without
+# it. Observed on run 33840013842 against evidence PR #406: HEAD resolution
+# aborted, every downstream gate skipped, and the verifier posted state=error.
+# The failure direction was safe — never a false success — but no evidence PR
+# could ever be verified.
+#
+# read is the entire requirement and the ceiling. The verifier consumes the PR
+# as DATA from a privileged context and never checks the PR branch out; the only
+# write it performs is its own commit status. pull-requests: write would let a
+# read-only verifier mutate the PR it is judging and must never be granted, and
+# contents/actions stay read for the same reason.
 permissions:
   contents: read
   actions: read
+  pull-requests: read
   statuses: write
 
 jobs:
