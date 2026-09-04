@@ -202,11 +202,42 @@ describe("trusted verifier — shipped contract", () => {
     expect(PERMISSIONS).toEqual({
       contents: "read",
       actions: "read",
+      "pull-requests": "read",
       statuses: "write",
     });
     // The verifier reads the PR as data. It must never check the PR branch out.
     expect(body("fetch")).toContain("api.github.com/repos/$REPO/contents/");
     expect(WORKFLOW_SRC).not.toMatch(/ref:\s*\$\{\{\s*github\.event\.client_payload/);
+  });
+
+  // The permissions block is explicit, so an unnamed permission is none, not
+  // inherited. pull-requests went unnamed and both PR reads — GET /pulls/{n} and
+  // GET /pulls/{n}/files — were refused 403 on this private repository, aborting
+  // the verifier before it examined anything (run 33840013842, PR #406). The
+  // grant is read and must stay read: a verifier that can write to the PR it is
+  // judging is not a verifier.
+  it("can read the PR it verifies, and cannot write to it", () => {
+    expect(PERMISSIONS["pull-requests"]).toBe("read");
+    expect(PERMISSIONS["pull-requests"]).not.toBe("write");
+    expect(PERMISSIONS.statuses).toBe("write");
+    expect(PERMISSIONS.contents).toBe("read");
+    expect(PERMISSIONS.actions).toBe("read");
+  });
+
+  // Every PR endpoint the workflow calls must be covered by a declared
+  // permission. Enumerated from the source rather than listed by hand, so a
+  // future step that reaches for a new PR endpoint fails here instead of at
+  // 403 in a live capture.
+  it("declares a permission for every PR endpoint it calls", () => {
+    const prCalls = [
+      ...WORKFLOW_SRC.matchAll(/api\.github\.com\/repos\/\$REPO\/(pulls|issues)[^\s"']*/g),
+    ].map((m) => m[0]);
+    expect(prCalls.length).toBeGreaterThan(0);
+    for (const call of prCalls) {
+      // Read-only endpoints only: no POST/PATCH/DELETE against the PR.
+      expect(PERMISSIONS["pull-requests"]).toBe("read");
+      expect(call).not.toMatch(/\/(merge|reviews|comments)\b/);
+    }
   });
 
   it("no longer parses payload ids with the newline-deleting idiom (B5)", () => {
