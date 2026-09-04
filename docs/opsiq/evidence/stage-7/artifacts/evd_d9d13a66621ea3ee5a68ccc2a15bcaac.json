@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_d9d13a66621ea3ee5a68ccc2a15bcaac",
+  "invariant_id": "S7-I4",
+  "lane": "LANE_C",
+  "proof_type": "production_auth_check",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "production",
+  "method": "http_probe",
+  "captured_at_utc": "2026-09-04T13:22:35.832Z",
+  "subject_sha": "789768b99d5e8996c3f48671b188fa5ba0c51d04",
+  "authorization_manifest_sha": "31a8e711b77c6c0010db82b3b03cdf4b858cca9f",
+  "deployment_id": "dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC",
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d16",
+    "job": "capture",
+    "run_id": "33877613335",
+    "run_number": 7,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-04T13:21:33Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "node scripts/stage7-probes/s7-i4-auth-check.mjs"
+  },
+  "observation": {
+    "raw": "=== S7-I4: Private owner authentication and workspace binding ===\nDEPLOYMENT_ID: dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC\nPROBE_OWNER_EMAIL: set\n[PASS] probe_base_url: \"https://o-ps-iq.vercel.app\"\n\nTest: unauthorized-user rejection → https://o-ps-iq.vercel.app/api/auth/login\n[PASS] rejection_http_status: 401\n[PASS] rejection_does_not_leak_credentials: true\n\nTest: wrong-password rejection for known user → https://o-ps-iq.vercel.app/api/auth/login\n[PASS] wrong_password_http_status: 401\n\nTest: protected route rejected without session\n[PASS] unauthenticated_request_rejected: 401\n\nTest: owner login → https://o-ps-iq.vercel.app/api/auth/login\n[PASS] login_http_status: 200\n[PASS] login_response_has_user: true\n[PASS] login_response_user_has_email: true\n[PASS] login_response_user_matches_configured_owner: true\n[PASS] login_session_cookie_set: true\n[PASS] session_cookie_httponly: true\n[PASS] session_cookie_samesite_set: true\n  Session cookie obtained (value withheld from observation)\n\nTest: protected route accessible with valid session\n[FAIL] protected_route_with_session: 403\n[FAIL] session_not_accepted: \"Expected 200 or 404, got 403\"\n\nTest: logout → https://o-ps-iq.vercel.app/api/auth/logout\n[PASS] logout_http_status: 200\n[PASS] logout_response_success: true\n[PASS] logout_clears_session_cookie: true\n\nTest: revoked session rejected after logout\n[PASS] revoked_session_rejected: 401\n\n=== OBSERVATION SUMMARY ===\nChecks: 16 PASS, 2 FAIL\n\nRESULT: FAIL\n",
+    "content_hash": "sha256:9166b7bc48ad56be00b9a37b1090762c5e66c9e8a1a954d07d2043ef0ad9cfe5",
+    "byte_length": 1461,
+    "truncated": false
+  },
+  "assertion": "Owner login, logout, session expiry, and unauthorized-user rejection all confirmed on production deployment.",
+  "result": "FAIL",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "929d8a73c6678d94b0c4573be9c693d98a4f4384182dd4fb75275d462c391abd6f6c25225cd187da229483e7dc04bb03a04fee1cc9c2b6b66878ca2cde756f0d"
+  }
+}
