@@ -21,14 +21,24 @@
  * Every one of those fallbacks is gone. There is now no path on which the
  * deployed SHA is unknown and the result is PASS.
  *
- * ─── Where the deployed SHA comes from ───────────────────────────────────────
+ * ─── Where the deployed SHA comes from, and why TWO authorities ─────────────
  * `GET {PROBE_BASE_URL}/api/internal/build-info` — the repository's existing
  * first-party deployed-identity authority (src/app/api/internal/build-info/route.ts),
  * already used for exactly this purpose by
  * .github/workflows/production-owner-acceptance.yml. It reports the deployed
- * commit and the Vercel environment, needs no credential, and is served by the
- * deployment being probed, so it cannot describe some other deployment. A Vercel
- * API token is therefore NOT required to verify identity, and none is invented.
+ * commit and the Vercel environment and is served by the deployment being probed.
+ *
+ * That establishes "the host answering this URL claims commit X". It does NOT
+ * establish WHICH DEPLOYMENT that host is. The canonical executable_evidence
+ * requires more than a self-report: "deployed URL responds with 200 to health
+ * probe; Vercel or equivalent DEPLOYMENT DASHBOARD shows exact authorized SHA."
+ * A deployment is not its own dashboard, and `DEPLOYMENT_ID` — which is written
+ * verbatim into the signed artifact — arrives from the caller's dispatch input.
+ *
+ * The control-plane check is therefore REQUIRED, not optional, and it binds the
+ * alias too: the probed host must be listed by the control plane as an address of
+ * DEPLOYMENT_ID. Absent VERCEL_TOKEN this probe now FAILS rather than recording
+ * "NOT_REQUESTED" as a passing observation.
  *
  * Required env vars:
  *   CLOSURE_SUBJECT_SHA — the exact commit this capture is authorized against.
@@ -36,14 +46,11 @@
  *                         the OPTION A gate has independently proved equals the
  *                         authorized closure_subject_sha at AUTH_SHA. No default.
  *   PROBE_BASE_URL      — the production endpoint to probe. No default.
- *   DEPLOYMENT_ID       — Vercel deployment id (dpl_...), recorded by the contract.
- *
- * Optional env vars:
- *   VERCEL_TOKEN        — when present, adds a Vercel control-plane cross-check
- *                         (readyState + meta.githubCommitSha). Its absence never
- *                         weakens the verdict, because identity is already
- *                         established from build-info; when it IS supplied, any
- *                         disagreement fails.
+ *   DEPLOYMENT_ID       — Vercel deployment id (dpl_...), recorded by the contract
+ *                         and now verified against the control plane.
+ *   VERCEL_TOKEN        — deployment-dashboard credential. REQUIRED: supplies the
+ *                         second authority the canonical evidence names. Never
+ *                         printed.
  *
  * Exit 0 = PASS. Non-zero = FAIL. Observations on stdout.
  */
@@ -54,11 +61,22 @@ const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID ?? "";
 const VERCEL_TOKEN = process.env.VERCEL_TOKEN ?? "";
 const CLOSURE_SUBJECT_SHA = process.env.CLOSURE_SUBJECT_SHA ?? "";
 const PROBE_BASE_URL = process.env.PROBE_BASE_URL ?? "";
+/**
+ * Deployment-dashboard API root. Overridable so the control-plane branch is
+ * testable against a stub; the value used is RECORDED in the observation, and
+ * the capture workflow never supplies it (asserted by
+ * stage7-machine-probe-integrity.test.ts), so a signed capture always reads the
+ * real control plane and any other value is visible in the artifact.
+ */
+const VERCEL_API_BASE = process.env.VERCEL_API_BASE || "https://api.vercel.com";
 
 const observations = [];
 let failed = false;
 
-function record(label, value, pass = true) {
+function record(label, value, pass) {
+  if (typeof pass !== "boolean") {
+    throw new Error(`record("${label}") requires an explicit boolean verdict`);
+  }
   const entry = { label, value, pass };
   observations.push(entry);
   console.log(`[${pass ? "PASS" : "FAIL"}] ${label}: ${JSON.stringify(value)}`);
@@ -95,7 +113,7 @@ function verifyConfiguration() {
     );
     ok = false;
   } else {
-    record("closure_subject_sha_present", CLOSURE_SUBJECT_SHA);
+    record("closure_subject_sha_present", CLOSURE_SUBJECT_SHA, true);
   }
 
   if (!PROBE_BASE_URL) {
@@ -107,7 +125,7 @@ function verifyConfiguration() {
     );
     ok = false;
   } else {
-    record("probe_base_url", PROBE_BASE_URL);
+    record("probe_base_url", PROBE_BASE_URL, true);
   }
 
   return ok;
@@ -125,7 +143,7 @@ function verifyConfiguration() {
  */
 async function verifyDeployedIdentity() {
   const url = `${PROBE_BASE_URL.replace(/\/$/, "")}/api/internal/build-info`;
-  record("build_info_url", url);
+  record("build_info_url", url, true);
 
   let body;
   try {
@@ -163,7 +181,7 @@ async function verifyDeployedIdentity() {
     );
     return null;
   }
-  record("deployed_sha", deployedSha);
+  record("deployed_sha", deployedSha, true);
 
   const shaMatch = deployedSha === CLOSURE_SUBJECT_SHA;
   record(
@@ -183,19 +201,31 @@ async function verifyDeployedIdentity() {
 }
 
 /**
- * Optional Vercel control-plane cross-check.
+ * REQUIRED Vercel control-plane verification.
  *
- * Identity is already established from build-info, so an absent token weakens
- * nothing and is recorded as "not requested" rather than as a passing check.
- * When a token IS supplied the caller has asked for the stronger check, so any
- * failure or disagreement fails the observation.
+ * The canonical executable_evidence for S7-I1 is: "deployed URL responds with 200
+ * to health probe; Vercel OR EQUIVALENT DEPLOYMENT DASHBOARD shows exact
+ * authorized SHA". A deployment reporting its own commit is not a deployment
+ * dashboard — the whole point of naming one is corroboration by a second
+ * authority. build-info alone proves "the host answering this URL claims commit
+ * X"; it cannot prove which deployment that host is, and `deployment_id` is
+ * supplied by the caller and recorded verbatim into the signed artifact.
+ *
+ * So this check is no longer optional, and it now also binds the alias: the host
+ * named by PROBE_BASE_URL must appear in the control plane's alias list for
+ * DEPLOYMENT_ID. That is what makes the artifact's deployment_id an observation
+ * rather than an unverified caller assertion.
+ *
+ * Never prints the token.
  */
 async function crossCheckVercelDeployment(deploymentId) {
   if (!VERCEL_TOKEN) {
-    record(
-      "vercel_cross_check",
-      "NOT_REQUESTED — no VERCEL_TOKEN supplied; deployed identity was established " +
-        "from the deployment's own build-info endpoint"
+    fail(
+      "vercel_control_plane_credential",
+      "MISSING — VERCEL_TOKEN is not set. S7-I1's canonical evidence requires a " +
+        "deployment dashboard to show the authorized SHA; the deployment's own " +
+        "build-info endpoint is not a second authority and cannot corroborate " +
+        "which deployment is serving the probed URL."
     );
     return;
   }
@@ -203,10 +233,12 @@ async function crossCheckVercelDeployment(deploymentId) {
     fail("vercel_cross_check", "VERCEL_TOKEN supplied but DEPLOYMENT_ID is not set");
     return;
   }
+  // Recorded as a fact, so the artifact always states which authority answered.
+  record("vercel_api_base", VERCEL_API_BASE, true);
 
   try {
     const res = await fetch(
-      `https://api.vercel.com/v13/deployments/${encodeURIComponent(deploymentId)}`,
+      `${VERCEL_API_BASE}/v13/deployments/${encodeURIComponent(deploymentId)}`,
       {
         headers: {
           Authorization: `Bearer ${VERCEL_TOKEN}`,
@@ -231,7 +263,7 @@ async function crossCheckVercelDeployment(deploymentId) {
           `candidate ${CLOSURE_SUBJECT_SHA}`
       );
     } else {
-      record("vercel_sha_matches_closure_subject", deployedSha);
+      record("vercel_sha_matches_closure_subject", deployedSha, true);
     }
 
     const deploymentState = data.readyState ?? data.state ?? "UNKNOWN";
@@ -240,6 +272,37 @@ async function crossCheckVercelDeployment(deploymentId) {
     if (!deploymentReady) {
       fail("deployment_not_ready", `State is ${deploymentState}, expected READY`);
     }
+
+    // ── Alias binding: is THIS deployment the one serving the probed URL? ────
+    // Without this, `deployment_id` is a caller-supplied string recorded into a
+    // signed artifact that never observed it. The control plane knows which
+    // aliases resolve to the deployment, so the probed host must be among them.
+    let probeHost = "";
+    try {
+      probeHost = new URL(PROBE_BASE_URL).host;
+    } catch {
+      probeHost = "";
+    }
+    const aliases = Array.isArray(data.alias) ? data.alias : [];
+    const aliasHosts = aliases.map((a) =>
+      String(a).replace(/^https?:\/\//, "").replace(/\/$/, "")
+    );
+    // The deployment's own generated URL counts as one of its addresses.
+    if (typeof data.url === "string" && data.url) aliasHosts.push(data.url);
+    const aliasCovers = probeHost !== "" && aliasHosts.includes(probeHost);
+    record(
+      "vercel_deployment_alias_covers_probe_target",
+      aliasCovers ? "probed host is served by this deployment" : "NOT COVERED",
+      aliasCovers
+    );
+    if (!aliasCovers) {
+      fail(
+        "deployment_id_not_bound_to_probe_target",
+        `The control plane does not list the probed host as an address of ` +
+          `deployment ${deploymentId}. The recorded deployment_id would not ` +
+          `describe the deployment actually observed.`
+      );
+    }
   } catch (err) {
     fail("vercel_sha_fetch_error", String(err));
   }
@@ -247,7 +310,7 @@ async function crossCheckVercelDeployment(deploymentId) {
 
 async function probeHealth(baseUrl) {
   const url = `${baseUrl.replace(/\/$/, "")}/api/health`;
-  record("probe_url", url);
+  record("probe_url", url, true);
 
   let res;
   try {
@@ -275,7 +338,7 @@ async function probeHealth(baseUrl) {
   }
 
   record("response_has_status_field", "status" in body, "status" in body);
-  record("health_status_value", body.status ?? "MISSING");
+  record("health_status_value", body.status ?? "MISSING", "status" in body);
   record("response_has_checks_field", "checks" in body, "checks" in body);
   record("response_has_timestamp", "timestamp" in body, "timestamp" in body);
 
@@ -302,6 +365,7 @@ async function main() {
   console.log(`CLOSURE_SUBJECT_SHA: ${CLOSURE_SUBJECT_SHA || "(not set)"}`);
   console.log(`PROBE_BASE_URL: ${PROBE_BASE_URL || "(not set)"}`);
   console.log(`VERCEL_TOKEN: ${VERCEL_TOKEN ? "set" : "not set"}`);
+  console.log(`VERCEL_API_BASE: ${VERCEL_API_BASE}`);
   console.log("");
 
   // Configuration first: without an authorized subject or a named endpoint there

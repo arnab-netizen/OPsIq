@@ -115,7 +115,13 @@ jobs:
               echo "assertion=Deployed SHA matches authorized candidate; production health probe returns 200." >> "$GITHUB_OUTPUT"
               echo "command=node scripts/stage7-probes/s7-i1-health-probe.mjs" >> "$GITHUB_OUTPUT"
               echo "requires_deployment_id=true" >> "$GITHUB_OUTPUT"
-              echo "required_inputs=PROBE_BASE_URL CLOSURE_SUBJECT_SHA" >> "$GITHUB_OUTPUT"
+              # VERCEL_TOKEN is REQUIRED, not optional. The canonical executable_evidence
+              # names a deployment dashboard ("Vercel or equivalent deployment dashboard
+              # shows exact authorized SHA"); a deployment's own /api/internal/build-info
+              # is a self-report, not a second authority, and cannot corroborate which
+              # deployment serves the probed URL. deployment_id is otherwise a
+              # caller-supplied string written verbatim into a signed artifact.
+              echo "required_inputs=PROBE_BASE_URL CLOSURE_SUBJECT_SHA VERCEL_TOKEN" >> "$GITHUB_OUTPUT"
               ;;
             S7-I2)
               echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
@@ -265,6 +271,8 @@ jobs:
           PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           PROBE_OWNER_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
           PROBE_OWNER_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          # Deployment-dashboard credential for S7-I1. Presence only; never printed.
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           # Stage 7 boundary/audit fixtures. Record and workspace identifiers, carried as
           # secrets so GitHub masks them if any future step were to echo one; presence is
           # all this step ever tests.
@@ -341,9 +349,11 @@ jobs:
           PROBE_PILOT_ENTITY_ID: ${{ secrets.STAGE7_PILOT_ENTITY_ID }}
           PROBE_FOREIGN_WORKSPACE_ID: ${{ secrets.STAGE7_FOREIGN_WORKSPACE_ID }}
           PROBE_FOREIGN_ENTITY_ID: ${{ secrets.STAGE7_FOREIGN_ENTITY_ID }}
-          # Optional. Absent, S7-I1 still establishes deployed identity from the
-          # deployment's own /api/internal/build-info. Present, it additionally
-          # cross-checks the Vercel control plane and any disagreement fails.
+          # REQUIRED for S7-I1 (declared in its required_inputs, so the preflight
+          # refuses without it). It supplies the second authority the canonical
+          # evidence names: the control plane confirms the authorized SHA AND that
+          # the probed host is an address of the recorded deployment id. Also used
+          # opportunistically by the LANE_C probes to resolve a deployment URL.
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail

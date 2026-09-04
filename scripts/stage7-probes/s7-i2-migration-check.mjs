@@ -29,7 +29,10 @@ const DATABASE_URL = process.env.DATABASE_URL ?? "";
 const observations = [];
 let failed = false;
 
-function record(label, value, pass = true) {
+function record(label, value, pass) {
+  if (typeof pass !== "boolean") {
+    throw new Error(`record("${label}") requires an explicit boolean verdict`);
+  }
   const entry = { label, value, pass };
   observations.push(entry);
   console.log(`[${pass ? "PASS" : "FAIL"}] ${label}: ${JSON.stringify(value)}`);
@@ -89,7 +92,16 @@ async function main() {
     process.exit(1);
   }
 
-  record("db_url_source", DIRECT_URL ? "DATABASE_DIRECT_URL" : "DATABASE_URL (pooled — DIRECT preferred)");
+  // Which credential was used is informational, but a POOLED url is not merely a
+  // preference: `prisma migrate status` introspects `_prisma_migrations` through a
+  // pgbouncer-style pooler that can answer from a different backend session, so a
+  // pooled read is not a sound basis for a governed migration assertion.
+  record("db_url_source", DIRECT_URL ? "DATABASE_DIRECT_URL" : "DATABASE_URL (pooled)", true);
+  record(
+    "db_url_is_direct_endpoint",
+    DIRECT_URL ? "direct" : "pooled — DATABASE_DIRECT_URL not supplied",
+    !!DIRECT_URL
+  );
 
   // Count local migration files
   const localMigrations = countMigrationFiles();
@@ -108,8 +120,18 @@ async function main() {
   }
   console.log("--- end migrate status output ---\n");
 
-  // Parse output for migration status indicators
+  // Parse output for migration status indicators. An empty combined output means
+  // the command produced nothing to read, so no conclusion about migration state
+  // is available — that is a FAIL, never an implicit pass.
   const output = (result.stdout + result.stderr).toLowerCase();
+  const outputUsable = output.trim().length > 0;
+  record("migrate_status_output_present", outputUsable, outputUsable);
+  if (!outputUsable) {
+    fail(
+      "migrate_status_output_empty",
+      "prisma migrate status produced no output; migration state is unknown."
+    );
+  }
 
   const dbUpToDate =
     output.includes("database schema is up to date") ||
@@ -161,14 +183,23 @@ async function main() {
   if (hasFailedMigrations) {
     fail("failed_migrations_present", "Output indicates failed/error migration state");
   }
+  // Drift is one of the conditions the invariant names ("no unexpected pending,
+  // failed or drifted migration"). Recording it as a passing "warning" was a
+  // false-pass path: an artifact could assert migration integrity while the
+  // observation itself reported drift.
+  record("schema_drift_absent", !hasDrift, !hasDrift);
   if (hasDrift) {
-    record("schema_drift_warning", "Output mentions drift — review for shadow database artifacts");
+    fail(
+      "schema_drift_detected",
+      "migrate status output reports drift or a shadow-database condition; the " +
+        "production schema does not match the migration history."
+    );
   }
 
   // Verify schema.prisma is present (sanity check)
   try {
     readFileSync(resolve(projectRoot, "prisma", "schema.prisma"), "utf8");
-    record("prisma_schema_present", "prisma/schema.prisma exists");
+    record("prisma_schema_present", "prisma/schema.prisma exists", true);
   } catch {
     fail("prisma_schema_missing", "prisma/schema.prisma not found");
   }
