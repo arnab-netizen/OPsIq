@@ -77,3 +77,6 @@ dbenv.sh
 full-test-output.log
 test-full-output.log
 *-test-output.log
+
+# ESLint JSON report consumed by scripts/lint-ratchet.mjs (CI artifact, never committed)
+eslint-report.json
