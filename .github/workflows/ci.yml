@@ -238,12 +238,25 @@ jobs:
             sleep $((i*10))
           done
 
-      - name: Run linter
-        run: npm run lint
+      # ── One ESLint traversal per job ──────────────────────────────────────
+      # This step used to be `npm run lint` with continue-on-error, and the ratchet
+      # below then ran `npm run lint` a SECOND time internally. One job paid for two
+      # complete traversals of the repository inside timeout-minutes: 10 and overran
+      # it non-deterministically -- jobs 100920174479, 100939368880, 100945566301 and
+      # 100956290102 each ran 10m15s-10m18s and were killed mid-ratchet. GitHub
+      # reports a timeout as `cancelled` and branch-protection fails closed on it, so
+      # a lint result that was inside the baseline surfaced as a red required check
+      # four times and needed a manual re-run each time.
+      #
+      # ESLint now runs once, to a JSON report the ratchet consumes. continue-on-error
+      # stays because ESLint exits 1 while the baseline error count is non-zero; the
+      # ratchet, not this step, is what decides the job.
+      - name: Run linter (single traversal -> JSON report)
+        run: npm run lint -- -f json -o eslint-report.json
         continue-on-error: true
 
       - name: Lint ratchet (block new lint debt)
-        run: npm run lint:ratchet
+        run: npm run lint:ratchet -- --from-result eslint-report.json
         continue-on-error: false
 
   # Calls the reusable PR validation workflow with bundle manifest validation enabled.
