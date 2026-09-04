@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_147fce5b18cdeeebf9d9b0b9778b8f06",
+  "invariant_id": "S7-I11",
+  "lane": "LANE_E",
+  "proof_type": "simulation_adversarial",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "ci",
+  "method": "test_run",
+  "captured_at_utc": "2026-09-04T05:16:26.436Z",
+  "subject_sha": "789768b99d5e8996c3f48671b188fa5ba0c51d04",
+  "authorization_manifest_sha": "2365bfc931bb53e9199d38bc7a242331e0b44228",
+  "deployment_id": null,
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d16",
+    "job": "capture",
+    "run_id": "33839398043",
+    "run_number": 3,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-04T05:08:41Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "npx vitest run src/__tests__/completion-factory/stage7-evidence-artifact.test.ts src/__tests__/completion-factory/stage7-ed25519-hostile.test.ts --reporter=default"
+  },
+  "observation": {
+    "raw": "\n\u001b[1m\u001b[30m\u001b[46m RUN \u001b[49m\u001b[39m\u001b[22m \u001b[36mv4.1.7 \u001b[39m\u001b[90m/home/runner/work/OPsIq/OPsIq\u001b[39m\n\n\n📊 Initializing test environment...\n  → .env.test not found, using defaults\n  → Wrote direct Neon URL to .env.test for test worker propagation\n  → Database URL: postgresql:***@localhost:5432/opsiq_dev?schema=public\n  → Generating Prisma client...\n  ✓ Prisma Client generated\n  ℹ DATABASE_URL not configured for local testing, skipping DB initialization\n✓ Test environment ready\n\n\u001b[90mstdout\u001b[2m | src/__tests__/completion-factory/stage7-evidence-artifact.test.ts\n\u001b[22m\u001b[39m◇ injected env (5) from .env.test // tip: ⌘ custom filepath { path: '/custom/path/.env' }\n\n \u001b[32m✓\u001b[39m src/__tests__/completion-factory/stage7-evidence-artifact.test.ts \u001b[2m(\u001b[22m\u001b[2m59 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 6161\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m attack: an invented producer type has no representation \u001b[33m 356\u001b[2mms\u001b[22m\u001b[39m\n\u001b[90mstdout\u001b[2m | src/__tests__/completion-factory/stage7-ed25519-hostile.test.ts\n\u001b[22m\u001b[39m◇ injected env (5) from .env.test // tip: ⌘ multiple files { path: ['.env.local', '.env'] }\n\n \u001b[32m✓\u001b[39m src/__tests__/completion-factory/stage7-ed25519-hostile.test.ts \u001b[2m(\u001b[22m\u001b[2m15 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 1413\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m2 passed\u001b[39m\u001b[22m\u001b[90m (2)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m74 passed\u001b[39m\u001b[22m\u001b[90m (74)\u001b[39m\n\u001b[2m   Start at \u001b[22m 05:16:10\n\u001b[2m   Duration \u001b[22m 14.89s\u001b[2m (transform 127ms, setup 119ms, import 121ms, tests 7.57s, environment 1.24s)\u001b[22m\n\n\n📊 Cleaning up test environment...\n  ✓ Removed temporary .env.test\n  ℹ Skipping DB disconnect (TEST_WITH_DB not set)\n",
+    "content_hash": "sha256:839fbc79946c02998d15f1c7033295e682507c52672e051e62d06585578bb4cf",
+    "byte_length": 1668,
+    "truncated": false
+  },
+  "assertion": "Nine adversarial failure scenarios each fail safely, visibly, and recoverably in isolated simulation.",
+  "result": "PASS",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "17e28000abe5c19b6a87f48458af54304f15653fa85af8fc07f6c745919e20e3389c903cb480d83dacee7619641b8f4720eabaeb506e92a463b57381db21a10d"
+  }
+}
