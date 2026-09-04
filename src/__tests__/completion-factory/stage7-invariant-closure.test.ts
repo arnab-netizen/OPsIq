@@ -151,9 +151,23 @@ function buildLedger(bundleId: string, status: string, evidence: unknown, artifa
   return { stages: { "factory-stage-7": { name: "Factory Stage Test", bundles: [entry] } } };
 }
 
+// The stage-acceptance gate resolves evidence provenance through the GitHub API,
+// so its proven/unmet counts depend on whether a token happens to be exported.
+// A developer shell with GITHUB_TOKEN set and a CI job without it disagree about
+// the same commit. Strip both so every run here exercises the same, uncredentialed
+// path and the assertions mean one thing everywhere.
+const NO_GITHUB_CREDENTIALS = (() => {
+  const env = { ...process.env };
+  delete env.GITHUB_TOKEN;
+  delete env.GH_TOKEN;
+  return env;
+})();
+
 function runScript(script: string, args: string[]): { code: number; output: string } {
   try {
-    const output = execFileSync("node", [script, ...args], { cwd: root, encoding: "utf8", stdio: "pipe" });
+    const output = execFileSync("node", [script, ...args], {
+      cwd: root, encoding: "utf8", stdio: "pipe", env: NO_GITHUB_CREDENTIALS,
+    });
     return { code: 0, output };
   } catch (err: unknown) {
     const e = err as { status?: number; stdout?: string; stderr?: string };
@@ -655,11 +669,16 @@ describe("Stage 7 condition 5 — live repository state", () => {
     expect(runScript(bundleManifestScript, []).code).toBe(0);
   });
 
-  it("reports the real Factory Stage 7 contract as PENDING with 15 unproven invariants", () => {
+  // S7-I11 carries evd_147fce5b18cdeeebf9d9b0b9778b8f06 and the manifest marks it
+  // PROVEN, but this gate runs without GitHub credentials, so it cannot check that
+  // artifact's provenance and therefore refuses to count it. 0/16 here is the
+  // fail-closed answer, not a stale expectation: unverifiable provenance must never
+  // be read as proof. A credentialed run of the same commit reports 1/16.
+  it("refuses to count evidence whose provenance it cannot check", () => {
     const result = runScript(stageAcceptanceScript, ["--mode", "integrity", "--stage", "factory-7"]);
     expect(result.code).toBe(0);
     expect(result.output).toContain("factory-stage-7-closure: status=PENDING");
-    expect(result.output).toContain("1/16 invariants proven, 0 waived, 15 unmet");
+    expect(result.output).toContain("0/16 invariants proven, 0 waived, 16 unmet");
   });
 
   it("refuses to close the real Factory Stage 7 contract", () => {

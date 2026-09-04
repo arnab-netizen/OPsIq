@@ -1031,13 +1031,22 @@ describe("G-1 — main-lane enforcement cannot be removed unnoticed", () => {
 });
 
 describe("G-1 — the live repository is unchanged by this PR", () => {
-  it("the Stage 7 integrity gate stays green and reports no progress", () => {
+  // Run with GITHUB_TOKEN and GH_TOKEN stripped. The gate resolves evidence
+  // provenance through the GitHub API, so a credentialed shell and an
+  // uncredentialed CI job otherwise disagree about the same commit — the counts
+  // below would pass locally and fail in CI. Uncredentialed, the gate cannot check
+  // the provenance of evd_147fce5b18cdeeebf9d9b0b9778b8f06 and refuses to count it,
+  // which is the property worth pinning: unverifiable provenance is never proof.
+  it("the Stage 7 integrity gate stays green and counts no unverifiable evidence", () => {
+    const env = { ...process.env };
+    delete env.GITHUB_TOKEN;
+    delete env.GH_TOKEN;
     const output = execFileSync(
       "node",
       ["scripts/validate-stage-acceptance.mjs", "--mode", "integrity", "--stage", "factory-7"],
-      { cwd: root, encoding: "utf8" },
+      { cwd: root, encoding: "utf8", env },
     );
-    expect(output).toContain("1/16 invariants proven");
+    expect(output).toContain("0/16 invariants proven");
     expect(output).toContain("NOT stage progress");
   });
 
