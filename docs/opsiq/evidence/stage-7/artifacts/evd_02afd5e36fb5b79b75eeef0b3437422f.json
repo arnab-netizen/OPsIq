@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_02afd5e36fb5b79b75eeef0b3437422f",
+  "invariant_id": "S7-I12",
+  "lane": "LANE_E",
+  "proof_type": "simulation_runbook_recovery",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "isolated_simulation",
+  "method": "test_run",
+  "captured_at_utc": "2026-09-04T13:03:42.611Z",
+  "subject_sha": "789768b99d5e8996c3f48671b188fa5ba0c51d04",
+  "authorization_manifest_sha": "31a8e711b77c6c0010db82b3b03cdf4b858cca9f",
+  "deployment_id": null,
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d16",
+    "job": "capture",
+    "run_id": "33875880976",
+    "run_number": 5,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-04T13:02:34Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "node scripts/stage7-probes/s7-i12-runbook-recovery.mjs"
+  },
+  "observation": {
+    "raw": "=== S7-I12: Operational recovery (LANE_E isolated simulation) ===\nMode: isolated simulation — no production infrastructure touched\n\n[PASS] deployment_runbook_exists: \"/home/runner/work/OPsIq/OPsIq/docs/DEPLOYMENT_RUNBOOK.md\"\n[PASS] deployment_runbook_readable: \"18464 bytes\"\n[PASS] deployment_runbook_has_pre-deployment_checklist: true\n[PASS] deployment_runbook_has_deployment_process: true\n[PASS] deployment_runbook_has_post-deployment_verification: true\n[PASS] deployment_runbook_has_rollback_procedure: true\n[PASS] deployment_runbook_has_incident_response: true\n[PASS] rollback_runbook_exists: \"/home/runner/work/OPsIq/OPsIq/docs/ROLLBACK_RUNBOOK.md\"\n[PASS] rollback_runbook_readable: \"13890 bytes\"\n[PASS] rollback_runbook_has_rollback_trigger/decision_criteria: true\n[PASS] rollback_runbook_has_vercel_deployment_rollback_steps: true\n[PASS] rollback_runbook_has_database_rollback_steps: true\n[PASS] rollback_runbook_has_post-rollback_verification: true\n[PASS] runbook_covers_health_endpoint_check: true\n[PASS] runbook_covers_database_recovery_step: true\n[PASS] runbook_covers_deployment_recovery_step: true\n[PASS] runbook_covers_log_monitor_review: true\n[PASS] runbook_covers_rollback_capability: true\n\n=== Simulating staged DB failure → recovery ===\nStage 1: Verifying failure detection mechanism...\n[PASS] health_route_has_db_failure_detection: true\n[PASS] health_route_returns_503_on_failure: true\nStage 2: Verifying error classification code paths...\n[PASS] error_governance_classifies_db_errors: true\nStage 3: Verifying recovery tooling...\n[PASS] recovery_tool_deployment_runbook: \"present\"\n[PASS] recovery_tool_rollback_runbook: \"present\"\n[PASS] recovery_tool_migration_runbook: \"present\"\nStage 4: Verifying recovery is observable...\n[PASS] startup_state_has_readiness_check: true\n[PASS] simulation_recovery_time_ms: 1\n[PASS] recovery_time_under_5min: true\n[PASS] simulation_total_probe_time_ms: 5\n\n=== STAGED FAILURE SIMULATION RECORD ===\nstaged_failure: DB connectivity failure (simulated)\nrecovery_method: following DEPLOYMENT_RUNBOOK.md sections\nrecovery_time_ms: 1\ndeviations: none (all required sections present and verified)\nisolation: full — no production DB touched\n\n=== OBSERVATION SUMMARY ===\nChecks: 28 PASS, 0 FAIL\n\nRESULT: PASS\n",
+    "content_hash": "sha256:bf267fdab863feb67a53d626a09c384d7cff325fad1c750931f88ec9116a031f",
+    "byte_length": 2258,
+    "truncated": false
+  },
+  "assertion": "Staged failure introduced; recovery confirmed following DEPLOYMENT_RUNBOOK.md without undocumented steps.",
+  "result": "PASS",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "106fa51c92a2702bc4ff9bf020e09d14aa49e5cd762804a0c71f4ad99ec1a57f5b93a12a6fa4297a24dda22cf3263d9445b317b11380be6ddb843b23443a520d"
+  }
+}
