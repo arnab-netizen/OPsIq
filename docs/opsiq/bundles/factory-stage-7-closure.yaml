@@ -353,8 +353,9 @@ invariants:
     proof_lane: LANE_E
     proof_type: simulation_adversarial
     executable_evidence: "nine failure scenarios simulated in isolated environment; each fails safely, visibly, and recoverably"
-    status: PENDING
-    proof_artifacts: []
+    status: PROVEN
+    proof_artifacts:
+      - evd_147fce5b18cdeeebf9d9b0b9778b8f06
 
   S7-I12:
     name: Operational recovery

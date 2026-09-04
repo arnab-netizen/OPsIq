@@ -655,11 +655,11 @@ describe("Stage 7 condition 5 — live repository state", () => {
     expect(runScript(bundleManifestScript, []).code).toBe(0);
   });
 
-  it("reports the real Factory Stage 7 contract as PENDING with 16 unproven invariants", () => {
+  it("reports the real Factory Stage 7 contract as PENDING with 15 unproven invariants", () => {
     const result = runScript(stageAcceptanceScript, ["--mode", "integrity", "--stage", "factory-7"]);
     expect(result.code).toBe(0);
     expect(result.output).toContain("factory-stage-7-closure: status=PENDING");
-    expect(result.output).toContain("0/16 invariants proven, 0 waived, 16 unmet");
+    expect(result.output).toContain("1/16 invariants proven, 0 waived, 15 unmet");
   });
 
   it("refuses to close the real Factory Stage 7 contract", () => {

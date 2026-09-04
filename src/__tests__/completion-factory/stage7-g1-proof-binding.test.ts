@@ -224,7 +224,13 @@ describe("G-1 — PENDING invariants stay valid", () => {
     expect(result.structuralViolations.join("\n")).toContain("is free text");
   });
 
-  it("the live Stage 7 contract still evaluates as PENDING with 0/16 proven", () => {
+  // S7-I11 is bound to evd_147fce5b18cdeeebf9d9b0b9778b8f06, the first Stage 7
+  // evidence artifact to survive trusted verification (run 33844489817). It is
+  // asserted by id, not by count alone: a count would still pass if the binding
+  // silently moved to a different invariant or a different artifact. The other
+  // fifteen stay PENDING with empty proof_artifacts, and the bundle stays PENDING
+  // — one proven invariant is not stage progress.
+  it("the live Stage 7 contract evaluates as PENDING with exactly S7-I11 proven", () => {
     const manifest = YAML.load(
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
@@ -232,8 +238,25 @@ describe("G-1 — PENDING invariants stay valid", () => {
       structuralViolations: string[]; proven: string[]; total: number;
     };
     expect(result.structuralViolations).toHaveLength(0);
-    expect(result.proven).toHaveLength(0);
     expect(result.total).toBe(16);
+    // Called with no protected context — no signing-key resolver, no closure-manifest
+    // resolver, no provenance map — nothing can resolve to ACCEPTED, so a PROVEN
+    // status alone buys nothing here. That the binding really does resolve is proved
+    // by the gate test below, which runs validate-stage-acceptance.mjs and reports
+    // "1/16 invariants proven".
+    expect(result.proven).toEqual([]);
+
+    const invariants = (manifest as { invariants: Record<string, {
+      status: string; proof_artifacts: string[];
+    }> }).invariants;
+    expect(invariants["S7-I11"].proof_artifacts).toEqual([
+      "evd_147fce5b18cdeeebf9d9b0b9778b8f06",
+    ]);
+    for (const [id, inv] of Object.entries(invariants)) {
+      if (id === "S7-I11") continue;
+      expect(inv.status).toBe("PENDING");
+      expect(inv.proof_artifacts).toEqual([]);
+    }
   });
 });
 
@@ -883,7 +906,16 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
     expect(raw.invariant_waivers).toEqual([]);
     const invariants = raw.invariants as Record<string, { status: string; proof_artifacts: unknown[] }>;
     expect(Object.keys(invariants)).toHaveLength(16);
+    // S7-I11 is the one invariant carrying evidence. Authorizing the subject SHA is
+    // still not what proved it: the artifact was captured against that subject,
+    // trust-verified, and bound by a separate owner-authorized change. Every other
+    // invariant remains untouched, and the bundle itself remains PENDING above.
     for (const [id, entry] of Object.entries(invariants)) {
+      if (id === "S7-I11") {
+        expect(entry.status, id).toBe("PROVEN");
+        expect(entry.proof_artifacts, id).toEqual(["evd_147fce5b18cdeeebf9d9b0b9778b8f06"]);
+        continue;
+      }
       expect(entry.status, id).toBe("PENDING");
       expect(entry.proof_artifacts, id).toEqual([]);
     }
@@ -1005,7 +1037,7 @@ describe("G-1 — the live repository is unchanged by this PR", () => {
       ["scripts/validate-stage-acceptance.mjs", "--mode", "integrity", "--stage", "factory-7"],
       { cwd: root, encoding: "utf8" },
     );
-    expect(output).toContain("0/16 invariants proven");
+    expect(output).toContain("1/16 invariants proven");
     expect(output).toContain("NOT stage progress");
   });
 
@@ -1021,11 +1053,39 @@ describe("G-1 — the live repository is unchanged by this PR", () => {
     expect(code).not.toBe(0);
   });
 
-  it("no evidence artifact exists in the repository", () => {
+  // The repository now holds exactly one evidence artifact. Asserting the whole
+  // inventory, not merely that this one is present, is deliberate: a second
+  // artifact appearing here — a recapture, a duplicate, a hand-written file —
+  // must fail loudly rather than pass because the one id it looked for is still
+  // there. Fields are checked against the governed D-16 capture.
+  it("holds exactly the one governed S7-I11 evidence artifact", () => {
     const { records } = loadEvidenceArtifactIndex({
       dir: join(root, "docs/opsiq/evidence/stage-7/artifacts"),
     });
-    expect(records).toHaveLength(0);
+    expect(records).toHaveLength(1);
+    const [record] = records as unknown as [{
+      artifactId: string; invariantId: string; lane: string; proofType: string;
+      subjectSha: string; fileName: string; nested: boolean; supersedes: string | null;
+      level: string; signatureState: string; provenanceState: string;
+    }];
+    expect(record.artifactId).toBe("evd_147fce5b18cdeeebf9d9b0b9778b8f06");
+    expect(record.invariantId).toBe("S7-I11");
+    expect(record.lane).toBe("LANE_E");
+    expect(record.proofType).toBe("simulation_adversarial");
+    expect(record.subjectSha).toBe(AUTHORIZED_SUBJECT_SHA);
+    expect(record.fileName).toBe("evd_147fce5b18cdeeebf9d9b0b9778b8f06.json");
+    expect(record.nested).toBe(false);
+    expect(record.supersedes).toBeNull();
+
+    // Loaded with no protected context, so the index cannot reach a verdict and
+    // must not invent one: D-4 is unresolvable without the manifest text, and the
+    // signature and provenance go UNCHECKED rather than assumed good. The artifact
+    // reaches ACCEPTED only through the governed path, which the validator and gate
+    // tests exercise. A future change that let a bare load report ACCEPTED would be
+    // a real regression, and this pins it.
+    expect(record.level).toBe("REJECTED");
+    expect(record.signatureState).toBe("UNCHECKED");
+    expect(record.provenanceState).toBe("UNCHECKED");
   });
 
   it("the evidence validator and bundle validator both stay green", () => {
