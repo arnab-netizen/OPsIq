@@ -46,24 +46,32 @@ const { privateKey: SIGNING_KEY } = generateKeyPairSync('ed25519', {
 });
 const SUBJECT_SHA = "f129fb8633b38230c16fb44aed8f5f90c8f4b8a9";
 /**
- * Owner decision D-17, corrected 2026-09-05: the one commit Stage 7 evidence may
- * describe. This is PR #418's squash-merge commit — the actual final beta runtime
- * (PR #416's owner-lane probe repair + PR #418's public-beta hardening + production
- * migration 20260905044623_open_beta_hardening) — not the intermediate ae15813c
- * candidate D-17 originally proposed on 2026-09-04.
+ * Owner decision D-18, authorized 2026-09-05: the one commit Stage 7 evidence may
+ * describe. This is PR #419's merge commit — the security-fixed runtime that
+ * removed the confirmed sanitizeTokenForLogging OAuth-access-token prefix
+ * disclosure. It supersedes D-17 (3647b8ce), which HAD become active governance
+ * (PR #417 merged, production genuinely deployed at that SHA) but was never
+ * tagged and never had evidence captured against it before production advanced.
  */
-const AUTHORIZED_SUBJECT_SHA = "3647b8ce95fd4c75640a6062a3a9ed235577f023";
+const AUTHORIZED_SUBJECT_SHA = "0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06";
 /**
- * D-17 as originally proposed, 2026-09-04, while this same PR was still unmerged:
+ * D-17, 2026-09-05 (amendment A17's corrected value): the PREVIOUS active
+ * subject, now historical. D-18's SINGLE_ACTIVE_SUBJECT policy does not
+ * authorize this commit. No D17 tag was ever created and no D17-subject
+ * evidence was ever captured against it.
+ */
+const D17_SUBJECT_SHA = "3647b8ce95fd4c75640a6062a3a9ed235577f023";
+/**
+ * D-17 as originally proposed, 2026-09-04, while the D-17 PR was still unmerged:
  * "RUNTIME_CANDIDATE_SHA= ae15813c417901a9b48b012303f666e7591d1275". It never became
- * an active subject — no evidence was ever captured against it, and this PR never
- * merged carrying that value before main advanced past it. D-17's
- * SINGLE_ACTIVE_SUBJECT policy does not authorize this commit either.
+ * an active subject — no evidence was ever captured against it, and that PR never
+ * merged carrying that value before main advanced past it. Neither D-17 nor D-18's
+ * SINGLE_ACTIVE_SUBJECT policy authorizes this commit.
  */
 const OLD_UNMERGED_D17_CANDIDATE_SHA = "ae15813c417901a9b48b012303f666e7591d1275";
 /**
- * Owner decision D-16, 2026-09-03: the PREVIOUS active subject, now historical.
- * D-17's SINGLE_ACTIVE_SUBJECT policy does not authorize this commit. The one
+ * Owner decision D-16, 2026-09-03: an earlier active subject, now historical.
+ * D-18's SINGLE_ACTIVE_SUBJECT policy does not authorize this commit. The one
  * committed evidence artifact (evd_147fce5b18cdeeebf9d9b0b9778b8f06) still declares
  * this as its subject_sha — that is real, unaltered history — but it is no longer
  * the authorized subject.
@@ -248,12 +256,12 @@ describe("G-1 — PENDING invariants stay valid", () => {
 
   // D-17 (2026-09-04) atomically demoted S7-I11 from PROVEN back to PENDING when the
   // active subject advanced past D-16: evd_147fce5b18cdeeebf9d9b0b9778b8f06 declares
-  // subject_sha 789768b9 (D-16), which D-17's SINGLE_ACTIVE_SUBJECT policy does not
-  // authorize. All sixteen invariants are therefore PENDING with empty
+  // subject_sha 789768b9 (D-16), which neither D-17 nor D-18's SINGLE_ACTIVE_SUBJECT
+  // policy authorizes. All sixteen invariants are therefore PENDING with empty
   // proof_artifacts, and the bundle stays PENDING. This is asserted per-invariant,
   // not by a bare count: a count would still pass if one invariant silently carried
   // a stale reference while another went empty.
-  it("the live Stage 7 contract evaluates as fully PENDING under D-17", () => {
+  it("the live Stage 7 contract evaluates as fully PENDING under D-18", () => {
     const manifest = YAML.load(
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
@@ -876,25 +884,25 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
   });
 
   /**
-   * D-17 (corrected 2026-09-05, PR #418 merge SHA 3647b8ce) is the current subject:
-   * the exact production-deployed commit carrying PR #416's owner-lane capture-path
-   * repair (S7-I1, S7-I2, S7-I4, S7-I5, S7-I10, S7-I12) plus PR #418's public-beta
-   * runtime hardening, with production migration 20260905044623_open_beta_hardening
-   * applied. D-17 was originally proposed against ae15813c (2026-09-04, while this
-   * PR was still unmerged); that candidate never became active — no evidence was
-   * captured against it — and is corrected here to name the actual final runtime
-   * instead, without advancing to D-18 (see amendment A17). It superseded
-   * D-16 (789768b9, PR #404 merge), the first commit carrying the complete known
-   * capture-path repair set (#391-#394, #396, #401-#402) together with both
-   * observation credential-disclosure repairs. Under owner decision
-   * D17_TRANSITION_POLICY=SINGLE_ACTIVE_SUBJECT, D-16 is not carried forward in the
-   * active subject allowlist, and S7-I11 — the one invariant D-16 left PROVEN — is
-   * atomically demoted to PENDING with proof_artifacts reset to [] (amendment A16),
-   * because its proof artifact declares D-16's subject_sha, which D-17 no longer
-   * authorizes. D-16 remains historical and unmodified; amendment A15 still records
-   * it. The guarantee worth holding is narrower and stricter: exactly one commit is
-   * authorized at a time, it is the one the owner named, and authorizing it moved
-   * nothing else in the contract to PROVEN.
+   * D-18 (authorized 2026-09-05, PR #419 merge SHA 0c06fe43) is the current subject:
+   * the exact production-deployed commit that removed the confirmed
+   * sanitizeTokenForLogging OAuth-access-token prefix disclosure, deployed READY at
+   * that exact SHA. It supersedes D-17 (3647b8ce, PR #418 merge, corrected in place
+   * 2026-09-05 by amendment A17 from the never-activated ae15813c/PR #416 candidate
+   * originally proposed 2026-09-04). D-17 HAD become active governance — PR #417
+   * merged and production was genuinely deployed at 3647b8ce — but no D17 tag was
+   * ever created and no D17-subject evidence was ever captured before production
+   * advanced to 0c06fe43. D-17 superseded D-16 (789768b9, PR #404 merge), the first
+   * commit carrying the complete known capture-path repair set (#391-#394, #396,
+   * #401-#402) together with both observation credential-disclosure repairs. Under
+   * owner decision D17_TRANSITION_POLICY=SINGLE_ACTIVE_SUBJECT, neither D-16 nor
+   * D-17 is carried forward in the active subject allowlist, and S7-I11 — the one
+   * invariant D-16 left PROVEN — stays demoted to PENDING with proof_artifacts []
+   * (amendment A16; D-18 does not touch it), because no artifact declares D-18's
+   * subject_sha. D-16 and D-17 remain historical and unmodified; amendments A15 and
+   * A17 still record them. The guarantee worth holding is narrower and stricter:
+   * exactly one commit is authorized at a time, it is the one the owner named, and
+   * authorizing it moved nothing else in the contract to PROVEN.
    */
   it("the live contract authorizes exactly the owner-named subject SHA", () => {
     const raw = YAML.load(
@@ -920,10 +928,11 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
     expect(raw.invariant_waivers).toEqual([]);
     const invariants = raw.invariants as Record<string, { status: string; proof_artifacts: unknown[] }>;
     expect(Object.keys(invariants)).toHaveLength(16);
-    // Under D-17, every invariant is PENDING with empty proof_artifacts — including
+    // Under D-18, every invariant is PENDING with empty proof_artifacts — including
     // S7-I11, atomically demoted when the active subject advanced past D-16 (see the
-    // A16 amendment). Authorizing a subject SHA proves nothing on its own; the bundle
-    // itself remains PENDING above.
+    // A16 amendment) and still untouched by the D-17->D-18 transition (amendment
+    // A18). Authorizing a subject SHA proves nothing on its own; the bundle itself
+    // remains PENDING above.
     for (const [id, entry] of Object.entries(invariants)) {
       expect(entry.status, id).toBe("PENDING");
       expect(entry.proof_artifacts, id).toEqual([]);
@@ -968,33 +977,36 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
     const auth = raw.closure_subject_sha_authorization as Record<string, unknown>;
-    expect(auth.decision).toBe("D-17");
+    expect(auth.decision).toBe("D-18");
     // A superseded decision is not erased — the record must still name what it replaced.
-    expect(auth.supersedes).toBe("D-16");
-    expect(auth.superseded_sha).toBe(D16_SUBJECT_SHA);
+    expect(auth.supersedes).toBe("D-17");
+    expect(auth.superseded_sha).toBe(D17_SUBJECT_SHA);
     // The SHA the owner authorized must be the SHA CI tested and the SHA production
     // deployed. A record that names three different commits records nothing.
     expect(raw.closure_subject_sha).toBe(AUTHORIZED_SUBJECT_SHA);
     expect(auth.main_integration_tested_sha).toBe(AUTHORIZED_SUBJECT_SHA);
     expect(auth.vercel_production_commit_sha).toBe(AUTHORIZED_SUBJECT_SHA);
-    expect(auth.main_integration_run).toBe("33951086242");
-    expect(auth.vercel_production_deployment).toBe("dpl_8FqgGoe1SXaUQTrKmD691rs46zE6");
-    // Never the old, unmerged D-17 candidate — a record naming that commit anywhere
-    // in the authorized-facing fields would mean the correction did not actually
-    // take effect.
+    expect(auth.main_integration_run).toBe("33970892435");
+    expect(auth.vercel_production_deployment).toBe("dpl_8owYgFhBFFwCPUfs2LMHBeQdGzgm");
+    // Never the old, unmerged D-17 candidate, and never D-16 — a record naming either
+    // commit anywhere in the authorized-facing fields would mean the transition did
+    // not actually take effect.
     expect(raw.closure_subject_sha).not.toBe(OLD_UNMERGED_D17_CANDIDATE_SHA);
     expect(auth.main_integration_tested_sha).not.toBe(OLD_UNMERGED_D17_CANDIDATE_SHA);
     expect(auth.vercel_production_commit_sha).not.toBe(OLD_UNMERGED_D17_CANDIDATE_SHA);
-    // The migration provenance PR #418 actually produced must be recorded too.
+    expect(raw.closure_subject_sha).not.toBe(D16_SUBJECT_SHA);
+    // The migration provenance is D-17's, carried forward unchanged: PR #419
+    // introduced no new Prisma migration of its own.
     const migration = auth.production_migration as Record<string, string>;
     expect(migration.name).toBe("20260905044623_open_beta_hardening");
     expect(migration.result).toBe("SUCCESS");
     expect(migration.post_deploy_status).toBe("DATABASE_SCHEMA_UP_TO_DATE");
+    expect(migration.new_migration_this_decision).toBe(false);
     // The limitations must stay recorded, not quietly dropped once inconvenient.
     const unverified = auth.unverified as Record<string, string>;
     expect(unverified.production_http_health).toMatch(/egress/i);
-    expect(unverified.production_http_health).toMatch(/not independently/i);
-    expect(unverified.production_schema_structural_verification).toMatch(/skipped/i);
+    expect(unverified.production_http_health).toMatch(/UNVERIFIED_DIRECTLY|not independently/i);
+    expect(unverified.production_schema_structural_verification).toMatch(/not applicable/i);
     expect(auth.deployment_success_is_not_readiness).toMatch(/not Owner Mode readiness/);
   });
 
@@ -1011,14 +1023,19 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
   });
 });
 
-describe("D-17 transition — subject policy hostile simulation", () => {
+describe("D-18 transition — subject policy hostile simulation", () => {
   /**
-   * Owner decision D-17 (2026-09-04) advances closure_subject_sha past D-16 under
-   * D17_TRANSITION_POLICY=SINGLE_ACTIVE_SUBJECT and atomically demotes S7-I11 from
-   * PROVEN back to PENDING. This block is the hostile simulation required before the
-   * governance PR opens: it proves the transition is safe with I11 PENDING, and that
-   * the mechanism would have REJECTED the unsafe alternative — leaving S7-I11 PROVEN
-   * while citing the D-16 artifact under the D-17 subject.
+   * Owner decision D-18 (2026-09-05) advances closure_subject_sha from D-17
+   * (3647b8ce, which HAD become active governance via PR #417 but was never
+   * tagged and never had evidence captured against it) to D-18 (0c06fe43, PR
+   * #419's merge — the security-fixed runtime that removed the confirmed
+   * sanitizeTokenForLogging OAuth-access-token prefix disclosure), under the
+   * same D17_TRANSITION_POLICY=SINGLE_ACTIVE_SUBJECT. S7-I11 was already PENDING
+   * (demoted under D-17 by amendment A16) and stays PENDING — this transition
+   * does not touch it. This block proves the transition is safe, that D-17, the
+   * old unmerged D-17 candidate, and D-16 are all rejected as the active
+   * subject, and that the mechanism would REJECT the unsafe alternative of
+   * S7-I11 PROVEN citing the D-16 artifact under the new subject.
    */
 
   /** The real Stage 7 contract exactly as it sits on disk, with invariant overrides. */
@@ -1031,19 +1048,33 @@ describe("D-17 transition — subject policy hostile simulation", () => {
     return { ...raw, invariants };
   }
 
-  it("D17_ACTIVE_SUBJECT is authorized; D16_ACTIVE_SUBJECT is not", () => {
+  it("D18_ACTIVE_SUBJECT is authorized; D17, the old unmerged D17 candidate, and D16 are not", () => {
     const policy = resolveSubjectShaPolicy(realContract());
     expect(policy.state).toBe(SUBJECT_SHA_POLICY.PRESENT);
     expect(policy.authorized).toEqual([AUTHORIZED_SUBJECT_SHA]);
+    expect(policy.authorized).not.toContain(D17_SUBJECT_SHA);
+    expect(policy.authorized).not.toContain(OLD_UNMERGED_D17_CANDIDATE_SHA);
     expect(policy.authorized).not.toContain(D16_SUBJECT_SHA);
   });
 
-  // The old, never-merged D-17 candidate (ae15813c, proposed 2026-09-04 while this
-  // PR was still open) must not linger as authorized once D-17 is corrected to name
-  // the actual final runtime (3647b8ce). No evidence was ever captured against it,
-  // but the policy must reject it exactly as it rejects any other non-authorized SHA
-  // — there is no "it used to be proposed" carve-out in SINGLE_ACTIVE_SUBJECT.
-  it("the old unmerged D17 candidate (ae15813c) is not authorized", () => {
+  // D-17 (3647b8ce) DID become active governance — PR #417 merged and production
+  // was genuinely deployed at that SHA — but it was never tagged and never had
+  // evidence captured against it before production advanced again under D-18.
+  // The policy must reject it exactly as it rejects any other non-authorized SHA
+  // once superseded: there is no "it used to be active" carve-out in
+  // SINGLE_ACTIVE_SUBJECT.
+  it("the superseded D17 subject (3647b8ce) is not authorized under D18", () => {
+    const policy = resolveSubjectShaPolicy(realContract());
+    expect(policy.authorized).not.toContain(D17_SUBJECT_SHA);
+    expect(policy.authorized).toEqual([AUTHORIZED_SUBJECT_SHA]);
+  });
+
+  // The old, never-merged D-17 candidate (ae15813c, proposed 2026-09-04 while that
+  // PR was still open) must not linger as authorized under D-18 either. No evidence
+  // was ever captured against it, but the policy must reject it exactly as it
+  // rejects any other non-authorized SHA — there is no "it used to be proposed"
+  // carve-out in SINGLE_ACTIVE_SUBJECT.
+  it("the old unmerged D17 candidate (ae15813c) is not authorized under D18", () => {
     const policy = resolveSubjectShaPolicy(realContract());
     expect(policy.authorized).not.toContain(OLD_UNMERGED_D17_CANDIDATE_SHA);
     expect(policy.authorized).not.toContain(D16_SUBJECT_SHA);
@@ -1056,7 +1087,7 @@ describe("D-17 transition — subject policy hostile simulation", () => {
   // the same idiom the rest of this file already uses to isolate the subject-SHA
   // check from S7-I11's extra gate (see "closure fails when every artifact is
   // otherwise eligible but no policy exists" above).
-  it("a fresh D17 artifact -> subject authorization PASS", () => {
+  it("a fresh D18 artifact -> subject authorization PASS", () => {
     const artifact = signedArtifact("S7-I1", { subject_sha: AUTHORIZED_SUBJECT_SHA });
     const dir = writeArtifacts([artifact]);
     const r = evaluateInvariantClosure(
@@ -1067,8 +1098,8 @@ describe("D-17 transition — subject policy hostile simulation", () => {
     expect(allViolations(r)).not.toContain("SUBJECT_SHA");
   });
 
-  it("the D16 artifact cannot prove the active D17 invariant", () => {
-    // The one real evidence artifact on disk: subject_sha is D-16's, not D-17's.
+  it("the D16 artifact cannot prove the active D18 invariant", () => {
+    // The one real evidence artifact on disk: subject_sha is D-16's, not D-18's.
     const { records } = loadEvidenceArtifactIndex({
       dir: join(root, "docs/opsiq/evidence/stage-7/artifacts"),
     });
@@ -1080,7 +1111,35 @@ describe("D-17 transition — subject policy hostile simulation", () => {
     expect(policy.authorized).not.toContain((d16Artifact as unknown as { subjectSha: string }).subjectSha);
   });
 
-  it("S7-I11=PENDING with no proof artifacts under D17 -> manifest integrity PASS", () => {
+  // A D-17-subject artifact would be just as stale as the D-16 one now: D-17 was
+  // never tagged and never actually had a capture run against it (this is a
+  // simulated/hypothetical D-17 artifact, since no real one exists), but the
+  // policy must reject it exactly the same way once D-18 is the active subject.
+  it("a D17-subject artifact cannot prove the active D18 invariant", () => {
+    const d17Artifact = signedArtifact("S7-I1", { subject_sha: D17_SUBJECT_SHA });
+    const dir = writeArtifacts([d17Artifact]);
+    const r = evaluateInvariantClosure(
+      realContract({ "S7-I1": provenWith("S7-I1", [d17Artifact.artifact_id]) }),
+      { bundleId: STAGE_7_ID, evidenceDir: dir, signingKey: SIGNING_KEY, provenance: verifiedProvenance(d17Artifact) },
+    ) as { proven: string[]; proofViolations: string[] };
+    expect(r.proven).not.toContain("S7-I1");
+    expect(r.proofViolations.join("\n")).toContain(SUBJECT_SHA_NOT_AUTHORIZED);
+  });
+
+  // The old unmerged D-17 candidate is no more able to prove D-18 than it was able
+  // to prove D-17 itself — it was never authorized under either decision.
+  it("the old unmerged D17 candidate's artifact cannot prove the active D18 invariant", () => {
+    const oldCandidateArtifact = signedArtifact("S7-I1", { subject_sha: OLD_UNMERGED_D17_CANDIDATE_SHA });
+    const dir = writeArtifacts([oldCandidateArtifact]);
+    const r = evaluateInvariantClosure(
+      realContract({ "S7-I1": provenWith("S7-I1", [oldCandidateArtifact.artifact_id]) }),
+      { bundleId: STAGE_7_ID, evidenceDir: dir, signingKey: SIGNING_KEY, provenance: verifiedProvenance(oldCandidateArtifact) },
+    ) as { proven: string[]; proofViolations: string[] };
+    expect(r.proven).not.toContain("S7-I1");
+    expect(r.proofViolations.join("\n")).toContain(SUBJECT_SHA_NOT_AUTHORIZED);
+  });
+
+  it("S7-I11=PENDING with no proof artifacts under D18 -> manifest integrity PASS", () => {
     const r = evaluateInvariantClosure(realContract(), {
       bundleId: STAGE_7_ID,
       evidenceDir: join(root, "docs/opsiq/evidence/stage-7/artifacts"),
@@ -1110,12 +1169,12 @@ describe("D-17 transition — subject policy hostile simulation", () => {
   });
 
   // The critical hostile-simulation gate: if the transition had left S7-I11 PROVEN
-  // while citing the D-16 artifact under the D-17 subject, the proof-binding path
+  // while citing the D-16 artifact under the D-18 subject, the proof-binding path
   // must reject it with SUBJECT_SHA_NOT_AUTHORIZED — not silently accept a proof
   // bound to a superseded commit. This is evaluated the way a CLOSED-bundle gate
   // would evaluate it (closure.proofViolations), which is exactly the check this PR
-  // avoided triggering by demoting S7-I11 instead of merely advancing the subject.
-  it("S7-I11=PROVEN with the D16 artifact under D17 -> manifest integrity FAIL", () => {
+  // avoided triggering by leaving S7-I11 demoted rather than resurrecting it.
+  it("S7-I11=PROVEN with the D16 artifact under D18 -> manifest integrity FAIL", () => {
     const hypothetical = realContract({
       "S7-I11": provenWith("S7-I11", ["evd_147fce5b18cdeeebf9d9b0b9778b8f06"]),
     });
@@ -1128,7 +1187,7 @@ describe("D-17 transition — subject policy hostile simulation", () => {
     expect(r.proofViolations.join("\n")).toContain(SUBJECT_SHA_NOT_AUTHORIZED);
   });
 
-  it("OPTION A: GITHUB_SHA=D17 + manifest closure_subject_sha=D17 -> authorization PASS", () => {
+  it("OPTION A: GITHUB_SHA=D18 + manifest closure_subject_sha=D18 -> authorization PASS", () => {
     const script = `
       import { resolveCaptureAuthorization } from ${JSON.stringify(join(root, "scripts/lib/evidence-artifact.mjs"))};
       const result = resolveCaptureAuthorization({
@@ -1142,7 +1201,30 @@ describe("D-17 transition — subject policy hostile simulation", () => {
     expect(result).toBe(AUTHORIZED_SUBJECT_SHA);
   });
 
-  it("OPTION A: GITHUB_SHA=D16 + manifest closure_subject_sha=D17 -> authorization FAIL", () => {
+  // D-17 was a real, active subject once — but a capture dispatched at that commit
+  // against today's manifest is describing a superseded runtime, not the one D-18
+  // authorizes, and must be refused the same as any other non-authorized SHA.
+  it("OPTION A: GITHUB_SHA=D17 (3647b8ce) + manifest closure_subject_sha=D18 -> authorization FAIL", () => {
+    const script = `
+      import { resolveCaptureAuthorization } from ${JSON.stringify(join(root, "scripts/lib/evidence-artifact.mjs"))};
+      try {
+        resolveCaptureAuthorization({
+          subjectSha: ${JSON.stringify(D17_SUBJECT_SHA)},
+          fetchMainManifest: () => \`closure_subject_sha: ${AUTHORIZED_SUBJECT_SHA}\`,
+          resolveMainSha: () => ${JSON.stringify(AUTHORIZED_SUBJECT_SHA)},
+        });
+        process.stderr.write("NO_THROW");
+        process.exit(1);
+      } catch (e) {
+        process.stdout.write(e.message);
+      }
+    `;
+    const result = execFileSync("node", ["--input-type=module", "-e", script], { cwd: root, encoding: "utf8" });
+    expect(result).toContain("OPTION A authorization gate");
+    expect(result).toContain("is NOT authorized");
+  });
+
+  it("OPTION A: GITHUB_SHA=D16 + manifest closure_subject_sha=D18 -> authorization FAIL", () => {
     const script = `
       import { resolveCaptureAuthorization } from ${JSON.stringify(join(root, "scripts/lib/evidence-artifact.mjs"))};
       try {
@@ -1165,7 +1247,7 @@ describe("D-17 transition — subject policy hostile simulation", () => {
   // The old unmerged D-17 candidate must fail the same way D-16 does: a capture
   // dispatched at that commit, against today's corrected manifest, is not describing
   // the authorized subject and must be refused before it can produce an artifact.
-  it("OPTION A: GITHUB_SHA=old unmerged D17 candidate (ae15813c) + manifest closure_subject_sha=D17 (3647b8ce) -> authorization FAIL", () => {
+  it("OPTION A: GITHUB_SHA=old unmerged D17 candidate (ae15813c) + manifest closure_subject_sha=D18 -> authorization FAIL", () => {
     const script = `
       import { resolveCaptureAuthorization } from ${JSON.stringify(join(root, "scripts/lib/evidence-artifact.mjs"))};
       try {
@@ -1185,7 +1267,7 @@ describe("D-17 transition — subject policy hostile simulation", () => {
     expect(result).toContain("is NOT authorized");
   });
 
-  it("D16-bound evidence PRs (#410-#415) remain unmerged and are not cited as D17 proof", () => {
+  it("D16-bound evidence PRs (#410-#415) remain unmerged and are not cited as D18 proof", () => {
     const raw = YAML.load(
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
@@ -1285,9 +1367,10 @@ describe("G-1 — the live repository is unchanged by this PR", () => {
     expect(record.invariantId).toBe("S7-I11");
     expect(record.lane).toBe("LANE_E");
     expect(record.proofType).toBe("simulation_adversarial");
-    // This artifact describes D-16's subject, not the active D-17 subject — that is
+    // This artifact describes D-16's subject, not the active D-18 subject — that is
     // real, unaltered history (see D16_SUBJECT_SHA above). It is why S7-I11 was
-    // demoted to PENDING under D-17 rather than left PROVEN against a stale subject.
+    // demoted to PENDING (originally under D-17, unchanged by the D-17->D-18
+    // transition) rather than left PROVEN against a stale subject.
     expect(record.subjectSha).toBe(D16_SUBJECT_SHA);
     expect(record.fileName).toBe("evd_147fce5b18cdeeebf9d9b0b9778b8f06.json");
     expect(record.nested).toBe(false);
