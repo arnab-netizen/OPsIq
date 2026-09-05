@@ -372,30 +372,76 @@ describe("B13-S1: OAuth Token Service", () => {
   });
 
   describe("Token Sanitization", () => {
-    it("should sanitize token for logging", () => {
+    // Synthetic, unmistakably fake token values — never real credentials.
+    const REAL_LOOKING_TOKEN = "ya29.a0AfH6SMC_fake_synthetic_token_do_not_use_1234567890abcdef";
+
+    it("should sanitize token for logging with a fixed, opaque marker", () => {
       const token: OAuthToken = {
-        accessToken: "super_secret_token_12345",
+        accessToken: REAL_LOOKING_TOKEN,
         tokenType: "Bearer",
         expiresAt: new Date("2026-12-31"),
       };
 
       const sanitized = sanitizeTokenForLogging(token);
 
-      expect(sanitized.accessToken).toBe("super_secr...***");
+      expect(sanitized.accessToken).toBe("[REDACTED]");
       expect(sanitized.tokenType).toBe("Bearer");
       expect(sanitized.expiresAt).toBe(token.expiresAt);
     });
 
-    it("should never expose full token in sanitized form", () => {
-      const token: OAuthToken = {
-        accessToken: "super_secret_token_12345",
-        tokenType: "Bearer",
-      };
-
+    it("never contains the full access token", () => {
+      const token: OAuthToken = { accessToken: REAL_LOOKING_TOKEN, tokenType: "Bearer" };
       const sanitized = sanitizeTokenForLogging(token);
+      expect(sanitized.accessToken).not.toContain(REAL_LOOKING_TOKEN);
+    });
 
-      expect(sanitized.accessToken).not.toContain("secret");
-      expect(sanitized.accessToken).not.toContain("12345");
+    it("never contains the token's first 10 characters (the historical prefix-disclosure defect)", () => {
+      const token: OAuthToken = { accessToken: REAL_LOOKING_TOKEN, tokenType: "Bearer" };
+      const sanitized = sanitizeTokenForLogging(token);
+      expect(sanitized.accessToken).not.toContain(REAL_LOOKING_TOKEN.slice(0, 10));
+    });
+
+    it("never contains the token's first 8 characters", () => {
+      const token: OAuthToken = { accessToken: REAL_LOOKING_TOKEN, tokenType: "Bearer" };
+      const sanitized = sanitizeTokenForLogging(token);
+      expect(sanitized.accessToken).not.toContain(REAL_LOOKING_TOKEN.slice(0, 8));
+    });
+
+    it("never contains the token's last 8 characters", () => {
+      const token: OAuthToken = { accessToken: REAL_LOOKING_TOKEN, tokenType: "Bearer" };
+      const sanitized = sanitizeTokenForLogging(token);
+      expect(sanitized.accessToken).not.toContain(REAL_LOOKING_TOKEN.slice(-8));
+    });
+
+    it("never contains any 4+ character contiguous substring of the real token", () => {
+      const token: OAuthToken = { accessToken: REAL_LOOKING_TOKEN, tokenType: "Bearer" };
+      const sanitized = sanitizeTokenForLogging(token);
+      for (let i = 0; i + 4 <= REAL_LOOKING_TOKEN.length; i++) {
+        const chunk = REAL_LOOKING_TOKEN.slice(i, i + 4);
+        expect(sanitized.accessToken).not.toContain(chunk);
+      }
+    });
+
+    it("does not leak the whole value even for a token shorter than 10 characters", () => {
+      const shortToken: OAuthToken = { accessToken: "abcdefg", tokenType: "Bearer" };
+      const sanitized = sanitizeTokenForLogging(shortToken);
+      expect(sanitized.accessToken).not.toContain("abcdefg");
+      expect(sanitized.accessToken).not.toBe("abcdefg");
+      expect(sanitized.accessToken).toBe("[REDACTED]");
+    });
+
+    it("does not vary with token content (no fingerprint correlating back to the raw value)", () => {
+      const a = sanitizeTokenForLogging({ accessToken: "token-alpha-0000000000", tokenType: "Bearer" });
+      const b = sanitizeTokenForLogging({ accessToken: "token-beta--9999999999", tokenType: "Bearer" });
+      expect(a.accessToken).toBe(b.accessToken);
+    });
+
+    it("preserves non-secret metadata (tokenType, expiresAt) while redacting the secret", () => {
+      const expiresAt = new Date("2027-01-01");
+      const token: OAuthToken = { accessToken: REAL_LOOKING_TOKEN, tokenType: "Bearer", expiresAt };
+      const sanitized = sanitizeTokenForLogging(token);
+      expect(sanitized.tokenType).toBe("Bearer");
+      expect(sanitized.expiresAt).toBe(expiresAt);
     });
   });
 
