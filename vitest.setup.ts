@@ -22,6 +22,18 @@ if (!process.env.OAUTH_TOKEN_ENCRYPTION_KEY) {
   process.env.OAUTH_TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
 }
 
+// PUBLIC_BETA_ENABLED fails closed (default false) so the signup route
+// refuses registration unless explicitly turned on. Every pre-existing test
+// that exercises POST /api/auth/signup predates the open-beta gate and
+// expects signup to just work, so default the flag "on" for the whole test
+// environment — exactly the same override-if-you-need-the-other-behavior
+// pattern as OAUTH_TOKEN_ENCRYPTION_KEY above. Tests that specifically assert
+// the disabled/closed-beta behavior set process.env.PUBLIC_BETA_ENABLED to
+// "false" locally within their own try/finally, so this default never masks them.
+if (!process.env.PUBLIC_BETA_ENABLED) {
+  process.env.PUBLIC_BETA_ENABLED = "true";
+}
+
 // Ensure database is initialized before tests run (only if TEST_WITH_DB=true)
 beforeAll(async () => {
   if (process.env.TEST_WITH_DB !== "true") {

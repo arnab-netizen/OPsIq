@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { randomUUID } from "crypto";
-import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
+import { verifyDiagnosticKeyFromRequest, isNonProductionEnvironment } from "@/lib/security/diagnostic-key";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
 const DEMO_ENGAGEMENT_CODE = "ENG-001";
@@ -351,6 +351,14 @@ function classifyPrismaError(code: string, errorMsg: string): string {
 
 // POST: Idempotently backfill missing/mislinked demo engagement
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // Open-beta hardening: this is a real database writer (creates/relinks
+  // Engagement, ClientAccount, EngagementMembership rows). It must never be
+  // reachable in production merely because the shared OPSIQ_DIAGNOSTIC_KEY
+  // leaked — see isNonProductionEnvironment's own doc comment. 404, not 401,
+  // so its existence is not disclosed in production either.
+  if (!isNonProductionEnvironment()) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   if (!verifyDiagnosticKeyFromRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }

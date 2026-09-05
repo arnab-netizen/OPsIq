@@ -74,3 +74,22 @@ export const PASSWORD_RESET_RATE_LIMIT: RateLimitConfig = {
   windowMs: 60 * 60 * 1000, // 1 hour
   maxAttempts: 5,
 };
+
+// Same reasoning as PASSWORD_RESET_RATE_LIMIT: a verification-resend request
+// sends a real email whether or not it hits the "unverified account exists"
+// branch, so it is bounded identically per IP and per email.
+export const EMAIL_VERIFICATION_RATE_LIMIT: RateLimitConfig = {
+  windowMs: 60 * 60 * 1000, // 1 hour
+  maxAttempts: 5,
+};
+
+// Same enumeration-resistant public-endpoint risk profile as
+// PASSWORD_RESET_RATE_LIMIT / EMAIL_VERIFICATION_RATE_LIMIT: no email is sent
+// from this endpoint, but every accepted request creates a durable
+// PrivacyRequest row a human must manually triage (see
+// docs/PRIVACY_REQUEST_RUNBOOK.md), so it is bounded per IP and per email to
+// stop trivial row-flooding / triage-queue spam of an unauthenticated route.
+export const PRIVACY_REQUEST_RATE_LIMIT: RateLimitConfig = {
+  windowMs: 60 * 60 * 1000, // 1 hour
+  maxAttempts: 5,
+};

@@ -17,18 +17,10 @@ import { db } from "@/lib/db";
 import { SMOKE_EMAIL } from "@/lib/smoke-identity";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
-
-function isAllowedEnvironment(): boolean {
-  const env = process.env.NODE_ENV;
-  const vercelEnv = process.env.VERCEL_ENV;
-  // Never enabled in production Vercel deployment.
-  if (vercelEnv === "production") return false;
-  return env === "development" || env === "test";
-}
+import { verifyDiagnosticKeyFromRequest, isNonProductionEnvironment } from "@/lib/security/diagnostic-key";
 
 export async function DELETE(request: Request): Promise<NextResponse> {
-  if (!isAllowedEnvironment()) {
+  if (!isNonProductionEnvironment()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

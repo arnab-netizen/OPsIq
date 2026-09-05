@@ -89,3 +89,24 @@ export function verifyDiagnosticKeyFromRequest(request: {
   const headerValue = request.headers.get("x-opsiq-diagnostic-key");
   return verifyDiagnosticKey(headerValue);
 }
+
+/**
+ * True only outside a production Vercel deployment (development or test).
+ *
+ * Open-beta hardening audit (2026-09): several `/api/internal/*` diagnostic
+ * routes MUTATE the database (create/relink demo engagements, grant
+ * UserRoleAssignment rows) and were gated ONLY by OPSIQ_DIAGNOSTIC_KEY, a
+ * single secret shared across a dozen endpoints, with no environment
+ * restriction — unlike /api/internal/smoke-cleanup, which already
+ * double-gates on both this environment check AND the diagnostic key. Every
+ * DB-mutating diagnostic route now uses this same shared check so a
+ * diagnostic-key leak alone can never grant a production database write or a
+ * production role assignment; only a genuinely non-production deployment
+ * (Vercel preview/dev, or a local/test run) can reach the mutating branch at
+ * all, and the key is still required on top of that.
+ */
+export function isNonProductionEnvironment(): boolean {
+  if (process.env.VERCEL_ENV === "production") return false;
+  const env = process.env.NODE_ENV;
+  return env === "development" || env === "test";
+}

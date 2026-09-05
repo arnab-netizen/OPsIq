@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   categorizeError,
   captureError,
+  scrubEvent,
   type ObservabilityCategory,
 } from "@/infra/observability";
 
@@ -118,5 +119,146 @@ describe("captureError — fail-open and PII-safe without a DSN", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(captureError(new Error("x"), { category: "DIAGNOSIS_ERROR" })).toBe("DIAGNOSIS_ERROR");
     spy.mockRestore();
+  });
+});
+
+// Open-beta hardening: targeted proof of the beforeSend scrubber's actual
+// behavior, driven directly against constructed Sentry-event-shaped objects
+// (no real @sentry/nextjs SDK needed for this half of the contract).
+describe("scrubEvent — beforeSend scrubber", () => {
+  it("scrubs request cookies", () => {
+    const event = { request: { cookies: { opsiq_session: "abc123" }, headers: {} } };
+    const scrubbed = scrubEvent(event);
+    expect((scrubbed.request as Record<string, unknown>).cookies).toBeUndefined();
+  });
+
+  it("scrubs the Authorization header (and the cookie header, and the diagnostic-key header)", () => {
+    const event = {
+      request: {
+        headers: {
+          authorization: "Bearer super-secret-token",
+          cookie: "opsiq_session=abc123",
+          "x-opsiq-diagnostic-key": "the-shared-diagnostic-secret",
+          "user-agent": "vitest",
+        },
+      },
+    };
+    const scrubbed = scrubEvent(event);
+    const headers = (scrubbed.request as Record<string, unknown>).headers as Record<string, unknown>;
+    expect(headers.authorization).toBeUndefined();
+    expect(headers.cookie).toBeUndefined();
+    expect(headers["x-opsiq-diagnostic-key"]).toBeUndefined();
+    // Non-sensitive headers are left alone — this is scrubbing, not wholesale deletion.
+    expect(headers["user-agent"]).toBe("vitest");
+  });
+
+  it("scrubs the request body (event.request.data)", () => {
+    const event = { request: { data: { password: "hunter2", email: "user@example.com" }, headers: {} } };
+    const scrubbed = scrubEvent(event);
+    expect((scrubbed.request as Record<string, unknown>).data).toBeUndefined();
+  });
+
+  it("scrubs user email, ip_address, and username from event.user", () => {
+    const event = { user: { id: "user-123", email: "user@example.com", ip_address: "203.0.113.5", username: "someone" } };
+    const scrubbed = scrubEvent(event);
+    const user = scrubbed.user as Record<string, unknown>;
+    expect(user.email).toBeUndefined();
+    expect(user.ip_address).toBeUndefined();
+    expect(user.username).toBeUndefined();
+    // A non-PII identifier (id) is left alone.
+    expect(user.id).toBe("user-123");
+  });
+
+  it("is a no-op on an event with no request/user (never throws on a minimal event)", () => {
+    expect(() => scrubEvent({ message: "something happened" })).not.toThrow();
+  });
+
+  it("scrubs all of cookies, authorization, body, email, and IP in a single realistic event", () => {
+    const event = {
+      request: {
+        cookies: { opsiq_session: "abc" },
+        data: { problemStatement: "confidential business detail" },
+        headers: { authorization: "Bearer xyz", cookie: "opsiq_session=abc" },
+      },
+      user: { id: "user-1", email: "owner@company.com", ip_address: "203.0.113.9" },
+    };
+    const scrubbed = scrubEvent(event);
+    const req = scrubbed.request as Record<string, unknown>;
+    const headers = req.headers as Record<string, unknown>;
+    const user = scrubbed.user as Record<string, unknown>;
+    expect(req.cookies).toBeUndefined();
+    expect(req.data).toBeUndefined();
+    expect(headers.authorization).toBeUndefined();
+    expect(headers.cookie).toBeUndefined();
+    expect(user.email).toBeUndefined();
+    expect(user.ip_address).toBeUndefined();
+  });
+});
+
+describe("initObservability — release/environment attachment and beforeSend wiring", () => {
+  const originalDsn = process.env.SENTRY_DSN;
+
+  afterEach(() => {
+    if (originalDsn === undefined) delete process.env.SENTRY_DSN;
+    else process.env.SENTRY_DSN = originalDsn;
+    vi.doUnmock("@sentry/nextjs");
+    vi.resetModules();
+  });
+
+  it("attaches VERCEL_GIT_COMMIT_SHA as the release and passes a working scrubbing beforeSend", async () => {
+    process.env.SENTRY_DSN = "https://example@o0.ingest.sentry.io/0";
+    const originalSha = process.env.VERCEL_GIT_COMMIT_SHA;
+    process.env.VERCEL_GIT_COMMIT_SHA = "abc123deadbeef";
+
+    const init = vi.fn();
+    vi.doMock("@sentry/nextjs", () => ({ init, captureException: vi.fn() }));
+    vi.resetModules();
+    const { initObservability: freshInit } = await import("@/infra/observability");
+
+    await freshInit("server");
+
+    expect(init).toHaveBeenCalledTimes(1);
+    const config = init.mock.calls[0][0];
+    expect(config.release).toBe("abc123deadbeef");
+    expect(typeof config.beforeSend).toBe("function");
+
+    // The wired beforeSend really does scrub — not just present, but functional.
+    const scrubbedByWiredFn = config.beforeSend({ request: { cookies: { a: "b" }, headers: {} } });
+    expect(scrubbedByWiredFn.request.cookies).toBeUndefined();
+
+    if (originalSha === undefined) delete process.env.VERCEL_GIT_COMMIT_SHA;
+    else process.env.VERCEL_GIT_COMMIT_SHA = originalSha;
+  });
+
+  it("is a no-op (never calls Sentry.init) when no DSN is configured — fail-open by absence", async () => {
+    delete process.env.SENTRY_DSN;
+    const init = vi.fn();
+    vi.doMock("@sentry/nextjs", () => ({ init, captureException: vi.fn() }));
+    vi.resetModules();
+    const { initObservability: freshInit } = await import("@/infra/observability");
+
+    await freshInit("server");
+    expect(init).not.toHaveBeenCalled();
+  });
+});
+
+describe("real instrumentation entrypoints actually call initObservability", () => {
+  // Static-inspection regression guard (same technique as
+  // src/__tests__/security/route-scanner.test.ts): scrubbing correctness
+  // alone proves nothing if initObservability is never actually invoked from
+  // Next.js's real bootstrap hooks. This pins that both hooks genuinely call
+  // it, not merely define something never wired up.
+  it("src/instrumentation.ts (server) calls initObservability", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const content = fs.readFileSync(path.join(process.cwd(), "src/instrumentation.ts"), "utf8");
+    expect(content).toMatch(/initObservability\s*\(\s*["']server["']\s*\)/);
+  });
+
+  it("src/instrumentation-client.ts calls initObservability", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const content = fs.readFileSync(path.join(process.cwd(), "src/instrumentation-client.ts"), "utf8");
+    expect(content).toMatch(/initObservability\s*\(\s*["']client["']\s*\)/);
   });
 });

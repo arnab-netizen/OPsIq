@@ -16,7 +16,7 @@ import type { UserRoleAssignment } from "@/generated/prisma/client";
 import { getCapabilitiesForRole } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { logger } from "@/infra/logger";
-import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
+import { verifyDiagnosticKeyFromRequest, isNonProductionEnvironment } from "@/lib/security/diagnostic-key";
 import { classifyDbRuntimeError } from "@/lib/schema-drift";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
@@ -256,6 +256,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 // POST: Idempotently backfill missing UserRoleAssignment
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // Open-beta hardening: this is a real database writer that GRANTS a role
+  // assignment (privilege escalation for the demo user). It must never be
+  // reachable in production merely because the shared OPSIQ_DIAGNOSTIC_KEY
+  // leaked — see isNonProductionEnvironment's own doc comment. 404, not 401,
+  // so its existence is not disclosed in production either.
+  if (!isNonProductionEnvironment()) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   if (!verifyDiagnosticKeyFromRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }

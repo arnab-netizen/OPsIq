@@ -1,0 +1,77 @@
+/**
+ * POST /api/feedback
+ *
+ * Beta feedback surface ("Send beta feedback" / "Report a problem") for
+ * signed-in Owner Mode users. Any authenticated member of the caller's
+ * workspace may submit feedback — this is deliberately NOT gated on a
+ * specific capability (e.g. OWNER_VIEW): a self-serve owner's own
+ * workspace membership, verified server-side by withCanonicalEnforcement's
+ * `requireWorkspace: true`, is the whole gate. There is no legitimate
+ * workspace member this should be closed to, and no capability in
+ * src/domain/constants/capabilities.ts maps cleanly onto "may report a bug"
+ * without either over-restricting (most capabilities are feature-specific)
+ * or requiring a new capability, which the task explicitly rules out.
+ *
+ * The schema below has no field for cookies, passwords, tokens, or
+ * Authorization-header values, and parseRequestBody() rejects any unknown
+ * field in the request body outright — so none of that can ever reach the
+ * PlatformFeedback row by construction, not by best-effort stripping.
+ */
+
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { db } from "@/lib/db";
+import { parseRequestBody } from "@/lib/validation";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { requirePgRateLimit, MUTATION_RATE_LIMIT } from "@/infra/rate-limit";
+import { randomUUID } from "crypto";
+import { z } from "zod/v4";
+
+const FEEDBACK_CATEGORIES = ["BUG", "CONFUSION", "FEATURE_REQUEST", "OTHER"] as const;
+
+const feedbackSchema = z.object({
+  category: z.enum(FEEDBACK_CATEGORIES),
+  description: z.string().trim().min(1, "Description is required").max(5000),
+  route: z.string().trim().max(500).optional(),
+  expectedResult: z.string().trim().max(2000).optional(),
+});
+
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    // Rate-limit per authenticated actor, before touching the body — a flood of
+    // feedback submissions from one signed-in user is bounded the same way any
+    // other mutation is (MUTATION_RATE_LIMIT: 30/min), rather than needing a
+    // bespoke, tighter limit for what is a low-volume, human-typed action.
+    await requirePgRateLimit(`feedback:${ctx.verifiedActorId}`, MUTATION_RATE_LIMIT);
+
+    const body = await parseRequestBody(ctx.request!, feedbackSchema);
+
+    const id = randomUUID();
+
+    await db.platformFeedback.create({
+      data: {
+        id,
+        workspaceId: ctx.verifiedWorkspaceId,
+        userId: ctx.verifiedActorId,
+        category: body.category,
+        description: body.description,
+        route: body.route ?? null,
+        // Vercel injects this at build time; undefined locally/self-hosted, never an error.
+        buildSha: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+        expectedResult: body.expectedResult ?? null,
+      },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.PLATFORM_FEEDBACK_SUBMITTED,
+      workspaceId: ctx.verifiedWorkspaceId,
+      actorId: ctx.verifiedActorId,
+      entityType: "platform_feedback",
+      entityId: id,
+      payload: { category: body.category },
+    });
+
+    return { success: true };
+  },
+  { requireWorkspace: true }
+);

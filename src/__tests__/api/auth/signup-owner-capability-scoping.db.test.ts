@@ -76,13 +76,39 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const req = new Request("http://localhost/api/auth/signup", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password: "password123", workspaceName }),
+        body: JSON.stringify({
+          email,
+          password: "password123",
+          workspaceName,
+          acceptTerms: true,
+          acceptPrivacy: true,
+          acceptBetaNotice: true,
+        }),
       });
       const res = await (POST(req as never) as Promise<Response>);
       expect(res.status).toBe(201);
       const json = await res.json();
       createdUserIds.push(json.user.id);
       createdWorkspaceIds.push(json.workspace.id);
+
+      // This file's subject is CAPABILITY SCOPING of an already-existing
+      // signup-derived owner, not the email-verification journey (covered by
+      // verify-email.db.test.ts) — open-beta signup itself creates no session.
+      // Simulate "this account already redeemed its verification link" by
+      // marking it verified and minting a session directly, exactly the state
+      // POST /api/auth/verify-email would have produced.
+      const sessionToken = `owner-scope-verified-${randomUUID()}`;
+      await db.user.update({ where: { id: json.user.id }, data: { emailVerifiedAt: new Date() } });
+      await db.session.create({
+        data: {
+          id: randomUUID(),
+          userId: json.user.id,
+          token: sessionToken,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+      jar.token = sessionToken;
+
       return { userId: json.user.id as string, workspaceId: json.workspace.id as string };
     }
 
