@@ -7,6 +7,12 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+// Fixed, public-safe fallback for any failure that isn't a governed server
+// `error` string (a network failure, a non-JSON response body, etc.) — this
+// route is Internet-facing, so a caught exception's own .message is never an
+// acceptable source of user-facing text here.
+const SIGNUP_FAILURE_FALLBACK = "Something went wrong. Please try again.";
+
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,14 +63,22 @@ export default function SignupPage() {
         }),
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Signup failed");
+        // data.error is always a fixed, server-governed string on this route
+        // (see /api/auth/signup/route.ts) — never raw internal/Prisma/stack
+        // text — but a parse failure or an unexpected shape still falls back
+        // to the fixed client-side copy rather than trusting the body blindly.
+        const data = await res.json().catch(() => null);
+        setError(typeof data?.error === "string" ? data.error : SIGNUP_FAILURE_FALLBACK);
+        return;
       }
 
       setPendingVerification(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+    } catch {
+      // Network failure, JSON parse failure, or anything else thrown before a
+      // response body was safely read — never render the exception's own
+      // .message, which is not a governed/public-safe string.
+      setError(SIGNUP_FAILURE_FALLBACK);
     } finally {
       setLoading(false);
     }

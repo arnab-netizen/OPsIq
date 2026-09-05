@@ -45,7 +45,10 @@ export default function FeedbackPage() {
   const [expectedResult, setExpectedResult] = useState("");
   const [route, setRoute] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Governed, operator-safe error text only — never raw exception text. Populated
+  // exclusively from a fixed client-side copy string or classifyOperatorError(...)
+  // .operatorMessage below; never from err.message directly.
+  const [operatorSafeError, setOperatorSafeError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -57,13 +60,13 @@ export default function FeedbackPage() {
   }, []);
 
   async function handleSubmit() {
-    setError(null);
+    setOperatorSafeError(null);
     if (!category) {
-      setError("Please choose a category.");
+      setOperatorSafeError("Please choose a category.");
       return;
     }
     if (!description.trim()) {
-      setError("Please describe the problem or feedback.");
+      setOperatorSafeError("Please describe the problem or feedback.");
       return;
     }
 
@@ -88,7 +91,7 @@ export default function FeedbackPage() {
       setDescription("");
       setExpectedResult("");
     } catch (err) {
-      setError(classifyOperatorError(err, { context: "save" }).operatorMessage);
+      setOperatorSafeError(classifyOperatorError(err, { context: "save" }).operatorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -114,7 +117,9 @@ export default function FeedbackPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {operatorSafeError && (
+            <p className="text-destructive text-sm">{operatorSafeError}</p>
+          )}
 
           <Select
             label="Category"

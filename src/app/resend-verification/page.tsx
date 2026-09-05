@@ -7,15 +7,22 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+// Fixed, public-safe copy for any failed resend attempt. This is an anonymous,
+// unauthenticated identity endpoint — the response body is never rendered here,
+// regardless of status code or failure reason, so a server/provider/database
+// detail can never reach this client.
+const RESEND_FAILURE_MESSAGE =
+  "We couldn't send a verification email right now. Please try again shortly.";
+
 export default function ResendVerificationPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
+    setFailed(false);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/resend-verification", {
@@ -23,13 +30,13 @@ export default function ResendVerificationPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Something went wrong.");
+        setFailed(true);
+        return;
       }
       setSubmitted(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } catch {
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -57,8 +64,10 @@ export default function ResendVerificationPage() {
               required
               autoComplete="email"
             />
-            {error && (
-              <div className="rounded bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+            {failed && (
+              <div className="rounded bg-destructive/10 p-3 text-sm text-destructive">
+                {RESEND_FAILURE_MESSAGE}
+              </div>
             )}
             <Button type="submit" isLoading={loading} className="w-full">
               Resend link

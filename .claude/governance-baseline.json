@@ -1,16 +1,7 @@
 {
   "_comment": "Frozen pre-existing governance findings on main. Any error-severity finding NOT listed here fails a strict scan. Deterministic (sorted, no timestamps). Regenerate with: npm run governance:scan -- --update-baseline",
-  "total_frozen": 36,
+  "total_frozen": 31,
   "findings": [
-    {
-      "type": "unsafe-error-render",
-      "category": "UNSAFE ERROR RENDER",
-      "file": "src/app/(authenticated)/owner/feedback/page.tsx",
-      "line": 117,
-      "severity": "error",
-      "code": "{error && <p className=\"text-destructive text-sm\">{error}</p>}",
-      "reason": "operator-facing render; pre-existing, deferred to a separate runtime fix slice"
-    },
     {
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
@@ -18,7 +9,7 @@
       "line": 323,
       "severity": "error",
       "code": "const errorMessage = error instanceof Error ? error.message : \"Unknown error\";",
-      "reason": "auth route server-side log/context string; not operator-rendered"
+      "reason": "auth route server-side log/context string; not operator-rendered (line-shifted by open-beta hardening additions earlier in this file; code unchanged)"
     },
     {
       "type": "raw-error-message",
@@ -69,10 +60,10 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/internal/demo-engagement-proof/route.ts",
-      "line": 597,
+      "line": 598,
       "severity": "error",
       "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
-      "reason": "internal diagnostic route; server-side error string, not operator-rendered"
+      "reason": "internal diagnostic route server-side log string; not operator-rendered (line-shifted by an open-beta hardening guard added earlier in this file; code unchanged)"
     },
     {
       "type": "raw-error-message",
@@ -118,42 +109,6 @@
       "severity": "error",
       "code": "result.safe_error_message = error instanceof Error ? error.message : \"Unknown error\";",
       "reason": "internal diagnostic route; server-side error string, not operator-rendered"
-    },
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
-      "file": "src/app/resend-verification/page.tsx",
-      "line": 32,
-      "severity": "error",
-      "code": "setError(err instanceof Error ? err.message : \"Something went wrong.\");",
-      "reason": "pre-existing governance finding (frozen for CI baseline recovery)"
-    },
-    {
-      "type": "unsafe-error-render",
-      "category": "UNSAFE ERROR RENDER",
-      "file": "src/app/resend-verification/page.tsx",
-      "line": 32,
-      "severity": "error",
-      "code": "setError(err instanceof Error ? err.message : \"Something went wrong.\");",
-      "reason": "operator-facing render; pre-existing, deferred to a separate runtime fix slice"
-    },
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
-      "file": "src/app/signup/page.tsx",
-      "line": 67,
-      "severity": "error",
-      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
-      "reason": "pre-existing governance finding (frozen for CI baseline recovery)"
-    },
-    {
-      "type": "unsafe-error-render",
-      "category": "UNSAFE ERROR RENDER",
-      "file": "src/app/signup/page.tsx",
-      "line": 67,
-      "severity": "error",
-      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
-      "reason": "operator-facing render; pre-existing, deferred to a separate runtime fix slice"
     },
     {
       "type": "raw-error-message",
@@ -261,7 +216,7 @@
       "line": 834,
       "severity": "error",
       "code": "error: isKnownSafeClientError ? classifiedError.message : \"Internal server error\",",
-      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
+      "reason": "deliberate, gated client-facing exposure (PR #362): isKnownSafeClientError is true only for a genuine AppError subclass reporting a 4xx status (e.g. ValidationError), which by construction carries an owner-safe message with no stack/SQL/provider payload; 5xx and unclassified/raw errors are excluded and still receive the generic \"Internal server error\" message"
     },
     {
       "type": "raw-error-message",
