@@ -94,9 +94,13 @@ describe("PHASE I10: Runtime Enforcement Scanner - ALL Routes", () => {
       "webhooks/stripe/route.ts":
         "External webhook - no correlation context available",
       "webhooks/subscribe/route.ts": "External webhook - no correlation context",
-      "public/actions/route.ts": "Public API - explicit design to bypass auth",
-      "public/engagements/route.ts": "Public API - explicit design to bypass auth",
-      "public/kpis/route.ts": "Public API - explicit design to bypass auth",
+      // public/actions, public/engagements, public/kpis were removed from this
+      // local exemption map during the open-beta hostile audit: they do NOT
+      // bypass auth. All three call withCanonicalEnforcement and are correctly
+      // classified WRAPPED_WITH_ENFORCEMENT by the check below without needing
+      // an exemption at all. The prior "explicit design to bypass auth" entries
+      // here were stale/inaccurate — see the canonical PUBLIC_ROUTE_EXEMPTIONS
+      // registry's own corrected comment for the same finding.
       "auth/login/route.ts": "Authentication entry point - uses OAuth provider",
       "auth/logout/route.ts": "Authentication exit point - simple redirect",
       "startup/route.ts": "System startup - runs before enforcement ready",

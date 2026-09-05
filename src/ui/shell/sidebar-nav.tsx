@@ -130,6 +130,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "Vendors", href: "/owner/vendor", requiresOwner: true },
       { label: "People", href: "/users", requiresCapability: CAPABILITIES.USER_VIEW },
       { label: "Settings", href: "/settings" },
+      { label: "Send beta feedback", href: "/owner/feedback", requiresOwner: true },
     ],
   },
   {

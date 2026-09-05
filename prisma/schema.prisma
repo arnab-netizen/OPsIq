@@ -1002,6 +1002,89 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+/// Open-beta email verification tokens. Byte-for-byte the same shape and
+/// invariants as PasswordResetToken (sha256-hashed at rest, single-use via
+/// usedAt, bounded by expiresAt) — deliberately not merged into that model
+/// because a verification token and a reset token authorize different things
+/// and must never be redeemable as one another. See
+/// src/app/api/auth/verify-email/route.ts and .../signup/route.ts.
+model EmailVerificationToken {
+  id        String    @id @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  ipAddress String?   @map("ip_address")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
+}
+
+/// Durable server-side record of a user's acceptance of a dated policy
+/// version. One row per (user, policyType) acceptance event — a re-acceptance
+/// of a bumped version is a new row, never an overwrite, so acceptance
+/// history is auditable. Recorded inside the signup transaction alongside the
+/// User/Workspace graph; never inferred from a client-only checkbox state.
+model PolicyAcceptance {
+  id         String   @id @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  policyType String   @map("policy_type") // TERMS | PRIVACY | BETA_NOTICE
+  version    String
+  acceptedAt DateTime @default(now()) @map("accepted_at")
+  ipAddress  String?  @map("ip_address")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("policy_acceptances")
+}
+
+/// In-product "send beta feedback / report a problem" submissions. Deliberately
+/// minimal and never carries cookies, tokens, Authorization headers, or
+/// passwords — see the API route's own input schema, which has no field that
+/// could carry them. workspaceId/userId are nullable so an unauthenticated
+/// reporter (e.g. hitting a dead end before finishing onboarding) can still
+/// file a report.
+model PlatformFeedback {
+  id             String   @id @db.Uuid
+  workspaceId    String?  @map("workspace_id") @db.Uuid
+  userId         String?  @map("user_id") @db.Uuid
+  category       String // BUG | CONFUSION | FEATURE_REQUEST | OTHER
+  description    String   @db.Text
+  route          String?
+  buildSha       String?  @map("build_sha")
+  expectedResult String?  @map("expected_result") @db.Text
+  status         String   @default("OPEN") // OPEN | ACKNOWLEDGED | RESOLVED
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([status, createdAt])
+  @@map("platform_feedback")
+}
+
+/// A privacy request (access/export, deletion, correction) filed by an
+/// identified user. Fulfillment is a documented manual runbook step, not
+/// automated cascade deletion — see docs/PRIVACY_REQUEST_RUNBOOK.md. This
+/// model records only that a request exists and its handling state; it never
+/// itself performs the requested action.
+model PrivacyRequest {
+  id          String    @id @db.Uuid
+  requestType String    @map("request_type") // ACCESS | DELETION | CORRECTION
+  userId      String?   @map("user_id") @db.Uuid
+  email       String
+  detail      String?   @db.Text
+  status      String    @default("OPEN") // OPEN | IN_PROGRESS | FULFILLED | REJECTED
+  handledBy   String?   @map("handled_by")
+  handledAt   DateTime? @map("handled_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@map("privacy_requests")
+}
+
 model ShockEvent {
   id           String     @id @db.Uuid
   engagementId String     @map("engagement_id") @db.Uuid
@@ -1160,15 +1243,24 @@ model UserRoleAssignment {
 }
 
 model User {
-  id                              String                 @id @db.Uuid
-  email                           String                 @unique
+  id                              String                   @id @db.Uuid
+  email                           String                   @unique
   name                            String?
-  hashedPassword                  String?                @map("hashed_password")
-  isActive                        Boolean                @default(true) @map("is_active")
-  version                         Int                    @default(1)
-  createdAt                       DateTime               @default(now()) @map("created_at")
-  updatedAt                       DateTime               @updatedAt @map("updated_at")
-  deactivatedAt                   DateTime?              @map("deactivated_at")
+  hashedPassword                  String?                  @map("hashed_password")
+  isActive                        Boolean                  @default(true) @map("is_active")
+  version                         Int                      @default(1)
+  createdAt                       DateTime                 @default(now()) @map("created_at")
+  updatedAt                       DateTime                 @updatedAt @map("updated_at")
+  deactivatedAt                   DateTime?                @map("deactivated_at")
+  // Open-beta email verification (additive, defaults preserve every existing
+  // account's behavior unchanged). requiresEmailVerification is set true ONLY
+  // by the public-beta signup path; every pre-existing and internally-created
+  // account defaults to false and is never retroactively locked out. See
+  // src/app/api/auth/signup/route.ts and .../verify-email/route.ts.
+  emailVerifiedAt                 DateTime?                @map("email_verified_at")
+  requiresEmailVerification       Boolean                  @default(false) @map("requires_email_verification")
+  emailVerificationTokens         EmailVerificationToken[]
+  policyAcceptances               PolicyAcceptance[]
   operatorItemsCreated            String?
   operatorItemsCompleted          String?
   operatorItemsVerified           String?
@@ -1179,18 +1271,18 @@ model User {
   engagementMemberships           EngagementMembership[]
   entities                        Entity[]
   financialBaselines              FinancialBaseline[]
-  operatorItemsCompletedBy        OperatorItem[]         @relation("operator_items_completed_byTousers")
-  operatorItemsCreatedBy          OperatorItem[]         @relation("operator_items_created_by_user_idTousers")
-  operatorItemsVerifiedBy         OperatorItem[]         @relation("operator_items_verified_byTousers")
+  operatorItemsCompletedBy        OperatorItem[]           @relation("operator_items_completed_byTousers")
+  operatorItemsCreatedBy          OperatorItem[]           @relation("operator_items_created_by_user_idTousers")
+  operatorItemsVerifiedBy         OperatorItem[]           @relation("operator_items_verified_byTousers")
   overrideRecordsCreated          OverrideRecord[]
-  recommendationsLegacyApprovedBy RecommendationLegacy[] @relation("recommendations_legacy_approved_byTousers") @ignore
-  recommendationsLegacyCreatedBy  RecommendationLegacy[] @relation("recommendations_legacy_created_byTousers") @ignore
+  recommendationsLegacyApprovedBy RecommendationLegacy[]   @relation("recommendations_legacy_approved_byTousers") @ignore
+  recommendationsLegacyCreatedBy  RecommendationLegacy[]   @relation("recommendations_legacy_created_byTousers") @ignore
   sessions                        Session[]
   passwordResetTokens             PasswordResetToken[]
   userRoleAssignments             UserRoleAssignment[]
   workspaceMemberships            WorkspaceMembership[]
-  approvalRequestsRequested       ApprovalRequest[]      @relation("approval_requests_requested_by")
-  approvalRequestsAsApprover      ApprovalRequest[]      @relation("approval_requests_approver")
+  approvalRequestsRequested       ApprovalRequest[]        @relation("approval_requests_requested_by")
+  approvalRequestsAsApprover      ApprovalRequest[]        @relation("approval_requests_approver")
   alerts                          Alert[]
 
   @@map("users")
@@ -1276,6 +1368,13 @@ model Workspace {
   isActive              Boolean                        @default(true) @map("is_active")
   createdAt             DateTime                       @default(now()) @map("created_at")
   updatedAt             DateTime                       @default(now()) @map("updated_at")
+  // Provenance marker, null for every pre-existing/internal/demo workspace.
+  // Set to "PUBLIC_BETA" ONLY by the public self-registration signup path
+  // when PUBLIC_BETA_ENABLED=true. This is the sole basis for the beta
+  // workspace cap (scripts read/count WHERE signup_source = 'PUBLIC_BETA')
+  // rather than naively counting every workspace ever created — internal,
+  // demo, and pre-beta workspaces carry no such tag and are never counted.
+  signupSource          String?                        @map("signup_source")
   engagements           Engagement[]
   recommendationsLegacy RecommendationLegacy[]         @ignore
   snapshotDatas         SnapshotData[]

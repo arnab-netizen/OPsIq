@@ -103,6 +103,35 @@ export const POST = async (request: NextRequest) => {
       throw new UnauthorizedError("Invalid email or password");
     }
 
+    // Open-beta email verification gate. Checked only AFTER the password has
+    // been confirmed correct, so an attacker probing credentials learns
+    // nothing beyond what a normal wrong-password response already leaks.
+    // requiresEmailVerification is false for every pre-existing and
+    // internally-created account (see prisma/schema.prisma), so this can
+    // never lock out an account that predates open-beta email verification —
+    // it applies only to accounts created through the public-beta signup
+    // path that have not yet redeemed their verification link. Without this
+    // check, an unverified beta signup could reach a full session simply by
+    // logging in, bypassing verification entirely even though signup itself
+    // never issues a session for such an account.
+    stage = "email_verification_check";
+    if (user.requiresEmailVerification && !user.emailVerifiedAt) {
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
+        actorId: user.id,
+        workspaceId,
+        payload: { reason: "email_not_verified" },
+        visibility: "internal",
+      });
+      return Response.json(
+        {
+          error: "Please verify your email before signing in. Check your inbox for the verification link.",
+          classification: "email_not_verified",
+        },
+        { status: 403 }
+      );
+    }
+
     // Session creation
     stage = "session_create";
     const sessionId = uuidv4();

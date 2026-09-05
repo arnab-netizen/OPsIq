@@ -74,13 +74,27 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Password reset — real end-to-end j
 
   async function signup(email: string, password: string) {
     const { POST } = await import("@/app/api/auth/signup/route");
-    return POST(
+    const res = await POST(
       jsonRequest("http://localhost/api/auth/signup", {
         email,
         password,
         workspaceName: "Reset Co",
+        acceptTerms: true,
+        acceptPrivacy: true,
+        acceptBetaNotice: true,
       }) as never
     );
+    // This file's subject is the password-reset journey, not email
+    // verification (covered by verify-email.db.test.ts) — open-beta signup
+    // itself creates no session and login refuses an unverified account, so
+    // every test below that logs in after signing up needs a verified
+    // account. Mark it verified directly on success, exactly the state
+    // POST /api/auth/verify-email would have produced.
+    if (res.status === 201) {
+      const { user } = await res.clone().json();
+      await db.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
+    }
+    return res;
   }
 
   async function login(email: string, password: string, ip: string) {

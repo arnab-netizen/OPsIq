@@ -13,17 +13,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import type { UserRoleAssignment } from "@/generated/prisma/client";
+import { randomUUID } from "crypto";
 import { getCapabilitiesForRole } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import type { RoleName } from "@/domain/constants/roles";
 import { logger } from "@/infra/logger";
-import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
+import { verifyDiagnosticKeyFromRequest, isNonProductionEnvironment } from "@/lib/security/diagnostic-key";
 import { classifyDbRuntimeError } from "@/lib/schema-drift";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
 
 // Helper: Check if role grants engagement:view capability
 function roleGrantsEngagementView(role: string): boolean {
-  const capabilities = getCapabilitiesForRole(role as any);
+  const capabilities = getCapabilitiesForRole(role as RoleName);
   return capabilities.includes(CAPABILITIES.ENGAGEMENT_VIEW);
 }
 
@@ -180,7 +182,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     const hasEngagementViewFromRoles = roleAssignments.some((ra: UserRoleAssignment) =>
-      getCapabilitiesForRole(ra.role as any).includes(CAPABILITIES.ENGAGEMENT_VIEW)
+      getCapabilitiesForRole(ra.role as RoleName).includes(CAPABILITIES.ENGAGEMENT_VIEW)
     );
 
     // Determine classification
@@ -256,6 +258,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 // POST: Idempotently backfill missing UserRoleAssignment
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // Open-beta hardening: this is a real database writer that GRANTS a role
+  // assignment (privilege escalation for the demo user). It must never be
+  // reachable in production merely because the shared OPSIQ_DIAGNOSTIC_KEY
+  // leaked — see isNonProductionEnvironment's own doc comment. 404, not 401,
+  // so its existence is not disclosed in production either.
+  if (!isNonProductionEnvironment()) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   if (!verifyDiagnosticKeyFromRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }
@@ -337,7 +347,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Create new assignment
       roleAssignment = await db.userRoleAssignment.create({
         data: {
-          id: require("crypto").randomUUID(),
+          id: randomUUID(),
           userId: user.id,
           role: "admin_or_portfolio_manager",
           scope: "workspace",
@@ -379,7 +389,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     const hasEngagementView = roleAssignments.some((ra: UserRoleAssignment) =>
-      getCapabilitiesForRole(ra.role as any).includes(CAPABILITIES.ENGAGEMENT_VIEW)
+      getCapabilitiesForRole(ra.role as RoleName).includes(CAPABILITIES.ENGAGEMENT_VIEW)
     );
 
     // 6. Backfill engagementMembership for ENG-001 (required by dashboard route's assertEngagementAccess)
@@ -403,7 +413,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Create new membership
         engagementMembership = await db.engagementMembership.create({
           data: {
-            id: require("crypto").randomUUID(),
+            id: randomUUID(),
             userId: user.id,
             engagementId: engagement.id,
             role: "member",

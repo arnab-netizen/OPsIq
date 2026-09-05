@@ -68,7 +68,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email canonicalization — cross-rou
 
   async function signup(body: Record<string, unknown>) {
     const { POST } = await import("@/app/api/auth/signup/route");
-    return POST(jsonRequest("http://localhost/api/auth/signup", body) as never);
+    return POST(
+      jsonRequest("http://localhost/api/auth/signup", {
+        acceptTerms: true,
+        acceptPrivacy: true,
+        acceptBetaNotice: true,
+        ...body,
+      }) as never
+    );
   }
 
   // login has no "skip rate-limit when IP is unknown" carve-out (unlike
@@ -167,6 +174,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email canonicalization — cross-rou
     });
     expect(signupRes.status).toBe(201);
     const { user } = await signupRes.json();
+
+    // This test's subject is CASE/WHITESPACE canonicalization of the login
+    // lookup, not the email-verification journey (covered by
+    // verify-email.db.test.ts) — open-beta signup itself creates no session,
+    // and login refuses an unverified account. Mark it verified directly,
+    // exactly the state POST /api/auth/verify-email would have produced.
+    await db.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
 
     const loginRes = await login({
       email: `  ${canonicalEmail.toUpperCase()}  `,

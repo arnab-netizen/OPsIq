@@ -693,6 +693,16 @@ export const AUDIT_EVENTS = {
   SCHEDULED_TASK_RETRY_SCHEDULED: "scheduled_task.retry_scheduled",
   SCHEDULED_TASK_FAILED: "scheduled_task.failed",
   SCHEDULED_TASK_DEAD_LETTERED: "scheduled_task.dead_lettered",
+
+  // Open beta
+  SIGNUP_REFUSED_BETA_DISABLED: "signup.refused_beta_disabled",
+  SIGNUP_REFUSED_BETA_CAP: "signup.refused_beta_cap",
+  EMAIL_VERIFICATION_REQUESTED: "user.email_verification_requested",
+  EMAIL_VERIFICATION_RESENT: "user.email_verification_resent",
+  EMAIL_VERIFIED: "user.email_verified",
+  POLICY_ACCEPTED: "user.policy_accepted",
+  PLATFORM_FEEDBACK_SUBMITTED: "platform_feedback.submitted",
+  PRIVACY_REQUEST_CREATED: "privacy_request.created",
 } as const;
 
 export type AuditEventName =

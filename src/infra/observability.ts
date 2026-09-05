@@ -82,8 +82,13 @@ export function categorizeError(error: unknown, route?: string): ObservabilityCa
   return "UNEXPECTED_ERROR";
 }
 
-/** Strip anything potentially sensitive before an event leaves the process. */
-function scrubEvent(event: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Strip anything potentially sensitive before an event leaves the process.
+ * Exported (only) so open-beta hardening's scrubbing tests can drive it
+ * directly against constructed Sentry-event-shaped objects, rather than
+ * needing to stand up the real @sentry/nextjs SDK in a test.
+ */
+export function scrubEvent(event: Record<string, unknown>): Record<string, unknown> {
   const req = event.request as Record<string, unknown> | undefined;
   if (req) {
     delete req.cookies;

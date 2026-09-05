@@ -1,15 +1,20 @@
 /**
  * POST /api/auth/signup — initial account-graph correctness (DB-backed).
  *
- * Pins the public-beta signup invariant: one successful signup durably
- * creates exactly one User, one Workspace, one active WorkspaceMembership,
- * one workspace-scoped UserRoleAssignment and one Session — all correctly
- * linked — and that a slug collision or a concurrent duplicate-email
- * signup can never leave a partial (orphaned) graph behind.
+ * Pins the open-beta signup invariant: one successful signup durably creates
+ * exactly one User, one Workspace, one active WorkspaceMembership, one
+ * workspace-scoped UserRoleAssignment, one EmailVerificationToken, and three
+ * PolicyAcceptance rows (terms/privacy/beta) — all correctly linked — and
+ * that a slug collision or a concurrent duplicate-email signup can never
+ * leave a partial (orphaned) graph behind.
  *
- * Real DB writes; no Prisma mocks. `next/headers` cookies() is mocked
- * because it requires a live Next.js request scope this test harness
- * doesn't provide — the mock only records what the route would have set.
+ * Open-beta hardening: signup no longer creates a Session or sets a cookie —
+ * an account is not usable until its emailed verification link is redeemed
+ * (see verify-email.db.test.ts for that half of the journey). No `next/headers`
+ * mock is needed here for that reason (kept, harmlessly unused by signup
+ * itself, only if a future case needs it).
+ *
+ * Real DB writes; no Prisma mocks.
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { db } from "@/lib/db";
@@ -19,6 +24,11 @@ const mockCookieSet = vi.fn();
 vi.mock("next/headers", () => ({
   cookies: vi.fn().mockResolvedValue({ set: mockCookieSet }),
 }));
+
+/** Every signup body in this file must carry all three consents — the route requires exactly `true` for each. */
+function signupBody(overrides: Record<string, unknown>) {
+  return { acceptTerms: true, acceptPrivacy: true, acceptBetaNotice: true, ...overrides };
+}
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account graph", () => {
   const createdEmails: string[] = [];
@@ -57,16 +67,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
 
   async function signup(body: Record<string, unknown>) {
     const { POST } = await import("@/app/api/auth/signup/route");
-    return POST(signupRequest(body) as never);
+    return POST(signupRequest(signupBody(body)) as never);
   }
 
-  it("[db] creates exactly one consistent initial account graph", async () => {
+  it("[db] creates exactly one consistent initial account graph, pending email verification", async () => {
     const email = `graph-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
     createdEmails.push(email);
 
     const res = await signup({ email, password: "password123", workspaceName: "Acme Corp" });
     expect(res.status).toBe(201);
     const json = await res.json();
+    expect(json.pendingVerification).toBe(true);
 
     const userId = json.user.id as string;
     const workspaceId = json.workspace.id as string;
@@ -74,6 +85,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
     const users = await db.user.findMany({ where: { email } });
     expect(users).toHaveLength(1);
     expect(users[0].id).toBe(userId);
+    // Open-beta signup never grants unrestricted access before verification.
+    expect(users[0].requiresEmailVerification).toBe(true);
+    expect(users[0].emailVerifiedAt).toBeNull();
 
     const memberships = await db.workspaceMembership.findMany({ where: { userId, isActive: true } });
     expect(memberships).toHaveLength(1);
@@ -84,17 +98,25 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
     expect(roleAssignments[0].scopeId).toBe(workspaceId);
     expect(roleAssignments[0].scope).toBe("workspace");
 
+    // No session and no cookie: the account is not usable until verify-email
+    // redeems the emailed token (see verify-email.db.test.ts).
     const sessions = await db.session.findMany({ where: { userId } });
-    expect(sessions).toHaveLength(1);
+    expect(sessions).toHaveLength(0);
+    expect(mockCookieSet).not.toHaveBeenCalled();
+
+    const verificationTokens = await db.emailVerificationToken.findMany({ where: { userId } });
+    expect(verificationTokens).toHaveLength(1);
+    expect(verificationTokens[0].usedAt).toBeNull();
+    expect(verificationTokens[0].expiresAt.getTime()).toBeGreaterThan(Date.now());
+
+    const acceptances = await db.policyAcceptance.findMany({ where: { userId } });
+    expect(acceptances.map((a: { policyType: string }) => a.policyType).sort()).toEqual(
+      ["BETA_NOTICE", "PRIVACY", "TERMS"]
+    );
 
     const workspaces = await db.workspace.findMany({ where: { id: workspaceId } });
     expect(workspaces).toHaveLength(1);
-
-    // Cookie is set post-commit, outside the transaction.
-    expect(mockCookieSet).toHaveBeenCalledTimes(1);
-    const [cookieName, , cookieOpts] = mockCookieSet.mock.calls[0];
-    expect(cookieName).toBe("opsiq_session");
-    expect(cookieOpts).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
+    expect(workspaces[0].signupSource).toBe("PUBLIC_BETA");
   });
 
   it("[db] a duplicate email conflicts and creates no second account graph", async () => {
