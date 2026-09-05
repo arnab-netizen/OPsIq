@@ -21,6 +21,7 @@ vi.mock("@/lib/db", () => ({
     user: { findUnique: mocks.findUnique },
     privacyRequest: { create: mocks.create },
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/infra/rate-limit", async (importOriginal) => {

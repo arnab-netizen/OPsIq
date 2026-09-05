@@ -24,6 +24,7 @@ vi.mock("@/lib/db", () => ({
       create: mocks.create,
     },
   },
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("@/infra/rate-limit", async (importOriginal) => {

@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import { randomUUID } from "crypto";
 import { verifyDiagnosticKeyFromRequest, isNonProductionEnvironment } from "@/lib/security/diagnostic-key";
@@ -429,7 +430,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // 4. Use transaction for all operations
-    const result = await db.$transaction(async (tx: any) => {
+    const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       // Re-read proof state within transaction
       const demoEngagementCandidates = await tx.engagement.findMany({
         where: {
@@ -612,7 +613,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Build safe error response
-    let safeErrorMessage = sanitizeErrorMessage(errorMsg);
+    const safeErrorMessage = sanitizeErrorMessage(errorMsg);
     let stackFileLine = "unknown";
     let classification = "cannot_determine";
 
@@ -622,7 +623,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Classify error
     if (errorName === "PrismaClientKnownRequestError") {
-      const prismaError = error as any;
+      const prismaError = error as { code: string };
       classification = classifyPrismaError(prismaError.code, errorMsg);
     } else if (errorName === "PrismaClientValidationError") {
       classification = "invalid_field_name";

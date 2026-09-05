@@ -13,8 +13,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import type { UserRoleAssignment } from "@/generated/prisma/client";
+import { randomUUID } from "crypto";
 import { getCapabilitiesForRole } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import type { RoleName } from "@/domain/constants/roles";
 import { logger } from "@/infra/logger";
 import { verifyDiagnosticKeyFromRequest, isNonProductionEnvironment } from "@/lib/security/diagnostic-key";
 import { classifyDbRuntimeError } from "@/lib/schema-drift";
@@ -23,7 +25,7 @@ const DEMO_USER_EMAIL = "operator@demo.local";
 
 // Helper: Check if role grants engagement:view capability
 function roleGrantsEngagementView(role: string): boolean {
-  const capabilities = getCapabilitiesForRole(role as any);
+  const capabilities = getCapabilitiesForRole(role as RoleName);
   return capabilities.includes(CAPABILITIES.ENGAGEMENT_VIEW);
 }
 
@@ -180,7 +182,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     const hasEngagementViewFromRoles = roleAssignments.some((ra: UserRoleAssignment) =>
-      getCapabilitiesForRole(ra.role as any).includes(CAPABILITIES.ENGAGEMENT_VIEW)
+      getCapabilitiesForRole(ra.role as RoleName).includes(CAPABILITIES.ENGAGEMENT_VIEW)
     );
 
     // Determine classification
@@ -345,7 +347,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Create new assignment
       roleAssignment = await db.userRoleAssignment.create({
         data: {
-          id: require("crypto").randomUUID(),
+          id: randomUUID(),
           userId: user.id,
           role: "admin_or_portfolio_manager",
           scope: "workspace",
@@ -387,7 +389,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     const hasEngagementView = roleAssignments.some((ra: UserRoleAssignment) =>
-      getCapabilitiesForRole(ra.role as any).includes(CAPABILITIES.ENGAGEMENT_VIEW)
+      getCapabilitiesForRole(ra.role as RoleName).includes(CAPABILITIES.ENGAGEMENT_VIEW)
     );
 
     // 6. Backfill engagementMembership for ENG-001 (required by dashboard route's assertEngagementAccess)
@@ -411,7 +413,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Create new membership
         engagementMembership = await db.engagementMembership.create({
           data: {
-            id: require("crypto").randomUUID(),
+            id: randomUUID(),
             userId: user.id,
             engagementId: engagement.id,
             role: "member",

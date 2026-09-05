@@ -1,25 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyEmailForm />
+    </Suspense>
+  );
+}
+
 type Status = "verifying" | "success" | "error";
 
-export default function VerifyEmailPage() {
+// useSearchParams() requires a Suspense boundary above it — without one, Next's
+// build-time prerender of this page's static shell fails outright (it's a hard
+// build error, not just a warning), even with dynamic = "force-dynamic".
+// (Same pattern as src/app/reset-password/page.tsx.)
+function VerifyEmailForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  const [status, setStatus] = useState<Status>("verifying");
-  const [message, setMessage] = useState<string>("");
+  // Derived directly from the URL at first render rather than set from
+  // inside the effect below — the missing-token case needs no network call
+  // and no effect at all, it's just the token's absence reflected as state.
+  const [status, setStatus] = useState<Status>(token ? "verifying" : "error");
+  const [message, setMessage] = useState<string>(
+    token ? "" : "This verification link is missing its token."
+  );
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setMessage("This verification link is missing its token.");
-      return;
-    }
+    if (!token) return;
 
     let cancelled = false;
     fetch("/api/auth/verify-email", {

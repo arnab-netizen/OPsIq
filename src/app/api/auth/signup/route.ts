@@ -325,7 +325,7 @@ const handleSignup = async (request: NextRequest) => {
     let classification = "unknown_error";
 
     // Extract Prisma error code if present
-    const prismaError = error as any;
+    const prismaError = error as { code?: string };
     if (prismaError.code) {
       prismaCode = prismaError.code;
       if (prismaError.code === "P2002") {
