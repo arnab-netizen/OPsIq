@@ -22,7 +22,7 @@
  * - Automatic cleanup of expired states
  */
 
-import { randomBytes, createCipheriv, createDecipheriv, hkdfSync } from "crypto";
+import { randomBytes, createCipheriv, createDecipheriv, createHash, hkdfSync } from "crypto";
 
 /** Env var holding the master key for OAuth token encryption. No default — absence fails closed. */
 export const OAUTH_TOKEN_ENCRYPTION_KEY_ENV = "OAUTH_TOKEN_ENCRYPTION_KEY";
@@ -232,8 +232,7 @@ export function isTokenExpired(token: OAuthToken, gracePeriodSeconds: number = 3
  * Prevents authorization code interception attacks.
  */
 export function generateCodeChallenge(codeVerifier: string): string {
-  const crypto = require("crypto");
-  return crypto.createHash("sha256").update(codeVerifier).digest("base64url");
+  return createHash("sha256").update(codeVerifier).digest("base64url");
 }
 
 /**
@@ -261,7 +260,9 @@ export function validateCodeVerifier(codeVerifier: string, codeChallenge: string
 }
 
 /**
- * Sanitize token for logging/debugging (never expose full token).
+ * Sanitize token for logging/debugging. Returns zero raw access-token
+ * characters — not a prefix, suffix, or any other partial mask — regardless
+ * of token length, so a short token cannot end up fully exposed.
  */
 export function sanitizeTokenForLogging(token: OAuthToken): {
   accessToken: string;
@@ -269,7 +270,7 @@ export function sanitizeTokenForLogging(token: OAuthToken): {
   expiresAt?: Date;
 } {
   return {
-    accessToken: `${token.accessToken.substring(0, 10)}...***`,
+    accessToken: "[REDACTED]",
     tokenType: token.tokenType,
     expiresAt: token.expiresAt,
   };
