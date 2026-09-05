@@ -45,8 +45,30 @@ const { privateKey: SIGNING_KEY } = generateKeyPairSync('ed25519', {
   publicKeyEncoding: { type: 'spki', format: 'pem' },
 });
 const SUBJECT_SHA = "f129fb8633b38230c16fb44aed8f5f90c8f4b8a9";
-/** Owner decision D-16, 2026-09-03: the one commit Stage 7 evidence may describe. */
-const AUTHORIZED_SUBJECT_SHA = "789768b99d5e8996c3f48671b188fa5ba0c51d04";
+/**
+ * Owner decision D-17, corrected 2026-09-05: the one commit Stage 7 evidence may
+ * describe. This is PR #418's squash-merge commit — the actual final beta runtime
+ * (PR #416's owner-lane probe repair + PR #418's public-beta hardening + production
+ * migration 20260905044623_open_beta_hardening) — not the intermediate ae15813c
+ * candidate D-17 originally proposed on 2026-09-04.
+ */
+const AUTHORIZED_SUBJECT_SHA = "3647b8ce95fd4c75640a6062a3a9ed235577f023";
+/**
+ * D-17 as originally proposed, 2026-09-04, while this same PR was still unmerged:
+ * "RUNTIME_CANDIDATE_SHA= ae15813c417901a9b48b012303f666e7591d1275". It never became
+ * an active subject — no evidence was ever captured against it, and this PR never
+ * merged carrying that value before main advanced past it. D-17's
+ * SINGLE_ACTIVE_SUBJECT policy does not authorize this commit either.
+ */
+const OLD_UNMERGED_D17_CANDIDATE_SHA = "ae15813c417901a9b48b012303f666e7591d1275";
+/**
+ * Owner decision D-16, 2026-09-03: the PREVIOUS active subject, now historical.
+ * D-17's SINGLE_ACTIVE_SUBJECT policy does not authorize this commit. The one
+ * committed evidence artifact (evd_147fce5b18cdeeebf9d9b0b9778b8f06) still declares
+ * this as its subject_sha — that is real, unaltered history — but it is no longer
+ * the authorized subject.
+ */
+const D16_SUBJECT_SHA = "789768b99d5e8996c3f48671b188fa5ba0c51d04";
 
 const CANONICAL_IDS = Array.from({ length: 16 }, (_, i) => `S7-I${i + 1}`);
 
@@ -224,13 +246,14 @@ describe("G-1 — PENDING invariants stay valid", () => {
     expect(result.structuralViolations.join("\n")).toContain("is free text");
   });
 
-  // S7-I11 is bound to evd_147fce5b18cdeeebf9d9b0b9778b8f06, the first Stage 7
-  // evidence artifact to survive trusted verification (run 33844489817). It is
-  // asserted by id, not by count alone: a count would still pass if the binding
-  // silently moved to a different invariant or a different artifact. The other
-  // fifteen stay PENDING with empty proof_artifacts, and the bundle stays PENDING
-  // — one proven invariant is not stage progress.
-  it("the live Stage 7 contract evaluates as PENDING with exactly S7-I11 proven", () => {
+  // D-17 (2026-09-04) atomically demoted S7-I11 from PROVEN back to PENDING when the
+  // active subject advanced past D-16: evd_147fce5b18cdeeebf9d9b0b9778b8f06 declares
+  // subject_sha 789768b9 (D-16), which D-17's SINGLE_ACTIVE_SUBJECT policy does not
+  // authorize. All sixteen invariants are therefore PENDING with empty
+  // proof_artifacts, and the bundle stays PENDING. This is asserted per-invariant,
+  // not by a bare count: a count would still pass if one invariant silently carried
+  // a stale reference while another went empty.
+  it("the live Stage 7 contract evaluates as fully PENDING under D-17", () => {
     const manifest = YAML.load(
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
@@ -239,23 +262,14 @@ describe("G-1 — PENDING invariants stay valid", () => {
     };
     expect(result.structuralViolations).toHaveLength(0);
     expect(result.total).toBe(16);
-    // Called with no protected context — no signing-key resolver, no closure-manifest
-    // resolver, no provenance map — nothing can resolve to ACCEPTED, so a PROVEN
-    // status alone buys nothing here. That the binding really does resolve is proved
-    // by the gate test below, which runs validate-stage-acceptance.mjs and reports
-    // "1/16 invariants proven".
     expect(result.proven).toEqual([]);
 
     const invariants = (manifest as { invariants: Record<string, {
       status: string; proof_artifacts: string[];
     }> }).invariants;
-    expect(invariants["S7-I11"].proof_artifacts).toEqual([
-      "evd_147fce5b18cdeeebf9d9b0b9778b8f06",
-    ]);
     for (const [id, inv] of Object.entries(invariants)) {
-      if (id === "S7-I11") continue;
-      expect(inv.status).toBe("PENDING");
-      expect(inv.proof_artifacts).toEqual([]);
+      expect(inv.status, id).toBe("PENDING");
+      expect(inv.proof_artifacts, id).toEqual([]);
     }
   });
 });
@@ -862,25 +876,25 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
   });
 
   /**
-   * D-16 (2026-09-03, PR #404 merge SHA 789768b9) is the current subject: the first
-   * commit carrying the complete known capture-path repair set (#391-#394, #396,
-   * #401-#402) together with both observation credential-disclosure repairs — #403
-   * removed the owner email from the S7-I4/S7-I5 observations, #404 removed the
-   * 8-character live session-cookie prefix from the S7-I4 observation — and the exact
-   * SHA production is deployed at. Because artifacts are append-only, evidence
-   * captured against D-15's subject a19d226d would have committed that credential
-   * material permanently. It superseded D-15, which had itself superseded D-14
-   * (1fdc3184) after the first real S7-I11 capture safely refused a genuine 74/74
-   * passing observation — GitHub Actions ANSI sequences split the vitest marker.
-   *
-   * D-13 replaced the D-12 assertion (PR #285 merge SHA 036c5269). PR #386
-   * closed the technical pre-beta readiness gate (identity email canonicalization,
-   * distributed Postgres rate limiting, a login rate-limit info-disclosure fix,
-   * production health-check observability, and an A7.7 governance-scan integrity
-   * fix), making a2d72660 the stable production subject; the owner authorized
-   * a2d72660 as the new subject SHA. The guarantee worth holding is narrower and
-   * stricter: exactly one commit is authorized, it is the one the owner named,
-   * and authorizing it moved nothing else in the contract.
+   * D-17 (corrected 2026-09-05, PR #418 merge SHA 3647b8ce) is the current subject:
+   * the exact production-deployed commit carrying PR #416's owner-lane capture-path
+   * repair (S7-I1, S7-I2, S7-I4, S7-I5, S7-I10, S7-I12) plus PR #418's public-beta
+   * runtime hardening, with production migration 20260905044623_open_beta_hardening
+   * applied. D-17 was originally proposed against ae15813c (2026-09-04, while this
+   * PR was still unmerged); that candidate never became active — no evidence was
+   * captured against it — and is corrected here to name the actual final runtime
+   * instead, without advancing to D-18 (see amendment A17). It superseded
+   * D-16 (789768b9, PR #404 merge), the first commit carrying the complete known
+   * capture-path repair set (#391-#394, #396, #401-#402) together with both
+   * observation credential-disclosure repairs. Under owner decision
+   * D17_TRANSITION_POLICY=SINGLE_ACTIVE_SUBJECT, D-16 is not carried forward in the
+   * active subject allowlist, and S7-I11 — the one invariant D-16 left PROVEN — is
+   * atomically demoted to PENDING with proof_artifacts reset to [] (amendment A16),
+   * because its proof artifact declares D-16's subject_sha, which D-17 no longer
+   * authorizes. D-16 remains historical and unmodified; amendment A15 still records
+   * it. The guarantee worth holding is narrower and stricter: exactly one commit is
+   * authorized at a time, it is the one the owner named, and authorizing it moved
+   * nothing else in the contract to PROVEN.
    */
   it("the live contract authorizes exactly the owner-named subject SHA", () => {
     const raw = YAML.load(
@@ -906,16 +920,11 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
     expect(raw.invariant_waivers).toEqual([]);
     const invariants = raw.invariants as Record<string, { status: string; proof_artifacts: unknown[] }>;
     expect(Object.keys(invariants)).toHaveLength(16);
-    // S7-I11 is the one invariant carrying evidence. Authorizing the subject SHA is
-    // still not what proved it: the artifact was captured against that subject,
-    // trust-verified, and bound by a separate owner-authorized change. Every other
-    // invariant remains untouched, and the bundle itself remains PENDING above.
+    // Under D-17, every invariant is PENDING with empty proof_artifacts — including
+    // S7-I11, atomically demoted when the active subject advanced past D-16 (see the
+    // A16 amendment). Authorizing a subject SHA proves nothing on its own; the bundle
+    // itself remains PENDING above.
     for (const [id, entry] of Object.entries(invariants)) {
-      if (id === "S7-I11") {
-        expect(entry.status, id).toBe("PROVEN");
-        expect(entry.proof_artifacts, id).toEqual(["evd_147fce5b18cdeeebf9d9b0b9778b8f06"]);
-        continue;
-      }
       expect(entry.status, id).toBe("PENDING");
       expect(entry.proof_artifacts, id).toEqual([]);
     }
@@ -959,27 +968,33 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
       readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
     ) as Record<string, unknown>;
     const auth = raw.closure_subject_sha_authorization as Record<string, unknown>;
-    expect(auth.decision).toBe("D-16");
+    expect(auth.decision).toBe("D-17");
     // A superseded decision is not erased — the record must still name what it replaced.
-    expect(auth.supersedes).toBe("D-15");
-    expect(auth.superseded_sha).toBe("a19d226d784d4eb48bf239ca5c5320f12efac541");
+    expect(auth.supersedes).toBe("D-16");
+    expect(auth.superseded_sha).toBe(D16_SUBJECT_SHA);
     // The SHA the owner authorized must be the SHA CI tested and the SHA production
     // deployed. A record that names three different commits records nothing.
     expect(raw.closure_subject_sha).toBe(AUTHORIZED_SUBJECT_SHA);
     expect(auth.main_integration_tested_sha).toBe(AUTHORIZED_SUBJECT_SHA);
     expect(auth.vercel_production_commit_sha).toBe(AUTHORIZED_SUBJECT_SHA);
-    expect(auth.main_integration_run).toBe("33781637673");
-    expect(auth.vercel_production_deployment).toBe("dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC");
+    expect(auth.main_integration_run).toBe("33951086242");
+    expect(auth.vercel_production_deployment).toBe("dpl_8FqgGoe1SXaUQTrKmD691rs46zE6");
+    // Never the old, unmerged D-17 candidate — a record naming that commit anywhere
+    // in the authorized-facing fields would mean the correction did not actually
+    // take effect.
+    expect(raw.closure_subject_sha).not.toBe(OLD_UNMERGED_D17_CANDIDATE_SHA);
+    expect(auth.main_integration_tested_sha).not.toBe(OLD_UNMERGED_D17_CANDIDATE_SHA);
+    expect(auth.vercel_production_commit_sha).not.toBe(OLD_UNMERGED_D17_CANDIDATE_SHA);
+    // The migration provenance PR #418 actually produced must be recorded too.
+    const migration = auth.production_migration as Record<string, string>;
+    expect(migration.name).toBe("20260905044623_open_beta_hardening");
+    expect(migration.result).toBe("SUCCESS");
+    expect(migration.post_deploy_status).toBe("DATABASE_SCHEMA_UP_TO_DATE");
     // The limitations must stay recorded, not quietly dropped once inconvenient.
     const unverified = auth.unverified as Record<string, string>;
-    // Pinned to the substance, not one decision's phrasing: the record must still say
-    // that independent DNS resolution was not done, and must still stop short of
-    // claiming the binding is proven. D-13 said "API-reported only"; D-14 onward
-    // add an observed liveness probe and say "not independently proven". Any of those
-    // satisfies this; silently dropping the limitation does not.
-    expect(unverified.production_alias_binding).toMatch(/DNS resolution/i);
-    expect(unverified.production_alias_binding).toMatch(/not performed/i);
-    expect(unverified.production_alias_binding).toMatch(/not independently proven|API-reported only/i);
+    expect(unverified.production_http_health).toMatch(/egress/i);
+    expect(unverified.production_http_health).toMatch(/not independently/i);
+    expect(unverified.production_schema_structural_verification).toMatch(/skipped/i);
     expect(auth.deployment_success_is_not_readiness).toMatch(/not Owner Mode readiness/);
   });
 
@@ -993,6 +1008,195 @@ describe("G-1 — subject-SHA policy fails closed when the contract states none"
       code = (err as { status?: number }).status ?? 1;
     }
     expect(code).not.toBe(0);
+  });
+});
+
+describe("D-17 transition — subject policy hostile simulation", () => {
+  /**
+   * Owner decision D-17 (2026-09-04) advances closure_subject_sha past D-16 under
+   * D17_TRANSITION_POLICY=SINGLE_ACTIVE_SUBJECT and atomically demotes S7-I11 from
+   * PROVEN back to PENDING. This block is the hostile simulation required before the
+   * governance PR opens: it proves the transition is safe with I11 PENDING, and that
+   * the mechanism would have REJECTED the unsafe alternative — leaving S7-I11 PROVEN
+   * while citing the D-16 artifact under the D-17 subject.
+   */
+
+  /** The real Stage 7 contract exactly as it sits on disk, with invariant overrides. */
+  function realContract(overrides: Record<string, unknown> = {}) {
+    const raw = YAML.load(
+      readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
+    ) as Record<string, unknown>;
+    const invariants = { ...(raw.invariants as Record<string, unknown>) };
+    for (const [id, entry] of Object.entries(overrides)) invariants[id] = entry;
+    return { ...raw, invariants };
+  }
+
+  it("D17_ACTIVE_SUBJECT is authorized; D16_ACTIVE_SUBJECT is not", () => {
+    const policy = resolveSubjectShaPolicy(realContract());
+    expect(policy.state).toBe(SUBJECT_SHA_POLICY.PRESENT);
+    expect(policy.authorized).toEqual([AUTHORIZED_SUBJECT_SHA]);
+    expect(policy.authorized).not.toContain(D16_SUBJECT_SHA);
+  });
+
+  // The old, never-merged D-17 candidate (ae15813c, proposed 2026-09-04 while this
+  // PR was still open) must not linger as authorized once D-17 is corrected to name
+  // the actual final runtime (3647b8ce). No evidence was ever captured against it,
+  // but the policy must reject it exactly as it rejects any other non-authorized SHA
+  // — there is no "it used to be proposed" carve-out in SINGLE_ACTIVE_SUBJECT.
+  it("the old unmerged D17 candidate (ae15813c) is not authorized", () => {
+    const policy = resolveSubjectShaPolicy(realContract());
+    expect(policy.authorized).not.toContain(OLD_UNMERGED_D17_CANDIDATE_SHA);
+    expect(policy.authorized).not.toContain(D16_SUBJECT_SHA);
+    expect(policy.authorized).toEqual([AUTHORIZED_SUBJECT_SHA]);
+  });
+
+  // S7-I11 alone additionally requires the D-4 governance target to be resolved
+  // from the manifest text (buildEvidenceArtifact's own D-4/A4 guard), which is
+  // orthogonal to the subject-SHA policy this test exercises. Using S7-I1 here is
+  // the same idiom the rest of this file already uses to isolate the subject-SHA
+  // check from S7-I11's extra gate (see "closure fails when every artifact is
+  // otherwise eligible but no policy exists" above).
+  it("a fresh D17 artifact -> subject authorization PASS", () => {
+    const artifact = signedArtifact("S7-I1", { subject_sha: AUTHORIZED_SUBJECT_SHA });
+    const dir = writeArtifacts([artifact]);
+    const r = evaluateInvariantClosure(
+      realContract({ "S7-I1": provenWith("S7-I1", [artifact.artifact_id]) }),
+      { bundleId: STAGE_7_ID, evidenceDir: dir, signingKey: SIGNING_KEY, provenance: verifiedProvenance(artifact) },
+    ) as { proven: string[]; structuralViolations: string[]; proofViolations: string[] };
+    expect(r.proven).toContain("S7-I1");
+    expect(allViolations(r)).not.toContain("SUBJECT_SHA");
+  });
+
+  it("the D16 artifact cannot prove the active D17 invariant", () => {
+    // The one real evidence artifact on disk: subject_sha is D-16's, not D-17's.
+    const { records } = loadEvidenceArtifactIndex({
+      dir: join(root, "docs/opsiq/evidence/stage-7/artifacts"),
+    });
+    const d16Artifact = records.find((r) => (r as { artifactId: string }).artifactId === "evd_147fce5b18cdeeebf9d9b0b9778b8f06");
+    expect(d16Artifact).toBeDefined();
+    expect((d16Artifact as unknown as { subjectSha: string }).subjectSha).toBe(D16_SUBJECT_SHA);
+
+    const policy = resolveSubjectShaPolicy(realContract());
+    expect(policy.authorized).not.toContain((d16Artifact as unknown as { subjectSha: string }).subjectSha);
+  });
+
+  it("S7-I11=PENDING with no proof artifacts under D17 -> manifest integrity PASS", () => {
+    const r = evaluateInvariantClosure(realContract(), {
+      bundleId: STAGE_7_ID,
+      evidenceDir: join(root, "docs/opsiq/evidence/stage-7/artifacts"),
+      signingKey: SIGNING_KEY,
+    }) as { structuralViolations: string[]; proofViolations: string[]; proven: string[] };
+    expect(r.structuralViolations).toHaveLength(0);
+    // evaluateInvariantClosure reports an "unmet requirement" proofViolations entry
+    // for every non-PROVEN, non-waived invariant regardless of bundle status — that
+    // is how a CLOSED gate later knows what still blocks it. On a PENDING bundle
+    // these are informational, not blocking: the real enforcement point is that
+    // neither gate script surfaces them while status stays PENDING (asserted below
+    // by actually running validate-bundle-manifests.mjs), and that none of them
+    // concern the subject-SHA policy specifically.
+    expect(r.proofViolations.filter((v) => v.includes("SUBJECT_SHA"))).toHaveLength(0);
+    expect(r.proven).toEqual([]);
+
+    let code = 0;
+    let output = "";
+    try {
+      output = execFileSync("node", ["scripts/validate-bundle-manifests.mjs"], { cwd: root, encoding: "utf8" });
+    } catch (err) {
+      code = (err as { status?: number }).status ?? 1;
+      output = String((err as { stdout?: string }).stdout ?? "");
+    }
+    expect(code).toBe(0);
+    expect(output).toContain("Bundle manifest validation passed");
+  });
+
+  // The critical hostile-simulation gate: if the transition had left S7-I11 PROVEN
+  // while citing the D-16 artifact under the D-17 subject, the proof-binding path
+  // must reject it with SUBJECT_SHA_NOT_AUTHORIZED — not silently accept a proof
+  // bound to a superseded commit. This is evaluated the way a CLOSED-bundle gate
+  // would evaluate it (closure.proofViolations), which is exactly the check this PR
+  // avoided triggering by demoting S7-I11 instead of merely advancing the subject.
+  it("S7-I11=PROVEN with the D16 artifact under D17 -> manifest integrity FAIL", () => {
+    const hypothetical = realContract({
+      "S7-I11": provenWith("S7-I11", ["evd_147fce5b18cdeeebf9d9b0b9778b8f06"]),
+    });
+    const r = evaluateInvariantClosure(hypothetical, {
+      bundleId: STAGE_7_ID,
+      evidenceDir: join(root, "docs/opsiq/evidence/stage-7/artifacts"),
+      signingKey: SIGNING_KEY,
+    }) as { proofViolations: string[]; proven: string[] };
+    expect(r.proven).not.toContain("S7-I11");
+    expect(r.proofViolations.join("\n")).toContain(SUBJECT_SHA_NOT_AUTHORIZED);
+  });
+
+  it("OPTION A: GITHUB_SHA=D17 + manifest closure_subject_sha=D17 -> authorization PASS", () => {
+    const script = `
+      import { resolveCaptureAuthorization } from ${JSON.stringify(join(root, "scripts/lib/evidence-artifact.mjs"))};
+      const result = resolveCaptureAuthorization({
+        subjectSha: ${JSON.stringify(AUTHORIZED_SUBJECT_SHA)},
+        fetchMainManifest: () => \`closure_subject_sha: ${AUTHORIZED_SUBJECT_SHA}\`,
+        resolveMainSha: () => ${JSON.stringify(AUTHORIZED_SUBJECT_SHA)},
+      });
+      process.stdout.write(result.authorizationManifestSha);
+    `;
+    const result = execFileSync("node", ["--input-type=module", "-e", script], { cwd: root, encoding: "utf8" });
+    expect(result).toBe(AUTHORIZED_SUBJECT_SHA);
+  });
+
+  it("OPTION A: GITHUB_SHA=D16 + manifest closure_subject_sha=D17 -> authorization FAIL", () => {
+    const script = `
+      import { resolveCaptureAuthorization } from ${JSON.stringify(join(root, "scripts/lib/evidence-artifact.mjs"))};
+      try {
+        resolveCaptureAuthorization({
+          subjectSha: ${JSON.stringify(D16_SUBJECT_SHA)},
+          fetchMainManifest: () => \`closure_subject_sha: ${AUTHORIZED_SUBJECT_SHA}\`,
+          resolveMainSha: () => ${JSON.stringify(AUTHORIZED_SUBJECT_SHA)},
+        });
+        process.stderr.write("NO_THROW");
+        process.exit(1);
+      } catch (e) {
+        process.stdout.write(e.message);
+      }
+    `;
+    const result = execFileSync("node", ["--input-type=module", "-e", script], { cwd: root, encoding: "utf8" });
+    expect(result).toContain("OPTION A authorization gate");
+    expect(result).toContain("is NOT authorized");
+  });
+
+  // The old unmerged D-17 candidate must fail the same way D-16 does: a capture
+  // dispatched at that commit, against today's corrected manifest, is not describing
+  // the authorized subject and must be refused before it can produce an artifact.
+  it("OPTION A: GITHUB_SHA=old unmerged D17 candidate (ae15813c) + manifest closure_subject_sha=D17 (3647b8ce) -> authorization FAIL", () => {
+    const script = `
+      import { resolveCaptureAuthorization } from ${JSON.stringify(join(root, "scripts/lib/evidence-artifact.mjs"))};
+      try {
+        resolveCaptureAuthorization({
+          subjectSha: ${JSON.stringify(OLD_UNMERGED_D17_CANDIDATE_SHA)},
+          fetchMainManifest: () => \`closure_subject_sha: ${AUTHORIZED_SUBJECT_SHA}\`,
+          resolveMainSha: () => ${JSON.stringify(AUTHORIZED_SUBJECT_SHA)},
+        });
+        process.stderr.write("NO_THROW");
+        process.exit(1);
+      } catch (e) {
+        process.stdout.write(e.message);
+      }
+    `;
+    const result = execFileSync("node", ["--input-type=module", "-e", script], { cwd: root, encoding: "utf8" });
+    expect(result).toContain("OPTION A authorization gate");
+    expect(result).toContain("is NOT authorized");
+  });
+
+  it("D16-bound evidence PRs (#410-#415) remain unmerged and are not cited as D17 proof", () => {
+    const raw = YAML.load(
+      readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8"),
+    ) as Record<string, unknown>;
+    const invariants = raw.invariants as Record<string, { proof_artifacts: unknown[] }>;
+    // No proof_artifacts entry anywhere in the live manifest names an artifact other
+    // than the one D-16 artifact already on disk (which is itself no longer bound to
+    // anything, per the fully-PENDING assertion above) — in particular, nothing from
+    // the still-open #410-#415 evidence PRs has been merged in as a citation.
+    for (const [id, entry] of Object.entries(invariants)) {
+      expect(entry.proof_artifacts, id).toEqual([]);
+    }
   });
 });
 
@@ -1081,7 +1285,10 @@ describe("G-1 — the live repository is unchanged by this PR", () => {
     expect(record.invariantId).toBe("S7-I11");
     expect(record.lane).toBe("LANE_E");
     expect(record.proofType).toBe("simulation_adversarial");
-    expect(record.subjectSha).toBe(AUTHORIZED_SUBJECT_SHA);
+    // This artifact describes D-16's subject, not the active D-17 subject — that is
+    // real, unaltered history (see D16_SUBJECT_SHA above). It is why S7-I11 was
+    // demoted to PENDING under D-17 rather than left PROVEN against a stale subject.
+    expect(record.subjectSha).toBe(D16_SUBJECT_SHA);
     expect(record.fileName).toBe("evd_147fce5b18cdeeebf9d9b0b9778b8f06.json");
     expect(record.nested).toBe(false);
     expect(record.supersedes).toBeNull();

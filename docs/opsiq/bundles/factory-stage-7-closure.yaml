@@ -27,10 +27,10 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 # and it proves nothing on its own — required_evidence below remains null, every
 # invariant remains PENDING, and Stage 7 remains open.
 #
-# D-16 supersedes D-15 as the ACTIVE evidence subject authorization. D-15 remains
-# historical and is not rewritten: it authorized a19d226d784d4eb48bf239ca5c5320f12efac541
-# on 2026-09-02, and amendment A14 below still records it as decided. D-14 and D-13
-# likewise remain historical in A13 and A12.
+# D-17 supersedes D-16 as the ACTIVE evidence subject authorization. D-16 remains
+# historical and is not rewritten: it authorized 789768b99d5e8996c3f48671b188fa5ba0c51d04
+# on 2026-09-03, and amendment A15 below still records it as decided. D-15, D-14 and
+# D-13 likewise remain historical in A14, A13 and A12.
 #
 # Subject lineage: D-12 (036c5269, PR #285 merge, permanent CI trigger hardening and
 # recovery controls) -> D-13 (a2d72660, PR #386 merge, technical pre-beta readiness
@@ -39,7 +39,10 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 # health-check observability rewired onto the real Sentry-backed capture path, and an
 # A7.7 governance-scan integrity fix) -> D-14 (1fdc3184, PR #394 merge, the first
 # subject carrying #391-#394) -> D-15 (a19d226d, PR #396 merge, ANSI-normalised
-# observation-validity matching) -> D-16 (789768b9, this decision).
+# observation-validity matching) -> D-16 (789768b9, PR #404 merge, both observation
+# credential-disclosure repairs) -> D-17 (3647b8ce, PR #418 merge, final beta runtime
+# subject; corrected in place from the never-activated ae15813c/PR #416 candidate
+# originally proposed 2026-09-04 — see amendment A17).
 #
 # D-13 also resolved the "D-13" naming inconsistency noted during Stage 7
 # reconciliation: commit 184d2515 (authored the same day D-12 was decided) left
@@ -100,68 +103,140 @@ authorized_base: "f93bd37a86ba83d36bdc45245bb648c45eb9817b"
 # complete known capture-path repair set #391, #392, #393, #394, #396, #401, #402,
 # #403 and #404, and the exact SHA production is deployed at.
 # Authorized by the owner on 2026-09-03.
-closure_subject_sha: "789768b99d5e8996c3f48671b188fa5ba0c51d04"
+#
+# Why the subject had to advance a fourth time. D-16's subject 789768b9 predates
+# PR #416, which repaired the governed Stage 7 capture implementation itself rather
+# than the observation content: S7-I1 deployment-control-plane binding (a deployment
+# reporting its own commit is no longer accepted as a second authority; absent
+# VERCEL_TOKEN the probe now fails rather than recording a passing NOT_REQUESTED
+# observation), S7-I2 fail-closed migration semantics (drift no longer records as a
+# passing "warning"; empty status output now fails rather than falling through),
+# S7-I4 correct owner-entitled route (the probe targeted /api/operator, a capability
+# the designated owner role does not hold, so a correct 403 was reachable only after
+# session and workspace resolution and was misread as session failure; retargeted to
+# /api/owner/home), S7-I5 non-vacuous boundary semantics (removed three vacuous-pass
+# paths: an anonymous request standing in for tenant isolation, a workspace-binding
+# test short-circuited by its own first line, and a secret scan gated to 2xx/404
+# with every 403 defaulting true), S7-I10 owner-facing audit semantics + workspaceId
+# (retargeted from /api/audit to /api/owner/trust/audit-trail; workspaceId now
+# emitted from the persisted audit row, never the caller's argument — the sixth
+# attribution field S7-I10 requires), S7-I12 actual staged recovery (replaced a probe
+# that staged no failure and performed no recovery — every "stage" was a file read,
+# and recovery_time_ms: 1 was the elapsed time of those reads — with a real HTTP
+# state machine over a staged deployment: HEALTHY -> FAILED -> DIAGNOSED ->
+# RECOVERY_ACTION_EXECUTED -> HEALTHY, with each recovery step bound to a parsed,
+# documented runbook heading), and all remaining default-success recorders removed
+# (`function record(label, value, pass = true)` let an omitted verdict file as a
+# passing check; 17 such call sites across the six governed probes reduced to 0,
+# and record() now throws on a non-boolean verdict).
+#
+# This authorization proves none of those six invariants: PR #416 repaired the
+# capture instruments, and every invariant it touches remains PENDING until a fresh
+# D-17 capture runs and is trust-verified. See amendment A16 below for the
+# accompanying S7-I11 demotion and the evidence-PR disposition this PR's own
+# description records for #410-#415.
+#
+# D-17 correction (2026-09-05, no new decision letter). The subject originally
+# authorized for D-17, ae15813c417901a9b48b012303f666e7591d1275 (owner
+# authorization text "RUNTIME_CANDIDATE_SHA= ae15813c417901a9b48b012303f666e7591d1275",
+# 2026-09-04), was proposed in this same PR while it was still unmerged and never
+# became an active, evidence-bearing subject — no capture ran against it, and this
+# PR was never merged carrying that value. Before it merged, main advanced past it:
+# PR #418 (public-beta runtime hardening — signup kill switch, race-safe workspace
+# cap, durable email verification, legal/consent capture, privacy-request path,
+# feedback surface, internal-diagnostic and public-API hostile audits) merged as
+# 3647b8ce95fd4c75640a6062a3a9ed235577f023, Main Integration succeeded against that
+# exact SHA (run 33951086242, including its Full DB Integration Suite lane — not
+# skipped), and it is the exact SHA production is deployed at (READY). Because
+# ae15813c was never activated, correcting D-17 to name 3647b8ce instead is not an
+# advance to D-18; it is naming the actual final runtime as the same D-17 decision
+# always intended, per D17_TRANSITION_POLICY=SINGLE_ACTIVE_SUBJECT (exactly one
+# commit authorized at a time). D-16 (789768b9) remains the historically-superseded
+# subject; this correction does not touch that relationship. See amendment A17 below.
+closure_subject_sha: "3647b8ce95fd4c75640a6062a3a9ed235577f023"
 closure_subject_sha_authorization:
-  decision: "D-16"
+  decision: "D-17"
   authorized_by: "owner"
-  authorized_date: "2026-09-03"
-  authorization_text: "D16_SUBJECT_SHA= 789768b99d5e8996c3f48671b188fa5ba0c51d04"
-  supersedes: "D-15"
-  superseded_sha: "a19d226d784d4eb48bf239ca5c5320f12efac541"
-  pr_that_produced_sha: "404"
-  pr_head: "9831100438ad64590af8d2ad1b3d2bb33443e86d"
-  main_integration_run: "33781637673"
+  authorized_date: "2026-09-05"
+  authorization_text: "D17_SUBJECT_SHA= 3647b8ce95fd4c75640a6062a3a9ed235577f023"
+  supersedes: "D-16"
+  superseded_sha: "789768b99d5e8996c3f48671b188fa5ba0c51d04"
+  pr_that_produced_sha: "418"
+  pr_head: "6807afa79767ef45d5c37b7042bbd6df9f3bf46b"
+  pr_merge_sha: "3647b8ce95fd4c75640a6062a3a9ed235577f023"
+  main_integration_run: "33951086242"
   main_integration_conclusion: "success"
-  main_integration_tested_sha: "789768b99d5e8996c3f48671b188fa5ba0c51d04"
-  vercel_production_deployment: "dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC"
+  main_integration_tested_sha: "3647b8ce95fd4c75640a6062a3a9ed235577f023"
+  vercel_production_deployment: "dpl_8FqgGoe1SXaUQTrKmD691rs46zE6"
   vercel_production_state: "READY"
-  vercel_production_commit_sha: "789768b99d5e8996c3f48671b188fa5ba0c51d04"
+  vercel_production_commit_sha: "3647b8ce95fd4c75640a6062a3a9ed235577f023"
+  production_migration:
+    name: "20260905044623_open_beta_hardening"
+    workflow_run: "33955264413"
+    mode: "MAIN"
+    result: "SUCCESS"
+    post_deploy_status: "DATABASE_SCHEMA_UP_TO_DATE"
+    structural_table_verification: "SKIPPED (MAIN mode does not run the workflow's
+      structural post-migration verification step; confirmed by direct inspection
+      of workflow run 33955264413's job steps, not assumed)"
   rationale: >-
-    Merge commit of PR #404 (S7-I4 session-cookie value withheld from the
-    observation), simultaneously: current main HEAD; Main Integration green
-    (run 33781637673, success, 789768b99d5e8996c3f48671b188fa5ba0c51d04 tested,
-    risk class APPLICATION_NON_DB, tier 3, suiteMode BROAD_NON_DB — the classifier
-    emitted runNonDbSuite=true and runMainIntegrationFullSuite=false, so the Full DB
-    Integration Suite job was skipped by the risk classifier's own decision and did
-    NOT execute; the non-DB validation did run and passed in the PR #404 gate);
-    Vercel production deployment dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC READY at merge SHA
-    789768b99d5e8996c3f48671b188fa5ba0c51d04 (alias o-ps-iq.vercel.app), created
-    2026-09-03T16:56:46Z, ready 2026-09-03T16:59:54Z, and GET
-    /api/internal/build-info at that alias returned commit
-    789768b99d5e8996c3f48671b188fa5ba0c51d04 with environment "production", so
-    production is at the exact authorized SHA rather than merely code-equivalent.
-    This is the first subject carrying the complete known Stage 7 capture-path
-    repair set together with both observation credential-disclosure repairs:
-    PR #391 (vitest 4 reporter compatibility), #392 (execution-validity fail-closed
-    gate), #393 (node-probe terminal-verdict integrity gate), #394 (trusted-verifier
-    repository_dispatch contract), #396 (ANSI-normalised validity matching with the
-    raw observation preserved for evidence), #401 (governed LANE_C capture inputs and
-    S7-I1 fail-closed), #402 (closure-time protected evidence context), #403 (owner
-    email redacted from evidence observations) and #404 (session cookie value
-    withheld from the observation). Supersedes D-15 (a19d226d). The governance-only
-    deployment-control script (scripts/vercel-ignore-build.mjs, wired via
-    vercel.json ignoreCommand) remains active and enforced. Owner authorization
-    received verbatim: "D16_SUBJECT_SHA=
-    789768b99d5e8996c3f48671b188fa5ba0c51d04".
+    D-17 now names the actual final beta runtime rather than the intermediate,
+    never-merged ae15813c candidate. That runtime is the composition of: PR #416
+    (Stage 7 owner-lane production-probe repair and machine-probe result-integrity
+    closure, merged ae15813c) + PR #418 (public-beta runtime hardening: signup kill
+    switch, race-safe workspace cap, durable email verification, server-recorded
+    consent, legal pages, internal-diagnostic and public-API hostile audits,
+    privacy-request path, feedback surface — merged 3647b8ce, PR head 6807afa9) +
+    production migration 20260905044623_open_beta_hardening (workflow run
+    33955264413, mode MAIN, prisma migrate deploy succeeded, post-deploy `prisma
+    migrate status` reported "Database schema is up to date!", zero pending, zero
+    failed). Main Integration for 3647b8ce succeeded (run 33951086242) with its
+    Full DB Integration Suite lane actually executed, not skipped by the risk
+    classifier: 1399/1400 test files passed (1 intentionally skipped), 33212/33231
+    tests passed (19 intentionally skipped), zero unexpected failures. Vercel
+    production deployment dpl_8FqgGoe1SXaUQTrKmD691rs46zE6 is state READY, target
+    production, alias o-ps-iq.vercel.app, meta.githubCommitSha 3647b8ce matching
+    exactly — all confirmed via the Vercel API. D17_TRANSITION_POLICY=
+    SINGLE_ACTIVE_SUBJECT continues to apply: D-16 is not carried forward in the
+    active subject allowlist, and required_evidence.merge_sha/pr_sha remain null,
+    unchanged by this correction. This authorization proves no invariant on its
+    own — S7-I11 stays PENDING with proof_artifacts [] (see amendment A16); a fresh
+    capture against 3647b8ce is required to prove any invariant under D-17.
   # Recorded limitations. Stated rather than assumed, because an unverified claim
   # in a governance record is worse than an absent one.
   unverified:
-    production_alias_binding: >-
-      The alias o-ps-iq.vercel.app is reported as bound to deployment
-      dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC by the Vercel API, and an unauthenticated
-      GET https://o-ps-iq.vercel.app/api/health returned HTTP 200 with status
-      "healthy" and environment "production", while GET
-      /api/internal/build-info at the same alias returned commit
-      789768b99d5e8996c3f48671b188fa5ba0c51d04. Independent DNS resolution and
-      certificate-chain inspection were NOT performed, so the binding of that
-      hostname to that deployment is API-reported plus liveness-observed, not
-      independently proven.
+    production_http_health: >-
+      This correction was authored from an execution environment whose outbound
+      network access to o-ps-iq.vercel.app is blocked by the network egress proxy
+      (confirmed: both an HTTP fetch and a direct curl to
+      https://o-ps-iq.vercel.app/api/health failed with a proxy-level
+      connect_rejected/EGRESS_BLOCKED error, not a response from the application).
+      No GET /api/health, /api/internal/build-info, /beta, /terms, /privacy, or
+      /signup was independently re-issued here. Vercel's own deployment record
+      (state READY, meta.githubCommitSha exactly 3647b8ce) and its runtime-log/
+      runtime-error API (periodic health-check traffic returning 200, no new
+      SQL/schema-relation errors observed post-deploy) were used as an indirect
+      substitute, not a substitute for an actual HTTP 200/healthy observation.
+      GET /api/auth/beta-status was likewise not independently re-issued; whether
+      PUBLIC_BETA_ENABLED is currently "true" in production is UNKNOWN to this
+      agent, not asserted false by direct observation — no action taken by any
+      session working on this decision has set it to "true".
+    production_schema_structural_verification: >-
+      migrate-production.yml's MAIN-mode run (33955264413) skipped its own
+      "Structural post-migration verification" step (confirmed from that run's job
+      steps directly, not inferred) — Prisma's own post-deploy `prisma migrate
+      status` ("Database schema is up to date!") is the only structural evidence
+      recorded here. No table-by-table, column-by-column confirmation that
+      EmailVerificationToken, PolicyAcceptance, PlatformFeedback, PrivacyRequest,
+      or the new Workspace/User beta-signup-source/cap columns exist was performed
+      by this agent, which has no direct database access in any of its execution
+      environments this Stage 7 cycle.
     git_commit_signature: >-
-      Vercel records githubCommitVerification "verified" for deployment
-      dpl_7ChcfrpKyDFGxbYwbJ5976tQ5eMC at commit
-      789768b99d5e8996c3f48671b188fa5ba0c51d04. Local `git log --show-signature`
-      returns status E (cannot check) because the GitHub web-flow signing key is not
-      present in this environment's keyring. The signature is therefore
+      Vercel records githubCommitVerification "verified" for the production
+      deployment at commit 3647b8ce95fd4c75640a6062a3a9ed235577f023 (per its own
+      deployment metadata, confirmed via the Vercel API). Local
+      `git log --show-signature` was not run against a keyring holding the GitHub
+      web-flow signing key in this environment. The signature is therefore
       provider-attested, NOT independently verified here.
   deployment_success_is_not_readiness: >-
     Vercel deployment state 'READY' means the deployment completed. It is not
@@ -171,7 +246,11 @@ closure_subject_sha_authorization:
     scripts/vercel-ignore-build.mjs is now active in production via vercel.json
     ignoreCommand. Governance-only diffs (docs/, .claude/, .governance/,
     src/__tests__/) exit 0 and are skipped by Vercel; runtime/configuration diffs
-    exit 1 and deploy; unknown or unavailable diffs fail open and deploy.
+    exit 1 and deploy; unknown or unavailable diffs fail open and deploy. This
+    governance PR's own diff (docs/opsiq/bundles/factory-stage-7-closure.yaml and
+    src/__tests__/completion-factory/*.test.ts) falls entirely within docs/ and
+    src/__tests__/, so it is itself classified governance-only and must not trigger
+    a new production deployment.
 
 description: |
   Factory Stage 7 proves that the existing OpsIQ system can be deployed securely
@@ -353,9 +432,12 @@ invariants:
     proof_lane: LANE_E
     proof_type: simulation_adversarial
     executable_evidence: "nine failure scenarios simulated in isolated environment; each fails safely, visibly, and recoverably"
-    status: PROVEN
-    proof_artifacts:
-      - evd_147fce5b18cdeeebf9d9b0b9778b8f06
+    # AMENDMENT A16 (2026-09-04): demoted PROVEN -> PENDING under D-17. See A16 below.
+    # evd_147fce5b18cdeeebf9d9b0b9778b8f06 remains append-only historical evidence; it
+    # describes D-16's subject (789768b9), which D-17's SINGLE_ACTIVE_SUBJECT policy no
+    # longer authorizes. It is not deleted, edited, or resigned.
+    status: PENDING
+    proof_artifacts: []
 
   S7-I12:
     name: Operational recovery
@@ -668,6 +750,111 @@ amendments:
       A14 above still records it. Stage 7 status PENDING, all invariants PENDING,
       required_evidence null — no closure evidence changed, no invariant made PROVEN,
       and no evidence captured by this amendment.
+  - id: A16
+    date: "2026-09-04"
+    applied_in: "governance/stage7-d17-subject"
+    authority: "owner decision D-17, authorized 2026-09-04"
+    summary: >-
+      closure_subject_sha advanced from 789768b99d5e8996c3f48671b188fa5ba0c51d04
+      (D-16, 2026-09-03, PR #404 merge) to ae15813c417901a9b48b012303f666e7591d1275
+      (D-17, 2026-09-04, PR #416 merge). The new subject is the exact
+      production-deployed SHA carrying PR #416's repair of the governed capture
+      instruments for S7-I1, S7-I2, S7-I4, S7-I5, S7-I10 and S7-I12 (owner-lane
+      route corrections, non-vacuous S7-I5 boundary checks, workspaceId attribution,
+      real staged S7-I12 recovery, and removal of every remaining default-success
+      `record()` call site). Owner decision D17_TRANSITION_POLICY=
+      SINGLE_ACTIVE_SUBJECT: exactly one commit is authorized at a time, D-16 is not
+      carried forward in the active subject allowlist, and required_evidence's
+      merge_sha/pr_sha fields are not used as a side-channel to retain it — both
+      remain null, unchanged by this amendment.
+
+      S7-I11 (the sole invariant D-16 left PROVEN) is atomically demoted PROVEN ->
+      PENDING with proof_artifacts reset to []: its proof artifact
+      evd_147fce5b18cdeeebf9d9b0b9778b8f06 declares subject_sha 789768b99d5e8996-
+      c3f48671b188fa5ba0c51d04, which D-17's SINGLE_ACTIVE_SUBJECT policy no longer
+      authorizes (scripts/lib/evidence-artifact.mjs resolveSubjectShaPolicy /
+      evaluateProofReference resolve the authorized allowlist from
+      closure_subject_sha and would reject that artifact as
+      SUBJECT_SHA_NOT_AUTHORIZED were S7-I11 left PROVEN under this subject). The
+      artifact file itself is unmodified, undeleted, and unresigned — it remains
+      append-only historical evidence describing D-16's subject; it is simply no
+      longer authorized to prove the D-17 subject. Proving S7-I11 again requires a
+      fresh capture against ae15813c417901a9b48b012303f666e7591d1275.
+
+      This is a deliberate, temporary reduction: Stage 7 governed progress falls
+      from 1/16 to 0/16 invariants proven. It is not a regression in what was
+      previously observed — the D-16 observation stands, unaltered, as historical
+      evidence — it is the correction of a policy hole where a proof bound to a
+      superseded subject could otherwise have kept reading as current.
+
+      Six open evidence PRs from the D-16 cycle (#410 S7-I10-LANE_E, #411 S7-I12,
+      #412 S7-I1, #413 S7-I4, #414 S7-I5, #415 S7-I10-LANE_C) are carried forward
+      unmerged and unbound; none is used to prove any D-17 invariant. Each requires
+      recapture under D-17 per PR #416's own disposition notes. D-15 and D-14
+      remain historical and unmodified; amendments A14 and A13 above still record
+      them. Stage 7 status PENDING, required_evidence null — no closure evidence
+      changed and no invariant other than S7-I11's demotion was touched by this
+      amendment.
+  - id: A17
+    date: "2026-09-05"
+    applied_in: "claude/stage7-d17-subject-auth-5yyiso"
+    authority: "owner decision D-17 (corrected in place; not a new decision letter), authorized 2026-09-05"
+    summary: >-
+      closure_subject_sha corrected from ae15813c417901a9b48b012303f666e7591d1275
+      (D-17 as originally proposed by this same PR while still unmerged, owner
+      authorization text "RUNTIME_CANDIDATE_SHA=
+      ae15813c417901a9b48b012303f666e7591d1275", 2026-09-04) to
+      3647b8ce95fd4c75640a6062a3a9ed235577f023 (D-17 as finalized, owner
+      authorization text "D17_SUBJECT_SHA= 3647b8ce95fd4c75640a6062a3a9ed235577f023",
+      2026-09-05). This is a correction within D-17, not an advance to D-18: the
+      ae15813c candidate never became an active subject — no evidence was captured
+      against it, and the PR proposing it (this one) never merged carrying that
+      value. Before it could merge, main advanced past it when PR #418 (open-beta
+      runtime hardening: server-side PUBLIC_BETA_ENABLED kill switch, race-safe
+      Postgres-advisory-lock workspace cap, durable EmailVerificationToken-backed
+      email verification with login independently refusing unverified accounts,
+      server-recorded PolicyAcceptance consent, expanded /terms and /privacy plus a
+      new /beta page, a shared isNonProductionEnvironment() gate added to two
+      DB-mutating internal diagnostic proof endpoints, correction of a stale
+      "bypasses auth" description of three already-governed /api/public/* routes,
+      new PlatformFeedback and enumeration-resistant PrivacyRequest models with an
+      in-product feedback surface, and a two-tenant DB-backed hostile regression +
+      abuse-resistance suite) merged as 3647b8ce95fd4c75640a6062a3a9ed235577f023
+      (PR head 6807afa79767ef45d5c37b7042bbd6df9f3bf46b). Main Integration succeeded
+      against that exact SHA (run 33951086242) with its Full DB Integration Suite
+      lane actually executed — not skipped by the risk classifier the way D-16's
+      transition run was — 1399/1400 test files passed (1 intentional skip),
+      33212/33231 tests passed (19 intentional skips), zero unexpected failures.
+      Vercel production deployment dpl_8FqgGoe1SXaUQTrKmD691rs46zE6 confirmed READY,
+      target production, alias o-ps-iq.vercel.app, meta.githubCommitSha matching
+      3647b8ce exactly. Production migration 20260905044623_open_beta_hardening was
+      then applied via the repository's governed migrate-production.yml workflow in
+      MAIN mode (run 33955264413): preflight independently classified exactly that
+      migration as the sole pending one (PREFLIGHT_CLASSIFICATION=PENDING_EXPECTED),
+      `prisma migrate deploy` succeeded, and post-deploy `prisma migrate status`
+      reported "Database schema is up to date!" — zero pending, zero failed. That
+      workflow's structural post-migration verification step is skipped in MAIN
+      mode; no table-by-table schema confirmation is claimed by this amendment (see
+      the `unverified.production_schema_structural_verification` note above). No
+      direct HTTP observation of /api/health or any other production route was
+      performed in the environment that authored this amendment (outbound access to
+      o-ps-iq.vercel.app is blocked by network egress policy there); Vercel's own
+      deployment-state and runtime-log APIs were used as an indirect substitute
+      instead (see `unverified.production_http_health` above).
+
+      D17_TRANSITION_POLICY=SINGLE_ACTIVE_SUBJECT is unchanged by this correction:
+      D-16 (789768b9) remains the historically-superseded subject exactly as
+      amendment A16 recorded it, and required_evidence.merge_sha/pr_sha remain
+      null. S7-I11 remains PENDING with proof_artifacts [] exactly as A16 left it —
+      this amendment does not resurrect the D-16-subject artifact
+      evd_147fce5b18cdeeebf9d9b0b9778b8f06 as active proof of anything, and does not
+      widen the active-subject allowlist beyond the single named commit. Evidence
+      tags stage7-evidence-subject-d13 through -d16 are untouched; no D17 tag is
+      created by this amendment. PUBLIC_BETA_ENABLED authorization (see
+      docs/opsiq/status/CONTROLLED_OPEN_BETA_AUTHORIZATION_DRAFT.md, added by PR
+      #418) remains a distinct, separate, unexercised owner decision — this
+      amendment does not activate it, and Stage 7 status remains PENDING with
+      0/16 invariants proven, 16 unmet.
   - id: A4
     date: "2026-09-01"
     applied_in: "claude/stage7-d13-subject-sha-and-d4"
