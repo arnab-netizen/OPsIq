@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_48fbf11fb7d4190f07324a67579851f8",
+  "invariant_id": "S7-I2",
+  "lane": "LANE_C",
+  "proof_type": "production_migration_check",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "production",
+  "method": "db_query",
+  "captured_at_utc": "2026-09-06T08:46:48.854Z",
+  "subject_sha": "0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06",
+  "authorization_manifest_sha": "a0a8a16066cd77da52a21758efeb361a32f723ee",
+  "deployment_id": "dpl_8owYgFhBFFwCPUfs2LMHBeQdGzgm",
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d18",
+    "job": "capture",
+    "run_id": "34022759891",
+    "run_number": 11,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-06T08:45:43Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "node scripts/stage7-probes/s7-i2-migration-check.mjs"
+  },
+  "observation": {
+    "raw": "=== S7-I2: Production migration integrity ===\n[PASS] db_url_source: \"DATABASE_DIRECT_URL\"\n[PASS] db_url_is_direct_endpoint: \"direct\"\n[PASS] local_migration_count: 124\nLocal migration directories: 20260417154412_add_module_05_evidence_vault, 20260610120000_owner_recovery_mode, 20260611120000_module2_finance, 20260612120000_module5_cashflow, 20260613120000_module3_sales, 20260613130000_module4_operations, 20260613150000_module7_sop, 20260613170000_module6_marketing, 20260613190000_module8_strategy, 20260613210000_module10_data_intake, 20260614183839_b05_fact_review_actions, 20260614200257_b12_add_business_condition_fields, 20260614202300_b12_external_systems_connector, 20260614213648_b13_oauth_connections, 20260614225000_b14_browser_assisted_import, 20260614230000_b15_case_study_benchmark, 20260615035700_b15_fix_benchmark_column_types, 20260615080000_b16_s1_public_dataset_harness, 20260615114500_b24_s1_private_mode_access, 20260625120000_owner_mode_execution_tables, 20260625130000_recommendation_business_impact, 20260625140000_require_business_impact_flag, 20260626100000_owner_service_economics, 20260626110000_owner_employee_workload_snapshots, 20260626120000_owner_workload_snapshots, 20260626130000_owner_capacity_snapshots, 20260626140000_owner_guidance_snapshots, 20260626150000_owner_supplier_inventory_snapshots, 20260626160000_owner_outcome_reassessment_tables, 20260627000000_owner_budget_governance, 20260627010000_owner_budget_governance_authority, 20260627020000_owner_budget_vendor_initiative, 20260627030000_owner_budget_action_linkage, 20260627090000_owner_working_capital_items, 20260627120000_owner_archetype_metrics, 20260628100000_owner_gate_opt_out, 20260628110000_owner_approval_memory, 20260628120000_owner_load_reduction, 20260628130000_owner_sop_document, 20260628140000_owner_staff_training, 20260628150000_owner_equipment, 20260628160000_owner_process, 20260628170000_owner_do_not_repeat_rule, 20260628180000_owner_self_evaluation, 20260628190000_owner_compliance_item, 20260628200000_owner_diagnosis_decision_harm_lifecycle, 20260628205000_engagement_workspace_required_indexed, 20260628210000_governed_verification_restrict, 20260629000000_audit_entity_id_text, 20260629010000_behavioral_learning_artifacts, 20260629020000_owner_entities_business_scope, 20260704120000_client_lead_workspace_anchor, 20260705000000_proof_tamper_suspected, 20260705120000_reassessment_source_proof, 20260705140000_operational_event, 20260705150000_operational_event_resolution, 20260705160000_proof_risk_adjudication, 20260705170000_completion_escalation_timing_evidence, 20260705180000_task_work_started_at, 20260706000000_external_opportunity_signal, 20260706010000_opportunity_validation_outcome, 20260706020000_opportunity_execution_task, 20260706030000_process_execution_task, 20260706040000_process_execution_task_notes, 20260713010000_retention_cohort_persistence, 20260713020000_growth_engine_persistence, 20260713030000_sales_deal_and_revenue_stream_persistence, 20260715000000_retention_cohort_unique, 20260715010000_vendor_contract_delivery_management, 20260715020000_compliance_obligation_metadata, 20260715030000_startup_session_persistence, 20260715040000_waste_leakage_events, 20260715050000_owner_goal_trajectory, 20260715060000_spreadsheet_allowlist, 20260715070000_operating_policies, 20260718000000_phase3_task_progress, 20260718010000_phase3_process_execution_task_plan_fields, 20260718020000_phase3_owner_action_outcome_verification, 20260718030000_phase3_owner_approval_memory_task_binding, 20260719000000_phase4_objectives_dependencies_arbitration, 20260719010000_phase4_resource_intelligence, 20260719020000_phase4_risk_kpi_confidence_constraint_explainability_memory, 20260719030000_phase4_cost_attribution_opportunity_links, 20260719040000_phase4_deepen_arbitration_memory_kpi_override, 20260719050000_phase4_fix_operating_memory_unique_constraint, 20260719060000_phase4_resource_pool_concurrency, 20260720010000_phase5_startup_mode, 20260720020000_phase5_approval_package_blueprint_uniqueness, 20260720030000_phase5_blueprint_extended_ids, 20260720040000_phase5_evidence_fk, 20260720050000_phase5_decision_snapshot_fields, 20260721060000_phase5_constraint_startup_session_fk, 20260721070000_phase5_initiative_verification_window, 20260721080000_phase5_material_claim_execution_plan, 20260721090000_phase5_execution_governance_candidates, 20260721100000_phase5_startup_task_link_fields, 20260722010000_phase5_r7_r8_provenance_plan_superseded, 20260722020000_phase5_verification_window_fields, 20260723000000_risk_compliance_lifecycle, 20260723010000_stage3_alert_model, 20260723020000_stage3_task_source_link, 20260724000000_bundle6_consulting_engagement_fields, 20260725000000_stage3b_customer_record, 20260725000001_stage3c_stock_purchase_order, 20260725000002_stage3d_marketing_campaign, 20260725000003_stage3f_entity_workspace_id, 20260725000004_stage3e_alert_delivery_state, 20260726000001_stage3g_alert_email_delivery_fsm, 20260726000002_stage3_bundle_service_tables, 20260727000001_stage5_bcp_connector_tables, 20260728000001_stage7_scheduler_hardening, 20260728000002_stage7_distributed_rate_limiting, 20260807000001_operator_items_outcome_fields, 20260808000001_operator_items_time_to_value_fields, 20260811000001_finance_snapshot_total_debt_outstanding, 20260813000001_snapshot_amendment, 20260813000002_finance_outcome_signals, 20260814000001_finance_signal_clc_link_text, 20260816000001_startup_status_claim_token, 20260819000001_startup_session_business_handoff, 20260824000001_approval_request_workspace_anchor, 20260825000001_override_record_workspace_anchor, 20260830174552_add_password_reset_tokens, 20260905044623_open_beta_hardening\n\nRunning: npx prisma migrate status\n\n--- migrate status stdout ---\nDatasource \"db\": PostgreSQL database \"neondb\", schema \"public\" at \"ep-empty-sky-ay1e6c27.c-5.us-east-2.aws.neon.tech\"\n\n172 migrations found in prisma/migrations\n\nDatabase schema is up to date!\n\n--- end migrate status output ---\n\n[PASS] migrate_status_output_present: true\n[PASS] migrate_status_exit_code: 0\n[PASS] zero_pending_migrations: \"Database schema is up to date — all migrations applied\"\n[PASS] schema_drift_absent: true\n[PASS] prisma_schema_present: \"prisma/schema.prisma exists\"\n\n=== OBSERVATION SUMMARY ===\nChecks: 8 PASS, 0 FAIL\n\nRESULT: PASS\n",
+    "content_hash": "sha256:f8c86fb656a11860f9df117521009cb897039774c02f8e1e7085fc623345f00c",
+    "byte_length": 6326,
+    "truncated": false
+  },
+  "assertion": "All approved migrations applied; zero pending migrations confirmed against production DB.",
+  "result": "PASS",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "6ded3ab0796aa84a00b2cf9c124ceddc6286a285bddbd3a0c509bfdc66ff6963d6010d8c6e784066c69fcdfa1ef380cb8bf1a023b7438f9add83daa168fcab0e"
+  }
+}
