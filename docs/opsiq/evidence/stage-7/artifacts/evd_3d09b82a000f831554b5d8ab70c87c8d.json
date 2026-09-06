@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_3d09b82a000f831554b5d8ab70c87c8d",
+  "invariant_id": "S7-I5",
+  "lane": "LANE_C",
+  "proof_type": "production_boundary_check",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "production",
+  "method": "http_probe",
+  "captured_at_utc": "2026-09-06T08:46:45.373Z",
+  "subject_sha": "0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06",
+  "authorization_manifest_sha": "a0a8a16066cd77da52a21758efeb361a32f723ee",
+  "deployment_id": "dpl_8owYgFhBFFwCPUfs2LMHBeQdGzgm",
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d18",
+    "job": "capture",
+    "run_id": "34022763855",
+    "run_number": 13,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-06T08:45:48Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "node scripts/stage7-probes/s7-i5-boundary-check.mjs"
+  },
+  "observation": {
+    "raw": "=== S7-I5: Live tenant and secret boundary ===\nDEPLOYMENT_ID: dpl_8owYgFhBFFwCPUfs2LMHBeQdGzgm\nPROBE_OWNER_EMAIL: set\nPROBE_PILOT_ENTITY_ID: set\nPROBE_FOREIGN_WORKSPACE_ID: set\nPROBE_FOREIGN_ENTITY_ID: set\n[PASS] probe_base_url: \"https://o-ps-iq.vercel.app\"\n\nTest: health endpoint does not leak secrets\n[PASS] health_response_no_secrets: true\n[PASS] health_does_not_expose_env_vars: true\n\nTest: malformed anonymous request does not leak stack traces\n[PASS] malformed_request_no_raw_error: true\n[FAIL] owner_session_obtained: false\n[FAIL] session_unavailable: \"Could not obtain owner session — every authenticated boundary check below is unproven.\"\n\nRESULT: FAIL\n",
+    "content_hash": "sha256:1b6524ae499e58a5606e81c926c36423fd685aee30c35d47dec6d30091c8f2db",
+    "byte_length": 664,
+    "truncated": false
+  },
+  "assertion": "Cross-workspace rejection confirmed on production; secret values absent from all owner-visible API responses, health output, and audit events.",
+  "result": "FAIL",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "f8c7a55efd7580ab7087b0f5ef76952440c1b46017daa0baf24cc978bdb1efa0dad162760de317ddb0419c0be12cb11045c1780ee7fcfedb5e3d8c387b0c5601"
+  }
+}
