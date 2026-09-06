@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_20466e742c3720a92b56e1258662317a",
+  "invariant_id": "S7-I10",
+  "lane": "LANE_C",
+  "proof_type": "simulation_and_production_audit_check",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "production",
+  "method": "db_query",
+  "captured_at_utc": "2026-09-06T08:46:51.727Z",
+  "subject_sha": "0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06",
+  "authorization_manifest_sha": "a0a8a16066cd77da52a21758efeb361a32f723ee",
+  "deployment_id": "dpl_8owYgFhBFFwCPUfs2LMHBeQdGzgm",
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d18",
+    "job": "capture",
+    "run_id": "34022765674",
+    "run_number": 14,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-06T08:45:50Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "node scripts/stage7-probes/s7-i10-audit-check-lane-c.mjs"
+  },
+  "observation": {
+    "raw": "=== S7-I10 (LANE_C): Audit and provenance completeness (production) ===\nDEPLOYMENT_ID: dpl_8owYgFhBFFwCPUfs2LMHBeQdGzgm\nPROBE_OWNER_EMAIL: set\nPROBE_PILOT_ENTITY_ID: set\n[PASS] probe_base_url: \"https://o-ps-iq.vercel.app\"\n[PASS] owner_audit_route_under_test: \"/api/owner/trust/audit-trail\"\n[FAIL] owner_login_failed: \"Error: Login failed: HTTP 401\"\n\nRESULT: FAIL\n",
+    "content_hash": "sha256:104ade58e42f32f257763e456c6f6e5e61cab5e84ee3934ed76262805d25dfa5",
+    "byte_length": 363,
+    "truncated": false
+  },
+  "assertion": "All six attribution fields present in audit records for pilot transitions; no raw payload copied into any audit record.",
+  "result": "FAIL",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "2a2d1fb441433413039d5b2fb434b8824b827f58c4127adbcdf7af49131c4a7fbeab1926ef4973b1b7aceea1734680ba1c045a1fa813b4bd3289d826176adf08"
+  }
+}
