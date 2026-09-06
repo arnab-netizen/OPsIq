@@ -1,0 +1,386 @@
+name: Stage 7 — Evidence Capture (Control Plane / D18 correction)
+
+# ─── Why this workflow exists, and why it is not a change to stage7-capture.yml ──
+#
+# stage7-capture.yml is dispatched with `--ref stage7-evidence-subject-d18` so that
+# github.sha (the observed subject) equals the checked-out commit. GitHub Actions
+# `workflow_dispatch --ref <ref>` checks out the ENTIRE workflow/action/script tree
+# from that ref — not just the triggering event. That means every fix landed on
+# main to this repository's OWN evidence tooling (the local self-validation step,
+# the composite capture action, scripts/lib/evidence-artifact.mjs) never takes
+# effect for a D18 dispatch: the frozen D18 tree's own old copies of that tooling
+# run instead, and — for the S7-I4/I5/I10-LANE_C corrections this workflow exists
+# to enable — the frozen D18 self-validation step rejects the artifact (it cannot
+# resolve a `supersedes` target that only exists in main's tree) BEFORE "Create
+# evidence branch and open PR" or the trusted verifier are ever reached.
+#
+# This workflow is dispatched from refs/heads/main, never from a tag. Its own
+# `uses: ./...` composite-action references and its own `node scripts/...mjs`
+# calls therefore resolve to CURRENT MAIN's tooling — the fixed validator, the
+# fixed trusted verifier, the raw-observation-preservation step — for exactly the
+# same reason the frozen-tree problem above exists in the first place.
+#
+# The commit actually being OBSERVED (D18) is checked out separately, read-only,
+# into ./subject, and only the governed probe script itself is executed from
+# there. It is never the workflow's own checkout, is never assumed to equal
+# github.sha, and cannot be pointed anywhere else: the tag name below is a literal
+# in this file, never a workflow input, and capture-evidence.mjs independently
+# re-derives and re-verifies the same subject commit from the governance manifest
+# before it will sign anything (see resolveControlPlaneSubject in
+# scripts/lib/evidence-artifact.mjs) — this workflow's own checkout is simply the
+# first of two independent places that fact is checked.
+#
+# Scope is intentionally narrower than stage7-capture.yml's full contract matrix:
+# only the three invariants PR #430 exists to unblock (S7-I4, S7-I5,
+# S7-I10-LANE_C — all production LANE_C corrections superseding a D18 FAIL). No
+# other invariant needs a control-plane capture, because no other invariant has an
+# unmerged predecessor blocking its supersession chain. Extending this matrix to
+# a new invariant later is a deliberate, reviewed change to this file — not a
+# caller-supplied input — same as stage7-capture.yml's own matrix.
+#
+# OPTION A (the legacy gate) is untouched by any of this: stage7-capture.yml, its
+# composite action step invocations, and every artifact OPTION A has ever
+# authorized are byte-for-byte unaffected. This is a new, additive gate for a new,
+# additive mode.
+
+on:
+  workflow_dispatch:
+    inputs:
+      invariant_id:
+        description: "Stage 7 invariant id being corrected against the D18 subject. LANE_C only."
+        required: true
+        type: choice
+        options:
+          - S7-I4
+          - S7-I5
+          - S7-I10-LANE_C
+      deployment_id:
+        description: "Vercel deployment ID (required — LANE_C). Format: dpl_..."
+        required: true
+        type: string
+      supersedes:
+        description: "artifact_id of the prior (D18) artifact this correction replaces. Required."
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+  pull-requests: write
+
+# ── OWNER ACTION REQUIRED before first dispatch ───────────────────────────────
+# The `stage7-evidence-signing` GitHub Environment's deployment branch/tag policy
+# was configured for the legacy workflow, which only ever runs from a
+# `stage7-evidence-subject-*` tag. This workflow runs from `refs/heads/main`
+# instead (enforced above) — GitHub will refuse to expose
+# `secrets.EVIDENCE_SIGNING_KEY` to this job at all unless the owner also adds
+# `main` to that environment's allowed deployment branches. This is a
+# repository-settings change no workflow file can make; until it is done, this
+# workflow can run through observation but will refuse at "Capture evidence
+# artifact" with EVIDENCE_SIGNING_KEY unset (UNVERIFIED, never ACCEPTED) —
+# fail-closed, not a security gap.
+
+env:
+  PROBE_BASE_URL: https://o-ps-iq.vercel.app
+  # Literal, reviewed source constant — must equal
+  # CONTROL_PLANE_AUTHORIZED_SUBJECT_TAG in scripts/lib/evidence-artifact.mjs.
+  # Not a workflow input: changing which subject is authorized is a governance
+  # decision that touches the manifest and this constant together, never a
+  # dispatch-time choice.
+  SUBJECT_TAG: stage7-evidence-subject-d18
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    environment: stage7-evidence-signing
+    steps:
+      # ── Enforcement point 1 of 2: this job's own checkout must be main ────────
+      # capture-evidence.mjs independently refuses --capture-mode control-plane
+      # unless GITHUB_REF is exactly refs/heads/main (enforcement point 2). This
+      # check runs first, before any checkout, so a caller who dispatches this
+      # workflow against a tag, a fork, or any other ref gets an immediate,
+      # cheap refusal instead of a partial run.
+      - name: Refuse unless dispatched from refs/heads/main
+        run: |
+          set -euo pipefail
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "REFUSED: this workflow may only be dispatched from refs/heads/main; got '${{ github.ref }}'." >&2
+            echo "Trusted control-plane code is only ever the current tip of main — never a tag, fork, or PR ref." >&2
+            exit 1
+          fi
+
+      - name: Checkout control plane (main) at GITHUB_SHA with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Populates both origin/main (required by the AUTH_SHA reads inside
+      # capture-evidence.mjs) and the immutable subject tag object (required by
+      # this job's own tag-vs-checkout cross-check below, and by
+      # resolveControlPlaneSubject's own `git rev-parse <tag>^{commit}`, which
+      # runs with cwd = this control-plane checkout, never ./subject).
+      - name: Fetch origin/main and tags
+        run: git fetch origin main --tags
+
+      # ── Isolated, read-only checkout of the exact immutable subject commit ───
+      # A second, independent working tree, never the job's own checkout. Only
+      # the governed probe script is ever executed from inside it.
+      - name: Checkout subject (immutable D18 tree) into ./subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_TAG }}
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+
+      # ── Enforcement point 1 of the tag/manifest cross-check ──────────────────
+      # Proves the tree actually checked out into ./subject is exactly what the
+      # immutable tag currently names, independently of anything capture-evidence.mjs
+      # will separately re-derive from the governance manifest. A tag that moved
+      # between this step and that later check would still be caught by the later
+      # manifest-vs-tag comparison; this step exists so a mismatch is refused
+      # before any production probe runs at all, not after.
+      - name: Verify subject checkout matches the immutable subject tag
+        id: verify_subject
+        run: |
+          set -euo pipefail
+          tag_sha=$(git rev-parse "refs/tags/${SUBJECT_TAG}^{commit}")
+          subject_sha=$(git -C subject rev-parse HEAD)
+          if [ "$tag_sha" != "$subject_sha" ]; then
+            echo "REFUSED: ./subject checkout ($subject_sha) does not match tag $SUBJECT_TAG ($tag_sha)." >&2
+            exit 1
+          fi
+          echo "subject_sha=$subject_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Contract matrix (control-plane subset) ───────────────────────────────
+      # Same shape and same values as stage7-capture.yml's matrix for these three
+      # invariants — see the parity test
+      # (stage7-capture-control-plane-parity.test.ts) that asserts the two stay
+      # in lockstep — except every command path is rooted at ./subject, because
+      # the code being observed is the D18 subject, not this job's own checkout.
+      - name: Resolve contract parameters from invariant_id
+        id: contract
+        env:
+          INVARIANT_ID: ${{ inputs.invariant_id }}
+        run: |
+          set -euo pipefail
+          case "$INVARIANT_ID" in
+            S7-I4)
+              echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
+              echo "proof_type=production_auth_check" >> "$GITHUB_OUTPUT"
+              echo "environment=production" >> "$GITHUB_OUTPUT"
+              echo "method=http_probe" >> "$GITHUB_OUTPUT"
+              echo "assertion=Owner login, logout, session expiry, and unauthorized-user rejection all confirmed on production deployment." >> "$GITHUB_OUTPUT"
+              echo "command=node subject/scripts/stage7-probes/s7-i4-auth-check.mjs" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD PROBE_FOREIGN_WORKSPACE_ID PROBE_FOREIGN_ENTITY_ID" >> "$GITHUB_OUTPUT"
+              ;;
+            S7-I5)
+              echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
+              echo "proof_type=production_boundary_check" >> "$GITHUB_OUTPUT"
+              echo "environment=production" >> "$GITHUB_OUTPUT"
+              echo "method=http_probe" >> "$GITHUB_OUTPUT"
+              echo "assertion=Cross-workspace rejection confirmed on production; secret values absent from all owner-visible API responses, health output, and audit events." >> "$GITHUB_OUTPUT"
+              echo "command=node subject/scripts/stage7-probes/s7-i5-boundary-check.mjs" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD PROBE_PILOT_ENTITY_ID PROBE_FOREIGN_WORKSPACE_ID PROBE_FOREIGN_ENTITY_ID" >> "$GITHUB_OUTPUT"
+              ;;
+            S7-I10-LANE_C)
+              echo "lane=LANE_C" >> "$GITHUB_OUTPUT"
+              echo "proof_type=simulation_and_production_audit_check" >> "$GITHUB_OUTPUT"
+              echo "environment=production" >> "$GITHUB_OUTPUT"
+              echo "method=db_query" >> "$GITHUB_OUTPUT"
+              echo "assertion=All six attribution fields present in audit records for pilot transitions; no raw payload copied into any audit record." >> "$GITHUB_OUTPUT"
+              echo "command=node subject/scripts/stage7-probes/s7-i10-audit-check-lane-c.mjs" >> "$GITHUB_OUTPUT"
+              echo "required_inputs=PROBE_BASE_URL PROBE_OWNER_EMAIL PROBE_OWNER_PASSWORD PROBE_PILOT_ENTITY_ID" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "REFUSED: '$INVARIANT_ID' is not in the control-plane capture matrix. Only S7-I4, S7-I5 and S7-I10-LANE_C are supported here." >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Validate deployment_id requirement
+        env:
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "REFUSED: deployment_id is required for every control-plane (LANE_C) capture." >&2
+            exit 1
+          fi
+
+      # ── Governed-input preflight — identical rationale to stage7-capture.yml ──
+      - name: Preflight governed capture inputs
+        env:
+          INVARIANT_ID: ${{ inputs.invariant_id }}
+          REQUIRED_INPUTS: ${{ steps.contract.outputs.required_inputs }}
+          PROBE_BASE_URL: ${{ env.PROBE_BASE_URL }}
+          PROBE_OWNER_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          PROBE_OWNER_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          PROBE_PILOT_ENTITY_ID: ${{ secrets.STAGE7_PILOT_ENTITY_ID }}
+          PROBE_FOREIGN_WORKSPACE_ID: ${{ secrets.STAGE7_FOREIGN_WORKSPACE_ID }}
+          PROBE_FOREIGN_ENTITY_ID: ${{ secrets.STAGE7_FOREIGN_ENTITY_ID }}
+        run: |
+          set -euo pipefail
+          missing=""
+          for name in $REQUIRED_INPUTS; do
+            if [ -z "${!name:-}" ]; then
+              missing="$missing $name"
+            else
+              echo "  present: $name"
+            fi
+          done
+          if [ -n "${missing// /}" ]; then
+            echo "REFUSED: $INVARIANT_ID cannot be captured — missing governed capture input(s):$missing" >&2
+            exit 1
+          fi
+          echo "All governed capture inputs for $INVARIANT_ID are present."
+
+      # ── Run observation ───────────────────────────────────────────────────────
+      # Identical ANSI-normalization and terminal-verdict validity gates to
+      # stage7-capture.yml's "Run observation" step (see the parity test).
+      # CLOSURE_SUBJECT_SHA is the resolved, tag-verified D18 subject SHA — never
+      # github.sha, which is this job's own control-plane (main) checkout and
+      # would make the probe compare production against the wrong commit.
+      - name: Run observation (hardcoded command — not caller-supplied)
+        id: observe
+        env:
+          OBSERVATION_COMMAND: ${{ steps.contract.outputs.command }}
+          METHOD: ${{ steps.contract.outputs.method }}
+          PROBE_BASE_URL: ${{ env.PROBE_BASE_URL }}
+          CLOSURE_SUBJECT_SHA: ${{ steps.verify_subject.outputs.subject_sha }}
+          PROBE_OWNER_EMAIL: ${{ secrets.PRODUCTION_ACCEPTANCE_EMAIL }}
+          PROBE_OWNER_PASSWORD: ${{ secrets.PRODUCTION_ACCEPTANCE_PASSWORD }}
+          PROBE_PILOT_ENTITY_ID: ${{ secrets.STAGE7_PILOT_ENTITY_ID }}
+          PROBE_FOREIGN_WORKSPACE_ID: ${{ secrets.STAGE7_FOREIGN_WORKSPACE_ID }}
+          PROBE_FOREIGN_ENTITY_ID: ${{ secrets.STAGE7_FOREIGN_ENTITY_ID }}
+        run: |
+          set -euo pipefail
+          obs_file="$RUNNER_TEMP/observation.txt"
+          observed_exit=0
+          eval "$OBSERVATION_COMMAND" > "$obs_file" 2>&1 || observed_exit=$?
+
+          if [ ! -s "$obs_file" ]; then
+            echo "REFUSED: observation command produced no output" >&2
+            exit 1
+          fi
+
+          validation_file="$RUNNER_TEMP/observation.normalized.txt"
+          LC_ALL=C sed -E $'s/\033\\[[0-9;]*[A-Za-z]//g' "$obs_file" > "$validation_file"
+
+          case "$OBSERVATION_COMMAND" in
+            "node subject/scripts/stage7-probes/"*) observation_runner="stage7_node_probe" ;;
+            *)                                       observation_runner="unclassified" ;;
+          esac
+
+          if [ "$observation_runner" = "stage7_node_probe" ]; then
+            verdict_count=$(grep -cE '^[[:space:]]*RESULT:[[:space:]]+(PASS|FAIL)[[:space:]]*$' "$validation_file" || true)
+            pass_count=$(grep -cE '^[[:space:]]*RESULT:[[:space:]]+PASS[[:space:]]*$' "$validation_file" || true)
+            fail_count=$(grep -cE '^[[:space:]]*RESULT:[[:space:]]+FAIL[[:space:]]*$' "$validation_file" || true)
+
+            if [ "$verdict_count" -eq 0 ]; then
+              echo "REFUSED: the Stage 7 probe did not reach a controlled verdict." >&2
+              echo "--- observation output (first 40 lines) ---" >&2
+              head -40 "$obs_file" >&2
+              exit 1
+            fi
+            if [ "$verdict_count" -ne 1 ]; then
+              echo "REFUSED: the Stage 7 probe emitted $verdict_count terminal verdict lines ($pass_count PASS, $fail_count FAIL)." >&2
+              exit 1
+            fi
+            if [ "$pass_count" -eq 1 ] && [ "$observed_exit" -ne 0 ]; then
+              echo "REFUSED: the Stage 7 probe declared 'RESULT: PASS' but exited $observed_exit." >&2
+              exit 1
+            fi
+            if [ "$fail_count" -eq 1 ] && [ "$observed_exit" -eq 0 ]; then
+              echo "REFUSED: the Stage 7 probe declared 'RESULT: FAIL' but exited 0." >&2
+              exit 1
+            fi
+          else
+            echo "REFUSED: observation command is not a governed control-plane observation." >&2
+            echo "command: $OBSERVATION_COMMAND" >&2
+            exit 1
+          fi
+
+          if [ "$observed_exit" -eq 0 ]; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+          fi
+          echo "observation_file=$obs_file" >> "$GITHUB_OUTPUT"
+
+      - name: Normalize invariant_id
+        id: normalize
+        env:
+          INVARIANT_ID: ${{ inputs.invariant_id }}
+        run: |
+          normalized="${INVARIANT_ID%%-LANE_*}"
+          echo "invariant_id=$normalized" >> "$GITHUB_OUTPUT"
+
+      # capture_mode: control-plane is the only new input this composite action
+      # accepts. Every value it drives (subject_sha, control_plane_sha,
+      # control_plane_ref, subject_tag) is derived inside capture-evidence.mjs
+      # itself, from GITHUB_REF/GITHUB_SHA and the governance manifest — never
+      # from this workflow's own inputs, and never caller-suppliable.
+      - name: Capture evidence artifact
+        id: capture
+        uses: ./.github/actions/stage7-evidence-capture
+        with:
+          invariant: ${{ steps.normalize.outputs.invariant_id }}
+          lane: ${{ steps.contract.outputs.lane }}
+          proof_type: ${{ steps.contract.outputs.proof_type }}
+          environment: ${{ steps.contract.outputs.environment }}
+          method: ${{ steps.contract.outputs.method }}
+          assertion: ${{ steps.contract.outputs.assertion }}
+          result: ${{ steps.observe.outputs.result }}
+          observation_file: ${{ steps.observe.outputs.observation_file }}
+          replay_command: ${{ steps.contract.outputs.command }}
+          deployment_id: ${{ inputs.deployment_id }}
+          classification: "INTERNAL_ONLY"
+          supersedes: ${{ inputs.supersedes }}
+          capture_mode: control-plane
+          signing_key: ${{ secrets.EVIDENCE_SIGNING_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create evidence branch and open PR
+        id: evidence_pr
+        uses: ./.github/actions/stage7-create-evidence-pr
+        with:
+          artifact_path: ${{ steps.capture.outputs.artifact_path }}
+          artifact_id: ${{ steps.capture.outputs.artifact_id }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dispatch trusted verifier
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.evidence_pr.outputs.pr_number }}
+          PR_HEAD_SHA: ${{ steps.evidence_pr.outputs.pr_head_sha }}
+          ARTIFACT_ID: ${{ steps.capture.outputs.artifact_id }}
+        run: |
+          set -euo pipefail
+          HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPO/dispatches" \
+            -d "$(jq -nc \
+              --arg event_type "stage7-verify-artifacts" \
+              --arg pr_number "$PR_NUMBER" \
+              --arg head_sha "$PR_HEAD_SHA" \
+              --arg artifact_ids "$ARTIFACT_ID" \
+              '{event_type: $event_type, client_payload: {pr_number: $pr_number, head_sha: $head_sha, artifact_ids: $artifact_ids}}')")
+
+          if [ "$HTTP_STATUS" != "204" ]; then
+            echo "FAILED: repository_dispatch returned HTTP $HTTP_STATUS (expected 204)." >&2
+            exit 1
+          fi
+          echo "Dispatched stage7-trusted-verifier for PR #$PR_NUMBER (head: $PR_HEAD_SHA)."

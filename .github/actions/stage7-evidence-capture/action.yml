@@ -71,6 +71,18 @@ inputs:
     description: "URL of the owner's GitHub comment naming this artifact. Required on LANE_F and OWNER_ACCEPTANCE."
     required: false
     default: ""
+  capture_mode:
+    description: >
+      Leave empty for the legacy direct-capture shape (subject_sha = GITHUB_SHA of this
+      job's own checkout). Set to "control-plane" only from a job whose own checkout is
+      the current tip of refs/heads/main and which observes a DIFFERENT, immutable
+      subject commit checked out elsewhere in the same job — capture-evidence.mjs then
+      derives subject_sha itself, from the governance manifest cross-checked against the
+      immutable subject tag, and refuses unless GITHUB_REF is exactly refs/heads/main.
+      There is no other value: a caller cannot name its own subject_sha or control-plane
+      SHA through this action.
+    required: false
+    default: ""
   signing_key:
     description: "EVIDENCE_SIGNING_KEY. Pass secrets.EVIDENCE_SIGNING_KEY; omit and the artifact is UNVERIFIED."
     required: false
@@ -126,6 +138,7 @@ runs:
         IN_CLASSIFICATION: ${{ inputs.classification }}
         IN_SUPERSEDES: ${{ inputs.supersedes }}
         IN_OWNER_ATTESTATION_REF: ${{ inputs.owner_attestation_ref }}
+        IN_CAPTURE_MODE: ${{ inputs.capture_mode }}
       run: |
         set -euo pipefail
         args=(
@@ -143,6 +156,7 @@ runs:
         [ -n "$IN_DEPLOYMENT_ID" ] && args+=(--deployment-id "$IN_DEPLOYMENT_ID")
         [ -n "$IN_SUPERSEDES" ] && args+=(--supersedes "$IN_SUPERSEDES")
         [ -n "$IN_OWNER_ATTESTATION_REF" ] && args+=(--owner-attestation-ref "$IN_OWNER_ATTESTATION_REF")
+        [ -n "$IN_CAPTURE_MODE" ] && args+=(--capture-mode "$IN_CAPTURE_MODE")
         node "$GITHUB_ACTION_PATH/../../../scripts/capture-evidence.mjs" "${args[@]}"
 
     # Diagnostic safety net, NOT evidence. The step below this one re-validates the

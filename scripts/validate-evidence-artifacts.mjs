@@ -191,6 +191,38 @@ async function githubJson(url) {
   return response.json();
 }
 
+/**
+ * Resolve a tag name to the 40-hex commit it currently targets, dereferencing
+ * one level of annotated-tag indirection if needed. Used only for control-plane
+ * provenance (evaluateRunProvenance's context.subjectTagSha): the run's own
+ * head_sha proves the control-plane commit, not the subject, so subject_sha for
+ * a control-plane artifact is instead re-checked against the live tag on every
+ * validation run, never assumed to still hold from capture time.
+ */
+async function resolveSubjectTagSha(repository, tag) {
+  let ref;
+  try {
+    ref = await githubJson(`https://api.github.com/repos/${repository}/git/ref/tags/${tag}`);
+  } catch (error) {
+    return { error: error.message };
+  }
+  if (ref === null) return { error: `tag '${tag}' does not exist in ${repository}` };
+  if (ref.object?.type === 'commit' && typeof ref.object.sha === 'string') {
+    return { sha: ref.object.sha };
+  }
+  if (ref.object?.type === 'tag' && typeof ref.object.sha === 'string') {
+    let tagObject;
+    try {
+      tagObject = await githubJson(`https://api.github.com/repos/${repository}/git/tags/${ref.object.sha}`);
+    } catch (error) {
+      return { error: `could not dereference annotated tag object — ${error.message}` };
+    }
+    if (typeof tagObject?.object?.sha === 'string') return { sha: tagObject.object.sha };
+    return { error: 'annotated tag object did not resolve to a commit' };
+  }
+  return { error: `unexpected ref.object.type '${ref.object?.type}'` };
+}
+
 /** `https://github.com/o/r/issues/12#issuecomment-345` → issue-comment API URL. */
 function ownerCommentApiUrl(ref) {
   const match = /^https:\/\/github\.com\/([^/]+\/[^/]+)\/(?:issues|pull)\/\d+#issuecomment-(\d+)$/.exec(String(ref ?? ''));
@@ -237,7 +269,14 @@ async function verifyProvenance(artifact) {
     } catch (error) {
       return [`${artifact.artifact_id}: could not retrieve run ${artifact.producer.run_id} — ${error.message}`];
     }
-    violations.push(...evaluateRunProvenance(artifact, run));
+    let provenanceContext = {};
+    if (artifact.capture_mode === 'control_plane' && run !== null) {
+      const tagResolution = await resolveSubjectTagSha(artifact.producer.repository, artifact.producer.subject_tag);
+      provenanceContext = tagResolution.error
+        ? { subjectTagLookupError: tagResolution.error }
+        : { subjectTagSha: tagResolution.sha };
+    }
+    violations.push(...evaluateRunProvenance(artifact, run, provenanceContext));
   } else if (OWNER_LANES.includes(artifact.lane)) {
     const apiUrl = ownerCommentApiUrl(artifact.producer.owner_attestation_ref);
     if (apiUrl === null) {

@@ -240,7 +240,69 @@ An agent cannot post a comment as the owner's account, so it cannot manufacture 
 Under `--require-provenance`, `subject_sha` must be known to the local clone and must be an
 ancestor of `origin/main`. The frozen standard requires it ("an artifact whose
 `subject_sha` is not an ancestor of `main` is invalid"), and it is why capture is intended
-to run on `main`, not on a PR branch.
+to run on `main`, not on a PR branch. Unchanged by control-plane mode (§6.4): a
+control-plane artifact's `subject_sha` is still required to be an ancestor of `main`,
+exactly as for a legacy artifact.
+
+### 6.4 Control-plane capture mode (additive, optional)
+
+`workflow_dispatch --ref <immutable-subject-tag>` checks out the **entire** workflow/
+action/script tree from that tag — not just the triggering event. That means a fix landed
+on `main` to this repository's *own* evidence tooling (the validator, the capture action,
+this library) never takes effect for a dispatch against a frozen historical subject tag:
+the frozen tag's own old copies of that tooling run instead. For a legacy capture this is
+by design — the job's own checkout **is** the subject, so running the subject's own tooling
+against the subject's own code is exactly the point. It becomes a problem only when the
+tooling itself needs a fix that a frozen historical subject can never carry.
+
+Control-plane mode is a second, additive way to produce an artifact: the job dispatches
+from `refs/heads/main` (never a tag), so its own checkout — and every composite action and
+script it calls via `uses: ./...` or `node scripts/...` — is current main's tooling. The
+commit actually being *observed* is checked out separately, read-only, into an isolated
+`./subject` path, and only the governed probe script itself runs from there. The two
+identities are recorded separately in `producer` and are never conflated:
+
+| Field | Meaning |
+|---|---|
+| `capture_mode` (top-level, optional) | absent = legacy; `"control_plane"` = this mode |
+| `producer.control_plane_sha` | the commit whose tooling actually executed (must equal the run's own `head_sha`, and must be an ancestor-of-main tip — enforced as exactly `refs/heads/main` at capture time) |
+| `producer.control_plane_ref` | must be exactly `"refs/heads/main"` |
+| `producer.subject_tag` | the immutable subject tag naming the observed commit (must equal the one currently authorized — `CONTROL_PLANE_AUTHORIZED_SUBJECT_TAG` in `scripts/lib/evidence-artifact.mjs`) |
+| `subject_sha` | unchanged in meaning — the commit actually observed — but now *derived* from the governance manifest cross-checked against the immutable tag, never read from `GITHUB_SHA` |
+
+**Two independent gates, not one relaxed gate.** OPTION A (§ above, unchanged) asks "is the
+commit this job checked itself out at the one commit currently authorized to be observed" —
+true by construction when the job's own checkout is the subject. The CONTROL-PLANE
+authorization gate (`resolveControlPlaneSubject` in `scripts/lib/evidence-artifact.mjs`)
+asks a different question — "does the one subject tag this build is allowed to trust
+currently resolve to exactly the commit the governance manifest names as authorized" —
+because a control-plane job's own checkout is main, not the subject, so OPTION A's question
+no longer applies. Neither gate is a caller input: `fetchMainManifest` and `resolveTagSha`
+are injected I/O (real `git`/GitHub calls at runtime, fixtures in tests), and the subject
+tag name is a reviewed source constant, never a workflow input or CLI flag.
+
+**Re-verified on every future validation, not only at capture time.** Because a
+control-plane run's own `head_sha` proves nothing about the subject (they are, by design,
+different commits), `evaluateRunProvenance` independently re-resolves `producer.subject_tag`
+via the GitHub API on every `--require-provenance` run and refuses if it no longer matches
+`subject_sha` — catching a subject tag that moved *after* capture, not just a mismatch at
+capture time.
+
+**Backward compatibility.** `capture_mode` is the only new top-level field, and it is
+optional: every artifact ever captured, and every call site that never sets it, is governed
+by exactly the same code paths as before this mode existed. `evidence_version` is not
+bumped. The documented JSON schema (`schema/evidence-artifact.v1.schema.json`) continues to
+describe only the base (legacy) shape; `capture_mode` and the three `producer.control_plane_*`
+/ `producer.subject_tag` fields are validated by the executable library only. OPTION A
+(`resolveCaptureAuthorization`) is untouched — it is not shared code with
+`resolveControlPlaneSubject`, on purpose, so nothing about this mode's existence can affect
+OPTION A's exact behavior or the artifacts it has already authorized.
+
+Scope: only S7-I4, S7-I5 and S7-I10-LANE_C currently use control-plane mode
+(`.github/workflows/stage7-capture-control-plane.yml`), because those are the only
+invariants with a correction blocked by a predecessor that exists solely on `main` (see
+`docs/opsiq/evidence/stage-7/README.md` and PR history). `stage7-capture.yml` (the legacy,
+tag-dispatched workflow) is unchanged and remains the path for every other invariant.
 
 ---
 
@@ -271,6 +333,7 @@ so explicitly. It never prints anything that could be read as Stage 7 progress.
 | CI capture helper | `scripts/capture-evidence.mjs` | GitHub Actions only; refuses to run elsewhere |
 | Validator | `scripts/validate-evidence-artifacts.mjs` | PR CI, and any future closure gate |
 | CI action | `.github/actions/stage7-evidence-capture/action.yml` | composite action, called by a capture job |
+| Control-plane capture workflow | `.github/workflows/stage7-capture-control-plane.yml` | dispatched from `refs/heads/main` only — see §6.4 |
 
 A composite action rather than a reusable workflow, deliberately: the observation must
 be the verbatim output of a step the calling job already ran, and a composite action
@@ -300,6 +363,7 @@ These are owner actions or follow-up PRs. None can be closed by an agent session
 | G-5 | `EVIDENCE_OWNER_LOGINS` allowlist is unset; owner-lane provenance falls back to the repository owner | LANE_F, OWNER_ACCEPTANCE | confirm or set the allowlist |
 | G-6 | Deferred contract amendments A1 (deployment candidate SHA), A2 (S7-I3 evidence text), A4 (isolated environment target) still block owner decisions D-1…D-4 | S7-I1, S7-I3, S7-I11 | issue D-1 … D-4 |
 | G-7 | Production runtime-log retention is ~1h; LANE_C capture must be synchronous with the observation | LANE_C | none — the framework's design constraint, recorded so it is not rediscovered |
+| G-8 | The `stage7-evidence-signing` GitHub Environment's deployment branch/tag policy currently allows only `stage7-evidence-subject-*` tags; `stage7-capture-control-plane.yml` (§6.4) runs from `refs/heads/main` and cannot reach `EVIDENCE_SIGNING_KEY` until `main` is added to that policy | control-plane captures (S7-I4, S7-I5, S7-I10-LANE_C corrections) — fails closed (UNVERIFIED) until done, not a security gap | add `main` to the environment's allowed deployment branches |
 
 ## Related
 
