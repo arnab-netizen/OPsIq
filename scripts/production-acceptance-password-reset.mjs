@@ -12,6 +12,24 @@
  * password change, redemption, and session revocation. This script never
  * touches users.hashed_password directly and never authenticates as the user.
  *
+ * WHY RAW PARAMETERIZED SQL, NOT THE GENERATED PRISMA CLIENT:
+ * prisma/schema.prisma generates its client to src/generated/prisma (a custom
+ * `output`, not the default node_modules location). That generated output is
+ * plain TypeScript with extensionless internal imports (e.g. `./internal/class`),
+ * resolved correctly only by a bundler-aware toolchain (Next.js's webpack build,
+ * or vitest/esbuild in tests) — never by plain `node`. This was verified directly
+ * in this environment: `node -e "import('@prisma/client')"` fails with
+ * "Cannot find module '.prisma/client/default'" because `prisma generate` with a
+ * custom output never creates that default-location shim; and importing the
+ * generated `src/generated/prisma/client.ts` file directly (even through tsx's
+ * programmatic API) fails on its own extensionless internal imports. Neither
+ * path is provable under the required invocation
+ * (`node scripts/production-acceptance-password-reset.mjs`, no extra loader
+ * flags). `pg` — already a proven, working repository dependency (used directly
+ * by src/lib/db.ts's own @prisma/adapter-pg construction) — has no such
+ * resolution problem, so this script talks to Postgres directly with
+ * parameterized queries instead.
+ *
  * Governed, single-purpose, fail-closed:
  *   - targets exactly one email, read from PRODUCTION_ACCEPTANCE_EMAIL
  *   - requires the account to already exist, be active, and already have a
@@ -20,12 +38,20 @@
  *   - requires an exact-match production confirmation string
  *   - requires the resolved DB hostname to exactly equal an owner-supplied
  *     expected host, and refuses a pooler endpoint outright
- *   - creates exactly one PasswordResetToken row (+ one governed AuditEvent
- *     row, mirroring the real route) and prints the resulting reset URL once
+ *   - creates the PasswordResetToken row and (when an active workspace
+ *     membership exists) the governed AuditEvent row in ONE database
+ *     transaction: either both commit or neither does. If no active
+ *     membership exists, the token is still created without an audit event —
+ *     this is not a weaker rule invented for this script, it is the actual
+ *     production behavior of forgot-password/route.ts: emitAuditEvent()
+ *     silently no-ops on a missing workspaceId (see src/infra/audit.ts) while
+ *     the token row is created unconditionally.
+ *   - prints the resulting reset URL exactly once, and only after the
+ *     transaction has actually committed — never before, never on a rollback
  *   - never logs the email, user id, workspace id, password hash, token
  *     hash, or the DATABASE_URL
  *   - makes no other read or write: no User update, no WorkspaceMembership
- *     read beyond resolving the audit scope, no account creation
+ *     write, no account creation
  *
  * Required environment variables (never printed):
  *   PRODUCTION_DATABASE_URL          direct (non-pooler) production Postgres URL
@@ -100,10 +126,107 @@ export function generateResetToken() {
 }
 
 /** Same hash-chain construction as src/infra/audit.ts's computeEventHash. */
-function computeAuditEventHash(eventId, workspaceId, eventName, timestamp) {
+export function computeAuditEventHash(eventId, workspaceId, eventName, occurredAt) {
   return createHash("sha256")
-    .update(`${eventId}|${workspaceId}|${eventName}|${timestamp.toISOString()}`)
+    .update(`${eventId}|${workspaceId}|${eventName}|${occurredAt.toISOString()}`)
     .digest("hex");
+}
+
+/**
+ * Read-only lookup, performed BEFORE any transaction is opened. Selects only
+ * the booleans needed to gate the mutation — never the password hash itself.
+ * Returns null if no such user exists.
+ */
+export async function findAcceptanceAccount(client, email) {
+  const { rows } = await client.query(
+    `SELECT id, is_active AS "isActive", (hashed_password IS NOT NULL) AS "hasPassword"
+     FROM users WHERE email = $1`,
+    [email]
+  );
+  return rows[0] ?? null;
+}
+
+/** Read-only: the account's oldest active workspace membership, if any. */
+export async function findActiveWorkspaceId(client, userId) {
+  const { rows } = await client.query(
+    `SELECT workspace_id AS "workspaceId" FROM workspace_memberships
+     WHERE user_id = $1 AND is_active = true
+     ORDER BY added_at ASC LIMIT 1`,
+    [userId]
+  );
+  return rows[0]?.workspaceId ?? null;
+}
+
+/**
+ * The atomic mutation: creates the PasswordResetToken row and, when
+ * workspaceId is non-null, the governed AuditEvent row (hash-chained exactly
+ * like src/infra/audit.ts) — in a single transaction on the given client.
+ * Returns { rawToken } ONLY after COMMIT has actually succeeded. On any
+ * error, the caller must have already issued (or must issue) ROLLBACK before
+ * this rejects — see runRecovery below, which owns the BEGIN/ROLLBACK
+ * lifecycle around this function so a caller cannot forget either half.
+ *
+ * `client` needs only `.query(text, params)` — a real `pg.Client`/`pg.Pool`
+ * connection, or (in tests) any fake satisfying that shape.
+ */
+export async function createResetTokenAndAudit(client, { userId, workspaceId }) {
+  const { rawToken, tokenHash } = generateResetToken();
+  const tokenId = randomUUID();
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+
+  await client.query(
+    `INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, ip_address)
+     VALUES ($1, $2, $3, $4, NULL)`,
+    [tokenId, userId, tokenHash, expiresAt]
+  );
+
+  if (workspaceId) {
+    const { rows: lastEventRows } = await client.query(
+      `SELECT id, event_name AS "eventName", occurred_at AS "occurredAt"
+       FROM audit_events WHERE workspace_id = $1
+       ORDER BY occurred_at DESC LIMIT 1`,
+      [workspaceId]
+    );
+    const lastEvent = lastEventRows[0] ?? null;
+    const previousHash = lastEvent
+      ? computeAuditEventHash(lastEvent.id, workspaceId, lastEvent.eventName, new Date(lastEvent.occurredAt))
+      : null;
+
+    // actor_id is uuid but entity_id is plain text (see prisma/schema.prisma's
+    // AuditEvent.entityId, which has no @db.Uuid annotation) — even though
+    // both hold the same user id value here, they need separate placeholders:
+    // reusing one parameter for both makes node-postgres deduce conflicting
+    // types for it and reject the query outright (proven by the DB-backed
+    // test suite against a real Postgres instance).
+    await client.query(
+      `INSERT INTO audit_events
+         (id, workspace_id, event_name, actor_id, actor_type, entity_type, entity_id,
+          correlation_id, visibility, previous_hash)
+       VALUES ($1, $2, $3, $4, 'user', 'user', $5, NULL, 'internal', $6)`,
+      [randomUUID(), workspaceId, AUDIT_EVENT_PASSWORD_RESET_REQUESTED, userId, userId, previousHash]
+    );
+  }
+
+  return { rawToken };
+}
+
+/**
+ * Owns the transaction lifecycle: BEGIN, run the mutation, COMMIT on success,
+ * ROLLBACK on any failure (re-throwing afterwards). The raw token is only
+ * ever returned to the caller after COMMIT has resolved successfully — a
+ * throw here always means neither the token row nor the audit row persists.
+ */
+export async function runRecovery(client, { userId, workspaceId }) {
+  await client.query("BEGIN");
+  let result;
+  try {
+    result = await createResetTokenAndAudit(client, { userId, workspaceId });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  }
+  await client.query("COMMIT");
+  return result;
 }
 
 async function main() {
@@ -137,86 +260,47 @@ async function main() {
 
   const email = normalizeEmail(rawEmail);
 
-  // Matches src/lib/db.ts's own construction exactly: this schema's generated
-  // client requires the @prisma/adapter-pg driver adapter, not a bare
-  // connection-string option — a plain `new PrismaClient({ datasourceUrl })`
-  // does not work against this generator's output.
-  const pg = await import("pg");
-  const { PrismaPg } = await import("@prisma/adapter-pg");
-  const { PrismaClient } = await import("@prisma/client");
-  const pool = new pg.Pool({ connectionString: databaseUrl, max: 1 });
-  const adapter = new PrismaPg(pool);
-  const prisma = new PrismaClient({ adapter });
+  const { Client } = await import("pg");
+  const client = new Client({ connectionString: databaseUrl });
+  await client.connect();
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await findAcceptanceAccount(client, email);
 
     if (!user) {
       console.error("REFUSED: ACCOUNT_NOT_FOUND — no account exists for the configured email. No mutation performed.");
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
     if (!user.isActive) {
       console.error("REFUSED: ACCOUNT_INACTIVE — this script does not reactivate accounts. No mutation performed.");
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
-    if (!user.hashedPassword) {
+    if (!user.hasPassword) {
       console.error("REFUSED: NO_PASSWORD_HASH_SET — the normal reset flow cannot establish a first-time password. No mutation performed.");
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
-    const { rawToken, tokenHash } = generateResetToken();
-
-    await prisma.passwordResetToken.create({
-      data: {
-        id: randomUUID(),
-        userId: user.id,
-        tokenHash,
-        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
-        ipAddress: null,
-      },
-    });
-
-    const membership = await prisma.workspaceMembership.findFirst({
-      where: { userId: user.id, isActive: true },
-      orderBy: { addedAt: "asc" },
-      select: { workspaceId: true },
-    });
-
-    if (membership?.workspaceId) {
-      const lastEvent = await prisma.auditEvent.findFirst({
-        where: { workspaceId: membership.workspaceId },
-        orderBy: { occurredAt: "desc" },
-        select: { id: true, previousHash: true, eventName: true, occurredAt: true },
-      });
-      await prisma.auditEvent.create({
-        data: {
-          id: randomUUID(),
-          workspaceId: membership.workspaceId,
-          eventName: AUDIT_EVENT_PASSWORD_RESET_REQUESTED,
-          actorId: user.id,
-          actorType: "user",
-          entityType: "user",
-          entityId: user.id,
-          correlationId: null,
-          visibility: "internal",
-          previousHash: lastEvent
-            ? computeAuditEventHash(lastEvent.id, membership.workspaceId, lastEvent.eventName, lastEvent.occurredAt)
-            : null,
-        },
-      });
-      console.log("Audit event recorded (user.password_reset_requested).");
-    } else {
-      console.warn("No active workspace membership found — audit event skipped (fail-safe, matches emitAuditEvent's own no-workspace behavior).");
+    const workspaceId = await findActiveWorkspaceId(client, user.id);
+    if (!workspaceId) {
+      console.warn("No active workspace membership found — the token will still be created without an audit event, matching production forgot-password's own fail-safe behavior.");
     }
+
+    const { rawToken } = await runRecovery(client, { userId: user.id, workspaceId });
 
     const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
+    console.log(workspaceId ? "Audit event recorded (user.password_reset_requested)." : "");
     console.log("\nToken created. This URL is shown ONCE and is not logged anywhere else:");
     console.log(resetUrl);
     console.log(`\nExpires in ${RESET_TOKEN_TTL_MS / 60000} minutes. Single-use — redeeming it via the normal`);
     console.log("production /api/auth/reset-password route revokes all existing sessions for this account.");
+  } catch (err) {
+    console.error("REFUSED: transaction failed, rolled back — no token or audit event was created —", err instanceof Error ? err.constructor.name : "UnknownError");
+    process.exitCode = 1;
   } finally {
-    await prisma.$disconnect();
-    await pool.end();
+    await client.end();
   }
 }
 
