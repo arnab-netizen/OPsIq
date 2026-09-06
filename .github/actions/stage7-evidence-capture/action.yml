@@ -145,6 +145,30 @@ runs:
         [ -n "$IN_OWNER_ATTESTATION_REF" ] && args+=(--owner-attestation-ref "$IN_OWNER_ATTESTATION_REF")
         node "$GITHUB_ACTION_PATH/../../../scripts/capture-evidence.mjs" "${args[@]}"
 
+    # Diagnostic safety net, NOT evidence. The step below this one re-validates the
+    # artifact this job just wrote and can fail it closed — correctly, e.g. when a
+    # supersedes target is not yet auditable. Before this step existed, that failure
+    # meant "Create evidence branch and open PR" was skipped, nothing was ever
+    # committed anywhere, and the runner's workspace (holding the only copy of the
+    # verbatim observation and the signed-but-unfiled artifact) was destroyed at the
+    # end of the job — the raw observation was gone, unrecoverable even from the
+    # Actions logs, which never echo it. Uploading it here, unconditionally, means a
+    # human can always retrieve exactly what was observed and inspect why capture
+    # was refused, without ever weakening acceptance: this upload is never read by
+    # the validator, never resolves a proof reference, and is not filed under
+    # docs/opsiq/evidence/stage-7/artifacts. A human who wants to act on it must
+    # re-run the normal governed capture path, same as today.
+    - name: Preserve raw observation and unfiled artifact (diagnostic only — never evidence)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: stage7-raw-observation-${{ inputs.invariant }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          ${{ inputs.observation_file }}
+          ${{ steps.capture.outputs.artifact_path }}
+        if-no-files-found: warn
+        retention-days: 90
+
     - name: Validate what was just written
       shell: bash
       env:

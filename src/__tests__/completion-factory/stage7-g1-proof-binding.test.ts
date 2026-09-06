@@ -533,8 +533,14 @@ describe("G-1 — supersession", () => {
   // are both unreachable through buildEvidenceArtifact — the id changes the moment
   // the field does. The walker is therefore driven directly, or the rules above
   // would only ever be reached by way of the hash check and would pass vacuously.
-  const asRecord = (artifactId: string, supersedes: string | null, invariantId = "S7-I1") => ({
-    artifactId, supersedes, invariantId, level: ACCEPTANCE.UNVERIFIED, violations: [] as string[],
+  const asRecord = (
+    artifactId: string,
+    supersedes: string | null,
+    invariantId = "S7-I1",
+    lane = "LANE_C",
+    subjectSha = SUBJECT_SHA,
+  ) => ({
+    artifactId, supersedes, invariantId, lane, subjectSha, level: ACCEPTANCE.UNVERIFIED, violations: [] as string[],
   });
 
   it("self-supersession is invalid", () => {
@@ -568,6 +574,35 @@ describe("G-1 — supersession", () => {
     const head = asRecord(first, second);
     const byId = new Map([[first, head], [second, broken]]);
     expect(evaluateSupersessionChain(head, byId).join("\n")).toContain("is REJECTED");
+  });
+
+  // A superseding artifact naming a target from a different lane is not describing
+  // a correction of that target — the two are not comparable observations, even if
+  // they happen to share an invariant id. This closes a gap the walker had: only
+  // invariant identity was checked, so a LANE_C artifact could claim to supersede a
+  // LANE_D or LANE_F artifact of the same invariant without being refused.
+  it("supersession across lanes is invalid, even within the same invariant", () => {
+    const first = `evd_${"a".repeat(32)}`;
+    const second = `evd_${"b".repeat(32)}`;
+    const target = asRecord(second, null, "S7-I1", "LANE_D");
+    const head = asRecord(first, second, "S7-I1", "LANE_C");
+    const byId = new Map([[first, head], [second, target]]);
+    expect(evaluateSupersessionChain(head, byId).join("\n")).toContain("a correction must observe the same lane");
+  });
+
+  // Likewise for subject_sha: a correction observes the same commit its predecessor
+  // observed. An artifact naming a target captured against a different subject_sha
+  // is describing a different runtime, not correcting a prior observation of this
+  // one — even when invariant and lane both match.
+  it("supersession across subject_sha is invalid, even within the same invariant and lane", () => {
+    const first = `evd_${"a".repeat(32)}`;
+    const second = `evd_${"b".repeat(32)}`;
+    const target = asRecord(second, null, "S7-I1", "LANE_C", "1".repeat(40));
+    const head = asRecord(first, second, "S7-I1", "LANE_C", "2".repeat(40));
+    const byId = new Map([[first, head], [second, target]]);
+    expect(evaluateSupersessionChain(head, byId).join("\n")).toContain(
+      "a correction must observe the same subject commit",
+    );
   });
 });
 

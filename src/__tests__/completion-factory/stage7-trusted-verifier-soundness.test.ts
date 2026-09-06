@@ -40,6 +40,7 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -686,5 +687,253 @@ describe("key registry states that leave a signature UNCHECKED", () => {
 
   it("an absent registry yields no key at all", () => {
     expect(parseKeyRegistryYaml("").size).toBe(0);
+  });
+});
+
+// ─── PR-D18-SUPERSESSION: supersedes targets fetched from main, executed ──────
+//
+// A correcting artifact's `supersedes` field names a historical artifact_id that
+// the validator's supersession-chain check can only resolve if that file is
+// present in the same directory being validated. The "fetch" step now also
+// fetches each such target — but from ref=main, hardcoded, never from the PR
+// head, the payload, or any other caller-controlled value. These tests execute
+// the real shipped step body under bash with a stubbed curl that serves
+// different bytes/status per (artifact id, ref) pair, so what is proven is the
+// text that ships, not a re-implementation of it.
+
+interface FetchResponse {
+  status: number;
+  body?: Record<string, unknown>;
+}
+
+interface FetchResult {
+  exitCode: number;
+  count: string;
+  stderr: string;
+  requestedRefs: Array<{ id: string; ref: string }>;
+  /** Contents of every file present in the fetch directory when the step exited, keyed by filename. Captured before the temp dir is cleaned up. */
+  artifactFiles: Record<string, string>;
+}
+
+/**
+ * Run the shipped `fetch` step body against a synthetic set of primary
+ * artifact ids (as if just proven to equal the PR's own added set) and a
+ * table of canned HTTP responses keyed by `${artifactId}@${ref}`.
+ */
+function runFetch(options: {
+  artifactIds: string[];
+  liveHeadSha: string;
+  responses: Record<string, FetchResponse>;
+}): FetchResult {
+  const dir = mkdtempSync(join(tmpdir(), "s7-verifier-fetch-"));
+  try {
+    const responsesDir = join(dir, "responses");
+    mkdirSync(responsesDir);
+    const requestLog = join(dir, "requests.log");
+    writeFileSync(requestLog, "", "utf-8");
+
+    for (const [key, response] of Object.entries(options.responses)) {
+      writeFileSync(join(responsesDir, `${key}.status`), String(response.status), "utf-8");
+      writeFileSync(
+        join(responsesDir, `${key}.body`),
+        JSON.stringify(response.body ?? {}),
+        "utf-8",
+      );
+    }
+
+    const binDir = join(dir, "bin");
+    mkdirSync(binDir);
+    const curlStub = join(binDir, "curl");
+    // Finds the `-o <file>` target and the final (URL) argument, extracts the
+    // artifact id and `ref=` value from the URL, logs the (id, ref) pair the
+    // step actually requested, and serves the canned status/body for that key
+    // (defaulting to 404/empty for any key the test did not pre-populate).
+    writeFileSync(
+      curlStub,
+      [
+        "#!/usr/bin/env bash",
+        "outfile=\"\"",
+        "args=(\"$@\")",
+        "for ((i=0; i<${#args[@]}; i++)); do",
+        '  if [ "${args[$i]}" = "-o" ]; then outfile="${args[$((i+1))]}"; fi',
+        "done",
+        'url="${args[${#args[@]}-1]}"',
+        'id=$(echo "$url" | sed -E \'s#.*/artifacts/(evd_[0-9a-f]+)\\.json.*#\\1#\')',
+        'ref=$(echo "$url" | sed -E \'s#.*ref=([^&]*).*#\\1#\')',
+        `echo "\${id}@\${ref}" >> "${requestLog}"`,
+        `key="${responsesDir}/\${id}@\${ref}"`,
+        'if [ -f "${key}.status" ]; then',
+        '  status=$(cat "${key}.status")',
+        '  cat "${key}.body" > "$outfile"',
+        "else",
+        '  status=404',
+        '  : > "$outfile"',
+        "fi",
+        'printf "%s" "$status"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    chmodSync(curlStub, 0o755);
+
+    const scriptPath = join(dir, "fetch.sh");
+    writeFileSync(scriptPath, `#!/usr/bin/env bash\n${body("fetch")}`, "utf-8");
+
+    const runnerTemp = join(dir, "runner-temp");
+    mkdirSync(runnerTemp);
+    const githubOutput = join(dir, "github-output.txt");
+    writeFileSync(githubOutput, "", "utf-8");
+
+    const result = spawnSync("bash", [scriptPath], {
+      encoding: "utf-8",
+      env: {
+        ...process.env,
+        PATH: `${binDir}:${process.env.PATH ?? ""}`,
+        RUNNER_TEMP: runnerTemp,
+        GITHUB_OUTPUT: githubOutput,
+        GH_TOKEN: "stub-token-not-a-secret",
+        REPO: "arnab-netizen/OPsIq",
+        LIVE_HEAD_SHA: options.liveHeadSha,
+        ARTIFACT_IDS: options.artifactIds.join(","),
+        EXPECTED_COUNT: String(options.artifactIds.length),
+      },
+    });
+
+    const outputs = readFileSync(githubOutput, "utf-8");
+    const read = (key: string): string => {
+      const matches = [...outputs.matchAll(new RegExp(`^${key}=(.*)$`, "gm"))];
+      return matches.length > 0 ? matches[matches.length - 1][1] : "";
+    };
+    const requestedRefs = readFileSync(requestLog, "utf-8")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [id, ref] = line.split("@");
+        return { id, ref };
+      });
+
+    // Read every file's content now, inside the try block — the temp dir
+    // (including the fetch directory itself) is deleted in `finally` below,
+    // which runs before this function returns to its caller.
+    const artifactDirPath = read("artifact_dir");
+    const artifactFiles: Record<string, string> = {};
+    if (artifactDirPath) {
+      for (const name of readdirSync(artifactDirPath)) {
+        artifactFiles[name] = readFileSync(join(artifactDirPath, name), "utf-8");
+      }
+    }
+
+    return {
+      exitCode: result.status ?? -1,
+      count: read("count"),
+      stderr: result.stderr ?? "",
+      requestedRefs,
+      artifactFiles,
+    };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const LIVE_SHA = "deadbeef".repeat(5); // 40 hex chars, a plausible commit sha
+
+describe("trusted verifier — supersedes targets are fetched from main, not the PR (PR-D18-SUPERSESSION)", () => {
+  it("fetches a primary artifact from the live PR head, and its supersedes target from main — never from the PR head", () => {
+    const r = runFetch({
+      artifactIds: [ID_A],
+      liveHeadSha: LIVE_SHA,
+      responses: {
+        [`${ID_A}@${LIVE_SHA}`]: { status: 200, body: { artifact_id: ID_A, supersedes: ID_B } },
+        [`${ID_B}@main`]: { status: 200, body: { artifact_id: ID_B, supersedes: null } },
+      },
+    });
+    expect(r.exitCode).toBe(0);
+    expect(r.count).toBe("1"); // count tracks only the primary (payload) set
+    expect(r.requestedRefs).toContainEqual({ id: ID_A, ref: LIVE_SHA });
+    expect(r.requestedRefs).toContainEqual({ id: ID_B, ref: "main" });
+    // The critical property: B is never requested at the PR's own head SHA.
+    expect(r.requestedRefs).not.toContainEqual({ id: ID_B, ref: LIVE_SHA });
+    expect(r.artifactFiles[`${ID_B}.json`]).toContain(ID_B);
+  });
+
+  it("does not re-fetch a supersedes target that the PR itself already adds", () => {
+    const r = runFetch({
+      artifactIds: [ID_A, ID_B],
+      liveHeadSha: LIVE_SHA,
+      responses: {
+        [`${ID_A}@${LIVE_SHA}`]: { status: 200, body: { artifact_id: ID_A, supersedes: ID_B } },
+        [`${ID_B}@${LIVE_SHA}`]: { status: 200, body: { artifact_id: ID_B, supersedes: null } },
+      },
+    });
+    expect(r.exitCode).toBe(0);
+    // B was already fetched as a primary artifact at the live head; the
+    // supersedes-resolution loop must not issue a second request for it.
+    expect(r.requestedRefs.filter((x) => x.id === ID_B)).toHaveLength(1);
+    expect(r.requestedRefs).not.toContainEqual({ id: ID_B, ref: "main" });
+  });
+
+  it("a supersedes target absent from main (404) is left unfetched, and the step still succeeds", () => {
+    const r = runFetch({
+      artifactIds: [ID_A],
+      liveHeadSha: LIVE_SHA,
+      responses: {
+        [`${ID_A}@${LIVE_SHA}`]: { status: 200, body: { artifact_id: ID_A, supersedes: ID_B } },
+        // No entry for ID_B@main — the stub defaults to 404.
+      },
+    });
+    expect(r.exitCode).toBe(0);
+    expect(r.count).toBe("1");
+    expect(r.artifactFiles[`${ID_B}.json`]).toBeUndefined();
+  });
+
+  it("an API failure fetching a supersedes target hard-refuses the run, never silently treated as absent", () => {
+    const r = runFetch({
+      artifactIds: [ID_A],
+      liveHeadSha: LIVE_SHA,
+      responses: {
+        [`${ID_A}@${LIVE_SHA}`]: { status: 200, body: { artifact_id: ID_A, supersedes: ID_B } },
+        [`${ID_B}@main`]: { status: 500, body: {} },
+      },
+    });
+    expect(r.exitCode).not.toBe(0);
+    expect(r.stderr).toContain("must never be treated as proof the target is absent");
+  });
+
+  it("a non-canonical supersedes id never reaches a fetch URL", () => {
+    const r = runFetch({
+      artifactIds: [ID_A],
+      liveHeadSha: LIVE_SHA,
+      responses: {
+        [`${ID_A}@${LIVE_SHA}`]: {
+          status: 200,
+          // Not a canonical evd_<32hex> id — must be refused before any curl call.
+          body: { artifact_id: ID_A, supersedes: "../../etc/passwd" },
+        },
+      },
+    });
+    expect(r.exitCode).not.toBe(0);
+    expect(r.stderr).toContain("is not a canonical artifact id");
+    // The malformed id must never have reached the request log.
+    expect(r.requestedRefs.some((x) => x.ref === "main")).toBe(false);
+  });
+
+  it("an artifact with no supersedes field triggers no second fetch at all", () => {
+    const r = runFetch({
+      artifactIds: [ID_A],
+      liveHeadSha: LIVE_SHA,
+      responses: {
+        [`${ID_A}@${LIVE_SHA}`]: { status: 200, body: { artifact_id: ID_A, supersedes: null } },
+      },
+    });
+    expect(r.exitCode).toBe(0);
+    expect(r.requestedRefs).toHaveLength(1);
+  });
+
+  it("the fetch step hardcodes ref=main for supersedes resolution — never the payload or a caller-controlled value", () => {
+    const fetchBody = body("fetch");
+    const supersedesSection = fetchBody.slice(fetchBody.indexOf("SUPERSEDES_PATH"));
+    expect(supersedesSection).toContain("?ref=main");
+    expect(supersedesSection).not.toMatch(/ref=\$LIVE_HEAD_SHA/);
+    expect(supersedesSection).not.toMatch(/ref=\$\{\{/);
   });
 });

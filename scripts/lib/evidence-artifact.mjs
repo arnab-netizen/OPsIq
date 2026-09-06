@@ -1418,6 +1418,14 @@ export function evaluateSupersessionChain(record, byId) {
       violations.push(`${cursor.artifactId} (${cursor.invariantId}) supersedes ${target} (${next.invariantId}) — supersession is only meaningful within one invariant`);
       break;
     }
+    if (next.lane !== cursor.lane) {
+      violations.push(`${cursor.artifactId} (lane ${cursor.lane}) supersedes ${target} (lane ${next.lane}) — a correction must observe the same lane as the artifact it replaces, or the two are not comparable observations`);
+      break;
+    }
+    if (next.subjectSha !== cursor.subjectSha) {
+      violations.push(`${cursor.artifactId} (subject_sha ${cursor.subjectSha}) supersedes ${target} (subject_sha ${next.subjectSha}) — a correction must observe the same subject commit as the artifact it replaces, or it is a new observation, not a correction`);
+      break;
+    }
     if (next.level === ACCEPTANCE.REJECTED) {
       violations.push(`supersession chain passes through ${target}, which is REJECTED — a chain is only as auditable as its weakest link`);
       break;
