@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_5b59b73ad136d0603778d92cba8df2c1",
+  "invariant_id": "S7-I4",
+  "lane": "LANE_C",
+  "proof_type": "production_auth_check",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "production",
+  "method": "http_probe",
+  "captured_at_utc": "2026-09-06T08:46:52.284Z",
+  "subject_sha": "0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06",
+  "authorization_manifest_sha": "a0a8a16066cd77da52a21758efeb361a32f723ee",
+  "deployment_id": "dpl_8owYgFhBFFwCPUfs2LMHBeQdGzgm",
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d18",
+    "job": "capture",
+    "run_id": "34022762040",
+    "run_number": 12,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-06T08:45:46Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "node scripts/stage7-probes/s7-i4-auth-check.mjs"
+  },
+  "observation": {
+    "raw": "=== S7-I4: Private owner authentication and workspace binding ===\nDEPLOYMENT_ID: dpl_8owYgFhBFFwCPUfs2LMHBeQdGzgm\nPROBE_OWNER_EMAIL: set\nPROBE_FOREIGN_WORKSPACE_ID: set\nPROBE_FOREIGN_ENTITY_ID: set\n[PASS] probe_base_url: \"https://o-ps-iq.vercel.app\"\n[PASS] owner_entitled_route_under_test: \"/api/owner/home\"\n\nTest: unauthorized-user rejection → https://o-ps-iq.vercel.app/api/auth/login\n[PASS] rejection_http_status: 401\n[PASS] rejection_does_not_leak_credentials: true\n\nTest: wrong-password rejection for known user → https://o-ps-iq.vercel.app/api/auth/login\n[PASS] wrong_password_http_status: 401\n\nTest: owner route rejected without session → /api/owner/home\n[PASS] unauthenticated_request_rejected: 401\n\nTest: well-formed but unknown session credential rejected\n[PASS] unknown_session_rejected: 401\n\nTest: owner login → https://o-ps-iq.vercel.app/api/auth/login\n[FAIL] login_http_status: 401\n[FAIL] login_failed_body: {\"error\":\"Invalid email or password\",\"classification\":\"invalid_credentials\"}\n[FAIL] auth_sequence_aborted: \"Owner login failed — logout, session validation, cross-workspace and revocation tests skipped\"\n\n=== OBSERVATION SUMMARY ===\nChecks: 7 PASS, 3 FAIL\n\nRESULT: FAIL\n",
+    "content_hash": "sha256:643c851712dc504b07bd1bd434c5969356b76fbf6a7b1a419af714777f0c4887",
+    "byte_length": 1201,
+    "truncated": false
+  },
+  "assertion": "Owner login, logout, session expiry, and unauthorized-user rejection all confirmed on production deployment.",
+  "result": "FAIL",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "9f75d2c2932d29cb34afa96dd1a08da3df72e3cca2347f9e2700ff09ed331ee0cd25aa07bfab22f30004109b04811077eb7a035df12be7ec18116df94f9f5709"
+  }
+}
