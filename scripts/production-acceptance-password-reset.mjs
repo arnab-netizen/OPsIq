@@ -53,6 +53,27 @@
  *   - makes no other read or write: no User update, no WorkspaceMembership
  *     write, no account creation
  *
+ * COMMIT-ACKNOWLEDGEMENT AMBIGUITY:
+ * A mutation error raised BEFORE `COMMIT` is issued is unambiguous — ROLLBACK
+ * is issued and, once *it* is acknowledged, nothing was persisted. But if the
+ * connection drops between issuing `COMMIT` and receiving its acknowledgement,
+ * Postgres may have committed the transaction anyway — the client simply never
+ * found out. Treating that as "rolled back" would be a lie: it can leave a
+ * genuinely valid, durably committed PasswordResetToken in production whose
+ * raw token was never printed and is now unrecoverable (the same orphan-token
+ * failure class this script exists to avoid). So a COMMIT failure is never
+ * assumed to mean rollback. Instead: the raw token and its hash are generated
+ * BEFORE the transaction opens, so after an unacknowledged COMMIT the script
+ * opens a FRESH connection and looks up that exact tokenHash. If found (and,
+ * when a workspace membership exists, its paired audit event is also found —
+ * token and audit must both exist or neither must), the original transaction
+ * is confirmed to have committed and the already-generated raw token is
+ * printed — never a newly generated one, and never a second token row. If not
+ * found, nothing persisted. If reconciliation itself cannot determine the
+ * outcome (e.g. the fresh connection also fails), the script stops and reports
+ * COMMIT_OUTCOME_UNKNOWN rather than guessing or retrying. See COMMIT_OUTCOME
+ * and reconcileAmbiguousCommit below.
+ *
  * Required environment variables (never printed):
  *   PRODUCTION_DATABASE_URL          direct (non-pooler) production Postgres URL
  *   PRODUCTION_ACCEPTANCE_EMAIL      the exact account email to issue a token for
@@ -158,22 +179,42 @@ export async function findActiveWorkspaceId(client, userId) {
 }
 
 /**
+ * Every distinguishable transaction outcome this script can report. A commit
+ * failure is NEVER collapsed into PRE_COMMIT_FAILURE_ROLLED_BACK — that label
+ * is only ever used once an actual ROLLBACK has been acknowledged.
+ */
+export const COMMIT_OUTCOME = Object.freeze({
+  PRE_COMMIT_FAILURE_ROLLED_BACK: "PRE_COMMIT_FAILURE_ROLLED_BACK",
+  COMMIT_ACKNOWLEDGED: "COMMIT_ACKNOWLEDGED",
+  COMMIT_RECOVERED_AFTER_ACK_FAILURE: "COMMIT_RECOVERED_AFTER_ACK_FAILURE",
+  COMMIT_NOT_PERSISTED: "COMMIT_NOT_PERSISTED",
+  COMMIT_OUTCOME_UNKNOWN: "COMMIT_OUTCOME_UNKNOWN",
+});
+
+/** Thrown by runRecovery/reconcileAmbiguousCommit; `.outcome` is always one of COMMIT_OUTCOME. */
+export class RecoveryError extends Error {
+  constructor(outcome, message, { invariantViolation = false } = {}) {
+    super(message);
+    this.name = "RecoveryError";
+    this.outcome = outcome;
+    this.invariantViolation = invariantViolation;
+  }
+}
+
+/**
  * The atomic mutation: creates the PasswordResetToken row and, when
  * workspaceId is non-null, the governed AuditEvent row (hash-chained exactly
- * like src/infra/audit.ts) — in a single transaction on the given client.
- * Returns { rawToken } ONLY after COMMIT has actually succeeded. On any
- * error, the caller must have already issued (or must issue) ROLLBACK before
- * this rejects — see runRecovery below, which owns the BEGIN/ROLLBACK
- * lifecycle around this function so a caller cannot forget either half.
+ * like src/infra/audit.ts) — in a single transaction on the given client. The
+ * token's id doubles as the audit event's correlation_id, which is how
+ * reconcileAmbiguousCommit later confirms the two rows belong to the same
+ * issuance without needing to re-derive or expose the user/workspace id.
+ * Both the token and (when applicable) the audit row must exist, or neither
+ * must — the caller owns the transaction lifecycle (see runRecovery).
  *
  * `client` needs only `.query(text, params)` — a real `pg.Client`/`pg.Pool`
  * connection, or (in tests) any fake satisfying that shape.
  */
-export async function createResetTokenAndAudit(client, { userId, workspaceId }) {
-  const { rawToken, tokenHash } = generateResetToken();
-  const tokenId = randomUUID();
-  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
-
+export async function createResetTokenAndAudit(client, { userId, workspaceId, tokenId, tokenHash, expiresAt }) {
   await client.query(
     `INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, ip_address)
      VALUES ($1, $2, $3, $4, NULL)`,
@@ -202,31 +243,150 @@ export async function createResetTokenAndAudit(client, { userId, workspaceId }) 
       `INSERT INTO audit_events
          (id, workspace_id, event_name, actor_id, actor_type, entity_type, entity_id,
           correlation_id, visibility, previous_hash)
-       VALUES ($1, $2, $3, $4, 'user', 'user', $5, NULL, 'internal', $6)`,
-      [randomUUID(), workspaceId, AUDIT_EVENT_PASSWORD_RESET_REQUESTED, userId, userId, previousHash]
+       VALUES ($1, $2, $3, $4, 'user', 'user', $5, $6, 'internal', $7)`,
+      [randomUUID(), workspaceId, AUDIT_EVENT_PASSWORD_RESET_REQUESTED, userId, userId, tokenId, previousHash]
     );
   }
+}
 
-  return { rawToken };
+/** Read-only: find a reset token row by its exact hash, scoped to the expected user. */
+export async function findResetTokenByHash(client, { userId, tokenHash }) {
+  const { rows } = await client.query(
+    `SELECT id, expires_at AS "expiresAt", used_at AS "usedAt"
+     FROM password_reset_tokens WHERE user_id = $1 AND token_hash = $2`,
+    [userId, tokenHash]
+  );
+  return rows[0] ?? null;
+}
+
+/** Read-only: find the audit event paired to a specific token issuance via its correlation_id. */
+export async function findAuditEventByCorrelationId(client, { workspaceId, correlationId }) {
+  const { rows } = await client.query(
+    `SELECT id FROM audit_events
+     WHERE workspace_id = $1 AND correlation_id = $2 AND event_name = $3`,
+    [workspaceId, correlationId, AUDIT_EVENT_PASSWORD_RESET_REQUESTED]
+  );
+  return rows[0] ?? null;
 }
 
 /**
- * Owns the transaction lifecycle: BEGIN, run the mutation, COMMIT on success,
- * ROLLBACK on any failure (re-throwing afterwards). The raw token is only
- * ever returned to the caller after COMMIT has resolved successfully — a
- * throw here always means neither the token row nor the audit row persists.
+ * Called only when COMMIT was sent but its acknowledgement was never
+ * received. Opens a FRESH connection (the original one is unreliable — that's
+ * exactly why we're here) via `createClient`, and looks up the exact
+ * tokenHash generated before the transaction started. Never generates a new
+ * token, never retries the mutation.
+ *
+ * - Fresh connection itself fails               -> COMMIT_OUTCOME_UNKNOWN
+ * - No matching token row found                 -> COMMIT_NOT_PERSISTED
+ * - Token found, but under a different token id  -> COMMIT_OUTCOME_UNKNOWN
+ *   (a tokenHash collision would mean this isn't actually our row; treat as
+ *   indeterminate rather than claiming someone else's row as our own)
+ * - Token found; workspace expected an audit
+ *   event and none is paired to it              -> COMMIT_OUTCOME_UNKNOWN,
+ *   flagged as an invariant violation (token+audit must both exist or
+ *   neither must) — never manufactured after the fact
+ * - Token found and (if applicable) its audit
+ *   event is also found                         -> COMMIT_RECOVERED_AFTER_ACK_FAILURE,
+ *   returning the SAME rawToken generated before the transaction began
  */
-export async function runRecovery(client, { userId, workspaceId }) {
-  await client.query("BEGIN");
-  let result;
+export async function reconcileAmbiguousCommit({ createClient, userId, workspaceId, tokenId, tokenHash, rawToken }) {
+  let reconClient;
   try {
-    result = await createResetTokenAndAudit(client, { userId, workspaceId });
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
+    reconClient = await createClient();
+  } catch {
+    throw new RecoveryError(
+      COMMIT_OUTCOME.COMMIT_OUTCOME_UNKNOWN,
+      "COMMIT acknowledgement failed and a fresh reconciliation connection could not be established. Transaction outcome unknown — do not retry; no token or audit event was created by this run."
+    );
   }
-  await client.query("COMMIT");
-  return result;
+
+  try {
+    const tokenRow = await findResetTokenByHash(reconClient, { userId, tokenHash });
+    if (!tokenRow) {
+      throw new RecoveryError(
+        COMMIT_OUTCOME.COMMIT_NOT_PERSISTED,
+        "COMMIT acknowledgement failed and reconciliation found no matching token row — the transaction did not persist. No token or audit event was created."
+      );
+    }
+    if (tokenRow.id !== tokenId) {
+      throw new RecoveryError(
+        COMMIT_OUTCOME.COMMIT_OUTCOME_UNKNOWN,
+        "Reconciliation found a token row with this hash but a different id than the one just issued. Transaction outcome unknown — do not retry."
+      );
+    }
+
+    if (workspaceId) {
+      const auditRow = await findAuditEventByCorrelationId(reconClient, { workspaceId, correlationId: tokenId });
+      if (!auditRow) {
+        throw new RecoveryError(
+          COMMIT_OUTCOME.COMMIT_OUTCOME_UNKNOWN,
+          "INVARIANT VIOLATION: the reset token committed but its paired audit event was not found (token and audit must both exist or neither must). Stopping without creating a replacement audit event or a new token — owner must investigate directly.",
+          { invariantViolation: true }
+        );
+      }
+    }
+
+    return { rawToken, outcome: COMMIT_OUTCOME.COMMIT_RECOVERED_AFTER_ACK_FAILURE };
+  } finally {
+    await reconClient.end();
+  }
+}
+
+/**
+ * Owns the transaction lifecycle. The raw token and its hash are generated
+ * BEFORE the transaction opens so that, if COMMIT's acknowledgement is lost,
+ * reconciliation can look up that exact hash instead of ever generating (or
+ * risking persisting) a second one. Three distinct paths, per COMMIT_OUTCOME:
+ *
+ *   1. Mutation fails before COMMIT is attempted -> ROLLBACK -> rethrow
+ *      PRE_COMMIT_FAILURE_ROLLED_BACK (only ever used once ROLLBACK itself
+ *      is acknowledged; if ROLLBACK also fails, that's COMMIT_OUTCOME_UNKNOWN
+ *      too, never a false claim of a clean rollback).
+ *   2. COMMIT is acknowledged normally -> return { rawToken, outcome: COMMIT_ACKNOWLEDGED }.
+ *   3. COMMIT's acknowledgement is lost -> reconcileAmbiguousCommit decides
+ *      the real outcome via a fresh connection; never a blind retry.
+ */
+export async function runRecovery(client, { userId, workspaceId, createClient }) {
+  const { rawToken, tokenHash } = generateResetToken();
+  const tokenId = randomUUID();
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+
+  try {
+    await client.query("BEGIN");
+  } catch {
+    throw new RecoveryError(
+      COMMIT_OUTCOME.PRE_COMMIT_FAILURE_ROLLED_BACK,
+      "BEGIN failed before any mutation was attempted. No token or audit event was created."
+    );
+  }
+
+  try {
+    await createResetTokenAndAudit(client, { userId, workspaceId, tokenId, tokenHash, expiresAt });
+  } catch (mutationErr) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      throw new RecoveryError(
+        COMMIT_OUTCOME.COMMIT_OUTCOME_UNKNOWN,
+        "Mutation failed and ROLLBACK could not be acknowledged either — transaction outcome unknown. Do not assume rollback; do not retry."
+      );
+    }
+    throw new RecoveryError(
+      COMMIT_OUTCOME.PRE_COMMIT_FAILURE_ROLLED_BACK,
+      `Mutation failed before COMMIT was attempted; ROLLBACK acknowledged. No token or audit event was created. (${mutationErr instanceof Error ? mutationErr.constructor.name : "UnknownError"})`
+    );
+  }
+
+  try {
+    await client.query("COMMIT");
+  } catch {
+    // COMMIT was sent but never acknowledged — Postgres may have committed it
+    // anyway. Reconcile via a fresh connection rather than assuming either
+    // outcome; never generate or persist a second token here.
+    return reconcileAmbiguousCommit({ createClient, userId, workspaceId, tokenId, tokenHash, rawToken });
+  }
+
+  return { rawToken, outcome: COMMIT_OUTCOME.COMMIT_ACKNOWLEDGED };
 }
 
 async function main() {
@@ -288,16 +448,43 @@ async function main() {
       console.warn("No active workspace membership found — the token will still be created without an audit event, matching production forgot-password's own fail-safe behavior.");
     }
 
-    const { rawToken } = await runRecovery(client, { userId: user.id, workspaceId });
+    // Only used if COMMIT's acknowledgement is lost — opens a brand new
+    // connection for reconciliation, since the original one is unreliable.
+    const createClient = async () => {
+      const fresh = new Client({ connectionString: databaseUrl });
+      await fresh.connect();
+      return fresh;
+    };
+
+    const { rawToken, outcome } = await runRecovery(client, { userId: user.id, workspaceId, createClient });
+
+    if (outcome === COMMIT_OUTCOME.COMMIT_RECOVERED_AFTER_ACK_FAILURE) {
+      console.warn(
+        "COMMIT status: COMMIT_RECOVERED_AFTER_ACK_FAILURE — the original connection never confirmed COMMIT, " +
+          "but reconciliation over a fresh connection confirmed it actually persisted. The token below was already " +
+          "committed by that transaction; this is NOT a newly created token."
+      );
+    } else {
+      console.log("COMMIT status: COMMIT_ACKNOWLEDGED.");
+    }
 
     const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
-    console.log(workspaceId ? "Audit event recorded (user.password_reset_requested)." : "");
+    if (workspaceId) {
+      console.log("Audit event recorded (user.password_reset_requested).");
+    }
     console.log("\nToken created. This URL is shown ONCE and is not logged anywhere else:");
     console.log(resetUrl);
     console.log(`\nExpires in ${RESET_TOKEN_TTL_MS / 60000} minutes. Single-use — redeeming it via the normal`);
     console.log("production /api/auth/reset-password route revokes all existing sessions for this account.");
   } catch (err) {
-    console.error("REFUSED: transaction failed, rolled back — no token or audit event was created —", err instanceof Error ? err.constructor.name : "UnknownError");
+    if (err instanceof RecoveryError) {
+      console.error(`REFUSED: [${err.outcome}] ${err.message}`);
+    } else {
+      console.error(
+        "REFUSED: an error occurred before any transaction was opened —",
+        err instanceof Error ? err.constructor.name : "UnknownError"
+      );
+    }
     process.exitCode = 1;
   } finally {
     await client.end();
