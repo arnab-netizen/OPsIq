@@ -69,6 +69,8 @@ import {
   scanForSecrets,
   validateEvidenceArtifact,
   resolveCaptureAuthorization,
+  resolveControlPlaneSubject,
+  parseKeyRegistryYaml,
 } from './lib/evidence-artifact.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -78,8 +80,16 @@ const DEFAULT_OUT_DIR = join(repoRoot, 'docs', 'opsiq', 'evidence', 'stage-7', '
 const FLAGS = [
   'invariant', 'lane', 'proof-type', 'environment', 'method', 'assertion', 'result',
   'replay-command', 'deployment-id', 'classification', 'observation-file', 'supersedes',
-  'owner-attestation-ref', 'out-dir',
+  'owner-attestation-ref', 'out-dir', 'capture-mode',
 ];
+
+// The only accepted value. Deliberately not '--subject-sha', '--subject-tag' or
+// '--control-plane-sha': every one of those would be a caller stating its own
+// provenance, exactly what this script's own design note above refuses for
+// --run-id/--sha/--workflow. '--capture-mode control-plane' is a pure mode
+// switch; every value the new mode needs is still derived from the environment
+// or the governance manifest inside this script, never accepted as an argument.
+const CAPTURE_MODES = ['control-plane'];
 
 function refuse(code, message) {
   console.error(`REFUSED: ${message}`);
@@ -156,6 +166,12 @@ if (process.env.GITHUB_ACTIONS !== 'true') {
 
 const args = parseArgs(process.argv.slice(2));
 
+const captureMode = args['capture-mode'] ?? null;
+if (captureMode !== null && !CAPTURE_MODES.includes(captureMode)) {
+  refuse(3, `--capture-mode '${captureMode}' is not one of: ${CAPTURE_MODES.join(', ')}`);
+}
+const isControlPlane = captureMode === 'control-plane';
+
 const repository = requireEnv('GITHUB_REPOSITORY');
 const runId = requireEnv('GITHUB_RUN_ID');
 const runNumber = Number(requireEnv('GITHUB_RUN_NUMBER'));
@@ -165,8 +181,29 @@ const workflowRef = process.env.GITHUB_WORKFLOW_REF?.trim() || null;
 const job = requireEnv('GITHUB_JOB');
 const actor = requireEnv('GITHUB_ACTOR');
 const eventName = requireEnv('GITHUB_EVENT_NAME');
-const subjectSha = requireEnv('GITHUB_SHA');
+// Legacy meaning, unchanged: GITHUB_SHA IS the observed subject. In control-plane
+// mode this same env var means something different — see controlPlaneSha below —
+// and subjectSha is instead derived by the CONTROL-PLANE authorization gate,
+// never read from GITHUB_SHA at all.
+const githubSha = requireEnv('GITHUB_SHA');
+let subjectSha = isControlPlane ? null : githubSha;
 const startedAt = runStartedAt();
+
+// ─── Control-plane identity — required only in control-plane mode ────────────
+// The run that executes this script must itself be main's own tip, on main's
+// own branch ref — never a tag, a fork, a PR, or any other ref a caller could
+// aim workflow_dispatch at. This is re-checked here, inside the script that
+// actually signs the artifact, in addition to whatever the calling workflow
+// itself asserts — two independent enforcement points, not one.
+let controlPlaneSha = null;
+let controlPlaneRef = null;
+if (isControlPlane) {
+  controlPlaneSha = githubSha;
+  controlPlaneRef = requireEnv('GITHUB_REF');
+  if (controlPlaneRef !== 'refs/heads/main') {
+    refuse(2, `--capture-mode control-plane requires GITHUB_REF to be exactly 'refs/heads/main'; got '${controlPlaneRef}'. Trusted control-plane code is only ever the current tip of main.`);
+  }
+}
 
 if (!Number.isInteger(runNumber) || !Number.isInteger(runAttempt)) {
   refuse(2, 'GITHUB_RUN_NUMBER and GITHUB_RUN_ATTEMPT must both be integers');
@@ -266,17 +303,62 @@ function fetchKeyRegistryYaml(sha) {
   return result.stdout;
 }
 
+// Used only by the CONTROL-PLANE authorization gate. Resolves a tag name to the
+// 40-hex commit it currently targets, dereferencing one level of annotated-tag
+// indirection — same shape of proof `git rev-parse <tag>^{commit}` gives locally.
+function resolveTagSha(tag) {
+  const result = spawnSync('git', ['rev-parse', `${tag}^{commit}`], { cwd: repoRoot, encoding: 'utf8' });
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || `git rev-parse ${tag}^{commit} exited non-zero`);
+  }
+  return result.stdout.trim();
+}
+
 let authorizationManifestSha;
 let keyRegistry;
-try {
-  ({ authorizationManifestSha, keyRegistry } = resolveCaptureAuthorization({
-    subjectSha,
-    fetchMainManifest,
-    resolveMainSha,
-    fetchKeyRegistryYaml,
-  }));
-} catch (error) {
-  refuse(2, error.message);
+let subjectTag = null;
+if (isControlPlane) {
+  // CONTROL-PLANE authorization gate: subject_sha is derived here, from the
+  // governance manifest cross-checked against the immutable subject tag —
+  // never from GITHUB_SHA, never from a flag. See resolveControlPlaneSubject's
+  // own doc comment for why this is a distinct gate from OPTION A below, not a
+  // relaxation of it.
+  try {
+    const resolved = resolveControlPlaneSubject({ fetchMainManifest, resolveTagSha });
+    subjectSha = resolved.subjectSha;
+    subjectTag = resolved.subjectTag;
+  } catch (error) {
+    refuse(2, error.message);
+  }
+  try {
+    authorizationManifestSha = resolveMainSha();
+  } catch (error) {
+    refuse(2, `CONTROL-PLANE authorization gate: could not resolve origin/main HEAD SHA — ${error.message}`);
+  }
+  try {
+    keyRegistry = parseKeyRegistryYaml(fetchKeyRegistryYaml(authorizationManifestSha));
+  } catch (error) {
+    refuse(2,
+      `CONTROL-PLANE authorization gate: could not load key registry from AUTH_SHA ` +
+      `${authorizationManifestSha} — ${error.message}.`,
+    );
+  }
+} else {
+  // OPTION A authorization gate — completely unchanged from before capture_mode
+  // existed. Verify that GITHUB_SHA is the exact commit authorized by D-13 in
+  // origin/main. `resolveCaptureAuthorization` is injected with real git I/O
+  // here; tests inject fixture functions directly into the library — no
+  // runtime env var bypass exists.
+  try {
+    ({ authorizationManifestSha, keyRegistry } = resolveCaptureAuthorization({
+      subjectSha,
+      fetchMainManifest,
+      resolveMainSha,
+      fetchKeyRegistryYaml,
+    }));
+  } catch (error) {
+    refuse(2, error.message);
+  }
 }
 
 // ─── Signing key — required ───────────────────────────────────────────────────
@@ -337,6 +419,14 @@ const artifact = buildEvidenceArtifact(
     assertion,
     result,
     supersedes: args.supersedes ?? null,
+    ...(isControlPlane
+      ? {
+          capture_mode: 'control_plane',
+          control_plane_sha: controlPlaneSha,
+          control_plane_ref: controlPlaneRef,
+          subject_tag: subjectTag,
+        }
+      : {}),
   },
   // closureManifestYaml carries the D-4/A4 authorized S7-I11 environment target.
   // It is the same string the authorization gate above consumed. The builder reads
@@ -378,6 +468,10 @@ console.log(`Wrote ${outPath}`);
 console.log(`  artifact_id  ${artifact.artifact_id}`);
 console.log(`  invariant    ${artifact.invariant_id} (${artifact.lane})`);
 console.log(`  subject_sha  ${artifact.subject_sha}`);
+if (isControlPlane) {
+  console.log(`  control_plane_sha ${controlPlaneSha} (${controlPlaneRef})`);
+  console.log(`  subject_tag  ${subjectTag}`);
+}
 console.log(`  run          ${repository} run ${runId} attempt ${runAttempt}`);
 console.log(`  signed       ${artifact.signature ? `yes (${artifact.signature.key_id})` : 'no — UNVERIFIED, cannot back a PROVEN invariant'}`);
 console.log('');

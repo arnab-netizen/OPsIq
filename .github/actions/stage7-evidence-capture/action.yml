@@ -71,6 +71,18 @@ inputs:
     description: "URL of the owner's GitHub comment naming this artifact. Required on LANE_F and OWNER_ACCEPTANCE."
     required: false
     default: ""
+  capture_mode:
+    description: >
+      Leave empty for the legacy direct-capture shape (subject_sha = GITHUB_SHA of this
+      job's own checkout). Set to "control-plane" only from a job whose own checkout is
+      the current tip of refs/heads/main and which observes a DIFFERENT, immutable
+      subject commit checked out elsewhere in the same job — capture-evidence.mjs then
+      derives subject_sha itself, from the governance manifest cross-checked against the
+      immutable subject tag, and refuses unless GITHUB_REF is exactly refs/heads/main.
+      There is no other value: a caller cannot name its own subject_sha or control-plane
+      SHA through this action.
+    required: false
+    default: ""
   signing_key:
     description: "EVIDENCE_SIGNING_KEY. Pass secrets.EVIDENCE_SIGNING_KEY; omit and the artifact is UNVERIFIED."
     required: false
@@ -126,6 +138,7 @@ runs:
         IN_CLASSIFICATION: ${{ inputs.classification }}
         IN_SUPERSEDES: ${{ inputs.supersedes }}
         IN_OWNER_ATTESTATION_REF: ${{ inputs.owner_attestation_ref }}
+        IN_CAPTURE_MODE: ${{ inputs.capture_mode }}
       run: |
         set -euo pipefail
         args=(
@@ -143,7 +156,32 @@ runs:
         [ -n "$IN_DEPLOYMENT_ID" ] && args+=(--deployment-id "$IN_DEPLOYMENT_ID")
         [ -n "$IN_SUPERSEDES" ] && args+=(--supersedes "$IN_SUPERSEDES")
         [ -n "$IN_OWNER_ATTESTATION_REF" ] && args+=(--owner-attestation-ref "$IN_OWNER_ATTESTATION_REF")
+        [ -n "$IN_CAPTURE_MODE" ] && args+=(--capture-mode "$IN_CAPTURE_MODE")
         node "$GITHUB_ACTION_PATH/../../../scripts/capture-evidence.mjs" "${args[@]}"
+
+    # Diagnostic safety net, NOT evidence. The step below this one re-validates the
+    # artifact this job just wrote and can fail it closed — correctly, e.g. when a
+    # supersedes target is not yet auditable. Before this step existed, that failure
+    # meant "Create evidence branch and open PR" was skipped, nothing was ever
+    # committed anywhere, and the runner's workspace (holding the only copy of the
+    # verbatim observation and the signed-but-unfiled artifact) was destroyed at the
+    # end of the job — the raw observation was gone, unrecoverable even from the
+    # Actions logs, which never echo it. Uploading it here, unconditionally, means a
+    # human can always retrieve exactly what was observed and inspect why capture
+    # was refused, without ever weakening acceptance: this upload is never read by
+    # the validator, never resolves a proof reference, and is not filed under
+    # docs/opsiq/evidence/stage-7/artifacts. A human who wants to act on it must
+    # re-run the normal governed capture path, same as today.
+    - name: Preserve raw observation and unfiled artifact (diagnostic only — never evidence)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: stage7-raw-observation-${{ inputs.invariant }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          ${{ inputs.observation_file }}
+          ${{ steps.capture.outputs.artifact_path }}
+        if-no-files-found: warn
+        retention-days: 90
 
     - name: Validate what was just written
       shell: bash

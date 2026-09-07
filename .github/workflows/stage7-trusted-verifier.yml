@@ -75,6 +75,24 @@ name: Stage 7 — Trusted Evidence Verifier
 #      it must never conclude set equality from a prefix of the diff.
 # 25.  An artifact that cannot be fetched refuses — YES (fetch step). A skip would
 #      reopen the gap requirement 22 closes.
+#
+# PR-D18-SUPERSESSION remediation (legitimate correction of an unmerged signed
+# FAIL could not pass supersession validation — the target lived only on its own
+# unmerged evidence PR, never in the directory this validator scans):
+# 26.  A correcting artifact's supersedes target is fetched from main (hardcoded
+#      ref, never the PR head, the payload, or any other caller-controlled value)
+#      so the validator's byId index can resolve it — YES (fetch step, second loop).
+# 27.  The fetched target is not trusted because it came from main: it is written
+#      into the same directory and re-verified structurally + by signature +
+#      by provenance exactly like every other artifact — YES (same --require-accepted
+#      --require-provenance validate step covers it, no special-casing).
+# 28.  A supersedes target absent from main (HTTP 404) is left unfetched and the
+#      validator's own missing-target rule REJECTS it — YES. Any other non-200
+#      response hard-refuses the run instead of being read as "absent" — YES.
+# 29.  A supersedes id that is not canonically formed never reaches a fetch URL —
+#      YES (regex check before use, same pattern as the primary fetch loop).
+# 30.  Supersession additionally requires matching lane and subject_sha, not just
+#      invariant — YES (scripts/lib/evidence-artifact.mjs evaluateSupersessionChain).
 
 on:
   repository_dispatch:
@@ -394,6 +412,71 @@ jobs:
           fi
 
           echo "count=$count" >> "$GITHUB_OUTPUT"
+
+          # ── Supersession targets: fetched from main, never from the PR ──────
+          #
+          # A correcting artifact's `supersedes` field names an artifact_id that is
+          # expected to already exist elsewhere in the evidence trail, not inside the
+          # PR being verified (an artifact cannot correct a sibling added by the same
+          # PR — that is not an auditable correction of a prior observation). The
+          # validator's supersession-chain check can only resolve that id if it is
+          # present in the same directory being validated. So for each artifact just
+          # fetched above, read its own `supersedes` field and, when set, also fetch
+          # that exact canonical path — but at `ref=main`, hardcoded on this line and
+          # never taken from the PR, the dispatch payload, or any other caller
+          # input. This is a read of this repository's own already-merged evidence
+          # trail, never a read of the PR's own claim about where its predecessor
+          # lives.
+          #
+          # The fetched bytes are not trusted because they came from main: they land
+          # in the exact same directory the validator scans next and go through the
+          # full structural + signature + provenance pass like every other artifact
+          # here. A byte-for-byte-identical copy verifies; a modified one does not,
+          # regardless of which ref supplied it — main is a source of custody, not a
+          # source of trust by itself.
+          #
+          # A supersedes target absent from main (HTTP 404) is left unfetched: the
+          # validator's own "not present" rule then REJECTS the superseding artifact
+          # exactly as it does today — the correct, fail-closed outcome for a target
+          # that is genuinely absent. Any other non-200 response (rate limit, outage,
+          # malformed body) hard-refuses the whole verification run instead: an API
+          # failure must never be read as proof that a target is absent.
+          for id_file in "$ARTIFACT_DIR"/evd_*.json; do
+            [ -f "$id_file" ] || continue
+            target_id=$(jq -r '.supersedes // empty' "$id_file" 2>/dev/null || true)
+            if [ -z "$target_id" ]; then
+              continue
+            fi
+
+            if ! [[ "$target_id" =~ ^evd_[0-9a-f]{32}$ ]]; then
+              echo "REFUSED: '$(basename "$id_file")' names a supersedes target '$target_id' that is not a canonical artifact id — refusing before it ever reaches a fetch URL." >&2
+              exit 1
+            fi
+
+            SUPERSEDES_TARGET="$ARTIFACT_DIR/${target_id}.json"
+            if [ -f "$SUPERSEDES_TARGET" ]; then
+              echo "Supersedes target $target_id is already present (fetched above)."
+              continue
+            fi
+
+            SUPERSEDES_PATH="docs/opsiq/evidence/stage-7/artifacts/${target_id}.json"
+            SUPERSEDES_HTTP_STATUS=$(curl -sS -o "$SUPERSEDES_TARGET" -w "%{http_code}" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github.raw" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPO/contents/$SUPERSEDES_PATH?ref=main")
+
+            if [ "$SUPERSEDES_HTTP_STATUS" = "404" ]; then
+              rm -f "$SUPERSEDES_TARGET"
+              echo "Supersedes target $target_id is not present on main (HTTP 404) — the validator will report it REJECTED as not-present."
+            elif [ "$SUPERSEDES_HTTP_STATUS" != "200" ]; then
+              rm -f "$SUPERSEDES_TARGET"
+              echo "REFUSED: could not fetch supersedes target $target_id from main (HTTP $SUPERSEDES_HTTP_STATUS) — an API failure must never be treated as proof the target is absent." >&2
+              exit 1
+            else
+              echo "Fetched supersedes target $target_id from main (HTTP $SUPERSEDES_HTTP_STATUS) for auditability."
+            fi
+          done
 
       # Validate using the validator from main.
       # --from-auth-sha-registry: load each artifact's key registry from its own

@@ -129,12 +129,46 @@ const TOP_LEVEL_KEYS = Object.freeze([
   'artifact_classification', 'environment', 'method', 'captured_at_utc',
   'subject_sha', 'authorization_manifest_sha', 'deployment_id', 'producer', 'replay',
   'observation', 'assertion', 'result', 'redaction_attestation', 'supersedes', 'signature',
+  'capture_mode',
 ]);
+
+// Top-level keys an artifact may carry but need not — everything else in
+// TOP_LEVEL_KEYS is still required on every artifact, exactly as before.
+// `capture_mode` is the sole exception: it is a purely additive, v1.0.0-compatible
+// extension (see CONTROL_PLANE authorization gate below) that legacy artifacts —
+// every one already committed, signed and accepted before this extension existed —
+// were built without and can never retroactively acquire. Requiring it on every
+// artifact would invalidate every one of them; this repository's own governance
+// rules forbid re-signing or migrating historical evidence, so the schema must
+// treat its absence as the (unchanged) legacy meaning, not a defect.
+const OPTIONAL_TOP_LEVEL_KEYS = Object.freeze(['capture_mode']);
+
+// The two recognised values of `capture_mode`. Absent (undefined/not-a-key) means
+// the same thing as 'direct' always meant before this field existed: subject_sha
+// IS the commit whose code produced the observation, and GITHUB_SHA at capture
+// time was that exact commit (Option A's own invariant). 'control_plane' is the
+// new, explicitly-marked shape where the code that produced the artifact (main,
+// evolving) and the code that was observed (the frozen Stage 7 subject) are
+// different, independently-verified commits.
+const CAPTURE_MODES = Object.freeze(['control_plane']);
+
+/**
+ * The one Stage 7 subject tag a control-plane capture may currently observe.
+ * Not a CLI flag, not a workflow_dispatch input, not derived from caller text —
+ * a reviewed source-code constant an owner changes only by merging a PR when a
+ * new D-decision authorizes a new subject. This is a strictly stronger trust
+ * position than the legacy path's own `--ref <tag>` on the dispatch command line,
+ * which is chosen by whoever has workflow_dispatch permission at the moment they
+ * run it and appears nowhere in reviewed source.
+ */
+export const CONTROL_PLANE_AUTHORIZED_SUBJECT_TAG = 'stage7-evidence-subject-d18';
+
+const SUBJECT_TAG_PATTERN = /^stage7-evidence-subject-[a-z0-9-]+$/;
 
 const PRODUCER_KEYS = Object.freeze([
   'type', 'repository', 'workflow', 'workflow_ref', 'job', 'run_id', 'run_number',
   'run_attempt', 'run_started_at', 'actor', 'event_name', 'owner_identity',
-  'owner_attestation_ref',
+  'owner_attestation_ref', 'control_plane_sha', 'control_plane_ref', 'subject_tag',
 ]);
 
 const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
@@ -398,7 +432,25 @@ export function buildEvidenceArtifact(input, { signingKey = null, signingKeyId =
         event_name: input.event_name ?? null,
         owner_identity: null,
         owner_attestation_ref: null,
+        // Present only for capture_mode 'control_plane' (see below), so a
+        // legacy-shaped build's producer object is byte-structurally identical
+        // to what this function has always produced.
+        ...(input.capture_mode === 'control_plane'
+          ? {
+              control_plane_sha: input.control_plane_sha ?? null,
+              control_plane_ref: input.control_plane_ref ?? null,
+              subject_tag: input.subject_tag ?? null,
+            }
+          : {}),
       };
+
+  if (input.capture_mode === 'control_plane' && isOwnerLane) {
+    throw new Error(
+      `capture_mode 'control_plane' is a CI-lane concept (it decouples the CI run that ` +
+      `executed the control-plane code from the commit it observed) and has no meaning ` +
+      `for owner lane ${input.lane}, which has no CI run at all.`,
+    );
+  }
 
   const artifact = {
     evidence_version: EVIDENCE_VERSION,
@@ -433,6 +485,9 @@ export function buildEvidenceArtifact(input, { signingKey = null, signingKeyId =
     },
     supersedes: input.supersedes ?? null,
     signature: null,
+    // Omitted entirely (not even as null) unless explicitly requested — see
+    // OPTIONAL_TOP_LEVEL_KEYS. A legacy build's key set is therefore unchanged.
+    ...(input.capture_mode === 'control_plane' ? { capture_mode: 'control_plane' } : {}),
   };
 
   artifact.artifact_id = computeArtifactId(artifact);
@@ -513,9 +568,15 @@ export function validateEvidenceArtifact(artifact, options = {}) {
     }
   }
   for (const key of TOP_LEVEL_KEYS) {
+    if (OPTIONAL_TOP_LEVEL_KEYS.includes(key)) continue;
     if (!Object.prototype.hasOwnProperty.call(artifact, key)) {
       fail(at(`required field '${key}' is absent`));
     }
+  }
+
+  const isControlPlane = Object.prototype.hasOwnProperty.call(artifact, 'capture_mode');
+  if (isControlPlane && !CAPTURE_MODES.includes(artifact.capture_mode)) {
+    fail(at(`capture_mode '${artifact.capture_mode}' is not one of ${CAPTURE_MODES.join(', ')} (omit the field entirely for the legacy direct-capture shape)`));
   }
 
   if (artifact.evidence_version !== EVIDENCE_VERSION) {
@@ -751,6 +812,45 @@ function validateLaneBinding(artifact, fail, at) {
     if (artifact.method === 'owner_attestation') {
       fail(at(`method 'owner_attestation' is not available on CI lane ${lane}`));
     }
+
+    // ─── CONTROL-PLANE producer fields (additive; see CONTROL_PLANE authorization
+    // gate) ─────────────────────────────────────────────────────────────────────
+    // capture_mode: 'control_plane' means producer.run_id/workflow/job/actor/
+    // event_name/run_number/run_attempt/run_started_at above describe the CI run
+    // that executed the CONTROL-PLANE code (main), not the observed subject —
+    // those checks are unchanged and still required. Three additional fields
+    // describe the observed-subject side, which the run's own identity above
+    // cannot: which exact commit was checked out into the isolated subject/
+    // path, on what ref the control-plane run itself executed, and which
+    // immutable tag authorizes treating that commit as the current Stage 7
+    // subject. A legacy (capture_mode absent) artifact must NOT carry real
+    // values here — there is no separate subject checkout to describe, and a
+    // stray value would be meaningless data no code path ever checks.
+    const isControlPlane = artifact.capture_mode === 'control_plane';
+    if (isControlPlane) {
+      if (typeof producer.control_plane_sha !== 'string' || !SHA40.test(producer.control_plane_sha)) {
+        fail(at(`capture_mode 'control_plane' requires producer.control_plane_sha as a 40-character lowercase commit SHA; got ${describe(producer.control_plane_sha)} '${producer.control_plane_sha}'`));
+      }
+      if (!nonEmptyString(producer.control_plane_ref)) {
+        fail(at(`capture_mode 'control_plane' requires producer.control_plane_ref (the ref the control-plane run executed on); got ${describe(producer.control_plane_ref)}`));
+      } else if (producer.control_plane_ref !== 'refs/heads/main') {
+        fail(at(`capture_mode 'control_plane' requires producer.control_plane_ref to be exactly 'refs/heads/main'; got '${producer.control_plane_ref}' — trusted control-plane code is only ever the current tip of main, never a branch, fork, tag or PR ref`));
+      }
+      if (!nonEmptyString(producer.subject_tag) || !SUBJECT_TAG_PATTERN.test(producer.subject_tag)) {
+        fail(at(`capture_mode 'control_plane' requires producer.subject_tag matching ${SUBJECT_TAG_PATTERN} (a Stage 7 subject tag name); got ${describe(producer.subject_tag)} '${producer.subject_tag}'`));
+      } else if (producer.subject_tag !== CONTROL_PLANE_AUTHORIZED_SUBJECT_TAG) {
+        fail(at(`producer.subject_tag '${producer.subject_tag}' is not the currently authorized control-plane subject tag ('${CONTROL_PLANE_AUTHORIZED_SUBJECT_TAG}') — a capture naming any other tag is not authorized by current governance, regardless of whether that tag exists`));
+      }
+      if (producer.control_plane_sha === artifact.subject_sha) {
+        fail(at(`producer.control_plane_sha equals subject_sha (${artifact.subject_sha}) — a control-plane capture exists specifically to observe a DIFFERENT commit than the one that produced it; if they are the same commit, capture_mode 'control_plane' should not have been used (omit it and capture directly instead)`));
+      }
+    } else {
+      for (const field of ['control_plane_sha', 'control_plane_ref', 'subject_tag']) {
+        if (producer[field] !== null && producer[field] !== undefined) {
+          fail(at(`producer.${field} is set but capture_mode is not 'control_plane' — this field has meaning only for a control-plane capture`));
+        }
+      }
+    }
   }
 
   if (isOwnerLane) {
@@ -816,14 +916,21 @@ function toEpoch(value) {
  *
  * @param {object} artifact
  * @param {object|null} run  GitHub Actions run object, or null when not found
+ * @param {object} [context]
+ * @param {string} [context.subjectTagSha]  what producer.subject_tag currently resolves to
+ *   (control-plane artifacts only). Omit when the caller could not attempt resolution;
+ *   pass subjectTagLookupError instead so the distinction between "we checked and it
+ *   doesn't match" and "we could not check" is never lost.
+ * @param {string} [context.subjectTagLookupError]  why subjectTagSha could not be resolved
  * @returns {string[]} violations
  */
-export function evaluateRunProvenance(artifact, run) {
+export function evaluateRunProvenance(artifact, run, context = {}) {
   const producer = artifact.producer ?? {};
   const label = `${artifact.artifact_id}: `;
   if (run === null || run === undefined) {
     return [`${label}GitHub Actions run ${producer.run_id} was not found in ${producer.repository} — the artifact names a run that does not exist`];
   }
+  const isControlPlane = artifact.capture_mode === 'control_plane';
 
   const violations = [];
   const mismatch = (field, declared, actual) =>
@@ -833,7 +940,14 @@ export function evaluateRunProvenance(artifact, run) {
   if (run.repository?.full_name && run.repository.full_name !== producer.repository) {
     mismatch('producer.repository', producer.repository, run.repository.full_name);
   }
-  if (run.head_sha !== artifact.subject_sha) {
+  if (isControlPlane) {
+    // The run's own checkout is the control-plane commit (main), never the
+    // subject — see the CONTROL-PLANE authorization gate. subject_sha is
+    // independently re-verified below, against the tag, not against this run.
+    if (run.head_sha !== producer.control_plane_sha) {
+      violations.push(`${label}producer.control_plane_sha '${producer.control_plane_sha}' is not the commit run ${producer.run_id} executed ('${run.head_sha}') — the control-plane code was not run at the commit it claims`);
+    }
+  } else if (run.head_sha !== artifact.subject_sha) {
     violations.push(`${label}subject_sha '${artifact.subject_sha}' is not the commit run ${producer.run_id} executed ('${run.head_sha}') — the observation was not made against the commit it claims`);
   }
   if (run.name !== producer.workflow) mismatch('producer.workflow', producer.workflow, run.name);
@@ -853,6 +967,22 @@ export function evaluateRunProvenance(artifact, run) {
     violations.push(`${label}captured_at_utc '${artifact.captured_at_utc}' is not a parseable instant`);
   } else if (actualStart !== null && (captured < actualStart || captured > windowEnd)) {
     violations.push(`${label}captured_at_utc '${artifact.captured_at_utc}' falls outside the window of run ${producer.run_id} (${run.run_started_at ?? run.created_at} … ${run.updated_at ?? run.completed_at}) — the observation was not taken during that run`);
+  }
+
+  // The control-plane run's own head_sha proves nothing about the subject — by
+  // design, they are different commits. The only way to prove subject_sha is
+  // still the commit the immutable tag names is to re-resolve that tag right
+  // now, independent of anything the artifact itself claims. A tag that has
+  // since moved (forbidden by governance, but never assumed) is caught here,
+  // at every future validation, not only at capture time.
+  if (isControlPlane) {
+    if (nonEmptyString(context.subjectTagLookupError)) {
+      violations.push(`${label}could not resolve tag '${producer.subject_tag}' to verify subject_sha independently of this run — ${context.subjectTagLookupError}`);
+    } else if (!nonEmptyString(context.subjectTagSha)) {
+      violations.push(`${label}subject_sha was not independently re-verified against tag '${producer.subject_tag}' — a control-plane artifact's subject_sha is never trusted from the run alone`);
+    } else if (context.subjectTagSha !== artifact.subject_sha) {
+      violations.push(`${label}subject_sha '${artifact.subject_sha}' does not match what tag '${producer.subject_tag}' currently resolves to ('${context.subjectTagSha}') — the immutable subject tag must name exactly the observed commit`);
+    }
   }
 
   return violations;
@@ -1055,6 +1185,99 @@ export function resolveCaptureAuthorization({
   }
 
   return { authorizationManifestSha, keyRegistry };
+}
+
+/**
+ * CONTROL-PLANE authorization gate.
+ *
+ * A deliberately separate function from resolveCaptureAuthorization (OPTION A)
+ * above, not a refactor of it: OPTION A governs the legacy, single-checkout
+ * capture path and is left completely untouched by this gate's existence, so
+ * every artifact it has ever authorized — and every test asserting its exact
+ * error text — is unaffected by anything below.
+ *
+ * This gate answers a different question than OPTION A. OPTION A asks "is the
+ * commit this job checked itself out at the one commit currently authorized to
+ * be observed" — true by construction when the job's own checkout IS the
+ * subject. A control-plane capture's own checkout is main, not the subject, so
+ * that question no longer applies; instead this gate asks "does the one subject
+ * tag this control-plane build is allowed to trust currently resolve to exactly
+ * the commit the governance manifest names as authorized" — proving the subject
+ * about to be checked out into the isolated subject/ path is both (a) the
+ * commit D-18 (or whichever decision is current) actually authorized and (b)
+ * the exact commit the immutable stage7-evidence-subject-* tag still points to,
+ * neither of which is ever taken from caller input: fetchMainManifest and
+ * resolveTagSha are both injected I/O, and subjectTag defaults to the one
+ * reviewed source-code constant, never a flag or workflow input.
+ *
+ * @param {object} deps
+ * @param {() => string} deps.fetchMainManifest  reads factory-stage-7-closure.yaml from origin/main
+ * @param {(tag: string) => string} deps.resolveTagSha  resolves a tag name to the 40-hex commit it targets
+ * @param {string} [deps.subjectTag]  defaults to CONTROL_PLANE_AUTHORIZED_SUBJECT_TAG
+ * @returns {{ subjectSha: string, subjectTag: string }}
+ */
+export function resolveControlPlaneSubject({
+  fetchMainManifest,
+  resolveTagSha,
+  subjectTag = CONTROL_PLANE_AUTHORIZED_SUBJECT_TAG,
+}) {
+  if (!SUBJECT_TAG_PATTERN.test(subjectTag)) {
+    throw new Error(
+      `CONTROL-PLANE authorization gate: subjectTag '${subjectTag}' does not match ${SUBJECT_TAG_PATTERN} — refusing before resolving anything.`,
+    );
+  }
+
+  let rawManifest;
+  try {
+    rawManifest = fetchMainManifest();
+  } catch (error) {
+    throw new Error(
+      `CONTROL-PLANE authorization gate: failed to read factory-stage-7-closure.yaml from ` +
+      `origin/main — ${error.message}.`,
+    );
+  }
+  if (typeof rawManifest !== 'string' || rawManifest.trim().length === 0) {
+    throw new Error(
+      `CONTROL-PLANE authorization gate: factory-stage-7-closure.yaml at origin/main is empty ` +
+      `or unreadable. The manifest must contain a well-formed closure_subject_sha.`,
+    );
+  }
+  const match = /^\s*closure_subject_sha:\s*["']?([0-9a-f]{40})["']?\s*(?:#.*)?$/m.exec(rawManifest);
+  if (!match) {
+    throw new Error(
+      `CONTROL-PLANE authorization gate: factory-stage-7-closure.yaml at origin/main does not ` +
+      `contain a well-formed closure_subject_sha (must be a 40-character lowercase commit SHA).`,
+    );
+  }
+  const manifestSubjectSha = match[1];
+
+  let tagSha;
+  try {
+    tagSha = resolveTagSha(subjectTag);
+  } catch (error) {
+    throw new Error(
+      `CONTROL-PLANE authorization gate: could not resolve tag '${subjectTag}' — ${error.message}. ` +
+      `The immutable subject tag must exist and be reachable before a control-plane capture can run.`,
+    );
+  }
+  if (typeof tagSha !== 'string' || !SHA40.test(tagSha.trim())) {
+    throw new Error(
+      `CONTROL-PLANE authorization gate: resolveTagSha('${subjectTag}') returned '${tagSha}', ` +
+      `which is not a valid 40-character lowercase commit SHA.`,
+    );
+  }
+  const resolvedTagSha = tagSha.trim();
+
+  if (resolvedTagSha !== manifestSubjectSha) {
+    throw new Error(
+      `CONTROL-PLANE authorization gate: tag '${subjectTag}' resolves to ${resolvedTagSha}, but ` +
+      `factory-stage-7-closure.yaml at origin/main declares closure_subject_sha=${manifestSubjectSha}. ` +
+      `The immutable subject tag and the governance manifest must name the exact same commit before ` +
+      `a control-plane capture may treat either as authorized.`,
+    );
+  }
+
+  return { subjectSha: manifestSubjectSha, subjectTag };
 }
 
 // ─── Key registry ─────────────────────────────────────────────────────────────
@@ -1416,6 +1639,14 @@ export function evaluateSupersessionChain(record, byId) {
     }
     if (next.invariantId !== cursor.invariantId) {
       violations.push(`${cursor.artifactId} (${cursor.invariantId}) supersedes ${target} (${next.invariantId}) — supersession is only meaningful within one invariant`);
+      break;
+    }
+    if (next.lane !== cursor.lane) {
+      violations.push(`${cursor.artifactId} (lane ${cursor.lane}) supersedes ${target} (lane ${next.lane}) — a correction must observe the same lane as the artifact it replaces, or the two are not comparable observations`);
+      break;
+    }
+    if (next.subjectSha !== cursor.subjectSha) {
+      violations.push(`${cursor.artifactId} (subject_sha ${cursor.subjectSha}) supersedes ${target} (subject_sha ${next.subjectSha}) — a correction must observe the same subject commit as the artifact it replaces, or it is a new observation, not a correction`);
       break;
     }
     if (next.level === ACCEPTANCE.REJECTED) {
