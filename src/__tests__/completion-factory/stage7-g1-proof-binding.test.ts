@@ -1615,17 +1615,230 @@ describe("G-1 append-only evidence history — closed-set repair hostile cases",
     expect(allViolations(result)).toMatch(/S7-I4/);
   });
 
-  // NOT asserted here, and deliberately not papered over: evaluateInvariantClosure's
-  // proof-binding check (scripts/lib/invariant-closure.mjs) requires the cited
-  // artifact to reach ACCEPTANCE level ACCEPTED — structurally valid, signed, and
-  // provenance-verified against the correct lane/subject — but does not itself
-  // additionally require `result === 'PASS'`. In principle a FAIL artifact that
-  // somehow reached full ACCEPTED status (real signing key, real matching GitHub
-  // Actions run) would currently satisfy proof_artifacts. In practice this cannot
-  // happen unattended: reaching ACCEPTED needs the production signing key (a GitHub
-  // Actions secret) and a live run whose provenance matches, both of which are
-  // exactly the two things this file's own threat model says an interactive session
-  // cannot produce. This is a real, separate, pre-existing gap in `result`
-  // enforcement — out of scope for this test's repair (a stale artifact-count
-  // assumption, not a proof-binding design change) and not fixed here.
+  // The gap noted here as "found in passing, not fixed here" when this suite was
+  // last touched — evaluateProofReference required ACCEPTED but not `result ===
+  // 'PASS'`, so a FAIL artifact that somehow reached full ACCEPTED status could
+  // have satisfied proof_artifacts — is now closed. See the dedicated describe
+  // block below ("G-1 proof binding — a PROVEN invariant requires PASS evidence")
+  // for the forensic reproduction (pre-fix) and the hostile matrix proving the fix.
+});
+
+/**
+ * G-1 proof binding — a PROVEN invariant requires PASS evidence.
+ *
+ * Root cause: evaluateProofReference (scripts/lib/evidence-artifact.mjs), the
+ * sole decision point evaluateInvariantClosure uses to decide whether a cited
+ * artifact may back a PROVEN invariant, required the artifact to reach
+ * ACCEPTANCE.ACCEPTED (structurally valid, signed, provenance-verified, correct
+ * lane/proof_type/subject/invariant, not superseded) but never independently
+ * checked the observation's own `result`. An artifact with result: FAIL,
+ * BLOCKED or NOT_TESTED that reached full ACCEPTED status — a real signing key
+ * plus a live GitHub Actions run whose provenance matches — would therefore
+ * have satisfied proof_artifacts exactly as a PASS artifact does.
+ *
+ * VALID EVIDENCE RECORD != SUCCESSFUL PROOF: every case below constructs a
+ * real, validly-signed artifact via buildEvidenceArtifact and drives it
+ * through the real evaluateInvariantClosure path (never mocked), forcing
+ * ACCEPTED via a real Ed25519 signature plus an injected VERIFIED provenance
+ * map — the only way to reach ACCEPTED at all — so "ACCEPTED" here is the
+ * real acceptance level the fix must not weaken, not a stand-in for it.
+ */
+describe("G-1 proof binding — a PROVEN invariant requires PASS evidence", () => {
+  /** Forces ACCEPTED: a real signature (SIGNING_KEY) plus a real VERIFIED provenance entry. */
+  function acceptedArtifact(invariantId: string, result: string) {
+    return signedArtifact(invariantId, { result, assertion: `${invariantId} observed as ${result}` });
+  }
+
+  function closureFor(invariantId: string, artifact: Record<string, unknown>, opts: { evidenceDir: string; provenance?: Map<string, string> }) {
+    return evaluate(
+      contractWith({ [invariantId]: provenWith(invariantId, [artifact.artifact_id as string]) }),
+      opts,
+    );
+  }
+
+  it("ACCEPTED + PASS may satisfy PROVEN", () => {
+    const a = acceptedArtifact("S7-I1", "PASS");
+    const dir = writeArtifacts([a]);
+    const result = closureFor("S7-I1", a, { evidenceDir: dir, provenance: verifiedProvenance(a) });
+    expect(result.proven).toContain("S7-I1");
+  });
+
+  it("ACCEPTED + FAIL cannot satisfy PROVEN", () => {
+    const a = acceptedArtifact("S7-I1", "FAIL");
+    const dir = writeArtifacts([a]);
+    const result = closureFor("S7-I1", a, { evidenceDir: dir, provenance: verifiedProvenance(a) });
+    expect(result.proven).not.toContain("S7-I1");
+    expect(allViolations(result)).toContain(`observed result 'FAIL', not 'PASS'`);
+  });
+
+  it("ACCEPTED + BLOCKED cannot satisfy PROVEN", () => {
+    const a = acceptedArtifact("S7-I1", "BLOCKED");
+    const dir = writeArtifacts([a]);
+    const result = closureFor("S7-I1", a, { evidenceDir: dir, provenance: verifiedProvenance(a) });
+    expect(result.proven).not.toContain("S7-I1");
+    expect(allViolations(result)).toContain(`observed result 'BLOCKED', not 'PASS'`);
+  });
+
+  it("ACCEPTED + NOT_TESTED cannot satisfy PROVEN", () => {
+    const a = acceptedArtifact("S7-I1", "NOT_TESTED");
+    const dir = writeArtifacts([a]);
+    const result = closureFor("S7-I1", a, { evidenceDir: dir, provenance: verifiedProvenance(a) });
+    expect(result.proven).not.toContain("S7-I1");
+    expect(allViolations(result)).toContain(`observed result 'NOT_TESTED', not 'PASS'`);
+  });
+
+  it("UNVERIFIED + PASS cannot satisfy PROVEN (no provenance supplied)", () => {
+    const a = acceptedArtifact("S7-I1", "PASS");
+    const dir = writeArtifacts([a]);
+    // No provenance map: signature verifies but provenance stays UNCHECKED, so
+    // the record can reach at most UNVERIFIED, never ACCEPTED.
+    const result = closureFor("S7-I1", a, { evidenceDir: dir });
+    expect(result.proven).not.toContain("S7-I1");
+    expect(allViolations(result)).toMatch(/is UNVERIFIED, not ACCEPTED/);
+  });
+
+  it("REJECTED + PASS cannot satisfy PROVEN (structurally invalid)", () => {
+    const a = acceptedArtifact("S7-I1", "PASS");
+    const dir = writeArtifacts([a]);
+    // Corrupt the committed file in place so the structural pass rejects it —
+    // still PASS by content, but no longer a well-formed artifact.
+    const raw = JSON.parse(readFileSync(join(dir, `${a.artifact_id}.json`), "utf8"));
+    delete raw.replay;
+    writeFileSync(join(dir, `${a.artifact_id}.json`), JSON.stringify(raw, null, 2), "utf8");
+    const result = closureFor("S7-I1", a, { evidenceDir: dir, provenance: verifiedProvenance(a) });
+    expect(result.proven).not.toContain("S7-I1");
+    expect(allViolations(result)).toMatch(/is REJECTED, not ACCEPTED|structurally invalid artifact/);
+  });
+
+  it("a FAIL artifact remains loadable and structurally valid on its own", () => {
+    const a = acceptedArtifact("S7-I1", "FAIL");
+    const dir = writeArtifacts([a]);
+    const { records } = loadEvidenceArtifactIndex({ dir, signingKey: SIGNING_KEY });
+    const record = records.find((r) => r.artifactId === a.artifact_id);
+    expect(record).toBeDefined();
+    expect(record?.violations).toEqual([]);
+    expect(record?.level).not.toBe("REJECTED");
+  });
+
+  it("a FAIL artifact may be superseded by a later PASS artifact, which then proves the invariant", () => {
+    const fail = acceptedArtifact("S7-I1", "FAIL");
+    // supersedes is part of the build input, not a post-hoc mutation, so the
+    // content-derived artifact_id already reflects it.
+    const pass = signedArtifact("S7-I1", { result: "PASS", supersedes: fail.artifact_id });
+    const dir = writeArtifacts([fail, pass]);
+    const result = closureFor("S7-I1", pass, {
+      evidenceDir: dir,
+      provenance: verifiedProvenance(fail, pass),
+    });
+    expect(result.proven).toContain("S7-I1");
+  });
+
+  it("a historical FAIL artifact is immutable — citing it does not rewrite its own result", () => {
+    const fail = acceptedArtifact("S7-I1", "FAIL");
+    const dir = writeArtifacts([fail]);
+    const before = readFileSync(join(dir, `${fail.artifact_id}.json`), "utf8");
+    closureFor("S7-I1", fail, { evidenceDir: dir, provenance: verifiedProvenance(fail) });
+    const after = readFileSync(join(dir, `${fail.artifact_id}.json`), "utf8");
+    expect(after).toBe(before);
+    const raw = JSON.parse(after);
+    expect(raw.result).toBe("FAIL");
+  });
+
+  it("multiple proof_artifacts cannot hide a FAIL among PASS references — every supplied reference must qualify", () => {
+    const pass = acceptedArtifact("S7-I1", "PASS");
+    const fail = acceptedArtifact("S7-I1", "FAIL");
+    const dir = writeArtifacts([pass, fail]);
+    const result = evaluate(
+      contractWith({ "S7-I1": provenWith("S7-I1", [pass.artifact_id as string, fail.artifact_id as string]) }),
+      { evidenceDir: dir, provenance: verifiedProvenance(pass, fail) },
+    );
+    expect(result.proven).not.toContain("S7-I1");
+    expect(allViolations(result)).toContain(`observed result 'FAIL', not 'PASS'`);
+  });
+
+  it("wrong lane still fails, independent of the PASS-result rule", () => {
+    // Declared as S7-I1 (avoiding S7-I11's own extra D-4 governance guard,
+    // which is orthogonal to this check) but built as LANE_E; S7-I1's contract
+    // (below, via CONTRACT's default) requires LANE_C.
+    const a = buildEvidenceArtifact({
+      invariant_id: "S7-I1", lane: "LANE_E", proof_type: "production_runtime_check",
+      environment: "isolated_simulation", method: "http_probe", captured_at_utc: "2026-08-03T12:00:00.000Z",
+      subject_sha: SUBJECT_SHA, deployment_id: null, assertion: "x", result: "PASS", raw_observation: "x",
+      replay_command: "npm run verify", repository: "arnab-netizen/OPsIq", workflow: "w",
+      workflow_ref: "w@refs/heads/main", job: "capture", run_id: "1", run_number: 1, run_attempt: 1,
+      run_started_at: "2026-08-03T11:55:37Z", actor: "arnab-netizen", event_name: "workflow_dispatch",
+    }, { signingKey: SIGNING_KEY }) as Record<string, unknown>;
+    const dir = writeArtifacts([a]);
+    const result = closureFor("S7-I1", a, { evidenceDir: dir, provenance: verifiedProvenance(a) });
+    expect(result.proven).not.toContain("S7-I1");
+    expect(allViolations(result)).toMatch(/is lane LANE_E, but S7-I1 requires/);
+  });
+
+  it("wrong proof_type still fails, independent of the PASS-result rule", () => {
+    const a = signedArtifact("S7-I1", { proof_type: "production_migration_check", result: "PASS" });
+    const dir = writeArtifacts([a]);
+    const result = closureFor("S7-I1", a, { evidenceDir: dir, provenance: verifiedProvenance(a) });
+    expect(result.proven).not.toContain("S7-I1");
+    expect(allViolations(result)).toMatch(/declares proof_type production_migration_check, but S7-I1 requires/);
+  });
+
+  it("wrong invariant still fails, independent of the PASS-result rule", () => {
+    const a = acceptedArtifact("S7-I2", "PASS");
+    const dir = writeArtifacts([a]);
+    const result = evaluate(
+      contractWith({ "S7-I1": provenWith("S7-I1", [a.artifact_id as string]) }),
+      { evidenceDir: dir, provenance: verifiedProvenance(a) },
+    );
+    expect(result.proven).not.toContain("S7-I1");
+    expect(allViolations(result)).toMatch(/is bound to invariant S7-I2, not S7-I1/);
+  });
+
+  it("wrong subject still fails, independent of the PASS-result rule", () => {
+    const a = signedArtifact("S7-I1", { subject_sha: "1111111111111111111111111111111111111111", result: "PASS" });
+    const dir = writeArtifacts([a]);
+    const result = closureFor("S7-I1", a, { evidenceDir: dir, provenance: verifiedProvenance(a) });
+    expect(result.proven).not.toContain("S7-I1");
+    expect(allViolations(result)).toMatch(/SUBJECT_SHA_NOT_AUTHORIZED|not an authorized closure subject SHA/);
+  });
+
+  it("a malformed result still fails existing structural validation, before the PASS-result rule is ever reached", () => {
+    const a = signedArtifact("S7-I1");
+    const dir = writeArtifacts([a]);
+    const raw = JSON.parse(readFileSync(join(dir, `${a.artifact_id}.json`), "utf8"));
+    raw.result = "SUCCESS"; // not one of PASS | FAIL | BLOCKED | NOT_TESTED
+    writeFileSync(join(dir, `${a.artifact_id}.json`), JSON.stringify(raw, null, 2), "utf8");
+    const { records } = loadEvidenceArtifactIndex({ dir, signingKey: SIGNING_KEY });
+    const record = records.find((r) => r.fileName === `${a.artifact_id}.json`);
+    expect(record?.level).toBe("REJECTED");
+    expect(record?.violations.join("\n")).toMatch(/result 'SUCCESS' is not one of/);
+  });
+
+  it("the current archived D18 historical FAIL artifacts remain valid historical records and remain unbound", () => {
+    const dir = join(root, "docs/opsiq/evidence/stage-7/artifacts");
+    const d18FailIds = [
+      "evd_5b59b73ad136d0603778d92cba8df2c1",
+      "evd_3d09b82a000f831554b5d8ab70c87c8d",
+      "evd_20466e742c3720a92b56e1258662317a",
+    ];
+    const { records } = loadEvidenceArtifactIndex({ dir });
+    for (const id of d18FailIds) {
+      const record = records.find((r) => r.artifactId === id);
+      expect(record, `expected archived D18 artifact ${id} to be present`).toBeDefined();
+      expect(record?.violations).toEqual([]);
+      const raw = JSON.parse(readFileSync(record!.absolutePath, "utf8"));
+      expect(raw.result).toBe("FAIL");
+      expect(raw.supersedes).toBeNull();
+    }
+    // The live contract cites none of them as proof — read the real, unmodified
+    // manifest directly (not a fixture) and confirm no invariant's proof_artifacts
+    // names any of the three.
+    const manifestYaml = readFileSync(join(root, "docs/opsiq/bundles/factory-stage-7-closure.yaml"), "utf8");
+    const manifest = YAML.load(manifestYaml) as { invariants: Record<string, { proof_artifacts?: unknown[] }> };
+    for (const [invariantId, entry] of Object.entries(manifest.invariants)) {
+      const refs = Array.isArray(entry?.proof_artifacts) ? entry.proof_artifacts : [];
+      for (const id of d18FailIds) {
+        expect(refs, `${invariantId} must not cite archived FAIL artifact ${id} as proof`).not.toContain(id);
+      }
+    }
+  });
 });

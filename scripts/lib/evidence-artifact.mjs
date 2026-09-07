@@ -1553,6 +1553,13 @@ export function loadEvidenceArtifactIndex({ dir, signingKey = null, provenance =
       lane: parsed?.lane ?? null,
       proofType: parsed?.proof_type ?? null,
       subjectSha: parsed?.subject_sha ?? null,
+      // Read here, not derived, so evaluateProofReference (the sole caller of
+      // evaluateSupersessionChain's sibling proof-eligibility check) can tell a
+      // PASS observation from a FAIL/BLOCKED/NOT_TESTED one without re-reading
+      // the file: VALID EVIDENCE RECORD != SUCCESSFUL PROOF, and the record
+      // shape is exactly where that distinction is available to every consumer
+      // of loadEvidenceArtifactIndex, not just this one.
+      result: parsed?.result ?? null,
       supersedes: parsed?.supersedes ?? null,
       level: classifyAcceptance({ violations: scoped, signatureState, provenanceState }),
       violations: scoped,
@@ -1713,6 +1720,17 @@ export function evaluateProofReference(reference, context) {
   if (record.level !== ACCEPTANCE.ACCEPTED) {
     const why = explainAcceptance(record) || 'acceptance requirements not met';
     violations.push(`proof reference ${reference} is ${record.level}, not ACCEPTED — ${why}. Owner decision D-8: an artifact that has not been verified may be committed, but may never satisfy a PROVEN invariant`);
+  }
+
+  // A structurally valid, signed, provenance-verified observation is still only
+  // an observation of what happened — not proof that the invariant holds. Only
+  // a PASS observation asserts that. FAIL, BLOCKED and NOT_TESTED are legitimate,
+  // archivable, superseded-or-superseding evidence records — none of them may
+  // ever satisfy PROVEN, regardless of how fully accepted the record is. This is
+  // independent of, and in addition to, the ACCEPTED check above: an artifact can
+  // fail either, both, or neither.
+  if (record.result !== 'PASS') {
+    violations.push(`proof reference ${reference} observed result '${record.result}', not 'PASS' — an artifact records what was observed, and only a PASS observation may back a PROVEN invariant. A FAIL, BLOCKED or NOT_TESTED artifact remains a valid, immutable historical record; it is not proof`);
   }
 
   return violations;
