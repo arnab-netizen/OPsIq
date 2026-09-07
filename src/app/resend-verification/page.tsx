@@ -2,8 +2,9 @@
 
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,18 @@ const RESEND_FAILURE_MESSAGE =
   "We couldn't send a verification email right now. Please try again shortly.";
 
 export default function ResendVerificationPage() {
-  const [email, setEmail] = useState("");
+  return (
+    // useSearchParams() requires a Suspense boundary above it, same as
+    // src/app/verify-email/page.tsx and src/app/reset-password/page.tsx.
+    <Suspense fallback={null}>
+      <ResendVerificationForm />
+    </Suspense>
+  );
+}
+
+function ResendVerificationForm() {
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);

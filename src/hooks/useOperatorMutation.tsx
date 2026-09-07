@@ -115,7 +115,22 @@ export function useOperatorMutation<TData, TVariables = unknown>(
 
         if (!response.ok) {
           const errorMessage = typeof data?.error === 'string' ? data.error : `API error: ${response.statusText}`;
-          throw new Error(errorMessage);
+          // Tag the error with the real HTTP status and the server's own
+          // `classification` field (when the governed route sent one) so a
+          // caller can branch on a specific, known server outcome instead of
+          // being limited to the generic, keyword-reclassified operator
+          // message that classifyOperatorError derives below. This does not
+          // change that generic message or any existing caller's behavior --
+          // it's read via GovernedErrorResponse.serverClassification/httpStatus.
+          const taggedError = new Error(errorMessage) as Error & {
+            httpStatus?: number;
+            serverClassification?: string;
+          };
+          taggedError.httpStatus = response.status;
+          if (typeof data?.classification === "string") {
+            taggedError.serverClassification = data.classification;
+          }
+          throw taggedError;
         }
 
         setState((s) => ({

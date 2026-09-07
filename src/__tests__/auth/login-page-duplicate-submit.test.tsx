@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 describe("LoginPage — one logical login action sends at most one request", () => {
-  it("1. normal login: one submit, exactly one POST, success navigates to /dashboard", async () => {
+  it("1. normal login: one submit, exactly one POST, success navigates to /", async () => {
     const fetchMock = vi.fn(async () => okResponse());
     vi.stubGlobal("fetch", fetchMock);
 
@@ -48,7 +48,10 @@ describe("LoginPage — one logical login action sends at most one request", () 
     fillCredentials();
     fireEvent.submit(screen.getByRole("button", { name: /sign in/i }).closest("form")!);
 
-    await waitFor(() => expect(window.location.href).toBe("/dashboard"));
+    // "/" (not a hardcoded "/dashboard") so the root page's centralized
+    // isSelfServeOwnerContext policy check decides the authenticated
+    // session's canonical Home — see src/app/page.tsx.
+    await waitFor(() => expect(window.location.href).toBe("/"));
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -74,7 +77,7 @@ describe("LoginPage — one logical login action sends at most one request", () 
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     resolveFetch?.();
-    await waitFor(() => expect(window.location.href).toBe("/dashboard"));
+    await waitFor(() => expect(window.location.href).toBe("/"));
     // Still exactly one — the second submit was ignored outright, not queued.
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -138,7 +141,7 @@ describe("LoginPage — one logical login action sends at most one request", () 
     vi.useRealTimers();
 
     fireEvent.submit(form);
-    await waitFor(() => expect(window.location.href).toBe("/dashboard"));
+    await waitFor(() => expect(window.location.href).toBe("/"));
     expect(secondFetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -59,6 +59,17 @@ export interface GovernedErrorResponse {
   technicalDetails: string; // For logging only, never to operator
   shouldEscalate: boolean;
   escalationReason?: string;
+  /** Real HTTP status of the response this error came from, when known. */
+  httpStatus?: number;
+  /**
+   * The server's own machine-readable `classification` field, when the
+   * governed API route provided one (e.g. "email_not_verified"). The
+   * generic operatorMessage above is reclassified from message keywords and
+   * loses this distinction, so a caller that needs to branch on a specific,
+   * known server classification (rather than show the generic message)
+   * should read this field instead of pattern-matching operatorMessage.
+   */
+  serverClassification?: string;
 }
 
 /**
@@ -74,6 +85,7 @@ export function classifyOperatorError(
   const safeError = toOperatorSafeError(error, mappedContext);
   const technicalDetails = extractTechnicalDetails(error);
   const shouldEscalate = determineShouldEscalate(error, context);
+  const { httpStatus, serverClassification } = extractServerTags(error);
 
   return {
     operatorMessage: safeError.error,
@@ -82,6 +94,25 @@ export function classifyOperatorError(
     technicalDetails,
     shouldEscalate,
     escalationReason: shouldEscalate ? getEscalationReason(error) : undefined,
+    httpStatus,
+    serverClassification,
+  };
+}
+
+/**
+ * Read the HTTP status and server classification tags a mutation call site
+ * (e.g. useOperatorMutation) may have attached to the thrown error, without
+ * changing how the generic operatorMessage above is derived. Purely
+ * additive: an error with no such tags yields undefined for both, exactly
+ * as before this field existed.
+ */
+function extractServerTags(error: unknown): { httpStatus?: number; serverClassification?: string } {
+  if (!(error instanceof Error)) return {};
+  const tagged = error as Error & { httpStatus?: unknown; serverClassification?: unknown };
+  return {
+    httpStatus: typeof tagged.httpStatus === "number" ? tagged.httpStatus : undefined,
+    serverClassification:
+      typeof tagged.serverClassification === "string" ? tagged.serverClassification : undefined,
   };
 }
 
