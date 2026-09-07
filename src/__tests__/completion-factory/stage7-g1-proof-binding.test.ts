@@ -1348,43 +1348,117 @@ describe("G-1 — the live repository is unchanged by this PR", () => {
     expect(code).not.toBe(0);
   });
 
-  // The repository now holds exactly one evidence artifact. Asserting the whole
-  // inventory, not merely that this one is present, is deliberate: a second
-  // artifact appearing here — a recapture, a duplicate, a hand-written file —
-  // must fail loudly rather than pass because the one id it looked for is still
-  // there. Fields are checked against the governed D-16 capture.
-  it("holds exactly the one governed S7-I11 evidence artifact", () => {
-    const { records } = loadEvidenceArtifactIndex({
+  // The repository holds an APPEND-ONLY history of Stage 7 evidence artifacts.
+  // Legitimate growth is expected: D-16's S7-I11 capture, then three D-18
+  // LANE_C FAIL captures archived by a later, reviewed PR (#431) once their
+  // own unmerged evidence branches made that archival possible. That growth
+  // must never be mistaken for noise — but what must still fail loudly is
+  // anything OUTSIDE this reviewed, enumerated set: a recapture under a new
+  // id, a duplicate, a hand-written file, or a known artifact's id, fields or
+  // filename being silently substituted.
+  //
+  // A bare directory-length count cannot tell "one more reviewed artifact"
+  // apart from "one more of anything" — it was the right check only while the
+  // set had exactly one member and any second file was automatically
+  // suspect. Asserting the CLOSED SET of artifact ids by name, deep-checking
+  // every one, is the same "fail loudly on anything unexpected" property
+  // restated so that further *reviewed* growth doesn't require guessing a new
+  // magic number: it requires adding the new artifact's own entry here, in
+  // the same PR that adds it, which is the correct place for that review to
+  // be visible.
+  const KNOWN_ARTIFACTS = [
+    {
+      artifactId: "evd_147fce5b18cdeeebf9d9b0b9778b8f06",
+      invariantId: "S7-I11",
+      lane: "LANE_E",
+      proofType: "simulation_adversarial",
+      // This artifact describes D-16's subject, not the active D-18 subject —
+      // that is real, unaltered history (see D16_SUBJECT_SHA above). It is why
+      // S7-I11 was demoted to PENDING (originally under D-17, unchanged by
+      // the D-17->D-18 transition) rather than left PROVEN against a stale
+      // subject.
+      subjectSha: D16_SUBJECT_SHA,
+      result: "PASS",
+      supersedes: null,
+      // Loaded with no protected context, so the index cannot reach a verdict
+      // and must not invent one: D-4 is unresolvable without the manifest
+      // text for an S7-I11 artifact specifically.
+      level: "REJECTED",
+    },
+    {
+      artifactId: "evd_5b59b73ad136d0603778d92cba8df2c1",
+      invariantId: "S7-I4",
+      lane: "LANE_C",
+      proofType: "production_auth_check",
+      // D-18 historical FAIL observation, archived by PR #431. Immutable: it
+      // remains FAIL and proves nothing about S7-I4 on its own.
+      subjectSha: AUTHORIZED_SUBJECT_SHA,
+      result: "FAIL",
+      supersedes: null,
+      level: "UNVERIFIED",
+    },
+    {
+      artifactId: "evd_3d09b82a000f831554b5d8ab70c87c8d",
+      invariantId: "S7-I5",
+      lane: "LANE_C",
+      proofType: "production_boundary_check",
+      subjectSha: AUTHORIZED_SUBJECT_SHA,
+      result: "FAIL",
+      supersedes: null,
+      level: "UNVERIFIED",
+    },
+    {
+      artifactId: "evd_20466e742c3720a92b56e1258662317a",
+      invariantId: "S7-I10",
+      lane: "LANE_C",
+      proofType: "simulation_and_production_audit_check",
+      subjectSha: AUTHORIZED_SUBJECT_SHA,
+      result: "FAIL",
+      supersedes: null,
+      level: "UNVERIFIED",
+    },
+  ] as const;
+
+  it("holds exactly the known, reviewed set of historical evidence artifacts — nothing more, nothing substituted", () => {
+    const { records, duplicates } = loadEvidenceArtifactIndex({
       dir: join(root, "docs/opsiq/evidence/stage-7/artifacts"),
     });
-    expect(records).toHaveLength(1);
-    const [record] = records as unknown as [{
-      artifactId: string; invariantId: string; lane: string; proofType: string;
-      subjectSha: string; fileName: string; nested: boolean; supersedes: string | null;
-      level: string; signatureState: string; provenanceState: string;
-    }];
-    expect(record.artifactId).toBe("evd_147fce5b18cdeeebf9d9b0b9778b8f06");
-    expect(record.invariantId).toBe("S7-I11");
-    expect(record.lane).toBe("LANE_E");
-    expect(record.proofType).toBe("simulation_adversarial");
-    // This artifact describes D-16's subject, not the active D-18 subject — that is
-    // real, unaltered history (see D16_SUBJECT_SHA above). It is why S7-I11 was
-    // demoted to PENDING (originally under D-17, unchanged by the D-17->D-18
-    // transition) rather than left PROVEN against a stale subject.
-    expect(record.subjectSha).toBe(D16_SUBJECT_SHA);
-    expect(record.fileName).toBe("evd_147fce5b18cdeeebf9d9b0b9778b8f06.json");
-    expect(record.nested).toBe(false);
-    expect(record.supersedes).toBeNull();
 
-    // Loaded with no protected context, so the index cannot reach a verdict and
-    // must not invent one: D-4 is unresolvable without the manifest text, and the
-    // signature and provenance go UNCHECKED rather than assumed good. The artifact
-    // reaches ACCEPTED only through the governed path, which the validator and gate
-    // tests exercise. A future change that let a bare load report ACCEPTED would be
-    // a real regression, and this pins it.
-    expect(record.level).toBe("REJECTED");
-    expect(record.signatureState).toBe("UNCHECKED");
-    expect(record.provenanceState).toBe("UNCHECKED");
+    // Closed-set membership by id catches an unexpected addition, a missing
+    // artifact, and a rename/substitution alike — properties a bare length
+    // check cannot distinguish from legitimate growth.
+    expect(records.map((r) => r.artifactId).sort()).toEqual(
+      [...KNOWN_ARTIFACTS.map((a) => a.artifactId)].sort(),
+    );
+    expect(duplicates).toEqual([]);
+
+    for (const expected of KNOWN_ARTIFACTS) {
+      const record = records.find((r) => r.artifactId === expected.artifactId);
+      if (!record) throw new Error(`expected known artifact ${expected.artifactId} not found`);
+      expect(record.invariantId).toBe(expected.invariantId);
+      expect(record.lane).toBe(expected.lane);
+      expect(record.proofType).toBe(expected.proofType);
+      expect(record.subjectSha).toBe(expected.subjectSha);
+      expect(record.fileName).toBe(`${expected.artifactId}.json`);
+      expect(record.nested).toBe(false);
+      expect(record.supersedes).toBe(expected.supersedes);
+
+      // Loaded with no protected context, so the index cannot reach a verdict
+      // above what its own structural pass supports, and must not invent
+      // one. Every known artifact here is at most UNVERIFIED — never
+      // ACCEPTED — confirming none of them backs a PROVEN invariant merely
+      // by existing on disk in structurally valid form.
+      expect(record.level).toBe(expected.level);
+      expect(record.level).not.toBe("ACCEPTED");
+      expect(record.signatureState).toBe("UNCHECKED");
+      expect(record.provenanceState).toBe("UNCHECKED");
+
+      // `result` is not part of the loader's summary record; read the
+      // governed observation directly, exactly as every other
+      // artifact-content test in this suite does.
+      const raw = JSON.parse(readFileSync(record.absolutePath, "utf8"));
+      expect(raw.result).toBe(expected.result);
+    }
   });
 
   it("the evidence validator and bundle validator both stay green", () => {
@@ -1397,4 +1471,126 @@ describe("G-1 — the live repository is unchanged by this PR", () => {
   it("ACCEPTANCE never gains a level above ACCEPTED", () => {
     expect(Object.keys(ACCEPTANCE).sort()).toEqual(["ACCEPTED", "REJECTED", "UNVERIFIED"]);
   });
+});
+
+/**
+ * Hostile audit of the closed-set repair above (append-only evidence history).
+ *
+ * These run against synthetic temp directories, never the live repository —
+ * they exist to prove the repair PATTERN itself is sound, not to re-test
+ * loadEvidenceArtifactIndex's own structural checks (covered exhaustively
+ * elsewhere). The closed-set-by-id assertion replaces a bare `toHaveLength`
+ * specifically so legitimate history can grow without the check going stale
+ * again the next time a real artifact is archived; these cases prove that
+ * substitution is still not tolerated.
+ */
+describe("G-1 append-only evidence history — closed-set repair hostile cases", () => {
+  /** The same assertion shape the real G-1 test above uses, generalised over any expected id set. */
+  function assertClosedSet(dir: string, expectedIds: string[]) {
+    const { records, duplicates } = loadEvidenceArtifactIndex({ dir });
+    expect(records.map((r) => r.artifactId).sort()).toEqual([...expectedIds].sort());
+    expect(duplicates).toEqual([]);
+  }
+
+  it("the expected governed artifact, present exactly once, passes", () => {
+    const a = signedArtifact("S7-I1");
+    const dir = writeArtifacts([a]);
+    expect(() => assertClosedSet(dir, [a.artifact_id as string])).not.toThrow();
+  });
+
+  it("a missing expected artifact fails loudly", () => {
+    const a = signedArtifact("S7-I1");
+    const b = signedArtifact("S7-I2");
+    const dir = writeArtifacts([a]); // b is expected but never written
+    expect(() => assertClosedSet(dir, [a.artifact_id as string, b.artifact_id as string])).toThrow();
+  });
+
+  it("an unexpected extra artifact (a recapture, a hand-written file) fails loudly even though the expected one is still present", () => {
+    const a = signedArtifact("S7-I1");
+    const surprise = signedArtifact("S7-I2");
+    const dir = writeArtifacts([a, surprise]);
+    // Only `a` was reviewed/expected; `surprise` appearing must not pass silently
+    // merely because `a` is still findable.
+    expect(() => assertClosedSet(dir, [a.artifact_id as string])).toThrow();
+  });
+
+  it("the same artifact_id duplicated under a second filename is caught by loadEvidenceArtifactIndex's own duplicate detection, and fails the closed-set check", () => {
+    const a = signedArtifact("S7-I1");
+    const dir = writeArtifacts([a], { fileNameFor: () => `${a.artifact_id}.json` });
+    // Write it again under a second canonical-looking filename with the same id.
+    writeFileSync(join(dir, `${a.artifact_id}-copy.json`), JSON.stringify(a, null, 2), "utf8");
+    const { records, duplicates } = loadEvidenceArtifactIndex({ dir });
+    expect(duplicates).toEqual([a.artifact_id]);
+    // Whichever of the two files the scan reaches second is the one carrying
+    // the "duplicate artifact_id" violation (file iteration order, not review
+    // order, decides which); what matters is that at least one record does,
+    // and that the closed-set check — which refuses on ANY duplicate — throws
+    // regardless of which file that is.
+    expect(records.map((r) => r.violations.join("\n")).join("\n")).toContain("duplicate artifact_id");
+    expect(() => assertClosedSet(dir, [a.artifact_id as string])).toThrow();
+  });
+
+  it("a substituted artifact — same filename, different content/id than reviewed — is caught because the id no longer matches what was expected", () => {
+    const expectedId = signedArtifact("S7-I1").artifact_id as string;
+    const substitute = signedArtifact("S7-I2"); // different observation entirely
+    const dir = tempDir("opsiq-g1-evidence-");
+    // Filed under the EXPECTED artifact's canonical filename, but its content
+    // (and therefore its content-derived artifact_id) is a different
+    // observation — the classic "swap the file, keep the name" attack.
+    writeFileSync(join(dir, `${expectedId}.json`), JSON.stringify(substitute, null, 2), "utf8");
+    expect(() => assertClosedSet(dir, [expectedId])).toThrow();
+  });
+
+  it("additional legitimate historical artifacts do not break the check merely because the count increased, once explicitly enumerated", () => {
+    // Mirrors what happened for real: one known artifact, then reviewed growth
+    // to include several more. The pattern must accommodate that growth as
+    // long as the grower updates the expected set — it must not require the
+    // check itself to special-case "count went up".
+    const known = [signedArtifact("S7-I1"), signedArtifact("S7-I2"), signedArtifact("S7-I4"), signedArtifact("S7-I5")];
+    const dir = writeArtifacts(known);
+    expect(() => assertClosedSet(dir, known.map((a) => a.artifact_id as string))).not.toThrow();
+  });
+
+  it("a malformed (unparseable) artifact still fails closed under the same directory scan", () => {
+    const a = signedArtifact("S7-I1");
+    const dir = writeArtifacts([a]);
+    writeFileSync(join(dir, "evd_deadbeefdeadbeefdeadbeefdeadbeef.json"), "{ not json", "utf8");
+    const { records } = loadEvidenceArtifactIndex({ dir });
+    const malformed = records.find((r) => r.fileName === "evd_deadbeefdeadbeefdeadbeefdeadbeef.json");
+    expect(malformed?.level).toBe("REJECTED");
+    expect(malformed?.violations.join("\n")).toContain("not parseable as JSON");
+  });
+
+  it("a historical FAIL artifact, in the same unverified state as the real committed D18 artifacts, cannot close its invariant", () => {
+    const fail = signedArtifact("S7-I4", { result: "FAIL", assertion: "observed FAIL, archived as history" });
+    const dir = writeArtifacts([fail]);
+    // No provenance map supplied — this is the artifact's REAL state on disk
+    // right now: structurally valid and signed, but never independently
+    // confirmed against a live GitHub Actions run (that requires a network
+    // call and a token neither this test nor a bare load has). The main G-1
+    // test above pins that every real committed artifact is at most
+    // UNVERIFIED for exactly this reason. UNVERIFIED can never satisfy the
+    // ACCEPTED level `evaluateInvariantClosure` requires, so closure is
+    // refused here regardless of `result`.
+    const result = evaluate(
+      contractWith({ "S7-I4": provenWith("S7-I4", [fail.artifact_id as string]) }),
+      { evidenceDir: dir },
+    );
+    expect(result.proven).not.toContain("S7-I4");
+    expect(allViolations(result)).toMatch(/S7-I4/);
+  });
+
+  // NOT asserted here, and deliberately not papered over: evaluateInvariantClosure's
+  // proof-binding check (scripts/lib/invariant-closure.mjs) requires the cited
+  // artifact to reach ACCEPTANCE level ACCEPTED — structurally valid, signed, and
+  // provenance-verified against the correct lane/subject — but does not itself
+  // additionally require `result === 'PASS'`. In principle a FAIL artifact that
+  // somehow reached full ACCEPTED status (real signing key, real matching GitHub
+  // Actions run) would currently satisfy proof_artifacts. In practice this cannot
+  // happen unattended: reaching ACCEPTED needs the production signing key (a GitHub
+  // Actions secret) and a live run whose provenance matches, both of which are
+  // exactly the two things this file's own threat model says an interactive session
+  // cannot produce. This is a real, separate, pre-existing gap in `result`
+  // enforcement — out of scope for this test's repair (a stale artifact-count
+  // assumption, not a proof-binding design change) and not fixed here.
 });
