@@ -27,7 +27,7 @@ export default function ResendVerificationPage() {
 
 function ResendVerificationForm() {
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
+  const [email, setEmail] = useState(() => searchParams?.get("email") ?? "");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);

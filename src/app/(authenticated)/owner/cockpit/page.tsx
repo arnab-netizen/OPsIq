@@ -20,7 +20,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
 import { useCallback, useEffect, useState } from "react";
-import { Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Button, CardDashboardSkeleton, PageHeader } from "@/ui/primitives";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
 import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
@@ -208,30 +208,36 @@ export default function OwnerCockpitPage() {
     }
   }, [load]);
 
-  if (loading) return <main style={{ padding: 24 }}><CardDashboardSkeleton label="Loading your cockpit" sections={2} /></main>;
+  if (loading) return <main className="p-6"><CardDashboardSkeleton label="Loading your business" sections={2} /></main>;
   if (error) return (
-    <main style={{ padding: 24 }}>
-      <p style={{ color: "var(--destructive)" }}>{error}</p>
+    <main className="flex flex-col items-start gap-3 p-6">
+      <p className="text-sm text-destructive">{error}</p>
       <Button onClick={() => void load()}>Retry</Button>
     </main>
   );
 
   return (
-    <main style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
-      <header style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
-        <h1 style={{ margin: 0, fontSize: 22 }}>Your cockpit</h1>
-        <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>One clear next step, with the proof and the safety limits.</span>
-        <Button onClick={() => void load()} disabled={busy}>Refresh</Button>
-      </header>
-      {message && <p data-testid="cockpit-message" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>{message}</p>}
+    <main className="flex max-w-2xl flex-col gap-6 p-6">
+      <PageHeader
+        title="Home"
+        description="How your business is doing, what needs your attention, and what to do next."
+        actions={
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={busy}>
+            Refresh
+          </Button>
+        }
+      />
+      {message && <p data-testid="cockpit-message" className="text-sm text-muted-foreground">{message}</p>}
       {/* G8: Startup Mode entry point — server-authoritative role gating at /owner/startup */}
-      <nav aria-label="Owner mode navigation" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <nav aria-label="Owner mode navigation">
         <Button
           data-testid="cockpit-startup-mode-link"
+          variant="ghost"
+          size="sm"
           onClick={() => { window.location.href = "/owner/startup"; }}
-          style={{ fontSize: 13, padding: "4px 10px", background: "#f3f4f6", borderRadius: 4, color: "#111827", border: "1px solid #d1d5db" }}
+          className="text-muted-foreground"
         >
-          Startup Mode
+          Starting up a new business? Switch to Startup Mode
         </Button>
       </nav>
       <MinimumOwnerCockpit

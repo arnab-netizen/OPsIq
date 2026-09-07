@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "OpsIQ - Governed Business Intervention OS",
+  title: "OpsIQ - Business health & priorities",
   description:
-    "OpsIQ is a governed business intervention and consulting operating system.",
+    "OpsIQ helps business owners see how their business is doing, what needs attention, and what to do next.",
 };
 
 export default function RootLayout({

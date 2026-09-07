@@ -8,31 +8,33 @@ import { CAPABILITIES, type CapabilityName } from "@/domain/constants/capabiliti
 /**
  * Owner / consulting / admin navigation — persona-sectioned single sidebar (IA Model B).
  *
- * Three changes from the previous flat/grouped list:
+ * Sectioned into the premium-redesign's six-bucket target IA — Home, My Business, Priorities,
+ * Actions, Growth, More — plus the capability-gated Consulting/Administration sections:
  *
- * 1. GROUPED, not flat. A single ungrouped list of 21 equal-weight links gave the owner no signal
- *    about where to start, and buried the data-entry path at position 14. The primary path
- *    (Home → Add & Connect Data) now sits above everything else, and the rest is grouped by the
- *    question the owner is asking.
+ * 1. GROUPED, not flat, and named for the question the owner is asking ("what needs my
+ *    attention" = Priorities, "what should I do" = Actions, "how is my business doing" = My
+ *    Business), not for internal module structure. The primary path (Home → Add & Connect Data)
+ *    sits above everything else, ungrouped, so it's never buried inside a collapsed section.
+ *    "My Business" (detail/drill-down pages) and "Growth"/"More" (occasional-use pages) start
+ *    collapsed; "Priorities" and "Actions" (small, high-frequency lists) start open.
  *
  * 2. LONGEST-MATCH active state. The previous `pathname.startsWith(item.href)` test highlighted
  *    "/dashboard" while the user was on "/dashboard/inbox". Active state is now the single
  *    longest-matching entry, so a child route never lights up its unrelated parent.
  *
- * 3. PERSONA-SECTIONED. The former "Records & settings" section mixed pure owner record-keeping
- *    with consulting-only surfaces (Clients/Engagements/Leads/consulting dashboard) that most
- *    signed-in users can never open. Those now live in their own "Consulting" section, and a new
- *    "Administration" section surfaces the previously nav-orphaned /admin/billing route to
- *    SYSTEM_ADMIN holders. Nothing changed about WHO can see an item — every gate below is the
- *    same `requiresOwner`/`requiresCapability` check as before (or, for /admin/billing, the same
- *    per-item capability pattern already used for Clients/Engagements/Leads/People) — only WHERE
- *    it renders changed. Because a section that ends up with zero visible items renders nothing
- *    (see the `visibleItems.length === 0` check below), "Consulting" and "Administration"
- *    automatically disappear for the self-serve owner population that holds neither set of
- *    capabilities — this is what makes it a persona-sectioned single sidebar (Model B) rather
- *    than a capability-filtered flat list (Model A) or a separate owner/consulting mode switch
- *    (Model C): one sidebar, sections that only exist when the signed-in capability set makes
- *    them relevant, no separate "mode" the user has to toggle.
+ * 3. PERSONA-SECTIONED. Consulting-only surfaces (Clients/Engagements/Leads/consulting dashboard)
+ *    live in their own "Consulting" section, and "Administration" surfaces the previously
+ *    nav-orphaned /admin/billing route to SYSTEM_ADMIN holders. Nothing changed about WHO can see
+ *    an item — every gate below is the same `requiresOwner`/`requiresCapability` check as before
+ *    (or, for /admin/billing, the same per-item capability pattern already used for
+ *    Clients/Engagements/Leads/People) — only WHERE it renders changed. Because a section that
+ *    ends up with zero visible items renders nothing (see the `visibleItems.length === 0` check
+ *    below), "Consulting" and "Administration" automatically disappear for the self-serve owner
+ *    population that holds neither set of capabilities — this is what makes it a
+ *    persona-sectioned single sidebar (Model B) rather than a capability-filtered flat list
+ *    (Model A) or a separate owner/consulting mode switch (Model C): one sidebar, sections that
+ *    only exist when the signed-in capability set makes them relevant, no separate "mode" the
+ *    user has to toggle.
  *
  *    Today that "Consulting" section is dormant for real production traffic: the only
  *    production-reachable role-assignment path (POST /api/auth/signup) always grants
@@ -84,8 +86,15 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: "health",
-    title: "Business health",
+    // "My Business" — everything about the state of the business itself. Collapsed by default:
+    // these are detail/drill-down pages a lay owner opens deliberately, not the first things they
+    // need to see (see OPSIQ_DESIGN_DIRECTION.md §18 — a first-time owner is not shown ~24 peer
+    // destinations on day one). Diagnosis/Risk/Compliance moved here from the former "Business
+    // health" section; Goals moved here from "Growth & strategy" per the redesign's target IA
+    // (Home / My Business / Priorities / Actions / Growth / More). No href or gate changed.
+    id: "my-business",
+    title: "My Business",
+    collapsedByDefault: true,
     items: [
       { label: "Diagnosis", href: "/diagnosis" },
       { label: "Money", href: "/owner/finance", requiresOwner: true },
@@ -93,25 +102,37 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "Operations", href: "/owner/operations", requiresOwner: true },
       { label: "Risk", href: "/owner/risks", requiresOwner: true },
       { label: "Compliance", href: "/owner/compliance", requiresOwner: true },
+      { label: "Goals", href: "/owner/goals", requiresOwner: true },
+      { label: "Inventory", href: "/owner/inventory", requiresOwner: true },
+      { label: "Procurement", href: "/owner/procurement", requiresOwner: true },
+      { label: "Vendors", href: "/owner/vendor", requiresOwner: true },
+    ],
+  },
+  {
+    // "Priorities" — what needs the owner's attention right now. Split out of the former flat
+    // "Actions" section so urgency (Priorities) and execution (Actions) aren't one undifferentiated
+    // list; kept open by default since this is exactly what a returning owner checks first.
+    id: "priorities",
+    title: "Priorities",
+    items: [
+      { label: "Alerts", href: "/owner/alerts", requiresOwner: true, showAlertBadge: true },
+      { label: "Decision Inbox", href: "/dashboard/inbox" },
     ],
   },
   {
     id: "actions",
     title: "Actions",
     items: [
-      { label: "Alerts", href: "/owner/alerts", requiresOwner: true, showAlertBadge: true },
       { label: "Tasks", href: "/owner/tasks", requiresOwner: true },
-      { label: "Decision Inbox", href: "/dashboard/inbox" },
       { label: "Execution & SOP", href: "/owner/execution", requiresOwner: true },
       { label: "Check a decision", href: "/decision" },
     ],
   },
   {
     id: "growth",
-    title: "Growth & strategy",
+    title: "Growth",
     collapsedByDefault: true,
     items: [
-      { label: "Goals", href: "/owner/goals", requiresOwner: true },
       { label: "Strategy", href: "/owner/strategy", requiresOwner: true },
       { label: "What if…", href: "/scenario" },
       { label: "Starting up", href: "/owner/startup", requiresOwner: true },
@@ -119,15 +140,14 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: "records",
-    title: "Records",
+    // "More" — everything else: reference/records pages a lay owner rarely needs on day one.
+    // Renamed from "Records" (same items, same gates) to fit the redesign's six-bucket IA.
+    id: "more",
+    title: "More",
     collapsedByDefault: true,
     items: [
       { label: "Reports", href: "/report" },
       { label: "Why OpsIQ says this", href: "/owner/trust", requiresOwner: true },
-      { label: "Inventory", href: "/owner/inventory", requiresOwner: true },
-      { label: "Procurement", href: "/owner/procurement", requiresOwner: true },
-      { label: "Vendors", href: "/owner/vendor", requiresOwner: true },
       { label: "People", href: "/users", requiresCapability: CAPABILITIES.USER_VIEW },
       { label: "Settings", href: "/settings" },
       { label: "Send beta feedback", href: "/owner/feedback", requiresOwner: true },
