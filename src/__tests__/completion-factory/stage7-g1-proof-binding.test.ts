@@ -1452,6 +1452,67 @@ describe("G-1 — the live repository is unchanged by this PR", () => {
       supersedes: null,
       level: "UNVERIFIED",
     },
+    // Five further D18 PASS captures, archived by a later, reviewed PR (#434)
+    // once their own unmerged evidence branches made that archival possible —
+    // the same growth pattern as PR #431's three FAIL artifacts above. None of
+    // these are new captures and archiving them binds no invariant: recording
+    // an artifact against an invariant remains a separate, owner-authorised
+    // act (see PR #434's own description).
+    {
+      artifactId: "evd_81d9d968205515f3b77da3e61295de49",
+      invariantId: "S7-I1",
+      lane: "LANE_C",
+      proofType: "production_runtime_check",
+      subjectSha: AUTHORIZED_SUBJECT_SHA,
+      result: "PASS",
+      supersedes: null,
+      level: "UNVERIFIED",
+    },
+    {
+      artifactId: "evd_48fbf11fb7d4190f07324a67579851f8",
+      invariantId: "S7-I2",
+      lane: "LANE_C",
+      proofType: "production_migration_check",
+      subjectSha: AUTHORIZED_SUBJECT_SHA,
+      result: "PASS",
+      supersedes: null,
+      level: "UNVERIFIED",
+    },
+    {
+      artifactId: "evd_eddde80e368d25ad714d717cb6b1a0c8",
+      invariantId: "S7-I10",
+      lane: "LANE_E",
+      proofType: "simulation_and_production_audit_check",
+      subjectSha: AUTHORIZED_SUBJECT_SHA,
+      result: "PASS",
+      supersedes: null,
+      level: "UNVERIFIED",
+    },
+    {
+      artifactId: "evd_fe2665b570dd48b5db2c5bebc5f0cecb",
+      invariantId: "S7-I11",
+      lane: "LANE_E",
+      proofType: "simulation_adversarial",
+      // D18 subject, unlike evd_147fce5b above — but still REJECTED under this
+      // no-protected-context load: D-4 enforcement for S7-I11 requires the raw
+      // factory-stage-7-closure.yaml text to resolve its environment target,
+      // which this loader call does not supply. Observed, not assumed — see
+      // the loader's own violation message reproduced in the test above.
+      subjectSha: AUTHORIZED_SUBJECT_SHA,
+      result: "PASS",
+      supersedes: null,
+      level: "REJECTED",
+    },
+    {
+      artifactId: "evd_90194adae0471902da8e89c5676766db",
+      invariantId: "S7-I12",
+      lane: "LANE_E",
+      proofType: "simulation_runbook_recovery",
+      subjectSha: AUTHORIZED_SUBJECT_SHA,
+      result: "PASS",
+      supersedes: null,
+      level: "UNVERIFIED",
+    },
   ] as const;
 
   it("holds exactly the known, reviewed set of historical evidence artifacts — nothing more, nothing substituted", () => {
