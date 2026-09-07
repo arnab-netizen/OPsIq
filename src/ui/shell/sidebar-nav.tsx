@@ -115,6 +115,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: "priorities",
     title: "Priorities",
     items: [
+      { label: "What needs attention", href: "/owner/priorities", requiresOwner: true },
       { label: "Alerts", href: "/owner/alerts", requiresOwner: true, showAlertBadge: true },
       { label: "Decision Inbox", href: "/dashboard/inbox" },
     ],

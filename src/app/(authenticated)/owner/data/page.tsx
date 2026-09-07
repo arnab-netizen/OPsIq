@@ -18,9 +18,10 @@
 /* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the established owner-page pattern */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
 import {
   buildOwnerDataHubView,
   inputTargetForCategory,
@@ -108,88 +109,6 @@ const STATUS_VARIANT: Record<string, "success" | "destructive" | "warning" | "mu
   missing_recommended: "warning",
   optional: "muted",
 };
-
-/** Blocking first step: without a business record nothing else on this page can accept data. */
-function CreateBusinessPanel({ onCreated }: { onCreated: () => void }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    const fd = new FormData(e.currentTarget);
-    try {
-      await api("/api/owner/recovery/businesses", {
-        method: "POST",
-        body: JSON.stringify({
-          name: fd.get("name"),
-          businessType: fd.get("businessType"),
-          currency: fd.get("currency"),
-          b2cSupported: true,
-          b2bSupported: false,
-        }),
-      });
-      onCreated();
-    } catch (err) {
-      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), {
-        context: "save",
-      });
-      setError(governed.operatorMessage);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-border bg-muted/30 p-6" data-testid="data-hub-create-business">
-      <h2 className="text-lg font-semibold text-foreground">Start with your business profile</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        OpsIQ keeps your records against a business. Until you add one, there is nowhere to put your
-        revenue, costs or uploads — so this is the first step.
-      </p>
-      <form onSubmit={submit} className="mt-4 space-y-3" aria-label="Create your business profile">
-        <label className="flex flex-col gap-1 text-sm text-foreground">
-          <span>Business name *</span>
-          <input
-            name="name"
-            required
-            data-testid="data-hub-business-name"
-            className="w-full rounded-md border border-border p-2 text-sm sm:w-96"
-            placeholder="e.g. Harbour Street Bakery"
-          />
-        </label>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Select
-            name="businessType"
-            label="What kind of business is it?"
-            required
-            options={[...BUSINESS_TYPE_OPTIONS]}
-          />
-          <Select
-            name="currency"
-            label="Currency"
-            required
-            options={[
-              { value: "GBP", label: "GBP" },
-              { value: "USD", label: "USD" },
-              { value: "EUR", label: "EUR" },
-              { value: "INR", label: "INR" },
-            ]}
-          />
-        </div>
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        <Button type="submit" disabled={busy}>
-          {busy ? "Saving…" : "Save business profile"}
-        </Button>
-      </form>
-    </div>
-  );
-}
 
 /**
  * Lets the owner change an existing business's type through the existing governed PATCH endpoint

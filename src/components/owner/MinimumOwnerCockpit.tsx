@@ -935,6 +935,12 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
               OpsIQ has nothing that requires an owner decision at the moment. This stays empty until a real
               action is ready — nothing is invented to fill the space.
             </p>
+            {/* Phase 7's no-data-state contract ("what OpsIQ needs, why, and one clear next action")
+                — a lay owner landing here with no business data yet previously had no path forward
+                except finding "Add & Connect Data" in the sidebar themselves. */}
+            <p className="mt-3 text-sm text-muted-foreground">
+              Haven&rsquo;t added your business yet? <a href="/owner/data" className="text-[var(--primary-text)] underline">Add your business information</a> to get your first result.
+            </p>
           </div>
         )}
         {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} />}

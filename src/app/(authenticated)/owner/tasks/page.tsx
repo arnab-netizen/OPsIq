@@ -59,7 +59,37 @@ const STATUS_LABELS: Record<string, string> = {
   [DelegatedTaskStatus.DISPUTED]: "Disputed",
 };
 
-const ALL_STATUSES = Object.values(DelegatedTaskStatus);
+/**
+ * Plain-language grouping of the 15-state DelegatedTaskStatus model, for the filter dropdown only
+ * — the underlying status value, API contract, and per-row Badge/STATUS_LABELS above are untouched.
+ * A lay owner sees "To do / In progress / Waiting / Done" as the structure; the detailed state is
+ * still there in each group and on every row, one level down, not hidden.
+ */
+const STATUS_GROUPS: Array<{ label: string; statuses: string[] }> = [
+  { label: "To do", statuses: [DelegatedTaskStatus.DRAFT, DelegatedTaskStatus.ASSIGNED, DelegatedTaskStatus.ACKNOWLEDGED] },
+  { label: "In progress", statuses: [DelegatedTaskStatus.IN_PROGRESS] },
+  {
+    label: "Waiting",
+    statuses: [
+      DelegatedTaskStatus.BLOCKED,
+      DelegatedTaskStatus.NEEDS_OWNER_CLARIFICATION,
+      DelegatedTaskStatus.ESCALATED,
+      DelegatedTaskStatus.PROOF_REQUIRED,
+      DelegatedTaskStatus.PROOF_SUBMITTED,
+      DelegatedTaskStatus.COMPLETED_PENDING_REVIEW,
+      DelegatedTaskStatus.DISPUTED,
+    ],
+  },
+  {
+    label: "Done",
+    statuses: [
+      DelegatedTaskStatus.APPROVED_COMPLETE,
+      DelegatedTaskStatus.REJECTED_INCOMPLETE,
+      DelegatedTaskStatus.CANCELLED,
+      DelegatedTaskStatus.EXPIRED,
+    ],
+  },
+];
 
 async function apiFetch(path: string) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" } });
@@ -118,8 +148,12 @@ export default function OwnerTasksPage() {
           className="rounded border border-border bg-background px-3 py-1.5 text-sm"
         >
           <option value="">All statuses</option>
-          {ALL_STATUSES.map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>
+          {STATUS_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.statuses.map((s) => (
+                <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>

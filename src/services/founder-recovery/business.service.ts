@@ -45,8 +45,14 @@ export async function createBusiness(
 }
 
 export async function listBusinesses(workspaceId: string) {
+  // isActive: true — excludes archived businesses (see archiveBusiness below). Durable,
+  // non-destructive isolation for stale/test/acceptance rows accumulated in a workspace:
+  // an owner (or whoever ran acceptance testing under their own account) can archive a
+  // business they no longer want cluttering their own selector without deleting the row
+  // or its history. Previously this had no isActive filter at all, so a business archived
+  // by any future caller of this field would still have appeared here.
   return db.ownerBusiness.findMany({
-    where: { workspaceId },
+    where: { workspaceId, isActive: true },
     orderBy: { createdAt: "desc" },
   });
 }
