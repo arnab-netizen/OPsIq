@@ -54,7 +54,10 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
-        <h1 className="text-lg font-semibold text-[var(--primary-text)]">OpsIQ</h1>
+        {/* Brand mark, not the page heading -- each page supplies its own real <h1>. The
+            surrounding <header> already carries the "banner" landmark, so assistive tech
+            doesn't need a heading here to identify the site name. */}
+        <p className="text-lg font-semibold text-[var(--primary-text)]">OpsIQ</p>
         <span className="hidden text-xs text-muted-foreground sm:inline">
           Business health &amp; priorities
         </span>

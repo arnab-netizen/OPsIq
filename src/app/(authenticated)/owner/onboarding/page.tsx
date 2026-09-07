@@ -155,14 +155,23 @@ function EssentialNumbersForm({
       // variableCosts -> "expenses"), so a first result is still one field away.
       fixedCosts: num("fixedCosts"),
       variableCosts: num("variableCosts"),
+      // cashOnHand means physical cash only on the finance snapshot (see the doc comment on
+      // FinancialSnapshotInput.bankBalance in src/domain/owner-finance/types.ts: bankBalance is
+      // "never persisted on the finance snapshot itself" -- it is enriched at diagnosis time from
+      // a separate OwnerCashflowSnapshot). The finance create/amend schemas
+      // (src/domain/owner-finance/validation.ts) don't even accept a bankBalance field, so it must
+      // never be folded in here.
       cashOnHand: num("cashOnHand"),
     };
+    const bankBalance = num("bankBalance");
+    const periodStart = lastFullMonthStart();
+    const periodEnd = lastFullMonthEnd();
     try {
       let snapshotId: string;
       try {
         const snapshot = await api(`/api/owner/finance/businesses/${businessId}/snapshots`, {
           method: "POST",
-          body: JSON.stringify({ periodStart: lastFullMonthStart(), periodEnd: lastFullMonthEnd(), currency, ...fields }),
+          body: JSON.stringify({ periodStart, periodEnd, currency, ...fields }),
         });
         snapshotId = snapshot.id;
       } catch (createErr) {
@@ -175,7 +184,7 @@ function EssentialNumbersForm({
         const existing = await api(`/api/owner/finance/businesses/${businessId}/snapshots`);
         const list = (existing?.snapshots ?? existing ?? []) as Array<{ id: string; periodStart: string; periodEnd: string; version: number }>;
         const currentPeriod = list
-          .filter((s) => s.periodStart?.slice(0, 10) === lastFullMonthStart() && s.periodEnd?.slice(0, 10) === lastFullMonthEnd())
+          .filter((s) => s.periodStart?.slice(0, 10) === periodStart && s.periodEnd?.slice(0, 10) === periodEnd)
           .sort((a, b) => b.version - a.version)[0];
         if (!currentPeriod) throw createErr;
         const amended = await api(`/api/owner/finance/snapshots/${currentPeriod.id}/amend`, {
@@ -184,6 +193,34 @@ function EssentialNumbersForm({
         });
         snapshotId = amended.newSnapshotId;
       }
+
+      // Bank balance is a Cashflow-domain fact, not a finance one -- it lives on a
+      // OwnerCashflowSnapshot (cashInHand/bankBalance are its own separate fields; see
+      // src/domain/owner-cashflow/types.ts), which the finance diagnosis then enriches itself from
+      // (DEFECT 1 in src/services/owner-finance/diagnosis.service.ts: it reads the latest cashflow
+      // snapshot with periodEnd <= this finance snapshot's periodEnd, within a 45-day freshness
+      // window). Creating it here, for the same period, before running the diagnosis below, is what
+      // makes that enrichment fire on this very first result -- no new field, no new domain, just
+      // wiring onboarding into the enrichment path that already exists.
+      if (bankBalance !== undefined) {
+        try {
+          await api(`/api/owner/cashflow/businesses/${businessId}/snapshots`, {
+            method: "POST",
+            body: JSON.stringify({ periodStart, periodEnd, currency, bankBalance }),
+          });
+        } catch (cashflowErr) {
+          // A cashflow snapshot for this exact period already exists. Unlike finance snapshots,
+          // cashflow snapshots have no governed amend/update endpoint in this codebase (only
+          // GET/POST-create exist -- see src/app/api/owner/cashflow/**) so there is no safe way to
+          // change the value already on file for this period from here. That's fine for onboarding's
+          // purpose: the existing snapshot (from an earlier run of this same step, or entered
+          // directly in Cashflow) still satisfies the finance diagnosis's enrichment lookup, so we
+          // simply don't block or fail the first-result flow on a conflict outside our own control.
+          // A real change to the figure belongs in Cashflow, which owns editing its own snapshots.
+          if (!(cashflowErr instanceof ApiError) || cashflowErr.status !== 409) throw cashflowErr;
+        }
+      }
+
       const cycle = await api(`/api/owner/finance/businesses/${businessId}/diagnoses`, {
         method: "POST",
         body: JSON.stringify({ snapshotId }),
@@ -204,7 +241,7 @@ function EssentialNumbersForm({
         you can refine them later in Money. It&rsquo;s fine to fill in just one cost number if
         that&rsquo;s all you have right now.
       </p>
-      <form onSubmit={submit} className="mt-4 flex flex-col gap-4 max-w-sm">
+      <form onSubmit={submit} className="mt-4 flex flex-col gap-4 max-w-lg">
         <label className="flex flex-col gap-1 text-sm text-foreground">
           <span>Average monthly sales ({currency})</span>
           <input
@@ -218,49 +255,69 @@ function EssentialNumbersForm({
           />
           <span className="text-xs text-muted-foreground">Total sales in a typical month, before costs.</span>
         </label>
-        <label className="flex flex-col gap-1 text-sm text-foreground">
-          <span>Fixed monthly costs ({currency})</span>
-          <input
-            name="fixedCosts"
-            type="number"
-            min={0}
-            step="any"
-            inputMode="decimal"
-            className="w-full rounded-md border border-border p-2 text-sm"
-            placeholder="e.g. 7000"
-          />
-          <span className="text-xs text-muted-foreground">Rent, wages, and other costs that stay the same whether sales go up or down.</span>
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-foreground">
-          <span>Variable monthly costs ({currency})</span>
-          <input
-            name="variableCosts"
-            type="number"
-            min={0}
-            step="any"
-            inputMode="decimal"
-            className="w-full rounded-md border border-border p-2 text-sm"
-            placeholder="e.g. 5000"
-          />
-          <span className="text-xs text-muted-foreground">Cost of goods, delivery, and other costs that rise and fall with how much you sell.</span>
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-foreground">
-          <span>Cash on hand right now ({currency})</span>
-          <input
-            name="cashOnHand"
-            type="number"
-            min={0}
-            step="any"
-            inputMode="decimal"
-            className="w-full rounded-md border border-border p-2 text-sm"
-            placeholder="e.g. 8000"
-          />
-          <span className="text-xs text-muted-foreground">
-            Everything liquid right now — bank balance plus cash in the till, as one total. (If
-            you already track bank balance separately in Cashflow, count it only there or only
-            here — never both, or it will be counted twice.)
-          </span>
-        </label>
+        {/* Paired by concept (fixed vs. variable cost, physical cash vs. bank balance) rather than
+            one field per row -- a deliberate grouping, not a decorative grid. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-1 text-sm text-foreground">
+            <span>Fixed monthly costs ({currency})</span>
+            <input
+              name="fixedCosts"
+              type="number"
+              min={0}
+              step="any"
+              inputMode="decimal"
+              className="w-full rounded-md border border-border p-2 text-sm"
+              placeholder="e.g. 7000"
+            />
+            <span className="text-xs text-muted-foreground">Rent, wages, and other costs that stay the same whether sales go up or down.</span>
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-foreground">
+            <span>Variable monthly costs ({currency})</span>
+            <input
+              name="variableCosts"
+              type="number"
+              min={0}
+              step="any"
+              inputMode="decimal"
+              className="w-full rounded-md border border-border p-2 text-sm"
+              placeholder="e.g. 5000"
+            />
+            <span className="text-xs text-muted-foreground">Cost of goods, delivery, and other costs that rise and fall with how much you sell.</span>
+          </label>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-1 text-sm text-foreground">
+            <span>Cash in the till ({currency})</span>
+            <input
+              name="cashOnHand"
+              type="number"
+              min={0}
+              step="any"
+              inputMode="decimal"
+              className="w-full rounded-md border border-border p-2 text-sm"
+              placeholder="e.g. 3000"
+            />
+            <span className="text-xs text-muted-foreground">
+              Physical cash you have right now — notes and coins, not what&rsquo;s in the bank.
+            </span>
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-foreground">
+            <span>Money in the bank ({currency})</span>
+            <input
+              name="bankBalance"
+              type="number"
+              min={0}
+              step="any"
+              inputMode="decimal"
+              className="w-full rounded-md border border-border p-2 text-sm"
+              placeholder="e.g. 6000"
+            />
+            <span className="text-xs text-muted-foreground">
+              Bank balance right now, across all accounts. (If you already track this in
+              Cashflow for this month, enter it only there or only here — never both.)
+            </span>
+          </label>
+        </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={busy} className="min-h-[44px] self-start">
           {busy ? "Working on it…" : "See my first result"}
@@ -297,6 +354,13 @@ type FirstResultAction = {
  * engine produced no action for the top finding, or no finding at all, this says so
  * plainly and points at the specific missing inputs (finding.missingData) rather than
  * inventing a recommendation.
+ *
+ * The action block used to label its verification-method line "Why this action" -- but that text
+ * only restates what OpsIQ recommends and how it will check the result, neither of which is a
+ * causal rationale. The domain engine does compute a real one (buildEvidenceRationale in
+ * src/domain/owner-finance/actions.ts, e.g. "Your netMarginPct is -25 (threshold: 0)."), but it is
+ * never persisted on OwnerFinanceAction nor returned by this API today, so there is nothing true to
+ * show under a "Why" heading here. Labeled honestly instead: "How OpsIQ will check it worked."
  */
 function FirstResultCard({ cycle }: { cycle: any }) {
   const findings = (cycle?.findings ?? []) as FirstResultFinding[];
@@ -326,11 +390,12 @@ function FirstResultCard({ cycle }: { cycle: any }) {
               <p className="mt-1 text-sm font-medium text-foreground">{topAction.title}</p>
               <p className="mt-1 text-sm text-muted-foreground">{topAction.description}</p>
               {topAction.verificationMethod && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  <span className="font-semibold uppercase tracking-wide">Why this action — </span>
-                  This is what OpsIQ recommends for the finding above. OpsIQ will check this worked by:{" "}
-                  {topAction.verificationMethod}
-                </p>
+                <>
+                  <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    How OpsIQ will check it worked
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">{topAction.verificationMethod}</p>
+                </>
               )}
             </>
           ) : top.missingData && top.missingData.length > 0 ? (
@@ -416,10 +481,19 @@ export default function OwnerOnboardingPage() {
 
   const selectedBusiness = businesses?.find((b) => b.id === selected) ?? null;
 
+  // A real, deterministic read of where the owner actually is in this 3-step flow -- never a
+  // decorative counter. Gives the page a sense of progress instead of restating "Welcome to
+  // OpsIQ" with no indication of how far along setup is.
+  const step = firstResult ? 3 : (businesses?.length ?? 0) > 0 ? 2 : 1;
+  const stepLabel = step === 1 ? "Business basics" : step === 2 ? "Essential numbers" : "First result";
+
   return (
     <div className="mx-auto max-w-2xl py-8 px-4" data-testid="owner-onboarding">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-foreground">Welcome to OpsIQ</h1>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Step {step} of 3 · {stepLabel}
+        </p>
+        <h1 className="mt-1 text-2xl font-semibold text-foreground">Welcome to OpsIQ</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           OpsIQ helps you see what needs attention in your business, what to do next, and whether it worked.
         </p>

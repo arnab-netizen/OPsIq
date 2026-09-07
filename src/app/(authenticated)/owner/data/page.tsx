@@ -200,7 +200,7 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
       : 0;
 
   return (
-    <div className="rounded-lg border border-border p-5" data-testid="data-hub-readiness">
+    <div data-testid="data-hub-readiness">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold text-foreground">How well OpsIQ knows your business</h2>
         <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted"}>

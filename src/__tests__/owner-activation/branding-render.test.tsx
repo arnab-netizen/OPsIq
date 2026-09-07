@@ -32,6 +32,14 @@ describe("rendered product name", () => {
     expect(text).not.toContain("Rebilix");
   });
 
+  it("the app header's brand mark is not a document heading -- each page owns the real <h1>", () => {
+    // Regression: this header used to render "OpsIQ" as an <h1>, which meant every single
+    // authenticated page had two <h1>s (this shell brand mark plus the page's own title),
+    // violating one-h1-per-page heading hierarchy sitewide.
+    const { container } = render(<AppHeader userName="Test Owner" />);
+    expect(container.querySelectorAll("h1")).toHaveLength(0);
+  });
+
   it("the first-diagnosis call to action names OpsIQ, not the legacy brand", () => {
     const { container } = render(<FirstDiagnosisCta />);
     const text = container.textContent ?? "";
