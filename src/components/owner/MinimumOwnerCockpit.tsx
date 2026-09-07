@@ -64,6 +64,39 @@ const ACTION_LABEL: Record<string, string> = {
 const SEVERITY_VARIANT = (s: string): "destructive" | "warning" | "default" | "muted" =>
   s === "CRITICAL" || s === "HIGH" ? "destructive" : s === "MEDIUM" ? "warning" : "default";
 
+// Plain-language severity labels -- the raw enum token ("HIGH", "critical", ...) must never reach
+// an owner verbatim. Case-insensitive lookup because severity values arrive in different casings
+// from different sources in this codebase (uppercase from owner-now-view.service.ts, lowercase
+// from business-state-timeline.ts's TrendAlert).
+const SEVERITY_LABEL: Record<string, string> = {
+  CRITICAL: "Urgent",
+  HIGH: "Important",
+  MEDIUM: "Worth doing",
+  LOW: "Minor",
+};
+function severityLabel(s: string): string {
+  return SEVERITY_LABEL[s.toUpperCase()] ?? s;
+}
+
+const SURVIVAL_LABEL: Record<string, string> = {
+  SAFE: "Safe",
+  WATCH: "Watch",
+  AT_RISK: "At risk",
+  CRITICAL: "Critical",
+  INSOLVENT_RISK: "Insolvency risk",
+};
+
+const POLICY_DECISION_LABEL: Record<string, string> = {
+  BLOCK: "Blocked",
+  WARN: "Warning",
+  ALLOW: "Allowed",
+};
+
+/** Qualitative label for a 0-100 risk score, matching this file's own destructive/warning color thresholds. */
+function riskScoreLabel(score: number): string {
+  return score >= 50 ? "High risk" : score >= 25 ? "Watch" : "Low risk";
+}
+
 // Plain-language labels for BridgedRouteView.status, covering every value this file's own
 // logic branches on (the `terminal` check below, and allowedCockpitActions' PROPOSED/NEEDS_DATA/
 // BLOCKED/IN_PROGRESS checks) — used wherever status is shown as a predicate ("This task is
@@ -169,7 +202,9 @@ function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinanc
         <span style={{ fontSize: 12, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.4 }}>
           {primary ? "From your latest finance diagnosis" : "Latest finance diagnosis"}
         </span>
-        <Badge variant={SURVIVAL_VARIANT[priority.survivalState] ?? "default"}>{priority.survivalState.replace(/_/g, " ")}</Badge>
+        <Badge variant={SURVIVAL_VARIANT[priority.survivalState] ?? "default"}>
+          {SURVIVAL_LABEL[priority.survivalState] ?? priority.survivalState.replace(/_/g, " ")}
+        </Badge>
       </div>
       {priority.topAction ? (
         <>
@@ -362,7 +397,7 @@ function ExecutionLifecycleSection({
     <li key={item.taskKey} data-testid={`${groupPrefix}-${i}`}
       style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 6, paddingBottom: 8, borderBottom: "1px solid var(--border)" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <Badge variant={SEVERITY_VARIANT(item.severity)}>{item.severity}</Badge>
+        <Badge variant={SEVERITY_VARIANT(item.severity)}>{severityLabel(item.severity)}</Badge>
         <span style={{ fontWeight: 600 }}>{item.ownerVisibleSummary}</span>
         <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{item.status}</span>
       </div>
@@ -737,7 +772,9 @@ function BusinessOperatingSystemSection({
             <ul style={{ margin: "4px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 2 }}>
               {bos.topRisks.map((r) => (
                 <li key={r.riskId} data-testid={`cockpit-bos-risk-${r.riskId}`} style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-                  <Badge variant={r.severity >= 50 ? "destructive" : r.severity >= 25 ? "warning" : "muted"}>{r.severity}</Badge>
+                  <Badge variant={r.severity >= 50 ? "destructive" : r.severity >= 25 ? "warning" : "muted"}>
+                    {riskScoreLabel(r.severity)}
+                  </Badge>
                   {" "}{r.title}
                 </li>
               ))}
@@ -1002,7 +1039,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       <div data-testid="cockpit-top-action" className="flex flex-col gap-3 rounded-md border border-border bg-card p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Your top priority now</span>
-          <Badge variant={SEVERITY_VARIANT(top.severity)}>{top.severity}</Badge>
+          <Badge variant={SEVERITY_VARIANT(top.severity)}>{severityLabel(top.severity)}</Badge>
         </div>
         <strong data-testid="cockpit-top-action-title" className="text-lg font-semibold leading-snug text-foreground">{top.ownerVisibleSummary}</strong>
 
@@ -1258,7 +1295,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
             {policyAttentionSignal.details.map((d, i) => (
               <li key={d.policyKey} data-testid={`cockpit-policy-detail-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center" }}>
-                <Badge variant={d.decision === "BLOCK" ? "destructive" : d.decision === "WARN" ? "warning" : "muted"}>{d.decision}</Badge>
+                <Badge variant={d.decision === "BLOCK" ? "destructive" : d.decision === "WARN" ? "warning" : "muted"}>
+                  {POLICY_DECISION_LABEL[d.decision] ?? d.decision}
+                </Badge>
                 <span style={{ color: "var(--muted-foreground)" }}>{d.label}</span>
                 {d.hasActiveOverride && <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>(override active)</span>}
               </li>
@@ -1281,7 +1320,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             {trendAlerts.map((alert, i) => (
               <li key={alert.alertType} data-testid={`cockpit-trend-alert-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
                 <Badge data-testid={`cockpit-trend-alert-${i}-severity`} variant={alert.severity === "critical" ? "destructive" : "warning"}>
-                  {alert.severity}
+                  {severityLabel(alert.severity)}
                 </Badge>
                 <span style={{ color: "var(--muted-foreground)" }}>{alert.description}</span>
               </li>
@@ -1322,7 +1361,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
             {activeEscalations.map((esc) => (
               <li key={esc.id} data-testid={`cockpit-escalation-${esc.id}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <Badge variant={esc.severity === "CRITICAL" ? "destructive" : "warning"}>{esc.severity}</Badge>
+                <Badge variant={esc.severity === "CRITICAL" ? "destructive" : "warning"}>{severityLabel(esc.severity)}</Badge>
                 <span style={{ color: "var(--muted-foreground)", flex: 1 }}>{esc.title}</span>
                 {onAcknowledgeEscalation && (
                   <button

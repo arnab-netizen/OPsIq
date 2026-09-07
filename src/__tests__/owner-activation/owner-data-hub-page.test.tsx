@@ -92,15 +92,17 @@ describe("with a business", () => {
     const band = screen.getByTestId("data-hub-readiness");
     expect(band.textContent).toContain("1 of 3 essential items added");
     expect(band.querySelector('[role="progressbar"]')!.getAttribute("aria-valuenow")).toBe("33");
-    expect(band.textContent).toContain("Confidence: LOW");
+    // Plain-language phrase, never the raw "low" enum token.
+    expect(band.textContent).toContain("Early days");
+    expect(band.textContent).not.toMatch(/\blow\b/i);
   });
 
-  it("states plainly that there is not enough data for a trustworthy diagnosis", async () => {
+  it("states plainly that there is not enough data for a trustworthy first assessment", async () => {
     mockWithBusiness();
     render(<OwnerDataHubPage />);
     await waitFor(() => expect(screen.getByTestId("data-hub-insufficient")).toBeTruthy());
     expect(screen.getByTestId("data-hub-insufficient").textContent).toMatch(
-      /does not yet have enough reliable business information to generate a trustworthy diagnosis/i,
+      /does not yet have enough reliable business information for a trustworthy first assessment/i,
     );
   });
 

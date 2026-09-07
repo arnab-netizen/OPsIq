@@ -286,3 +286,22 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
     multiLocation: input.ownerRole === "multi_location",
   };
 }
+
+/**
+ * Plain-language phrase for a `Confidence` level. The raw token ("none" / "low" / "medium" /
+ * "high") must never reach an owner verbatim — every UI surface that shows confidence before
+ * diagnosis (/owner/onboarding, /owner/data) renders this phrase instead of the enum.
+ */
+export function confidenceDisplayPhrase(confidence: string): string {
+  switch (confidence) {
+    case "high":
+      return "Solid";
+    case "medium":
+      return "Getting there";
+    case "low":
+      return "Early days";
+    case "none":
+    default:
+      return "Not enough data yet";
+  }
+}

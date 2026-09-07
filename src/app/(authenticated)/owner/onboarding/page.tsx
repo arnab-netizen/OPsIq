@@ -6,15 +6,17 @@ import { Badge, Button, CardDashboardSkeleton, Disclosure } from "@/ui/primitive
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
-import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
+import { INPUT_CATALOG, type OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { displayLabelForField } from "@/domain/owner-finance";
+import { confidenceDisplayPhrase } from "@/domain/owner-mode/owner-onboarding";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- runtime onboarding payload is untyped; fetch-on-mount is intentional */
 
+// Data completeness is not a danger signal -- see the matching comment in /owner/data/page.tsx.
 const CONFIDENCE_VARIANT: Record<string, "success" | "default" | "warning" | "destructive" | "muted"> = {
   high: "success",
   medium: "warning",
-  low: "destructive",
+  low: "muted",
   none: "muted",
 };
 
@@ -22,6 +24,13 @@ const SEVERITY_VARIANT: Record<string, "warning" | "destructive" | "muted"> = {
   critical: "destructive",
   high: "warning",
   medium: "muted",
+};
+
+const SEVERITY_LABEL: Record<string, string> = {
+  critical: "Urgent",
+  high: "Important",
+  medium: "Worth doing",
+  low: "Minor",
 };
 
 // Lowercase — OwnerSeverity values (src/domain/owner-spine/contracts.ts) are "critical" |
@@ -66,14 +75,30 @@ async function api(path: string, init?: RequestInit) {
   }
 }
 
-/** First day of the current calendar month, as an ISO date string (YYYY-MM-DD). */
-function currentMonthStart(): string {
+/**
+ * First and last day of the most recently completed full calendar month, as ISO date strings
+ * (YYYY-MM-DD).
+ *
+ * The essential-numbers form asks for "Average monthly sales", "Fixed monthly costs", and
+ * "Variable monthly costs" -- figures the owner is describing as representative of a typical,
+ * complete month. Posting those values against periodStart=start-of-current-month /
+ * periodEnd=today was a real correctness defect: on the 8th of a month, that is an 8-day
+ * reporting period, but periodDays() (src/domain/owner-finance/metrics.ts) divides the very
+ * same monthly figures by however many days sit between periodStart/periodEnd to derive
+ * dailyBreakEvenRevenue and cashRunwayDays. A full month's worth of revenue/costs divided by 8
+ * days instead of ~30 overstates daily burn by roughly 4x, so cashRunwayDays -- the number a
+ * struggling owner most needs to trust -- would silently read roughly 4x too alarmist. The last
+ * full calendar month is a real, complete, unambiguous period the owner can estimate honestly
+ * (as opposed to an abstract "any typical month"), and it never straddles today.
+ */
+function lastFullMonthStart(): string {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 10);
 }
-/** Today, as an ISO date string — the snapshot's period end. */
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
+function lastFullMonthEnd(): string {
+  const d = new Date();
+  // Day 0 of the current month is the last day of the previous month.
+  return new Date(d.getFullYear(), d.getMonth(), 0).toISOString().slice(0, 10);
 }
 
 function confidencePhrase(score: number): string {
@@ -137,7 +162,7 @@ function EssentialNumbersForm({
       try {
         const snapshot = await api(`/api/owner/finance/businesses/${businessId}/snapshots`, {
           method: "POST",
-          body: JSON.stringify({ periodStart: currentMonthStart(), periodEnd: today(), currency, ...fields }),
+          body: JSON.stringify({ periodStart: lastFullMonthStart(), periodEnd: lastFullMonthEnd(), currency, ...fields }),
         });
         snapshotId = snapshot.id;
       } catch (createErr) {
@@ -150,7 +175,7 @@ function EssentialNumbersForm({
         const existing = await api(`/api/owner/finance/businesses/${businessId}/snapshots`);
         const list = (existing?.snapshots ?? existing ?? []) as Array<{ id: string; periodStart: string; periodEnd: string; version: number }>;
         const currentPeriod = list
-          .filter((s) => s.periodStart?.slice(0, 10) === currentMonthStart() && s.periodEnd?.slice(0, 10) === today())
+          .filter((s) => s.periodStart?.slice(0, 10) === lastFullMonthStart() && s.periodEnd?.slice(0, 10) === lastFullMonthEnd())
           .sort((a, b) => b.version - a.version)[0];
         if (!currentPeriod) throw createErr;
         const amended = await api(`/api/owner/finance/snapshots/${currentPeriod.id}/amend`, {
@@ -230,7 +255,11 @@ function EssentialNumbersForm({
             className="w-full rounded-md border border-border p-2 text-sm"
             placeholder="e.g. 8000"
           />
-          <span className="text-xs text-muted-foreground">What&rsquo;s in the business bank account and till today.</span>
+          <span className="text-xs text-muted-foreground">
+            Everything liquid right now — bank balance plus cash in the till, as one total. (If
+            you already track bank balance separately in Cashflow, count it only there or only
+            here — never both, or it will be counted twice.)
+          </span>
         </label>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={busy} className="min-h-[44px] self-start">
@@ -283,7 +312,9 @@ function FirstResultCard({ cycle }: { cycle: any }) {
         <>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <strong className="text-base text-foreground">{top.title}</strong>
-            <Badge variant={FINDING_SEVERITY_VARIANT[top.severity] ?? "default"}>{top.severity}</Badge>
+            <Badge variant={FINDING_SEVERITY_VARIANT[top.severity] ?? "default"}>
+              {SEVERITY_LABEL[top.severity] ?? top.severity}
+            </Badge>
           </div>
 
           <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Why it matters</h3>
@@ -467,9 +498,9 @@ export default function OwnerOnboardingPage() {
 
                   <section className="rounded-md border border-border bg-card p-4" data-testid="onboarding-confidence">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-xs uppercase text-muted-foreground">Confidence before diagnosis</div>
+                      <div className="text-xs uppercase text-muted-foreground">How sure OpsIQ is so far</div>
                       <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted"}>
-                        {state.confidenceBeforeDiagnosis}
+                        {confidenceDisplayPhrase(state.confidenceBeforeDiagnosis)}
                       </Badge>
                     </div>
                     <p className="mt-2 text-sm text-muted-foreground">
@@ -490,7 +521,9 @@ export default function OwnerOnboardingPage() {
                             <li key={m.category} className="rounded-md border border-border p-3">
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <span className="min-w-0 break-words text-sm font-medium text-foreground">{m.label}</span>
-                                <Badge variant={SEVERITY_VARIANT[m.severity] ?? "muted"}>{m.severity}</Badge>
+                                <Badge variant={SEVERITY_VARIANT[m.severity] ?? "muted"}>
+                                  {SEVERITY_LABEL[m.severity] ?? m.severity}
+                                </Badge>
                               </div>
                               <p className="mt-1 text-xs text-muted-foreground">{m.why}</p>
                               <Link
@@ -520,8 +553,11 @@ export default function OwnerOnboardingPage() {
                   <Disclosure summary="More setup details">
                     <div className="flex flex-col gap-3">
                       <div data-testid="onboarding-next-upload">
-                        <strong className="text-foreground">Next best upload:</strong>{" "}
-                        {state.nextBestUpload ? state.nextBestUpload.replace(/_/g, " ") : "you have what you need to start"}
+                        <strong className="text-foreground">Next best thing to add:</strong>{" "}
+                        {state.nextBestUpload
+                          ? (INPUT_CATALOG[state.nextBestUpload as OwnerInputCategory]?.label ??
+                             state.nextBestUpload.replace(/_/g, " "))
+                          : "you have what you need to start"}
                         <div className="mt-2">
                           <Link
                             href={

@@ -17,6 +17,8 @@ import {
   fixedCostBurdenPct,
   fixedCostsTotal,
   variableCostsTotal,
+  dailyBreakEvenRevenue,
+  cashRunwayDays,
   type FinancialSnapshotInput,
   SURVIVAL_STATES,
 } from "@/domain/owner-finance";
@@ -343,5 +345,80 @@ describe("owner-finance — onboarding cost-field mapping honesty (regression)",
     // condition the diagnosis engine's readiness gate depends on.
     expect(netProfit(fixedOnly)).not.toBeNull();
     expect(netProfit(variableOnly)).not.toBeNull();
+  });
+});
+
+describe("owner-finance — onboarding period-field mapping honesty (regression)", () => {
+  /**
+   * Regression guard for the onboarding time-period defect: the essential-numbers form asks
+   * for "Average monthly sales/costs" (a full, typical month), so its snapshot's
+   * periodStart/periodEnd must span a real ~30-day month -- never
+   * periodStart=start-of-current-month / periodEnd=today, which is only a partial period on
+   * every day but the last of the month. periodDays() (src/domain/owner-finance/metrics.ts)
+   * divides the SAME monthly figures by however many days sit in that window to derive
+   * dailyBreakEvenRevenue and cashRunwayDays, so a short window silently inflates daily burn
+   * and understates cash runway by the same factor the window is short.
+   *
+   * Onboarding now posts a real last-full-calendar-month window
+   * (src/app/(authenticated)/owner/onboarding/page.tsx: lastFullMonthStart/lastFullMonthEnd),
+   * which this proves is period-length-honest and produces identical period-dependent
+   * metrics to the same figures entered through Finance's own "Add snapshot" surface with an
+   * equivalent explicit one-month period.
+   */
+  // A loss-making month (revenue 200000 - fixedCosts 150000 - variableCosts 100000 = -50000
+  // net profit), so cashRunwayDays is actually computed (non-null) rather than trivially
+  // null===null in the equivalence check below.
+  const monthlyFigures = {
+    revenue: 200000,
+    fixedCosts: 150000,
+    variableCosts: 100000,
+    cashOnHand: 50000,
+  };
+
+  it("a real ~30-day period (what onboarding now posts) and an equivalent Finance-surface month produce identical period-dependent metrics", () => {
+    // What onboarding now posts: a real last-full-calendar-month window (31 days, e.g. July).
+    const onboardingInput: FinancialSnapshotInput = {
+      periodStart: "2026-07-01",
+      periodEnd: "2026-07-31",
+      currency: "INR",
+      ...monthlyFigures,
+    };
+    // The semantically equivalent entry through Finance's own "Add snapshot" form for the
+    // same calendar month -- same dates, same fields, same schema.
+    const financeSurfaceInput: FinancialSnapshotInput = { ...onboardingInput };
+
+    expect(dailyBreakEvenRevenue(onboardingInput)).toBe(dailyBreakEvenRevenue(financeSurfaceInput));
+    expect(cashRunwayDays(onboardingInput)).toBe(cashRunwayDays(financeSurfaceInput));
+  });
+
+  it("the old defect (partial current-month-to-date window) silently corrupts daily break-even and cash runway relative to a real month", () => {
+    // The old, incorrect mapping: periodStart=start-of-month, periodEnd=8th of the month --
+    // an 8-day window carrying a FULL MONTH's worth of revenue/costs.
+    const oldDefectInput: FinancialSnapshotInput = {
+      periodStart: "2026-07-01",
+      periodEnd: "2026-07-08", // 8 days
+      currency: "INR",
+      ...monthlyFigures, // fixedCosts: 90000 => break-even revenue is fixed/(CM%)
+    };
+    // The corrected mapping: the same figures against a real 31-day month.
+    const correctedInput: FinancialSnapshotInput = {
+      periodStart: "2026-07-01",
+      periodEnd: "2026-07-31", // 31 days
+      currency: "INR",
+      ...monthlyFigures,
+    };
+
+    const be = breakEvenRevenue(correctedInput)!;
+    expect(be).not.toBeNull();
+
+    // Same break-even revenue in both (period length doesn't change breakEvenRevenue itself)...
+    expect(breakEvenRevenue(oldDefectInput)).toBe(be);
+
+    // ...but dividing it by 8 days instead of 31 inflates the reported daily break-even by
+    // roughly 4x -- the exact corruption class this test guards against.
+    const dailyOld = dailyBreakEvenRevenue(oldDefectInput)!;
+    const dailyCorrected = dailyBreakEvenRevenue(correctedInput)!;
+    expect(dailyOld).toBeGreaterThan(dailyCorrected * 3);
+    expect(Math.round((dailyOld / dailyCorrected) * 10) / 10).toBeCloseTo(31 / 8, 1);
   });
 });

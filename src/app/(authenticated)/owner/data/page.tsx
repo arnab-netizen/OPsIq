@@ -30,6 +30,7 @@ import {
   type OwnerDataGroupView,
 } from "@/domain/owner-mode/owner-data-hub";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
+import { confidenceDisplayPhrase } from "@/domain/owner-mode/owner-onboarding";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -90,10 +91,14 @@ async function api(path: string, init?: RequestInit) {
   }
 }
 
+// Data completeness is not a danger signal -- "destructive" red is reserved for the separate
+// "What is missing right now" list. Never paint this badge red: an owner who is 80% of the way
+// to their first assessment (canRunFirstDiagnosis) should not see an alarm-red badge fighting
+// the green "ready" box right below it.
 const CONFIDENCE_VARIANT: Record<string, "success" | "warning" | "destructive" | "muted"> = {
   high: "success",
   medium: "warning",
-  low: "destructive",
+  low: "muted",
   none: "muted",
 };
 
@@ -109,6 +114,24 @@ const STATUS_VARIANT: Record<string, "success" | "destructive" | "warning" | "mu
   missing_required: "destructive",
   missing_recommended: "warning",
   optional: "muted",
+};
+
+const SEVERITY_LABEL: Record<string, string> = {
+  critical: "Urgent",
+  high: "Important",
+  medium: "Worth doing",
+};
+
+const EFFORT_LABEL: Record<string, string> = {
+  low: "Quick to add",
+  medium: "Takes a few minutes",
+  high: "Takes some time",
+};
+
+const CONFIDENCE_GAIN_LABEL: Record<string, string> = {
+  high: "Makes a big difference",
+  medium: "Helps a fair amount",
+  low: "Helps a little",
 };
 
 /**
@@ -169,7 +192,8 @@ function BusinessTypeEditor({ business, onUpdated }: { business: BusinessLite; o
   );
 }
 
-function ReadinessBand({ state }: { state: OnboardingView }) {
+/** What OpsIQ knows so far: the confidence badge and essential-items progress. */
+function ReadinessSummary({ state }: { state: OnboardingView }) {
   const pct =
     state.minimumRequiredCount > 0
       ? Math.round((state.minimumSuppliedCount / state.minimumRequiredCount) * 100)
@@ -178,9 +202,9 @@ function ReadinessBand({ state }: { state: OnboardingView }) {
   return (
     <div className="rounded-lg border border-border p-5" data-testid="data-hub-readiness">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-foreground">Your data readiness</h2>
+        <h2 className="text-lg font-semibold text-foreground">How well OpsIQ knows your business</h2>
         <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted"}>
-          Confidence: {String(state.confidenceBeforeDiagnosis).toUpperCase()}
+          {confidenceDisplayPhrase(state.confidenceBeforeDiagnosis)}
         </Badge>
       </div>
 
@@ -199,9 +223,18 @@ function ReadinessBand({ state }: { state: OnboardingView }) {
       >
         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
       </div>
+    </div>
+  );
+}
+
+/** The one thing to do next, given what OpsIQ knows and what is still missing. */
+function NextAction({ state }: { state: OnboardingView }) {
+  return (
+    <div className="rounded-lg border border-border p-5" data-testid="data-hub-next-action">
+      <h2 className="text-lg font-semibold text-foreground">What to do next</h2>
 
       {state.canRunFirstDiagnosis ? (
-        <div className="mt-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+        <div className="mt-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900">
           <p className="font-medium">OpsIQ has enough to run a first assessment.</p>
           <p className="mt-1">
             It will be limited to what you have supplied so far, and it will say so.
@@ -220,14 +253,14 @@ function ReadinessBand({ state }: { state: OnboardingView }) {
         </div>
       ) : (
         <div
-          className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+          className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
           data-testid="data-hub-insufficient"
         >
           <p className="font-medium">
-            OpsIQ does not yet have enough reliable business information to generate a trustworthy
-            diagnosis.
+            OpsIQ does not yet have enough reliable business information for a trustworthy first
+            assessment.
           </p>
-          <p className="mt-1">Add the items marked “Needed” below and this will unlock.</p>
+          <p className="mt-1">Add the items marked “Needed” above and this will unlock.</p>
         </div>
       )}
 
@@ -320,7 +353,7 @@ function MissingCritical({ items }: { items: MissingMinimumView[] }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-foreground">{item.label}</span>
                 <Badge variant={item.severity === "critical" ? "destructive" : "warning"}>
-                  {item.severity}
+                  {SEVERITY_LABEL[item.severity] ?? item.severity}
                 </Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{item.why}</p>
@@ -374,7 +407,8 @@ function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
                     </p>
                   )}
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Effort: {cat.ownerEffort} · Confidence gain: {cat.expectedConfidenceGain}
+                    {EFFORT_LABEL[cat.ownerEffort] ?? cat.ownerEffort} ·{" "}
+                    {CONFIDENCE_GAIN_LABEL[cat.expectedConfidenceGain] ?? cat.expectedConfidenceGain}
                   </p>
                 </div>
                 <Link
@@ -507,24 +541,25 @@ export default function OwnerDataHubPage() {
             )}
           </div>
 
-          {state && <ReadinessBand state={state} />}
-          <WaysToAdd />
+          {state && <ReadinessSummary state={state} />}
           {state && <MissingCritical items={state.missingMinimum ?? []} />}
-          {groups.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Everything OpsIQ can use</h2>
-              <p className="mb-4 text-sm text-muted-foreground">
-                You do not need all of it. Items marked “Needed” are the ones holding back your first
-                assessment.
-              </p>
-              <CategoryGroups groups={groups} />
-            </div>
-          )}
+          {state && <NextAction state={state} />}
+          <WaysToAdd />
 
           <div className="border-t border-border pt-6">
-            <h2 className="text-sm font-semibold text-foreground">See the details for one area</h2>
+            <h2 className="text-sm font-semibold text-foreground">Everything OpsIQ can use</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Once you&rsquo;ve added the basics above, these go deeper into one part of your business.
+              You do not need all of it. Items marked “Needed” are the ones holding back your first
+              assessment.
+            </p>
+            {groups.length > 0 && (
+              <div className="mt-4">
+                <CategoryGroups groups={groups} />
+              </div>
+            )}
+            <h3 className="mt-6 text-sm font-semibold text-foreground">Go further into one area</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Full pages for money, customers, operations and the rest of your business.
             </p>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
               <Link href="/owner/finance" className="text-primary underline-offset-2 hover:underline">Money</Link>
