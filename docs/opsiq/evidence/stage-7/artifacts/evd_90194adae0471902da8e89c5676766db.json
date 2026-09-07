@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_90194adae0471902da8e89c5676766db",
+  "invariant_id": "S7-I12",
+  "lane": "LANE_E",
+  "proof_type": "simulation_runbook_recovery",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "isolated_simulation",
+  "method": "test_run",
+  "captured_at_utc": "2026-09-06T08:46:56.590Z",
+  "subject_sha": "0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06",
+  "authorization_manifest_sha": "a0a8a16066cd77da52a21758efeb361a32f723ee",
+  "deployment_id": null,
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d18",
+    "job": "capture",
+    "run_id": "34022771119",
+    "run_number": 17,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-06T08:45:58Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "node scripts/stage7-probes/s7-i12-runbook-recovery.mjs"
+  },
+  "observation": {
+    "raw": "=== S7-I12: Operational recovery (LANE_E isolated simulation) ===\nMode: isolated simulation — no production infrastructure touched\nRunbook: /home/runner/work/OPsIq/OPsIq/docs/ROLLBACK_RUNBOOK.md\n[PASS] rollback_runbook_available: true\n[PASS] documented_step_count: 5\n[PASS] documented_trigger_count: 6\n[PASS] state_1_initial_health: 200\n[PASS] known_good_commit_established: true\n[PASS] state_2_failure_induced: 503\n[PASS] state_2_failure_detected_via_health_endpoint: true\n[PASS] state_3_symptom_matches_documented_trigger: true\n[PASS] state_5_health_restored: 200\n[PASS] state_5_serving_known_good_commit: true\n[PASS] executed_step_count: 5\n[PASS] undocumented_executed_step_count: 0\n[PASS] missing_required_step_count: 0\n[PASS] recovery_time_ms: 4\n[PASS] runbook_rto_target_ms: 900000\n[PASS] recovery_within_runbook_rto: true\n[PASS] decisions_recorded: 6\n[PASS] deviations_recorded: true\n[PASS] deviation_count: 1\n\n=== STAGED RECOVERY RECORD ===\nenvironment: isolated_simulation\nstaged_failure: Database connection fails\nmatched_documented_trigger: Database connection fails\nstate_sequence: HEALTHY → FAILED → DIAGNOSED → RECOVERY_ACTION_EXECUTED → HEALTHY\nrunbook: /home/runner/work/OPsIq/OPsIq/docs/ROLLBACK_RUNBOOK.md\nrunbook_section: Code Rollback Procedure\ndocumented_steps: [\"Step 1: Identify Previous Known-Good Commit\",\"Step 2: Revert Deployment\",\"Step 3: Redeploy Application\",\"Step 4: Verify Deployment\",\"Step 5: Monitor for 30 minutes\"]\nexecuted_steps: [\"Step 1: Identify Previous Known-Good Commit\",\"Step 2: Revert Deployment\",\"Step 3: Redeploy Application\",\"Step 4: Verify Deployment\",\"Step 5: Monitor for 30 minutes\"]\nrecovery_time_ms: 4\ndecisions: [\n  {\n    \"step\": \"diagnose\",\n    \"rationale\": \"Health endpoint reported 503 with checks.database.status=unhealthy; this matches the documented immediate-rollback trigger \\\"Database connection fails\\\". Decision: roll back via the Code Rollback Procedure.\"\n  },\n  {\n    \"step\": \"Step 1: Identify Previous Known-Good Commit\",\n    \"rationale\": \"Previous known-good deployment identified from build-info captured while the service was healthy.\"\n  },\n  {\n    \"step\": \"Step 2: Revert Deployment\",\n    \"rationale\": \"Reverted the deployment to the known-good commit (runbook Option A: revert, preserving an audit trail rather than rewriting history).\"\n  },\n  {\n    \"step\": \"Step 3: Redeploy Application\",\n    \"rationale\": \"Redeployed the reverted application; the dependency it failed on is restored as part of bringing the known-good release back up.\"\n  },\n  {\n    \"step\": \"Step 4: Verify Deployment\",\n    \"rationale\": \"Verified recovery through the runbook's Recovery Verification checks: health endpoint returns 200 and checks.database.status is healthy.\"\n  },\n  {\n    \"step\": \"Step 5: Monitor for 30 minutes\",\n    \"rationale\": \"Executed as a bounded post-recovery verification pass inside the simulation.\"\n  }\n]\ndeviations: [\n  {\n    \"step\": \"Step 5: Monitor for 30 minutes\",\n    \"reason\": \"Runbook prescribes a 30-minute monitoring window; the isolated simulation executes a bounded verification pass instead. Deviation is duration only — the documented checks themselves were performed.\"\n  }\n]\nproduction_failure_induced: NO\nproduction_db_mutations: 0\n\n=== OBSERVATION SUMMARY ===\nChecks: 19 PASS, 0 FAIL\n\nRESULT: PASS\n",
+    "content_hash": "sha256:72e5f955de42b780c9143eb00718a635ee53f029a51dd7f4aafe8b1775467649",
+    "byte_length": 3295,
+    "truncated": false
+  },
+  "assertion": "Staged failure introduced; recovery confirmed following DEPLOYMENT_RUNBOOK.md without undocumented steps.",
+  "result": "PASS",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "df64ad0045a5ead692252a08b9a264db65c937504a2453d6a63b6ebd6ab947a7c99d11651f11417a23590bafa8134baade88b57f57b2bd064939c51bee02dc07"
+  }
+}
