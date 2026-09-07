@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * /owner/data — "Add & Connect Data": the single visible owner surface for getting real business
- * information into OpsIQ.
+ * /owner/data — "My Business": the single visible owner surface for telling OpsIQ about your
+ * business and keeping its information current. (Formerly labeled "Add & Connect Data" — renamed
+ * so a fresh owner has exactly one "My Business" concept, not two.)
  *
  * This page adds NO backend capability. It composes existing, already-governed surfaces:
  *   - GET /api/owner/businesses            (business list)
@@ -463,10 +464,11 @@ export default function OwnerDataHubPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <header>
-        <h1 className="text-3xl font-bold text-foreground">Add &amp; Connect Data</h1>
+        <h1 className="text-3xl font-bold text-foreground">My Business</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Everything OpsIQ knows about your business starts here. The more real information you add,
-          the more specific its findings become — and it will always tell you what is still missing.
+          This is where you tell OpsIQ about your business and keep its information up to date.
+          The more real information you add, the more specific its findings become — and it will
+          always tell you what is still missing.
         </p>
       </header>
 
@@ -518,6 +520,24 @@ export default function OwnerDataHubPage() {
               <CategoryGroups groups={groups} />
             </div>
           )}
+
+          <div className="border-t border-border pt-6">
+            <h2 className="text-sm font-semibold text-foreground">See the details for one area</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Once you&rsquo;ve added the basics above, these go deeper into one part of your business.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              <Link href="/owner/finance" className="text-primary underline-offset-2 hover:underline">Money</Link>
+              <Link href="/owner/customers" className="text-primary underline-offset-2 hover:underline">Customers</Link>
+              <Link href="/owner/operations" className="text-primary underline-offset-2 hover:underline">Operations</Link>
+              <Link href="/owner/inventory" className="text-primary underline-offset-2 hover:underline">Inventory</Link>
+              <Link href="/owner/procurement" className="text-primary underline-offset-2 hover:underline">Procurement</Link>
+              <Link href="/owner/vendor" className="text-primary underline-offset-2 hover:underline">Vendors</Link>
+              <Link href="/owner/goals" className="text-primary underline-offset-2 hover:underline">Goals</Link>
+              <Link href="/owner/risks" className="text-primary underline-offset-2 hover:underline">Risk</Link>
+              <Link href="/owner/compliance" className="text-primary underline-offset-2 hover:underline">Compliance</Link>
+            </div>
+          </div>
         </div>
       )}
     </div>

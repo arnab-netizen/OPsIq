@@ -76,7 +76,7 @@ export default function OwnerActivationPanel() {
           href="/owner/data"
           className="mt-4 inline-flex h-11 items-center justify-center rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
         >
-          Add &amp; Connect Data
+          Go to My Business
         </Link>
       </div>
     );
@@ -150,7 +150,7 @@ export default function OwnerActivationPanel() {
         href="/owner/data"
         className="mt-4 inline-flex h-11 items-center justify-center rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
       >
-        Add &amp; Connect Data
+        Go to My Business
       </Link>
     </div>
   );

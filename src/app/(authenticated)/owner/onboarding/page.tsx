@@ -7,6 +7,7 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
 import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
+import { displayLabelForField } from "@/domain/owner-finance";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- runtime onboarding payload is untyped; fetch-on-mount is intentional */
 
@@ -115,13 +116,19 @@ function EssentialNumbersForm({
     };
     const fields = {
       revenue: num("revenue"),
-      // variableCosts, not fixedCosts: the onboarding-readiness "expenses" category
-      // (src/services/owner-mode/owner-onboarding.service.ts) only counts as supplied
-      // when costOfGoodsOrServices or variableCosts is present -- fixedCosts alone left
-      // "Expense records" showing as still-missing/critical even after the diagnosis
-      // itself ran successfully on it, a confusing split result. variableCosts also
-      // satisfies the diagnosis engine's own "any one cost field" check, so this one
-      // field now unlocks both systems consistently.
+      // Fixed and variable costs are genuinely different finance-engine concepts
+      // (src/domain/owner-finance/metrics.ts: contributionMarginPct and breakEvenRevenue
+      // read only variableCostsTotal; fixedCostBurdenPct reads only fixedCostsTotal) and
+      // must never be collapsed into one field just to satisfy a readiness check --
+      // labeling "rent, wages" (fixed) as variableCosts silently corrupts contribution
+      // margin and break-even for every onboarding user. Each field maps to its real
+      // counterpart, matching exactly what src/app/owner/finance's own "Add snapshot"
+      // form posts for the same concepts, so onboarding and Finance always agree.
+      // Either one alone still satisfies the diagnosis engine's "has cost info" gate
+      // (src/domain/owner-finance/data-confidence.ts hasCost) and its own readiness
+      // category (owner-onboarding.service.ts: fixedCosts -> "fixed_costs",
+      // variableCosts -> "expenses"), so a first result is still one field away.
+      fixedCosts: num("fixedCosts"),
       variableCosts: num("variableCosts"),
       cashOnHand: num("cashOnHand"),
     };
@@ -168,8 +175,9 @@ function EssentialNumbersForm({
     <section className="rounded-md border border-border bg-card p-5" data-testid="onboarding-essential-numbers">
       <h2 className="text-base font-semibold text-foreground">Essential numbers</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Three numbers are enough for a first, real result. An estimate is fine for all of them —
-        you can refine them later in Money.
+        A few numbers are enough for a first, real result. An estimate is fine for all of them —
+        you can refine them later in Money. It&rsquo;s fine to fill in just one cost number if
+        that&rsquo;s all you have right now.
       </p>
       <form onSubmit={submit} className="mt-4 flex flex-col gap-4 max-w-sm">
         <label className="flex flex-col gap-1 text-sm text-foreground">
@@ -186,7 +194,20 @@ function EssentialNumbersForm({
           <span className="text-xs text-muted-foreground">Total sales in a typical month, before costs.</span>
         </label>
         <label className="flex flex-col gap-1 text-sm text-foreground">
-          <span>Average monthly costs ({currency})</span>
+          <span>Fixed monthly costs ({currency})</span>
+          <input
+            name="fixedCosts"
+            type="number"
+            min={0}
+            step="any"
+            inputMode="decimal"
+            className="w-full rounded-md border border-border p-2 text-sm"
+            placeholder="e.g. 7000"
+          />
+          <span className="text-xs text-muted-foreground">Rent, wages, and other costs that stay the same whether sales go up or down.</span>
+        </label>
+        <label className="flex flex-col gap-1 text-sm text-foreground">
+          <span>Variable monthly costs ({currency})</span>
           <input
             name="variableCosts"
             type="number"
@@ -194,9 +215,9 @@ function EssentialNumbersForm({
             step="any"
             inputMode="decimal"
             className="w-full rounded-md border border-border p-2 text-sm"
-            placeholder="e.g. 12000"
+            placeholder="e.g. 5000"
           />
-          <span className="text-xs text-muted-foreground">Rent, wages, and everything else it costs to run a typical month.</span>
+          <span className="text-xs text-muted-foreground">Cost of goods, delivery, and other costs that rise and fall with how much you sell.</span>
         </label>
         <label className="flex flex-col gap-1 text-sm text-foreground">
           <span>Cash on hand right now ({currency})</span>
@@ -220,10 +241,39 @@ function EssentialNumbersForm({
   );
 }
 
-/** The first real, non-fabricated interpretation of the owner's own data (Phase 7). */
+type FirstResultFinding = {
+  id: string;
+  title: string;
+  summary: string;
+  severity: string;
+  sourceMetric?: string | null;
+  missingData?: string[] | null;
+};
+type FirstResultAction = {
+  findingId: string | null;
+  title: string;
+  description: string;
+  verificationMetric?: string | null;
+  verificationMethod?: string | null;
+  confidence?: number | null;
+};
+
+/**
+ * The first real, non-fabricated interpretation of the owner's own data (Phase 7).
+ *
+ * Reads only what the governed finance-diagnosis engine actually returned on this
+ * cycle -- the top finding (by impact/urgency, already ordered server-side) and, when
+ * one exists, the real OwnerFinanceAction the engine generated FOR that exact finding
+ * (matched by findingId, never guessed or reordered). Nothing here is invented: if the
+ * engine produced no action for the top finding, or no finding at all, this says so
+ * plainly and points at the specific missing inputs (finding.missingData) rather than
+ * inventing a recommendation.
+ */
 function FirstResultCard({ cycle }: { cycle: any }) {
-  const findings = (cycle?.findings ?? []) as Array<{ title: string; summary: string; severity: string }>;
+  const findings = (cycle?.findings ?? []) as FirstResultFinding[];
+  const actions = (cycle?.actions ?? []) as FirstResultAction[];
   const top = findings[0] ?? null;
+  const topAction = top ? (actions.find((a) => a.findingId === top.id) ?? null) : null;
   const confidenceScore = cycle?.dataConfidenceScore as number | undefined;
 
   return (
@@ -235,7 +285,34 @@ function FirstResultCard({ cycle }: { cycle: any }) {
             <strong className="text-base text-foreground">{top.title}</strong>
             <Badge variant={FINDING_SEVERITY_VARIANT[top.severity] ?? "default"}>{top.severity}</Badge>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">{top.summary}</p>
+
+          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Why it matters</h3>
+          <p className="mt-1 text-sm text-foreground">{top.summary}</p>
+
+          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">What to do next</h3>
+          {topAction ? (
+            <>
+              <p className="mt-1 text-sm font-medium text-foreground">{topAction.title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{topAction.description}</p>
+              {topAction.verificationMethod && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  <span className="font-semibold uppercase tracking-wide">Why this action — </span>
+                  This is what OpsIQ recommends for the finding above. OpsIQ will check this worked by:{" "}
+                  {topAction.verificationMethod}
+                </p>
+              )}
+            </>
+          ) : top.missingData && top.missingData.length > 0 ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              OpsIQ doesn&rsquo;t have enough information yet to safely recommend an action for this. Add{" "}
+              {top.missingData.map(displayLabelForField).join(", ")} and run this again.
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">
+              OpsIQ doesn&rsquo;t have a safe recommendation for this yet. Add a bit more detail in Money and run
+              this again.
+            </p>
+          )}
         </>
       ) : (
         <p className="mt-2 text-sm text-muted-foreground">
@@ -243,7 +320,12 @@ function FirstResultCard({ cycle }: { cycle: any }) {
         </p>
       )}
       {typeof confidenceScore === "number" && (
-        <p className="mt-3 text-sm text-muted-foreground">{confidencePhrase(confidenceScore)}</p>
+        <>
+          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            How sure OpsIQ is
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">{confidencePhrase(confidenceScore)}</p>
+        </>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
         <Link href="/owner/finance"><Button className="min-h-[44px]">See full finance details</Button></Link>

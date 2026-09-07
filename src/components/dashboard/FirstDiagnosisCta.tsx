@@ -19,7 +19,7 @@ export default function FirstDiagnosisCta({ href = "/diagnosis" }: { href?: stri
       <h3 className="text-base font-semibold text-foreground">Run your first diagnosis</h3>
       <p className="mt-1 text-sm text-muted-foreground">
         Describe your business and OpsIQ will return risks, findings, and a prioritized action plan.
-        This first pass uses only what you type here — add your real records in Add &amp; Connect Data
+        This first pass uses only what you type here — add your real records in My Business
         to make it specific to your business.
       </p>
       <Link

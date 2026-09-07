@@ -138,7 +138,7 @@ describe("sidebar nav — owner-only and shared/ungated items are unaffected by 
       <SidebarNav canViewOwnerRecovery={true} capabilities={[CAPABILITIES.OWNER_VIEW]} />,
     );
     expect(queryByText("Home")).not.toBeNull();
-    expect(queryByText("Add & Connect Data")).not.toBeNull();
+    expect(queryByText("My Business")).not.toBeNull();
     expect(queryByText("Money")).not.toBeNull();
   });
 
@@ -153,19 +153,65 @@ describe("sidebar nav — owner-only and shared/ungated items are unaffected by 
     expect(queryByText("Money")).toBeNull();
   });
 
-  it("shared, ungated items (Diagnosis, Decision Inbox, Check a decision, What if…, Reports, Settings) remain visible to everyone with no capabilities at all", () => {
+  it("truly shared, ungated items (Check a decision... no — see below; Settings) remain visible to everyone with no capabilities at all", () => {
+    // Settings (/api/me) is session-only -- genuinely the last ungated item in the nav.
     const { queryByText } = render(<SidebarNav canViewOwnerRecovery={false} capabilities={[]} />);
-    expect(queryByText("Diagnosis")).not.toBeNull();
-    expect(queryByText("Decision Inbox")).not.toBeNull();
-    expect(queryByText("Check a decision")).not.toBeNull();
-    expect(queryByText("What if…")).not.toBeNull();
-    expect(queryByText("Reports")).not.toBeNull();
     expect(queryByText("Settings")).not.toBeNull();
+  });
+
+  /**
+   * Dead-nav closure: Diagnosis, What if…, Check a decision, Decision Inbox, and Reports were
+   * ALL previously ungated despite each being backed by an API route that requires a
+   * consulting-engagement-only capability (ENGAGEMENT_CREATE, ACTION_VIEW, ENGAGEMENT_VIEW,
+   * ENGAGEMENT_VIEW, SYSTEM_VIEW_AUDIT respectively) -- none of which survive the
+   * self-serve-owner OWNER_SCOPED_CAPABILITIES narrowing. Every one of these asserts against
+   * the exact two-arg call the real app renders with (src/app/(authenticated)/layout.tsx:
+   * getCapabilitiesForRole(r.role, policy.workspaceRole)), which correctly narrows
+   * ADMIN_OR_PORTFOLIO_MANAGER + workspaceRole="owner" (the self-serve signup shape) down to
+   * OWNER_SCOPED_CAPABILITIES. This is NOT the same as the CONSULTANT_LABELS residual gap
+   * documented above (which is measured via the single-arg call and intentionally left open) --
+   * these five items are fully closed for the persona that matters for beta.
+   */
+  it("Diagnosis, What if…, Check a decision, Decision Inbox, and Reports are gated on their real backing API capability, and correctly hidden for a real self-serve owner", () => {
+    const selfServeOwnerCaps = getCapabilitiesForRole(ROLES.ADMIN_OR_PORTFOLIO_MANAGER, "owner");
+    for (const cap of [
+      CAPABILITIES.ENGAGEMENT_CREATE,
+      CAPABILITIES.ACTION_VIEW,
+      CAPABILITIES.ENGAGEMENT_VIEW,
+      CAPABILITIES.SYSTEM_VIEW_AUDIT,
+    ]) {
+      expect(selfServeOwnerCaps).not.toContain(cap);
+    }
+
+    const { queryByText } = render(
+      <SidebarNav canViewOwnerRecovery={true} capabilities={Array.from(selfServeOwnerCaps)} />,
+    );
+    expect(queryByText("Diagnosis")).toBeNull();
+    expect(queryByText("What if…")).toBeNull();
+    expect(queryByText("Check a decision")).toBeNull();
+    expect(queryByText("Decision Inbox")).toBeNull();
+    expect(queryByText("Reports")).toBeNull();
+  });
+
+  it("Diagnosis, What if…, Check a decision, Decision Inbox, and Reports remain visible to roles that genuinely hold the matching capability", () => {
+    const consultantCaps = Array.from(getCapabilitiesForRole(ROLES.EXPERIENCED_CONSULTANT));
+    const { queryByText } = render(<SidebarNav canViewOwnerRecovery={false} capabilities={consultantCaps} />);
+    expect(queryByText("Diagnosis")).not.toBeNull();
+    expect(queryByText("What if…")).not.toBeNull();
+    expect(queryByText("Check a decision")).not.toBeNull();
+    expect(queryByText("Decision Inbox")).not.toBeNull();
+
+    const adminCaps = Array.from(getCapabilitiesForRole(ROLES.SYSTEM_ADMIN));
+    const { queryByText: queryByTextAdmin } = render(
+      <SidebarNav canViewOwnerRecovery={true} capabilities={adminCaps} />,
+    );
+    expect(queryByTextAdmin("Reports")).not.toBeNull();
   });
 
   it("omitting the capabilities prop entirely behaves the same as an empty array (safe default for any caller not yet updated)", () => {
     const { queryByText } = render(<SidebarNav canViewOwnerRecovery={false} />);
-    expect(queryByText("Diagnosis")).not.toBeNull();
+    expect(queryByText("Settings")).not.toBeNull();
+    expect(queryByText("Diagnosis")).toBeNull();
     expect(queryByText("Clients")).toBeNull();
   });
 });

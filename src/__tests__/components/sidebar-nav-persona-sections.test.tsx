@@ -98,8 +98,12 @@ describe("persona sections — shared/internal user with no elevated capability"
     const { queryByText } = render(<SidebarNav canViewOwnerRecovery={false} capabilities={[]} />);
     expect(queryByText("Consulting")).toBeNull();
     expect(queryByText("Administration")).toBeNull();
-    expect(queryByText("Diagnosis")).not.toBeNull();
-    expect(queryByText("Reports")).not.toBeNull();
+    expect(queryByText("Settings")).not.toBeNull();
+    // Diagnosis (ENGAGEMENT_CREATE) and Reports (SYSTEM_VIEW_AUDIT) each match their own
+    // backing API's real capability requirement and are correctly hidden here, unlike a
+    // genuinely ungated item such as Settings (/api/me, session-only).
+    expect(queryByText("Diagnosis")).toBeNull();
+    expect(queryByText("Reports")).toBeNull();
   });
 });
 

@@ -1,5 +1,5 @@
 /**
- * Owner Data Hub — the pure presentation model behind `/owner/data` ("Add & Connect Data").
+ * Owner Data Hub — the pure presentation model behind `/owner/data` ("My Business").
  *
  * This module invents NO new taxonomy and NO new confidence maths. It reads the existing
  * `INPUT_CATALOG` (the single source of truth for owner-facing data categories) and the existing

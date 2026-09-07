@@ -12,11 +12,12 @@ import { CAPABILITIES, type CapabilityName } from "@/domain/constants/capabiliti
  * Actions, Growth, More — plus the capability-gated Consulting/Administration sections:
  *
  * 1. GROUPED, not flat, and named for the question the owner is asking ("what needs my
- *    attention" = Priorities, "what should I do" = Actions, "how is my business doing" = My
- *    Business), not for internal module structure. The primary path (Home → Add & Connect Data)
- *    sits above everything else, ungrouped, so it's never buried inside a collapsed section.
- *    "My Business" (detail/drill-down pages) and "Growth"/"More" (occasional-use pages) start
- *    collapsed; "Priorities" and "Actions" (small, high-frequency lists) start open.
+ *    attention" = Priorities, "what should I do" = Actions, "tell OpsIQ about my business" = My
+ *    Business), not for internal module structure. The primary path (Home → My Business, at
+ *    /owner/data) sits above everything else, ungrouped, so it's never buried inside a collapsed
+ *    section. "Business details" (Money/Customers/etc. drill-down pages, formerly also labeled
+ *    "My Business" — renamed to remove that collision) and "Growth"/"More" (occasional-use pages)
+ *    start collapsed; "Priorities" and "Actions" (small, high-frequency lists) start open.
  *
  * 2. LONGEST-MATCH active state. The previous `pathname.startsWith(item.href)` test highlighted
  *    "/dashboard" while the user was on "/dashboard/inbox". Active state is now the single
@@ -82,21 +83,35 @@ const NAV_SECTIONS: NavSection[] = [
     title: null,
     items: [
       { label: "Home", href: "/owner/cockpit", requiresOwner: true },
-      { label: "Add & Connect Data", href: "/owner/data", requiresOwner: true },
+      // Renamed from "Add & Connect Data": /owner/data IS "My Business" -- the single place an
+      // owner tells OpsIQ about their business and keeps its information current (its own file
+      // header already described it this way). A fresh owner should not have to learn the
+      // difference between a top-level "Add & Connect Data" concept and a separate "My Business"
+      // section; there is exactly one. The former "My Business" section (Money, Customers,
+      // Operations, Risk, Compliance, Goals, Inventory, Procurement, Vendors) is renamed
+      // "Business details" below -- deeper, occasional drill-downs this page links out to, not a
+      // second front door.
+      { label: "My Business", href: "/owner/data", requiresOwner: true },
     ],
   },
   {
-    // "My Business" — everything about the state of the business itself. Collapsed by default:
-    // these are detail/drill-down pages a lay owner opens deliberately, not the first things they
-    // need to see (see OPSIQ_DESIGN_DIRECTION.md §18 — a first-time owner is not shown ~24 peer
-    // destinations on day one). Diagnosis/Risk/Compliance moved here from the former "Business
-    // health" section; Goals moved here from "Growth & strategy" per the redesign's target IA
-    // (Home / My Business / Priorities / Actions / Growth / More). No href or gate changed.
+    // "Business details" — deeper drill-down pages about the state of the business (Money,
+    // Customers, Operations, etc.), reachable directly from the nav for a returning owner and
+    // linked from the My Business (/owner/data) page for progressive disclosure. Collapsed by
+    // default: these are pages a lay owner opens deliberately, not the first things they need to
+    // see (see OPSIQ_DESIGN_DIRECTION.md §18 — a first-time owner is not shown ~24 peer
+    // destinations on day one). Formerly titled "My Business"; renamed to remove the label
+    // collision with the primary /owner/data entry above, which now owns that name. No href, id,
+    // or gate changed on any item below.
     id: "my-business",
-    title: "My Business",
+    title: "Business details",
     collapsedByDefault: true,
     items: [
-      { label: "Diagnosis", href: "/diagnosis" },
+      // /api/diagnosis requires ENGAGEMENT_CREATE (a consulting-engagement capability no
+      // self-serve beta owner holds — this is the legacy consultant "create an engagement
+      // diagnosis" page, not the self-serve owner's own business diagnosis, which lives
+      // under Home/first-result and /owner/finance instead). Gated to match its real API.
+      { label: "Diagnosis", href: "/diagnosis", requiresCapability: CAPABILITIES.ENGAGEMENT_CREATE },
       { label: "Money", href: "/owner/finance", requiresOwner: true },
       { label: "Customers", href: "/owner/customers", requiresOwner: true },
       { label: "Operations", href: "/owner/operations", requiresOwner: true },
@@ -117,7 +132,13 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "What needs attention", href: "/owner/priorities", requiresOwner: true },
       { label: "Alerts", href: "/owner/alerts", requiresOwner: true, showAlertBadge: true },
-      { label: "Decision Inbox", href: "/dashboard/inbox" },
+      // Decision Inbox reads OperatorItem rows via /api/decisions/list, which requires
+      // ENGAGEMENT_VIEW -- a consulting-engagement capability no self-serve beta owner
+      // holds (OperatorItem is a consultant<->client recommendation-approval workflow,
+      // not an owner-operator concept; the owner-facing equivalent already lives at
+      // /owner/priorities and /owner/opportunities/decide). Without this gate the link
+      // was visible to every persona but 403'd for the one persona actually in beta.
+      { label: "Decision Inbox", href: "/dashboard/inbox", requiresCapability: CAPABILITIES.ENGAGEMENT_VIEW },
     ],
   },
   {
@@ -126,7 +147,12 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "Tasks", href: "/owner/tasks", requiresOwner: true },
       { label: "Execution & SOP", href: "/owner/execution", requiresOwner: true },
-      { label: "Check a decision", href: "/decision" },
+      // /decision loads /api/calibration (ACTION_VIEW), /api/value and
+      // /api/intelligence/summary (ENGAGEMENT_VIEW), and /api/run (ACTION_CREATE) --
+      // an entirely consulting-engagement page (calibration/value/intelligence-summary),
+      // none of which self-serve beta owners hold. Gated on ENGAGEMENT_VIEW, consistent
+      // with the other consulting-facing items in this file.
+      { label: "Check a decision", href: "/decision", requiresCapability: CAPABILITIES.ENGAGEMENT_VIEW },
     ],
   },
   {
@@ -135,7 +161,10 @@ const NAV_SECTIONS: NavSection[] = [
     collapsedByDefault: true,
     items: [
       { label: "Strategy", href: "/owner/strategy", requiresOwner: true },
-      { label: "What if…", href: "/scenario" },
+      // /api/scenario requires ACTION_VIEW, which no self-serve beta owner holds (it is not
+      // part of OWNER_SCOPED_CAPABILITIES). Gated to match; was previously visible to every
+      // persona but 403'd for the one persona actually in beta.
+      { label: "What if…", href: "/scenario", requiresCapability: CAPABILITIES.ACTION_VIEW },
       { label: "Starting up", href: "/owner/startup", requiresOwner: true },
       { label: "Campaigns", href: "/owner/marketing/campaigns", requiresOwner: true },
     ],
@@ -147,7 +176,10 @@ const NAV_SECTIONS: NavSection[] = [
     title: "More",
     collapsedByDefault: true,
     items: [
-      { label: "Reports", href: "/report" },
+      // /api/report requires SYSTEM_VIEW_AUDIT, which no self-serve beta owner holds --
+      // gated to match, so the link is only ever shown to a persona that can actually
+      // load it (was previously visible to everyone and 403'd for self-serve owners).
+      { label: "Reports", href: "/report", requiresCapability: CAPABILITIES.SYSTEM_VIEW_AUDIT },
       { label: "Why OpsIQ says this", href: "/owner/trust", requiresOwner: true },
       { label: "People", href: "/users", requiresCapability: CAPABILITIES.USER_VIEW },
       { label: "Settings", href: "/settings" },
