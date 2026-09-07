@@ -1,0 +1,53 @@
+{
+  "evidence_version": "1.0.0",
+  "artifact_id": "evd_81d9d968205515f3b77da3e61295de49",
+  "invariant_id": "S7-I1",
+  "lane": "LANE_C",
+  "proof_type": "production_runtime_check",
+  "artifact_classification": "INTERNAL_ONLY",
+  "environment": "production",
+  "method": "http_probe",
+  "captured_at_utc": "2026-09-06T08:46:43.424Z",
+  "subject_sha": "0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06",
+  "authorization_manifest_sha": "a0a8a16066cd77da52a21758efeb361a32f723ee",
+  "deployment_id": "dpl_8owYgFhBFFwCPUfs2LMHBeQdGzgm",
+  "producer": {
+    "type": "github_actions",
+    "repository": "arnab-netizen/OPsIq",
+    "workflow": "Stage 7 — Evidence Capture (Canonical)",
+    "workflow_ref": "arnab-netizen/OPsIq/.github/workflows/stage7-capture.yml@refs/tags/stage7-evidence-subject-d18",
+    "job": "capture",
+    "run_id": "34022757859",
+    "run_number": 10,
+    "run_attempt": 1,
+    "run_started_at": "2026-09-06T08:45:40Z",
+    "actor": "arnab-netizen",
+    "event_name": "workflow_dispatch",
+    "owner_identity": null,
+    "owner_attestation_ref": null
+  },
+  "replay": {
+    "replayable": true,
+    "command": "node scripts/stage7-probes/s7-i1-health-probe.mjs"
+  },
+  "observation": {
+    "raw": "=== S7-I1: Exact private deployment identity ===\nDEPLOYMENT_ID: dpl_8owYgFhBFFwCPUfs2LMHBeQdGzgm\nCLOSURE_SUBJECT_SHA: 0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06\nPROBE_BASE_URL: https://o-ps-iq.vercel.app\nVERCEL_TOKEN: set\nVERCEL_API_BASE: https://api.vercel.com\n\n[PASS] closure_subject_sha_present: \"0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06\"\n[PASS] probe_base_url: \"https://o-ps-iq.vercel.app\"\n[PASS] build_info_url: \"https://o-ps-iq.vercel.app/api/internal/build-info\"\n[PASS] build_info_http_status: 200\n[PASS] deployed_environment: \"production\"\n[PASS] deployed_sha: \"0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06\"\n[PASS] sha_matches_closure_subject: \"deployed=0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06 authorized=0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06\"\n[PASS] vercel_api_base: \"https://api.vercel.com\"\n[PASS] vercel_deployed_sha: \"0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06\"\n[PASS] vercel_sha_matches_closure_subject: \"0c06fe4399fb4dc81bb7fb9f41db70b921e9ec06\"\n[PASS] vercel_deployment_state: \"READY\"\n[PASS] vercel_deployment_alias_covers_probe_target: \"probed host is served by this deployment\"\n[PASS] probe_url: \"https://o-ps-iq.vercel.app/api/health\"\n[PASS] http_status: 200\n[PASS] response_has_status_field: true\n[PASS] health_status_value: \"healthy\"\n[PASS] response_has_checks_field: true\n[PASS] response_has_timestamp: true\n[PASS] health_status_acceptable: \"healthy\"\n[PASS] database_check_status: \"healthy\"\n\n=== OBSERVATION SUMMARY ===\nChecks: 20 PASS, 0 FAIL\n\nRESULT: PASS\n",
+    "content_hash": "sha256:4b9c887fa7faece04adc4026eee7c3ea53ab615197ac93bd2fa1809f06e09243",
+    "byte_length": 1474,
+    "truncated": false
+  },
+  "assertion": "Deployed SHA matches authorized candidate; production health probe returns 200.",
+  "result": "PASS",
+  "redaction_attestation": {
+    "attested": true,
+    "statement": "No secret, token, credential value or connection string appears in this artifact.",
+    "scanner": "evidence-redaction-scan@14",
+    "patterns_checked": 14
+  },
+  "supersedes": null,
+  "signature": {
+    "algorithm": "Ed25519",
+    "key_id": "stage7-evidence-v1",
+    "value": "878fbf3e26fc641d11779a4021cdeac5686c41d162b9f005efe62fef986d6a82175d9a7ec56f20bff5efd7221c392b4e2b07827bf6bf560836a8d1fadbfd1904"
+  }
+}
