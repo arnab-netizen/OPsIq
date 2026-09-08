@@ -6,21 +6,29 @@
  * POST /api/owner/process-execution (applyProcessExecutionAction). No business logic, no duplicate backend:
  * the server re-derives + re-checks every action. Presentation + safety layout live in MinimumOwnerCockpit.
  *
- * Business-context decision (verified against owner-now-view.service.ts and process-execution-bridge.ts):
- * NO selector, by design. `processExecution` (the task bridge this page drives START/action/progress
- * against) is built via `buildProcessExecutionBridge(processCorrections, cashProfitProtection,
- * workspaceId, ...)` — workspace-scoped, not businessId-scoped — and every mutation here is submitted by
- * `taskKey` (POST /api/owner/process-execution never sends a businessId; the server resolves task
- * ownership from the task record itself). This is a workspace-wide execution queue, the same shape as
- * /owner/tasks, not a per-business view a selector could correctly narrow. It is also an active
- * decision/workflow surface (in-progress task actions) — letting the owner "switch business" mid-task
- * here would not change which tasks are shown (they aren't scoped that way) and could wrongly imply the
- * in-flight task itself moved, which is unsafe. A business selector was deliberately not added.
+ * Business-context decision (revised — see docs/opsiq-governance and the P0-4 Home/Finance
+ * consistency fix): this page still has NO visible selector — `processExecution` (the task bridge
+ * this page drives START/action/progress against) is built via `buildProcessExecutionBridge(
+ * processCorrections, cashProfitProtection, workspaceId, ...)` — workspace-scoped, not
+ * businessId-scoped — and every mutation here is submitted by `taskKey` (POST
+ * /api/owner/process-execution never sends a businessId; the server resolves task ownership from
+ * the task record itself). That part is unchanged: it is a workspace-wide execution queue, the
+ * same shape as /owner/tasks, and letting the owner "switch business" mid-task here would not
+ * change which tasks are shown and could wrongly imply an in-flight task moved.
+ *
+ * BUT GET /api/owner/now-view's OTHER signals (cash, finance, business condition, retention) are
+ * genuinely per-business, and a real human usability test proved that fetching now-view with no
+ * businessId let it silently fall back to a workspace-wide "most recent row" — sometimes a stale
+ * or different business's cash/finance state entirely (Home said "at risk" while Finance for the
+ * active business said SAFE). This page now reads the shared ActiveBusinessContext and passes its
+ * businessId to now-view so those signals resolve to the SAME business as every other owner page,
+ * without adding a selector control or touching the workspace-wide task queue above.
  */
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
 import { useCallback, useEffect, useState } from "react";
 import { Button, CardDashboardSkeleton, PageHeader } from "@/ui/primitives";
+import { useActiveBusiness } from "@/context/active-business-context";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
 import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
@@ -63,6 +71,7 @@ async function apiPost(path: string, body: unknown) {
 interface AvoidItem { avoid?: string }
 
 export default function OwnerCockpitPage() {
+  const { activeBusinessId, loading: contextLoading } = useActiveBusiness();
   const [bridge, setBridge] = useState<ProcessExecutionBridgeView | null>(null);
   const [avoid, setAvoid] = useState<string[]>([]);
   const [recovery, setRecovery] = useState<OwnerRecoveryStatusResponse | null>(null);
@@ -83,11 +92,12 @@ export default function OwnerCockpitPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (businessId: string | null) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiGet("/api/owner/now-view");
+      const qs = businessId ? `?businessId=${encodeURIComponent(businessId)}` : "";
+      const data = await apiGet(`/api/owner/now-view${qs}`);
       setBridge((data.processExecution as ProcessExecutionBridgeView) ?? null);
       const avoidList = (data?.view?.actionsToAvoid as AvoidItem[] | undefined) ?? [];
       setAvoid(avoidList.map((a) => a.avoid ?? "").filter(Boolean));
@@ -103,10 +113,10 @@ export default function OwnerCockpitPage() {
       setBusinessOperatingSystem((data.businessOperatingSystem as BusinessOperatingSystemView) ?? null);
       setFinanceTopPriority((data.financeTopPriority as CockpitFinancePriority) ?? null);
       // Read-only recovery status (best-effort; a failure here must not break the cockpit).
-      const rec = await apiGet("/api/owner/recovery-status").catch(() => null);
+      const rec = await apiGet(`/api/owner/recovery-status${qs}`).catch(() => null);
       setRecovery(rec && typeof rec === "object" && "recoveryStatus" in rec ? (rec as OwnerRecoveryStatusResponse) : null);
       // Read-only outside signals (best-effort; a failure here must not break the cockpit).
-      const sig = await apiGet("/api/owner/public-signals").catch(() => null);
+      const sig = await apiGet(`/api/owner/public-signals${qs}`).catch(() => null);
       setPublicSignals(sig && typeof sig === "object" && "publicSignalStatus" in sig ? (sig as OwnerPublicSignalsResponse) : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -115,7 +125,11 @@ export default function OwnerCockpitPage() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (contextLoading) return;
+    void load(activeBusinessId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner switches business elsewhere, not on every `load` identity change
+  }, [contextLoading, activeBusinessId]);
 
   const onAction = useCallback(async (taskKey: string, action: string, input: CockpitActionInput) => {
     setBusy(true);
@@ -134,14 +148,14 @@ export default function OwnerCockpitPage() {
         setMessage(data?.error?.message || data?.error?.code || data?.error || "Action was not allowed.");
       } else {
         setMessage(`Action applied — task is now ${String(data.status ?? "updated").toLowerCase()}.`);
-        await load();
+        await load(activeBusinessId);
       }
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Action failed");
     } finally {
       setBusy(false);
     }
-  }, [load]);
+  }, [load, activeBusinessId]);
 
   const onStartWork = useCallback(async (taskKey: string) => {
     setBusy(true);
@@ -152,14 +166,14 @@ export default function OwnerCockpitPage() {
         setMessage(data?.error?.message || data?.error?.code || data?.error || "Could not start work.");
       } else {
         setMessage("Work started.");
-        await load();
+        await load(activeBusinessId);
       }
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Start work failed");
     } finally {
       setBusy(false);
     }
-  }, [load]);
+  }, [load, activeBusinessId]);
 
   const onBosAction = useCallback(async (action: string, payload: Record<string, unknown>) => {
     setBusy(true);
@@ -181,14 +195,14 @@ export default function OwnerCockpitPage() {
         setMessage((d?.error as Record<string, unknown>)?.message as string || String(d?.error) || "Action failed.");
       } else {
         setMessage(`${action === "run-arbitration" ? "Arbitration complete" : action === "override" ? "Override recorded" : "Constraint updated"}.`);
-        await load();
+        await load(activeBusinessId);
       }
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "BOS action failed");
     } finally {
       setBusy(false);
     }
-  }, [load]);
+  }, [load, activeBusinessId]);
 
   const onAcknowledgeEscalation = useCallback(async (escalationId: string) => {
     setBusy(true);
@@ -199,20 +213,20 @@ export default function OwnerCockpitPage() {
         setMessage(data?.error?.message || data?.error?.code || data?.error || "Could not acknowledge escalation.");
       } else {
         setMessage("Escalation acknowledged.");
-        await load();
+        await load(activeBusinessId);
       }
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Acknowledge failed");
     } finally {
       setBusy(false);
     }
-  }, [load]);
+  }, [load, activeBusinessId]);
 
   if (loading) return <main className="p-6"><CardDashboardSkeleton label="Loading your business" sections={2} /></main>;
   if (error) return (
     <main className="flex flex-col items-start gap-3 p-6">
       <p className="text-sm text-destructive">{error}</p>
-      <Button onClick={() => void load()}>Retry</Button>
+      <Button onClick={() => void load(activeBusinessId)}>Retry</Button>
     </main>
   );
 
@@ -222,7 +236,7 @@ export default function OwnerCockpitPage() {
         title="Home"
         description="How your business is doing, what needs your attention, and what to do next."
         actions={
-          <Button variant="outline" size="sm" onClick={() => void load()} disabled={busy}>
+          <Button variant="outline" size="sm" onClick={() => void load(activeBusinessId)} disabled={busy}>
             Refresh
           </Button>
         }

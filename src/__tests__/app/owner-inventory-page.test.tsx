@@ -4,6 +4,15 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import InventoryPage from "@/app/(authenticated)/owner/inventory/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
+
+function renderPage() {
+  return render(
+    <ActiveBusinessProvider>
+      <InventoryPage />
+    </ActiveBusinessProvider>
+  );
+}
 
 const BUSINESSES = [{ id: "biz-uuid-1", name: "Acme Trading" }];
 
@@ -51,6 +60,13 @@ beforeEach(() => {
         json: () => Promise.resolve(BUSINESSES),
       } as Response);
     }
+    // The shared ActiveBusinessProvider (wraps every page) fetches this on mount.
+    if (url.includes("/api/owner/businesses") && method === "GET") {
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: () => Promise.resolve({ businesses: BUSINESSES }),
+      } as Response);
+    }
     if (url.includes("/api/owner/inventory/stock-items") && method === "GET" && !url.match(/stock-items\/[a-z]/)) {
       return Promise.resolve({
         ok: true, status: 200,
@@ -84,15 +100,16 @@ afterEach(() => {
 
 describe("InventoryPage", () => {
   it("renders the page heading", async () => {
-    const { findByText } = render(<InventoryPage />);
+    const { findByText } = renderPage();
     await findByText("Inventory");
   });
 
   it("fetches businesses then stock items on mount", async () => {
-    const { findByTestId } = render(<InventoryPage />);
+    const { findByTestId } = renderPage();
     await findByTestId("inventory-table");
+    // Business list now comes from the shared ActiveBusinessProvider, not a page-local fetch.
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/owner/recovery/businesses"),
+      expect.stringContaining("/api/owner/businesses"),
       expect.anything(),
     );
     expect(fetchMock).toHaveBeenCalledWith(
@@ -102,7 +119,7 @@ describe("InventoryPage", () => {
   });
 
   it("renders stock item skus and names", async () => {
-    const { findByText } = render(<InventoryPage />);
+    const { findByText } = renderPage();
     await findByText("SKU-001");
     await findByText("Widget A");
     await findByText("SKU-002");
@@ -110,12 +127,12 @@ describe("InventoryPage", () => {
   });
 
   it("renders current qty with unit", async () => {
-    const { findByText } = render(<InventoryPage />);
+    const { findByText } = renderPage();
     await findByText(/150\.00 pcs/);
   });
 
   it("renders lead time days", async () => {
-    const { findByText } = render(<InventoryPage />);
+    const { findByText } = renderPage();
     await findByText("7d");
   });
 
@@ -125,17 +142,20 @@ describe("InventoryPage", () => {
       if (url.includes("/api/owner/recovery/businesses")) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(BUSINESSES) } as Response);
       }
+      if (url.includes("/api/owner/businesses")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: BUSINESSES }) } as Response);
+      }
       if (url.includes("/api/owner/inventory/stock-items")) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ items: [], total: 0 }) } as Response);
       }
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
-    const { findByText } = render(<InventoryPage />);
+    const { findByText } = renderPage();
     await findByText("No stock items yet");
   });
 
   it("opens create modal when + Add Item is clicked", async () => {
-    const { findByText } = render(<InventoryPage />);
+    const { findByText } = renderPage();
     await findByText("Inventory");
     await waitFor(async () => {
       const btn = await findByText("+ Add Item");
@@ -146,7 +166,7 @@ describe("InventoryPage", () => {
   });
 
   it("opens edit modal when Edit is clicked", async () => {
-    const { findByText, findAllByText } = render(<InventoryPage />);
+    const { findByText, findAllByText } = renderPage();
     await findByText("Widget A");
     const editBtns = await findAllByText("Edit");
     fireEvent.click(editBtns[0]);
@@ -155,7 +175,7 @@ describe("InventoryPage", () => {
   });
 
   it("submits new stock item via POST", async () => {
-    const { findByText } = render(<InventoryPage />);
+    const { findByText } = renderPage();
     const addBtn = await findByText("+ Add Item");
     fireEvent.click(addBtn);
     await findByText("Add Stock Item");

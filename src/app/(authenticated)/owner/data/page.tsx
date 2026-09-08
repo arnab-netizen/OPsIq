@@ -17,12 +17,13 @@
  * onboarding contract.
  */
 /* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the established owner-page pattern */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
+import { useActiveBusiness } from "@/context/active-business-context";
 import {
   buildOwnerDataHubView,
   inputTargetForCategory,
@@ -209,8 +210,8 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
       </div>
 
       <p className="mt-2 text-sm text-muted-foreground">
-        {state.minimumSuppliedCount} of {state.minimumRequiredCount} essential items added
-        {state.minimumRequiredCount > 0 ? ` (${pct}%)` : ""}.
+        {state.minimumSuppliedCount} of {state.minimumRequiredCount} starter items added
+        {state.minimumRequiredCount > 0 ? ` (${pct}% of the starter minimum)` : ""}.
       </p>
 
       <div
@@ -219,10 +220,17 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
         aria-valuenow={pct}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label="Essential data added"
+        aria-label="Starter items added"
       >
         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
       </div>
+
+      {pct >= 100 && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          OpsIQ can give you a first read now. Add Money, Customers and Operations information to
+          make the advice more reliable.
+        </p>
+      )}
     </div>
   );
 }
@@ -443,15 +451,16 @@ function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
 }
 
 export default function OwnerDataHubPage() {
-  const [businesses, setBusinesses] = useState<BusinessLite[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  // My Business is where the owner actually picks their active business — this used to keep
+  // that choice only in a same-page ref (survived an in-page edit-triggered reload, but not
+  // navigating to Money/Customers/Operations, which each independently re-derived their own
+  // default). The shared context is now the single source of truth for both the business list
+  // and which one is active, so a selection made here is what every other owner page sees too.
+  const { businesses, activeBusinessId, setActiveBusinessId, refreshBusinesses, loading: businessesLoading } = useActiveBusiness();
+  const selected = activeBusinessId;
   const [state, setState] = useState<OnboardingView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const selectedRef = useRef<string | null>(null);
-  useEffect(() => {
-    selectedRef.current = selected;
-  }, [selected]);
 
   const loadState = useCallback(async (businessId: string) => {
     try {
@@ -466,34 +475,19 @@ export default function OwnerDataHubPage() {
   }, []);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api("/api/owner/businesses");
-      const list: BusinessLite[] = res.businesses ?? [];
-      setBusinesses(list);
-      if (list.length > 0) {
-        // Reloading (e.g. after editing the currently-selected business's type) must not silently
-        // jump the owner back to their first business — keep the current selection if it still exists.
-        const stillValid = list.some((b) => b.id === selectedRef.current);
-        const targetId = stillValid ? (selectedRef.current as string) : list[0].id;
-        setSelected(targetId);
-        await loadState(targetId);
-      }
-    } catch (e) {
-      const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), {
-        context: "load",
-      });
-      setError(governed.operatorMessage);
-      setBusinesses([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadState]);
+    await refreshBusinesses();
+  }, [refreshBusinesses]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (businessesLoading) return;
+    setLoading(true);
+    setError(null);
+    if (!activeBusinessId) {
+      setLoading(false);
+      return;
+    }
+    void loadState(activeBusinessId).finally(() => setLoading(false));
+  }, [businessesLoading, activeBusinessId, loadState]);
 
   const groups = useMemo(() => {
     if (!state) return [];
@@ -505,11 +499,11 @@ export default function OwnerDataHubPage() {
   }, [state]);
 
   const selectedBusiness = useMemo(
-    () => businesses?.find((b) => b.id === selected) ?? null,
+    () => businesses.find((b) => b.id === selected) ?? null,
     [businesses, selected],
   );
 
-  const hasBusiness = (businesses?.length ?? 0) > 0;
+  const hasBusiness = businesses.length > 0;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -540,12 +534,9 @@ export default function OwnerDataHubPage() {
         <div className="mt-6 space-y-8">
           <div className="flex flex-wrap gap-4">
             <BusinessContextSelector
-              businesses={businesses ?? []}
+              businesses={businesses}
               selectedId={selected}
-              onChange={(businessId) => {
-                setSelected(businessId);
-                void loadState(businessId);
-              }}
+              onChange={(businessId) => setActiveBusinessId(businessId)}
             />
             {selectedBusiness && (
               <BusinessTypeEditor

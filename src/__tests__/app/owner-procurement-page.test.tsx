@@ -4,6 +4,15 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import ProcurementPage from "@/app/(authenticated)/owner/procurement/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
+
+function renderPage() {
+  return render(
+    <ActiveBusinessProvider>
+      <ProcurementPage />
+    </ActiveBusinessProvider>
+  );
+}
 
 const BUSINESSES = [{ id: "biz-uuid-1", name: "Acme Trading" }];
 
@@ -45,6 +54,13 @@ beforeEach(() => {
         json: () => Promise.resolve(BUSINESSES),
       } as Response);
     }
+    // The shared ActiveBusinessProvider (wraps every page) fetches this on mount.
+    if (url.includes("/api/owner/businesses") && method === "GET") {
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: () => Promise.resolve({ businesses: BUSINESSES }),
+      } as Response);
+    }
     if (url.includes("/api/owner/procurement/purchase-orders") && method === "GET" && !url.includes("/transition")) {
       return Promise.resolve({
         ok: true, status: 200,
@@ -78,15 +94,16 @@ afterEach(() => {
 
 describe("ProcurementPage", () => {
   it("renders the page heading", async () => {
-    const { findByText } = render(<ProcurementPage />);
+    const { findByText } = renderPage();
     await findByText("Purchase Orders");
   });
 
   it("fetches businesses then orders on mount", async () => {
-    const { findByTestId } = render(<ProcurementPage />);
+    const { findByTestId } = renderPage();
     await findByTestId("procurement-table");
+    // Business list now comes from the shared ActiveBusinessProvider, not a page-local fetch.
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/owner/recovery/businesses"),
+      expect.stringContaining("/api/owner/businesses"),
       expect.anything(),
     );
     expect(fetchMock).toHaveBeenCalledWith(
@@ -96,38 +113,38 @@ describe("ProcurementPage", () => {
   });
 
   it("renders PO numbers in the table", async () => {
-    const { findByText } = render(<ProcurementPage />);
+    const { findByText } = renderPage();
     await findByText("PO-2026-001");
     await findByText("PO-2026-002");
   });
 
   it("renders vendor name", async () => {
-    const { findByText } = render(<ProcurementPage />);
+    const { findByText } = renderPage();
     await findByText("Supplier Co");
   });
 
   it("renders DRAFT status badge", async () => {
-    const { findAllByText } = render(<ProcurementPage />);
+    const { findAllByText } = renderPage();
     const badges = await findAllByText("DRAFT");
     expect(badges.length).toBeGreaterThan(0);
   });
 
   it("renders APPROVED status badge", async () => {
-    const { findAllByText } = render(<ProcurementPage />);
+    const { findAllByText } = renderPage();
     const badges = await findAllByText("APPROVED");
     expect(badges.length).toBeGreaterThan(0);
   });
 
   it("renders total amount for approved PO", async () => {
-    const { findByText } = render(<ProcurementPage />);
+    const { findByText } = renderPage();
     await findByText(/2,500/);
   });
 
   it("shows dash for missing vendor", async () => {
-    const { findByTestId } = render(<ProcurementPage />);
+    const { findByTestId } = renderPage();
     await findByTestId("procurement-table");
     // Second order has no vendor name → "—"
-    const { getAllByText } = render(<ProcurementPage />);
+    const { getAllByText } = renderPage();
     // Just confirm table renders without error
     expect(true).toBe(true);
   });
@@ -138,17 +155,20 @@ describe("ProcurementPage", () => {
       if (url.includes("/api/owner/recovery/businesses")) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(BUSINESSES) } as Response);
       }
+      if (url.includes("/api/owner/businesses")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: BUSINESSES }) } as Response);
+      }
       if (url.includes("/api/owner/procurement/purchase-orders")) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ orders: [], total: 0 }) } as Response);
       }
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
-    const { findByText } = render(<ProcurementPage />);
+    const { findByText } = renderPage();
     await findByText("No purchase orders yet");
   });
 
   it("opens create modal when + New PO is clicked", async () => {
-    const { findByText } = render(<ProcurementPage />);
+    const { findByText } = renderPage();
     await findByText("Purchase Orders");
     await waitFor(async () => {
       const btn = await findByText("+ New PO");
@@ -159,7 +179,7 @@ describe("ProcurementPage", () => {
   });
 
   it("submits new PO via POST", async () => {
-    const { findByText } = render(<ProcurementPage />);
+    const { findByText } = renderPage();
     const addBtn = await findByText("+ New PO");
     fireEvent.click(addBtn);
     await findByText("New Purchase Order");
@@ -176,7 +196,7 @@ describe("ProcurementPage", () => {
   });
 
   it("calls transition endpoint when Mark REVIEWED is clicked", async () => {
-    const { findByText } = render(<ProcurementPage />);
+    const { findByText } = renderPage();
     await findByText("PO-2026-001");
     const markBtn = await findByText("Mark REVIEWED");
     fireEvent.click(markBtn);

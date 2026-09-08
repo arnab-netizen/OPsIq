@@ -7,6 +7,15 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import CustomersPage from "@/app/(authenticated)/owner/customers/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
+
+function renderPage() {
+  return render(
+    <ActiveBusinessProvider>
+      <CustomersPage />
+    </ActiveBusinessProvider>
+  );
+}
 
 const BUSINESSES = [{ id: "biz-uuid-1", name: "Acme Trading" }];
 
@@ -48,6 +57,14 @@ beforeEach(() => {
         json: () => Promise.resolve(BUSINESSES),
       } as Response);
     }
+    // The shared ActiveBusinessProvider (wraps every page — see finance/page.tsx's root-cause
+    // comment) fetches this on mount to resolve the active business.
+    if (url.includes("/api/owner/businesses") && method === "GET") {
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: () => Promise.resolve({ businesses: BUSINESSES }),
+      } as Response);
+    }
     if (url.includes("/api/owner/sales/customers") && method === "GET" && !url.match(/customers\/[a-z]/)) {
       return Promise.resolve({
         ok: true, status: 200,
@@ -81,15 +98,16 @@ afterEach(() => {
 
 describe("CustomersPage", () => {
   it("renders the page heading", async () => {
-    const { findByText } = render(<CustomersPage />);
+    const { findByText } = renderPage();
     await findByText("Customers");
   });
 
   it("fetches businesses then customers on mount", async () => {
-    const { findByTestId } = render(<CustomersPage />);
+    const { findByTestId } = renderPage();
     await findByTestId("customers-table");
+    // Business list now comes from the shared ActiveBusinessProvider, not a page-local fetch.
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/owner/recovery/businesses"),
+      expect.stringContaining("/api/owner/businesses"),
       expect.anything(),
     );
     expect(fetchMock).toHaveBeenCalledWith(
@@ -99,30 +117,30 @@ describe("CustomersPage", () => {
   });
 
   it("renders customer names in the table", async () => {
-    const { findByText } = render(<CustomersPage />);
+    const { findByText } = renderPage();
     await findByText("Jane Smith");
     await findByText("Bob Jones");
   });
 
   it("renders VIP segment badge", async () => {
-    const { findByText } = render(<CustomersPage />);
+    const { findByText } = renderPage();
     await findByText("VIP");
   });
 
   it("renders LTV value for Jane Smith", async () => {
-    const { findByText } = render(<CustomersPage />);
+    const { findByText } = renderPage();
     await findByText("$12,500");
   });
 
   it("shows dash for missing email", async () => {
-    const { findByTestId, findAllByText } = render(<CustomersPage />);
+    const { findByTestId, findAllByText } = renderPage();
     await findByTestId("customers-table");
     const dashes = await findAllByText("—");
     expect(dashes.length).toBeGreaterThan(0);
   });
 
   it("opens create modal when + New Customer is clicked", async () => {
-    const { findByText } = render(<CustomersPage />);
+    const { findByText } = renderPage();
     await findByText("Customers");
     await waitFor(async () => {
       const btn = await findByText("+ New Customer");
@@ -133,7 +151,7 @@ describe("CustomersPage", () => {
   });
 
   it("opens edit modal when Edit is clicked", async () => {
-    const { findByText, findAllByText } = render(<CustomersPage />);
+    const { findByText, findAllByText } = renderPage();
     await findByText("Jane Smith");
     const editBtns = await findAllByText("Edit");
     fireEvent.click(editBtns[0]);
@@ -147,17 +165,24 @@ describe("CustomersPage", () => {
       if (url.includes("/api/owner/recovery/businesses")) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(BUSINESSES) } as Response);
       }
+      if (url.includes("/api/owner/businesses")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: BUSINESSES }) } as Response);
+      }
       if (url.includes("/api/owner/sales/customers")) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ customers: [], total: 0 }) } as Response);
       }
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
-    const { findByText } = render(<CustomersPage />);
+    const { findByText } = renderPage();
     await findByText("No customers yet");
   });
 
   it("submits new customer via POST", async () => {
-    const { findByText } = render(<CustomersPage />);
+    const { findByText, findByTestId } = renderPage();
+    // Wait for the customers table (not just the page heading) so the shared active-business
+    // context and this page's own customer list have both fully resolved before interacting —
+    // otherwise a click can land mid-async-chain and miss the modal open.
+    await findByTestId("customers-table");
     const addBtn = await findByText("+ New Customer");
     fireEvent.click(addBtn);
     await findByText("New Customer");

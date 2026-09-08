@@ -14,6 +14,15 @@ vi.mock("next/link", () => ({
 }));
 
 import OwnerDataHubPage from "@/app/(authenticated)/owner/data/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
+
+function renderPage() {
+  return render(
+    <ActiveBusinessProvider>
+      <OwnerDataHubPage />
+    </ActiveBusinessProvider>
+  );
+}
 
 const fetchMock = vi.fn();
 const json = (body: unknown, ok = true) =>
@@ -67,7 +76,7 @@ function mockWithBusiness() {
 describe("no business yet", () => {
   it("shows the business profile as the blocking first step", async () => {
     fetchMock.mockImplementation(() => json({ businesses: [] }));
-    render(<OwnerDataHubPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-create-business")).toBeTruthy());
     expect(screen.getByTestId("data-hub-create-business").textContent).toMatch(
       /Start with your business profile/i,
@@ -77,7 +86,7 @@ describe("no business yet", () => {
 
   it("does not offer readiness or categories before a business exists", async () => {
     fetchMock.mockImplementation(() => json({ businesses: [] }));
-    const { container } = render(<OwnerDataHubPage />);
+    const { container } = renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-create-business")).toBeTruthy());
     expect(container.querySelector('[data-testid="data-hub-readiness"]')).toBeNull();
     expect(container.querySelector('[data-testid="data-hub-group-money"]')).toBeNull();
@@ -87,10 +96,10 @@ describe("no business yet", () => {
 describe("with a business", () => {
   it("renders real readiness counts from the onboarding contract", async () => {
     mockWithBusiness();
-    render(<OwnerDataHubPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
     const band = screen.getByTestId("data-hub-readiness");
-    expect(band.textContent).toContain("1 of 3 essential items added");
+    expect(band.textContent).toContain("1 of 3 starter items added");
     expect(band.querySelector('[role="progressbar"]')!.getAttribute("aria-valuenow")).toBe("33");
     // Plain-language phrase, never the raw "low" enum token.
     expect(band.textContent).toContain("Early days");
@@ -99,7 +108,7 @@ describe("with a business", () => {
 
   it("states plainly that there is not enough data for a trustworthy first assessment", async () => {
     mockWithBusiness();
-    render(<OwnerDataHubPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-insufficient")).toBeTruthy());
     expect(screen.getByTestId("data-hub-insufficient").textContent).toMatch(
       /does not yet have enough reliable business information for a trustworthy first assessment/i,
@@ -108,7 +117,7 @@ describe("with a business", () => {
 
   it("shows what is missing, why, and which decision it affects", async () => {
     mockWithBusiness();
-    render(<OwnerDataHubPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-missing")).toBeTruthy());
     const missing = screen.getByTestId("data-hub-missing");
     expect(missing.textContent).toContain("Expense records");
@@ -122,7 +131,7 @@ describe("with a business", () => {
 
   it("renders all four category groups with real supplied counts", async () => {
     mockWithBusiness();
-    render(<OwnerDataHubPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-group-money")).toBeTruthy());
     for (const group of ["money", "people", "customers", "operations"]) {
       expect(screen.getByTestId(`data-hub-group-${group}`)).toBeTruthy();
@@ -134,7 +143,7 @@ describe("with a business", () => {
 
   it("links to both existing intake surfaces without duplicating them", async () => {
     mockWithBusiness();
-    const { container } = render(<OwnerDataHubPage />);
+    const { container } = renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href") ?? "");
     expect(hrefs).toContain("/owner/manual-entry");
@@ -146,7 +155,7 @@ describe("with a business", () => {
 
   it("is honest that integrations are not available rather than rendering a dead control", async () => {
     mockWithBusiness();
-    render(<OwnerDataHubPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-integrations")).toBeTruthy());
     const card = screen.getByTestId("data-hub-integrations");
     expect(card.textContent).toMatch(/not available yet/i);
@@ -159,7 +168,7 @@ describe("with a business", () => {
         ? json({ businesses: [{ id: "b1", name: "Test Co" }] })
         : json({ ...ONBOARDING, canRunFirstDiagnosis: true, missingMinimum: [] }),
     );
-    const { container } = render(<OwnerDataHubPage />);
+    const { container } = renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-readiness")).toBeTruthy());
     expect(container.querySelector('[data-testid="data-hub-insufficient"]')).toBeNull();
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
@@ -176,7 +185,7 @@ describe("with a business", () => {
         ? json({ businesses: [{ id: "b1", name: "Test Co" }] })
         : json({ error: "boom" }, false),
     );
-    render(<OwnerDataHubPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
   });
 });
@@ -199,7 +208,7 @@ describe("editing an existing business's type", () => {
 
   it("renders the current business type via the canonical 8-option list, not a duplicated one", async () => {
     mockWithEditableBusiness("retail_storefront");
-    render(<OwnerDataHubPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-business-type-editor")).toBeTruthy());
     const editor = screen.getByTestId("data-hub-business-type-editor");
     const select = editor.querySelector("select") as HTMLSelectElement;
@@ -219,7 +228,7 @@ describe("editing an existing business's type", () => {
 
   it("changing the selection PATCHes the governed business-update endpoint and confirms success", async () => {
     const patchCalls = mockWithEditableBusiness("generic_local_service");
-    render(<OwnerDataHubPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-business-type-editor")).toBeTruthy());
     const select = screen.getByTestId("data-hub-business-type-editor").querySelector("select")!;
 
@@ -241,7 +250,7 @@ describe("editing an existing business's type", () => {
       }
       return json(ONBOARDING);
     });
-    render(<OwnerDataHubPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-business-type-editor")).toBeTruthy());
     const select = screen.getByTestId("data-hub-business-type-editor").querySelector("select")!;
 

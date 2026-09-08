@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AppHeader } from "./app-header";
 import { SidebarNav } from "./sidebar-nav";
 import { useDialogA11y } from "@/ui/primitives/use-dialog-a11y";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
 
 interface AppShellProps {
   children: ReactNode;
@@ -53,52 +54,54 @@ export function AppShell({
   });
 
   return (
-    <div className="flex h-screen flex-col">
-      <AppHeader
-        ref={menuButtonRef}
-        userName={userName}
-        onMenuClick={() => setDrawerOpen(true)}
-        menuOpen={drawerOpen}
-        menuControlsId={MOBILE_NAV_DRAWER_ID}
-        backgroundHidden={drawerOpen}
-      />
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop sidebar */}
-        <aside
-          aria-hidden={drawerOpen || undefined}
-          className="hidden w-60 flex-shrink-0 border-r border-border bg-accent/50 md:block overflow-y-auto"
-        >
-          <SidebarNav canViewOwnerRecovery={canViewOwnerRecovery} capabilities={capabilities} />
-        </aside>
+    <ActiveBusinessProvider>
+      <div className="flex h-screen flex-col">
+        <AppHeader
+          ref={menuButtonRef}
+          userName={userName}
+          onMenuClick={() => setDrawerOpen(true)}
+          menuOpen={drawerOpen}
+          menuControlsId={MOBILE_NAV_DRAWER_ID}
+          backgroundHidden={drawerOpen}
+        />
+        <div className="flex flex-1 overflow-hidden">
+          {/* Desktop sidebar */}
+          <aside
+            aria-hidden={drawerOpen || undefined}
+            className="hidden w-60 flex-shrink-0 border-r border-border bg-accent/50 md:block overflow-y-auto"
+          >
+            <SidebarNav canViewOwnerRecovery={canViewOwnerRecovery} capabilities={capabilities} />
+          </aside>
 
-        {/* Mobile drawer. Modal dialog pattern: role="dialog" + aria-modal="true" +
-            an accessible name via aria-label, since it fully overlays and blocks
-            background interaction rather than behaving as ordinary in-flow nav content. */}
-        {drawerOpen && (
-          <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={closeDrawer}>
-            <div
-              ref={drawerRef}
-              id={MOBILE_NAV_DRAWER_ID}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Navigation menu"
-              tabIndex={-1}
-              className="absolute left-0 top-0 h-full w-64 bg-background shadow-xl overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <SidebarNav
-                canViewOwnerRecovery={canViewOwnerRecovery}
-                capabilities={capabilities}
-                onLinkClick={closeDrawer}
-              />
+          {/* Mobile drawer. Modal dialog pattern: role="dialog" + aria-modal="true" +
+              an accessible name via aria-label, since it fully overlays and blocks
+              background interaction rather than behaving as ordinary in-flow nav content. */}
+          {drawerOpen && (
+            <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={closeDrawer}>
+              <div
+                ref={drawerRef}
+                id={MOBILE_NAV_DRAWER_ID}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Navigation menu"
+                tabIndex={-1}
+                className="absolute left-0 top-0 h-full w-64 bg-background shadow-xl overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <SidebarNav
+                  canViewOwnerRecovery={canViewOwnerRecovery}
+                  capabilities={capabilities}
+                  onLinkClick={closeDrawer}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <main aria-hidden={drawerOpen || undefined} className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
+          <main aria-hidden={drawerOpen || undefined} className="flex-1 overflow-y-auto p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </ActiveBusinessProvider>
   );
 }

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
+import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
@@ -58,6 +60,7 @@ const OPERATIONS_FIELDS: Array<{ name: string; label: string }> = [
 ];
 
 export default function OwnerOperationsPage() {
+  const { activeBusinessId, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,16 +81,21 @@ export default function OwnerOperationsPage() {
       const data = await api(`/api/owner/operations/dashboard${qs}`);
       setDashboard(data);
       setSelected(data.selectedBusinessId);
+      // Keep the shared active-business context in sync — see finance/page.tsx for the root
+      // cause this closes (each owner page independently defaulting to a different business).
+      if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setActiveBusinessId]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (contextLoading) return;
+    void load(activeBusinessId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner explicitly switches business
+  }, [contextLoading, activeBusinessId]);
 
   async function createBusiness(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -108,6 +116,8 @@ export default function OwnerOperationsPage() {
         }),
       });
       setShowBusinessForm(false);
+      setActiveBusinessId(created.id);
+      await refreshBusinesses();
       await load(created.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create business");
@@ -323,7 +333,7 @@ export default function OwnerOperationsPage() {
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
-              onChange={(businessId) => load(businessId)}
+              onChange={(businessId) => setActiveBusinessId(businessId)}
             />
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add operations snapshot
@@ -476,7 +486,7 @@ function OperationsCycleView({
           <div className="font-semibold">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
           <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {recommended.verificationMetric}
+            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
           </p>
         </div>
       )}
@@ -496,13 +506,13 @@ function OperationsCycleView({
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
               <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {f.sourceMetric} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · confidence {Math.round((f.confidence ?? 0) * 100)}%
+                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · confidence {Math.round((f.confidence ?? 0) * 100)}%
               </p>
               {Array.isArray(f.evidence) && f.evidence.length > 0 && (
-                <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.join("; ")}</p>
+                <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
               )}
               {f.verificationMetric && (
-                <p className="text-xs text-muted-foreground"><strong>Verify via:</strong> {f.verificationMetric}</p>
+                <p className="text-xs text-muted-foreground"><strong>Verify via:</strong> {humanizeMetricKey(f.verificationMetric)}</p>
               )}
             </div>
           ))}
@@ -527,7 +537,7 @@ function OperationsCycleView({
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
-                  Verify <strong>{a.verificationMetric}</strong> — {a.verificationMethod}
+                  Verify <strong>{humanizeMetricKey(a.verificationMetric)}</strong> — {humanizeEvidenceLine(a.verificationMethod ?? "")}
                 </p>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {a.status === "proposed" && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}

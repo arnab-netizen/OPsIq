@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import { useOperatorMutation } from "@/hooks/useOperatorMutation";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 interface AppHeaderProps {
   userName?: string | null;
@@ -23,6 +24,13 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
   { userName, onMenuClick, menuOpen = false, menuControlsId, backgroundHidden = false },
   menuButtonRef,
 ) {
+  // Always-visible active-business readout — a real human usability test found the owner had
+  // no way to tell which business the rest of the app was currently showing them. Read-only here
+  // (switching happens via the BusinessContextSelector on the pages that have one); this just
+  // keeps the current context visible everywhere, including pages with no selector of their own
+  // (Home, Priorities, Actions).
+  const { activeBusiness, businesses, loading: businessLoading } = useActiveBusiness();
+
   // End the session via the governed mutation hook; always return the user to
   // /login afterwards (success or failure), never surfacing a raw error.
   const logoutMutation = useOperatorMutation<{ success: boolean }, Record<string, never>>({
@@ -58,9 +66,15 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
             surrounding <header> already carries the "banner" landmark, so assistive tech
             doesn't need a heading here to identify the site name. */}
         <p className="text-lg font-semibold text-[var(--primary-text)]">OpsIQ</p>
-        <span className="hidden text-xs text-muted-foreground sm:inline">
-          Business health &amp; priorities
-        </span>
+        {!businessLoading && businesses.length > 0 && (
+          <span
+            data-testid="active-business-indicator"
+            className="ml-2 hidden items-center gap-1.5 rounded-full border border-border bg-accent/60 px-2.5 py-1 text-xs font-medium text-foreground sm:flex"
+          >
+            <span className="text-muted-foreground">Business:</span>
+            {activeBusiness?.name ?? "—"}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-3 sm:gap-4">
         {userName && (

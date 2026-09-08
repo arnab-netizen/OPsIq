@@ -7,6 +7,7 @@ import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 async function apiFetch(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -27,8 +28,11 @@ const RISK_COLOR: Record<string, string> = {
 };
 
 export default function InventoryPage() {
-  const [businesses, setBusinesses] = useState<any[]>([]);
-  const [businessId, setBusinessId] = useState<string | null>(null);
+  // The shared context is the single source of truth for the business list — see
+  // customers/page.tsx for why a second, independently-fetched copy was removed (it raced the
+  // context's own fetch on every mount).
+  const { businesses, activeBusinessId, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
+  const businessId = activeBusinessId;
   const [items, setItems] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<Record<string, any>>({});
   const [error, setError] = useState<string | null>(null);
@@ -36,17 +40,6 @@ export default function InventoryPage() {
   const [editItem, setEditItem] = useState<any | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-
-  const loadBusinesses = useCallback(async () => {
-    try {
-      const data = await apiFetch("/api/owner/recovery/businesses");
-      const list = Array.isArray(data) ? data : data.businesses ?? [];
-      setBusinesses(list);
-      if (list.length > 0) setBusinessId(list[0].id);
-    } catch (e: any) {
-      setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
-    }
-  }, []);
 
   const loadItems = useCallback(async (bid: string) => {
     try {
@@ -64,8 +57,11 @@ export default function InventoryPage() {
     }
   }, []);
 
-  useEffect(() => { loadBusinesses(); }, [loadBusinesses]);
-  useEffect(() => { if (businessId) loadItems(businessId); }, [businessId, loadItems]);
+  useEffect(() => {
+    if (contextLoading || !activeBusinessId) return;
+    void loadItems(activeBusinessId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only on context resolution/switch, not on every loadItems identity change
+  }, [contextLoading, activeBusinessId]);
 
   const openCreate = () => {
     setForm({ sku: "", name: "", unit: "unit", currentQty: "0", reorderPoint: "0", safetyStock: "0", leadTimeDays: "0", dailyUsage: "0" });
@@ -135,7 +131,7 @@ export default function InventoryPage() {
           <BusinessContextSelector
             businesses={businesses}
             selectedId={businessId}
-            onChange={(id) => setBusinessId(id)}
+            onChange={(id) => setActiveBusinessId(id)}
           />
           <Button onClick={openCreate}>+ Add Item</Button>
         </div>

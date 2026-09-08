@@ -14,11 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
-
-interface Business {
-  id: string;
-  name: string;
-}
+import { useActiveBusiness } from "@/context/active-business-context";
 
 interface CustomerRecord {
   id: string;
@@ -78,8 +74,13 @@ function formatDate(iso: string): string {
 }
 
 export default function CustomersPage() {
-  const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [selectedBizId, setSelectedBizId] = useState<string | null>(null);
+  // The shared context is now the single source of truth for the business list too (not a
+  // second, independently-fetched copy) — root cause of the human-tester-reported bug: this page
+  // used to fetch its OWN business list and always default to businesses[0] regardless of what
+  // the owner had just selected on My Business/Money. A second parallel fetch here previously
+  // raced the context's own fetch on every mount, which was also a source of test flakiness.
+  const { businesses, activeBusinessId, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
+  const selectedBizId = activeBusinessId;
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,33 +108,15 @@ export default function CustomersPage() {
     }
   }, []);
 
-  const loadInitial = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const bizList: Business[] = await apiFetch("/api/owner/recovery/businesses");
-      const list = Array.isArray(bizList) ? bizList : (bizList as { businesses?: Business[] }).businesses ?? [];
-      setBusinesses(list);
-      if (list.length > 0) {
-        const bizId = list[0].id;
-        setSelectedBizId(bizId);
-        await loadCustomers(bizId);
-      } else {
-        setLoading(false);
-      }
-    } catch (err) {
-      setError(classifyOperatorError(err, { context: "load" }).operatorMessage);
-      setLoading(false);
-    }
-  }, [loadCustomers]);
-
   useEffect(() => {
-    loadInitial();
-  }, [loadInitial]);
+    if (contextLoading) return;
+    if (!activeBusinessId) { setLoading(false); return; }
+    void loadCustomers(activeBusinessId, segmentFilter || undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only on context resolution/switch, not on every segmentFilter/loadCustomers identity change
+  }, [contextLoading, activeBusinessId]);
 
   async function handleBizChange(bizId: string) {
-    setSelectedBizId(bizId);
-    await loadCustomers(bizId, segmentFilter || undefined);
+    setActiveBusinessId(bizId);
   }
 
   async function handleSegmentFilter(seg: string) {
