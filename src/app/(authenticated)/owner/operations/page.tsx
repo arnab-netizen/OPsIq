@@ -5,6 +5,7 @@ import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primit
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { FindingCard } from "@/components/owner/FindingCard";
+import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
 import { useActiveBusiness } from "@/context/active-business-context";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
@@ -437,11 +438,12 @@ export default function OwnerOperationsPage() {
           {workloadResult && <div className="mb-4 text-sm text-[var(--success-text)]" data-testid="workload-result">{workloadResult}</div>}
 
           {!dashboard?.hasData ? (
-            <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard?.latestSnapshot
-                ? "Snapshot recorded. Click “Run operations diagnosis” to generate findings and an action plan."
-                : "No operations snapshot yet. Add a snapshot, then run an operations diagnosis."}
-            </div>
+            <DiagnosisEmptyState
+              domainLabel="operations"
+              hasSnapshot={Boolean(dashboard?.latestSnapshot)}
+              snapshotLabel="operations snapshot"
+              diagnosisLabel="Run operations diagnosis"
+            />
           ) : (
             <OperationsCycleView
               cycle={cycle}

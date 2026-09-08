@@ -10,22 +10,50 @@ interface ModalProps {
   footer?: ReactNode;
 }
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+    // Focus trap + initial focus + focus restoration -- a modal dialog previously left the
+    // background reachable by Tab (real WCAG 2.4.3/2.1.2 gap, found during a manual accessibility
+    // pass) and never moved focus into itself or gave it back to the trigger on close.
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    (firstFocusable ?? dialogRef.current)?.focus();
+
+    function handleKeydown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
 
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("keydown", handleKeydown);
     document.body.style.overflow = "hidden";
 
     return () => {
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("keydown", handleKeydown);
       document.body.style.overflow = "";
+      previouslyFocusedRef.current?.focus();
     };
   }, [isOpen, onClose]);
 
@@ -40,8 +68,11 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
       }}
     >
       <div
-        className="mx-4 w-full max-w-lg rounded-lg border border-border bg-background shadow-xl"
+        ref={dialogRef}
+        tabIndex={-1}
+        className="mx-4 w-full max-w-lg rounded-lg border border-border bg-background shadow-xl outline-none"
         role="dialog"
+        aria-modal="true"
         aria-label={title}
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">

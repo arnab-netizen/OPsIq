@@ -206,6 +206,18 @@ export default function OwnerTasksPage() {
         </ul>
       )}
 
+      {/* A short list (the common case for a real, non-fixture business) otherwise trails into a
+          mostly-empty page below -- the same "arbitrary empty whitespace" issue found and fixed
+          on Priorities during a formal cross-screen audit, and fixed the same way here: a closing
+          line so the page reads as complete rather than unfinished. Only shown on an unfiltered,
+          unpaginated short list -- a filtered view already explains itself, and a full page of
+          results already has pagination controls doing that job. */}
+      {!loading && !error && tasks.length > 0 && tasks.length < LIMIT && !statusFilter && offset === 0 && (
+        <p className="border-t border-border pt-4 text-sm text-muted-foreground">
+          That{"'"}s every task currently delegated. New tasks you create, or ones OpsIQ proposes, will appear here.
+        </p>
+      )}
+
       {/* Pagination */}
       {!loading && !error && (
         <div className="flex gap-3 mt-4">

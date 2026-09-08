@@ -124,74 +124,64 @@ export default function StartHerePage() {
       {error && <p className="text-sm text-destructive mb-4">{error}</p>}
 
       {canRunFirstDiagnosis && (
-        <div className="mb-6 rounded-lg border border-border bg-card p-4" data-testid="start-here-first-read-available">
+        <div className="mb-6 border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }} data-testid="start-here-first-read-available">
           <p className="text-sm font-medium text-foreground">
             You already have enough information for a first financial read.
           </p>
-          <div className="mt-3">
-            <Link href="/owner/cockpit">
-              <Button size="sm">See my first result</Button>
-            </Link>
-          </div>
+          <Link href="/owner/cockpit" className="mt-2 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline">
+            See my first result →
+          </Link>
         </div>
       )}
 
-      <ol className="flex flex-col gap-3" data-testid="start-here-steps">
+      {/* A numbered, left-rule list -- the same treatment Priorities uses for its ranked list --
+          instead of five uniform bordered cards with a checkmark-in-a-circle icon each. That card
+          pattern is a generic "onboarding checklist" recipe shared by countless SaaS products
+          (found during a formal cross-screen audit); this app's own list pattern already fits an
+          ordered setup sequence at least as well and reads as the same product as every other
+          page here. */}
+      <ol className="flex flex-col gap-5" data-testid="start-here-steps">
         {steps.map((step, i) => {
           const isNext = next?.id === step.id;
           return (
             <li
               key={step.id}
               data-testid={`start-here-step-${step.id}`}
-              className={`rounded-lg border p-4 ${
-                isNext ? "border-primary bg-primary/5" : "border-border bg-card"
-              }`}
+              className="border-l-2 pl-5 py-0.5"
+              style={{ borderColor: step.complete ? "var(--success-text)" : isNext ? "var(--accent-ink)" : "var(--border)" }}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex flex-wrap items-baseline gap-2">
                 <span
-                  aria-hidden="true"
-                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                    step.complete
-                      ? "bg-[var(--success-text)]/15 text-[var(--success-text)]"
-                      : isNext
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                  }`}
+                  className="font-display text-base font-semibold tabular-nums"
+                  style={{ color: step.complete ? "var(--success-text)" : isNext ? "var(--accent-ink)" : "var(--muted-foreground)" }}
                 >
                   {step.complete ? "✓" : i + 1}
                 </span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {step.label}
-                    {!step.applicable && (
-                      <span className="ml-2 text-xs font-normal text-muted-foreground">(Not needed for your business)</span>
-                    )}
-                  </p>
-                  {isNext && (
-                    <>
-                      {/* text-muted-foreground drops below 4.5:1 on this card's own bg-primary/5
-                          tint (axe-verified) -- same accessible token used elsewhere in the repo
-                          for text sitting on a tinted, non-default background. */}
-                      <p className="mt-1 text-sm text-[var(--muted-foreground-accessible)]">{step.why}</p>
-                      <p className="mt-1 text-xs text-[var(--muted-foreground-accessible)]">
-                        If you skip this for now: {step.ifSkipped}
-                      </p>
-                      <div className="mt-3">
-                        <Link href={step.href}>
-                          <Button size="sm">Continue</Button>
-                        </Link>
-                      </div>
-                    </>
+                <p className={`text-sm font-medium ${isNext ? "text-foreground" : "text-muted-foreground"}`}>
+                  {step.label}
+                  {!step.applicable && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">(Not needed for your business)</span>
                   )}
-                </div>
+                </p>
               </div>
+              {isNext && (
+                <>
+                  <p className="mt-1.5 text-sm text-muted-foreground">{step.why}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    If you skip this for now: {step.ifSkipped}
+                  </p>
+                  <Link href={step.href} className="mt-2.5 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline">
+                    Continue →
+                  </Link>
+                </>
+              )}
             </li>
           );
         })}
       </ol>
 
       {!next && (
-        <div className="mt-6 rounded-lg border border-border bg-card p-4">
+        <div className="mt-6 border-l-2 pl-5 py-1" style={{ borderColor: "var(--success-text)" }}>
           <p className="text-sm font-medium text-foreground">Setup is complete.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             You can always come back here, or improve OpsIQ&rsquo;s understanding further at any time.

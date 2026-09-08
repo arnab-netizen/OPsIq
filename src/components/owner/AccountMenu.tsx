@@ -21,6 +21,7 @@ export function AccountMenu({ userName }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const firstItemRef = useRef<HTMLAnchorElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const logoutMutation = useOperatorMutation<{ success: boolean }, Record<string, never>>({
     url: "/api/auth/logout",
@@ -34,6 +35,7 @@ export function AccountMenu({ userName }: AccountMenuProps) {
   useEffect(() => {
     if (!open) return;
     firstItemRef.current?.focus();
+    const trigger = triggerRef.current;
 
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
@@ -46,12 +48,18 @@ export function AccountMenu({ userName }: AccountMenuProps) {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
+      // Without this, closing (Escape, outside click, or picking an item) unmounts the focused
+      // menu item and the browser drops focus to <body> instead of giving it back to the control
+      // that opened the menu -- found during a manual keyboard-accessibility pass, same class of
+      // gap as the shared Modal primitive had.
+      trigger?.focus();
     };
   }, [open]);
 
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"

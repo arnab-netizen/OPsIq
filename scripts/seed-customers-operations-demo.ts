@@ -86,7 +86,14 @@ async function main() {
       periodEnd: isoDate(periodEnd),
       currency: "INR",
       businessModel: "service",
-      industryTemplate: "laundry_local_service",
+      // No industryTemplate: Trinity's real businessType is "b2b_project_contract_service" (set
+      // by scripts/seed-trust-journey-repro.ts), not a laundry/local-service business -- an
+      // earlier version of this script set industryTemplate: "laundry_local_service" anyway,
+      // which silently tightened the delay/rework/completion thresholds runOperationsDiagnosis
+      // uses for a turnaround-sensitive same-day business that Trinity isn't. industryTemplate is
+      // never shown to or settable by the owner in the Operations UI and is never derived from
+      // businessType anywhere in the app -- leaving it unset here falls back to the generic
+      // thresholds, matching what a real owner submitting this snapshot for Trinity would get.
       ordersReceived: 420,
       ordersCompleted: 395,
       ordersDelayed: 38,
@@ -100,7 +107,7 @@ async function main() {
       inventoryShortages: 3,
       sopChecks: 60,
       sopMisses: 7,
-      notes: "Design-demo operations snapshot -- realistic laundry-service figures for one reporting month.",
+      notes: "Design-demo operations snapshot -- realistic service-business figures for one reporting month.",
     },
     USER_ID,
     WORKSPACE_ID,

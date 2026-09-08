@@ -5,6 +5,7 @@ import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primit
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { FindingCard } from "@/components/owner/FindingCard";
+import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { formatHumanDate } from "@/lib/format-human-date";
@@ -428,11 +429,12 @@ export default function OwnerFinancePage() {
           )}
 
           {!dashboard?.hasData ? (
-            <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard?.latestSnapshot
-                ? "Snapshot recorded. Click “Run finance diagnosis” to generate findings and an action plan."
-                : "No financial snapshot yet. Add a snapshot, then run a finance diagnosis."}
-            </div>
+            <DiagnosisEmptyState
+              domainLabel="financial"
+              hasSnapshot={Boolean(dashboard?.latestSnapshot)}
+              snapshotLabel="financial snapshot"
+              diagnosisLabel="Run finance diagnosis"
+            />
           ) : (
             <FinanceCycleView
               cycle={cycle}
