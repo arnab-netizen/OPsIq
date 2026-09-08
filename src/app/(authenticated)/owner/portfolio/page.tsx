@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { humanizeMetricKey } from "@/lib/metric-label";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic portfolio payload is untyped; load() fetch-on-mount is intentional */
 
@@ -111,7 +112,7 @@ export default function OwnerPortfolioPage() {
                   <div key={p.action?.id ?? i} className="border-b py-1">
                     <div className="font-semibold">{i + 1}. {p.action?.title}</div>
                     <div className="text-xs text-muted-foreground">
-                      {p.businessName} · {p.action?.domain} · priority {Math.round(p.action?.priorityScore ?? 0)} · verify via {p.action?.verificationMetric}
+                      {p.businessName} · {p.action?.domain} · priority {Math.round(p.action?.priorityScore ?? 0)} · verify via {humanizeMetricKey(p.action?.verificationMetric)}
                     </div>
                   </div>
                 ))}

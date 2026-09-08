@@ -294,8 +294,12 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
  */
 export function confidenceDisplayPhrase(confidence: string): string {
   switch (confidence) {
+    // "Solid" alone (esp. next to a 100% bar) reads as "setup finished" — a real usability test
+    // confirmed an owner interpreted 5/5 starter items + this badge as total completion, even
+    // though Money/Customers/Operations were still empty. This measures only the STARTER minimum,
+    // never overall completeness, so the phrase must say so.
     case "high":
-      return "Solid";
+      return "Starter information complete";
     case "medium":
       return "Getting there";
     case "low":

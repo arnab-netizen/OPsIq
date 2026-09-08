@@ -5,6 +5,7 @@ import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primit
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
+import { humanizeMetricKey } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
@@ -345,7 +346,7 @@ function RecoveryCycleView({
                 <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {f.sourceMetric} = {String(f.currentValue)} (threshold {String(f.threshold)})
+                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.currentValue)} (threshold {String(f.threshold)})
               </p>
               <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence}</p>
               <p className="text-xs text-muted-foreground"><strong>Why:</strong> {f.whyItMatters}</p>
@@ -354,7 +355,7 @@ function RecoveryCycleView({
                   <strong>Impact:</strong> {f.impactEstimate} {f.impactCurrency}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground"><strong>Verify via:</strong> {f.verificationMetric}</p>
+              <p className="text-xs text-muted-foreground"><strong>Verify via:</strong> {humanizeMetricKey(f.verificationMetric)}</p>
             </div>
           ))}
         </div>
