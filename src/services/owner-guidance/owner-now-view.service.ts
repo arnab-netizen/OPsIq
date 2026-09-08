@@ -791,7 +791,7 @@ export async function assembleGuidanceContext(
   workspaceId: string,
   businessId: string | null,
   deps: GuidanceDeps
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null }> {
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null }> {
   const scope = businessId ? { workspaceId, businessId } : { workspaceId };
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
@@ -1016,6 +1016,14 @@ export async function assembleGuidanceContext(
       b2bRevenue: metric?.b2bRevenue ?? null, newCustomers: metric?.newCustomers ?? null,
       repeatCustomers: metric?.repeatCustomers ?? null,
     },
+    // The arbitrated cash/finance reading (see resolveCashFinanceSignal above) — callers that
+    // build an owner-facing cash-risk signal from a state must use THIS, never raw.cashState
+    // directly. Using the raw, un-arbitrated cashflow-cycle state is exactly the bug a real human
+    // usability test reproduced: Home presented a superseded AT_RISK/INSOLVENT_RISK cash reading
+    // as the top priority while the newer finance diagnosis was SAFE, because the arbitration
+    // result was computed here but never threaded through to the cash/profit-protection signal
+    // builder downstream in getOwnerNowView.
+    cashFinanceEffectiveState: cashFinanceResolution.effectiveState,
     avgActiveMargin,
     pipelineSummary,
   };
@@ -1425,7 +1433,7 @@ export async function getOwnerNowView(
       .catch(() => {});
   }
   const deps = injected ?? (await resolveDefaultDeps());
-  const { ctx, state, ag, raw, avgActiveMargin, pipelineSummary } = await assembleGuidanceContext(workspaceId, businessId, deps);
+  const { ctx, state, ag, raw, cashFinanceEffectiveState, avgActiveMargin, pipelineSummary } = await assembleGuidanceContext(workspaceId, businessId, deps);
 
   // Owner Workload Budget signals — concrete owner-decision surfaces (workspace-scoped).
   // opportunityApprovalsPending has no persisted queue yet (decisions are computed on demand),
@@ -1869,7 +1877,12 @@ export async function getOwnerNowView(
         // risk qualitatively from the categorical state (metricValue stays null — no false precision).
         cashRunwayDays: null,
         netMarginPct: null,
-        cashRunwayState: (raw.cashState ?? null) as CashRiskState | null,
+        // Arbitrated (see resolveCashFinanceSignal / cashFinanceEffectiveState above), never
+        // raw.cashState directly -- using the raw, un-arbitrated cashflow-cycle reading here was
+        // the exact bug a real human usability test reproduced: Home presented a superseded
+        // AT_RISK/INSOLVENT_RISK cash reading as the top priority action while the newer finance
+        // diagnosis was SAFE.
+        cashRunwayState: cashFinanceEffectiveState as CashRiskState | null,
         netMarginState: (raw.finState ?? null) as CashRiskState | null,
         lowMarginJobCount: 0,
         pricingLeakCount: 0,
