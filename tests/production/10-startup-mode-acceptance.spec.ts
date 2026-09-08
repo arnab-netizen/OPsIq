@@ -121,6 +121,13 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
             skills: [],
           },
           ideas: [{ name: ACCEPTANCE_TAG, industry: "Automotive Services", structural: {} }],
+          // Marks this as synthetic acceptance data at creation time (see
+          // OwnerStartupSession.isFixtureBusiness), rather than relying on the "OPSIQ Production
+          // Acceptance - ..." label to keep it out of ordinary owners' Startup planning history —
+          // mirrors domain-business.ts's isFixtureBusiness flag for business creation. Requires
+          // the acceptance account to hold SYSTEM_ADMIN in the target environment; the route
+          // silently ignores this flag otherwise.
+          isFixtureBusiness: true,
         },
       })
     );

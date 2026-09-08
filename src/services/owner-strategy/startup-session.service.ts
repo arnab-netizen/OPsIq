@@ -75,7 +75,10 @@ function ideaToRecord(eval_: IdeaEvaluation, sessionId: string, workspaceId: str
   };
 }
 
-export async function createStartupSession(input: CreateStartupSessionInput): Promise<string> {
+export async function createStartupSession(
+  input: CreateStartupSessionInput,
+  opts?: { isFixtureBusiness?: boolean }
+): Promise<string> {
   const result = validateStartup(input.intake, input.ideas);
   const sessionId = randomUUID();
   const allIdeas = [...result.shortlist, ...result.rejected];
@@ -93,6 +96,7 @@ export async function createStartupSession(input: CreateStartupSessionInput): Pr
         status: "DRAFT",
         validationResult: result as unknown as object,
         recommendedName: result.recommended?.name ?? null,
+        isFixtureBusiness: opts?.isFixtureBusiness ?? false,
         updatedAt: new Date(),
       },
     });
@@ -131,7 +135,10 @@ export async function getStartupSession(workspaceId: string, sessionId: string) 
 
 export async function listStartupSessions(workspaceId: string): Promise<StartupSessionSummary[]> {
   const sessions = await db.ownerStartupSession.findMany({
-    where: { workspaceId },
+    // isFixtureBusiness: false mirrors listBusinesses() -- ordinary owners must never see
+    // acceptance/QA-created startup sessions in their own planning history. See
+    // docs/opsiq-governance/ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+    where: { workspaceId, isFixtureBusiness: false },
     include: { ideas: { select: { id: true, accepted: true } } },
     orderBy: { createdAt: "desc" },
   });

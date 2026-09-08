@@ -1879,6 +1879,13 @@ model OwnerStartupSession {
   /// Prisma relation. @unique enforces at most one business per session at the
   /// DB level — the idempotency backstop for handOffStartupSessionToBusiness().
   businessId              String?  @unique @map("business_id") @db.Uuid
+  /// Same fixture-isolation pattern as OwnerBusiness.isFixtureBusiness (see
+  /// docs/opsiq-governance/ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — that plan tagged every
+  /// downstream blueprint-output model but never this one, and a real human usability test found
+  /// production acceptance-tooling startup sessions ("OPsIQ Production Acceptance - ...") mixed
+  /// into an ordinary owner's own Startup planning history. Defaults false; only settable via the
+  /// governed write path for a SYSTEM_ADMIN-capable actor (acceptance/QA tooling).
+  isFixtureBusiness       Boolean  @default(false) @map("is_fixture_business")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
