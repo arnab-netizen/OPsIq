@@ -8,12 +8,15 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("fs", () => ({
-  existsSync: vi.fn(() => false),
-  readFileSync: vi.fn(),
-  writeFileSync: vi.fn(),
-  mkdirSync: vi.fn(),
-}));
+vi.mock("fs", () => {
+  const impl = {
+    existsSync: vi.fn(() => false),
+    readFileSync: vi.fn(),
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
+  };
+  return { ...impl, default: impl };
+});
 
 import { resolveOrCreateDomainBusiness } from "../../../tests/production/helpers/domain-business";
 

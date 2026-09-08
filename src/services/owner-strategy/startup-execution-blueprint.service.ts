@@ -313,6 +313,7 @@ export async function createBlueprint(
           linkedStartupSessionId: input.sessionId,
           originBlueprintId: blueprintId,
           originType: "BLUEPRINT_ARTIFACT",
+          isFixtureRecord,
           identifiedBy: actorId,
           updatedAt: new Date(),
         },

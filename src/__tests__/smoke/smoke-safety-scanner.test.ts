@@ -49,6 +49,11 @@ const KNOWN_PREFIXES: Array<{
   { prefix: "classify-", classification: "GOVERNANCE" },
   { prefix: "deployment-", classification: "GOVERNANCE" },
   { prefix: "diagnose-", classification: "GOVERNANCE" },
+  // dry-run-legacy-fixture-classification.ts: DB_DIRECT, read-only. Performs only
+  // `findMany`/`findFirst` Prisma queries (OwnerBusiness, User) and never a `.update`/`.create`/
+  // `.delete` call anywhere in the file — see its own file-header comment. Not an HTTP mutation
+  // script, so the HTTP-mutation guard requirements below don't apply.
+  { prefix: "dry-run-", classification: "DB_DIRECT" },
   { prefix: "export-", classification: "GOVERNANCE" },
   { prefix: "gen-", classification: "GOVERNANCE" },
   { prefix: "generate-", classification: "GOVERNANCE" },

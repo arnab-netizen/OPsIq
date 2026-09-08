@@ -135,10 +135,93 @@ test.describe("Trust journey — global business context + fixture isolation + h
       expect(text).not.toContain("OPSIQ Production Acceptance");
     }
 
-    // 7. Risk register — no raw internal risk codes as the primary owner-facing identifier.
+    // 7. Risk register — no raw internal risk codes as the primary owner-facing identifier, and
+    // the fixture risk seeded alongside the fixture businesses must never appear either.
     await page.goto("/owner/risks", { waitUntil: "networkidle" });
     text = await bodyText(page);
     assertNoRawTokens(text, "Risks");
     expect(text).not.toMatch(/\bstartup_[a-f0-9]{6,}_[a-z]+\b/);
+    expect(text).not.toContain("OPSIQ Acceptance fixture risk");
+  });
+
+  test("Home does not present the stale AT_RISK/INSOLVENT_RISK cash reading as current truth over Trinity's newer SAFE finance diagnosis, and no fixture risk/task or raw ISO date ever reaches an owner page", async ({ page }) => {
+    await authenticateUser(page, TRUST_JOURNEY_OWNER.email, TRUST_JOURNEY_OWNER.password);
+    await page.goto("/owner/data", { waitUntil: "networkidle" });
+    const selector = page.locator('[data-testid="business-context-selector"]');
+    await expect(selector).toBeVisible({ timeout: 10000 });
+    const trinityOptionValue = await selector.locator(`option:has-text("${TRINITY_BUSINESS_NAME}")`).getAttribute("value");
+    await selector.selectOption(trinityOptionValue!);
+    await expect(page.locator('[data-testid="active-business-indicator"]')).toContainText(TRINITY_BUSINESS_NAME, { timeout: 10000 });
+
+    // Seed condition: Trinity has an OLDER INSOLVENT_RISK cashflow-triage reading immediately
+    // superseded by a NEWER SAFE finance diagnosis (see scripts/seed-trust-journey-repro.ts). The
+    // P0-E fix (resolveCashFinanceSignal) means the newer SAFE reading supersedes the stale one
+    // outright (not a genuine conflict — one side is clearly more current) — Home must show no
+    // negative cash claim for Trinity at all.
+    await page.goto("/owner/cockpit", { waitUntil: "networkidle" });
+    await expect
+      .poll(async () => activeBusinessLabel(page), { timeout: 10000 })
+      .toContain(TRINITY_BUSINESS_NAME);
+    const homeText = await bodyText(page);
+    assertNoRawTokens(homeText, "Home");
+    expect(homeText).not.toMatch(/cash survival is (at_risk|critical|insolvent_risk)/i);
+    expect(homeText.toLowerCase()).not.toContain("insolvent_risk");
+
+    // Fixture-tagged risk/task (isFixtureRecord: true) must never surface on Home's own
+    // workspace-wide aggregation (top risks, execution lifecycle) either.
+    expect(homeText).not.toContain("OPSIQ Acceptance fixture risk");
+    expect(homeText).not.toContain("OPSIQ Acceptance fixture task");
+
+    // No raw ISO 8601 timestamp anywhere on Home or Money — every date must go through a human
+    // formatter (see src/lib/format-human-date.ts).
+    const isoDatePattern = /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+    expect(homeText).not.toMatch(isoDatePattern);
+    await page.goto("/owner/finance", { waitUntil: "networkidle" });
+    const moneyText = await bodyText(page);
+    expect(moneyText).not.toMatch(isoDatePattern);
+    expect(moneyText).not.toContain("OPSIQ Acceptance fixture");
+
+    // Fixture task must never surface on the workspace-wide Tasks/Priorities/Actions views either.
+    for (const route of ["/owner/tasks", "/owner/priorities"]) {
+      await page.goto(route, { waitUntil: "networkidle" });
+      const t = await bodyText(page);
+      expect(t).not.toContain("OPSIQ Acceptance fixture task");
+      expect(t).not.toContain("OPSIQ Acceptance fixture risk");
+    }
+  });
+
+  test("an invalid/archived selected business triggers explicit recovery UI — no silent fallback when multiple valid businesses remain", async ({ page }) => {
+    await authenticateUser(page, TRUST_JOURNEY_OWNER.email, TRUST_JOURNEY_OWNER.password);
+    // Let the app load its real business list once (establishes the shared context + confirms
+    // there are genuinely 2 real businesses to choose between), then simulate a previously-selected
+    // business that no longer resolves (archived/deleted/foreign) by writing a bogus id directly
+    // into sessionStorage — the exact key ActiveBusinessContext reads first (see
+    // src/context/active-business-context.tsx's SESSION_KEY) — before reloading.
+    await page.goto("/owner/cockpit", { waitUntil: "networkidle" });
+    await page.evaluate(() => {
+      window.sessionStorage.setItem("opsiq.activeBusinessId", "00000000-0000-0000-0000-0000000000ff");
+    });
+    await page.reload({ waitUntil: "networkidle" });
+
+    const banner = page.locator('[data-testid="business-recovery-banner"]');
+    await expect(banner).toBeVisible({ timeout: 10000 });
+    const bannerText = await banner.innerText();
+    expect(bannerText).not.toContain(FIXTURE_BUSINESS_A_NAME);
+    expect(bannerText).not.toContain(FIXTURE_BUSINESS_B_NAME);
+    expect(bannerText).toContain(TRINITY_BUSINESS_NAME);
+    expect(bannerText).toContain("Riverside Cafe");
+
+    // No silent fallback: the page underneath must not have already picked a business on its own
+    // while the banner is up (the active-business indicator must not show a resolved business).
+    const indicator = page.locator('[data-testid="active-business-indicator"]');
+    if ((await indicator.count()) > 0) {
+      await expect(indicator).not.toContainText(TRINITY_BUSINESS_NAME);
+      await expect(indicator).not.toContainText("Riverside Cafe");
+    }
+
+    // Choosing a business from the banner resolves the recovery state.
+    await banner.locator(`button:has-text("${TRINITY_BUSINESS_NAME}")`).click();
+    await expect(banner).not.toBeVisible({ timeout: 10000 });
+    await expect(indicator).toContainText(TRINITY_BUSINESS_NAME, { timeout: 10000 });
   });
 });

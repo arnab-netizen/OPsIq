@@ -70,10 +70,16 @@ async function main() {
     await prisma.ownerBusiness.deleteMany({ where: { id: { in: priorBusinessIds } } });
     console.log(`[trust-journey] cleared ${priorBusinessIds.length} business(es) from a prior seed run`);
   }
+  // The fixture risk/task below are workspace-scoped (no businessId column), so they are not
+  // cascaded by the OwnerBusiness delete above — clear them explicitly for the same idempotency.
+  await prisma.businessRiskEntry.deleteMany({ where: { workspaceId: WORKSPACE_ID, riskCode: { startsWith: "trust_journey_fixture_risk_" } } });
+  await prisma.processExecutionTask.deleteMany({ where: { workspaceId: WORKSPACE_ID, taskKey: { startsWith: "trust_journey_fixture_task_" } } });
 
   const { createBusiness } = await import("../src/services/founder-recovery/business.service");
   const { createFinancialSnapshot } = await import("../src/services/owner-finance/snapshot.service");
   const { runFinanceDiagnosis } = await import("../src/services/owner-finance/diagnosis.service");
+  const { createCashflowSnapshot } = await import("../src/services/owner-cashflow/snapshot.service");
+  const { runCashflowDiagnosis } = await import("../src/services/owner-cashflow/diagnosis.service");
 
   // ── Real business: Trinity Services (created first, so it is NOT the newest row — this is
   // exactly the ordering that made the bug reproduce: listBusinesses() orders by createdAt desc,
@@ -84,6 +90,24 @@ async function main() {
     USER_ID, WORKSPACE_ID
   );
   console.log(`[trust-journey] real business: ${trinity.id} (${TRINITY_BUSINESS_NAME})`);
+
+  // P0-E repro: an OLDER, unsafe cash-survival-triage reading for Trinity itself (created first,
+  // so its createdAt is naturally earlier than the finance diagnosis below), immediately
+  // superseded by a NEWER, SAFE finance diagnosis for the SAME business — Home must present the
+  // newer SAFE reading as current truth, never the stale AT_RISK one.
+  const cashStart = "2026-06-01";
+  const cashEnd = "2026-06-30";
+  const trinityCashSnap = await createCashflowSnapshot(
+    trinity.id,
+    {
+      periodStart: cashStart, periodEnd: cashEnd, currency: "INR",
+      cashInHand: 1000, bankBalance: 0, dailyCollections: 200,
+      upcomingEmi: 8000, rentDue: 10000, salaryDue: 20000, vendorDue: 8000, taxDue: 4000,
+    },
+    USER_ID, WORKSPACE_ID
+  );
+  const trinityCashCycle = await runCashflowDiagnosis(trinity.id, trinityCashSnap.id, USER_ID, WORKSPACE_ID);
+  console.log(`[trust-journey] Trinity STALE cashflow diagnosis: cycle ${trinityCashCycle.id}, cashflowState ${trinityCashCycle.cashflowState}`);
 
   // Healthy, complete finance snapshot -> SAFE survivalState (see src/__tests__/owner-finance/
   // metrics.test.ts's `profitable()` fixture, which this mirrors exactly).
@@ -100,7 +124,7 @@ async function main() {
     USER_ID, WORKSPACE_ID
   );
   const trinityCycle = await runFinanceDiagnosis(trinity.id, trinitySnap.id, USER_ID, WORKSPACE_ID);
-  console.log(`[trust-journey] Trinity finance diagnosis: cycle ${trinityCycle.id}, survivalState ${trinityCycle.survivalState ?? "(see snapshot)"}`);
+  console.log(`[trust-journey] Trinity NEWER finance diagnosis: cycle ${trinityCycle.id}, survivalState ${trinityCycle.survivalState ?? "(see snapshot)"}`);
 
   // Deliberately NO OwnerMetricSnapshot / customer data for Trinity — this is the "zero customer
   // records" condition the retention "unknown != bad" fix must respect.
@@ -131,6 +155,34 @@ async function main() {
   );
   const fixtureACycle = await runFinanceDiagnosis(fixtureA.id, fixtureASnap.id, USER_ID, WORKSPACE_ID);
   console.log(`[trust-journey] fixture A finance diagnosis: cycle ${fixtureACycle.id}, survivalState ${fixtureACycle.survivalState ?? "(see snapshot)"}`);
+
+  // A fixture-tagged risk and task, directly in the workspace-wide surfaces (Home, Risks,
+  // Priorities/Tasks) an ordinary owner reads without any business filter — proves
+  // isFixtureRecord isolation holds for Startup Mode blueprint output, not just OwnerBusiness rows.
+  const fixtureRiskId = randomUUID();
+  await prisma.businessRiskEntry.create({
+    data: {
+      id: fixtureRiskId, workspaceId: WORKSPACE_ID,
+      riskCode: `trust_journey_fixture_risk_${fixtureRiskId.slice(0, 8)}`,
+      title: "OPSIQ Acceptance fixture risk — must never reach a real owner",
+      category: "OPERATIONAL", likelihood: 80, impact: 80, severity: 64,
+      isFixtureRecord: true, identifiedBy: USER_ID, updatedAt: now,
+    },
+  });
+  const fixtureTaskId = randomUUID();
+  await prisma.processExecutionTask.create({
+    data: {
+      id: fixtureTaskId, workspaceId: WORKSPACE_ID,
+      taskKey: `trust_journey_fixture_task_${fixtureTaskId.slice(0, 8)}`,
+      sourceFamily: "STARTUP_MODE", sourceFindingKey: `trust_journey_fixture_${fixtureTaskId.slice(0, 8)}`,
+      executionRoute: "OWNER_LED", actionOwner: USER_ID, approvalLevel: "OWNER", status: "PROPOSED",
+      completionCriteria: "OPSIQ Acceptance fixture task — must never reach a real owner",
+      reassessmentTrigger: "WEEKLY_REVIEW", riskIfIgnored: "n/a (fixture)",
+      ownerVisibleSummary: "OPSIQ Acceptance fixture task — must never reach a real owner",
+      severity: "MEDIUM", priorityRank: 1, isFixtureRecord: true, updatedAt: now,
+    },
+  });
+  console.log(`[trust-journey] fixture risk ${fixtureRiskId} + fixture task ${fixtureTaskId} seeded (isFixtureRecord: true)`);
 
   const fixtureB = await createBusiness(
     { name: FIXTURE_BUSINESS_B_NAME, businessType: "generic_local_service", currency: "INR", b2cSupported: true, b2bSupported: false },
