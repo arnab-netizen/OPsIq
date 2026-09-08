@@ -79,19 +79,30 @@ async function apiPost(path: string, body: unknown) {
  * governance. This routes every action-failure message here through the same
  * classifyOperatorError system CreateBusinessPanel already uses, so the owner never sees a raw
  * server error string, an error code, or a JS exception message verbatim.
+ *
+ * classifyOperatorError's own generic catch-all for an unrecognized message ("Couldn't process
+ * this action. Please try again.") is honest but weaker than what the mission specifies ("We
+ * couldn't start this action. Nothing was changed."). Since the server's own calm fallback text
+ * (see canonical-route-enforcement.ts) also doesn't match any of classifyOperatorError's specific
+ * patterns, it would otherwise silently fall through to that generic text and this function's
+ * caller-supplied, action-specific fallback would never actually be shown. Substitute the
+ * fallback back in for exactly that one generic case, while still deferring to
+ * classifyOperatorError's more specific classifications (network/permission/validation/timeout).
  */
+const GENERIC_ACTION_DEFAULT = "Couldn't process this action. Please try again.";
+
 function describeActionFailure(raw: { error?: unknown } | undefined, fallback: string): string {
   const serverText =
     typeof raw?.error === "string" ? raw.error
       : typeof (raw?.error as { message?: unknown })?.message === "string" ? (raw!.error as { message: string }).message
       : undefined;
   const governed = classifyOperatorError(new Error(serverText ?? fallback), { context: "action" });
-  return governed.operatorMessage;
+  return governed.operatorMessage === GENERIC_ACTION_DEFAULT ? fallback : governed.operatorMessage;
 }
 
 function describeThrownFailure(e: unknown, fallback: string): string {
   const governed = classifyOperatorError(e instanceof Error ? e : new Error(fallback), { context: "action" });
-  return governed.operatorMessage;
+  return governed.operatorMessage === GENERIC_ACTION_DEFAULT ? fallback : governed.operatorMessage;
 }
 
 interface AvoidItem { avoid?: string }
