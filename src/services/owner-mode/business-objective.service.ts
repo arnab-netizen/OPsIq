@@ -215,6 +215,9 @@ export async function listObjectives(
   return db.businessObjective.findMany({
     where: {
       workspaceId,
+      // Excludes acceptance/QA fixture objectives (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an
+      // ordinary owner's goals list must never include a goal a QA blueprint run created.
+      isFixtureRecord: false,
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.objectiveType ? { objectiveType: opts.objectiveType } : {}),
       ...(opts.parentId !== undefined ? { parentId: opts.parentId } : {}),

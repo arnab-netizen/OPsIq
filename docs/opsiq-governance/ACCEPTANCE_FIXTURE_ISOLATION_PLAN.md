@@ -30,6 +30,59 @@ Status: **IMPLEMENTED** (local/dev; not yet deployed to production — see
   fixture hidden from `listBusinesses()`, fixture reachable via
   `listFixtureBusinesses()`, workspace isolation preserved) plus a mixed
   real+fixture listing and the "no explicit opts = never a fixture" default.
+- **Every real acceptance/QA business-creation path is now fixture-aware**:
+  `tests/production/helpers/domain-business.ts`'s `resolveOrCreateDomainBusiness()`
+  (used by 7 production acceptance specs to create their own dedicated
+  business) always sends `isFixtureBusiness: true`. This does not depend on
+  a human remembering to pass the flag — it is unconditional in the helper
+  every spec calls. It is still only honored in practice once the
+  `PRODUCTION_ACCEPTANCE_EMAIL` account itself holds `SYSTEM_ADMIN` in the
+  target environment; see "Remaining gap" below.
+- **Startup Mode blueprint output is also fixture-tagged, structurally**:
+  `OwnerBusiness.isFixtureBusiness` only covers the business row itself.
+  Startup Mode's `createBlueprint()`
+  (`src/services/owner-strategy/startup-execution-blueprint.service.ts`)
+  separately writes to six owner-visible-by-default record types in one
+  transaction — `BusinessObjective`, `ProcessExecutionTask`,
+  `KPIOwnershipRecord`, `BusinessRiskEntry`, `ResourceAllocation`,
+  `ConstraintResolutionRecord` — none of which reference an `OwnerBusiness`
+  row (they are workspace-scoped, not business-scoped). Before this change,
+  an acceptance/QA blueprint run's tasks/risks/KPIs/goals were only
+  distinguishable from a real owner's own Startup Mode use by the idea name
+  embedded in their default titles — the forbidden string-matching approach.
+  This adds `isFixtureRecord Boolean @default(false)` to all six models
+  (migration `20260908060917_add_blueprint_output_fixture_record_flag`),
+  threaded through `createBlueprint(workspaceId, actorId, input, opts?)`'s
+  new `opts.isFixtureRecord`, honored by `POST
+  /api/owner/startup/sessions/[sessionId]/blueprint` only when the actor
+  holds `SYSTEM_ADMIN` (same pattern as `isFixtureBusiness`), and filtered
+  out of every ordinary owner-facing read of those six types: `listObjectives`,
+  `listBusinessRisks` (including the overdue-risk alert scan — a fixture risk
+  can no longer generate a real "Risk review overdue" in-app alert),
+  `listKPIOwnership`, `getPersistedProcessTasks`, `listResourcePools` /
+  `getResourcePoolUtilization`, `listActiveConstraints`, and every
+  corresponding direct read inside Home's aggregation
+  (`owner-now-view.service.ts`'s `buildBusinessOperatingSystem` /
+  `buildExecutionLifecycle`). `tests/production/10-startup-mode-acceptance.spec.ts`
+  (the one production spec that runs Startup Mode end-to-end) now sends
+  `isFixtureRecord: true` on its blueprint-creation call.
+  Tests: `src/__tests__/owner-strategy/startup-blueprint-fixture-isolation.db.test.ts`
+  (tagging + "ordinary owner sees ZERO fixture-generated records" across all
+  six list surfaces) and `startup-blueprint-fixture-rbac.db.test.ts` (route-level
+  SYSTEM_ADMIN gate, mirroring `fixture-flag-rbac.db.test.ts`) — not executed
+  in this authoring session (no network path to the test database from this
+  sandboxed environment reached the DB before the session ended); must run
+  under `TEST_WITH_DB=true` in CI before this is considered proven.
+  **Known limitation**: `StartupInitiative`, `StartupVerificationWindow`,
+  `FundedInitiativeOutcome`, and `StartupExecutionPlan`/`StartupExecutionBlueprint`
+  (session/idea-scoped reads only) are the remaining blueprint outputs and
+  do **not** yet carry `isFixtureRecord` — a repo-wide read-path survey found
+  no owner-facing workspace-wide list route reads the first three today, and
+  the latter two are already scoped by `sessionId`, not merely `workspaceId`,
+  so a real owner would have to already know/guess a QA session id to reach
+  them. If any of these four gains a workspace-wide owner-facing list route
+  in the future, it must get the same `isFixtureRecord` treatment before
+  that route ships.
 
 ## Rollout to production
 
@@ -53,6 +106,37 @@ require identifying them (most reliably by name pattern, e.g. `OPSIQ
 production data change and is deliberately **not** performed here without
 explicit owner authorization — see `PRODUCTION_DATA_MUTATIONS = 0` in the
 session's final report.
+
+### Deterministic, fail-closed dry-run classification (built, not yet run against production)
+
+Hiding these rows by matching their display name in React/the UI was
+explicitly ruled out — a name is not provenance. Instead,
+`src/domain/founder-recovery/legacy-fixture-classification.ts` exports a
+pure `classifyLegacyFixtureCandidates()` function that requires **two**
+independent signals to agree before proposing a row as a confident
+historical-fixture candidate: (1) the name matches the established
+acceptance-naming convention (`^OPSIQ (Production )?Acceptance`, anchored at
+the start so a real business that merely mentions "acceptance" elsewhere in
+its name never matches) AND (2) the row's `createdBy` resolves to a known
+acceptance/QA actor email (sourced from the real `PRODUCTION_ACCEPTANCE_EMAIL`
+account, never guessed). A name-only match is downgraded to **ambiguous**
+and is never proposed for reclassification — it requires manual review.
+Nothing in this function or its caller mutates any row.
+
+`scripts/dry-run-legacy-fixture-classification.ts` wraps this with real
+(read-only) `OwnerBusiness`/`User` queries and prints a report: confident
+candidates, ambiguous rows, and `PRODUCTION_DATA_MUTATIONS: 0`. It contains
+no `.create`/`.update`/`.delete` call anywhere. It was **not run against the
+real production database in this session** — this sandboxed environment has
+no network path to production Postgres, so `EXISTING_FIXTURE_DRY_RUN_COUNT`
+and `AMBIGUOUS_ROW_COUNT` are unknown until someone with production DB
+access runs it. Unit tests for the classification logic itself
+(`src/__tests__/domain/founder-recovery/legacy-fixture-classification.test.ts`)
+do run in this session and pass, proving the fail-closed behavior (ambiguous
+rows never promoted to confident, no known actor email ⇒ everything
+ambiguous, a real business's name is never matched).
+Reclassifying the confident candidates the dry run reports remains a
+separate, explicitly-authorized action — out of scope here.
 
 ## What's already closed
 

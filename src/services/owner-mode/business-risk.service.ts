@@ -203,6 +203,9 @@ export async function listBusinessRisks(
   return db.businessRiskEntry.findMany({
     where: {
       workspaceId,
+      // Excludes acceptance/QA fixture risks (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an
+      // ordinary owner's risk register must never include a risk a QA blueprint run created.
+      isFixtureRecord: false,
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.category ? { category: opts.category } : {}),
     },
@@ -427,11 +430,14 @@ export async function evaluateOverdueRiskAlerts(
   now: Date = new Date(),
 ): Promise<void> {
   // Query non-terminal risks with reviewDueDate in the past (bounded at 500)
+  // isFixtureRecord: false — a QA blueprint's risk must never generate a real owner-visible
+  // "Risk review overdue" alert. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
   const overdueRisks = await db.businessRiskEntry.findMany({
     where: {
       workspaceId,
       reviewDueDate: { lt: now },
       status: { notIn: ["RESOLVED", "CLOSED"] },
+      isFixtureRecord: false,
     },
     select: { id: true, riskCode: true },
     take: 500,

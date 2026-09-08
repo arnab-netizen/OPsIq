@@ -201,7 +201,10 @@ export async function listKPIOwnership(
   opts: { ownerUserId?: string } = {},
 ) {
   return db.kPIOwnershipRecord.findMany({
-    where: { workspaceId, ...(opts.ownerUserId ? { ownerUserId: opts.ownerUserId } : {}) },
+    // isFixtureRecord: false excludes acceptance/QA fixture KPIs (see
+    // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an ordinary owner's KPI list must never include a
+    // metric a QA blueprint run created.
+    where: { workspaceId, isFixtureRecord: false, ...(opts.ownerUserId ? { ownerUserId: opts.ownerUserId } : {}) },
     orderBy: { metricName: "asc" },
   });
 }

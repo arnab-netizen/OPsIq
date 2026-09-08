@@ -206,6 +206,12 @@ test.describe("PROD-13 — Startup Mode live production acceptance", () => {
             objectiveDescription: "Live production acceptance execution blueprint",
             targetMetricName: "monthly_revenue_cents",
             targetValue: 500000,
+            // Marks every record this blueprint creates (objective, tasks, KPIs, risks,
+            // resource allocation, constraint) as a fixture at creation time — see
+            // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md. Requires the acceptance account to hold
+            // SYSTEM_ADMIN in the target environment; the route silently ignores this flag
+            // otherwise.
+            isFixtureRecord: true,
           },
         })
     );

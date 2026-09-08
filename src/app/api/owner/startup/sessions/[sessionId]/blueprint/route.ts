@@ -45,11 +45,17 @@ const postSchema = z.object({
   targetValue: z.number().optional(),
   deadline: z.string().optional(),
   initialTaskTitles: z.array(z.string()).optional(),
+  isFixtureRecord: z.boolean().optional(),
 });
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const body = await parseRequestBody(ctx.request!, postSchema);
+    // isFixtureRecord is only ever honored for a SYSTEM_ADMIN-capable actor (acceptance/QA
+    // tooling) — a self-serve owner's request body can carry it and it is silently ignored
+    // without that capability. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+    const isFixtureRecord =
+      body.isFixtureRecord === true && ctx.verifiedCapabilities.has(CAPABILITIES.SYSTEM_ADMIN);
     const result = await createBlueprint(
       ctx.verifiedWorkspaceId,
       ctx.verifiedActorId,
@@ -63,7 +69,8 @@ export const POST = withCanonicalEnforcement(
         targetValue: body.targetValue,
         deadline: body.deadline ? new Date(body.deadline) : undefined,
         initialTaskTitles: body.initialTaskTitles,
-      }
+      },
+      { isFixtureRecord }
     );
     return canonicalJson(result, { status: 201 });
   },

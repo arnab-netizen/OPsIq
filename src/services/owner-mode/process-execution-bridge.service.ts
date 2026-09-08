@@ -172,7 +172,10 @@ function routeToData(r: BridgedExecutionRoute, workspaceId: string, now: Date): 
 export async function getPersistedProcessTasks(workspaceId: string, injected?: ProcessBridgeDeps): Promise<TaskRow[]> {
   const deps = injected ?? (await resolveDefaultDeps());
   try {
-    return await deps.db.processExecutionTask.findMany({ where: { workspaceId }, orderBy: { priorityRank: "asc" }, take: 2000 });
+    // isFixtureRecord: false excludes acceptance/QA fixture tasks (see
+    // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an ordinary owner's task list must never include a
+    // task a QA blueprint run created.
+    return await deps.db.processExecutionTask.findMany({ where: { workspaceId, isFixtureRecord: false }, orderBy: { priorityRank: "asc" }, take: 2000 });
   } catch (e) {
     if (e && typeof e === "object" && (e as { code?: string }).code === "P2021") return [];
     throw e;

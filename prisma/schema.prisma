@@ -5454,6 +5454,10 @@ model ProcessExecutionTask {
   linkedStartupSessionId   String?   @map("linked_startup_session_id") @db.Uuid
   linkedStartupBlueprintId String?   @map("linked_startup_blueprint_id") @db.Uuid
   linkedStartupPlanId      String?   @map("linked_startup_plan_id") @db.Uuid
+  // Acceptance/QA fixture provenance (mirrors OwnerBusiness.isFixtureBusiness) — set only by
+  // createBlueprint() when the calling actor holds SYSTEM_ADMIN. See
+  // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+  isFixtureRecord          Boolean   @default(false) @map("is_fixture_record")
 
   @@unique([workspaceId, taskKey])
   @@index([workspaceId, status])
@@ -6150,6 +6154,10 @@ model BusinessObjective {
   linkedGoalId           String?   @map("linked_goal_id") @db.Uuid // FK → OwnerGoal (optional)
   linkedStartupSessionId String?   @map("linked_startup_session_id") @db.Uuid
   linkedStartupIdeaId    String?   @map("linked_startup_idea_id") @db.Uuid
+  // Acceptance/QA fixture provenance (mirrors OwnerBusiness.isFixtureBusiness) — set only by
+  // createBlueprint() when the calling actor holds SYSTEM_ADMIN. See
+  // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+  isFixtureRecord        Boolean   @default(false) @map("is_fixture_record")
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
@@ -6234,6 +6242,10 @@ model ResourceAllocation {
   allocatedAt      DateTime  @default(now()) @map("allocated_at")
   releasedAt       DateTime? @map("released_at")
   idempotencyKey   String?   @unique @map("idempotency_key")
+  // Acceptance/QA fixture provenance (mirrors OwnerBusiness.isFixtureBusiness) — set only by
+  // createBlueprint() when the calling actor holds SYSTEM_ADMIN. See
+  // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+  isFixtureRecord  Boolean   @default(false) @map("is_fixture_record")
 
   pool ResourcePool @relation(fields: [poolId], references: [id], onDelete: Cascade)
 
@@ -6266,6 +6278,11 @@ model BusinessRiskEntry {
   // R7: provenance — distinguishes blueprint-created artifacts from independently-created records
   originBlueprintId      String?   @map("origin_blueprint_id") @db.Uuid
   originType             String?   @map("origin_type") // BLUEPRINT_ARTIFACT | INDEPENDENT
+  // Acceptance/QA fixture provenance (mirrors OwnerBusiness.isFixtureBusiness) — set only by
+  // createBlueprint() when the calling actor holds SYSTEM_ADMIN. Ordinary owner-facing risk
+  // reads exclude isFixtureRecord: true so a QA blueprint run never pollutes a real owner's
+  // risk register. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+  isFixtureRecord        Boolean   @default(false) @map("is_fixture_record")
   reviewedAt             DateTime? @map("reviewed_at")
   identifiedBy           String    @map("identified_by") @db.Uuid
   createdAt              DateTime  @default(now()) @map("created_at")
@@ -6318,6 +6335,10 @@ model KPIOwnershipRecord {
   confidenceLevel   String?   @map("confidence_level") // very_high | high | moderate | low | very_low
   linkedObjectiveId String?   @map("linked_objective_id") @db.Uuid
   lastReviewedAt    DateTime? @map("last_reviewed_at")
+  // Acceptance/QA fixture provenance (mirrors OwnerBusiness.isFixtureBusiness) — set only by
+  // createBlueprint() when the calling actor holds SYSTEM_ADMIN. See
+  // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+  isFixtureRecord   Boolean   @default(false) @map("is_fixture_record")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -6360,6 +6381,10 @@ model ConstraintResolutionRecord {
   // R7: provenance — distinguishes blueprint-created artifacts from independently-created records
   originBlueprintId      String?   @map("origin_blueprint_id") @db.Uuid
   originType             String?   @map("origin_type") // BLUEPRINT_ARTIFACT | INDEPENDENT
+  // Acceptance/QA fixture provenance (mirrors OwnerBusiness.isFixtureBusiness) — set only by
+  // createBlueprint() when the calling actor holds SYSTEM_ADMIN. See
+  // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+  isFixtureRecord        Boolean   @default(false) @map("is_fixture_record")
   identifiedAt           DateTime  @default(now()) @map("identified_at")
   resolvedAt             DateTime? @map("resolved_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")

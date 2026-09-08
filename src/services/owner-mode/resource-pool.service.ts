@@ -216,7 +216,10 @@ export async function listResourcePools(workspaceId: string, activeOnly = true) 
     where: { workspaceId, ...(activeOnly ? { isActive: true } : {}) },
     include: {
       allocations: {
-        where: { status: "ALLOCATED" },
+        // isFixtureRecord: false excludes acceptance/QA fixture allocations (see
+        // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an ordinary owner's resource-pool view must
+        // never include an allocation a QA blueprint run created.
+        where: { status: "ALLOCATED", isFixtureRecord: false },
         select: { id: true, objectiveId: true, allocationAmount: true, priority: true },
       },
     },
@@ -227,7 +230,9 @@ export async function listResourcePools(workspaceId: string, activeOnly = true) 
 export async function getResourcePoolUtilization(workspaceId: string, poolId: string) {
   const pool = await db.resourcePool.findFirst({
     where: { id: poolId, workspaceId },
-    include: { allocations: { where: { status: "ALLOCATED" } } },
+    // isFixtureRecord: false — a QA blueprint's allocation must never skew a real owner's
+    // utilization percentage. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+    include: { allocations: { where: { status: "ALLOCATED", isFixtureRecord: false } } },
   });
   if (!pool) throw new NotFoundError("ResourcePool", poolId);
 
