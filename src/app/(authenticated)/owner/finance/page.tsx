@@ -7,6 +7,7 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { formatHumanDate } from "@/lib/format-human-date";
+import { Disclosure } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -43,36 +44,64 @@ async function api(path: string, init?: RequestInit) {
   return data;
 }
 
-// Field names match financialSnapshotCreateSchema (Slice 6).
-const FINANCE_FIELDS: Array<{ name: string; label: string }> = [
-  { name: "revenue", label: "Revenue" },
-  { name: "b2cRevenue", label: "B2C revenue" },
-  { name: "b2bRevenue", label: "B2B revenue" },
-  { name: "costOfGoodsOrServices", label: "Cost of goods/services" },
-  { name: "fixedCosts", label: "Fixed costs" },
-  { name: "variableCosts", label: "Variable costs" },
-  { name: "rent", label: "Rent" },
-  { name: "salaryPayroll", label: "Salary / payroll" },
-  { name: "utilities", label: "Utilities" },
-  { name: "deliveryFulfilmentCost", label: "Delivery / fulfilment" },
-  { name: "marketingSpend", label: "Marketing spend" },
-  { name: "discountAmount", label: "Discount amount" },
-  { name: "refundAmount", label: "Refund amount" },
-  { name: "reworkCost", label: "Rework cost" },
-  { name: "complaintCost", label: "Complaint cost" },
-  { name: "loanEmiDebtPayments", label: "Loan / EMI payments" },
-  { name: "totalDebtOutstanding", label: "Total debt outstanding" },
-  { name: "cashOnHand", label: "Cash on hand" },
-  { name: "receivables", label: "Receivables" },
-  { name: "receivablesOverdue", label: "Receivables overdue" },
-  { name: "payables", label: "Payables" },
-  { name: "payablesOverdue", label: "Payables overdue" },
-  { name: "ownerWithdrawals", label: "Owner withdrawals" },
-  { name: "inventoryStockCashLock", label: "Inventory cash lock" },
-  { name: "orderCount", label: "Order count" },
-  { name: "customerCount", label: "Customer count" },
-  { name: "repeatCustomerCount", label: "Repeat customers" },
+// Field names match financialSnapshotCreateSchema (Slice 6). `hint` is the plain-language
+// explanation shown under each field (accounting term + short meaning + example, or what to
+// enter if it doesn't apply) — a real usability test found the flat, unexplained ~27-field form
+// unusable for an owner without an accounting background. Grouping these into progressive tiers
+// (below) changes ONLY what's visible/expanded by default; every field name here still maps
+// 1:1 to addSnapshot()'s FormData read, so the save payload is byte-for-byte unchanged.
+const FINANCE_FIELDS: Array<{ name: string; label: string; hint: string }> = [
+  { name: "revenue", label: "Revenue", hint: "Total sales in a typical month, before costs. Example: 15000." },
+  { name: "b2cRevenue", label: "B2C revenue", hint: "Sales directly to individual customers, if you track it separately. Leave blank if you don't split this out." },
+  { name: "b2bRevenue", label: "B2B revenue", hint: "Sales to other businesses, if you track it separately. Leave blank if you don't split this out." },
+  { name: "costOfGoodsOrServices", label: "Cost of goods/services", hint: "What it directly cost you to make or deliver what you sold (materials, direct labor) — accountants call this COGS." },
+  { name: "fixedCosts", label: "Fixed costs", hint: "Rent, wages, and other costs that stay the same whether sales go up or down. Example: 7000." },
+  { name: "variableCosts", label: "Variable costs", hint: "Costs that rise and fall with how much you sell, like materials or delivery. Example: 3000." },
+  { name: "rent", label: "Rent", hint: "Rent for your business space, if any. Leave blank if you don't rent a space." },
+  { name: "salaryPayroll", label: "Salary / payroll", hint: "Wages and salaries paid to staff, not including money you took for yourself." },
+  { name: "utilities", label: "Utilities", hint: "Electricity, water, internet, and similar recurring bills." },
+  { name: "deliveryFulfilmentCost", label: "Delivery / fulfilment", hint: "Shipping, courier, or delivery costs. Leave blank if you don't deliver." },
+  { name: "marketingSpend", label: "Marketing spend", hint: "Advertising and promotion spend. Leave blank if you didn't spend on this." },
+  { name: "discountAmount", label: "Discount amount", hint: "Discounts you gave customers this period." },
+  { name: "refundAmount", label: "Refund amount", hint: "Refunds you paid out this period." },
+  { name: "reworkCost", label: "Rework cost", hint: "Cost of redoing work that didn't meet quality the first time. Leave blank if this doesn't apply." },
+  { name: "complaintCost", label: "Complaint cost", hint: "Cost of resolving customer complaints beyond a refund (e.g. replacement, goodwill). Leave blank if none." },
+  { name: "loanEmiDebtPayments", label: "Loan / EMI payments", hint: "Loan or EMI payments you made this period. Leave blank if you have no loans." },
+  { name: "totalDebtOutstanding", label: "Total debt outstanding", hint: "The total amount you still owe across all loans right now." },
+  { name: "cashOnHand", label: "Cash on hand", hint: "Cash and bank balance you could use today. Example: 20000." },
+  { name: "receivables", label: "Receivables", hint: "Money customers owe you that isn't overdue yet — accountants call this accounts receivable." },
+  { name: "receivablesOverdue", label: "Receivables overdue", hint: "Of the money customers owe you, how much is now overdue." },
+  { name: "payables", label: "Payables", hint: "Money you owe suppliers that isn't overdue yet — accountants call this accounts payable." },
+  { name: "payablesOverdue", label: "Payables overdue", hint: "Of the money you owe suppliers, how much is now overdue." },
+  { name: "ownerWithdrawals", label: "Owner withdrawals", hint: "Money you personally took out of the business this period (not a salary)." },
+  { name: "inventoryStockCashLock", label: "Inventory cash lock", hint: "Cash tied up in unsold stock right now. Leave blank if you don't hold stock." },
+  { name: "orderCount", label: "Order count", hint: "Number of orders or jobs completed in this period." },
+  { name: "customerCount", label: "Customer count", hint: "Number of different customers you served in this period." },
+  { name: "repeatCustomerCount", label: "Repeat customers", hint: "Of those customers, how many had bought from you before." },
 ];
+
+function financeField(name: string) {
+  const f = FINANCE_FIELDS.find((x) => x.name === name);
+  if (!f) throw new Error(`Unknown finance field: ${name}`);
+  return f;
+}
+
+// Progressive disclosure tiers — see the FINANCE_FIELDS comment above for why this never changes
+// what gets submitted, only what's visible/expanded by default. Every FINANCE_FIELDS name appears
+// in exactly one tier below.
+const QUICK_FIELD_NAMES = ["revenue", "fixedCosts", "variableCosts", "cashOnHand"];
+
+const IMPROVE_GROUPS: Array<{ title: string; fieldNames: string[] }> = [
+  { title: "Sales detail", fieldNames: ["b2cRevenue", "b2bRevenue", "orderCount", "customerCount", "repeatCustomerCount"] },
+  { title: "Regular costs", fieldNames: ["costOfGoodsOrServices", "rent", "salaryPayroll", "utilities", "deliveryFulfilmentCost", "marketingSpend"] },
+  { title: "Customer money owed", fieldNames: ["receivables", "receivablesOverdue"] },
+  { title: "Supplier money owed", fieldNames: ["payables", "payablesOverdue"] },
+  { title: "Loans", fieldNames: ["loanEmiDebtPayments", "totalDebtOutstanding"] },
+  { title: "Stock", fieldNames: ["inventoryStockCashLock"] },
+  { title: "Discounts & refunds", fieldNames: ["discountAmount", "refundAmount"] },
+];
+
+const ADVANCED_FIELD_NAMES = ["reworkCost", "complaintCost", "ownerWithdrawals"];
 
 export default function OwnerFinancePage() {
   const { activeBusinessId, needsBusinessRecovery, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
@@ -327,14 +356,50 @@ export default function OwnerFinancePage() {
                   ]}
                 />
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                {FINANCE_FIELDS.map((f) => (
-                  <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />
-                ))}
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Quick financial picture</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  These four numbers are enough for a first read. Estimates are fine — you can
+                  refine them later.
+                </p>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {QUICK_FIELD_NAMES.map((name) => {
+                    const f = financeField(name);
+                    return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
+                  })}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Leave fields blank if unknown — missing data is reported, never invented.
-              </p>
+
+              <Disclosure summary="Improve the analysis (optional)">
+                <p className="mb-3">
+                  Adding these makes OpsIQ&rsquo;s read of your business more accurate. Leave
+                  anything blank that doesn&rsquo;t apply — missing data is reported, never
+                  invented.
+                </p>
+                <div className="flex flex-col gap-4">
+                  {IMPROVE_GROUPS.map((group) => (
+                    <div key={group.title}>
+                      <p className="text-sm font-medium text-foreground">{group.title}</p>
+                      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {group.fieldNames.map((name) => {
+                          const f = financeField(name);
+                          return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Disclosure>
+
+              <Disclosure summary="Advanced detail (optional)">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {ADVANCED_FIELD_NAMES.map((name) => {
+                    const f = financeField(name);
+                    return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
+                  })}
+                </div>
+              </Disclosure>
+
               <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save snapshot"}</Button>
             </form>
           )}
