@@ -6,6 +6,7 @@ import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { formatHumanDate } from "@/lib/format-human-date";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -505,7 +506,7 @@ function FinanceCycleView({
         <div className="space-y-1 text-sm">
           {history.map((c: any) => (
             <div key={c.id} className="flex justify-between border-b py-1">
-              <span>Cycle #{c.sequenceNumber} — {new Date(c.createdAt).toLocaleDateString()}</span>
+              <span>Cycle #{c.sequenceNumber} — {formatHumanDate(c.createdAt)}</span>
               <span className="text-muted-foreground">
                 {c.survivalState} · {c.findingCount} findings · {c.actionCount} actions
               </span>

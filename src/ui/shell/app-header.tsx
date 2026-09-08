@@ -1,8 +1,8 @@
 "use client";
 
 import { forwardRef } from "react";
-import { useOperatorMutation } from "@/hooks/useOperatorMutation";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { AccountMenu } from "@/components/owner/AccountMenu";
 
 interface AppHeaderProps {
   userName?: string | null;
@@ -30,17 +30,6 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
   // keeps the current context visible everywhere, including pages with no selector of their own
   // (Home, Priorities, Actions).
   const { activeBusiness, businesses, loading: businessLoading } = useActiveBusiness();
-
-  // End the session via the governed mutation hook; always return the user to
-  // /login afterwards (success or failure), never surfacing a raw error.
-  const logoutMutation = useOperatorMutation<{ success: boolean }, Record<string, never>>({
-    url: "/api/auth/logout",
-    method: "POST",
-    operationName: "logout",
-    onSettled: () => {
-      window.location.href = "/login";
-    },
-  });
 
   return (
     <header
@@ -77,22 +66,7 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
         )}
       </div>
       <div className="flex items-center gap-3 sm:gap-4">
-        {userName && (
-          <span className="hidden text-sm text-muted-foreground sm:inline">{userName}</span>
-        )}
-        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-          <span className="text-xs font-medium text-primary">
-            {userName?.charAt(0)?.toUpperCase() ?? "U"}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => logoutMutation.mutate({})}
-          disabled={logoutMutation.isLoading}
-          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-        >
-          Log out
-        </button>
+        <AccountMenu userName={userName} />
       </div>
     </header>
   );

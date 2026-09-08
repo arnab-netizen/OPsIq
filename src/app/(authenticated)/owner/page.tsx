@@ -9,6 +9,7 @@ import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { formatHumanDate } from "@/lib/format-human-date";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic command-center payload is untyped; load() fetch-on-mount is intentional */
 
 const MISSING_INPUT_REASON: Record<string, string> = {
@@ -798,11 +799,11 @@ export default function OwnerCommandCenterPage() {
                 <h2 className="font-bold mb-1">Reassessment</h2>
                 {data.lastDiagnosedAt && (
                   <div className="text-xs text-muted-foreground mb-2 space-y-0.5">
-                    <div>Last diagnosed: {new Date(data.lastDiagnosedAt).toLocaleDateString()}</div>
+                    <div>Last diagnosed: {formatHumanDate(data.lastDiagnosedAt)}</div>
                     {data.nextReassessmentDue && (
                       <div className={new Date(data.nextReassessmentDue) <= new Date() ? "text-[var(--warning-text)] font-medium" : ""}>
                         Next reassessment {new Date(data.nextReassessmentDue) <= new Date() ? "overdue" : "due"}:{" "}
-                        {new Date(data.nextReassessmentDue).toLocaleDateString()}
+                        {formatHumanDate(data.nextReassessmentDue)}
                         {data.reassessmentCadenceDays != null && <> (every {data.reassessmentCadenceDays} days)</>}
                       </div>
                     )}

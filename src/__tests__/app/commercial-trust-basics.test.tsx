@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, fireEvent } from "@testing-library/react";
 
 import { AppHeader } from "@/ui/shell/app-header";
 import { ActiveBusinessProvider } from "@/context/active-business-context";
@@ -21,13 +21,26 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Visible logout control", () => {
-  it("renders a 'Log out' control in the authenticated header", () => {
+describe("Logout control, reached via the account menu", () => {
+  it("is not exposed directly in the header — a lay owner must deliberately open the account menu first", () => {
     const { container } = render(
       <ActiveBusinessProvider>
         <AppHeader userName="Ada" />
       </ActiveBusinessProvider>
     );
+    const btn = Array.from(container.querySelectorAll("button")).find((b) =>
+      /log out/i.test(b.textContent ?? "")
+    );
+    expect(btn).toBeUndefined();
+  });
+
+  it("appears once the account menu is opened", () => {
+    const { container, getByTestId } = render(
+      <ActiveBusinessProvider>
+        <AppHeader userName="Ada" />
+      </ActiveBusinessProvider>
+    );
+    fireEvent.click(getByTestId("account-menu-trigger"));
     const btn = Array.from(container.querySelectorAll("button")).find((b) =>
       /log out/i.test(b.textContent ?? "")
     );

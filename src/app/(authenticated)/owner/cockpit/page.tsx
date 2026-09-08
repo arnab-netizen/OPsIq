@@ -27,7 +27,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
 import { useCallback, useEffect, useState } from "react";
-import { Button, CardDashboardSkeleton, PageHeader } from "@/ui/primitives";
+import { Button, CardDashboardSkeleton, Modal, PageHeader } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
 import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
@@ -71,7 +71,8 @@ async function apiPost(path: string, body: unknown) {
 interface AvoidItem { avoid?: string }
 
 export default function OwnerCockpitPage() {
-  const { activeBusinessId, needsBusinessRecovery, loading: contextLoading } = useActiveBusiness();
+  const { activeBusiness, activeBusinessId, needsBusinessRecovery, loading: contextLoading } = useActiveBusiness();
+  const [startupModeConfirmOpen, setStartupModeConfirmOpen] = useState(false);
   const [bridge, setBridge] = useState<ProcessExecutionBridgeView | null>(null);
   const [avoid, setAvoid] = useState<string[]>([]);
   const [recovery, setRecovery] = useState<OwnerRecoveryStatusResponse | null>(null);
@@ -246,18 +247,50 @@ export default function OwnerCockpitPage() {
         }
       />
       {message && <p data-testid="cockpit-message" className="text-sm text-muted-foreground">{message}</p>}
-      {/* G8: Startup Mode entry point — server-authoritative role gating at /owner/startup */}
+      {/* G8: Startup Mode entry point — server-authoritative role gating at /owner/startup.
+          Confirmation dialog added after a real usability test: clicking this navigated
+          immediately with no explanation of what "Startup Mode" is or that it leaves the
+          current business untouched — an owner could not tell if they were about to lose or
+          change what they'd already set up. */}
       <nav aria-label="Owner mode navigation">
         <Button
           data-testid="cockpit-startup-mode-link"
           variant="ghost"
           size="sm"
-          onClick={() => { window.location.href = "/owner/startup"; }}
+          onClick={() => setStartupModeConfirmOpen(true)}
           className="text-muted-foreground"
         >
-          Starting up a new business? Switch to Startup Mode
+          Plan a new business
         </Button>
       </nav>
+      <Modal
+        isOpen={startupModeConfirmOpen}
+        onClose={() => setStartupModeConfirmOpen(false)}
+        title="Plan a new business"
+        footer={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setStartupModeConfirmOpen(false)}>
+              {activeBusiness?.name ? `← Back to ${activeBusiness.name}` : "← Back"}
+            </Button>
+            <Button
+              data-testid="cockpit-startup-mode-confirm"
+              size="sm"
+              onClick={() => { window.location.href = "/owner/startup"; }}
+            >
+              Continue to Starting up
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-foreground">
+          Startup planning is separate from {activeBusiness?.name ?? "your current business"}.
+          Your current business will not be changed.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Use this if you&apos;re thinking about starting a brand-new business. You can always come
+          back to {activeBusiness?.name ?? "your current business"} exactly as you left it.
+        </p>
+      </Modal>
       <MinimumOwnerCockpit
         bridge={bridge}
         actionsToAvoid={avoid}

@@ -183,6 +183,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "Why OpsIQ says this", href: "/owner/trust", requiresOwner: true },
       { label: "People", href: "/users", requiresCapability: CAPABILITIES.USER_VIEW },
       { label: "Settings", href: "/settings" },
+      { label: "Help", href: "/owner/help", requiresOwner: true },
       { label: "Send beta feedback", href: "/owner/feedback", requiresOwner: true },
     ],
   },
