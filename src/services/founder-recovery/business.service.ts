@@ -83,6 +83,24 @@ export async function listFixtureBusinesses(workspaceId: string) {
   });
 }
 
+/**
+ * The single authoritative "does this workspace have at least one real, active business" check
+ * for domain services that must gate business-derived output (risks, alerts, actions,
+ * recommendations) on real business existence -- never a React-only page guard. See
+ * listBusinessRisks() in business-risk.service.ts for the defect this closes: a real human
+ * usability test found Priorities still showing a critical cash-survival risk while Home
+ * correctly showed the "set up your business" onboarding state, because BusinessRiskEntry has no
+ * businessId column at all and its list query was workspace-scoped only, with no gate on whether
+ * a real business currently exists for that workspace.
+ */
+export async function hasAnyRealBusiness(workspaceId: string): Promise<boolean> {
+  const business = await db.ownerBusiness.findFirst({
+    where: { workspaceId, isActive: true, isFixtureBusiness: false },
+    select: { id: true },
+  });
+  return business !== null;
+}
+
 export async function getBusiness(businessId: string, workspaceId: string) {
   const business = await db.ownerBusiness.findFirst({
     where: { id: businessId, workspaceId },

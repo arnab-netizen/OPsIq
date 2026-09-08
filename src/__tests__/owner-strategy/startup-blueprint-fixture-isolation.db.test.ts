@@ -83,9 +83,20 @@ beforeAll(async () => {
     update: {},
     create: { id: actor, email: `blueprint-fixture-${actor}@example.com`, name: "Blueprint Fixture Test", isActive: true, updatedAt: new Date() },
   });
+  // listBusinessRisks() (like Home) now requires a real, active, non-fixture business to exist
+  // before returning any business-derived risk (see hasAnyRealBusiness) -- this test's workspace
+  // needs one so the "ordinary owner sees ZERO fixture-generated records" assertions below still
+  // exercise fixture filtering specifically, not the separate zero-business gate.
+  await db.ownerBusiness.create({
+    data: {
+      id: randomUUID(), workspaceId: ws, name: "Fixture Isolation Test Business", businessType: "generic_local_service",
+      currency: "USD", isActive: true, isFixtureBusiness: false, createdBy: actor,
+    },
+  });
 });
 
 afterAll(async () => {
+  await db.ownerBusiness.deleteMany({ where: { workspaceId: ws } });
   await db.startupIdeaRecord.deleteMany({ where: { workspaceId: ws } });
   await db.ownerStartupSession.deleteMany({ where: { workspaceId: ws } });
   await db.auditEvent.deleteMany({ where: { actorId: actor } });
