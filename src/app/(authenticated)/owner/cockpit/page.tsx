@@ -28,7 +28,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
 import { useCallback, useEffect, useState } from "react";
-import { Button, CardDashboardSkeleton, PageHeader } from "@/ui/primitives";
+import { Button, CardDashboardSkeleton, EmptyState, PageHeader } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
 import { StartHereContinuationCard } from "@/components/owner/StartHereContinuationCard";
@@ -73,7 +73,7 @@ async function apiPost(path: string, body: unknown) {
 interface AvoidItem { avoid?: string }
 
 export default function OwnerCockpitPage() {
-  const { activeBusinessId, needsBusinessRecovery, loading: contextLoading } = useActiveBusiness();
+  const { activeBusinessId, needsBusinessRecovery, businesses, loading: contextLoading } = useActiveBusiness();
   const [bridge, setBridge] = useState<ProcessExecutionBridgeView | null>(null);
   const [avoid, setAvoid] = useState<string[]>([]);
   const [recovery, setRecovery] = useState<OwnerRecoveryStatusResponse | null>(null);
@@ -133,9 +133,16 @@ export default function OwnerCockpitPage() {
     // workspace-wide-fallback business signals as if they belonged to a resolved business —
     // see ActiveBusinessContext.needsBusinessRecovery.
     if (needsBusinessRecovery) return;
+    // No real business exists yet for this workspace (activeBusinessId is legitimately null, not
+    // a recovery case). A real human usability test found that calling now-view anyway still
+    // rendered a full business diagnosis (cash/finance findings, "blocked: do not pursue growth",
+    // business condition, execution lifecycle...) built from a workspace-wide fallback query, even
+    // though no business-specific evidence exists yet. NO VALID OWNER BUSINESS => NO
+    // BUSINESS-SPECIFIC DIAGNOSIS: skip the fetch entirely and render the onboarding state below.
+    if (businesses.length === 0) { setLoading(false); return; }
     void load(activeBusinessId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner switches business elsewhere, not on every `load` identity change
-  }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery, businesses.length]);
 
   const onAction = useCallback(async (taskKey: string, action: string, input: CockpitActionInput) => {
     setBusy(true);
@@ -227,6 +234,23 @@ export default function OwnerCockpitPage() {
       setBusy(false);
     }
   }, [load, activeBusinessId]);
+
+  if (contextLoading) return <main className="p-6"><CardDashboardSkeleton label="Loading your business" sections={2} /></main>;
+
+  // No business exists yet for this workspace. Never render a diagnosis/recommendation built
+  // from workspace-wide fallback data for a business that doesn't exist — see the effect above.
+  if (!needsBusinessRecovery && businesses.length === 0) {
+    return (
+      <main className="flex max-w-2xl flex-col gap-6 p-6">
+        <PageHeader title="Home" description="How your business is doing, what needs your attention, and what to do next." />
+        <EmptyState
+          title="Set up your business to get your first assessment"
+          description="OpsIQ needs at least one business on file before it can show you cash health, priorities, or recommendations. Add your business to get started."
+          primaryAction={{ label: "Set up your business", href: "/owner/data" }}
+        />
+      </main>
+    );
+  }
 
   if (loading) return <main className="p-6"><CardDashboardSkeleton label="Loading your business" sections={2} /></main>;
   if (error) return (
