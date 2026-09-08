@@ -11,9 +11,15 @@
  *
  * This proves the fixed wiring end-to-end at the request level: physical cash goes only to the
  * finance snapshot, bank balance goes only to a minimal cashflow snapshot for the same period
- * (the same governed endpoints /owner/finance and /owner/cashflow already use), and a 409 on the
- * cashflow side (no amend endpoint exists for cashflow snapshots in this codebase) never blocks
- * the first-result flow.
+ * (the same governed endpoints /owner/finance and /owner/cashflow already use).
+ *
+ * It also proves the retry/conflict path is genuinely safe, not just non-blocking: cashflow
+ * snapshots have no amend/update endpoint in this codebase (confirmed by enumerating every route
+ * under src/app/api/owner/cashflow/**), so a 409 on re-submission must never be treated as
+ * "saved" without checking whether the value on file actually matches what was just submitted.
+ * Silently continuing on a DIFFERENT value would mean the diagnosis enriches itself from a stale
+ * bank balance while the UI just accepted a new one, with no signal to the owner that their
+ * correction never took effect.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, waitFor, fireEvent } from "@testing-library/react";
@@ -52,7 +58,13 @@ function json(body: unknown, ok = true, status = ok ? 200 : 500) {
   return Promise.resolve({ ok, status, json: () => Promise.resolve(body) });
 }
 
-function setupFetch(opts: { cashflowStatus?: number } = {}) {
+/**
+ * @param existingCashflowSnapshot When set, the cashflow POST returns 409 (as if a snapshot for
+ *   this exact period already exists) and the subsequent GET list resolves to this one row --
+ *   `bankBalance: null` models scenario D (a snapshot exists for the period but without a bank
+ *   balance on it), any number models scenarios B/C.
+ */
+function setupFetch(opts: { existingCashflowSnapshot?: { bankBalance: number | null } } = {}) {
   const calls: Call[] = [];
   const fetchMock = vi.fn((url: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
@@ -72,9 +84,16 @@ function setupFetch(opts: { cashflowStatus?: number } = {}) {
       return json({ id: "snap-1" });
     }
     if (method === "POST" && url === `/api/owner/cashflow/businesses/${BUSINESS_ID}/snapshots`) {
-      const status = opts.cashflowStatus ?? 201;
-      if (status === 409) return json({ error: "A cashflow snapshot for this business and reporting period already exists." }, false, 409);
+      if (opts.existingCashflowSnapshot) {
+        return json({ error: "A cashflow snapshot for this business and reporting period already exists." }, false, 409);
+      }
       return json({ id: "cf-snap-1" });
+    }
+    if (method === "GET" && url === `/api/owner/cashflow/businesses/${BUSINESS_ID}/snapshots`) {
+      if (!opts.existingCashflowSnapshot) throw new Error("Unexpected GET: no conflict was configured");
+      const financePost = calls.find((c) => c.method === "POST" && c.url.endsWith("/finance/businesses/b1/snapshots"))!;
+      const { periodStart, periodEnd } = financePost.body as Record<string, string>;
+      return json([{ periodStart, periodEnd, bankBalance: opts.existingCashflowSnapshot.bankBalance }]);
     }
     if (method === "POST" && url === `/api/owner/finance/businesses/${BUSINESS_ID}/diagnoses`) {
       return json({ findings: [], actions: [], dataConfidenceScore: 40 });
@@ -102,8 +121,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("onboarding cash-field wiring", () => {
-  it("physical cash only: posts cashOnHand to Finance, never calls Cashflow", async () => {
+describe("E/F/G/H: onboarding cash-field routing", () => {
+  it("E. physical cash only: posts cashOnHand to Finance, never calls Cashflow", async () => {
     const calls = setupFetch();
     render(<OwnerOnboardingPage />);
     await fillAndSubmit({ revenue: "20000", cashOnHand: "3000" });
@@ -113,12 +132,10 @@ describe("onboarding cash-field wiring", () => {
     const financePost = calls.find((c) => c.method === "POST" && c.url.endsWith("/finance/businesses/b1/snapshots"))!;
     expect((financePost.body as Record<string, unknown>).cashOnHand).toBe(3000);
     expect("bankBalance" in (financePost.body as Record<string, unknown>)).toBe(false);
-
-    const cashflowPost = calls.find((c) => c.url.includes("/cashflow/businesses/b1/snapshots"));
-    expect(cashflowPost).toBeUndefined();
+    expect(calls.find((c) => c.url.endsWith("/cashflow/businesses/b1/snapshots"))).toBeUndefined();
   });
 
-  it("bank balance only: never puts it on the Finance snapshot, creates a minimal Cashflow snapshot instead", async () => {
+  it("F. bank balance only: never puts it on the Finance snapshot, creates a minimal Cashflow snapshot instead", async () => {
     const calls = setupFetch();
     render(<OwnerOnboardingPage />);
     await fillAndSubmit({ revenue: "20000", bankBalance: "5000" });
@@ -133,13 +150,11 @@ describe("onboarding cash-field wiring", () => {
     expect(cashflowPost).toBeDefined();
     const cfBody = cashflowPost.body as Record<string, unknown>;
     expect(cfBody.bankBalance).toBe(5000);
-    // Same reporting period as the finance snapshot, so the diagnosis enrichment (at-or-before,
-    // same period => age 0 days) actually picks it up.
     expect(cfBody.periodStart).toBe((financePost.body as Record<string, unknown>).periodStart);
     expect(cfBody.periodEnd).toBe((financePost.body as Record<string, unknown>).periodEnd);
   });
 
-  it("both physical cash and bank balance: each lands in its own domain, neither is dropped", async () => {
+  it("G. both physical cash and bank balance: each lands in its own domain, neither is dropped", async () => {
     const calls = setupFetch();
     render(<OwnerOnboardingPage />);
     await fillAndSubmit({ revenue: "20000", cashOnHand: "3000", bankBalance: "5000" });
@@ -154,7 +169,7 @@ describe("onboarding cash-field wiring", () => {
     expect((cashflowPost.body as Record<string, unknown>).bankBalance).toBe(5000);
   });
 
-  it("neither cash field filled: no cash value on Finance, Cashflow is never called", async () => {
+  it("H. neither cash field filled: no cash value on Finance, Cashflow is never called", async () => {
     const calls = setupFetch();
     render(<OwnerOnboardingPage />);
     await fillAndSubmit({ revenue: "20000" });
@@ -165,15 +180,56 @@ describe("onboarding cash-field wiring", () => {
     expect((financePost.body as Record<string, unknown>).cashOnHand).toBeUndefined();
     expect(calls.find((c) => c.url.endsWith("/cashflow/businesses/b1/snapshots"))).toBeUndefined();
   });
+});
 
-  it("a same-period Cashflow conflict (409, no amend endpoint exists) never blocks the first result", async () => {
-    const calls = setupFetch({ cashflowStatus: 409 });
+describe("A/B/C/D: Cashflow 409 conflict resolution is genuinely safe, not just non-blocking", () => {
+  it("A. no existing snapshot + bank balance: plain create succeeds, no conflict path taken, no warning", async () => {
+    const calls = setupFetch();
     render(<OwnerOnboardingPage />);
     await fillAndSubmit({ revenue: "20000", bankBalance: "5000" });
 
-    // The 409 is swallowed -- diagnosis still runs and a first result is still produced.
+    await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
+    expect(calls.find((c) => c.method === "GET" && c.url.endsWith("/cashflow/businesses/b1/snapshots"))).toBeUndefined();
+    expect(screen.queryByTestId("onboarding-bank-balance-warning")).toBeNull();
+  });
+
+  it("B. existing snapshot with the SAME bank balance: genuinely idempotent, proceeds with no warning", async () => {
+    const calls = setupFetch({ existingCashflowSnapshot: { bankBalance: 5000 } });
+    render(<OwnerOnboardingPage />);
+    await fillAndSubmit({ revenue: "20000", bankBalance: "5000" });
+
+    await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
+    // The conflict was resolved by reading the existing value back, not assumed.
+    expect(calls.some((c) => c.method === "GET" && c.url.endsWith("/cashflow/businesses/b1/snapshots"))).toBe(true);
+    expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true);
+    expect(screen.queryByTestId("onboarding-bank-balance-warning")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("C. existing snapshot with a DIFFERENT bank balance: never silently proceeds as if the new number was saved", async () => {
+    const calls = setupFetch({ existingCashflowSnapshot: { bankBalance: 100000 } });
+    render(<OwnerOnboardingPage />);
+    await fillAndSubmit({ revenue: "20000", bankBalance: "70000" });
+
+    // The first result still renders (finance data was saved correctly) --
     await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
     expect(calls.some((c) => c.method === "POST" && c.url.includes("/diagnoses"))).toBe(true);
-    expect(screen.queryByRole("alert")).toBeNull();
+    // -- but it is NOT presented as though the bank balance correction took effect.
+    const warning = screen.getByTestId("onboarding-bank-balance-warning");
+    expect(warning.textContent).toMatch(/70,000/);
+    expect(warning.textContent).toMatch(/100,000/);
+    expect(warning.textContent).toMatch(/couldn.t be saved/i);
+    expect(warning.querySelector("a")!.getAttribute("href")).toBe("/owner/cashflow");
+  });
+
+  it("D. existing snapshot for the period with NO bank balance on it: still flagged, not silently treated as a match", async () => {
+    setupFetch({ existingCashflowSnapshot: { bankBalance: null } });
+    render(<OwnerOnboardingPage />);
+    await fillAndSubmit({ revenue: "20000", bankBalance: "5000" });
+
+    await waitFor(() => expect(screen.getByTestId("onboarding-first-result")).toBeTruthy());
+    const warning = screen.getByTestId("onboarding-bank-balance-warning");
+    expect(warning.textContent).toMatch(/couldn.t be saved/i);
+    expect(warning.querySelector("a")!.getAttribute("href")).toBe("/owner/cashflow");
   });
 });

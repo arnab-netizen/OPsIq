@@ -13,17 +13,17 @@ import { confidenceDisplayPhrase } from "@/domain/owner-mode/owner-onboarding";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- runtime onboarding payload is untyped; fetch-on-mount is intentional */
 
 // Data completeness is not a danger signal -- see the matching comment in /owner/data/page.tsx.
-const CONFIDENCE_VARIANT: Record<string, "success" | "default" | "warning" | "destructive" | "muted"> = {
-  high: "success",
-  medium: "warning",
-  low: "muted",
-  none: "muted",
+const CONFIDENCE_VARIANT: Record<string, "success-accessible" | "default-accessible" | "warning-accessible" | "destructive" | "muted-accessible"> = {
+  high: "success-accessible",
+  medium: "warning-accessible",
+  low: "muted-accessible",
+  none: "muted-accessible",
 };
 
-const SEVERITY_VARIANT: Record<string, "warning" | "destructive" | "muted"> = {
-  critical: "destructive",
-  high: "warning",
-  medium: "muted",
+const SEVERITY_VARIANT: Record<string, "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  critical: "destructive-accessible",
+  high: "warning-accessible",
+  medium: "muted-accessible",
 };
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -36,11 +36,11 @@ const SEVERITY_LABEL: Record<string, string> = {
 // Lowercase — OwnerSeverity values (src/domain/owner-spine/contracts.ts) are "critical" |
 // "high" | "medium" | "low", not upper-case; a mismatched-case map here would silently fall
 // through to the "default" (unstyled) badge variant for every real finding.
-const FINDING_SEVERITY_VARIANT: Record<string, "warning" | "destructive" | "muted" | "default"> = {
-  critical: "destructive",
-  high: "destructive",
-  medium: "warning",
-  low: "muted",
+const FINDING_SEVERITY_VARIANT: Record<string, "warning-accessible" | "destructive-accessible" | "muted-accessible" | "default-accessible"> = {
+  critical: "destructive-accessible",
+  high: "destructive-accessible",
+  medium: "warning-accessible",
+  low: "muted-accessible",
 };
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -123,7 +123,7 @@ function EssentialNumbersForm({
 }: {
   businessId: string;
   currency: string;
-  onResult: (cycle: any) => void;
+  onResult: (cycle: any, bankBalanceWarning?: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -202,6 +202,7 @@ function EssentialNumbersForm({
       // window). Creating it here, for the same period, before running the diagnosis below, is what
       // makes that enrichment fire on this very first result -- no new field, no new domain, just
       // wiring onboarding into the enrichment path that already exists.
+      let bankBalanceWarning: string | undefined;
       if (bankBalance !== undefined) {
         try {
           await api(`/api/owner/cashflow/businesses/${businessId}/snapshots`, {
@@ -211,13 +212,35 @@ function EssentialNumbersForm({
         } catch (cashflowErr) {
           // A cashflow snapshot for this exact period already exists. Unlike finance snapshots,
           // cashflow snapshots have no governed amend/update endpoint in this codebase (only
-          // GET/POST-create exist -- see src/app/api/owner/cashflow/**) so there is no safe way to
-          // change the value already on file for this period from here. That's fine for onboarding's
-          // purpose: the existing snapshot (from an earlier run of this same step, or entered
-          // directly in Cashflow) still satisfies the finance diagnosis's enrichment lookup, so we
-          // simply don't block or fail the first-result flow on a conflict outside our own control.
-          // A real change to the figure belongs in Cashflow, which owns editing its own snapshots.
+          // GET/POST-create exist -- see src/app/api/owner/cashflow/**), so there is no safe way to
+          // overwrite the value already on file for this period from here.
           if (!(cashflowErr instanceof ApiError) || cashflowErr.status !== 409) throw cashflowErr;
+
+          // The 409 alone doesn't tell us whether this is genuinely idempotent (the owner re-ran
+          // this step and typed the same number again) or a real conflict (the number on file is
+          // different from what was just submitted). Resolve the actual stored value and compare --
+          // silently proceeding on a DIFFERENT value would mean the diagnosis below enriches itself
+          // from a stale bank balance while the UI just accepted a new one, with nothing telling the
+          // owner their correction never took effect.
+          const existing = await api(`/api/owner/cashflow/businesses/${businessId}/snapshots`);
+          const list = (existing?.snapshots ?? existing ?? []) as Array<{
+            periodStart: string;
+            periodEnd: string;
+            bankBalance: number | null;
+          }>;
+          const currentPeriod = list.find(
+            (s) => s.periodStart?.slice(0, 10) === periodStart && s.periodEnd?.slice(0, 10) === periodEnd,
+          );
+          const onFile = currentPeriod?.bankBalance ?? null;
+          if (onFile !== bankBalance) {
+            // Not idempotent. There is no governed way to overwrite it from onboarding, so say so
+            // honestly rather than silently using the stale figure.
+            bankBalanceWarning =
+              onFile === null
+                ? `Your bank balance couldn't be saved for this period — a cashflow record already exists for it without a bank balance. Add it directly in Cashflow.`
+                : `Your bank balance of ${bankBalance.toLocaleString()} couldn't be saved — ${onFile.toLocaleString()} is already on file for this period. Update it directly in Cashflow if that figure is wrong.`;
+          }
+          // else: identical value already on file -- genuinely idempotent, nothing to warn about.
         }
       }
 
@@ -225,7 +248,7 @@ function EssentialNumbersForm({
         method: "POST",
         body: JSON.stringify({ snapshotId }),
       });
-      onResult(cycle);
+      onResult(cycle, bankBalanceWarning);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save that. Please try again.");
     } finally {
@@ -362,7 +385,7 @@ type FirstResultAction = {
  * never persisted on OwnerFinanceAction nor returned by this API today, so there is nothing true to
  * show under a "Why" heading here. Labeled honestly instead: "How OpsIQ will check it worked."
  */
-function FirstResultCard({ cycle }: { cycle: any }) {
+function FirstResultCard({ cycle, bankBalanceWarning }: { cycle: any; bankBalanceWarning?: string | null }) {
   const findings = (cycle?.findings ?? []) as FirstResultFinding[];
   const actions = (cycle?.actions ?? []) as FirstResultAction[];
   const top = findings[0] ?? null;
@@ -371,12 +394,25 @@ function FirstResultCard({ cycle }: { cycle: any }) {
 
   return (
     <section className="rounded-md border border-border bg-card p-5" data-testid="onboarding-first-result">
+      {bankBalanceWarning && (
+        <div
+          className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+          role="alert"
+          data-testid="onboarding-bank-balance-warning"
+        >
+          <p className="font-medium">Bank balance not saved</p>
+          <p className="mt-1">{bankBalanceWarning}</p>
+          <Link href="/owner/cashflow" className="mt-1 inline-block font-medium underline hover:no-underline">
+            Go to Cashflow →
+          </Link>
+        </div>
+      )}
       <h2 className="text-base font-semibold text-foreground">What OpsIQ found</h2>
       {top ? (
         <>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <strong className="text-base text-foreground">{top.title}</strong>
-            <Badge variant={FINDING_SEVERITY_VARIANT[top.severity] ?? "default"}>
+            <Badge variant={FINDING_SEVERITY_VARIANT[top.severity] ?? "default-accessible"}>
               {SEVERITY_LABEL[top.severity] ?? top.severity}
             </Badge>
           </div>
@@ -387,7 +423,7 @@ function FirstResultCard({ cycle }: { cycle: any }) {
           <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">What to do next</h3>
           {topAction ? (
             <>
-              <p className="mt-1 text-sm font-medium text-foreground">{topAction.title}</p>
+              <p className="mt-1 text-base font-semibold text-foreground">{topAction.title}</p>
               <p className="mt-1 text-sm text-muted-foreground">{topAction.description}</p>
               {topAction.verificationMethod && (
                 <>
@@ -423,8 +459,12 @@ function FirstResultCard({ cycle }: { cycle: any }) {
           <p className="mt-1 text-sm text-muted-foreground">{confidencePhrase(confidenceScore)}</p>
         </>
       )}
+      {/* Both outline, not one solid-primary: neither is "the" recommended action -- that's the
+          plain-text finding/action content above (title, why it matters, what to do next). These
+          are navigation only (view more detail / leave this screen), so a solid button here would
+          out-compete the actual recommendation for attention rather than support it. */}
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/owner/finance"><Button className="min-h-[44px]">See full finance details</Button></Link>
+        <Link href="/owner/finance"><Button variant="outline" className="min-h-[44px]">See full finance details</Button></Link>
         <Link href="/owner/cockpit"><Button variant="outline" className="min-h-[44px]">Go to Home</Button></Link>
       </div>
     </section>
@@ -439,6 +479,7 @@ export default function OwnerOnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [firstResult, setFirstResult] = useState<any | null>(null);
+  const [bankBalanceWarning, setBankBalanceWarning] = useState<string | null>(null);
 
   const loadState = useCallback(async (businessId: string) => {
     setError(null);
@@ -527,14 +568,17 @@ export default function OwnerOnboardingPage() {
           )}
 
           {firstResult ? (
-            <FirstResultCard cycle={firstResult} />
+            <FirstResultCard cycle={firstResult} bankBalanceWarning={bankBalanceWarning} />
           ) : (
             <div className="flex flex-col gap-6">
               {state?.found && !state.canRunFirstDiagnosis && selectedBusiness && (
                 <EssentialNumbersForm
                   businessId={selectedBusiness.id}
                   currency={selectedBusiness.currency ?? "USD"}
-                  onResult={setFirstResult}
+                  onResult={(cycle, warning) => {
+                    setFirstResult(cycle);
+                    setBankBalanceWarning(warning ?? null);
+                  }}
                 />
               )}
 
@@ -544,7 +588,7 @@ export default function OwnerOnboardingPage() {
                     <div className="text-xs uppercase text-muted-foreground">Setup progress</div>
                     <div className="flex flex-wrap gap-2">
                       <Badge
-                        variant={readiness.overallScore >= 70 ? "success" : readiness.overallScore >= 40 ? "warning" : "destructive"}
+                        variant={readiness.overallScore >= 70 ? "success-accessible" : readiness.overallScore >= 40 ? "warning-accessible" : "destructive-accessible"}
                         className="tabular-nums"
                       >
                         {Math.round(readiness.overallScore)}/100
@@ -573,7 +617,7 @@ export default function OwnerOnboardingPage() {
                   <section className="rounded-md border border-border bg-card p-4" data-testid="onboarding-confidence">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-xs uppercase text-muted-foreground">How sure OpsIQ is so far</div>
-                      <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted"}>
+                      <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted-accessible"}>
                         {confidenceDisplayPhrase(state.confidenceBeforeDiagnosis)}
                       </Badge>
                     </div>
@@ -595,7 +639,7 @@ export default function OwnerOnboardingPage() {
                             <li key={m.category} className="rounded-md border border-border p-3">
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <span className="min-w-0 break-words text-sm font-medium text-foreground">{m.label}</span>
-                                <Badge variant={SEVERITY_VARIANT[m.severity] ?? "muted"}>
+                                <Badge variant={SEVERITY_VARIANT[m.severity] ?? "muted-accessible"}>
                                   {SEVERITY_LABEL[m.severity] ?? m.severity}
                                 </Badge>
                               </div>

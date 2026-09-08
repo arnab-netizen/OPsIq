@@ -95,11 +95,11 @@ async function api(path: string, init?: RequestInit) {
 // "What is missing right now" list. Never paint this badge red: an owner who is 80% of the way
 // to their first assessment (canRunFirstDiagnosis) should not see an alarm-red badge fighting
 // the green "ready" box right below it.
-const CONFIDENCE_VARIANT: Record<string, "success" | "warning" | "destructive" | "muted"> = {
-  high: "success",
-  medium: "warning",
-  low: "muted",
-  none: "muted",
+const CONFIDENCE_VARIANT: Record<string, "success-accessible" | "warning-accessible" | "destructive" | "muted-accessible"> = {
+  high: "success-accessible",
+  medium: "warning-accessible",
+  low: "muted-accessible",
+  none: "muted-accessible",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -109,11 +109,11 @@ const STATUS_LABEL: Record<string, string> = {
   optional: "Optional",
 };
 
-const STATUS_VARIANT: Record<string, "success" | "destructive" | "warning" | "muted"> = {
-  supplied: "success",
-  missing_required: "destructive",
-  missing_recommended: "warning",
-  optional: "muted",
+const STATUS_VARIANT: Record<string, "success-accessible" | "destructive-accessible" | "warning-accessible" | "muted-accessible"> = {
+  supplied: "success-accessible",
+  missing_required: "destructive-accessible",
+  missing_recommended: "warning-accessible",
+  optional: "muted-accessible",
 };
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -203,7 +203,7 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
     <div data-testid="data-hub-readiness">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold text-foreground">How well OpsIQ knows your business</h2>
-        <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted"}>
+        <Badge variant={CONFIDENCE_VARIANT[state.confidenceBeforeDiagnosis] ?? "muted-accessible"}>
           {confidenceDisplayPhrase(state.confidenceBeforeDiagnosis)}
         </Badge>
       </div>
@@ -352,12 +352,16 @@ function MissingCritical({ items }: { items: MissingMinimumView[] }) {
             <li key={item.category} className="border-b border-border pb-3 last:border-0 last:pb-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-foreground">{item.label}</span>
-                <Badge variant={item.severity === "critical" ? "destructive" : "warning"}>
+                <Badge variant={item.severity === "critical" ? "destructive-accessible" : "warning-accessible"}>
                   {SEVERITY_LABEL[item.severity] ?? item.severity}
                 </Badge>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">{item.why}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              {/* text-muted-foreground itself is AA-compliant on a plain background, but this card's
+                  own bg-destructive/5 tint pushes it just under 4.5:1 (axe-verified) -- the
+                  accessible token, same as the badge above, corrects it without touching the
+                  sitewide muted-foreground default every other card relies on. */}
+              <p className="mt-1 text-sm text-[var(--muted-foreground-accessible)]">{item.why}</p>
+              <p className="mt-1 text-sm text-[var(--muted-foreground-accessible)]">
                 <span className="font-medium text-foreground">Affects: </span>
                 {item.decisionAffected}
               </p>

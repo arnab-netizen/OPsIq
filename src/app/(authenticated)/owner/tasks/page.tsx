@@ -143,6 +143,7 @@ export default function OwnerTasksPage() {
       {/* Filters */}
       <div className="flex gap-3 mb-6">
         <select
+          aria-label="Filter tasks by status"
           value={statusFilter}
           onChange={handleStatusChange}
           className="rounded border border-border bg-background px-3 py-1.5 text-sm"

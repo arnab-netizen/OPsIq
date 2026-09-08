@@ -27,12 +27,12 @@ import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
 import type { CockpitFinancePriority } from "@/services/owner-guidance/cockpit-finance-priority.service";
 
 /** Same survival-state palette as /owner/finance (owner/finance/page.tsx's SURVIVAL_VARIANT) — kept local since that page is a separate client bundle. */
-const SURVIVAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  SAFE: "success",
-  WATCH: "default",
-  AT_RISK: "warning",
-  CRITICAL: "destructive",
-  INSOLVENT_RISK: "destructive",
+const SURVIVAL_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted"> = {
+  SAFE: "success-accessible",
+  WATCH: "default-accessible",
+  AT_RISK: "warning-accessible",
+  CRITICAL: "destructive-accessible",
+  INSOLVENT_RISK: "destructive-accessible",
 };
 
 const APPROVAL_LABEL: Record<string, string> = {
@@ -61,8 +61,8 @@ const ACTION_LABEL: Record<string, string> = {
   // Phase 3 actions
   ACKNOWLEDGE: "Acknowledge", RECORD_PROGRESS: "Record progress", RECORD_OUTCOME: "Record outcome", VERIFY_OUTCOME: "Verify outcome",
 };
-const SEVERITY_VARIANT = (s: string): "destructive" | "warning" | "default" | "muted" =>
-  s === "CRITICAL" || s === "HIGH" ? "destructive" : s === "MEDIUM" ? "warning" : "default";
+const SEVERITY_VARIANT = (s: string): "destructive-accessible" | "warning-accessible" | "default-accessible" | "muted" =>
+  s === "CRITICAL" || s === "HIGH" ? "destructive-accessible" : s === "MEDIUM" ? "warning-accessible" : "default-accessible";
 
 // Plain-language severity labels -- the raw enum token ("HIGH", "critical", ...) must never reach
 // an owner verbatim. Case-insensitive lookup because severity values arrive in different casings
@@ -202,7 +202,7 @@ function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinanc
         <span style={{ fontSize: 12, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.4 }}>
           {primary ? "From your latest finance diagnosis" : "Latest finance diagnosis"}
         </span>
-        <Badge variant={SURVIVAL_VARIANT[priority.survivalState] ?? "default"}>
+        <Badge variant={SURVIVAL_VARIANT[priority.survivalState] ?? "default-accessible"}>
           {SURVIVAL_LABEL[priority.survivalState] ?? priority.survivalState.replace(/_/g, " ")}
         </Badge>
       </div>
@@ -289,11 +289,11 @@ function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsRespons
   );
 }
 
-const RISK_VARIANT = (level: string): "destructive" | "warning" | "default" | "muted" =>
-  level === "CRITICAL" || level === "HIGH" ? "destructive"
-  : level === "MEDIUM" ? "warning"
-  : level === "LOW" || level === "HIGH" ? "default"
-  : "muted";
+const RISK_VARIANT = (level: string): "destructive-accessible" | "warning-accessible" | "default-accessible" | "muted-accessible" =>
+  level === "CRITICAL" || level === "HIGH" ? "destructive-accessible"
+  : level === "MEDIUM" ? "warning-accessible"
+  : level === "LOW" || level === "HIGH" ? "default-accessible"
+  : "muted-accessible";
 
 const RISK_LEVEL_LABEL: Record<string, string> = {
   CRITICAL: "Critical", HIGH: "High", MEDIUM: "Medium", LOW: "Low",
@@ -331,11 +331,11 @@ const VERIFICATION_CLASS_LABEL: Record<string, string> = {
   INSUFFICIENT_EVIDENCE: "Insufficient evidence",
 };
 
-const VERIFICATION_CLASS_VARIANT = (c: string): "destructive" | "warning" | "default" | "muted" =>
-  c === "SUCCESS" ? "default"
-  : c === "FAILURE" || c === "NEGATIVE_IMPACT" ? "destructive"
-  : c === "PARTIAL_SUCCESS" ? "warning"
-  : "muted";
+const VERIFICATION_CLASS_VARIANT = (c: string): "destructive-accessible" | "warning-accessible" | "default-accessible" | "muted-accessible" =>
+  c === "SUCCESS" ? "default-accessible"
+  : c === "FAILURE" || c === "NEGATIVE_IMPACT" ? "destructive-accessible"
+  : c === "PARTIAL_SUCCESS" ? "warning-accessible"
+  : "muted-accessible";
 
 const OUTCOME_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "worked", label: "Worked" },
@@ -696,7 +696,7 @@ function BusinessOperatingSystemSection({
                   <span style={{ flex: 1 }}>{o.title}</span>
                   <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{o.objectiveType}</span>
                   {o.candidateType === "EXTERNAL_OPPORTUNITY" && (
-                    <Badge variant="default" data-testid={`cockpit-bos-candidate-type-${o.objectiveId}`}>External</Badge>
+                    <Badge variant="default-accessible" data-testid={`cockpit-bos-candidate-type-${o.objectiveId}`}>External</Badge>
                   )}
                 </div>
                 {o.portfolioDecision && (
@@ -737,7 +737,7 @@ function BusinessOperatingSystemSection({
             <ul style={{ margin: "4px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
               {bos.activeConstraints.map((c) => (
                 <li key={c.constraintId} data-testid={`cockpit-bos-constraint-${c.constraintId}`} style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                  <Badge variant="warning" data-testid={`cockpit-bos-constraint-badge-${c.constraintId}`}>BINDING CONSTRAINT</Badge>
+                  <Badge variant="warning-accessible" data-testid={`cockpit-bos-constraint-badge-${c.constraintId}`}>BINDING CONSTRAINT</Badge>
                   <span style={{ flex: 1 }}>{c.title}</span>
                   {onBosAction && (
                     <>
@@ -772,7 +772,7 @@ function BusinessOperatingSystemSection({
             <ul style={{ margin: "4px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 2 }}>
               {bos.topRisks.map((r) => (
                 <li key={r.riskId} data-testid={`cockpit-bos-risk-${r.riskId}`} style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-                  <Badge variant={r.severity >= 50 ? "destructive" : r.severity >= 25 ? "warning" : "muted"}>
+                  <Badge variant={r.severity >= 50 ? "destructive-accessible" : r.severity >= 25 ? "warning-accessible" : "muted-accessible"}>
                     {riskScoreLabel(r.severity)}
                   </Badge>
                   {" "}{r.title}
@@ -922,7 +922,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
         ) : (
           <>
             <div data-testid="cockpit-recovery-state" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              <Badge variant="muted">{RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</Badge>
+              <Badge variant="muted-accessible">{RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</Badge>
               <span data-testid="cockpit-recovery-stabilization">Stabilization: {recovery.stabilizationGate}</span>
               <span data-testid="cockpit-recovery-thrive">Growth gate: {recovery.thriveGate}</span>
             </div>
@@ -997,6 +997,18 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
   const secondaryVisible = secondary.slice(0, 3);
   const secondaryMore = secondary.slice(3);
 
+  // ── Presentation hierarchy only (F/PASS-40 governance unchanged: same actions, same counts, same
+  // data-cockpit-priority markers the no-overload test asserts on) -- pick the ONE action that most
+  // deserves to be the visually dominant "next step" so it doesn't compete with everything else in
+  // an undifferentiated row of equal-weight buttons. Start Work (a dedicated, separately-governed
+  // action) outranks the generic primary list when both are available, since starting the work is
+  // the literal first step; otherwise the first primary-classed action takes the dominant slot and
+  // every other offered action -- remaining primary actions included -- renders at the same, lighter
+  // visual weight below it.
+  const dominantIsStartWork = Boolean(top.canStart && onStartWork);
+  const dominantPrimaryAction = !dominantIsStartWork ? primary[0] : undefined;
+  const demotedPrimary = dominantPrimaryAction ? primary.slice(1) : primary;
+
   // Reason bullets: at most 3 plain-language reasons. Never a raw dump.
   const whyBullets = [top.riskIfIgnored].filter(Boolean).slice(0, 3);
 
@@ -1053,26 +1065,57 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           </ul>
         </div>
 
-        {/* 5. Safe Actions */}
-        {onAction && !terminal && (primary.length > 0 || secondaryVisible.length > 0) && (
-          <div data-testid="cockpit-safe-actions" className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-foreground">What you can safely do</span>
-            <div className="flex flex-wrap gap-2">
-              {primary.map((a) => (
-                <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="primary" disabled={busy}
-                  onClick={() => clickAction(a)}
-                  className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50">
-                  {ACTION_LABEL[a] ?? a}
-                </button>
-              ))}
-              {secondaryVisible.map((a) => (
-                <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="secondary" disabled={busy}
-                  onClick={() => clickAction(a)}
-                  className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
-                  {ACTION_LABEL[a] ?? a}
-                </button>
-              ))}
-            </div>
+        {/* 5. Safe Actions. Presentation only, per the F/PASS-40 no-overload envelope: one visually
+            dominant recommended action (never fabricated -- it's just the first of the actions the
+            server already allowed), everything else at one uniform, lighter weight underneath so it
+            never competes with it for attention. */}
+        {onAction && !terminal && (dominantIsStartWork || dominantPrimaryAction || demotedPrimary.length > 0 || secondaryVisible.length > 0) && (
+          <div data-testid="cockpit-safe-actions" className="flex flex-col gap-3">
+            {(dominantIsStartWork || dominantPrimaryAction) && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-foreground">Recommended next step</span>
+                {dominantIsStartWork ? (
+                  <button
+                    type="button"
+                    data-testid={`cockpit-start-work-${top.taskKey}`}
+                    disabled={busy}
+                    onClick={() => onStartWork!(top.taskKey)}
+                    className="inline-flex h-11 w-fit items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50"
+                  >
+                    Start Work
+                  </button>
+                ) : (
+                  <button type="button" data-testid={`cockpit-action-${dominantPrimaryAction}`} data-cockpit-priority="primary" disabled={busy}
+                    onClick={() => clickAction(dominantPrimaryAction!)}
+                    className="inline-flex h-11 w-fit items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50">
+                    {ACTION_LABEL[dominantPrimaryAction!] ?? dominantPrimaryAction}
+                  </button>
+                )}
+              </div>
+            )}
+            {(demotedPrimary.length > 0 || secondaryVisible.length > 0) && (
+              <div className="flex flex-col gap-1.5">
+                {(dominantIsStartWork || dominantPrimaryAction) && (
+                  <span className="text-xs text-muted-foreground">Other options</span>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {demotedPrimary.map((a) => (
+                    <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="primary" disabled={busy}
+                      onClick={() => clickAction(a)}
+                      className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
+                      {ACTION_LABEL[a] ?? a}
+                    </button>
+                  ))}
+                  {secondaryVisible.map((a) => (
+                    <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="secondary" disabled={busy}
+                      onClick={() => clickAction(a)}
+                      className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
+                      {ACTION_LABEL[a] ?? a}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {secondaryMore.length > 0 && (
               <details data-testid="cockpit-more-actions">
                 <summary className="cursor-pointer text-xs text-muted-foreground">{secondaryMore.length} more action(s)</summary>
@@ -1127,8 +1170,11 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         )}
         {terminal && <p data-testid="cockpit-terminal" style={{ fontSize: 12, color: "var(--success-text)" }}>This task is {STATUS_LABEL[top.status] ?? top.status.toLowerCase()}.</p>}
 
-        {/* Start Work — dedicated button for canStart=true tasks (Phase 2 Signal F) */}
-        {top.canStart && onStartWork && (
+        {/* Start Work (canStart=true tasks, Phase 2 Signal F) now renders inside "5. Safe Actions"
+            above as the dominant recommended button when onAction is provided. When onAction is
+            absent (a read-only render) there is no action-buttons block above to hold it, so it
+            still needs its own slot here -- same button, same testid, same handler. */}
+        {!onAction && top.canStart && onStartWork && (
           <div>
             <button
               type="button"
@@ -1151,7 +1197,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <div className="flex flex-col gap-3">
             <div data-testid="cockpit-owner-decision" className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-foreground">Required owner decision:</span>
-              <Badge variant={isOwner ? "destructive" : "default"}>{APPROVAL_LABEL[top.approvalLevel] ?? top.approvalLevel}</Badge>
+              <Badge variant={isOwner ? "destructive-accessible" : "default-accessible"}>{APPROVAL_LABEL[top.approvalLevel] ?? top.approvalLevel}</Badge>
               {isOwner && <span data-testid="cockpit-cannot-automate" className="text-xs text-destructive">This cannot be automated.</span>}
             </div>
 
@@ -1208,7 +1254,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <ul style={{ margin: "8px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
             {secondaryRoutes.slice(0, 3).map((r) => (
               <li key={r.taskKey} data-testid="cockpit-secondary-item" style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <Badge variant="muted">{ROUTE_LABEL[r.executionRoute] ?? r.executionRoute}</Badge>
+                <Badge variant="muted-accessible">{ROUTE_LABEL[r.executionRoute] ?? r.executionRoute}</Badge>
                 <span>{r.ownerVisibleSummary}</span>
               </li>
             ))}
@@ -1295,7 +1341,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
             {policyAttentionSignal.details.map((d, i) => (
               <li key={d.policyKey} data-testid={`cockpit-policy-detail-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center" }}>
-                <Badge variant={d.decision === "BLOCK" ? "destructive" : d.decision === "WARN" ? "warning" : "muted"}>
+                <Badge variant={d.decision === "BLOCK" ? "destructive-accessible" : d.decision === "WARN" ? "warning-accessible" : "muted-accessible"}>
                   {POLICY_DECISION_LABEL[d.decision] ?? d.decision}
                 </Badge>
                 <span style={{ color: "var(--muted-foreground)" }}>{d.label}</span>
@@ -1319,7 +1365,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
             {trendAlerts.map((alert, i) => (
               <li key={alert.alertType} data-testid={`cockpit-trend-alert-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
-                <Badge data-testid={`cockpit-trend-alert-${i}-severity`} variant={alert.severity === "critical" ? "destructive" : "warning"}>
+                <Badge data-testid={`cockpit-trend-alert-${i}-severity`} variant={alert.severity === "critical" ? "destructive-accessible" : "warning-accessible"}>
                   {severityLabel(alert.severity)}
                 </Badge>
                 <span style={{ color: "var(--muted-foreground)" }}>{alert.description}</span>
@@ -1361,7 +1407,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
             {activeEscalations.map((esc) => (
               <li key={esc.id} data-testid={`cockpit-escalation-${esc.id}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <Badge variant={esc.severity === "CRITICAL" ? "destructive" : "warning"}>{severityLabel(esc.severity)}</Badge>
+                <Badge variant={esc.severity === "CRITICAL" ? "destructive-accessible" : "warning-accessible"}>{severityLabel(esc.severity)}</Badge>
                 <span style={{ color: "var(--muted-foreground)", flex: 1 }}>{esc.title}</span>
                 {onAcknowledgeEscalation && (
                   <button

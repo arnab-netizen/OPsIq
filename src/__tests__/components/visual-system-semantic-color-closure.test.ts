@@ -244,7 +244,14 @@ describe("app-wide migration: the shared Badge/Button primitives and every bg-to
     expect(badgeSource).toMatch(/bg-primary\/10 text-primary border-primary\/20/);
     expect(badgeSource).toMatch(/bg-success\/10 text-success border-success\/20/);
     expect(badgeSource).toMatch(/bg-warning\/10 text-warning border-warning\/20/);
-    expect(badgeSource).not.toMatch(/-text\b/);
+    // The original "destructive"/"muted" variant entries are untouched (still the bare-token
+    // pattern, no -text token). This does NOT extend to "destructive-accessible"/"muted-accessible"
+    // — two new, additive, opt-in variants added later (see the --destructive-text/
+    // --muted-foreground-accessible describe block below) for owner-facing severity/confidence
+    // badges that axe found failing 4.5:1; every other Badge consumer, "destructive"/"muted"
+    // included, keeps using exactly what it used before.
+    expect(badgeSource).toMatch(/^\s*destructive:\s*"bg-destructive\/10 text-destructive border-destructive\/20",$/m);
+    expect(badgeSource).toMatch(/^\s*muted:\s*"bg-muted text-muted-foreground border-border",$/m);
   });
 
   it("the app-header avatar-initial badge (bg-primary/10 tinted circle) keeps the base --primary token — it is the same self-consistent tinted-fill pattern as Badge, not the broken plain-text pattern", () => {
@@ -304,5 +311,195 @@ describe("app-wide migration: the shared Badge/Button primitives and every bg-to
     const source = read("src/app/(authenticated)/dashboard/page.tsx");
     expect(source).toMatch(/text-3xl font-bold text-warning\b/);
     expect(source).not.toMatch(/text-3xl font-bold text-\[var\(--warning-text\)\]/);
+  });
+});
+
+/**
+ * --destructive-text / --muted-foreground-accessible (follow-up to the two closures above):
+ * real owner-facing severity/confidence badges on Home, Onboarding, and My Business measured
+ * 4.13-4.40:1 with axe (@axe-core/playwright) -- --destructive and --muted-foreground on their
+ * own badge fills, just under AA. Same fix shape as --primary-text/--warning-text/--success-text:
+ * new, additive, opt-in tokens (and two new Badge variants that consume them), the base tokens
+ * left exactly as every other consumer already uses them.
+ */
+describe("globals.css: --destructive-text / --muted-foreground-accessible are defined for both themes", () => {
+  const accessibleTokens = {
+    light: {
+      destructiveText: tokenValue(lightBlock, "destructive-text"),
+      mutedForegroundAccessible: tokenValue(lightBlock, "muted-foreground-accessible"),
+    },
+    dark: {
+      destructiveText: tokenValue(darkBlock, "destructive-text"),
+      mutedForegroundAccessible: tokenValue(darkBlock, "muted-foreground-accessible"),
+    },
+  };
+
+  it("both tokens are defined on :root (light) and redefined in the dark media block", () => {
+    for (const name of ["destructiveText", "mutedForegroundAccessible"] as const) {
+      expect(accessibleTokens.light[name]).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(accessibleTokens.dark[name]).toMatch(/^#[0-9a-fA-F]{6}$/);
+    }
+  });
+
+  it("is NOT registered in the @theme inline block (same Turbopack/Tailwind v4 quirk as --primary-text etc.)", () => {
+    expect(css).not.toMatch(/--color-destructive-text:/);
+    expect(css).not.toMatch(/--color-muted-foreground-accessible:/);
+  });
+
+  it("--destructive (fill token) is unchanged -- badges/buttons/borders/icons keep their exact color", () => {
+    expect(tokenValue(lightBlock, "destructive")).toBe("#dc2626");
+    expect(tokenValue(darkBlock, "destructive")).toBe("#ef4444");
+  });
+
+  it("--muted-foreground (default body-text token) is unchanged", () => {
+    expect(tokenValue(lightBlock, "muted-foreground")).toBe("#64748b");
+    expect(tokenValue(darkBlock, "muted-foreground")).toBe("#94a3b8");
+  });
+
+  it("--destructive-text passes 4.5:1 against a real destructive/10 badge fill (10% --destructive over --card/--background), in both themes", () => {
+    function blend(fgHex: string, alpha: number, bgHex: string): string {
+      const fg = hexToRgb(fgHex);
+      const bg = hexToRgb(bgHex);
+      return (
+        "#" +
+        fg
+          .map((c, i) => Math.round(c * alpha + bg[i] * (1 - alpha)))
+          .map((v) => v.toString(16).padStart(2, "0"))
+          .join("")
+      );
+    }
+    const lightTint = blend(tokenValue(lightBlock, "destructive"), 0.1, tokens.light.background);
+    expect(contrastRatio(accessibleTokens.light.destructiveText, lightTint)).toBeGreaterThanOrEqual(AA_NORMAL);
+    const darkTint = blend(tokenValue(darkBlock, "destructive"), 0.1, tokens.dark.background);
+    expect(contrastRatio(accessibleTokens.dark.destructiveText, darkTint)).toBeGreaterThanOrEqual(AA_NORMAL);
+  });
+
+  it("--muted-foreground-accessible passes 4.5:1 against --muted, in both themes", () => {
+    expect(
+      contrastRatio(accessibleTokens.light.mutedForegroundAccessible, tokenValue(lightBlock, "muted")),
+    ).toBeGreaterThanOrEqual(AA_NORMAL);
+    expect(
+      contrastRatio(accessibleTokens.dark.mutedForegroundAccessible, tokenValue(darkBlock, "muted")),
+    ).toBeGreaterThanOrEqual(AA_NORMAL);
+  });
+});
+
+describe("src/ui/primitives/badge.tsx: destructive-accessible/muted-accessible variants exist and consume the tokens correctly", () => {
+  const badgeSource = read("src/ui/primitives/badge.tsx");
+
+  it("both variants are opt-in additions, not replacements of the existing destructive/muted variants", () => {
+    expect(badgeSource).toMatch(/destructive:\s*"bg-destructive\/10 text-destructive border-destructive\/20"/);
+    expect(badgeSource).toMatch(/muted:\s*"bg-muted text-muted-foreground border-border"/);
+  });
+
+  it("destructive-accessible keeps the same fill/border as destructive, only the text token differs, consumed as a raw var()", () => {
+    expect(badgeSource).toMatch(
+      /"destructive-accessible":\s*"bg-destructive\/10 text-\[var\(--destructive-text\)\] border-destructive\/20"/,
+    );
+  });
+
+  it("muted-accessible keeps the same fill/border as muted, only the text token differs, consumed as a raw var()", () => {
+    expect(badgeSource).toMatch(
+      /"muted-accessible":\s*"bg-muted text-\[var\(--muted-foreground-accessible\)\] border-border"/,
+    );
+  });
+});
+
+/**
+ * --warning-badge-text / --success-badge-text (follow-up to the destructive/muted closure above):
+ * a live Lighthouse re-run on Home found the SAME defect on the "warning" Badge variant --
+ * text-warning on bg-warning/10 measures 2.86:1 in light mode. Checking success's math the same
+ * way showed the identical failure (2.96:1) even though nothing had reported it yet. The
+ * "default"/primary variant's dark-mode failure (4.31:1) needed no new token: the existing
+ * --primary-text already clears this tint with margin in both themes, it just was never applied
+ * to Badge's own "default" variant -- hence "default-accessible" reuses it directly.
+ */
+describe("globals.css: --warning-badge-text / --success-badge-text are defined for both themes", () => {
+  const badgeTextTokens = {
+    light: {
+      warningBadgeText: tokenValue(lightBlock, "warning-badge-text"),
+      successBadgeText: tokenValue(lightBlock, "success-badge-text"),
+    },
+    dark: {
+      warningBadgeText: tokenValue(darkBlock, "warning-badge-text"),
+      successBadgeText: tokenValue(darkBlock, "success-badge-text"),
+    },
+  };
+
+  function blendToken(fgHex: string, alpha: number, bgHex: string): string {
+    const fg = hexToRgb(fgHex);
+    const bg = hexToRgb(bgHex);
+    return (
+      "#" +
+      fg
+        .map((c, i) => Math.round(c * alpha + bg[i] * (1 - alpha)))
+        .map((v) => v.toString(16).padStart(2, "0"))
+        .join("")
+    );
+  }
+
+  it("both tokens are defined on :root (light) and redefined in the dark media block", () => {
+    for (const name of ["warningBadgeText", "successBadgeText"] as const) {
+      expect(badgeTextTokens.light[name]).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(badgeTextTokens.dark[name]).toMatch(/^#[0-9a-fA-F]{6}$/);
+    }
+  });
+
+  it("is NOT registered in the @theme inline block (same Turbopack/Tailwind v4 quirk as the other readable-text tokens)", () => {
+    expect(css).not.toMatch(/--color-warning-badge-text:/);
+    expect(css).not.toMatch(/--color-success-badge-text:/);
+  });
+
+  it("--warning/--success (fill tokens) are unchanged -- badges/buttons/borders/icons keep their exact color", () => {
+    expect(tokens.light.warning).toBe("#d97706");
+    expect(tokens.dark.warning).toBe("#f59e0b");
+    expect(tokens.light.success).toBe("#16a34a");
+    expect(tokens.dark.success).toBe("#22c55e");
+  });
+
+  it("--warning-badge-text passes 4.5:1 against a real bg-warning/10 badge fill, in both themes", () => {
+    const lightTint = blendToken(tokens.light.warning, 0.1, tokens.light.background);
+    expect(contrastRatio(badgeTextTokens.light.warningBadgeText, lightTint)).toBeGreaterThanOrEqual(AA_NORMAL);
+    const darkTint = blendToken(tokens.dark.warning, 0.1, tokens.dark.background);
+    expect(contrastRatio(badgeTextTokens.dark.warningBadgeText, darkTint)).toBeGreaterThanOrEqual(AA_NORMAL);
+  });
+
+  it("--success-badge-text passes 4.5:1 against a real bg-success/10 badge fill, in both themes", () => {
+    const lightTint = blendToken(tokens.light.success, 0.1, tokens.light.background);
+    expect(contrastRatio(badgeTextTokens.light.successBadgeText, lightTint)).toBeGreaterThanOrEqual(AA_NORMAL);
+    const darkTint = blendToken(tokens.dark.success, 0.1, tokens.dark.background);
+    expect(contrastRatio(badgeTextTokens.dark.successBadgeText, darkTint)).toBeGreaterThanOrEqual(AA_NORMAL);
+  });
+
+  it("--primary-text (already existing) passes 4.5:1 against a real bg-primary/10 badge fill, in both themes -- why 'default-accessible' needs no new token", () => {
+    const lightTint = blendToken(tokens.light.primary, 0.1, tokens.light.background);
+    expect(contrastRatio(tokens.light.primaryText, lightTint)).toBeGreaterThanOrEqual(AA_NORMAL);
+    const darkTint = blendToken(tokens.dark.primary, 0.1, tokens.dark.background);
+    expect(contrastRatio(tokens.dark.primaryText, darkTint)).toBeGreaterThanOrEqual(AA_NORMAL);
+  });
+});
+
+describe("src/ui/primitives/badge.tsx: warning-accessible/success-accessible/default-accessible variants exist and consume the tokens correctly", () => {
+  const badgeSource = read("src/ui/primitives/badge.tsx");
+
+  it("the original warning/success/default variants are untouched", () => {
+    expect(badgeSource).toMatch(/^\s*default:\s*"bg-primary\/10 text-primary border-primary\/20",$/m);
+    expect(badgeSource).toMatch(/^\s*success:\s*"bg-success\/10 text-success border-success\/20",$/m);
+    expect(badgeSource).toMatch(/^\s*warning:\s*"bg-warning\/10 text-warning border-warning\/20",$/m);
+  });
+
+  it("warning-accessible/success-accessible keep the same fill/border, only the text token differs", () => {
+    expect(badgeSource).toMatch(
+      /"warning-accessible":\s*"bg-warning\/10 text-\[var\(--warning-badge-text\)\] border-warning\/20"/,
+    );
+    expect(badgeSource).toMatch(
+      /"success-accessible":\s*"bg-success\/10 text-\[var\(--success-badge-text\)\] border-success\/20"/,
+    );
+  });
+
+  it("default-accessible keeps the same fill/border as default, reusing the existing --primary-text token", () => {
+    expect(badgeSource).toMatch(
+      /"default-accessible":\s*"bg-primary\/10 text-\[var\(--primary-text\)\] border-primary\/20"/,
+    );
   });
 });
