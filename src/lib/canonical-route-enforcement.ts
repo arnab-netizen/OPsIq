@@ -829,9 +829,25 @@ export function withCanonicalEnforcement(
       const responseBody: any = {
         // A known, owner-safe 4xx AppError (e.g. ValidationError) exposes
         // its real message so the client can act on it; any 5xx or
-        // unclassified/raw exception keeps the generic message -- never
+        // unclassified/raw exception keeps a generic message -- never
         // exposes a stack, SQL, provider payload, or other internal detail.
-        error: isKnownSafeClientError ? classifiedError.message : "Internal server error",
+        //
+        // A real human usability test found that the PREVIOUS fallback text
+        // here -- the literal phrase "Internal server error" -- was itself
+        // the raw, alarming, unowned-by-anyone error text owners reported
+        // seeing verbatim across the app (business save, start work, page
+        // loads). It contained no Prisma/SQL/stack details, so it passed
+        // every existing "no technical leakage" scanner, but it reads
+        // exactly like a raw backend error to a lay owner and gives no
+        // indication whether their data/action was affected. This generic
+        // string is deliberately calm, admits nothing technical, and states
+        // the one fact every failed write in this wrapper can honestly
+        // guarantee: since the handler threw before responding, nothing was
+        // saved. Page-/action-specific callers may still show a more
+        // specific owner-safe message by classifying the response body
+        // themselves (see src/lib/operator-error-governance.ts); this is
+        // only the last-resort fallback when no more specific message exists.
+        error: isKnownSafeClientError ? classifiedError.message : "Something went wrong on our side. Nothing was saved. Please try again.",
         correlationId: finalCorrelationId,
         classification: classifiedError.classification,
         stage: classifiedError.stage,

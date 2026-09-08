@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button, Select } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -36,8 +37,10 @@ async function api(path: string, init?: RequestInit) {
  * same governed POST /api/owner/recovery/businesses route.
  */
 export function CreateBusinessPanel({ onCreated }: { onCreated: () => void }) {
+  const { refreshBusinesses, setActiveBusinessId } = useActiveBusiness();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justCreated, setJustCreated] = useState(false);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,7 +48,7 @@ export function CreateBusinessPanel({ onCreated }: { onCreated: () => void }) {
     setError(null);
     const fd = new FormData(e.currentTarget);
     try {
-      await api("/api/owner/recovery/businesses", {
+      const created = await api("/api/owner/recovery/businesses", {
         method: "POST",
         body: JSON.stringify({
           name: fd.get("name"),
@@ -55,6 +58,16 @@ export function CreateBusinessPanel({ onCreated }: { onCreated: () => void }) {
           b2bSupported: false,
         }),
       });
+      // Root cause of "Save appears to do nothing": ActiveBusinessContext (the shared source every
+      // owner page reads to decide which business is active — see active-business-context.tsx) is
+      // fetched once when the app shell mounts and was never told a business had just been
+      // created. The new business existed in the database (creation itself never failed in
+      // testing) but stayed invisible everywhere except this page's own local reload, so a real
+      // human retester who then went to Home saw no business at all. Refresh the shared context
+      // and explicitly activate the new business so it is immediately visible on every page.
+      await refreshBusinesses();
+      if (created?.id) setActiveBusinessId(created.id as string);
+      setJustCreated(true);
       onCreated();
     } catch (err) {
       const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), {
@@ -108,7 +121,14 @@ export function CreateBusinessPanel({ onCreated }: { onCreated: () => void }) {
             {error}
           </p>
         )}
-        <Button type="submit" disabled={busy}>
+        {/* aria-live region: announces loading and success even though this panel is normally
+            unmounted almost immediately after success (the parent page swaps it for the business
+            hub once it sees a business) — a low-literacy owner using a screen reader, or on a slow
+            connection where the swap lags, still gets an explicit status instead of silence. */}
+        <p aria-live="polite" className="sr-only">
+          {busy ? "Saving your business profile…" : justCreated ? "Business created." : ""}
+        </p>
+        <Button type="submit" disabled={busy} aria-busy={busy}>
           {busy ? "Saving…" : "Save business profile"}
         </Button>
       </form>

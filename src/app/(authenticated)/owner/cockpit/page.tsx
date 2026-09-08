@@ -30,6 +30,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, CardDashboardSkeleton, EmptyState, PageHeader } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
 import { StartHereContinuationCard } from "@/components/owner/StartHereContinuationCard";
 import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
@@ -68,6 +69,29 @@ async function apiPost(path: string, body: unknown) {
   });
   const data = await res.json().catch(() => ({}));
   return { ok: res.ok, data };
+}
+
+/**
+ * Owner-safe message for a failed action, whether it came back as a non-ok response body or as a
+ * thrown exception. A real human usability test reported seeing raw internal error text on Start
+ * Work and other cockpit actions; the previous code here rendered `data?.error?.message ||
+ * data?.error?.code || data?.error` (or a caught exception's raw `.message`) directly, with no
+ * governance. This routes every action-failure message here through the same
+ * classifyOperatorError system CreateBusinessPanel already uses, so the owner never sees a raw
+ * server error string, an error code, or a JS exception message verbatim.
+ */
+function describeActionFailure(raw: { error?: unknown } | undefined, fallback: string): string {
+  const serverText =
+    typeof raw?.error === "string" ? raw.error
+      : typeof (raw?.error as { message?: unknown })?.message === "string" ? (raw!.error as { message: string }).message
+      : undefined;
+  const governed = classifyOperatorError(new Error(serverText ?? fallback), { context: "action" });
+  return governed.operatorMessage;
+}
+
+function describeThrownFailure(e: unknown, fallback: string): string {
+  const governed = classifyOperatorError(e instanceof Error ? e : new Error(fallback), { context: "action" });
+  return governed.operatorMessage;
 }
 
 interface AvoidItem { avoid?: string }
@@ -121,7 +145,7 @@ export default function OwnerCockpitPage() {
       const sig = await apiGet(`/api/owner/public-signals${qs}`).catch(() => null);
       setPublicSignals(sig && typeof sig === "object" && "publicSignalStatus" in sig ? (sig as OwnerPublicSignalsResponse) : null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -158,13 +182,13 @@ export default function OwnerCockpitPage() {
       if (input.outcomeStatus) body.outcomeStatus = input.outcomeStatus;
       const { ok, data } = await apiPost("/api/owner/process-execution", body);
       if (!ok) {
-        setMessage(data?.error?.message || data?.error?.code || data?.error || "Action was not allowed.");
+        setMessage(describeActionFailure(data, "We couldn't complete this action. Nothing was changed."));
       } else {
         setMessage(`Action applied — task is now ${String(data.status ?? "updated").toLowerCase()}.`);
         await load(activeBusinessId);
       }
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Action failed");
+      setMessage(describeThrownFailure(e, "We couldn't complete this action. Nothing was changed."));
     } finally {
       setBusy(false);
     }
@@ -176,13 +200,13 @@ export default function OwnerCockpitPage() {
     try {
       const { ok, data } = await apiPost("/api/owner/process-execution", { taskKey, action: "START" });
       if (!ok) {
-        setMessage(data?.error?.message || data?.error?.code || data?.error || "Could not start work.");
+        setMessage(describeActionFailure(data, "We couldn't start this action. Nothing was changed."));
       } else {
         setMessage("Work started.");
         await load(activeBusinessId);
       }
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Start work failed");
+      setMessage(describeThrownFailure(e, "We couldn't start this action. Nothing was changed."));
     } finally {
       setBusy(false);
     }
@@ -204,14 +228,13 @@ export default function OwnerCockpitPage() {
         return;
       }
       if (!result.ok) {
-        const d = result.data as Record<string, unknown>;
-        setMessage((d?.error as Record<string, unknown>)?.message as string || String(d?.error) || "Action failed.");
+        setMessage(describeActionFailure(result.data as { error?: unknown }, "We couldn't complete this action. Nothing was changed."));
       } else {
         setMessage(`${action === "run-arbitration" ? "Arbitration complete" : action === "override" ? "Override recorded" : "Constraint updated"}.`);
         await load(activeBusinessId);
       }
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "BOS action failed");
+      setMessage(describeThrownFailure(e, "We couldn't complete this action. Nothing was changed."));
     } finally {
       setBusy(false);
     }
@@ -223,13 +246,13 @@ export default function OwnerCockpitPage() {
     try {
       const { ok, data } = await apiPost("/api/escalation/acknowledge", { escalationId });
       if (!ok) {
-        setMessage(data?.error?.message || data?.error?.code || data?.error || "Could not acknowledge escalation.");
+        setMessage(describeActionFailure(data, "We couldn't acknowledge this escalation. Nothing was changed."));
       } else {
         setMessage("Escalation acknowledged.");
         await load(activeBusinessId);
       }
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Acknowledge failed");
+      setMessage(describeThrownFailure(e, "We couldn't acknowledge this escalation. Nothing was changed."));
     } finally {
       setBusy(false);
     }
