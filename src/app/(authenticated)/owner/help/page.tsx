@@ -129,7 +129,7 @@ const SECTIONS: HelpSection[] = [
 export default function OwnerHelpPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8" data-testid="owner-help-page">
-      <h1 className="text-2xl font-semibold mb-2">Help</h1>
+      <h1 className="font-display text-[1.75rem] font-semibold tracking-tight mb-2">Help</h1>
       <p className="text-sm text-muted-foreground mb-8">
         Plain-language answers to common questions, and where to go for each part of OpsIQ.
       </p>

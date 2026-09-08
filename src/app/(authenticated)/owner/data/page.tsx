@@ -239,13 +239,16 @@ function ReadinessSummary({ state }: { state: OnboardingView }) {
 /** The one thing to do next, given what OpsIQ knows and what is still missing. */
 function NextAction({ state }: { state: OnboardingView }) {
   return (
-    <div className="rounded-lg border border-border p-5" data-testid="data-hub-next-action">
+    <div className="border-t border-border pt-5" data-testid="data-hub-next-action">
       <h2 className="text-lg font-semibold text-foreground">What to do next</h2>
 
       {state.canRunFirstDiagnosis ? (
-        <div className="mt-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+        <div
+          className="mt-3 border-l-2 pl-4 py-0.5 text-sm text-foreground"
+          style={{ borderColor: "var(--success-text)" }}
+        >
           <p className="font-medium">OpsIQ has enough to run a first assessment.</p>
-          <p className="mt-1">
+          <p className="mt-1 text-muted-foreground">
             It will be limited to what you have supplied so far, and it will say so.
           </p>
           {/*
@@ -262,14 +265,15 @@ function NextAction({ state }: { state: OnboardingView }) {
         </div>
       ) : (
         <div
-          className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+          className="mt-3 border-l-2 pl-4 py-0.5 text-sm text-foreground"
+          style={{ borderColor: "var(--warning-text)" }}
           data-testid="data-hub-insufficient"
         >
           <p className="font-medium">
             OpsIQ does not yet have enough reliable business information for a trustworthy first
             assessment.
           </p>
-          <p className="mt-1">Add the items marked “Needed” above and this will unlock.</p>
+          <p className="mt-1 text-muted-foreground">Add the items marked “Needed” above and this will unlock.</p>
         </div>
       )}
 
@@ -352,7 +356,11 @@ function WaysToAdd() {
 function MissingCritical({ items }: { items: MissingMinimumView[] }) {
   if (items.length === 0) return null;
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5" data-testid="data-hub-missing">
+    <div
+      className="border-l-2 pl-5 py-1"
+      style={{ borderColor: "var(--destructive)" }}
+      data-testid="data-hub-missing"
+    >
       <h2 className="text-lg font-semibold text-foreground">What is missing right now</h2>
       <ul className="mt-3 space-y-4">
         {items.map((item) => {
@@ -365,10 +373,10 @@ function MissingCritical({ items }: { items: MissingMinimumView[] }) {
                   {SEVERITY_LABEL[item.severity] ?? item.severity}
                 </Badge>
               </div>
-              {/* text-muted-foreground itself is AA-compliant on a plain background, but this card's
-                  own bg-destructive/5 tint pushes it just under 4.5:1 (axe-verified) -- the
-                  accessible token, same as the badge above, corrects it without touching the
-                  sitewide muted-foreground default every other card relies on. */}
+              {/* Kept on the accessible token even though this container no longer carries a
+                  tinted background (was needed against the old bg-destructive/5 fill, axe-verified
+                  below 4.5:1) -- it still passes comfortably on the plain background, and matching
+                  the badge above keeps one severity color per item instead of two. */}
               <p className="mt-1 text-sm text-[var(--muted-foreground-accessible)]">{item.why}</p>
               <p className="mt-1 text-sm text-[var(--muted-foreground-accessible)]">
                 <span className="font-medium text-foreground">Affects: </span>
@@ -509,7 +517,7 @@ export default function OwnerDataHubPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <header>
-        <h1 className="text-3xl font-bold text-foreground">My Business</h1>
+        <h1 className="font-display text-[2rem] font-semibold tracking-tight text-foreground">My Business</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           This is where you tell OpsIQ about your business and keep its information up to date.
           The more real information you add, the more specific its findings become — and it will

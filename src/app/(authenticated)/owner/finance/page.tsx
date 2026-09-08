@@ -11,22 +11,22 @@ import { Disclosure } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  low: "muted",
+const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
+  low: "muted-accessible",
   medium: "default",
   high: "warning",
   critical: "destructive",
 };
 
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  unverified: "muted",
+const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
+  unverified: "muted-accessible",
   verified_improved: "success",
   verified_not_improved: "destructive",
   inconclusive: "warning",
   disputed: "warning",
 };
 
-const SURVIVAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+const SURVIVAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
   SAFE: "success",
   WATCH: "default",
   AT_RISK: "warning",
@@ -283,7 +283,7 @@ export default function OwnerFinancePage() {
     <div className="mx-auto max-w-5xl py-8 px-4">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Finance</h1>
+          <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Money</h1>
           <p className="text-muted-foreground text-sm">
             Diagnose money, find leaks, and act on the single highest-impact financial move — with verification.
           </p>
@@ -457,7 +457,7 @@ function FinanceCycleView({
           </div>
         </div>
         <div className="text-right">
-          <Badge variant={SURVIVAL_VARIANT[score?.survivalState ?? cycle.survivalState] || "muted"}>
+          <Badge variant={SURVIVAL_VARIANT[score?.survivalState ?? cycle.survivalState] || "muted-accessible"}>
             {score?.survivalState ?? cycle.survivalState}
           </Badge>
           <div className="text-xs text-muted-foreground mt-1">
@@ -504,7 +504,7 @@ function FinanceCycleView({
               <div className="flex justify-between">
                 <span className="font-semibold">{f.title}</span>
                 <span className="flex gap-1">
-                  <Badge variant="muted">{f.findingType}</Badge>
+                  <Badge variant="muted-accessible">{f.findingType}</Badge>
                   <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
                 </span>
               </div>
@@ -537,7 +537,7 @@ function FinanceCycleView({
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
                   </div>
-                  <Badge variant="muted">{a.status}</Badge>
+                  <Badge variant="muted-accessible">{a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
@@ -552,7 +552,7 @@ function FinanceCycleView({
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
-                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted"}>
+                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">

@@ -99,7 +99,7 @@ export default function StartHerePage() {
   if (!activeBusinessId || !steps) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-semibold mb-2">Start here</h1>
+        <h1 className="font-display text-[1.75rem] font-semibold tracking-tight mb-2">Start here</h1>
         <p className="text-sm text-muted-foreground mb-4">
           Add your business first, then come back here to get OpsIQ working for it.
         </p>
@@ -116,7 +116,7 @@ export default function StartHerePage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8" data-testid="start-here-page">
-      <h1 className="text-2xl font-semibold mb-1">Start here</h1>
+      <h1 className="font-display text-[1.75rem] font-semibold tracking-tight mb-1">Start here</h1>
       <p className="text-sm text-muted-foreground mb-6">
         Get OpsIQ working for {businessName}
       </p>
@@ -169,8 +169,11 @@ export default function StartHerePage() {
                   </p>
                   {isNext && (
                     <>
-                      <p className="mt-1 text-sm text-muted-foreground">{step.why}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      {/* text-muted-foreground drops below 4.5:1 on this card's own bg-primary/5
+                          tint (axe-verified) -- same accessible token used elsewhere in the repo
+                          for text sitting on a tinted, non-default background. */}
+                      <p className="mt-1 text-sm text-[var(--muted-foreground-accessible)]">{step.why}</p>
+                      <p className="mt-1 text-xs text-[var(--muted-foreground-accessible)]">
                         If you skip this for now: {step.ifSkipped}
                       </p>
                       <div className="mt-3">

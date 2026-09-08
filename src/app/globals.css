@@ -88,6 +88,13 @@
      `@theme inline`. */
   --warning-badge-text: #955405;
   --success-badge-text: #0f6b2a;
+  /* Editorial accent — a deep, muted ink-blue used sparingly for the advisory "voice" (a rule
+     above a headline finding, a small kicker label) so the product doesn't read as generic
+     Tailwind/shadcn blue-on-white. Purely decorative (never a status/semantic color, never used
+     for text that must pass a contrast check on its own — it always sits on --foreground-level
+     text or as a thin rule), so it does not touch or replace any of the contrast-audited tokens
+     above. */
+  --accent-ink: #2d3b55;
 }
 
 @theme inline {
@@ -108,6 +115,7 @@
   --color-card-foreground: var(--card-foreground);
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-display: var(--font-display, Georgia, "Times New Roman", serif);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -153,6 +161,7 @@
        fix needs no token here either -- --primary-text's existing dark value already covers it.) */
     --warning-badge-text: #f59e0b;
     --success-badge-text: #22c55e;
+    --accent-ink: #b8c4dd;
   }
 }
 

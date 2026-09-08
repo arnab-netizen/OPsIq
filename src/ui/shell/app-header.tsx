@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { AccountMenu } from "@/components/owner/AccountMenu";
+import { BUSINESS_TYPE_LABELS } from "@/domain/owner-mode/owner-data-hub";
 
 interface AppHeaderProps {
   userName?: string | null;
@@ -58,10 +59,14 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
         {!businessLoading && businesses.length > 0 && (
           <span
             data-testid="active-business-indicator"
-            className="ml-2 hidden items-center gap-1.5 rounded-full border border-border bg-accent/60 px-2.5 py-1 text-xs font-medium text-foreground sm:flex"
+            className="ml-2 hidden items-baseline gap-1.5 sm:flex"
           >
-            <span className="text-muted-foreground">Business:</span>
-            {activeBusiness?.name ?? "—"}
+            <span className="text-sm font-medium text-foreground">{activeBusiness?.name ?? "—"}</span>
+            {activeBusiness?.businessType && (
+              <span className="text-xs text-muted-foreground">
+                {BUSINESS_TYPE_LABELS[activeBusiness.businessType as keyof typeof BUSINESS_TYPE_LABELS] ?? activeBusiness.businessType}
+              </span>
+            )}
           </span>
         )}
       </div>
