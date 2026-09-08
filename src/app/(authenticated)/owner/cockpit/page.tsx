@@ -71,7 +71,7 @@ async function apiPost(path: string, body: unknown) {
 interface AvoidItem { avoid?: string }
 
 export default function OwnerCockpitPage() {
-  const { activeBusinessId, loading: contextLoading } = useActiveBusiness();
+  const { activeBusinessId, needsBusinessRecovery, loading: contextLoading } = useActiveBusiness();
   const [bridge, setBridge] = useState<ProcessExecutionBridgeView | null>(null);
   const [avoid, setAvoid] = useState<string[]>([]);
   const [recovery, setRecovery] = useState<OwnerRecoveryStatusResponse | null>(null);
@@ -127,9 +127,13 @@ export default function OwnerCockpitPage() {
 
   useEffect(() => {
     if (contextLoading) return;
+    // A pending business-recovery choice must never be silently resolved by rendering
+    // workspace-wide-fallback business signals as if they belonged to a resolved business —
+    // see ActiveBusinessContext.needsBusinessRecovery.
+    if (needsBusinessRecovery) return;
     void load(activeBusinessId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner switches business elsewhere, not on every `load` identity change
-  }, [contextLoading, activeBusinessId]);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
 
   const onAction = useCallback(async (taskKey: string, action: string, input: CockpitActionInput) => {
     setBusy(true);

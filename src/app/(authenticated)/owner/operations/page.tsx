@@ -60,7 +60,7 @@ const OPERATIONS_FIELDS: Array<{ name: string; label: string }> = [
 ];
 
 export default function OwnerOperationsPage() {
-  const { activeBusinessId, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
+  const { activeBusinessId, needsBusinessRecovery, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,9 +93,12 @@ export default function OwnerOperationsPage() {
 
   useEffect(() => {
     if (contextLoading) return;
+    // A pending business-recovery choice must never be silently resolved by letting the server
+    // pick its own default businessId — see ActiveBusinessContext.needsBusinessRecovery.
+    if (needsBusinessRecovery) return;
     void load(activeBusinessId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner explicitly switches business
-  }, [contextLoading, activeBusinessId]);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
 
   async function createBusiness(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

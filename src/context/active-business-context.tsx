@@ -36,13 +36,31 @@ export interface ActiveBusinessLite {
 interface ActiveBusinessContextValue {
   /** The owner's businesses (fixture-free, active-only — see listBusinesses()). */
   businesses: ActiveBusinessLite[];
-  /** The currently active business id, or null if the owner has no businesses yet. */
+  /**
+   * The currently active business id, or null if the owner has no businesses yet OR a
+   * recovery choice is pending (see `needsBusinessRecovery`) — never a silently-substituted
+   * business id.
+   */
   activeBusinessId: string | null;
   /** The full record for the active business, or null. */
   activeBusiness: ActiveBusinessLite | null;
   /** True until the initial business list fetch completes. */
   loading: boolean;
-  /** Explicitly switch the active business — persists across navigation and future tabs. */
+  /**
+   * True when a PREVIOUSLY selected business (a real stored preference, not just "first ever
+   * visit") is no longer valid — archived, deleted, foreign, or a fixture the ordinary owner
+   * list no longer includes — AND more than one legitimate business remains, so there is a
+   * genuine choice to make. The trust invariant this exists for: silently re-anchoring to a
+   * different business here would repeat the exact bug a human usability test found (the app
+   * quietly showing a different business than the one the owner was just looking at). Callers
+   * must render an explicit "no longer available — choose a business" state instead of any
+   * page content while this is true. Never true when only one legitimate business exists
+   * (auto-reanchoring to the sole remaining business is safe and expected there) or when there
+   * was no prior stored preference at all (an ordinary first-run default is not a "recovery").
+   */
+  needsBusinessRecovery: boolean;
+  /** Explicitly switch the active business — persists across navigation and future tabs, and
+   *  clears any pending recovery state. */
   setActiveBusinessId: (businessId: string) => void;
   /** Re-fetch the business list (e.g. after creating or archiving a business). */
   refreshBusinesses: () => Promise<void>;
@@ -53,12 +71,15 @@ const LOCAL_KEY = "opsiq.lastActiveBusinessId";
 
 const ActiveBusinessContext = createContext<ActiveBusinessContextValue | null>(null);
 
-function readStoredId(): string | null {
+/** The raw stored value, or null if NOTHING has ever been stored (as opposed to a stored value
+ *  that merely fails to resolve against the current business list — those are different cases:
+ *  the former is an ordinary first run, the latter is a genuine recovery scenario). */
+function readRawStoredId(): string | null {
   if (typeof window === "undefined") return null;
   try {
     return window.sessionStorage.getItem(SESSION_KEY) ?? window.localStorage.getItem(LOCAL_KEY);
   } catch {
-    // Private browsing / storage blocked — fall back to no persisted preference.
+    // Private browsing / storage blocked — treated the same as "never stored".
     return null;
   }
 }
@@ -73,9 +94,33 @@ function persistId(businessId: string): void {
   }
 }
 
+interface ResolvedActive {
+  id: string | null;
+  needsRecovery: boolean;
+}
+
+/**
+ * Pure resolution rule — see `needsBusinessRecovery` doc above for the invariant this encodes.
+ * Exported for direct unit testing independent of the fetch/effect plumbing around it.
+ */
+export function resolveActiveBusiness(
+  list: ActiveBusinessLite[],
+  storedId: string | null
+): ResolvedActive {
+  if (list.length === 0) return { id: null, needsRecovery: false };
+  if (storedId && list.some((b) => b.id === storedId)) return { id: storedId, needsRecovery: false };
+  // storedId is missing from the list: either there was no stored preference at all (ordinary
+  // first run — default silently), or there was one and it no longer resolves (archived, a
+  // foreign/fixture id, or corrupt storage) — a genuine recovery scenario UNLESS there is only
+  // one legitimate business anyway, in which case there is no real choice to protect.
+  if (storedId && list.length > 1) return { id: null, needsRecovery: true };
+  return { id: list[0].id, needsRecovery: false };
+}
+
 export function ActiveBusinessProvider({ children }: { children: ReactNode }) {
   const [businesses, setBusinesses] = useState<ActiveBusinessLite[]>([]);
   const [activeBusinessId, setActiveBusinessIdState] = useState<string | null>(null);
+  const [needsBusinessRecovery, setNeedsBusinessRecovery] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchBusinesses = useCallback(async () => {
@@ -85,28 +130,24 @@ export function ActiveBusinessProvider({ children }: { children: ReactNode }) {
     return (data.businesses ?? []) as ActiveBusinessLite[];
   }, []);
 
-  const resolveActiveId = useCallback((list: ActiveBusinessLite[], preferred: string | null) => {
-    if (list.length === 0) return null;
-    // A previously-selected business that no longer exists in the list (archived, or
-    // never belonged to this workspace) must never silently fall through to a wrong
-    // business without at least re-anchoring to a business that genuinely exists.
-    if (preferred && list.some((b) => b.id === preferred)) return preferred;
-    return list[0].id;
-  }, []);
-
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const list = await fetchBusinesses();
       setBusinesses(list);
-      const preferred = readStoredId();
-      const resolved = resolveActiveId(list, preferred);
-      setActiveBusinessIdState(resolved);
-      if (resolved) persistId(resolved);
+      const storedId = readRawStoredId();
+      const resolved = resolveActiveBusiness(list, storedId);
+      setActiveBusinessIdState(resolved.id);
+      setNeedsBusinessRecovery(resolved.needsRecovery);
+      // Only persist a resolution the owner didn't explicitly make yet when it's a safe,
+      // non-recovery auto-anchor (first run, or the sole remaining business) — never persist
+      // "null" over a recovery state, which would erase the fact that a real prior choice
+      // existed and silently convert this into an ordinary first-run default on next load.
+      if (resolved.id && !resolved.needsRecovery) persistId(resolved.id);
     } finally {
       setLoading(false);
     }
-  }, [fetchBusinesses, resolveActiveId]);
+  }, [fetchBusinesses]);
 
   useEffect(() => {
     // Fetch-on-mount is the intentional pattern used across every owner page in this repo;
@@ -118,6 +159,7 @@ export function ActiveBusinessProvider({ children }: { children: ReactNode }) {
 
   const setActiveBusinessId = useCallback((businessId: string) => {
     setActiveBusinessIdState(businessId);
+    setNeedsBusinessRecovery(false);
     persistId(businessId);
   }, []);
 
@@ -132,10 +174,11 @@ export function ActiveBusinessProvider({ children }: { children: ReactNode }) {
       activeBusinessId,
       activeBusiness,
       loading,
+      needsBusinessRecovery,
       setActiveBusinessId,
       refreshBusinesses: load,
     }),
-    [businesses, activeBusinessId, activeBusiness, loading, setActiveBusinessId, load]
+    [businesses, activeBusinessId, activeBusiness, loading, needsBusinessRecovery, setActiveBusinessId, load]
   );
 
   return <ActiveBusinessContext.Provider value={value}>{children}</ActiveBusinessContext.Provider>;

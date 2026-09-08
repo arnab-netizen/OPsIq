@@ -74,7 +74,7 @@ const FINANCE_FIELDS: Array<{ name: string; label: string }> = [
 ];
 
 export default function OwnerFinancePage() {
-  const { activeBusinessId, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
+  const { activeBusinessId, needsBusinessRecovery, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,9 +108,13 @@ export default function OwnerFinancePage() {
   // server pick businesses[0]) and then re-fetching a moment later.
   useEffect(() => {
     if (contextLoading) return;
+    // A pending business-recovery choice (see ActiveBusinessContext) must never be silently
+    // resolved by letting the server pick its own default businessId — that would repeat the
+    // exact bug this context exists to prevent. Wait for the owner to explicitly choose.
+    if (needsBusinessRecovery) return;
     void load(activeBusinessId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner explicitly switches business, not on every `load` identity change
-  }, [contextLoading, activeBusinessId]);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
 
   async function createBusiness(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

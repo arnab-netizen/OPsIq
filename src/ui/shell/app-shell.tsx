@@ -6,6 +6,7 @@ import { AppHeader } from "./app-header";
 import { SidebarNav } from "./sidebar-nav";
 import { useDialogA11y } from "@/ui/primitives/use-dialog-a11y";
 import { ActiveBusinessProvider } from "@/context/active-business-context";
+import { BusinessRecoveryBanner } from "@/components/owner/BusinessRecoveryBanner";
 
 interface AppShellProps {
   children: ReactNode;
@@ -64,6 +65,7 @@ export function AppShell({
           menuControlsId={MOBILE_NAV_DRAWER_ID}
           backgroundHidden={drawerOpen}
         />
+        <BusinessRecoveryBanner />
         <div className="flex flex-1 overflow-hidden">
           {/* Desktop sidebar */}
           <aside
