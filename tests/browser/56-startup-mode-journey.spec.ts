@@ -952,10 +952,13 @@ test.describe("56 — Phase 5 Startup Mode owner journey", () => {
 
   // G-E2E: Closure tests for Phase 5 gaps
 
-  test("step 64 — cockpit page renders Startup Mode navigation button", async () => {
-    await page.goto("/owner/cockpit");
+  test("step 64 — My Business renders the (relocated, secondary) Startup Mode navigation link", async () => {
+    // Relocated off Home after a real usability test found a prominent "Switch to Startup Mode"
+    // entry point on Home confusing for an owner who already runs a real business — it now lives
+    // on My Business (/owner/data) as a secondary link. See PlanNewBusinessLink.tsx.
+    await page.goto("/owner/data");
     await page.waitForLoadState("networkidle");
-    const startupBtn = page.locator("[data-testid='cockpit-startup-mode-link']");
+    const startupBtn = page.locator("[data-testid='plan-new-business-link']");
     await expect(startupBtn).toBeVisible();
     expect(fatalErrors()).toHaveLength(0);
   });

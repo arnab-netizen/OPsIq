@@ -60,11 +60,14 @@ describe("owner data path is visible in the primary navigation", () => {
     expect(link!.getAttribute("href")).toBe("/owner/data");
   });
 
-  it("places My Business among the first two owner entries", () => {
+  it("places My Business among the first three owner entries", () => {
+    // Start Here now leads the primary section (a real usability test's headline failure was "I
+    // don't know where to start" — see src/domain/owner-mode/start-here.ts), pushing Home and My
+    // Business to positions 2 and 3 rather than 1 and 2.
     pathnameMock.current = "/dashboard";
     const { container } = render(<SidebarNav canViewOwnerRecovery={true} />);
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs.slice(0, 2)).toEqual(["/owner/cockpit", "/owner/data"]);
+    expect(hrefs.slice(0, 3)).toEqual(["/owner/start-here", "/owner/cockpit", "/owner/data"]);
   });
 
   it("gates the data hub to OWNER_VIEW users", () => {

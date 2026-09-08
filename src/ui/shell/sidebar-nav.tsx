@@ -2,8 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { CAPABILITIES, type CapabilityName } from "@/domain/constants/capabilities";
+
+/**
+ * Minimal inline icon set for the primary nav items only — a real usability test found the
+ * sidebar "looked like plain text" with no way to visually scan it. Icons are deliberately
+ * limited to the handful of items an owner needs to recognize at a glance (Start Here, Home, My
+ * Business) rather than applied to every leaf item, which would read as decoration rather than
+ * recognition (see the anti-AI-template audit: "icons beside every heading" is a rejected pattern).
+ */
+function CompassIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m14.5 9.5-2 5-3-1.5 2-5 3 1.5Z" />
+    </svg>
+  );
+}
+function HomeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10.5 12 3l9 7.5M5.5 9.5V20a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1V9.5" />
+    </svg>
+  );
+}
+function BuildingIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M4 21h15M9 8h1M9 12h1M13 8h1M13 12h1M14 21v-4a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v4M18 21v-9l2 1v8" />
+    </svg>
+  );
+}
 
 /**
  * Owner / consulting / admin navigation — persona-sectioned single sidebar (IA Model B).
@@ -66,6 +96,9 @@ interface NavItem {
   requiresCapability?: CapabilityName;
   /** If true, show a live unread-alert badge next to the label. */
   showAlertBadge?: boolean;
+  /** Rendered before the label. Reserved for the small set of primary items an owner needs to
+   *  recognize at a glance — see the file-level comment on the icon components above. */
+  icon?: ReactNode;
 }
 
 interface NavSection {
@@ -82,7 +115,12 @@ const NAV_SECTIONS: NavSection[] = [
     id: "primary",
     title: null,
     items: [
-      { label: "Home", href: "/owner/cockpit", requiresOwner: true },
+      // First item, deliberately: a real usability test's headline failure was "I don't know
+      // where to start." This is the persistent, resumable guided-setup entry point (see
+      // src/app/(authenticated)/owner/start-here/page.tsx) — always visible, never a one-time
+      // tour that disappears once dismissed.
+      { label: "Start Here", href: "/owner/start-here", requiresOwner: true, icon: <CompassIcon /> },
+      { label: "Home", href: "/owner/cockpit", requiresOwner: true, icon: <HomeIcon /> },
       // Renamed from "Add & Connect Data": /owner/data IS "My Business" -- the single place an
       // owner tells OpsIQ about their business and keeps its information current (its own file
       // header already described it this way). A fresh owner should not have to learn the
@@ -91,7 +129,7 @@ const NAV_SECTIONS: NavSection[] = [
       // Operations, Risk, Compliance, Goals, Inventory, Procurement, Vendors) is renamed
       // "Business details" below -- deeper, occasional drill-downs this page links out to, not a
       // second front door.
-      { label: "My Business", href: "/owner/data", requiresOwner: true },
+      { label: "My Business", href: "/owner/data", requiresOwner: true, icon: <BuildingIcon /> },
     ],
   },
   {
@@ -292,6 +330,7 @@ export function SidebarNav({
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         }`}
       >
+        {item.icon}
         <span className="flex-1">{item.label}</span>
         {badgeCount > 0 && (
           <span className="inline-flex items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-xs font-bold leading-none text-white min-w-[20px]">

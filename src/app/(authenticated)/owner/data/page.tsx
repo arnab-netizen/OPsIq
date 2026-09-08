@@ -23,6 +23,7 @@ import { Badge, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
+import { PlanNewBusinessLink } from "@/components/owner/PlanNewBusinessLink";
 import { useActiveBusiness } from "@/context/active-business-context";
 import {
   buildOwnerDataHubView,
@@ -582,6 +583,9 @@ export default function OwnerDataHubPage() {
           </div>
         </div>
       )}
+      <div className="mt-8 border-t border-border pt-4">
+        <PlanNewBusinessLink />
+      </div>
     </div>
   );
 }
