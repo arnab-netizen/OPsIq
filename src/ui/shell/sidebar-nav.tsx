@@ -8,9 +8,11 @@ import { CAPABILITIES, type CapabilityName } from "@/domain/constants/capabiliti
 /**
  * Minimal inline icon set for the primary nav items only — a real usability test found the
  * sidebar "looked like plain text" with no way to visually scan it. Icons are deliberately
- * limited to the handful of items an owner needs to recognize at a glance (Start Here, Home, My
- * Business) rather than applied to every leaf item, which would read as decoration rather than
- * recognition (see the anti-AI-template audit: "icons beside every heading" is a rejected pattern).
+ * limited to the handful of items an owner needs to recognize at a glance -- the three primary
+ * entries (Start Here, Home, My Business) plus the one high-frequency item at the top of
+ * Priorities and of Actions -- rather than applied to every leaf item, which would read as
+ * decoration rather than recognition (see the anti-AI-template audit: "icons beside every
+ * heading" is a rejected pattern). Five icons across ~20 nav items, not an icon-per-row system.
  */
 function CompassIcon() {
   return (
@@ -31,6 +33,21 @@ function BuildingIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M4 21h15M9 8h1M9 12h1M13 8h1M13 12h1M14 21v-4a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v4M18 21v-9l2 1v8" />
+    </svg>
+  );
+}
+function AttentionIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 3.5h.01M10.3 4.4 2.9 17.5a1.5 1.5 0 0 0 1.3 2.2h15.6a1.5 1.5 0 0 0 1.3-2.2L13.7 4.4a1.5 1.5 0 0 0-2.6 0Z" />
+    </svg>
+  );
+}
+function TaskIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0" aria-hidden="true">
+      <rect x="4.5" y="4" width="15" height="16" rx="1.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m8.5 12 2 2 4-4.5" />
     </svg>
   );
 }
@@ -168,7 +185,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: "priorities",
     title: "Priorities",
     items: [
-      { label: "What needs attention", href: "/owner/priorities", requiresOwner: true },
+      { label: "What needs attention", href: "/owner/priorities", requiresOwner: true, icon: <AttentionIcon /> },
       { label: "Alerts", href: "/owner/alerts", requiresOwner: true, showAlertBadge: true },
       // Decision Inbox reads OperatorItem rows via /api/decisions/list, which requires
       // ENGAGEMENT_VIEW -- a consulting-engagement capability no self-serve beta owner
@@ -183,7 +200,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: "actions",
     title: "Actions",
     items: [
-      { label: "Tasks", href: "/owner/tasks", requiresOwner: true },
+      { label: "Tasks", href: "/owner/tasks", requiresOwner: true, icon: <TaskIcon /> },
       { label: "Execution & SOP", href: "/owner/execution", requiresOwner: true },
       // /decision loads /api/calibration (ACTION_VIEW), /api/value and
       // /api/intelligence/summary (ENGAGEMENT_VIEW), and /api/run (ACTION_CREATE) --
@@ -324,11 +341,17 @@ export function SidebarNav({
         href={item.href}
         onClick={onLinkClick}
         aria-current={isActive ? "page" : undefined}
-        className={`flex min-h-[44px] items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+        // Active state is a left-rule accent + weight change, the same editorial "one thing
+        // matters here" language used for the top-priority treatment on every content page --
+        // not the generic filled-pill/tinted-block highlight every shadcn/AdminLTE-style sidebar
+        // defaults to. The left border reserves its own 2px column (border-transparent when
+        // inactive) so nothing shifts horizontally on activation.
+        className={`flex min-h-[44px] items-center gap-3 border-l-2 py-2.5 pl-[10px] pr-3 text-sm transition-colors ${
           isActive
-            ? "bg-primary/10 text-primary"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            ? "font-semibold text-foreground"
+            : "border-transparent font-medium text-muted-foreground hover:text-foreground"
         }`}
+        style={isActive ? { borderColor: "var(--accent-ink)" } : undefined}
       >
         {item.icon}
         <span className="flex-1">{item.label}</span>

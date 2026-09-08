@@ -103,6 +103,7 @@ function riskScoreLabel(score: number): string {
 // {label}.", "Status: {label}") instead of the raw governed-engine enum value.
 const STATUS_LABEL: Record<string, string> = {
   PROPOSED: "suggested",
+  ACKNOWLEDGED: "acknowledged",
   NEEDS_DATA: "waiting on data",
   BLOCKED: "blocked",
   IN_PROGRESS: "in progress",
@@ -406,7 +407,7 @@ function ExecutionLifecycleSection({
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <Badge variant={SEVERITY_VARIANT(item.severity)}>{severityLabel(item.severity)}</Badge>
         <span style={{ fontWeight: 600 }}>{item.ownerVisibleSummary}</span>
-        <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{item.status}</span>
+        <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{STATUS_LABEL[item.status] ?? item.status.toLowerCase().replace(/_/g, " ")}</span>
       </div>
       {item.verificationClassification && (
         <span data-testid={`cockpit-verification-classification-${item.taskKey}`}>

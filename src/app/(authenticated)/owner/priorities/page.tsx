@@ -175,29 +175,38 @@ export default function OwnerPrioritiesPage() {
           description="OpsIQ checks your risks, alerts, and blocked decisions continuously. This stays empty until something real needs you."
         />
       ) : (
-        <ol className="flex flex-col gap-6">
-          {items?.map((item, i) => (
-            <li
-              key={item.id}
-              className="border-l-2 pl-5 py-0.5"
-              style={{ borderColor: TIER_RULE_COLOR[item.tier] }}
-              data-testid="priority-item"
-            >
-              <div className="flex flex-wrap items-baseline gap-2.5">
-                <span className="font-display text-base font-semibold tabular-nums text-muted-foreground">{i + 1}</span>
-                <Badge variant={TIER_VARIANT[item.tier]}>{TIER_LABEL[item.tier]}</Badge>
-              </div>
-              <strong className="mt-1 block font-display text-[1.15rem] font-semibold leading-snug tracking-tight text-foreground">{item.title}</strong>
-              {item.why && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{item.why}</p>}
-              <Link
-                href={item.actionHref}
-                className="mt-2.5 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline"
+        <>
+          <ol className="flex flex-col gap-6">
+            {items?.map((item, i) => (
+              <li
+                key={item.id}
+                className="border-l-2 pl-5 py-0.5"
+                style={{ borderColor: TIER_RULE_COLOR[item.tier] }}
+                data-testid="priority-item"
               >
-                {item.actionLabel} →
-              </Link>
-            </li>
-          ))}
-        </ol>
+                <div className="flex flex-wrap items-baseline gap-2.5">
+                  <span className="font-display text-base font-semibold tabular-nums text-muted-foreground">{i + 1}</span>
+                  <Badge variant={TIER_VARIANT[item.tier]}>{TIER_LABEL[item.tier]}</Badge>
+                </div>
+                <strong className="mt-1 block font-display text-[1.15rem] font-semibold leading-snug tracking-tight text-foreground">{item.title}</strong>
+                {item.why && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{item.why}</p>}
+                <Link
+                  href={item.actionHref}
+                  className="mt-2.5 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline"
+                >
+                  {item.actionLabel} →
+                </Link>
+              </li>
+            ))}
+          </ol>
+          {/* A one- or two-item list otherwise trails off into a mostly-empty page -- this closing
+              line is the same honest continuously-checked framing as the zero-item EmptyState
+              above, just for the "some, but not many" case, so the page reads as complete by
+              design rather than unfinished. */}
+          <p className="border-t border-border pt-4 text-sm text-muted-foreground">
+            That{"'"}s everything OpsIQ is tracking as a priority right now. Risks, alerts, and blocked decisions are checked continuously — this list updates as things change.
+          </p>
+        </>
       )}
     </main>
   );

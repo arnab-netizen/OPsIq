@@ -18,10 +18,34 @@ async function main() {
   const pool = new Pool({ connectionString: databaseUrl });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
   await prisma.businessRiskEntry.deleteMany({ where: { workspaceId: WORKSPACE_ID, riskCode: "design_demo_key_person_dependency" } });
-  // A ProcessExecutionTask version of this demo record was removed: it surfaced on Home's
-  // "Execution lifecycle" section with a raw "PROPOSED" badge (a pre-existing, undiscovered
-  // raw-token leak in ExecutionLifecycleSection) -- worth fixing separately, but not needed here
-  // since neither Priorities nor Actions reads from ProcessExecutionTask.
+  // A ProcessExecutionTask version of this demo record was previously removed because it exposed
+  // a raw "PROPOSED" badge on Home's "Execution lifecycle" section (ExecutionLifecycleSection
+  // rendered item.status directly, no label map). That leak is now fixed (STATUS_LABEL covers
+  // PROPOSED/ACKNOWLEDGED/NEEDS_DATA/IN_PROGRESS/BLOCKED/COMPLETED/OUTCOME_*) -- this record is
+  // kept deliberately, in PROPOSED state, as a live regression check that the fix holds.
+  await prisma.processExecutionTask.deleteMany({ where: { workspaceId: WORKSPACE_ID, taskKey: "design_demo_confirm_client_renewal" } });
+  const processTaskId = randomUUID();
+  await prisma.processExecutionTask.create({
+    data: {
+      id: processTaskId,
+      workspaceId: WORKSPACE_ID,
+      taskKey: "design_demo_confirm_client_renewal",
+      sourceFamily: "OWNER_LED",
+      sourceFindingKey: "design_demo_finding_client_renewal",
+      executionRoute: "OWNER_LED",
+      actionOwner: USER_ID,
+      approvalLevel: "OWNER",
+      status: "PROPOSED",
+      completionCriteria: "Signed renewal confirmation from the client on file.",
+      reassessmentTrigger: "WEEKLY_REVIEW",
+      riskIfIgnored: "The contract may lapse without a renewed agreement, interrupting billing.",
+      ownerVisibleSummary: "Confirm the Q4 contract renewal with the client before it lapses",
+      severity: "HIGH",
+      priorityRank: 1,
+      isFixtureRecord: false,
+      updatedAt: new Date(),
+    },
+  });
 
   const riskId = randomUUID();
   await prisma.businessRiskEntry.create({
@@ -59,7 +83,7 @@ async function main() {
     },
   });
 
-  console.log(`[design-demo] risk ${riskId} + delegated task ${delegatedTaskId} seeded (isFixtureRecord: false)`);
+  console.log(`[design-demo] risk ${riskId} + process task ${processTaskId} + delegated task ${delegatedTaskId} seeded (isFixtureRecord: false)`);
   await prisma.$disconnect();
 }
 

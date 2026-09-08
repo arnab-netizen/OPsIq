@@ -330,25 +330,27 @@ function WaysToAdd() {
   return (
     <div>
       <h2 className="text-lg font-semibold text-foreground">Ways to add data</h2>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      {/* A same-size bordered-box grid here read as a generic "features" tile layout -- the same
+          divided-list treatment already used for "What is missing right now" just below (and for
+          every other list in this app) fits an owner deciding between a small number of concrete
+          next actions better than a symmetric card grid designed for browsing many options. */}
+      <ul className="mt-3">
         {cards.map((card) => (
-          <Link
-            key={card.title}
-            href={card.href}
-            className="block rounded-lg border border-border p-4 transition-colors hover:border-primary hover:bg-muted/40"
-          >
-            <p className="font-medium text-foreground">{card.title}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{card.body}</p>
-          </Link>
+          <li key={card.title} className="border-b border-border py-3.5 first:pt-0 last:border-0 last:pb-0">
+            <Link href={card.href} className="group block">
+              <p className="font-medium text-foreground group-hover:text-[var(--primary-text)]">{card.title} →</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">{card.body}</p>
+            </Link>
+          </li>
         ))}
-        <div className="rounded-lg border border-dashed border-border p-4" data-testid="data-hub-integrations">
+        <li className="border-b border-border py-3.5 last:border-0 last:pb-0" data-testid="data-hub-integrations">
           <p className="font-medium text-muted-foreground">Connect accounting, banking or POS</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Not available yet. Use manual entry or upload for now — we will tell you here when
             connections are ready.
           </p>
-        </div>
-      </div>
+        </li>
+      </ul>
     </div>
   );
 }
@@ -422,8 +424,13 @@ function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
         ];
         const page = GROUP_PAGE[group.id];
         return (
-        <div key={group.id} className="flex flex-wrap items-start justify-between gap-3 border-t border-border py-3.5 first:border-t-0 first:pt-0">
-        <details data-testid={`data-hub-group-${group.id}`} open={hasOutstanding} className="group min-w-0 flex-1">
+        // flex-col below sm: on a narrow screen, a same-row sibling link ("Open X →") with no
+        // flex-basis of its own forces the disclosure's flex-1 sibling to shrink to fit beside
+        // it, which crushed the group label/summary text into a near-unreadable single column
+        // (found while reviewing the mobile redesign -- a real layout defect, not a downscaled
+        // screenshot artifact). Side-by-side is fine once there is enough row width to share.
+        <div key={group.id} className="flex flex-col items-start gap-2 border-t border-border py-3.5 first:border-t-0 first:pt-0 sm:flex-row sm:flex-wrap sm:justify-between sm:gap-3">
+        <details data-testid={`data-hub-group-${group.id}`} open={hasOutstanding} className="group min-w-0 w-full sm:w-auto sm:flex-1">
           {/* The "Open {group.label}" link used to render inside this <summary> -- a link nested
               inside a native <summary> is two interactive controls in one (axe: nested-interactive),
               since <summary> is itself the disclosure's built-in toggle button. Moved to a sibling
@@ -480,7 +487,7 @@ function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
           </ul>
         </details>
         {page && (
-          <a href={page} className="whitespace-nowrap text-sm font-medium text-[var(--primary-text)] underline-offset-2 hover:underline">
+          <a href={page} className="shrink-0 whitespace-nowrap text-sm font-medium text-[var(--primary-text)] underline-offset-2 hover:underline">
             Open {group.label} →
           </a>
         )}

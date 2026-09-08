@@ -121,6 +121,31 @@ describe("MinimumOwnerCockpit — Phase 3 execution lifecycle section", () => {
     expect(section.textContent).toContain("No tasks awaiting your decision.");
   });
 
+  it("6b. never renders a raw governed-status token — every item.status value goes through STATUS_LABEL, not the raw enum (regression: Home used to render a bare 'PROPOSED' badge)", () => {
+    const RAW_STATUSES = ["PROPOSED", "ACKNOWLEDGED", "NEEDS_DATA", "IN_PROGRESS", "BLOCKED", "COMPLETED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"];
+    const lifecycle: OwnerExecutionLifecycleView = {
+      requiresDecision: [lifecycleItem({ status: "PROPOSED", taskKey: "t-proposed" }), lifecycleItem({ status: "ACKNOWLEDGED", taskKey: "t-ack" }), lifecycleItem({ status: "NEEDS_DATA", taskKey: "t-needs-data" }), lifecycleItem({ status: "BLOCKED", taskKey: "t-blocked" })],
+      inExecution: [lifecycleItem({ status: "IN_PROGRESS", taskKey: "t-inprogress" })],
+      awaitingVerification: [lifecycleItem({ status: "COMPLETED", taskKey: "t-completed" }), lifecycleItem({ status: "OUTCOME_RECORDED", taskKey: "t-outcome-recorded" }), lifecycleItem({ status: "OUTCOME_DISPUTED", taskKey: "t-outcome-disputed" })],
+      recentlyVerified: [lifecycleItem({ status: "OUTCOME_VERIFIED", taskKey: "t-verified" })],
+      totalPendingVerification: 0,
+    };
+    const { getByTestId } = render(
+      <MinimumOwnerCockpit bridge={bridge()} executionLifecycle={lifecycle} onAction={() => {}} />
+    );
+    const section = getByTestId("cockpit-execution-lifecycle");
+    for (const raw of RAW_STATUSES) {
+      // The whole-word raw token (uppercase, underscore intact) must never appear as owner-facing
+      // text — STATUS_LABEL always resolves it to a plain-language phrase first.
+      expect(section.textContent, `raw token "${raw}" leaked into owner-facing text`).not.toMatch(new RegExp(`\\b${raw}\\b`));
+    }
+    // And the real plain-language labels are actually present, not just absent-raw-token.
+    expect(section.textContent).toContain("suggested");
+    expect(section.textContent).toContain("acknowledged");
+    expect(section.textContent).toContain("waiting on data");
+    expect(section.textContent).toContain("in progress");
+  });
+
   it("7. renders ACKNOWLEDGE button when canAcknowledge=true", () => {
     const lifecycle: OwnerExecutionLifecycleView = {
       ...emptyLifecycle(),

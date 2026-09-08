@@ -4,19 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { FindingCard } from "@/components/owner/FindingCard";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { formatHumanDate } from "@/lib/format-human-date";
 import { Disclosure } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
-
-const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
-  low: "muted-accessible",
-  medium: "default",
-  high: "warning",
-  critical: "destructive",
-};
 
 const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
   unverified: "muted-accessible",
@@ -536,52 +530,22 @@ function FinanceCycleView({
       )}
 
       {/*
-        Findings — the signature "what OpsIQ found" experience. Every value here is unchanged from
-        before (same fields, same source); only the presentation now separates a measured FACT from
-        the CALCULATION run against it, states HOW SURE OpsIQ is in plain language rather than a
-        bare percentage, and gives the finding a real editorial headline instead of a metric dump.
-        "What changed" / "why this action" / "other options" from the full 8-section spec are not
-        shown per finding: this cycle-level view has no per-finding change-history or alternative-
-        action data to draw on honestly (cycle #1 has no prior cycle to diff against here, and
-        actions aren't linked back to the finding that raised them) -- real limitations, not a
-        design choice, so nothing is invented to fill those sections.
+        Findings — the signature "what OpsIQ found" experience, now the shared FindingCard
+        component (src/components/owner/FindingCard.tsx) instead of one-off JSX -- Operations
+        renders the exact same card for its own findings, since OwnerOperationsFinding has the
+        identical shape. "What changed" / "why this action" / "other options" from the full
+        8-section spec are not shown per finding: this cycle-level view has no per-finding
+        change-history or alternative-action data to draw on honestly (cycle #1 has no prior cycle
+        to diff against here, and actions aren't linked back to the finding that raised them) --
+        real limitations, not a design choice, so nothing is invented to fill those sections.
       */}
       <section className="border-t border-border pt-4">
         <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-4">Findings ({cycle.findings.length})</h2>
         {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No findings generated — this may indicate missing input data rather than a healthy business. Check data confidence above.</p>}
         <div className="flex flex-col gap-6">
-          {cycle.findings.map((f: any) => {
-            const confidencePct = Math.round((f.confidence ?? 0) * 100);
-            const sureLabel = confidencePct >= 80 ? "Very sure" : confidencePct >= 50 ? "Reasonably sure" : "Not very sure yet";
-            return (
-              <div key={f.id} className="border-l-2 pl-4 py-0.5" style={{ borderColor: f.findingType === "opportunity" ? "var(--success-text)" : "var(--warning-text)" }}>
-                <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What OpsIQ found</span>
-                  <span className="flex shrink-0 gap-1">
-                    <Badge variant="muted-accessible">{f.findingType}</Badge>
-                    <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
-                  </span>
-                </div>
-                <strong className="mt-1 block font-display text-[1.05rem] font-semibold leading-snug text-foreground">{f.title}</strong>
-                <p className="mt-1 text-sm text-muted-foreground">{f.summary}</p>
-
-                <div className="mt-3">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Evidence</span>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">Measured:</span> {humanizeMetricKey(f.sourceMetric)} is {String(f.sourceValue)} — <span className="font-medium text-foreground">compared against</span> a threshold of {String(f.threshold)}
-                  </p>
-                  {Array.isArray(f.evidence) && f.evidence.length > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground"><span className="font-medium text-foreground">Supporting detail:</span> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
-                  )}
-                </div>
-
-                <p className="mt-2 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">How sure OpsIQ is:</span> {sureLabel} ({confidencePct}% confidence)
-                  {f.verificationMetric && <> — verify by re-checking {humanizeMetricKey(f.verificationMetric)}</>}
-                </p>
-              </div>
-            );
-          })}
+          {cycle.findings.map((f: any) => (
+            <FindingCard key={f.id} finding={f} />
+          ))}
         </div>
       </section>
 

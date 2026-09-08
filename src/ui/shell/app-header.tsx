@@ -37,7 +37,7 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
       aria-hidden={backgroundHidden || undefined}
       className="flex h-14 items-center justify-between border-b border-border bg-background px-6"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <button
           ref={menuButtonRef}
           type="button"
@@ -54,20 +54,32 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
         </button>
         {/* Brand mark, not the page heading -- each page supplies its own real <h1>. The
             surrounding <header> already carries the "banner" landmark, so assistive tech
-            doesn't need a heading here to identify the site name. */}
-        <p className="text-lg font-semibold text-[var(--primary-text)]">OpsIQ</p>
+            doesn't need a heading here to identify the site name. Serif, matching the same
+            font-display used for every page's own headline and every "top priority" treatment
+            in the app -- a distinctive wordmark instead of the generic sans-serif-bold logotype
+            every SaaS admin shell defaults to. */}
+        <p className="shrink-0 font-display text-lg font-semibold tracking-tight text-[var(--primary-text)]">OpsIQ</p>
         {!businessLoading && businesses.length > 0 && (
-          <span
-            data-testid="active-business-indicator"
-            className="ml-2 hidden items-baseline gap-1.5 sm:flex"
-          >
-            <span className="text-sm font-medium text-foreground">{activeBusiness?.name ?? "—"}</span>
-            {activeBusiness?.businessType && (
-              <span className="text-xs text-muted-foreground">
-                {BUSINESS_TYPE_LABELS[activeBusiness.businessType as keyof typeof BUSINESS_TYPE_LABELS] ?? activeBusiness.businessType}
-              </span>
-            )}
-          </span>
+          <>
+            <span aria-hidden="true" className="hidden h-5 w-px shrink-0 bg-border sm:block" />
+            {/* Which business is active must never be mobile-only-hidden information -- a real
+                usability test's failure was exactly this ("no way to tell which business the app
+                is showing me"), and that risk is highest on the narrowest screens, not lowest. The
+                name itself is always visible (truncated on the very narrowest widths); only the
+                business-type subtitle -- true supporting detail, not the identity itself -- waits
+                for a bit more room. */}
+            <span
+              data-testid="active-business-indicator"
+              className="flex min-w-0 items-baseline gap-1.5"
+            >
+              <span className="min-w-0 truncate text-sm font-medium text-foreground">{activeBusiness?.name ?? "—"}</span>
+              {activeBusiness?.businessType && (
+                <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                  {BUSINESS_TYPE_LABELS[activeBusiness.businessType as keyof typeof BUSINESS_TYPE_LABELS] ?? activeBusiness.businessType}
+                </span>
+              )}
+            </span>
+          </>
         )}
       </div>
       <div className="flex items-center gap-3 sm:gap-4">

@@ -5,7 +5,7 @@
  * customer table, create/edit modal lifecycle, and workspace-scoped fetch calls.
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import CustomersPage from "@/app/(authenticated)/owner/customers/page";
 import { ActiveBusinessProvider } from "@/context/active-business-context";
 
@@ -17,7 +17,7 @@ function renderPage() {
   );
 }
 
-const BUSINESSES = [{ id: "biz-uuid-1", name: "Acme Trading" }];
+const BUSINESSES = [{ id: "biz-uuid-1", name: "Acme Trading", currency: "USD" }];
 
 const CUSTOMERS = [
   {
@@ -117,19 +117,29 @@ describe("CustomersPage", () => {
   });
 
   it("renders customer names in the table", async () => {
-    const { findByText } = renderPage();
-    await findByText("Jane Smith");
-    await findByText("Bob Jones");
+    // Scoped to the desktop table: the same customer list also renders as a stacked card list
+    // for narrow (mobile) viewports, present in the jsdom tree alongside the table (the two are
+    // separated with CSS breakpoints, which jsdom doesn't evaluate), so an unscoped query is
+    // ambiguous by design once both are on screen together.
+    const { findByTestId } = renderPage();
+    const table = await findByTestId("customers-table");
+    await within(table).findByText("Jane Smith");
+    await within(table).findByText("Bob Jones");
   });
 
   it("renders VIP segment badge", async () => {
-    const { findByText } = renderPage();
-    await findByText("VIP");
+    // Scoped to the records table: "VIP" is a legitimate segment name that also appears as a
+    // plain option in the segment-filter <select> above the table, so an unscoped text query is
+    // ambiguous by design once both are on screen together (real UI, not a bug).
+    const { findByTestId } = renderPage();
+    const table = await findByTestId("customers-table");
+    await within(table).findByText("VIP");
   });
 
   it("renders LTV value for Jane Smith", async () => {
-    const { findByText } = renderPage();
-    await findByText("$12,500");
+    const { findByTestId } = renderPage();
+    const table = await findByTestId("customers-table");
+    await within(table).findByText("USD 12,500");
   });
 
   it("shows dash for missing email", async () => {
@@ -151,8 +161,9 @@ describe("CustomersPage", () => {
   });
 
   it("opens edit modal when Edit is clicked", async () => {
-    const { findByText, findAllByText } = renderPage();
-    await findByText("Jane Smith");
+    const { findByText, findByTestId, findAllByText } = renderPage();
+    const table = await findByTestId("customers-table");
+    await within(table).findByText("Jane Smith");
     const editBtns = await findAllByText("Edit");
     fireEvent.click(editBtns[0]);
     const title = await findByText("Edit Customer");
