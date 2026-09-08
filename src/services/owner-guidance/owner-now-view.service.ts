@@ -802,11 +802,18 @@ export async function assembleGuidanceContext(
   const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
     deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true } }),
     deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true, createdAt: true } }),
+    // ownerEmployeeWorkloadSnapshot has no businessId column (it's employee-scoped, genuinely
+    // workspace-wide) — workspaceId-only is correct here. ownerWorkloadSnapshot,
+    // ownerCapacitySnapshot, and ownerSupplierInventorySnapshot DO each have a businessId column
+    // and must use `scope` like ownerCashflowCycle/ownerFinanceCycle/ownerMetricSnapshot above —
+    // without it, in a multi-business workspace this business inherits whichever OTHER business
+    // most recently wrote a workload/capacity/supplier snapshot, presenting that business's real
+    // problem (or lack of one) as this business's own.
     deps.db.ownerEmployeeWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overburdened: true, utilizationPct: true } }),
-    deps.db.ownerWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }),
-    deps.db.ownerCapacitySnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }),
+    deps.db.ownerWorkloadSnapshot.findFirst({ where: scope, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }),
+    deps.db.ownerCapacitySnapshot.findFirst({ where: scope, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }),
     deps.db.ownerMetricSnapshot.findFirst({ where: scope, orderBy: periodOrder, select: { complaintCount: true, rewashCount: true, refundAmount: true, newCustomers: true, repeatCustomers: true, revenue: true, discountAmount: true, b2bRevenue: true } }),
-    deps.db.ownerSupplierInventorySnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { worstStockoutRisk: true, riskScore: true, supplyCutoffRisk: true, belowReorderCount: true } }),
+    deps.db.ownerSupplierInventorySnapshot.findFirst({ where: scope, orderBy: order, select: { worstStockoutRisk: true, riskScore: true, supplyCutoffRisk: true, belowReorderCount: true } }),
     businessId
       ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, id: businessId }, select: { businessType: true } })
       : deps.db.ownerBusiness.findFirst({ where: { workspaceId, isActive: true }, orderBy: order, select: { businessType: true } }),
@@ -861,6 +868,11 @@ export async function assembleGuidanceContext(
   const cashSafe = !!cashState && !!finState && cashFinanceResolution.safe;
   const staffOverloaded = emp?.overburdened === true;
   const ownerOverloaded = own?.overloaded === true || own?.bottleneckRisk === true;
+  // Deliberately conservative, matching cashSafe above: no capacity snapshot means growth
+  // capacity has never been assessed, so growthReadinessTier stays "STABILIZE_FIRST" rather than
+  // asserting readiness on no evidence. This does not raise a capacity "issue" for missing data —
+  // the issue push below (`cap && ...`) is separately gated on `cap` existing — it only keeps the
+  // growth-readiness gate itself fail-closed on unmeasured capacity, same as unmeasured cash.
   const capacityGrowthSafe = cap?.growthSafe === true;
   const supplierRiskScore = supplier?.riskScore ?? 0;
   const supplierRiskHigh = supplierRiskScore >= 0.5;
@@ -1094,6 +1106,9 @@ async function buildExecutionLifecycle(
     const tasks = await (db as any).processExecutionTask.findMany({
       where: {
         workspaceId,
+        // Excludes acceptance/QA fixture tasks (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — Home
+        // must never surface a QA blueprint's task to a real owner.
+        isFixtureRecord: false,
         OR: [
           { status: { in: ["PROPOSED", "ACKNOWLEDGED", "IN_PROGRESS", "BLOCKED", "NEEDS_DATA", "COMPLETED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED"] } },
           { status: "OUTCOME_VERIFIED", updatedAt: { gte: cutoff } },
@@ -1202,7 +1217,9 @@ async function buildBusinessOperatingSystem(
       deadline: Date | null; linkedGoalId: string | null; parentId: string | null;
       blockedBy: { id: string }[]; _count: { children: number };
     }> = await dbAny.businessObjective.findMany({
-      where: { workspaceId, status: "ACTIVE" },
+      // isFixtureRecord: false — Home must never surface a QA blueprint's objective as a real
+      // owner's goal. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+      where: { workspaceId, status: "ACTIVE", isFixtureRecord: false },
       include: { blockedBy: { select: { id: true } }, _count: { select: { children: true } } },
     });
 
@@ -1216,7 +1233,9 @@ async function buildBusinessOperatingSystem(
     let totalAllocated = 0;
     if (poolIds.length > 0) {
       const aggResult = await dbAny.resourceAllocation.aggregate({
-        where: { workspaceId, poolId: { in: poolIds }, status: "ALLOCATED" },
+        // isFixtureRecord: false — a QA blueprint's allocation must never skew a real owner's
+        // resource-utilization percentage. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+        where: { workspaceId, poolId: { in: poolIds }, status: "ALLOCATED", isFixtureRecord: false },
         _sum: { allocationAmount: true },
       });
       totalAllocated = Number(aggResult._sum?.allocationAmount ?? 0);
@@ -1228,7 +1247,9 @@ async function buildBusinessOperatingSystem(
     // 3. Top risks by severity (active risks: IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED)
     const topRisks: Array<{ id: string; title: string; severity: number; status: string; category: string }> =
       await dbAny.businessRiskEntry.findMany({
-        where: { workspaceId, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING", "ACCEPTED"] } },
+        // isFixtureRecord: false — Home must never surface a QA blueprint's risk as a real
+        // owner's top risk. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+        where: { workspaceId, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING", "ACCEPTED"] }, isFixtureRecord: false },
         orderBy: { severity: "desc" },
         take: 3,
         select: { id: true, title: true, severity: true, status: true, category: true },
@@ -1264,17 +1285,19 @@ async function buildBusinessOperatingSystem(
       id: string; title: string; constraintType: string; bindingScore: number;
       status: string; remediationAction: string | null;
     }> = await dbAny.constraintResolutionRecord.findMany({
-      where: { workspaceId, status: "ACTIVE" },
+      // isFixtureRecord: false — Home must never surface a QA blueprint's constraint as a real
+      // owner's active constraint. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+      where: { workspaceId, status: "ACTIVE", isFixtureRecord: false },
       orderBy: { bindingScore: "desc" },
       take: 5,
       select: { id: true, title: true, constraintType: true, bindingScore: true, status: true, remediationAction: true },
     }).catch(() => [] as typeof activeConstraintRows);
     const activeConstraintCount: number = await dbAny.constraintResolutionRecord.count({
-      where: { workspaceId, status: "ACTIVE" },
+      where: { workspaceId, status: "ACTIVE", isFixtureRecord: false },
     }).catch(() => 0);
 
-    // 6. KPI ownership count
-    const kpiCount: number = await dbAny.kPIOwnershipRecord.count({ where: { workspaceId } });
+    // 6. KPI ownership count — isFixtureRecord: false excludes acceptance/QA fixture KPIs.
+    const kpiCount: number = await dbAny.kPIOwnershipRecord.count({ where: { workspaceId, isFixtureRecord: false } });
 
     // 7. Cost attribution coverage (% of spend entries linked to an objective)
     const [totalSpend, linkedSpend] = await Promise.all([
@@ -1292,9 +1315,12 @@ async function buildBusinessOperatingSystem(
       const daysRemaining = obj.deadline
         ? Math.round((obj.deadline.getTime() - now) / 86_400_000)
         : null;
+      // null (not 0) when no target is set or progress has never been measured — a never-measured
+      // objective is not evidence it's 0% done (UNKNOWN != BAD). scoreObjectiveHealth treats null
+      // as "no progress penalty applies," not as a bad score.
       const progressPct = obj.targetValue && obj.currentValue !== null
         ? Math.min(100, Math.round(((obj.currentValue ?? 0) / obj.targetValue) * 100))
-        : 0;
+        : null;
       return {
         objectiveId: obj.id,
         parentId: obj.parentId,

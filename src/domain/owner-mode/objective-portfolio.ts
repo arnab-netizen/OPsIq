@@ -26,7 +26,10 @@ export interface ObjectivePortfolioInput {
   priorityScore: number; // 0..100
   targetValue: number | null;
   currentValue: number | null;
-  progressPct: number; // 0..100 — computed from currentValue/targetValue or explicit
+  // 0..100 — computed from currentValue/targetValue, or null when no target is set or progress
+  // has never been measured. Null must never be treated as "0% complete" (UNKNOWN != BAD): an
+  // objective nobody has measured yet is not evidence it's behind schedule.
+  progressPct: number | null;
   deadlineDaysRemaining: number | null;
   linkedGoalAligned: boolean;
   hasBlockingDependencies: boolean;
@@ -46,7 +49,7 @@ export interface ObjectivePortfolioItem {
   healthStatus: ObjectiveHealthStatus;
   healthScore: number; // 0..100
   priorityScore: number;
-  progressPct: number;
+  progressPct: number | null;
   deadlineDaysRemaining: number | null;
   atRiskReasons: string[];
   recommendedAction: string | null;
@@ -97,21 +100,23 @@ export function scoreObjectiveHealth(obj: ObjectivePortfolioInput): {
     if (obj.deadlineDaysRemaining < 0) {
       reasons.push("Past deadline");
       score -= 30;
-    } else if (obj.deadlineDaysRemaining <= 7 && obj.progressPct < 80) {
+    } else if (obj.deadlineDaysRemaining <= 7 && obj.progressPct !== null && obj.progressPct < 80) {
       reasons.push(`Deadline in ${obj.deadlineDaysRemaining}d, only ${obj.progressPct}% complete`);
       score -= 25;
-    } else if (obj.deadlineDaysRemaining <= 30 && obj.progressPct < 50) {
+    } else if (obj.deadlineDaysRemaining <= 30 && obj.progressPct !== null && obj.progressPct < 50) {
       reasons.push(`Deadline in ${obj.deadlineDaysRemaining}d with low progress`);
       score -= 15;
     }
   }
 
-  if (obj.resourceBudgetUsedPct >= 95 && obj.progressPct < 90) {
+  if (obj.resourceBudgetUsedPct >= 95 && obj.progressPct !== null && obj.progressPct < 90) {
     reasons.push("Budget nearly exhausted before completion");
     score -= 20;
   }
 
-  if (obj.progressPct < 20 && obj.deadlineDaysRemaining !== null && obj.deadlineDaysRemaining < 60) {
+  // progressPct === null means progress has never been measured for this objective — not
+  // evidence of low progress, so no penalty applies (UNKNOWN != BAD).
+  if (obj.progressPct !== null && obj.progressPct < 20 && obj.deadlineDaysRemaining !== null && obj.deadlineDaysRemaining < 60) {
     reasons.push("Very low progress relative to timeline");
     score -= 10;
   }
@@ -146,8 +151,10 @@ function derivePortfolioDecision(obj: ObjectivePortfolioInput, healthScore: numb
   if (obj.hasBlockingDependencies && obj.deadlineDaysRemaining !== null && obj.deadlineDaysRemaining <= 14) {
     return { decision: "ESCALATE", rationale: `Blocked with ${obj.deadlineDaysRemaining}d until deadline — escalate to resolve blocker` };
   }
-  // CANCEL: negligible progress + far past deadline + resources exhausted
+  // CANCEL: negligible progress + far past deadline + resources exhausted. progressPct === null
+  // (never measured) is not evidence of negligible progress, so this never fires from that alone.
   if (
+    obj.progressPct !== null &&
     obj.progressPct < 10 &&
     obj.deadlineDaysRemaining !== null &&
     obj.deadlineDaysRemaining < -30 &&
@@ -156,7 +163,7 @@ function derivePortfolioDecision(obj: ObjectivePortfolioInput, healthScore: numb
     return { decision: "CANCEL", rationale: "Negligible progress far past deadline with exhausted budget" };
   }
   // SPLIT: high-priority leaf consuming resources with low progress
-  if (obj.childCount === 0 && obj.priorityScore >= 80 && obj.resourceBudgetUsedPct >= 70 && obj.progressPct < 30) {
+  if (obj.childCount === 0 && obj.priorityScore >= 80 && obj.resourceBudgetUsedPct >= 70 && obj.progressPct !== null && obj.progressPct < 30) {
     return { decision: "SPLIT", rationale: "High-priority objective consuming significant resources with low progress — split into sub-objectives" };
   }
   // DELAY: distant deadline and low urgency

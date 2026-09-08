@@ -319,6 +319,37 @@ describe("arbitrateObjectives — portfolio decisions", () => {
     expect(result.candidates[0].portfolioDecision).toBe("SPLIT");
   });
 
+  // [module42] repo-wide UNKNOWN != BAD sweep — progressPct: null (never measured) must never be
+  // treated as negligible/low progress. Same conditions as the CANCEL/SPLIT tests above, but with
+  // progressPct: null instead of a measured low value — neither decision should fire.
+  it("progressPct: null does NOT trigger CANCEL, even with the same deadline/budget as the CANCEL case above", () => {
+    const candidate = makeCandidate({
+      objectiveId: "never-measured-cancel",
+      progressPct: null,
+      deadlineDaysRemaining: -45,
+      resourceBudgetUsedPct: 85,
+      status: "ACTIVE",
+      hasBlockingDependencies: false,
+    });
+    const result = arbitrateObjectives([candidate]);
+    expect(result.candidates[0].portfolioDecision).not.toBe("CANCEL");
+  });
+
+  it("progressPct: null does NOT trigger SPLIT, even with the same priority/budget as the SPLIT case above", () => {
+    const candidate = makeCandidate({
+      objectiveId: "never-measured-split",
+      priorityScore: 85,
+      resourceBudgetUsedPct: 75,
+      progressPct: null,
+      childCount: 0,
+      hasBlockingDependencies: false,
+      deadlineDaysRemaining: 30,
+      status: "ACTIVE",
+    });
+    const result = arbitrateObjectives([candidate]);
+    expect(result.candidates[0].portfolioDecision).not.toBe("SPLIT");
+  });
+
   it("DELAY when resource availability < 10%", () => {
     const candidate = makeCandidate({
       objectiveId: "delay",

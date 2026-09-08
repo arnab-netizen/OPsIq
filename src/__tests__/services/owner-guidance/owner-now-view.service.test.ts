@@ -275,3 +275,47 @@ describe("[module41] Home same-business cash/finance conflict arbitration", () =
     expect(cashIssue?.requiresOwnerAction).toBe(true);
   });
 });
+
+describe("[module42] repo-wide UNKNOWN != BAD sweep — cross-business signal scoping", () => {
+  it("ownerWorkloadSnapshot, ownerCapacitySnapshot, and ownerSupplierInventorySnapshot are read scoped to businessId, not just workspaceId", async () => {
+    // Root cause: these three models each have a nullable businessId column (confirmed in
+    // prisma/schema.prisma) but were being read with { workspaceId } alone — in a multi-business
+    // workspace, whichever business most recently wrote a snapshot would silently supply every
+    // OTHER business's workload/capacity/supplier signal too. ownerEmployeeWorkloadSnapshot has
+    // no businessId column (genuinely workspace-wide, e.g. employee shift data) and is
+    // intentionally excluded from this assertion.
+    const capturedWheres: Record<string, { where: unknown }> = {};
+    const { deps } = fakeDeps(healthy);
+    const capture = (key: string, row: unknown) => ({
+      findFirst: async (args: { where: unknown }) => {
+        capturedWheres[key] = args as { where: unknown };
+        return row;
+      },
+    });
+    deps.db.ownerWorkloadSnapshot = capture("own", healthy.own ?? null);
+    deps.db.ownerCapacitySnapshot = capture("cap", healthy.cap ?? null);
+    deps.db.ownerSupplierInventorySnapshot = capture("supplier", healthy.supplier ?? null);
+
+    await assembleGuidanceContext("ws1", "biz1", deps);
+
+    expect(capturedWheres.own.where).toMatchObject({ workspaceId: "ws1", businessId: "biz1" });
+    expect(capturedWheres.cap.where).toMatchObject({ workspaceId: "ws1", businessId: "biz1" });
+    expect(capturedWheres.supplier.where).toMatchObject({ workspaceId: "ws1", businessId: "biz1" });
+  });
+
+  it("with no active business selected, falls back to workspace-only scope (no businessId to leak)", async () => {
+    const capturedWheres: Record<string, { where: unknown }> = {};
+    const { deps } = fakeDeps(healthy);
+    const capture = (key: string, row: unknown) => ({
+      findFirst: async (args: { where: unknown }) => {
+        capturedWheres[key] = args as { where: unknown };
+        return row;
+      },
+    });
+    deps.db.ownerCapacitySnapshot = capture("cap", healthy.cap ?? null);
+
+    await assembleGuidanceContext("ws1", null, deps);
+
+    expect(capturedWheres.cap.where).toEqual({ workspaceId: "ws1" });
+  });
+});
