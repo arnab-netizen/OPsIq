@@ -71,6 +71,7 @@ import { deriveBusinessConditionSignals, type DerivedBusinessConditionSignals } 
 import { analyzeBusinessTrend, type TrendAlert, type BusinessMetricName, type MetricDataPoint } from "@/domain/owner-mode/business-state-timeline";
 import { checkDoNotRepeatForGuidance, type DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
+import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -81,7 +82,7 @@ const PROOF_OVERDUE_AGE_MS = 48 * 60 * 60 * 1000;
 const RUNWAY_BY_STATE: Record<string, number> = { SAFE: 120, WATCH: 45, AT_RISK: 18, CRITICAL: 7, INSOLVENT_RISK: 2 };
 const MARGIN_BY_STATE: Record<string, number> = { SAFE: 20, WATCH: 10, AT_RISK: 3, CRITICAL: -2, INSOLVENT_RISK: -10 };
 
-interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number }
+interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date }
 interface EmployeeRow { overburdened: boolean; utilizationPct: number }
 interface OwnerRow { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number }
 interface CapacityRow { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number }
@@ -799,8 +800,8 @@ export async function assembleGuidanceContext(
 
   const CLOSED_STAGES = ["CLOSED_WON", "CLOSED_LOST"];
   const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
-    deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true } }),
-    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true } }),
+    deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true } }),
+    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true, createdAt: true } }),
     deps.db.ownerEmployeeWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overburdened: true, utilizationPct: true } }),
     deps.db.ownerWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }),
     deps.db.ownerCapacitySnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }),
@@ -844,7 +845,20 @@ export async function assembleGuidanceContext(
   const ag = archetypeGuidance(business?.businessType);
   const cashState = cash?.cashflowState;
   const finState = fin?.survivalState;
-  const cashSafe = !!cashState && !!finState && SAFE_STATES.has(cashState) && SAFE_STATES.has(finState);
+  // Cash-survival-triage and finance diagnosis are two separate signals for the same business
+  // that can go stale relative to each other (an owner can re-run one without the other). A real
+  // human usability test reproduced the exact failure this closes: an older AT_RISK cash reading
+  // presented as current truth alongside a newer SAFE finance diagnosis for the same business.
+  // See src/domain/owner-guidance/cash-finance-conflict.ts for the full arbitration rule.
+  const cashFinanceResolution = resolveCashFinanceSignal(
+    { state: (cashState as SurvivalLikeState | undefined) ?? null, generatedAt: cash?.createdAt ?? null },
+    { state: (finState as SurvivalLikeState | undefined) ?? null, generatedAt: fin?.createdAt ?? null }
+  );
+  // Growth/high-impact gating stays conservative exactly as before when either signal is
+  // entirely missing (fail closed on missing critical data, tracked separately below via
+  // missingCriticalData) — the conflict resolution only changes behavior for the specific bug
+  // being fixed: both signals present AND disagreeing.
+  const cashSafe = !!cashState && !!finState && cashFinanceResolution.safe;
   const staffOverloaded = emp?.overburdened === true;
   const ownerOverloaded = own?.overloaded === true || own?.bottleneckRisk === true;
   const capacityGrowthSafe = cap?.growthSafe === true;
@@ -880,7 +894,32 @@ export async function assembleGuidanceContext(
   if (!supplier) missingCriticalData.push("supplier reliability + stock levels");
 
   const issues: BusinessIssue[] = [];
-  if (!cashSafe && (cashState || finState)) {
+  if (cashState && finState) {
+    // Both signals present — use the freshness/conflict-aware resolution so a stale reading is
+    // never presented as unqualified current truth (see cash-finance-conflict.ts). A newer SAFE
+    // reading that supersedes an older unsafe one means NO issue is pushed here at all — that is
+    // the fix for "Home must not present the stale action as current truth."
+    if (cashFinanceResolution.conflicting) {
+      issues.push({
+        id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+        severity: cashSeverity(cashState) === "CRITICAL" || cashSeverity(finState) === "CRITICAL" ? "CRITICAL" : "HIGH",
+        headline: `We have conflicting information about cash health for this business: the latest cash check says ${cashState}, the latest finance diagnosis says ${finState}, and neither can be shown to be more current. Review both before acting on either.`,
+        requiresOwnerAction: true,
+      });
+    } else if (!cashFinanceResolution.safe) {
+      const effectiveState = cashFinanceResolution.effectiveState as string;
+      const sev = cashSeverity(effectiveState);
+      const supersedeNote = cashFinanceResolution.supersededSource
+        ? ` An earlier ${cashFinanceResolution.supersededSource === "cash" ? "cash check" : "finance diagnosis"} showed ${cashFinanceResolution.supersededState}; that reading is now out of date.`
+        : "";
+      issues.push({
+        id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+        severity: sev, headline: `Cash survival is ${effectiveState}.${supersedeNote}`,
+        requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
+      });
+    }
+  } else if (!cashSafe && (cashState || finState)) {
+    // Exactly one of the two signals exists — unchanged from prior behavior.
     const sev = cashSeverity(cashState && !SAFE_STATES.has(cashState) ? cashState : finState);
     issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
       severity: sev, headline: `Cash survival is ${cashState ?? "unknown"} / finance ${finState ?? "unknown"}`,
