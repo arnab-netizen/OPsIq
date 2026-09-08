@@ -3,19 +3,26 @@
 /**
  * /owner/priorities — "What needs my attention?"
  *
- * A lay owner should not have to understand that risks, alerts, and the decision inbox are three
- * separate internal systems (src/services/owner-mode/business-risk.service.ts,
- * src/services/alerts/alert-service.ts, and the OperatorItem table read directly by
- * /api/decisions/list) to find out what needs their attention today. This page reads all three
- * existing, already-governed GET endpoints and merges them into one plain-language list — no new
- * business logic, no new severity computation: every severity/status shown here is the same value
- * the owner would see on /owner/risks, /owner/alerts, or /dashboard/inbox, just translated to
- * plain language and ranked together instead of split across three unrelated pages.
+ * A lay owner should not have to understand that risks, alerts, the decision inbox, and Home's
+ * top governed action are four separate internal systems (src/services/owner-mode/business-risk.
+ * service.ts, src/services/alerts/alert-service.ts, the OperatorItem table read directly by
+ * /api/decisions/list, and the process-execution bridge behind /api/owner/now-view) to find out
+ * what needs their attention today. This page reads all four existing, already-governed GET
+ * endpoints and merges them into one plain-language list — no new business logic, no new severity
+ * computation: every severity/status shown here is the same value the owner would see on
+ * /owner/risks, /owner/alerts, /dashboard/inbox, or the Home page, just translated to plain
+ * language and ranked together instead of split across separate pages.
+ *
+ * The fourth source (now-view's topRoute) is included so this page satisfies a hard invariant:
+ * Home must never show an actionable top priority while this page claims nothing needs attention.
+ * It reuses Home's exact canonical item (same taskKey/title/severity) rather than re-deriving one,
+ * so the two surfaces never disagree about what "the" priority is.
  */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, CardDashboardSkeleton, EmptyState, ErrorState } from "@/ui/primitives";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -37,7 +44,7 @@ type PriorityTier = "critical" | "attention" | "normal";
 
 interface PriorityItem {
   id: string;
-  source: "risk" | "alert" | "decision";
+  source: "risk" | "alert" | "decision" | "priority";
   title: string;
   why: string | null;
   tier: PriorityTier;
@@ -84,7 +91,18 @@ function decisionTier(status: string): PriorityTier {
   return status === "blocked" ? "critical" : "attention";
 }
 
+const BRIDGE_SEVERITY_TIER: Record<string, PriorityTier> = {
+  CRITICAL: "critical",
+  HIGH: "critical",
+  MEDIUM: "attention",
+  LOW: "normal",
+};
+
+/** Terminal statuses a completed/rejected bridged task can carry — never a priority once resolved. */
+const BRIDGE_TERMINAL_STATUSES = new Set(["COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"]);
+
 export default function OwnerPrioritiesPage() {
+  const { activeBusinessId } = useActiveBusiness();
   const [items, setItems] = useState<PriorityItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,19 +112,44 @@ export default function OwnerPrioritiesPage() {
     (async () => {
       setLoading(true);
       setError(null);
-      const [risksRes, alertsRes, decisionsRes] = await Promise.all([
+      const nowViewQs = activeBusinessId ? `?businessId=${encodeURIComponent(activeBusinessId)}` : "";
+      const [risksRes, alertsRes, decisionsRes, nowViewRes] = await Promise.all([
         api("/api/owner/risks"),
         api("/api/owner/alerts?unreadOnly=true&limit=20"),
         api("/api/decisions/list?status=blocked&limit=20"),
+        api(`/api/owner/now-view${nowViewQs}`),
       ]);
       if (cancelled) return;
-      if (risksRes === null && alertsRes === null && decisionsRes === null) {
+      if (risksRes === null && alertsRes === null && decisionsRes === null && nowViewRes === null) {
         setError("Couldn't load your priorities. Please try again.");
         setLoading(false);
         return;
       }
 
       const merged: PriorityItem[] = [];
+
+      // Home's canonical top governed action (process-execution bridge) — the SAME item Home shows,
+      // never re-derived, so this page can never say "nothing needs attention" while Home shows one.
+      const topRoute = nowViewRes?.processExecution?.topRoute as
+        | { taskKey: string; title: string; ownerVisibleSummary?: string | null; severity: string; executionRoute: string; status: string }
+        | null
+        | undefined;
+      if (
+        topRoute &&
+        topRoute.executionRoute !== "MONITOR_ONLY" &&
+        !BRIDGE_TERMINAL_STATUSES.has(topRoute.status)
+      ) {
+        merged.push({
+          id: `priority-${topRoute.taskKey}`,
+          source: "priority",
+          title: topRoute.title,
+          why: topRoute.ownerVisibleSummary ?? null,
+          tier: BRIDGE_SEVERITY_TIER[topRoute.severity] ?? "attention",
+          actionLabel: "Go to Home to start this",
+          actionHref: "/owner/cockpit",
+          detailHref: "/owner/cockpit",
+        });
+      }
 
       for (const r of (risksRes?.risks ?? []) as Array<{ id: string; title: string; description: string | null; severity: number; status: string }>) {
         if (!OPEN_RISK_STATUSES.has(r.status)) continue;
@@ -157,7 +200,7 @@ export default function OwnerPrioritiesPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activeBusinessId]);
 
   if (loading) return <main className="p-6"><CardDashboardSkeleton label="Loading your priorities" sections={2} /></main>;
   if (error) return <main className="p-6"><ErrorState message={error} onRetry={() => window.location.reload()} /></main>;
@@ -172,7 +215,7 @@ export default function OwnerPrioritiesPage() {
       {items && items.length === 0 ? (
         <EmptyState
           title="Nothing needs your attention right now"
-          description="OpsIQ checks your risks, alerts, and blocked decisions continuously. This stays empty until something real needs you."
+          description="OpsIQ checks your risks, alerts, blocked decisions, and Home's top action continuously. This stays empty until something real needs you."
         />
       ) : (
         <>
@@ -204,7 +247,7 @@ export default function OwnerPrioritiesPage() {
               above, just for the "some, but not many" case, so the page reads as complete by
               design rather than unfinished. */}
           <p className="border-t border-border pt-4 text-sm text-muted-foreground">
-            That{"'"}s everything OpsIQ is tracking as a priority right now. Risks, alerts, and blocked decisions are checked continuously — this list updates as things change.
+            That{"'"}s everything OpsIQ is tracking as a priority right now. Risks, alerts, blocked decisions, and Home{"'"}s top action are checked continuously — this list updates as things change.
           </p>
         </>
       )}
