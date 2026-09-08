@@ -855,11 +855,15 @@ export async function assembleGuidanceContext(
   const rework = Math.round(metric?.rewashCount ?? 0);
   const newC = metric?.newCustomers ?? 0;
   const repeatC = metric?.repeatCustomers ?? 0;
-  const metricChurnRate = newC + repeatC > 0 ? Math.max(0, 1 - repeatC / (newC + repeatC)) : 0;
-  // Prefer DB-persisted cohort churn (scaled to 0–1 risk score) over the metric snapshot ratio.
-  const cohortAvgChurn = latestCohorts[0]?.avgMonthlyChurn ?? null;
-  const churnRiskScore = cohortAvgChurn !== null ? Math.min(1, cohortAvgChurn * 5) : metricChurnRate;
-  const retentionRiskHigh = churnRiskScore >= 0.5;
+  const hasCustomerEvidence = newC + repeatC > 0;
+  const metricChurnRate = hasCustomerEvidence ? Math.max(0, 1 - repeatC / (newC + repeatC)) : null;
+  // RetentionCohort is a workspace-level aggregate (no businessId column) — it must never stand
+  // in for this business's retention when this business itself has no measured customer activity
+  // yet (UNKNOWN != BAD). Without that guard, a business with zero customers inherits another
+  // business's cohort churn rate and gets a false "customers aren't coming back" signal.
+  const cohortAvgChurn = hasCustomerEvidence ? (latestCohorts[0]?.avgMonthlyChurn ?? null) : null;
+  const churnRiskScore = cohortAvgChurn !== null ? Math.min(1, cohortAvgChurn * 5) : (metricChurnRate ?? 0);
+  const retentionRiskHigh = hasCustomerEvidence && churnRiskScore >= 0.5;
   const growthGatePassed = cashSafe && capacityGrowthSafe && !supplierRiskHigh && !retentionRiskHigh;
   const outcomeChecksDue = outcomeOpen + reassessOpen;
 
