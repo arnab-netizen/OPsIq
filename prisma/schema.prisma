@@ -2589,6 +2589,10 @@ model OwnerBusiness {
   b2cSupported            Boolean                       @default(true) @map("b2c_supported")
   b2bSupported            Boolean                       @default(false) @map("b2b_supported")
   isActive                Boolean                       @default(true) @map("is_active")
+  // Additive provenance marker (mirrors Workspace.signupSource). Set only at creation time by
+  // createBusiness(), never client-writable — see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md. Every
+  // existing row defaults to false (real); ordinary owner queries (listBusinesses) exclude true.
+  isFixtureBusiness       Boolean                       @default(false) @map("is_fixture_business")
   createdBy               String?                       @map("created_by") @db.Uuid
   version                 Int                           @default(1)
   createdAt               DateTime                      @default(now()) @map("created_at")

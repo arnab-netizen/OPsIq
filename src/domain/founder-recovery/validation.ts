@@ -17,6 +17,11 @@ export const businessCreateSchema = z.object({
   operatingModel: z.string().max(200).optional(),
   b2cSupported: z.boolean().optional().default(true),
   b2bSupported: z.boolean().optional().default(false),
+  // Honored only when the requesting actor holds SYSTEM_ADMIN — see the POST route handler and
+  // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md. A self-serve owner can send this field but it is
+  // silently ignored without that capability, never surfaced as an error (it is not a field an
+  // ordinary owner has any legitimate reason to know about).
+  isFixtureBusiness: z.boolean().optional(),
 });
 export type BusinessCreateInput = z.infer<typeof businessCreateSchema>;
 

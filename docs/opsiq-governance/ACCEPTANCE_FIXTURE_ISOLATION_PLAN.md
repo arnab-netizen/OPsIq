@@ -1,7 +1,58 @@
-# Acceptance-fixture isolation — plan (not implemented)
+# Acceptance-fixture isolation — plan and implementation
 
-Status: **OPEN**. This documents the architecture for the remaining gap; it
-does not implement it. No production data has been touched.
+Status: **IMPLEMENTED** (local/dev; not yet deployed to production — see
+"Rollout to production" below). No production data has been touched.
+
+## What's implemented
+
+- **Schema**: `OwnerBusiness.isFixtureBusiness Boolean @default(false)` —
+  additive migration
+  `prisma/migrations/20260908042043_add_owner_business_fixture_flag`.
+- **Set at creation time**: `createBusiness(input, actorId, workspaceId, opts?)`
+  in `src/services/founder-recovery/business.service.ts` accepts
+  `opts.isFixtureBusiness`, defaulting to `false`. The only caller that can
+  set it `true` is `POST /api/owner/recovery/businesses`, and only when the
+  requesting actor holds `CAPABILITIES.SYSTEM_ADMIN` — a self-serve owner's
+  request body can carry `isFixtureBusiness: true` and it is silently
+  ignored without that capability (verified by
+  `src/__tests__/founder-recovery/fixture-flag-rbac.db.test.ts`, which
+  exercises the real route through the real canonical auth wrapper).
+- **Filtered from ordinary queries**: `listBusinesses()` now filters
+  `isFixtureBusiness: false` alongside the existing `isActive: true`.
+- **Governed acceptance path**: `listFixtureBusinesses(workspaceId)` (same
+  file) returns only fixture rows; backed by `GET
+  /api/admin/fixture-businesses?workspaceId=...`, gated on
+  `CAPABILITIES.SYSTEM_ADMIN`. Read-only — cleanup still goes through the
+  existing governed archive path (`PATCH
+  /api/owner/recovery/businesses/[id]`), never a raw delete.
+- **Tests**: `src/__tests__/founder-recovery/fixture-isolation.db.test.ts`
+  proves all four required invariants (real business visible, active
+  fixture hidden from `listBusinesses()`, fixture reachable via
+  `listFixtureBusinesses()`, workspace isolation preserved) plus a mixed
+  real+fixture listing and the "no explicit opts = never a fixture" default.
+
+## Rollout to production
+
+The migration above has not been deployed to the production database from
+this session (no production DB access here, and doing so is a deploy-time
+`prisma migrate deploy` gated by this repo's own exact-SHA merge policy and
+CI). Until it deploys, the acceptance/QA account's own future business-create
+calls need to pass `isFixtureBusiness: true` explicitly (and that account
+needs `SYSTEM_ADMIN`) for new rows to be tagged; existing already-created
+acceptance rows in production are untouched by this change (no backfill was
+performed — see "Historical rows" below).
+
+## Historical rows still in production
+
+Rows created before this change (the ~35+ "OPSIQ Acceptance ..." businesses
+the human tester saw) default to `isFixtureBusiness: false` under the
+additive migration and are **not** retroactively reclassified — that would
+require identifying them (most reliably by name pattern, e.g. `OPSIQ
+(Production )?Acceptance`) and calling the existing governed
+`updateBusiness()`/archive path or a one-time backfill script. Doing so is a
+production data change and is deliberately **not** performed here without
+explicit owner authorization — see `PRODUCTION_DATA_MUTATIONS = 0` in the
+session's final report.
 
 ## What's already closed
 

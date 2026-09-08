@@ -22,7 +22,11 @@ export const GET = withCanonicalEnforcement(
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const input = await parseRequestBody(ctx.request!, businessCreateSchema);
-    const business = await createBusiness(input, ctx.verifiedActorId, ctx.verifiedWorkspaceId);
+    // isFixtureBusiness is only ever honored for a SYSTEM_ADMIN-capable actor (acceptance/QA
+    // tooling) — a self-serve owner can never mark their own business a fixture. See
+    // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+    const isFixtureBusiness = input.isFixtureBusiness === true && ctx.verifiedCapabilities.has(CAPABILITIES.SYSTEM_ADMIN);
+    const business = await createBusiness(input, ctx.verifiedActorId, ctx.verifiedWorkspaceId, { isFixtureBusiness });
     return canonicalJson(business, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }

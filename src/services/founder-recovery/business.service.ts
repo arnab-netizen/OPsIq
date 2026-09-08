@@ -14,8 +14,15 @@ import type { BusinessCreateInput, BusinessUpdateInput } from "@/domain/founder-
 export async function createBusiness(
   input: BusinessCreateInput,
   actorId: string,
-  workspaceId: string
+  workspaceId: string,
+  opts?: { isFixtureBusiness?: boolean }
 ) {
+  // isFixtureBusiness is NEVER read from the ordinary business-create request body/schema — it
+  // is only ever passed by the route layer after an explicit SYSTEM_ADMIN capability check (see
+  // POST /api/owner/recovery/businesses). A self-serve owner has no path to set this on their own
+  // business. See docs/opsiq-governance/ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+  const isFixtureBusiness = opts?.isFixtureBusiness === true;
+
   const business = await db.ownerBusiness.create({
     data: {
       id: randomUUID(),
@@ -28,6 +35,7 @@ export async function createBusiness(
       b2cSupported: input.b2cSupported ?? true,
       b2bSupported: input.b2bSupported ?? false,
       isActive: true,
+      isFixtureBusiness,
       createdBy: actorId,
     },
   });
@@ -38,7 +46,7 @@ export async function createBusiness(
     workspaceId,
     entityType: "OwnerBusiness",
     entityId: business.id,
-    payload: { name: business.name, businessType: business.businessType, currency: business.currency },
+    payload: { name: business.name, businessType: business.businessType, currency: business.currency, isFixtureBusiness },
   });
 
   return business;
@@ -51,8 +59,26 @@ export async function listBusinesses(workspaceId: string) {
   // business they no longer want cluttering their own selector without deleting the row
   // or its history. Previously this had no isActive filter at all, so a business archived
   // by any future caller of this field would still have appeared here.
+  //
+  // isFixtureBusiness: false — excludes acceptance/QA fixtures (see createBusiness above and
+  // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md). An ordinary owner's list must never include a business
+  // an authorized acceptance run created under this same workspace/account.
   return db.ownerBusiness.findMany({
-    where: { workspaceId, isActive: true },
+    where: { workspaceId, isActive: true, isFixtureBusiness: false },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * Authorized acceptance/QA path — the ONLY listBusinesses variant that returns fixture rows.
+ * Callers must independently enforce a SYSTEM_ADMIN (or equivalent acceptance-tooling) capability
+ * check before invoking this; it performs no capability check itself, matching every other
+ * function in this file being a plain workspace-scoped data accessor with authorization handled at
+ * the route layer.
+ */
+export async function listFixtureBusinesses(workspaceId: string) {
+  return db.ownerBusiness.findMany({
+    where: { workspaceId, isFixtureBusiness: true },
     orderBy: { createdAt: "desc" },
   });
 }
