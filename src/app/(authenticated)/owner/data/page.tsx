@@ -382,15 +382,26 @@ function MissingCritical({ items }: { items: MissingMinimumView[] }) {
 function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
   return (
     <div className="space-y-6">
-      {groups.map((group) => (
-        <section key={group.id} data-testid={`data-hub-group-${group.id}`}>
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-base font-semibold text-foreground">{group.label}</h3>
+      {groups.map((group) => {
+        // Open by default only when this category still has a required item outstanding --
+        // an owner who already finished a category (or never needed to look at it) shouldn't
+        // have its full item-by-item breakdown competing for space by default. Progressive
+        // disclosure per the redesign's target My Business hierarchy: identity, what's known,
+        // what's missing, and next action stay up front; the full per-field breakdown behind
+        // each category is the deepest, most-detail tier, one click away.
+        const hasOutstanding = group.categories.some((c) => c.status === "missing_required");
+        return (
+        <details key={group.id} data-testid={`data-hub-group-${group.id}`} open={hasOutstanding} className="group">
+          <summary className="flex flex-wrap cursor-pointer list-none items-baseline justify-between gap-2 [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-1.5 text-base font-semibold text-foreground">
+              <span className="inline-block text-muted-foreground transition-transform group-open:rotate-90">&#9656;</span>
+              {group.label}
+            </span>
             <span className="text-sm text-muted-foreground">
               {group.suppliedCount} of {group.totalCount} added
             </span>
-          </div>
-          <p className="text-sm text-muted-foreground">{group.purpose}</p>
+          </summary>
+          <p className="ml-4 text-sm text-muted-foreground">{group.purpose}</p>
           <ul className="mt-3 divide-y divide-border rounded-lg border border-border">
             {group.categories.map((cat) => (
               <li key={cat.category} className="flex flex-wrap items-start justify-between gap-3 p-3">
@@ -424,8 +435,9 @@ function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
               </li>
             ))}
           </ul>
-        </section>
-      ))}
+        </details>
+        );
+      })}
     </div>
   );
 }
