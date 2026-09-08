@@ -290,10 +290,10 @@ export default function OwnerOperationsPage() {
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Operations</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Operations</h1>
+          <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-muted-foreground">
             Where throughput stalls, where the bottleneck is, and what to fix next — with the single highest-impact execution move and verification.
           </p>
         </div>
@@ -332,7 +332,7 @@ export default function OwnerOperationsPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 flex items-end gap-3">
+          <div className="mb-6 flex flex-wrap items-end gap-3">
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}

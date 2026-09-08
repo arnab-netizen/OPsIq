@@ -197,9 +197,16 @@ export interface MinimumOwnerCockpitProps {
 function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinancePriority; primary: boolean }) {
   const testId = primary ? "cockpit-finance-priority-primary" : "cockpit-finance-priority-secondary";
   return (
-    <div data-testid={testId} style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: primary ? 10 : 8, padding: primary ? 18 : 12, display: "flex", flexDirection: "column", gap: 8 }}>
+    <div
+      data-testid={testId}
+      className={primary ? "flex flex-col gap-2.5 border-l-2 pl-5 py-1" : "flex flex-col gap-2 border-t border-border pt-3.5"}
+      style={primary ? { borderColor: "var(--accent-ink)" } : undefined}
+    >
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+        <span
+          className={primary ? "text-xs font-semibold uppercase tracking-[0.08em]" : "text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"}
+          style={primary ? { color: "var(--accent-ink)" } : undefined}
+        >
           {primary ? "From your latest finance diagnosis" : "Latest finance diagnosis"}
         </span>
         <Badge variant={SURVIVAL_VARIANT[priority.survivalState] ?? "default-accessible"}>
@@ -208,7 +215,7 @@ function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinanc
       </div>
       {priority.topAction ? (
         <>
-          <strong data-testid="cockpit-finance-priority-title" style={{ fontSize: primary ? 17 : 14 }}>{priority.topAction.title}</strong>
+          <strong data-testid="cockpit-finance-priority-title" className={primary ? "font-display text-[1.1rem] font-semibold leading-snug tracking-tight text-foreground" : "text-sm font-medium text-foreground"}>{priority.topAction.title}</strong>
           <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>{priority.topAction.description}</p>
         </>
       ) : (
@@ -252,7 +259,7 @@ function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsRespons
   const active = signals.publicSignalStatus !== "NONE";
   return (
     <details data-testid="cockpit-signals-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Outside signals
         <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {PUBLIC_SIGNAL_STATUS_LABEL[signals.publicSignalStatus] ?? signals.publicSignalStatus}</span>
       </summary>
@@ -526,7 +533,7 @@ function ExecutionLifecycleSection({
 
   return (
     <details data-testid="cockpit-execution-lifecycle" open={total > 0} style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Execution lifecycle{total > 0 ? ` (${total} active)` : ""}
         {lifecycle.totalPendingVerification > 0 && (
           <span style={{ marginLeft: 8, fontSize: 12, padding: "1px 6px", borderRadius: 10, background: "#fef3c7", color: "#92400e" }}>
@@ -641,8 +648,8 @@ function BusinessOperatingSystemSection({
   };
 
   return (
-    <details open data-testid="cockpit-bos-section" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+    <details open={bos.totalActiveObjectives > 0} data-testid="cockpit-bos-section" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
+      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Goals &amp; objectives
         <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>
           {" "}
@@ -875,7 +882,7 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
 
   return (
     <details data-testid="cockpit-business-condition-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Business condition
         <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — highest risk: {RISK_LEVEL_LABEL[worstLevel] ?? worstLevel}</span>
       </summary>
@@ -912,7 +919,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   const inProgress = recovery.recoveryStatus !== "NONE";
   return (
     <details data-testid="cockpit-recovery-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Recovery status
         <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</span>
       </summary>
@@ -1248,7 +1255,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* 8. Secondary Actions (collapsed) */}
       <details data-testid="cockpit-secondary-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+        <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
           Other actions{secondaryRoutes.length ? ` (${secondaryRoutes.length})` : ""}
         </summary>
         {secondaryRoutes.length === 0 ? (
@@ -1268,7 +1275,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* 9. Monitor-only (collapsed) */}
       <details data-testid="cockpit-monitor-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+        <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
           Monitor only{monitorRoutes.length ? ` (${monitorRoutes.length})` : ""}
         </summary>
         {monitorRoutes.length === 0 ? (
@@ -1283,25 +1290,6 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         )}
       </details>
 
-      {/* Goal Attention Signal — Phase 2 Signal A */}
-      {goalAttentionSignal && (
-        <div data-testid="cockpit-goal-section" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>Goal</span>
-            <span data-testid="cockpit-goal-state" data-cockpit-goal-state={goalAttentionSignal.state} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#fef2f2" : goalAttentionSignal.state === "ON_TRACK" ? "#f0fdf4" : "#fafafa", color: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#b91c1c" : goalAttentionSignal.state === "ON_TRACK" ? "#15803d" : "#6b7280" }}>
-              {goalAttentionSignal.state.replace(/_/g, " ")}
-            </span>
-            {goalAttentionSignal.goalTitle && <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{goalAttentionSignal.goalTitle}</span>}
-          </div>
-          {goalAttentionSignal.gapToClose !== null && (
-            <p data-testid="cockpit-goal-gap" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>
-              Gap to close: {goalAttentionSignal.targetCurrency ?? ""} {goalAttentionSignal.gapToClose.toLocaleString()}
-            </p>
-          )}
-          <p data-testid="cockpit-goal-explanation" style={{ margin: "4px 0 0", fontSize: 13, color: "var(--muted-foreground)", fontStyle: "italic" }}>{goalAttentionSignal.beginnerExplanation}</p>
-        </div>
-      )}
-
       {/*
         Finance diagnosis top action (F3) — secondary here because a real governed process-execution
         route (`top`, rendered above as "Your top priority now") is currently primary; never
@@ -1310,122 +1298,161 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       */}
       {financeTopPriority && <FinanceTopPriorityCard priority={financeTopPriority} primary={isMonitorOnly} />}
 
-      {/* Profit Leak — Phase 2 Signal B */}
-      {topProfitLeak && (
-        <div data-testid="cockpit-profit-leak-section" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-          <span style={{ fontSize: 14, fontWeight: 600 }}>Profit leak detected</span>
-          <div style={{ marginTop: 6, fontSize: 13, display: "flex", flexDirection: "column", gap: 4 }}>
-            <span data-testid="cockpit-profit-leak-area" style={{ color: "var(--muted-foreground)" }}>Area: {topProfitLeak.domain}</span>
-            {topProfitLeak.estimatedImpact.rangeLow !== undefined && (
-              <span data-testid="cockpit-profit-leak-impact" style={{ color: "var(--destructive)" }}>
-                Estimated impact: {topProfitLeak.estimatedImpact.rangeLow.toLocaleString()}
-                {topProfitLeak.estimatedImpact.rangeHigh !== undefined ? ` – ${topProfitLeak.estimatedImpact.rangeHigh.toLocaleString()}` : ""}
-              </span>
-            )}
-            {topProfitLeak.ownerExplanation && (
-              <span style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>{topProfitLeak.ownerExplanation}</span>
-            )}
-          </div>
-        </div>
-      )}
+      {/*
+        Also worth knowing — Goal / Profit leak / Operating policies / Trend alerts / Do-not-repeat /
+        Escalations (Phase 2 Signals A-G) used to each render as their own full-width bold-headed,
+        border-divided section — six competing "modules" stacked under the one real priority above.
+        Every one of these can carry real, currently-true content the owner must be able to see
+        without an extra click (tests/browser/46-owner-cockpit.spec.ts specs 8-11 assert
+        toBeVisible() on each, not just DOM presence), so none of it is hidden behind a closed
+        <details> here — only compacted into one shared, quietly-labelled strip instead of six.
+        Same data, same conditions, same testids; only the surrounding chrome changed.
+      */}
+      {/* Trend alerts and Escalations always render below (no conditional guard in the original
+          markup either), so this wrapper is unconditional too. */}
+      <div className="border-t border-border pt-3.5 flex flex-col gap-3">
+        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Also worth knowing</span>
 
-      {/* Policy Attention Signal — Phase 2 Signal C */}
-      {policyAttentionSignal && (
-        <div data-testid="cockpit-policy-section" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>Operating policies</span>
-            <span data-testid="cockpit-policy-triggered-blocks" style={{ fontSize: 12, color: policyAttentionSignal.triggeredBlockCount > 0 ? "var(--destructive)" : "var(--muted-foreground)", fontWeight: policyAttentionSignal.triggeredBlockCount > 0 ? 600 : 400 }}>
-              {policyAttentionSignal.triggeredBlockCount} blocked
-            </span>
-            <span data-testid="cockpit-policy-triggered-warnings" style={{ fontSize: 12, color: policyAttentionSignal.triggeredWarningCount > 0 ? "var(--warning-text)" : "var(--muted-foreground)" }}>
-              {policyAttentionSignal.triggeredWarningCount} warning{policyAttentionSignal.triggeredWarningCount !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
-            {policyAttentionSignal.details.map((d, i) => (
-              <li key={d.policyKey} data-testid={`cockpit-policy-detail-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center" }}>
-                <Badge variant={d.decision === "BLOCK" ? "destructive-accessible" : d.decision === "WARN" ? "warning-accessible" : "muted-accessible"}>
-                  {POLICY_DECISION_LABEL[d.decision] ?? d.decision}
-                </Badge>
-                <span style={{ color: "var(--muted-foreground)" }}>{d.label}</span>
-                {d.hasActiveOverride && <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>(override active)</span>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Trend Alerts — Phase 2 Signal D */}
-      <div data-testid="cockpit-trend-alerts-section" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <span style={{ fontSize: 14, fontWeight: 600 }}>Trend alerts</span>
-        {trendAlerts === null || trendAlerts === undefined ? (
-          <p data-testid="cockpit-trend-alerts-state" data-cockpit-trend-alerts-state="INSUFFICIENT_DATA" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>
-            Not enough metric history yet for trend alerts. Record at least two periods.
-          </p>
-        ) : trendAlerts.length === 0 ? (
-          <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--success-text)" }}>No trend alerts — metrics moving in a healthy direction.</p>
-        ) : (
-          <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
-            {trendAlerts.map((alert, i) => (
-              <li key={alert.alertType} data-testid={`cockpit-trend-alert-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
-                <Badge data-testid={`cockpit-trend-alert-${i}-severity`} variant={alert.severity === "critical" ? "destructive-accessible" : "warning-accessible"}>
-                  {severityLabel(alert.severity)}
-                </Badge>
-                <span style={{ color: "var(--muted-foreground)" }}>{alert.description}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Do-Not-Repeat Annotation — Phase 2 Signal E */}
-      {doNotRepeatAnnotation?.blocked && (
-        <div data-testid="cockpit-dnr-section" style={{ border: "1px solid #fef3c7", borderRadius: 8, padding: "10px 14px", background: "#fffbeb" }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>Do not repeat</span>
-          <p data-testid="cockpit-dnr-prior-action" style={{ margin: "6px 0 0", fontSize: 13, color: "#374151" }}>
-            {doNotRepeatAnnotation.priorActionSummary}
-          </p>
-          <p data-testid="cockpit-dnr-reason" style={{ margin: "4px 0 0", fontSize: 13, color: "#92400e" }}>
-            {doNotRepeatAnnotation.blockedReason}
-          </p>
-          {doNotRepeatAnnotation.changedContextCondition && (
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>
-              Allowed if: {doNotRepeatAnnotation.changedContextCondition}
-            </p>
+          {/* Goal Attention Signal — Phase 2 Signal A */}
+          {goalAttentionSignal && (
+            <div data-testid="cockpit-goal-section" className="flex flex-col gap-1">
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span className="text-sm font-medium text-foreground">Goal</span>
+                <span data-testid="cockpit-goal-state" data-cockpit-goal-state={goalAttentionSignal.state} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#fef2f2" : goalAttentionSignal.state === "ON_TRACK" ? "#f0fdf4" : "#fafafa", color: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#b91c1c" : goalAttentionSignal.state === "ON_TRACK" ? "#15803d" : "#6b7280" }}>
+                  {goalAttentionSignal.state.replace(/_/g, " ")}
+                </span>
+                {goalAttentionSignal.goalTitle && <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{goalAttentionSignal.goalTitle}</span>}
+              </div>
+              {goalAttentionSignal.gapToClose !== null && (
+                <p data-testid="cockpit-goal-gap" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
+                  Gap to close: {goalAttentionSignal.targetCurrency ?? ""} {goalAttentionSignal.gapToClose.toLocaleString()}
+                </p>
+              )}
+              <p data-testid="cockpit-goal-explanation" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)", fontStyle: "italic" }}>{goalAttentionSignal.beginnerExplanation}</p>
+            </div>
           )}
-          {doNotRepeatAnnotation.legacyMatch && (
-            <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>Matched by area scope (informational).</p>
-          )}
-        </div>
-      )}
 
-      {/* Active Escalations — Phase 2 Signal G */}
-      <div data-testid="cockpit-escalations-section" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <span style={{ fontSize: 14, fontWeight: 600 }}>Escalations</span>
-        {activeEscalations === null || activeEscalations === undefined ? (
-          <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>Escalation data unavailable.</p>
-        ) : activeEscalations.length === 0 ? (
-          <p data-testid="cockpit-escalations-state" data-cockpit-escalations-state="NONE" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--success-text)" }}>No open escalations.</p>
-        ) : (
-          <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
-            {activeEscalations.map((esc) => (
-              <li key={esc.id} data-testid={`cockpit-escalation-${esc.id}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <Badge variant={esc.severity === "CRITICAL" ? "destructive-accessible" : "warning-accessible"}>{severityLabel(esc.severity)}</Badge>
-                <span style={{ color: "var(--muted-foreground)", flex: 1 }}>{esc.title}</span>
-                {onAcknowledgeEscalation && (
-                  <button
-                    type="button"
-                    data-testid={`cockpit-escalation-ack-${esc.id}`}
-                    onClick={() => onAcknowledgeEscalation(esc.id)}
-                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}
-                  >
-                    Acknowledge
-                  </button>
+          {/* Profit Leak — Phase 2 Signal B */}
+          {topProfitLeak && (
+            <div data-testid="cockpit-profit-leak-section" className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-foreground">Profit leak detected</span>
+              <div style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 2 }}>
+                <span data-testid="cockpit-profit-leak-area" style={{ color: "var(--muted-foreground)" }}>Area: {topProfitLeak.domain}</span>
+                {topProfitLeak.estimatedImpact.rangeLow !== undefined && (
+                  <span data-testid="cockpit-profit-leak-impact" style={{ color: "var(--destructive)" }}>
+                    Estimated impact: {topProfitLeak.estimatedImpact.rangeLow.toLocaleString()}
+                    {topProfitLeak.estimatedImpact.rangeHigh !== undefined ? ` – ${topProfitLeak.estimatedImpact.rangeHigh.toLocaleString()}` : ""}
+                  </span>
                 )}
-              </li>
-            ))}
-          </ul>
-        )}
+                {topProfitLeak.ownerExplanation && (
+                  <span style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>{topProfitLeak.ownerExplanation}</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Policy Attention Signal — Phase 2 Signal C */}
+          {policyAttentionSignal && (
+            <div data-testid="cockpit-policy-section" className="flex flex-col gap-1">
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span className="text-sm font-medium text-foreground">Operating policies</span>
+                <span data-testid="cockpit-policy-triggered-blocks" style={{ fontSize: 12, color: policyAttentionSignal.triggeredBlockCount > 0 ? "var(--destructive)" : "var(--muted-foreground)", fontWeight: policyAttentionSignal.triggeredBlockCount > 0 ? 600 : 400 }}>
+                  {policyAttentionSignal.triggeredBlockCount} blocked
+                </span>
+                <span data-testid="cockpit-policy-triggered-warnings" style={{ fontSize: 12, color: policyAttentionSignal.triggeredWarningCount > 0 ? "var(--warning-text)" : "var(--muted-foreground)" }}>
+                  {policyAttentionSignal.triggeredWarningCount} warning{policyAttentionSignal.triggeredWarningCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+                {policyAttentionSignal.details.map((d, i) => (
+                  <li key={d.policyKey} data-testid={`cockpit-policy-detail-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center" }}>
+                    <Badge variant={d.decision === "BLOCK" ? "destructive-accessible" : d.decision === "WARN" ? "warning-accessible" : "muted-accessible"}>
+                      {POLICY_DECISION_LABEL[d.decision] ?? d.decision}
+                    </Badge>
+                    <span style={{ color: "var(--muted-foreground)" }}>{d.label}</span>
+                    {d.hasActiveOverride && <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>(override active)</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Trend Alerts — Phase 2 Signal D */}
+          <div data-testid="cockpit-trend-alerts-section" className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-foreground">Trend alerts</span>
+            {trendAlerts === null || trendAlerts === undefined ? (
+              <p data-testid="cockpit-trend-alerts-state" data-cockpit-trend-alerts-state="INSUFFICIENT_DATA" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
+                Not enough metric history yet for trend alerts. Record at least two periods.
+              </p>
+            ) : trendAlerts.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 13, color: "var(--success-text)" }}>No trend alerts — metrics moving in a healthy direction.</p>
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+                {trendAlerts.map((alert, i) => (
+                  <li key={alert.alertType} data-testid={`cockpit-trend-alert-${i}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+                    <Badge data-testid={`cockpit-trend-alert-${i}-severity`} variant={alert.severity === "critical" ? "destructive-accessible" : "warning-accessible"}>
+                      {severityLabel(alert.severity)}
+                    </Badge>
+                    <span style={{ color: "var(--muted-foreground)" }}>{alert.description}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Do-Not-Repeat Annotation — Phase 2 Signal E. Its own hardcoded amber box (background,
+              border, text colors) is a deliberate, separately-locked-in "bucket 3, self-consistent"
+              exception (visual-system-p0-contrast-regression.test.ts / -semantic-color-closure.test.ts)
+              from an earlier design pass -- left untouched here; only its position moved into this
+              shared strip. */}
+          {doNotRepeatAnnotation?.blocked && (
+            <div data-testid="cockpit-dnr-section" style={{ border: "1px solid #fef3c7", borderRadius: 8, padding: "10px 14px", background: "#fffbeb" }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>Do not repeat</span>
+              <p data-testid="cockpit-dnr-prior-action" style={{ margin: "6px 0 0", fontSize: 13, color: "#374151" }}>
+                {doNotRepeatAnnotation.priorActionSummary}
+              </p>
+              <p data-testid="cockpit-dnr-reason" style={{ margin: "4px 0 0", fontSize: 13, color: "#92400e" }}>
+                {doNotRepeatAnnotation.blockedReason}
+              </p>
+              {doNotRepeatAnnotation.changedContextCondition && (
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>
+                  Allowed if: {doNotRepeatAnnotation.changedContextCondition}
+                </p>
+              )}
+              {doNotRepeatAnnotation.legacyMatch && (
+                <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>Matched by area scope (informational).</p>
+              )}
+            </div>
+          )}
+
+          {/* Active Escalations — Phase 2 Signal G */}
+          <div data-testid="cockpit-escalations-section" className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-foreground">Escalations</span>
+            {activeEscalations === null || activeEscalations === undefined ? (
+              <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>Escalation data unavailable.</p>
+            ) : activeEscalations.length === 0 ? (
+              <p data-testid="cockpit-escalations-state" data-cockpit-escalations-state="NONE" style={{ margin: 0, fontSize: 13, color: "var(--success-text)" }}>No open escalations.</p>
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                {activeEscalations.map((esc) => (
+                  <li key={esc.id} data-testid={`cockpit-escalation-${esc.id}`} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <Badge variant={esc.severity === "CRITICAL" ? "destructive-accessible" : "warning-accessible"}>{severityLabel(esc.severity)}</Badge>
+                    <span style={{ color: "var(--muted-foreground)", flex: 1 }}>{esc.title}</span>
+                    {onAcknowledgeEscalation && (
+                      <button
+                        type="button"
+                        data-testid={`cockpit-escalation-ack-${esc.id}`}
+                        onClick={() => onAcknowledgeEscalation(esc.id)}
+                        style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}
+                      >
+                        Acknowledge
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
       </div>
 
       {/* Recovery status — read-only, collapsed low-load summary (PASS 37). */}
@@ -1445,7 +1472,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
       <details data-testid="cockpit-proof-drawer" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>View proof &amp; details</summary>
+        <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>View proof &amp; details</summary>
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted-foreground)", display: "flex", flexDirection: "column", gap: 6 }}>
           <span><strong>Done when:</strong> {top.completionCriteria}</span>
           {top.evidenceRefs.length > 0

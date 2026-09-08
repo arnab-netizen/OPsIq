@@ -129,16 +129,19 @@ describe("with a business", () => {
     expect(missing.querySelector("a")!.getAttribute("href")).toBe("/owner/finance");
   });
 
-  it("renders all four category groups with real supplied counts", async () => {
+  it("renders all four category groups summarized as what's known / what's missing, not raw counts", async () => {
     mockWithBusiness();
     renderPage();
     await waitFor(() => expect(screen.getByTestId("data-hub-group-money")).toBeTruthy());
     for (const group of ["money", "people", "customers", "operations"]) {
       expect(screen.getByTestId(`data-hub-group-${group}`)).toBeTruthy();
     }
-    // One supplied category (revenue_sales) sits in Money.
-    expect(screen.getByTestId("data-hub-group-money").textContent).toContain("1 of 6 added");
-    expect(screen.getByTestId("data-hub-group-people").textContent).toContain("0 of 4 added");
+    // One supplied category (revenue_sales) sits in Money — named plainly, not as a raw count.
+    const money = screen.getByTestId("data-hub-group-money").textContent!;
+    expect(money).toContain("Knows: Revenue / sales records");
+    expect(money).toContain("Missing:");
+    // Nothing supplied in People — says so in plain language rather than "0 of 4 added".
+    expect(screen.getByTestId("data-hub-group-people").textContent).toContain("Nothing recorded yet");
   });
 
   it("links to both existing intake surfaces without duplicating them", async () => {

@@ -7,7 +7,8 @@
  * the server re-derives + re-checks every action. Presentation + safety layout live in MinimumOwnerCockpit.
  *
  * Business-context decision (revised — see docs/opsiq-governance and the P0-4 Home/Finance
- * consistency fix): this page still has NO visible selector — `processExecution` (the task bridge
+ * consistency fix): NO selector, by design — this page still has no visible business selector.
+ * `processExecution` (the task bridge
  * this page drives START/action/progress against) is built via `buildProcessExecutionBridge(
  * processCorrections, cashProfitProtection, workspaceId, ...)` — workspace-scoped, not
  * businessId-scoped — and every mutation here is submitted by `taskKey` (POST

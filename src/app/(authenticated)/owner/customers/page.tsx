@@ -183,8 +183,8 @@ export default function CustomersPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8" data-testid="customers-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Customers</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+        <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Customers</h1>
         <Button size="sm" onClick={openCreate} disabled={!selectedBizId}>
           + New Customer
         </Button>
@@ -208,6 +208,7 @@ export default function CustomersPage() {
 
       <div className="flex gap-3 mb-6 flex-wrap">
         <select
+          aria-label="Filter customers by segment"
           value={segmentFilter}
           onChange={(e) => handleSegmentFilter(e.target.value)}
           className="rounded border border-border bg-background px-3 py-1.5 text-sm"

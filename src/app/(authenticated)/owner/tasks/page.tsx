@@ -27,20 +27,6 @@ interface TaskListItem {
   proofRequirementId: string | null;
 }
 
-const STATUS_VARIANT: Record<string, "success" | "default" | "warning" | "destructive"> = {
-  [DelegatedTaskStatus.APPROVED_COMPLETE]: "success",
-  [DelegatedTaskStatus.IN_PROGRESS]: "default",
-  [DelegatedTaskStatus.PROOF_REQUIRED]: "warning",
-  [DelegatedTaskStatus.PROOF_SUBMITTED]: "warning",
-  [DelegatedTaskStatus.BLOCKED]: "destructive",
-  [DelegatedTaskStatus.ESCALATED]: "destructive",
-  [DelegatedTaskStatus.REJECTED_INCOMPLETE]: "destructive",
-  [DelegatedTaskStatus.CANCELLED]: "destructive",
-  [DelegatedTaskStatus.EXPIRED]: "destructive",
-  [DelegatedTaskStatus.DISPUTED]: "warning",
-  [DelegatedTaskStatus.COMPLETED_PENDING_REVIEW]: "warning",
-};
-
 const STATUS_LABELS: Record<string, string> = {
   [DelegatedTaskStatus.DRAFT]: "Draft",
   [DelegatedTaskStatus.ASSIGNED]: "Assigned",
@@ -90,6 +76,17 @@ const STATUS_GROUPS: Array<{ label: string; statuses: string[] }> = [
     ],
   },
 ];
+
+/** Reverse lookup: raw 15-state status → the one owner-visible bucket it belongs to. */
+const GROUP_FOR_STATUS: Record<string, string> = Object.fromEntries(
+  STATUS_GROUPS.flatMap((g) => g.statuses.map((s) => [s, g.label]))
+);
+const GROUP_VARIANT: Record<string, "success" | "default" | "warning" | "destructive"> = {
+  "To do": "default",
+  "In progress": "default",
+  Waiting: "warning",
+  Done: "success",
+};
 
 async function apiFetch(path: string) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" } });
@@ -180,50 +177,33 @@ export default function OwnerTasksPage() {
       )}
 
       {!loading && !error && tasks.length > 0 && (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted text-muted-foreground">
-              <tr>
-                <th className="px-4 py-2 text-left font-medium">Title</th>
-                <th className="px-4 py-2 text-left font-medium">Status</th>
-                <th className="px-4 py-2 text-left font-medium">Assigned to</th>
-                <th className="px-4 py-2 text-left font-medium">Due</th>
-                <th className="px-4 py-2 text-left font-medium">Proof</th>
-                <th className="px-4 py-2 text-left font-medium"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {tasks.map((task) => (
-                <tr key={task.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-medium">{task.title}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={STATUS_VARIANT[task.status] ?? "default"}>
-                      {STATUS_LABELS[task.status] ?? task.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {task.assignedRole ?? task.assignedUserId ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {task.proofRequirementId ? (
-                      <Badge variant="default">Required</Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/owner/tasks/${task.id}`} className="text-[var(--primary-text)] hover:underline text-sm">
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="flex flex-col">
+          {tasks.map((task) => {
+            const group = GROUP_FOR_STATUS[task.status] ?? "To do";
+            // Never show a raw user id -- the list API returns assignedUserId but no resolved
+            // display name, so "who owns it" falls back to the role (if set) or a plain "Assigned"
+            // rather than leaking the UUID, which is the previous fallback here.
+            const who = task.assignedRole ?? (task.assignedUserId ? "Assigned" : "Not yet assigned");
+            return (
+              <li key={task.id} className="border-t border-border py-4 first:border-t-0 first:pt-0">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <Link href={`/owner/tasks/${task.id}`} className="font-display text-[1.05rem] font-semibold text-foreground hover:underline">
+                    {task.title}
+                  </Link>
+                  <Badge variant={GROUP_VARIANT[group]}>{group}</Badge>
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  <span>Who: {who}</span>
+                  <span>When: {task.dueAt ? new Date(task.dueAt).toLocaleDateString() : "No due date set"}</span>
+                  {task.proofRequirementId && <span>Proof required before this can close</span>}
+                </div>
+                <Link href={`/owner/tasks/${task.id}`} className="mt-1.5 inline-block text-sm font-medium text-[var(--primary-text)] underline-offset-2 hover:underline">
+                  What happens next →
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
       {/* Pagination */}

@@ -46,16 +46,22 @@ interface PriorityItem {
   detailHref: string;
 }
 
-const TIER_VARIANT: Record<PriorityTier, "destructive" | "warning" | "muted"> = {
-  critical: "destructive",
-  attention: "warning",
-  normal: "muted",
+const TIER_VARIANT: Record<PriorityTier, "destructive-accessible" | "warning-accessible" | "muted-accessible"> = {
+  critical: "destructive-accessible",
+  attention: "warning-accessible",
+  normal: "muted-accessible",
 };
 
 const TIER_LABEL: Record<PriorityTier, string> = {
   critical: "Critical",
   attention: "Needs attention",
   normal: "Worth knowing",
+};
+
+const TIER_RULE_COLOR: Record<PriorityTier, string> = {
+  critical: "var(--destructive)",
+  attention: "var(--warning-text)",
+  normal: "var(--border)",
 };
 
 /** Open, unresolved risk statuses only — a risk already RESOLVED/CLOSED/ACCEPTED isn't a priority. */
@@ -169,23 +175,29 @@ export default function OwnerPrioritiesPage() {
           description="OpsIQ checks your risks, alerts, and blocked decisions continuously. This stays empty until something real needs you."
         />
       ) : (
-        <ul className="flex flex-col gap-3">
-          {items?.map((item) => (
-            <li key={item.id} className="rounded-md border border-border bg-card p-4" data-testid="priority-item">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <strong className="text-sm font-semibold text-foreground">{item.title}</strong>
+        <ol className="flex flex-col gap-6">
+          {items?.map((item, i) => (
+            <li
+              key={item.id}
+              className="border-l-2 pl-5 py-0.5"
+              style={{ borderColor: TIER_RULE_COLOR[item.tier] }}
+              data-testid="priority-item"
+            >
+              <div className="flex flex-wrap items-baseline gap-2.5">
+                <span className="font-display text-base font-semibold tabular-nums text-muted-foreground">{i + 1}</span>
                 <Badge variant={TIER_VARIANT[item.tier]}>{TIER_LABEL[item.tier]}</Badge>
               </div>
-              {item.why && <p className="mt-1 text-sm text-muted-foreground">{item.why}</p>}
+              <strong className="mt-1 block font-display text-[1.15rem] font-semibold leading-snug tracking-tight text-foreground">{item.title}</strong>
+              {item.why && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{item.why}</p>}
               <Link
                 href={item.actionHref}
-                className="mt-2 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline"
+                className="mt-2.5 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline"
               >
                 {item.actionLabel} →
               </Link>
             </li>
           ))}
-        </ul>
+        </ol>
       )}
     </main>
   );

@@ -148,9 +148,16 @@ describe("MinimumOwnerCockpit uses theme-aware CSS custom properties instead of 
   });
 
   it("the FinanceTopPriorityCard (both primary and secondary render paths) resolves its surface and text via CSS variables", () => {
-    // This is the exact component + description paragraph the audit measured
-    // at 1.73:1 in dark mode ("Postpone all discretionary spend...").
-    expect(source).toMatch(/data-testid=\{testId\}\s*style=\{\{\s*border:\s*"1px solid var\(--border\)",\s*background:\s*"var\(--card\)"/);
+    // The premium-redesign pass replaced this component's bordered/filled box (background:
+    // "var(--card)") with an editorial left-rule/divider treatment -- still fully theme-tracking
+    // (a CSS var for the primary rule color, Tailwind's border-border utility -- itself backed by
+    // var(--border) -- for the secondary divider), just no longer a filled card. The guard that
+    // matters is still enforced: no hardcoded hex reappears on this component's own surface.
+    const cardSection = source.slice(source.indexOf("function FinanceTopPriorityCard"), source.indexOf("const RECOVERY_STATUS_LABEL"));
+    expect(cardSection).toMatch(/borderColor:\s*"var\(--accent-ink\)"/);
+    expect(cardSection).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+    // This is the exact description paragraph the audit measured at 1.73:1 in dark mode
+    // ("Postpone all discretionary spend...") -- untouched by the redesign.
     expect(source).toMatch(/<p style=\{\{ margin: 0, fontSize: 13, color: "var\(--muted-foreground\)" \}\}>\{priority\.topAction\.description\}<\/p>/);
   });
 

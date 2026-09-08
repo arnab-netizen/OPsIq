@@ -57,10 +57,13 @@ export function StartHereContinuationCard({ businessId }: { businessId: string |
       className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4"
     >
       <p className="text-sm font-medium text-foreground">Continue setting up OpsIQ</p>
-      <p className="mt-1 text-sm text-muted-foreground">
+      {/* text-muted-foreground drops below 4.5:1 on this card's own bg-primary/5 tint
+          (axe-verified) -- same accessible token used elsewhere in the repo for text on a
+          tinted, non-default background. */}
+      <p className="mt-1 text-sm text-[var(--muted-foreground-accessible)]">
         Next: {next.label}
       </p>
-      <p className="mt-0.5 text-xs text-muted-foreground">Why: {next.why}</p>
+      <p className="mt-0.5 text-xs text-[var(--muted-foreground-accessible)]">Why: {next.why}</p>
       <div className="mt-3">
         <Link href="/owner/start-here">
           <Button size="sm">Continue setup</Button>

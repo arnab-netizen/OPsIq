@@ -396,9 +396,17 @@ function MissingCritical({ items }: { items: MissingMinimumView[] }) {
   );
 }
 
+/** Dedicated full pages that exist for a subset of the tracked domains — "people" has no page of
+ *  its own yet, so it falls back to per-field targets below rather than link somewhere that lies. */
+const GROUP_PAGE: Partial<Record<OwnerDataGroupView["id"], string>> = {
+  money: "/owner/finance",
+  customers: "/owner/customers",
+  operations: "/owner/operations",
+};
+
 function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col">
       {groups.map((group) => {
         // Open by default only when this category still has a required item outstanding --
         // an owner who already finished a category (or never needed to look at it) shouldn't
@@ -407,19 +415,37 @@ function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
         // what's missing, and next action stay up front; the full per-field breakdown behind
         // each category is the deepest, most-detail tier, one click away.
         const hasOutstanding = group.categories.some((c) => c.status === "missing_required");
+        const known = group.categories.filter((c) => c.status === "supplied").map((c) => c.label);
+        const missing = [
+          ...group.categories.filter((c) => c.status === "missing_required").map((c) => c.label),
+          ...group.categories.filter((c) => c.status === "missing_recommended").map((c) => c.label),
+        ];
+        const page = GROUP_PAGE[group.id];
         return (
-        <details key={group.id} data-testid={`data-hub-group-${group.id}`} open={hasOutstanding} className="group">
-          <summary className="flex flex-wrap cursor-pointer list-none items-baseline justify-between gap-2 [&::-webkit-details-marker]:hidden">
-            <span className="flex items-center gap-1.5 text-base font-semibold text-foreground">
-              <span className="inline-block text-muted-foreground transition-transform group-open:rotate-90">&#9656;</span>
+        <div key={group.id} className="flex flex-wrap items-start justify-between gap-3 border-t border-border py-3.5 first:border-t-0 first:pt-0">
+        <details data-testid={`data-hub-group-${group.id}`} open={hasOutstanding} className="group min-w-0 flex-1">
+          {/* The "Open {group.label}" link used to render inside this <summary> -- a link nested
+              inside a native <summary> is two interactive controls in one (axe: nested-interactive),
+              since <summary> is itself the disclosure's built-in toggle button. Moved to a sibling
+              of <details> below instead, so the link and the disclosure toggle are two separate,
+              independently-focusable controls rather than one nested inside the other. */}
+          <summary className="flex cursor-pointer list-none flex-col items-start gap-1 [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-1.5 text-base font-medium text-foreground">
+              <span className="inline-block shrink-0 text-muted-foreground transition-transform group-open:rotate-90">&#9656;</span>
               {group.label}
             </span>
-            <span className="text-sm text-muted-foreground">
-              {group.suppliedCount} of {group.totalCount} added
+            <span className="ml-[22px] mt-0.5 block text-sm text-muted-foreground">
+              {known.length > 0 ? (
+                <>Knows: {known.slice(0, 3).join(", ")}{known.length > 3 ? `, +${known.length - 3} more` : ""}</>
+              ) : (
+                <>Nothing recorded yet</>
+              )}
+              {missing.length > 0 && (
+                <>{" · "}Missing: {missing.slice(0, 2).join(", ")}{missing.length > 2 ? `, +${missing.length - 2} more` : ""}</>
+              )}
             </span>
           </summary>
-          <p className="ml-4 text-sm text-muted-foreground">{group.purpose}</p>
-          <ul className="mt-3 divide-y divide-border rounded-lg border border-border">
+          <ul className="mt-3 ml-[22px] divide-y divide-border rounded-lg border border-border">
             {group.categories.map((cat) => (
               <li key={cat.category} className="flex flex-wrap items-start justify-between gap-3 p-3">
                 <div className="min-w-0 flex-1">
@@ -453,6 +479,12 @@ function CategoryGroups({ groups }: { groups: OwnerDataGroupView[] }) {
             ))}
           </ul>
         </details>
+        {page && (
+          <a href={page} className="whitespace-nowrap text-sm font-medium text-[var(--primary-text)] underline-offset-2 hover:underline">
+            Open {group.label} →
+          </a>
+        )}
+        </div>
         );
       })}
     </div>
@@ -556,6 +588,9 @@ export default function OwnerDataHubPage() {
               />
             )}
           </div>
+          {selectedBusiness?.currency && (
+            <p className="-mt-4 text-sm text-muted-foreground">Reporting currency: {selectedBusiness.currency}</p>
+          )}
 
           {state && <ReadinessSummary state={state} />}
           {state && <MissingCritical items={state.missingMinimum ?? []} />}

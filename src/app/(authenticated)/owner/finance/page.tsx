@@ -25,6 +25,13 @@ const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destru
   inconclusive: "warning",
   disputed: "warning",
 };
+const VERIFY_LABEL: Record<string, string> = {
+  unverified: "Not yet verified",
+  verified_improved: "Verified — improved",
+  verified_not_improved: "Verified — no improvement",
+  inconclusive: "Inconclusive",
+  disputed: "Disputed",
+};
 
 const SURVIVAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
   SAFE: "success",
@@ -32,6 +39,28 @@ const SURVIVAL_VARIANT: Record<string, "default" | "success" | "warning" | "dest
   AT_RISK: "warning",
   CRITICAL: "destructive",
   INSOLVENT_RISK: "destructive",
+};
+
+// The survival-state badge previously rendered the raw enum token verbatim (e.g. "AT_RISK",
+// "INSOLVENT_RISK" with the underscore intact) -- every other owner-facing survival-state badge
+// in the app (MinimumOwnerCockpit's SURVIVAL_LABEL) already goes through a plain-language map;
+// this page just never had one.
+const SURVIVAL_LABEL: Record<string, string> = {
+  SAFE: "Safe",
+  WATCH: "Watch",
+  AT_RISK: "At risk",
+  CRITICAL: "Critical",
+  INSOLVENT_RISK: "Insolvency risk",
+};
+
+// Same raw-token leak as SURVIVAL_LABEL above, on the finance action status badge
+// ("in_progress" rendered with its underscore intact).
+const ACTION_STATUS_LABEL: Record<string, string> = {
+  proposed: "Proposed",
+  assigned: "Assigned",
+  in_progress: "In progress",
+  completed: "Completed",
+  blocked: "Blocked",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -323,7 +352,7 @@ export default function OwnerFinancePage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 flex items-end gap-3">
+          <div className="mb-6 flex flex-wrap items-end gap-3">
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
@@ -448,22 +477,33 @@ function FinanceCycleView({
   onVerifyAction: (a: any) => void;
 }) {
   return (
-    <div className="space-y-6">
-      <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
-        <div>
-          <div className="text-xs uppercase text-muted-foreground">Latest diagnosis · cycle #{cycle.sequenceNumber}</div>
-          <div className="text-lg font-semibold tabular-nums">
-            Health {Math.round(score?.healthScore ?? cycle.overallHealthScore)}/100 · Risk {Math.round(score?.riskScore ?? cycle.survivalRiskScore)}/100 · Opportunity {Math.round(score?.opportunityScore ?? cycle.growthOpportunityScore)}/100
-          </div>
-        </div>
-        <div className="text-right">
+    <div className="flex flex-col gap-5">
+      <div className="border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
+        <div className="flex flex-wrap items-baseline gap-2.5">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>
+            Financial position · cycle #{cycle.sequenceNumber}
+          </span>
           <Badge variant={SURVIVAL_VARIANT[score?.survivalState ?? cycle.survivalState] || "muted-accessible"}>
-            {score?.survivalState ?? cycle.survivalState}
+            {SURVIVAL_LABEL[score?.survivalState ?? cycle.survivalState] ?? (score?.survivalState ?? cycle.survivalState)}
           </Badge>
-          <div className="text-xs text-muted-foreground mt-1">
-            data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
-          </div>
         </div>
+        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
+          {[
+            ["Health", score?.healthScore ?? cycle.overallHealthScore],
+            ["Risk", score?.riskScore ?? cycle.survivalRiskScore],
+            ["Opportunity", score?.opportunityScore ?? cycle.growthOpportunityScore],
+          ].map(([label, value]) => (
+            <div key={label as string}>
+              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground">
+                {Math.round(value as number)}<span className="text-base font-normal text-muted-foreground">/100</span>
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100 — how much of this reading rests on real, supplied numbers.
+        </p>
       </div>
 
       {(score?.dataConfidenceScore ?? cycle.dataConfidenceScore) < 30 && (
@@ -479,9 +519,9 @@ function FinanceCycleView({
       )}
 
       {recommended && (
-        <div className="border rounded-lg p-4 bg-card">
-          <div className="text-xs uppercase text-muted-foreground">Recommended next financial action</div>
-          <div className="font-semibold">{recommended.title}</div>
+        <div className="border-t border-border pt-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Recommended next financial action</div>
+          <div className="mt-1 font-display text-[1.1rem] font-semibold text-foreground">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
           {recommended.evidenceRationale && (
             <p className="text-xs text-muted-foreground italic">Why: {recommended.evidenceRationale}</p>
@@ -495,41 +535,63 @@ function FinanceCycleView({
         </div>
       )}
 
-      <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Findings ({cycle.findings.length})</h2>
+      {/*
+        Findings — the signature "what OpsIQ found" experience. Every value here is unchanged from
+        before (same fields, same source); only the presentation now separates a measured FACT from
+        the CALCULATION run against it, states HOW SURE OpsIQ is in plain language rather than a
+        bare percentage, and gives the finding a real editorial headline instead of a metric dump.
+        "What changed" / "why this action" / "other options" from the full 8-section spec are not
+        shown per finding: this cycle-level view has no per-finding change-history or alternative-
+        action data to draw on honestly (cycle #1 has no prior cycle to diff against here, and
+        actions aren't linked back to the finding that raised them) -- real limitations, not a
+        design choice, so nothing is invented to fill those sections.
+      */}
+      <section className="border-t border-border pt-4">
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-4">Findings ({cycle.findings.length})</h2>
         {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No findings generated — this may indicate missing input data rather than a healthy business. Check data confidence above.</p>}
-        <div className="space-y-3">
-          {cycle.findings.map((f: any) => (
-            <div key={f.id} className="border-l-4 pl-3 py-1" style={{ borderColor: f.findingType === "opportunity" ? "#16a34a" : "#f59e0b" }}>
-              <div className="flex justify-between">
-                <span className="font-semibold">{f.title}</span>
-                <span className="flex gap-1">
-                  <Badge variant="muted-accessible">{f.findingType}</Badge>
-                  <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
-                </span>
+        <div className="flex flex-col gap-6">
+          {cycle.findings.map((f: any) => {
+            const confidencePct = Math.round((f.confidence ?? 0) * 100);
+            const sureLabel = confidencePct >= 80 ? "Very sure" : confidencePct >= 50 ? "Reasonably sure" : "Not very sure yet";
+            return (
+              <div key={f.id} className="border-l-2 pl-4 py-0.5" style={{ borderColor: f.findingType === "opportunity" ? "var(--success-text)" : "var(--warning-text)" }}>
+                <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What OpsIQ found</span>
+                  <span className="flex shrink-0 gap-1">
+                    <Badge variant="muted-accessible">{f.findingType}</Badge>
+                    <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
+                  </span>
+                </div>
+                <strong className="mt-1 block font-display text-[1.05rem] font-semibold leading-snug text-foreground">{f.title}</strong>
+                <p className="mt-1 text-sm text-muted-foreground">{f.summary}</p>
+
+                <div className="mt-3">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Evidence</span>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">Measured:</span> {humanizeMetricKey(f.sourceMetric)} is {String(f.sourceValue)} — <span className="font-medium text-foreground">compared against</span> a threshold of {String(f.threshold)}
+                  </p>
+                  {Array.isArray(f.evidence) && f.evidence.length > 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground"><span className="font-medium text-foreground">Supporting detail:</span> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
+                  )}
+                </div>
+
+                <p className="mt-2 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">How sure OpsIQ is:</span> {sureLabel} ({confidencePct}% confidence)
+                  {f.verificationMetric && <> — verify by re-checking {humanizeMetricKey(f.verificationMetric)}</>}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">{f.summary}</p>
-              <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · confidence {Math.round((f.confidence ?? 0) * 100)}%
-              </p>
-              {Array.isArray(f.evidence) && f.evidence.length > 0 && (
-                <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
-              )}
-              {f.verificationMetric && (
-                <p className="text-xs text-muted-foreground"><strong>Verify via:</strong> {humanizeMetricKey(f.verificationMetric)}</p>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Finance actions ({cycle.actions.length})</h2>
+      <section className="border-t border-border pt-4">
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-3">Finance actions ({cycle.actions.length})</h2>
         <div className="space-y-3">
           {cycle.actions.map((a: any) => {
             const latestVerification = a.verifications?.[0];
             return (
-              <div key={a.id} className="border rounded p-3">
+              <div key={a.id} className="border-b border-border pb-3 last:border-0 last:pb-0">
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-semibold">{a.title}</div>
@@ -537,7 +599,7 @@ function FinanceCycleView({
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
                   </div>
-                  <Badge variant="muted-accessible">{a.status}</Badge>
+                  <Badge variant="muted-accessible">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
@@ -553,7 +615,7 @@ function FinanceCycleView({
                 {latestVerification && (
                   <div className="mt-2 text-xs">
                     <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
-                      {latestVerification.status}
+                      {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">
                       before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
@@ -566,14 +628,14 @@ function FinanceCycleView({
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Diagnosis history</h2>
+      <section className="border-t border-border pt-4">
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-3">Diagnosis history</h2>
         <div className="space-y-1 text-sm">
           {history.map((c: any) => (
-            <div key={c.id} className="flex justify-between border-b py-1">
+            <div key={c.id} className="flex justify-between border-b border-border py-1.5 last:border-0">
               <span>Cycle #{c.sequenceNumber} — {formatHumanDate(c.createdAt)}</span>
               <span className="text-muted-foreground">
-                {c.survivalState} · {c.findingCount} findings · {c.actionCount} actions
+                {SURVIVAL_LABEL[c.survivalState] ?? c.survivalState} · {c.findingCount} findings · {c.actionCount} actions
               </span>
             </div>
           ))}
