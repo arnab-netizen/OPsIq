@@ -4,7 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { parseRequestBody, identityEmailSchema } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { BadRequestError, ConflictError } from "@/infra/errors";
+import { AppError, ConflictError } from "@/infra/errors";
 import { randomUUID, randomBytes, createHash } from "crypto";
 import { z } from "zod/v4";
 import * as bcrypt from "bcryptjs";
@@ -56,11 +56,31 @@ const signupSchema = z.object({
 // plus one advisory-lock cap check, generous headroom for a cold Neon connection.
 const SIGNUP_TRANSACTION_TIMEOUT_MS = 5000;
 
-/** True when `error` is a Prisma unique-constraint violation on User.email. */
+/**
+ * True when `error` is a Prisma unique-constraint violation on User.email.
+ *
+ * ROOT CAUSE (found live via the concurrent-double-submit test after the signup-response fix
+ * above): this repo's Prisma client uses the @prisma/adapter-pg driver adapter, whose
+ * PrismaClientKnownRequestError for P2002 does NOT populate `meta.target` at all -- the field
+ * this function originally checked. The actual constraint info lives at
+ * `meta.driverAdapterError.cause.constraint.fields` (an array, e.g. ["email"]) with the classic
+ * `meta.target` shape never present under this adapter. The old check silently always returned
+ * false under this driver, so a genuine concurrent-signup race fell through to the generic 500
+ * fallback instead of a governed 409 -- caught here, not in production, because the concurrent
+ * test in signup-account-graph.db.test.ts exercises the real race, not just the fast pre-check.
+ * Checks both the driver-adapter shape and the classic `meta.target` shape (kept for forward/
+ * backward compatibility with a future Prisma/adapter version), and never trusts field detection
+ * alone without also confirming the error is P2002.
+ */
 function isEmailUniqueViolation(error: unknown): boolean {
-  const prismaError = error as { code?: string; meta?: { target?: unknown } } | null;
+  const prismaError = error as {
+    code?: string;
+    meta?: { target?: unknown; driverAdapterError?: { cause?: { constraint?: { fields?: unknown } } } };
+  } | null;
   if (!prismaError || prismaError.code !== "P2002") return false;
-  return JSON.stringify(prismaError.meta?.target ?? "").toLowerCase().includes("email");
+  const adapterFields = prismaError.meta?.driverAdapterError?.cause?.constraint?.fields;
+  const target = prismaError.meta?.target;
+  return JSON.stringify([adapterFields, target]).toLowerCase().includes("email");
 }
 
 const handleSignup = async (request: NextRequest) => {
@@ -97,7 +117,14 @@ const handleSignup = async (request: NextRequest) => {
     currentStage = "user_lookup";
     const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) {
-      throw new ConflictError("Email already in use");
+      // Distinguish "you already have a working account" from "you started signing up but never
+      // verified" -- "sign in instead" is the wrong instruction for the latter, since an
+      // unverified account can't sign in yet.
+      throw new ConflictError(
+        existingUser.emailVerifiedAt
+          ? "An account already exists for this email. Sign in instead."
+          : "Check your email to finish creating your account."
+      );
     }
 
     // Hash password
@@ -357,29 +384,45 @@ const handleSignup = async (request: NextRequest) => {
       );
     }
 
-    // Otherwise return normal safe error response
+    // Otherwise return normal safe error response.
+    //
+    // ROOT CAUSE (found via Vercel runtime log forensics, [SIGNUP_FAILURE] entries with
+    // errorName=ConflictError and errorName=ValidationError): this route is a bare async
+    // function, not wrapped in withCanonicalEnforcement (the shared wrapper that converts a
+    // thrown AppError into a proper JSON response elsewhere in the app) -- `throw`ing an AppError
+    // here (ConflictError from a duplicate email, ValidationError from parseRequestBody, or any
+    // other AppError subclass) previously escaped straight past this handler into Next.js's own
+    // default error handling, which returns a generic 500 with NO parseable `{error: "..."}` JSON
+    // body. The signup page's client-side `res.json().catch(() => null)` then silently got `null`
+    // and fell through to its fixed "Something went wrong. Please try again." fallback --
+    // discarding the specific, already-safe message computed for every one of these cases,
+    // including the single most common one: signing up again with an email that already has an
+    // account. Fixed generically (not one-by-one per subclass, which is exactly how the
+    // ValidationError case was originally missed) by returning a governed Response.json for ANY
+    // AppError, using its own real statusCode/message -- both are constructed safe-by-design (see
+    // AppError's subclasses in infra/errors.ts) -- same shape as the BetaCapExceededError/
+    // BetaCapUnavailableError branches above.
     if (error instanceof z.ZodError) {
-      throw new BadRequestError(
-        `Validation error: ${error.issues.map((i) => i.message).join(", ")}`
-      );
+      const message = `Validation error: ${error.issues.map((i) => i.message).join(", ")}`;
+      return Response.json({ success: false, error: message }, { status: 400 });
     }
 
-    if (error instanceof ConflictError) {
-      throw error;
-    }
-
-    // A concurrent double-submit can lose the email uniqueness race inside
-    // the transaction (the pre-check above only catches the common case) —
-    // surface it as the same friendly conflict rather than a generic failure.
+    // A concurrent double-submit can lose the email uniqueness race inside the transaction (the
+    // pre-check above only catches the common case) — surface it as the same friendly conflict
+    // rather than letting the raw Prisma error fall through to the generic AppError branch below.
     if (isEmailUniqueViolation(error)) {
-      throw new ConflictError("Email already in use");
+      return Response.json({ success: false, error: "An account already exists for this email. Sign in instead." }, { status: 409 });
+    }
+
+    if (error instanceof AppError) {
+      return Response.json({ success: false, error: error.message }, { status: error.statusCode });
     }
 
     // CM-SEC-02: never surface a raw internal error (Prisma text, stack, internal
     // hostnames) to a public signup caller. The full detail is already captured in
     // the server log above and reachable via the diagnostic-key-gated branch; the
     // client gets a stable, generic message.
-    throw new BadRequestError("Signup failed. Please try again.");
+    return Response.json({ success: false, error: "We couldn't create your account right now. Please try again." }, { status: 500 });
   }
 };
 

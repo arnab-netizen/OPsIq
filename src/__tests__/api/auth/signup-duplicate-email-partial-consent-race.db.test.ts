@@ -128,16 +128,15 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] duplicate-email race with only one c
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const email = `solo-invalid-consent-${stamp}@example.com`;
 
-    await expect(
-      signup({
-        email,
-        password: "password123",
-        workspaceName: "Solo Invalid Co",
-        acceptTerms: true,
-        acceptPrivacy: false,
-        acceptBetaNotice: true,
-      })
-    ).rejects.toMatchObject({ name: "BadRequestError", statusCode: 400 });
+    const res = await signup({
+      email,
+      password: "password123",
+      workspaceName: "Solo Invalid Co",
+      acceptTerms: true,
+      acceptPrivacy: false,
+      acceptBetaNotice: true,
+    });
+    expect(res.status).toBe(400);
 
     const users = await db.user.findMany({ where: { email } });
     expect(users).toHaveLength(0);
