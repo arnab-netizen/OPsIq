@@ -119,7 +119,10 @@ export async function updateConstraintStatus(input: UpdateConstraintStatusInput)
 
 export async function listActiveConstraints(workspaceId: string) {
   return db.constraintResolutionRecord.findMany({
-    where: { workspaceId, status: "ACTIVE" },
+    // isFixtureRecord: false excludes acceptance/QA fixture constraints (see
+    // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an ordinary owner's constraint list must never
+    // include a constraint a QA blueprint run created.
+    where: { workspaceId, status: "ACTIVE", isFixtureRecord: false },
     orderBy: [{ bindingScore: "desc" }, { identifiedAt: "asc" }],
   });
 }

@@ -1,17 +1,46 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { render, cleanup, fireEvent } from "@testing-library/react";
 
 import { AppHeader } from "@/ui/shell/app-header";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
 import DiagnosisBetaNotice from "@/components/diagnosis/DiagnosisBetaNotice";
 import PrivacyPage from "@/app/privacy/page";
 import TermsPage from "@/app/terms/page";
 import LandingPage from "@/components/landing/LandingPage";
 
-afterEach(() => cleanup());
+beforeEach(() => {
+  // AppHeader reads the shared ActiveBusinessContext (the always-visible active-business
+  // indicator); stub fetch so its mount-time /api/owner/businesses call resolves harmlessly.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: [] }) } as Response))
+  );
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
-describe("Visible logout control", () => {
-  it("renders a 'Log out' control in the authenticated header", () => {
-    const { container } = render(<AppHeader userName="Ada" />);
+describe("Logout control, reached via the account menu", () => {
+  it("is not exposed directly in the header — a lay owner must deliberately open the account menu first", () => {
+    const { container } = render(
+      <ActiveBusinessProvider>
+        <AppHeader userName="Ada" />
+      </ActiveBusinessProvider>
+    );
+    const btn = Array.from(container.querySelectorAll("button")).find((b) =>
+      /log out/i.test(b.textContent ?? "")
+    );
+    expect(btn).toBeUndefined();
+  });
+
+  it("appears once the account menu is opened", () => {
+    const { container, getByTestId } = render(
+      <ActiveBusinessProvider>
+        <AppHeader userName="Ada" />
+      </ActiveBusinessProvider>
+    );
+    fireEvent.click(getByTestId("account-menu-trigger"));
     const btn = Array.from(container.querySelectorAll("button")).find((b) =>
       /log out/i.test(b.textContent ?? "")
     );

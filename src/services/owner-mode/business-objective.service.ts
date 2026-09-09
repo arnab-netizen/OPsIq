@@ -32,6 +32,14 @@ const VALID_STATUSES: ObjectiveStatus[] = ["ACTIVE", "PAUSED", "COMPLETED", "ABA
 export interface CreateObjectiveInput {
   workspaceId: string;
   actorId: string;
+  /**
+   * null means an EXPLICIT workspace/portfolio-level objective, not tied to any one business.
+   * Callers creating a business-specific objective must pass the business's id — this is never
+   * inferred server-side from a caller's "currently selected" business. See
+   * owner-now-view.service.ts's buildBusinessOperatingSystem() for the read-side contract this
+   * enforces.
+   */
+  businessId?: string | null;
   parentId?: string | null;
   title: string;
   description?: string | null;
@@ -78,10 +86,44 @@ function validateStatus(s: string): asserts s is ObjectiveStatus {
   }
 }
 
+/**
+ * Ownership guard for the soft-FK BusinessObjective.businessId: proves, inside the same
+ * transaction as the insert, that the business belongs to this exact workspace and is not an
+ * acceptance/QA fixture, before any row is written. Without this, an explicit businessId in the
+ * request body could attach a workspace's objective to a business belonging to a DIFFERENT
+ * workspace (or to a fixture business, which must never be a real owner's create target) — a
+ * tenant-isolation break the soft-FK's lack of a DB-level foreign key cannot catch on its own.
+ * Lives on the shared core so every caller (the HTTP route AND createBlueprint's in-transaction
+ * path) is protected identically, not just the route layer.
+ *
+ * Deliberately a plain NotFoundError, identical whether businessId belongs to another workspace,
+ * is a fixture business, or does not exist at all — never distinguishes those cases in the
+ * response, so a caller cannot use this check to probe for the existence of another workspace's
+ * business ids.
+ */
+async function assertBusinessOwnership(
+  tx: Prisma.TransactionClient,
+  workspaceId: string,
+  businessId: string,
+): Promise<void> {
+  const business = await tx.ownerBusiness.findFirst({
+    where: { id: businessId, workspaceId, isFixtureBusiness: false },
+    select: { id: true },
+  });
+  if (!business) {
+    throw new NotFoundError("OwnerBusiness", businessId);
+  }
+}
+
 async function _createObjectiveCore(tx: Prisma.TransactionClient, input: CreateObjectiveInput) {
+  if (input.businessId != null) {
+    await assertBusinessOwnership(tx, input.workspaceId, input.businessId);
+  }
+
   const objective = await tx.businessObjective.create({
     data: {
       workspaceId: input.workspaceId,
+      businessId: input.businessId ?? null,
       parentId: input.parentId ?? null,
       title: input.title.trim(),
       description: input.description ?? null,
@@ -210,11 +252,25 @@ export async function getObjective(workspaceId: string, objectiveId: string) {
 
 export async function listObjectives(
   workspaceId: string,
-  opts: { status?: ObjectiveStatus; objectiveType?: ObjectiveType; parentId?: string | null } = {},
+  opts: {
+    status?: ObjectiveStatus;
+    objectiveType?: ObjectiveType;
+    parentId?: string | null;
+    /**
+     * Omit to list every objective in the workspace regardless of business (the pre-existing,
+     * unscoped behavior). Pass a business id to scope strictly to that business's objectives, or
+     * pass `null` explicitly to list only workspace/portfolio-level objectives (businessId IS NULL).
+     */
+    businessId?: string | null;
+  } = {},
 ) {
   return db.businessObjective.findMany({
     where: {
       workspaceId,
+      // Excludes acceptance/QA fixture objectives (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an
+      // ordinary owner's goals list must never include a goal a QA blueprint run created.
+      isFixtureRecord: false,
+      ...(opts.businessId !== undefined ? { businessId: opts.businessId } : {}),
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.objectiveType ? { objectiveType: opts.objectiveType } : {}),
       ...(opts.parentId !== undefined ? { parentId: opts.parentId } : {}),

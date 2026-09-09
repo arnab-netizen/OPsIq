@@ -1,15 +1,24 @@
 {
   "_comment": "Frozen pre-existing governance findings on main. Any error-severity finding NOT listed here fails a strict scan. Deterministic (sorted, no timestamps). Regenerate with: npm run governance:scan -- --update-baseline",
-  "total_frozen": 31,
+  "total_frozen": 38,
   "findings": [
     {
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/auth/signup/route.ts",
-      "line": 323,
+      "line": 350,
       "severity": "error",
       "code": "const errorMessage = error instanceof Error ? error.message : \"Unknown error\";",
-      "reason": "auth route server-side log/context string; not operator-rendered (line-shifted by open-beta hardening additions earlier in this file; code unchanged)"
+      "reason": "auth route server-side log/context string; not operator-rendered (line-shifted 323->350 by df1be6b's added ConflictError/ValidationError/AppError 4xx handling above this line; code unchanged)"
+    },
+    {
+      "type": "raw-error-message",
+      "category": "RAW ERROR MESSAGE",
+      "file": "src/app/(authenticated)/owner/onboarding/page.tsx",
+      "line": 253,
+      "severity": "error",
+      "code": "setError(err instanceof Error ? err.message : \"Couldn't save that. Please try again.\");",
+      "reason": "client component state setter, not a server log string, but flagged by the raw-error-message rule because the catch variable is named err; pre-existing (commit ffb6c793, predates this PR series). The rendered value is safe by construction: the only Error this file's local api() helper can throw carries either a governed server-provided error.message/error string or the helper's own hardcoded 'Request failed (status)'/timeout text -- never a raw stack/SQL/provider payload."
     },
     {
       "type": "raw-error-message",
@@ -213,10 +222,10 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 834,
+      "line": 850,
       "severity": "error",
-      "code": "error: isKnownSafeClientError ? classifiedError.message : \"Internal server error\",",
-      "reason": "deliberate, gated client-facing exposure (PR #362): isKnownSafeClientError is true only for a genuine AppError subclass reporting a 4xx status (e.g. ValidationError), which by construction carries an owner-safe message with no stack/SQL/provider payload; 5xx and unclassified/raw errors are excluded and still receive the generic \"Internal server error\" message"
+      "code": "error: isKnownSafeClientError ? classifiedError.message : \"Something went wrong on our side. Nothing was saved. Please try again.\",",
+      "reason": "deliberate, gated client-facing exposure (PR #362, line/fallback-text updated by 1d563ebd, predates this PR series): isKnownSafeClientError is true only for a genuine AppError subclass reporting a 4xx status (e.g. ValidationError), which by construction carries an owner-safe message with no stack/SQL/provider payload; 5xx and unclassified/raw errors are excluded and still receive the generic operator-safe fallback text"
     },
     {
       "type": "raw-error-message",
@@ -280,6 +289,60 @@
       "severity": "error",
       "code": "{ instance: instanceId, error: error instanceof Error ? error.message : String(error) }",
       "reason": "service-layer server-side log/classification string; not operator-rendered"
+    },
+    {
+      "type": "unsafe-error-render",
+      "category": "UNSAFE ERROR RENDER",
+      "file": "src/app/api/auth/signup/route.ts",
+      "line": 407,
+      "severity": "error",
+      "code": "return Response.json({ success: false, error: message }, { status: 400 });",
+      "reason": "new in df1be6b: message is built from error.issues.map(i => i.message).join(', ') on a caught z.ZodError -- Zod validation-issue messages are governed, owner-safe field-level text (e.g. 'Required', 'Invalid email'), never raw stack/SQL/provider payload; same safety class as the existing canonical-route-enforcement.ts isKnownSafeClientError precedent"
+    },
+    {
+      "type": "unsafe-error-render",
+      "category": "UNSAFE ERROR RENDER",
+      "file": "src/app/api/auth/signup/route.ts",
+      "line": 418,
+      "severity": "error",
+      "code": "return Response.json({ success: false, error: error.message }, { status: error.statusCode });",
+      "reason": "new in df1be6b: only reached when error instanceof AppError, whose message is hand-written at each throw site (ConflictError/ValidationError/etc.) specifically to be owner-safe; statusCode is likewise the AppError's own governed 4xx code, not a raw Prisma/stack value -- same safety class as the existing canonical-route-enforcement.ts isKnownSafeClientError precedent"
+    },
+    {
+      "type": "unsafe-error-render",
+      "category": "UNSAFE ERROR RENDER",
+      "file": "src/app/(authenticated)/owner/start-here/page.tsx",
+      "line": 124,
+      "severity": "error",
+      "code": "{error && <p className=\"text-sm text-destructive mb-4\">{error}</p>}",
+      "reason": "pre-existing (commit ca5f2be9, predates this PR series). error state is only ever set from this file's local api() helper, whose only throw is new Error(data?.error?.message || data?.error || `Request failed (${res.status})`) -- a governed server message, a governed server string, or a hardcoded status-code fallback; never a raw stack/SQL/provider payload"
+    },
+    {
+      "type": "unsafe-error-render",
+      "category": "UNSAFE ERROR RENDER",
+      "file": "src/app/(authenticated)/owner/priorities/page.tsx",
+      "line": 238,
+      "severity": "error",
+      "code": "if (error) return <main className=\"p-6\"><ErrorState message={error} onRetry={() => window.location.reload()} /></main>;",
+      "reason": "pre-existing (commit ffb6c793, 2026-09-07, predates this PR series -- proven via three-point line/code comparison across ffb6c793/50277a6/8b8bec9: byte-identical code, only line number shifted by unrelated additions). error state is only ever set to the hardcoded literal \"Couldn't load your priorities. Please try again.\" -- never a caught error's message"
+    },
+    {
+      "type": "unsafe-error-render",
+      "category": "UNSAFE ERROR RENDER",
+      "file": "src/app/(authenticated)/owner/onboarding/page.tsx",
+      "line": 253,
+      "severity": "error",
+      "code": "setError(err instanceof Error ? err.message : \"Couldn't save that. Please try again.\");",
+      "reason": "pre-existing (commit ffb6c793, predates this PR series); matches the setError(err...) unsafe-error-render pattern on the same line already covered by the raw-error-message entry above. The rendered value is safe by construction: the only Error this file's local api() helper can throw carries either a governed server-provided error.message/error string or the helper's own hardcoded status-code/timeout fallback text -- never a raw stack/SQL/provider payload"
+    },
+    {
+      "type": "unsafe-error-render",
+      "category": "UNSAFE ERROR RENDER",
+      "file": "src/app/(authenticated)/owner/onboarding/page.tsx",
+      "line": 344,
+      "severity": "error",
+      "code": "{error && <p role=\"alert\" className=\"text-sm text-destructive\">{error}</p>}",
+      "reason": "pre-existing (commit ffb6c793, predates this PR series). Renders the same error state covered by the onboarding.tsx:253 entry above -- sourced only from this file's local api() helper's governed ApiError/timeout/network-error construction, never a raw stack/SQL/provider payload"
     }
   ]
 }

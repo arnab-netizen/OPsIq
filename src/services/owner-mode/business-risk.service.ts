@@ -12,6 +12,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { AuditEventName } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
+import { hasAnyRealBusiness } from "@/services/founder-recovery/business.service";
 
 export type RiskCategory =
   | "OPERATIONAL"
@@ -200,9 +201,18 @@ export async function listBusinessRisks(
   workspaceId: string,
   opts: { status?: RiskStatus; category?: RiskCategory } = {},
 ) {
+  // BusinessRiskEntry has no businessId column (workspace-scoped only) -- without this gate, a
+  // workspace with zero real active businesses (or one whose only business was archived) still
+  // returned any risk rows it happened to have, which a real human usability test caught: Home
+  // correctly showed the "set up your business" onboarding state while Priorities still displayed
+  // a critical cash-survival risk. NO VALID REAL ACTIVE BUSINESS => NO BUSINESS-DERIVED RISK.
+  if (!(await hasAnyRealBusiness(workspaceId))) return [];
   return db.businessRiskEntry.findMany({
     where: {
       workspaceId,
+      // Excludes acceptance/QA fixture risks (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an
+      // ordinary owner's risk register must never include a risk a QA blueprint run created.
+      isFixtureRecord: false,
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.category ? { category: opts.category } : {}),
     },
@@ -427,11 +437,14 @@ export async function evaluateOverdueRiskAlerts(
   now: Date = new Date(),
 ): Promise<void> {
   // Query non-terminal risks with reviewDueDate in the past (bounded at 500)
+  // isFixtureRecord: false — a QA blueprint's risk must never generate a real owner-visible
+  // "Risk review overdue" alert. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
   const overdueRisks = await db.businessRiskEntry.findMany({
     where: {
       workspaceId,
       reviewDueDate: { lt: now },
       status: { notIn: ["RESOLVED", "CLOSED"] },
+      isFixtureRecord: false,
     },
     select: { id: true, riskCode: true },
     take: 500,

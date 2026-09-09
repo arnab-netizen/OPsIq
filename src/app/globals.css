@@ -55,6 +55,46 @@
   --primary-text: #1e40af;
   --warning-text: #b45309;
   --success-text: #15803d;
+  /* --destructive-text and --muted-foreground-accessible extend the same readable-text role to the
+     two color pairs axe found failing 4.5:1 on real owner-facing severity/confidence badges (Home,
+     Onboarding, My Business): --destructive (#dc2626) on a badge's own bg-destructive/10 tint
+     measures 4.13:1, and --muted-foreground (#64748b) on bg-muted measures 4.34:1 — both just under
+     AA. Same rule as above: --destructive/--muted-foreground themselves are untouched (they were
+     deliberately left out of the PR #385 fix and stay that way; see the badge/muted-foreground
+     comments elsewhere in this codebase) — these are new, additive, opt-in tokens for the specific
+     badge variants that need them ("destructive-accessible"/"muted-accessible" in
+     src/ui/primitives/badge.tsx), not a repoint of the tokens every other consumer already uses.
+     Same consumption rule too: raw `var()` only (inline style or `text-[var(--x)]`), never a
+     `@theme inline` entry. */
+  --destructive-text: #b91c1c;
+  --muted-foreground-accessible: #475569;
+  /* --warning-badge-text/--success-badge-text: a live Lighthouse re-run (after the destructive/
+     muted fix above) found the SAME badge-fill-vs-text-color defect on the "warning" and "success"
+     Badge variants too — text-warning (#d97706) on bg-warning/10 measures 2.86:1 in light mode,
+     text-success (#16a34a) on bg-success/10 measures 2.96:1, both well under AA. NOT the same
+     tokens as --warning-text/--success-text above: those were calibrated for body text on
+     --background/--card, and while they happen to also clear the /10 badge tint, only barely
+     (4.502:1 / 4.499:1 — the latter is UNDER 4.5 to three decimal places), too thin a margin to
+     reuse safely here. These two are calibrated specifically against each badge's own /10 tint,
+     with real margin (light mode only -- dark mode already passes on the base --warning/--success
+     value, 7.10:1/6.73:1, so it reuses that as-is below). The "default"/primary variant's dark-mode
+     failure on the same tint (text-primary #3b82f6 on bg-primary/10, 4.31:1) needs no new token at
+     all: the EXISTING --primary-text already passes with margin on this tint in both themes
+     (7.40:1 light, 6.23:1 dark) -- it just was never applied to Badge's own "default" variant.
+     Same rule as every token above: the base --warning/--success/--primary/--destructive/
+     --muted-foreground tokens are untouched; these are new, additive, opt-in tokens for the three
+     new Badge variants ("warning-accessible"/"success-accessible"/"default-accessible" -- the last
+     one reuses --primary-text, no new token). Same consumption rule too: raw `var()` only, never
+     `@theme inline`. */
+  --warning-badge-text: #955405;
+  --success-badge-text: #0f6b2a;
+  /* Editorial accent — a deep, muted ink-blue used sparingly for the advisory "voice" (a rule
+     above a headline finding, a small kicker label) so the product doesn't read as generic
+     Tailwind/shadcn blue-on-white. Purely decorative (never a status/semantic color, never used
+     for text that must pass a contrast check on its own — it always sits on --foreground-level
+     text or as a thin rule), so it does not touch or replace any of the contrast-audited tokens
+     above. */
+  --accent-ink: #2d3b55;
 }
 
 @theme inline {
@@ -75,6 +115,7 @@
   --color-card-foreground: var(--card-foreground);
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-display: var(--font-display, Georgia, "Times New Roman", serif);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -107,6 +148,20 @@
     --primary-text: #60a5fa;
     --warning-text: #f59e0b;
     --success-text: #22c55e;
+    /* --destructive-text is lightened from dark --destructive (#ef4444, 4.35:1 on its own
+       badge bg-destructive/10 tint) to #f87171 (5.92:1 on that tint, 6.45:1 on --background) --
+       still unmistakably the same red. --muted-foreground-accessible reuses the existing dark
+       --muted-foreground value as-is: it already passes AA in dark mode (5.71:1 on --muted) so
+       only the LIGHT value needed a darker shade; see :root. */
+    --destructive-text: #f87171;
+    --muted-foreground-accessible: #94a3b8;
+    /* --warning-badge-text/--success-badge-text reuse the existing dark --warning/--success values
+       as-is: both already pass AA on their own dark bg-token/10 tint (7.10:1 / 6.73:1) so only the
+       light values needed a new, more-margin shade; see :root. (The "default" variant's dark-mode
+       fix needs no token here either -- --primary-text's existing dark value already covers it.) */
+    --warning-badge-text: #f59e0b;
+    --success-badge-text: #22c55e;
+    --accent-ink: #b8c4dd;
   }
 }
 

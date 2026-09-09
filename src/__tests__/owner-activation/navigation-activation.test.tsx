@@ -46,31 +46,34 @@ describe("active state — longest match, not startsWith", () => {
   it("marks the matching nav link with aria-current=page", () => {
     pathnameMock.current = "/owner/data";
     const { getByText } = render(<SidebarNav canViewOwnerRecovery={true} />);
-    const link = getByText("Add & Connect Data").closest("a");
+    const link = getByText("My Business").closest("a");
     expect(link!.getAttribute("aria-current")).toBe("page");
   });
 });
 
 describe("owner data path is visible in the primary navigation", () => {
-  it("renders an 'Add & Connect Data' entry pointing at /owner/data", () => {
+  it("renders a 'My Business' entry pointing at /owner/data", () => {
     pathnameMock.current = "/dashboard";
     const { getByText } = render(<SidebarNav canViewOwnerRecovery={true} />);
-    const link = getByText("Add & Connect Data").closest("a");
+    const link = getByText("My Business").closest("a");
     expect(link).not.toBeNull();
     expect(link!.getAttribute("href")).toBe("/owner/data");
   });
 
-  it("places Add & Connect Data among the first two owner entries", () => {
+  it("places My Business among the first three owner entries", () => {
+    // Start Here now leads the primary section (a real usability test's headline failure was "I
+    // don't know where to start" — see src/domain/owner-mode/start-here.ts), pushing Home and My
+    // Business to positions 2 and 3 rather than 1 and 2.
     pathnameMock.current = "/dashboard";
     const { container } = render(<SidebarNav canViewOwnerRecovery={true} />);
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs.slice(0, 2)).toEqual(["/owner/cockpit", "/owner/data"]);
+    expect(hrefs.slice(0, 3)).toEqual(["/owner/start-here", "/owner/cockpit", "/owner/data"]);
   });
 
   it("gates the data hub to OWNER_VIEW users", () => {
     pathnameMock.current = "/dashboard";
     const { queryByText } = render(<SidebarNav canViewOwnerRecovery={false} />);
-    expect(queryByText("Add & Connect Data")).toBeNull();
+    expect(queryByText("My Business")).toBeNull();
   });
 
   it("surfaces the previously unreachable owner routes in the navigation", () => {
@@ -79,12 +82,15 @@ describe("owner data path is visible in the primary navigation", () => {
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
     for (const href of [
       "/owner/data",
-      "/diagnosis",
       "/owner/execution",
       "/owner/strategy",
       "/owner/trust",
       "/owner/startup",
-      "/dashboard/inbox",
+      // /diagnosis and /dashboard/inbox are intentionally excluded here: both require a
+      // consulting-engagement capability (ENGAGEMENT_CREATE / ENGAGEMENT_VIEW respectively,
+      // matching their own backing API's gate) that no self-serve owner holds, and are
+      // correctly absent with no capabilities granted -- see
+      // src/__tests__/components/sidebar-nav-capability-gating.test.tsx.
     ]) {
       expect(hrefs).toContain(href);
     }

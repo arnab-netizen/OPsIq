@@ -104,6 +104,13 @@ export async function resolveOrCreateDomainBusiness(
         currency: "INR",
         b2cSupported: true,
         b2bSupported: false,
+        // Marks this as synthetic acceptance data at creation time (see
+        // OwnerBusiness.isFixtureBusiness), rather than relying on the
+        // "OPSIQ Acceptance - ..." name to keep it out of ordinary owners'
+        // views. Requires the acceptance account to hold SYSTEM_ADMIN in the
+        // target environment -- the route silently ignores this flag
+        // otherwise, so it is not sufficient on its own without that grant.
+        isFixtureBusiness: true,
       },
     })
   );

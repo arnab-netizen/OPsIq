@@ -210,3 +210,46 @@ describe("buildObjectivePortfolio", () => {
     }
   });
 });
+
+// ── [module42] repo-wide UNKNOWN != BAD sweep — objective progress ────────────
+//
+// Root cause: an objective whose progress has never been measured (no target set, or a target
+// set but currentValue never recorded) was collapsed to progressPct=0 by every caller, which
+// scoreObjectiveHealth then penalized identically to "genuinely measured at 0% done" — an
+// objective nobody has logged progress against could be marked AT_RISK/CRITICAL purely because
+// no one measured it, not because it's actually behind. progressPct is now `number | null`; null
+// means "never measured" and must apply none of the progress-based penalties.
+describe("[module42] scoreObjectiveHealth — progressPct: null must never be treated as 0%", () => {
+  it("progressPct: null with an imminent deadline is NOT penalized as low progress", () => {
+    const withNull = scoreObjectiveHealth(makeObjective({ progressPct: null, deadlineDaysRemaining: 5 }));
+    const withZero = scoreObjectiveHealth(makeObjective({ progressPct: 0, deadlineDaysRemaining: 5 }));
+    expect(withNull.atRiskReasons).toEqual([]);
+    expect(withNull.healthStatus).toBe("ON_TRACK");
+    expect(withNull.healthScore).toBe(100);
+    // Contrast: a genuinely-measured 0% at the same deadline IS penalized — proves the null case
+    // is a real behavior difference, not a coincidence of the scoring math.
+    expect(withZero.atRiskReasons.length).toBeGreaterThan(0);
+    expect(withZero.healthScore).toBeLessThan(100);
+  });
+
+  it("progressPct: null with budget nearly exhausted is NOT penalized", () => {
+    const result = scoreObjectiveHealth(makeObjective({ progressPct: null, resourceBudgetUsedPct: 98 }));
+    expect(result.atRiskReasons).toEqual([]);
+    expect(result.healthScore).toBe(100);
+  });
+
+  it("progressPct: null with a near-term deadline inside the 60-day window is NOT penalized as very-low-progress", () => {
+    const result = scoreObjectiveHealth(makeObjective({ progressPct: null, deadlineDaysRemaining: 30 }));
+    expect(result.atRiskReasons).toEqual([]);
+    expect(result.healthStatus).toBe("ON_TRACK");
+  });
+
+  it("buildObjectivePortfolio: an unmeasured objective past most deadlines still reports ON_TRACK, not AT_RISK", () => {
+    const view = buildObjectivePortfolio([
+      makeObjective({ objectiveId: "obj-never-measured", progressPct: null, deadlineDaysRemaining: 5, resourceBudgetUsedPct: 96 }),
+    ]);
+    expect(view.items[0].healthStatus).toBe("ON_TRACK");
+    expect(view.atRiskCount).toBe(0);
+    expect(view.criticalCount).toBe(0);
+  });
+});

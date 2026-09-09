@@ -40,7 +40,17 @@ export default function LoginPage() {
     method: "POST",
     operationName: "login",
     onSuccess: () => {
-      window.location.href = "/dashboard";
+      // Land on "/" rather than hardcoding a destination here: the root page
+      // (src/app/page.tsx) already resolves the correct canonical Home for
+      // the now-authenticated session via the same centralized
+      // isSelfServeOwnerContext policy check the nav's "Home" link and every
+      // other Home-routing decision use (/owner/cockpit for a self-serve
+      // owner, /dashboard otherwise). Hardcoding "/dashboard" here duplicated
+      // that decision outside the centralized policy check and sent
+      // self-serve owners to the wrong, consultant-oriented Home immediately
+      // after login, only to be redirected to /owner/cockpit on their very
+      // next visit to "/" — two different "Home" experiences for one persona.
+      window.location.href = "/";
     },
     timeoutMs: 15000,
     // Login is a non-idempotent create (each call unconditionally creates a new
@@ -66,7 +76,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-background p-8 shadow-sm">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-primary">OpsIQ</h1>
+          <h1 className="text-2xl font-bold text-primary">
+            <Link href="/">OpsIQ</Link>
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Sign in to continue
           </p>
@@ -93,14 +105,32 @@ export default function LoginPage() {
           />
 
           {loginMutation.isError && loginMutation.error && (
-            <div className="space-y-2">
-              <p className="text-sm text-destructive">{loginMutation.error.operatorMessage}</p>
-              <p className="text-xs text-muted-foreground">
-                {loginMutation.error.operatorMessage === TIMEOUT_OPERATOR_MESSAGE
-                  ? TIMEOUT_RECOVERY_FOR_LOGIN
-                  : loginMutation.error.recovery}
-              </p>
-            </div>
+            loginMutation.error.serverClassification === "email_not_verified" ? (
+              <div className="space-y-2 rounded-md bg-destructive/10 p-3">
+                <p className="text-sm text-destructive">
+                  This email address hasn&rsquo;t been verified yet.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Check your inbox for the verification link, or{" "}
+                  <Link
+                    href={`/resend-verification${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+                    className="text-[var(--primary-text)] underline"
+                  >
+                    resend verification email
+                  </Link>
+                  .
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-destructive">{loginMutation.error.operatorMessage}</p>
+                <p className="text-xs text-muted-foreground">
+                  {loginMutation.error.operatorMessage === TIMEOUT_OPERATOR_MESSAGE
+                    ? TIMEOUT_RECOVERY_FOR_LOGIN
+                    : loginMutation.error.recovery}
+                </p>
+              </div>
+            )
           )}
 
           <Button type="submit" isLoading={loginMutation.isLoading} className="w-full">
@@ -111,6 +141,12 @@ export default function LoginPage() {
         <p className="text-center text-sm text-muted-foreground">
           <Link href="/forgot-password" className="text-[var(--primary-text)] hover:underline">
             Forgot your password?
+          </Link>
+        </p>
+        <p className="text-center text-sm text-muted-foreground">
+          Don&rsquo;t have an account?{" "}
+          <Link href="/signup" className="text-[var(--primary-text)] hover:underline">
+            Sign up
           </Link>
         </p>
       </div>

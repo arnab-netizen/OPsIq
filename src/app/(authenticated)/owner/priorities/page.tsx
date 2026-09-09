@@ -1,0 +1,288 @@
+"use client";
+
+/**
+ * /owner/priorities — "What needs my attention?"
+ *
+ * A lay owner should not have to understand that risks, alerts, the decision inbox, and Home's
+ * top governed action are four separate internal systems (src/services/owner-mode/business-risk.
+ * service.ts, src/services/alerts/alert-service.ts, the OperatorItem table read directly by
+ * /api/decisions/list, and the process-execution bridge behind /api/owner/now-view) to find out
+ * what needs their attention today. This page reads all four existing, already-governed GET
+ * endpoints and merges them into one plain-language list — no new business logic, no new severity
+ * computation: every severity/status shown here is the same value the owner would see on
+ * /owner/risks, /owner/alerts, /dashboard/inbox, or the Home page, just translated to plain
+ * language and ranked together instead of split across separate pages.
+ *
+ * The fourth source (now-view's topRoute) is included so this page satisfies a hard invariant:
+ * Home must never show an actionable top priority while this page claims nothing needs attention.
+ * It reuses Home's exact canonical item (same taskKey/title/severity) rather than re-deriving one,
+ * so the two surfaces never disagree about what "the" priority is.
+ */
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Badge, CardDashboardSkeleton, EmptyState, ErrorState } from "@/ui/primitives";
+import { useActiveBusiness } from "@/context/active-business-context";
+
+const FETCH_TIMEOUT_MS = 10_000;
+
+async function api(path: string) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(path, { headers: { "Content-Type": "application/json" }, signal: controller.signal });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+type PriorityTier = "critical" | "attention" | "normal";
+
+interface PriorityItem {
+  id: string;
+  source: "risk" | "alert" | "decision" | "priority";
+  title: string;
+  why: string | null;
+  tier: PriorityTier;
+  actionLabel: string;
+  actionHref: string;
+  detailHref: string;
+  /** Overrides the tier-derived badge text/variant (TIER_LABEL/TIER_VARIANT[tier]) when present.
+   *  Only ever set for the "priority" source (Home's canonical topRoute item) — its badge must
+   *  reflect the SAME server-computed status/canStart the action text below it already reads, not
+   *  the severity-only tier label every other source uses, so the badge and action text can never
+   *  contradict each other. */
+  statusLabel?: string;
+  statusVariant?: "destructive-accessible" | "warning-accessible" | "muted-accessible" | "default-accessible" | "success-accessible";
+}
+
+const TIER_VARIANT: Record<PriorityTier, "destructive-accessible" | "warning-accessible" | "muted-accessible"> = {
+  critical: "destructive-accessible",
+  attention: "warning-accessible",
+  normal: "muted-accessible",
+};
+
+const TIER_LABEL: Record<PriorityTier, string> = {
+  critical: "Critical",
+  attention: "Needs attention",
+  normal: "Worth knowing",
+};
+
+const TIER_RULE_COLOR: Record<PriorityTier, string> = {
+  critical: "var(--destructive)",
+  attention: "var(--warning-text)",
+  normal: "var(--border)",
+};
+
+/** Open, unresolved risk statuses only — a risk already RESOLVED/CLOSED/ACCEPTED isn't a priority. */
+const OPEN_RISK_STATUSES = new Set(["IDENTIFIED", "ASSESSED", "MITIGATING"]);
+
+function riskTier(severity: number): PriorityTier {
+  if (severity >= 75) return "critical";
+  if (severity >= 40) return "attention";
+  return "normal";
+}
+
+const ALERT_TIER: Record<string, PriorityTier> = {
+  critical: "critical",
+  high: "critical",
+  medium: "attention",
+  low: "normal",
+};
+
+function decisionTier(status: string): PriorityTier {
+  return status === "blocked" ? "critical" : "attention";
+}
+
+const BRIDGE_SEVERITY_TIER: Record<string, PriorityTier> = {
+  CRITICAL: "critical",
+  HIGH: "critical",
+  MEDIUM: "attention",
+  LOW: "normal",
+};
+
+/** Terminal statuses a completed/rejected bridged task can carry — never a priority once resolved. */
+const BRIDGE_TERMINAL_STATUSES = new Set(["COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"]);
+
+/** "Completed" matches the same status the owner sees for this exact ProcessExecutionTask on
+ *  Actions (owner/tasks/page.tsx's OWNER_WORK_STATUS_LABELS) — one governed status, one label,
+ *  wherever it's shown. Terminal statuses never actually reach this function today (the item is
+ *  filtered out of the merged list above before a badge is ever rendered for it), but the mapping
+ *  is complete rather than assuming that filter can never change. */
+function bridgeStatusLabel(status: string, canStart: boolean): string {
+  if (BRIDGE_TERMINAL_STATUSES.has(status)) return "Completed";
+  // Mirrors the action-text branch above exactly (canStart ? "start this" : "continue"): canStart
+  // false on a non-terminal item means IN_PROGRESS (or another in-flight, non-startable status).
+  if (!canStart) return "In progress";
+  return "Needs attention";
+}
+
+function bridgeStatusVariant(status: string, canStart: boolean): PriorityItem["statusVariant"] {
+  if (BRIDGE_TERMINAL_STATUSES.has(status)) return "success-accessible";
+  if (!canStart) return "default-accessible";
+  return undefined; // fall through to the normal severity-tier variant
+}
+
+export default function OwnerPrioritiesPage() {
+  const { activeBusinessId } = useActiveBusiness();
+  const [items, setItems] = useState<PriorityItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      const nowViewQs = activeBusinessId ? `?businessId=${encodeURIComponent(activeBusinessId)}` : "";
+      const [risksRes, alertsRes, decisionsRes, nowViewRes] = await Promise.all([
+        api("/api/owner/risks"),
+        api("/api/owner/alerts?unreadOnly=true&limit=20"),
+        api("/api/decisions/list?status=blocked&limit=20"),
+        api(`/api/owner/now-view${nowViewQs}`),
+      ]);
+      if (cancelled) return;
+      if (risksRes === null && alertsRes === null && decisionsRes === null && nowViewRes === null) {
+        setError("Couldn't load your priorities. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      const merged: PriorityItem[] = [];
+
+      // Home's canonical top governed action (process-execution bridge) — the SAME item Home shows,
+      // never re-derived, so this page can never say "nothing needs attention" while Home shows one.
+      const topRoute = nowViewRes?.processExecution?.topRoute as
+        | { taskKey: string; title: string; ownerVisibleSummary?: string | null; severity: string; executionRoute: string; status: string; canStart: boolean }
+        | null
+        | undefined;
+      if (
+        topRoute &&
+        topRoute.executionRoute !== "MONITOR_ONLY" &&
+        !BRIDGE_TERMINAL_STATUSES.has(topRoute.status)
+      ) {
+        // Reflect the SAME server-computed canStart Home uses to decide its own button state --
+        // never re-derive "started" from status text here. Once the owner has clicked Start Work
+        // on Home, this item is still an open priority (in-progress work still deserves attention),
+        // but the CTA must stop implying it hasn't been started yet.
+        merged.push({
+          id: `priority-${topRoute.taskKey}`,
+          source: "priority",
+          title: topRoute.title,
+          why: topRoute.ownerVisibleSummary ?? null,
+          tier: BRIDGE_SEVERITY_TIER[topRoute.severity] ?? "attention",
+          actionLabel: topRoute.canStart ? "Go to Home to start this" : "In progress — continue on Home",
+          actionHref: "/owner/cockpit",
+          detailHref: "/owner/cockpit",
+          statusLabel: bridgeStatusLabel(topRoute.status, topRoute.canStart),
+          statusVariant: bridgeStatusVariant(topRoute.status, topRoute.canStart),
+        });
+      }
+
+      for (const r of (risksRes?.risks ?? []) as Array<{ id: string; title: string; description: string | null; severity: number; status: string }>) {
+        if (!OPEN_RISK_STATUSES.has(r.status)) continue;
+        merged.push({
+          id: `risk-${r.id}`,
+          source: "risk",
+          title: r.title,
+          why: r.description,
+          tier: riskTier(r.severity),
+          actionLabel: "Review this risk",
+          actionHref: "/owner/risks",
+          detailHref: "/owner/risks",
+        });
+      }
+
+      for (const a of (alertsRes?.alerts ?? alertsRes ?? []) as Array<{ id: string; message: string; severity: string }>) {
+        merged.push({
+          id: `alert-${a.id}`,
+          source: "alert",
+          title: a.message,
+          why: null,
+          tier: ALERT_TIER[a.severity] ?? "attention",
+          actionLabel: "Open alert",
+          actionHref: "/owner/alerts",
+          detailHref: "/owner/alerts",
+        });
+      }
+
+      for (const d of (decisionsRes?.decisions ?? decisionsRes ?? []) as Array<{ id: string; title: string; blockReason: string | null; status: string }>) {
+        merged.push({
+          id: `decision-${d.id}`,
+          source: "decision",
+          title: d.title,
+          why: d.blockReason,
+          tier: decisionTier(d.status),
+          actionLabel: "Check this decision",
+          actionHref: "/dashboard/inbox",
+          detailHref: "/dashboard/inbox",
+        });
+      }
+
+      const rank: Record<PriorityTier, number> = { critical: 0, attention: 1, normal: 2 };
+      merged.sort((a, b) => rank[a.tier] - rank[b.tier]);
+
+      setItems(merged);
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeBusinessId]);
+
+  if (loading) return <main className="p-6"><CardDashboardSkeleton label="Loading your priorities" sections={2} /></main>;
+  if (error) return <main className="p-6"><ErrorState message={error} onRetry={() => window.location.reload()} /></main>;
+
+  return (
+    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6" data-testid="owner-priorities">
+      <div>
+        <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Priorities</h1>
+        <p className="mt-1 text-sm text-muted-foreground">What needs your attention, in one place.</p>
+      </div>
+
+      {items && items.length === 0 ? (
+        <EmptyState
+          title="Nothing needs your attention right now"
+          description="OpsIQ checks your risks, alerts, blocked decisions, and Home's top action continuously. This stays empty until something real needs you."
+        />
+      ) : (
+        <>
+          <ol className="flex flex-col gap-6">
+            {items?.map((item, i) => (
+              <li
+                key={item.id}
+                className="border-l-2 pl-5 py-0.5"
+                style={{ borderColor: TIER_RULE_COLOR[item.tier] }}
+                data-testid="priority-item"
+              >
+                <div className="flex flex-wrap items-baseline gap-2.5">
+                  <span className="font-display text-base font-semibold tabular-nums text-muted-foreground">{i + 1}</span>
+                  <Badge variant={item.statusVariant ?? TIER_VARIANT[item.tier]}>{item.statusLabel ?? TIER_LABEL[item.tier]}</Badge>
+                </div>
+                <strong className="mt-1 block font-display text-[1.15rem] font-semibold leading-snug tracking-tight text-foreground">{item.title}</strong>
+                {item.why && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{item.why}</p>}
+                <Link
+                  href={item.actionHref}
+                  className="mt-2.5 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline"
+                >
+                  {item.actionLabel} →
+                </Link>
+              </li>
+            ))}
+          </ol>
+          {/* A one- or two-item list otherwise trails off into a mostly-empty page -- this closing
+              line is the same honest continuously-checked framing as the zero-item EmptyState
+              above, just for the "some, but not many" case, so the page reads as complete by
+              design rather than unfinished. */}
+          <p className="border-t border-border pt-4 text-sm text-muted-foreground">
+            That{"'"}s everything OpsIQ is tracking as a priority right now. Risks, alerts, blocked decisions, and Home{"'"}s top action are checked continuously — this list updates as things change.
+          </p>
+        </>
+      )}
+    </main>
+  );
+}

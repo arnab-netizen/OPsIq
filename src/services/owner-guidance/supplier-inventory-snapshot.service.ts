@@ -107,11 +107,18 @@ export async function saveSupplierInventorySnapshot(
   return summary;
 }
 
-/** Latest supplier/inventory snapshot for a workspace (scoped), or null. */
+/**
+ * Latest supplier/inventory snapshot for a workspace, or null. `businessId` scopes to one
+ * business when a workspace has more than one — OwnerSupplierInventorySnapshot has a nullable
+ * businessId column; without this, a multi-business workspace would surface whichever business
+ * most recently wrote a snapshot as if it were every business's own supplier risk.
+ */
 export async function getLatestSupplierInventory(
   workspaceId: string,
+  businessId?: string | null,
   injected?: SIDeps
 ): Promise<PersistedSupplierInventory | null> {
   const deps = injected ?? (await resolveDefaultDeps());
-  return deps.db.ownerSupplierInventorySnapshot.findFirst({ where: { workspaceId }, orderBy: { createdAt: "desc" } });
+  const where = businessId ? { workspaceId, businessId } : { workspaceId };
+  return deps.db.ownerSupplierInventorySnapshot.findFirst({ where, orderBy: { createdAt: "desc" } });
 }

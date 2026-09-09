@@ -20,7 +20,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const FIXED_FALLBACK = "Something went wrong. Please try again.";
+const FIXED_FALLBACK = "We couldn't create your account right now. Please try again.";
 
 async function fillAndSubmit() {
   await waitFor(() => expect(screen.getByLabelText(/email/i)).not.toBeDisabled());

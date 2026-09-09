@@ -286,3 +286,26 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
     multiLocation: input.ownerRole === "multi_location",
   };
 }
+
+/**
+ * Plain-language phrase for a `Confidence` level. The raw token ("none" / "low" / "medium" /
+ * "high") must never reach an owner verbatim — every UI surface that shows confidence before
+ * diagnosis (/owner/onboarding, /owner/data) renders this phrase instead of the enum.
+ */
+export function confidenceDisplayPhrase(confidence: string): string {
+  switch (confidence) {
+    // "Solid" alone (esp. next to a 100% bar) reads as "setup finished" — a real usability test
+    // confirmed an owner interpreted 5/5 starter items + this badge as total completion, even
+    // though Money/Customers/Operations were still empty. This measures only the STARTER minimum,
+    // never overall completeness, so the phrase must say so.
+    case "high":
+      return "Starter information complete";
+    case "medium":
+      return "Getting there";
+    case "low":
+      return "Early days";
+    case "none":
+    default:
+      return "Not enough data yet";
+  }
+}

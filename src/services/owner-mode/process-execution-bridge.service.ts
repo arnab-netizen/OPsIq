@@ -21,7 +21,7 @@ import { detectFakeCompletion } from "@/services/execution/verification-engine";
 import type { BridgedExecutionRoute, ProcessExecutionBridgeAnalysis, ExecutionRoute } from "@/domain/owner-mode/process-execution-bridge";
 
 interface TaskRow {
-  id: string; workspaceId: string; taskKey: string; sourceFamily: string; sourceFindingKey: string;
+  id: string; workspaceId: string; businessId: string | null; taskKey: string; sourceFamily: string; sourceFindingKey: string;
   executionRoute: string; actionOwner: string; approvalLevel: string; status: string;
   requiredEvidence: string[]; evidenceRefs: string[]; completionCriteria: string; reassessmentTrigger: string;
   riskIfIgnored: string; ownerVisibleSummary: string; severity: string; priorityRank: number; notes: string | null;
@@ -160,7 +160,7 @@ export async function persistProcessExecutionRoutes(
 
 function routeToData(r: BridgedExecutionRoute, workspaceId: string, now: Date): Record<string, unknown> {
   return {
-    workspaceId, taskKey: r.taskKey, sourceFamily: r.sourceFamily, sourceFindingKey: r.sourceFindingKey,
+    workspaceId, businessId: r.businessId, taskKey: r.taskKey, sourceFamily: r.sourceFamily, sourceFindingKey: r.sourceFindingKey,
     executionRoute: r.executionRoute, actionOwner: r.actionOwner, approvalLevel: r.approvalLevel,
     requiredEvidence: r.requiredEvidence, evidenceRefs: r.evidenceRefs, completionCriteria: r.completionCriteria,
     reassessmentTrigger: r.reassessmentTrigger, riskIfIgnored: r.riskIfIgnored, ownerVisibleSummary: r.ownerVisibleSummary,
@@ -172,7 +172,10 @@ function routeToData(r: BridgedExecutionRoute, workspaceId: string, now: Date): 
 export async function getPersistedProcessTasks(workspaceId: string, injected?: ProcessBridgeDeps): Promise<TaskRow[]> {
   const deps = injected ?? (await resolveDefaultDeps());
   try {
-    return await deps.db.processExecutionTask.findMany({ where: { workspaceId }, orderBy: { priorityRank: "asc" }, take: 2000 });
+    // isFixtureRecord: false excludes acceptance/QA fixture tasks (see
+    // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an ordinary owner's task list must never include a
+    // task a QA blueprint run created.
+    return await deps.db.processExecutionTask.findMany({ where: { workspaceId, isFixtureRecord: false }, orderBy: { priorityRank: "asc" }, take: 2000 });
   } catch (e) {
     if (e && typeof e === "object" && (e as { code?: string }).code === "P2021") return [];
     throw e;
@@ -340,6 +343,14 @@ export async function applyProcessExecutionAction(
   }
   const task = await deps.db.processExecutionTask.findFirst({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey } });
   if (!task) return { ok: false, reason: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" };
+  // Defense-in-depth business isolation: taskKey already embeds businessId for PROCESS_CORRECTION/
+  // CASH_PROFIT routes (see process-execution-bridge.ts), so a caller cannot normally reach another
+  // business's task through a bare taskKey collision -- but a caller could still supply a taskKey it
+  // read from Business A's view alongside a businessId claiming Business B. Refuse identically to
+  // "not found" (never reveal that the task belongs to a different business).
+  if (task.businessId && input.businessId && input.businessId.trim() && task.businessId !== input.businessId.trim()) {
+    return { ok: false, reason: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" };
+  }
   const route = task.executionRoute as ExecutionRoute;
 
   // ── Phase 3: ACKNOWLEDGE ──────────────────────────────────────────────────

@@ -4,30 +4,53 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { FindingCard } from "@/components/owner/FindingCard";
+import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
+import { useActiveBusiness } from "@/context/active-business-context";
 
+import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { formatHumanDate } from "@/lib/format-human-date";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  low: "muted",
-  medium: "default",
-  high: "warning",
-  critical: "destructive",
-};
-
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  unverified: "muted",
+const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
+  unverified: "muted-accessible",
   verified_improved: "success",
   verified_not_improved: "destructive",
   inconclusive: "warning",
   disputed: "warning",
 };
+const VERIFY_LABEL: Record<string, string> = {
+  unverified: "Not yet verified",
+  verified_improved: "Verified — improved",
+  verified_not_improved: "Verified — no improvement",
+  inconclusive: "Inconclusive",
+  disputed: "Disputed",
+};
 
-const STATE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+const ACTION_STATUS_LABEL: Record<string, string> = {
+  proposed: "Proposed",
+  assigned: "Assigned",
+  in_progress: "In progress",
+  completed: "Completed",
+  blocked: "Blocked",
+};
+
+const STATE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
   SMOOTH: "success",
   STEADY: "default",
   STRAINED: "warning",
   BOTTLENECKED: "destructive",
   OVERLOADED: "destructive",
+};
+// operationsState previously rendered as the raw enum token (e.g. "BOTTLENECKED") in both the
+// position badge and the diagnosis-history rows -- same class of leak Money's SURVIVAL_LABEL
+// exists to close, just never applied here.
+const STATE_LABEL: Record<string, string> = {
+  SMOOTH: "Running smoothly",
+  STEADY: "Steady",
+  STRAINED: "Strained",
+  BOTTLENECKED: "Bottlenecked",
+  OVERLOADED: "Overloaded",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -58,6 +81,7 @@ const OPERATIONS_FIELDS: Array<{ name: string; label: string }> = [
 ];
 
 export default function OwnerOperationsPage() {
+  const { activeBusinessId, needsBusinessRecovery, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,16 +102,24 @@ export default function OwnerOperationsPage() {
       const data = await api(`/api/owner/operations/dashboard${qs}`);
       setDashboard(data);
       setSelected(data.selectedBusinessId);
+      // Keep the shared active-business context in sync — see finance/page.tsx for the root
+      // cause this closes (each owner page independently defaulting to a different business).
+      if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setActiveBusinessId]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (contextLoading) return;
+    // A pending business-recovery choice must never be silently resolved by letting the server
+    // pick its own default businessId — see ActiveBusinessContext.needsBusinessRecovery.
+    if (needsBusinessRecovery) return;
+    void load(activeBusinessId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner explicitly switches business
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
 
   async function createBusiness(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -108,6 +140,8 @@ export default function OwnerOperationsPage() {
         }),
       });
       setShowBusinessForm(false);
+      setActiveBusinessId(created.id);
+      await refreshBusinesses();
       await load(created.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create business");
@@ -277,10 +311,10 @@ export default function OwnerOperationsPage() {
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Operations</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Operations</h1>
+          <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-muted-foreground">
             Where throughput stalls, where the bottleneck is, and what to fix next — with the single highest-impact execution move and verification.
           </p>
         </div>
@@ -319,11 +353,11 @@ export default function OwnerOperationsPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 flex items-end gap-3">
+          <div className="mb-6 flex flex-wrap items-end gap-3">
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
-              onChange={(businessId) => load(businessId)}
+              onChange={(businessId) => setActiveBusinessId(businessId)}
             />
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add operations snapshot
@@ -404,11 +438,12 @@ export default function OwnerOperationsPage() {
           {workloadResult && <div className="mb-4 text-sm text-[var(--success-text)]" data-testid="workload-result">{workloadResult}</div>}
 
           {!dashboard?.hasData ? (
-            <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard?.latestSnapshot
-                ? "Snapshot recorded. Click “Run operations diagnosis” to generate findings and an action plan."
-                : "No operations snapshot yet. Add a snapshot, then run an operations diagnosis."}
-            </div>
+            <DiagnosisEmptyState
+              domainLabel="operations"
+              hasSnapshot={Boolean(dashboard?.latestSnapshot)}
+              snapshotLabel="operations snapshot"
+              diagnosisLabel="Run operations diagnosis"
+            />
           ) : (
             <OperationsCycleView
               cycle={cycle}
@@ -447,22 +482,40 @@ function OperationsCycleView({
   onVerifyAction: (a: any) => void;
 }) {
   const state = score?.operationsState ?? cycle.operationsState;
+  const dataConfidence = Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore);
   return (
-    <div className="space-y-6">
-      <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
-        <div>
-          <div className="text-xs uppercase text-muted-foreground">Latest diagnosis · cycle #{cycle.sequenceNumber}</div>
-          <div className="text-lg font-semibold tabular-nums">
-            Health {Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Risk {Math.round(score?.riskScore ?? cycle.riskScore)}/100 · Opportunity {Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100
-          </div>
+    <div className="flex flex-col gap-5">
+      <div className="border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
+        <div className="flex flex-wrap items-baseline gap-2.5">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>
+            Operations position · cycle #{cycle.sequenceNumber}
+          </span>
+          <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
         </div>
-        <div className="text-right">
-          <Badge variant={STATE_VARIANT[state] || "muted"}>{state}</Badge>
-          <div className="text-xs text-muted-foreground mt-1">
-            data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
-          </div>
+        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
+          {[
+            ["Health", score?.healthScore ?? cycle.healthScore],
+            ["Risk", score?.riskScore ?? cycle.riskScore],
+            ["Opportunity", score?.opportunityScore ?? cycle.opportunityScore],
+          ].map(([label, value]) => (
+            <div key={label as string}>
+              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground">
+                {Math.round(value as number)}<span className="text-base font-normal text-muted-foreground">/100</span>
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+            </div>
+          ))}
         </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Data confidence {dataConfidence}/100 — how much of this reading rests on real, supplied numbers.
+        </p>
       </div>
+
+      {dataConfidence < 30 && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive font-medium">
+          ⚠ Data confidence is critically low ({dataConfidence}/100). Diagnosis results are unreliable and should not be acted upon without providing the missing critical inputs below.
+        </div>
+      )}
 
       {missing.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
@@ -471,51 +524,36 @@ function OperationsCycleView({
       )}
 
       {recommended && (
-        <div className="border rounded-lg p-4 bg-card">
-          <div className="text-xs uppercase text-muted-foreground">Recommended next operations action</div>
-          <div className="font-semibold">{recommended.title}</div>
+        <div className="border-t border-border pt-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Recommended next operations action</div>
+          <div className="mt-1 font-display text-[1.1rem] font-semibold text-foreground">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
           <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {recommended.verificationMetric}
+            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
           </p>
         </div>
       )}
 
-      <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Findings ({cycle.findings.length})</h2>
-        {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No operations issues detected.</p>}
-        <div className="space-y-3">
+      {/* Findings — the shared FindingCard component (src/components/owner/FindingCard.tsx),
+          the exact same card Money renders: OwnerOperationsFinding has the identical shape to
+          OwnerFinanceFinding, so this is the same real component, not a look-alike copy. */}
+      <section className="border-t border-border pt-4">
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-4">Findings ({cycle.findings.length})</h2>
+        {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No operations issues detected — this may indicate missing input data rather than smooth operations. Check data confidence above.</p>}
+        <div className="flex flex-col gap-6">
           {cycle.findings.map((f: any) => (
-            <div key={f.id} className="border-l-4 pl-3 py-1" style={{ borderColor: f.findingType === "opportunity" ? "#16a34a" : "#f59e0b" }}>
-              <div className="flex justify-between">
-                <span className="font-semibold">{f.title}</span>
-                <span className="flex gap-1">
-                  <Badge variant="muted">{f.findingType}</Badge>
-                  <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">{f.summary}</p>
-              <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {f.sourceMetric} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · confidence {Math.round((f.confidence ?? 0) * 100)}%
-              </p>
-              {Array.isArray(f.evidence) && f.evidence.length > 0 && (
-                <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.join("; ")}</p>
-              )}
-              {f.verificationMetric && (
-                <p className="text-xs text-muted-foreground"><strong>Verify via:</strong> {f.verificationMetric}</p>
-              )}
-            </div>
+            <FindingCard key={f.id} finding={f} />
           ))}
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Operations actions ({cycle.actions.length})</h2>
+      <section className="border-t border-border pt-4">
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-3">Operations actions ({cycle.actions.length})</h2>
         <div className="space-y-3">
           {cycle.actions.map((a: any) => {
             const latestVerification = a.verifications?.[0];
             return (
-              <div key={a.id} className="border rounded p-3">
+              <div key={a.id} className="border-b border-border pb-3 last:border-0 last:pb-0">
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-semibold">{a.title}</div>
@@ -523,11 +561,11 @@ function OperationsCycleView({
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
                   </div>
-                  <Badge variant="muted">{a.status}</Badge>
+                  <Badge variant="muted-accessible">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
-                  Verify <strong>{a.verificationMetric}</strong> — {a.verificationMethod}
+                  Verify <strong>{humanizeMetricKey(a.verificationMetric)}</strong> — {humanizeEvidenceLine(a.verificationMethod ?? "")}
                 </p>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {a.status === "proposed" && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}
@@ -538,8 +576,8 @@ function OperationsCycleView({
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
-                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted"}>
-                      {latestVerification.status}
+                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
+                      {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">
                       before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
@@ -552,14 +590,14 @@ function OperationsCycleView({
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Diagnosis history</h2>
+      <section className="border-t border-border pt-4">
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-3">Diagnosis history</h2>
         <div className="space-y-1 text-sm">
           {history.map((c: any) => (
-            <div key={c.id} className="flex justify-between border-b py-1">
-              <span>Cycle #{c.sequenceNumber} — {new Date(c.createdAt).toLocaleDateString()}</span>
+            <div key={c.id} className="flex justify-between border-b border-border py-1.5 last:border-0">
+              <span>Cycle #{c.sequenceNumber} — {formatHumanDate(c.createdAt)}</span>
               <span className="text-muted-foreground">
-                {c.operationsState} · {c.findingCount} findings · {c.actionCount} actions
+                {STATE_LABEL[c.operationsState] ?? c.operationsState} · {c.findingCount} findings · {c.actionCount} actions
               </span>
             </div>
           ))}

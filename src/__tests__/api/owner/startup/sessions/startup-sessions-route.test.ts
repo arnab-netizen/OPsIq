@@ -181,35 +181,40 @@ describe("POST /api/owner/startup/sessions — non-DB mock tests", () => {
     it("calls createStartupSession with workspaceId", async () => {
       await startupSessionsPost(makeCtx());
       expect(mockCreateStartupSession).toHaveBeenCalledWith(
-        expect.objectContaining({ workspaceId: WS_A })
+        expect.objectContaining({ workspaceId: WS_A }),
+        expect.anything()
       );
     });
 
     it("calls createStartupSession with actorId", async () => {
       await startupSessionsPost(makeCtx());
       expect(mockCreateStartupSession).toHaveBeenCalledWith(
-        expect.objectContaining({ actorId: ACTOR_A })
+        expect.objectContaining({ actorId: ACTOR_A }),
+        expect.anything()
       );
     });
 
     it("calls createStartupSession with intake from body", async () => {
       await startupSessionsPost(makeCtx());
       expect(mockCreateStartupSession).toHaveBeenCalledWith(
-        expect.objectContaining({ intake: MOCK_INTAKE })
+        expect.objectContaining({ intake: MOCK_INTAKE }),
+        expect.anything()
       );
     });
 
     it("calls createStartupSession with ideas from body", async () => {
       await startupSessionsPost(makeCtx());
       expect(mockCreateStartupSession).toHaveBeenCalledWith(
-        expect.objectContaining({ ideas: MOCK_IDEAS })
+        expect.objectContaining({ ideas: MOCK_IDEAS }),
+        expect.anything()
       );
     });
 
     it("calls createStartupSession with sessionLabel from body", async () => {
       await startupSessionsPost(makeCtx());
       expect(mockCreateStartupSession).toHaveBeenCalledWith(
-        expect.objectContaining({ sessionLabel: "Q3 2026 Validation" })
+        expect.objectContaining({ sessionLabel: "Q3 2026 Validation" }),
+        expect.anything()
       );
     });
 
@@ -217,7 +222,8 @@ describe("POST /api/owner/startup/sessions — non-DB mock tests", () => {
       mockParseRequestBody.mockResolvedValue({ ...MOCK_CREATE_INPUT, sessionLabel: undefined });
       await startupSessionsPost(makeCtx());
       expect(mockCreateStartupSession).toHaveBeenCalledWith(
-        expect.objectContaining({ sessionLabel: null })
+        expect.objectContaining({ sessionLabel: null }),
+        expect.anything()
       );
     });
 
@@ -234,7 +240,8 @@ describe("POST /api/owner/startup/sessions — non-DB mock tests", () => {
     it("uses verifiedWorkspaceId not body workspaceId (WS_B)", async () => {
       await startupSessionsPost(makeCtx({ verifiedWorkspaceId: WS_B }));
       expect(mockCreateStartupSession).toHaveBeenCalledWith(
-        expect.objectContaining({ workspaceId: WS_B })
+        expect.objectContaining({ workspaceId: WS_B }),
+        expect.anything()
       );
     });
   });

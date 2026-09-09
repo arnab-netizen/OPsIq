@@ -1,7 +1,9 @@
 "use client";
 
 import { forwardRef } from "react";
-import { useOperatorMutation } from "@/hooks/useOperatorMutation";
+import { useActiveBusiness } from "@/context/active-business-context";
+import { AccountMenu } from "@/components/owner/AccountMenu";
+import { BUSINESS_TYPE_LABELS } from "@/domain/owner-mode/owner-data-hub";
 
 interface AppHeaderProps {
   userName?: string | null;
@@ -23,23 +25,19 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
   { userName, onMenuClick, menuOpen = false, menuControlsId, backgroundHidden = false },
   menuButtonRef,
 ) {
-  // End the session via the governed mutation hook; always return the user to
-  // /login afterwards (success or failure), never surfacing a raw error.
-  const logoutMutation = useOperatorMutation<{ success: boolean }, Record<string, never>>({
-    url: "/api/auth/logout",
-    method: "POST",
-    operationName: "logout",
-    onSettled: () => {
-      window.location.href = "/login";
-    },
-  });
+  // Always-visible active-business readout — a real human usability test found the owner had
+  // no way to tell which business the rest of the app was currently showing them. Read-only here
+  // (switching happens via the BusinessContextSelector on the pages that have one); this just
+  // keeps the current context visible everywhere, including pages with no selector of their own
+  // (Home, Priorities, Actions).
+  const { activeBusiness, businesses, loading: businessLoading } = useActiveBusiness();
 
   return (
     <header
       aria-hidden={backgroundHidden || undefined}
       className="flex h-14 items-center justify-between border-b border-border bg-background px-6"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <button
           ref={menuButtonRef}
           type="button"
@@ -54,28 +52,38 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-[var(--primary-text)]">OpsIQ</h1>
-        <span className="hidden text-xs text-muted-foreground sm:inline">
-          Governed Business Intervention OS
-        </span>
+        {/* Brand mark, not the page heading -- each page supplies its own real <h1>. The
+            surrounding <header> already carries the "banner" landmark, so assistive tech
+            doesn't need a heading here to identify the site name. Serif, matching the same
+            font-display used for every page's own headline and every "top priority" treatment
+            in the app -- a distinctive wordmark instead of the generic sans-serif-bold logotype
+            every SaaS admin shell defaults to. */}
+        <p className="shrink-0 font-display text-lg font-semibold tracking-tight text-[var(--primary-text)]">OpsIQ</p>
+        {!businessLoading && businesses.length > 0 && (
+          <>
+            <span aria-hidden="true" className="hidden h-5 w-px shrink-0 bg-border sm:block" />
+            {/* Which business is active must never be mobile-only-hidden information -- a real
+                usability test's failure was exactly this ("no way to tell which business the app
+                is showing me"), and that risk is highest on the narrowest screens, not lowest. The
+                name itself is always visible (truncated on the very narrowest widths); only the
+                business-type subtitle -- true supporting detail, not the identity itself -- waits
+                for a bit more room. */}
+            <span
+              data-testid="active-business-indicator"
+              className="flex min-w-0 items-baseline gap-1.5"
+            >
+              <span className="min-w-0 truncate text-sm font-medium text-foreground">{activeBusiness?.name ?? "—"}</span>
+              {activeBusiness?.businessType && (
+                <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                  {BUSINESS_TYPE_LABELS[activeBusiness.businessType as keyof typeof BUSINESS_TYPE_LABELS] ?? activeBusiness.businessType}
+                </span>
+              )}
+            </span>
+          </>
+        )}
       </div>
       <div className="flex items-center gap-3 sm:gap-4">
-        {userName && (
-          <span className="hidden text-sm text-muted-foreground sm:inline">{userName}</span>
-        )}
-        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-          <span className="text-xs font-medium text-primary">
-            {userName?.charAt(0)?.toUpperCase() ?? "U"}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => logoutMutation.mutate({})}
-          disabled={logoutMutation.isLoading}
-          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-        >
-          Log out
-        </button>
+        <AccountMenu userName={userName} />
       </div>
     </header>
   );

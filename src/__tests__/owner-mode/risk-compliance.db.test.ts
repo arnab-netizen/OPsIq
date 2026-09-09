@@ -924,4 +924,31 @@ describe("[db] Compliance — task linkage", () => {
     const fetched = await getBusinessRisk(workspaceId, risk.id);
     expect(fetched.taskLinks.length).toBeGreaterThanOrEqual(2);
   });
+
+  // Preview runtime forensics (v2) — a real human usability test found Home correctly showing the
+  // "set up your business" onboarding state while Priorities still displayed a critical
+  // cash-survival risk for the SAME workspace. Root cause: BusinessRiskEntry has no businessId
+  // column at all, so listBusinessRisks() was workspace-scoped only with no gate on whether a
+  // real business currently exists. NO VALID REAL ACTIVE BUSINESS => NO BUSINESS-DERIVED RISK.
+  it("[db] listBusinessRisks returns nothing for a workspace with zero real active businesses, even if risk rows exist", async () => {
+    const workspaceId = ws();
+    await createBusinessRisk({ workspaceId, actorId: actor, riskCode: "R-NO-BIZ", title: "Risk with no business in this workspace", category: "FINANCIAL" });
+
+    const risks = await listBusinessRisks(workspaceId);
+    expect(risks).toEqual([]);
+  });
+
+  it("[db] listBusinessRisks returns risks again once a real active business exists for the workspace", async () => {
+    const workspaceId = ws();
+    const risk = await createBusinessRisk({ workspaceId, actorId: actor, riskCode: "R-WITH-BIZ", title: "Risk with a real business", category: "FINANCIAL" });
+    await db.ownerBusiness.create({
+      data: {
+        id: randomUUID(), workspaceId, name: "Regression Test Business", businessType: "generic_local_service",
+        currency: "USD", isActive: true, isFixtureBusiness: false, createdBy: actor,
+      },
+    });
+
+    const risks = await listBusinessRisks(workspaceId);
+    expect(risks.some((r) => r.id === risk.id)).toBe(true);
+  });
 });

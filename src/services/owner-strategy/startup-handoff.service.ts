@@ -103,6 +103,19 @@ export async function handOffStartupSessionToBusiness(
       },
     });
 
+    // The blueprint's BusinessObjective(s) (createObjectiveInTx in
+    // startup-execution-blueprint.service.ts) are necessarily created with businessId=null --
+    // no OwnerBusiness exists yet at blueprint-creation time, only a session/idea. This handoff is
+    // the FIRST moment a real business exists for this session, so it is the correct, single,
+    // provenance-based place to backfill businessId onto that session's own objectives -- via the
+    // real linkedStartupSessionId this blueprint set, never inferred from a caller's "currently
+    // selected" business. Scoped to businessId: null so a handoff can never overwrite an objective
+    // some other path already attributed to a business.
+    await tx.businessObjective.updateMany({
+      where: { workspaceId, linkedStartupSessionId: sessionId, businessId: null },
+      data: { businessId },
+    });
+
     // Optimistic-concurrency guard (Pattern A, matching transitionSession()'s
     // own EXECUTION_PLANNED guard in startup-session.service.ts): the WHERE
     // clause re-checks status/businessId at UPDATE time. If either changed

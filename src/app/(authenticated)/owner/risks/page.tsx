@@ -288,7 +288,6 @@ export default function RisksPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted text-muted-foreground">
               <tr>
-                <th className="px-4 py-2 text-left font-medium">Code</th>
                 <th className="px-4 py-2 text-left font-medium">Title</th>
                 <th className="px-4 py-2 text-left font-medium">Category</th>
                 <th className="px-4 py-2 text-left font-medium">Severity</th>
@@ -299,7 +298,6 @@ export default function RisksPage() {
             <tbody className="divide-y divide-border">
               {visibleRisks.map((risk) => (
                 <tr key={risk.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{risk.riskCode}</td>
                   <td className="px-4 py-3 font-medium">{risk.title}</td>
                   <td className="px-4 py-3 text-muted-foreground">{CATEGORY_LABELS[risk.category]}</td>
                   <td className="px-4 py-3">

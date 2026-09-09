@@ -126,9 +126,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
     const first = await signup({ email, password: "password123", workspaceName: "First Co" });
     expect(first.status).toBe(201);
 
-    await expect(
-      signup({ email, password: "password123", workspaceName: "Second Co" })
-    ).rejects.toMatchObject({ name: "ConflictError", statusCode: 409 });
+    const second = await signup({ email, password: "password123", workspaceName: "Second Co" });
+    expect(second.status).toBe(409);
 
     const users = await db.user.findMany({ where: { email } });
     expect(users).toHaveLength(1);
@@ -138,9 +137,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
 
   it("[db] a whitespace-only workspace name is rejected outright (nothing to slug)", async () => {
     const email = `empty-name-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
-    await expect(
-      signup({ email, password: "password123", workspaceName: "   " })
-    ).rejects.toMatchObject({ name: "BadRequestError", statusCode: 400 });
+    const res = await signup({ email, password: "password123", workspaceName: "   " });
+    expect(res.status).toBe(400);
 
     const users = await db.user.findMany({ where: { email } });
     expect(users).toHaveLength(0);
@@ -180,13 +178,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/auth/signup — account gr
     const email = `race-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
     createdEmails.push(email);
 
-    const results = await Promise.allSettled([
+    const responses = await Promise.all([
       signup({ email, password: "password123", workspaceName: "Racer A" }),
       signup({ email, password: "password123", workspaceName: "Racer B" }),
     ]);
 
-    const succeeded = results.filter((r) => r.status === "fulfilled");
+    // Both requests resolve (the loser gets a governed 409, not a thrown/rejected
+    // promise) -- exactly one must have actually created the account.
+    const succeeded = responses.filter((r) => r.status === 201);
+    const conflicted = responses.filter((r) => r.status === 409);
     expect(succeeded.length).toBe(1);
+    expect(conflicted.length).toBe(1);
 
     const users = await db.user.findMany({ where: { email } });
     expect(users).toHaveLength(1);

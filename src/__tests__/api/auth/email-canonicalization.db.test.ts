@@ -122,13 +122,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email canonicalization — cross-rou
     });
     expect(first.status).toBe(201);
 
-    await expect(
-      signup({
-        email: canonicalEmail.toUpperCase(),
-        password: "password123",
-        workspaceName: "Second Co",
-      })
-    ).rejects.toMatchObject({ name: "ConflictError", statusCode: 409 });
+    const second = await signup({
+      email: canonicalEmail.toUpperCase(),
+      password: "password123",
+      workspaceName: "Second Co",
+    });
+    expect(second.status).toBe(409);
 
     const rows = await db.user.findMany({ where: { email: canonicalEmail } });
     expect(rows).toHaveLength(1);
@@ -150,13 +149,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email canonicalization — cross-rou
     });
     expect(first.status).toBe(201);
 
-    await expect(
-      signup({
-        email: `  ${canonicalEmail}  `,
-        password: "password123",
-        workspaceName: "Second Co",
-      })
-    ).rejects.toMatchObject({ name: "ConflictError", statusCode: 409 });
+    const second = await signup({
+      email: `  ${canonicalEmail}  `,
+      password: "password123",
+      workspaceName: "Second Co",
+    });
+    expect(second.status).toBe(409);
 
     const rows = await db.user.findMany({ where: { email: canonicalEmail } });
     expect(rows).toHaveLength(1);

@@ -100,3 +100,67 @@ describe("Owner Finance page wiring", () => {
     expect(src).toContain("/api/owner/recovery/businesses");
   });
 });
+
+describe("Owner Finance page — progressive-disclosure snapshot entry", () => {
+  // A real usability test found the ~27-field flat entry form unusable for an owner without an
+  // accounting background. Fields are now grouped into a "Quick financial picture" (always
+  // visible), "Improve the analysis" and "Advanced detail" (collapsed <Disclosure> sections) —
+  // this proves the restructuring never drops, duplicates, or renames a submitted field.
+  function extractQuotedList(varName: string): string[] {
+    const re = new RegExp(`const ${varName}(?:: string\\[\\])?\\s*=\\s*\\[([\\s\\S]*?)\\];`);
+    const match = src.match(re);
+    if (!match) throw new Error(`Could not find ${varName} in source`);
+    return [...match[1].matchAll(/"([a-zA-Z0-9]+)"/g)].map((m) => m[1]);
+  }
+
+  function extractFinanceFieldNames(): string[] {
+    const start = src.indexOf("const FINANCE_FIELDS");
+    const end = src.indexOf("];", start);
+    const block = src.slice(start, end);
+    return [...block.matchAll(/\{ name: "([a-zA-Z0-9]+)"/g)].map((m) => m[1]);
+  }
+
+  it("uses the Disclosure primitive for the two optional tiers", () => {
+    expect(src).toContain('from "@/ui/primitives"');
+    expect(src).toMatch(/\bDisclosure\b/);
+    expect(src).toContain("Improve the analysis");
+    expect(src).toContain("Advanced detail");
+    expect(src).toContain("Quick financial picture");
+  });
+
+  it("every FINANCE_FIELDS name appears in exactly one tier (quick, an improve group, or advanced) — no field dropped or duplicated", () => {
+    const allFields = extractFinanceFieldNames();
+    expect(allFields.length).toBeGreaterThan(20); // sanity: still the full field set, not accidentally truncated
+
+    const quick = extractQuotedList("QUICK_FIELD_NAMES");
+    const advanced = extractQuotedList("ADVANCED_FIELD_NAMES");
+
+    const improveBlockStart = src.indexOf("const IMPROVE_GROUPS");
+    const improveBlockEnd = src.indexOf("];", improveBlockStart);
+    const improveBlock = src.slice(improveBlockStart, improveBlockEnd);
+    // Only pull names out of each group's `fieldNames: [...]` sub-array, never a group's `title`
+    // string (e.g. "Loans", "Stock" would otherwise false-positive-match the same regex).
+    const improve = [...improveBlock.matchAll(/fieldNames:\s*\[([^\]]*)\]/g)].flatMap((m) =>
+      [...m[1].matchAll(/"([a-zA-Z0-9]+)"/g)].map((x) => x[1])
+    );
+
+    const tierCounts = new Map<string, number>();
+    for (const name of [...quick, ...improve, ...advanced]) {
+      tierCounts.set(name, (tierCounts.get(name) ?? 0) + 1);
+    }
+
+    for (const field of allFields) {
+      expect(tierCounts.get(field), `${field} must appear in exactly one tier`).toBe(1);
+    }
+    // No tier references a name that isn't a real FINANCE_FIELDS entry.
+    for (const name of tierCounts.keys()) {
+      expect(allFields, `tier lists an unknown field: ${name}`).toContain(name);
+    }
+  });
+
+  it("still saves via a single unified submit — no separate multi-step snapshot flow was introduced", () => {
+    // Exactly one "Save snapshot" submit button: the "Create business" form above it has its own,
+    // unrelated submit button, so this scopes to the snapshot form specifically.
+    expect((src.match(/"Save snapshot"/g) ?? []).length).toBe(1);
+  });
+});

@@ -8,6 +8,15 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import VendorPage from "@/app/(authenticated)/owner/vendor/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
+
+function renderPage() {
+  return render(
+    <ActiveBusinessProvider>
+      <VendorPage />
+    </ActiveBusinessProvider>
+  );
+}
 
 const BUSINESSES = [
   { id: "biz-uuid-1", name: "Acme Trading" },
@@ -53,6 +62,13 @@ beforeEach(() => {
         json: () => Promise.resolve(BUSINESSES),
       } as Response);
     }
+    // The shared ActiveBusinessProvider (wraps every page) fetches this on mount.
+    if (url.includes("/api/owner/businesses") && method === "GET") {
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: () => Promise.resolve({ businesses: BUSINESSES }),
+      } as Response);
+    }
     if (url.includes("/api/owner/vendor") && url.includes("businessId") && method === "GET") {
       return Promise.resolve({
         ok: true, status: 200,
@@ -92,15 +108,16 @@ afterEach(() => {
 
 describe("VendorPage", () => {
   it("renders the page heading", async () => {
-    const { findByText } = render(<VendorPage />);
+    const { findByText } = renderPage();
     await findByText("Vendors");
   });
 
   it("fetches businesses then vendors on mount", async () => {
-    const { findByTestId } = render(<VendorPage />);
+    const { findByTestId } = renderPage();
     await findByTestId("vendor-table");
+    // Business list now comes from the shared ActiveBusinessProvider, not a page-local fetch.
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/owner/recovery/businesses"),
+      expect.stringContaining("/api/owner/businesses"),
       expect.anything(),
     );
     expect(fetchMock).toHaveBeenCalledWith(
@@ -110,38 +127,38 @@ describe("VendorPage", () => {
   });
 
   it("renders approved vendor with correct badge", async () => {
-    const { findByTestId, findAllByText } = render(<VendorPage />);
+    const { findByTestId, findAllByText } = renderPage();
     await findByTestId("vendor-table");
     const badges = await findAllByText("Approved");
     expect(badges.length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders pending vendor with Approve action", async () => {
-    const { findByText } = render(<VendorPage />);
+    const { findByText } = renderPage();
     await findByText("Unknown Co");
     const approveBtns = await findByText("Approve");
     expect(approveBtns).toBeTruthy();
   });
 
   it("renders bank verified badge for vendor with verified bank", async () => {
-    const { findByText } = render(<VendorPage />);
+    const { findByText } = renderPage();
     await findByText("Delta Supplies");
     const badge = await findByText("Verified");
     expect(badge).toBeTruthy();
   });
 
   it("renders payment terms as Net 30", async () => {
-    const { findByText } = render(<VendorPage />);
+    const { findByText } = renderPage();
     await findByText("Net 30");
   });
 
   it("shows related party status", async () => {
-    const { findAllByText } = render(<VendorPage />);
+    const { findAllByText } = renderPage();
     await findAllByText("Yes");
   });
 
   it("opens create modal when + New Vendor is clicked", async () => {
-    const { findByText } = render(<VendorPage />);
+    const { findByText } = renderPage();
     await findByText("Vendors");
     await waitFor(async () => {
       const btn = await findByText("+ New Vendor");
@@ -152,7 +169,7 @@ describe("VendorPage", () => {
   });
 
   it("calls approve endpoint when Approve is clicked", async () => {
-    const { findByText } = render(<VendorPage />);
+    const { findByText } = renderPage();
     await findByText("Unknown Co");
     const approveBtn = await findByText("Approve");
     fireEvent.click(approveBtn);
@@ -165,7 +182,7 @@ describe("VendorPage", () => {
   });
 
   it("opens suspend modal and calls suspend endpoint", async () => {
-    const { findByText, findAllByText } = render(<VendorPage />);
+    const { findByText, findAllByText } = renderPage();
     await findByText("Delta Supplies");
     const suspendBtns = await findAllByText("Suspend");
     fireEvent.click(suspendBtns[0]);
@@ -179,33 +196,40 @@ describe("VendorPage", () => {
       if (url.includes("/api/owner/recovery/businesses")) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(BUSINESSES) } as Response);
       }
+      if (url.includes("/api/owner/businesses")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: BUSINESSES }) } as Response);
+      }
       if (url.includes("/api/owner/vendor")) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) } as Response);
       }
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
-    const { findByText } = render(<VendorPage />);
+    const { findByText } = renderPage();
     await findByText("No vendors yet");
   });
 
   it("shows business selector when multiple businesses exist", async () => {
     fetchMock.mockImplementation((input: string | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
+      const twoBusinesses = [
+        { id: "biz-1", name: "Business A" },
+        { id: "biz-2", name: "Business B" },
+      ];
       if (url.includes("/api/owner/recovery/businesses")) {
         return Promise.resolve({
           ok: true, status: 200,
-          json: () => Promise.resolve([
-            { id: "biz-1", name: "Business A" },
-            { id: "biz-2", name: "Business B" },
-          ]),
+          json: () => Promise.resolve(twoBusinesses),
         } as Response);
+      }
+      if (url.includes("/api/owner/businesses")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: twoBusinesses }) } as Response);
       }
       if (url.includes("/api/owner/vendor")) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) } as Response);
       }
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
-    const { findByText } = render(<VendorPage />);
+    const { findByText } = renderPage();
     await findByText("Business A");
     await findByText("Business B");
   });

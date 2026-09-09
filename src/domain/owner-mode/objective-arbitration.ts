@@ -93,7 +93,9 @@ export interface ObjectiveCandidate {
   objectiveType: ObjectiveType;
   status: ObjectiveStatus;
   priorityScore: number;        // Dim 4: owner priority, 0..100
-  progressPct: number;          // 0..100
+  // 0..100, or null when progress has never been measured — null must never be treated as 0
+  // (UNKNOWN != BAD): an unmeasured objective is not evidence of negligible progress.
+  progressPct: number | null;
   resourceBudgetUsedPct: number;// Dim 7: execution cost proxy, 0..100
   hasBlockingDependencies: boolean; // Dim 5: dependency blocking
   linkedGoalAligned: boolean;
@@ -129,7 +131,7 @@ export interface ObjectiveArbitrationItem extends ArbitrationCandidate {
   objectiveId: string;
   objectiveType: ObjectiveType;
   timeHorizon: TimeHorizon;
-  progressPct: number;
+  progressPct: number | null;
   typeWeight: number;
   urgencyScore: number;
   // Named dimension scores (0..1 each, for explainability)
@@ -327,6 +329,7 @@ function computePortfolioDecisions(
       decision = "ESCALATE";
       rationale = `Blocked by dependencies with ${orig.deadlineDaysRemaining}d until deadline — owner escalation required`;
     } else if (orig.status !== "ACTIVE" || (
+      orig.progressPct !== null &&
       orig.progressPct < 10 &&
       orig.deadlineDaysRemaining !== null &&
       orig.deadlineDaysRemaining < -30 &&
@@ -343,6 +346,7 @@ function computePortfolioDecisions(
       orig.childCount === 0 &&
       orig.priorityScore >= 80 &&
       orig.resourceBudgetUsedPct >= 70 &&
+      orig.progressPct !== null &&
       orig.progressPct < 30
     ) {
       // SPLIT: high-priority broad objective consuming resources with low progress

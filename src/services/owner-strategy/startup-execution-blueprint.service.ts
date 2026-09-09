@@ -51,8 +51,17 @@ export interface BlueprintResult {
 export async function createBlueprint(
   workspaceId: string,
   actorId: string,
-  input: BlueprintInput
+  input: BlueprintInput,
+  opts?: { isFixtureRecord?: boolean }
 ): Promise<BlueprintResult> {
+  // isFixtureRecord is NEVER read from the ordinary blueprint-create request body — it is only
+  // ever passed by the route layer after an explicit SYSTEM_ADMIN capability check (see POST
+  // /api/owner/startup/sessions/[sessionId]/blueprint). A self-serve owner running real Startup
+  // Mode has no path to set this. Propagated onto every owner-visible record this blueprint
+  // creates (BusinessObjective, ProcessExecutionTask, KPIOwnershipRecord, BusinessRiskEntry) so
+  // an acceptance/QA blueprint run can never surface as a real owner's goal, task, KPI, or risk.
+  // See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+  const isFixtureRecord = opts?.isFixtureRecord === true;
   // G16: Blueprint supersession policy — if a DRAFT or ACTIVE blueprint exists after reapproval,
   // supersede it rather than blocking. If the existing blueprint is ACTIVE and has NOT gone
   // through reapproval (staleness check did not pass), block as before.
@@ -194,6 +203,7 @@ export async function createBlueprint(
       data: {
         linkedStartupSessionId: input.sessionId,
         linkedStartupIdeaId: input.ideaId,
+        isFixtureRecord,
       },
     });
 
@@ -231,6 +241,7 @@ export async function createBlueprint(
           linkedStartupSessionId: input.sessionId,
           linkedStartupBlueprintId: blueprintId,
           linkedStartupPlanId: executionPlanId,
+          isFixtureRecord,
         },
       });
     }
@@ -261,6 +272,7 @@ export async function createBlueprint(
           ownerUserId: actorId,
           reviewCadence: kpi.reviewCadence,
           linkedObjectiveId: objectiveId,
+          isFixtureRecord,
           updatedAt: new Date(),
         },
       });
@@ -301,6 +313,7 @@ export async function createBlueprint(
           linkedStartupSessionId: input.sessionId,
           originBlueprintId: blueprintId,
           originType: "BLUEPRINT_ARTIFACT",
+          isFixtureRecord,
           identifiedBy: actorId,
           updatedAt: new Date(),
         },
@@ -326,6 +339,7 @@ export async function createBlueprint(
           status: "ALLOCATED",
           allocatedBy: actorId,
           idempotencyKey: `blueprint_${blueprintId}_pool_${resourcePool.id}`,
+          isFixtureRecord,
         },
       });
     }
@@ -347,6 +361,7 @@ export async function createBlueprint(
         linkedStartupSessionId: input.sessionId,
         originBlueprintId: blueprintId,
         originType: "BLUEPRINT_ARTIFACT",
+        isFixtureRecord,
         updatedAt: new Date(),
       },
     });
@@ -569,6 +584,7 @@ export async function createBlueprint(
           taskCount: taskIds.length,
           kpiCount: kpiIds.length,
           riskCount: riskIds.length,
+          isFixtureRecord,
         },
       },
       tx

@@ -50,7 +50,21 @@ export type BridgeSourceFamily =
 /** The bridged execution route — one per bridged finding. Flat + serialisable for the UI, tests, and DB. */
 export interface BridgedExecutionRoute {
   workspaceId: string;
-  /** Stable dedupe key: one route per source finding (never duplicated across re-evaluations). */
+  /**
+   * Which business this route belongs to; null for a genuinely workspace-level route (no expansion
+   * family currently produces one — see the callers in process-execution-bridge-expansion.ts). This
+   * is NOT decorative: taskKey embeds it (see below) precisely so two businesses in the same
+   * workspace can never collide on the same persisted ProcessExecutionTask row.
+   */
+  businessId: string | null;
+  /**
+   * Stable dedupe key: one route per source finding (never duplicated across re-evaluations).
+   * Business-scoped routes (PROCESS_CORRECTION, CASH_PROFIT) embed businessId directly in the key
+   * (e.g. "cp:<businessId>:MISSING_UNIT_ECONOMICS") so the SAME underlying signal type in two
+   * different businesses in one workspace can never persist to or be started/completed via the
+   * same ProcessExecutionTask row -- taskKey alone was not tenant-safe before this (see PASS 25's
+   * businessInWorkspace(), which only guarded reassessment linkage, not task identity itself).
+   */
   taskKey: string;
   sourceFamily: BridgeSourceFamily;
   sourceFindingKey: string;
@@ -132,7 +146,7 @@ export const COMPLETION_BY_ROUTE: Record<ExecutionRoute, string> = {
 };
 
 /** Bridge one process correction into a governed execution route. */
-function bridgeCorrection(c: ProcessCorrection): BridgedExecutionRoute {
+function bridgeCorrection(c: ProcessCorrection, businessId: string | null): BridgedExecutionRoute {
   const hasMissingData = c.missingData.length > 0;
   const mapped = CORRECTION_ROUTE[c.correctionType];
   // A correction whose governed floor is OWNER is always an owner-approval task, whatever its type default.
@@ -162,7 +176,8 @@ function bridgeCorrection(c: ProcessCorrection): BridgedExecutionRoute {
 
   return {
     workspaceId: c.workspaceId,
-    taskKey: `pc:${c.correctionId}`,
+    businessId,
+    taskKey: businessId ? `pc:${businessId}:${c.correctionId}` : `pc:${c.correctionId}`,
     sourceFamily: "PROCESS_CORRECTION",
     sourceFindingKey: c.correctionId,
     executionRoute: route,
@@ -185,14 +200,15 @@ function bridgeCorrection(c: ProcessCorrection): BridgedExecutionRoute {
 /** Cash/profit signals that are pure data gaps route to a missing-data task; material ones to owner approval. */
 const CASH_DATA_SIGNALS = new Set(["MISSING_UNIT_ECONOMICS", "PROFIT_DATA_INSUFFICIENT"]);
 
-function bridgeCashSignal(s: CashProfitSignal, rank: number): BridgedExecutionRoute {
+function bridgeCashSignal(s: CashProfitSignal, rank: number, businessId: string | null): BridgedExecutionRoute {
   const isDataGap = CASH_DATA_SIGNALS.has(s.signalType);
   const route: ExecutionRoute = isDataGap ? "CREATE_MISSING_DATA_TASK" : s.requiresOwnerReview ? "CREATE_OWNER_APPROVAL_TASK" : "CREATE_MANAGER_TASK";
   const owner: BridgeActionOwner = isDataGap ? "STAFF" : s.requiresOwnerReview ? "OWNER" : "MANAGER";
   const approvalLevel: BridgeApprovalLevel = isDataGap ? "NEEDS_DATA" : s.requiresOwnerReview ? "OWNER_APPROVAL_REQUIRED" : "MANAGER_APPROVAL_REQUIRED";
   return {
     workspaceId: s.workspaceId,
-    taskKey: `cp:${s.signalType}`,
+    businessId,
+    taskKey: businessId ? `cp:${businessId}:${s.signalType}` : `cp:${s.signalType}`,
     sourceFamily: "CASH_PROFIT",
     sourceFindingKey: s.signalType,
     executionRoute: route,
@@ -235,19 +251,27 @@ export function buildProcessExecutionBridge(
   workspaceId: string,
   evaluatedAt: string,
   expansion?: BridgeExpansion | null,
+  /**
+   * The active business this bridge is being computed for. Threaded into every
+   * PROCESS_CORRECTION/CASH_PROFIT route's taskKey (see bridgeCorrection/bridgeCashSignal) so the
+   * persisted ProcessExecutionTask row for a given finding can never be shared between two
+   * businesses in the same workspace. null is valid (a zero-active-business or workspace-level
+   * call) and produces the pre-existing, business-unscoped taskKey shape.
+   */
+  businessId: string | null = null,
 ): ProcessExecutionBridgeAnalysis {
   const collapseSop = expansion?.collapse.sopCorrectionKeys ?? new Set<string>();
   const collapseTraining = expansion?.collapse.trainingCorrectionKeys ?? new Set<string>();
   const byKey = new Map<string, BridgedExecutionRoute>();
   for (const c of routing?.corrections ?? []) {
-    const r = bridgeCorrection(c);
+    const r = bridgeCorrection(c, businessId);
     // Collapse: drop the generic correction route when a specific SOP/training route already covers this fix.
     if (r.executionRoute === "CREATE_SOP_CHECKLIST_TASK" && collapseSop.has(r.sourceFindingKey)) continue;
     if (r.executionRoute === "CREATE_TRAINING_TASK" && collapseTraining.has(r.sourceFindingKey)) continue;
     if (!byKey.has(r.taskKey)) byKey.set(r.taskKey, r);
   }
   (cashProfit?.signals ?? []).forEach((s, i) => {
-    const r = bridgeCashSignal(s, i);
+    const r = bridgeCashSignal(s, i, businessId);
     if (!byKey.has(r.taskKey)) byKey.set(r.taskKey, r);
   });
   for (const r of expansion?.routes ?? []) {

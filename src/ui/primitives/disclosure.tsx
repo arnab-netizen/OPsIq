@@ -1,0 +1,35 @@
+import type { ReactNode } from "react";
+
+/**
+ * The "Why?" / "See details" progressive-disclosure pattern: evidence,
+ * governance mechanics, and raw model state stay collapsed by default and
+ * are one click away, rather than competing with the plain-language answer
+ * above the fold. A native <details> element — no JS state, keyboard- and
+ * screen-reader-accessible for free, and closed by default in every browser.
+ */
+export function Disclosure({
+  summary,
+  children,
+  defaultOpen = false,
+}: {
+  summary: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details
+      className="group rounded-md border border-border open:bg-muted/30"
+      open={defaultOpen}
+    >
+      <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+        <span className="mr-1.5 inline-block text-muted-foreground transition-transform group-open:rotate-90">
+          &#9656;
+        </span>
+        {summary}
+      </summary>
+      <div className="border-t border-border px-3 py-3 text-sm text-muted-foreground">
+        {children}
+      </div>
+    </details>
+  );
+}

@@ -26,6 +26,7 @@ interface MeResponse {
   }>;
   highestRole: string | null;
   isInternal: boolean;
+  isSelfServeOwner: boolean;
 }
 
 export default function SettingsPage() {
@@ -118,30 +119,38 @@ export default function SettingsPage() {
               </dd>
             </div>
             <div>
-              <dt className="text-sm text-muted-foreground">Access Type</dt>
+              <dt className="text-sm text-muted-foreground">
+                {me.isSelfServeOwner ? "Account type" : "Access Type"}
+              </dt>
               <dd className="mt-1">
-                <Badge variant={me.isInternal ? "default" : "outline"}>
-                  {me.isInternal ? "Internal" : "External"}
-                </Badge>
+                {me.isSelfServeOwner ? (
+                  <Badge variant="outline">Business owner</Badge>
+                ) : (
+                  <Badge variant={me.isInternal ? "default" : "outline"}>
+                    {me.isInternal ? "Internal" : "External"}
+                  </Badge>
+                )}
               </dd>
             </div>
           </dl>
         </div>
 
-        {/* Roles Section */}
-        <div className="rounded-lg border border-border p-6">
-          <h2 className="text-lg font-semibold text-foreground">Roles</h2>
-          {me.roles.length === 0 ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              No roles assigned.
-            </p>
-          ) : (
+        {/* Roles Section — a self-serve business owner is granted the same internal
+            admin_or_portfolio_manager role name used for staff portfolio managers (an
+            implementation detail of how signup provisions capabilities, not a meaningful identity
+            to a lay owner). A real human usability test found seeing "Admin / Portfolio Mgr" and
+            "Access Type: Internal" made an ordinary owner believe they were on an internal/test
+            build. The Profile card above now states their actual account type plainly; this raw
+            role/capability detail moves behind a disclosure instead of disappearing, so it is still
+            reachable (support, debugging) without being the first thing an owner reads. */}
+        {me.isSelfServeOwner ? (
+          <details className="rounded-lg border border-border p-6">
+            <summary className="cursor-pointer text-sm font-medium text-foreground">
+              Advanced account details
+            </summary>
             <div className="mt-4 space-y-2">
               {me.roles.map((r) => (
-                <div
-                  key={r.id}
-                  className="flex items-center gap-2 rounded-md bg-muted/30 px-3 py-2"
-                >
+                <div key={r.id} className="flex items-center gap-2 rounded-md bg-muted/30 px-3 py-2">
                   <Badge variant="default">{formatRole(r.role)}</Badge>
                   {r.scope && (
                     <span className="text-xs text-muted-foreground">
@@ -151,40 +160,73 @@ export default function SettingsPage() {
                   )}
                 </div>
               ))}
+              <p className="pt-1 text-xs text-muted-foreground">
+                This is internal system detail, not a special access level — every business owner
+                account is set up this way.
+              </p>
             </div>
-          )}
-          {me.highestRole && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Effective role: {formatRole(me.highestRole)}
-            </p>
-          )}
-        </div>
-
-        {/* Engagement Memberships Section */}
-        <div className="rounded-lg border border-border p-6">
-          <h2 className="text-lg font-semibold text-foreground">
-            Engagement Memberships
-          </h2>
-          {me.memberships.length === 0 ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Not assigned to any engagements.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-2">
-              {me.memberships.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex items-center gap-2 rounded-md bg-muted/30 px-3 py-2"
-                >
-                  <Badge variant="outline">{formatRole(m.role)}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    Engagement: {m.engagementId}
-                  </span>
+          </details>
+        ) : (
+          <>
+            {/* Roles Section */}
+            <div className="rounded-lg border border-border p-6">
+              <h2 className="text-lg font-semibold text-foreground">Roles</h2>
+              {me.roles.length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  No roles assigned.
+                </p>
+              ) : (
+                <div className="mt-4 space-y-2">
+                  {me.roles.map((r) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center gap-2 rounded-md bg-muted/30 px-3 py-2"
+                    >
+                      <Badge variant="default">{formatRole(r.role)}</Badge>
+                      {r.scope && (
+                        <span className="text-xs text-muted-foreground">
+                          Scope: {r.scope}
+                          {r.scopeId ? ` (${r.scopeId})` : ""}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              {me.highestRole && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Effective role: {formatRole(me.highestRole)}
+                </p>
+              )}
             </div>
-          )}
-        </div>
+
+            {/* Engagement Memberships Section */}
+            <div className="rounded-lg border border-border p-6">
+              <h2 className="text-lg font-semibold text-foreground">
+                Engagement Memberships
+              </h2>
+              {me.memberships.length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Not assigned to any engagements.
+                </p>
+              ) : (
+                <div className="mt-4 space-y-2">
+                  {me.memberships.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-2 rounded-md bg-muted/30 px-3 py-2"
+                    >
+                      <Badge variant="outline">{formatRole(m.role)}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        Engagement: {m.engagementId}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

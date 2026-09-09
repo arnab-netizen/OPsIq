@@ -2,8 +2,9 @@
 
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,18 @@ const RESEND_FAILURE_MESSAGE =
   "We couldn't send a verification email right now. Please try again shortly.";
 
 export default function ResendVerificationPage() {
-  const [email, setEmail] = useState("");
+  return (
+    // useSearchParams() requires a Suspense boundary above it, same as
+    // src/app/verify-email/page.tsx and src/app/reset-password/page.tsx.
+    <Suspense fallback={null}>
+      <ResendVerificationForm />
+    </Suspense>
+  );
+}
+
+function ResendVerificationForm() {
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState(() => searchParams?.get("email") ?? "");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -46,7 +58,10 @@ export default function ResendVerificationPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-background p-8 shadow-sm">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-primary">Resend verification email</h1>
+          <p className="text-sm font-bold text-primary">
+            <Link href="/">OpsIQ</Link>
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-primary">Resend verification email</h1>
         </div>
 
         {submitted ? (

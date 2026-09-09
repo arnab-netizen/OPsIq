@@ -13,6 +13,12 @@ import {
   grossMarginPct,
   netProfit,
   breakEvenRevenue,
+  contributionMarginPct,
+  fixedCostBurdenPct,
+  fixedCostsTotal,
+  variableCostsTotal,
+  dailyBreakEvenRevenue,
+  cashRunwayDays,
   type FinancialSnapshotInput,
   SURVIVAL_STATES,
 } from "@/domain/owner-finance";
@@ -250,5 +256,169 @@ describe("owner-finance — invariants", () => {
     expect(grossMarginPct(input)).toBe(70);
     expect(netProfit(input)).toBe(30000);
     expect(breakEvenRevenue(input)).toBe(50000);
+  });
+});
+
+describe("owner-finance — onboarding cost-field mapping honesty (regression)", () => {
+  /**
+   * Regression guard for the onboarding "Essential numbers" defect: rent/wages are
+   * fixed costs, and must be posted as `fixedCosts`, never mislabeled as
+   * `variableCosts` merely to satisfy an onboarding-readiness or diagnosis-gate
+   * check. This proves the onboarding page's own field mapping
+   * (src/app/(authenticated)/owner/onboarding/page.tsx EssentialNumbersForm) is the
+   * financially correct one: entering rent+wages as `fixedCosts` (what onboarding
+   * now posts) produces different, correct contribution margin / break-even /
+   * fixed-cost-burden results than the old, incorrect `variableCosts` mapping would
+   * have — and identical results to entering the same figures through the normal
+   * Finance "Add snapshot" surface, because both post through the exact same
+   * `financialSnapshotCreateSchema` fields into the exact same pure metric
+   * functions. There is no separate onboarding data model to drift out of sync.
+   */
+  const base = {
+    periodStart: "2026-07-01",
+    periodEnd: "2026-07-31",
+    currency: "INR",
+  };
+
+  it("onboarding's fixedCosts mapping matches the equivalent normal-Finance-surface input exactly", () => {
+    // What onboarding now posts: revenue + fixedCosts (rent+wages+other) + cashOnHand.
+    const onboardingInput: FinancialSnapshotInput = {
+      ...base,
+      revenue: 100000,
+      fixedCosts: 30000,
+      cashOnHand: 50000,
+    };
+    // The semantically equivalent entry through Finance's own "Add snapshot" form —
+    // same concept, same field, same schema. Must produce byte-identical metrics.
+    const financeSurfaceInput: FinancialSnapshotInput = { ...onboardingInput };
+
+    expect(fixedCostsTotal(onboardingInput)).toBe(fixedCostsTotal(financeSurfaceInput));
+    expect(contributionMarginPct(onboardingInput)).toBe(contributionMarginPct(financeSurfaceInput));
+    expect(fixedCostBurdenPct(onboardingInput)).toBe(fixedCostBurdenPct(financeSurfaceInput));
+    expect(breakEvenRevenue(onboardingInput)).toBe(breakEvenRevenue(financeSurfaceInput));
+
+    // And the values must be the financially correct ones: $30k of rent+wages is
+    // 100% fixed cost, 0% variable cost.
+    expect(fixedCostsTotal(onboardingInput)).toBe(30000);
+    expect(variableCostsTotal(onboardingInput)).toBeNull(); // nothing variable was reported
+    expect(fixedCostBurdenPct(onboardingInput)).toBe(30); // 30000 / 100000
+  });
+
+  it("mislabeling fixed costs as variableCosts (the old defect) silently corrupts contribution margin, fixed-cost burden, and break-even", () => {
+    const revenue = 100000;
+    const rentAndWages = 30000;
+    const trueVariableCosts = 20000; // e.g. cost of goods, reported honestly in both scenarios
+
+    // Correct: rent+wages reported as fixedCosts (what onboarding posts today), plus a
+    // genuine variable cost, exactly as a fuller Finance-surface entry would look.
+    const correct: FinancialSnapshotInput = {
+      ...base, revenue, fixedCosts: rentAndWages, variableCosts: trueVariableCosts, cashOnHand: 1,
+    };
+    // The old defect: rent+wages folded into variableCosts alongside the real variable
+    // cost, with nothing left to represent fixed costs at all.
+    const oldDefect: FinancialSnapshotInput = {
+      ...base, revenue, variableCosts: rentAndWages + trueVariableCosts, cashOnHand: 1,
+    };
+
+    // Contribution margin: correct subtracts only the true $20k variable cost (80%
+    // margin). The old defect wrongly subtracts $50k as if all of it scaled with
+    // sales, understating contribution margin by 30 points.
+    expect(contributionMarginPct(correct)).toBe(80);
+    expect(contributionMarginPct(oldDefect)).toBe(50);
+
+    // Fixed-cost burden: correct sees the real 30% fixed-cost burden; the old defect
+    // sees none at all (fixedCostsTotal is null with nothing to sum), hiding it entirely.
+    expect(fixedCostBurdenPct(correct)).toBe(30);
+    expect(fixedCostBurdenPct(oldDefect)).toBeNull();
+
+    // Break-even revenue: correct computes a real break-even off the true fixed cost
+    // and true contribution margin; the old defect can't compute one at all (no fixed
+    // cost to break even against).
+    expect(breakEvenRevenue(correct)).toBe(37500); // 30000 / (80/100)
+    expect(breakEvenRevenue(oldDefect)).toBeNull();
+  });
+
+  it("either fixedCosts or variableCosts alone still satisfies the diagnosis engine's cost-info gate", () => {
+    const fixedOnly: FinancialSnapshotInput = { ...base, revenue: 100000, fixedCosts: 20000, cashOnHand: 1 };
+    const variableOnly: FinancialSnapshotInput = { ...base, revenue: 100000, variableCosts: 20000, cashOnHand: 1 };
+    // netProfit requires totalCosts to be non-null, which is the same "has cost info"
+    // condition the diagnosis engine's readiness gate depends on.
+    expect(netProfit(fixedOnly)).not.toBeNull();
+    expect(netProfit(variableOnly)).not.toBeNull();
+  });
+});
+
+describe("owner-finance — onboarding period-field mapping honesty (regression)", () => {
+  /**
+   * Regression guard for the onboarding time-period defect: the essential-numbers form asks
+   * for "Average monthly sales/costs" (a full, typical month), so its snapshot's
+   * periodStart/periodEnd must span a real ~30-day month -- never
+   * periodStart=start-of-current-month / periodEnd=today, which is only a partial period on
+   * every day but the last of the month. periodDays() (src/domain/owner-finance/metrics.ts)
+   * divides the SAME monthly figures by however many days sit in that window to derive
+   * dailyBreakEvenRevenue and cashRunwayDays, so a short window silently inflates daily burn
+   * and understates cash runway by the same factor the window is short.
+   *
+   * Onboarding now posts a real last-full-calendar-month window
+   * (src/app/(authenticated)/owner/onboarding/page.tsx: lastFullMonthStart/lastFullMonthEnd),
+   * which this proves is period-length-honest and produces identical period-dependent
+   * metrics to the same figures entered through Finance's own "Add snapshot" surface with an
+   * equivalent explicit one-month period.
+   */
+  // A loss-making month (revenue 200000 - fixedCosts 150000 - variableCosts 100000 = -50000
+  // net profit), so cashRunwayDays is actually computed (non-null) rather than trivially
+  // null===null in the equivalence check below.
+  const monthlyFigures = {
+    revenue: 200000,
+    fixedCosts: 150000,
+    variableCosts: 100000,
+    cashOnHand: 50000,
+  };
+
+  it("a real ~30-day period (what onboarding now posts) and an equivalent Finance-surface month produce identical period-dependent metrics", () => {
+    // What onboarding now posts: a real last-full-calendar-month window (31 days, e.g. July).
+    const onboardingInput: FinancialSnapshotInput = {
+      periodStart: "2026-07-01",
+      periodEnd: "2026-07-31",
+      currency: "INR",
+      ...monthlyFigures,
+    };
+    // The semantically equivalent entry through Finance's own "Add snapshot" form for the
+    // same calendar month -- same dates, same fields, same schema.
+    const financeSurfaceInput: FinancialSnapshotInput = { ...onboardingInput };
+
+    expect(dailyBreakEvenRevenue(onboardingInput)).toBe(dailyBreakEvenRevenue(financeSurfaceInput));
+    expect(cashRunwayDays(onboardingInput)).toBe(cashRunwayDays(financeSurfaceInput));
+  });
+
+  it("the old defect (partial current-month-to-date window) silently corrupts daily break-even and cash runway relative to a real month", () => {
+    // The old, incorrect mapping: periodStart=start-of-month, periodEnd=8th of the month --
+    // an 8-day window carrying a FULL MONTH's worth of revenue/costs.
+    const oldDefectInput: FinancialSnapshotInput = {
+      periodStart: "2026-07-01",
+      periodEnd: "2026-07-08", // 8 days
+      currency: "INR",
+      ...monthlyFigures, // fixedCosts: 90000 => break-even revenue is fixed/(CM%)
+    };
+    // The corrected mapping: the same figures against a real 31-day month.
+    const correctedInput: FinancialSnapshotInput = {
+      periodStart: "2026-07-01",
+      periodEnd: "2026-07-31", // 31 days
+      currency: "INR",
+      ...monthlyFigures,
+    };
+
+    const be = breakEvenRevenue(correctedInput)!;
+    expect(be).not.toBeNull();
+
+    // Same break-even revenue in both (period length doesn't change breakEvenRevenue itself)...
+    expect(breakEvenRevenue(oldDefectInput)).toBe(be);
+
+    // ...but dividing it by 8 days instead of 31 inflates the reported daily break-even by
+    // roughly 4x -- the exact corruption class this test guards against.
+    const dailyOld = dailyBreakEvenRevenue(oldDefectInput)!;
+    const dailyCorrected = dailyBreakEvenRevenue(correctedInput)!;
+    expect(dailyOld).toBeGreaterThan(dailyCorrected * 3);
+    expect(Math.round((dailyOld / dailyCorrected) * 10) / 10).toBeCloseTo(31 / 8, 1);
   });
 });

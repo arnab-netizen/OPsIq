@@ -71,6 +71,7 @@ import { deriveBusinessConditionSignals, type DerivedBusinessConditionSignals } 
 import { analyzeBusinessTrend, type TrendAlert, type BusinessMetricName, type MetricDataPoint } from "@/domain/owner-mode/business-state-timeline";
 import { checkDoNotRepeatForGuidance, type DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
+import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -81,7 +82,7 @@ const PROOF_OVERDUE_AGE_MS = 48 * 60 * 60 * 1000;
 const RUNWAY_BY_STATE: Record<string, number> = { SAFE: 120, WATCH: 45, AT_RISK: 18, CRITICAL: 7, INSOLVENT_RISK: 2 };
 const MARGIN_BY_STATE: Record<string, number> = { SAFE: 20, WATCH: 10, AT_RISK: 3, CRITICAL: -2, INSOLVENT_RISK: -10 };
 
-interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number }
+interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date }
 interface EmployeeRow { overburdened: boolean; utilizationPct: number }
 interface OwnerRow { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number }
 interface CapacityRow { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number }
@@ -790,7 +791,7 @@ export async function assembleGuidanceContext(
   workspaceId: string,
   businessId: string | null,
   deps: GuidanceDeps
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null }> {
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null }> {
   const scope = businessId ? { workspaceId, businessId } : { workspaceId };
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
@@ -799,13 +800,20 @@ export async function assembleGuidanceContext(
 
   const CLOSED_STAGES = ["CLOSED_WON", "CLOSED_LOST"];
   const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
-    deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true } }),
-    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true } }),
+    deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true } }),
+    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true, createdAt: true } }),
+    // ownerEmployeeWorkloadSnapshot has no businessId column (it's employee-scoped, genuinely
+    // workspace-wide) — workspaceId-only is correct here. ownerWorkloadSnapshot,
+    // ownerCapacitySnapshot, and ownerSupplierInventorySnapshot DO each have a businessId column
+    // and must use `scope` like ownerCashflowCycle/ownerFinanceCycle/ownerMetricSnapshot above —
+    // without it, in a multi-business workspace this business inherits whichever OTHER business
+    // most recently wrote a workload/capacity/supplier snapshot, presenting that business's real
+    // problem (or lack of one) as this business's own.
     deps.db.ownerEmployeeWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overburdened: true, utilizationPct: true } }),
-    deps.db.ownerWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }),
-    deps.db.ownerCapacitySnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }),
+    deps.db.ownerWorkloadSnapshot.findFirst({ where: scope, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }),
+    deps.db.ownerCapacitySnapshot.findFirst({ where: scope, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }),
     deps.db.ownerMetricSnapshot.findFirst({ where: scope, orderBy: periodOrder, select: { complaintCount: true, rewashCount: true, refundAmount: true, newCustomers: true, repeatCustomers: true, revenue: true, discountAmount: true, b2bRevenue: true } }),
-    deps.db.ownerSupplierInventorySnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { worstStockoutRisk: true, riskScore: true, supplyCutoffRisk: true, belowReorderCount: true } }),
+    deps.db.ownerSupplierInventorySnapshot.findFirst({ where: scope, orderBy: order, select: { worstStockoutRisk: true, riskScore: true, supplyCutoffRisk: true, belowReorderCount: true } }),
     businessId
       ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, id: businessId }, select: { businessType: true } })
       : deps.db.ownerBusiness.findFirst({ where: { workspaceId, isActive: true }, orderBy: order, select: { businessType: true } }),
@@ -844,9 +852,27 @@ export async function assembleGuidanceContext(
   const ag = archetypeGuidance(business?.businessType);
   const cashState = cash?.cashflowState;
   const finState = fin?.survivalState;
-  const cashSafe = !!cashState && !!finState && SAFE_STATES.has(cashState) && SAFE_STATES.has(finState);
+  // Cash-survival-triage and finance diagnosis are two separate signals for the same business
+  // that can go stale relative to each other (an owner can re-run one without the other). A real
+  // human usability test reproduced the exact failure this closes: an older AT_RISK cash reading
+  // presented as current truth alongside a newer SAFE finance diagnosis for the same business.
+  // See src/domain/owner-guidance/cash-finance-conflict.ts for the full arbitration rule.
+  const cashFinanceResolution = resolveCashFinanceSignal(
+    { state: (cashState as SurvivalLikeState | undefined) ?? null, generatedAt: cash?.createdAt ?? null },
+    { state: (finState as SurvivalLikeState | undefined) ?? null, generatedAt: fin?.createdAt ?? null }
+  );
+  // Growth/high-impact gating stays conservative exactly as before when either signal is
+  // entirely missing (fail closed on missing critical data, tracked separately below via
+  // missingCriticalData) — the conflict resolution only changes behavior for the specific bug
+  // being fixed: both signals present AND disagreeing.
+  const cashSafe = !!cashState && !!finState && cashFinanceResolution.safe;
   const staffOverloaded = emp?.overburdened === true;
   const ownerOverloaded = own?.overloaded === true || own?.bottleneckRisk === true;
+  // Deliberately conservative, matching cashSafe above: no capacity snapshot means growth
+  // capacity has never been assessed, so growthReadinessTier stays "STABILIZE_FIRST" rather than
+  // asserting readiness on no evidence. This does not raise a capacity "issue" for missing data —
+  // the issue push below (`cap && ...`) is separately gated on `cap` existing — it only keeps the
+  // growth-readiness gate itself fail-closed on unmeasured capacity, same as unmeasured cash.
   const capacityGrowthSafe = cap?.growthSafe === true;
   const supplierRiskScore = supplier?.riskScore ?? 0;
   const supplierRiskHigh = supplierRiskScore >= 0.5;
@@ -855,11 +881,15 @@ export async function assembleGuidanceContext(
   const rework = Math.round(metric?.rewashCount ?? 0);
   const newC = metric?.newCustomers ?? 0;
   const repeatC = metric?.repeatCustomers ?? 0;
-  const metricChurnRate = newC + repeatC > 0 ? Math.max(0, 1 - repeatC / (newC + repeatC)) : 0;
-  // Prefer DB-persisted cohort churn (scaled to 0–1 risk score) over the metric snapshot ratio.
-  const cohortAvgChurn = latestCohorts[0]?.avgMonthlyChurn ?? null;
-  const churnRiskScore = cohortAvgChurn !== null ? Math.min(1, cohortAvgChurn * 5) : metricChurnRate;
-  const retentionRiskHigh = churnRiskScore >= 0.5;
+  const hasCustomerEvidence = newC + repeatC > 0;
+  const metricChurnRate = hasCustomerEvidence ? Math.max(0, 1 - repeatC / (newC + repeatC)) : null;
+  // RetentionCohort is a workspace-level aggregate (no businessId column) — it must never stand
+  // in for this business's retention when this business itself has no measured customer activity
+  // yet (UNKNOWN != BAD). Without that guard, a business with zero customers inherits another
+  // business's cohort churn rate and gets a false "customers aren't coming back" signal.
+  const cohortAvgChurn = hasCustomerEvidence ? (latestCohorts[0]?.avgMonthlyChurn ?? null) : null;
+  const churnRiskScore = cohortAvgChurn !== null ? Math.min(1, cohortAvgChurn * 5) : (metricChurnRate ?? 0);
+  const retentionRiskHigh = hasCustomerEvidence && churnRiskScore >= 0.5;
   const growthGatePassed = cashSafe && capacityGrowthSafe && !supplierRiskHigh && !retentionRiskHigh;
   const outcomeChecksDue = outcomeOpen + reassessOpen;
 
@@ -876,7 +906,32 @@ export async function assembleGuidanceContext(
   if (!supplier) missingCriticalData.push("supplier reliability + stock levels");
 
   const issues: BusinessIssue[] = [];
-  if (!cashSafe && (cashState || finState)) {
+  if (cashState && finState) {
+    // Both signals present — use the freshness/conflict-aware resolution so a stale reading is
+    // never presented as unqualified current truth (see cash-finance-conflict.ts). A newer SAFE
+    // reading that supersedes an older unsafe one means NO issue is pushed here at all — that is
+    // the fix for "Home must not present the stale action as current truth."
+    if (cashFinanceResolution.conflicting) {
+      issues.push({
+        id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+        severity: cashSeverity(cashState) === "CRITICAL" || cashSeverity(finState) === "CRITICAL" ? "CRITICAL" : "HIGH",
+        headline: `We have conflicting information about cash health for this business: the latest cash check says ${cashState}, the latest finance diagnosis says ${finState}, and neither can be shown to be more current. Review both before acting on either.`,
+        requiresOwnerAction: true,
+      });
+    } else if (!cashFinanceResolution.safe) {
+      const effectiveState = cashFinanceResolution.effectiveState as string;
+      const sev = cashSeverity(effectiveState);
+      const supersedeNote = cashFinanceResolution.supersededSource
+        ? ` An earlier ${cashFinanceResolution.supersededSource === "cash" ? "cash check" : "finance diagnosis"} showed ${cashFinanceResolution.supersededState}; that reading is now out of date.`
+        : "";
+      issues.push({
+        id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+        severity: sev, headline: `Cash survival is ${effectiveState}.${supersedeNote}`,
+        requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
+      });
+    }
+  } else if (!cashSafe && (cashState || finState)) {
+    // Exactly one of the two signals exists — unchanged from prior behavior.
     const sev = cashSeverity(cashState && !SAFE_STATES.has(cashState) ? cashState : finState);
     issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
       severity: sev, headline: `Cash survival is ${cashState ?? "unknown"} / finance ${finState ?? "unknown"}`,
@@ -961,6 +1016,14 @@ export async function assembleGuidanceContext(
       b2bRevenue: metric?.b2bRevenue ?? null, newCustomers: metric?.newCustomers ?? null,
       repeatCustomers: metric?.repeatCustomers ?? null,
     },
+    // The arbitrated cash/finance reading (see resolveCashFinanceSignal above) — callers that
+    // build an owner-facing cash-risk signal from a state must use THIS, never raw.cashState
+    // directly. Using the raw, un-arbitrated cashflow-cycle state is exactly the bug a real human
+    // usability test reproduced: Home presented a superseded AT_RISK/INSOLVENT_RISK cash reading
+    // as the top priority while the newer finance diagnosis was SAFE, because the arbitration
+    // result was computed here but never threaded through to the cash/profit-protection signal
+    // builder downstream in getOwnerNowView.
+    cashFinanceEffectiveState: cashFinanceResolution.effectiveState,
     avgActiveMargin,
     pipelineSummary,
   };
@@ -1051,6 +1114,9 @@ async function buildExecutionLifecycle(
     const tasks = await (db as any).processExecutionTask.findMany({
       where: {
         workspaceId,
+        // Excludes acceptance/QA fixture tasks (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — Home
+        // must never surface a QA blueprint's task to a real owner.
+        isFixtureRecord: false,
         OR: [
           { status: { in: ["PROPOSED", "ACKNOWLEDGED", "IN_PROGRESS", "BLOCKED", "NEEDS_DATA", "COMPLETED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED"] } },
           { status: "OUTCOME_VERIFIED", updatedAt: { gte: cutoff } },
@@ -1146,20 +1212,32 @@ export async function queryExecutionLifecycle(
 
 async function buildBusinessOperatingSystem(
   workspaceId: string,
+  businessId: string | null,
   db: GuidanceDeps["db"],
 ): Promise<BusinessOperatingSystemView | null> {
   try {
     const dbAny = db as any;
     const now = Date.now();
 
-    // 1. Active business objectives with blocking dependencies and child counts
+    // 1. Active business objectives with blocking dependencies and child counts.
+    //
+    // Scoped to the selected active business: businessId=null on a BusinessObjective row is an
+    // EXPLICIT workspace/portfolio-level objective (see prisma/schema.prisma), not "unset" or a
+    // wildcard match, so this must never fall back to a workspace-wide query. A business-specific
+    // Home/Priorities view (businessId provided) shows only that business's own objectives — an
+    // objective belonging to a different business in the same workspace must never appear here.
+    // A zero-active-business view (businessId === null) shows only explicit workspace-level
+    // objectives, never any business's own objectives folded in.
+    const objectiveScope = { workspaceId, businessId, status: "ACTIVE", isFixtureRecord: false };
     const rawObjectives: Array<{
       id: string; title: string; objectiveType: string; status: string;
       priorityScore: number; targetValue: number | null; currentValue: number | null;
       deadline: Date | null; linkedGoalId: string | null; parentId: string | null;
       blockedBy: { id: string }[]; _count: { children: number };
     }> = await dbAny.businessObjective.findMany({
-      where: { workspaceId, status: "ACTIVE" },
+      // isFixtureRecord: false — Home must never surface a QA blueprint's objective as a real
+      // owner's goal. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+      where: objectiveScope,
       include: { blockedBy: { select: { id: true } }, _count: { select: { children: true } } },
     });
 
@@ -1173,7 +1251,9 @@ async function buildBusinessOperatingSystem(
     let totalAllocated = 0;
     if (poolIds.length > 0) {
       const aggResult = await dbAny.resourceAllocation.aggregate({
-        where: { workspaceId, poolId: { in: poolIds }, status: "ALLOCATED" },
+        // isFixtureRecord: false — a QA blueprint's allocation must never skew a real owner's
+        // resource-utilization percentage. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+        where: { workspaceId, poolId: { in: poolIds }, status: "ALLOCATED", isFixtureRecord: false },
         _sum: { allocationAmount: true },
       });
       totalAllocated = Number(aggResult._sum?.allocationAmount ?? 0);
@@ -1185,7 +1265,9 @@ async function buildBusinessOperatingSystem(
     // 3. Top risks by severity (active risks: IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED)
     const topRisks: Array<{ id: string; title: string; severity: number; status: string; category: string }> =
       await dbAny.businessRiskEntry.findMany({
-        where: { workspaceId, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING", "ACCEPTED"] } },
+        // isFixtureRecord: false — Home must never surface a QA blueprint's risk as a real
+        // owner's top risk. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+        where: { workspaceId, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING", "ACCEPTED"] }, isFixtureRecord: false },
         orderBy: { severity: "desc" },
         take: 3,
         select: { id: true, title: true, severity: true, status: true, category: true },
@@ -1221,17 +1303,19 @@ async function buildBusinessOperatingSystem(
       id: string; title: string; constraintType: string; bindingScore: number;
       status: string; remediationAction: string | null;
     }> = await dbAny.constraintResolutionRecord.findMany({
-      where: { workspaceId, status: "ACTIVE" },
+      // isFixtureRecord: false — Home must never surface a QA blueprint's constraint as a real
+      // owner's active constraint. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+      where: { workspaceId, status: "ACTIVE", isFixtureRecord: false },
       orderBy: { bindingScore: "desc" },
       take: 5,
       select: { id: true, title: true, constraintType: true, bindingScore: true, status: true, remediationAction: true },
     }).catch(() => [] as typeof activeConstraintRows);
     const activeConstraintCount: number = await dbAny.constraintResolutionRecord.count({
-      where: { workspaceId, status: "ACTIVE" },
+      where: { workspaceId, status: "ACTIVE", isFixtureRecord: false },
     }).catch(() => 0);
 
-    // 6. KPI ownership count
-    const kpiCount: number = await dbAny.kPIOwnershipRecord.count({ where: { workspaceId } });
+    // 6. KPI ownership count — isFixtureRecord: false excludes acceptance/QA fixture KPIs.
+    const kpiCount: number = await dbAny.kPIOwnershipRecord.count({ where: { workspaceId, isFixtureRecord: false } });
 
     // 7. Cost attribution coverage (% of spend entries linked to an objective)
     const [totalSpend, linkedSpend] = await Promise.all([
@@ -1249,9 +1333,12 @@ async function buildBusinessOperatingSystem(
       const daysRemaining = obj.deadline
         ? Math.round((obj.deadline.getTime() - now) / 86_400_000)
         : null;
+      // null (not 0) when no target is set or progress has never been measured — a never-measured
+      // objective is not evidence it's 0% done (UNKNOWN != BAD). scoreObjectiveHealth treats null
+      // as "no progress penalty applies," not as a bad score.
       const progressPct = obj.targetValue && obj.currentValue !== null
         ? Math.min(100, Math.round(((obj.currentValue ?? 0) / obj.targetValue) * 100))
-        : 0;
+        : null;
       return {
         objectiveId: obj.id,
         parentId: obj.parentId,
@@ -1356,7 +1443,7 @@ export async function getOwnerNowView(
       .catch(() => {});
   }
   const deps = injected ?? (await resolveDefaultDeps());
-  const { ctx, state, ag, raw, avgActiveMargin, pipelineSummary } = await assembleGuidanceContext(workspaceId, businessId, deps);
+  const { ctx, state, ag, raw, cashFinanceEffectiveState, avgActiveMargin, pipelineSummary } = await assembleGuidanceContext(workspaceId, businessId, deps);
 
   // Owner Workload Budget signals — concrete owner-decision surfaces (workspace-scoped).
   // opportunityApprovalsPending has no persisted queue yet (decisions are computed on demand),
@@ -1800,7 +1887,12 @@ export async function getOwnerNowView(
         // risk qualitatively from the categorical state (metricValue stays null — no false precision).
         cashRunwayDays: null,
         netMarginPct: null,
-        cashRunwayState: (raw.cashState ?? null) as CashRiskState | null,
+        // Arbitrated (see resolveCashFinanceSignal / cashFinanceEffectiveState above), never
+        // raw.cashState directly -- using the raw, un-arbitrated cashflow-cycle reading here was
+        // the exact bug a real human usability test reproduced: Home presented a superseded
+        // AT_RISK/INSOLVENT_RISK cash reading as the top priority action while the newer finance
+        // diagnosis was SAFE.
+        cashRunwayState: cashFinanceEffectiveState as CashRiskState | null,
         netMarginState: (raw.finState ?? null) as CashRiskState | null,
         lowMarginJobCount: 0,
         pricingLeakCount: 0,
@@ -1834,7 +1926,7 @@ export async function getOwnerNowView(
   );
   const processExecution: ProcessExecutionBridgeAnalysis | null =
     (processCorrections || cashProfitProtection || bridgeExpansion.routes.length > 0)
-      ? buildProcessExecutionBridge(processCorrections, cashProfitProtection, workspaceId, new Date(deps.now()).toISOString(), bridgeExpansion)
+      ? buildProcessExecutionBridge(processCorrections, cashProfitProtection, workspaceId, new Date(deps.now()).toISOString(), bridgeExpansion, businessId)
       : null;
   // Reflect persisted task state so the cockpit shows the REAL status (PROPOSED/IN_PROGRESS/APPROVED/COMPLETED/…)
   // and the interactive controls only offer valid transitions. Best-effort read: if the table is unavailable,
@@ -2176,7 +2268,7 @@ export async function getOwnerNowView(
       ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
       : Promise.resolve(null),
     buildExecutionLifecycle(workspaceId, deps.db),
-    buildBusinessOperatingSystem(workspaceId, deps.db),
+    buildBusinessOperatingSystem(workspaceId, businessId, deps.db),
   ]);
 
   await deps.db.ownerGuidanceSnapshot.create({

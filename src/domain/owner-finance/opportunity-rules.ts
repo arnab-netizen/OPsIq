@@ -252,7 +252,7 @@ export function buildFinanceOpportunityFindings(
         confidence: 1,
         impactScore: clampScore(100 - m.dataConfidenceScore),
         urgencyScore: 20,
-        evidence: [`dataConfidenceScore = ${m.dataConfidenceScore} < 100`, evidenceLine],
+        evidence: [`data confidence score is ${m.dataConfidenceScore} out of 100`, evidenceLine],
         missingData: allMissingOrdered, // priority-ordered field keys for recommendation builder
         verificationMetric: "dataConfidenceScore",
       })

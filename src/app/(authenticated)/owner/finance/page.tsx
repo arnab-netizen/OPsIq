@@ -4,30 +4,58 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { FindingCard } from "@/components/owner/FindingCard";
+import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
+import { useActiveBusiness } from "@/context/active-business-context";
+import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { formatHumanDate } from "@/lib/format-human-date";
+import { Disclosure } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  low: "muted",
-  medium: "default",
-  high: "warning",
-  critical: "destructive",
-};
-
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  unverified: "muted",
+const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
+  unverified: "muted-accessible",
   verified_improved: "success",
   verified_not_improved: "destructive",
   inconclusive: "warning",
   disputed: "warning",
 };
+const VERIFY_LABEL: Record<string, string> = {
+  unverified: "Not yet verified",
+  verified_improved: "Verified — improved",
+  verified_not_improved: "Verified — no improvement",
+  inconclusive: "Inconclusive",
+  disputed: "Disputed",
+};
 
-const SURVIVAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+const SURVIVAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
   SAFE: "success",
   WATCH: "default",
   AT_RISK: "warning",
   CRITICAL: "destructive",
   INSOLVENT_RISK: "destructive",
+};
+
+// The survival-state badge previously rendered the raw enum token verbatim (e.g. "AT_RISK",
+// "INSOLVENT_RISK" with the underscore intact) -- every other owner-facing survival-state badge
+// in the app (MinimumOwnerCockpit's SURVIVAL_LABEL) already goes through a plain-language map;
+// this page just never had one.
+const SURVIVAL_LABEL: Record<string, string> = {
+  SAFE: "Safe",
+  WATCH: "Watch",
+  AT_RISK: "At risk",
+  CRITICAL: "Critical",
+  INSOLVENT_RISK: "Insolvency risk",
+};
+
+// Same raw-token leak as SURVIVAL_LABEL above, on the finance action status badge
+// ("in_progress" rendered with its underscore intact).
+const ACTION_STATUS_LABEL: Record<string, string> = {
+  proposed: "Proposed",
+  assigned: "Assigned",
+  in_progress: "In progress",
+  completed: "Completed",
+  blocked: "Blocked",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -40,38 +68,67 @@ async function api(path: string, init?: RequestInit) {
   return data;
 }
 
-// Field names match financialSnapshotCreateSchema (Slice 6).
-const FINANCE_FIELDS: Array<{ name: string; label: string }> = [
-  { name: "revenue", label: "Revenue" },
-  { name: "b2cRevenue", label: "B2C revenue" },
-  { name: "b2bRevenue", label: "B2B revenue" },
-  { name: "costOfGoodsOrServices", label: "Cost of goods/services" },
-  { name: "fixedCosts", label: "Fixed costs" },
-  { name: "variableCosts", label: "Variable costs" },
-  { name: "rent", label: "Rent" },
-  { name: "salaryPayroll", label: "Salary / payroll" },
-  { name: "utilities", label: "Utilities" },
-  { name: "deliveryFulfilmentCost", label: "Delivery / fulfilment" },
-  { name: "marketingSpend", label: "Marketing spend" },
-  { name: "discountAmount", label: "Discount amount" },
-  { name: "refundAmount", label: "Refund amount" },
-  { name: "reworkCost", label: "Rework cost" },
-  { name: "complaintCost", label: "Complaint cost" },
-  { name: "loanEmiDebtPayments", label: "Loan / EMI payments" },
-  { name: "totalDebtOutstanding", label: "Total debt outstanding" },
-  { name: "cashOnHand", label: "Cash on hand" },
-  { name: "receivables", label: "Receivables" },
-  { name: "receivablesOverdue", label: "Receivables overdue" },
-  { name: "payables", label: "Payables" },
-  { name: "payablesOverdue", label: "Payables overdue" },
-  { name: "ownerWithdrawals", label: "Owner withdrawals" },
-  { name: "inventoryStockCashLock", label: "Inventory cash lock" },
-  { name: "orderCount", label: "Order count" },
-  { name: "customerCount", label: "Customer count" },
-  { name: "repeatCustomerCount", label: "Repeat customers" },
+// Field names match financialSnapshotCreateSchema (Slice 6). `hint` is the plain-language
+// explanation shown under each field (accounting term + short meaning + example, or what to
+// enter if it doesn't apply) — a real usability test found the flat, unexplained ~27-field form
+// unusable for an owner without an accounting background. Grouping these into progressive tiers
+// (below) changes ONLY what's visible/expanded by default; every field name here still maps
+// 1:1 to addSnapshot()'s FormData read, so the save payload is byte-for-byte unchanged.
+const FINANCE_FIELDS: Array<{ name: string; label: string; hint: string }> = [
+  { name: "revenue", label: "Revenue", hint: "Total sales in a typical month, before costs. Example: 15000." },
+  { name: "b2cRevenue", label: "B2C revenue", hint: "Sales directly to individual customers, if you track it separately. Leave blank if you don't split this out." },
+  { name: "b2bRevenue", label: "B2B revenue", hint: "Sales to other businesses, if you track it separately. Leave blank if you don't split this out." },
+  { name: "costOfGoodsOrServices", label: "Cost of goods/services", hint: "What it directly cost you to make or deliver what you sold (materials, direct labor) — accountants call this COGS." },
+  { name: "fixedCosts", label: "Fixed costs", hint: "Rent, wages, and other costs that stay the same whether sales go up or down. Example: 7000." },
+  { name: "variableCosts", label: "Variable costs", hint: "Costs that rise and fall with how much you sell, like materials or delivery. Example: 3000." },
+  { name: "rent", label: "Rent", hint: "Rent for your business space, if any. Leave blank if you don't rent a space." },
+  { name: "salaryPayroll", label: "Salary / payroll", hint: "Wages and salaries paid to staff, not including money you took for yourself." },
+  { name: "utilities", label: "Utilities", hint: "Electricity, water, internet, and similar recurring bills." },
+  { name: "deliveryFulfilmentCost", label: "Delivery / fulfilment", hint: "Shipping, courier, or delivery costs. Leave blank if you don't deliver." },
+  { name: "marketingSpend", label: "Marketing spend", hint: "Advertising and promotion spend. Leave blank if you didn't spend on this." },
+  { name: "discountAmount", label: "Discount amount", hint: "Discounts you gave customers this period." },
+  { name: "refundAmount", label: "Refund amount", hint: "Refunds you paid out this period." },
+  { name: "reworkCost", label: "Rework cost", hint: "Cost of redoing work that didn't meet quality the first time. Leave blank if this doesn't apply." },
+  { name: "complaintCost", label: "Complaint cost", hint: "Cost of resolving customer complaints beyond a refund (e.g. replacement, goodwill). Leave blank if none." },
+  { name: "loanEmiDebtPayments", label: "Loan / EMI payments", hint: "Loan or EMI payments you made this period. Leave blank if you have no loans." },
+  { name: "totalDebtOutstanding", label: "Total debt outstanding", hint: "The total amount you still owe across all loans right now." },
+  { name: "cashOnHand", label: "Cash on hand", hint: "Cash and bank balance you could use today. Example: 20000." },
+  { name: "receivables", label: "Receivables", hint: "Money customers owe you that isn't overdue yet — accountants call this accounts receivable." },
+  { name: "receivablesOverdue", label: "Receivables overdue", hint: "Of the money customers owe you, how much is now overdue." },
+  { name: "payables", label: "Payables", hint: "Money you owe suppliers that isn't overdue yet — accountants call this accounts payable." },
+  { name: "payablesOverdue", label: "Payables overdue", hint: "Of the money you owe suppliers, how much is now overdue." },
+  { name: "ownerWithdrawals", label: "Owner withdrawals", hint: "Money you personally took out of the business this period (not a salary)." },
+  { name: "inventoryStockCashLock", label: "Inventory cash lock", hint: "Cash tied up in unsold stock right now. Leave blank if you don't hold stock." },
+  { name: "orderCount", label: "Order count", hint: "Number of orders or jobs completed in this period." },
+  { name: "customerCount", label: "Customer count", hint: "Number of different customers you served in this period." },
+  { name: "repeatCustomerCount", label: "Repeat customers", hint: "Of those customers, how many had bought from you before." },
 ];
 
+function financeField(name: string) {
+  const f = FINANCE_FIELDS.find((x) => x.name === name);
+  if (!f) throw new Error(`Unknown finance field: ${name}`);
+  return f;
+}
+
+// Progressive disclosure tiers — see the FINANCE_FIELDS comment above for why this never changes
+// what gets submitted, only what's visible/expanded by default. Every FINANCE_FIELDS name appears
+// in exactly one tier below.
+const QUICK_FIELD_NAMES = ["revenue", "fixedCosts", "variableCosts", "cashOnHand"];
+
+const IMPROVE_GROUPS: Array<{ title: string; fieldNames: string[] }> = [
+  { title: "Sales detail", fieldNames: ["b2cRevenue", "b2bRevenue", "orderCount", "customerCount", "repeatCustomerCount"] },
+  { title: "Regular costs", fieldNames: ["costOfGoodsOrServices", "rent", "salaryPayroll", "utilities", "deliveryFulfilmentCost", "marketingSpend"] },
+  { title: "Customer money owed", fieldNames: ["receivables", "receivablesOverdue"] },
+  { title: "Supplier money owed", fieldNames: ["payables", "payablesOverdue"] },
+  { title: "Loans", fieldNames: ["loanEmiDebtPayments", "totalDebtOutstanding"] },
+  { title: "Stock", fieldNames: ["inventoryStockCashLock"] },
+  { title: "Discounts & refunds", fieldNames: ["discountAmount", "refundAmount"] },
+];
+
+const ADVANCED_FIELD_NAMES = ["reworkCost", "complaintCost", "ownerWithdrawals"];
+
 export default function OwnerFinancePage() {
+  const { activeBusinessId, needsBusinessRecovery, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,16 +145,30 @@ export default function OwnerFinancePage() {
       const data = await api(`/api/owner/finance/dashboard${qs}`);
       setDashboard(data);
       setSelected(data.selectedBusinessId);
+      // Keep the shared active-business context in sync with whichever business this page
+      // actually resolved to (e.g. the server's own first-run default), so the OTHER owner
+      // pages the human tester found diverging (Customers, Operations, ...) land on the same
+      // business rather than each independently re-deriving their own default.
+      if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setActiveBusinessId]);
 
+  // Wait for the shared context to resolve first so this page's initial fetch already carries
+  // the owner's actual active business instead of fetching once with no businessId (letting the
+  // server pick businesses[0]) and then re-fetching a moment later.
   useEffect(() => {
-    load();
-  }, [load]);
+    if (contextLoading) return;
+    // A pending business-recovery choice (see ActiveBusinessContext) must never be silently
+    // resolved by letting the server pick its own default businessId — that would repeat the
+    // exact bug this context exists to prevent. Wait for the owner to explicitly choose.
+    if (needsBusinessRecovery) return;
+    void load(activeBusinessId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner explicitly switches business, not on every `load` identity change
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
 
   async function createBusiness(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -118,6 +189,8 @@ export default function OwnerFinancePage() {
         }),
       });
       setShowBusinessForm(false);
+      setActiveBusinessId(created.id);
+      await refreshBusinesses();
       await load(created.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create business");
@@ -234,7 +307,7 @@ export default function OwnerFinancePage() {
     <div className="mx-auto max-w-5xl py-8 px-4">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Finance</h1>
+          <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Money</h1>
           <p className="text-muted-foreground text-sm">
             Diagnose money, find leaks, and act on the single highest-impact financial move — with verification.
           </p>
@@ -274,11 +347,11 @@ export default function OwnerFinancePage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 flex items-end gap-3">
+          <div className="mb-6 flex flex-wrap items-end gap-3">
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
-              onChange={(businessId) => load(businessId)}
+              onChange={(businessId) => setActiveBusinessId(businessId)}
             />
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add financial snapshot
@@ -307,24 +380,61 @@ export default function OwnerFinancePage() {
                   ]}
                 />
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                {FINANCE_FIELDS.map((f) => (
-                  <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />
-                ))}
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Quick financial picture</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  These four numbers are enough for a first read. Estimates are fine — you can
+                  refine them later.
+                </p>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {QUICK_FIELD_NAMES.map((name) => {
+                    const f = financeField(name);
+                    return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
+                  })}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Leave fields blank if unknown — missing data is reported, never invented.
-              </p>
+
+              <Disclosure summary="Improve the analysis (optional)">
+                <p className="mb-3">
+                  Adding these makes OpsIQ&rsquo;s read of your business more accurate. Leave
+                  anything blank that doesn&rsquo;t apply — missing data is reported, never
+                  invented.
+                </p>
+                <div className="flex flex-col gap-4">
+                  {IMPROVE_GROUPS.map((group) => (
+                    <div key={group.title}>
+                      <p className="text-sm font-medium text-foreground">{group.title}</p>
+                      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {group.fieldNames.map((name) => {
+                          const f = financeField(name);
+                          return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Disclosure>
+
+              <Disclosure summary="Advanced detail (optional)">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {ADVANCED_FIELD_NAMES.map((name) => {
+                    const f = financeField(name);
+                    return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
+                  })}
+                </div>
+              </Disclosure>
+
               <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save snapshot"}</Button>
             </form>
           )}
 
           {!dashboard?.hasData ? (
-            <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard?.latestSnapshot
-                ? "Snapshot recorded. Click “Run finance diagnosis” to generate findings and an action plan."
-                : "No financial snapshot yet. Add a snapshot, then run a finance diagnosis."}
-            </div>
+            <DiagnosisEmptyState
+              domainLabel="financial"
+              hasSnapshot={Boolean(dashboard?.latestSnapshot)}
+              snapshotLabel="financial snapshot"
+              diagnosisLabel="Run finance diagnosis"
+            />
           ) : (
             <FinanceCycleView
               cycle={cycle}
@@ -363,22 +473,33 @@ function FinanceCycleView({
   onVerifyAction: (a: any) => void;
 }) {
   return (
-    <div className="space-y-6">
-      <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
-        <div>
-          <div className="text-xs uppercase text-muted-foreground">Latest diagnosis · cycle #{cycle.sequenceNumber}</div>
-          <div className="text-lg font-semibold tabular-nums">
-            Health {Math.round(score?.healthScore ?? cycle.overallHealthScore)}/100 · Risk {Math.round(score?.riskScore ?? cycle.survivalRiskScore)}/100 · Opportunity {Math.round(score?.opportunityScore ?? cycle.growthOpportunityScore)}/100
-          </div>
-        </div>
-        <div className="text-right">
-          <Badge variant={SURVIVAL_VARIANT[score?.survivalState ?? cycle.survivalState] || "muted"}>
-            {score?.survivalState ?? cycle.survivalState}
+    <div className="flex flex-col gap-5">
+      <div className="border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
+        <div className="flex flex-wrap items-baseline gap-2.5">
+          <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>
+            Financial position · cycle #{cycle.sequenceNumber}
+          </span>
+          <Badge variant={SURVIVAL_VARIANT[score?.survivalState ?? cycle.survivalState] || "muted-accessible"}>
+            {SURVIVAL_LABEL[score?.survivalState ?? cycle.survivalState] ?? (score?.survivalState ?? cycle.survivalState)}
           </Badge>
-          <div className="text-xs text-muted-foreground mt-1">
-            data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
-          </div>
         </div>
+        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
+          {[
+            ["Health", score?.healthScore ?? cycle.overallHealthScore],
+            ["Risk", score?.riskScore ?? cycle.survivalRiskScore],
+            ["Opportunity", score?.opportunityScore ?? cycle.growthOpportunityScore],
+          ].map(([label, value]) => (
+            <div key={label as string}>
+              <div className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-tight text-foreground">
+                {Math.round(value as number)}<span className="text-base font-normal text-muted-foreground">/100</span>
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100 — how much of this reading rests on real, supplied numbers.
+        </p>
       </div>
 
       {(score?.dataConfidenceScore ?? cycle.dataConfidenceScore) < 30 && (
@@ -394,9 +515,9 @@ function FinanceCycleView({
       )}
 
       {recommended && (
-        <div className="border rounded-lg p-4 bg-card">
-          <div className="text-xs uppercase text-muted-foreground">Recommended next financial action</div>
-          <div className="font-semibold">{recommended.title}</div>
+        <div className="border-t border-border pt-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Recommended next financial action</div>
+          <div className="mt-1 font-display text-[1.1rem] font-semibold text-foreground">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
           {recommended.evidenceRationale && (
             <p className="text-xs text-muted-foreground italic">Why: {recommended.evidenceRationale}</p>
@@ -405,46 +526,38 @@ function FinanceCycleView({
             <p className="text-xs text-muted-foreground">Based on: {recommended.evidence.join(" · ")}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {recommended.verificationMetric}
+            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
           </p>
         </div>
       )}
 
-      <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Findings ({cycle.findings.length})</h2>
+      {/*
+        Findings — the signature "what OpsIQ found" experience, now the shared FindingCard
+        component (src/components/owner/FindingCard.tsx) instead of one-off JSX -- Operations
+        renders the exact same card for its own findings, since OwnerOperationsFinding has the
+        identical shape. "What changed" / "why this action" / "other options" from the full
+        8-section spec are not shown per finding: this cycle-level view has no per-finding
+        change-history or alternative-action data to draw on honestly (cycle #1 has no prior cycle
+        to diff against here, and actions aren't linked back to the finding that raised them) --
+        real limitations, not a design choice, so nothing is invented to fill those sections.
+      */}
+      <section className="border-t border-border pt-4">
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-4">Findings ({cycle.findings.length})</h2>
         {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No findings generated — this may indicate missing input data rather than a healthy business. Check data confidence above.</p>}
-        <div className="space-y-3">
+        <div className="flex flex-col gap-6">
           {cycle.findings.map((f: any) => (
-            <div key={f.id} className="border-l-4 pl-3 py-1" style={{ borderColor: f.findingType === "opportunity" ? "#16a34a" : "#f59e0b" }}>
-              <div className="flex justify-between">
-                <span className="font-semibold">{f.title}</span>
-                <span className="flex gap-1">
-                  <Badge variant="muted">{f.findingType}</Badge>
-                  <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">{f.summary}</p>
-              <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {f.sourceMetric} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · confidence {Math.round((f.confidence ?? 0) * 100)}%
-              </p>
-              {Array.isArray(f.evidence) && f.evidence.length > 0 && (
-                <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.join("; ")}</p>
-              )}
-              {f.verificationMetric && (
-                <p className="text-xs text-muted-foreground"><strong>Verify via:</strong> {f.verificationMetric}</p>
-              )}
-            </div>
+            <FindingCard key={f.id} finding={f} />
           ))}
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Finance actions ({cycle.actions.length})</h2>
+      <section className="border-t border-border pt-4">
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-3">Finance actions ({cycle.actions.length})</h2>
         <div className="space-y-3">
           {cycle.actions.map((a: any) => {
             const latestVerification = a.verifications?.[0];
             return (
-              <div key={a.id} className="border rounded p-3">
+              <div key={a.id} className="border-b border-border pb-3 last:border-0 last:pb-0">
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-semibold">{a.title}</div>
@@ -452,11 +565,11 @@ function FinanceCycleView({
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
                   </div>
-                  <Badge variant="muted">{a.status}</Badge>
+                  <Badge variant="muted-accessible">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
-                  Verify <strong>{a.verificationMetric}</strong> — {a.verificationMethod}
+                  Verify <strong>{humanizeMetricKey(a.verificationMetric)}</strong> — {humanizeEvidenceLine(a.verificationMethod ?? "")}
                 </p>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {a.status === "proposed" && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}
@@ -467,8 +580,8 @@ function FinanceCycleView({
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
-                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted"}>
-                      {latestVerification.status}
+                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
+                      {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">
                       before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
@@ -481,14 +594,14 @@ function FinanceCycleView({
         </div>
       </section>
 
-      <section className="border rounded-lg p-4 bg-card">
-        <h2 className="font-bold mb-3">Diagnosis history</h2>
+      <section className="border-t border-border pt-4">
+        <h2 className="font-display text-[1.1rem] font-semibold text-foreground mb-3">Diagnosis history</h2>
         <div className="space-y-1 text-sm">
           {history.map((c: any) => (
-            <div key={c.id} className="flex justify-between border-b py-1">
-              <span>Cycle #{c.sequenceNumber} — {new Date(c.createdAt).toLocaleDateString()}</span>
+            <div key={c.id} className="flex justify-between border-b border-border py-1.5 last:border-0">
+              <span>Cycle #{c.sequenceNumber} — {formatHumanDate(c.createdAt)}</span>
               <span className="text-muted-foreground">
-                {c.survivalState} · {c.findingCount} findings · {c.actionCount} actions
+                {SURVIVAL_LABEL[c.survivalState] ?? c.survivalState} · {c.findingCount} findings · {c.actionCount} actions
               </span>
             </div>
           ))}

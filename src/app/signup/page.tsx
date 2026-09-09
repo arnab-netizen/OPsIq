@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 // `error` string (a network failure, a non-JSON response body, etc.) — this
 // route is Internet-facing, so a caught exception's own .message is never an
 // acceptable source of user-facing text here.
-const SIGNUP_FAILURE_FALLBACK = "Something went wrong. Please try again.";
+const SIGNUP_FAILURE_FALLBACK = "We couldn't create your account right now. Please try again.";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -109,7 +109,9 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-background p-8 shadow-sm">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-primary">OpsIQ</h1>
+          <h1 className="text-2xl font-bold text-primary">
+            <Link href="/">OpsIQ</Link>
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Create your account &mdash; open beta
           </p>

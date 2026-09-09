@@ -138,11 +138,12 @@ export async function runGoalArbitration(
     const resourceBudgetUsedPct =
       totalCapacity > 0 ? Math.min(100, Math.round((allocated / totalCapacity) * 100)) : 0;
 
-    // Progress from metric if available, else 0
+    // Progress from metric if available, else null (never measured — not evidence of 0% done;
+    // UNKNOWN != BAD, see objective-arbitration.ts's ObjectiveCandidate.progressPct).
     const progressPct =
       obj.targetValue && obj.currentValue !== null
         ? Math.min(100, Math.round(((obj.currentValue ?? 0) / obj.targetValue) * 100))
-        : 0;
+        : null;
 
     // Resource availability: remaining pool fraction
     const resourceAvailabilityRatio = totalCapacity > 0

@@ -25,6 +25,10 @@ export const runtime = "nodejs";
 const createSchema = z.object({
   action: z.enum(["CREATE", "UPDATE", "ADD_DEPENDENCY", "REMOVE_DEPENDENCY"]).default("CREATE"),
   objectiveId: z.string().trim().uuid().nullish(),
+  // Explicit only -- the caller (the owner's currently active business in the UI) must state which
+  // business this objective belongs to, or omit/null it for a deliberate workspace-level objective.
+  // Never inferred server-side. See business-objective.service.ts's CreateObjectiveInput.
+  businessId: z.string().trim().uuid().nullish(),
   title: z.string().trim().min(1).max(500).optional(),
   description: z.string().trim().max(2000).nullish(),
   objectiveType: z.enum(["REVENUE", "COST_REDUCTION", "QUALITY", "COMPLIANCE", "GROWTH", "RESILIENCE", "STRATEGIC"]).optional(),
@@ -98,6 +102,7 @@ export const POST = withCanonicalEnforcement(
     const objective = await createObjective({
       workspaceId,
       actorId,
+      businessId: input.businessId,
       title: input.title,
       description: input.description,
       objectiveType: input.objectiveType,

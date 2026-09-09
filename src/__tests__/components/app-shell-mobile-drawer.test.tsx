@@ -10,7 +10,7 @@
  * (and does) move focus programmatically on Tab/Shift+Tab, which is exactly what these
  * tests exercise.
  */
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, fireEvent, screen } from "@testing-library/react";
 
 const usePathnameMock = vi.fn(() => "/owner/cockpit");
@@ -28,10 +28,21 @@ vi.mock("next/link", () => ({
 
 import { AppShell } from "@/ui/shell/app-shell";
 
+// AppShell wraps children in ActiveBusinessProvider, which fetches /api/owner/businesses on
+// mount. This suite only exercises drawer a11y behavior and doesn't care about business data —
+// stub fetch so that mount-time request resolves harmlessly instead of hitting the network.
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: [] }) } as Response))
+  );
+});
+
 afterEach(() => {
   cleanup();
   usePathnameMock.mockReturnValue("/owner/cockpit");
   document.body.style.overflow = "";
+  vi.unstubAllGlobals();
 });
 
 function openDrawer() {
