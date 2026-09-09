@@ -58,7 +58,10 @@ function ResendVerificationForm() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-background p-8 shadow-sm">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-primary">Resend verification email</h1>
+          <p className="text-sm font-bold text-primary">
+            <Link href="/">OpsIQ</Link>
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-primary">Resend verification email</h1>
         </div>
 
         {submitted ? (

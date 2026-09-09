@@ -76,7 +76,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-background p-8 shadow-sm">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-primary">OpsIQ</h1>
+          <h1 className="text-2xl font-bold text-primary">
+            <Link href="/">OpsIQ</Link>
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Sign in to continue
           </p>
@@ -139,6 +141,12 @@ export default function LoginPage() {
         <p className="text-center text-sm text-muted-foreground">
           <Link href="/forgot-password" className="text-[var(--primary-text)] hover:underline">
             Forgot your password?
+          </Link>
+        </p>
+        <p className="text-center text-sm text-muted-foreground">
+          Don&rsquo;t have an account?{" "}
+          <Link href="/signup" className="text-[var(--primary-text)] hover:underline">
+            Sign up
           </Link>
         </p>
       </div>

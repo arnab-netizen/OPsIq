@@ -70,7 +70,9 @@ function VerifyEmailForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-background p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-bold text-primary">OpsIQ</h1>
+        <h1 className="text-2xl font-bold text-primary">
+          <Link href="/">OpsIQ</Link>
+        </h1>
         {status === "verifying" && (
           <p className="text-sm text-muted-foreground">Verifying your email&hellip;</p>
         )}
