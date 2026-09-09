@@ -51,6 +51,13 @@ interface PriorityItem {
   actionLabel: string;
   actionHref: string;
   detailHref: string;
+  /** Overrides the tier-derived badge text/variant (TIER_LABEL/TIER_VARIANT[tier]) when present.
+   *  Only ever set for the "priority" source (Home's canonical topRoute item) — its badge must
+   *  reflect the SAME server-computed status/canStart the action text below it already reads, not
+   *  the severity-only tier label every other source uses, so the badge and action text can never
+   *  contradict each other. */
+  statusLabel?: string;
+  statusVariant?: "destructive-accessible" | "warning-accessible" | "muted-accessible" | "default-accessible" | "success-accessible";
 }
 
 const TIER_VARIANT: Record<PriorityTier, "destructive-accessible" | "warning-accessible" | "muted-accessible"> = {
@@ -100,6 +107,25 @@ const BRIDGE_SEVERITY_TIER: Record<string, PriorityTier> = {
 
 /** Terminal statuses a completed/rejected bridged task can carry — never a priority once resolved. */
 const BRIDGE_TERMINAL_STATUSES = new Set(["COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"]);
+
+/** "Completed" matches the same status the owner sees for this exact ProcessExecutionTask on
+ *  Actions (owner/tasks/page.tsx's OWNER_WORK_STATUS_LABELS) — one governed status, one label,
+ *  wherever it's shown. Terminal statuses never actually reach this function today (the item is
+ *  filtered out of the merged list above before a badge is ever rendered for it), but the mapping
+ *  is complete rather than assuming that filter can never change. */
+function bridgeStatusLabel(status: string, canStart: boolean): string {
+  if (BRIDGE_TERMINAL_STATUSES.has(status)) return "Completed";
+  // Mirrors the action-text branch above exactly (canStart ? "start this" : "continue"): canStart
+  // false on a non-terminal item means IN_PROGRESS (or another in-flight, non-startable status).
+  if (!canStart) return "In progress";
+  return "Needs attention";
+}
+
+function bridgeStatusVariant(status: string, canStart: boolean): PriorityItem["statusVariant"] {
+  if (BRIDGE_TERMINAL_STATUSES.has(status)) return "success-accessible";
+  if (!canStart) return "default-accessible";
+  return undefined; // fall through to the normal severity-tier variant
+}
 
 export default function OwnerPrioritiesPage() {
   const { activeBusinessId } = useActiveBusiness();
@@ -152,6 +178,8 @@ export default function OwnerPrioritiesPage() {
           actionLabel: topRoute.canStart ? "Go to Home to start this" : "In progress — continue on Home",
           actionHref: "/owner/cockpit",
           detailHref: "/owner/cockpit",
+          statusLabel: bridgeStatusLabel(topRoute.status, topRoute.canStart),
+          statusVariant: bridgeStatusVariant(topRoute.status, topRoute.canStart),
         });
       }
 
@@ -233,7 +261,7 @@ export default function OwnerPrioritiesPage() {
               >
                 <div className="flex flex-wrap items-baseline gap-2.5">
                   <span className="font-display text-base font-semibold tabular-nums text-muted-foreground">{i + 1}</span>
-                  <Badge variant={TIER_VARIANT[item.tier]}>{TIER_LABEL[item.tier]}</Badge>
+                  <Badge variant={item.statusVariant ?? TIER_VARIANT[item.tier]}>{item.statusLabel ?? TIER_LABEL[item.tier]}</Badge>
                 </div>
                 <strong className="mt-1 block font-display text-[1.15rem] font-semibold leading-snug tracking-tight text-foreground">{item.title}</strong>
                 {item.why && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{item.why}</p>}
