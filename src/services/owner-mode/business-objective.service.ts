@@ -32,6 +32,14 @@ const VALID_STATUSES: ObjectiveStatus[] = ["ACTIVE", "PAUSED", "COMPLETED", "ABA
 export interface CreateObjectiveInput {
   workspaceId: string;
   actorId: string;
+  /**
+   * null means an EXPLICIT workspace/portfolio-level objective, not tied to any one business.
+   * Callers creating a business-specific objective must pass the business's id — this is never
+   * inferred server-side from a caller's "currently selected" business. See
+   * owner-now-view.service.ts's buildBusinessOperatingSystem() for the read-side contract this
+   * enforces.
+   */
+  businessId?: string | null;
   parentId?: string | null;
   title: string;
   description?: string | null;
@@ -82,6 +90,7 @@ async function _createObjectiveCore(tx: Prisma.TransactionClient, input: CreateO
   const objective = await tx.businessObjective.create({
     data: {
       workspaceId: input.workspaceId,
+      businessId: input.businessId ?? null,
       parentId: input.parentId ?? null,
       title: input.title.trim(),
       description: input.description ?? null,
@@ -210,7 +219,17 @@ export async function getObjective(workspaceId: string, objectiveId: string) {
 
 export async function listObjectives(
   workspaceId: string,
-  opts: { status?: ObjectiveStatus; objectiveType?: ObjectiveType; parentId?: string | null } = {},
+  opts: {
+    status?: ObjectiveStatus;
+    objectiveType?: ObjectiveType;
+    parentId?: string | null;
+    /**
+     * Omit to list every objective in the workspace regardless of business (the pre-existing,
+     * unscoped behavior). Pass a business id to scope strictly to that business's objectives, or
+     * pass `null` explicitly to list only workspace/portfolio-level objectives (businessId IS NULL).
+     */
+    businessId?: string | null;
+  } = {},
 ) {
   return db.businessObjective.findMany({
     where: {
@@ -218,6 +237,7 @@ export async function listObjectives(
       // Excludes acceptance/QA fixture objectives (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an
       // ordinary owner's goals list must never include a goal a QA blueprint run created.
       isFixtureRecord: false,
+      ...(opts.businessId !== undefined ? { businessId: opts.businessId } : {}),
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.objectiveType ? { objectiveType: opts.objectiveType } : {}),
       ...(opts.parentId !== undefined ? { parentId: opts.parentId } : {}),

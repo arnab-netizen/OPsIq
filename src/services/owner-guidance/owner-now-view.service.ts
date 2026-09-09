@@ -1212,13 +1212,23 @@ export async function queryExecutionLifecycle(
 
 async function buildBusinessOperatingSystem(
   workspaceId: string,
+  businessId: string | null,
   db: GuidanceDeps["db"],
 ): Promise<BusinessOperatingSystemView | null> {
   try {
     const dbAny = db as any;
     const now = Date.now();
 
-    // 1. Active business objectives with blocking dependencies and child counts
+    // 1. Active business objectives with blocking dependencies and child counts.
+    //
+    // Scoped to the selected active business: businessId=null on a BusinessObjective row is an
+    // EXPLICIT workspace/portfolio-level objective (see prisma/schema.prisma), not "unset" or a
+    // wildcard match, so this must never fall back to a workspace-wide query. A business-specific
+    // Home/Priorities view (businessId provided) shows only that business's own objectives — an
+    // objective belonging to a different business in the same workspace must never appear here.
+    // A zero-active-business view (businessId === null) shows only explicit workspace-level
+    // objectives, never any business's own objectives folded in.
+    const objectiveScope = { workspaceId, businessId, status: "ACTIVE", isFixtureRecord: false };
     const rawObjectives: Array<{
       id: string; title: string; objectiveType: string; status: string;
       priorityScore: number; targetValue: number | null; currentValue: number | null;
@@ -1227,7 +1237,7 @@ async function buildBusinessOperatingSystem(
     }> = await dbAny.businessObjective.findMany({
       // isFixtureRecord: false — Home must never surface a QA blueprint's objective as a real
       // owner's goal. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
-      where: { workspaceId, status: "ACTIVE", isFixtureRecord: false },
+      where: objectiveScope,
       include: { blockedBy: { select: { id: true } }, _count: { select: { children: true } } },
     });
 
@@ -2258,7 +2268,7 @@ export async function getOwnerNowView(
       ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
       : Promise.resolve(null),
     buildExecutionLifecycle(workspaceId, deps.db),
-    buildBusinessOperatingSystem(workspaceId, deps.db),
+    buildBusinessOperatingSystem(workspaceId, businessId, deps.db),
   ]);
 
   await deps.db.ownerGuidanceSnapshot.create({

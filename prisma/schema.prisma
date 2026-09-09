@@ -6144,6 +6144,11 @@ model OperatingPolicyOverride {
 model BusinessObjective {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId            String    @map("workspace_id") @db.Uuid
+  /// Soft FK to OwnerBusiness.id, matching the existing businessId convention used elsewhere in
+  /// this domain (e.g. OwnerComplianceItem, OwnerStartupSession) rather than a formal Prisma
+  /// relation. null means this is EXPLICITLY a workspace/portfolio-level objective, not "unset" —
+  /// see owner-now-view.service.ts's buildBusinessOperatingSystem() for the read-side contract.
+  businessId             String?   @map("business_id") @db.Uuid
   parentId               String?   @map("parent_id") @db.Uuid
   title                  String
   description            String?   @db.Text
@@ -6176,6 +6181,7 @@ model BusinessObjective {
   @@index([workspaceId, status])
   @@index([workspaceId, objectiveType])
   @@index([workspaceId, parentId])
+  @@index([workspaceId, businessId, status])
   @@map("business_objectives")
 }
 
