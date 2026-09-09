@@ -86,7 +86,40 @@ function validateStatus(s: string): asserts s is ObjectiveStatus {
   }
 }
 
+/**
+ * Ownership guard for the soft-FK BusinessObjective.businessId: proves, inside the same
+ * transaction as the insert, that the business belongs to this exact workspace and is not an
+ * acceptance/QA fixture, before any row is written. Without this, an explicit businessId in the
+ * request body could attach a workspace's objective to a business belonging to a DIFFERENT
+ * workspace (or to a fixture business, which must never be a real owner's create target) — a
+ * tenant-isolation break the soft-FK's lack of a DB-level foreign key cannot catch on its own.
+ * Lives on the shared core so every caller (the HTTP route AND createBlueprint's in-transaction
+ * path) is protected identically, not just the route layer.
+ *
+ * Deliberately a plain NotFoundError, identical whether businessId belongs to another workspace,
+ * is a fixture business, or does not exist at all — never distinguishes those cases in the
+ * response, so a caller cannot use this check to probe for the existence of another workspace's
+ * business ids.
+ */
+async function assertBusinessOwnership(
+  tx: Prisma.TransactionClient,
+  workspaceId: string,
+  businessId: string,
+): Promise<void> {
+  const business = await tx.ownerBusiness.findFirst({
+    where: { id: businessId, workspaceId, isFixtureBusiness: false },
+    select: { id: true },
+  });
+  if (!business) {
+    throw new NotFoundError("OwnerBusiness", businessId);
+  }
+}
+
 async function _createObjectiveCore(tx: Prisma.TransactionClient, input: CreateObjectiveInput) {
+  if (input.businessId != null) {
+    await assertBusinessOwnership(tx, input.workspaceId, input.businessId);
+  }
+
   const objective = await tx.businessObjective.create({
     data: {
       workspaceId: input.workspaceId,
