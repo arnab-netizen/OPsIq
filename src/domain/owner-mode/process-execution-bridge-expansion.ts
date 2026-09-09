@@ -64,7 +64,13 @@ function mk(p: {
   severity: Severity; priorityRank: number; reassess: string; notActionableReason?: string | null;
 }): BridgedExecutionRoute {
   return {
-    workspaceId: p.workspaceId, taskKey: p.taskKey, sourceFamily: p.sourceFamily, sourceFindingKey: p.sourceFindingKey,
+    workspaceId: p.workspaceId,
+    // PASS 23 expansion families (workload/capability/SOP/training/effectiveness) are not yet
+    // threaded with a business dimension upstream -- left workspace-scoped only, same as before
+    // this change. Explicit null (not omitted) so this gap is visible in the type rather than
+    // silently absent. See BridgedExecutionRoute.businessId's doc comment.
+    businessId: null,
+    taskKey: p.taskKey, sourceFamily: p.sourceFamily, sourceFindingKey: p.sourceFindingKey,
     executionRoute: p.executionRoute, actionOwner: p.actionOwner, approvalLevel: p.approvalLevel,
     requiredEvidence: p.executionRoute === "MONITOR_ONLY" ? [] : p.requiredEvidence,
     completionCriteria: COMPLETION_BY_ROUTE[p.executionRoute],

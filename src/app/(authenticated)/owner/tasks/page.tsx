@@ -14,6 +14,7 @@ import Link from "next/link";
 import { Badge, Button, EmptyState, TableListSkeleton } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 interface TaskListItem {
   id: string;
@@ -26,6 +27,37 @@ interface TaskListItem {
   createdAt: string;
   proofRequirementId: string | null;
 }
+
+/** An owner-started governed action (ProcessExecutionTask) -- e.g. one begun with "Start Work" on
+ *  Home. Distinct from a DelegatedTask (work explicitly handed off to a named person/role): this is
+ *  work the owner is doing themselves, or a governed correction/data/approval item, that must show
+ *  up here once started so Home, Priorities, and Actions never disagree about whether it exists. */
+interface OwnerWorkItem {
+  id: string;
+  taskKey: string;
+  businessId: string | null;
+  ownerVisibleSummary: string;
+  status: string;
+  severity: string;
+  executionRoute: string;
+  workStartedAt: string | null;
+}
+
+const OWNER_WORK_STATUS_LABELS: Record<string, string> = {
+  PROPOSED: "Proposed",
+  ACKNOWLEDGED: "Acknowledged",
+  IN_PROGRESS: "In progress",
+  BLOCKED: "Blocked",
+  NEEDS_DATA: "Needs data",
+  APPROVED: "Approved",
+  DELEGATED: "Delegated",
+  COMPLETED: "Completed",
+  REJECTED: "Rejected",
+  OUTCOME_RECORDED: "Outcome recorded",
+  OUTCOME_DISPUTED: "Outcome disputed",
+  OUTCOME_VERIFIED: "Outcome verified",
+};
+const OWNER_WORK_TERMINAL = new Set(["REJECTED"]);
 
 const STATUS_LABELS: Record<string, string> = {
   [DelegatedTaskStatus.DRAFT]: "Draft",
@@ -96,13 +128,44 @@ async function apiFetch(path: string) {
 }
 
 export default function OwnerTasksPage() {
+  const { activeBusinessId } = useActiveBusiness();
   const [tasks, setTasks] = useState<TaskListItem[]>([]);
+  const [ownerWork, setOwnerWork] = useState<OwnerWorkItem[]>([]);
+  const [ownerWorkError, setOwnerWorkError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [offset, setOffset] = useState(0);
 
   const LIMIT = 25;
+
+  // My work: owner-started governed actions (ProcessExecutionTask), independent of the delegated-
+  // task filters/pagination below -- loaded once per active business, not re-fetched on every
+  // status-filter/offset change since it has no filter/pagination controls of its own.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setOwnerWorkError(null);
+      try {
+        const data = await apiFetch("/api/owner/process-execution");
+        if (cancelled) return;
+        const rows = (data.tasks ?? []) as OwnerWorkItem[];
+        // Business-scoped: an item belongs here if it's this business's own (businessId matches)
+        // or is an explicit workspace-level item (businessId null) -- never another business's.
+        // Excludes PROPOSED (not yet started -- Priorities/Home is where the owner starts it) and
+        // MONITOR_ONLY (no interactive action to show).
+        const relevant = rows.filter((t) =>
+          (t.businessId === null || t.businessId === activeBusinessId) &&
+          t.status !== "PROPOSED" &&
+          t.executionRoute !== "MONITOR_ONLY"
+        );
+        setOwnerWork(relevant);
+      } catch (err) {
+        if (!cancelled) setOwnerWorkError(classifyOperatorError(err, { context: "load" }).operatorMessage);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeBusinessId]);
 
   const load = useCallback(async (status: string, off: number) => {
     setLoading(true);
@@ -136,6 +199,41 @@ export default function OwnerTasksPage() {
           <Button size="sm">+ New Task</Button>
         </Link>
       </div>
+
+      {/* My work: governed actions the owner started themselves (e.g. via Start Work on Home) --
+          distinct from delegated work below, which is handed off to a named person/role. */}
+      {ownerWorkError ? <p className="text-destructive text-sm mb-4">{ownerWorkError}</p> : null}
+      {ownerWork.length > 0 && (
+        <div className="mb-8">
+          <h2 className="font-display text-base font-semibold tracking-tight text-foreground mb-3">My work</h2>
+          <ul className="flex flex-col">
+            {ownerWork.map((item) => {
+              const isTerminal = OWNER_WORK_TERMINAL.has(item.status);
+              return (
+                <li key={item.id} className="border-t border-border py-4 first:border-t-0 first:pt-0">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <Link href="/owner/cockpit" className="font-display text-[1.05rem] font-semibold text-foreground hover:underline">
+                      {item.ownerVisibleSummary}
+                    </Link>
+                    <Badge variant={isTerminal ? "destructive" : item.status === "COMPLETED" || item.status.startsWith("OUTCOME") ? "success" : "default"}>
+                      {OWNER_WORK_STATUS_LABELS[item.status] ?? item.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                    <span>Who: You</span>
+                    {item.workStartedAt && <span>Started: {new Date(item.workStartedAt).toLocaleDateString()}</span>}
+                  </div>
+                  <Link href="/owner/cockpit" className="mt-1.5 inline-block text-sm font-medium text-[var(--primary-text)] underline-offset-2 hover:underline">
+                    Continue on Home →
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      <h2 className="font-display text-base font-semibold tracking-tight text-foreground mb-3">Delegated work</h2>
 
       {/* Filters */}
       <div className="flex gap-3 mb-6">

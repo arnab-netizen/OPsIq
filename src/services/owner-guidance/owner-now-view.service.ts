@@ -1926,7 +1926,7 @@ export async function getOwnerNowView(
   );
   const processExecution: ProcessExecutionBridgeAnalysis | null =
     (processCorrections || cashProfitProtection || bridgeExpansion.routes.length > 0)
-      ? buildProcessExecutionBridge(processCorrections, cashProfitProtection, workspaceId, new Date(deps.now()).toISOString(), bridgeExpansion)
+      ? buildProcessExecutionBridge(processCorrections, cashProfitProtection, workspaceId, new Date(deps.now()).toISOString(), bridgeExpansion, businessId)
       : null;
   // Reflect persisted task state so the cockpit shows the REAL status (PROPOSED/IN_PROGRESS/APPROVED/COMPLETED/…)
   // and the interactive controls only offer valid transitions. Best-effort read: if the table is unavailable,

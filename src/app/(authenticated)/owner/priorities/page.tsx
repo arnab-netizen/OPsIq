@@ -131,7 +131,7 @@ export default function OwnerPrioritiesPage() {
       // Home's canonical top governed action (process-execution bridge) — the SAME item Home shows,
       // never re-derived, so this page can never say "nothing needs attention" while Home shows one.
       const topRoute = nowViewRes?.processExecution?.topRoute as
-        | { taskKey: string; title: string; ownerVisibleSummary?: string | null; severity: string; executionRoute: string; status: string }
+        | { taskKey: string; title: string; ownerVisibleSummary?: string | null; severity: string; executionRoute: string; status: string; canStart: boolean }
         | null
         | undefined;
       if (
@@ -139,13 +139,17 @@ export default function OwnerPrioritiesPage() {
         topRoute.executionRoute !== "MONITOR_ONLY" &&
         !BRIDGE_TERMINAL_STATUSES.has(topRoute.status)
       ) {
+        // Reflect the SAME server-computed canStart Home uses to decide its own button state --
+        // never re-derive "started" from status text here. Once the owner has clicked Start Work
+        // on Home, this item is still an open priority (in-progress work still deserves attention),
+        // but the CTA must stop implying it hasn't been started yet.
         merged.push({
           id: `priority-${topRoute.taskKey}`,
           source: "priority",
           title: topRoute.title,
           why: topRoute.ownerVisibleSummary ?? null,
           tier: BRIDGE_SEVERITY_TIER[topRoute.severity] ?? "attention",
-          actionLabel: "Go to Home to start this",
+          actionLabel: topRoute.canStart ? "Go to Home to start this" : "In progress — continue on Home",
           actionHref: "/owner/cockpit",
           detailHref: "/owner/cockpit",
         });

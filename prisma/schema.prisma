@@ -5416,6 +5416,12 @@ model OpportunityExecutionTask {
 model ProcessExecutionTask {
   id                       String    @id @db.Uuid
   workspaceId              String    @map("workspace_id") @db.Uuid
+  /// Soft FK to OwnerBusiness.id (same convention as BusinessObjective.businessId / OwnerComplianceItem /
+  /// OwnerStartupSession — no formal Prisma relation). Embedded into taskKey itself for the
+  /// PROCESS_CORRECTION/CASH_PROFIT families (see process-execution-bridge.ts) so this column is
+  /// defense-in-depth, not the sole isolation mechanism. null for the PASS 23 expansion families
+  /// (workload/capability/SOP/training/effectiveness), which remain workspace-scoped only.
+  businessId               String?   @map("business_id") @db.Uuid
   taskKey                  String    @map("task_key")
   sourceFamily             String    @map("source_family")
   sourceFindingKey         String    @map("source_finding_key")
@@ -5470,6 +5476,7 @@ model ProcessExecutionTask {
   @@index([workspaceId, status])
   @@index([workspaceId, outcomeId])
   @@index([workspaceId, linkedStartupSessionId])
+  @@index([workspaceId, businessId, status])
   @@map("process_execution_tasks")
 }
 
