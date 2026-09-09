@@ -297,7 +297,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const response = await wrapped(makeRequest({}), { params: Promise.resolve({}) });
       expect(response.status).toBe(500);
       const body = await response.json();
-      expect(body.error).toBe("Internal server error");
+      // Current governed operator-safe fallback (canonical-route-enforcement.ts's
+      // isKnownSafeClientError branch): a raw/unclassified Error is not a known-safe
+      // AppError subclass, so it gets this generic fallback text, not its own message.
+      expect(body.error).toBe("Something went wrong on our side. Nothing was saved. Please try again.");
       expect(JSON.stringify(body)).not.toContain(secretDetail);
       expect(JSON.stringify(body)).not.toContain("s3cr3t");
     });

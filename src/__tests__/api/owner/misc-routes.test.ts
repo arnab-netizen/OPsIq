@@ -180,6 +180,7 @@ import { PATCH as leakageStatusPatch } from "@/app/api/owner/waste-leakage/[even
 import { POST as tasksPost } from "@/app/api/owner/tasks/route";
 import { POST as tasksCompletePost } from "@/app/api/owner/tasks/complete/route";
 import { GET as startupSessionsGet, POST as startupSessionsPost } from "@/app/api/owner/startup/sessions/route";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { POST as gatesOptOutPost, DELETE as gatesOptOutDelete } from "@/app/api/owner/gates/opt-out/route";
 import { GET as localModeGet } from "@/app/api/owner/local-mode/status/route";
 import { GET as vendorGet, POST as vendorPost } from "@/app/api/owner/vendor/route";
@@ -207,6 +208,11 @@ function makeCtx(url = "https://x/api/owner/test", wsId = WS) {
   return {
     verifiedActorId: ACTOR,
     verifiedWorkspaceId: wsId,
+    // Every real ctx from withCanonicalEnforcement always carries this Set (empty for a
+    // non-admin caller); default it here so route code that checks a capability (e.g. the
+    // SYSTEM_ADMIN-gated isFixtureBusiness field) behaves the same as it would for a real,
+    // ordinary owner caller instead of throwing on an undefined ctx field.
+    verifiedCapabilities: new Set<string>(),
     request: {
       url,
       json: async () => ({}),
@@ -218,6 +224,7 @@ function makeBodyCtx(body: Record<string, unknown>, url = "https://x/api/owner/t
   return {
     verifiedActorId: ACTOR,
     verifiedWorkspaceId: wsId,
+    verifiedCapabilities: new Set<string>(),
     request: {
       url,
       json: async () => body,
@@ -701,7 +708,8 @@ describe("[startup-sessions-post] POST /api/owner/startup/sessions", () => {
     const ctx = makeBodyCtx(MINIMAL_SESSION_BODY);
     const res = await startupSessionsPost(ctx) as { status: number };
     expect(mocks.createStartupSession).toHaveBeenCalledWith(
-      expect.objectContaining({ workspaceId: WS, actorId: ACTOR })
+      expect.objectContaining({ workspaceId: WS, actorId: ACTOR, intake: {}, ideas: MINIMAL_SESSION_BODY.ideas }),
+      { isFixtureBusiness: false }
     );
     expect(res.status).toBe(201);
   });
@@ -711,7 +719,45 @@ describe("[startup-sessions-post] POST /api/owner/startup/sessions", () => {
     const ctx = makeBodyCtx({ ...MINIMAL_SESSION_BODY, sessionLabel: "Q1 Ideas" });
     await startupSessionsPost(ctx);
     expect(mocks.createStartupSession).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionLabel: "Q1 Ideas" })
+      expect.objectContaining({ sessionLabel: "Q1 Ideas" }),
+      { isFixtureBusiness: false }
+    );
+  });
+
+  it("ORDINARY_CALLER_CANNOT_CREATE_FIXTURE: a caller without SYSTEM_ADMIN gets isFixtureBusiness=false even when the body requests true", async () => {
+    mocks.createStartupSession.mockResolvedValue("sess-id-3");
+    // No verifiedCapabilities set on this ctx -- the same as every real non-admin owner caller.
+    const ctx = makeBodyCtx({ ...MINIMAL_SESSION_BODY, isFixtureBusiness: true });
+    await startupSessionsPost(ctx);
+    expect(mocks.createStartupSession).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: WS, actorId: ACTOR }),
+      { isFixtureBusiness: false }
+    );
+  });
+
+  it("SYSTEM_ADMIN_CAN_CREATE_FIXTURE: a SYSTEM_ADMIN-capable caller requesting isFixtureBusiness=true is honored", async () => {
+    mocks.createStartupSession.mockResolvedValue("sess-id-4");
+    const ctx = {
+      ...makeBodyCtx({ ...MINIMAL_SESSION_BODY, isFixtureBusiness: true }),
+      verifiedCapabilities: new Set([CAPABILITIES.SYSTEM_ADMIN]),
+    };
+    await startupSessionsPost(ctx);
+    expect(mocks.createStartupSession).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: WS, actorId: ACTOR }),
+      { isFixtureBusiness: true }
+    );
+  });
+
+  it("SYSTEM_ADMIN capability alone does not imply isFixtureBusiness -- the body must still ask for it", async () => {
+    mocks.createStartupSession.mockResolvedValue("sess-id-5");
+    const ctx = {
+      ...makeBodyCtx(MINIMAL_SESSION_BODY),
+      verifiedCapabilities: new Set([CAPABILITIES.SYSTEM_ADMIN]),
+    };
+    await startupSessionsPost(ctx);
+    expect(mocks.createStartupSession).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: WS, actorId: ACTOR }),
+      { isFixtureBusiness: false }
     );
   });
 });

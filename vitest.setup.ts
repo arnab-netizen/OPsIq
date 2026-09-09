@@ -3,6 +3,20 @@ import dotenv from "dotenv";
 import path from "path";
 import "@testing-library/jest-dom/vitest";
 
+// next/font/google self-hosts a font at Next.js build time via a bundler-specific transform;
+// outside that build pipeline (jsdom/Vitest) the real package has no font files to resolve and
+// no network access to fall back on, so any loader (e.g. Source_Serif_4) is undefined here. This
+// stub returns the same shape every real loader returns (className/style/variable), stable and
+// deterministic, so components that apply those fields render as normal without needing network
+// or a production-code workaround. It does not remove or alter the real font import in app code.
+vi.mock("next/font/google", () => ({
+  Source_Serif_4: () => ({
+    className: "__mocked_next_font__",
+    variable: "--font-display",
+    style: { fontFamily: "__mocked_next_font__" },
+  }),
+}));
+
 // Load test environment first — override:true ensures that if globalSetup wrote a
 // .env.test with the direct Neon URL (no -pooler suffix), it wins over any pooler
 // URL that was baked into the worker's process.env copy at thread-creation time.

@@ -254,10 +254,14 @@ describe("app-wide migration: the shared Badge/Button primitives and every bg-to
     expect(badgeSource).toMatch(/^\s*muted:\s*"bg-muted text-muted-foreground border-border",$/m);
   });
 
-  it("the app-header avatar-initial badge (bg-primary/10 tinted circle) keeps the base --primary token — it is the same self-consistent tinted-fill pattern as Badge, not the broken plain-text pattern", () => {
-    const headerSource = read("src/ui/shell/app-header.tsx");
-    expect(headerSource).toMatch(/bg-primary\/10 flex items-center justify-center/);
-    expect(headerSource).toMatch(/<span className="text-xs font-medium text-primary">/);
+  it("the account-menu avatar-initial badge (bg-primary/10 tinted circle) keeps the base --primary token — it is the same self-consistent tinted-fill pattern as Badge, not the broken plain-text pattern", () => {
+    // PR #435's app-shell redesign moved this badge out of app-header.tsx and into its own
+    // AccountMenu component (the header's previous non-interactive avatar became a real,
+    // clickable account menu) -- same markup, same token usage, new home. See
+    // AccountMenu.tsx's own header comment.
+    const accountMenuSource = read("src/components/owner/AccountMenu.tsx");
+    expect(accountMenuSource).toMatch(/bg-primary\/10 flex items-center justify-center/);
+    expect(accountMenuSource).toMatch(/<span className="text-xs font-medium text-primary">/);
   });
 
   it("the app-header 'OpsIQ' wordmark (plain text, no own background) was migrated to the arbitrary-value form of --primary-text", () => {

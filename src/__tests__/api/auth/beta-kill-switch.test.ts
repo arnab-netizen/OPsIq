@@ -82,13 +82,25 @@ describe("POST /api/auth/signup — PUBLIC_BETA_ENABLED kill switch", () => {
     // A body missing all three consents is invalid — but proving it fails at
     // VALIDATION (not at the beta gate) is exactly what shows the gate let it
     // through. If the gate ran after validation this test would be unable to
-    // tell the two failure modes apart; because it runs first, the visible
-    // failure category, thrown from later in the same handler, IS the proof.
+    // tell the two failure modes apart; because the gate runs first, seeing a
+    // validation-stage failure (400, not the gate's own 403/beta_disabled) IS
+    // the proof.
+    //
+    // The route returns a governed Response.json for a ZodError rather than
+    // throwing it (df1be6b: a raw throw from this bare, unwrapped handler
+    // previously escaped to Next.js's default handler as an unparseable
+    // generic 500, silently discarding the safe validation message) -- so
+    // this asserts the resolved Response, not a rejection.
     const invalidBody = { email: VALID_BODY.email, password: VALID_BODY.password, workspaceName: VALID_BODY.workspaceName };
-    await expect(POST(signupRequest(invalidBody) as never)).rejects.toMatchObject({
-      name: "BadRequestError",
-      statusCode: 400,
-    });
+    const res = await POST(signupRequest(invalidBody) as never);
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+    // A real, specific validation message -- proof this is the validation
+    // stage failing, not a generic/accidental 500 masking some other error.
+    expect(typeof json.error).toBe("string");
+    expect(json.error.length).toBeGreaterThan(0);
+    expect(json.error).not.toMatch(/prisma|stack|internal server error/i);
   });
 
   it("CLIENT_CANNOT_OVERRIDE_BETA_FLAG: a client-supplied flag-shaped field in the body has no effect while the server flag is false", async () => {
