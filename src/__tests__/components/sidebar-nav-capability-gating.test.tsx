@@ -2,7 +2,7 @@
  * Sidebar nav capability gating — closes the ungated-consultant-nav defect.
  *
  * Before this change, Clients (/clients), Engagements (/engagements), Leads (/leads), the
- * "Consulting dashboard" (/dashboard), and People (/users) rendered for every signed-in user
+ * "Consulting dashboard" (/dashboard), and User accounts (/users) rendered for every signed-in user
  * with no gate at all, regardless of role — unlike the owner-only items, which were already
  * correctly gated behind `canViewOwnerRecovery` (OWNER_VIEW).
  *
@@ -46,7 +46,7 @@ import { SidebarNav } from "@/ui/shell/sidebar-nav";
 
 afterEach(() => cleanup());
 
-const CONSULTANT_LABELS = ["Consulting workspace", "Clients", "Engagements", "Leads", "People"];
+const CONSULTANT_LABELS = ["Consulting workspace", "Clients", "Engagements", "Leads", "User accounts"];
 
 function hrefsOf(container: HTMLElement): (string | null)[] {
   return Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
@@ -66,12 +66,12 @@ describe("sidebar nav — consultant-facing items are capability-gated, not unga
     expect(hrefs).not.toContain("/users");
   });
 
-  it("hides Clients, Leads, and People from a client-side role (CLIENT_TEAM_MEMBER) that genuinely lacks CLIENT_VIEW/LEAD_VIEW/USER_VIEW", () => {
+  it("hides Clients, Leads, and User accounts from a client-side role (CLIENT_TEAM_MEMBER) that genuinely lacks CLIENT_VIEW/LEAD_VIEW/USER_VIEW", () => {
     const caps = Array.from(getCapabilitiesForRole(ROLES.CLIENT_TEAM_MEMBER));
     const { queryByText } = render(<SidebarNav canViewOwnerRecovery={false} capabilities={caps} />);
     expect(queryByText("Clients")).toBeNull();
     expect(queryByText("Leads")).toBeNull();
-    expect(queryByText("People")).toBeNull();
+    expect(queryByText("User accounts")).toBeNull();
   });
 
   it("still shows Engagements/Consulting workspace to a client-side role that legitimately holds ENGAGEMENT_VIEW (parity with what the /engagements API route actually allows)", () => {
@@ -90,7 +90,7 @@ describe("sidebar nav — consultant-facing items are capability-gated, not unga
     const { queryByText } = render(<SidebarNav canViewOwnerRecovery={false} capabilities={caps} />);
     expect(queryByText("Clients")).toBeNull();
     expect(queryByText("Leads")).toBeNull();
-    expect(queryByText("People")).toBeNull();
+    expect(queryByText("User accounts")).toBeNull();
   });
 
   it("shows all five consultant-facing items to an authorized internal role (EXPERIENCED_CONSULTANT) that holds every backing capability", () => {
