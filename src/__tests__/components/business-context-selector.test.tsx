@@ -99,6 +99,68 @@ describe("BusinessContextSelector — many-business state (interactive switch)",
   });
 });
 
+describe("BusinessContextSelector — searchable switcher (30+ businesses)", () => {
+  const many30 = Array.from({ length: 32 }, (_, i) => ({
+    id: `biz-${i}`,
+    name: `Business Number ${i} — a fairly long descriptive trading name`,
+    currency: "USD",
+  }));
+
+  it("shows a search box once the business count exceeds the threshold", () => {
+    render(<BusinessContextSelector businesses={many30} selectedId="biz-0" onChange={vi.fn()} />);
+    expect(screen.getByRole("textbox", { name: "Search businesses" })).toBeInTheDocument();
+  });
+
+  it("does not show a search box for a small business count (many-but-under-threshold case)", () => {
+    render(<BusinessContextSelector businesses={MANY} selectedId="biz-1" onChange={vi.fn()} />);
+    expect(screen.queryByRole("textbox", { name: "Search businesses" })).not.toBeInTheDocument();
+  });
+
+  it("type-to-filter narrows the select's options to matching business names", () => {
+    render(<BusinessContextSelector businesses={many30} selectedId="biz-0" onChange={vi.fn()} />);
+    const search = screen.getByRole("textbox", { name: "Search businesses" });
+    fireEvent.change(search, { target: { value: "Number 17" } });
+    expect(screen.getByRole("option", { name: many30[17].name + " (USD)" })).toBeInTheDocument();
+  });
+
+  it("still renders the full untruncated business list with no search query typed (back-compat with existing selectOption automation)", () => {
+    render(<BusinessContextSelector businesses={many30} selectedId="biz-0" onChange={vi.fn()} />);
+    for (const b of many30) {
+      expect(screen.getByRole("option", { name: `${b.name} (${b.currency})` })).toBeInTheDocument();
+    }
+  });
+
+  it("keeps the currently selected business in the option list even when it no longer matches the query", () => {
+    render(<BusinessContextSelector businesses={many30} selectedId="biz-5" onChange={vi.fn()} />);
+    const search = screen.getByRole("textbox", { name: "Search businesses" });
+    fireEvent.change(search, { target: { value: "Number 17" } });
+    const select = screen.getByRole("combobox", { name: "Business" }) as HTMLSelectElement;
+    expect(select.value).toBe("biz-5");
+    expect(screen.getByRole("option", { name: many30[5].name + " (USD)" })).toBeInTheDocument();
+  });
+
+  it("filters out non-matching, non-selected businesses from the select", () => {
+    render(<BusinessContextSelector businesses={many30} selectedId="biz-0" onChange={vi.fn()} />);
+    const search = screen.getByRole("textbox", { name: "Search businesses" });
+    fireEvent.change(search, { target: { value: "Number 17" } });
+    expect(screen.queryByRole("option", { name: many30[3].name + " (USD)" })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: many30[17].name + " (USD)" })).toBeInTheDocument();
+  });
+
+  it("the underlying select still fires onChange with the chosen id, unaffected by search state", () => {
+    const onChange = vi.fn();
+    render(<BusinessContextSelector businesses={many30} selectedId="biz-0" onChange={onChange} />);
+    const select = screen.getByRole("combobox", { name: "Business" });
+    fireEvent.change(select, { target: { value: "biz-20" } });
+    expect(onChange).toHaveBeenCalledWith("biz-20");
+  });
+
+  it("shows the full, untruncated selected business name as a readout (fixes clipped-label finding)", () => {
+    render(<BusinessContextSelector businesses={many30} selectedId="biz-9" onChange={vi.fn()} />);
+    expect(screen.getByTitle(many30[9].name + " (USD)")).toBeInTheDocument();
+  });
+});
+
 describe("BusinessContextSelector — loading state", () => {
   it("renders a disabled placeholder control while the caller's list is not yet known", () => {
     render(<BusinessContextSelector businesses={[]} selectedId={null} onChange={vi.fn()} loading />);

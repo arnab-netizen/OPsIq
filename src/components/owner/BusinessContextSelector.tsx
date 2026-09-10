@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
 /**
  * BusinessContextSelector — the canonical "which business am I looking at" control for
  * business-scoped Owner Mode pages. Prop-driven; NO data fetching and NO business logic here —
@@ -18,10 +20,15 @@
  *    consistently, across every migrated page — "No businesses yet. Create one in Finance…").
  *  - exactly one business: renders a plain, non-interactive context readout (no dropdown chrome) —
  *    matches the "shows context without unnecessary chrome" requirement.
- *  - two or more businesses: renders the interactive control (native `<select>` under the hood —
- *    a native select already provides full keyboard, screen-reader and touch support with no
- *    reinvention needed) with a real associated `<label>`, `aria-live` current-value announcement,
- *    and a 44px min touch target.
+ *  - two or more businesses: renders the interactive control. The repo has no Combobox/Command/
+ *    Popover primitive and no headless-listbox dependency (checked package.json), and the
+ *    underlying `<select name="businessSelector">` is driven directly by ~40 Playwright specs via
+ *    `page.selectOption('select[name="businessSelector"]', id)` plus this component's own unit
+ *    tests — replacing it with a fully custom listbox would break that whole surface, which is out
+ *    of scope here. Instead the native `<select id="business-context-selector">` stays the source
+ *    of truth (full keyboard/screen-reader support, zero DOM-contract change), and a type-to-filter
+ *    search input narrows its `<option>` list live for large business counts — the search box is
+ *    additive, so with no query typed the select renders exactly as before.
  *
  * Output event: onChange(businessId) — the caller is responsible for re-fetching its own
  * business-scoped data for the new id (every existing loader already does this) and, per the
@@ -91,10 +98,51 @@ export function BusinessContextSelector({
   }
 
   return (
+    <BusinessContextSwitcher businesses={businesses} selectedId={selectedId} onChange={onChange} className={className} />
+  );
+}
+
+const SEARCH_THRESHOLD = 8;
+
+function BusinessContextSwitcher({
+  businesses,
+  selectedId,
+  onChange,
+  className,
+}: {
+  businesses: BusinessContextOption[];
+  selectedId: string | null;
+  onChange: (businessId: string) => void;
+  className: string;
+}) {
+  const [query, setQuery] = useState("");
+
+  const visibleBusinesses = useMemo(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return businesses;
+    // The currently selected business always stays in the list even if it no longer matches
+    // the query, so the <select>'s value binding never goes stale mid-search.
+    return businesses.filter((b) => b.id === selectedId || formatLabel(b).toLowerCase().includes(trimmed));
+  }, [businesses, query, selectedId]);
+
+  const selectedBusiness = businesses.find((b) => b.id === selectedId) ?? null;
+
+  return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       <label htmlFor="business-context-selector" className="text-sm font-medium text-foreground">
         Business
       </label>
+      {businesses.length > SEARCH_THRESHOLD && (
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search businesses…"
+          aria-label="Search businesses"
+          data-testid="business-context-search"
+          className="min-h-[44px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 sm:w-80"
+        />
+      )}
       <select
         id="business-context-selector"
         name="businessSelector"
@@ -102,14 +150,19 @@ export function BusinessContextSelector({
         value={selectedId ?? ""}
         onChange={(e) => onChange(e.target.value)}
         aria-live="polite"
-        className="min-h-[44px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 sm:w-72"
+        className="min-h-[44px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 sm:w-80"
       >
-        {businesses.map((b) => (
+        {visibleBusinesses.map((b) => (
           <option key={b.id} value={b.id}>
             {formatLabel(b)}
           </option>
         ))}
       </select>
+      {selectedBusiness && (
+        <p className="truncate text-xs text-muted-foreground" title={formatLabel(selectedBusiness)}>
+          {formatLabel(selectedBusiness)}
+        </p>
+      )}
     </div>
   );
 }
