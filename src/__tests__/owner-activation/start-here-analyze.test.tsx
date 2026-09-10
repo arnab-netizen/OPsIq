@@ -32,8 +32,23 @@ function renderPage() {
 
 const REQUIREMENTS = { minimumRequired: ["revenue_sales", "expenses", "cash_debt"], recommended: [], optional: [] };
 
-let analyzePostMode: "success" | "reject" = "success";
+let analyzePostMode: "success" | "reject" | "total-failure" | "nothing-eligible" = "success";
 let analyzeCalls: string[] = [];
+
+const ANALYZE_RESPONSE_BODIES = {
+  success: { analyzed: ["finance"], skipped: [], rateLimited: [], failed: [] },
+  "total-failure": {
+    analyzed: [],
+    skipped: [],
+    rateLimited: [],
+    failed: [
+      { domain: "finance", reason: "Error" },
+      { domain: "sales", reason: "Error" },
+      { domain: "operations", reason: "Error" },
+    ],
+  },
+  "nothing-eligible": { analyzed: [], skipped: ["finance", "sales", "operations"], rateLimited: [], failed: [] },
+} as const;
 
 function installFetchMock() {
   vi.stubGlobal(
@@ -64,7 +79,7 @@ function installFetchMock() {
         if (analyzePostMode === "reject") {
           throw new TypeError("Failed to fetch");
         }
-        return { ok: true, status: 200, json: async () => ({ analyzed: ["finance"], skipped: [], rateLimited: [], failed: [] }) } as Response;
+        return { ok: true, status: 200, json: async () => ANALYZE_RESPONSE_BODIES[analyzePostMode] } as Response;
       }
       return { ok: true, status: 200, json: async () => ({}) } as Response;
     })
@@ -110,6 +125,28 @@ describe("Start Here — Analyze my business", () => {
     const errorEl = await screen.findByTestId("start-here-analyze-error");
     expect(errorEl.textContent).not.toMatch(/Failed to fetch/i);
     expect(errorEl.textContent).toMatch(/couldn't analyze/i);
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("when every eligible domain fails (200 OK, zero analyzed), shows an error and never navigates -- no false success", async () => {
+    analyzePostMode = "total-failure";
+    renderPage();
+    const button = await screen.findByTestId("start-here-analyze-button");
+    fireEvent.click(button);
+
+    const errorEl = await screen.findByTestId("start-here-analyze-error");
+    expect(errorEl.textContent).toMatch(/couldn't analyze/i);
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("when no domain has data yet (200 OK, all skipped), shows a distinct message and never navigates", async () => {
+    analyzePostMode = "nothing-eligible";
+    renderPage();
+    const button = await screen.findByTestId("start-here-analyze-button");
+    fireEvent.click(button);
+
+    const errorEl = await screen.findByTestId("start-here-analyze-error");
+    expect(errorEl.textContent).toMatch(/add more business data/i);
     expect(pushMock).not.toHaveBeenCalled();
   });
 });
