@@ -597,10 +597,19 @@ export interface OwnerNowViewPayload {
 export interface ExecutionLifecycleItem {
   taskId: string;
   taskKey: string;
+  /**
+   * The task's origin family (e.g. "PROCESS_CORRECTION") — a stable, server-authoritative field
+   * on ProcessExecutionTask, not derived from display text. Used (paired with
+   * ownerVisibleSummary) to group repeated, semantically-identical suggestions in the owner UI
+   * (P0-F) without grouping by raw title string alone.
+   */
+  sourceFamily: string;
   status: string;
   ownerVisibleSummary: string;
   severity: string;
   assignedRole: string;
+  /** When the underlying task was created — for humanized "reported X ago" display only. */
+  createdAt: string;
   dueAt: string | null;
   progressPct: number | null;
   blockerActive: boolean;
@@ -1147,10 +1156,12 @@ async function buildExecutionLifecycle(
       return {
         taskId: t.id as string,
         taskKey: t.taskKey as string,
+        sourceFamily: t.sourceFamily as string,
         status,
         ownerVisibleSummary: t.ownerVisibleSummary as string,
         severity: t.severity as string,
         assignedRole: t.actionOwner as string,
+        createdAt: (t.createdAt as Date).toISOString(),
         dueAt: null,
         progressPct: prog?.progressPct ?? null,
         blockerActive: prog?.blockerActive ?? false,

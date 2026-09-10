@@ -33,10 +33,12 @@ function lifecycleItem(over: Partial<ExecutionLifecycleItem> = {}): ExecutionLif
   return {
     taskId: "task-uuid-1",
     taskKey: "task_cash",
+    sourceFamily: "PROCESS_CORRECTION",
     status: "PROPOSED",
     ownerVisibleSummary: "Improve cash flow",
     severity: "HIGH",
     assignedRole: "owner",
+    createdAt: "2026-01-01T00:00:00.000Z",
     dueAt: null,
     progressPct: null,
     blockerActive: false,
