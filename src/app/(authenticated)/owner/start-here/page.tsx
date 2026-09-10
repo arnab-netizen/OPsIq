@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, CardDashboardSkeleton } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -20,12 +21,13 @@ import {
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- runtime onboarding payload is untyped; fetch-on-mount is intentional */
 
 const FETCH_TIMEOUT_MS = 10_000;
+const ANALYZE_FAILURE_FALLBACK = "We couldn't analyze your business right now. Your information is still saved — try again in a moment.";
 
-async function api(path: string) {
+async function api(path: string, init?: RequestInit) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(path, { headers: { "Content-Type": "application/json" }, signal: controller.signal });
+    const res = await fetch(path, { headers: { "Content-Type": "application/json" }, signal: controller.signal, ...init });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
     return data;
@@ -35,11 +37,29 @@ async function api(path: string) {
 }
 
 export default function StartHerePage() {
+  const router = useRouter();
   const { activeBusinessId, activeBusiness, needsBusinessRecovery, loading: contextLoading } = useActiveBusiness();
   const [steps, setSteps] = useState<StartHereStep[] | null>(null);
   const [canRunFirstDiagnosis, setCanRunFirstDiagnosis] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+
+  const handleAnalyze = useCallback(async () => {
+    if (!activeBusinessId) return;
+    setAnalyzing(true);
+    setAnalyzeError(null);
+    try {
+      await api(`/api/owner/businesses/${activeBusinessId}/analyze`, { method: "POST" });
+      router.push("/owner/cockpit");
+    } catch {
+      // Never the caught error's own .message here (not a governed public-safe string) --
+      // the entered data is untouched either way, only the analyze call itself failed.
+      setAnalyzeError(ANALYZE_FAILURE_FALLBACK);
+      setAnalyzing(false);
+    }
+  }, [activeBusinessId, router]);
 
   const load = useCallback(async (businessId: string) => {
     setLoading(true);
@@ -126,11 +146,21 @@ export default function StartHerePage() {
       {canRunFirstDiagnosis && (
         <div className="mb-6 border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }} data-testid="start-here-first-read-available">
           <p className="text-sm font-medium text-foreground">
-            You already have enough information for a first financial read.
+            You already have enough information for a first read.
           </p>
-          <Link href="/owner/cockpit" className="mt-2 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline">
-            See my first result →
-          </Link>
+          <p className="mt-1 text-sm text-muted-foreground">
+            OpsIQ will analyze every area you&rsquo;ve added data for — no need to visit each one separately.
+          </p>
+          {analyzeError && <p className="mt-2 text-sm text-destructive" data-testid="start-here-analyze-error">{analyzeError}</p>}
+          <Button
+            size="sm"
+            className="mt-2.5"
+            isLoading={analyzing}
+            onClick={handleAnalyze}
+            data-testid="start-here-analyze-button"
+          >
+            Analyze my business
+          </Button>
         </div>
       )}
 

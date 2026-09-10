@@ -312,10 +312,10 @@
       "type": "unsafe-error-render",
       "category": "UNSAFE ERROR RENDER",
       "file": "src/app/(authenticated)/owner/start-here/page.tsx",
-      "line": 124,
+      "line": 144,
       "severity": "error",
       "code": "{error && <p className=\"text-sm text-destructive mb-4\">{error}</p>}",
-      "reason": "pre-existing (commit ca5f2be9, predates this PR series). error state is only ever set from this file's local api() helper, whose only throw is new Error(data?.error?.message || data?.error || `Request failed (${res.status})`) -- a governed server message, a governed server string, or a hardcoded status-code fallback; never a raw stack/SQL/provider payload"
+      "reason": "pre-existing (commit ca5f2be9, predates this PR series). error state is only ever set from this file's local api() helper, whose only throw is new Error(data?.error?.message || data?.error || `Request failed (${res.status})`) -- a governed server message, a governed server string, or a hardcoded status-code fallback; never a raw stack/SQL/provider payload. Line shifted 124->144 by the PR B \"Analyze my business\" orchestration addition (new imports/state/handler above this line); code itself unchanged, verified byte-identical."
     },
     {
       "type": "unsafe-error-render",
