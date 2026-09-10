@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
@@ -9,6 +9,7 @@ import { DiagnosisEmptyState } from "@/components/owner/DiagnosisEmptyState";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { formatHumanDate } from "@/lib/format-human-date";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { Disclosure } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -127,6 +128,57 @@ const IMPROVE_GROUPS: Array<{ title: string; fieldNames: string[] }> = [
 
 const ADVANCED_FIELD_NAMES = ["reworkCost", "complaintCost", "ownerWithdrawals"];
 
+// P0-D: minimal local draft persistence for the unfinished "Add financial snapshot" form, keyed
+// per business so switching business never leaks one business's unsaved draft into another. Only
+// the fields the mission scopes are persisted (no full 27-field form, no submitted/response data),
+// storage is best-effort (private browsing / quota can throw), and a malformed stored value fails
+// closed to "no draft" rather than crashing the page.
+const DRAFT_FIELDS = ["periodStart", "periodEnd", "businessModel", "revenue", "fixedCosts", "variableCosts", "cashOnHand"] as const;
+type DraftField = (typeof DRAFT_FIELDS)[number];
+type FinanceDraft = Partial<Record<DraftField, string>>;
+
+function financeDraftKey(businessId: string) {
+  return `opsiq:finance-draft:${businessId}`;
+}
+
+function readFinanceDraft(businessId: string): FinanceDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(financeDraftKey(businessId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const draft: FinanceDraft = {};
+    for (const field of DRAFT_FIELDS) {
+      const v = (parsed as Record<string, unknown>)[field];
+      if (typeof v === "string") draft[field] = v;
+    }
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+function writeFinanceDraft(businessId: string, draft: FinanceDraft) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(financeDraftKey(businessId), JSON.stringify(draft));
+  } catch {
+    // best-effort only -- storage unavailable/full must never block the form
+  }
+}
+
+function clearFinanceDraft(businessId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(financeDraftKey(businessId));
+  } catch {
+    // best-effort
+  }
+}
+
+const DRAFT_DEBOUNCE_MS = 400;
+
 export default function OwnerFinancePage() {
   const { activeBusinessId, needsBusinessRecovery, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
@@ -136,6 +188,32 @@ export default function OwnerFinancePage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [showBusinessForm, setShowBusinessForm] = useState(false);
   const [showSnapshotForm, setShowSnapshotForm] = useState(false);
+  // P0-E: the snapshot form's save error is scoped separately from the shared page-level `error`
+  // above (used by the other four mutations on this page) so it can render next to the Save
+  // button instead of at the top of the page, far from where the owner is looking.
+  const [snapshotError, setSnapshotError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const draftDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current);
+    };
+  }, []);
+
+  function handleSnapshotFormChange(e: React.FormEvent<HTMLFormElement>) {
+    if (!selected) return;
+    const form = e.currentTarget;
+    if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current);
+    draftDebounceRef.current = setTimeout(() => {
+      const fd = new FormData(form);
+      const draft: FinanceDraft = {};
+      for (const field of DRAFT_FIELDS) {
+        const v = fd.get(field);
+        if (typeof v === "string" && v !== "") draft[field] = v;
+      }
+      writeFinanceDraft(selected, draft);
+    }, DRAFT_DEBOUNCE_MS);
+  }
 
   const load = useCallback(async (businessId?: string | null) => {
     setLoading(true);
@@ -203,7 +281,7 @@ export default function OwnerFinancePage() {
     e.preventDefault();
     if (!selected) return;
     setBusy(true);
-    setError(null);
+    setSnapshotError(null);
     const fd = new FormData(e.currentTarget);
     const body: Record<string, unknown> = {
       periodStart: fd.get("periodStart"),
@@ -221,10 +299,19 @@ export default function OwnerFinancePage() {
         method: "POST",
         body: JSON.stringify(body),
       });
+      // Draft is cleared only now, on confirmed success -- never at submission start, so a
+      // failed save leaves the draft (and the on-screen values) intact for retry.
+      if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current);
+      clearFinanceDraft(selected);
       setShowSnapshotForm(false);
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save snapshot");
+      // Governed classification, never the raw fetch/exception text -- see P0-E.
+      const governed = classifyOperatorError(e, { context: "save" });
+      setSnapshotError({
+        message: `We couldn't save this snapshot. Your entries are still here. ${governed.recovery}`,
+        retryable: governed.isRetryable,
+      });
     } finally {
       setBusy(false);
     }
@@ -302,6 +389,10 @@ export default function OwnerFinancePage() {
   const cycle = dashboard?.latestCycle ?? null;
   const score = dashboard?.domainScore ?? null;
   const missing: string[] = dashboard?.missingCriticalData ?? [];
+  // Read once per render for the currently-open form's initial mount -- see the `key={selected}`
+  // on the snapshot <form> below, which remounts (and so re-reads this) whenever business
+  // switches, so an in-progress draft never leaks across businesses.
+  const snapshotDraft: FinanceDraft | null = selected && showSnapshotForm ? readFinanceDraft(selected) : null;
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
@@ -362,16 +453,22 @@ export default function OwnerFinancePage() {
           </div>
 
           {showSnapshotForm && (
-            <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
+            <form
+              key={selected}
+              onSubmit={addSnapshot}
+              onChange={handleSnapshotFormChange}
+              className="mb-6 border rounded-lg p-4 bg-card space-y-3"
+            >
               <h2 className="font-semibold">
                 Financial snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
-              <div className="grid grid-cols-2 gap-3">
-                <Input name="periodStart" label="Period start" type="date" required />
-                <Input name="periodEnd" label="Period end" type="date" required />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Input name="periodStart" label="Period start" type="date" required defaultValue={snapshotDraft?.periodStart ?? ""} />
+                <Input name="periodEnd" label="Period end" type="date" required defaultValue={snapshotDraft?.periodEnd ?? ""} />
                 <Select
                   name="businessModel"
                   label="Business model"
+                  defaultValue={snapshotDraft?.businessModel ?? ""}
                   options={[
                     { value: "", label: "—" },
                     { value: "service", label: "Service" },
@@ -389,7 +486,17 @@ export default function OwnerFinancePage() {
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {QUICK_FIELD_NAMES.map((name) => {
                     const f = financeField(name);
-                    return <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" hint={f.hint} />;
+                    return (
+                      <Input
+                        key={f.name}
+                        name={f.name}
+                        label={f.label}
+                        type="number"
+                        placeholder="—"
+                        hint={f.hint}
+                        defaultValue={snapshotDraft?.[f.name as DraftField] ?? ""}
+                      />
+                    );
                   })}
                 </div>
               </div>
@@ -424,6 +531,15 @@ export default function OwnerFinancePage() {
                 </div>
               </Disclosure>
 
+              {snapshotError && (
+                <div
+                  role="alert"
+                  data-testid="snapshot-save-error"
+                  className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
+                >
+                  {snapshotError.message}
+                </div>
+              )}
               <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save snapshot"}</Button>
             </form>
           )}
