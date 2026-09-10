@@ -134,7 +134,16 @@ export default function OwnerCockpitPage() {
     setError(null);
     try {
       const qs = businessId ? `?businessId=${encodeURIComponent(businessId)}` : "";
-      const data = await apiGet(`/api/owner/now-view${qs}`);
+      // now-view / recovery-status / public-signals each depend only on businessId, not on one
+      // another's response -- they were previously three sequential awaits (a measured request
+      // waterfall). recovery-status and public-signals keep their existing best-effort
+      // `.catch(() => null)` isolation so a failure there still cannot fail the whole page; a
+      // now-view failure still propagates and is still page-fatal, exactly as before.
+      const [data, rec, sig] = await Promise.all([
+        apiGet(`/api/owner/now-view${qs}`),
+        apiGet(`/api/owner/recovery-status${qs}`).catch(() => null),
+        apiGet(`/api/owner/public-signals${qs}`).catch(() => null),
+      ]);
       setBridge((data.processExecution as ProcessExecutionBridgeView) ?? null);
       const avoidList = (data?.view?.actionsToAvoid as AvoidItem[] | undefined) ?? [];
       setAvoid(avoidList.map((a) => a.avoid ?? "").filter(Boolean));
@@ -150,10 +159,8 @@ export default function OwnerCockpitPage() {
       setBusinessOperatingSystem((data.businessOperatingSystem as BusinessOperatingSystemView) ?? null);
       setFinanceTopPriority((data.financeTopPriority as CockpitFinancePriority) ?? null);
       // Read-only recovery status (best-effort; a failure here must not break the cockpit).
-      const rec = await apiGet(`/api/owner/recovery-status${qs}`).catch(() => null);
       setRecovery(rec && typeof rec === "object" && "recoveryStatus" in rec ? (rec as OwnerRecoveryStatusResponse) : null);
       // Read-only outside signals (best-effort; a failure here must not break the cockpit).
-      const sig = await apiGet(`/api/owner/public-signals${qs}`).catch(() => null);
       setPublicSignals(sig && typeof sig === "object" && "publicSignalStatus" in sig ? (sig as OwnerPublicSignalsResponse) : null);
     } catch (e) {
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
@@ -286,14 +293,15 @@ export default function OwnerCockpitPage() {
     );
   }
 
-  if (loading) return <main className="p-6"><CardDashboardSkeleton label="Loading your business" sections={2} /></main>;
-  if (error) return (
-    <main className="flex flex-col items-start gap-3 p-6">
-      <p className="text-sm text-destructive">{error}</p>
-      <Button onClick={() => void load(activeBusinessId)}>Retry</Button>
-    </main>
-  );
-
+  // P1-A: StartHereContinuationCard drives its own two calls (onboarding, process-execution,
+  // already fan-out via Promise.all inside it) and needs only `businessId` -- it never depended
+  // on `load()`'s now-view/recovery-status/public-signals data. It previously lived only in the
+  // branch below this `loading` check, so React fully unmounted/remounted it (and so restarted
+  // its fetches) on every loading -> loaded transition, and its calls never started until this
+  // page's own three calls had already finished -- a mount-order waterfall on top of the fetch
+  // waterfall fixed in `load()` above. Rendering it once, unconditionally, at a stable position
+  // keeps it mounted (and its own fetch running) across that transition so all five calls this
+  // page depends on genuinely overlap on the wire.
   return (
     <main className="flex max-w-2xl flex-col gap-6 p-6">
       <PageHeader
@@ -307,32 +315,43 @@ export default function OwnerCockpitPage() {
       />
       {message && <p data-testid="cockpit-message" className="text-sm text-muted-foreground">{message}</p>}
       <StartHereContinuationCard businessId={activeBusinessId} />
-      {/* "Plan a new business" (Startup Mode) deliberately does NOT live on Home — a real
-          usability test found a prominent entry point here confusing for an owner who already
-          has a real business set up. It now lives on My Business (/owner/data) as a secondary
-          link (src/components/owner/PlanNewBusinessLink.tsx), plus in the nav's Growth section. */}
-      <MinimumOwnerCockpit
-        bridge={bridge}
-        actionsToAvoid={avoid}
-        recovery={recovery}
-        publicSignals={publicSignals}
-        businessCondition={businessCondition}
-        dataFreshnessWeak={dataFreshnessWeak}
-        goalAttentionSignal={goalAttentionSignal}
-        topProfitLeak={topProfitLeak}
-        policyAttentionSignal={policyAttentionSignal}
-        trendAlerts={trendAlerts}
-        doNotRepeatAnnotation={doNotRepeatAnnotation}
-        activeEscalations={activeEscalations}
-        onAction={onAction}
-        onStartWork={onStartWork}
-        onAcknowledgeEscalation={onAcknowledgeEscalation}
-        executionLifecycle={executionLifecycle}
-        businessOperatingSystem={businessOperatingSystem}
-        onBosAction={onBosAction}
-        financeTopPriority={financeTopPriority}
-        busy={busy}
-      />
+      {loading ? (
+        <CardDashboardSkeleton label="Loading your business" sections={2} />
+      ) : error ? (
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-sm text-destructive">{error}</p>
+          <Button onClick={() => void load(activeBusinessId)}>Retry</Button>
+        </div>
+      ) : (
+        <>
+          {/* "Plan a new business" (Startup Mode) deliberately does NOT live on Home — a real
+              usability test found a prominent entry point here confusing for an owner who already
+              has a real business set up. It now lives on My Business (/owner/data) as a secondary
+              link (src/components/owner/PlanNewBusinessLink.tsx), plus in the nav's Growth section. */}
+          <MinimumOwnerCockpit
+            bridge={bridge}
+            actionsToAvoid={avoid}
+            recovery={recovery}
+            publicSignals={publicSignals}
+            businessCondition={businessCondition}
+            dataFreshnessWeak={dataFreshnessWeak}
+            goalAttentionSignal={goalAttentionSignal}
+            topProfitLeak={topProfitLeak}
+            policyAttentionSignal={policyAttentionSignal}
+            trendAlerts={trendAlerts}
+            doNotRepeatAnnotation={doNotRepeatAnnotation}
+            activeEscalations={activeEscalations}
+            onAction={onAction}
+            onStartWork={onStartWork}
+            onAcknowledgeEscalation={onAcknowledgeEscalation}
+            executionLifecycle={executionLifecycle}
+            businessOperatingSystem={businessOperatingSystem}
+            onBosAction={onBosAction}
+            financeTopPriority={financeTopPriority}
+            busy={busy}
+          />
+        </>
+      )}
     </main>
   );
 }

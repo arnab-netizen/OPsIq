@@ -209,6 +209,31 @@ interface GuidanceDb {
   };
 }
 
+/**
+ * Narrow structural type for the two ProcessExecutionTask* delegates used by
+ * buildExecutionLifecycle. Not part of GuidanceDb itself (that interface stays a minimal,
+ * hand-typed fake-DI surface for unit tests, most of which don't need Phase 3 data) — this exists
+ * only so the live `db` value can be accessed here without `any`, matching the eslint
+ * `no-explicit-any` rule this file must pass.
+ */
+interface ProcessExecutionTaskDb {
+  processExecutionTask: {
+    findMany(args: {
+      where: Record<string, unknown>;
+      orderBy: Record<string, unknown>;
+      take: number;
+    }): Promise<Array<Record<string, unknown>>>;
+  };
+  processExecutionTaskProgress: {
+    findMany(args: {
+      where: Record<string, unknown>;
+      orderBy: Record<string, unknown>;
+      distinct: string[];
+      select: Record<string, unknown>;
+    }): Promise<Array<{ taskId: string; progressPct: number | null; blockerActive: boolean }>>;
+  };
+}
+
 export interface GuidanceDeps {
   db: GuidanceDb;
   uuid: () => string;
@@ -597,10 +622,19 @@ export interface OwnerNowViewPayload {
 export interface ExecutionLifecycleItem {
   taskId: string;
   taskKey: string;
+  /**
+   * The task's origin family (e.g. "PROCESS_CORRECTION") — a stable, server-authoritative field
+   * on ProcessExecutionTask, not derived from display text. Used (paired with
+   * ownerVisibleSummary) to group repeated, semantically-identical suggestions in the owner UI
+   * (P0-F) without grouping by raw title string alone.
+   */
+  sourceFamily: string;
   status: string;
   ownerVisibleSummary: string;
   severity: string;
   assignedRole: string;
+  /** When the underlying task was created — for humanized "reported X ago" display only. */
+  createdAt: string;
   dueAt: string | null;
   progressPct: number | null;
   blockerActive: boolean;
@@ -1111,7 +1145,8 @@ async function buildExecutionLifecycle(
 ): Promise<OwnerExecutionLifecycleView | null> {
   try {
     const cutoff = new Date(Date.now() - RECENTLY_VERIFIED_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-    const tasks = await (db as any).processExecutionTask.findMany({
+    const dbUntyped = db as unknown as ProcessExecutionTaskDb;
+    const tasks = await dbUntyped.processExecutionTask.findMany({
       where: {
         workspaceId,
         // Excludes acceptance/QA fixture tasks (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — Home
@@ -1127,9 +1162,9 @@ async function buildExecutionLifecycle(
     });
 
     // Fetch latest progress record per task (most recent createdAt)
-    const taskIds: string[] = tasks.map((t: { id: string }) => t.id);
+    const taskIds: string[] = tasks.map((t) => t.id as string);
     const progressRows: Array<{ taskId: string; progressPct: number | null; blockerActive: boolean }> = taskIds.length > 0
-      ? await (db as any).processExecutionTaskProgress.findMany({
+      ? await dbUntyped.processExecutionTaskProgress.findMany({
           where: { taskId: { in: taskIds } },
           orderBy: { createdAt: "desc" },
           distinct: ["taskId"],
@@ -1147,10 +1182,12 @@ async function buildExecutionLifecycle(
       return {
         taskId: t.id as string,
         taskKey: t.taskKey as string,
+        sourceFamily: t.sourceFamily as string,
         status,
         ownerVisibleSummary: t.ownerVisibleSummary as string,
         severity: t.severity as string,
         assignedRole: t.actionOwner as string,
+        createdAt: (t.createdAt as Date).toISOString(),
         dueAt: null,
         progressPct: prog?.progressPct ?? null,
         blockerActive: prog?.blockerActive ?? false,

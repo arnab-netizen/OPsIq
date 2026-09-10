@@ -16,6 +16,7 @@
  */
 
 import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 import { Badge, Disclosure } from "@/ui/primitives";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
@@ -76,6 +77,55 @@ const SEVERITY_LABEL: Record<string, string> = {
 };
 function severityLabel(s: string): string {
   return SEVERITY_LABEL[s.toUpperCase()] ?? s;
+}
+
+const SEVERITY_RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+function maxSeverity(items: readonly { severity: string }[]): string {
+  return items.reduce((worst, item) => {
+    const a = SEVERITY_RANK[worst.toUpperCase()] ?? 0;
+    const b = SEVERITY_RANK[item.severity.toUpperCase()] ?? 0;
+    return b > a ? item.severity : worst;
+  }, items[0]?.severity ?? "LOW");
+}
+
+/** Relative-time display for owner-facing content — never a raw ISO timestamp (P0-F). */
+function humanizeReported(iso: string): string {
+  try {
+    return formatDistanceToNow(new Date(iso), { addSuffix: true });
+  } catch {
+    return "recently";
+  }
+}
+
+/**
+ * Groups repeated, semantically-identical "Requires your decision" suggestions (P0-F) so the
+ * owner sees one compact row with a count instead of N near-duplicate cards. The key is built
+ * from two server-authoritative fields -- `sourceFamily` (the task's origin family, e.g.
+ * "PROCESS_CORRECTION") and `ownerVisibleSummary` (template-generated text that is byte-identical
+ * across true duplicates of the same correction type and distinct across genuinely different
+ * suggestions) -- never from a raw title/display-string heuristic alone. A group of size 1 is
+ * rendered exactly as an ungrouped item always was; only a real duplicate cluster (size > 1)
+ * collapses into the compact form. Order is otherwise preserved (first-seen position, matching
+ * the server's own priorityRank ordering).
+ */
+export interface DecisionItemGroup {
+  key: string;
+  items: ExecutionLifecycleItem[];
+}
+export function groupRequiresDecisionItems(items: readonly ExecutionLifecycleItem[]): DecisionItemGroup[] {
+  const order: string[] = [];
+  const byKey = new Map<string, ExecutionLifecycleItem[]>();
+  for (const item of items) {
+    const key = `${item.sourceFamily}::${item.ownerVisibleSummary}`;
+    const list = byKey.get(key);
+    if (list) {
+      list.push(item);
+    } else {
+      byKey.set(key, [item]);
+      order.push(key);
+    }
+  }
+  return order.map((key) => ({ key, items: byKey.get(key)! }));
 }
 
 const SURVIVAL_LABEL: Record<string, string> = {
@@ -408,6 +458,9 @@ function ExecutionLifecycleSection({
         <Badge variant={SEVERITY_VARIANT(item.severity)}>{severityLabel(item.severity)}</Badge>
         <span style={{ fontWeight: 600 }}>{item.ownerVisibleSummary}</span>
         <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{STATUS_LABEL[item.status] ?? item.status.toLowerCase().replace(/_/g, " ")}</span>
+        <span data-testid={`cockpit-reported-${item.taskKey}`} style={{ color: "var(--muted-foreground)", fontSize: 12 }}>
+          Reported {humanizeReported(item.createdAt)}
+        </span>
       </div>
       {item.verificationClassification && (
         <span data-testid={`cockpit-verification-classification-${item.taskKey}`}>
@@ -530,6 +583,42 @@ function ExecutionLifecycleSection({
     </li>
   );
 
+  // P0-F: a compact row for a cluster of repeated, semantically-identical suggestions (see
+  // groupRequiresDecisionItems) -- one line with a severity badge, the shared summary text, a
+  // count, and a relative "reported" time, with every underlying item still individually
+  // reachable (and individually actionable) via the nested, collapsed detail list. No bulk/
+  // destructive action is offered here; each item keeps its own action controls unchanged.
+  const renderDecisionGroup = (group: DecisionItemGroup, i: number) => {
+    const first = group.items[0];
+    const earliestReported = group.items.reduce(
+      (min, item) => (item.createdAt < min ? item.createdAt : min),
+      first.createdAt
+    );
+    return (
+      <li key={group.key} data-testid={`cockpit-requires-decision-group-${i}`}
+        style={{ fontSize: 13, paddingBottom: 8, borderBottom: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <span data-testid={`cockpit-decision-group-severity-${i}`}>
+            <Badge variant={SEVERITY_VARIANT(maxSeverity(group.items))}>{severityLabel(maxSeverity(group.items))}</Badge>
+          </span>
+          <span style={{ fontWeight: 600 }}>{first.ownerVisibleSummary}</span>
+          <span data-testid={`cockpit-decision-group-count-${i}`} style={{ fontSize: 12, padding: "1px 6px", borderRadius: 10, background: "var(--muted)", color: "var(--muted-foreground)" }}>
+            {group.items.length} suggestions
+          </span>
+          <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>Reported {humanizeReported(earliestReported)}</span>
+        </div>
+        <details style={{ marginTop: 6 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--primary-text)" }}>
+            Show all {group.items.length}
+          </summary>
+          <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+            {group.items.map((item, j) => renderItem(item, j, `cockpit-requires-decision-group-${i}-item`))}
+          </ul>
+        </details>
+      </li>
+    );
+  };
+
   const total = lifecycle.requiresDecision.length + lifecycle.inExecution.length + lifecycle.awaitingVerification.length;
 
   return (
@@ -551,7 +640,11 @@ function ExecutionLifecycleSection({
           {lifecycle.requiresDecision.length === 0
             ? <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--muted-foreground)" }}>No tasks awaiting your decision.</p>
             : <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
-                {lifecycle.requiresDecision.map((item, i) => renderItem(item, i, "cockpit-requires-decision"))}
+                {groupRequiresDecisionItems(lifecycle.requiresDecision).map((group, i) =>
+                  group.items.length === 1
+                    ? renderItem(group.items[0], i, "cockpit-requires-decision")
+                    : renderDecisionGroup(group, i)
+                )}
               </ul>}
         </details>
         <details data-testid="cockpit-in-execution-group" open={lifecycle.inExecution.length > 0}
