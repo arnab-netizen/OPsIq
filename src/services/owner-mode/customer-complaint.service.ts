@@ -209,6 +209,18 @@ export async function createComplaint(input: CreateComplaintInput): Promise<Publ
     channel = "DIRECT", reportedBy, businessId,
   } = input;
 
+  // Ownership guard: a caller-supplied businessId must resolve to a real business in
+  // THIS workspace before it can be stamped on a governed record. Same pattern as
+  // founder-recovery/business.service.ts:getBusiness — mirrors the fix already applied
+  // to BusinessObjective.businessId (commit 3bf4ca8e) for the same bug class.
+  if (businessId) {
+    const business = await db.ownerBusiness.findFirst({
+      where: { id: businessId, workspaceId, isFixtureBusiness: false },
+      select: { id: true },
+    });
+    if (!business) throw new NotFoundError("OwnerBusiness", businessId);
+  }
+
   // Idempotency: return existing if key already used in this workspace
   const existing = await db.customerComplaint.findFirst({
     where: { workspaceId, idempotencyKey },

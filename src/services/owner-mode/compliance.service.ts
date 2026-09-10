@@ -67,6 +67,9 @@ interface ComplianceDb {
     create(args: { data: Record<string, unknown> }): Promise<{ id: string }>;
     findMany(args: { where: { workspaceId: string; status: string }; select: Record<string, boolean> }): Promise<ComplianceRow[]>;
   };
+  ownerBusiness: {
+    findFirst(args: { where: { id: string; workspaceId: string; isFixtureBusiness: boolean }; select: { id: true } }): Promise<{ id: string } | null>;
+  };
 }
 
 export interface ComplianceDeps {
@@ -101,6 +104,19 @@ export interface RecordComplianceItemInput {
 export async function recordComplianceItem(input: RecordComplianceItemInput, injected?: ComplianceDeps): Promise<string> {
   const deps = injected ?? (await resolveDefaultDeps());
   const now = (deps.now ?? (() => new Date()))();
+
+  // Ownership guard: a caller-supplied businessId must resolve to a real business in
+  // THIS workspace before it can be stamped on a governed record. Same pattern as
+  // founder-recovery/business.service.ts:getBusiness — mirrors the fix already applied
+  // to BusinessObjective.businessId (commit 3bf4ca8e) for the same bug class.
+  if (input.businessId) {
+    const business = await deps.db.ownerBusiness.findFirst({
+      where: { id: input.businessId, workspaceId: input.workspaceId, isFixtureBusiness: false },
+      select: { id: true },
+    });
+    if (!business) throw new NotFoundError("OwnerBusiness", input.businessId);
+  }
+
   const created = await deps.db.ownerComplianceItem.create({
     data: {
       workspaceId: input.workspaceId,
