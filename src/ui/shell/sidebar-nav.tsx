@@ -388,7 +388,10 @@ export function SidebarNav({
 
         return (
           <details key={section.id} open={open} className="group mb-1">
-            <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground marker:content-none hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+              <span className="inline-block shrink-0 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden="true">
+                &#9656;
+              </span>
               {section.title}
             </summary>
             <div className="mt-1 flex flex-col gap-1">{visibleItems.map(renderItem)}</div>

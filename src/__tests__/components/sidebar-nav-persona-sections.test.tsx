@@ -112,7 +112,9 @@ describe("group collapse/expand behavior is unregressed by the new sections", ()
     const caps = Array.from(getCapabilitiesForRole(ROLES.SYSTEM_ADMIN));
     const { container } = render(<SidebarNav canViewOwnerRecovery={true} capabilities={caps} />);
     const summaries = Array.from(container.querySelectorAll("summary"));
-    const adminSummary = summaries.find((s) => s.textContent === "Administration")!;
+    // The summary's textContent also carries the P0-B disclosure indicator glyph, so match by
+    // trailing text rather than strict equality.
+    const adminSummary = summaries.find((s) => s.textContent?.trim().endsWith("Administration"))!;
     const adminDetails = adminSummary.closest("details")!;
     // Active route is /owner/cockpit (mocked above), which is not inside Administration.
     expect(adminDetails.hasAttribute("open")).toBe(false);
@@ -124,10 +126,43 @@ describe("group collapse/expand behavior is unregressed by the new sections", ()
       <SidebarNav canViewOwnerRecovery={true} capabilities={caps} />,
     );
     const summaries = Array.from(container.querySelectorAll("summary"));
-    const adminSummary = summaries.find((s) => s.textContent === "Administration")!;
+    const adminSummary = summaries.find((s) => s.textContent?.trim().endsWith("Administration"))!;
     expect(queryByText("Billing diagnostics")).not.toBeNull(); // present in DOM even closed (native <details>)
     fireEvent.click(adminSummary);
     const adminDetails = adminSummary.closest("details")!;
     expect(adminDetails.hasAttribute("open")).toBe(true);
+  });
+});
+
+describe("collapsed section summaries expose a visible disclosure affordance", () => {
+  // P0-B: closed groups previously rendered as plain text with no indication they were
+  // expandable. Every collapsible summary must carry a rotating indicator and keep native
+  // <details>/<summary> keyboard behavior — this is shared by both the desktop sidebar and
+  // the mobile drawer, since both render this same SidebarNav component (see app-shell.tsx).
+  const caps = Array.from(getCapabilitiesForRole(ROLES.SYSTEM_ADMIN));
+
+  it("every collapsible summary renders a disclosure indicator that rotates on open", () => {
+    const { container } = render(<SidebarNav canViewOwnerRecovery={true} capabilities={caps} />);
+    const detailsEls = Array.from(container.querySelectorAll("details"));
+    // Sanity: this render includes multiple collapsible sections (Business details, Growth,
+    // More, Consulting, Administration), so this isn't a vacuous pass.
+    expect(detailsEls.length).toBeGreaterThan(1);
+
+    for (const details of detailsEls) {
+      const summary = details.querySelector("summary")!;
+      const indicator = summary.querySelector('[aria-hidden="true"]');
+      expect(indicator).not.toBeNull();
+      expect(indicator!.className).toContain("transition-transform");
+      expect(indicator!.className).toContain("group-open:rotate-90");
+      // Native browser marker must stay suppressed so only our indicator shows.
+      expect(summary.className).toContain("list-none");
+    }
+  });
+
+  it("a summary is a native focusable/keyboard-operable control with a visible focus style", () => {
+    const { container } = render(<SidebarNav canViewOwnerRecovery={true} capabilities={caps} />);
+    const summary = container.querySelector("summary")!;
+    expect(summary.className).toContain("cursor-pointer");
+    expect(summary.className).toContain("focus-visible:ring-2");
   });
 });
