@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { getBusiness } from "@/services/founder-recovery/business.service";
+import { NotFoundError } from "@/infra/errors";
 import { z } from "zod/v4";
 
 export const createCustomerSchema = z.object({
@@ -26,11 +27,21 @@ export async function createCustomer(
   actorId: string,
   workspaceId: string,
 ) {
-  // Ownership guard: a caller-supplied businessId must resolve to a real, non-fixture business
-  // in THIS workspace before it can be stamped on a governed record — same pattern as
+  // Ownership guard: a caller-supplied businessId must resolve to a real business in THIS
+  // workspace before it can be stamped on a governed record — same pattern as
   // owner-sales/snapshot.service.ts and every other business-scoped write in this app. Prior to
   // this check, CustomerRecord.businessId was trusted verbatim with no existence/ownership check.
-  await getBusiness(input.businessId, workspaceId);
+  //
+  // getBusiness() itself does not filter isFixtureBusiness (it's a plain existence+ownership
+  // check shared by read and write paths across the app), so the fixture exclusion is applied
+  // here explicitly — matching the inline `isFixtureBusiness: false` idiom used by
+  // compliance.service.ts / equipment.service.ts / customer-complaint.service.ts /
+  // sop-document.service.ts (see write-isolation-ownership-guard.db.test.ts, the precedent this
+  // guard mirrors) rather than being folded into the shared getBusiness() helper.
+  const business = await getBusiness(input.businessId, workspaceId);
+  if (business.isFixtureBusiness) {
+    throw new NotFoundError("OwnerBusiness", input.businessId);
+  }
 
   const record = await db.customerRecord.create({
     data: {

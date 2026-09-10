@@ -12,10 +12,13 @@
  * nonexistent id.
  *
  * Fix: createCustomer now calls getBusiness(businessId, workspaceId) before insert -- the same
- * function every Sales/Finance write path already uses -- fails closed with NotFoundError on any
- * businessId that isn't a real, non-fixture business in the caller's own workspace.
- * businessId is a required field on CustomerRecord (unlike the soft-FK models above), so there is
- * no "omitted" case to cover.
+ * function every Sales/Finance write path already uses for existence+ownership -- plus an
+ * explicit isFixtureBusiness check on the returned row (getBusiness() itself does not filter
+ * fixtures; that exclusion is inlined per-caller across this app, matching compliance.service.ts /
+ * equipment.service.ts / customer-complaint.service.ts / sop-document.service.ts). Together they
+ * fail closed with NotFoundError on any businessId that isn't a real, non-fixture business in the
+ * caller's own workspace. businessId is a required field on CustomerRecord (unlike the soft-FK
+ * models above), so there is no "omitted" case to cover.
  *
  * Cases (A-D, matching the write-isolation-ownership-guard precedent):
  *  A. workspace A + business A (same workspace)          -> PASS
