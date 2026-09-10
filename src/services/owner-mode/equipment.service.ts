@@ -4,9 +4,13 @@
  */
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { NotFoundError } from "@/infra/errors";
 
 interface EquipmentDb {
   ownerEquipment: { create(args: { data: Record<string, unknown> }): Promise<{ id: string }> };
+  ownerBusiness: {
+    findFirst(args: { where: { id: string; workspaceId: string; isFixtureBusiness: boolean }; select: { id: true } }): Promise<{ id: string } | null>;
+  };
 }
 export interface EquipmentDeps {
   db: EquipmentDb;
@@ -36,6 +40,19 @@ export interface RecordEquipmentInput {
 export async function recordEquipment(input: RecordEquipmentInput, injected?: EquipmentDeps): Promise<string> {
   const deps = injected ?? (await resolveDefaultDeps());
   const now = (deps.now ?? (() => new Date()))();
+
+  // Ownership guard: a caller-supplied businessId must resolve to a real business in
+  // THIS workspace before it can be stamped on a governed record. Same pattern as
+  // founder-recovery/business.service.ts:getBusiness — mirrors the fix already applied
+  // to BusinessObjective.businessId (commit 3bf4ca8e) for the same bug class.
+  if (input.businessId) {
+    const business = await deps.db.ownerBusiness.findFirst({
+      where: { id: input.businessId, workspaceId: input.workspaceId, isFixtureBusiness: false },
+      select: { id: true },
+    });
+    if (!business) throw new NotFoundError("OwnerBusiness", input.businessId);
+  }
+
   const created = await deps.db.ownerEquipment.create({
     data: {
       workspaceId: input.workspaceId,

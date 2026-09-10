@@ -5,6 +5,27 @@
  * blocks promotion when the worst-case capacity is high_risk/blocked (down, overdue
  * maintenance, or saturated utilization). Non-growth recs and equipment-free
  * workspaces are unaffected. Reuses the pure capacity rules + sensitivity taxonomy.
+ *
+ * WORKSPACE-WIDE BY NECESSITY, NOT BY OMISSION (hostile-review finding, 2026-09-10):
+ * ownerEquipment.findMany below filters by workspaceId only, with no businessId. This
+ * was flagged as a possible cross-business "wrong business intelligence" gap and
+ * traced to its root: this function is reachable ONLY via
+ * updateRecommendationStatus (services/recommendation.ts) -> enforceOwnerGatesForPromotion
+ * (gate-enforcement-policy.ts) -> here, and that whole chain operates on the LEGACY
+ * consultant/engagement Recommendation/Finding/Engagement models. Engagement has a
+ * clientId, not a businessId (see prisma/schema.prisma model Engagement) -- there is
+ * no OwnerBusiness concept anywhere in this call's data model to scope by, so
+ * "workspace-wide" is the only coherent contract available here, not a missing
+ * filter. Confirmed unreachable by any self-serve owner: the route this eventually
+ * hangs off, PATCH /api/recommendations/[recommendationId], requires
+ * CAPABILITIES.RECOMMENDATION_APPROVE, which is absent from OWNER_SCOPED_CAPABILITIES
+ * (capability-check.ts) -- no self-serve owner can ever trigger this path. Contrast
+ * with owner-action-gate.service.ts's bizScope() helper, the correct precedent for a
+ * TRUE business-scoped read of this same OwnerEquipment table, used by the (reachable)
+ * ProcessExecutionTask gate, which does have a businessId to scope by.
+ * If Engagement ever gains a businessId/OwnerBusiness relation, this read must be
+ * revisited; until then, do not "fix" this into a fabricated business-scoped filter.
+ * See write-isolation-recommendation-capacity-equipment-scope.db.test.ts.
  */
 
 import {
