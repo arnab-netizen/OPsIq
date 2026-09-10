@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, CardDashboardSkeleton } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -20,12 +21,21 @@ import {
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- runtime onboarding payload is untyped; fetch-on-mount is intentional */
 
 const FETCH_TIMEOUT_MS = 10_000;
+const ANALYZE_FAILURE_FALLBACK = "We couldn't analyze your business right now. Your information is still saved — try again in a moment.";
+const ANALYZE_NOTHING_ELIGIBLE_FALLBACK = "Add more business data before OpsIQ can run your first analysis.";
 
-async function api(path: string) {
+interface AnalyzeBusinessResult {
+  analyzed: string[];
+  skipped: string[];
+  rateLimited: string[];
+  failed: Array<{ domain: string; reason: string }>;
+}
+
+async function api(path: string, init?: RequestInit) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(path, { headers: { "Content-Type": "application/json" }, signal: controller.signal });
+    const res = await fetch(path, { headers: { "Content-Type": "application/json" }, signal: controller.signal, ...init });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
     return data;
@@ -35,11 +45,43 @@ async function api(path: string) {
 }
 
 export default function StartHerePage() {
+  const router = useRouter();
   const { activeBusinessId, activeBusiness, needsBusinessRecovery, loading: contextLoading } = useActiveBusiness();
   const [steps, setSteps] = useState<StartHereStep[] | null>(null);
   const [canRunFirstDiagnosis, setCanRunFirstDiagnosis] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+
+  const handleAnalyze = useCallback(async () => {
+    if (!activeBusinessId) return;
+    setAnalyzing(true);
+    setAnalyzeError(null);
+    try {
+      const result = (await api(`/api/owner/businesses/${activeBusinessId}/analyze`, {
+        method: "POST",
+      })) as AnalyzeBusinessResult;
+      // The route always answers 200 with a per-domain result -- HTTP success alone does not mean
+      // analysis happened. Only navigate to the cockpit when at least one domain actually produced
+      // a new result; otherwise this would silently claim success on a run that analyzed nothing.
+      if (result.analyzed.length > 0) {
+        router.push("/owner/cockpit");
+        return;
+      }
+      setAnalyzeError(
+        result.failed.length > 0 || result.rateLimited.length > 0
+          ? ANALYZE_FAILURE_FALLBACK
+          : ANALYZE_NOTHING_ELIGIBLE_FALLBACK
+      );
+      setAnalyzing(false);
+    } catch {
+      // Never the caught error's own .message here (not a governed public-safe string) --
+      // the entered data is untouched either way, only the analyze call itself failed.
+      setAnalyzeError(ANALYZE_FAILURE_FALLBACK);
+      setAnalyzing(false);
+    }
+  }, [activeBusinessId, router]);
 
   const load = useCallback(async (businessId: string) => {
     setLoading(true);
@@ -126,11 +168,21 @@ export default function StartHerePage() {
       {canRunFirstDiagnosis && (
         <div className="mb-6 border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }} data-testid="start-here-first-read-available">
           <p className="text-sm font-medium text-foreground">
-            You already have enough information for a first financial read.
+            You already have enough information for a first read.
           </p>
-          <Link href="/owner/cockpit" className="mt-2 inline-block text-sm font-medium text-[var(--primary-text)] underline hover:no-underline">
-            See my first result →
-          </Link>
+          <p className="mt-1 text-sm text-muted-foreground">
+            OpsIQ will analyze every area you&rsquo;ve added data for — no need to visit each one separately.
+          </p>
+          {analyzeError && <p className="mt-2 text-sm text-destructive" data-testid="start-here-analyze-error">{analyzeError}</p>}
+          <Button
+            size="sm"
+            className="mt-2.5"
+            isLoading={analyzing}
+            onClick={handleAnalyze}
+            data-testid="start-here-analyze-button"
+          >
+            Analyze my business
+          </Button>
         </div>
       )}
 
