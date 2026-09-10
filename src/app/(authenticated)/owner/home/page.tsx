@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic owner-home payload is untyped; load() fetch-on-mount is intentional */
 
@@ -103,6 +104,7 @@ export default function OwnerHomePage() {
 
   return (
     <div className="mx-auto max-w-md sm:max-w-2xl md:max-w-4xl py-6 px-4">
+      <div className="mb-4"><CanonicalCockpitLink from="home" /></div>
       <div className="mb-4">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div>
@@ -118,10 +120,7 @@ export default function OwnerHomePage() {
             { label: "Sales", href: "/owner/sales" },
             { label: "Operations", href: "/owner/operations" },
             { label: "Execution", href: "/owner/execution" },
-            { label: "Marketing", href: "/owner/marketing" },
-            { label: "Strategy", href: "/owner/strategy" },
             { label: "Data Intake", href: "/owner/intake" },
-            { label: "Recovery", href: "/owner/recovery" },
             { label: "Approvals", href: "/owner/approvals" },
             { label: "Learning", href: "/owner/learning" },
             { label: "Delegation", href: "/owner/tasks" },
@@ -164,8 +163,7 @@ export default function OwnerHomePage() {
 
       {businesses.length === 0 ? (
         <div className="border rounded-lg p-6 text-center text-muted-foreground">
-          No businesses yet. Start in <Link href="/owner/finance" className="underline">Finance</Link> or{" "}
-          <Link href="/owner/recovery" className="underline">Recovery</Link>.
+          No businesses yet. Start in <Link href="/owner/finance" className="underline">Finance</Link>.
         </div>
       ) : (
         <>

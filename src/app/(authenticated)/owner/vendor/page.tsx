@@ -3,9 +3,9 @@
 /**
  * /owner/vendor — Vendor Management.
  *
- * Lists workspace vendors with approval status, bank verification, and
- * risk classification. Approve, suspend, and assess vendors inline.
- * No workspace or actor IDs are supplied from the client.
+ * Lists workspace vendors with approval status and bank verification.
+ * Approve or suspend a vendor inline. No workspace or actor IDs are
+ * supplied from the client.
  */
 
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */

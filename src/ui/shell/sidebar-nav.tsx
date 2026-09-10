@@ -71,13 +71,19 @@ function TaskIcon() {
  *    "Priorities" and "Actions" (small, high-frequency lists) start open.
  *
  * 2. PREVIEW / COMING SOON are explicit, visible states, not silent omissions or dead links.
- *    Recovery, Strategy, Marketing, and Campaigns are real, reachable pages not yet part of the
- *    core controlled-beta workflow — each renders as a normal link with a "Preview" pill. AI
- *    Copilot and Integrations have no owner-facing page at all yet — each renders as a
- *    non-interactive row (no `<a>`, not part of the tab order) with a "Coming soon" pill and a
- *    one-line explanation, so neither looks like a broken control nor implies a working feature
- *    the app doesn't have (no QuickBooks/HubSpot connection exists; there is no working AI
- *    assistant surface). Nothing here invents a new page merely to populate the nav.
+ *    Recovery, Strategy, Marketing, Campaigns, Compliance, Procurement, and Starting up are real,
+ *    reachable pages not yet part of the core controlled-beta workflow — each renders as a normal
+ *    link with a "Preview" pill (see each item's own comment for why: Compliance's proactive
+ *    detection and Procurement's connection to Inventory/Vendors are both real gaps, not
+ *    polish; Starting up is a different-persona tool, not an incomplete one). AI Copilot and
+ *    Integrations have no owner-facing page at all yet — each renders as a non-interactive row
+ *    (no `<a>`, not part of the tab order) with a "Coming soon" pill and a one-line explanation,
+ *    so neither looks like a broken control nor implies a working feature the app doesn't have
+ *    (no QuickBooks/HubSpot connection exists; there is no working AI assistant surface).
+ *    Inventory has no nav entry at all: its one system-generated signal is wired to nothing and
+ *    always displays a wrong result today (see its removal comment in the "business" section
+ *    below) — a known-wrong live feature, not merely unfinished. Nothing here invents a new page
+ *    merely to populate the nav.
  *
  * 3. LONGEST-MATCH active state. The previous `pathname.startsWith(item.href)` test highlighted
  *    "/dashboard" while the user was on "/dashboard/inbox". Active state is now the single
@@ -197,12 +203,14 @@ const NAV_SECTIONS: NavSection[] = [
   {
     // "Business" — Money, Sales, and Operations grouped under one disclosure so they read as
     // three views into one business, not three unrelated mini-apps (PR C requirement). Customer
-    // records and the remaining business-state drill-downs (Risk, Compliance, Goals, Inventory,
-    // Procurement, Vendors) and Starting up (new-business planning) stay reachable here too, just
-    // lower in the list -- none of these routes were removed, only regrouped. Collapsed by
-    // default: these are pages a lay owner opens deliberately, not the first things they need to
-    // see (see OPSIQ_DESIGN_DIRECTION.md §18 — a first-time owner is not shown ~24 peer
-    // destinations on day one).
+    // records, Risk, Goals, and Vendors stay reachable here too, just lower in the list -- none
+    // of these routes were removed, only regrouped. Collapsed by default: these are pages a lay
+    // owner opens deliberately, not the first things they need to see (see
+    // OPSIQ_DESIGN_DIRECTION.md §18 — a first-time owner is not shown ~24 peer destinations on
+    // day one). Compliance and Procurement are marked Preview (see each item's own comment
+    // below) rather than presented as full peers; Inventory has no entry at all (see below);
+    // Starting up moved to "More from OpsIQ" (see that section) as a different-persona tool, not
+    // a drill-down into the owner's own operating business.
     id: "business",
     title: "Business",
     collapsedByDefault: true,
@@ -219,12 +227,34 @@ const NAV_SECTIONS: NavSection[] = [
       // nothing here implies one does.
       { label: "Customer records", href: "/owner/customers", requiresOwner: true },
       { label: "Risk", href: "/owner/risks", requiresOwner: true },
-      { label: "Compliance", href: "/owner/compliance", requiresOwner: true },
+      // Preview: the compliance calendar's reactive expired-item action gate is live and
+      // production-solid, but its proactive expiring/overdue detection (getComplianceReviewItems)
+      // has no caller anywhere in the app -- it never reaches Home, Priorities, or Alerts, only
+      // the page itself. Marked Preview rather than a core peer until that gap closes.
+      {
+        label: "Compliance",
+        href: "/owner/compliance",
+        requiresOwner: true,
+        state: "preview",
+        blurb: "Track licences, permits, and deadlines; blocks other actions when one has expired.",
+      },
       { label: "Goals", href: "/owner/goals", requiresOwner: true },
-      { label: "Inventory", href: "/owner/inventory", requiresOwner: true },
-      { label: "Procurement", href: "/owner/procurement", requiresOwner: true },
+      // Inventory intentionally has no nav entry: its one system-generated signal (the
+      // reorder-risk badge) is wired to nothing -- getReorderSuggestions is never called from
+      // the live API route, so the badge always renders "NONE" regardless of real stock levels.
+      // Route and implementation are untouched; only the nav link is removed until that wiring
+      // is fixed and tested.
+      // Preview: a real, transactional purchase-order lifecycle, but fully disconnected from
+      // Inventory (delivery never updates stock) and from Vendors (vendorId has no FK, vendorName
+      // is free text) -- an isolated workflow, not yet part of a connected operations chain.
+      {
+        label: "Procurement",
+        href: "/owner/procurement",
+        requiresOwner: true,
+        state: "preview",
+        blurb: "Track purchase orders through their own lifecycle. Not yet connected to Inventory or Vendors.",
+      },
       { label: "Vendors", href: "/owner/vendor", requiresOwner: true },
-      { label: "Starting up", href: "/owner/startup", requiresOwner: true },
       // /api/diagnosis requires ENGAGEMENT_CREATE (a consulting-engagement capability no
       // self-serve beta owner holds — this is the legacy consultant "create an engagement
       // diagnosis" page, not the self-serve owner's own business diagnosis, which lives
@@ -269,13 +299,13 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     // "More from OpsIQ" — what else exists or is coming (PR C mental model). Recovery, Strategy,
-    // and Marketing (+ its Campaigns sub-page) are real, reachable, working pages -- each gets a
-    // visible "Preview" pill precisely because it is real functionality that just isn't part of
-    // the core controlled-beta workflow yet, so an owner never mistakes it for a broken link. AI
-    // Copilot and Integrations have no owner-facing page in this app at all -- each is a
-    // non-interactive "Coming soon" row (see the `state`/`href`-optional contract on NavItem
-    // above), not a placeholder page built merely to populate this list, and not a claim that a
-    // working AI assistant or a live QuickBooks/HubSpot connection exists today.
+    // Marketing (+ its Campaigns sub-page), and Starting up are real, reachable, working pages --
+    // each gets a visible "Preview" pill precisely because it is real functionality that just
+    // isn't part of the core controlled-beta workflow yet, so an owner never mistakes it for a
+    // broken link. AI Copilot and Integrations have no owner-facing page in this app at all --
+    // each is a non-interactive "Coming soon" row (see the `state`/`href`-optional contract on
+    // NavItem above), not a placeholder page built merely to populate this list, and not a claim
+    // that a working AI assistant or a live QuickBooks/HubSpot connection exists today.
     id: "more-from-opsiq",
     title: "More from OpsIQ",
     collapsedByDefault: true,
@@ -306,6 +336,18 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/owner/marketing/campaigns",
         requiresOwner: true,
         state: "preview",
+      },
+      // Moved out of "Business": /owner/startup is a zero-to-validated new-business engine for
+      // someone deciding whether/what to start (capital available, survival need, risk tolerance
+      // intake) -- a different persona and business-state than an owner with an existing,
+      // operating business, which every other "Business" item assumes. Technically the most
+      // built-out capability in the app; the exposure issue is persona fit, not readiness.
+      {
+        label: "Starting up",
+        href: "/owner/startup",
+        requiresOwner: true,
+        state: "preview",
+        blurb: "Tools for screening and validating a brand-new business idea -- not for a business you're already running.",
       },
       {
         label: "AI Copilot",
