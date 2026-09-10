@@ -37,7 +37,7 @@ const HOW_IT_WORKS = [
   },
   {
     title: "Act",
-    body: "Every finding comes with a recommended action: who owns it, and a realistic timeframe.",
+    body: "Every finding comes with a recommended action: who owns it, and a timeframe.",
   },
   {
     title: "Verify",
@@ -53,7 +53,7 @@ const TRUST_POINTS = [
   },
   {
     title: "Missing data is shown, not hidden",
-    body: "When OpsIQ doesn't have enough to be confident, it says so instead of guessing.",
+    body: "When required information is missing, OpsIQ shows the gap instead of hiding it.",
   },
   {
     title: "You control every action",
@@ -161,7 +161,8 @@ export default function LandingPage() {
                 Evidence &amp; verification
               </p>
               <p className="mt-0.5 text-sm text-foreground">
-                Tied to the business&rsquo;s own receivables data. Marked verified once accounts pay down.
+                Tied to the business&rsquo;s own receivables data. The owner checks what happened and
+                records the outcome &mdash; OpsIQ doesn&rsquo;t detect payment automatically.
               </p>
             </li>
           </ol>
@@ -186,8 +187,8 @@ export default function LandingPage() {
               With OpsIQ
             </p>
             <p className="mt-2 text-sm text-foreground">
-              The same signal gets caught, ranked by real urgency, and turned into one clear next
-              action — before it&rsquo;s an emergency.
+              The same signal is surfaced, ranked by real urgency, and turned into one clear,
+              owned next action — instead of staying buried in the numbers.
             </p>
           </div>
         </div>

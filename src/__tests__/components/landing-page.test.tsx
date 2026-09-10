@@ -6,9 +6,11 @@
  * suite proves the page never renders a prohibited or unsupported marketing
  * claim (churn/retention intelligence, live integrations, an AI advisor/chat,
  * autonomous execution, forecasts, ROI/revenue promises, fabricated customer
- * proof, or "no paid AI provider needed" as a value claim), that the product-
- * proof example is clearly labeled fictional, and that the page keeps its
- * real landmark/heading structure.
+ * proof, "no paid AI provider needed" as a value claim, prospective early-
+ * warning timing, automatic payment/verification detection, ungrounded
+ * confidence framing, or an unproven "realistic" timeframe claim), that the
+ * product-proof example is clearly labeled fictional, and that the page keeps
+ * its real landmark/heading structure.
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
@@ -27,6 +29,10 @@ const PROHIBITED_PATTERNS: Array<{ label: string; pattern: RegExp }> = [
   { label: "fabricated confidence percentage", pattern: /\d+(\.\d+)?%\s*(confiden|accura)/i },
   { label: "no-paid-AI-provider as a value claim", pattern: /no paid ai provider/i },
   { label: "unsupported generic trust language", pattern: /enterprise-grade|highly accurate|secure by design|trusted ai/i },
+  { label: "prospective early-warning timing claim", pattern: /before it.?s an emergency|catches? it before|early[- ]warning/i },
+  { label: "automatic payment/verification detection claim", pattern: /marked verified once|automatically (detect|observ|verif)/i },
+  { label: "ungrounded confidence framing", pattern: /enough to be confident/i },
+  { label: "unproven 'realistic' timeframe claim", pattern: /realistic timeframe/i },
 ];
 
 describe("LandingPage — prohibited/unsupported claims never render", () => {
@@ -50,6 +56,27 @@ describe("LandingPage — product-proof example is honestly labeled", () => {
     for (const label of ["Business signal", "Finding", "Why it matters", "Priority", "Recommended action", "Evidence"]) {
       expect(proof).toMatch(new RegExp(label, "i"));
     }
+  });
+});
+
+describe("LandingPage — claim-precision corrections stay grounded", () => {
+  it("verification is explicitly owner-recorded, not automatically detected", () => {
+    const { container } = render(<LandingPage />);
+    const text = container.textContent ?? "";
+    expect(text).toMatch(/owner checks what happened and\s*records the outcome/i);
+    expect(text).toMatch(/doesn.t detect payment automatically/i);
+  });
+
+  it("missing-data trust point is grounded in the real behavior (showing the gap), not a confidence framing", () => {
+    const { container } = render(<LandingPage />);
+    const text = container.textContent ?? "";
+    expect(text).toMatch(/when required information is missing, opsiq shows the gap/i);
+  });
+
+  it("does not claim OpsIQ surfaces issues before they become an emergency", () => {
+    const { container } = render(<LandingPage />);
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/before it.?s an emergency/i);
   });
 });
 
