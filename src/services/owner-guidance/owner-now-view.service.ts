@@ -72,6 +72,7 @@ import { analyzeBusinessTrend, type TrendAlert, type BusinessMetricName, type Me
 import { checkDoNotRepeatForGuidance, type DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
 import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
+import { hasAnyRealBusiness } from "@/services/founder-recovery/business.service";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -1300,15 +1301,25 @@ async function buildBusinessOperatingSystem(
       : null;
 
     // 3. Top risks by severity (active risks: IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED)
+    //
+    // hasAnyRealBusiness gate — same check listBusinessRisks() in business-risk.service.ts
+    // already applies (see hasAnyRealBusiness in founder-recovery/business.service.ts).
+    // BusinessRiskEntry has no businessId column (workspace-scoped only), so without this
+    // gate this Home-feeding query returned any risk rows the workspace happened to have even
+    // with zero real active businesses — Home's own onboarding state would say "set up your
+    // business" while this same view still showed a stale top risk. NO VALID REAL ACTIVE
+    // BUSINESS => NO BUSINESS-DERIVED RISK, exactly mirroring the canonical Risk listing.
     const topRisks: Array<{ id: string; title: string; severity: number; status: string; category: string }> =
-      await dbAny.businessRiskEntry.findMany({
-        // isFixtureRecord: false — Home must never surface a QA blueprint's risk as a real
-        // owner's top risk. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
-        where: { workspaceId, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING", "ACCEPTED"] }, isFixtureRecord: false },
-        orderBy: { severity: "desc" },
-        take: 3,
-        select: { id: true, title: true, severity: true, status: true, category: true },
-      });
+      (await hasAnyRealBusiness(workspaceId))
+        ? await dbAny.businessRiskEntry.findMany({
+            // isFixtureRecord: false — Home must never surface a QA blueprint's risk as a real
+            // owner's top risk. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+            where: { workspaceId, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING", "ACCEPTED"] }, isFixtureRecord: false },
+            orderBy: { severity: "desc" },
+            take: 3,
+            select: { id: true, title: true, severity: true, status: true, category: true },
+          })
+        : [];
 
     // 4. Latest goal arbitration + its owner override (if any) + portfolioDecisions JSON
     const latestArb: { id: string; winnerObjectiveId: string | null; dominantConstraint: string | null; arbitratedAt: Date; portfolioDecisions: unknown } | null =

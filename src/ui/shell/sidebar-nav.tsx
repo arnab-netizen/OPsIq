@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Badge } from "@/ui/primitives";
 import { CAPABILITIES, type CapabilityName } from "@/domain/constants/capabilities";
 
@@ -11,9 +11,11 @@ import { CAPABILITIES, type CapabilityName } from "@/domain/constants/capabiliti
  * sidebar "looked like plain text" with no way to visually scan it. Icons are deliberately
  * limited to the handful of items an owner needs to recognize at a glance -- the three primary
  * entries (Start Here, Home, My Business) plus the one high-frequency item at the top of
- * Priorities and of Actions -- rather than applied to every leaf item, which would read as
- * decoration rather than recognition (see the anti-AI-template audit: "icons beside every
- * heading" is a rejected pattern). Five icons across ~20 nav items, not an icon-per-row system.
+ * Actions -- rather than applied to every leaf item, which would read as decoration rather than
+ * recognition (see the anti-AI-template audit: "icons beside every heading" is a rejected
+ * pattern). Four icons across ~20 nav items, not an icon-per-row system. (A fifth, AttentionIcon,
+ * was retired along with the "What needs attention" nav item it labeled -- see the "priorities"
+ * section below.)
  */
 function CompassIcon() {
   return (
@@ -34,13 +36,6 @@ function BuildingIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M4 21h15M9 8h1M9 12h1M13 8h1M13 12h1M14 21v-4a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v4M18 21v-9l2 1v8" />
-    </svg>
-  );
-}
-function AttentionIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4 shrink-0" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 3.5h.01M10.3 4.4 2.9 17.5a1.5 1.5 0 0 0 1.3 2.2h15.6a1.5 1.5 0 0 0 1.3-2.2L13.7 4.4a1.5 1.5 0 0 0-2.6 0Z" />
     </svg>
   );
 }
@@ -120,6 +115,18 @@ function TaskIcon() {
  * section: it is isolated CRUD (create/list/tag customer rows) not consumed by any diagnosis,
  * recommendation, or Home/Pulse signal today, so it does not warrant peer prominence with Money /
  * Sales / Operations — the route itself is unchanged and still reachable.
+ *
+ * 5. MULTI-BUSINESS CONTEXT CLOSURE (final controlled-beta P1 pass, follow-on to PR C). A hostile
+ *    re-audit proved several surfaces either leaked or risked leaking a different business's data
+ *    into the currently-selected business's context within one workspace:
+ *    - Customer Records' getCustomer/updateCustomer had no businessId scoping at all (fixed in the
+ *      service layer, not here — see customer.service.ts).
+ *    - "What needs attention" (/owner/priorities) and "Alerts" (/owner/alerts) are both removed
+ *      from this nav; see the "priorities" section comment below for why. Routes/pages/APIs are
+ *      untouched.
+ *    - "Risk" is marked Preview; BusinessRiskEntry has no businessId column (workspace-scoped
+ *      only), so a multi-business owner cannot tell which business a given risk belongs to.
+ *    None of this touched single-business behavior, which was already correct in every case.
  */
 
 interface NavItem {
@@ -142,8 +149,6 @@ interface NavItem {
    * the backend actually allows.
    */
   requiresCapability?: CapabilityName;
-  /** If true, show a live unread-alert badge next to the label. */
-  showAlertBadge?: boolean;
   /** Rendered before the label. Reserved for the small set of primary items an owner needs to
    *  recognize at a glance — see the file-level comment on the icon components above. */
   icon?: ReactNode;
@@ -226,7 +231,22 @@ const NAV_SECTIONS: NavSection[] = [
       // (churn/retention/concentration analysis) -- no such capability exists in this app, and
       // nothing here implies one does.
       { label: "Customer records", href: "/owner/customers", requiresOwner: true },
-      { label: "Risk", href: "/owner/risks", requiresOwner: true },
+      // Preview: BusinessRiskEntry has no businessId column at all (workspace-scoped only,
+      // confirmed via schema + service read) -- an owner running more than one business sees the
+      // same risk register regardless of which business is currently selected, with no way to
+      // tell which business a given risk actually belongs to. Home's own topRisks feed was
+      // separately confirmed to bypass hasAnyRealBusiness() and has been fixed to match the
+      // canonical listBusinessRisks() gate; that staleness fix is unrelated to this multi-business
+      // scoping gap, which needs a schema change (add businessId, backfill, filter) to close
+      // narrowly. Marked Preview rather than hidden: single-business workspaces (the beta norm)
+      // see fully correct behavior today.
+      {
+        label: "Risk",
+        href: "/owner/risks",
+        requiresOwner: true,
+        state: "preview",
+        blurb: "Track and act on business risks; not yet scoped to a specific business if you run more than one.",
+      },
       // Preview: the compliance calendar's reactive expired-item action gate is live and
       // production-solid, but its proactive expiring/overdue detection (getComplianceReviewItems)
       // has no caller anywhere in the app -- it never reaches Home, Priorities, or Alerts, only
@@ -269,11 +289,25 @@ const NAV_SECTIONS: NavSection[] = [
     // "Priorities" — what needs the owner's attention right now. Split out of the former flat
     // "Actions" section so urgency (Priorities) and execution (Actions) aren't one undifferentiated
     // list; kept open by default since this is exactly what a returning owner checks first.
+    //
+    // "What needs attention" (/owner/priorities) and "Alerts" (/owner/alerts) were both removed
+    // from this section -- route/page/API/service code for both is untouched, only the nav link is
+    // gone:
+    //  - Priorities is a domain-biased subset (manual risk entries + alerts + the generic
+    //    cross-cutting process bridge -- NOT Sales's or Operations's diagnosis findings, and not
+    //    even Money's own financeTopPriority) that makes a "one place" completeness claim
+    //    (page copy: "That's everything OpsIQ is tracking as a priority right now") Cockpit's own
+    //    canonical surface (/owner/cockpit) doesn't make and can't back up -- a reproducible case
+    //    exists where Priorities shows "nothing needs attention" while Cockpit is simultaneously
+    //    showing an actionable Finance item as its primary card. Home/Cockpit remains the single
+    //    authoritative "what needs my attention" surface for controlled beta.
+    //  - Alerts has no businessId column at all (Alert model is workspaceId-scoped only, confirmed
+    //    via schema), so a multi-business owner sees every business's alerts merged with no
+    //    attribution regardless of which business is selected -- the same class of gap as Risk
+    //    above, but with no businessId column to even filter on, so there is no narrow fix.
     id: "priorities",
     title: "Priorities",
     items: [
-      { label: "What needs attention", href: "/owner/priorities", requiresOwner: true, icon: <AttentionIcon /> },
-      { label: "Alerts", href: "/owner/alerts", requiresOwner: true, showAlertBadge: true },
       // Decision Inbox reads OperatorItem rows via /api/decisions/list, which requires
       // ENGAGEMENT_VIEW -- a consulting-engagement capability no self-serve beta owner
       // holds (OperatorItem is a consultant<->client recommendation-approval workflow,
@@ -466,19 +500,7 @@ export function SidebarNav({
   onLinkClick?: () => void;
 }) {
   const pathname = usePathname();
-  const [unreadAlertCount, setUnreadAlertCount] = useState(0);
   const capabilitySet = new Set(capabilities);
-
-  useEffect(() => {
-    if (!canViewOwnerRecovery) return;
-    fetch("/api/owner/alerts?limit=1")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { unreadCount?: number } | null) => {
-        if (d && typeof d.unreadCount === "number") setUnreadAlertCount(d.unreadCount);
-      })
-      .catch(() => {});
-  }, [canViewOwnerRecovery]);
-
   const activeHref = resolveActiveHref(pathname ?? "");
 
   const renderItem = (item: NavItem) => {
@@ -500,7 +522,6 @@ export function SidebarNav({
     }
 
     const isActive = activeHref === item.href;
-    const badgeCount = item.showAlertBadge ? unreadAlertCount : 0;
     return (
       <Link
         key={item.href}
@@ -526,11 +547,6 @@ export function SidebarNav({
             <Badge variant="muted-accessible" className="text-[10px] uppercase tracking-wide">
               Preview
             </Badge>
-          )}
-          {badgeCount > 0 && (
-            <span className="inline-flex items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-xs font-bold leading-none text-white min-w-[20px]">
-              {badgeCount > 99 ? "99+" : badgeCount}
-            </span>
           )}
         </span>
         {item.blurb && <span className="pl-7 text-xs text-muted-foreground">{item.blurb}</span>}

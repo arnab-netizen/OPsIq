@@ -307,7 +307,11 @@ export default function CustomersPage() {
       if (form.notes.trim()) payload.notes = form.notes.trim();
 
       if (editingCustomer) {
-        await apiFetch(`/api/owner/sales/customers/${editingCustomer.id}`, {
+        // businessId is the business the record was loaded under (selectedBizId, since
+        // editingCustomer only ever comes from the currently-loaded customers list) -- required
+        // by the route so updateCustomer can enforce its cross-business isolation guard.
+        const qs = new URLSearchParams({ businessId: selectedBizId });
+        await apiFetch(`/api/owner/sales/customers/${editingCustomer.id}?${qs.toString()}`, {
           method: "PATCH",
           body: JSON.stringify(payload),
         });
