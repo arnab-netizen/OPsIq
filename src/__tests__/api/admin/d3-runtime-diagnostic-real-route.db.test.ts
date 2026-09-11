@@ -284,3 +284,243 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     });
   }
 );
+
+/**
+ * Path B — OPSIQ_DIAGNOSTIC_KEY access path (PR #444 follow-up).
+ *
+ * Reuses the REAL, unmocked verifyDiagnosticKeyFromRequest() (src/lib/security/diagnostic-key.ts)
+ * — the exact same timing-safe validator every other `/api/internal/*` diagnostic route already
+ * uses. Proves the key path is fixed to exactly D3_FIXED_WORKSPACE_ID, cannot be redirected to
+ * another workspace, never echoes the key or DATABASE_URL, performs zero mutations, and that an
+ * invalid/missing key falls straight through to Path A's own unmodified, unregressed auth check.
+ */
+describe.skipIf(!SHOULD_RUN_DB_TESTS)(
+  "GET /api/admin/d3-runtime-diagnostic — diagnostic-key access path (Path B)",
+  () => {
+    const D3_FIXED_WORKSPACE_ID = "d0609f28-dbbd-4a29-a5d2-fd74a7bb4ce5";
+    const originalDiagnosticKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
+    const DIAGNOSTIC_KEY_TEST_VALUE = `test-d3-diagnostic-key-${randomUUID()}`;
+
+    // A separate, ordinary session identity (mirrors the describe block above) used only for the
+    // "authenticated OWNER_VIEW" denial tests — deliberately decoupled from D3_FIXED_WORKSPACE_ID
+    // so those tests exercise real workspace-membership resolution, not the fixed-workspace path.
+    let sessionActorId: string;
+    let sessionWorkspaceId: string;
+
+    // The fixed D3 workspace's seeded business rows, used only by the diagnostic-key-path tests.
+    let fixedWsOwnerId: string;
+    let otherRealBusinessId: string;
+    let fixtureBusinessId: string;
+
+    function makeKeyRequest(headerValue?: string, query = ""): NextRequest {
+      return new NextRequest(`https://example.com/api/admin/d3-runtime-diagnostic${query}`, {
+        method: "GET",
+        headers: headerValue !== undefined ? { "x-opsiq-diagnostic-key": headerValue } : undefined,
+      });
+    }
+
+    beforeEach(async () => {
+      process.env.OPSIQ_DIAGNOSTIC_KEY = DIAGNOSTIC_KEY_TEST_VALUE;
+
+      sessionActorId = randomUUID();
+      sessionWorkspaceId = randomUUID();
+      mockActorId = sessionActorId;
+      mockWorkspaceId = sessionWorkspaceId;
+      mockSessionValid = true;
+      mockRole = "system_admin";
+
+      await db.user.create({
+        data: { id: sessionActorId, email: `${sessionActorId}@example.com`, updatedAt: new Date() },
+      });
+      await db.workspace.create({
+        data: { id: sessionWorkspaceId, name: "D3 Key-Path Session WS", slug: `d3-key-session-ws-${sessionWorkspaceId.substring(0, 8)}` },
+      });
+      await db.workspaceMembership.create({
+        data: { userId: sessionActorId, workspaceId: sessionWorkspaceId, role: "admin", isActive: true },
+      });
+
+      // Defensive cleanup: this exact fixed id must never carry rows left over from a prior run.
+      await db.ownerBusiness.deleteMany({ where: { workspaceId: D3_FIXED_WORKSPACE_ID } });
+      await db.workspaceMembership.deleteMany({ where: { workspaceId: D3_FIXED_WORKSPACE_ID } });
+      await db.workspace.deleteMany({ where: { id: D3_FIXED_WORKSPACE_ID } });
+
+      fixedWsOwnerId = randomUUID();
+      otherRealBusinessId = randomUUID();
+      fixtureBusinessId = randomUUID();
+
+      await db.user.create({
+        data: { id: fixedWsOwnerId, email: `${fixedWsOwnerId}@example.com`, updatedAt: new Date() },
+      });
+      await db.workspace.create({
+        data: { id: D3_FIXED_WORKSPACE_ID, name: "D3 Fixed WS (test)", slug: `d3-fixed-ws-test-${randomUUID().substring(0, 8)}` },
+      });
+      await db.workspaceMembership.create({
+        data: { userId: fixedWsOwnerId, workspaceId: D3_FIXED_WORKSPACE_ID, role: "admin", isActive: true },
+      });
+
+      await db.ownerBusiness.create({
+        data: {
+          id: TRINITY_SERVICES_ID, workspaceId: D3_FIXED_WORKSPACE_ID, name: "Trinity Services", businessType: "generic_local_service",
+          currency: "USD", isActive: true, isFixtureBusiness: false, createdBy: fixedWsOwnerId, updatedAt: new Date(),
+        },
+      });
+      await db.ownerBusiness.create({
+        data: {
+          id: SAMPLE_ACCEPTANCE_BUSINESS_ID, workspaceId: D3_FIXED_WORKSPACE_ID, name: "OPSIQ Production Acceptance - test", businessType: "generic_local_service",
+          currency: "USD", isActive: true, isFixtureBusiness: true, createdBy: fixedWsOwnerId, updatedAt: new Date(),
+        },
+      });
+      await db.ownerBusiness.create({
+        data: {
+          id: otherRealBusinessId, workspaceId: D3_FIXED_WORKSPACE_ID, name: "Other Real Business (fixed ws test)", businessType: "generic_local_service",
+          currency: "USD", isActive: true, isFixtureBusiness: false, createdBy: fixedWsOwnerId, updatedAt: new Date(),
+        },
+      });
+      await db.ownerBusiness.create({
+        data: {
+          id: fixtureBusinessId, workspaceId: D3_FIXED_WORKSPACE_ID, name: "Fixture Business (fixed ws test)", businessType: "generic_local_service",
+          currency: "USD", isActive: true, isFixtureBusiness: true, createdBy: fixedWsOwnerId, updatedAt: new Date(),
+        },
+      });
+    });
+
+    afterEach(async () => {
+      if (originalDiagnosticKey === undefined) {
+        delete process.env.OPSIQ_DIAGNOSTIC_KEY;
+      } else {
+        process.env.OPSIQ_DIAGNOSTIC_KEY = originalDiagnosticKey;
+      }
+
+      await db.workspaceMembership.deleteMany({ where: { userId: sessionActorId } });
+      await db.workspace.deleteMany({ where: { id: sessionWorkspaceId } });
+      await db.user.deleteMany({ where: { id: sessionActorId } });
+
+      await db.ownerBusiness.deleteMany({ where: { workspaceId: D3_FIXED_WORKSPACE_ID } });
+      await db.workspaceMembership.deleteMany({ where: { workspaceId: D3_FIXED_WORKSPACE_ID } });
+      await db.workspace.deleteMany({ where: { id: D3_FIXED_WORKSPACE_ID } });
+      await db.user.deleteMany({ where: { id: fixedWsOwnerId } });
+    });
+
+    it("anonymous + no key -> denied (falls through to Path A's unmodified auth, 401)", async () => {
+      mockSessionValid = false;
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      const response = await GET(makeKeyRequest(undefined), { params: Promise.resolve({}) });
+      expect(response.status).toBe(401);
+    });
+
+    it("anonymous + invalid key -> denied (falls through to Path A's unmodified auth, 401)", async () => {
+      mockSessionValid = false;
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      const response = await GET(makeKeyRequest("totally-wrong-key"), { params: Promise.resolve({}) });
+      expect(response.status).toBe(401);
+    });
+
+    it("authenticated OWNER_VIEW + no key -> denied (403, unregressed Path A behavior)", async () => {
+      mockSessionValid = true;
+      mockRole = "admin_or_portfolio_manager";
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      const response = await GET(makeKeyRequest(undefined), { params: Promise.resolve({}) });
+      expect(response.status).toBe(403);
+    });
+
+    it("authenticated OWNER_VIEW + invalid key -> denied (403, unregressed Path A behavior)", async () => {
+      mockSessionValid = true;
+      mockRole = "admin_or_portfolio_manager";
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      const response = await GET(makeKeyRequest("wrong-key"), { params: Promise.resolve({}) });
+      expect(response.status).toBe(403);
+    });
+
+    it("SYSTEM_ADMIN + invalid key -> still allowed (Path A unregressed by a bad key present)", async () => {
+      mockSessionValid = true;
+      mockRole = "system_admin";
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      const response = await GET(makeKeyRequest("totally-wrong-key"), { params: Promise.resolve({}) });
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.workspaceId).toBe(sessionWorkspaceId);
+    });
+
+    it("valid diagnostic key + no user session -> allowed for the fixed D3 workspace (200), correct counts", async () => {
+      mockSessionValid = false;
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      const response = await GET(makeKeyRequest(DIAGNOSTIC_KEY_TEST_VALUE), { params: Promise.resolve({}) });
+      expect(response.status).toBe(200);
+      const body = await response.json();
+
+      expect(body.workspaceId).toBe(D3_FIXED_WORKSPACE_ID);
+      // Seeded: trinity + sampleAcceptance + otherReal + fixtureBusiness = 4 total.
+      expect(body.ownerBusiness.total).toBe(4);
+      expect(body.ownerBusiness.fixtureTrue).toBe(2); // sampleAcceptance + fixtureBusiness
+      expect(body.ownerBusiness.fixtureFalse).toBe(2); // trinity + otherReal
+      expect(body.ownerBusiness.activeNonFixture).toBe(2); // trinity + otherReal
+      expect(body.trinityServices).toEqual({ id: TRINITY_SERVICES_ID, isFixtureBusiness: false, isActive: true });
+      expect(body.sampleAcceptanceBusiness).toEqual({ id: SAMPLE_ACCEPTANCE_BUSINESS_ID, isFixtureBusiness: true, isActive: true });
+      expect(body.listBusinessesCount).toBe(2);
+      expect(body.listBusinessesCount).toBe(body.ownerBusiness.activeNonFixture);
+    });
+
+    it("valid diagnostic key cannot select another workspace via query string", async () => {
+      mockSessionValid = false;
+      const someOtherWorkspaceId = randomUUID();
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      const response = await GET(
+        makeKeyRequest(DIAGNOSTIC_KEY_TEST_VALUE, `?workspaceId=${someOtherWorkspaceId}`),
+        { params: Promise.resolve({}) }
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.workspaceId).toBe(D3_FIXED_WORKSPACE_ID);
+      expect(body.workspaceId).not.toBe(someOtherWorkspaceId);
+    });
+
+    it("query-param diagnostic key is NOT accepted (header only)", async () => {
+      mockSessionValid = false;
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      // Key supplied ONLY via query string, no header -- must be rejected as Path B and fall
+      // through to Path A's unmodified auth check (no session -> 401).
+      const response = await GET(
+        makeKeyRequest(undefined, `?key=${encodeURIComponent(DIAGNOSTIC_KEY_TEST_VALUE)}`),
+        { params: Promise.resolve({}) }
+      );
+      expect(response.status).toBe(401);
+    });
+
+    it("response never contains the diagnostic key", async () => {
+      mockSessionValid = false;
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      const response = await GET(makeKeyRequest(DIAGNOSTIC_KEY_TEST_VALUE), { params: Promise.resolve({}) });
+      const raw = await response.text();
+      expect(raw).not.toContain(DIAGNOSTIC_KEY_TEST_VALUE);
+    });
+
+    it("response never contains DATABASE_URL or a connection string (diagnostic-key path)", async () => {
+      mockSessionValid = false;
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      const response = await GET(makeKeyRequest(DIAGNOSTIC_KEY_TEST_VALUE), { params: Promise.resolve({}) });
+      const raw = await response.text();
+      expect(raw).not.toContain(process.env.DATABASE_URL ?? "__unset__");
+      expect(raw).not.toMatch(/postgres(ql)?:\/\/[^"]*:[^"@]*@/i);
+      expect(raw).not.toMatch(/password|passwd|secret|token|api_key/i);
+    });
+
+    it("performs zero mutations via the diagnostic-key path", async () => {
+      mockSessionValid = false;
+      const before = await db.ownerBusiness.findMany({
+        where: { workspaceId: D3_FIXED_WORKSPACE_ID },
+        select: { id: true, isFixtureBusiness: true, isActive: true, version: true },
+        orderBy: { id: "asc" },
+      });
+
+      const { GET } = await import("@/app/api/admin/d3-runtime-diagnostic/route");
+      await GET(makeKeyRequest(DIAGNOSTIC_KEY_TEST_VALUE), { params: Promise.resolve({}) });
+
+      const after = await db.ownerBusiness.findMany({
+        where: { workspaceId: D3_FIXED_WORKSPACE_ID },
+        select: { id: true, isFixtureBusiness: true, isActive: true, version: true },
+        orderBy: { id: "asc" },
+      });
+      expect(after).toEqual(before);
+    });
+  }
+);
