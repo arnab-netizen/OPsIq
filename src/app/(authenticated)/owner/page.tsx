@@ -328,20 +328,21 @@ export default function OwnerCommandCenterPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {[
-            { label: "Home", href: "/owner/home", domain: null },
+            // "Home" points at the canonical /owner/cockpit, not the legacy /owner/home duplicate
+            // -- that page independently falls back to the most-recently-created business when no
+            // businessId is supplied (src/services/owner-home/home.service.ts), the exact
+            // stale-business bug /owner/cockpit was fixed for.
+            { label: "Home", href: "/owner/cockpit", domain: null },
             { label: "Finance", href: "/owner/finance", domain: "finance" },
             { label: "Budget & Profit Plan", href: "/owner/budget", domain: null },
             { label: "Cashflow", href: "/owner/cashflow", domain: "cashflow" },
             { label: "Sales", href: "/owner/sales", domain: "sales" },
             { label: "Operations", href: "/owner/operations", domain: "operations" },
             { label: "Execution", href: "/owner/execution", domain: "sop" },
-            { label: "Marketing", href: "/owner/marketing", domain: "marketing" },
-            { label: "Strategy", href: "/owner/strategy", domain: "strategy" },
             { label: "Wealth", href: "/owner/wealth", domain: null },
             { label: "Portfolio", href: "/owner/portfolio", domain: null },
             { label: "Data Intake", href: "/owner/intake", domain: null },
             { label: "Trust", href: "/owner/trust", domain: null },
-            { label: "Recovery", href: "/owner/recovery", domain: "recovery" },
             { label: "Approvals", href: "/owner/approvals", domain: null },
             { label: "Learning", href: "/owner/learning", domain: null },
             { label: "Delegation", href: "/owner/tasks", domain: null },
@@ -371,8 +372,7 @@ export default function OwnerCommandCenterPage() {
 
       {businessList.length === 0 ? (
         <div className="border rounded-lg p-8 text-center text-muted-foreground">
-          No businesses yet. Start in <Link href="/owner/finance" className="underline">Finance</Link> or{" "}
-          <Link href="/owner/recovery" className="underline">Recovery</Link> to create one.
+          No businesses yet. Start in <Link href="/owner/finance" className="underline">Finance</Link> to create one.
         </div>
       ) : (
         <>

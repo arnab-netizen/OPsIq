@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { getBusiness } from "@/services/founder-recovery/business.service";
+import { NotFoundError } from "@/infra/errors";
 import { z } from "zod/v4";
 
 export const createCustomerSchema = z.object({
@@ -25,6 +27,22 @@ export async function createCustomer(
   actorId: string,
   workspaceId: string,
 ) {
+  // Ownership guard: a caller-supplied businessId must resolve to a real business in THIS
+  // workspace before it can be stamped on a governed record — same pattern as
+  // owner-sales/snapshot.service.ts and every other business-scoped write in this app. Prior to
+  // this check, CustomerRecord.businessId was trusted verbatim with no existence/ownership check.
+  //
+  // getBusiness() itself does not filter isFixtureBusiness (it's a plain existence+ownership
+  // check shared by read and write paths across the app), so the fixture exclusion is applied
+  // here explicitly — matching the inline `isFixtureBusiness: false` idiom used by
+  // compliance.service.ts / equipment.service.ts / customer-complaint.service.ts /
+  // sop-document.service.ts (see write-isolation-ownership-guard.db.test.ts, the precedent this
+  // guard mirrors) rather than being folded into the shared getBusiness() helper.
+  const business = await getBusiness(input.businessId, workspaceId);
+  if (business.isFixtureBusiness) {
+    throw new NotFoundError("OwnerBusiness", input.businessId);
+  }
+
   const record = await db.customerRecord.create({
     data: {
       workspaceId,
@@ -65,23 +83,34 @@ export async function listCustomers(
   });
 }
 
-export async function getCustomer(workspaceId: string, customerId: string) {
+// businessId isolation guard: a CustomerRecord is scoped to workspaceId AND businessId (a
+// workspace can hold multiple real businesses -- see createCustomer's ownership guard above).
+// Prior to this fix, getCustomer/updateCustomer filtered only by workspaceId, so any customerId
+// in the caller's own workspace was readable/mutable regardless of which business the caller's
+// UI currently had selected -- a cross-business record exposure within one workspace. Callers
+// must now supply the businessId they already have (the route layer's ?businessId= query param,
+// same convention as listCustomers/createCustomer) and it is matched against the record's own
+// businessId, not merely trusted. No separate getBusiness()/isFixtureBusiness check is needed
+// here: createCustomer already refuses to attach a CustomerRecord to a fixture business, so no
+// real record can ever carry a fixture businessId for this match to succeed against.
+export async function getCustomer(workspaceId: string, businessId: string, customerId: string) {
   return db.customerRecord.findFirst({
-    where: { workspaceId, id: customerId },
+    where: { workspaceId, businessId, id: customerId },
   });
 }
 
 export async function updateCustomer(
   workspaceId: string,
+  businessId: string,
   customerId: string,
   input: UpdateCustomerInput,
   actorId: string,
 ) {
-  const existing = await db.customerRecord.findFirst({ where: { workspaceId, id: customerId } });
+  const existing = await db.customerRecord.findFirst({ where: { workspaceId, businessId, id: customerId } });
   if (!existing) return null;
 
   const record = await db.customerRecord.update({
-    where: { id: customerId, workspaceId },
+    where: { id: customerId, workspaceId, businessId },
     data: {
       ...(input.name != null && { name: input.name }),
       ...(input.email !== undefined && { email: input.email ?? null }),
