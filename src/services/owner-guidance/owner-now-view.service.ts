@@ -72,7 +72,7 @@ import { analyzeBusinessTrend, type TrendAlert, type BusinessMetricName, type Me
 import { checkDoNotRepeatForGuidance, type DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
 import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
-import { hasAnyRealBusiness } from "@/services/founder-recovery/business.service";
+import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -1142,7 +1142,18 @@ const RECENTLY_VERIFIED_WINDOW_DAYS = 90;
  */
 async function buildExecutionLifecycle(
   workspaceId: string,
-  db: GuidanceDeps["db"]
+  db: GuidanceDeps["db"],
+  /**
+   * The active business this lifecycle view is being computed for (D1 fix). When supplied, a task
+   * is only included if it belongs to this business OR is genuinely workspace-level (businessId
+   * null — the WORKLOAD_REDUCTION/CAPABILITY_GAP/SOP_CHECKLIST/TRAINING/EFFECTIVENESS_RECHECK
+   * families never carry a businessId by design; see BridgedExecutionRoute.businessId's doc
+   * comment in process-execution-bridge.ts). This is the exact read path Cockpit's Execution
+   * lifecycle → "Requires your decision" list renders from — previously workspace-only, which is
+   * the confirmed mechanism behind the cross-business data leak (D1 launch blocker): a task
+   * belonging to a DIFFERENT business in the same workspace must never appear here.
+   */
+  businessId: string | null = null,
 ): Promise<OwnerExecutionLifecycleView | null> {
   try {
     const cutoff = new Date(Date.now() - RECENTLY_VERIFIED_WINDOW_DAYS * 24 * 60 * 60 * 1000);
@@ -1153,9 +1164,14 @@ async function buildExecutionLifecycle(
         // Excludes acceptance/QA fixture tasks (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — Home
         // must never surface a QA blueprint's task to a real owner.
         isFixtureRecord: false,
-        OR: [
-          { status: { in: ["PROPOSED", "ACKNOWLEDGED", "IN_PROGRESS", "BLOCKED", "NEEDS_DATA", "COMPLETED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED"] } },
-          { status: "OUTCOME_VERIFIED", updatedAt: { gte: cutoff } },
+        ...(businessId ? { OR: [{ businessId }, { businessId: null }] } : {}),
+        AND: [
+          {
+            OR: [
+              { status: { in: ["PROPOSED", "ACKNOWLEDGED", "IN_PROGRESS", "BLOCKED", "NEEDS_DATA", "COMPLETED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED"] } },
+              { status: "OUTCOME_VERIFIED", updatedAt: { gte: cutoff } },
+            ],
+          },
         ],
       },
       orderBy: { priorityRank: "asc" },
@@ -1241,9 +1257,10 @@ async function buildExecutionLifecycle(
 /** Direct export for DB tests: query Phase 3 execution lifecycle groups. */
 export async function queryExecutionLifecycle(
   workspaceId: string,
-  db: GuidanceDeps["db"]
+  db: GuidanceDeps["db"],
+  businessId: string | null = null,
 ): Promise<OwnerExecutionLifecycleView | null> {
-  return buildExecutionLifecycle(workspaceId, db);
+  return buildExecutionLifecycle(workspaceId, db, businessId);
 }
 
 // ── Phase 4: Business Operating System summary ───────────────────────────────
@@ -1302,15 +1319,18 @@ async function buildBusinessOperatingSystem(
 
     // 3. Top risks by severity (active risks: IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED)
     //
-    // hasAnyRealBusiness gate — same check listBusinessRisks() in business-risk.service.ts
-    // already applies (see hasAnyRealBusiness in founder-recovery/business.service.ts).
-    // BusinessRiskEntry has no businessId column (workspace-scoped only), so without this
-    // gate this Home-feeding query returned any risk rows the workspace happened to have even
-    // with zero real active businesses — Home's own onboarding state would say "set up your
-    // business" while this same view still showed a stale top risk. NO VALID REAL ACTIVE
-    // BUSINESS => NO BUSINESS-DERIVED RISK, exactly mirroring the canonical Risk listing.
+    // hasExactlyOneRealBusiness gate (D2, controlled-beta launch-blocker closure) — stricter than
+    // the earlier hasAnyRealBusiness staleness fix. BusinessRiskEntry has NO businessId column at
+    // all, so this query can never filter by the currently-selected business. Live production
+    // browser acceptance proved that in a workspace with MORE than one real business, showing
+    // these workspace-wide rows on Home/Cockpit silently misattributes them: the SAME risk record
+    // IDs render as if they belonged to whichever business happens to be selected. With exactly one
+    // real business, workspace-wide data and that business's data are the same set by definition,
+    // so surfacing it is correct; with zero or two-or-more, it is hidden rather than guessed at.
+    // (The nav entry for the standalone Risk page is hidden for the same underlying reason — see
+    // sidebar-nav.tsx.)
     const topRisks: Array<{ id: string; title: string; severity: number; status: string; category: string }> =
-      (await hasAnyRealBusiness(workspaceId))
+      (await hasExactlyOneRealBusiness(workspaceId))
         ? await dbAny.businessRiskEntry.findMany({
             // isFixtureRecord: false — Home must never surface a QA blueprint's risk as a real
             // owner's top risk. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
@@ -1880,7 +1900,7 @@ export async function getOwnerNowView(
   // (completed-with-evidence vs proposed/in-progress) rather than assuming nothing was executed, and so the
   // bridge status annotation below reuses the same read. Best-effort — an unavailable table yields [].
   const persistedProcessTasks = (processIntelligence && processCorrections)
-    ? await getPersistedProcessTasks(workspaceId).catch(() => [])
+    ? await getPersistedProcessTasks(workspaceId, undefined, businessId).catch(() => [])
     : [];
 
   // SOP / Training Effectiveness Loop — for each finding with a routed correction, compare the targeted
@@ -2315,7 +2335,7 @@ export async function getOwnerNowView(
     topActionImpactArea
       ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
       : Promise.resolve(null),
-    buildExecutionLifecycle(workspaceId, deps.db),
+    buildExecutionLifecycle(workspaceId, deps.db, businessId),
     buildBusinessOperatingSystem(workspaceId, businessId, deps.db),
   ]);
 

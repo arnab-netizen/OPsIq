@@ -126,7 +126,13 @@ export async function createBlueprint(
 
   const session = await db.ownerStartupSession.findFirst({
     where: { id: input.sessionId, workspaceId },
-    select: { id: true },
+    // businessId: the OwnerBusiness this session is (or will be) handed off to — see
+    // OwnerStartupSession.businessId doc comment. Read here so every ProcessExecutionTask this
+    // blueprint creates carries the same businessId, closing the cross-business leak where
+    // STARTUP_MODE tasks were persisted with businessId=null regardless of the session's own
+    // business (D1 launch blocker — a business-scoped cockpit read must never surface a task that
+    // actually belongs to a different business in the same workspace).
+    select: { id: true, businessId: true },
   });
   if (!session) throw new NotFoundError("OwnerStartupSession", input.sessionId);
 
@@ -223,6 +229,9 @@ export async function createBlueprint(
         data: {
           id: taskId,
           workspaceId,
+          // businessId: stamped from the owning session (see the select above) so this task is
+          // never visible from a different business's cockpit read in the same workspace.
+          businessId: session.businessId,
           taskKey: `startup_${input.ideaId.slice(0, 8)}_task_${i + 1}`,
           sourceFamily: "STARTUP_MODE",
           sourceFindingKey: `startup_${input.sessionId.slice(0, 8)}_${i + 1}`,

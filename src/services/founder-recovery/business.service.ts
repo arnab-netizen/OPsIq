@@ -101,6 +101,26 @@ export async function hasAnyRealBusiness(workspaceId: string): Promise<boolean> 
   return business !== null;
 }
 
+/**
+ * The authoritative "is this workspace's data unambiguously attributable to exactly one real,
+ * active business" check -- for domain services whose underlying model has NO businessId column
+ * at all (e.g. BusinessRiskEntry) and therefore can never filter by the currently-selected
+ * business. Live production browser acceptance (controlled-beta launch-blocker audit, D2) proved
+ * that when a workspace holds MORE than one real business, showing that workspace-wide data on any
+ * "selected business" surface (Home/Cockpit) silently misattributes it -- the same risk record IDs
+ * rendered as if they belonged to whichever business happened to be selected. With exactly one real
+ * business, workspace-wide data and that business's data are the same set by definition, so showing
+ * it is correct, not an assumption; with zero or two-or-more, it is hidden rather than guessed at.
+ */
+export async function hasExactlyOneRealBusiness(workspaceId: string): Promise<boolean> {
+  const businesses = await db.ownerBusiness.findMany({
+    where: { workspaceId, isActive: true, isFixtureBusiness: false },
+    select: { id: true },
+    take: 2,
+  });
+  return businesses.length === 1;
+}
+
 export async function getBusiness(businessId: string, workspaceId: string) {
   const business = await db.ownerBusiness.findFirst({
     where: { id: businessId, workspaceId },

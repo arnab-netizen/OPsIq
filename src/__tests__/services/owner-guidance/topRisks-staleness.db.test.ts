@@ -1,5 +1,5 @@
 /**
- * Home `topRisks` staleness gap — `[db]`-gated regression proof.
+ * Home `topRisks` staleness + multi-business masquerading gap — `[db]`-gated regression proof.
  *
  * buildBusinessOperatingSystem() (owner-now-view.service.ts), which feeds Home's
  * `view.businessOperatingSystem.topRisks`, queried BusinessRiskEntry with no gate on
@@ -10,7 +10,14 @@
  * have. That contradicted Home's own onboarding state (which correctly says "set up your
  * business") and is exactly the defect class listBusinessRisks() in business-risk.service.ts
  * was already fixed for (see hasAnyRealBusiness in founder-recovery/business.service.ts).
- * This proves buildBusinessOperatingSystem's topRisks now applies the identical gate.
+ *
+ * D2 (controlled-beta launch-blocker closure) tightened the gate further: live production
+ * browser acceptance proved that a workspace with MORE THAN ONE real active business also
+ * leaks — Home showed the same workspace-wide risk record IDs regardless of which business was
+ * selected, misattributing them. The gate is now hasExactlyOneRealBusiness(): topRisks is only
+ * ever populated when workspace-wide data and "the selected business's" data are provably the
+ * same set (exactly one real business exists), never inferred from "beta customers probably only
+ * have one business".
  *
  * Run: TEST_WITH_DB=true npx vitest run src/__tests__/services/owner-guidance/topRisks-staleness.db.test.ts
  */
@@ -22,16 +29,18 @@ import { createBusinessRisk } from "@/services/owner-mode/business-risk.service"
 
 const actor = randomUUID();
 
-// Three workspaces, each with a critical-severity risk row already seeded, but differing
-// only in whether a real active business currently exists for that workspace:
-//   wsNoBusiness  — zero OwnerBusiness rows at all
-//   wsFixtureOnly — one OwnerBusiness row, but isFixtureBusiness: true (QA fixture)
-//   wsArchived    — one OwnerBusiness row, but isActive: false (archived)
-//   wsReal        — one real, active, non-fixture OwnerBusiness row (control — must still see the risk)
+// Workspaces, each with a critical-severity risk row already seeded, but differing in how many
+// real active businesses currently exist for that workspace:
+//   wsNoBusiness    — zero OwnerBusiness rows at all
+//   wsFixtureOnly   — one OwnerBusiness row, but isFixtureBusiness: true (QA fixture)
+//   wsArchived      — one OwnerBusiness row, but isActive: false (archived)
+//   wsReal          — one real, active, non-fixture OwnerBusiness row (control — must still see the risk)
+//   wsMultiBusiness — TWO real, active, non-fixture OwnerBusiness rows (D2 — must NOT see either risk)
 const wsNoBusiness = randomUUID();
 const wsFixtureOnly = randomUUID();
 const wsArchived = randomUUID();
 const wsReal = randomUUID();
+const wsMultiBusiness = randomUUID();
 
 async function seedCriticalRisk(workspaceId: string, riskCode: string) {
   return createBusinessRisk({
@@ -70,15 +79,28 @@ beforeAll(async () => {
       currency: "USD", isActive: true, isFixtureBusiness: false, createdBy: actor,
     },
   });
+  await db.ownerBusiness.create({
+    data: {
+      id: randomUUID(), workspaceId: wsMultiBusiness, name: "Multi-business A", businessType: "generic_local_service",
+      currency: "USD", isActive: true, isFixtureBusiness: false, createdBy: actor,
+    },
+  });
+  await db.ownerBusiness.create({
+    data: {
+      id: randomUUID(), workspaceId: wsMultiBusiness, name: "Multi-business B", businessType: "generic_local_service",
+      currency: "USD", isActive: true, isFixtureBusiness: false, createdBy: actor,
+    },
+  });
 
   await seedCriticalRisk(wsNoBusiness, "TOPRISK_NO_BIZ");
   await seedCriticalRisk(wsFixtureOnly, "TOPRISK_FIXTURE_ONLY");
   await seedCriticalRisk(wsArchived, "TOPRISK_ARCHIVED");
   await seedCriticalRisk(wsReal, "TOPRISK_REAL");
+  await seedCriticalRisk(wsMultiBusiness, "TOPRISK_MULTI_BIZ");
 });
 
 afterAll(async () => {
-  const workspaceIds = [wsNoBusiness, wsFixtureOnly, wsArchived, wsReal];
+  const workspaceIds = [wsNoBusiness, wsFixtureOnly, wsArchived, wsReal, wsMultiBusiness];
   await db.businessRiskEntry.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
   await db.ownerBusiness.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
   await db.ownerGuidanceSnapshot.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
@@ -86,7 +108,7 @@ afterAll(async () => {
   await db.user.delete({ where: { id: actor } });
 });
 
-describe("[db] Home topRisks staleness gap — hasAnyRealBusiness parity with listBusinessRisks", () => {
+describe("[db] Home topRisks staleness + multi-business masquerading gap — hasExactlyOneRealBusiness parity", () => {
   it("[db] returns empty topRisks for a workspace with NO OwnerBusiness row at all", async () => {
     const out = await getOwnerNowView(wsNoBusiness, null);
     expect(out.businessOperatingSystem?.topRisks ?? []).toEqual([]);
@@ -102,10 +124,15 @@ describe("[db] Home topRisks staleness gap — hasAnyRealBusiness parity with li
     expect(out.businessOperatingSystem?.topRisks ?? []).toEqual([]);
   });
 
-  it("[db] still returns the risk for a workspace with a real, active, non-fixture business (control)", async () => {
+  it("[db] still returns the risk for a workspace with exactly one real, active, non-fixture business (control)", async () => {
     const out = await getOwnerNowView(wsReal, null);
     const risks = out.businessOperatingSystem?.topRisks ?? [];
     expect(risks.length).toBeGreaterThan(0);
     expect(risks.some((r) => r.title.includes("TOPRISK_REAL"))).toBe(true);
+  });
+
+  it("[db] D2: returns empty topRisks for a workspace with TWO real, active, non-fixture businesses — never misattributes workspace-wide risk to whichever business is selected", async () => {
+    const out = await getOwnerNowView(wsMultiBusiness, null);
+    expect(out.businessOperatingSystem?.topRisks ?? []).toEqual([]);
   });
 });

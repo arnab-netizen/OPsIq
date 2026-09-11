@@ -237,16 +237,21 @@ const NAV_SECTIONS: NavSection[] = [
       // tell which business a given risk actually belongs to. Home's own topRisks feed was
       // separately confirmed to bypass hasAnyRealBusiness() and has been fixed to match the
       // canonical listBusinessRisks() gate; that staleness fix is unrelated to this multi-business
-      // scoping gap, which needs a schema change (add businessId, backfill, filter) to close
-      // narrowly. Marked Preview rather than hidden: single-business workspaces (the beta norm)
-      // see fully correct behavior today.
-      {
-        label: "Risk",
-        href: "/owner/risks",
-        requiresOwner: true,
-        state: "preview",
-        blurb: "Track and act on business risks; not yet scoped to a specific business if you run more than one.",
-      },
+      // scoping gap.
+      //
+      // REMOVED FROM NAV (was previously marked Preview): live production browser acceptance
+      // (controlled-beta launch-blocker audit) proved BusinessRiskEntry has no businessId column
+      // at all -- it is workspace-wide with zero per-business attribution -- and confirmed the SAME
+      // underlying risk record IDs render under every business selected in a multi-business
+      // workspace, not just in a hypothetical edge case. The prior "single-business workspaces (the
+      // beta norm) see fully correct behavior today" reasoning was the exact "beta customers
+      // probably only have one business" assumption this app must not rely on: the product does not
+      // enforce a one-business admission rule, so any workspace can and does hold more than one real
+      // business, and Risk cannot safely distinguish between them. Closing this narrowly requires a
+      // schema change (add businessId, backfill, filter) which is out of scope for a launch-blocker
+      // fix -- hidden rather than broadened, per this app's own "prefer hiding over expanding scope"
+      // rule. Route, page, and service code are untouched; only this nav link is gone.
+      // { label: "Risk", href: "/owner/risks", requiresOwner: true, state: "preview" },
       // Preview: the compliance calendar's reactive expired-item action gate is live and
       // production-solid, but its proactive expiring/overdue detection (getComplianceReviewItems)
       // has no caller anywhere in the app -- it never reaches Home, Priorities, or Alerts, only
