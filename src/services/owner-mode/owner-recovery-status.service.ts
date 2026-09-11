@@ -6,9 +6,10 @@
  * pure owner-recovery-status projection, and returns a governed, fail-closed recovery status for the owner.
  *
  * It MUTATES NOTHING, creates no tasks, fabricates no money, and never opens the thrive gate without proven
- * stabilization. Workspace isolation is inherited from getOwnerNowView / getPersistedProcessTasks (both
- * workspace-scoped). No proven milestone outcomes are persisted for the PASS 33 ladder yet, so the read path
- * conservatively reports crisis/in-progress state and never fabricates milestone completion.
+ * stabilization. Workspace isolation is inherited from getOwnerNowView / getPersistedProcessTasks; both are
+ * ADDITIONALLY business-scoped here via the businessId already threaded through this function (D1 fix — see
+ * process-execution-bridge.service.ts). No proven milestone outcomes are persisted for the PASS 33 ladder yet,
+ * so the read path conservatively reports crisis/in-progress state and never fabricates milestone completion.
  */
 
 import { getOwnerNowView, type GuidanceDeps } from "@/services/owner-guidance/owner-now-view.service";
@@ -56,11 +57,12 @@ export async function getOwnerRecoveryStatus(
     missingData: nowView.view?.missingDataRequests ?? [],
   });
 
-  // Linked governed tasks — same-workspace only (getPersistedProcessTasks is workspace-scoped).
+  // Linked governed tasks — workspace-scoped, ADDITIONALLY business-scoped via the businessId already in
+  // scope on this function (D1 fix): a task belonging to a DIFFERENT business in the same workspace must
+  // never be linked into this business's recovery status.
   let linkedProcessExecutionTaskIds: string[] = [];
   if (crisis) {
-    const tasks = await getPersistedProcessTasks(workspaceId).catch(() => []);
-    // getPersistedProcessTasks is workspace-scoped, so every taskKey here belongs to this workspace only.
+    const tasks = await getPersistedProcessTasks(workspaceId, undefined, businessId).catch(() => []);
     linkedProcessExecutionTaskIds = tasks.map((t) => t.taskKey).slice(0, 20);
   }
 

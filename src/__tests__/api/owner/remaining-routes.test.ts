@@ -556,7 +556,7 @@ describe("[process-execution-get] GET /api/owner/process-execution", () => {
   it("scopes task query to verifiedWorkspaceId", async () => {
     mocks.getPersistedProcessTasks.mockResolvedValue([]);
     await (processExecGet as (ctx: unknown) => Promise<unknown>)(makeCtx("https://x", "pe-ws-scoped"));
-    expect(mocks.getPersistedProcessTasks).toHaveBeenCalledWith("pe-ws-scoped");
+    expect(mocks.getPersistedProcessTasks).toHaveBeenCalledWith("pe-ws-scoped", undefined, null);
   });
 });
 

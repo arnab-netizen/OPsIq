@@ -47,9 +47,21 @@ const schema = z.object({
   ]).nullish(),
 });
 
+const businessIdQuerySchema = z.string().trim().uuid().nullish();
+
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const tasks = await getPersistedProcessTasks(ctx.verifiedWorkspaceId);
+    // D1 fix: business-scope the list when a businessId is supplied — matches the POST schema's
+    // own businessId validation (line 35 below) so a malformed query param fails closed (400)
+    // rather than reaching the DB as an invalid uuid. ctx.request is optional on
+    // CanonicalAuthContext (some non-request-bound / test contexts omit it) — treat a missing
+    // request as "no businessId supplied" rather than throwing.
+    const businessIdParam = ctx.request ? new URL(ctx.request.url).searchParams.get("businessId") : null;
+    const parsedBusinessId = businessIdQuerySchema.safeParse(businessIdParam);
+    if (!parsedBusinessId.success) {
+      return canonicalJson({ error: "Invalid businessId query parameter", code: "MISSING_INPUT" }, { status: 400 });
+    }
+    const tasks = await getPersistedProcessTasks(ctx.verifiedWorkspaceId, undefined, parsedBusinessId.data ?? null);
     return canonicalJson({ tasks }, { status: 200 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },

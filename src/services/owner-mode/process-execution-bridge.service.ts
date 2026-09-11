@@ -132,7 +132,13 @@ export async function persistProcessExecutionRoutes(
     const changed = !existing
       || existing.executionRoute !== r.executionRoute || existing.actionOwner !== r.actionOwner
       || existing.approvalLevel !== r.approvalLevel || existing.ownerVisibleSummary !== r.ownerVisibleSummary
-      || JSON.stringify(existing.requiredEvidence) !== JSON.stringify(r.requiredEvidence);
+      || JSON.stringify(existing.requiredEvidence) !== JSON.stringify(r.requiredEvidence)
+      // D1 fix: a row created before businessId-threading existed (or whose owning business
+      // changed) must be recognised as changed so the re-sync below actually persists the correct
+      // businessId. Without this comparison a NULL/stale businessId sticks forever — the exact
+      // mechanism behind the confirmed cross-business leak for legacy PROCESS_CORRECTION /
+      // SOP_CHECKLIST / TRAINING rows.
+      || existing.businessId !== r.businessId;
     if (existing && !changed) { deduped++; continue; }
     const now = deps.now();
     const id = existing?.id ?? deps.uuid();
@@ -168,14 +174,49 @@ function routeToData(r: BridgedExecutionRoute, workspaceId: string, now: Date): 
   };
 }
 
-/** Read the workspace's persisted process-execution tasks (workspace-scoped). */
-export async function getPersistedProcessTasks(workspaceId: string, injected?: ProcessBridgeDeps): Promise<TaskRow[]> {
+/**
+ * Read the workspace's persisted process-execution tasks. Workspace-scoped always; ADDITIONALLY
+ * business-scoped when `businessId` is supplied (D1 fix — a business-scoped cockpit read must
+ * never surface a task belonging to a DIFFERENT business in the same workspace).
+ *
+ * `businessId` is appended as a third parameter (after `injected`) rather than inserted before it
+ * so every pre-existing positional call site (`getPersistedProcessTasks(ws, deps)`, of which there
+ * are many across this repo's DB test suites) keeps compiling and keeps its prior, unscoped
+ * behavior unchanged — only call sites that explicitly opt in by passing a third argument get
+ * business scoping.
+ *
+ * When a businessId IS supplied, a row is returned when EITHER:
+ *   - businessId === the supplied business (the row genuinely belongs to it), OR
+ *   - businessId is NULL — some source families (WORKLOAD_REDUCTION, CAPABILITY_GAP,
+ *     SOP_CHECKLIST, TRAINING, EFFECTIVENESS_RECHECK — see BridgedExecutionRoute.businessId's doc
+ *     comment in process-execution-bridge.ts) are, BY DESIGN, workspace-level and never carry a
+ *     businessId. Excluding null-businessId rows unconditionally would silently hide those entire
+ *     families from every business view — a functional regression, not a fix. This OR-null shape
+ *     still closes the actual leak: a row that DOES carry a *different* business's id is excluded.
+ * A row whose businessId is null purely because it predates businessId-threading (legacy
+ * STARTUP_MODE rows — see docs/opsiq-governance, Phase 5 backfill) is indistinguishable from a
+ * genuinely workspace-level row at this layer; that residual gap is closed by a data backfill, not
+ * by this read path (see the code-fix PR's report for the D1 launch-blocker fix).
+ */
+export async function getPersistedProcessTasks(
+  workspaceId: string,
+  injected?: ProcessBridgeDeps,
+  businessId?: string | null,
+): Promise<TaskRow[]> {
   const deps = injected ?? (await resolveDefaultDeps());
   try {
     // isFixtureRecord: false excludes acceptance/QA fixture tasks (see
     // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an ordinary owner's task list must never include a
     // task a QA blueprint run created.
-    return await deps.db.processExecutionTask.findMany({ where: { workspaceId, isFixtureRecord: false }, orderBy: { priorityRank: "asc" }, take: 2000 });
+    return await deps.db.processExecutionTask.findMany({
+      where: {
+        workspaceId,
+        isFixtureRecord: false,
+        ...(businessId ? { OR: [{ businessId }, { businessId: null }] } : {}),
+      },
+      orderBy: { priorityRank: "asc" },
+      take: 2000,
+    });
   } catch (e) {
     if (e && typeof e === "object" && (e as { code?: string }).code === "P2021") return [];
     throw e;

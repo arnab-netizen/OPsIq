@@ -197,9 +197,9 @@ describe("GET /api/owner/process-execution — non-DB mock tests", () => {
       expect(result.status).toBe(200);
     });
 
-    it("calls getPersistedProcessTasks with workspaceId", async () => {
+    it("calls getPersistedProcessTasks with workspaceId and no businessId when none is supplied", async () => {
       await processExecutionGet(makeCtx());
-      expect(mockGetPersistedProcessTasks).toHaveBeenCalledWith(WS_A);
+      expect(mockGetPersistedProcessTasks).toHaveBeenCalledWith(WS_A, undefined, null);
     });
 
     it("returns tasks array in body", async () => {
@@ -214,7 +214,27 @@ describe("GET /api/owner/process-execution — non-DB mock tests", () => {
 
     it("uses verifiedWorkspaceId for GET (WS_B)", async () => {
       await processExecutionGet(makeCtx({ verifiedWorkspaceId: WS_B }));
-      expect(mockGetPersistedProcessTasks).toHaveBeenCalledWith(WS_B);
+      expect(mockGetPersistedProcessTasks).toHaveBeenCalledWith(WS_B, undefined, null);
+    });
+  });
+
+  describe("businessId query parameter (D1 fix)", () => {
+    const BIZ_A = "cccccccc-cccc-4000-8000-cccccccccccc";
+
+    it("threads a valid businessId query param through to getPersistedProcessTasks", async () => {
+      await processExecutionGet(makeCtx({ request: { url: `${BASE_URL}?businessId=${BIZ_A}` } }));
+      expect(mockGetPersistedProcessTasks).toHaveBeenCalledWith(WS_A, undefined, BIZ_A);
+    });
+
+    it("passes null businessId when the query param is absent", async () => {
+      await processExecutionGet(makeCtx({ request: { url: BASE_URL } }));
+      expect(mockGetPersistedProcessTasks).toHaveBeenCalledWith(WS_A, undefined, null);
+    });
+
+    it("returns 400 and never calls getPersistedProcessTasks for a malformed businessId", async () => {
+      const result = await processExecutionGet(makeCtx({ request: { url: `${BASE_URL}?businessId=not-a-uuid` } })) as { status: number };
+      expect(result.status).toBe(400);
+      expect(mockGetPersistedProcessTasks).not.toHaveBeenCalled();
     });
   });
 });
