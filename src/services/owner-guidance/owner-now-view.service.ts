@@ -1146,25 +1146,38 @@ async function buildExecutionLifecycle(
   /**
    * The active business this lifecycle view is being computed for (D1 fix). When supplied, a task
    * is only included if it belongs to this business OR is genuinely workspace-level (businessId
-   * null — the WORKLOAD_REDUCTION/CAPABILITY_GAP/SOP_CHECKLIST/TRAINING/EFFECTIVENESS_RECHECK
-   * families never carry a businessId by design; see BridgedExecutionRoute.businessId's doc
-   * comment in process-execution-bridge.ts). This is the exact read path Cockpit's Execution
-   * lifecycle → "Requires your decision" list renders from — previously workspace-only, which is
-   * the confirmed mechanism behind the cross-business data leak (D1 launch blocker): a task
-   * belonging to a DIFFERENT business in the same workspace must never appear here.
+   * null AND sourceFamily is one of WORKSPACE_LEVEL_SOURCE_FAMILIES — the
+   * WORKLOAD_REDUCTION/CAPABILITY_GAP/SOP_CHECKLIST/TRAINING/EFFECTIVENESS_RECHECK families never
+   * carry a businessId by design; see BridgedExecutionRoute.businessId's doc comment in
+   * process-execution-bridge.ts). This is the exact read path Cockpit's Execution lifecycle →
+   * "Requires your decision" list renders from.
+   *
+   * A null businessId OUTSIDE that family set (in practice, legacy STARTUP_MODE rows created
+   * before createBlueprint() stamped session.businessId — see startup-execution-blueprint.service.ts)
+   * is NEVER treated as workspace-level here: a null businessId there means "not yet attributed,"
+   * not "intentionally shared," and showing it to every business in the workspace regardless of
+   * which one it actually belongs to was the exact residual mechanism behind the controlled-beta
+   * launch-blocker cross-business leak (D1) after the write-path fix. See
+   * WORKSPACE_LEVEL_SOURCE_FAMILIES in process-execution-bridge.service.ts for the single source
+   * of truth for this family list — duplicated as a literal here (not imported) to avoid a
+   * services/owner-mode -> services/owner-guidance layering dependency for one small constant;
+   * keep the two lists in sync if the family set ever changes.
    */
   businessId: string | null = null,
 ): Promise<OwnerExecutionLifecycleView | null> {
   try {
     const cutoff = new Date(Date.now() - RECENTLY_VERIFIED_WINDOW_DAYS * 24 * 60 * 60 * 1000);
     const dbUntyped = db as unknown as ProcessExecutionTaskDb;
+    const WORKSPACE_LEVEL_SOURCE_FAMILIES = ["WORKLOAD_REDUCTION", "CAPABILITY_GAP", "SOP_CHECKLIST", "TRAINING", "EFFECTIVENESS_RECHECK"] as const;
     const tasks = await dbUntyped.processExecutionTask.findMany({
       where: {
         workspaceId,
         // Excludes acceptance/QA fixture tasks (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — Home
         // must never surface a QA blueprint's task to a real owner.
         isFixtureRecord: false,
-        ...(businessId ? { OR: [{ businessId }, { businessId: null }] } : {}),
+        ...(businessId
+          ? { OR: [{ businessId }, { businessId: null, sourceFamily: { in: WORKSPACE_LEVEL_SOURCE_FAMILIES } }] }
+          : {}),
         AND: [
           {
             OR: [

@@ -100,6 +100,37 @@ describe("[db] Owner Sales services", () => {
     await teardownOwnerBusiness(businessId);
   });
 
+  // Controlled-beta business-context-integrity closure (server fallback safety, section 6): with
+  // TWO real businesses in the workspace and no explicit businessId, getSalesDashboard() must fail
+  // closed (selectedBusinessId: null) rather than silently guessing businesses[0] -- the exact
+  // server-side mechanism that let Sales/Trust/Execution pages render the wrong business's
+  // intelligence when their frontend omitted businessId (now separately fixed) and, defense in
+  // depth, whenever ANY caller omits it. Mirrors the same exactly-one-business rule already used by
+  // hasExactlyOneRealBusiness() and cockpit-finance-priority.service.ts.
+  it("[db] with 2 real businesses and no requestedBusinessId, fails closed (selectedBusinessId null) rather than picking businesses[0]", async () => {
+    const workspaceId = ws();
+    const businessA = await newBusiness(workspaceId);
+    const businessB = await newBusiness(workspaceId);
+
+    const dash = await getSalesDashboard(workspaceId);
+    expect(dash.selectedBusinessId).toBeNull();
+    expect(dash.hasData).toBe(false);
+    expect(dash.businesses.map((b: any) => b.id).sort()).toEqual([businessA, businessB].sort());
+
+    await teardownOwnerBusiness(businessA);
+    await teardownOwnerBusiness(businessB);
+  });
+
+  it("[db] with exactly 1 real business and no requestedBusinessId, still auto-selects it (unambiguous — no regression)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+
+    const dash = await getSalesDashboard(workspaceId);
+    expect(dash.selectedBusinessId).toBe(businessId);
+
+    await teardownOwnerBusiness(businessId);
+  });
+
   it("[db] executes an action transition and rejects an invalid one", async () => {
     const workspaceId = ws();
     const businessId = await newBusiness(workspaceId);
