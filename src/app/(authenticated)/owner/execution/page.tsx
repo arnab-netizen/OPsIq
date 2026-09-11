@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -57,6 +58,7 @@ const SOP_FIELDS: Array<{ name: string; label: string }> = [
 ];
 
 export default function OwnerExecutionPage() {
+  const { activeBusinessId, needsBusinessRecovery, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,16 +75,26 @@ export default function OwnerExecutionPage() {
       const data = await api(`/api/owner/sop/dashboard${qs}`);
       setDashboard(data);
       setSelected(data.selectedBusinessId);
+      // Keep the shared active-business context in sync — see finance/page.tsx and
+      // operations/page.tsx for the root cause this closes (each owner page independently
+      // defaulting to a different business, e.g. the first row returned by the server, instead
+      // of the business selected elsewhere in the app).
+      if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setActiveBusinessId]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (contextLoading) return;
+    // A pending business-recovery choice must never be silently resolved by letting the server
+    // pick its own default businessId — see ActiveBusinessContext.needsBusinessRecovery.
+    if (needsBusinessRecovery) return;
+    void load(activeBusinessId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner explicitly switches business
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
 
   async function createBusiness(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -103,6 +115,8 @@ export default function OwnerExecutionPage() {
         }),
       });
       setShowBusinessForm(false);
+      setActiveBusinessId(created.id);
+      await refreshBusinesses();
       await load(created.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create business");
@@ -263,7 +277,7 @@ export default function OwnerExecutionPage() {
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
-              onChange={(businessId) => load(businessId)}
+              onChange={(businessId) => setActiveBusinessId(businessId)}
             />
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add execution snapshot

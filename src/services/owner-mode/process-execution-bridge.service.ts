@@ -175,6 +175,27 @@ function routeToData(r: BridgedExecutionRoute, workspaceId: string, now: Date): 
 }
 
 /**
+ * Source families that are genuinely workspace-level BY DESIGN (see BridgedExecutionRoute's
+ * businessId doc comment and process-execution-bridge-expansion.ts, which hardcodes
+ * `businessId: null` for every route these families produce). A null businessId in one of these
+ * families means "workspace-level," never "not yet attributed."
+ *
+ * STARTUP_MODE is deliberately EXCLUDED from this set even though legacy rows exist with a null
+ * businessId — createBlueprint() (startup-execution-blueprint.service.ts) always stamps
+ * `session.businessId` on every task it creates, and the only STARTUP_MODE rows with a null
+ * businessId are pre-D1-fix legacy rows. Their true owning business is always recoverable via
+ * `linkedStartupSessionId -> OwnerStartupSession.businessId` (never ambiguous — see
+ * PROCESS_EXECUTION_BUSINESS_ISOLATION docs) and treating them as workspace-level would show a
+ * STARTUP_MODE task to every business in the workspace regardless of which one it actually
+ * belongs to — the exact D1 launch-blocker leak. PROCESS_CORRECTION and CASH_PROFIT are also
+ * excluded: they are business-scoped by design (businessId embedded directly in taskKey) and the
+ * rare row with neither a businessId nor a session link is a workspace-level "insufficient data"
+ * placeholder with no business signal at all — safest treated as workspace-level via the OR-null
+ * fallback below, same as today, since there is nothing to attribute it to.
+ */
+const WORKSPACE_LEVEL_SOURCE_FAMILIES = ["WORKLOAD_REDUCTION", "CAPABILITY_GAP", "SOP_CHECKLIST", "TRAINING", "EFFECTIVENESS_RECHECK"] as const;
+
+/**
  * Read the workspace's persisted process-execution tasks. Workspace-scoped always; ADDITIONALLY
  * business-scoped when `businessId` is supplied (D1 fix — a business-scoped cockpit read must
  * never surface a task belonging to a DIFFERENT business in the same workspace).
@@ -187,16 +208,13 @@ function routeToData(r: BridgedExecutionRoute, workspaceId: string, now: Date): 
  *
  * When a businessId IS supplied, a row is returned when EITHER:
  *   - businessId === the supplied business (the row genuinely belongs to it), OR
- *   - businessId is NULL — some source families (WORKLOAD_REDUCTION, CAPABILITY_GAP,
- *     SOP_CHECKLIST, TRAINING, EFFECTIVENESS_RECHECK — see BridgedExecutionRoute.businessId's doc
- *     comment in process-execution-bridge.ts) are, BY DESIGN, workspace-level and never carry a
- *     businessId. Excluding null-businessId rows unconditionally would silently hide those entire
- *     families from every business view — a functional regression, not a fix. This OR-null shape
- *     still closes the actual leak: a row that DOES carry a *different* business's id is excluded.
- * A row whose businessId is null purely because it predates businessId-threading (legacy
- * STARTUP_MODE rows — see docs/opsiq-governance, Phase 5 backfill) is indistinguishable from a
- * genuinely workspace-level row at this layer; that residual gap is closed by a data backfill, not
- * by this read path (see the code-fix PR's report for the D1 launch-blocker fix).
+ *   - businessId is NULL *and* the row's sourceFamily is one of WORKSPACE_LEVEL_SOURCE_FAMILIES
+ *     above — the only families that are BY DESIGN workspace-level and never carry a businessId.
+ *     A null-businessId row in any OTHER family (in practice, legacy STARTUP_MODE rows) is
+ *     excluded here, never treated as "workspace-level by default": null there means legacy/
+ *     unattributed data, not an intentional design choice, and the launch-blocker fix is to close
+ *     that gap by narrowing the fallback, not to keep guessing at read time (see the module doc
+ *     comment above and the D1 controlled-beta closure PR report).
  */
 export async function getPersistedProcessTasks(
   workspaceId: string,
@@ -212,7 +230,9 @@ export async function getPersistedProcessTasks(
       where: {
         workspaceId,
         isFixtureRecord: false,
-        ...(businessId ? { OR: [{ businessId }, { businessId: null }] } : {}),
+        ...(businessId
+          ? { OR: [{ businessId }, { businessId: null, sourceFamily: { in: WORKSPACE_LEVEL_SOURCE_FAMILIES } }] }
+          : {}),
       },
       orderBy: { priorityRank: "asc" },
       take: 2000,

@@ -128,7 +128,12 @@ export async function getOwnerHome(
   if (requestedBusinessId && businesses.find((b: any) => b.id === requestedBusinessId)) {
     selectedBusinessId = requestedBusinessId;
   }
-  if (!selectedBusinessId && businesses.length > 0) selectedBusinessId = businesses[0].id;
+  // Unambiguous only when exactly one real business exists — see hasExactlyOneRealBusiness()
+  // and cockpit-finance-priority.service.ts for the same rule. With 0 businesses this falls
+  // through to the existing empty-state return below; with 2+, it now also falls through
+  // (selectedBusinessId stays null) rather than silently guessing businesses[0] — the exact
+  // server-side "wrong business" mechanism the controlled-beta launch-blocker audit flagged.
+  if (!selectedBusinessId && businesses.length === 1) selectedBusinessId = businesses[0].id;
 
   if (!selectedBusinessId) {
     return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], summary: null };

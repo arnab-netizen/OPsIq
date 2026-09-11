@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Select, CardDashboardSkeleton } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic trust payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -31,6 +32,7 @@ function fmt(n: number | null): string {
 }
 
 export default function OwnerTrustPage() {
+  const { activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
   const [overview, setOverview] = useState<any | null>(null);
   const [selectedBusiness, setSelectedBusiness] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
@@ -51,16 +53,26 @@ export default function OwnerTrustPage() {
       setSelectedDomain(data.cycles?.[0]?.domain ?? null);
       setCards(null);
       setAudit(null);
+      // Keep the shared active-business context in sync — see finance/page.tsx and
+      // operations/page.tsx for the root cause this closes (each owner page independently
+      // defaulting to a different business, e.g. the first row returned by the server, instead
+      // of the business selected elsewhere in the app).
+      if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setActiveBusinessId]);
 
   useEffect(() => {
-    loadOverview();
-  }, [loadOverview]);
+    if (contextLoading) return;
+    // A pending business-recovery choice must never be silently resolved by letting the server
+    // pick its own default businessId — see ActiveBusinessContext.needsBusinessRecovery.
+    if (needsBusinessRecovery) return;
+    void loadOverview(activeBusinessId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner explicitly switches business
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
 
   const cycleFor = (domain: string | null): any =>
     (overview?.cycles ?? []).find((c: any) => c.domain === domain) ?? null;
@@ -131,7 +143,7 @@ export default function OwnerTrustPage() {
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selectedBusiness}
-              onChange={(businessId) => loadOverview(businessId)}
+              onChange={(businessId) => setActiveBusinessId(businessId)}
             />
             {cycles.length > 0 && (
               <div className="w-72">

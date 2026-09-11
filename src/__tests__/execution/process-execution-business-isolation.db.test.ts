@@ -208,6 +208,40 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Process-execution business isolation
       expect(readA.some((t) => t.id === workspaceLevelTask)).toBe(true);
       expect(readB.some((t) => t.id === workspaceLevelTask)).toBe(true);
     });
+
+    // F2/F3: the controlled-beta business-context-integrity closure's actual fix. A legacy
+    // STARTUP_MODE row with businessId=null (pre-D1-fix data, or a fixture-linked row D3 already
+    // hid the owning business for) must NEVER be treated as workspace-level -- unlike the PASS23
+    // families in F above, STARTUP_MODE is business-specific by contract (createBlueprint() always
+    // stamps session.businessId on new writes). Showing it to every business regardless of which
+    // one it actually belongs to was the exact residual leak proven by live production forensics
+    // after the D1 write-path fix landed: 28 legacy STARTUP_MODE rows, 100% deterministically
+    // attributable via linkedStartupSessionId -> OwnerStartupSession.businessId, all traced to
+    // businesses D3 already reclassified as fixtures -- yet still shown under a real business's
+    // (Trinity Services') own Cockpit "Requires your decision" list before this fix.
+    it("F2. a legacy STARTUP_MODE task with businessId=null is NOT visible under ANY business's read — never treated as workspace-level", async () => {
+      const legacyStartupTask = await seedTask(ws, `iso:legacy-startup-null:${randomUUID().slice(0, 8)}`, {
+        businessId: null, sourceFamily: "STARTUP_MODE",
+      });
+
+      const readA = await getPersistedProcessTasks(ws, deps, bizA);
+      const readB = await getPersistedProcessTasks(ws, deps, bizB);
+      expect(readA.some((t) => t.id === legacyStartupTask)).toBe(false);
+      expect(readB.some((t) => t.id === legacyStartupTask)).toBe(false);
+    });
+
+    it("F3. contrast within the same read: a null STARTUP_MODE row is excluded while a null WORKLOAD_REDUCTION row in the same workspace stays visible — proves the family-scoped fix targets exactly the right rows, not a blanket null exclusion", async () => {
+      const legacyStartupTask = await seedTask(ws, `iso:legacy-startup-null-2:${randomUUID().slice(0, 8)}`, {
+        businessId: null, sourceFamily: "STARTUP_MODE",
+      });
+      const workspaceLevelTask = await seedTask(ws, `iso:workspace-level-2:${randomUUID().slice(0, 8)}`, {
+        businessId: null, sourceFamily: "CAPABILITY_GAP",
+      });
+
+      const readA = await getPersistedProcessTasks(ws, deps, bizA);
+      expect(readA.some((t) => t.id === legacyStartupTask)).toBe(false);
+      expect(readA.some((t) => t.id === workspaceLevelTask)).toBe(true);
+    });
   });
 
   describe("A'-F': queryExecutionLifecycle business scoping (the exact read path Cockpit's 'Requires your decision' renders from)", () => {
@@ -217,6 +251,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Process-execution business isolation
 
       const lifecycleA = await queryExecutionLifecycle(ws, db as unknown as GuidanceDeps["db"], bizA);
       expect(lifecycleA!.requiresDecision.some((i) => i.taskKey === key)).toBe(true);
+
+      const lifecycleB = await queryExecutionLifecycle(ws, db as unknown as GuidanceDeps["db"], bizB);
+      expect(lifecycleB!.requiresDecision.some((i) => i.taskKey === key)).toBe(false);
+    });
+
+    it("a legacy STARTUP_MODE task with businessId=null does NOT appear in requiresDecision for ANY business — the exact Cockpit-facing leak this fix closes", async () => {
+      const key = `iso:lifecycle-legacy-startup-null:${randomUUID().slice(0, 8)}`;
+      await seedTask(ws, key, { businessId: null, sourceFamily: "STARTUP_MODE", status: "PROPOSED" });
+
+      const lifecycleA = await queryExecutionLifecycle(ws, db as unknown as GuidanceDeps["db"], bizA);
+      expect(lifecycleA!.requiresDecision.some((i) => i.taskKey === key)).toBe(false);
 
       const lifecycleB = await queryExecutionLifecycle(ws, db as unknown as GuidanceDeps["db"], bizB);
       expect(lifecycleB!.requiresDecision.some((i) => i.taskKey === key)).toBe(false);
