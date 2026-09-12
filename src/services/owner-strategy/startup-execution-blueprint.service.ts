@@ -61,7 +61,19 @@ export async function createBlueprint(
   // creates (BusinessObjective, ProcessExecutionTask, KPIOwnershipRecord, BusinessRiskEntry) so
   // an acceptance/QA blueprint run can never surface as a real owner's goal, task, KPI, or risk.
   // See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
-  const isFixtureRecord = opts?.isFixtureRecord === true;
+  //
+  // ROOT-CAUSE FIX (final beta blocker — fixture leakage on Home/Risk/Priorities): the caller-
+  // supplied opt-in above is NOT the only signal. Seven real historical acceptance runs
+  // (2026-08-21 through 2026-08-27) created blueprints against "OPSIQ Production Acceptance"
+  // businesses without ever passing opts.isFixtureRecord (or without the acceptance actor holding
+  // SYSTEM_ADMIN in that environment), leaving isFixtureRecord: false on every derived
+  // BusinessRiskEntry/ConstraintResolutionRecord row despite the underlying OwnerBusiness already
+  // being correctly flagged isFixtureBusiness: true. isFixtureRecord must ALSO be true whenever
+  // the session's own isFixtureBusiness flag is true, or the session has been handed off to a
+  // business that is itself isFixtureBusiness: true — both are already-established, legitimate
+  // provenance signals (never a name/timestamp/ID heuristic), computed below once the session is
+  // loaded.
+  const explicitFixtureOptIn = opts?.isFixtureRecord === true;
   // G16: Blueprint supersession policy — if a DRAFT or ACTIVE blueprint exists after reapproval,
   // supersede it rather than blocking. If the existing blueprint is ACTIVE and has NOT gone
   // through reapproval (staleness check did not pass), block as before.
@@ -132,9 +144,27 @@ export async function createBlueprint(
     // STARTUP_MODE tasks were persisted with businessId=null regardless of the session's own
     // business (D1 launch blocker — a business-scoped cockpit read must never surface a task that
     // actually belongs to a different business in the same workspace).
-    select: { id: true, businessId: true },
+    //
+    // isFixtureBusiness: the session's own fixture flag (see model doc comment) — read here
+    // alongside businessId so isFixtureRecord below can be derived from real provenance instead
+    // of only the caller's opt-in.
+    select: { id: true, businessId: true, isFixtureBusiness: true },
   });
   if (!session) throw new NotFoundError("OwnerStartupSession", input.sessionId);
+
+  // The session may already be handed off to a business that was independently reclassified as a
+  // fixture (e.g. by the D3 acceptance-fixture reclassification) after this session/blueprint's
+  // own flags were set — or never set at all. Checking the CURRENT state of that linked business
+  // closes the gap the caller-only opt-in leaves open.
+  let linkedBusinessIsFixture = false;
+  if (session.businessId) {
+    const linkedBusiness = await db.ownerBusiness.findFirst({
+      where: { id: session.businessId, workspaceId },
+      select: { isFixtureBusiness: true },
+    });
+    linkedBusinessIsFixture = linkedBusiness?.isFixtureBusiness === true;
+  }
+  const isFixtureRecord = explicitFixtureOptIn || session.isFixtureBusiness === true || linkedBusinessIsFixture;
 
   const idea = await db.startupIdeaRecord.findFirst({
     where: { id: input.ideaId, sessionId: input.sessionId, workspaceId },

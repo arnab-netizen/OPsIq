@@ -12,6 +12,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import type { ConstraintType } from "@/domain/owner-mode/constraint-engine";
 import type { Prisma } from "@/generated/prisma/client";
+import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
 
 export type ConstraintStatus = "ACTIVE" | "ACCEPTED" | "RESOLVED";
 
@@ -118,11 +119,26 @@ export async function updateConstraintStatus(input: UpdateConstraintStatusInput)
 }
 
 export async function listActiveConstraints(workspaceId: string) {
+  // Read-time correction for historical rows whose isFixtureRecord was incorrectly persisted as
+  // false (createBlueprint()'s write-time gap, now fixed) — excludes any constraint linked to a
+  // startup session that is itself, or is handed off to a business that is, isFixtureBusiness:
+  // true. Never touches stored data. See getFixtureTaintedStartupSessionIds() doc comment.
+  const fixtureTaintedSessionIds = await getFixtureTaintedStartupSessionIds(workspaceId);
+  const fixtureSessionExclusion =
+    fixtureTaintedSessionIds.length > 0
+      ? { OR: [{ linkedStartupSessionId: null }, { linkedStartupSessionId: { notIn: fixtureTaintedSessionIds } }] }
+      : {};
+
   return db.constraintResolutionRecord.findMany({
-    // isFixtureRecord: false excludes acceptance/QA fixture constraints (see
-    // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an ordinary owner's constraint list must never
-    // include a constraint a QA blueprint run created.
-    where: { workspaceId, status: "ACTIVE", isFixtureRecord: false },
+    where: {
+      workspaceId,
+      status: "ACTIVE",
+      // isFixtureRecord: false excludes acceptance/QA fixture constraints (see
+      // ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an ordinary owner's constraint list must never
+      // include a constraint a QA blueprint run created.
+      isFixtureRecord: false,
+      ...fixtureSessionExclusion,
+    },
     orderBy: [{ bindingScore: "desc" }, { identifiedAt: "asc" }],
   });
 }

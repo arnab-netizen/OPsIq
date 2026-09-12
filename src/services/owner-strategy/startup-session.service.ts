@@ -164,6 +164,48 @@ export async function listStartupSessions(workspaceId: string): Promise<StartupS
   }));
 }
 
+/**
+ * Startup session ids that must be treated as fixture-tainted for any workspace-wide,
+ * business-agnostic read of blueprint output — specifically BusinessRiskEntry and
+ * ConstraintResolutionRecord, neither of which has a businessId column (see
+ * ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md), so a business-scoped read can never filter them by the
+ * currently-selected business the way BusinessObjective/ProcessExecutionTask already can.
+ *
+ * A session counts as fixture-tainted when EITHER its own isFixtureBusiness flag is true, OR it
+ * has been handed off to an OwnerBusiness that is itself isFixtureBusiness: true. The second case
+ * is the one createBlueprint()'s write path failed to check for seven real historical acceptance
+ * runs (2026-08-21 through 2026-08-27): their derived BusinessRiskEntry/ConstraintResolutionRecord
+ * rows were persisted with isFixtureRecord: false despite the underlying business being correctly
+ * reclassified as a fixture (the D3 acceptance-fixture reclassification). This is a read-time,
+ * non-mutating correction — it never touches the stored isFixtureRecord/isFixtureBusiness columns,
+ * only excludes rows at query time using an already-established, legitimate provenance signal
+ * (OwnerBusiness.isFixtureBusiness) rather than a display-string/name/timestamp heuristic.
+ */
+export async function getFixtureTaintedStartupSessionIds(workspaceId: string): Promise<string[]> {
+  type SessionFixtureRow = { id: string; isFixtureBusiness: boolean; businessId: string | null };
+  const sessions: SessionFixtureRow[] = await db.ownerStartupSession.findMany({
+    where: { workspaceId },
+    select: { id: true, isFixtureBusiness: true, businessId: true },
+  });
+  if (sessions.length === 0) return [];
+
+  const businessIds = Array.from(
+    new Set(sessions.map((s: SessionFixtureRow) => s.businessId).filter((id: string | null): id is string => id !== null))
+  );
+  let fixtureBusinessIds = new Set<string>();
+  if (businessIds.length > 0) {
+    const fixtureBusinesses: Array<{ id: string }> = await db.ownerBusiness.findMany({
+      where: { id: { in: businessIds }, workspaceId, isFixtureBusiness: true },
+      select: { id: true },
+    });
+    fixtureBusinessIds = new Set(fixtureBusinesses.map((b: { id: string }) => b.id));
+  }
+
+  return sessions
+    .filter((s: SessionFixtureRow) => s.isFixtureBusiness === true || (s.businessId !== null && fixtureBusinessIds.has(s.businessId)))
+    .map((s: SessionFixtureRow) => s.id);
+}
+
 // ─── Phase 5 Lifecycle ────────────────────────────────────────────────────────
 
 export async function transitionSession(
