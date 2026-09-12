@@ -1,2 +1,0 @@
-{"test":"app_startup","status":"success","pid":4835}
-{"test":"sigkill_crash","status":"success","recovery_delay_seconds":2}

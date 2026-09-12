@@ -1,3 +1,0 @@
-export interface HumanReviewQueueReadinessView { readonly moduleKey: 'human-review-queue'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface HumanReviewQueueServicePort { getReadinessView(): Promise<HumanReviewQueueReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface HumanReviewQueueRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'human-review-queue'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

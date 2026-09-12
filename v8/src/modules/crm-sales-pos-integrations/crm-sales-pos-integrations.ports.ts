@@ -1,3 +1,0 @@
-export interface CrmSalesPosIntegrationsReadinessView { readonly moduleKey: 'crm-sales-pos-integrations'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface CrmSalesPosIntegrationsServicePort { getReadinessView(): Promise<CrmSalesPosIntegrationsReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface CrmSalesPosIntegrationsRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'crm-sales-pos-integrations'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

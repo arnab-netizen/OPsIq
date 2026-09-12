@@ -211,7 +211,7 @@ Replace with: ${replacement}
 
 ENFORCEMENT:
 This is a build-time gate. Build will fail if shadow reads exist.
-See: .claude/global_auth_read_inventory.md
+See: docs/internal-reference/global_auth_read_inventory.md
 See: src/lib/auth-ownership-allowlist.ts
 `;
 }

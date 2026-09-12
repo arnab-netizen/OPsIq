@@ -1,3 +1,0 @@
-export interface DatabasePrismaCoreReadinessView { readonly moduleKey: 'database-prisma-core'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface DatabasePrismaCoreServicePort { getReadinessView(): Promise<DatabasePrismaCoreReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface DatabasePrismaCoreRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'database-prisma-core'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

@@ -1,3 +1,0 @@
-export interface ReportAChangeFlowReadinessView { readonly moduleKey: 'report-a-change-flow'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface ReportAChangeFlowServicePort { getReadinessView(): Promise<ReportAChangeFlowReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface ReportAChangeFlowRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'report-a-change-flow'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

@@ -1,3 +1,0 @@
-export interface ExportPortabilityReadinessView { readonly moduleKey: 'export-portability'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface ExportPortabilityServicePort { getReadinessView(): Promise<ExportPortabilityReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface ExportPortabilityRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'export-portability'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

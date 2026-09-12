@@ -1,3 +1,0 @@
-export interface MiddlewareSystemReadinessView { readonly moduleKey: 'middleware-system'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface MiddlewareSystemServicePort { getReadinessView(): Promise<MiddlewareSystemReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface MiddlewareSystemRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'middleware-system'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

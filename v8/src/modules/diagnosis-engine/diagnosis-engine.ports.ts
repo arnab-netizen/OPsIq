@@ -1,3 +1,0 @@
-export interface DiagnosisEngineReadinessView { readonly moduleKey: 'diagnosis-engine'; readonly status: 'implemented_v6'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface DiagnosisEngineServicePort { getReadinessView(): Promise<DiagnosisEngineReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface DiagnosisEngineRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'diagnosis-engine'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

@@ -1,3 +1,0 @@
-export interface TriggerRulesEngineReadinessView { readonly moduleKey: 'trigger-rules-engine'; readonly status: 'implemented_v6_partial'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface TriggerRulesEngineServicePort { getReadinessView(): Promise<TriggerRulesEngineReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface TriggerRulesEngineRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'trigger-rules-engine'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }
