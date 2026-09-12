@@ -73,6 +73,7 @@ import { checkDoNotRepeatForGuidance, type DoNotRepeatAnnotation } from "@/servi
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
 import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
+import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -1284,6 +1285,10 @@ async function buildBusinessOperatingSystem(
   db: GuidanceDeps["db"],
 ): Promise<BusinessOperatingSystemView | null> {
   try {
+    // GuidanceDb is deliberately a minimal interface (see its own doc comment); this function
+    // reads several Prisma models (businessRiskEntry, constraintResolutionRecord, etc.) that are
+    // intentionally not part of it.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbAny = db as any;
     const now = Date.now();
 
@@ -1342,12 +1347,30 @@ async function buildBusinessOperatingSystem(
     // so surfacing it is correct; with zero or two-or-more, it is hidden rather than guessed at.
     // (The nav entry for the standalone Risk page is hidden for the same underlying reason — see
     // sidebar-nav.tsx.)
+    // Read-time correction for historical rows whose isFixtureRecord was incorrectly persisted as
+    // false (createBlueprint()'s write-time gap, now fixed) — excludes any risk/constraint linked
+    // to a startup session that is itself, or is handed off to a business that is,
+    // isFixtureBusiness: true. Never touches stored data. Fetched unconditionally (used by both
+    // the risk query below, gated on hasExactlyOneRealBusiness, and the constraint query further
+    // down, which is not gated on business count). See getFixtureTaintedStartupSessionIds() doc
+    // comment.
+    const fixtureTaintedSessionIds = await getFixtureTaintedStartupSessionIds(workspaceId);
+    const fixtureSessionExclusion =
+      fixtureTaintedSessionIds.length > 0
+        ? { OR: [{ linkedStartupSessionId: null }, { linkedStartupSessionId: { notIn: fixtureTaintedSessionIds } }] }
+        : {};
+
     const topRisks: Array<{ id: string; title: string; severity: number; status: string; category: string }> =
       (await hasExactlyOneRealBusiness(workspaceId))
         ? await dbAny.businessRiskEntry.findMany({
             // isFixtureRecord: false — Home must never surface a QA blueprint's risk as a real
             // owner's top risk. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
-            where: { workspaceId, status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING", "ACCEPTED"] }, isFixtureRecord: false },
+            where: {
+              workspaceId,
+              status: { in: ["IDENTIFIED", "ASSESSED", "MITIGATING", "ACCEPTED"] },
+              isFixtureRecord: false,
+              ...fixtureSessionExclusion,
+            },
             orderBy: { severity: "desc" },
             take: 3,
             select: { id: true, title: true, severity: true, status: true, category: true },
@@ -1386,13 +1409,13 @@ async function buildBusinessOperatingSystem(
     }> = await dbAny.constraintResolutionRecord.findMany({
       // isFixtureRecord: false — Home must never surface a QA blueprint's constraint as a real
       // owner's active constraint. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
-      where: { workspaceId, status: "ACTIVE", isFixtureRecord: false },
+      where: { workspaceId, status: "ACTIVE", isFixtureRecord: false, ...fixtureSessionExclusion },
       orderBy: { bindingScore: "desc" },
       take: 5,
       select: { id: true, title: true, constraintType: true, bindingScore: true, status: true, remediationAction: true },
     }).catch(() => [] as typeof activeConstraintRows);
     const activeConstraintCount: number = await dbAny.constraintResolutionRecord.count({
-      where: { workspaceId, status: "ACTIVE", isFixtureRecord: false },
+      where: { workspaceId, status: "ACTIVE", isFixtureRecord: false, ...fixtureSessionExclusion },
     }).catch(() => 0);
 
     // 6. KPI ownership count — isFixtureRecord: false excludes acceptance/QA fixture KPIs.

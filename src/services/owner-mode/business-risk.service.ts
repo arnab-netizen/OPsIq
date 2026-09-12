@@ -13,6 +13,7 @@ import type { AuditEventName } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
 import { hasAnyRealBusiness } from "@/services/founder-recovery/business.service";
+import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
 
 export type RiskCategory =
   | "OPERATIONAL"
@@ -207,12 +208,24 @@ export async function listBusinessRisks(
   // correctly showed the "set up your business" onboarding state while Priorities still displayed
   // a critical cash-survival risk. NO VALID REAL ACTIVE BUSINESS => NO BUSINESS-DERIVED RISK.
   if (!(await hasAnyRealBusiness(workspaceId))) return [];
+
+  // Read-time correction for historical rows whose isFixtureRecord was incorrectly persisted as
+  // false (createBlueprint()'s write-time gap, now fixed) — excludes any risk linked to a startup
+  // session that is itself, or is handed off to a business that is, isFixtureBusiness: true. Never
+  // touches stored data. See getFixtureTaintedStartupSessionIds() doc comment.
+  const fixtureTaintedSessionIds = await getFixtureTaintedStartupSessionIds(workspaceId);
+  const fixtureSessionExclusion =
+    fixtureTaintedSessionIds.length > 0
+      ? { OR: [{ linkedStartupSessionId: null }, { linkedStartupSessionId: { notIn: fixtureTaintedSessionIds } }] }
+      : {};
+
   return db.businessRiskEntry.findMany({
     where: {
       workspaceId,
       // Excludes acceptance/QA fixture risks (see ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md) — an
       // ordinary owner's risk register must never include a risk a QA blueprint run created.
       isFixtureRecord: false,
+      ...fixtureSessionExclusion,
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.category ? { category: opts.category } : {}),
     },
@@ -439,12 +452,23 @@ export async function evaluateOverdueRiskAlerts(
   // Query non-terminal risks with reviewDueDate in the past (bounded at 500)
   // isFixtureRecord: false — a QA blueprint's risk must never generate a real owner-visible
   // "Risk review overdue" alert. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
+  //
+  // Read-time correction (defense in depth; latent bypass, not yet reproduced in production since
+  // the known-contaminated rows all have reviewDueDate: null) for the same historical
+  // isFixtureRecord write-time gap fixed in createBlueprint() — see
+  // getFixtureTaintedStartupSessionIds() doc comment.
+  const fixtureTaintedSessionIds = await getFixtureTaintedStartupSessionIds(workspaceId);
+  const fixtureSessionExclusion =
+    fixtureTaintedSessionIds.length > 0
+      ? { OR: [{ linkedStartupSessionId: null }, { linkedStartupSessionId: { notIn: fixtureTaintedSessionIds } }] }
+      : {};
   const overdueRisks = await db.businessRiskEntry.findMany({
     where: {
       workspaceId,
       reviewDueDate: { lt: now },
       status: { notIn: ["RESOLVED", "CLOSED"] },
       isFixtureRecord: false,
+      ...fixtureSessionExclusion,
     },
     select: { id: true, riskCode: true },
     take: 500,
