@@ -1,3 +1,0 @@
-export interface OrganizationWorkspaceCoreReadinessView { readonly moduleKey: 'organization-workspace-core'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface OrganizationWorkspaceCoreServicePort { getReadinessView(): Promise<OrganizationWorkspaceCoreReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface OrganizationWorkspaceCoreRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'organization-workspace-core'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

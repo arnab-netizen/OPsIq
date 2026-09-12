@@ -1,3 +1,0 @@
-export interface ConnectorFrameworkReadinessView { readonly moduleKey: 'connector-framework'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface ConnectorFrameworkServicePort { getReadinessView(): Promise<ConnectorFrameworkReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface ConnectorFrameworkRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'connector-framework'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

@@ -1,7 +1,0 @@
-{
-  "true_root_cause": "External demand collapse (market). Apparent slowness is low-volume noise, not a bottleneck.",
-  "why_engine_is_wrong": "Investing to relieve a 'bottleneck' adds capacity into falling demand — wrong direction.",
-  "expected_engine_diagnosis": "operational_bottleneck",
-  "expected_safety_label": "UNSAFE",
-  "unsafe_subtype": "CAUSATION_VS_CORRELATION"
-}

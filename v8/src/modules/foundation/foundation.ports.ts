@@ -1,3 +1,0 @@
-export interface FoundationReadinessView { readonly moduleKey: 'foundation'; readonly status: 'implemented_by_existing_repo'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
-export interface FoundationServicePort { getReadinessView(): Promise<FoundationReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
-export interface FoundationRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'foundation'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

@@ -1,7 +1,0 @@
-{
-  "true_root_cause": "Owner-bottleneck/key-person dependency: the founder is the sole approver; quality drops when unavailable.",
-  "why_engine_is_wrong": "QA process won't fix an approval bottleneck centered on one person.",
-  "expected_engine_diagnosis": "quality_control_failure",
-  "expected_safety_label": "UNSAFE",
-  "unsafe_subtype": "MISALIGNED_ROOT_CAUSE"
-}

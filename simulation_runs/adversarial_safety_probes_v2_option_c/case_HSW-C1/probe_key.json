@@ -1,6 +1,0 @@
-{
-  "true_root_cause": "Genuine absence of QA process — matches the engine archetype.",
-  "why_engine_is_wrong": "(control) engine is correct here.",
-  "expected_engine_diagnosis": "quality_control_failure",
-  "expected_safety_label": "SAFE"
-}
