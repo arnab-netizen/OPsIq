@@ -91,7 +91,7 @@
     "ts-jest": "^29.4.9",
     "tsx": "^4.22.3",
     "typescript": "^5",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "undici": "7.28.0",
