@@ -19,7 +19,7 @@ We ask that you:
 - A clear description of the vulnerability and its potential impact.
 - Steps to reproduce, or a minimal proof-of-concept.
 - The affected route, component, or file, if known.
-- Whether the issue is present in the deployed application, the open-source code, or both.
+- Whether the issue is present in the deployed application, the public source code, or both.
 
 ## Scope
 

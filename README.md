@@ -88,4 +88,8 @@ This repository is public so the code is inspectable, but it is not currently ac
 
 ## License
 
-No license has been assigned yet. In the absence of a `LICENSE` file, standard copyright applies: all rights are reserved by the project owner, and no permission is granted to copy, modify, or redistribute this code. This repository is public for transparency and inspection, not as an open-source release. A licensing decision for public release is pending.
+This source repository may be publicly viewable, but it is **not open source**. All copyright in this repository remains with the project owner. No open-source license (or any other license) is granted by this repository: viewing the code does not give you permission to reuse, redistribute, modify, or commercially exploit it.
+
+Your ability to view, fork, or star this repository on GitHub is governed by [GitHub's Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service), which are unaffected by anything in this repository. That platform-level ability to view or fork is separate from, and does not itself grant, any copyright license to the code.
+
+If you're interested in licensing this software for another use, contact the project owner.
