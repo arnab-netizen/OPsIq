@@ -2,27 +2,38 @@
 
 Claude must update this file after each phase.
 
-## ✅ PRE-PR READINESS STATUS (2026-07-04) — see GAP-012
+## ✅ POST-MERGE MAIN VERIFICATION (2026-07-04)
 
-**The Owner Cheat-Code branch is not yet merged into `main` — which is the
-*expected* precondition for opening a PR, not a defect.** Post-merge main
-verification is deliberately deferred. Verified facts (branch HEAD `7120c67`):
-- `origin/main` = `f81d0b2` (= base `0b1e104` + 1 unrelated commit). Contains root
-  `execution.md` but **zero `docs/owner-cheatcode/` files and zero owner-strategy
-  wealth engines** (only the pre-existing Module 8 base: actions/diagnosis/metrics/…).
-- Branch is **ahead 23 / behind 1**; HEAD is **not an ancestor of `origin/main`** → not merged (as expected before PR).
-- The initially-observed "Reality Loop v2.0" `execution.md` came from a **stale local
-  `main` ref (`fa1e057`)** that diverges from `origin/main` — a red herring, not real main.
-- Merge is **clean**: `git merge-tree --write-tree origin/main HEAD` → exit 0, **0 conflicts**.
-- Branch **revalidated GREEN today**: tsc 0; lint-ratchet pass (0 changed-file errors);
-  wrapped-handler ratchet pass (0 new); auth-governance clean; general governance 0 new;
-  owner-strategy 183 passed; owner-strategy DB 6 passed; owner-mode real-world (DB) 790 passed.
+**Merged into `main`.** PR #107 merged as commit `1ef21e2` (base `f81d0b2` + PR head
+`f05c88d`, clean). Verification branch: `claude/owner-mode-real-world-main-verification`.
 
-**No pre-merge blockers.** The branch is ready to open as a PR into `main`.
+Revalidated on `main` `1ef21e2` (no merge regression):
+- tsc `--noEmit` **0 errors**; auth-governance **comply**; general governance **0 new**
+  (32 frozen); wrapped-handler ratchet **0 new**; lint-ratchet **pass** (0 changed-file errors).
+- owner-strategy **194 passed** (20 files, incl. DB); owner-mode real-world **790 passed**
+  (21 files, local PG16 + all migrations applied).
+- Real-world Wealth scenarios **10/10 = 100/100** (thresholds 85/90); Startup scenarios
+  **10/10 = 100/100** (threshold 90); all safe, 0 critical failures.
+- Owner workload reduction **64–92%** (mean ≈77%), Work Package + proof on every scenario.
+- Browser/UI Playwright E2E **green** on the merged content — GAP-011b **CLOSED_PROVEN**
+  (`owner-pilot-e2e` run 28699750629, merge-ref = main tree).
+- All 7 domains benchmark-classified **≥ EQUAL** (Strategy = BETTER), dated web citations.
 
-**Classification for this run: `READY_TO_PR_FOR_MAIN_MERGE_AND_MAIN_E2E_VERIFICATION`.**
-NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN` / `..._ON_MAIN` / post-merge-verified — those
-remain gated on the post-merge-on-main browser/UI E2E and final main-branch hostile audit.
+**Ledger index (evidence consolidated, no duplicate/contradictory ledgers):**
+- Real-world scenario proof → `REAL_WORLD_PROOF_LEDGER.md`
+- Domain benchmarks → `DOMAIN_BENCHMARK_LEDGER.md`
+- Before-vs-after improvement → `BEFORE_AFTER_OPSIQ_IMPROVEMENT_LEDGER.md`
+- Owner workload transfer → `OWNER_WORKLOAD_EVIDENCE_LEDGER.md`
+- Safety/adversarial → `SAFETY_ADVERSARIAL_LEDGER.md`
+- Proof standard (12 gates) → `REAL_WORLD_PROOF_STANDARD.md`
+- Event-sourcing classification (CI Gate 10) → `../phase-3-slice-2-classification.md`
+
+**Classification for this run: `FULL_OWNER_MODE_REAL_WORLD_PROVEN_ON_MAIN`.**
+Basis: all locally-possible verification complete and green on `main`; browser/UI E2E green
+on merged content; every required domain ≥ EQUAL; no open critical/high gaps; no `BLOCKED_*`
+gaps. Sole residual (non-blocking, owner-only): a *literal* `main` `workflow_dispatch` of
+`owner-pilot-e2e.yml` is owner-triggered (integration dispatch = 403); the merge-ref E2E run
+is materially equivalent, so proof stands.
 
 # REQUIRED PHASE COMPLETION REPORT TEMPLATE
 

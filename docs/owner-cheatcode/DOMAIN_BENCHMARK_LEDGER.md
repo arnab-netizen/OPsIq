@@ -1,5 +1,10 @@
 # Domain Benchmark Ledger — Owner Cheat-Code
 
+> **Main revalidation 2026-07-04 @ `1ef21e2`:** all 7 domains confirmed **≥ EQUAL** on merged
+> `main` (Finance/Sales/Marketing/Operations/Workforce/Compliance = EQUAL_FOR_OWNER_USE_CASE;
+> Strategy = BETTER_FOR_OWNER_USE_CASE), with dated web citations that support each claim.
+> Domain-loop wiring re-proven by `domain-hardening.test.ts` (7 domains + cross-domain, green).
+
 Honest benchmark of each domain for the **owner's actual operating outcome** — not
 by feature count. OpsIQ is a decision/execution/safety layer, not a point-tool
 replacement; it does not aim to match every narrow feature of a dedicated app.
