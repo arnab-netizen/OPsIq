@@ -16,6 +16,15 @@ export const ROLES = {
 
   // Read-only
   VIEWER: "viewer",
+
+  // OpsIQ platform-operator surface, narrower than SYSTEM_ADMIN. Carries
+  // ONLY BETA_REQUEST_REVIEW/BETA_REQUEST_INVITE (see capability-check.ts) —
+  // deliberately excluded from every consulting-firm and self-serve-owner
+  // capability bundle. This is the distinction between a customer/business
+  // owner (self-serve "owner" WorkspaceMembership, OWNER_SCOPED_CAPABILITIES)
+  // and an OpsIQ platform operator, even when the same real account performs
+  // both roles today.
+  BETA_REQUEST_OPERATOR: "beta_request_operator",
 } as const;
 
 export type RoleName = (typeof ROLES)[keyof typeof ROLES];
@@ -29,6 +38,12 @@ export const ROLE_HIERARCHY: Record<RoleName, number> = {
   [ROLES.CLIENT_OWNER]: 20,
   [ROLES.CLIENT_TEAM_MEMBER]: 10,
   [ROLES.VIEWER]: 0,
+  // Deliberately low and non-overlapping with any client-role level: this
+  // role grants two narrow write capabilities (not read-only, so it can't
+  // share VIEWER's level of 0), but must sit below every consulting-firm
+  // role so assertHierarchyAuthority (services/role-assignment.ts) never
+  // lets it be mistaken for a broader internal tier.
+  [ROLES.BETA_REQUEST_OPERATOR]: 5,
 };
 
 /** Roles that are internal/consultant-side — not client-facing */
@@ -38,6 +53,7 @@ export const INTERNAL_ROLES: readonly RoleName[] = [
   ROLES.EXPERIENCED_CONSULTANT,
   ROLES.BEGINNER_CONSULTANT,
   ROLES.ANALYST,
+  ROLES.BETA_REQUEST_OPERATOR,
 ];
 
 /** Roles that are client-side */

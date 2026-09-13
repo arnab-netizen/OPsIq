@@ -1,11 +1,15 @@
 /**
  * POST /api/admin/beta-requests/[id]/invite
  *
- * Mark a controlled-beta homepage capture request as invited. Admin-only
- * (enforces SYSTEM_ADMIN capability via canonical enforcement). Idempotent
- * (requires an idempotency-key header, same as
- * /api/admin/workspaces/[id]/disable) and audited (emits
- * beta_request.marked_invited on an actual state change).
+ * Mark a controlled-beta homepage capture request as invited. Gated on
+ * BETA_REQUEST_INVITE — a narrow OpsIQ platform-operator capability (see
+ * ROLES.BETA_REQUEST_OPERATOR in domain/constants/roles.ts), NOT the full
+ * SYSTEM_ADMIN bundle (SYSTEM_ADMIN still passes this check, since that role
+ * carries every capability — see beta-requests-rbac.test.ts for the proof
+ * that unrelated SYSTEM_ADMIN-gated surfaces, e.g. workspace disable, remain
+ * unreachable by a beta-request operator). Idempotent (requires an
+ * idempotency-key header, same as /api/admin/workspaces/[id]/disable) and
+ * audited (emits beta_request.marked_invited on an actual state change).
  *
  * This is the "HOW_OWNER_MARKS_INVITED" mechanism for the controlled-beta
  * homepage capture. It never creates a User, Workspace, or session itself —
@@ -61,6 +65,6 @@ export const POST = withCanonicalEnforcement(
     }
   },
   {
-    requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN],
+    requireCapabilities: [CAPABILITIES.BETA_REQUEST_INVITE],
   }
 );

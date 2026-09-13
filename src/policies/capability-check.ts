@@ -204,6 +204,15 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.KPI_VIEW,
     CAPABILITIES.DELIVERABLE_VIEW,
   ],
+
+  // OpsIQ platform-operator surface (controlled-beta homepage capture).
+  // Deliberately EXACTLY these two capabilities and nothing else — no
+  // ENGAGEMENT_*/CLIENT_*/USER_* access, no OWNER_* Owner Mode access, no
+  // SYSTEM_ADMIN. See ROLES.BETA_REQUEST_OPERATOR's own doc comment.
+  [ROLES.BETA_REQUEST_OPERATOR]: [
+    CAPABILITIES.BETA_REQUEST_REVIEW,
+    CAPABILITIES.BETA_REQUEST_INVITE,
+  ],
 };
 
 // ─── Self-serve owner scoping ───────────────────────────────────────────────
@@ -281,6 +290,8 @@ const INTERNAL_ONLY_CAPABILITIES: readonly CapabilityName[] = [
   CAPABILITIES.SCOPE_MANAGE,
   CAPABILITIES.REVIEW_MANAGE,
   CAPABILITIES.FILE_DELETE,
+  CAPABILITIES.BETA_REQUEST_REVIEW,
+  CAPABILITIES.BETA_REQUEST_INVITE,
 ];
 
 // ─── Policy Context ─────────────────────────────────────────────────────────
