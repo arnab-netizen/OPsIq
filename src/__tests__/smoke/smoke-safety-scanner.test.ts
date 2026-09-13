@@ -62,6 +62,12 @@ const KNOWN_PREFIXES: Array<{
   { prefix: "owner-data-", classification: "GOVERNANCE" },
   { prefix: "owner-mode-", classification: "GOVERNANCE" },
   { prefix: "production-", classification: "GOVERNANCE" },
+  // provision-*.ts: direct Prisma writes (e.g. a single UserRoleAssignment
+  // row), never an HTTP call. Safe-by-default on its own terms rather than
+  // the smoke-*.ts HTTP guard pattern: dry-run unless --apply is passed,
+  // requires an exact typed --confirm phrase to mutate, and independently
+  // re-derives + refuses to proceed on a target mismatch before writing.
+  { prefix: "provision-", classification: "DB_DIRECT" },
   { prefix: "reset-", classification: "GOVERNANCE" },
   { prefix: "scan-", classification: "GOVERNANCE" },
   { prefix: "security-", classification: "GOVERNANCE" },
