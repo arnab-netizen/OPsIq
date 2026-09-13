@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/ui/primitives";
+import { BetaAccessCta } from "@/components/landing/BetaAccessCta";
 
 /**
  * Public, logged-out landing page for first-time visitors.
@@ -7,7 +8,10 @@ import { Badge } from "@/ui/primitives";
  * Presentational only: no business logic, no permission checks, no state
  * transitions, no data fetching. Authenticated routing is handled by the
  * server route (src/app/page.tsx), which renders this component only for
- * logged-out visitors.
+ * logged-out visitors. The one exception is BetaAccessCta, a small client
+ * component (controlled-beta capture form) rendered as a child here — all of
+ * its own logic (validation, persistence, dedup) lives server-side in
+ * POST /api/beta-requests, never in this page.
  *
  * Every claim on this page is backed by a real, shipped OpsIQ concept (see
  * the PR description's claim registry). The product-proof sequence on the
@@ -74,9 +78,7 @@ export default function LandingPage() {
           <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
             Sign in
           </Link>
-          <Link href="/signup" className="text-sm font-medium text-[var(--primary-text)] hover:underline">
-            Start free
-          </Link>
+          <BetaAccessCta triggerClassName="border-0 bg-transparent p-0 text-sm font-medium text-[var(--primary-text)] hover:underline" />
         </nav>
       </header>
 
@@ -96,9 +98,7 @@ export default function LandingPage() {
             you an ordered plan for what to do next — then keeps track of what actually happened.
           </p>
           <div className="mt-10 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
-            <Link href="/signup" className={`${primaryCta} w-full sm:w-auto`}>
-              Start free
-            </Link>
+            <BetaAccessCta triggerClassName={`${primaryCta} w-full sm:w-auto`} />
             <Link href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
               Sign in
             </Link>
@@ -233,9 +233,7 @@ export default function LandingPage() {
           See what OpsIQ finds in your business.
         </h2>
         <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:justify-center">
-          <Link href="/signup" className={`${primaryCta} w-full sm:w-auto`}>
-            Start free
-          </Link>
+          <BetaAccessCta triggerClassName={`${primaryCta} w-full sm:w-auto`} />
           <Link href="/login" className={`${secondaryCta} w-full sm:w-auto`}>
             Sign in
           </Link>

@@ -93,3 +93,16 @@ export const PRIVACY_REQUEST_RATE_LIMIT: RateLimitConfig = {
   windowMs: 60 * 60 * 1000, // 1 hour
   maxAttempts: 5,
 };
+
+// Same enumeration-resistant/anonymous-write risk profile as
+// PRIVACY_REQUEST_RATE_LIMIT: no email is sent from this endpoint, but every
+// accepted request creates a durable BetaRequest row, and it is reachable by
+// anyone on the public marketing homepage with no session. Looser than the
+// privacy-request limit (5/hour) since this is the primary public marketing
+// CTA and a legitimate visitor retrying a mistyped email should not be
+// blocked, while still bounding row-flooding/automation abuse per IP and per
+// email.
+export const BETA_REQUEST_RATE_LIMIT: RateLimitConfig = {
+  windowMs: 60 * 60 * 1000, // 1 hour
+  maxAttempts: 10,
+};

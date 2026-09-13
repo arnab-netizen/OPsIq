@@ -703,6 +703,11 @@ export const AUDIT_EVENTS = {
   POLICY_ACCEPTED: "user.policy_accepted",
   PLATFORM_FEEDBACK_SUBMITTED: "platform_feedback.submitted",
   PRIVACY_REQUEST_CREATED: "privacy_request.created",
+
+  // Controlled-beta homepage capture
+  BETA_REQUEST_CREATED: "beta_request.created",
+  BETA_REQUEST_DUPLICATE_SUBMITTED: "beta_request.duplicate_submitted",
+  BETA_REQUEST_MARKED_INVITED: "beta_request.marked_invited",
 } as const;
 
 export type AuditEventName =

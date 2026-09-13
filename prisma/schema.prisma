@@ -1085,6 +1085,35 @@ model PrivacyRequest {
   @@map("privacy_requests")
 }
 
+/// A lightweight, anonymous beta-access request captured from the public
+/// marketing homepage's controlled-beta entry point. Deliberately NOT a CRM
+/// lead and NOT related to User/Workspace: it records only that someone
+/// asked for beta access, lets an owner mark who was invited, and preserves
+/// first-touch UTM attribution. A selected requester is invited out-of-band
+/// and goes on to use the existing /signup path; this model grants no
+/// access itself. `qualification` is a single optional JSON column (rather
+/// than named columns) so the optional second-stage qualification follow-up
+/// (see the controlled-beta homepage PR) can be added without a further
+/// schema migration.
+model BetaRequest {
+  id            String    @id @db.Uuid
+  email         String    @unique
+  firstName     String?   @map("first_name")
+  status        String    @default("REQUESTED") // REQUESTED | INVITED
+  utmSource     String?   @map("utm_source")
+  utmMedium     String?   @map("utm_medium")
+  utmCampaign   String?   @map("utm_campaign")
+  utmContent    String?   @map("utm_content")
+  qualification Json?
+  invitedAt     DateTime? @map("invited_at")
+  invitedBy     String?   @map("invited_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@map("beta_requests")
+}
+
 model ShockEvent {
   id           String     @id @db.Uuid
   engagementId String     @map("engagement_id") @db.Uuid
