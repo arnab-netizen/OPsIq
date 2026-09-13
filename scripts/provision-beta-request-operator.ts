@@ -60,6 +60,7 @@ import { db, getDbInstance } from "@/lib/db";
 import { ROLES } from "@/domain/constants/roles";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { emitAuditEvent } from "@/infra/audit";
+import type { Prisma } from "@/generated/prisma/client";
 
 const GRANT_CONFIRM_PHRASE = "GRANT BETA REQUEST OPERATOR";
 const REVOKE_CONFIRM_PHRASE = "REVOKE BETA REQUEST OPERATOR";
@@ -89,13 +90,109 @@ function parseArgs(argv: string[]): Args {
   return args;
 }
 
-async function resolvePrimaryWorkspaceId(userId: string): Promise<string | null> {
+export async function resolvePrimaryWorkspaceId(userId: string): Promise<string | null> {
   const membership = await db.workspaceMembership.findFirst({
     where: { userId, isActive: true },
     orderBy: [{ addedAt: "asc" }, { workspaceId: "asc" }],
     select: { workspaceId: true },
   });
   return membership?.workspaceId ?? null;
+}
+
+/**
+ * AUDIT-01 atomicity: the UserRoleAssignment mutation and its audit event must
+ * commit or roll back together, never one without the other. `emitAuditEvent`
+ * accepts an `AuditClient` (see infra/audit.ts) so it can run against the same
+ * `tx` handed out by `db.$transaction` -- same pattern as e.g.
+ * services/owner-mode/owner-action-outcome.service.ts. Extracted from `main()`
+ * (rather than inlined) so the transactional behavior itself -- including
+ * rollback on a simulated audit failure -- is directly unit-testable without
+ * spawning the CLI script as a subprocess.
+ */
+export interface GrantBetaRequestOperatorResult {
+  assignmentId: string;
+  auditEventId: string;
+}
+
+export async function grantBetaRequestOperator(params: {
+  userId: string;
+  email: string;
+  workspaceId: string;
+  grantedBy?: string;
+}): Promise<GrantBetaRequestOperatorResult> {
+  const assignmentId = randomUUID();
+  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.userRoleAssignment.create({
+      data: {
+        id: assignmentId,
+        userId: params.userId,
+        role: ROLE,
+        scope: SCOPE,
+        scopeId: params.workspaceId,
+        grantedBy: params.grantedBy ?? null,
+        isActive: true,
+      },
+    });
+    const auditEventId = await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.ROLE_ASSIGNED,
+        actorId: params.grantedBy,
+        workspaceId: params.workspaceId,
+        entityType: "user_role_assignment",
+        entityId: assignmentId,
+        payload: {
+          targetUserId: params.userId,
+          targetEmail: params.email,
+          role: ROLE,
+          scope: SCOPE,
+          scopeId: params.workspaceId,
+          provisionedVia: "scripts/provision-beta-request-operator.ts",
+        },
+        visibility: "internal",
+      },
+      tx
+    );
+    return { assignmentId, auditEventId };
+  });
+}
+
+export interface RevokeBetaRequestOperatorResult {
+  auditEventId: string;
+}
+
+export async function revokeBetaRequestOperator(params: {
+  assignmentId: string;
+  userId: string;
+  email: string;
+  workspaceId: string;
+  grantedBy?: string;
+}): Promise<RevokeBetaRequestOperatorResult> {
+  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.userRoleAssignment.update({
+      where: { id: params.assignmentId },
+      data: { isActive: false, revokedAt: new Date() },
+    });
+    const auditEventId = await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.ROLE_REVOKED,
+        actorId: params.grantedBy,
+        workspaceId: params.workspaceId,
+        entityType: "user_role_assignment",
+        entityId: params.assignmentId,
+        payload: {
+          targetUserId: params.userId,
+          targetEmail: params.email,
+          role: ROLE,
+          scope: SCOPE,
+          scopeId: params.workspaceId,
+          provisionedVia: "scripts/provision-beta-request-operator.ts",
+        },
+        visibility: "internal",
+      },
+      tx
+    );
+    return { auditEventId };
+  });
 }
 
 async function main() {
@@ -150,18 +247,12 @@ async function main() {
       console.error(`✗ --confirm must be exactly "${REVOKE_CONFIRM_PHRASE}" to revoke. Refusing.`);
       process.exit(1);
     }
-    await db.userRoleAssignment.update({
-      where: { id: existing.id },
-      data: { isActive: false, revokedAt: new Date() },
-    });
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.ROLE_REVOKED,
-      actorId: args.grantedBy,
+    await revokeBetaRequestOperator({
+      assignmentId: existing.id,
+      userId: user.id,
+      email: args.email,
       workspaceId: resolvedWorkspaceId,
-      entityType: "user_role_assignment",
-      entityId: existing.id,
-      payload: { targetUserId: user.id, targetEmail: args.email, role: ROLE, scope: SCOPE, scopeId: resolvedWorkspaceId, provisionedVia: "scripts/provision-beta-request-operator.ts" },
-      visibility: "internal",
+      grantedBy: args.grantedBy,
     });
     console.log(`✓ Revoked ${ROLE} for ${args.email} (assignment ${existing.id}).`);
     return;
@@ -185,31 +276,36 @@ async function main() {
     process.exit(1);
   }
 
-  const id = randomUUID();
-  await db.userRoleAssignment.create({
-    data: {
-      id,
-      userId: user.id,
-      role: ROLE,
-      scope: SCOPE,
-      scopeId: resolvedWorkspaceId,
-      grantedBy: args.grantedBy ?? null,
-      isActive: true,
-    },
-  });
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.ROLE_ASSIGNED,
-    actorId: args.grantedBy,
+  const { assignmentId } = await grantBetaRequestOperator({
+    userId: user.id,
+    email: args.email,
     workspaceId: resolvedWorkspaceId,
-    entityType: "user_role_assignment",
-    entityId: id,
-    payload: { targetUserId: user.id, targetEmail: args.email, role: ROLE, scope: SCOPE, scopeId: resolvedWorkspaceId, provisionedVia: "scripts/provision-beta-request-operator.ts" },
-    visibility: "internal",
+    grantedBy: args.grantedBy,
   });
-  console.log(`✓ Granted ${ROLE} to ${args.email} (assignment ${id}). Rollback: re-run with --revoke --confirm "${REVOKE_CONFIRM_PHRASE}" --apply.`);
+  console.log(`✓ Granted ${ROLE} to ${args.email} (assignment ${assignmentId}). Rollback: re-run with --revoke --confirm "${REVOKE_CONFIRM_PHRASE}" --apply.`);
 }
 
-main().catch((error: unknown) => {
-  console.error("Error:", error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
+// Only run main() when this file is the process's actual entry point (the
+// normal `npx tsx scripts/provision-beta-request-operator.ts ...` CLI
+// invocation) -- never as a side effect of importing grantBetaRequestOperator/
+// revokeBetaRequestOperator/resolvePrimaryWorkspaceId for testing. Checking
+// process.argv[1] avoids relying on require.main/import.meta module-identity
+// semantics, which behave differently between a plain tsx CLI run and a
+// module imported through a test bundler's transform pipeline.
+const isMainModule = typeof process.argv[1] === "string" && process.argv[1].endsWith("provision-beta-request-operator.ts");
+if (isMainModule) {
+  main()
+    .catch((error: unknown) => {
+      console.error("Error:", error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    })
+    .finally(() => {
+      // main()'s success/no-op/dry-run paths all end in a plain `return;` --
+      // none of them close the Prisma pool, so without an explicit exit here
+      // the process hangs (idle DB connection) until Postgres's own
+      // connection-idle timeout, well after the script has finished its work.
+      // Explicit error paths inside main() already call process.exit(1)
+      // directly and are unaffected by this.
+      process.exit(process.exitCode ?? 0);
+    });
+}
