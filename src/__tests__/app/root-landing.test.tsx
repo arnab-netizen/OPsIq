@@ -55,10 +55,15 @@ describe("LandingPage content", () => {
     expect(container.textContent ?? "").toMatch(/diagnosis/i);
   });
 
-  it("includes a primary CTA to /signup", () => {
+  it("includes a primary 'Request beta access' CTA instead of a direct /signup link", () => {
     const { container } = render(<LandingPage />);
     const signupLinks = container.querySelectorAll('a[href="/signup"]');
-    expect(signupLinks.length).toBeGreaterThan(0);
+    expect(signupLinks.length).toBe(0);
+
+    const betaTriggers = Array.from(container.querySelectorAll("button")).filter(
+      (b) => b.textContent === "Request beta access"
+    );
+    expect(betaTriggers.length).toBeGreaterThan(0);
   });
 
   it("includes a secondary link to /login", () => {

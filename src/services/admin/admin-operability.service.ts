@@ -456,3 +456,179 @@ export async function disableWorkspaceForAdmin(
     disabledAt,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Controlled-beta homepage capture — owner review (read + governed write)
+// Backs GET /api/admin/beta-requests and POST /api/admin/beta-requests/[id]/invite
+// ---------------------------------------------------------------------------
+
+export interface AdminBetaRequestSummary {
+  id: string;
+  email: string;
+  firstName: string | null;
+  status: string;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmContent: string | null;
+  invitedAt: string | null;
+  invitedBy: string | null;
+  createdAt: string;
+}
+
+export interface AdminBetaRequestListResult {
+  betaRequests: AdminBetaRequestSummary[];
+  pagination: AdminPagination;
+}
+
+/**
+ * List beta-access requests for the owner review surface (read-only).
+ *
+ * This is the minimum viable "HOW_OWNER_REVIEWS_REQUESTS" mechanism for the
+ * controlled-beta homepage capture: no new UI dashboard, API-only, mirroring
+ * listWorkspacesForAdmin's exact shape/pagination. Ordering is
+ * (createdAt asc, id asc) for stable cursor pagination, oldest (first-come)
+ * request first.
+ */
+export async function listBetaRequestsForAdmin(opts: {
+  status?: string;
+  limit?: number;
+  cursor?: string | null;
+}): Promise<AdminBetaRequestListResult> {
+  const limit = clampLimit(opts.limit);
+  const cursorId = decodeCursor(opts.cursor);
+
+  const rows = await db.betaRequest.findMany({
+    where: opts.status ? { status: opts.status } : undefined,
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    take: limit + 1,
+    ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      status: true,
+      utmSource: true,
+      utmMedium: true,
+      utmCampaign: true,
+      utmContent: true,
+      invitedAt: true,
+      invitedBy: true,
+      createdAt: true,
+    },
+  });
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+
+  const betaRequests: AdminBetaRequestSummary[] = page.map(
+    (r: {
+      id: string;
+      email: string;
+      firstName: string | null;
+      status: string;
+      utmSource: string | null;
+      utmMedium: string | null;
+      utmCampaign: string | null;
+      utmContent: string | null;
+      invitedAt: Date | null;
+      invitedBy: string | null;
+      createdAt: Date;
+    }) => ({
+      id: r.id,
+      email: r.email,
+      firstName: r.firstName,
+      status: r.status,
+      utmSource: r.utmSource,
+      utmMedium: r.utmMedium,
+      utmCampaign: r.utmCampaign,
+      utmContent: r.utmContent,
+      invitedAt: r.invitedAt ? r.invitedAt.toISOString() : null,
+      invitedBy: r.invitedBy,
+      createdAt: r.createdAt.toISOString(),
+    })
+  );
+
+  const nextCursor =
+    hasMore && betaRequests.length > 0 ? encodeCursor(betaRequests[betaRequests.length - 1].id) : null;
+
+  return {
+    betaRequests,
+    pagination: {
+      limit,
+      cursor: opts.cursor ?? null,
+      nextCursor,
+      hasMore,
+    },
+  };
+}
+
+export interface MarkBetaRequestInvitedInput {
+  betaRequestId: string;
+  actorId: string;
+}
+
+export interface MarkBetaRequestInvitedResult {
+  id: string;
+  status: string;
+  invitedAt: string | null;
+  invitedBy: string | null;
+}
+
+/**
+ * Mark a beta-access request as invited (owner has decided to grant this
+ * requester access; they receive the existing /signup flow out-of-band —
+ * this function never creates a User/Workspace itself).
+ *
+ * Governance:
+ *   - Throws NotFoundError if the request does not exist.
+ *   - Concurrency-safe, emit-once: only a REQUESTED -> INVITED transition
+ *     flips the row (conditional updateMany). An already-INVITED request is
+ *     an idempotent no-op with no new audit event — the response reflects
+ *     the row's real, current state (never fabricates a new invitedAt/
+ *     invitedBy on a no-op).
+ */
+export async function markBetaRequestInvited(
+  input: MarkBetaRequestInvitedInput
+): Promise<MarkBetaRequestInvitedResult> {
+  const { betaRequestId, actorId } = input;
+
+  const existing = await db.betaRequest.findUnique({
+    where: { id: betaRequestId },
+    select: { id: true },
+  });
+  if (!existing) {
+    throw new NotFoundError("BetaRequest", betaRequestId);
+  }
+
+  const invitedAt = new Date();
+  const updated = await db.betaRequest.updateMany({
+    where: { id: betaRequestId, status: "REQUESTED" },
+    data: { status: "INVITED", invitedAt, invitedBy: actorId },
+  });
+
+  if (updated.count === 1) {
+    await emitAuditEvent({
+      eventName: "BETA_REQUEST_MARKED_INVITED" as AuditEventName,
+      actorId,
+      entityType: "beta_request",
+      entityId: betaRequestId,
+      visibility: "internal",
+    });
+  }
+
+  const finalRow = await db.betaRequest.findUnique({
+    where: { id: betaRequestId },
+    select: { id: true, status: true, invitedAt: true, invitedBy: true },
+  });
+  if (!finalRow) {
+    throw new NotFoundError("BetaRequest", betaRequestId);
+  }
+
+  return {
+    id: finalRow.id,
+    status: finalRow.status,
+    invitedAt: finalRow.invitedAt ? finalRow.invitedAt.toISOString() : null,
+    invitedBy: finalRow.invitedBy,
+  };
+}

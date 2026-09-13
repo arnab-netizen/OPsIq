@@ -96,15 +96,29 @@ describe("LandingPage — structure and CTAs", () => {
     expect(container.querySelector('nav[aria-label="Legal and support"]')).not.toBeNull();
   });
 
-  it("every primary/secondary CTA points at /signup or /login, never a dead link", () => {
+  it("every anchor CTA points at /login, never a dead link, and cold traffic is never sent straight to /signup", () => {
     const { container } = render(<LandingPage />);
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
     expect(hrefs.length).toBeGreaterThan(0);
     for (const href of hrefs) {
       expect(href).toBeTruthy();
     }
-    expect(hrefs).toContain("/signup");
     expect(hrefs).toContain("/login");
+    // The controlled-beta homepage capture: the primary cold-traffic CTA is a
+    // modal trigger, never a direct link to full /signup.
+    expect(hrefs).not.toContain("/signup");
+  });
+
+  it("shows exactly three 'Request beta access' triggers (header, hero, final CTA) and 'Sign in' everywhere it appeared before", () => {
+    const { container } = render(<LandingPage />);
+    const triggers = Array.from(container.querySelectorAll("button")).filter(
+      (b) => b.textContent === "Request beta access"
+    );
+    expect(triggers).toHaveLength(3);
+    expect(container.textContent ?? "").not.toMatch(/start free/i);
+
+    const signInLinks = Array.from(container.querySelectorAll("a")).filter((a) => a.textContent === "Sign in");
+    expect(signInLinks).toHaveLength(3);
   });
 
   it("mentions Money, Sales, and Operations by name (the real, shipped decision domains) and no others", () => {
