@@ -3,11 +3,15 @@
  * transition (admin-operability.service.ts).
  *
  * DB-free: db, audit emission, the email provider, and app config are all
- * mocked. The state mutation itself (db.betaRequest.updateMany) is unchanged
- * by this addition and already covered by phase-d/admin-operability-db.test.ts
- * — these tests are scoped to the new email-on-transition behavior only:
- * fires once on a real transition, never on a replay, never blocks the
- * invite on a delivery failure, and never hardcodes a host.
+ * mocked. db.$transaction is mocked to simply invoke its callback with a tx
+ * object whose betaRequest.updateMany is the same `mocks.updateMany` spy, so
+ * existing per-test updateMany expectations are unaffected by the atomicity
+ * fix (the mutation now runs inside db.$transaction — see
+ * beta-request-invite-atomicity.db.test.ts for the real, DB-backed proof of
+ * the transactional rollback/retry/replay behavior this wrapping provides).
+ * These tests are scoped to the email-on-transition behavior only: fires
+ * once on a real transition, never on a replay, never blocks the invite on
+ * a delivery failure, and never hardcodes a host.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -25,6 +29,9 @@ vi.mock("@/lib/db", () => ({
       findUnique: mocks.findUnique,
       updateMany: mocks.updateMany,
     },
+    $transaction: vi.fn(async (callback: (tx: unknown) => unknown) =>
+      callback({ betaRequest: { updateMany: mocks.updateMany } })
+    ),
   },
   getDbInstance: vi.fn().mockResolvedValue({}),
 }));

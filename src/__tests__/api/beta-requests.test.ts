@@ -240,6 +240,26 @@ describe("POST /api/beta-requests — owner notification on new request", () => 
     expect(ownerCall![0].text).toContain("Ada");
   });
 
+  it("escapes untrusted visitor-supplied values (firstName, utm) in the owner notification HTML, never raw", async () => {
+    const payload = "<img src=x onerror=alert(1)>";
+    await POST(
+      makeReq({
+        email: "attacker@example.com",
+        firstName: payload,
+        utmSource: payload,
+        utmCampaign: payload,
+      }) as never
+    );
+    const ownerCall = mocks.send.mock.calls.find((c) => c[0].to === "owner@opsiq.example")!;
+    expect(ownerCall).toBeDefined();
+    // Never appears raw/executable in the HTML body.
+    expect(ownerCall[0].html).not.toContain(payload);
+    expect(ownerCall[0].html).not.toMatch(/<img/i);
+    expect(ownerCall[0].html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    // The plain-text body keeps the raw, human-readable value.
+    expect(ownerCall[0].text).toContain(payload);
+  });
+
   it("does not notify the owner a second time for a duplicate submission", async () => {
     mocks.create.mockRejectedValueOnce(emailUniqueViolation());
     await POST(makeReq({ email: "a@example.com" }) as never);

@@ -211,6 +211,19 @@ describe("POST /api/feedback — owner visibility via email", () => {
     expect(sent.text).toContain("/owner/goals");
   });
 
+  it("escapes untrusted feedback text (description) in the owner notification HTML, never as renderable markup", async () => {
+    const payload = '<a href="https://evil.example">OpsIQ login</a>';
+    const ctx = makeCtx({ category: "OTHER", description: payload });
+    await POST(ctx as never, {});
+    const sent = mocks.send.mock.calls[0][0];
+    // Never appears as a real, clickable/renderable anchor tag in the HTML body.
+    expect(sent.html).not.toContain(payload);
+    expect(sent.html).not.toMatch(/<a\s/i);
+    expect(sent.html).toContain("&lt;a href=&quot;https://evil.example&quot;&gt;OpsIQ login&lt;/a&gt;");
+    // The plain-text body keeps the raw, human-readable value.
+    expect(sent.text).toContain(payload);
+  });
+
   it("persistence succeeds even when the email provider throws", async () => {
     mocks.send.mockRejectedValueOnce(new Error("provider down"));
     const ctx = makeCtx({ category: "BUG", description: "still persists" });

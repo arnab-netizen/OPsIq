@@ -30,6 +30,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { requirePgRateLimit, RateLimitError, BETA_REQUEST_RATE_LIMIT } from "@/infra/rate-limit";
 import { ValidationError } from "@/infra/errors";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
+import { escapeHtml } from "@/lib/integrations/email-html";
 import { z } from "zod/v4";
 
 export const dynamic = "force-dynamic";
@@ -92,6 +93,11 @@ function isEmailUniqueViolation(error: unknown): boolean {
  * -> silently skipped, same as an unconfigured email provider. Never throws:
  * a notification failure must never affect the already-persisted request or
  * the response already returned to the visitor.
+ *
+ * Every field here (firstName, email, utmSource, utmCampaign) is
+ * visitor-supplied and untrusted: each is escapeHtml()'d before it reaches
+ * the HTML body, so a submitter cannot inject markup into the email an
+ * operator opens. The plain-text body keeps the raw, human-readable values.
  */
 async function notifyOwnerOfNewBetaRequest(row: {
   id: string;
@@ -106,20 +112,22 @@ async function notifyOwnerOfNewBetaRequest(row: {
     const provider = getEmailProvider();
     if (!provider) return;
 
-    const lines = [
-      row.firstName ? `Name: ${row.firstName}` : null,
-      `Email: ${row.email}`,
-      `Request ID: ${row.id}`,
-      `Created: ${new Date().toISOString()}`,
-      row.utmSource ? `Source: ${row.utmSource}` : null,
-      row.utmCampaign ? `Campaign: ${row.utmCampaign}` : null,
-    ].filter((line): line is string => line !== null);
+    const fields: Array<[string, string]> = [
+      ...(row.firstName ? ([["Name", row.firstName]] as Array<[string, string]>) : []),
+      ["Email", row.email],
+      ["Request ID", row.id],
+      ["Created", new Date().toISOString()],
+      ...(row.utmSource ? ([["Source", row.utmSource]] as Array<[string, string]>) : []),
+      ...(row.utmCampaign ? ([["Campaign", row.utmCampaign]] as Array<[string, string]>) : []),
+    ];
 
     await provider.send({
       to: recipient,
       subject: "New OpsIQ beta request",
-      html: `<p>A new beta access request was received.</p><ul>${lines.map((l) => `<li>${l}</li>`).join("")}</ul>`,
-      text: lines.join("\n"),
+      html: `<p>A new beta access request was received.</p><ul>${fields
+        .map(([label, value]) => `<li>${escapeHtml(label)}: ${escapeHtml(value)}</li>`)
+        .join("")}</ul>`,
+      text: fields.map(([label, value]) => `${label}: ${value}`).join("\n"),
     });
   } catch (notifyError) {
     console.error(
