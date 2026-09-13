@@ -2,7 +2,15 @@
  * GET /api/admin/beta-requests
  *
  * List controlled-beta homepage capture requests (read-only admin
- * operability view). Admin-only endpoint (enforces SYSTEM_ADMIN capability).
+ * operability view). Gated on BETA_REQUEST_REVIEW — a narrow OpsIQ
+ * platform-operator capability (see ROLES.BETA_REQUEST_OPERATOR in
+ * domain/constants/roles.ts), NOT the full SYSTEM_ADMIN bundle. A
+ * SYSTEM_ADMIN holder still passes this check (SYSTEM_ADMIN's role grants
+ * every capability), but a beta-request operator granted only
+ * BETA_REQUEST_REVIEW/BETA_REQUEST_INVITE gets no other admin surface —
+ * see src/__tests__/policies/beta-request-operator.test.ts and
+ * src/__tests__/api/admin/beta-requests-rbac.test.ts for the privilege
+ * boundary proofs.
  *
  * This is the "HOW_OWNER_REVIEWS_REQUESTS" mechanism for the controlled-beta
  * homepage capture — API-only, mirroring the existing
@@ -29,6 +37,6 @@ export const GET = withCanonicalEnforcement(
     return result;
   },
   {
-    requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN],
+    requireCapabilities: [CAPABILITIES.BETA_REQUEST_REVIEW],
   }
 );

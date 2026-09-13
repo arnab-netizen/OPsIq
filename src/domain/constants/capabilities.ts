@@ -140,6 +140,15 @@ export const CAPABILITIES = {
   // Consulting Mode (Bundle 6)
   CONSULTING_WRITE: "consulting:write",
   CONSULTING_READ: "consulting:read",
+
+  // Controlled-beta homepage capture — narrow platform-operator surface (see
+  // ROLES.BETA_REQUEST_OPERATOR). Deliberately NOT part of any
+  // consulting-firm or self-serve-owner capability bundle: reviewing/inviting
+  // beta requests is an OpsIQ-platform-operator function, distinct from
+  // running a business as a customer/business owner, even when today's real
+  // account happens to do both.
+  BETA_REQUEST_REVIEW: "beta_request:review",
+  BETA_REQUEST_INVITE: "beta_request:invite",
 } as const;
 
 export type CapabilityName =
