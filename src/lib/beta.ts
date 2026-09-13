@@ -1,3 +1,5 @@
+import { db } from "@/lib/db";
+
 /**
  * Open-beta gating.
  *
@@ -14,6 +16,24 @@
 /** True only when PUBLIC_BETA_ENABLED is the literal string "true". Fail-closed default: false. */
 export function isPublicBetaEnabled(): boolean {
   return process.env.PUBLIC_BETA_ENABLED === "true";
+}
+
+/**
+ * Controlled-beta admission check: true when a BetaRequest exists for the
+ * given (already-normalized, via identityEmailSchema) email with
+ * status "INVITED". This is the second admission path signup accepts while
+ * PUBLIC_BETA_ENABLED is false — the owner's out-of-band invite decision
+ * (see markBetaRequestInvited in admin-operability.service.ts) is the sole
+ * authority; there is no separate token or account model. `email` MUST
+ * already be normalized by the caller (identityEmailSchema), since
+ * BetaRequest.email is stored in that same canonical form.
+ */
+export async function isBetaRequestInvited(email: string): Promise<boolean> {
+  const betaRequest = await db.betaRequest.findUnique({
+    where: { email },
+    select: { status: true },
+  });
+  return betaRequest?.status === "INVITED";
 }
 
 /**

@@ -217,3 +217,58 @@ describe("POST /api/beta-requests", () => {
     expect(text).not.toMatch(/guaranteed access|instant access|immediately available|access is guaranteed/);
   });
 });
+
+describe("POST /api/beta-requests — owner notification on new request", () => {
+  const originalRecipient = process.env.BETA_REQUEST_NOTIFICATION_EMAIL;
+
+  beforeEach(() => {
+    process.env.BETA_REQUEST_NOTIFICATION_EMAIL = "owner@opsiq.example";
+  });
+
+  afterEach(() => {
+    if (originalRecipient === undefined) delete process.env.BETA_REQUEST_NOTIFICATION_EMAIL;
+    else process.env.BETA_REQUEST_NOTIFICATION_EMAIL = originalRecipient;
+  });
+
+  it("sends a best-effort owner notification on a genuine new request", async () => {
+    await POST(makeReq({ email: "a@example.com", firstName: "Ada" }) as never);
+    // One call for the applicant confirmation, one for the owner notification.
+    expect(mocks.send).toHaveBeenCalledTimes(2);
+    const ownerCall = mocks.send.mock.calls.find((c) => c[0].to === "owner@opsiq.example");
+    expect(ownerCall).toBeDefined();
+    expect(ownerCall![0].text).toContain("a@example.com");
+    expect(ownerCall![0].text).toContain("Ada");
+  });
+
+  it("does not notify the owner a second time for a duplicate submission", async () => {
+    mocks.create.mockRejectedValueOnce(emailUniqueViolation());
+    await POST(makeReq({ email: "a@example.com" }) as never);
+    const ownerCalls = mocks.send.mock.calls.filter((c) => c[0].to === "owner@opsiq.example");
+    expect(ownerCalls).toHaveLength(0);
+  });
+
+  it("still succeeds when no notification recipient is configured", async () => {
+    delete process.env.BETA_REQUEST_NOTIFICATION_EMAIL;
+    const res = await POST(makeReq({ email: "a@example.com" }) as never);
+    expect(res.status).toBe(200);
+    // Only the applicant confirmation is sent.
+    expect(mocks.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("still succeeds when the email provider is absent", async () => {
+    mocks.getEmailProvider.mockReturnValue(null);
+    const res = await POST(makeReq({ email: "a@example.com" }) as never);
+    expect(res.status).toBe(200);
+  });
+
+  it("still succeeds when the owner-notification send throws", async () => {
+    mocks.send.mockImplementation(async (msg: { to: string }) => {
+      if (msg.to === "owner@opsiq.example") throw new Error("provider down");
+      return { success: true };
+    });
+    const res = await POST(makeReq({ email: "a@example.com" }) as never);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+});

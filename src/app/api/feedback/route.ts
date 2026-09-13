@@ -24,6 +24,7 @@ import { parseRequestBody } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { requirePgRateLimit, MUTATION_RATE_LIMIT } from "@/infra/rate-limit";
+import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { randomUUID } from "crypto";
 import { z } from "zod/v4";
 
@@ -35,6 +36,50 @@ const feedbackSchema = z.object({
   route: z.string().trim().max(500).optional(),
   expectedResult: z.string().trim().max(2000).optional(),
 });
+
+/**
+ * Best-effort operator notification so submitted feedback is actually seen
+ * (P0 finding: PlatformFeedback had no read path anywhere). Reuses the same
+ * getEmailProvider()/BETA_REQUEST_NOTIFICATION_EMAIL recipient already used
+ * for the beta-request owner notification — one shared recipient config, not
+ * a second one. Persistence above is authoritative; this never affects the
+ * response or rolls back the already-committed row.
+ */
+async function notifyOwnerOfFeedback(row: {
+  id: string;
+  category: string;
+  description: string;
+  route: string | null;
+  expectedResult: string | null;
+  workspaceId: string | null;
+}): Promise<void> {
+  try {
+    const recipient = process.env.BETA_REQUEST_NOTIFICATION_EMAIL;
+    if (!recipient) return;
+    const provider = getEmailProvider();
+    if (!provider) return;
+
+    const lines = [
+      `Category: ${row.category}`,
+      row.route ? `Route: ${row.route}` : null,
+      `Description: ${row.description}`,
+      row.expectedResult ? `Expected result: ${row.expectedResult}` : null,
+      row.workspaceId ? `Workspace: ${row.workspaceId}` : null,
+    ].filter((line): line is string => line !== null);
+
+    await provider.send({
+      to: recipient,
+      subject: `New OpsIQ beta feedback: ${row.category}`,
+      html: `<p>New in-product feedback was submitted.</p><ul>${lines.map((l) => `<li>${l}</li>`).join("")}</ul>`,
+      text: lines.join("\n"),
+    });
+  } catch (notifyError) {
+    console.error(
+      "[FEEDBACK] Owner notification dispatch failed",
+      notifyError instanceof Error ? notifyError.constructor.name : "UnknownError"
+    );
+  }
+}
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -69,6 +114,16 @@ export const POST = withCanonicalEnforcement(
       entityType: "platform_feedback",
       entityId: id,
       payload: { category: body.category },
+    });
+
+    // Best-effort, non-blocking — persistence above is already durable.
+    await notifyOwnerOfFeedback({
+      id,
+      category: body.category,
+      description: body.description,
+      route: body.route ?? null,
+      expectedResult: body.expectedResult ?? null,
+      workspaceId: ctx.verifiedWorkspaceId,
     });
 
     return { success: true };

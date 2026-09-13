@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   requirePgRateLimit: vi.fn(),
   emitAuditEvent: vi.fn(),
+  getEmailProvider: vi.fn(),
+  send: vi.fn(),
 }));
 
 vi.mock("@/lib/canonical-route-enforcement", () => ({
@@ -39,6 +41,10 @@ vi.mock("@/infra/audit", () => ({
   emitAuditEvent: mocks.emitAuditEvent,
 }));
 
+vi.mock("@/lib/integrations/email-provider", () => ({
+  getEmailProvider: mocks.getEmailProvider,
+}));
+
 import { POST } from "@/app/api/feedback/route";
 import { RateLimitError } from "@/infra/rate-limit";
 import { ValidationError } from "@/infra/errors";
@@ -63,6 +69,8 @@ beforeEach(() => {
   mocks.requirePgRateLimit.mockResolvedValue(undefined);
   mocks.create.mockResolvedValue({ id: "feedback-1" });
   mocks.emitAuditEvent.mockResolvedValue("audit-1");
+  mocks.getEmailProvider.mockReturnValue({ send: mocks.send });
+  mocks.send.mockResolvedValue({ accepted: true });
 });
 
 describe("POST /api/feedback", () => {
@@ -177,5 +185,53 @@ describe("POST /api/feedback", () => {
     for (const forbidden of ["cookie", "authorization", "password", "token"]) {
       expect(Object.prototype.hasOwnProperty.call(data, forbidden)).toBe(false);
     }
+  });
+});
+
+describe("POST /api/feedback — owner visibility via email", () => {
+  const originalRecipient = process.env.BETA_REQUEST_NOTIFICATION_EMAIL;
+
+  beforeEach(() => {
+    process.env.BETA_REQUEST_NOTIFICATION_EMAIL = "owner@opsiq.example";
+  });
+
+  afterEach(() => {
+    if (originalRecipient === undefined) delete process.env.BETA_REQUEST_NOTIFICATION_EMAIL;
+    else process.env.BETA_REQUEST_NOTIFICATION_EMAIL = originalRecipient;
+  });
+
+  it("notifies the owner after a successful submission", async () => {
+    const ctx = makeCtx({ category: "BUG", description: "The save button does nothing.", route: "/owner/goals" });
+    await POST(ctx as never, {});
+    expect(mocks.send).toHaveBeenCalledTimes(1);
+    const sent = mocks.send.mock.calls[0][0];
+    expect(sent.to).toBe("owner@opsiq.example");
+    expect(sent.text).toContain("BUG");
+    expect(sent.text).toContain("The save button does nothing.");
+    expect(sent.text).toContain("/owner/goals");
+  });
+
+  it("persistence succeeds even when the email provider throws", async () => {
+    mocks.send.mockRejectedValueOnce(new Error("provider down"));
+    const ctx = makeCtx({ category: "BUG", description: "still persists" });
+    const result = (await POST(ctx as never, {})) as { success: boolean };
+    expect(result).toEqual({ success: true });
+    expect(mocks.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("persistence succeeds even when no notification recipient is configured", async () => {
+    delete process.env.BETA_REQUEST_NOTIFICATION_EMAIL;
+    const ctx = makeCtx({ category: "BUG", description: "no recipient configured" });
+    const result = (await POST(ctx as never, {})) as { success: boolean };
+    expect(result).toEqual({ success: true });
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+
+  it("never includes raw secrets/tokens/cookies in the owner notification", async () => {
+    const ctx = makeCtx({ category: "BUG", description: "normal feedback" });
+    await POST(ctx as never, {});
+    const sent = mocks.send.mock.calls[0][0];
+    expect(sent.text).not.toMatch(/cookie|authorization|password|token/i);
+    expect(sent.html).not.toMatch(/cookie|authorization|password|token/i);
   });
 });

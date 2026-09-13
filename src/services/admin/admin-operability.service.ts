@@ -21,6 +21,8 @@ import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import type { AuditEventName } from "@/domain/constants/audit-events";
+import { getEmailProvider } from "@/lib/integrations/email-provider";
+import { getConfig } from "@/lib/config";
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 200;
@@ -576,6 +578,33 @@ export interface MarkBetaRequestInvitedResult {
 }
 
 /**
+ * Best-effort applicant email on the actual REQUESTED -> INVITED transition.
+ * Reuses the same getEmailProvider() plumbing and NEXT_PUBLIC_APP_URL
+ * mechanism already used for the verify-email/reset-password links (see
+ * src/app/api/auth/signup/route.ts) — never a hardcoded host. Never throws:
+ * the state mutation above is already durably committed, so a delivery
+ * failure here must never surface as a failed invite.
+ */
+async function sendBetaApprovalEmail(email: string): Promise<void> {
+  try {
+    const provider = getEmailProvider();
+    if (!provider) return;
+    const signupUrl = `${getConfig().NEXT_PUBLIC_APP_URL}/signup`;
+    await provider.send({
+      to: email,
+      subject: "Your OpsIQ beta access is ready",
+      html: `<p>Your OpsIQ beta access is ready.</p><p><a href="${signupUrl}">Sign up now</a> using this same email address (${email}) to activate your account.</p>`,
+      text: `Your OpsIQ beta access is ready. Sign up now using this same email address (${email}): ${signupUrl}`,
+    });
+  } catch (emailError) {
+    console.error(
+      "[BETA_REQUEST_INVITE] Approval email dispatch failed",
+      emailError instanceof Error ? emailError.constructor.name : "UnknownError"
+    );
+  }
+}
+
+/**
  * Mark a beta-access request as invited (owner has decided to grant this
  * requester access; they receive the existing /signup flow out-of-band —
  * this function never creates a User/Workspace itself).
@@ -584,9 +613,9 @@ export interface MarkBetaRequestInvitedResult {
  *   - Throws NotFoundError if the request does not exist.
  *   - Concurrency-safe, emit-once: only a REQUESTED -> INVITED transition
  *     flips the row (conditional updateMany). An already-INVITED request is
- *     an idempotent no-op with no new audit event — the response reflects
- *     the row's real, current state (never fabricates a new invitedAt/
- *     invitedBy on a no-op).
+ *     an idempotent no-op with no new audit event and no re-sent email — the
+ *     response reflects the row's real, current state (never fabricates a
+ *     new invitedAt/invitedBy on a no-op).
  */
 export async function markBetaRequestInvited(
   input: MarkBetaRequestInvitedInput
@@ -595,7 +624,7 @@ export async function markBetaRequestInvited(
 
   const existing = await db.betaRequest.findUnique({
     where: { id: betaRequestId },
-    select: { id: true },
+    select: { id: true, email: true },
   });
   if (!existing) {
     throw new NotFoundError("BetaRequest", betaRequestId);
@@ -615,6 +644,10 @@ export async function markBetaRequestInvited(
       entityId: betaRequestId,
       visibility: "internal",
     });
+
+    // Only on the actual transition — never on an idempotent replay of an
+    // already-INVITED request (see updated.count === 1 guard above).
+    await sendBetaApprovalEmail(existing.email);
   }
 
   const finalRow = await db.betaRequest.findUnique({

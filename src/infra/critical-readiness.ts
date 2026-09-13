@@ -133,5 +133,24 @@ function validateCriticalConfiguration(): boolean {
     }
   }
 
+  // NEXT_PUBLIC_APP_URL builds every absolute link in verify-email,
+  // reset-password, resend-verification, and beta-invite emails
+  // (src/lib/config.ts's zod schema silently defaults it to
+  // "http://localhost:3000" when unset, so a missing production value never
+  // throws on its own — it just bakes a dead link into every one of those
+  // emails while every other health check stays green). Narrowed to
+  // production only: a localhost value is completely normal in
+  // development/test/staging-local and must not block those environments.
+  if (process.env.NODE_ENV === "production") {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl || appUrl.includes("localhost")) {
+      logger.error(
+        "Critical configuration invalid: NEXT_PUBLIC_APP_URL is missing or points at localhost in production",
+        { NEXT_PUBLIC_APP_URL: appUrl ?? null }
+      );
+      return false;
+    }
+  }
+
   return true;
 }

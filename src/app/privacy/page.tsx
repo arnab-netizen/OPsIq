@@ -91,8 +91,7 @@ export default function PrivacyPage() {
           <h2 className="font-semibold text-foreground">Your access, correction, and deletion rights</h2>
           <p className="mt-1">
             You can request a copy of your data, a correction, or deletion of your account and
-            data at any time via the &ldquo;Send beta feedback&rdquo; link in the product or by
-            emailing{" "}
+            data at any time by emailing{" "}
             <a href="mailto:support@opsiq.com" className="text-[var(--primary-text)] hover:underline">
               support@opsiq.com
             </a>

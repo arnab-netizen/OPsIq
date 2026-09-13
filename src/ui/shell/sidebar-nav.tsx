@@ -465,6 +465,13 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/admin/billing",
         requiresCapability: CAPABILITIES.SYSTEM_ADMIN,
       },
+      {
+        // Narrower than SYSTEM_ADMIN — visible to a BETA_REQUEST_OPERATOR
+        // holder even without the full admin bundle (see ROLES.BETA_REQUEST_OPERATOR).
+        label: "Beta requests",
+        href: "/admin/beta-requests",
+        requiresCapability: CAPABILITIES.BETA_REQUEST_REVIEW,
+      },
     ],
   },
 ];
