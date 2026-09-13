@@ -30,6 +30,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { requirePgRateLimit, RateLimitError, BETA_REQUEST_RATE_LIMIT } from "@/infra/rate-limit";
 import { ValidationError } from "@/infra/errors";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
+import { escapeHtml } from "@/lib/integrations/email-html";
 import { z } from "zod/v4";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +83,60 @@ function isEmailUniqueViolation(error: unknown): boolean {
   return JSON.stringify([adapterFields, target]).toLowerCase().includes("email");
 }
 
+/**
+ * Best-effort operator notification for a genuinely new BetaRequest. Reuses
+ * the same getEmailProvider()/RESEND_API_KEY plumbing as the applicant
+ * confirmation email below — no new notification system. The recipient is
+ * a single dedicated env var (BETA_REQUEST_NOTIFICATION_EMAIL): no existing
+ * ADMIN_EMAIL/OWNER_EMAIL/SUPPORT_EMAIL config exists anywhere in this repo
+ * to reuse instead (verified by repo-wide search before adding this). Unset
+ * -> silently skipped, same as an unconfigured email provider. Never throws:
+ * a notification failure must never affect the already-persisted request or
+ * the response already returned to the visitor.
+ *
+ * Every field here (firstName, email, utmSource, utmCampaign) is
+ * visitor-supplied and untrusted: each is escapeHtml()'d before it reaches
+ * the HTML body, so a submitter cannot inject markup into the email an
+ * operator opens. The plain-text body keeps the raw, human-readable values.
+ */
+async function notifyOwnerOfNewBetaRequest(row: {
+  id: string;
+  email: string;
+  firstName: string | null;
+  utmSource: string | null;
+  utmCampaign: string | null;
+}): Promise<void> {
+  try {
+    const recipient = process.env.BETA_REQUEST_NOTIFICATION_EMAIL;
+    if (!recipient) return;
+    const provider = getEmailProvider();
+    if (!provider) return;
+
+    const fields: Array<[string, string]> = [
+      ...(row.firstName ? ([["Name", row.firstName]] as Array<[string, string]>) : []),
+      ["Email", row.email],
+      ["Request ID", row.id],
+      ["Created", new Date().toISOString()],
+      ...(row.utmSource ? ([["Source", row.utmSource]] as Array<[string, string]>) : []),
+      ...(row.utmCampaign ? ([["Campaign", row.utmCampaign]] as Array<[string, string]>) : []),
+    ];
+
+    await provider.send({
+      to: recipient,
+      subject: "New OpsIQ beta request",
+      html: `<p>A new beta access request was received.</p><ul>${fields
+        .map(([label, value]) => `<li>${escapeHtml(label)}: ${escapeHtml(value)}</li>`)
+        .join("")}</ul>`,
+      text: fields.map(([label, value]) => `${label}: ${value}`).join("\n"),
+    });
+  } catch (notifyError) {
+    console.error(
+      "[BETA_REQUEST] Owner notification dispatch failed",
+      notifyError instanceof Error ? notifyError.constructor.name : "UnknownError"
+    );
+  }
+}
+
 export const POST = async (request: NextRequest) => {
   try {
     const { email, firstName, utmSource, utmMedium, utmCampaign, utmContent } = await parseRequestBody(
@@ -130,6 +185,18 @@ export const POST = async (request: NextRequest) => {
         entityId: id,
         payload: { hasUtm: !!(utmSource || utmMedium || utmCampaign || utmContent) },
         visibility: "internal",
+      });
+
+      // Best-effort, non-blocking owner notification — only for a genuine new
+      // request (this whole block is skipped on a duplicate submission, same
+      // guard as the confirmation email below), so a duplicate never
+      // re-notifies the owner.
+      await notifyOwnerOfNewBetaRequest({
+        id,
+        email,
+        firstName: firstName || null,
+        utmSource: utmSource || null,
+        utmCampaign: utmCampaign || null,
       });
 
       // Best-effort, non-blocking confirmation — never gates the response

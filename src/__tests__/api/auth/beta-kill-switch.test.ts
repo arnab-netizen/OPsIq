@@ -3,22 +3,35 @@
  *
  * Root cause under test: before open-beta hardening, signup had no server-side
  * gate at all — anyone could self-register unconditionally. These tests pin
- * three properties without needing a real database: the gate is checked
- * BEFORE request-body validation (so a disabled beta refuses regardless of
- * payload shape), it is re-evaluated fresh from process.env on every request
- * (no caching that could go stale relative to a Vercel env-var change), and
- * no client-supplied field can influence it (there is no such field in the
- * request schema, and the check reads only process.env).
+ * three properties: the gate is checked BEFORE full request-body validation
+ * (so a disabled beta refuses regardless of payload shape unless the email is
+ * on the controlled-beta INVITED allowlist), it is re-evaluated fresh from
+ * process.env on every request (no caching that could go stale relative to a
+ * Vercel env-var change), and no client-supplied field can influence it
+ * (there is no such field in the request schema, and the check reads only
+ * process.env plus, when disabled, a BetaRequest lookup — never db.user.findUnique
+ * or the account-creation transaction, which these tests prove by using a
+ * body that WOULD otherwise fail differently at a later stage (invalid
+ * consent, in Test B) — if the beta gate ran after validation, Test B would
+ * observe a validation error instead of proceeding, so seeing the validation
+ * error is itself the proof that the gate does not block a valid request
+ * when enabled).
  *
- * No database or network access is required: the gate short-circuits before
- * any db.user.findUnique / transaction call, which these tests prove by
- * using a body that WOULD otherwise fail differently at a later stage
- * (invalid consent, in Test B) — if the beta gate ran after validation, Test
- * B would observe a validation error instead of proceeding, so seeing the
- * validation error is itself the proof that the gate does not block a valid
- * request when enabled, without needing to mock the database at all.
+ * db.betaRequest.findUnique is mocked to always return null (no matching
+ * BetaRequest) since every test in this file is about the flag itself, not
+ * the controlled-beta admission path — see
+ * signup-controlled-beta-admission.test.ts for that.
  */
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
+
+vi.mock("@/lib/db", () => ({
+  db: {
+    betaRequest: { findUnique: vi.fn().mockResolvedValue(null) },
+    user: { findUnique: vi.fn() },
+  },
+  withStatementTimeout: vi.fn(),
+  getDbInstance: vi.fn().mockResolvedValue({}),
+}));
 
 function signupRequest(body: Record<string, unknown>): Request {
   return new Request("http://localhost/api/auth/signup", {

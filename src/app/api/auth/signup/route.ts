@@ -11,7 +11,7 @@ import * as bcrypt from "bcryptjs";
 import { ROLES } from "@/domain/constants/roles";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { isPublicBetaEnabled, PUBLIC_BETA_SIGNUP_SOURCE, CURRENT_POLICY_VERSIONS } from "@/lib/beta";
+import { isPublicBetaEnabled, isBetaRequestInvited, PUBLIC_BETA_SIGNUP_SOURCE, CURRENT_POLICY_VERSIONS } from "@/lib/beta";
 import { reservePublicBetaCapacity, BetaCapExceededError, BetaCapUnavailableError } from "@/services/auth/beta-cap";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
@@ -83,6 +83,39 @@ function isEmailUniqueViolation(error: unknown): boolean {
   return JSON.stringify([adapterFields, target]).toLowerCase().includes("email");
 }
 
+/**
+ * The exact response for every denied signup attempt while public beta is
+ * disabled — whether no BetaRequest exists for the email, it exists but is
+ * still REQUESTED, or the request body couldn't even be parsed. Byte-identical
+ * across all three so the response never reveals which case occurred
+ * (mirrors the enumeration-resistance rationale in /api/beta-requests).
+ */
+const BETA_CLOSED_RESPONSE = {
+  success: false,
+  error: "Open beta registration is currently closed. Please check back soon.",
+  reason: "beta_disabled",
+} as const;
+
+/**
+ * Best-effort extraction of a normalized email from the request body, for the
+ * controlled-beta admission check only. Never throws — any failure (invalid
+ * JSON, missing/malformed email) yields null, which the caller treats
+ * identically to "not on the allowlist" so the denial response never reveals
+ * which failure occurred. Reads a CLONED request so the original request's
+ * body stream is left untouched for the real parseRequestBody(signupSchema)
+ * call further down when admission succeeds.
+ */
+async function extractNormalizedEmailForGate(request: NextRequest): Promise<string | null> {
+  try {
+    const body: unknown = await request.clone().json();
+    if (typeof body !== "object" || body === null || !("email" in body)) return null;
+    const result = identityEmailSchema.safeParse((body as { email: unknown }).email);
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
 const handleSignup = async (request: NextRequest) => {
   let currentStage = "unknown";
   try {
@@ -90,18 +123,25 @@ const handleSignup = async (request: NextRequest) => {
     // every request from process.env — there is no client-supplied field that
     // can influence this check, and no cached/memoized value that could go
     // stale relative to a Vercel environment-variable change. This check runs
-    // BEFORE request-body validation, so a disabled beta refuses every
-    // signup attempt regardless of what the caller sends.
+    // BEFORE full request-body validation, so a disabled beta refuses every
+    // signup attempt regardless of what the caller sends UNLESS the email is
+    // one the owner has explicitly marked INVITED (see
+    // markBetaRequestInvited in admin-operability.service.ts) — the
+    // controlled-beta admission path. When public beta is enabled this branch
+    // is skipped entirely and behavior is byte-for-byte unchanged from before.
     currentStage = "beta_gate";
     if (!isPublicBetaEnabled()) {
-      return Response.json(
-        {
-          success: false,
-          error: "Open beta registration is currently closed. Please check back soon.",
-          reason: "beta_disabled",
-        },
-        { status: 403 }
-      );
+      const gateEmail = await extractNormalizedEmailForGate(request);
+      const admitted = gateEmail !== null && (await isBetaRequestInvited(gateEmail));
+      if (!admitted) {
+        return Response.json(
+          BETA_CLOSED_RESPONSE,
+          { status: 403 }
+        );
+      }
+      // Admitted: an INVITED BetaRequest exists for this normalized email.
+      // Fall through into the exact same validation/account-creation flow
+      // used when public beta is enabled — no separate signup path, no token.
     }
 
     // Parse and validate request

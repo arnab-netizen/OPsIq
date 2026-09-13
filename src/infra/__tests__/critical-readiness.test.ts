@@ -202,6 +202,69 @@ describe("Critical Readiness Assessment", () => {
     });
   });
 
+  describe("NEXT_PUBLIC_APP_URL production guard", () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+    afterEach(() => {
+      if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originalNodeEnv;
+      if (originalAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = originalAppUrl;
+    });
+
+    function mockHealthyDb() {
+      vi.doMock("@/lib/db", () => ({
+        getDbInstance: vi.fn(async () => ({
+          $queryRawUnsafe: vi.fn(async () => [{ result: 1 }]),
+        })),
+      }));
+      process.env.DATABASE_URL = "postgresql://user:pass@localhost/db";
+    }
+
+    it("rejects production when NEXT_PUBLIC_APP_URL is missing", async () => {
+      mockHealthyDb();
+      process.env.NODE_ENV = "production";
+      delete process.env.NEXT_PUBLIC_APP_URL;
+
+      const result = await ensureCriticalReadiness();
+
+      expect(result.status).toBe("FAILED_CRITICAL");
+      expect(result.checks.configuration_valid).toBe(false);
+    });
+
+    it("rejects production when NEXT_PUBLIC_APP_URL still points at localhost (the zod default)", async () => {
+      mockHealthyDb();
+      process.env.NODE_ENV = "production";
+      process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
+
+      const result = await ensureCriticalReadiness();
+
+      expect(result.status).toBe("FAILED_CRITICAL");
+      expect(result.checks.configuration_valid).toBe(false);
+    });
+
+    it("allows a localhost NEXT_PUBLIC_APP_URL outside production (development/test default)", async () => {
+      mockHealthyDb();
+      process.env.NODE_ENV = "development";
+      process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
+
+      const result = await ensureCriticalReadiness();
+
+      expect(result.status).toBe("READY");
+    });
+
+    it("allows production with a valid non-localhost https URL", async () => {
+      mockHealthyDb();
+      process.env.NODE_ENV = "production";
+      process.env.NEXT_PUBLIC_APP_URL = "https://app.opsiq.example";
+
+      const result = await ensureCriticalReadiness();
+
+      expect(result.status).toBe("READY");
+    });
+  });
+
   describe("Integration: Prevents stale FAILED state from blocking requests", () => {
     it("does not check startup_status database table", async () => {
       // This test ensures the new function doesn't perpetuate

@@ -18,9 +18,13 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { NotFoundError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import type { AuditEventName } from "@/domain/constants/audit-events";
+import { getEmailProvider } from "@/lib/integrations/email-provider";
+import { getConfig } from "@/lib/config";
+import { escapeHtml } from "@/lib/integrations/email-html";
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 200;
@@ -576,17 +580,55 @@ export interface MarkBetaRequestInvitedResult {
 }
 
 /**
+ * Best-effort applicant email on the actual REQUESTED -> INVITED transition.
+ * Reuses the same getEmailProvider() plumbing and NEXT_PUBLIC_APP_URL
+ * mechanism already used for the verify-email/reset-password links (see
+ * src/app/api/auth/signup/route.ts) — never a hardcoded host. Never throws:
+ * the state mutation above is already durably committed, so a delivery
+ * failure here must never surface as a failed invite.
+ */
+async function sendBetaApprovalEmail(email: string): Promise<void> {
+  try {
+    const provider = getEmailProvider();
+    if (!provider) return;
+    const signupUrl = `${getConfig().NEXT_PUBLIC_APP_URL}/signup`;
+    await provider.send({
+      to: email,
+      subject: "Your OpsIQ beta access is ready",
+      html: `<p>Your OpsIQ beta access is ready.</p><p><a href="${signupUrl}">Sign up now</a> using this same email address (${escapeHtml(email)}) to activate your account.</p>`,
+      text: `Your OpsIQ beta access is ready. Sign up now using this same email address (${email}): ${signupUrl}`,
+    });
+  } catch (emailError) {
+    console.error(
+      "[BETA_REQUEST_INVITE] Approval email dispatch failed",
+      emailError instanceof Error ? emailError.constructor.name : "UnknownError"
+    );
+  }
+}
+
+/**
  * Mark a beta-access request as invited (owner has decided to grant this
  * requester access; they receive the existing /signup flow out-of-band —
  * this function never creates a User/Workspace itself).
  *
  * Governance:
  *   - Throws NotFoundError if the request does not exist.
- *   - Concurrency-safe, emit-once: only a REQUESTED -> INVITED transition
- *     flips the row (conditional updateMany). An already-INVITED request is
- *     an idempotent no-op with no new audit event — the response reflects
- *     the row's real, current state (never fabricates a new invitedAt/
- *     invitedBy on a no-op).
+ *   - Concurrency-safe, emit-once, ATOMIC: the conditional REQUESTED ->
+ *     INVITED transition and its audit event run inside one db.$transaction
+ *     (same AUDIT-01 pattern as PR #473's grantBetaRequestOperator — see
+ *     scripts/provision-beta-request-operator.ts and
+ *     src/infra/audit.ts's AuditClient), so a thrown error anywhere in that
+ *     transaction (including from emitAuditEvent) rolls the state mutation
+ *     back too: the row is never left durably INVITED without its audit
+ *     event, and a retry after such a failure finds the row still
+ *     REQUESTED, free to attempt a fresh real transition. An already-INVITED
+ *     request is an idempotent no-op with no new audit event and no
+ *     re-sent email — the response reflects the row's real, current state
+ *     (never fabricates a new invitedAt/invitedBy on a no-op).
+ *   - The approval email is deliberately OUTSIDE the transaction and sent
+ *     only after a successful commit, and only when this call performed the
+ *     actual transition: best-effort delivery must never roll back an
+ *     already-durable state change, and a replay must never re-send it.
  */
 export async function markBetaRequestInvited(
   input: MarkBetaRequestInvitedInput
@@ -595,26 +637,40 @@ export async function markBetaRequestInvited(
 
   const existing = await db.betaRequest.findUnique({
     where: { id: betaRequestId },
-    select: { id: true },
+    select: { id: true, email: true },
   });
   if (!existing) {
     throw new NotFoundError("BetaRequest", betaRequestId);
   }
 
   const invitedAt = new Date();
-  const updated = await db.betaRequest.updateMany({
-    where: { id: betaRequestId, status: "REQUESTED" },
-    data: { status: "INVITED", invitedAt, invitedBy: actorId },
+  const transitioned = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.betaRequest.updateMany({
+      where: { id: betaRequestId, status: "REQUESTED" },
+      data: { status: "INVITED", invitedAt, invitedBy: actorId },
+    });
+
+    if (updated.count === 1) {
+      await emitAuditEvent(
+        {
+          eventName: "BETA_REQUEST_MARKED_INVITED" as AuditEventName,
+          actorId,
+          entityType: "beta_request",
+          entityId: betaRequestId,
+          visibility: "internal",
+        },
+        tx
+      );
+    }
+
+    return updated.count === 1;
   });
 
-  if (updated.count === 1) {
-    await emitAuditEvent({
-      eventName: "BETA_REQUEST_MARKED_INVITED" as AuditEventName,
-      actorId,
-      entityType: "beta_request",
-      entityId: betaRequestId,
-      visibility: "internal",
-    });
+  if (transitioned) {
+    // Only on the actual transition, and only after the transaction above
+    // has successfully committed — never on an idempotent replay, and
+    // never able to roll back the already-durable state change.
+    await sendBetaApprovalEmail(existing.email);
   }
 
   const finalRow = await db.betaRequest.findUnique({
