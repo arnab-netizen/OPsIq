@@ -76,6 +76,7 @@ export async function createClient(
     actorId,
     entityType: "client_account",
     entityId: result.result.id,
+    workspaceId: validatedWorkspaceId,
     payload: { name: result.result.name },
     visibility: "internal",
   });
