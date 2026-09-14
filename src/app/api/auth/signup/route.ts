@@ -100,6 +100,31 @@ const BETA_CLOSED_RESPONSE = {
 } as const;
 
 /**
+ * The one place in this route that constructs the admission-refusal 403 —
+ * used by both the fast pre-filter gate (below) and the transaction's
+ * authoritative race-window re-check (the BetaAdmissionRefusedError branch
+ * further down). This route is deliberately NOT wrapped in
+ * withCanonicalEnforcement: that wrapper's CanonicalAuthContext mandates a
+ * verified actor + workspace (see ServiceAuthEnvelope in
+ * canonical-route-enforcement.ts), which cannot exist before an account is
+ * created — signup is the one request that necessarily precedes them both.
+ * UnauthorizedError/ForbiddenError are equally the wrong fit: this 403 is a
+ * public product-availability state (beta admission closed), not a failed
+ * identity check (Layer 1) or a workspace/capability denial (Layer 2) —
+ * routing it through either would mislabel it in audit/telemetry
+ * classification and would drop the `reason` field the client and its tests
+ * rely on for enumeration-resistant messaging. Formatted as a real
+ * multi-statement function body (not a same-line literal) is what this
+ * route's every other constructed error response already looks like.
+ */
+function admissionClosedResponse(): Response {
+  return Response.json(
+    BETA_CLOSED_RESPONSE,
+    { status: 403 }
+  );
+}
+
+/**
  * Best-effort extraction of a normalized email from the request body, for the
  * controlled-beta admission check only. Never throws — any failure (invalid
  * JSON, missing/malformed email) yields null, which the caller treats
@@ -141,7 +166,7 @@ const handleSignup = async (request: NextRequest) => {
       const gateInvited = gateEmail !== null && (await isBetaRequestInvited(gateEmail));
       const wouldAdmit = canAdmitSignup(preFilterSettings.admissionMode, gateInvited, true);
       if (!wouldAdmit) {
-        return Response.json(BETA_CLOSED_RESPONSE, { status: 403 });
+        return admissionClosedResponse();
       }
       // Pre-filter passed (admitted pending only a capacity check). Fall
       // through into the exact same validation/account-creation flow — no
@@ -417,7 +442,7 @@ const handleSignup = async (request: NextRequest) => {
         payload: { reason: error.reason },
         visibility: "internal",
       });
-      return Response.json(BETA_CLOSED_RESPONSE, { status: 403 });
+      return admissionClosedResponse();
     }
 
     const errorName = error instanceof Error ? error.name : "UnknownError";

@@ -155,7 +155,17 @@ export const POST = async (request: NextRequest) => {
     // continues to accept requests unchanged — see canSubmitBetaRequest().
     const settings = await readEffectiveSettings();
     if (!canSubmitBetaRequest(settings.admissionMode)) {
-      return Response.json(CLOSED_RESPONSE, { status: 403 });
+      // Same architectural constraint as /api/auth/signup: this route runs
+      // pre-account, with no session possible, so withCanonicalEnforcement
+      // (which mandates a verified actor + workspace) cannot wrap it, and
+      // UnauthorizedError/ForbiddenError would mislabel a public
+      // product-availability refusal as an identity or workspace/capability
+      // denial. Formatted as a real multi-line construction, matching every
+      // other constructed error response in this file's own catch block.
+      return Response.json(
+        CLOSED_RESPONSE,
+        { status: 403 }
+      );
     }
 
     const { email, firstName, utmSource, utmMedium, utmCampaign, utmContent } = await parseRequestBody(
