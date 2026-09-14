@@ -1,0 +1,263 @@
+name: Provision ADMINISTRATION_OPERATOR
+
+# Manual trigger only. Grants (or dry-run previews granting) the narrow
+# ADMINISTRATION_OPERATOR role to exactly one account in production, via
+# scripts/provision-administration-operator.ts. This workflow NEVER accepts
+# an arbitrary role, NEVER touches BETA_REQUEST_OPERATOR or SYSTEM_ADMIN,
+# NEVER runs arbitrary SQL, and NEVER bootstraps PlatformSetting or changes
+# admission mode/capacity -- it does exactly one thing: invoke that one
+# purpose-specific script against the protected production database secret,
+# in either DRY_RUN (no --apply) or APPLY (--apply, exact confirm phrase)
+# mode.
+#
+# Modeled on .github/workflows/migrate-production.yml's safety shape:
+# workflow_dispatch only, environment: production, an exact owner-pinned
+# main SHA check, an exact-hostname gate on the production secret BEFORE
+# the script ever runs (reusing the same scripts/validate-expected-db-host.mjs
+# migrate-production.yml already uses -- not a second implementation), and
+# an explicit confirmation phrase required before any mutation.
+#
+# DEFENSE IN DEPTH: the exact-host gate runs twice -- once here, at the
+# workflow level, before the provisioning script is ever invoked, and again
+# inside the script itself (scripts/provision-administration-operator.ts's
+# own --expected-database-host check, which runs before it calls
+# getDbInstance()/touches the database at all). Either one failing closed
+# is sufficient to prevent a wrong-database run; both must independently
+# agree for this workflow to proceed.
+#
+# SCRIPT-INJECTION HARDENING: every `${{ inputs.* }}` / `${{ secrets.* }}`
+# value used inside a `run:` shell block is passed through that step's own
+# `env:` first and referenced as a shell variable ($TARGET_EMAIL, etc.) —
+# never interpolated directly into the script text. Direct `${{ }}`
+# interpolation inside `run:` is template-substituted by the Actions runner
+# BEFORE the shell ever sees the script, with no shell-escaping applied; a
+# crafted input (e.g. target_email containing a closing quote and a
+# semicolon) could otherwise break out of its quoted context and execute
+# arbitrary commands with this job's permissions. `env:` values are passed
+# as literal environment variable content and carry no such risk. `if:`
+# conditions (e.g. `if: inputs.mode == 'APPLY'`) are a separate, safe
+# mechanism -- they are evaluated by the runner's own expression engine, not
+# passed through a shell, so they are intentionally left as direct `inputs.*`
+# references.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'DRY_RUN (preview only, no --apply) or APPLY (mutates production)'
+        required: true
+        default: 'DRY_RUN'
+        type: choice
+        options:
+          - DRY_RUN
+          - APPLY
+      target_email:
+        description: 'Email of the account to grant ADMINISTRATION_OPERATOR to'
+        required: true
+        type: string
+      workspace_id:
+        description: 'Target account''s resolvable primary workspace UUID'
+        required: true
+        type: string
+      expected_database_host:
+        description: 'Required. Exact owner-authorized production DB hostname, bare hostname only (e.g. ep-xxxx.region.aws.neon.tech) — never a full URL, credentials, path, or query string'
+        required: true
+        type: string
+      expected_main_sha:
+        description: 'Required. Exact 40-character lowercase hex commit SHA on main that this dispatch is authorized against. If main has advanced past this SHA, the run refuses.'
+        required: true
+        type: string
+      confirm:
+        description: 'DRY_RUN: any value. APPLY: must be exactly "GRANT ADMINISTRATION OPERATOR".'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provision-administration-operator
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    name: Provision ADMINISTRATION_OPERATOR
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - name: Validate mode input
+        env:
+          MODE: ${{ inputs.mode }}
+        run: |
+          case "$MODE" in
+            DRY_RUN|APPLY) ;;
+            *)
+              echo "::error::Invalid mode '$MODE'. Must be DRY_RUN or APPLY."
+              exit 1
+              ;;
+          esac
+          echo "✓ Mode: $MODE"
+
+      - name: Validate expected_main_sha format (reject non-40-char SHA input)
+        env:
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+        run: |
+          if ! echo "$EXPECTED_MAIN_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "::error::expected_main_sha must be a full 40-character lowercase hex commit SHA. Got: $EXPECTED_MAIN_SHA"
+            exit 1
+          fi
+          echo "✓ expected_main_sha format valid"
+
+      - name: Validate target_email is non-empty
+        env:
+          TARGET_EMAIL: ${{ inputs.target_email }}
+        run: |
+          if [ -z "$TARGET_EMAIL" ]; then
+            echo "::error::target_email must not be empty."
+            exit 1
+          fi
+          echo "✓ target_email present"
+
+      - name: Validate workspace_id format (UUID)
+        env:
+          WORKSPACE_ID: ${{ inputs.workspace_id }}
+        run: |
+          if ! echo "$WORKSPACE_ID" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+            echo "::error::workspace_id must be a well-formed UUID. Got: $WORKSPACE_ID"
+            exit 1
+          fi
+          echo "✓ workspace_id format valid"
+
+      - name: Validate expected_database_host format (bare hostname only)
+        env:
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: |
+          node --input-type=module -e "
+            const { isValidExpectedHost } = await import(process.cwd() + '/scripts/validate-expected-db-host.mjs');
+            const r = isValidExpectedHost(process.env.EXPECTED_DATABASE_HOST);
+            if (!r.ok) { console.error('::error::' + r.reason); process.exit(1); }
+            console.log('✓ expected_database_host format valid');
+          "
+
+      - name: Confirm explicit intent (APPLY only)
+        if: inputs.mode == 'APPLY'
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "GRANT ADMINISTRATION OPERATOR" ]; then
+            echo "::error::APPLY mode requires the confirm input to be exactly \"GRANT ADMINISTRATION OPERATOR\". Aborting."
+            exit 1
+          fi
+          echo "✓ Explicit confirmation received for APPLY"
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify checked-out SHA exactly equals expected_main_sha
+        env:
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+        run: |
+          CURRENT_SHA=$(git rev-parse HEAD)
+          echo "Checked-out SHA: $CURRENT_SHA"
+          echo "Expected main SHA: $EXPECTED_MAIN_SHA"
+          if [ "$CURRENT_SHA" != "$EXPECTED_MAIN_SHA" ]; then
+            echo "::error::main's current HEAD ($CURRENT_SHA) does not exactly equal expected_main_sha ($EXPECTED_MAIN_SHA). main has moved since this dispatch was authorized — refusing. Re-authorize against the current SHA and re-dispatch."
+            exit 1
+          fi
+          echo "✓ Checked-out SHA matches expected_main_sha exactly"
+          echo "MAIN_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Preflight check - PRODUCTION_DATABASE_URL secret exists
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::PRODUCTION_DATABASE_URL secret is missing or empty"
+            exit 1
+          fi
+          echo "✓ PRODUCTION_DATABASE_URL secret is configured"
+
+      - name: Remove local environment files
+        run: |
+          rm -f .env .env.local .env.production .env.staging .env.postgres .env.local.bak
+          echo "✓ Removed all local .env files to prevent placeholder contamination"
+
+      - name: Verify exact production database host matches owner-pinned expectation (workflow-level gate)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: node scripts/validate-expected-db-host.mjs
+
+      - name: Run provisioning script (DRY_RUN preview)
+        if: inputs.mode == 'DRY_RUN'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          TARGET_EMAIL: ${{ inputs.target_email }}
+          WORKSPACE_ID: ${{ inputs.workspace_id }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: |
+          npx tsx scripts/provision-administration-operator.ts \
+            --email "$TARGET_EMAIL" \
+            --workspace-id "$WORKSPACE_ID" \
+            --expected-database-host "$EXPECTED_DATABASE_HOST"
+          echo "DRY_RUN_COMPLETED=true" >> "$GITHUB_ENV"
+
+      - name: Run provisioning script (APPLY — grants the role)
+        if: inputs.mode == 'APPLY'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          TARGET_EMAIL: ${{ inputs.target_email }}
+          WORKSPACE_ID: ${{ inputs.workspace_id }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: |
+          echo "APPLY_STARTED=true" >> "$GITHUB_ENV"
+          npx tsx scripts/provision-administration-operator.ts \
+            --email "$TARGET_EMAIL" \
+            --workspace-id "$WORKSPACE_ID" \
+            --expected-database-host "$EXPECTED_DATABASE_HOST" \
+            --apply \
+            --confirm "GRANT ADMINISTRATION OPERATOR"
+          echo "APPLY_SUCCEEDED=true" >> "$GITHUB_ENV"
+
+      - name: Run summary
+        if: always()
+        env:
+          MODE: ${{ inputs.mode }}
+          TARGET_EMAIL: ${{ inputs.target_email }}
+          WORKSPACE_ID: ${{ inputs.workspace_id }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: |
+          echo "## Provision ADMINISTRATION_OPERATOR Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Mode | $MODE |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Timestamp | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Checked-out main SHA | \`${MAIN_SHA:-unknown}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Target email | $TARGET_EMAIL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Target workspace | \`$WORKSPACE_ID\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Expected DB host | \`$EXPECTED_DATABASE_HOST\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Role | administration_operator (hard-coded in the script; not an input) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$MODE" == "DRY_RUN" ] && [ "${DRY_RUN_COMPLETED:-false}" == "true" ]; then
+            echo "**Result:** dry run completed. No production mutation occurred." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$MODE" == "APPLY" ] && [ "${APPLY_SUCCEEDED:-false}" == "true" ]; then
+            echo "**Result:** ADMINISTRATION_OPERATOR grant/revoke completed. See job logs for the exact assignment/audit-event outcome (grant vs already-held, per the script's own idempotency check)." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$MODE" == "APPLY" ] && [ "${APPLY_STARTED:-false}" != "true" ]; then
+            echo "**Result: NOT_EXECUTED** — a preflight gate did not pass; the provisioning script never ran. No production mutation occurred." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**Result: UNCERTAIN_OR_FAILED** — inspect this job's logs before assuming any outcome." >> "$GITHUB_STEP_SUMMARY"
+          fi

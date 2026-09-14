@@ -77,6 +77,13 @@ assert("rejects whitespace", isValidExpectedHost("ep abc.neon.tech").ok, false);
 assert("rejects embedded newline", isValidExpectedHost("ep-abc.neon.tech\nrm -rf /").ok, false);
 assert("rejects embedded tab", isValidExpectedHost("ep-abc.neon.tech\t").ok, false);
 
+console.log("\n── single-label hostname (local/CI, e.g. \"localhost\") -> format valid, still exact-match enforced ──");
+assert("bare single-label hostname is valid format", isValidExpectedHost("localhost").ok, true);
+assert("single-label host matches itself", hostsMatch("localhost", "localhost"), true);
+assert("single-label host does not match a different single-label host", hostsMatch("localhost", "postgres"), false);
+assert("single-label host does not match an FQDN", hostsMatch("localhost", EXPECTED), false);
+assert("single-label credentials still rejected", isValidExpectedHost("user:pass@localhost").ok, false);
+
 console.log("\n── extractHostname ──");
 assert(
   "extracts hostname from a well-formed connection URL",
