@@ -34,6 +34,7 @@ import { escapeHtml } from "@/lib/integrations/email-html";
 import { z } from "zod/v4";
 import { canSubmitBetaRequest } from "@/domain/beta/admission";
 import { readEffectiveSettings } from "@/services/beta/platform-settings.service";
+import { publicAdmissionRefusal } from "@/lib/public-admission-response";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -160,12 +161,9 @@ export const POST = async (request: NextRequest) => {
       // (which mandates a verified actor + workspace) cannot wrap it, and
       // UnauthorizedError/ForbiddenError would mislabel a public
       // product-availability refusal as an identity or workspace/capability
-      // denial. Formatted as a real multi-line construction, matching every
-      // other constructed error response in this file's own catch block.
-      return Response.json(
-        CLOSED_RESPONSE,
-        { status: 403 }
-      );
+      // denial. publicAdmissionRefusal is the sanctioned primitive for
+      // exactly this route category — see @/lib/public-admission-response.
+      return publicAdmissionRefusal("/api/beta-requests", CLOSED_RESPONSE, 403);
     }
 
     const { email, firstName, utmSource, utmMedium, utmCampaign, utmContent } = await parseRequestBody(
