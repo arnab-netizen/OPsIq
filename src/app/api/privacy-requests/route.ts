@@ -77,10 +77,12 @@ export const POST = async (request: NextRequest) => {
       },
     });
 
-    // emitAuditEvent fail-safe no-ops without a workspaceId (see infra/audit.ts) —
-    // expected here: this route runs before/without any session or workspace
-    // context. actorId is still set when a matching account was found so the
-    // event is attributable once a human picks up the request.
+    // No workspaceId: this route runs before/without any session or workspace
+    // context, so this persists as a durable, explicitly-unchained
+    // pre-workspace audit row (see infra/audit.ts's createUnchainedPlatformEvent
+    // — Administration V1's pre-workspace-audit-durability fix). actorId is
+    // still set when a matching account was found so the event is
+    // attributable once a human picks up the request.
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.PRIVACY_REQUEST_CREATED,
       actorId: user?.id,

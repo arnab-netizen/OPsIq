@@ -213,6 +213,15 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.BETA_REQUEST_REVIEW,
     CAPABILITIES.BETA_REQUEST_INVITE,
   ],
+
+  // Administration V1 — a SEPARATE narrow platform-operator surface, not an
+  // extension of BETA_REQUEST_OPERATOR's bundle above (which is left
+  // byte-for-byte unchanged by this addition). No production identity holds
+  // this role as of this change.
+  [ROLES.ADMINISTRATION_OPERATOR]: [
+    CAPABILITIES.BETA_PROGRAM_MANAGE,
+    CAPABILITIES.CUSTOMER_ACCESS_MANAGE,
+  ],
 };
 
 // ─── Self-serve owner scoping ───────────────────────────────────────────────
@@ -292,6 +301,8 @@ const INTERNAL_ONLY_CAPABILITIES: readonly CapabilityName[] = [
   CAPABILITIES.FILE_DELETE,
   CAPABILITIES.BETA_REQUEST_REVIEW,
   CAPABILITIES.BETA_REQUEST_INVITE,
+  CAPABILITIES.BETA_PROGRAM_MANAGE,
+  CAPABILITIES.CUSTOMER_ACCESS_MANAGE,
 ];
 
 // ─── Policy Context ─────────────────────────────────────────────────────────

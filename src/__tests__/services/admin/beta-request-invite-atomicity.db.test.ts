@@ -23,17 +23,19 @@
  * single test can force it to throw and prove the update rolls back with
  * it, without disturbing every other test's real behavior. Note:
  * `markBetaRequestInvited`'s emitAuditEvent call carries no `workspaceId`
- * (a BetaRequest is pre-account/pre-workspace, same as BETA_REQUEST_CREATED
- * — see infra/audit.ts's documented fail-safe), so the real emitAuditEvent
- * never persists an `audit_event` row here, before or after this fix; that
- * pre-existing, documented behavior is unrelated to and out of scope for
- * this atomicity fix. What these tests prove is the CALL itself — that it
- * happens exactly once, atomically with the state mutation, and that a
- * thrown error from it rolls the mutation back.
+ * (a BetaRequest is pre-account/pre-workspace, same as BETA_REQUEST_CREATED)
+ * — as of the Administration V1 pre-workspace-audit-durability fix (see
+ * infra/audit.ts's createUnchainedPlatformEvent), this now DOES persist a
+ * real, durable `audit_event` row (workspaceId: null, previousHash: null,
+ * explicitly unchained — no hash-chain/tamper-evidence claim), where
+ * previously it silently no-opped. What these tests prove is the CALL
+ * itself — that it happens exactly once, atomically with the state
+ * mutation, and that a thrown error from it rolls the mutation back — plus
+ * one assertion below that the row is now genuinely durable.
  *
  * Run: TEST_WITH_DB=true npx vitest run src/__tests__/services/admin/beta-request-invite-atomicity.db.test.ts
  */
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -53,7 +55,11 @@ import { markBetaRequestInvited } from "@/services/admin/admin-operability.servi
 
 const mockedEmitAuditEvent = vi.mocked(emitAuditEvent);
 const mockedGetEmailProvider = vi.mocked(getEmailProvider);
-const ACTOR_ID = "invite-atomicity-actor";
+// Must be a real UUID: AuditEvent.actorId is @db.Uuid, and — unlike before
+// the Administration V1 pre-workspace-audit-durability fix — this actorId
+// now actually reaches a real INSERT (previously the pre-workspace fail-safe
+// silently no-opped before ever touching the audit_events table).
+const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
 
 async function seedBetaRequest(status: "REQUESTED" | "INVITED" = "REQUESTED"): Promise<{ id: string; email: string }> {
   const id = randomUUID();
@@ -66,11 +72,27 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] markBetaRequestInvited — grant/aud
   const sendMock = vi.fn();
   let seededId: string | null = null;
 
+  // AuditEvent.actorId carries a real FK to users.id (onDelete: Restrict) —
+  // exercised for real now that pre-workspace events genuinely persist (see
+  // ACTOR_ID's own comment). A real User row must exist for the whole suite.
+  beforeAll(async () => {
+    await db.user.upsert({
+      where: { id: ACTOR_ID },
+      update: {},
+      create: { id: ACTOR_ID, email: `atomicity-actor-${ACTOR_ID}@example.com`, updatedAt: new Date() },
+    });
+  });
+  afterAll(async () => {
+    await db.auditEvent.deleteMany({ where: { actorId: ACTOR_ID } }).catch(() => undefined);
+    await db.user.delete({ where: { id: ACTOR_ID } }).catch(() => undefined);
+  });
+
   afterEach(async () => {
     mockedEmitAuditEvent.mockClear();
     mockedGetEmailProvider.mockReset();
     sendMock.mockClear();
     if (seededId) {
+      await db.auditEvent.deleteMany({ where: { entityId: seededId } }).catch(() => undefined);
       await db.betaRequest.delete({ where: { id: seededId } }).catch(() => undefined);
       seededId = null;
     }
@@ -91,12 +113,21 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] markBetaRequestInvited — grant/aud
 
     expect(mockedEmitAuditEvent).toHaveBeenCalledTimes(1);
     expect(mockedEmitAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ eventName: "BETA_REQUEST_MARKED_INVITED", entityId: id, actorId: ACTOR_ID }),
+      expect.objectContaining({ eventName: "beta_request.marked_invited", entityId: id, actorId: ACTOR_ID }),
       expect.anything() // the transaction client
     );
 
     // Approval email is sent once, after the transaction commits.
     expect(sendMock).toHaveBeenCalledTimes(1);
+
+    // Administration V1: the pre-workspace audit fix means this now
+    // persists a real, durable, explicitly-unchained audit_event row.
+    const persisted = await db.auditEvent.findFirst({
+      where: { eventName: "beta_request.marked_invited", entityId: id },
+    });
+    expect(persisted).not.toBeNull();
+    expect(persisted?.workspaceId).toBeNull();
+    expect(persisted?.previousHash).toBeNull();
   });
 
   it("[db] a simulated audit failure rolls the mutation back (row stays REQUESTED); a subsequent retry performs a fresh real transition and sends the approval email exactly once; a further replay sends no additional audit or email", async () => {

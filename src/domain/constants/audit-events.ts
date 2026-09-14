@@ -708,6 +708,16 @@ export const AUDIT_EVENTS = {
   BETA_REQUEST_CREATED: "beta_request.created",
   BETA_REQUEST_DUPLICATE_SUBMITTED: "beta_request.duplicate_submitted",
   BETA_REQUEST_MARKED_INVITED: "beta_request.marked_invited",
+  BETA_REQUEST_REVOKED: "beta_request.revoked",
+  BETA_REQUEST_REJECTED: "beta_request.rejected",
+  BETA_REQUEST_REOPENED: "beta_request.reopened",
+
+  // Administration V1 — beta operating control plane
+  PLATFORM_SETTINGS_INITIALIZED: "platform_settings.initialized",
+  PLATFORM_ADMISSION_MODE_CHANGED: "platform_settings.admission_mode_changed",
+  PLATFORM_CAPACITY_CHANGED: "platform_settings.capacity_changed",
+  PLATFORM_CAPACITY_ALERT_SENT: "platform_settings.capacity_alert_sent",
+  CUSTOMER_VERIFICATION_RESENT: "customer.verification_resent",
 } as const;
 
 export type AuditEventName =

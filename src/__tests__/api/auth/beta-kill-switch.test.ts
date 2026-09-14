@@ -23,11 +23,17 @@
  * signup-controlled-beta-admission.test.ts for that.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { db } from "@/lib/db";
 
 vi.mock("@/lib/db", () => ({
   db: {
     betaRequest: { findUnique: vi.fn().mockResolvedValue(null) },
     user: { findUnique: vi.fn() },
+    // Administration V1: the pre-filter gate reads effective platform
+    // settings first. No row -> legacy fallback (byte-identical to
+    // pre-Administration-V1 PUBLIC_BETA_ENABLED-derived behavior) — see
+    // platform-settings.service.ts.
+    platformSetting: { findUnique: vi.fn().mockResolvedValue(null) },
   },
   withStatementTimeout: vi.fn(),
   getDbInstance: vi.fn().mockResolvedValue({}),
@@ -137,13 +143,29 @@ describe("POST /api/auth/signup — PUBLIC_BETA_ENABLED kill switch", () => {
     const { GET } = await import("@/app/api/auth/beta-status/route");
     const statusRes = await GET();
     const statusJson = await statusRes.json();
-    expect(statusJson.enabled).toBe(false);
+    // Administration V1 correction: PUBLIC_BETA_ENABLED=false's legacy
+    // mapping is INVITE_ONLY (not "closed") — the signup FORM must be
+    // attempt-able (canAttemptSignupForm(INVITE_ONLY) === true) so an
+    // invited visitor can actually submit it; the real per-email admission
+    // decision is still made server-side, which is exactly what the rest of
+    // this test proves.
+    expect(statusJson.enabled).toBe(true);
+    expect(statusJson.admissionMode).toBe("INVITE_ONLY");
 
     // Even if a compromised/modified client believed beta were enabled (or
-    // simply lied about it), the signup route re-checks the server flag
-    // itself and refuses regardless of what beta-status returned.
+    // simply lied about it), the signup route re-checks admission itself
+    // (mode + real per-email invited status) and refuses this uninvited
+    // email regardless of what beta-status returned.
     const { POST } = await import("@/app/api/auth/signup/route");
     const res = await POST(signupRequest(VALID_BODY) as never);
     expect(res.status).toBe(403);
+  });
+
+  it("CLOSED admission mode: GET /api/auth/beta-status correctly reports enabled=false (the form-hiding case)", async () => {
+    vi.mocked(db.platformSetting.findUnique).mockResolvedValueOnce({ admissionMode: "CLOSED", capacityLimit: 50, version: 0 } as never);
+    const { GET } = await import("@/app/api/auth/beta-status/route");
+    const statusJson = await (await GET()).json();
+    expect(statusJson.enabled).toBe(false);
+    expect(statusJson.admissionMode).toBe("CLOSED");
   });
 });

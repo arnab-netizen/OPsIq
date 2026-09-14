@@ -28,6 +28,11 @@ vi.mock("@/lib/db", () => ({
   db: {
     betaRequest: { findUnique: mocks.findUniqueBetaRequest },
     user: { findUnique: vi.fn() },
+    // Administration V1: the pre-filter gate reads effective platform
+    // settings first. No row -> legacy fallback (byte-identical to
+    // pre-Administration-V1 PUBLIC_BETA_ENABLED-derived behavior) — see
+    // platform-settings.service.ts.
+    platformSetting: { findUnique: vi.fn().mockResolvedValue(null) },
   },
   withStatementTimeout: vi.fn(),
   getDbInstance: vi.fn().mockResolvedValue({}),
@@ -86,7 +91,7 @@ describe("POST /api/auth/signup — controlled-beta admission (PUBLIC_BETA_ENABL
   });
 
   it("admits the request past the gate when the BetaRequest is INVITED — falls through to real validation", async () => {
-    mocks.findUniqueBetaRequest.mockResolvedValue({ status: "INVITED" });
+    mocks.findUniqueBetaRequest.mockResolvedValue({ status: "INVITED", invitedAt: new Date() });
     const { POST } = await import("@/app/api/auth/signup/route");
     // Otherwise-invalid body (missing all three consents): if the gate had
     // refused, this would be a 403 beta_disabled. Observing the validation
@@ -101,7 +106,7 @@ describe("POST /api/auth/signup — controlled-beta admission (PUBLIC_BETA_ENABL
   });
 
   it("normalizes case/whitespace before the BetaRequest lookup, matching identityEmailSchema", async () => {
-    mocks.findUniqueBetaRequest.mockResolvedValue({ status: "INVITED" });
+    mocks.findUniqueBetaRequest.mockResolvedValue({ status: "INVITED", invitedAt: new Date() });
     const { POST } = await import("@/app/api/auth/signup/route");
     const invalidButAdmissible = {
       email: "  Invitee@Example.com  ",
@@ -111,7 +116,7 @@ describe("POST /api/auth/signup — controlled-beta admission (PUBLIC_BETA_ENABL
     await POST(signupRequest(invalidButAdmissible) as never);
     expect(mocks.findUniqueBetaRequest).toHaveBeenCalledWith({
       where: { email: "invitee@example.com" },
-      select: { status: true },
+      select: { status: true, invitedAt: true },
     });
   });
 

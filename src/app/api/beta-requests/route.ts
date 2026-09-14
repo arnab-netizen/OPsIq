@@ -32,6 +32,8 @@ import { ValidationError } from "@/infra/errors";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { escapeHtml } from "@/lib/integrations/email-html";
 import { z } from "zod/v4";
+import { canSubmitBetaRequest } from "@/domain/beta/admission";
+import { readEffectiveSettings } from "@/services/beta/platform-settings.service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -137,8 +139,25 @@ async function notifyOwnerOfNewBetaRequest(row: {
   }
 }
 
+/**
+ * Generic refusal for CLOSED admission mode — deliberately as uninformative
+ * as GENERIC_RESPONSE's success shape, so this route's behavior never
+ * reveals internal operating state beyond "not accepting requests right now."
+ */
+const CLOSED_RESPONSE = {
+  error: "OpsIQ isn't accepting beta requests right now. Please check back soon.",
+};
+
 export const POST = async (request: NextRequest) => {
   try {
+    // Admission-mode gate: CLOSED refuses request submission itself (not
+    // just signup). Every other mode (WAITLIST/INVITE_ONLY/OPEN_BETA)
+    // continues to accept requests unchanged — see canSubmitBetaRequest().
+    const settings = await readEffectiveSettings();
+    if (!canSubmitBetaRequest(settings.admissionMode)) {
+      return Response.json(CLOSED_RESPONSE, { status: 403 });
+    }
+
     const { email, firstName, utmSource, utmMedium, utmCampaign, utmContent } = await parseRequestBody(
       request,
       betaRequestSchema
@@ -176,9 +195,10 @@ export const POST = async (request: NextRequest) => {
     }
 
     if (created) {
-      // emitAuditEvent fail-safe no-ops without a workspaceId (see
-      // infra/audit.ts) — expected here: this route runs pre-account, with
-      // no workspace context, exactly like /api/privacy-requests.
+      // No workspaceId: this route runs pre-account, with no workspace
+      // context, exactly like /api/privacy-requests — persists as a durable,
+      // explicitly-unchained pre-workspace audit row (see infra/audit.ts's
+      // createUnchainedPlatformEvent).
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.BETA_REQUEST_CREATED,
         entityType: "beta_request",

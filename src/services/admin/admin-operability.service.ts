@@ -25,6 +25,8 @@ import type { AuditEventName } from "@/domain/constants/audit-events";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
 import { escapeHtml } from "@/lib/integrations/email-html";
+import { INVITE_TTL_DAYS } from "@/lib/beta";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 200;
@@ -611,20 +613,28 @@ async function sendBetaApprovalEmail(email: string): Promise<void> {
  * requester access; they receive the existing /signup flow out-of-band —
  * this function never creates a User/Workspace itself).
  *
+ * This is BOTH the "Invite" action (from REQUESTED) AND the routine
+ * "Re-invite" action (from REVOKED, or from an INVITED request whose invite
+ * has expired — see isInviteExpired in @/lib/beta) — the same transition,
+ * exposed as one button, since all three source states mean "this person is
+ * not currently able to sign up" and the operator's intent (grant access
+ * now) is identical. REJECTED is deliberately NOT one of the source states
+ * here — reopening a rejected request is a separate, explicitly-labeled
+ * action (reopenAndInviteBetaRequest) so an operator can't casually undo a
+ * deliberate rejection via the routine re-invite button.
+ *
  * Governance:
  *   - Throws NotFoundError if the request does not exist.
- *   - Concurrency-safe, emit-once, ATOMIC: the conditional REQUESTED ->
- *     INVITED transition and its audit event run inside one db.$transaction
- *     (same AUDIT-01 pattern as PR #473's grantBetaRequestOperator — see
+ *   - Concurrency-safe, emit-once, ATOMIC: the conditional transition and its
+ *     audit event run inside one db.$transaction (same AUDIT-01 pattern as
+ *     PR #473's grantBetaRequestOperator — see
  *     scripts/provision-beta-request-operator.ts and
  *     src/infra/audit.ts's AuditClient), so a thrown error anywhere in that
  *     transaction (including from emitAuditEvent) rolls the state mutation
- *     back too: the row is never left durably INVITED without its audit
- *     event, and a retry after such a failure finds the row still
- *     REQUESTED, free to attempt a fresh real transition. An already-INVITED
- *     request is an idempotent no-op with no new audit event and no
- *     re-sent email — the response reflects the row's real, current state
- *     (never fabricates a new invitedAt/invitedBy on a no-op).
+ *     back too. An already-INVITED, non-expired request is an idempotent
+ *     no-op with no new audit event and no re-sent email — the response
+ *     reflects the row's real, current state (never fabricates a new
+ *     invitedAt/invitedBy on a no-op).
  *   - The approval email is deliberately OUTSIDE the transaction and sent
  *     only after a successful commit, and only when this call performed the
  *     actual transition: best-effort delivery must never roll back an
@@ -644,16 +654,30 @@ export async function markBetaRequestInvited(
   }
 
   const invitedAt = new Date();
+  const expiredThreshold = new Date(invitedAt.getTime() - INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
   const transitioned = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const updated = await tx.betaRequest.updateMany({
-      where: { id: betaRequestId, status: "REQUESTED" },
-      data: { status: "INVITED", invitedAt, invitedBy: actorId },
+      where: {
+        id: betaRequestId,
+        OR: [
+          { status: "REQUESTED" },
+          { status: "REVOKED" },
+          { status: "INVITED", invitedAt: { lte: expiredThreshold } },
+        ],
+      },
+      data: {
+        status: "INVITED",
+        invitedAt,
+        invitedBy: actorId,
+        revokedAt: null,
+        revokedBy: null,
+      },
     });
 
     if (updated.count === 1) {
       await emitAuditEvent(
         {
-          eventName: "BETA_REQUEST_MARKED_INVITED" as AuditEventName,
+          eventName: AUDIT_EVENTS.BETA_REQUEST_MARKED_INVITED,
           actorId,
           entityType: "beta_request",
           entityId: betaRequestId,
@@ -681,6 +705,152 @@ export async function markBetaRequestInvited(
     throw new NotFoundError("BetaRequest", betaRequestId);
   }
 
+  return {
+    id: finalRow.id,
+    status: finalRow.status,
+    invitedAt: finalRow.invitedAt ? finalRow.invitedAt.toISOString() : null,
+    invitedBy: finalRow.invitedBy,
+  };
+}
+
+export interface BetaRequestActionInput {
+  betaRequestId: string;
+  actorId: string;
+  reason?: string;
+}
+
+export interface BetaRequestActionResult {
+  id: string;
+  status: string;
+}
+
+/**
+ * Revoke an invite: INVITED -> REVOKED. The applicant can no longer complete
+ * signup even if they still have the invite link/email (isBetaRequestInvited
+ * only admits status === "INVITED" — see @/lib/beta). Idempotent: replaying
+ * on an already-REVOKED (or otherwise non-INVITED) row is a no-op, no
+ * duplicate audit event. Same atomic tx+audit pattern as
+ * markBetaRequestInvited.
+ */
+export async function revokeBetaRequestInvite(
+  input: BetaRequestActionInput
+): Promise<BetaRequestActionResult> {
+  const { betaRequestId, actorId, reason } = input;
+  const existing = await db.betaRequest.findUnique({ where: { id: betaRequestId }, select: { id: true } });
+  if (!existing) throw new NotFoundError("BetaRequest", betaRequestId);
+
+  const revokedAt = new Date();
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.betaRequest.updateMany({
+      where: { id: betaRequestId, status: "INVITED" },
+      data: { status: "REVOKED", revokedAt, revokedBy: actorId },
+    });
+    if (updated.count === 1) {
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.BETA_REQUEST_REVOKED,
+          actorId,
+          entityType: "beta_request",
+          entityId: betaRequestId,
+          payload: { reason: reason ?? null },
+          visibility: "internal",
+        },
+        tx
+      );
+    }
+  });
+
+  const finalRow = await db.betaRequest.findUniqueOrThrow({ where: { id: betaRequestId }, select: { id: true, status: true } });
+  return finalRow;
+}
+
+/**
+ * Reject/archive a request: REQUESTED -> REJECTED. Terminal for the routine
+ * "Invite/Re-invite" action (REJECTED is deliberately not one of that
+ * function's source states) — reversing a rejection requires the separate,
+ * explicitly-labeled reopenAndInviteBetaRequest action below. No email is
+ * sent (unlike Invite/Re-invite): a rejection is a quiet archive, not a
+ * notification-worthy event for the applicant. Idempotent, same atomic
+ * tx+audit pattern.
+ */
+export async function rejectBetaRequest(
+  input: BetaRequestActionInput
+): Promise<BetaRequestActionResult> {
+  const { betaRequestId, actorId, reason } = input;
+  const existing = await db.betaRequest.findUnique({ where: { id: betaRequestId }, select: { id: true } });
+  if (!existing) throw new NotFoundError("BetaRequest", betaRequestId);
+
+  const rejectedAt = new Date();
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.betaRequest.updateMany({
+      where: { id: betaRequestId, status: "REQUESTED" },
+      data: { status: "REJECTED", rejectedAt, rejectedBy: actorId },
+    });
+    if (updated.count === 1) {
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.BETA_REQUEST_REJECTED,
+          actorId,
+          entityType: "beta_request",
+          entityId: betaRequestId,
+          payload: { reason: reason ?? null },
+          visibility: "internal",
+        },
+        tx
+      );
+    }
+  });
+
+  const finalRow = await db.betaRequest.findUniqueOrThrow({ where: { id: betaRequestId }, select: { id: true, status: true } });
+  return finalRow;
+}
+
+/**
+ * "Re-open & invite": REJECTED -> INVITED. Deliberately a SEPARATE function
+ * (and a separately labeled UI action) from the routine Invite/Re-invite
+ * button — reopening a deliberate rejection must never be one click away
+ * from a routine resend. Emits a distinct BETA_REQUEST_REOPENED audit event
+ * (in addition to the same effect as an invite) so the audit trail shows
+ * this was a reopen, not an ordinary invite. Sends the same approval email
+ * as a normal invite, since the applicant is now genuinely admitted.
+ */
+export async function reopenAndInviteBetaRequest(
+  input: BetaRequestActionInput
+): Promise<MarkBetaRequestInvitedResult> {
+  const { betaRequestId, actorId, reason } = input;
+  const existing = await db.betaRequest.findUnique({ where: { id: betaRequestId }, select: { id: true, email: true } });
+  if (!existing) throw new NotFoundError("BetaRequest", betaRequestId);
+
+  const invitedAt = new Date();
+  const transitioned = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.betaRequest.updateMany({
+      where: { id: betaRequestId, status: "REJECTED" },
+      data: { status: "INVITED", invitedAt, invitedBy: actorId, rejectedAt: null, rejectedBy: null },
+    });
+    if (updated.count === 1) {
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.BETA_REQUEST_REOPENED,
+          actorId,
+          entityType: "beta_request",
+          entityId: betaRequestId,
+          payload: { reason: reason ?? null },
+          visibility: "internal",
+        },
+        tx
+      );
+    }
+    return updated.count === 1;
+  });
+
+  if (transitioned) {
+    await sendBetaApprovalEmail(existing.email);
+  }
+
+  const finalRow = await db.betaRequest.findUniqueOrThrow({
+    where: { id: betaRequestId },
+    select: { id: true, status: true, invitedAt: true, invitedBy: true },
+  });
   return {
     id: finalRow.id,
     status: finalRow.status,

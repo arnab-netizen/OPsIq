@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   LifecycleConflictError,
   LifecycleNotAllowedError,
+  SoleActiveOwnerError,
   type LifecycleDeps,
   type LifecycleTx,
   suspendEmployee,
@@ -16,18 +17,23 @@ import { UnauthorizedError } from "@/infra/errors";
 const NOW = new Date("2026-06-25T12:00:00.000Z");
 
 interface FakeState {
-  membership: { isActive: boolean; removedAt: Date | null } | null;
+  membership: { isActive: boolean; removedAt: Date | null; role?: string } | null;
   /** how many rows the conditional updateMany should report changing */
   updateCount?: number;
   sessionRevokeCount?: number;
+  /** active-owner count returned by the sole-owner guard's count() query */
+  activeOwnerCount?: number;
+  /** when set, emit() throws this on its first call (proves tx rollback semantics at the call-sequencing level) */
+  emitThrows?: Error;
 }
 
 function makeDeps(state: FakeState) {
   const calls = {
     membershipUpdate: [] as Record<string, unknown>[],
     sessionUpdate: [] as Record<string, unknown>[],
-    emitted: [] as { eventName: string; payload?: Record<string, unknown> }[],
+    emitted: [] as { eventName: string; payload?: Record<string, unknown>; withClient?: boolean }[],
     txRuns: 0,
+    ownerCountChecked: false,
   };
 
   const tx: LifecycleTx = {
@@ -36,6 +42,10 @@ function makeDeps(state: FakeState) {
       updateMany: async (args) => {
         calls.membershipUpdate.push(args as Record<string, unknown>);
         return { count: state.updateCount ?? 1 };
+      },
+      count: async () => {
+        calls.ownerCountChecked = true;
+        return state.activeOwnerCount ?? 2;
       },
     },
     session: {
@@ -55,8 +65,9 @@ function makeDeps(state: FakeState) {
         return fn(tx);
       },
     },
-    emit: async (input) => {
-      calls.emitted.push({ eventName: input.eventName, payload: input.payload });
+    emit: async (input, client) => {
+      if (state.emitThrows) throw state.emitThrows;
+      calls.emitted.push({ eventName: input.eventName, payload: input.payload, withClient: client !== undefined });
       return "evt-id";
     },
     now: () => NOW,
@@ -111,6 +122,46 @@ describe("suspendEmployee", () => {
     const names = calls.emitted.map((e) => e.eventName);
     expect(names).toContain("employee.suspended");
     expect(names).toContain("employee.sessions_revoked");
+    // AUDIT-01: both events were emitted WITH the in-flight transaction client
+    // (i.e. from inside deps.db.$transaction), not after it committed.
+    expect(calls.emitted.every((e) => e.withClient)).toBe(true);
+  });
+
+  it("AUDIT-01: an audit-emission failure propagates (transaction rejects, does not swallow)", async () => {
+    const boom = new Error("SIMULATED_AUDIT_FAILURE");
+    const { deps } = makeDeps({
+      membership: { isActive: true, removedAt: null },
+      emitThrows: boom,
+    });
+    await expect(suspendEmployee(cmd, deps)).rejects.toBe(boom);
+  });
+
+  it("sole-active-owner guard: refuses to suspend the last active owner", async () => {
+    const { deps, calls } = makeDeps({
+      membership: { isActive: true, removedAt: null, role: "owner" },
+      activeOwnerCount: 1,
+    });
+    await expect(suspendEmployee(cmd, deps)).rejects.toBeInstanceOf(SoleActiveOwnerError);
+    expect(calls.ownerCountChecked).toBe(true);
+    expect(calls.txRuns).toBe(0);
+    expect(calls.emitted).toHaveLength(0);
+  });
+
+  it("sole-active-owner guard: allows suspending an owner when a co-owner remains active", async () => {
+    const { deps } = makeDeps({
+      membership: { isActive: true, removedAt: null, role: "owner" },
+      activeOwnerCount: 2,
+    });
+    const result = await suspendEmployee(cmd, deps);
+    expect(result).toBe(EmployeeAccessStatus.SUSPENDED);
+  });
+
+  it("sole-active-owner guard: does not run the owner-count check for an ordinary (non-owner) member", async () => {
+    const { deps, calls } = makeDeps({
+      membership: { isActive: true, removedAt: null, role: "member" },
+    });
+    await suspendEmployee(cmd, deps);
+    expect(calls.ownerCountChecked).toBe(false);
   });
 
   it("refuses to suspend an OFFBOARDED member and revokes nothing", async () => {
@@ -151,6 +202,14 @@ describe("offboardEmployee", () => {
     });
     expect(calls.sessionUpdate).toHaveLength(1);
     expect(calls.emitted.map((e) => e.eventName)).toContain("employee.offboarded");
+  });
+
+  it("sole-active-owner guard also applies to OFFBOARD", async () => {
+    const { deps } = makeDeps({
+      membership: { isActive: true, removedAt: null, role: "owner" },
+      activeOwnerCount: 1,
+    });
+    await expect(offboardEmployee(cmd, deps)).rejects.toBeInstanceOf(SoleActiveOwnerError);
   });
 });
 

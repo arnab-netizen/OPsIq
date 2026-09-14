@@ -9,10 +9,17 @@
  *     re-reads `session.revokedAt` and `membership.isActive` on every request, so
  *     a suspended/offboarded employee is denied server-side on the next call.
  *
- * The membership-status change and the session revocation are performed in a
- * single interactive transaction (atomic security pair). The audit event is
- * emitted after commit via the shared, hash-chained `emitAuditEvent` helper
- * (which is not transaction-aware repo-wide; see closeout).
+ * AUDIT-01 (Administration V1 correction): the membership-status change, the
+ * session revocation, AND the required audit event(s) now all commit or roll
+ * back together in ONE transaction — previously the audit event was emitted
+ * AFTER the transaction committed, so a mutation could succeed with no audit
+ * record if emission failed. Fixed by passing the in-flight transaction
+ * client through to `emit` (mirrors the identical fix already applied to
+ * `markBetaRequestInvited` in `admin-operability.service.ts`). `emit`'s
+ * second parameter is intentionally typed `unknown` rather than importing
+ * `@/infra/audit`'s `AuditClient` type here, to preserve this file's existing
+ * decoupling from generated Prisma types (see `resolveDefaultDeps` below) —
+ * at runtime it is the real transaction client, which does carry `auditEvent`.
  *
  * Pure decision rules live in `@/domain/workspace/employee-lifecycle`; this layer
  * is only wiring + concurrency-safe conditional writes. The DB/audit are injected
@@ -41,8 +48,9 @@ interface QueryArgs {
 interface MembershipDelegate {
   findUnique(
     args: QueryArgs
-  ): Promise<{ isActive: boolean; removedAt: Date | null } | null>;
+  ): Promise<{ isActive: boolean; removedAt: Date | null; role?: string } | null>;
   updateMany(args: QueryArgs): Promise<{ count: number }>;
+  count(args: QueryArgs): Promise<number>;
 }
 
 interface SessionDelegate {
@@ -58,15 +66,21 @@ export interface LifecycleDb extends LifecycleTx {
   $transaction<T>(fn: (tx: LifecycleTx) => Promise<T>): Promise<T>;
 }
 
-export type AuditFn = (input: {
-  eventName: string;
-  workspaceId: string;
-  actorId?: string;
-  actorType?: string;
-  entityType?: string;
-  entityId?: string;
-  payload?: Record<string, unknown>;
-}) => Promise<string>;
+export type AuditFn = (
+  input: {
+    eventName: string;
+    workspaceId: string;
+    actorId?: string;
+    actorType?: string;
+    entityType?: string;
+    entityId?: string;
+    payload?: Record<string, unknown>;
+  },
+  /** In-flight transaction client (AUDIT-01 atomicity). Untyped here to keep
+   *  this file decoupled from generated Prisma types; at runtime this is the
+   *  real transaction client passed through from `db.$transaction`. */
+  client?: unknown
+) => Promise<string>;
 
 export interface LifecycleDeps {
   db: LifecycleDb;
@@ -114,16 +128,29 @@ export class LifecycleNotAllowedError extends Error {
   }
 }
 
+/**
+ * Thrown when a lifecycle action would remove the last active owner of a
+ * workspace (Administration V1 correction — a real, previously-unguarded gap:
+ * `planLifecycleTransition` has no awareness of `role`/owner-count at all).
+ * Server-side, fail-closed — never a UI-only disable.
+ */
+export class SoleActiveOwnerError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SoleActiveOwnerError";
+  }
+}
+
 async function loadStatus(
   deps: LifecycleDeps,
   workspaceId: string,
   userId: string
-): Promise<EmployeeAccessStatus> {
+): Promise<{ status: EmployeeAccessStatus; role: string | undefined }> {
   const membership = await deps.db.workspaceMembership.findUnique({
     where: { workspaceId_userId: { workspaceId, userId } },
-    select: { isActive: true, removedAt: true },
+    select: { isActive: true, removedAt: true, role: true },
   });
-  return deriveAccessStatus(membership);
+  return { status: deriveAccessStatus(membership), role: membership?.role };
 }
 
 /**
@@ -148,6 +175,9 @@ function stateGuard(
   }
 }
 
+/** Literal role value marking a workspace owner (see OWNER_SCOPED_CAPABILITIES's identical check). */
+const OWNER_ROLE = "owner";
+
 async function applyTransition(
   command: LifecycleCommand,
   action: EmployeeLifecycleAction,
@@ -155,7 +185,7 @@ async function applyTransition(
 ): Promise<EmployeeAccessStatus> {
   const deps = injected ?? (await resolveDefaultDeps());
   const { workspaceId, userId, actorId } = command;
-  const from = await loadStatus(deps, workspaceId, userId);
+  const { status: from, role } = await loadStatus(deps, workspaceId, userId);
   const plan = planLifecycleTransition(from, action);
 
   if (!plan.allowed) {
@@ -172,8 +202,33 @@ async function applyTransition(
   if (action === EmployeeLifecycleAction.SUSPEND) membershipData.suspendedAt = now;
   if (action === EmployeeLifecycleAction.OFFBOARD) membershipData.offboardedAt = now;
 
-  // Atomic security pair: status change + (conditional) session revocation.
-  const revokedSessionCount = await deps.db.$transaction(async (tx) => {
+  // Server-side, fail-closed sole-active-owner guard (Administration V1
+  // correction — planLifecycleTransition has no role/owner-count awareness at
+  // all). Applies to both SUSPEND and OFFBOARD: either would remove this
+  // user's live access, and an orphaned workspace is the same failure either
+  // way. Checked before the transaction opens so a doomed transition never
+  // takes any lock; re-checked is unnecessary here since a workspace's set of
+  // active owners changing during this same request is not a scenario any
+  // other part of this mutation depends on for correctness (only this user's
+  // own row is written).
+  if (
+    role === OWNER_ROLE &&
+    (action === EmployeeLifecycleAction.SUSPEND || action === EmployeeLifecycleAction.OFFBOARD)
+  ) {
+    const activeOwnerCount = await deps.db.workspaceMembership.count({
+      where: { workspaceId, role: OWNER_ROLE, isActive: true },
+    });
+    if (activeOwnerCount <= 1) {
+      throw new SoleActiveOwnerError(
+        `Cannot ${action.toLowerCase()} the last active owner of workspace ${workspaceId} — this would orphan it.`
+      );
+    }
+  }
+
+  // AUDIT-01: membership transition, session revocation, AND the required
+  // audit event(s) all commit or roll back together — a thrown emit() aborts
+  // the whole transaction, leaving the membership/session state unchanged.
+  await deps.db.$transaction(async (tx) => {
     const updated = await tx.workspaceMembership.updateMany({
       where: stateGuard(workspaceId, userId, action),
       data: membershipData,
@@ -193,37 +248,43 @@ async function applyTransition(
       });
       revoked = res.count;
     }
+
+    if (plan.auditEvent) {
+      await deps.emit(
+        {
+          eventName: plan.auditEvent,
+          workspaceId,
+          actorId,
+          actorType: "user",
+          entityType: "workspace_membership",
+          entityId: userId,
+          payload: {
+            fromStatus: from,
+            toStatus: plan.to,
+            reason: command.reason ?? null,
+            revokedSessionCount: revoked,
+          },
+        },
+        tx
+      );
+      if (plan.revokeSessions && revoked > 0) {
+        await deps.emit(
+          {
+            eventName: AUDIT_EVENTS.EMPLOYEE_SESSIONS_REVOKED,
+            workspaceId,
+            actorId,
+            actorType: "user",
+            entityType: "workspace_membership",
+            entityId: userId,
+            payload: { revokedSessionCount: revoked, dueTo: action },
+          },
+          tx
+        );
+      }
+    }
+
     return revoked;
   });
-
-  // Audit after commit (shared hash-chained helper; not tx-aware repo-wide).
-  if (plan.auditEvent) {
-    await deps.emit({
-      eventName: plan.auditEvent,
-      workspaceId,
-      actorId,
-      actorType: "user",
-      entityType: "workspace_membership",
-      entityId: userId,
-      payload: {
-        fromStatus: from,
-        toStatus: plan.to,
-        reason: command.reason ?? null,
-        revokedSessionCount,
-      },
-    });
-    if (plan.revokeSessions && revokedSessionCount > 0) {
-      await deps.emit({
-        eventName: AUDIT_EVENTS.EMPLOYEE_SESSIONS_REVOKED,
-        workspaceId,
-        actorId,
-        actorType: "user",
-        entityType: "workspace_membership",
-        entityId: userId,
-        payload: { revokedSessionCount, dueTo: action },
-      });
-    }
-  }
 
   return plan.to;
 }
@@ -256,7 +317,8 @@ export async function getEmployeeAccessStatus(
   deps?: LifecycleDeps
 ): Promise<EmployeeAccessStatus> {
   const d = deps ?? (await resolveDefaultDeps());
-  return loadStatus(d, workspaceId, userId);
+  const { status } = await loadStatus(d, workspaceId, userId);
+  return status;
 }
 
 /**
@@ -271,7 +333,7 @@ export async function requireActiveMembership(
   deps?: LifecycleDeps
 ): Promise<void> {
   const d = deps ?? (await resolveDefaultDeps());
-  const status = await loadStatus(d, workspaceId, userId);
+  const { status } = await loadStatus(d, workspaceId, userId);
   if (!hasLiveAccess(status)) {
     throw new UnauthorizedError(
       `Member ${userId} is ${status} in workspace ${workspaceId} — access denied.`
@@ -289,7 +351,7 @@ export async function assertEmployeeAssignable(
   deps?: LifecycleDeps
 ): Promise<void> {
   const d = deps ?? (await resolveDefaultDeps());
-  const status = await loadStatus(d, workspaceId, userId);
+  const { status } = await loadStatus(d, workspaceId, userId);
   if (!isAssignable(status)) {
     throw new LifecycleNotAllowedError(
       `Member ${userId} is ${status} in workspace ${workspaceId} — cannot be assigned new work.`
