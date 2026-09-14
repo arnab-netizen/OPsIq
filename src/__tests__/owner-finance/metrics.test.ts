@@ -19,9 +19,26 @@ import {
   variableCostsTotal,
   dailyBreakEvenRevenue,
   cashRunwayDays,
+  calculateDataConfidence,
   type FinancialSnapshotInput,
   SURVIVAL_STATES,
 } from "@/domain/owner-finance";
+
+/**
+ * Fixed evaluation instant for every assertion in this file whose expected
+ * survivalState depends on data freshness (i.e. every exact-"SAFE" check —
+ * confidence < 70 forces WATCH regardless of margins, and data-confidence.ts's
+ * own staleness penalty is keyed off `now` vs `periodEnd`). computeFinancialMetrics
+ * defaults `now` to the real wall clock when no override is given, exactly like
+ * its owner-strategy/owner-operations siblings (which already pin `now` in their
+ * own tests for the same reason) — a fixture's periodEnd is a fixed point in time,
+ * so evaluating it against a moving "today" makes a currently-fresh snapshot
+ * silently cross the 45-day staleness threshold as real calendar time passes,
+ * independent of any code change. 5 days after `profitable()`'s periodEnd
+ * ("2026-07-31"), comfortably inside the <30-day FRESH tier with margin to
+ * spare.
+ */
+const NOW = new Date("2026-08-05T00:00:00Z");
 
 /** Profitable service business in INR (July 2026). */
 function profitable(): FinancialSnapshotInput {
@@ -68,7 +85,7 @@ describe("owner-finance — safe numeric + currency", () => {
 
 describe("owner-finance — normal profitable business", () => {
   it("computes correct margins, break-even, and a SAFE state", () => {
-    const m = computeFinancialMetrics(profitable());
+    const m = computeFinancialMetrics(profitable(), { now: NOW });
     expect(m.grossMarginPct).toBe(70); // (100k-30k)/100k
     expect(m.netProfit).toBe(30000); // 100k - (35k fixed + 30k var + 5k mktg)
     expect(m.netMarginPct).toBe(30);
@@ -163,13 +180,13 @@ describe("owner-finance — risk scenarios escalate survival state", () => {
   });
 
   it("survival state escalates monotonically across worsening inputs", () => {
-    const safe = computeFinancialMetrics(profitable());
-    const watch = computeFinancialMetrics({ ...profitable(), payables: 50000 });
-    const atRisk = computeFinancialMetrics({ ...profitable(), loanEmiDebtPayments: 30000 });
+    const safe = computeFinancialMetrics(profitable(), { now: NOW });
+    const watch = computeFinancialMetrics({ ...profitable(), payables: 50000 }, { now: NOW });
+    const atRisk = computeFinancialMetrics({ ...profitable(), loanEmiDebtPayments: 30000 }, { now: NOW });
     const critical = computeFinancialMetrics({
       periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
       revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 20000,
-    });
+    }, { now: NOW });
     expect(stateRank(safe.survivalState)).toBe(stateRank("SAFE"));
     expect(stateRank(watch.survivalState)).toBeGreaterThanOrEqual(stateRank("WATCH"));
     expect(stateRank(atRisk.survivalState)).toBeGreaterThanOrEqual(stateRank("AT_RISK"));
@@ -212,6 +229,40 @@ describe("owner-finance — data confidence", () => {
     });
     expect(full.dataConfidenceScore).toBeGreaterThan(sparse.dataConfidenceScore);
     expect(sparse.missingRequiredInputs.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * Regression guard for the exact defect class that broke the "SAFE state"
+   * test above: `calculateDataConfidence`'s default staleDays is 45
+   * (data-confidence.ts), and a snapshot with `dataConfidenceScore < 70` is
+   * forced to WATCH by survivalState() regardless of margins. `profitable()`
+   * sits exactly at confidence 70 while fresh (6 missing IMPORTANT_FIELDS ×
+   * -5 = -30, no critical/currency penalty) and 55 once stale (-15 more),
+   * crossing that boundary. Both sides pin `now` explicitly, so this stays
+   * true forever regardless of when it runs -- unlike the bug it guards
+   * against, which came from computeFinancialMetrics silently defaulting
+   * `now` to the real wall clock.
+   */
+  it("the same snapshot is confidence-eligible for SAFE just inside the 45-day staleness threshold, and forced to WATCH just past it", () => {
+    const periodEnd = new Date("2026-07-31T00:00:00Z");
+    const justFresh = new Date(periodEnd.getTime() + 44 * 24 * 60 * 60 * 1000); // 44 days old
+    const justStale = new Date(periodEnd.getTime() + 46 * 24 * 60 * 60 * 1000); // 46 days old
+
+    const fresh = computeFinancialMetrics(profitable(), { now: justFresh });
+    const stale = computeFinancialMetrics(profitable(), { now: justStale });
+
+    expect(fresh.dataConfidenceScore).toBe(70);
+    expect(fresh.survivalState).toBe("SAFE");
+
+    expect(stale.dataConfidenceScore).toBe(55);
+    expect(stale.survivalState).toBe("WATCH");
+
+    // Same underlying confidence computation, isolated from the orchestrator,
+    // proves this is data-confidence.ts's own documented 45-day boundary
+    // (see calculateDataConfidence's doc comment), not an artifact of this
+    // particular fixture.
+    expect(calculateDataConfidence(profitable(), { now: justFresh }).isStale).toBe(false);
+    expect(calculateDataConfidence(profitable(), { now: justStale }).isStale).toBe(true);
   });
 });
 
