@@ -1099,7 +1099,12 @@ model BetaRequest {
   id            String    @id @db.Uuid
   email         String    @unique
   firstName     String?   @map("first_name")
-  status        String    @default("REQUESTED") // REQUESTED | INVITED
+  // Persisted admission/request-lifecycle facts ONLY. REQUESTED | INVITED | REVOKED | REJECTED.
+  // EXPIRED is deliberately NOT a persisted value — it is derived at read time from
+  // (status == INVITED && invitedAt + INVITE_TTL_DAYS <= now), see src/lib/beta.ts.
+  // Any customer-journey state beyond admission (registered/verified/active) must be
+  // derived live from User/Session/WorkspaceMembership — never denormalized onto this row.
+  status        String    @default("REQUESTED")
   utmSource     String?   @map("utm_source")
   utmMedium     String?   @map("utm_medium")
   utmCampaign   String?   @map("utm_campaign")
@@ -1107,11 +1112,54 @@ model BetaRequest {
   qualification Json?
   invitedAt     DateTime? @map("invited_at")
   invitedBy     String?   @map("invited_by")
+  revokedAt     DateTime? @map("revoked_at")
+  revokedBy     String?   @map("revoked_by")
+  rejectedAt    DateTime? @map("rejected_at")
+  rejectedBy    String?   @map("rejected_by")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@index([status, createdAt])
   @@map("beta_requests")
+}
+
+/**
+ * Singleton platform-wide beta admission/capacity setting. Exactly one row,
+ * pinned to id "global" (direct PK lookup, no query needed to find "the" row).
+ * Governed cutover contract (see PR description / design doc): the migration
+ * that introduces this model creates ZERO rows. Legacy env-derived behavior
+ * (PUBLIC_BETA_WORKSPACE_CAP / PUBLIC_BETA_ENABLED) remains authoritative
+ * until a capability-gated, human-confirmed bootstrap action writes this row
+ * ONCE, capturing whatever the live runtime currently resolves those env vars
+ * to (never a guessed/hardcoded default). Once the row exists, it is
+ * authoritative and legacy env vars are ignored by application logic.
+ */
+model PlatformSetting {
+  id            String   @id @default("global")
+  // CLOSED | WAITLIST | INVITE_ONLY | OPEN_BETA
+  admissionMode String   @map("admission_mode")
+  capacityLimit Int      @map("capacity_limit")
+  updatedBy     String?  @map("updated_by")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  version       Int      @default(0)
+
+  @@map("platform_settings")
+}
+
+/**
+ * Singleton dedup state for capacity threshold alerts (80%/100%). Exactly one
+ * row, pinned to id "global". lastThresholdSent tracks the CURRENT tier (0,
+ * 80, or 100) — it is reset downward (silently, no alert) when utilization
+ * drops below a previously-crossed threshold (e.g. an operator raises
+ * capacity), so a later re-crossing of the same threshold alerts again.
+ */
+model CapacityAlertState {
+  id                String    @id @default("global")
+  lastThresholdSent Int       @default(0) @map("last_threshold_sent")
+  sentAt            DateTime? @map("sent_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@map("capacity_alert_state")
 }
 
 model ShockEvent {

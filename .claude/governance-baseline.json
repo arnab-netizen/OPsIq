@@ -6,10 +6,10 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/auth/signup/route.ts",
-      "line": 390,
+      "line": 425,
       "severity": "error",
       "code": "const errorMessage = error instanceof Error ? error.message : \"Unknown error\";",
-      "reason": "auth route server-side log/context string; not operator-rendered (line-shifted 323->350 by df1be6b's added ConflictError/ValidationError/AppError 4xx handling above this line; further shifted 350->390 by the controlled-beta admission gate (BETA_CLOSED_RESPONSE/extractNormalizedEmailForGate) added above this line; code unchanged)"
+      "reason": "auth route server-side log/context string; not operator-rendered (line-shifted 323->350 by df1be6b's added ConflictError/ValidationError/AppError 4xx handling above this line; further shifted 350->390 by the controlled-beta admission gate (BETA_CLOSED_RESPONSE/extractNormalizedEmailForGate); further shifted 390->424 by Administration V1's admission-mode pre-filter (readEffectiveSettings/canAdmitSignup), invite-check, and BetaAdmissionRefusedError handling above this line; briefly shifted 424->449 by a local admissionClosedResponse() helper that was itself a rejected fix (line-formatting to dodge the auth-governance scanner's regex without addressing the real governance question -- see PR #475 review history); that helper was removed and replaced by the real fix -- publicAdmissionRefusal() (@/lib/public-admission-response.ts) plus one import line -- landing at 425, one line above the pre-helper 424; code otherwise unchanged)"
     },
     {
       "type": "raw-error-message",
@@ -294,19 +294,19 @@
       "type": "unsafe-error-render",
       "category": "UNSAFE ERROR RENDER",
       "file": "src/app/api/auth/signup/route.ts",
-      "line": 447,
+      "line": 482,
       "severity": "error",
       "code": "return Response.json({ success: false, error: message }, { status: 400 });",
-      "reason": "new in df1be6b: message is built from error.issues.map(i => i.message).join(', ') on a caught z.ZodError -- Zod validation-issue messages are governed, owner-safe field-level text (e.g. 'Required', 'Invalid email'), never raw stack/SQL/provider payload; same safety class as the existing canonical-route-enforcement.ts isKnownSafeClientError precedent (line-shifted 407->447 by the controlled-beta admission gate added above this line; code unchanged)"
+      "reason": "new in df1be6b: message is built from error.issues.map(i => i.message).join(', ') on a caught z.ZodError -- Zod validation-issue messages are governed, owner-safe field-level text (e.g. 'Required', 'Invalid email'), never raw stack/SQL/provider payload; same safety class as the existing canonical-route-enforcement.ts isKnownSafeClientError precedent (line-shifted 407->447 by the controlled-beta admission gate; further shifted 447->481 by Administration V1's admission-mode pre-filter/invite-check/BetaAdmissionRefusedError handling; briefly shifted 481->506 by a local admissionClosedResponse() helper that was itself a rejected fix (line-formatting to dodge the auth-governance scanner's regex -- see PR #475 review history), then to 482 by the real fix -- publicAdmissionRefusal() (@/lib/public-admission-response.ts) plus one import line, one line above the pre-helper 481; code otherwise unchanged)"
     },
     {
       "type": "unsafe-error-render",
       "category": "UNSAFE ERROR RENDER",
       "file": "src/app/api/auth/signup/route.ts",
-      "line": 458,
+      "line": 493,
       "severity": "error",
       "code": "return Response.json({ success: false, error: error.message }, { status: error.statusCode });",
-      "reason": "new in df1be6b: only reached when error instanceof AppError, whose message is hand-written at each throw site (ConflictError/ValidationError/etc.) specifically to be owner-safe; statusCode is likewise the AppError's own governed 4xx code, not a raw Prisma/stack value -- same safety class as the existing canonical-route-enforcement.ts isKnownSafeClientError precedent (line-shifted 418->458 by the controlled-beta admission gate added above this line; code unchanged)"
+      "reason": "new in df1be6b: only reached when error instanceof AppError, whose message is hand-written at each throw site (ConflictError/ValidationError/etc.) specifically to be owner-safe; statusCode is likewise the AppError's own governed 4xx code, not a raw Prisma/stack value -- same safety class as the existing canonical-route-enforcement.ts isKnownSafeClientError precedent (line-shifted 418->458 by the controlled-beta admission gate; further shifted 458->492 by Administration V1's admission-mode pre-filter/invite-check/BetaAdmissionRefusedError handling; briefly shifted 492->517 by a local admissionClosedResponse() helper that was itself a rejected fix (line-formatting to dodge the auth-governance scanner's regex -- see PR #475 review history), then to 493 by the real fix -- publicAdmissionRefusal() (@/lib/public-admission-response.ts) plus one import line, one line above the pre-helper 492; code otherwise unchanged)"
     },
     {
       "type": "unsafe-error-render",

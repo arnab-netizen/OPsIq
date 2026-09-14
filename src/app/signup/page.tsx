@@ -25,10 +25,14 @@ export default function SignupPage() {
   const [betaEnabled, setBetaEnabled] = useState<boolean | null>(null);
   const [pendingVerification, setPendingVerification] = useState(false);
 
-  // Display-only: the server independently re-checks PUBLIC_BETA_ENABLED on
-  // every POST /api/auth/signup regardless of what this returns, so this
-  // check can never be used to open a registration window the server has
-  // closed — it only controls whether the form is shown or a "closed" notice is.
+  // Display-only: the server independently re-checks real admission on every
+  // POST /api/auth/signup regardless of what this returns, so this check can
+  // never be used to open a registration window the server has closed — it
+  // only controls whether the form is shown/submittable or a "closed" notice
+  // is. `enabled` reflects whether the FORM is worth attempting (true under
+  // INVITE_ONLY or OPEN_BETA — an invited visitor must be able to submit;
+  // the server decides per-email whether they're actually admitted), not
+  // whether every visitor will succeed.
   useEffect(() => {
     let cancelled = false;
     fetch("/api/auth/beta-status")

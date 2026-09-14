@@ -149,6 +149,14 @@ export const CAPABILITIES = {
   // account happens to do both.
   BETA_REQUEST_REVIEW: "beta_request:review",
   BETA_REQUEST_INVITE: "beta_request:invite",
+
+  // Administration V1 — beta operating control plane. Distinct from, and NOT
+  // added to, BETA_REQUEST_OPERATOR's existing bundle (see ROLE_CAPABILITIES
+  // in capability-check.ts) — the production BETA_REQUEST_OPERATOR grant must
+  // not silently gain new authority. Any role that should hold these must be
+  // provisioned explicitly and separately; none is provisioned by this change.
+  BETA_PROGRAM_MANAGE: "beta_program:manage",
+  CUSTOMER_ACCESS_MANAGE: "customer_access:manage",
 } as const;
 
 export type CapabilityName =

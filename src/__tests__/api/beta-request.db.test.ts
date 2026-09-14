@@ -11,7 +11,7 @@
  * DATABASE_URL/TEST_DATABASE_URL is configured.
  */
 
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { listBetaRequestsForAdmin, markBetaRequestInvited } from "@/services/admin/admin-operability.service";
@@ -19,9 +19,39 @@ import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 const createdIds: string[] = [];
 
+// AuditEvent.actorId carries a real FK to users.id (onDelete: Restrict).
+// markBetaRequestInvited emits a pre-workspace audit event on every real
+// transition (see infra/audit.ts's createUnchainedPlatformEvent) which, as
+// of the Administration V1 pre-workspace-audit-durability fix, now genuinely
+// persists instead of silently no-opping — so an actorId with no
+// corresponding User row fails audit_events_actor_id_fkey. Two real,
+// distinct User rows are seeded here (the idempotency test needs two
+// distinct actors to prove a second call doesn't switch invitedBy) — same
+// pattern as beta-request-invite-atomicity.db.test.ts.
+const ACTOR_ID_A = "22222222-2222-4222-8222-222222222222";
+const ACTOR_ID_B = "33333333-3333-4333-8333-333333333333";
+
+beforeAll(async () => {
+  if (!SHOULD_RUN_DB_TESTS) return;
+  await db.user.upsert({
+    where: { id: ACTOR_ID_A },
+    update: {},
+    create: { id: ACTOR_ID_A, email: `beta-request-db-test-actor-a-${ACTOR_ID_A}@example.com`, updatedAt: new Date() },
+  });
+  await db.user.upsert({
+    where: { id: ACTOR_ID_B },
+    update: {},
+    create: { id: ACTOR_ID_B, email: `beta-request-db-test-actor-b-${ACTOR_ID_B}@example.com`, updatedAt: new Date() },
+  });
+});
+
 afterAll(async () => {
-  if (!SHOULD_RUN_DB_TESTS || createdIds.length === 0) return;
-  await db.betaRequest.deleteMany({ where: { id: { in: createdIds } } });
+  if (!SHOULD_RUN_DB_TESTS) return;
+  if (createdIds.length > 0) {
+    await db.betaRequest.deleteMany({ where: { id: { in: createdIds } } });
+  }
+  await db.auditEvent.deleteMany({ where: { actorId: { in: [ACTOR_ID_A, ACTOR_ID_B] } } }).catch(() => undefined);
+  await db.user.deleteMany({ where: { id: { in: [ACTOR_ID_A, ACTOR_ID_B] } } }).catch(() => undefined);
 });
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("BetaRequest (DB-backed)", () => {
@@ -78,7 +108,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("BetaRequest (DB-backed)", () => {
     createdIds.push(id);
     await db.betaRequest.create({ data: { id, email: `invite-${id}@example.com` } });
 
-    const actorId = randomUUID();
+    const actorId = ACTOR_ID_A;
     const result = await markBetaRequestInvited({ betaRequestId: id, actorId });
 
     expect(result.status).toBe("INVITED");
@@ -95,8 +125,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("BetaRequest (DB-backed)", () => {
     createdIds.push(id);
     await db.betaRequest.create({ data: { id, email: `idempotent-${id}@example.com` } });
 
-    const firstActor = randomUUID();
-    const secondActor = randomUUID();
+    const firstActor = ACTOR_ID_A;
+    const secondActor = ACTOR_ID_B;
 
     const first = await markBetaRequestInvited({ betaRequestId: id, actorId: firstActor });
     const second = await markBetaRequestInvited({ betaRequestId: id, actorId: secondActor });

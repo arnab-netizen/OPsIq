@@ -25,6 +25,15 @@ export const ROLES = {
   // and an OpsIQ platform operator, even when the same real account performs
   // both roles today.
   BETA_REQUEST_OPERATOR: "beta_request_operator",
+
+  // Administration V1 — beta operating control plane. Carries ONLY
+  // BETA_PROGRAM_MANAGE/CUSTOMER_ACCESS_MANAGE (see capability-check.ts).
+  // Deliberately a SEPARATE role from BETA_REQUEST_OPERATOR, not an extension
+  // of it — the existing production BETA_REQUEST_OPERATOR grant must not
+  // gain this authority merely because this role exists. No production
+  // identity is assigned this role by this change; provisioning it is a
+  // separate, explicitly-authorized action.
+  ADMINISTRATION_OPERATOR: "administration_operator",
 } as const;
 
 export type RoleName = (typeof ROLES)[keyof typeof ROLES];
@@ -44,6 +53,9 @@ export const ROLE_HIERARCHY: Record<RoleName, number> = {
   // role so assertHierarchyAuthority (services/role-assignment.ts) never
   // lets it be mistaken for a broader internal tier.
   [ROLES.BETA_REQUEST_OPERATOR]: 5,
+  // Same rationale as BETA_REQUEST_OPERATOR: low, non-overlapping, must never
+  // be mistaken for a broader internal tier by assertHierarchyAuthority.
+  [ROLES.ADMINISTRATION_OPERATOR]: 5,
 };
 
 /** Roles that are internal/consultant-side — not client-facing */
@@ -54,6 +66,7 @@ export const INTERNAL_ROLES: readonly RoleName[] = [
   ROLES.BEGINNER_CONSULTANT,
   ROLES.ANALYST,
   ROLES.BETA_REQUEST_OPERATOR,
+  ROLES.ADMINISTRATION_OPERATOR,
 ];
 
 /** Roles that are client-side */

@@ -11,10 +11,14 @@ import * as bcrypt from "bcryptjs";
 import { ROLES } from "@/domain/constants/roles";
 import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { isPublicBetaEnabled, isBetaRequestInvited, PUBLIC_BETA_SIGNUP_SOURCE, CURRENT_POLICY_VERSIONS } from "@/lib/beta";
-import { reservePublicBetaCapacity, BetaCapExceededError, BetaCapUnavailableError } from "@/services/auth/beta-cap";
+import { isBetaRequestInvited, PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE, CURRENT_POLICY_VERSIONS } from "@/lib/beta";
+import { reservePublicBetaCapacity, BetaCapExceededError, BetaCapUnavailableError, BetaAdmissionRefusedError } from "@/services/auth/beta-cap";
+import { canAdmitSignup } from "@/domain/beta/admission";
+import { readEffectiveSettings } from "@/services/beta/platform-settings.service";
+import { checkAndSendCapacityAlert } from "@/services/beta/capacity-alerts.service";
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
+import { publicAdmissionRefusal } from "@/lib/public-admission-response";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -119,29 +123,32 @@ async function extractNormalizedEmailForGate(request: NextRequest): Promise<stri
 const handleSignup = async (request: NextRequest) => {
   let currentStage = "unknown";
   try {
-    // The beta kill switch. Server-side, authoritative, re-evaluated fresh on
-    // every request from process.env — there is no client-supplied field that
-    // can influence this check, and no cached/memoized value that could go
-    // stale relative to a Vercel environment-variable change. This check runs
-    // BEFORE full request-body validation, so a disabled beta refuses every
-    // signup attempt regardless of what the caller sends UNLESS the email is
-    // one the owner has explicitly marked INVITED (see
-    // markBetaRequestInvited in admin-operability.service.ts) — the
-    // controlled-beta admission path. When public beta is enabled this branch
-    // is skipped entirely and behavior is byte-for-byte unchanged from before.
+    // The admission-mode gate. Server-side, authoritative — reads the
+    // governed effective settings (DB-backed once Administration's bootstrap
+    // has run, byte-identical legacy env-derived behavior otherwise; see
+    // platform-settings.service.ts). This check runs BEFORE full
+    // request-body validation, as a fast pre-filter: CLOSED/WAITLIST always
+    // refuse here; INVITE_ONLY refuses unless the email has a live (INVITED,
+    // unexpired) BetaRequest; OPEN_BETA always continues. Capacity is
+    // deliberately NOT checked here (it can only be evaluated race-safely
+    // under the advisory lock inside the account-graph transaction below) —
+    // this is a mode/invite pre-filter only, using the exact same
+    // canAdmitSignup() decision function diagnostics uses, so it can never
+    // disagree with the real gate about what admits and what doesn't.
     currentStage = "beta_gate";
-    if (!isPublicBetaEnabled()) {
+    const preFilterSettings = await readEffectiveSettings();
+    if (preFilterSettings.admissionMode !== "OPEN_BETA") {
       const gateEmail = await extractNormalizedEmailForGate(request);
-      const admitted = gateEmail !== null && (await isBetaRequestInvited(gateEmail));
-      if (!admitted) {
-        return Response.json(
-          BETA_CLOSED_RESPONSE,
-          { status: 403 }
-        );
+      const gateInvited = gateEmail !== null && (await isBetaRequestInvited(gateEmail));
+      const wouldAdmit = canAdmitSignup(preFilterSettings.admissionMode, gateInvited, true);
+      if (!wouldAdmit) {
+        return publicAdmissionRefusal("/api/auth/signup", BETA_CLOSED_RESPONSE, 403);
       }
-      // Admitted: an INVITED BetaRequest exists for this normalized email.
-      // Fall through into the exact same validation/account-creation flow
-      // used when public beta is enabled — no separate signup path, no token.
+      // Pre-filter passed (admitted pending only a capacity check). Fall
+      // through into the exact same validation/account-creation flow — no
+      // separate signup path, no token. The real, race-safe admission
+      // decision (mode + invited + capacity together, under the shared
+      // advisory lock) happens again inside the transaction below.
     }
 
     // Parse and validate request
@@ -198,6 +205,13 @@ const handleSignup = async (request: NextRequest) => {
     const rawVerificationToken = randomBytes(32).toString("hex");
     const verificationTokenHash = createHash("sha256").update(rawVerificationToken).digest("hex");
 
+    // Resolved from the VALIDATED, canonical email (not the best-effort
+    // pre-filter extraction above) — this is the value that actually
+    // determines both the real admission decision and the signupSource tag
+    // written below, so it must be exact.
+    currentStage = "invite_check";
+    const isInvited = await isBetaRequestInvited(email);
+
     // User, Workspace, WorkspaceMembership, UserRoleAssignment, the three
     // PolicyAcceptance rows, and the EmailVerificationToken are the durable
     // initial-account-graph invariant for an open-beta signup: either all of
@@ -206,16 +220,18 @@ const handleSignup = async (request: NextRequest) => {
     // verification link is redeemed (see /api/auth/verify-email), so there is
     // no session for it to leak into if verification never happens.
     //
-    // The beta-workspace-cap check (reservePublicBetaCapacity) runs FIRST,
-    // inside this same transaction, under a Postgres transaction-scoped
-    // advisory lock — see src/services/auth/beta-cap.ts for why a plain
-    // COUNT(*) is not race-safe under concurrent signups.
+    // The admission check (reservePublicBetaCapacity — mode + invited +
+    // capacity together) runs FIRST, inside this same transaction, under a
+    // Postgres transaction-scoped advisory lock — see
+    // src/services/auth/beta-cap.ts for why a plain COUNT(*) is not
+    // race-safe under concurrent signups, and why mode/capacity must be
+    // re-verified here even though the pre-filter above already checked mode.
     currentStage = "account_graph_transaction";
     const { user, workspace } = await withStatementTimeout(
       db,
       SIGNUP_TRANSACTION_TIMEOUT_MS,
       async (tx: Prisma.TransactionClient) => {
-        await reservePublicBetaCapacity(tx);
+        await reservePublicBetaCapacity(tx, isInvited);
 
         const user = await tx.user.create({
           data: {
@@ -235,7 +251,7 @@ const handleSignup = async (request: NextRequest) => {
             slug,
             createdBy: user.id,
             isActive: true,
-            signupSource: PUBLIC_BETA_SIGNUP_SOURCE,
+            signupSource: isInvited ? CONTROLLED_BETA_SIGNUP_SOURCE : PUBLIC_BETA_SIGNUP_SOURCE,
           },
         });
 
@@ -298,7 +314,7 @@ const handleSignup = async (request: NextRequest) => {
         eventName: AUDIT_EVENTS.USER_CREATED,
         actorId: user.id,
         workspaceId: workspace.id,
-        payload: { email, workspaceName, signupSource: PUBLIC_BETA_SIGNUP_SOURCE },
+        payload: { email, workspaceName, signupSource: workspace.signupSource },
         visibility: "internal",
       });
       await emitAuditEvent({
@@ -323,6 +339,11 @@ const handleSignup = async (request: NextRequest) => {
       );
       console.error("[SIGNUP_AUDIT_FAILURE]", governed.technicalDetails);
     }
+
+    // Best-effort, non-blocking capacity-threshold check (never throws — see
+    // checkAndSendCapacityAlert's own doc comment).
+    currentStage = "capacity_alert_check";
+    await checkAndSendCapacityAlert();
 
     // Best-effort delivery: the token is already durably stored above, so a
     // transient Resend failure (or no provider configured at all) must never
@@ -384,6 +405,20 @@ const handleSignup = async (request: NextRequest) => {
         { success: false, error: "Signup is temporarily unavailable. Please try again shortly.", reason: "beta_cap_unavailable" },
         { status: 503 }
       );
+    }
+    if (error instanceof BetaAdmissionRefusedError) {
+      // The pre-filter above already refuses most of these before this stage
+      // is ever reached; this branch exists for the race window between that
+      // check and the transaction's authoritative, lock-protected re-check
+      // (e.g. an operator closes admission mid-request). Same generic,
+      // enumeration-resistant response as the pre-filter.
+      console.warn("[SIGNUP_REFUSED] admission refused inside transaction", { reason: error.reason });
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.SIGNUP_REFUSED_BETA_DISABLED,
+        payload: { reason: error.reason },
+        visibility: "internal",
+      });
+      return publicAdmissionRefusal("/api/auth/signup", BETA_CLOSED_RESPONSE, 403);
     }
 
     const errorName = error instanceof Error ? error.name : "UnknownError";

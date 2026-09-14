@@ -17,11 +17,17 @@ const mocks = vi.hoisted(() => ({
   emitAuditEvent: vi.fn(),
   getEmailProvider: vi.fn(),
   send: vi.fn(),
+  // Administration V1: the route now reads effective platform settings
+  // (admission mode) before accepting a request. No row -> legacy fallback
+  // (byte-identical to pre-Administration-V1 behavior) — see
+  // platform-settings.service.ts.
+  platformSettingFindUnique: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: {
     betaRequest: { create: mocks.create },
+    platformSetting: { findUnique: mocks.platformSettingFindUnique },
   },
   getDbInstance: vi.fn().mockResolvedValue({}),
 }));
@@ -206,6 +212,17 @@ describe("POST /api/beta-requests", () => {
     await POST(makeReq({ email: "a@example.com" }, "198.51.100.5") as never);
     expect(mocks.requirePgRateLimit).toHaveBeenCalledWith("beta-request:198.51.100.5", expect.any(Object));
     expect(mocks.requirePgRateLimit).toHaveBeenCalledWith("beta-request:a@example.com", expect.any(Object));
+  });
+
+  it("refuses request submission itself when admission mode is CLOSED", async () => {
+    mocks.platformSettingFindUnique.mockResolvedValueOnce({
+      admissionMode: "CLOSED",
+      capacityLimit: 50,
+      version: 0,
+    });
+    const res = await POST(makeReq({ email: "a@example.com" }) as never);
+    expect(res.status).toBe(403);
+    expect(mocks.create).not.toHaveBeenCalled();
   });
 
   it("never promises guaranteed or immediate access in the response copy", async () => {

@@ -472,6 +472,28 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/admin/beta-requests",
         requiresCapability: CAPABILITIES.BETA_REQUEST_REVIEW,
       },
+      {
+        // Administration V1 — new, narrow capabilities, NOT part of
+        // BETA_REQUEST_OPERATOR's existing bundle (see ROLE_CAPABILITIES).
+        label: "Overview",
+        href: "/admin/overview",
+        requiresCapability: CAPABILITIES.CUSTOMER_ACCESS_MANAGE,
+      },
+      {
+        label: "Beta programme",
+        href: "/admin/beta-programme",
+        requiresCapability: CAPABILITIES.BETA_PROGRAM_MANAGE,
+      },
+      {
+        label: "Customers",
+        href: "/admin/customers",
+        requiresCapability: CAPABILITIES.CUSTOMER_ACCESS_MANAGE,
+      },
+      {
+        label: "Audit log",
+        href: "/admin/audit",
+        requiresCapability: CAPABILITIES.CUSTOMER_ACCESS_MANAGE,
+      },
     ],
   },
 ];
