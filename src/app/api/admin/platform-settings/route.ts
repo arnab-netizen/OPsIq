@@ -48,7 +48,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     try {
-      const result = await updatePlatformSettings({ actorId: ctx.verifiedActorId, ...body });
+      const result = await updatePlatformSettings({ ...body, actorId: ctx.verifiedActorId });
       await recordIdempotencyResponse(idempotencyKey, 200, result as unknown as Record<string, unknown>);
       return canonicalJson(result, { status: 200 });
     } catch (error) {
