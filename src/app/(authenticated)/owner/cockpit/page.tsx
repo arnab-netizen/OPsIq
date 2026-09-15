@@ -91,6 +91,23 @@ async function apiPost(path: string, body: unknown) {
  */
 const GENERIC_ACTION_DEFAULT = "Couldn't process this action. Please try again.";
 
+// Verified against the ProcessExecutionTask.status literals produced by
+// applyProcessExecutionAction (src/services/owner-mode/process-execution-bridge.service.ts).
+// Lowercase phrases for embedding in "task is now {phrase}." -- `.toLowerCase()` alone does not
+// humanize an underscored value like "OUTCOME_RECORDED" into "outcome recorded".
+const PROCESS_TASK_STATUS_PHRASE: Record<string, string> = {
+  PROPOSED: "proposed",
+  ACKNOWLEDGED: "acknowledged",
+  IN_PROGRESS: "in progress",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+  BLOCKED: "blocked",
+  NEEDS_DATA: "needs data",
+  OUTCOME_RECORDED: "outcome recorded",
+  OUTCOME_VERIFIED: "outcome verified",
+  COMPLETED: "completed",
+};
+
 function describeActionFailure(raw: { error?: unknown } | undefined, fallback: string): string {
   const serverText =
     typeof raw?.error === "string" ? raw.error
@@ -202,7 +219,8 @@ export default function OwnerCockpitPage() {
       if (!ok) {
         setMessage(describeActionFailure(data, "We couldn't complete this action. Nothing was changed."));
       } else {
-        setMessage(`Action applied — task is now ${String(data.status ?? "updated").toLowerCase()}.`);
+        const rawStatus = String(data.status ?? "updated");
+        setMessage(`Action applied — task is now ${PROCESS_TASK_STATUS_PHRASE[rawStatus] ?? rawStatus.toLowerCase()}.`);
         await load(activeBusinessId);
       }
     } catch (e) {

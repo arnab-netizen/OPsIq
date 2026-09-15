@@ -54,6 +54,23 @@ async function apiPost(path: string, body: Record<string, unknown>): Promise<{ r
   }
 }
 
+// Verified against the ProcessExecutionTask.status literals produced by
+// applyProcessExecutionAction (src/services/owner-mode/process-execution-bridge.service.ts).
+// Lowercase phrases for embedding in "task is now {phrase}." -- `.toLowerCase()` alone does not
+// humanize an underscored value like "OUTCOME_RECORDED" into "outcome recorded".
+const PROCESS_TASK_STATUS_PHRASE: Record<string, string> = {
+  PROPOSED: "proposed",
+  ACKNOWLEDGED: "acknowledged",
+  IN_PROGRESS: "in progress",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+  BLOCKED: "blocked",
+  NEEDS_DATA: "needs data",
+  OUTCOME_RECORDED: "outcome recorded",
+  OUTCOME_VERIFIED: "outcome verified",
+  COMPLETED: "completed",
+};
+
 function safeError(data: Record<string, unknown>, status: number): string {
   const body = data.error as string | { message?: unknown } | undefined;
   const serverText = typeof body === "string" ? body : body && typeof body === "object" && typeof body.message === "string" ? body.message : "";
@@ -142,7 +159,8 @@ export default function OwnerProcessIntelligencePage() {
       if (!res.ok) {
         setActionMessage(safeError(data, res.status));
       } else {
-        setActionMessage(`Action applied — task is now ${String(data.status ?? "updated").toLowerCase()}.`);
+        const rawStatus = String(data.status ?? "updated");
+        setActionMessage(`Action applied — task is now ${PROCESS_TASK_STATUS_PHRASE[rawStatus] ?? rawStatus.toLowerCase()}.`);
         await load();
       }
     } catch {
