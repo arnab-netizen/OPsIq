@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, EmptyState, TableListSkeleton } from "@/ui/primitives";
+import { Badge, Button, EmptyState, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -196,12 +196,12 @@ export default function OwnerTasksPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-[1.75rem] font-semibold tracking-tight">Actions</h1>
-        <Link href="/owner/tasks/new">
-          <Button size="sm">+ New Task</Button>
-        </Link>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Actions"
+          actions={<Link href="/owner/tasks/new"><Button size="sm">+ New Task</Button></Link>}
+        />
       </div>
 
       {/* My work: governed actions the owner started themselves (e.g. via Start Work on Home) --
@@ -335,6 +335,6 @@ export default function OwnerTasksPage() {
           )}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
