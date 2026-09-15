@@ -26,6 +26,20 @@ const SOURCES = [
   { value: "bank_statement", label: "Bank statement" },
   { value: "lead_import", label: "Lead import" },
 ];
+// Verified against the domain nav array in owner/page.tsx (same domain keys, same labels).
+const DOMAIN_LABEL: Record<string, string> = {
+  finance: "Finance",
+  sales: "Sales",
+  operations: "Operations",
+  sop: "Execution",
+  marketing: "Marketing",
+};
+const SOURCE_LABEL: Record<string, string> = Object.fromEntries(SOURCES.map((s) => [s.value, s.label]));
+// Verified against IntakeNormalizationStatus / engine.ts's two possible values.
+const NORMALIZATION_LABEL: Record<string, string> = {
+  normalized: "Normalized",
+  not_normalized: "Not normalized",
+};
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -197,7 +211,7 @@ export default function OwnerIntakePage() {
             <form onSubmit={upload} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">Upload data</h2>
               <div className="grid grid-cols-2 gap-3">
-                <Select name="targetDomain" label="Target domain" required options={TARGET_DOMAINS.map((d) => ({ value: d, label: d }))} />
+                <Select name="targetDomain" label="Target domain" required options={TARGET_DOMAINS.map((d) => ({ value: d, label: DOMAIN_LABEL[d] ?? d }))} />
                 <Select name="source" label="Source" required options={SOURCES} />
               </div>
               <label className="block text-sm font-medium">CSV content (first row = headers)</label>
@@ -225,8 +239,8 @@ export default function OwnerIntakePage() {
               {intakes.map((it: any) => (
                 <div key={it.id} className="flex justify-between items-center border-b py-2 text-sm">
                   <div>
-                    <span className="font-medium">{it.targetDomain}</span>{" "}
-                    <span className="text-muted-foreground">· {it.source} · {it.rowCount} row(s) · {new Date(it.createdAt).toLocaleDateString()}</span>
+                    <span className="font-medium">{DOMAIN_LABEL[it.targetDomain] ?? it.targetDomain}</span>{" "}
+                    <span className="text-muted-foreground">· {SOURCE_LABEL[it.source] ?? it.source} · {it.rowCount} row(s) · {new Date(it.createdAt).toLocaleDateString()}</span>
                     {it.source && <Badge variant="muted" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
                   </div>
                   <div className="flex items-center gap-2">
@@ -259,7 +273,7 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
         <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted"}>{intake.validationStatus}</Badge>
       </div>
       <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
-        <span>{intake.targetDomain} · {intake.source} · {intake.rowCount} row(s) · normalization {intake.normalizationStatus}</span>
+        <span>{DOMAIN_LABEL[intake.targetDomain] ?? intake.targetDomain} · {SOURCE_LABEL[intake.source] ?? intake.source} · {intake.rowCount} row(s) · normalization {NORMALIZATION_LABEL[intake.normalizationStatus] ?? intake.normalizationStatus}</span>
         {intake.source && (
           <Badge variant="muted">Evidence quality: {sourceQualityTier(intake.source as IntakeSource)}</Badge>
         )}

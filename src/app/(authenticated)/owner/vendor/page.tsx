@@ -240,7 +240,7 @@ export default function VendorPage() {
         statusFilter ? (
           <EmptyState
             title="No vendors match this filter"
-            description={`No vendors have status "${statusFilter}".`}
+            description={`No vendors have status "${APPROVAL_LABELS[statusFilter as ApprovalStatus] ?? statusFilter}".`}
             primaryAction={{ label: "Clear filter", onClick: () => setStatusFilter("") }}
           />
         ) : (

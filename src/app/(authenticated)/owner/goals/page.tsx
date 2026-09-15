@@ -58,6 +58,17 @@ const STATUS_VARIANT: Record<GoalStatus, "default" | "success" | "warning" | "de
   ACHIEVED: "success",
   REVISED: "warning",
 };
+const STATUS_LABEL: Record<GoalStatus, string> = {
+  ACTIVE: "Active",
+  ACHIEVED: "Achieved",
+  REVISED: "Revised",
+};
+// Verified against TrajectoryConfidence in src/services/owner-strategy/goal-trajectory.service.ts.
+const CONFIDENCE_LABEL: Record<string, string> = {
+  HIGH: "High",
+  MEDIUM: "Medium",
+  LOW: "Low",
+};
 
 const TARGET_TYPES: TargetType[] = ["PROFIT", "REVENUE", "NET_WORTH", "MULTIPLE"];
 
@@ -196,7 +207,7 @@ export default function GoalsPage() {
                   </p>
                 )}
               </div>
-              <Badge variant={STATUS_VARIANT[goal.status]}>{goal.status}</Badge>
+              <Badge variant={STATUS_VARIANT[goal.status]}>{STATUS_LABEL[goal.status]}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
               Target date: <span className="font-medium text-foreground">{formatDate(goal.targetDate)}</span>
@@ -228,7 +239,7 @@ export default function GoalsPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Confidence</p>
-                  <p className="text-lg font-semibold capitalize">{traj.confidence}</p>
+                  <p className="text-lg font-semibold">{CONFIDENCE_LABEL[traj.confidence] ?? traj.confidence}</p>
                 </div>
               </div>
               {traj.projectedAchievementDate && (
