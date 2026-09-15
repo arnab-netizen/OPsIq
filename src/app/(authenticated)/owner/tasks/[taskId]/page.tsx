@@ -60,18 +60,22 @@ interface TaskDetail {
   }>;
 }
 
-const STATUS_VARIANT: Record<string, "success" | "default" | "warning" | "destructive"> = {
-  [DelegatedTaskStatus.APPROVED_COMPLETE]: "success",
-  [DelegatedTaskStatus.IN_PROGRESS]: "default",
-  [DelegatedTaskStatus.PROOF_REQUIRED]: "warning",
-  [DelegatedTaskStatus.PROOF_SUBMITTED]: "warning",
-  [DelegatedTaskStatus.BLOCKED]: "destructive",
-  [DelegatedTaskStatus.ESCALATED]: "destructive",
-  [DelegatedTaskStatus.REJECTED_INCOMPLETE]: "destructive",
-  [DelegatedTaskStatus.CANCELLED]: "destructive",
-  [DelegatedTaskStatus.EXPIRED]: "destructive",
-  [DelegatedTaskStatus.DISPUTED]: "warning",
-  [DelegatedTaskStatus.COMPLETED_PENDING_REVIEW]: "warning",
+// Presentation-only: "-accessible" variants keep the exact same status ->
+// color mapping as before, only the badge text color changes to the
+// AA-contrast-checked token for that same tinted fill (see badge.tsx's own
+// PR #385 readable-text fix comment).
+const STATUS_VARIANT: Record<string, "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible"> = {
+  [DelegatedTaskStatus.APPROVED_COMPLETE]: "success-accessible",
+  [DelegatedTaskStatus.IN_PROGRESS]: "default-accessible",
+  [DelegatedTaskStatus.PROOF_REQUIRED]: "warning-accessible",
+  [DelegatedTaskStatus.PROOF_SUBMITTED]: "warning-accessible",
+  [DelegatedTaskStatus.BLOCKED]: "destructive-accessible",
+  [DelegatedTaskStatus.ESCALATED]: "destructive-accessible",
+  [DelegatedTaskStatus.REJECTED_INCOMPLETE]: "destructive-accessible",
+  [DelegatedTaskStatus.CANCELLED]: "destructive-accessible",
+  [DelegatedTaskStatus.EXPIRED]: "destructive-accessible",
+  [DelegatedTaskStatus.DISPUTED]: "warning-accessible",
+  [DelegatedTaskStatus.COMPLETED_PENDING_REVIEW]: "warning-accessible",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -253,7 +257,7 @@ export default function TaskDetailPage() {
           </Link>
           <h1 className="text-2xl font-semibold">{task.title}</h1>
         </div>
-        <Badge variant={STATUS_VARIANT[task.status] ?? "default"}>
+        <Badge variant={STATUS_VARIANT[task.status] ?? "default-accessible"}>
           {STATUS_LABELS[task.status] ?? task.status}
         </Badge>
       </div>
@@ -292,7 +296,7 @@ export default function TaskDetailPage() {
           {task.proof ? (
             <div className="space-y-1">
               <div>
-                Status: <Badge variant={task.proof.status === ProofStatus.ACCEPTED ? "success" : task.proof.duplicateFlagged ? "destructive" : "default"}>
+                Status: <Badge variant={task.proof.status === ProofStatus.ACCEPTED ? "success-accessible" : task.proof.duplicateFlagged ? "destructive-accessible" : "default-accessible"}>
                   {PROOF_STATUS_LABELS[task.proof.status] ?? task.proof.status}
                 </Badge>
                 {task.proof.duplicateFlagged && <span className="ml-2 text-destructive text-xs font-medium">DUPLICATE</span>}

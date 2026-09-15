@@ -2,22 +2,30 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Select, CardDashboardSkeleton, PageHeader } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic trust payloads are untyped; load() fetch-on-mount is intentional */
 
-const LABEL_VARIANT: Record<string, "success" | "warning" | "destructive"> = {
-  high: "success",
-  moderate: "warning",
-  low: "destructive",
+// Presentation-only: "-accessible" variants keep the exact same
+// severity/confidence -> color mapping as before (which state gets which
+// semantic color is unchanged), only the badge text color changes to the
+// AA-contrast-checked token for that same tinted fill (see badge.tsx's own
+// comment on the PR #385 readable-text fix this repo already ships).
+const LABEL_VARIANT: Record<string, "success-accessible" | "warning-accessible" | "destructive-accessible"> = {
+  high: "success-accessible",
+  moderate: "warning-accessible",
+  low: "destructive-accessible",
 };
-const SEVERITY_VARIANT: Record<string, "success" | "default" | "warning" | "destructive"> = {
-  critical: "destructive",
-  high: "destructive",
-  medium: "warning",
-  low: "default",
+const SEVERITY_VARIANT: Record<
+  string,
+  "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible"
+> = {
+  critical: "destructive-accessible",
+  high: "destructive-accessible",
+  medium: "warning-accessible",
+  low: "default-accessible",
 };
 
 async function api(path: string) {
@@ -115,16 +123,12 @@ export default function OwnerTrustPage() {
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Trust &amp; Explainability</h1>
-          <p className="text-muted-foreground text-sm">
-            For every recommendation: what was detected, why it matters, the data and
-            calculation used, confidence, risk if ignored, expected impact, and how to
-            verify it — with a full audit trail. Nothing is invented.
-          </p>
-        </div>
-        <Link href="/owner"><Button>Command Center</Button></Link>
+      <div className="mb-6">
+        <PageHeader
+          title="Trust & Explainability"
+          description="For every recommendation: what was detected, why it matters, the data and calculation used, confidence, risk if ignored, expected impact, and how to verify it — with a full audit trail. Nothing is invented."
+          actions={<Link href="/owner"><Button>Command Center</Button></Link>}
+        />
       </div>
 
       {error && (
@@ -187,19 +191,19 @@ export default function OwnerTrustPage() {
               ) : (
                 (cards ?? []).map((c: any) => (
                   <section key={c.findingCode} className="border rounded-lg p-4 bg-card space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
                         <div className="font-bold">{c.whatWasDetected}</div>
                         <div className="text-xs text-muted-foreground">
                           {c.domain} · {c.findingType} · {c.findingCode}
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2 shrink-0">
-                        <Badge variant={SEVERITY_VARIANT[c.severity] || "default"}>{c.severity}</Badge>
-                        <Badge variant={LABEL_VARIANT[c.confidence?.label] || "default"}>
+                        <Badge variant={SEVERITY_VARIANT[c.severity] || "default-accessible"}>{c.severity}</Badge>
+                        <Badge variant={LABEL_VARIANT[c.confidence?.label] || "default-accessible"}>
                           confidence {c.confidence?.label} ({fmt(c.confidence?.score)})
                         </Badge>
-                        <Badge variant={LABEL_VARIANT[c.expectedImpact?.label] || "default"}>
+                        <Badge variant={LABEL_VARIANT[c.expectedImpact?.label] || "default-accessible"}>
                           impact {c.expectedImpact?.label} ({Math.round(c.expectedImpact?.score ?? 0)})
                         </Badge>
                       </div>
