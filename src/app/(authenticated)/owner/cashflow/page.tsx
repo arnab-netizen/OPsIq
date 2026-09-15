@@ -14,6 +14,16 @@ const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "dest
   high: "warning",
   critical: "destructive",
 };
+const SEVERITY_LABEL: Record<string, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  critical: "Critical",
+};
+const FINDING_TYPE_LABEL: Record<string, string> = {
+  opportunity: "Opportunity",
+  risk: "Risk",
+};
 
 const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   unverified: "muted",
@@ -29,6 +39,32 @@ const STATE_VARIANT: Record<string, "default" | "success" | "warning" | "destruc
   AT_RISK: "warning",
   CRITICAL: "destructive",
   INSOLVENT_RISK: "destructive",
+};
+
+// Same raw-token leak as Money's SURVIVAL_LABEL (which this state's values are identical to) --
+// this page's cashflowState badge and diagnosis-history rows never had a plain-language map.
+const STATE_LABEL: Record<string, string> = {
+  SAFE: "Safe",
+  WATCH: "Watch",
+  AT_RISK: "At risk",
+  CRITICAL: "Critical",
+  INSOLVENT_RISK: "Insolvency risk",
+};
+
+const VERIFY_LABEL: Record<string, string> = {
+  unverified: "Not yet verified",
+  verified_improved: "Verified — improved",
+  verified_not_improved: "Verified — no improvement",
+  inconclusive: "Inconclusive",
+  disputed: "Disputed",
+};
+
+const ACTION_STATUS_LABEL: Record<string, string> = {
+  proposed: "Proposed",
+  assigned: "Assigned",
+  in_progress: "In progress",
+  completed: "Completed",
+  blocked: "Blocked",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -187,9 +223,9 @@ export default function OwnerCashflowPage() {
     setBusy(true);
     setError(null);
     try {
-      const beforeRaw = window.prompt(`BEFORE value for ${action.verificationMetric}:`);
+      const beforeRaw = window.prompt(`BEFORE value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (beforeRaw === null) { setBusy(false); return; }
-      const afterRaw = window.prompt(`AFTER value for ${action.verificationMetric}:`);
+      const afterRaw = window.prompt(`AFTER value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (afterRaw === null) { setBusy(false); return; }
       const dir = window.prompt("Target direction (up / down):", "down");
       if (dir === null) { setBusy(false); return; }
@@ -360,7 +396,7 @@ function CashflowCycleView({
           </div>
         </div>
         <div className="text-right">
-          <Badge variant={STATE_VARIANT[state] || "muted"}>{state}</Badge>
+          <Badge variant={STATE_VARIANT[state] || "muted"}>{STATE_LABEL[state] ?? state}</Badge>
           <div className="text-xs text-muted-foreground mt-1">
             data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
           </div>
@@ -369,7 +405,7 @@ function CashflowCycleView({
 
       {missing.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
-          <strong>Missing critical data:</strong> {missing.join(", ")} — provide these to raise confidence.
+          <strong>Missing critical data:</strong> {missing.map(humanizeMetricKey).join(", ")} — provide these to raise confidence.
         </div>
       )}
 
@@ -393,8 +429,8 @@ function CashflowCycleView({
               <div className="flex justify-between">
                 <span className="font-semibold">{f.title}</span>
                 <span className="flex gap-1">
-                  <Badge variant="muted">{f.findingType}</Badge>
-                  <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
+                  <Badge variant="muted">{FINDING_TYPE_LABEL[f.findingType] ?? f.findingType}</Badge>
+                  <Badge variant={SEVERITY_VARIANT[f.severity]}>{SEVERITY_LABEL[f.severity] ?? f.severity}</Badge>
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
@@ -426,7 +462,7 @@ function CashflowCycleView({
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
                   </div>
-                  <Badge variant="muted">{a.status}</Badge>
+                  <Badge variant="muted">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
@@ -442,7 +478,7 @@ function CashflowCycleView({
                 {latestVerification && (
                   <div className="mt-2 text-xs">
                     <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted"}>
-                      {latestVerification.status}
+                      {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">
                       before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
@@ -462,7 +498,7 @@ function CashflowCycleView({
             <div key={c.id} className="flex justify-between border-b py-1">
               <span>Cycle #{c.sequenceNumber} — {new Date(c.createdAt).toLocaleDateString()}</span>
               <span className="text-muted-foreground">
-                {c.cashflowState} · {c.findingCount} findings · {c.actionCount} actions
+                {STATE_LABEL[c.cashflowState] ?? c.cashflowState} · {c.findingCount} findings · {c.actionCount} actions
               </span>
             </div>
           ))}
