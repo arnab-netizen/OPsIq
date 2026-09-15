@@ -85,6 +85,82 @@ const DOMAIN_LINK: Record<string, string> = {
   strategy: "/owner/strategy",
   recovery: "/owner/recovery",
 };
+// Canonical domain display names -- matches the nav array's own {label, domain} pairs
+// further down this file (e.g. domain "sop" navigates to "Execution", not "Sop").
+const DOMAIN_LABEL: Record<string, string> = {
+  finance: "Finance",
+  cashflow: "Cashflow",
+  sales: "Sales",
+  operations: "Operations",
+  sop: "Execution",
+  marketing: "Marketing",
+  strategy: "Strategy",
+  recovery: "Recovery",
+};
+// Verified against OwnerApprovalOutcome in
+// src/services/owner-mode/owner-approval-resolution.service.ts.
+const APPROVAL_OUTCOME_LABEL: Record<string, string> = {
+  auto_handled: "Auto-handled",
+  forbidden: "Forbidden",
+  needs_owner_approval: "Needs owner approval",
+};
+// Verified against Severity (input-guidance.ts's SEVERITY_RANK: critical/high/medium/low).
+const INPUT_SEVERITY_LABEL: Record<string, string> = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+// Verified against EffortLevel in src/domain/owner-mode/input-catalog.ts.
+const EFFORT_LABEL: Record<string, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+// Verified against the action-plan ProofType in src/domain/owner-mode/action-assignment.ts
+// (photo/document/receipt/metric_screenshot/signed_record/system_log) -- a distinct, smaller
+// enum from execution/proof.ts's ProofType used on the task-detail page.
+const ACTION_PROOF_TYPE_LABEL: Record<string, string> = {
+  photo: "Photo",
+  document: "Document",
+  receipt: "Receipt",
+  metric_screenshot: "Metric screenshot",
+  signed_record: "Signed record",
+  system_log: "System log",
+};
+// Verified against the missing-finance-input priority values used alongside
+// MISSING_INPUT_REASON above (CRITICAL/IMPORTANT).
+const MISSING_INPUT_PRIORITY_LABEL: Record<string, string> = {
+  CRITICAL: "Critical",
+  IMPORTANT: "Important",
+};
+// Verified against Confidence in src/domain/owner-mode/supervisor-summary.ts
+// (none/low/medium/high, also used for wbp.data.overallConfidence).
+const CONFIDENCE_LABEL: Record<string, string> = {
+  none: "None",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+// Verified against DelegatedTaskStatus in src/domain/execution/delegated-task.ts
+// (same set used in owner/tasks/[taskId]/page.tsx's STATUS_LABELS).
+const TASK_STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Draft",
+  ASSIGNED: "Assigned",
+  ACKNOWLEDGED: "Acknowledged",
+  IN_PROGRESS: "In progress",
+  BLOCKED: "Blocked",
+  NEEDS_OWNER_CLARIFICATION: "Needs clarification",
+  ESCALATED: "Escalated",
+  PROOF_REQUIRED: "Proof required",
+  PROOF_SUBMITTED: "Proof submitted",
+  COMPLETED_PENDING_REVIEW: "Pending review",
+  APPROVED_COMPLETE: "Approved",
+  REJECTED_INCOMPLETE: "Rejected",
+  CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
+  DISPUTED: "Disputed",
+};
 
 /**
  * EH-03/EH-04 — minimal owner action controls. The owner can ACT (not just read):
@@ -129,7 +205,7 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
     setTaskBusy(true);
     setTaskResult(null);
     const r = await apiPost("/api/owner/tasks/complete", { taskId: taskId.trim(), ownerOverride });
-    if (r.ok) setTaskResult({ ok: true, text: `Completed — status ${r.data.status}.` });
+    if (r.ok) setTaskResult({ ok: true, text: `Completed — status ${TASK_STATUS_LABEL[r.data.status] ?? r.data.status}.` });
     else if (r.status === 409 && r.data?.blocked) setTaskResult({ ok: false, text: `Blocked: ${r.data.reason}.` });
     else setTaskResult({ ok: false, text: r.data?.error?.message || r.data?.error || `Failed (${r.status}).` });
     setTaskBusy(false);
@@ -142,7 +218,7 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
     const r = await apiPost("/api/owner/approvals/resolve", { scope: scope.trim(), actionType: actionType.trim(), riskClass, content: { note: content.trim() } });
     if (r.ok) {
       const handled = r.data.handledByOpsIQ ? "OpsIQ handled this" : "owner decision required";
-      setApprResult({ ok: r.data.handledByOpsIQ, text: `${r.data.outcome} (${handled}).` });
+      setApprResult({ ok: r.data.handledByOpsIQ, text: `${APPROVAL_OUTCOME_LABEL[r.data.outcome] ?? r.data.outcome} (${handled}).` });
     } else setApprResult({ ok: false, text: r.data?.error?.message || r.data?.error || `Failed (${r.status}).` });
     setApprBusy(false);
   };
@@ -180,7 +256,7 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
             label="Risk class"
             value={riskClass}
             onChange={(e: any) => setRiskClass(e.target.value)}
-            options={["low", "medium", "high", "critical"].map((r) => ({ value: r, label: r }))}
+            options={["low", "medium", "high", "critical"].map((r) => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))}
           />
           <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Decision summary" value={content} onChange={(e) => setContent(e.target.value)} />
           <Button className="min-h-[44px]" disabled={apprBusy || !scope.trim() || !actionType.trim() || !content.trim()} onClick={resolveApproval}>
@@ -200,7 +276,7 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
             label="Payment risk"
             value={paymentRisk}
             onChange={(e: any) => setPaymentRisk(e.target.value)}
-            options={["low", "medium", "high"].map((r) => ({ value: r, label: r }))}
+            options={["low", "medium", "high"].map((r) => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))}
           />
           <Button className="min-h-[44px]" disabled={oppBusy || !businessId} onClick={decideOpportunity}>
             {oppBusy ? "Deciding…" : "Decide"}
@@ -405,7 +481,7 @@ export default function OwnerCommandCenterPage() {
                     </Badge>
                   </span>
                   <span data-testid="wbp-confidence">
-                    <Badge variant="muted">Confidence: {wbp.data.overallConfidence}</Badge>
+                    <Badge variant="muted">Confidence: {CONFIDENCE_LABEL[wbp.data.overallConfidence] ?? wbp.data.overallConfidence}</Badge>
                   </span>
                   <Badge variant="muted">Plan score {Math.round(wbp.collectiveScore)}/100</Badge>
                   <Badge variant="muted">Stage: {String(wbp.stage).replace(/_/g, " ")}</Badge>
@@ -416,7 +492,7 @@ export default function OwnerCommandCenterPage() {
                 <div className="text-xs uppercase text-muted-foreground">Top priority</div>
                 <div className="text-lg font-semibold">{wbp.topPriority.label}</div>
                 <div className="text-xs text-muted-foreground">
-                  Dominant constraint: <span data-testid="wbp-dominant-constraint">{wbp.dominantConstraint}</span>
+                  Dominant constraint: <span data-testid="wbp-dominant-constraint">{String(wbp.dominantConstraint).replace(/_/g, " ")}</span>
                 </div>
               </div>
 
@@ -455,10 +531,10 @@ export default function OwnerCommandCenterPage() {
               <div className="grid gap-3 sm:grid-cols-2 mb-3">
                 <div className="rounded-md border p-3 text-sm" data-testid="wbp-growth-gate">
                   <strong>Growth / scale gate:</strong> {wbp.growth.scaleAllowed ? "scale allowed (capped pilot)" : "scale gated"}
-                  {wbp.growth.blockedBy.length > 0 && <span className="text-muted-foreground"> — blocked by: {wbp.growth.blockedBy.join(", ")}</span>}
+                  {wbp.growth.blockedBy.length > 0 && <span className="text-muted-foreground"> — blocked by: {wbp.growth.blockedBy.map((c: string) => c.replace(/_/g, " ")).join(", ")}</span>}
                 </div>
                 <div className="rounded-md border p-3 text-sm" data-testid="wbp-arbitration">
-                  <strong>Cross-domain arbitration:</strong> {wbp.arbitration.dominantConstraint} wins; {wbp.arbitration.rejectedCount} conflicting move(s) rejected.
+                  <strong>Cross-domain arbitration:</strong> {String(wbp.arbitration.dominantConstraint).replace(/_/g, " ")} wins; {wbp.arbitration.rejectedCount} conflicting move(s) rejected.
                   {wbp.arbitration.ownerApprovalNeeded && " Owner approval needed."}
                 </div>
               </div>
@@ -466,7 +542,7 @@ export default function OwnerCommandCenterPage() {
               <div className="rounded-md border p-3 text-sm mb-3" data-testid="wbp-domains">
                 <strong>Critical / red domains:</strong>{" "}
                 {wbp.redDomains.length > 0
-                  ? <span className="text-destructive">{wbp.redDomains.join(", ")}</span>
+                  ? <span className="text-destructive">{wbp.redDomains.map((d: string) => DOMAIN_LABEL[d] ?? d).join(", ")}</span>
                   : <span className="text-[var(--success-text)]">none red</span>}
                 <span className="text-muted-foreground"> · {wbp.domainHealth.length} domains assessed</span>
               </div>
@@ -528,7 +604,7 @@ export default function OwnerCommandCenterPage() {
             <section className="border rounded-lg p-4 bg-card mb-6" data-testid="owner-input-guidance">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div className="text-xs uppercase text-muted-foreground">Improve accuracy</div>
-                <span data-testid="guidance-confidence"><Badge variant="muted">Confidence: {guidance.overallConfidence}</Badge></span>
+                <span data-testid="guidance-confidence"><Badge variant="muted">Confidence: {CONFIDENCE_LABEL[guidance.overallConfidence] ?? guidance.overallConfidence}</Badge></span>
               </div>
               <div className="text-sm mb-2" data-testid="guidance-next-input">
                 <span className="font-medium">Next best input:</span>{" "}
@@ -552,10 +628,10 @@ export default function OwnerCommandCenterPage() {
                     <li key={m.category} className="rounded-md border p-2 text-sm">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{m.label}</span>
-                        <Badge variant={m.severity === "critical" ? "destructive" : m.severity === "high" ? "warning" : "muted"}>{m.severity}</Badge>
+                        <Badge variant={m.severity === "critical" ? "destructive" : m.severity === "high" ? "warning" : "muted"}>{INPUT_SEVERITY_LABEL[m.severity] ?? m.severity}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">{m.why}</p>
-                      <p className="text-xs text-muted-foreground">Affects: {m.decisionAffected} · effort: {m.ownerEffort}</p>
+                      <p className="text-xs text-muted-foreground">Affects: {m.decisionAffected} · effort: {EFFORT_LABEL[m.ownerEffort] ?? m.ownerEffort}</p>
                     </li>
                   ))}
                 </ul>
@@ -583,7 +659,7 @@ export default function OwnerCommandCenterPage() {
                   <strong>OpsIQ prepared:</strong> {actionPlan.assignment.opsiqPreparedWork}
                 </div>
                 <div className="rounded-md border p-2 text-sm" data-testid="action-proof">
-                  <strong>Proof required:</strong> {String(actionPlan.assignment.proofType).replace(/_/g, " ")} — {actionPlan.assignment.acceptanceCriteria}
+                  <strong>Proof required:</strong> {ACTION_PROOF_TYPE_LABEL[actionPlan.assignment.proofType] ?? actionPlan.assignment.proofType} — {actionPlan.assignment.acceptanceCriteria}
                 </div>
                 <div className="rounded-md border p-2 text-sm" data-testid="action-escalation">
                   <strong>Escalation:</strong> {actionPlan.assignment.escalationTrigger}
@@ -627,12 +703,12 @@ export default function OwnerCommandCenterPage() {
                   return driver ? (
                     <div className="text-xs text-muted-foreground mt-2">
                       <span className="font-medium">Primary driver:</span>{" "}
-                      <span className="capitalize">{driver.domain}</span> — {driver.title}
+                      <span>{DOMAIN_LABEL[driver.domain] ?? driver.domain}</span> — {driver.title}
                     </div>
                   ) : null;
                 })()}
                 <div className="text-xs text-muted-foreground mt-1">
-                  Domains wired: {(data.domainsWired ?? []).join(", ") || "none"}
+                  Domains wired: {(data.domainsWired ?? []).map((d: string) => DOMAIN_LABEL[d] ?? d).join(", ") || "none"}
                 </div>
               </section>
 
@@ -713,9 +789,9 @@ export default function OwnerCommandCenterPage() {
                   <div className="space-y-1 mt-1">
                     {missingWithPriority.map((m: any) => (
                       <div key={m.field} className="flex items-start gap-2">
-                        <Badge variant={m.priority === "CRITICAL" ? "destructive" : "warning"} className="mt-0.5 shrink-0">{m.priority}</Badge>
+                        <Badge variant={m.priority === "CRITICAL" ? "destructive" : "warning"} className="mt-0.5 shrink-0">{MISSING_INPUT_PRIORITY_LABEL[m.priority] ?? m.priority}</Badge>
                         <span>
-                          <span className="font-medium">{m.field}</span>
+                          <span className="font-medium">{humanizeMetricKey(m.field)}</span>
                           {MISSING_INPUT_REASON[m.field] && (
                             <span className="text-muted-foreground"> — {MISSING_INPUT_REASON[m.field]}</span>
                           )}
@@ -750,7 +826,7 @@ export default function OwnerCommandCenterPage() {
                       </p>
                     )}
                     <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2 items-center">
-                      <Badge variant="muted">{next.domain}</Badge>
+                      <Badge variant="muted">{DOMAIN_LABEL[next.domain] ?? next.domain}</Badge>
                       <span>priority {Math.round(next.priorityScore)}</span>
                       <span>· impact {Math.round(next.expectedImpactScore)}</span>
                       <span>· effort {Math.round(next.effortScore)}</span>
@@ -758,7 +834,7 @@ export default function OwnerCommandCenterPage() {
                     </div>
                     {DOMAIN_LINK[next.domain] && (
                       <Link href={DOMAIN_LINK[next.domain]} className="inline-block mt-3">
-                        <Button className="min-h-[44px]">Open {next.domain}</Button>
+                        <Button className="min-h-[44px]">Open {DOMAIN_LABEL[next.domain] ?? next.domain}</Button>
                       </Link>
                     )}
                   </>
@@ -775,7 +851,7 @@ export default function OwnerCommandCenterPage() {
                     const actionCount: number = (d.topActionCodes ?? []).length;
                     return (
                       <div key={d.domain} className="flex justify-between items-center border-b py-1 text-sm">
-                        <span className="capitalize font-medium">{d.domain}</span>
+                        <span className="font-medium">{DOMAIN_LABEL[d.domain] ?? d.domain}</span>
                         <span className="flex flex-wrap gap-2 items-center text-muted-foreground">
                           <Badge variant={HEALTH_VARIANT(d.healthScore)}>health {Math.round(d.healthScore)}</Badge>
                           <Badge variant={RISK_VARIANT(d.riskScore)}>risk {Math.round(d.riskScore)}</Badge>
