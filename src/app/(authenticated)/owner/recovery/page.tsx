@@ -49,6 +49,14 @@ const HEALTH_STATUS_LABEL: Record<string, string> = {
   at_risk: "At risk",
   healthy: "Healthy",
 };
+// Verified against ActionPriority in src/domain/founder-recovery/types.ts
+// (produced by priorityFor() in recovery-actions.ts).
+const PRIORITY_LABEL: Record<string, string> = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -399,7 +407,7 @@ function RecoveryCycleView({
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     <div className="text-xs text-muted-foreground">
-                      {a.assignedToRole} · due {a.dueAt ? new Date(a.dueAt).toLocaleDateString() : "—"} · {a.priority}
+                      {a.assignedToRole} · due {a.dueAt ? new Date(a.dueAt).toLocaleDateString() : "—"} · {PRIORITY_LABEL[a.priority] ?? a.priority}
                     </div>
                   </div>
                   <Badge variant="muted">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
