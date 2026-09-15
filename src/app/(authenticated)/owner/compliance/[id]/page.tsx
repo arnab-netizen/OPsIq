@@ -92,6 +92,15 @@ const LINK_TYPE_LABEL: Record<string, string> = {
   EVIDENCE: "Evidence",
 };
 
+// Matches PROVENANCE_LABELS in the sibling list page (owner/compliance/page.tsx) exactly --
+// this detail page previously used a weaker `.replace(/_/g, " ")` that produced lowercase
+// "owner input" instead of "Owner input".
+const PROVENANCE_LABELS: Record<string, string> = {
+  owner_input: "Owner input",
+  professional_input: "Professional input",
+  authoritative_document: "Authoritative document",
+};
+
 async function apiFetch(path: string, options?: RequestInit) {
   const res = await fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -229,7 +238,7 @@ export default function ComplianceDetailPage() {
           {item.obligationOwner && <Stat label="Obligation owner" value={item.obligationOwner} />}
           {item.evidenceValidityDays != null && <Stat label="Evidence validity" value={`${item.evidenceValidityDays} days`} />}
           {item.recurrenceMonths != null && <Stat label="Recurrence" value={`${item.recurrenceMonths} months`} />}
-          {item.provenanceSource && <Stat label="Provenance" value={item.provenanceSource.replace(/_/g, " ")} />}
+          {item.provenanceSource && <Stat label="Provenance" value={PROVENANCE_LABELS[item.provenanceSource] ?? item.provenanceSource} />}
         </div>
         {item.legalBasis && (
           <div>
