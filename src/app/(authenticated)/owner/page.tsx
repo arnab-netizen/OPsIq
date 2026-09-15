@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Select, CardDashboardSkeleton, Disclosure } from "@/ui/primitives";
 import { PriorityCommandStrip } from "@/components/owner/PriorityCommandStrip";
 import { SupervisorSummary } from "@/components/owner/SupervisorSummary";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
@@ -479,13 +479,12 @@ export default function OwnerCommandCenterPage() {
                 )}
               </div>
 
-              <details data-testid="wbp-plan-detail">
-                <summary className="text-xs uppercase text-muted-foreground cursor-pointer">Whole-business plan summary</summary>
-                <p className="text-sm mt-1">{wbp.plan.businessHealthSummary}</p>
-                <p className="text-xs text-muted-foreground mt-1"><strong>7-day:</strong> {wbp.plan.plan7Day}</p>
-                <p className="text-xs text-muted-foreground"><strong>30-day:</strong> {wbp.plan.plan30Day}</p>
-                <p className="text-xs text-muted-foreground"><strong>90-day:</strong> {wbp.plan.plan90Day}</p>
-              </details>
+              <Disclosure summary="Whole-business plan summary" data-testid="wbp-plan-detail">
+                <p className="text-sm mt-1 text-foreground">{wbp.plan.businessHealthSummary}</p>
+                <p className="text-xs mt-1"><strong>7-day:</strong> {wbp.plan.plan7Day}</p>
+                <p className="text-xs"><strong>30-day:</strong> {wbp.plan.plan30Day}</p>
+                <p className="text-xs"><strong>90-day:</strong> {wbp.plan.plan90Day}</p>
+              </Disclosure>
             </section>
           )}
 
@@ -512,17 +511,16 @@ export default function OwnerCommandCenterPage() {
                   <ul className="list-disc ml-5">{readiness.blockers.slice(0, 4).map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
                 </div>
               )}
-              <details className="mt-2" data-testid="readiness-dimensions">
-                <summary className="text-xs uppercase text-muted-foreground cursor-pointer">Readiness by dimension</summary>
-                <div className="grid gap-1 sm:grid-cols-2 mt-2">
+              <Disclosure summary="Readiness by dimension" className="mt-2" data-testid="readiness-dimensions">
+                <div className="grid gap-1 sm:grid-cols-2">
                   {readiness.dimensions.map((d: any) => (
-                    <div key={d.key} className="flex items-center justify-between text-sm border rounded px-2 py-1">
+                    <div key={d.key} className="flex items-center justify-between text-sm border rounded px-2 py-1 bg-background text-foreground">
                       <span className="capitalize">{String(d.label)}</span>
                       <Badge variant={HEALTH_VARIANT(d.score)}>{Math.round(d.score)}</Badge>
                     </div>
                   ))}
                 </div>
-              </details>
+              </Disclosure>
             </section>
           )}
 
