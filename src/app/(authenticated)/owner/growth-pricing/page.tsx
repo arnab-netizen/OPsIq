@@ -11,6 +11,18 @@ const APPROVAL_VARIANT: Record<string, "default" | "success" | "warning" | "dest
   approved: "success",
   archived: "muted",
 };
+const APPROVAL_LABEL: Record<string, string> = {
+  draft: "Draft",
+  pending_approval: "Pending approval",
+  approved: "Approved",
+  archived: "Archived",
+};
+// Verified against the PriceTier status union (src/domain/growth/growth-engines.ts).
+const TIER_STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Draft",
+  ACTIVE: "Active",
+  ARCHIVED: "Archived",
+};
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -268,8 +280,8 @@ export default function OwnerGrowthPricingPage() {
                     )}
                   </div>
                   <div className="text-right space-y-1">
-                    <Badge variant={APPROVAL_VARIANT[t.approvalStatus] || "muted"}>{t.approvalStatus}</Badge>
-                    <div className="text-xs text-muted-foreground">{t.status}</div>
+                    <Badge variant={APPROVAL_VARIANT[t.approvalStatus] || "muted"}>{APPROVAL_LABEL[t.approvalStatus] ?? t.approvalStatus}</Badge>
+                    <div className="text-xs text-muted-foreground">{TIER_STATUS_LABEL[t.status] ?? t.status}</div>
                   </div>
                 </div>
 

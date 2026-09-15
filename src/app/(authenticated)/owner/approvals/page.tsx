@@ -13,12 +13,22 @@ const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "destru
   DEFERRED: "warning",
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  DEFERRED: "Deferred",
+};
+
 const EVIDENCE_TYPES = [
   { value: "document", label: "Document" },
   { value: "photo", label: "Photo" },
   { value: "data", label: "Data" },
   { value: "testimony", label: "Testimony" },
 ];
+const EVIDENCE_TYPE_LABEL: Record<string, string> = Object.fromEntries(
+  EVIDENCE_TYPES.map((t) => [t.value, t.label])
+);
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -115,7 +125,7 @@ export default function OwnerApprovalsPage() {
     setBusy(true);
     setError(null);
     try {
-      const rationale = window.prompt(`Rationale for ${decision} (optional):`) || undefined;
+      const rationale = window.prompt(`Rationale for ${STATUS_LABEL[decision] ?? decision} (optional):`) || undefined;
       await api("/api/owner/approval", {
         method: "PATCH",
         body: JSON.stringify({ action: "decide", approvalId: approval.id, decision, rationale }),
@@ -254,7 +264,7 @@ export default function OwnerApprovalsPage() {
                       {a.rationale && <div className="text-sm mt-1">{a.rationale}</div>}
                     </div>
                     <div className="text-right">
-                      <Badge variant={STATUS_VARIANT[a.status] || "muted"}>{a.status}</Badge>
+                      <Badge variant={STATUS_VARIANT[a.status] || "muted"}>{STATUS_LABEL[a.status] ?? a.status}</Badge>
                       {a.rescopeTriggered && (
                         <div className="text-xs text-destructive mt-1">Rescope triggered</div>
                       )}
@@ -266,7 +276,7 @@ export default function OwnerApprovalsPage() {
                     <div className="space-y-2">
                       {a.evidences.map((ev: any) => (
                         <div key={ev.id} className="border-l-4 pl-3 py-1" style={{ borderColor: "#94a3b8" }}>
-                          <div className="text-xs font-medium">{ev.evidenceType}</div>
+                          <div className="text-xs font-medium">{EVIDENCE_TYPE_LABEL[ev.evidenceType] ?? ev.evidenceType}</div>
                           <div className="text-xs text-muted-foreground">{ev.description}</div>
                           {ev.sourceUrl && (
                             <a href={ev.sourceUrl} className="text-xs underline" target="_blank" rel="noreferrer">
