@@ -8,6 +8,7 @@
  */
 
 import Link from "next/link";
+import { PageHeader, PageContainer } from "@/ui/primitives";
 
 interface HelpTopic {
   question: string;
@@ -128,11 +129,13 @@ const SECTIONS: HelpSection[] = [
 
 export default function OwnerHelpPage() {
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8" data-testid="owner-help-page">
-      <h1 className="font-display text-[1.75rem] font-semibold tracking-tight mb-2">Help</h1>
-      <p className="text-sm text-muted-foreground mb-8">
-        Plain-language answers to common questions, and where to go for each part of OpsIQ.
-      </p>
+    <PageContainer narrow data-testid="owner-help-page">
+      <div className="mb-8">
+        <PageHeader
+          title="Help"
+          description="Plain-language answers to common questions, and where to go for each part of OpsIQ."
+        />
+      </div>
 
       <div className="flex flex-col gap-8">
         {SECTIONS.map((section) => (
@@ -154,6 +157,6 @@ export default function OwnerHelpPage() {
           </section>
         ))}
       </div>
-    </div>
+    </PageContainer>
   );
 }

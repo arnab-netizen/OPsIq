@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { humanizeMetricKey } from "@/lib/metric-label";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic portfolio payload is untyped; load() fetch-on-mount is intentional */
@@ -58,15 +58,13 @@ export default function OwnerPortfolioPage() {
   const ranking = view?.ranking ?? {};
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Portfolio Command Center</h1>
-          <p className="text-muted-foreground text-sm">
-            Every business in one view — which is healthiest, which needs attention today, where to spend time, and where to invest.
-          </p>
-        </div>
-        <Link href="/owner"><Button>Command Center</Button></Link>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Portfolio Command Center"
+          description="Every business in one view — which is healthiest, which needs attention today, where to spend time, and where to invest."
+          actions={<Link href="/owner"><Button>Command Center</Button></Link>}
+        />
       </div>
 
       {error && (
@@ -181,6 +179,6 @@ export default function OwnerPortfolioPage() {
           </section>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
