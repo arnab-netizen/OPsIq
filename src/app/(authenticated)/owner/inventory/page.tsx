@@ -5,6 +5,8 @@ import { Button } from "@/ui/primitives/button";
 import { EmptyState } from "@/ui/primitives/states";
 import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
+import { PageHeader } from "@/ui/primitives/page-header";
+import { PageContainer } from "@/ui/primitives/page-container";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -124,17 +126,21 @@ export default function InventoryPage() {
   const modalTitle = editItem ? "Edit Stock Item" : "Add Stock Item";
 
   return (
-    <div className="p-6" data-testid="inventory-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Inventory</h1>
-        <div className="flex gap-3 items-center">
-          <BusinessContextSelector
-            businesses={businesses}
-            selectedId={businessId}
-            onChange={(id) => setActiveBusinessId(id)}
-          />
-          <Button onClick={openCreate}>+ Add Item</Button>
-        </div>
+    <PageContainer data-testid="inventory-page">
+      <div className="mb-6">
+        <PageHeader
+          title="Inventory"
+          actions={
+            <div className="flex gap-3 items-center">
+              <BusinessContextSelector
+                businesses={businesses}
+                selectedId={businessId}
+                onChange={(id) => setActiveBusinessId(id)}
+              />
+              <Button onClick={openCreate}>+ Add Item</Button>
+            </div>
+          }
+        />
       </div>
 
       {error && (
@@ -211,6 +217,6 @@ export default function InventoryPage() {
           </Button>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }
