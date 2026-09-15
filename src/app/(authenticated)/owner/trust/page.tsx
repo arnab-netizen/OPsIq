@@ -174,7 +174,7 @@ export default function OwnerTrustPage() {
             <div className="p-8 text-muted-foreground">Loading explanations…</div>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-xs text-muted-foreground">
                   {cards?.length ?? 0} explanation(s) ·{" "}
                   {activeCycle ? `generated ${new Date(activeCycle.generatedAt).toLocaleString()}` : ""}
@@ -198,7 +198,7 @@ export default function OwnerTrustPage() {
                           {c.domain} · {c.findingType} · {c.findingCode}
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-2 shrink-0">
+                      <div className="flex flex-wrap gap-2">
                         <Badge variant={SEVERITY_VARIANT[c.severity] || "default-accessible"}>{c.severity}</Badge>
                         <Badge variant={LABEL_VARIANT[c.confidence?.label] || "default-accessible"}>
                           confidence {c.confidence?.label} ({fmt(c.confidence?.score)})
