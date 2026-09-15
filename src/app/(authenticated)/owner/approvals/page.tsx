@@ -6,11 +6,11 @@ import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primit
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  PENDING: "muted",
-  APPROVED: "success",
-  REJECTED: "destructive",
-  DEFERRED: "warning",
+const STATUS_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  PENDING: "muted-accessible",
+  APPROVED: "success-accessible",
+  REJECTED: "destructive-accessible",
+  DEFERRED: "warning-accessible",
 };
 
 const EVIDENCE_TYPES = [
@@ -254,7 +254,7 @@ export default function OwnerApprovalsPage() {
                       {a.rationale && <div className="text-sm mt-1">{a.rationale}</div>}
                     </div>
                     <div className="text-right">
-                      <Badge variant={STATUS_VARIANT[a.status] || "muted"}>{a.status}</Badge>
+                      <Badge variant={STATUS_VARIANT[a.status] || "muted-accessible"}>{a.status}</Badge>
                       {a.rescopeTriggered && (
                         <div className="text-xs text-destructive mt-1">Rescope triggered</div>
                       )}

@@ -20,30 +20,30 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
  * Module honesty: DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL (not OWNER_MODE_READY).
  */
 
-const MODE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  EMERGENCY: "destructive",
-  STABILIZE: "warning",
-  HYBRID: "warning",
-  PROFIT_INCREASE: "default",
-  GROW: "success",
-  SCALE: "success",
-  DATA_INSUFFICIENT: "muted",
+const MODE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  EMERGENCY: "destructive-accessible",
+  STABILIZE: "warning-accessible",
+  HYBRID: "warning-accessible",
+  PROFIT_INCREASE: "default-accessible",
+  GROW: "success-accessible",
+  SCALE: "success-accessible",
+  DATA_INSUFFICIENT: "muted-accessible",
 };
 
-const CONFIDENCE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  UNVERIFIED: "destructive",
-  PARTIAL: "warning",
-  OPERATIONAL: "default",
-  VERIFIED: "success",
-  AUDITED: "success",
+const CONFIDENCE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  UNVERIFIED: "destructive-accessible",
+  PARTIAL: "warning-accessible",
+  OPERATIONAL: "default-accessible",
+  VERIFIED: "success-accessible",
+  AUDITED: "success-accessible",
 };
 
-const SIGNAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  INFO: "muted",
-  LOW: "muted",
-  MEDIUM: "warning",
-  HIGH: "destructive",
-  CRITICAL: "destructive",
+const SIGNAL_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  INFO: "muted-accessible",
+  LOW: "muted-accessible",
+  MEDIUM: "warning-accessible",
+  HIGH: "destructive-accessible",
+  CRITICAL: "destructive-accessible",
 };
 
 const PARTIAL_LIMITATIONS = [
@@ -53,13 +53,13 @@ const PARTIAL_LIMITATIONS = [
   "Runtime least-privilege RBAC denial is enforced by the server wrapper but not yet proven by an automated runtime test.",
 ];
 
-const TASK_STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  proposed: "muted",
-  assigned: "default",
-  in_progress: "warning",
-  blocked: "destructive",
-  completed: "success",
-  cancelled: "muted",
+const TASK_STATUS_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  proposed: "muted-accessible",
+  assigned: "default-accessible",
+  in_progress: "warning-accessible",
+  blocked: "destructive-accessible",
+  completed: "success-accessible",
+  cancelled: "muted-accessible",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -274,9 +274,9 @@ export default function OwnerBudgetPlanPage() {
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Current budget mode</div>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant={MODE_VARIANT[mode] ?? "muted"}>{mode ?? "—"}</Badge>
-                    <Badge variant={CONFIDENCE_VARIANT[confidence] ?? "muted"}>confidence: {confidence ?? "—"}</Badge>
-                    {plan?.highRiskBlocked && <Badge variant="destructive">high-risk recommendations blocked</Badge>}
+                    <Badge variant={MODE_VARIANT[mode] ?? "muted-accessible"}>{mode ?? "—"}</Badge>
+                    <Badge variant={CONFIDENCE_VARIANT[confidence] ?? "muted-accessible"}>confidence: {confidence ?? "—"}</Badge>
+                    {plan?.highRiskBlocked && <Badge variant="destructive-accessible">high-risk recommendations blocked</Badge>}
                   </div>
                 </div>
                 <div className="text-right text-xs text-muted-foreground">
@@ -310,7 +310,7 @@ export default function OwnerBudgetPlanPage() {
               <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
                 <div className="text-xs uppercase text-muted-foreground">Next best action</div>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="default">{plan?.decisionType ?? guidance?.decisionType ?? "—"}</Badge>
+                  <Badge variant="default-accessible">{plan?.decisionType ?? guidance?.decisionType ?? "—"}</Badge>
                   <span className="font-semibold">{plan?.nextBestAction ?? guidance?.nextBestAction}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Why first: {plan?.topConstraint ?? guidance?.topRisk}</p>
@@ -326,11 +326,11 @@ export default function OwnerBudgetPlanPage() {
                 <section className="border rounded-lg p-4 bg-card">
                   <h2 className="font-bold mb-2">Cash forecast</h2>
                   <div className="flex flex-wrap gap-2 text-sm">
-                    <Badge variant="muted">7-day {Math.round(forecast.sevenDayCash)}</Badge>
-                    <Badge variant="muted">30-day {Math.round(forecast.thirtyDayCash)}</Badge>
-                    <Badge variant="muted">90-day {Math.round(forecast.ninetyDayCash)}</Badge>
-                    <Badge variant="muted">reserve required {Math.round(forecast.reserveRequired)}</Badge>
-                    {forecast.nextCriticalDueInDays != null && <Badge variant="warning">next due in {forecast.nextCriticalDueInDays}d</Badge>}
+                    <Badge variant="muted-accessible">7-day {Math.round(forecast.sevenDayCash)}</Badge>
+                    <Badge variant="muted-accessible">30-day {Math.round(forecast.thirtyDayCash)}</Badge>
+                    <Badge variant="muted-accessible">90-day {Math.round(forecast.ninetyDayCash)}</Badge>
+                    <Badge variant="muted-accessible">reserve required {Math.round(forecast.reserveRequired)}</Badge>
+                    {forecast.nextCriticalDueInDays != null && <Badge variant="warning-accessible">next due in {forecast.nextCriticalDueInDays}d</Badge>}
                   </div>
                   <div className="mt-2 space-y-1 text-xs">
                     {(forecast.scenarios ?? []).map((s: any) => (
@@ -371,7 +371,7 @@ export default function OwnerBudgetPlanPage() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     {signals.map((s: any, i: number) => (
                       <span key={i} title={s.message}>
-                        <Badge variant={SIGNAL_VARIANT[s.severity] ?? "muted"}>{s.type}</Badge>
+                        <Badge variant={SIGNAL_VARIANT[s.severity] ?? "muted-accessible"}>{s.type}</Badge>
                       </span>
                     ))}
                   </div>
@@ -390,7 +390,7 @@ export default function OwnerBudgetPlanPage() {
                       <div key={a.id} className="flex justify-between border-b py-1">
                         <span>{a.subjectRole ?? a.subjectUserId ?? "role"}{a.scopeCategory ? ` · ${a.scopeCategory}` : ""}</span>
                         <span className="flex items-center gap-2">
-                          <Badge variant={a.status === "NORMAL" || a.status === "RESTORED" ? "muted" : "warning"}>{a.status}</Badge>
+                          <Badge variant={a.status === "NORMAL" || a.status === "RESTORED" ? "muted-accessible" : "warning-accessible"}>{a.status}</Badge>
                           {a.reason && <span className="text-muted-foreground">{a.reason}</span>}
                         </span>
                       </div>
@@ -409,7 +409,7 @@ export default function OwnerBudgetPlanPage() {
                       <div key={i} className="border rounded p-3">
                         <div className="flex justify-between items-start">
                           <span className="font-semibold">{a.title}</span>
-                          <Badge variant="muted">{a.decisionType}</Badge>
+                          <Badge variant="muted-accessible">{a.decisionType}</Badge>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
                           {a.accountableRole} · review in {a.reviewInDays}d · impact: {a.expectedFinancialImpact}
@@ -436,7 +436,7 @@ export default function OwnerBudgetPlanPage() {
                         <div key={t.id} className="border rounded p-3">
                           <div className="flex justify-between items-start gap-2">
                             <span className="font-semibold">{t.title}</span>
-                            <Badge variant={TASK_STATUS_VARIANT[t.status] ?? "muted"}>{String(t.status).replace("_", " ")}</Badge>
+                            <Badge variant={TASK_STATUS_VARIANT[t.status] ?? "muted-accessible"}>{String(t.status).replace("_", " ")}</Badge>
                           </div>
                           <div className="text-xs text-muted-foreground mt-1">
                             {t.accountableRole} · {t.decisionType}
@@ -505,7 +505,7 @@ export default function OwnerBudgetPlanPage() {
                         <div className="text-xs uppercase text-muted-foreground mb-1">Receivables ageing</div>
                         <div className="flex flex-wrap gap-1">
                           {wcBuckets(wcAgeing.receivables).map(([label, amt]: any) => (
-                            <Badge key={label} variant={label === "90+" && amt > 0 ? "destructive" : "muted"}>{label}: {Math.round(amt)}</Badge>
+                            <Badge key={label} variant={label === "90+" && amt > 0 ? "destructive-accessible" : "muted-accessible"}>{label}: {Math.round(amt)}</Badge>
                           ))}
                         </div>
                       </div>
@@ -513,7 +513,7 @@ export default function OwnerBudgetPlanPage() {
                         <div className="text-xs uppercase text-muted-foreground mb-1">Payables ageing</div>
                         <div className="flex flex-wrap gap-1">
                           {wcBuckets(wcAgeing.payables).map(([label, amt]: any) => (
-                            <Badge key={label} variant={label === "90+" && amt > 0 ? "destructive" : "muted"}>{label}: {Math.round(amt)}</Badge>
+                            <Badge key={label} variant={label === "90+" && amt > 0 ? "destructive-accessible" : "muted-accessible"}>{label}: {Math.round(amt)}</Badge>
                           ))}
                         </div>
                       </div>

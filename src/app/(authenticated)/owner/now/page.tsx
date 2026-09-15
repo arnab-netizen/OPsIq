@@ -26,8 +26,8 @@ async function api(path: string) {
   }
 }
 
-const STATUS_VARIANT = (s: string): "success" | "default" | "warning" | "destructive" =>
-  s === "CRITICAL" ? "destructive" : s === "DANGER" ? "warning" : s === "WATCH" ? "default" : "success";
+const STATUS_VARIANT = (s: string): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  s === "CRITICAL" ? "destructive-accessible" : s === "DANGER" ? "warning-accessible" : s === "WATCH" ? "default-accessible" : "success-accessible";
 
 /**
  * Owner Now View — the Real-Time 360° guided decision surface (Module 41).
@@ -144,8 +144,8 @@ export default function OwnerNowViewPage() {
         <Badge variant={STATUS_VARIANT(view.customerRetentionStatus)}>Retention: {view.customerRetentionStatus}</Badge>
         <Badge variant={STATUS_VARIANT(view.supplierInventoryStatus)}>Supply: {view.supplierInventoryStatus}</Badge>
         <Badge variant={STATUS_VARIANT(view.growthReadinessStatus)}>Growth: {view.growthReadinessStatus}</Badge>
-        <Badge variant="default">{view.classification}</Badge>
-        {view.confidenceCapped && <Badge variant="warning">Low confidence ({view.confidence})</Badge>}
+        <Badge variant="default-accessible">{view.classification}</Badge>
+        {view.confidenceCapped && <Badge variant="warning-accessible">Low confidence ({view.confidence})</Badge>}
       </section>
 
       {Array.isArray(view.missingDataRequests) && view.missingDataRequests.length > 0 && (

@@ -53,10 +53,10 @@ const TARGET_LABELS: Record<TargetType, string> = {
   MULTIPLE: "Business Multiple",
 };
 
-const STATUS_VARIANT: Record<GoalStatus, "default" | "success" | "warning" | "destructive"> = {
-  ACTIVE: "default",
-  ACHIEVED: "success",
-  REVISED: "warning",
+const STATUS_VARIANT: Record<GoalStatus, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible"> = {
+  ACTIVE: "default-accessible",
+  ACHIEVED: "success-accessible",
+  REVISED: "warning-accessible",
 };
 
 const TARGET_TYPES: TargetType[] = ["PROFIT", "REVENUE", "NET_WORTH", "MULTIPLE"];
@@ -221,7 +221,7 @@ export default function GoalsPage() {
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">On track</p>
                   <p className="text-lg font-semibold">
-                    <Badge variant={traj.onTrack ? "success" : "warning"}>
+                    <Badge variant={traj.onTrack ? "success-accessible" : "warning-accessible"}>
                       {traj.onTrack ? "Yes" : "No"}
                     </Badge>
                   </p>

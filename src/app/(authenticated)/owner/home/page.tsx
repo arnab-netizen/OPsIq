@@ -17,22 +17,22 @@ interface AlertSummary {
   unreadCount: number;
 }
 
-const DANGER_VARIANT: Record<string, "success" | "default" | "warning" | "destructive" | "muted"> = {
-  unknown: "muted",
-  none: "success",
-  low: "default",
-  elevated: "warning",
-  high: "destructive",
-  critical: "destructive",
+const DANGER_VARIANT: Record<string, "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  unknown: "muted-accessible",
+  none: "success-accessible",
+  low: "default-accessible",
+  elevated: "warning-accessible",
+  high: "destructive-accessible",
+  critical: "destructive-accessible",
 };
-const SEVERITY_VARIANT: Record<string, "success" | "default" | "warning" | "destructive"> = {
-  critical: "destructive",
-  high: "destructive",
-  medium: "warning",
-  low: "default",
+const SEVERITY_VARIANT: Record<string, "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible"> = {
+  critical: "destructive-accessible",
+  high: "destructive-accessible",
+  medium: "warning-accessible",
+  low: "default-accessible",
 };
-const HEALTH_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
-  score >= 70 ? "success" : score >= 50 ? "default" : score >= 30 ? "warning" : "destructive";
+const HEALTH_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  score >= 70 ? "success-accessible" : score >= 50 ? "default-accessible" : score >= 30 ? "warning-accessible" : "destructive-accessible";
 
 const DOMAIN_LINK: Record<string, string> = {
   finance: "/owner/finance",
@@ -58,7 +58,7 @@ function DangerCard({ label, danger }: { label: string; danger: any }) {
     <div className="border rounded-lg p-3 bg-card">
       <div className="text-xs uppercase text-muted-foreground">{label}</div>
       <div className="mt-1 flex items-center gap-2">
-        <Badge variant={DANGER_VARIANT[level] || "muted"}>{level === "unknown" ? "no data" : level}</Badge>
+        <Badge variant={DANGER_VARIANT[level] || "muted-accessible"}>{level === "unknown" ? "no data" : level}</Badge>
         <span className="text-sm text-muted-foreground">
           {danger?.riskScore === null || danger?.riskScore === undefined ? "—" : `${Math.round(danger.riskScore)}/100`}
         </span>
@@ -190,7 +190,7 @@ export default function OwnerHomePage() {
                     {Math.round(s.businessHealthScore)}/100
                   </Badge>
                   {typeof s.dataConfidenceScore === "number" && (
-                    <Badge variant="muted">
+                    <Badge variant="muted-accessible">
                       confidence {Math.round(s.dataConfidenceScore)}/100
                     </Badge>
                   )}
@@ -221,7 +221,7 @@ export default function OwnerHomePage() {
                         >
                           <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
                           <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
-                            <Badge variant="muted">{a.domain}</Badge>
+                            <Badge variant="muted-accessible">{a.domain}</Badge>
                             <span>priority {Math.round(a.priorityScore)}</span>
                             <span>· impact {Math.round(a.expectedImpactScore)}</span>
                           </div>
@@ -230,7 +230,7 @@ export default function OwnerHomePage() {
                         <div key={`${a.domain}-${a.findingCode}-${i}`} className="py-3 px-3 border-b min-h-[44px]">
                           <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
                           <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
-                            <Badge variant="muted">{a.domain}</Badge>
+                            <Badge variant="muted-accessible">{a.domain}</Badge>
                             <span>priority {Math.round(a.priorityScore)}</span>
                           </div>
                         </div>
@@ -255,7 +255,7 @@ export default function OwnerHomePage() {
                           <div className="text-sm font-medium">{r.title}</div>
                           <div className="text-xs text-muted-foreground">{r.domain} · impact {Math.round(r.impactScore)}</div>
                         </div>
-                        <Badge variant={SEVERITY_VARIANT[r.severity] || "default"}>{r.severity}</Badge>
+                        <Badge variant={SEVERITY_VARIANT[r.severity] || "default-accessible"}>{r.severity}</Badge>
                       </div>
                     ))}
                   </div>
@@ -275,7 +275,7 @@ export default function OwnerHomePage() {
                           <div className="text-sm font-medium">{o.title}</div>
                           <div className="text-xs text-muted-foreground">{o.domain}</div>
                         </div>
-                        <Badge variant="success">impact {Math.round(o.impactScore)}</Badge>
+                        <Badge variant="success-accessible">impact {Math.round(o.impactScore)}</Badge>
                       </div>
                     ))}
                   </div>

@@ -56,20 +56,20 @@ const STATUS_LABELS: Record<RiskStatus, string> = {
   CLOSED: "Closed",
 };
 
-const STATUS_VARIANT: Record<RiskStatus, "default" | "warning" | "success" | "destructive"> = {
-  IDENTIFIED: "default",
-  ASSESSED: "warning",
-  MITIGATING: "warning",
-  ACCEPTED: "default",
-  RESOLVED: "success",
-  CLOSED: "default",
+const STATUS_VARIANT: Record<RiskStatus, "default-accessible" | "warning-accessible" | "success-accessible" | "destructive-accessible"> = {
+  IDENTIFIED: "default-accessible",
+  ASSESSED: "warning-accessible",
+  MITIGATING: "warning-accessible",
+  ACCEPTED: "default-accessible",
+  RESOLVED: "success-accessible",
+  CLOSED: "default-accessible",
 };
 
-function severityVariant(severity: number): "success" | "warning" | "destructive" | "default" {
-  if (severity >= 75) return "destructive";
-  if (severity >= 50) return "destructive";
-  if (severity >= 25) return "warning";
-  return "success";
+function severityVariant(severity: number): "success-accessible" | "warning-accessible" | "destructive-accessible" | "default-accessible" {
+  if (severity >= 75) return "destructive-accessible";
+  if (severity >= 50) return "destructive-accessible";
+  if (severity >= 25) return "warning-accessible";
+  return "success-accessible";
 }
 
 function severityLabel(severity: number): string {

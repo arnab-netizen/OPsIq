@@ -136,7 +136,7 @@ export default function OwnerAutomationPage() {
                   <div key={t.id} className="border-b pb-2 text-sm">
                     <div className="flex items-center justify-between">
                       <strong>{t.taskName}</strong>
-                      <Badge variant="warning">partial failure</Badge>
+                      <Badge variant="warning-accessible">partial failure</Badge>
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {new Date(t.updatedAt).toLocaleString()}
@@ -160,7 +160,7 @@ export default function OwnerAutomationPage() {
                   <div key={t.id} className="border-b pb-2 text-sm">
                     <div className="flex items-center justify-between">
                       <strong>{t.taskName}</strong>
-                      <Badge variant="destructive">
+                      <Badge variant="destructive-accessible">
                         {t.attempts}/{t.maxAttempts} attempts
                       </Badge>
                     </div>

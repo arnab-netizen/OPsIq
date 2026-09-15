@@ -12,12 +12,12 @@ import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { formatHumanDate } from "@/lib/format-human-date";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
+const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
   unverified: "muted-accessible",
-  verified_improved: "success",
-  verified_not_improved: "destructive",
-  inconclusive: "warning",
-  disputed: "warning",
+  verified_improved: "success-accessible",
+  verified_not_improved: "destructive-accessible",
+  inconclusive: "warning-accessible",
+  disputed: "warning-accessible",
 };
 const VERIFY_LABEL: Record<string, string> = {
   unverified: "Not yet verified",
@@ -35,12 +35,12 @@ const ACTION_STATUS_LABEL: Record<string, string> = {
   blocked: "Blocked",
 };
 
-const STATE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
-  SMOOTH: "success",
-  STEADY: "default",
-  STRAINED: "warning",
-  BOTTLENECKED: "destructive",
-  OVERLOADED: "destructive",
+const STATE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  SMOOTH: "success-accessible",
+  STEADY: "default-accessible",
+  STRAINED: "warning-accessible",
+  BOTTLENECKED: "destructive-accessible",
+  OVERLOADED: "destructive-accessible",
 };
 // operationsState previously rendered as the raw enum token (e.g. "BOTTLENECKED") in both the
 // position badge and the diagnosis-history rows -- same class of leak Money's SURVIVAL_LABEL

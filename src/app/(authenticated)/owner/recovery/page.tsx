@@ -8,19 +8,19 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
 import { humanizeMetricKey } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  low: "muted",
-  medium: "default",
-  high: "warning",
-  critical: "destructive",
+const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  low: "muted-accessible",
+  medium: "default-accessible",
+  high: "warning-accessible",
+  critical: "destructive-accessible",
 };
 
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  unverified: "muted",
-  verified_improved: "success",
-  verified_not_improved: "destructive",
-  inconclusive: "warning",
-  disputed: "warning",
+const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  unverified: "muted-accessible",
+  verified_improved: "success-accessible",
+  verified_not_improved: "destructive-accessible",
+  inconclusive: "warning-accessible",
+  disputed: "warning-accessible",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -375,7 +375,7 @@ function RecoveryCycleView({
                       {a.assignedToRole} · due {a.dueAt ? new Date(a.dueAt).toLocaleDateString() : "—"} · {a.priority}
                     </div>
                   </div>
-                  <Badge variant="muted">{a.status}</Badge>
+                  <Badge variant="muted-accessible">{a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Move <strong>{a.metricToMove}</strong> {a.direction} — baseline {String(a.baselineValue)} → target {String(a.targetValue)} (within {a.verificationWindowDays}d)
@@ -389,7 +389,7 @@ function RecoveryCycleView({
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
-                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted"}>
+                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">

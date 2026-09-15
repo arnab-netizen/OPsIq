@@ -61,19 +61,19 @@ const STATUS_LABELS: Record<RiskStatus, string> = {
   CLOSED: "Closed",
 };
 
-const STATUS_VARIANT: Record<RiskStatus, "default" | "warning" | "success" | "destructive"> = {
-  IDENTIFIED: "default",
-  ASSESSED: "warning",
-  MITIGATING: "warning",
-  ACCEPTED: "default",
-  RESOLVED: "success",
-  CLOSED: "default",
+const STATUS_VARIANT: Record<RiskStatus, "default-accessible" | "warning-accessible" | "success-accessible" | "destructive-accessible"> = {
+  IDENTIFIED: "default-accessible",
+  ASSESSED: "warning-accessible",
+  MITIGATING: "warning-accessible",
+  ACCEPTED: "default-accessible",
+  RESOLVED: "success-accessible",
+  CLOSED: "default-accessible",
 };
 
-function severityVariant(s: number): "success" | "warning" | "destructive" | "default" {
-  if (s >= 50) return "destructive";
-  if (s >= 25) return "warning";
-  return "success";
+function severityVariant(s: number): "success-accessible" | "warning-accessible" | "destructive-accessible" | "default-accessible" {
+  if (s >= 50) return "destructive-accessible";
+  if (s >= 25) return "warning-accessible";
+  return "success-accessible";
 }
 
 async function apiFetch(path: string, options?: RequestInit) {

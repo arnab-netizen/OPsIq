@@ -54,13 +54,13 @@ const STATUS_LABELS: Record<ComplianceStatus, string> = {
   waived: "Waived",
 };
 
-const STATUS_VARIANT: Record<ComplianceStatus, "default" | "warning" | "success" | "destructive"> = {
-  active: "default",
-  evidence_pending: "warning",
-  review_pending: "warning",
-  compliant: "success",
-  breached: "destructive",
-  waived: "default",
+const STATUS_VARIANT: Record<ComplianceStatus, "default-accessible" | "warning-accessible" | "success-accessible" | "destructive-accessible"> = {
+  active: "default-accessible",
+  evidence_pending: "warning-accessible",
+  review_pending: "warning-accessible",
+  compliant: "success-accessible",
+  breached: "destructive-accessible",
+  waived: "default-accessible",
 };
 
 const TEMPORAL_LABELS: Record<string, string> = {
@@ -69,10 +69,10 @@ const TEMPORAL_LABELS: Record<string, string> = {
   overdue: "Overdue",
 };
 
-const TEMPORAL_VARIANT: Record<string, "default" | "warning" | "success" | "destructive"> = {
-  upcoming: "default",
-  action_required: "warning",
-  overdue: "destructive",
+const TEMPORAL_VARIANT: Record<string, "default-accessible" | "warning-accessible" | "success-accessible" | "destructive-accessible"> = {
+  upcoming: "default-accessible",
+  action_required: "warning-accessible",
+  overdue: "destructive-accessible",
 };
 
 const PROVENANCE_LABELS: Record<ProvenanceSource, string> = {

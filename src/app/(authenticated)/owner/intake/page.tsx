@@ -9,10 +9,10 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const VALIDATION_VARIANT: Record<string, "success" | "warning" | "destructive" | "muted"> = {
-  valid: "success",
-  partial: "warning",
-  invalid: "destructive",
+const VALIDATION_VARIANT: Record<string, "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  valid: "success-accessible",
+  partial: "warning-accessible",
+  invalid: "destructive-accessible",
 };
 
 const TARGET_DOMAINS = ["finance", "sales", "operations", "sop", "marketing"];
@@ -227,16 +227,16 @@ export default function OwnerIntakePage() {
                   <div>
                     <span className="font-medium">{it.targetDomain}</span>{" "}
                     <span className="text-muted-foreground">· {it.source} · {it.rowCount} row(s) · {new Date(it.createdAt).toLocaleDateString()}</span>
-                    {it.source && <Badge variant="muted" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
+                    {it.source && <Badge variant="muted-accessible" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted"}>{it.validationStatus}</Badge>
+                    <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted-accessible"}>{it.validationStatus}</Badge>
                     {it.ownerConfirmed ? (
-                      <Badge variant="success">confirmed</Badge>
+                      <Badge variant="success-accessible">confirmed</Badge>
                     ) : it.validationStatus !== "invalid" ? (
                       <Button onClick={() => confirm(it.id)} disabled={busy}>Confirm</Button>
                     ) : (
-                      <Badge variant="muted">unconfirmable</Badge>
+                      <Badge variant="muted-accessible">unconfirmable</Badge>
                     )}
                   </div>
                 </div>
@@ -256,12 +256,12 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
     <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card mb-6 space-y-3">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase text-muted-foreground">Candidate — review before confirming</div>
-        <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted"}>{intake.validationStatus}</Badge>
+        <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted-accessible"}>{intake.validationStatus}</Badge>
       </div>
       <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
         <span>{intake.targetDomain} · {intake.source} · {intake.rowCount} row(s) · normalization {intake.normalizationStatus}</span>
         {intake.source && (
-          <Badge variant="muted">Evidence quality: {sourceQualityTier(intake.source as IntakeSource)}</Badge>
+          <Badge variant="muted-accessible">Evidence quality: {sourceQualityTier(intake.source as IntakeSource)}</Badge>
         )}
       </div>
       {Array.isArray(intake.unmappedColumns) && intake.unmappedColumns.length > 0 && (

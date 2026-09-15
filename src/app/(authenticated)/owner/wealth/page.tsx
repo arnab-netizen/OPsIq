@@ -25,8 +25,8 @@ async function api(path: string) {
   }
 }
 
-const MOVE_VARIANT = (d: string): "success" | "default" | "warning" | "destructive" =>
-  d === "BLOCKED" ? "destructive" : d === "VALIDATE_FIRST" ? "warning" : d === "CHOOSE_ALTERNATIVE" ? "default" : "success";
+const MOVE_VARIANT = (d: string): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  d === "BLOCKED" ? "destructive-accessible" : d === "VALIDATE_FIRST" ? "warning-accessible" : d === "CHOOSE_ALTERNATIVE" ? "default-accessible" : "success-accessible";
 
 /**
  * Owner Wealth Command Center — the owner-facing surface for the wealth-loop

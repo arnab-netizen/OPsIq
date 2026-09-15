@@ -8,27 +8,27 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  low: "muted",
-  medium: "default",
-  high: "warning",
-  critical: "destructive",
+const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  low: "muted-accessible",
+  medium: "default-accessible",
+  high: "warning-accessible",
+  critical: "destructive-accessible",
 };
 
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  unverified: "muted",
-  verified_improved: "success",
-  verified_not_improved: "destructive",
-  inconclusive: "warning",
-  disputed: "warning",
+const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  unverified: "muted-accessible",
+  verified_improved: "success-accessible",
+  verified_not_improved: "destructive-accessible",
+  inconclusive: "warning-accessible",
+  disputed: "warning-accessible",
 };
 
-const STATE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  COMPOUNDING: "success",
-  GROWING: "default",
-  FLAT: "warning",
-  LEAKING: "destructive",
-  WASTING: "destructive",
+const STATE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  COMPOUNDING: "success-accessible",
+  GROWING: "default-accessible",
+  FLAT: "warning-accessible",
+  LEAKING: "destructive-accessible",
+  WASTING: "destructive-accessible",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -361,7 +361,7 @@ function MarketingCycleView({
           </div>
         </div>
         <div className="text-right">
-          <Badge variant={STATE_VARIANT[state] || "muted"}>{state}</Badge>
+          <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{state}</Badge>
           <div className="text-xs text-muted-foreground mt-1">
             data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
           </div>
@@ -394,7 +394,7 @@ function MarketingCycleView({
               <div className="flex justify-between">
                 <span className="font-semibold">{f.title}</span>
                 <span className="flex gap-1">
-                  <Badge variant="muted">{f.findingType}</Badge>
+                  <Badge variant="muted-accessible">{f.findingType}</Badge>
                   <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
                 </span>
               </div>
@@ -427,7 +427,7 @@ function MarketingCycleView({
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
                   </div>
-                  <Badge variant="muted">{a.status}</Badge>
+                  <Badge variant="muted-accessible">{a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
@@ -442,7 +442,7 @@ function MarketingCycleView({
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
-                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted"}>
+                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">

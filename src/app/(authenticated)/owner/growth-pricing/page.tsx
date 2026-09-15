@@ -5,11 +5,11 @@ import { Badge, Button, Input, Textarea, CardDashboardSkeleton } from "@/ui/prim
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- dynamic dashboard payloads are untyped */
 
-const APPROVAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  draft: "muted",
-  pending_approval: "warning",
-  approved: "success",
-  archived: "muted",
+const APPROVAL_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  draft: "muted-accessible",
+  pending_approval: "warning-accessible",
+  approved: "success-accessible",
+  archived: "muted-accessible",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -268,7 +268,7 @@ export default function OwnerGrowthPricingPage() {
                     )}
                   </div>
                   <div className="text-right space-y-1">
-                    <Badge variant={APPROVAL_VARIANT[t.approvalStatus] || "muted"}>{t.approvalStatus}</Badge>
+                    <Badge variant={APPROVAL_VARIANT[t.approvalStatus] || "muted-accessible"}>{t.approvalStatus}</Badge>
                     <div className="text-xs text-muted-foreground">{t.status}</div>
                   </div>
                 </div>

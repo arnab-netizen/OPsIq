@@ -233,7 +233,7 @@ export default function OwnerLearningGovernancePage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <Badge variant={c.promotionLocked ? "success" : canPromote ? "default" : "muted"}>
+                    <Badge variant={c.promotionLocked ? "success-accessible" : canPromote ? "default-accessible" : "muted-accessible"}>
                       {c.eligibilityStatus}
                     </Badge>
                     {c.promotionLocked && (

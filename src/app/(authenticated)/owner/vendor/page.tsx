@@ -31,10 +31,10 @@ interface VendorRecord {
   createdAt: string;
 }
 
-const APPROVAL_VARIANT: Record<ApprovalStatus, "default" | "success" | "warning" | "destructive"> = {
-  PENDING_REVIEW: "warning",
-  APPROVED: "success",
-  SUSPENDED: "destructive",
+const APPROVAL_VARIANT: Record<ApprovalStatus, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible"> = {
+  PENDING_REVIEW: "warning-accessible",
+  APPROVED: "success-accessible",
+  SUSPENDED: "destructive-accessible",
 };
 
 const APPROVAL_LABELS: Record<ApprovalStatus, string> = {
@@ -276,7 +276,7 @@ export default function VendorPage() {
                   </td>
                   <td className="px-4 py-3">
                     {vendor.bankAccountRef ? (
-                      <Badge variant={vendor.bankVerified ? "success" : "warning"}>
+                      <Badge variant={vendor.bankVerified ? "success-accessible" : "warning-accessible"}>
                         {vendor.bankVerified ? "Verified" : "Unverified"}
                       </Badge>
                     ) : (

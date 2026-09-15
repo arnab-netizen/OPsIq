@@ -7,15 +7,15 @@ import { humanizeMetricKey } from "@/lib/metric-label";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic portfolio payload is untyped; load() fetch-on-mount is intentional */
 
-const HEALTH_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
-  score >= 70 ? "success" : score >= 50 ? "default" : score >= 30 ? "warning" : "destructive";
-const RISK_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
-  score >= 70 ? "destructive" : score >= 40 ? "warning" : score >= 20 ? "default" : "success";
+const HEALTH_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  score >= 70 ? "success-accessible" : score >= 50 ? "default-accessible" : score >= 30 ? "warning-accessible" : "destructive-accessible";
+const RISK_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  score >= 70 ? "destructive-accessible" : score >= 40 ? "warning-accessible" : score >= 20 ? "default-accessible" : "success-accessible";
 
-const ALERT_VARIANT: Record<string, "warning" | "destructive"> = {
-  survival_risk: "destructive",
-  cash_risk: "destructive",
-  execution_risk: "warning",
+const ALERT_VARIANT: Record<string, "warning-accessible" | "destructive-accessible"> = {
+  survival_risk: "destructive-accessible",
+  cash_risk: "destructive-accessible",
+  execution_risk: "warning-accessible",
 };
 
 async function api(path: string) {
@@ -135,7 +135,7 @@ export default function OwnerPortfolioPage() {
                 {view.riskAlerts.map((a: any, i: number) => (
                   <div key={`${a.businessId}-${a.type}-${i}`} className="flex justify-between items-center border-b py-1 text-sm">
                     <span>{a.businessName} — {a.message}</span>
-                    <Badge variant={ALERT_VARIANT[a.type] || "warning"}>{a.type.replace("_", " ")}</Badge>
+                    <Badge variant={ALERT_VARIANT[a.type] || "warning-accessible"}>{a.type.replace("_", " ")}</Badge>
                   </div>
                 ))}
               </div>

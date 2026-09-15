@@ -29,10 +29,10 @@ const MISSING_INPUT_REASON: Record<string, string> = {
   refundReworkCost: "needed to assess quality and rework drain",
 };
 
-const RISK_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
-  score >= 70 ? "destructive" : score >= 40 ? "warning" : score >= 20 ? "default" : "success";
-const HEALTH_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
-  score >= 70 ? "success" : score >= 50 ? "default" : score >= 30 ? "warning" : "destructive";
+const RISK_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  score >= 70 ? "destructive-accessible" : score >= 40 ? "warning-accessible" : score >= 20 ? "default-accessible" : "success-accessible";
+const HEALTH_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  score >= 70 ? "success-accessible" : score >= 50 ? "default-accessible" : score >= 30 ? "warning-accessible" : "destructive-accessible";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -400,15 +400,15 @@ export default function OwnerCommandCenterPage() {
                 <div className="text-xs uppercase text-muted-foreground">Whole-business plan (live runtime)</div>
                 <div className="flex flex-wrap gap-2">
                   <span data-testid="wbp-provider-status">
-                    <Badge variant={wbp.data.criticalDomainsRealProviderBacked ? "success" : "warning"}>
+                    <Badge variant={wbp.data.criticalDomainsRealProviderBacked ? "success-accessible" : "warning-accessible"}>
                       {wbp.data.criticalDomainsRealProviderBacked ? "Provider-backed data" : "Partial data"}
                     </Badge>
                   </span>
                   <span data-testid="wbp-confidence">
-                    <Badge variant="muted">Confidence: {wbp.data.overallConfidence}</Badge>
+                    <Badge variant="muted-accessible">Confidence: {wbp.data.overallConfidence}</Badge>
                   </span>
-                  <Badge variant="muted">Plan score {Math.round(wbp.collectiveScore)}/100</Badge>
-                  <Badge variant="muted">Stage: {String(wbp.stage).replace(/_/g, " ")}</Badge>
+                  <Badge variant="muted-accessible">Plan score {Math.round(wbp.collectiveScore)}/100</Badge>
+                  <Badge variant="muted-accessible">Stage: {String(wbp.stage).replace(/_/g, " ")}</Badge>
                 </div>
               </div>
 
@@ -433,7 +433,7 @@ export default function OwnerCommandCenterPage() {
 
               <div className="rounded-md border p-3 text-sm mb-3" data-testid="wbp-owner-workload">
                 <strong>Owner workload / offload:</strong> {wbp.ownerWorkload.offload}
-                {wbp.ownerWorkload.approvalRequired && <Badge variant="warning" className="ml-2">Owner approval required</Badge>}
+                {wbp.ownerWorkload.approvalRequired && <Badge variant="warning-accessible" className="ml-2">Owner approval required</Badge>}
                 {wbp.ownerWorkload.delegatedWork.length > 0 && (
                   <ul className="list-disc ml-5 mt-1">{wbp.ownerWorkload.delegatedWork.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
                 )}
@@ -499,7 +499,7 @@ export default function OwnerCommandCenterPage() {
                     </Badge>
                   </span>
                   <span data-testid="readiness-gate">
-                    <Badge variant={readiness.pilotReady ? "success" : "warning"}>
+                    <Badge variant={readiness.pilotReady ? "success-accessible" : "warning-accessible"}>
                       {readiness.pilotReady ? "Pilot-ready" : "Not pilot-ready yet"}
                     </Badge>
                   </span>
@@ -528,7 +528,7 @@ export default function OwnerCommandCenterPage() {
             <section className="border rounded-lg p-4 bg-card mb-6" data-testid="owner-input-guidance">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div className="text-xs uppercase text-muted-foreground">Improve accuracy</div>
-                <span data-testid="guidance-confidence"><Badge variant="muted">Confidence: {guidance.overallConfidence}</Badge></span>
+                <span data-testid="guidance-confidence"><Badge variant="muted-accessible">Confidence: {guidance.overallConfidence}</Badge></span>
               </div>
               <div className="text-sm mb-2" data-testid="guidance-next-input">
                 <span className="font-medium">Next best input:</span>{" "}
@@ -552,7 +552,7 @@ export default function OwnerCommandCenterPage() {
                     <li key={m.category} className="rounded-md border p-2 text-sm">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{m.label}</span>
-                        <Badge variant={m.severity === "critical" ? "destructive" : m.severity === "high" ? "warning" : "muted"}>{m.severity}</Badge>
+                        <Badge variant={m.severity === "critical" ? "destructive-accessible" : m.severity === "high" ? "warning-accessible" : "muted-accessible"}>{m.severity}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">{m.why}</p>
                       <p className="text-xs text-muted-foreground">Affects: {m.decisionAffected} · effort: {m.ownerEffort}</p>
@@ -576,8 +576,8 @@ export default function OwnerCommandCenterPage() {
                   {actionPlan.assignment.assistedBy.length > 0 && (
                     <span className="text-muted-foreground"> (with {actionPlan.assignment.assistedBy.join(", ")})</span>
                   )}
-                  {actionPlan.assignment.ownerApprovalRequired && <Badge variant="warning" className="ml-2">Owner approval</Badge>}
-                  {actionPlan.assignment.delegatable && <Badge variant="muted" className="ml-2">Delegatable</Badge>}
+                  {actionPlan.assignment.ownerApprovalRequired && <Badge variant="warning-accessible" className="ml-2">Owner approval</Badge>}
+                  {actionPlan.assignment.delegatable && <Badge variant="muted-accessible" className="ml-2">Delegatable</Badge>}
                 </div>
                 <div className="rounded-md border p-2 text-sm" data-testid="action-opsiq-work">
                   <strong>OpsIQ prepared:</strong> {actionPlan.assignment.opsiqPreparedWork}
@@ -613,11 +613,11 @@ export default function OwnerCommandCenterPage() {
                   <Badge variant={RISK_VARIANT(profile.survivalRiskScore)}>
                     Survival risk {Math.round(profile.survivalRiskScore)}/100
                   </Badge>
-                  <Badge variant="default">Growth opportunity {Math.round(profile.growthOpportunityScore)}/100</Badge>
+                  <Badge variant="default-accessible">Growth opportunity {Math.round(profile.growthOpportunityScore)}/100</Badge>
                   <Badge variant={RISK_VARIANT(profile.executionRiskScore)}>
                     Execution risk {Math.round(profile.executionRiskScore)}/100
                   </Badge>
-                  <Badge variant="muted">Data confidence {Math.round(profile.dataConfidenceScore)}/100</Badge>
+                  <Badge variant="muted-accessible">Data confidence {Math.round(profile.dataConfidenceScore)}/100</Badge>
                 </div>
                 {(() => {
                   const topFindings: any[] = profile.topFindings ?? [];
@@ -641,11 +641,11 @@ export default function OwnerCommandCenterPage() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-xs uppercase text-muted-foreground">OpsIQ control center</div>
                     <div className="flex flex-wrap gap-2">
-                      <Badge variant={control.needsOwnerAttention ? "warning" : "success"}>
+                      <Badge variant={control.needsOwnerAttention ? "warning-accessible" : "success-accessible"}>
                         {control.ownerActionsToday} owner action{control.ownerActionsToday === 1 ? "" : "s"} today
                       </Badge>
-                      <Badge variant="muted">{control.handledByOpsIQ} handled by OpsIQ</Badge>
-                      <Badge variant="success">{control.approvalsAvoided ?? 0} approvals avoided</Badge>
+                      <Badge variant="muted-accessible">{control.handledByOpsIQ} handled by OpsIQ</Badge>
+                      <Badge variant="success-accessible">{control.approvalsAvoided ?? 0} approvals avoided</Badge>
                     </div>
                   </div>
 
@@ -713,7 +713,7 @@ export default function OwnerCommandCenterPage() {
                   <div className="space-y-1 mt-1">
                     {missingWithPriority.map((m: any) => (
                       <div key={m.field} className="flex items-start gap-2">
-                        <Badge variant={m.priority === "CRITICAL" ? "destructive" : "warning"} className="mt-0.5 shrink-0">{m.priority}</Badge>
+                        <Badge variant={m.priority === "CRITICAL" ? "destructive-accessible" : "warning-accessible"} className="mt-0.5 shrink-0">{m.priority}</Badge>
                         <span>
                           <span className="font-medium">{m.field}</span>
                           {MISSING_INPUT_REASON[m.field] && (
@@ -750,7 +750,7 @@ export default function OwnerCommandCenterPage() {
                       </p>
                     )}
                     <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2 items-center">
-                      <Badge variant="muted">{next.domain}</Badge>
+                      <Badge variant="muted-accessible">{next.domain}</Badge>
                       <span>priority {Math.round(next.priorityScore)}</span>
                       <span>· impact {Math.round(next.expectedImpactScore)}</span>
                       <span>· effort {Math.round(next.effortScore)}</span>

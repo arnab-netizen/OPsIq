@@ -32,11 +32,11 @@ interface Alert {
   entityId: string | null;
 }
 
-const SEVERITY_VARIANT: Record<AlertSeverity, "success" | "default" | "warning" | "destructive"> = {
-  critical: "destructive",
-  high: "destructive",
-  medium: "warning",
-  low: "default",
+const SEVERITY_VARIANT: Record<AlertSeverity, "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible"> = {
+  critical: "destructive-accessible",
+  high: "destructive-accessible",
+  medium: "warning-accessible",
+  low: "default-accessible",
 };
 
 const TYPE_LABEL: Record<AlertType, string> = {
@@ -92,9 +92,9 @@ function AlertCard({
             <Badge variant={SEVERITY_VARIANT[alert.severity]}>{alert.severity}</Badge>
             <span className="text-xs text-muted-foreground">{TYPE_LABEL[alert.type] ?? alert.type}</span>
             {!isRead && !isResolved && (
-              <Badge variant="default" className="text-xs">unread</Badge>
+              <Badge variant="default-accessible" className="text-xs">unread</Badge>
             )}
-            {isResolved && <Badge variant="muted" className="text-xs">resolved</Badge>}
+            {isResolved && <Badge variant="muted-accessible" className="text-xs">resolved</Badge>}
           </div>
           <p className="text-sm font-medium break-words">{alert.message}</p>
           <p className="text-xs text-muted-foreground mt-1">
