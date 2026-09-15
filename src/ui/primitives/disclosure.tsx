@@ -24,7 +24,7 @@ export function Disclosure({
       open={defaultOpen}
       {...rest}
     >
-      <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+      <summary className="cursor-pointer select-none rounded-sm px-3 py-2 text-sm font-medium text-foreground marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 [&::-webkit-details-marker]:hidden">
         <span className="mr-1.5 inline-block text-muted-foreground transition-transform group-open:rotate-90">
           &#9656;
         </span>
