@@ -241,7 +241,7 @@ export default function OwnerBudgetPlanPage() {
 
       {/* Honest module-status banner (never imply OWNER_MODE_READY). */}
       <div className="mb-6 rounded-md border border-warning/30 bg-warning/5 p-3 text-xs space-y-1">
-        <div className="font-semibold">Module status: DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL (backend governance DB/CI-proven; not Owner-Mode-complete)</div>
+        <div className="font-semibold break-words">Module status: DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL (backend governance DB/CI-proven; not Owner-Mode-complete)</div>
         {PARTIAL_LIMITATIONS.map((l) => (<div key={l}>• {l}</div>))}
       </div>
 

@@ -87,7 +87,7 @@ export default function FirstValuePage() {
       </div>
 
       {/* State and Confidence */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-gray-600">Readiness State</p>
           <p className="text-lg font-bold text-blue-900">{firstValue.state}</p>
@@ -104,7 +104,7 @@ export default function FirstValuePage() {
       {firstValue.businessSnapshot && (
         <div className="p-6 bg-card border border-gray-200 rounded-lg">
           <h2 className="text-xl font-bold mb-4">Business Snapshot</h2>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-gray-600">Consulting Stage</p>
               <p className="font-semibold">
@@ -213,7 +213,7 @@ export default function FirstValuePage() {
                 {firstValue.recommendedFirstAction.reason}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4 pt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
               <div>
                 <p className="text-xs text-gray-600">Expected Impact</p>
                 <p className="font-semibold">
