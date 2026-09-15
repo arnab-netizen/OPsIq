@@ -279,9 +279,9 @@ export default function OwnerOperationsPage() {
     setBusy(true);
     setError(null);
     try {
-      const beforeRaw = window.prompt(`BEFORE value for ${action.verificationMetric}:`);
+      const beforeRaw = window.prompt(`BEFORE value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (beforeRaw === null) { setBusy(false); return; }
-      const afterRaw = window.prompt(`AFTER value for ${action.verificationMetric}:`);
+      const afterRaw = window.prompt(`AFTER value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (afterRaw === null) { setBusy(false); return; }
       const dir = window.prompt("Target direction (up / down):", "up");
       if (dir === null) { setBusy(false); return; }
@@ -519,7 +519,7 @@ function OperationsCycleView({
 
       {missing.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
-          <strong>Missing critical data:</strong> {missing.join(", ")} — provide these to raise confidence.
+          <strong>Missing critical data:</strong> {missing.map(humanizeMetricKey).join(", ")} — provide these to raise confidence.
         </div>
       )}
 

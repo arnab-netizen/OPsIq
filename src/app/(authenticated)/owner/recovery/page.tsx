@@ -14,6 +14,12 @@ const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "dest
   high: "warning",
   critical: "destructive",
 };
+const SEVERITY_LABEL: Record<string, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  critical: "Critical",
+};
 
 const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   unverified: "muted",
@@ -21,6 +27,27 @@ const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destru
   verified_not_improved: "destructive",
   inconclusive: "warning",
   disputed: "warning",
+};
+const VERIFY_LABEL: Record<string, string> = {
+  unverified: "Not yet verified",
+  verified_improved: "Verified — improved",
+  verified_not_improved: "Verified — no improvement",
+  inconclusive: "Inconclusive",
+  disputed: "Disputed",
+};
+const ACTION_STATUS_LABEL: Record<string, string> = {
+  proposed: "Proposed",
+  assigned: "Assigned",
+  in_progress: "In progress",
+  completed: "Completed",
+  blocked: "Blocked",
+};
+// healthFromFindings (src/services/founder-recovery/cycle.service.ts) computes exactly these
+// three lowercase snake_case values -- never rendered through a plain-language map before.
+const HEALTH_STATUS_LABEL: Record<string, string> = {
+  critical: "Critical",
+  at_risk: "At risk",
+  healthy: "Healthy",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -181,7 +208,7 @@ export default function OwnerRecoveryPage() {
     setBusy(true);
     setError(null);
     try {
-      const raw = window.prompt(`Enter the AFTER value for ${action.metricToMove} (baseline ${action.baselineValue}):`);
+      const raw = window.prompt(`Enter the AFTER value for ${humanizeMetricKey(action.metricToMove)} (baseline ${action.baselineValue}):`);
       if (raw === null) {
         setBusy(false);
         return;
@@ -327,7 +354,7 @@ function RecoveryCycleView({
         </div>
         <div className="text-right">
           <Badge variant={SEVERITY_VARIANT[cycle.healthStatus === "critical" ? "critical" : cycle.healthStatus === "at_risk" ? "high" : "low"]}>
-            {cycle.healthStatus} · {Math.round(cycle.healthScore)}/100
+            {HEALTH_STATUS_LABEL[cycle.healthStatus] ?? cycle.healthStatus} · {Math.round(cycle.healthScore)}/100
           </Badge>
           {overdue.length > 0 && (
             <div className="text-xs text-destructive mt-1">{overdue.length} overdue action(s)</div>
@@ -343,7 +370,7 @@ function RecoveryCycleView({
             <div key={f.id} className="border-l-4 pl-3 py-1" style={{ borderColor: "#f59e0b" }}>
               <div className="flex justify-between">
                 <span className="font-semibold">{f.title}</span>
-                <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
+                <Badge variant={SEVERITY_VARIANT[f.severity]}>{SEVERITY_LABEL[f.severity] ?? f.severity}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
                 <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.currentValue)} (threshold {String(f.threshold)})
@@ -375,10 +402,10 @@ function RecoveryCycleView({
                       {a.assignedToRole} · due {a.dueAt ? new Date(a.dueAt).toLocaleDateString() : "—"} · {a.priority}
                     </div>
                   </div>
-                  <Badge variant="muted">{a.status}</Badge>
+                  <Badge variant="muted">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Move <strong>{a.metricToMove}</strong> {a.direction} — baseline {String(a.baselineValue)} → target {String(a.targetValue)} (within {a.verificationWindowDays}d)
+                  Move <strong>{humanizeMetricKey(a.metricToMove)}</strong> {a.direction} — baseline {String(a.baselineValue)} → target {String(a.targetValue)} (within {a.verificationWindowDays}d)
                 </p>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {a.status === "proposed" && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}
@@ -390,7 +417,7 @@ function RecoveryCycleView({
                 {latestVerification && (
                   <div className="mt-2 text-xs">
                     <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted"}>
-                      {latestVerification.status}
+                      {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">
                       after {String(latestVerification.afterValue)} · movement {String(latestVerification.actualMovement)}
@@ -410,7 +437,7 @@ function RecoveryCycleView({
             <div key={c.id} className="flex justify-between border-b py-1">
               <span>Cycle #{c.cycleNumber} — {new Date(c.createdAt).toLocaleDateString()}</span>
               <span className="text-muted-foreground">
-                {c.healthStatus} · {c.findingCount} findings · {c.actionCount} actions
+                {HEALTH_STATUS_LABEL[c.healthStatus] ?? c.healthStatus} · {c.findingCount} findings · {c.actionCount} actions
               </span>
             </div>
           ))}
