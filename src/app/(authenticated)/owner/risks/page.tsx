@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
+import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type RiskCategory = "OPERATIONAL" | "FINANCIAL" | "MARKET" | "COMPLIANCE" | "EXECUTION" | "STRATEGIC";
@@ -228,10 +228,12 @@ export default function RisksPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Risk Register</h1>
-        <Button size="sm" onClick={openCreate}>+ New Risk</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Risk Register"
+          actions={<Button size="sm" onClick={openCreate}>+ New Risk</Button>}
+        />
       </div>
 
       {/* Filters */}
@@ -453,6 +455,6 @@ export default function RisksPage() {
           )}
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }
