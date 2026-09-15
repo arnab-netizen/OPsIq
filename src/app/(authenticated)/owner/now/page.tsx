@@ -63,7 +63,9 @@ const CONFIDENCE_LEVEL_LABEL: Record<string, string> = {
 // English words joined by underscores, not abbreviations needing a real gloss.
 function humanizeChangeCategory(value: string): string {
   const words = value.toLowerCase().split("_");
-  return words.length === 0 ? value : words[0].charAt(0).toUpperCase() + words[0].slice(1) + " " + words.slice(1).join(" ");
+  if (words.length === 0) return value;
+  const rest = words.slice(1).join(" ");
+  return words[0].charAt(0).toUpperCase() + words[0].slice(1) + (rest ? " " + rest : "");
 }
 // step.proofType (owner-now-view.service.ts) is a free-text `string`, not a closed enum, but its
 // real values are all lowercase snake_case tokens ("checklist_completion", "before_after_image")
