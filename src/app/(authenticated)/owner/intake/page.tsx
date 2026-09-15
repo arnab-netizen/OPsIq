@@ -115,7 +115,7 @@ export default function OwnerIntakePage() {
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Data Intake & Connectors</h1>
           <p className="text-muted-foreground text-sm">
@@ -165,7 +165,7 @@ export default function OwnerIntakePage() {
       )}
 
       {confirmed && (
-        <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex items-center justify-between">
+        <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex flex-wrap items-center justify-between gap-2">
           <span>Data confirmed. OpsIQ is now ready to analyze your business.</span>
           <button
             onClick={() => router.push("/owner")}
@@ -223,13 +223,13 @@ export default function OwnerIntakePage() {
             {intakes.length === 0 && <p className="text-sm text-muted-foreground">No uploads yet.</p>}
             <div className="space-y-2">
               {intakes.map((it: any) => (
-                <div key={it.id} className="flex justify-between items-center border-b py-2 text-sm">
+                <div key={it.id} className="flex flex-wrap justify-between items-center gap-2 border-b py-2 text-sm">
                   <div>
                     <span className="font-medium">{it.targetDomain}</span>{" "}
                     <span className="text-muted-foreground">· {it.source} · {it.rowCount} row(s) · {new Date(it.createdAt).toLocaleDateString()}</span>
                     {it.source && <Badge variant="muted" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted"}>{it.validationStatus}</Badge>
                     {it.ownerConfirmed ? (
                       <Badge variant="success">confirmed</Badge>

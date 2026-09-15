@@ -554,7 +554,7 @@ function OperationsCycleView({
             const latestVerification = a.verifications?.[0];
             return (
               <div key={a.id} className="border-b border-border pb-3 last:border-0 last:pb-0">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-wrap justify-between items-start gap-2">
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     <div className="text-xs text-muted-foreground">

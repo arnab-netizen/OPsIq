@@ -125,7 +125,7 @@ export default function InventoryPage() {
 
   return (
     <div className="p-6" data-testid="inventory-page">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-bold">Inventory</h1>
         <div className="flex gap-3 items-center">
           <BusinessContextSelector

@@ -184,13 +184,13 @@ export default function ComplianceDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-start justify-between mb-6 gap-4">
+      <div className="flex flex-wrap items-start justify-between mb-6 gap-4">
         <div>
           <button onClick={() => router.back()} className="text-sm text-muted-foreground hover:underline mb-2 block">← Compliance Calendar</button>
           <h1 className="text-2xl font-semibold">{item.name}</h1>
           <p className="text-xs text-muted-foreground mt-1 capitalize">{item.kind}</p>
         </div>
-        <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+        <div className="flex gap-2 flex-wrap justify-end">
           {nextStatuses.length > 0 && (
             <Button size="sm" onClick={() => { setReviewStatus(""); setReviewNotes(""); setReviewError(null); setReviewOpen(true); }}>
               Update status

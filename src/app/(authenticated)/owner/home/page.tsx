@@ -106,7 +106,7 @@ export default function OwnerHomePage() {
     <div className="mx-auto max-w-md sm:max-w-2xl md:max-w-4xl py-6 px-4">
       <div className="mb-4"><CanonicalCockpitLink from="home" /></div>
       <div className="mb-4">
-        <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Owner Home</h1>
             <p className="text-muted-foreground text-xs">Risk first. Money first. One clear set of next actions.</p>
@@ -137,7 +137,7 @@ export default function OwnerHomePage() {
       {/* Alert summary — critical alerts and unread count */}
       {alertSummary && (alertSummary.unreadCount > 0 || alertSummary.alerts.length > 0) && (
         <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <span className="text-sm font-semibold text-destructive">
               {alertSummary.unreadCount > 0 ? `${alertSummary.unreadCount} unread alert${alertSummary.unreadCount === 1 ? "" : "s"}` : "Critical alerts"}
             </span>

@@ -250,7 +250,7 @@ export default function TaskDetailPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <Link href="/owner/tasks" className="text-sm text-muted-foreground hover:underline mb-2 block">
             ← Tasks

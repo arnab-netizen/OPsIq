@@ -197,7 +197,7 @@ export default function OwnerTasksPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <h1 className="font-display text-[1.75rem] font-semibold tracking-tight">Actions</h1>
         <Link href="/owner/tasks/new">
           <Button size="sm">+ New Task</Button>

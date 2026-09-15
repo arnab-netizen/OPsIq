@@ -77,7 +77,7 @@ export default function OwnerWealthPage() {
 
   return (
     <main style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700 }}>Wealth Command Center</h1>
         <Link href="/owner"><Button>Command Center</Button></Link>
       </div>

@@ -222,7 +222,7 @@ export default function OwnerLearningGovernancePage() {
             const isExpanded = expanded === c.id;
             return (
               <div key={c.id} className="border rounded-lg p-4 bg-card">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-wrap justify-between items-start gap-2">
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">
                       Business {c.businessId}

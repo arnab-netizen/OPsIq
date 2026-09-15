@@ -638,7 +638,7 @@ export default function OwnerCommandCenterPage() {
 
               {control && (
                 <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card" data-testid="owner-control-center">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <div className="text-xs uppercase text-muted-foreground">OpsIQ control center</div>
                     <div className="flex flex-wrap gap-2">
                       <Badge variant={control.needsOwnerAttention ? "warning" : "success"}>
@@ -774,7 +774,7 @@ export default function OwnerCommandCenterPage() {
                     const findingCount: number = (d.topFindingCodes ?? []).length;
                     const actionCount: number = (d.topActionCodes ?? []).length;
                     return (
-                      <div key={d.domain} className="flex justify-between items-center border-b py-1 text-sm">
+                      <div key={d.domain} className="flex flex-wrap justify-between items-center gap-2 border-b py-1 text-sm">
                         <span className="capitalize font-medium">{d.domain}</span>
                         <span className="flex flex-wrap gap-2 items-center text-muted-foreground">
                           <Badge variant={HEALTH_VARIANT(d.healthScore)}>health {Math.round(d.healthScore)}</Badge>

@@ -208,7 +208,7 @@ export default function CompliancePage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-semibold">Compliance Calendar</h1>
         <Button size="sm" onClick={openCreate}>+ Add item</Button>
       </div>

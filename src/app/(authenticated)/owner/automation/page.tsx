@@ -62,7 +62,7 @@ export default function OwnerAutomationPage() {
 
   return (
     <div className="mx-auto max-w-3xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Automation Health</h1>
           <p className="text-muted-foreground text-sm">

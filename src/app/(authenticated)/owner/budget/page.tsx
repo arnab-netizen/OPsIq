@@ -229,7 +229,7 @@ export default function OwnerBudgetPlanPage() {
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Budget &amp; Profit Plan</h1>
           <p className="text-muted-foreground text-sm">
@@ -273,7 +273,7 @@ export default function OwnerBudgetPlanPage() {
               <section className="border rounded-lg p-4 bg-card flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Current budget mode</div>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
                     <Badge variant={MODE_VARIANT[mode] ?? "muted"}>{mode ?? "—"}</Badge>
                     <Badge variant={CONFIDENCE_VARIANT[confidence] ?? "muted"}>confidence: {confidence ?? "—"}</Badge>
                     {plan?.highRiskBlocked && <Badge variant="destructive">high-risk recommendations blocked</Badge>}
@@ -474,7 +474,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* 9c: Working-capital ageing — owner-entered (manual / import-ready) */}
               <section className="border rounded-lg p-4 bg-card">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="font-bold">Working capital — receivables &amp; payables ageing</h2>
                   <Button onClick={() => setShowWcForm((s) => !s)}>{showWcForm ? "Cancel" : "Add receivable/payable"}</Button>
                 </div>
@@ -539,7 +539,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* 10: Owner override */}
               <section className="border rounded-lg p-4 bg-card">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="font-bold">Owner override</h2>
                   <Button onClick={() => setShowOverride((s) => !s)}>{showOverride ? "Cancel" : "Override this plan"}</Button>
                 </div>
