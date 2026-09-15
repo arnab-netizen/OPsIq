@@ -278,7 +278,7 @@ export default function OwnerSalesPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 flex items-end gap-3">
+          <div className="mb-6 flex flex-wrap items-end gap-3">
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
