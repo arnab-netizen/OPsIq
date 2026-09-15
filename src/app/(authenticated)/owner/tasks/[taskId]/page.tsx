@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge, Button, DetailPageSkeleton } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
-import { ProofStatus, ProofType } from "@/domain/execution/proof";
+import { ProofStatus, ProofType, ProofRiskLevel } from "@/domain/execution/proof";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface ProofDetail {
@@ -109,6 +109,31 @@ const PROOF_STATUS_LABELS: Record<string, string> = {
   [ProofStatus.RESUBMISSION_REQUIRED]: "Resubmission Required",
   [ProofStatus.DISPUTED]: "Disputed",
   [ProofStatus.OVERRIDDEN_NOT_VERIFIED]: "Override (Not Verified)",
+};
+
+const PROOF_TYPE_LABEL: Record<string, string> = {
+  [ProofType.PHOTO]: "Photo",
+  [ProofType.SCREENSHOT]: "Screenshot",
+  [ProofType.BEFORE_AFTER_IMAGE]: "Before/after image",
+  [ProofType.CALL_LOG]: "Call log",
+  [ProofType.MESSAGE_SCREENSHOT]: "Message screenshot",
+  [ProofType.CUSTOMER_RESPONSE_TAG]: "Customer response tag",
+  [ProofType.CSV_UPLOAD]: "CSV upload",
+  [ProofType.INVOICE]: "Invoice",
+  [ProofType.PAYMENT_CONFIRMATION]: "Payment confirmation",
+  [ProofType.DELIVERY_PROOF]: "Delivery proof",
+  [ProofType.PICKUP_PROOF]: "Pickup proof",
+  [ProofType.MANAGER_CONFIRMATION]: "Manager confirmation",
+  [ProofType.CUSTOMER_CONFIRMATION]: "Customer confirmation",
+  [ProofType.SHORT_NOTE]: "Short note",
+  [ProofType.CHECKLIST_COMPLETION]: "Checklist completion",
+  [ProofType.DOCUMENT]: "Document",
+};
+
+const RISK_LEVEL_LABEL: Record<string, string> = {
+  [ProofRiskLevel.LOW]: "Low",
+  [ProofRiskLevel.MEDIUM]: "Medium",
+  [ProofRiskLevel.HIGH]: "High",
 };
 
 async function apiFetch(path: string) {
@@ -220,7 +245,7 @@ export default function TaskDetailPage() {
         to: reviewTo,
         reason: reviewReason || undefined,
       });
-      setActionSuccess(`Proof review outcome: ${reviewTo}.`);
+      setActionSuccess(`Proof review outcome: ${PROOF_STATUS_LABELS[reviewTo] ?? reviewTo}.`);
       setReviewTo("");
       setReviewReason("");
       await load();
@@ -289,8 +314,8 @@ export default function TaskDetailPage() {
           <h2 className="font-medium">Proof</h2>
           {task.proofRequirement && (
             <div className="text-muted-foreground">
-              Type: <span className="text-foreground">{task.proofRequirement.proofType}</span>
-              {task.proofRequirement.riskLevel && <> · Risk: <span className="text-foreground">{task.proofRequirement.riskLevel}</span></>}
+              Type: <span className="text-foreground">{PROOF_TYPE_LABEL[task.proofRequirement.proofType] ?? task.proofRequirement.proofType}</span>
+              {task.proofRequirement.riskLevel && <> · Risk: <span className="text-foreground">{RISK_LEVEL_LABEL[task.proofRequirement.riskLevel] ?? task.proofRequirement.riskLevel}</span></>}
             </div>
           )}
           {task.proof ? (
@@ -321,7 +346,7 @@ export default function TaskDetailPage() {
               >
                 <option value="">Select proof type…</option>
                 {Object.values(ProofType).map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>{PROOF_TYPE_LABEL[t] ?? t}</option>
                 ))}
               </select>
               <input
