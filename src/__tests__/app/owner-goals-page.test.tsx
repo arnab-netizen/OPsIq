@@ -196,4 +196,30 @@ describe("GoalsPage", () => {
     const { findByText } = render(<GoalsPage />);
     await findByText("medium");
   });
+
+  it("associates the create-goal modal's fields with their visible labels (G1)", async () => {
+    const { findByText, getByLabelText } = render(<GoalsPage />);
+    const btn = await findByText("Update Goal");
+    fireEvent.click(btn);
+    await findByText("Update Financial Goal");
+
+    // getByLabelText resolves via the label's htmlFor -> input/select id association;
+    // it throws if no element has that accessible name, so this fails if the wiring
+    // (G1 fix) regresses even though the label text is still visually present.
+    expect(getByLabelText(/Goal type/)).toBeTruthy();
+    expect(getByLabelText(/Target amount/)).toBeTruthy();
+    expect(getByLabelText("Currency")).toBeTruthy();
+    expect(getByLabelText(/Target date/)).toBeTruthy();
+    expect(getByLabelText("Baseline amount (optional)")).toBeTruthy();
+  });
+
+  it("preserves the ACTIVE status badge's semantic color category after the G6 accessible-variant migration", async () => {
+    const { findByText } = render(<GoalsPage />);
+    const badge = await findByText("ACTIVE");
+    // STATUS_VARIANT.ACTIVE migrated from "default" to "default-accessible" (G6): same
+    // bg-primary category, only the text-color token changed. A category regression
+    // (e.g. accidentally mapped to destructive/warning) would flip this assertion.
+    expect(badge.className).toMatch(/bg-primary/);
+    expect(badge.className).not.toMatch(/bg-destructive|bg-warning/);
+  });
 });

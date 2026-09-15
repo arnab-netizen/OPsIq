@@ -65,3 +65,28 @@ describe("RisksPage — raw riskCode is never owner-facing", () => {
     expect(headers).not.toContain("Code");
   });
 });
+
+describe("RisksPage — G1/G6 accessibility regressions", () => {
+  it("gives both filter selects an accessible name (G1)", async () => {
+    const { findByText, getByLabelText } = render(<RisksPage />);
+    await findByText("Demand risk — customers may not pay");
+    expect(getByLabelText("Filter by category")).toBeTruthy();
+    expect(getByLabelText("Filter by status")).toBeTruthy();
+  });
+
+  it("preserves the IDENTIFIED status badge's semantic color category after the G6 accessible-variant migration", async () => {
+    const { container, findByText } = render(<RisksPage />);
+    // Wait for the row's own data to render first -- the filter dropdown's static
+    // "Identified" option is present synchronously and would otherwise satisfy a
+    // plain findByText("Identified") before the async badge ever renders.
+    await findByText("Demand risk — customers may not pay");
+    const badge = Array.from(container.querySelectorAll("span.inline-flex")).find(
+      (el) => el.textContent === "Identified",
+    );
+    expect(badge).toBeTruthy();
+    // STATUS_VARIANT.IDENTIFIED migrated from "default" to "default-accessible" (G6):
+    // same bg-primary category, only the text-color token changed.
+    expect(badge!.className).toMatch(/bg-primary/);
+    expect(badge!.className).not.toMatch(/bg-destructive|bg-warning/);
+  });
+});
