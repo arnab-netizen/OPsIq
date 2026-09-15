@@ -81,6 +81,43 @@ const SCREENING_STATUS_CLASS: Record<string, string> = {
   UNSCREENED: "UNKNOWN_INPUT",
 };
 
+const SCREENING_STATUS_LABEL: Record<string, string> = {
+  PASSED: "Passed",
+  CONDITIONALLY_PASSED: "Conditionally passed",
+  REJECTED: "Rejected",
+  EVIDENCE_REQUIRED: "Evidence required",
+  UNSCREENED: "Unscreened",
+};
+
+// Verified against OwnerDecisionType — the literal tuple driving the decision
+// buttons below (GO/MODIFY/HOLD/REJECT/REQUEST_MORE_EVIDENCE).
+const DECISION_TYPE_LABEL: Record<string, string> = {
+  GO: "Go",
+  MODIFY: "Modify",
+  HOLD: "Hold",
+  REJECT: "Reject",
+  REQUEST_MORE_EVIDENCE: "Request more evidence",
+};
+
+// Verified against StartupExplanation.confidenceLevel in
+// src/domain/owner-strategy/startup-explainability.ts (HIGH | MEDIUM | LOW | VERY_LOW).
+const CONFIDENCE_LEVEL_LABEL: Record<string, string> = {
+  HIGH: "High",
+  MEDIUM: "Medium",
+  LOW: "Low",
+  VERY_LOW: "Very low",
+};
+
+// Verified against FreshnessMeta.state in
+// src/domain/owner-strategy/startup-evidence-evaluation.ts.
+const FRESHNESS_STATE_LABEL: Record<string, string> = {
+  FRESH: "Fresh",
+  NEARING_EXPIRY: "Nearing expiry",
+  STALE: "Stale",
+  CURRENT_VERIFICATION_REQUIRED: "Current verification required",
+  NO_EXPIRY_POLICY: "No expiry policy",
+};
+
 export default function StartupSessionPage({
   params,
 }: {
@@ -496,7 +533,7 @@ export default function StartupSessionPage({
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>Session Overview</h2>
           <dl style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
             <dt style={{ fontWeight: 600 }}>Status</dt>
-            <dd data-testid="overview-status">{session.status}</dd>
+            <dd data-testid="overview-status">{STATUS_LABELS[session.status] ?? session.status}</dd>
             <dt style={{ fontWeight: 600 }}>Ideas</dt>
             <dd data-testid="overview-idea-count">{session.ideas?.length ?? 0}</dd>
             <dt style={{ fontWeight: 600 }}>Profile Version</dt>
@@ -541,7 +578,7 @@ export default function StartupSessionPage({
                       <span
                         className={`screening-badge ${SCREENING_STATUS_CLASS[idea.screeningStatus] ?? ""}`}
                         data-testid={`idea-status-${idea.id}`}>
-                        {idea.screeningStatus}
+                        {SCREENING_STATUS_LABEL[idea.screeningStatus] ?? idea.screeningStatus}
                       </span>
                     </div>
                   </div>
@@ -601,7 +638,7 @@ export default function StartupSessionPage({
                 style={{ border: "1px solid #10b981", borderRadius: 6, padding: "1rem", marginBottom: "1rem", background: "#ecfdf5" }}>
                 <div style={{ fontWeight: 700 }}>Owner Decision</div>
                 <div data-testid="owner-decision-type" style={{ fontSize: "1.1rem", fontWeight: 600 }}>
-                  {ownerDecision.decisionType}
+                  {DECISION_TYPE_LABEL[ownerDecision.decisionType] ?? ownerDecision.decisionType}
                 </div>
                 {ownerDecision.rationale && <div style={{ marginTop: "0.5rem" }}>{ownerDecision.rationale}</div>}
                 {ownerDecision.supersededById && (
@@ -621,7 +658,7 @@ export default function StartupSessionPage({
                 <button key={dt} onClick={() => handleOwnerDecision(dt)}
                   data-testid={`decision-btn-${dt.toLowerCase()}`}
                   style={{ ...btnStyle, background: dt === "GO" ? "#10b981" : dt === "REJECT" ? "#ef4444" : "#6b7280" }}>
-                  {dt.replace(/_/g, " ")}
+                  {DECISION_TYPE_LABEL[dt] ?? dt.replace(/_/g, " ")}
                 </button>
               ))}
             </div>
@@ -718,7 +755,7 @@ export default function StartupSessionPage({
                           ? "UNTESTED_ASSUMPTION"
                           : "VALIDATED"
                       } style={{ fontSize: "0.8rem" }}>
-                        {item.state}
+                        {FRESHNESS_STATE_LABEL[item.state] ?? item.state}
                       </span>
                     </div>
                   ))}
@@ -781,7 +818,7 @@ export default function StartupSessionPage({
               <div data-testid="explanation-recommendation" style={{ fontWeight: 600 }}>{explanation.recommendation}</div>
               <div style={{ marginTop: "0.25rem", color: "#374151" }}>{explanation.rationale}</div>
               <div style={{ marginTop: "0.25rem", fontSize: "0.85rem", color: "#6b7280" }}>
-                Confidence: {explanation.confidence}% ({explanation.confidenceLevel})
+                Confidence: {explanation.confidence}% ({CONFIDENCE_LEVEL_LABEL[explanation.confidenceLevel] ?? explanation.confidenceLevel})
               </div>
               {explanation.evidenceGaps.length > 0 && (
                 <div className="EVIDENCE_REQUIRED" style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}>
