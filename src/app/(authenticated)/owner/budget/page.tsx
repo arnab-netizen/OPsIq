@@ -62,6 +62,59 @@ const TASK_STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "d
   cancelled: "muted",
 };
 
+// Verified against BudgetMode in src/domain/owner-budget/types.ts.
+const MODE_LABEL: Record<string, string> = {
+  EMERGENCY: "Emergency",
+  STABILIZE: "Stabilize",
+  HYBRID: "Hybrid",
+  PROFIT_INCREASE: "Profit increase",
+  GROW: "Grow",
+  SCALE: "Scale",
+  DATA_INSUFFICIENT: "Data insufficient",
+};
+// Verified against BudgetConfidenceLevel in src/domain/owner-budget/types.ts. Also reused for
+// the working-capital-ageing AgeingConfidence (working-capital-ageing.ts), which shares
+// UNVERIFIED/PARTIAL and adds INSUFFICIENT.
+const CONFIDENCE_LABEL: Record<string, string> = {
+  UNVERIFIED: "Unverified",
+  PARTIAL: "Partial",
+  OPERATIONAL: "Operational",
+  VERIFIED: "Verified",
+  AUDITED: "Audited",
+  INSUFFICIENT: "Insufficient",
+};
+// Verified against PlanDecisionType in src/domain/owner-budget/types.ts (used by
+// plan.decisionType / generated-action.decisionType -- distinct from SpendDecisionType).
+const DECISION_TYPE_LABEL: Record<string, string> = {
+  APPROVE: "Approve",
+  BLOCK: "Block",
+  PAUSE: "Pause",
+  REDUCE: "Reduce",
+  INCREASE: "Increase",
+  REALLOCATE: "Reallocate",
+  INVESTIGATE: "Investigate",
+  DEFER: "Defer",
+  ESCALATE: "Escalate",
+  COLLECT_EVIDENCE: "Collect evidence",
+};
+// Verified against BudgetAuthorityStatus in src/domain/owner-budget/budget-authority.ts.
+const AUTHORITY_STATUS_LABEL: Record<string, string> = {
+  NORMAL: "Normal",
+  WATCH: "Watch",
+  RESTRICTED: "Restricted",
+  OWNER_APPROVAL_REQUIRED: "Owner approval required",
+  SUSPENDED_FOR_CATEGORY: "Suspended for category",
+  RESTORED: "Restored",
+};
+
+// BudgetSignalType (src/domain/owner-budget/types.ts) is a 30+-value, mechanically-regular
+// lowercase_snake_case enum of plain English words -- a generic converter, not a hand-written
+// per-value map, matching this file's own "no invented meaning, just format" scope.
+function humanizeSignalType(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " ");
+}
+
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
     ...init,
@@ -212,6 +265,7 @@ export default function OwnerBudgetPlanPage() {
   const list: any[] = businesses ?? [];
   const mode = guidance?.mode ?? plan?.mode ?? null;
   const confidence = guidance?.confidence ?? plan?.confidence ?? null;
+  const decisionType = plan?.decisionType ?? guidance?.decisionType ?? null;
   const signals: any[] = plan?.signals ?? guidance?.signals ?? [];
   const actions: any[] = plan?.generatedActions ?? guidance?.generatedActions ?? [];
   // Owner-entered (manual / import-ready) working-capital ageing — computed client-side
@@ -274,8 +328,8 @@ export default function OwnerBudgetPlanPage() {
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Current budget mode</div>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant={MODE_VARIANT[mode] ?? "muted"}>{mode ?? "—"}</Badge>
-                    <Badge variant={CONFIDENCE_VARIANT[confidence] ?? "muted"}>confidence: {confidence ?? "—"}</Badge>
+                    <Badge variant={MODE_VARIANT[mode] ?? "muted"}>{mode ? (MODE_LABEL[mode] ?? mode) : "—"}</Badge>
+                    <Badge variant={CONFIDENCE_VARIANT[confidence] ?? "muted"}>confidence: {confidence ? (CONFIDENCE_LABEL[confidence] ?? confidence) : "—"}</Badge>
                     {plan?.highRiskBlocked && <Badge variant="destructive">high-risk recommendations blocked</Badge>}
                   </div>
                 </div>
@@ -287,7 +341,7 @@ export default function OwnerBudgetPlanPage() {
 
               {confidence && confidence !== "VERIFIED" && confidence !== "AUDITED" && (
                 <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
-                  ⚠ Data confidence is <strong>{confidence}</strong>. Irreversible spend (hiring, capex, new branch, major marketing) is blocked below VERIFIED — figures may be ranges, not precise amounts.
+                  ⚠ Data confidence is <strong>{CONFIDENCE_LABEL[confidence] ?? confidence}</strong>. Irreversible spend (hiring, capex, new branch, major marketing) is blocked below VERIFIED — figures may be ranges, not precise amounts.
                 </div>
               )}
 
@@ -310,7 +364,7 @@ export default function OwnerBudgetPlanPage() {
               <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
                 <div className="text-xs uppercase text-muted-foreground">Next best action</div>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="default">{plan?.decisionType ?? guidance?.decisionType ?? "—"}</Badge>
+                  <Badge variant="default">{decisionType ? (DECISION_TYPE_LABEL[decisionType] ?? decisionType) : "—"}</Badge>
                   <span className="font-semibold">{plan?.nextBestAction ?? guidance?.nextBestAction}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Why first: {plan?.topConstraint ?? guidance?.topRisk}</p>
@@ -371,7 +425,7 @@ export default function OwnerBudgetPlanPage() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     {signals.map((s: any, i: number) => (
                       <span key={i} title={s.message}>
-                        <Badge variant={SIGNAL_VARIANT[s.severity] ?? "muted"}>{s.type}</Badge>
+                        <Badge variant={SIGNAL_VARIANT[s.severity] ?? "muted"}>{humanizeSignalType(s.type)}</Badge>
                       </span>
                     ))}
                   </div>
@@ -390,7 +444,7 @@ export default function OwnerBudgetPlanPage() {
                       <div key={a.id} className="flex justify-between border-b py-1">
                         <span>{a.subjectRole ?? a.subjectUserId ?? "role"}{a.scopeCategory ? ` · ${a.scopeCategory}` : ""}</span>
                         <span className="flex items-center gap-2">
-                          <Badge variant={a.status === "NORMAL" || a.status === "RESTORED" ? "muted" : "warning"}>{a.status}</Badge>
+                          <Badge variant={a.status === "NORMAL" || a.status === "RESTORED" ? "muted" : "warning"}>{AUTHORITY_STATUS_LABEL[a.status] ?? a.status}</Badge>
                           {a.reason && <span className="text-muted-foreground">{a.reason}</span>}
                         </span>
                       </div>
@@ -409,7 +463,7 @@ export default function OwnerBudgetPlanPage() {
                       <div key={i} className="border rounded p-3">
                         <div className="flex justify-between items-start">
                           <span className="font-semibold">{a.title}</span>
-                          <Badge variant="muted">{a.decisionType}</Badge>
+                          <Badge variant="muted">{DECISION_TYPE_LABEL[a.decisionType] ?? a.decisionType}</Badge>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
                           {a.accountableRole} · review in {a.reviewInDays}d · impact: {a.expectedFinancialImpact}
@@ -439,7 +493,7 @@ export default function OwnerBudgetPlanPage() {
                             <Badge variant={TASK_STATUS_VARIANT[t.status] ?? "muted"}>{String(t.status).replace("_", " ")}</Badge>
                           </div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            {t.accountableRole} · {t.decisionType}
+                            {t.accountableRole} · {DECISION_TYPE_LABEL[t.decisionType] ?? t.decisionType}
                             {t.dueAt && <> · due {new Date(t.dueAt).toLocaleDateString()}</>}
                             {t.expectedFinancialImpact && <> · impact: {t.expectedFinancialImpact}</>}
                           </div>
@@ -523,7 +577,7 @@ export default function OwnerBudgetPlanPage() {
                         Highest-risk to collect: {wcAgeing.collectionPriority.slice(0, 3).map((c: any) => `${c.counterparty} (${Math.round(c.amount)}, ${c.bucket})`).join("; ")}
                       </div>
                     )}
-                    <div className="text-xs text-muted-foreground">Data confidence: {wcAgeing.confidence} (manual/import — never auto-verified).</div>
+                    <div className="text-xs text-muted-foreground">Data confidence: {CONFIDENCE_LABEL[wcAgeing.confidence] ?? wcAgeing.confidence} (manual/import — never auto-verified).</div>
                   </div>
                 )}
                 {showWcForm && (
@@ -549,7 +603,7 @@ export default function OwnerBudgetPlanPage() {
                 {showOverride && (
                   <form onSubmit={submitOverride} className="mt-3 space-y-3">
                     <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-xs">
-                      <strong>Risk:</strong> overriding the {mode} plan may accept the risk it was protecting against ({plan?.decisionType}: {plan?.nextBestAction}).
+                      <strong>Risk:</strong> overriding the {mode ? (MODE_LABEL[mode] ?? mode) : mode} plan may accept the risk it was protecting against ({plan?.decisionType ? (DECISION_TYPE_LABEL[plan.decisionType] ?? plan.decisionType) : plan?.decisionType}: {plan?.nextBestAction}).
                     </div>
                     <Input name="reason" label="Override reason (required)" required />
                     <Input name="expectedConsequence" label="Expected consequence (required)" required />
