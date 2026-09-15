@@ -26,6 +26,17 @@ import { AdjudicationQueue, type QueueItemView, type OutcomeOption, type Adjudic
 
 const FETCH_TIMEOUT_MS = 10_000;
 
+// Verified against the AdjudicationDecisionPlan.status values in
+// src/domain/execution/proof-risk-adjudication.ts.
+const ADJUDICATION_STATUS_LABEL: Record<string, string> = {
+  ACTIVE: "Active",
+  CLEARED: "Cleared",
+  CONFIRMED: "Confirmed",
+  TRAINING: "Training",
+  OWNER_REVIEW: "Owner review",
+  INCONCLUSIVE: "Inconclusive",
+};
+
 async function api(path: string, init?: RequestInit): Promise<{ res: Response; data: Record<string, unknown> }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -101,7 +112,7 @@ export default function OwnerAdjudicationPage() {
       // Silent refresh so a cleared finding drops out and a still-active one keeps showing — without
       // unmounting the queue (which would wipe the success message the component is about to display).
       await load(true);
-      return { ok: true, message: `Decision recorded (${status}).` };
+      return { ok: true, message: `Decision recorded (${ADJUDICATION_STATUS_LABEL[status] ?? status}).` };
     },
     [load]
   );

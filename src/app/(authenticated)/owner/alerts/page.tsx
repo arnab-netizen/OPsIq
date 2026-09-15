@@ -45,6 +45,13 @@ const TYPE_LABEL: Record<AlertType, string> = {
   execution_failure: "Execution failure",
 };
 
+const SEVERITY_LABEL: Record<AlertSeverity, string> = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+
 async function apiFetch(path: string) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" } });
   const data = await res.json().catch(() => ({}));
@@ -89,7 +96,7 @@ function AlertCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <Badge variant={SEVERITY_VARIANT[alert.severity]}>{alert.severity}</Badge>
+            <Badge variant={SEVERITY_VARIANT[alert.severity]}>{SEVERITY_LABEL[alert.severity]}</Badge>
             <span className="text-xs text-muted-foreground">{TYPE_LABEL[alert.type] ?? alert.type}</span>
             {!isRead && !isResolved && (
               <Badge variant="default" className="text-xs">unread</Badge>
