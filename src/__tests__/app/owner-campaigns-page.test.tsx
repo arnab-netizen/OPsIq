@@ -111,9 +111,11 @@ describe("CampaignsPage", () => {
     await findByText("Search");
   });
 
-  it("renders ACTIVE status badge", async () => {
+  it("renders Active status badge", async () => {
+    // Presentation-only: the badge shows a sentence-case label ("Active") for
+    // the raw "ACTIVE" status value; the stored/submitted value is unchanged.
     const { findAllByText } = render(<CampaignsPage />);
-    const badges = await findAllByText("ACTIVE");
+    const badges = await findAllByText("Active");
     expect(badges.length).toBeGreaterThan(0);
   });
 

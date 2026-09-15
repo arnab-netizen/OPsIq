@@ -123,15 +123,17 @@ describe("ProcurementPage", () => {
     await findByText("Supplier Co");
   });
 
-  it("renders DRAFT status badge", async () => {
+  it("renders Draft status badge", async () => {
+    // Presentation-only: the badge shows a sentence-case label ("Draft") for
+    // the raw "DRAFT" status value; the stored/submitted value is unchanged.
     const { findAllByText } = renderPage();
-    const badges = await findAllByText("DRAFT");
+    const badges = await findAllByText("Draft");
     expect(badges.length).toBeGreaterThan(0);
   });
 
-  it("renders APPROVED status badge", async () => {
+  it("renders Approved status badge", async () => {
     const { findAllByText } = renderPage();
-    const badges = await findAllByText("APPROVED");
+    const badges = await findAllByText("Approved");
     expect(badges.length).toBeGreaterThan(0);
   });
 
@@ -195,10 +197,10 @@ describe("ProcurementPage", () => {
     });
   });
 
-  it("calls transition endpoint when Mark REVIEWED is clicked", async () => {
+  it("calls transition endpoint when Mark Reviewed is clicked", async () => {
     const { findByText } = renderPage();
     await findByText("PO-2026-001");
-    const markBtn = await findByText("Mark REVIEWED");
+    const markBtn = await findByText("Mark Reviewed");
     fireEvent.click(markBtn);
 
     await waitFor(() => {

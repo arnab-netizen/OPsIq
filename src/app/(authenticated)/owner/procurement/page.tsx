@@ -2,9 +2,10 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/ui/primitives/button";
-import { EmptyState } from "@/ui/primitives/states";
+import { EmptyState, LoadingState } from "@/ui/primitives/states";
 import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
+import { PageHeader } from "@/ui/primitives/page-header";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -19,6 +20,17 @@ async function apiFetch(path: string, init?: RequestInit) {
   return data;
 }
 
+// Presentation-only sentence-case mapping. The underlying stored/submitted
+// status is always the raw enum below — this only changes what text is
+// shown to the owner, never what is saved, compared, or transitioned.
+const STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Draft",
+  REVIEWED: "Reviewed",
+  APPROVED: "Approved",
+  ISSUED: "Issued",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
+};
 const STATUS_COLOR: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-700",
   REVIEWED: "bg-blue-100 text-blue-700",
@@ -46,6 +58,12 @@ export default function ProcurementPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // Presentation-only: prevents rendering EmptyState before this business's
+  // orders have actually finished loading (see G8 in the 14 Sep 2026 audit —
+  // this route previously showed a false "No purchase orders yet" flash
+  // while data was still in flight).
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const loading = contextLoading || ordersLoading;
 
   const loadOrders = useCallback(async (bid: string) => {
     try {
@@ -53,11 +71,20 @@ export default function ProcurementPage() {
       setOrders(data.orders ?? []);
     } catch (e: any) {
       setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
+    } finally {
+      setOrdersLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (contextLoading || !activeBusinessId) return;
+    if (contextLoading) return;
+    if (!activeBusinessId) {
+      // No business selected once the context has resolved — nothing else will
+      // clear ordersLoading, so settle it here rather than showing a permanent spinner.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- presentation-only loading-flag settle, not a data fetch.
+      setOrdersLoading(false);
+      return;
+    }
     void loadOrders(activeBusinessId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only on context resolution/switch, not on every loadOrders identity change
   }, [contextLoading, activeBusinessId]);
@@ -126,23 +153,29 @@ export default function ProcurementPage() {
 
   return (
     <div className="p-6" data-testid="procurement-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Purchase Orders</h1>
-        <div className="flex gap-3 items-center">
-          <BusinessContextSelector
-            businesses={businesses}
-            selectedId={businessId}
-            onChange={(id) => setActiveBusinessId(id)}
-          />
-          <Button onClick={openCreate}>+ New PO</Button>
-        </div>
+      <div className="mb-6">
+        <PageHeader
+          title="Purchase Orders"
+          actions={
+            <>
+              <BusinessContextSelector
+                businesses={businesses}
+                selectedId={businessId}
+                onChange={(id) => setActiveBusinessId(id)}
+              />
+              <Button onClick={openCreate}>+ New PO</Button>
+            </>
+          }
+        />
       </div>
 
       {error && (
         <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded text-sm">{error}</div>
       )}
 
-      {orders.length === 0 ? (
+      {loading ? (
+        <LoadingState message="Loading purchase orders…" />
+      ) : orders.length === 0 ? (
         <EmptyState
           title="No purchase orders yet"
           description="Create your first purchase order to start tracking spend and delivery against a vendor."
@@ -169,7 +202,7 @@ export default function ProcurementPage() {
                     <td className="px-4 py-2">{order.vendorName ?? "—"}</td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLOR[order.status] ?? ""}`}>
-                        {order.status}
+                        {STATUS_LABEL[order.status] ?? order.status}
                       </span>
                     </td>
                     <td className="px-4 py-2 text-right">
@@ -181,7 +214,7 @@ export default function ProcurementPage() {
                           className="text-[var(--primary-text)] text-xs hover:underline"
                           onClick={() => handleTransition(order.id, nextStatus)}
                         >
-                          Mark {nextStatus}
+                          Mark {STATUS_LABEL[nextStatus] ?? nextStatus}
                         </button>
                       )}
                       {!["DELIVERED", "CANCELLED"].includes(order.status) && (
@@ -203,12 +236,42 @@ export default function ProcurementPage() {
 
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Purchase Order">
         <div className="space-y-3">
-          <Input placeholder="PO Number (e.g. PO-2026-001)" value={form.poNumber ?? ""} onChange={(e) => setForm((f) => ({ ...f, poNumber: e.target.value }))} />
-          <Input placeholder="Vendor Name (optional)" value={form.vendorName ?? ""} onChange={(e) => setForm((f) => ({ ...f, vendorName: e.target.value }))} />
-          <Input placeholder="Item description" value={form.description ?? ""} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
-          <Input type="number" placeholder="Quantity" value={form.qty ?? ""} onChange={(e) => setForm((f) => ({ ...f, qty: e.target.value }))} />
-          <Input type="number" placeholder="Unit price (optional)" value={form.unitPrice ?? ""} onChange={(e) => setForm((f) => ({ ...f, unitPrice: e.target.value }))} />
-          <Input placeholder="Notes (optional)" value={form.notes ?? ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+          <Input
+            label="PO number"
+            hint="e.g. PO-2026-001"
+            value={form.poNumber ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, poNumber: e.target.value }))}
+          />
+          <Input
+            label="Vendor name"
+            hint="Optional"
+            value={form.vendorName ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, vendorName: e.target.value }))}
+          />
+          <Input
+            label="Item description"
+            value={form.description ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          />
+          <Input
+            type="number"
+            label="Quantity"
+            value={form.qty ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, qty: e.target.value }))}
+          />
+          <Input
+            type="number"
+            label="Unit price"
+            hint="Optional"
+            value={form.unitPrice ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, unitPrice: e.target.value }))}
+          />
+          <Input
+            label="Notes"
+            hint="Optional"
+            value={form.notes ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+          />
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
