@@ -31,15 +31,40 @@
  * SAFE BY DEFAULT: without --apply, this only prints what it would do. Nothing
  * is written. Pass --apply plus the exact --confirm phrase to actually mutate.
  *
+ * WRONG-DATABASE FAIL-CLOSED GATE: this script (like any standalone script
+ * importing `db` from @/lib/db) resolves its database purely from
+ * process.env.DATABASE_URL (falling back to TEST_DATABASE_URL) — there is no
+ * CLI-only safety net analogous to prisma.config.ts's OPSIQ_DB_TARGET gate
+ * for application/script runtime (see src/infra/prisma-datasource.ts's own
+ * documented scope limit). A real incident: an earlier session dry-run of
+ * this exact script would have silently targeted an unrelated Neon project
+ * because the sandbox's own DATABASE_URL pointed elsewhere, discovered only
+ * by manually cross-checking hostnames before ever invoking the CLI.
+ * --expected-database-host is therefore now REQUIRED for every real
+ * invocation, dry run included: the bare hostname the caller expects
+ * DATABASE_URL/TEST_DATABASE_URL to actually resolve to. Verified BEFORE
+ * getDbInstance() / before any database call, via the same allow-list
+ * hostname validator and exact-string comparison scripts/validate-expected-
+ * db-host.mjs already uses for migrate-production.yml's own exact-host gate
+ * — reused here rather than reimplemented, and NOT widened: that shared
+ * validator stays strict/FQDN-only for every caller, including production
+ * invocations of this script. A narrow, test-environment-gated allowance
+ * for bare local hostnames (e.g. "localhost") lives only in this file's own
+ * verifyExpectedDatabaseHost(), never in the shared .mjs — see that
+ * function's own comment for the exact scope of that allowance.
+ *
  * Usage (dry run — always start here):
- *   npx tsx scripts/provision-administration-operator.ts --email owner@example.com --workspace-id <uuid>
+ *   npx tsx scripts/provision-administration-operator.ts --email owner@example.com --workspace-id <uuid> \
+ *     --expected-database-host <bare-hostname>
  *
  * Usage (apply):
  *   npx tsx scripts/provision-administration-operator.ts --email owner@example.com --workspace-id <uuid> \
+ *     --expected-database-host <bare-hostname> \
  *     --confirm "GRANT ADMINISTRATION OPERATOR" --apply [--granted-by <admin-user-uuid>]
  *
  * Usage (revoke):
  *   npx tsx scripts/provision-administration-operator.ts --email owner@example.com --workspace-id <uuid> \
+ *     --expected-database-host <bare-hostname> \
  *     --confirm "REVOKE ADMINISTRATION OPERATOR" --apply --revoke
  *
  * This script has NEVER been run against production by Claude Code. Running it
@@ -54,15 +79,47 @@ import { ROLES } from "@/domain/constants/roles";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { emitAuditEvent } from "@/infra/audit";
 import type { Prisma } from "@/generated/prisma/client";
+import { isValidExpectedHost, extractHostname, hostsMatch } from "./validate-expected-db-host.mjs";
 
 const GRANT_CONFIRM_PHRASE = "GRANT ADMINISTRATION OPERATOR";
 const REVOKE_CONFIRM_PHRASE = "REVOKE ADMINISTRATION OPERATOR";
 const ROLE = ROLES.ADMINISTRATION_OPERATOR;
 const SCOPE = "workspace";
 
+// Narrow, test-only local-hostname allowance -- exists solely so this
+// script's own DB-backed tests (src/__tests__/scripts/provision-
+// administration-operator.db.test.ts) can run --expected-database-host
+// against local Postgres (hostname "localhost") without widening the
+// shared, strict, FQDN-only scripts/validate-expected-db-host.mjs that
+// migrate-production.yml and this script's own production invocation both
+// depend on. This allowance:
+//   - lives here, in the caller, never in the shared .mjs validator;
+//   - is gated on the exact same test-environment convention already used
+//     elsewhere in this codebase (src/lib/db.ts's own pooler-URL-rewrite
+//     logic): process.env.VITEST || process.env.NODE_ENV === "test";
+//   - is not a CLI flag -- there is no argument a production caller (or a
+//     malicious one) could pass to reach it;
+//   - only ever loosens the FORMAT check for a bare single-label value
+//     (still rejecting "://", "@", "/", "?", "#", whitespace, and control
+//     characters exactly like the shared validator, by construction of the
+//     pattern below); hostsMatch() below remains the same exact
+//     string-equality comparison in every case, so a wrong-host mismatch is
+//     still caught identically whether format was validated by the shared
+//     strict path or this narrow test-only path;
+//   - is unreachable from .github/workflows/provision-administration-
+//     operator.yml in either DRY_RUN or APPLY mode: that workflow never
+//     sets VITEST and never sets NODE_ENV=test, so isTestEnvironment() is
+//     always false there, regardless of --apply.
+const TEST_ONLY_SINGLE_LABEL_HOST_PATTERN = /^(?=.{1,253}$)[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
+
+function isTestEnvironment(): boolean {
+  return !!(process.env.VITEST || process.env.NODE_ENV === "test");
+}
+
 interface Args {
   email?: string;
   workspaceId?: string;
+  expectedDatabaseHost?: string;
   confirm?: string;
   apply: boolean;
   revoke: boolean;
@@ -75,12 +132,67 @@ function parseArgs(argv: string[]): Args {
     const a = argv[i];
     if (a === "--email") args.email = argv[++i];
     else if (a === "--workspace-id") args.workspaceId = argv[++i];
+    else if (a === "--expected-database-host") args.expectedDatabaseHost = argv[++i];
     else if (a === "--confirm") args.confirm = argv[++i];
     else if (a === "--apply") args.apply = true;
     else if (a === "--revoke") args.revoke = true;
     else if (a === "--granted-by") args.grantedBy = argv[++i];
   }
   return args;
+}
+
+/**
+ * Fail-closed wrong-database gate. Resolves the actual runtime database URL
+ * the exact same way src/lib/db.ts's createPrismaClient() does
+ * (DATABASE_URL, falling back to TEST_DATABASE_URL), extracts its hostname,
+ * and compares it against the caller-supplied --expected-database-host using
+ * scripts/validate-expected-db-host.mjs's own format validation and exact
+ * string-equality comparison. Never logs the URL itself — only the two bare
+ * hostnames being compared, matching that script's own logging contract.
+ *
+ * Returns nothing on success; calls process.exit(1) with a credential-free
+ * error on any failure (missing, malformed, or mismatched). Must be called
+ * before getDbInstance() / before any db.* call.
+ */
+export function verifyExpectedDatabaseHost(expectedDatabaseHost: string | undefined): void {
+  let formatCheck = isValidExpectedHost(expectedDatabaseHost);
+  if (
+    !formatCheck.ok &&
+    isTestEnvironment() &&
+    typeof expectedDatabaseHost === "string" &&
+    TEST_ONLY_SINGLE_LABEL_HOST_PATTERN.test(expectedDatabaseHost)
+  ) {
+    // Test-only fallback: a bare single-label hostname (e.g. "localhost")
+    // failed the shared strict validator's format check purely because it
+    // has no dot -- accepted here ONLY under isTestEnvironment(), and ONLY
+    // as a format allowance. hostsMatch() below is untouched, so the actual
+    // host-equality security property is identical either way.
+    formatCheck = { ok: true };
+  }
+  if (!formatCheck.ok) {
+    console.error(`✗ --expected-database-host: ${formatCheck.reason}`);
+    process.exit(1);
+  }
+
+  const rawUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL || "";
+  const actualHost = extractHostname(rawUrl);
+  if (!actualHost) {
+    console.error("✗ Could not parse a hostname from DATABASE_URL/TEST_DATABASE_URL. Refusing to proceed without a verified database target.");
+    process.exit(1);
+  }
+
+  const match = hostsMatch(actualHost, expectedDatabaseHost);
+  console.log(`Expected database host: ${expectedDatabaseHost}`);
+  console.log(`Actual database host: ${actualHost}`);
+  console.log(`MATCH=${match ? "YES" : "NO"}`);
+
+  if (!match) {
+    console.error(
+      "✗ The runtime database's hostname does not match --expected-database-host. Refusing before any database connection or query. " +
+      "This is the exact failure mode that would otherwise silently target the wrong database (wrong Neon project/branch, wrong environment)."
+    );
+    process.exit(1);
+  }
 }
 
 export async function resolvePrimaryWorkspaceId(userId: string): Promise<string | null> {
@@ -191,8 +303,14 @@ export async function revokeAdministrationOperator(params: {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
+  // Wrong-database fail-closed gate: checked first, before any other
+  // validation and before getDbInstance()/any DB call, so a wrong
+  // --expected-database-host (or a caller who forgot it) can never reach a
+  // database at all, regardless of what else was passed.
+  verifyExpectedDatabaseHost(args.expectedDatabaseHost);
+
   if (!args.email || !args.workspaceId) {
-    console.error("Usage: --email <email> --workspace-id <uuid> [--confirm \"...\" --apply [--revoke] [--granted-by <uuid>]]");
+    console.error("Usage: --email <email> --workspace-id <uuid> --expected-database-host <bare-hostname> [--confirm \"...\" --apply [--revoke] [--granted-by <uuid>]]");
     process.exit(1);
   }
 

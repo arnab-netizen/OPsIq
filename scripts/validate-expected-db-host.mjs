@@ -1,23 +1,40 @@
 #!/usr/bin/env node
 /**
- * PINNED_PREDEPLOY exact-host gate for migrate-production.yml.
+ * Exact-host gate shared by two callers:
+ *   - migrate-production.yml's PINNED_PREDEPLOY/MAIN migration gate
+ *   - scripts/provision-administration-operator.ts's standalone-CLI gate
  *
- * Before any migration is allowed to run, the owner-pinned
+ * Before either is allowed to touch a database, the owner-pinned
  * expected_database_host input is validated as a bare hostname (never a
  * full connection URL, credentials, path, or query string) and compared
- * exactly against PRODUCTION_DATABASE_URL's actual hostname. Without this,
+ * exactly against the actual runtime DATABASE_URL's hostname. Without this,
  * a syntactically valid direct (non-pooler) Neon URL belonging to the wrong
  * project/branch would pass the existing placeholder/pooler checks
- * undetected.
+ * undetected -- and, for a standalone script, DATABASE_URL is resolved
+ * directly from the environment with no CLI-only gate at all (see
+ * src/infra/prisma-datasource.ts's own documented scope limit: it governs
+ * the Prisma CLI only, not application/script runtime).
  *
  * Usage: DATABASE_URL=... EXPECTED_DATABASE_HOST=<hostname> node scripts/validate-expected-db-host.mjs
  */
 import { fileURLToPath } from "url";
 
-// RFC 1123 hostname: dot-separated labels, each 1-63 chars, alphanumeric
-// with internal hyphens only. This allow-list rejects "://", "@", "/", "?",
-// "#", whitespace, control characters, and every shell metacharacter by
-// construction -- none of those characters can appear in a match.
+// RFC 1123 hostname: one or more dot-separated labels, each 1-63 chars,
+// alphanumeric with internal hyphens only. A bare single-label host (e.g.
+// "localhost") is intentionally rejected here -- this is the production
+// format contract shared by every caller of this script, including
+// migrate-production.yml's PINNED_PREDEPLOY/MAIN gate. A real production
+// expected host is always a multi-label Neon FQDN with dots; accepting a
+// single-label value here would let a caller (accidentally or otherwise)
+// satisfy format validation with a bare service name like "localhost" or
+// "postgres", weakening this shared contract for every consumer. Callers
+// that legitimately need to test against a local/CI database (this
+// script's own DB-backed tests, provision-administration-operator.ts's
+// local/CI test runs) must not widen this shared validator -- see that
+// script's own narrowly-scoped, test-environment-gated allowance instead.
+// This allow-list still rejects "://", "@", "/", "?", "#", whitespace,
+// control characters, and every shell metacharacter by construction --
+// none of those characters can appear in a match.
 const HOSTNAME_PATTERN =
   /^(?=.{1,253}$)[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 

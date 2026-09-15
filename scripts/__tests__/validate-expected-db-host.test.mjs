@@ -77,6 +77,11 @@ assert("rejects whitespace", isValidExpectedHost("ep abc.neon.tech").ok, false);
 assert("rejects embedded newline", isValidExpectedHost("ep-abc.neon.tech\nrm -rf /").ok, false);
 assert("rejects embedded tab", isValidExpectedHost("ep-abc.neon.tech\t").ok, false);
 
+console.log("\n── single-label hostname (e.g. \"localhost\", \"postgres\") -> rejected by format, shared/default validator ──");
+assert("bare single-label hostname is rejected (no dot)", isValidExpectedHost("localhost").ok, false);
+assert("bare single-label service name is rejected (no dot)", isValidExpectedHost("postgres").ok, false);
+assert("bare single-label 'db' is rejected (no dot)", isValidExpectedHost("db").ok, false);
+
 console.log("\n── extractHostname ──");
 assert(
   "extracts hostname from a well-formed connection URL",

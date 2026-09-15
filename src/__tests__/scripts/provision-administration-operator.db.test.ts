@@ -266,6 +266,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator �
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator CLI — guard behaviors", () => {
   const SCRIPT_PATH = path.resolve(process.cwd(), "scripts/provision-administration-operator.ts");
+  // The real hostname this test process's own DATABASE_URL/TEST_DATABASE_URL
+  // resolves to -- computed the same way the script itself does, so these
+  // tests work identically against local Postgres, CI's throwaway Postgres,
+  // or any other real test database, without hardcoding "localhost".
+  const RAW_TEST_DB_URL = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL || "";
+  const EXPECTED_DB_HOST = new URL(RAW_TEST_DB_URL).hostname;
   let seededUserId: string | null = null;
   let seededWorkspaceId: string | null = null;
 
@@ -317,9 +323,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator CL
   it("[db] dry run (no --apply) performs zero writes and prints the exact-capability disclosure", async () => {
     const { workspaceId, email } = await seedActorWithWorkspace();
 
-    const result = runScript(["--email", email, "--workspace-id", workspaceId]);
+    const result = runScript(["--email", email, "--workspace-id", workspaceId, "--expected-database-host", EXPECTED_DB_HOST]);
 
     expect(result.status).toBe(0);
+    expect(result.stdout).toContain("MATCH=YES");
     expect(result.stdout).toContain("Dry run only");
     expect(result.stdout).toContain(
       "This grants EXACTLY BETA_PROGRAM_MANAGE and CUSTOMER_ACCESS_MANAGE — no SYSTEM_ADMIN and no beta-request-review/invite capabilities from this role."
@@ -332,7 +339,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator CL
     const { email } = await seedActorWithWorkspace();
     const wrongWorkspaceId = randomUUID();
 
-    const result = runScript(["--email", email, "--workspace-id", wrongWorkspaceId]);
+    const result = runScript(["--email", email, "--workspace-id", wrongWorkspaceId, "--expected-database-host", EXPECTED_DB_HOST]);
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("Mismatch");
@@ -343,7 +350,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator CL
   it("[db] an inactive user is refused (no writes)", async () => {
     const { workspaceId, email } = await seedActorWithWorkspace({ isActive: false });
 
-    const result = runScript(["--email", email, "--workspace-id", workspaceId]);
+    const result = runScript(["--email", email, "--workspace-id", workspaceId, "--expected-database-host", EXPECTED_DB_HOST]);
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("not active");
@@ -359,6 +366,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator CL
       email,
       "--workspace-id",
       workspaceId,
+      "--expected-database-host",
+      EXPECTED_DB_HOST,
       "--apply",
       "--confirm",
       "WRONG PHRASE",
@@ -378,6 +387,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator CL
       email,
       "--workspace-id",
       workspaceId,
+      "--expected-database-host",
+      EXPECTED_DB_HOST,
       "--apply",
       "--confirm",
       "GRANT BETA REQUEST OPERATOR",
@@ -397,6 +408,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator CL
       email,
       "--workspace-id",
       workspaceId,
+      "--expected-database-host",
+      EXPECTED_DB_HOST,
       "--apply",
       "--confirm",
       "GRANT ADMINISTRATION OPERATOR",
@@ -414,6 +427,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator CL
       email,
       "--workspace-id",
       workspaceId,
+      "--expected-database-host",
+      EXPECTED_DB_HOST,
       "--apply",
       "--confirm",
       "GRANT ADMINISTRATION OPERATOR",
@@ -427,4 +442,137 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator CL
     expect(afterSecond).toHaveLength(1);
     expect(afterSecond[0]!.id).toBe(afterFirst[0]!.id);
   }, 60_000);
+});
+
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] provision-administration-operator CLI — wrong-database fail-closed gate", () => {
+  const SCRIPT_PATH = path.resolve(process.cwd(), "scripts/provision-administration-operator.ts");
+  const RAW_TEST_DB_URL = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL || "";
+  const EXPECTED_DB_HOST = new URL(RAW_TEST_DB_URL).hostname;
+  let seededUserId: string | null = null;
+  let seededWorkspaceId: string | null = null;
+
+  afterEach(async () => {
+    if (seededUserId) {
+      await db.userRoleAssignment.deleteMany({ where: { userId: seededUserId } }).catch(() => undefined);
+      await db.workspaceMembership.deleteMany({ where: { userId: seededUserId } }).catch(() => undefined);
+      await db.user.delete({ where: { id: seededUserId } }).catch(() => undefined);
+      seededUserId = null;
+    }
+    if (seededWorkspaceId) {
+      await db.workspace.delete({ where: { id: seededWorkspaceId } }).catch(() => undefined);
+      seededWorkspaceId = null;
+    }
+  });
+
+  async function seedActorWithWorkspace() {
+    const userId = randomUUID();
+    const workspaceId = randomUUID();
+    const email = `provision-admin-op-hostgate-${userId}@example.com`;
+    await db.user.create({ data: { id: userId, email, isActive: true, updatedAt: new Date() } });
+    await db.workspace.create({ data: { id: workspaceId, name: "Provision AdminOp HostGate WS", slug: `provision-admin-op-hostgate-${workspaceId.substring(0, 8)}` } });
+    await db.workspaceMembership.create({ data: { userId, workspaceId, role: "owner", isActive: true } });
+    seededUserId = userId;
+    seededWorkspaceId = workspaceId;
+    return { userId, workspaceId, email };
+  }
+
+  const CHILD_TIMEOUT_MS = 25_000;
+
+  function runScript(args: string[]): { status: number; stdout: string; stderr: string } {
+    try {
+      const stdout = execFileSync("npx", ["tsx", SCRIPT_PATH, ...args], {
+        encoding: "utf8",
+        env: process.env,
+        timeout: CHILD_TIMEOUT_MS,
+      });
+      return { status: 0, stdout, stderr: "" };
+    } catch (error: unknown) {
+      const e = error as { status?: unknown; stdout?: unknown; stderr?: unknown };
+      return {
+        status: typeof e.status === "number" ? e.status : 1,
+        stdout: String(e.stdout ?? ""),
+        stderr: String(e.stderr ?? ""),
+      };
+    }
+  }
+
+  it("[db] correct --expected-database-host passes and the dry run proceeds normally", async () => {
+    const { workspaceId, email } = await seedActorWithWorkspace();
+
+    const result = runScript(["--email", email, "--workspace-id", workspaceId, "--expected-database-host", EXPECTED_DB_HOST]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(`Expected database host: ${EXPECTED_DB_HOST}`);
+    expect(result.stdout).toContain(`Actual database host: ${EXPECTED_DB_HOST}`);
+    expect(result.stdout).toContain("MATCH=YES");
+    const assignments = await db.userRoleAssignment.findMany({ where: { userId: seededUserId! } });
+    expect(assignments).toHaveLength(0);
+  }, 30_000);
+
+  it("[db] a wrong --expected-database-host fails before any DB query or mutation (no user lookup, no writes)", async () => {
+    const { workspaceId, email } = await seedActorWithWorkspace();
+
+    const result = runScript(["--email", email, "--workspace-id", workspaceId, "--expected-database-host", "definitely-the-wrong-host.example.com"]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toContain("MATCH=NO");
+    expect(result.stderr).toContain("Refusing before any database connection or query");
+    // Proves no DB lookup happened: the "No user found" branch (which itself
+    // requires a successful query) never printed.
+    expect(result.stderr).not.toContain("No user found");
+    const assignments = await db.userRoleAssignment.findMany({ where: { userId: seededUserId! } });
+    expect(assignments).toHaveLength(0);
+  }, 30_000);
+
+  it("[db] a wrong --expected-database-host refuses even when --apply and a correct --confirm are also passed (host gate runs first)", async () => {
+    const { workspaceId, email } = await seedActorWithWorkspace();
+
+    const result = runScript([
+      "--email", email,
+      "--workspace-id", workspaceId,
+      "--expected-database-host", "definitely-the-wrong-host.example.com",
+      "--apply",
+      "--confirm", "GRANT ADMINISTRATION OPERATOR",
+    ]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toContain("MATCH=NO");
+    const assignments = await db.userRoleAssignment.findMany({ where: { userId: seededUserId! } });
+    expect(assignments).toHaveLength(0);
+  }, 30_000);
+
+  it("[db] a missing --expected-database-host fails before any DB query (no writes)", async () => {
+    const { workspaceId, email } = await seedActorWithWorkspace();
+
+    const result = runScript(["--email", email, "--workspace-id", workspaceId]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("expected_database_host is required");
+    const assignments = await db.userRoleAssignment.findMany({ where: { userId: seededUserId! } });
+    expect(assignments).toHaveLength(0);
+  }, 30_000);
+
+  it("[db] a malformed --expected-database-host (full URL) fails before any DB query (no writes)", async () => {
+    const { workspaceId, email } = await seedActorWithWorkspace();
+
+    const result = runScript(["--email", email, "--workspace-id", workspaceId, "--expected-database-host", `postgresql://user:pass@${EXPECTED_DB_HOST}/db`]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("://");
+    const assignments = await db.userRoleAssignment.findMany({ where: { userId: seededUserId! } });
+    expect(assignments).toHaveLength(0);
+  }, 30_000);
+
+  it("[db] credentials passed as --expected-database-host are rejected as malformed, never compared or logged", async () => {
+    const { workspaceId, email } = await seedActorWithWorkspace();
+
+    const result = runScript(["--email", email, "--workspace-id", workspaceId, "--expected-database-host", `admin:s3cr3t@${EXPECTED_DB_HOST}`]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("@");
+    expect(result.stdout).not.toContain("s3cr3t");
+    expect(result.stderr).not.toContain("s3cr3t");
+    const assignments = await db.userRoleAssignment.findMany({ where: { userId: seededUserId! } });
+    expect(assignments).toHaveLength(0);
+  }, 30_000);
 });
