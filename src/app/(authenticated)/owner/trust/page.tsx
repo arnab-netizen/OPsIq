@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge, Button, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { humanizeMetricKey } from "@/lib/metric-label";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic trust payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -26,6 +27,32 @@ const SEVERITY_VARIANT: Record<
   high: "destructive-accessible",
   medium: "warning-accessible",
   low: "default-accessible",
+};
+// Verified against TrustLabel in src/domain/owner-trust/types.ts (confidence.label / expectedImpact.label).
+const TRUST_LABEL: Record<string, string> = {
+  high: "High",
+  moderate: "Moderate",
+  low: "Low",
+};
+// Verified against OwnerSeverity in src/domain/owner-spine/contracts.ts.
+const SEVERITY_LABEL: Record<string, string> = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+// Verified against OWNER_DOMAINS in src/domain/owner-spine/contracts.ts / owner/page.tsx's nav array.
+const DOMAIN_LABEL: Record<string, string> = {
+  recovery: "Recovery",
+  finance: "Finance",
+  cashflow: "Cashflow",
+  sales: "Sales",
+  operations: "Operations",
+  customer: "Customer",
+  marketing: "Marketing",
+  sop: "Execution",
+  strategy: "Strategy",
+  portfolio: "Portfolio",
 };
 
 async function api(path: string) {
@@ -158,7 +185,7 @@ export default function OwnerTrustPage() {
                   onChange={(e: any) => setSelectedDomain(e.target.value)}
                   options={cycles.map((c) => ({
                     value: c.domain,
-                    label: `${c.domain} — cycle #${c.sequenceNumber}`,
+                    label: `${DOMAIN_LABEL[c.domain] ?? c.domain} — cycle #${c.sequenceNumber}`,
                   }))}
                 />
               </div>
@@ -195,16 +222,16 @@ export default function OwnerTrustPage() {
                       <div className="min-w-0">
                         <div className="font-bold">{c.whatWasDetected}</div>
                         <div className="text-xs text-muted-foreground">
-                          {c.domain} · {c.findingType} · {c.findingCode}
+                          {DOMAIN_LABEL[c.domain] ?? c.domain} · {c.findingType} · {c.findingCode}
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant={SEVERITY_VARIANT[c.severity] || "default-accessible"}>{c.severity}</Badge>
+                        <Badge variant={SEVERITY_VARIANT[c.severity] || "default-accessible"}>{SEVERITY_LABEL[c.severity] ?? c.severity}</Badge>
                         <Badge variant={LABEL_VARIANT[c.confidence?.label] || "default-accessible"}>
-                          confidence {c.confidence?.label} ({fmt(c.confidence?.score)})
+                          confidence {TRUST_LABEL[c.confidence?.label] ?? c.confidence?.label} ({fmt(c.confidence?.score)})
                         </Badge>
                         <Badge variant={LABEL_VARIANT[c.expectedImpact?.label] || "default-accessible"}>
-                          impact {c.expectedImpact?.label} ({Math.round(c.expectedImpact?.score ?? 0)})
+                          impact {TRUST_LABEL[c.expectedImpact?.label] ?? c.expectedImpact?.label} ({Math.round(c.expectedImpact?.score ?? 0)})
                         </Badge>
                       </div>
                     </div>
@@ -221,7 +248,7 @@ export default function OwnerTrustPage() {
                       <div>
                         <div className="text-xs uppercase text-muted-foreground">Source data used</div>
                         <p>
-                          <strong>{c.sourceDataUsed?.metric}</strong>: {c.sourceDataUsed?.valueLabel}
+                          <strong>{c.sourceDataUsed?.metric ? humanizeMetricKey(c.sourceDataUsed.metric) : c.sourceDataUsed?.metric}</strong>: {c.sourceDataUsed?.valueLabel}
                           {c.sourceDataUsed?.thresholdLabel ? ` (threshold ${c.sourceDataUsed.thresholdLabel})` : ""}
                         </p>
                         {Array.isArray(c.sourceDataUsed?.evidence) && c.sourceDataUsed.evidence.length > 0 && (
@@ -238,7 +265,7 @@ export default function OwnerTrustPage() {
                         <div className="text-xs uppercase text-muted-foreground">Verification method</div>
                         <p>
                           {c.verification?.method || "—"}
-                          {c.verification?.metric ? ` (metric: ${c.verification.metric})` : ""}
+                          {c.verification?.metric ? ` (metric: ${humanizeMetricKey(c.verification.metric)})` : ""}
                         </p>
                       </div>
                       <div>
@@ -246,7 +273,7 @@ export default function OwnerTrustPage() {
                         <p className="text-xs">
                           {c.hasInventedValues === false ? "No values invented." : ""}
                           {Array.isArray(c.dataGaps) && c.dataGaps.length > 0
-                            ? ` Missing data: ${c.dataGaps.join(", ")}.`
+                            ? ` Missing data: ${c.dataGaps.map(humanizeMetricKey).join(", ")}.`
                             : " No data gaps."}
                         </p>
                       </div>
