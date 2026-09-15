@@ -14,6 +14,11 @@ const VALIDATION_VARIANT: Record<string, "success" | "warning" | "destructive" |
   partial: "warning",
   invalid: "destructive",
 };
+const VALIDATION_LABEL: Record<string, string> = {
+  valid: "Valid",
+  partial: "Partial",
+  invalid: "Invalid",
+};
 
 const TARGET_DOMAINS = ["finance", "sales", "operations", "sop", "marketing"];
 const SOURCES = [
@@ -244,7 +249,7 @@ export default function OwnerIntakePage() {
                     {it.source && <Badge variant="muted" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted"}>{it.validationStatus}</Badge>
+                    <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted"}>{VALIDATION_LABEL[it.validationStatus] ?? it.validationStatus}</Badge>
                     {it.ownerConfirmed ? (
                       <Badge variant="success">confirmed</Badge>
                     ) : it.validationStatus !== "invalid" ? (
@@ -270,7 +275,7 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
     <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card mb-6 space-y-3">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase text-muted-foreground">Candidate — review before confirming</div>
-        <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted"}>{intake.validationStatus}</Badge>
+        <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted"}>{VALIDATION_LABEL[intake.validationStatus] ?? intake.validationStatus}</Badge>
       </div>
       <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
         <span>{DOMAIN_LABEL[intake.targetDomain] ?? intake.targetDomain} · {SOURCE_LABEL[intake.source] ?? intake.source} · {intake.rowCount} row(s) · normalization {NORMALIZATION_LABEL[intake.normalizationStatus] ?? intake.normalizationStatus}</span>
