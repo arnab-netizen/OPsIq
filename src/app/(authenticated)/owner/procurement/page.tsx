@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/ui/primitives/button";
 import { EmptyState, LoadingState } from "@/ui/primitives/states";
 import { Modal } from "@/ui/primitives/modal";
@@ -66,14 +66,30 @@ export default function ProcurementPage() {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const loading = contextLoading || ordersLoading;
 
+  // Presentation-only: guards against two ordering bugs when the owner switches
+  // business via BusinessContextSelector — (a) the previous business's rows
+  // staying on screen while the new business's request is in flight (so the
+  // selector shows business B while the table still shows business A's
+  // orders), and (b) an in-flight request for a business the owner has since
+  // switched away from resolving late and clobbering the newer selection's
+  // rows. requestIdRef makes each loadOrders call ignore any response that
+  // isn't for the most recently started request. No endpoint/param/payload
+  // change — this is purely which local render each response is allowed to
+  // produce.
+  const requestIdRef = useRef(0);
   const loadOrders = useCallback(async (bid: string) => {
+    const requestId = ++requestIdRef.current;
+    setOrders([]);
+    setOrdersLoading(true);
     try {
       const data = await apiFetch(`/api/owner/procurement/purchase-orders?businessId=${bid}`);
+      if (requestIdRef.current !== requestId) return;
       setOrders(data.orders ?? []);
     } catch (e: any) {
+      if (requestIdRef.current !== requestId) return;
       setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
     } finally {
-      setOrdersLoading(false);
+      if (requestIdRef.current === requestId) setOrdersLoading(false);
     }
   }, []);
 
@@ -82,7 +98,11 @@ export default function ProcurementPage() {
     if (!activeBusinessId) {
       // No business selected once the context has resolved — nothing else will
       // clear ordersLoading, so settle it here rather than showing a permanent spinner.
+      // Also invalidate any in-flight request so a late response can't repopulate
+      // orders after we've already decided there's no business to show them for.
+      requestIdRef.current++;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- presentation-only loading-flag settle, not a data fetch.
+      setOrders([]);
       setOrdersLoading(false);
       return;
     }

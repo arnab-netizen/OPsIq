@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/ui/primitives/button";
 import { EmptyState, LoadingState } from "@/ui/primitives/states";
 import { Modal } from "@/ui/primitives/modal";
@@ -73,14 +73,30 @@ export default function CampaignsPage() {
     }
   }, []);
 
+  // Presentation-only: guards against two ordering bugs when the owner switches
+  // business via BusinessContextSelector — (a) the previous business's rows
+  // staying on screen (still tagged in the UI as belonging to whichever
+  // business the selector now shows) while the new business's request is in
+  // flight, and (b) an in-flight request for a business the owner has since
+  // switched away from resolving late and clobbering the newer selection's
+  // rows. requestIdRef makes each loadCampaigns call ignore any response that
+  // isn't for the most recently started request. No endpoint/param/payload
+  // change — this is purely which local render each response is allowed to
+  // produce.
+  const requestIdRef = useRef(0);
   const loadCampaigns = useCallback(async (bid: string) => {
+    const requestId = ++requestIdRef.current;
+    setCampaigns([]);
+    setLoading(true);
     try {
       const data = await apiFetch(`/api/owner/marketing/campaigns?businessId=${bid}`);
+      if (requestIdRef.current !== requestId) return;
       setCampaigns(data.campaigns ?? []);
     } catch (e: any) {
+      if (requestIdRef.current !== requestId) return;
       setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, []);
 
