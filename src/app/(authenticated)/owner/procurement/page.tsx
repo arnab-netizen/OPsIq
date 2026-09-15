@@ -6,6 +6,7 @@ import { EmptyState, LoadingState } from "@/ui/primitives/states";
 import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
 import { PageHeader } from "@/ui/primitives/page-header";
+import { PageContainer } from "@/ui/primitives/page-container";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -152,7 +153,7 @@ export default function ProcurementPage() {
   };
 
   return (
-    <div className="p-6" data-testid="procurement-page">
+    <PageContainer data-testid="procurement-page">
       <div className="mb-6">
         <PageHeader
           title="Purchase Orders"
@@ -278,6 +279,6 @@ export default function ProcurementPage() {
           <Button onClick={handleCreate} disabled={saving}>Create PO</Button>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

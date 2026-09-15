@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select, CardDashboardSkeleton, PageHeader } from "@/ui/primitives";
+import { Badge, Button, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 
@@ -122,7 +122,7 @@ export default function OwnerTrustPage() {
   const activeCycle = cycleFor(selectedDomain);
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
+    <PageContainer>
       <div className="mb-6">
         <PageHeader
           title="Trust & Explainability"
@@ -281,6 +281,6 @@ export default function OwnerTrustPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

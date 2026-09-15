@@ -7,6 +7,7 @@ import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
 import { Select } from "@/ui/primitives/select";
 import { PageHeader } from "@/ui/primitives/page-header";
+import { PageContainer } from "@/ui/primitives/page-container";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -154,7 +155,7 @@ export default function CampaignsPage() {
   };
 
   return (
-    <div className="p-6" data-testid="campaigns-page">
+    <PageContainer data-testid="campaigns-page">
       <div className="mb-6">
         <PageHeader
           title="Marketing Campaigns"
@@ -285,6 +286,6 @@ export default function CampaignsPage() {
           </Button>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }
