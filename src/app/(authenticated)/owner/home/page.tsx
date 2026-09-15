@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
+import { humanizeMetricKey } from "@/lib/metric-label";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic owner-home payload is untyped; load() fetch-on-mount is intentional */
 
@@ -31,6 +32,20 @@ const SEVERITY_VARIANT: Record<string, "success" | "default" | "warning" | "dest
   medium: "warning",
   low: "default",
 };
+const SEVERITY_LABEL: Record<string, string> = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+const DANGER_LABEL: Record<string, string> = {
+  unknown: "No data",
+  none: "None",
+  low: "Low",
+  elevated: "Elevated",
+  high: "High",
+  critical: "Critical",
+};
 const HEALTH_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
   score >= 70 ? "success" : score >= 50 ? "default" : score >= 30 ? "warning" : "destructive";
 
@@ -43,6 +58,17 @@ const DOMAIN_LINK: Record<string, string> = {
   marketing: "/owner/marketing",
   strategy: "/owner/strategy",
   recovery: "/owner/recovery",
+};
+// Verified against the domain nav array in owner/page.tsx (same domain keys, same labels).
+const DOMAIN_LABEL: Record<string, string> = {
+  finance: "Finance",
+  cashflow: "Cashflow",
+  sales: "Sales",
+  operations: "Operations",
+  sop: "Execution",
+  marketing: "Marketing",
+  strategy: "Strategy",
+  recovery: "Recovery",
 };
 
 async function api(path: string) {
@@ -58,7 +84,7 @@ function DangerCard({ label, danger }: { label: string; danger: any }) {
     <div className="border rounded-lg p-3 bg-card">
       <div className="text-xs uppercase text-muted-foreground">{label}</div>
       <div className="mt-1 flex items-center gap-2">
-        <Badge variant={DANGER_VARIANT[level] || "muted"}>{level === "unknown" ? "no data" : level}</Badge>
+        <Badge variant={DANGER_VARIANT[level] || "muted"}>{DANGER_LABEL[level] ?? level}</Badge>
         <span className="text-sm text-muted-foreground">
           {danger?.riskScore === null || danger?.riskScore === undefined ? "—" : `${Math.round(danger.riskScore)}/100`}
         </span>
@@ -221,7 +247,7 @@ export default function OwnerHomePage() {
                         >
                           <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
                           <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
-                            <Badge variant="muted">{a.domain}</Badge>
+                            <Badge variant="muted">{DOMAIN_LABEL[a.domain] ?? a.domain}</Badge>
                             <span>priority {Math.round(a.priorityScore)}</span>
                             <span>· impact {Math.round(a.expectedImpactScore)}</span>
                           </div>
@@ -230,7 +256,7 @@ export default function OwnerHomePage() {
                         <div key={`${a.domain}-${a.findingCode}-${i}`} className="py-3 px-3 border-b min-h-[44px]">
                           <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
                           <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
-                            <Badge variant="muted">{a.domain}</Badge>
+                            <Badge variant="muted">{DOMAIN_LABEL[a.domain] ?? a.domain}</Badge>
                             <span>priority {Math.round(a.priorityScore)}</span>
                           </div>
                         </div>
@@ -253,9 +279,9 @@ export default function OwnerHomePage() {
                       <div key={`${r.domain}-${r.code}`} className="flex justify-between items-start gap-2 border-b pb-2">
                         <div>
                           <div className="text-sm font-medium">{r.title}</div>
-                          <div className="text-xs text-muted-foreground">{r.domain} · impact {Math.round(r.impactScore)}</div>
+                          <div className="text-xs text-muted-foreground">{DOMAIN_LABEL[r.domain] ?? r.domain} · impact {Math.round(r.impactScore)}</div>
                         </div>
-                        <Badge variant={SEVERITY_VARIANT[r.severity] || "default"}>{r.severity}</Badge>
+                        <Badge variant={SEVERITY_VARIANT[r.severity] || "default"}>{SEVERITY_LABEL[r.severity] ?? r.severity}</Badge>
                       </div>
                     ))}
                   </div>
@@ -273,7 +299,7 @@ export default function OwnerHomePage() {
                       <div key={`${o.domain}-${o.code}`} className="flex justify-between items-start gap-2 border-b pb-2">
                         <div>
                           <div className="text-sm font-medium">{o.title}</div>
-                          <div className="text-xs text-muted-foreground">{o.domain}</div>
+                          <div className="text-xs text-muted-foreground">{DOMAIN_LABEL[o.domain] ?? o.domain}</div>
                         </div>
                         <Badge variant="success">impact {Math.round(o.impactScore)}</Badge>
                       </div>
@@ -290,7 +316,7 @@ export default function OwnerHomePage() {
                   <div className="mt-1 text-sm">
                     <div className="font-medium">{s.lastVerifiedImprovement.actionTitle}</div>
                     <div className="text-xs text-muted-foreground">
-                      {s.lastVerifiedImprovement.domain} · {s.lastVerifiedImprovement.metric}:{" "}
+                      {DOMAIN_LABEL[s.lastVerifiedImprovement.domain] ?? s.lastVerifiedImprovement.domain} · {humanizeMetricKey(s.lastVerifiedImprovement.metric)}:{" "}
                       {s.lastVerifiedImprovement.beforeValue ?? "—"} → {s.lastVerifiedImprovement.afterValue ?? "—"} ·{" "}
                       {new Date(s.lastVerifiedImprovement.verifiedAt).toLocaleDateString()}
                     </div>

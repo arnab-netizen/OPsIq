@@ -17,6 +17,22 @@ const ALERT_VARIANT: Record<string, "warning" | "destructive"> = {
   cash_risk: "destructive",
   execution_risk: "warning",
 };
+const ALERT_TYPE_LABEL: Record<string, string> = {
+  survival_risk: "Survival risk",
+  cash_risk: "Cash risk",
+  execution_risk: "Execution risk",
+};
+// Verified against the domain nav array in owner/page.tsx (same domain keys, same labels).
+const DOMAIN_LABEL: Record<string, string> = {
+  finance: "Finance",
+  cashflow: "Cashflow",
+  sales: "Sales",
+  operations: "Operations",
+  sop: "Execution",
+  marketing: "Marketing",
+  strategy: "Strategy",
+  recovery: "Recovery",
+};
 
 async function api(path: string) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" } });
@@ -112,7 +128,7 @@ export default function OwnerPortfolioPage() {
                   <div key={p.action?.id ?? i} className="border-b py-1">
                     <div className="font-semibold">{i + 1}. {p.action?.title}</div>
                     <div className="text-xs text-muted-foreground">
-                      {p.businessName} · {p.action?.domain} · priority {Math.round(p.action?.priorityScore ?? 0)} · verify via {humanizeMetricKey(p.action?.verificationMetric)}
+                      {p.businessName} · {DOMAIN_LABEL[p.action?.domain] ?? p.action?.domain} · priority {Math.round(p.action?.priorityScore ?? 0)} · verify via {humanizeMetricKey(p.action?.verificationMetric)}
                     </div>
                   </div>
                 ))}
@@ -135,7 +151,7 @@ export default function OwnerPortfolioPage() {
                 {view.riskAlerts.map((a: any, i: number) => (
                   <div key={`${a.businessId}-${a.type}-${i}`} className="flex justify-between items-center border-b py-1 text-sm">
                     <span>{a.businessName} — {a.message}</span>
-                    <Badge variant={ALERT_VARIANT[a.type] || "warning"}>{a.type.replace("_", " ")}</Badge>
+                    <Badge variant={ALERT_VARIANT[a.type] || "warning"}>{ALERT_TYPE_LABEL[a.type] ?? a.type}</Badge>
                   </div>
                 ))}
               </div>
