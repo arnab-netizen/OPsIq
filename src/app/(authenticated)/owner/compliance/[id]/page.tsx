@@ -87,6 +87,11 @@ const TEMPORAL_VARIANT: Record<string, "default" | "warning" | "success" | "dest
   overdue: "destructive",
 };
 
+const LINK_TYPE_LABEL: Record<string, string> = {
+  REMEDIATION: "Remediation",
+  EVIDENCE: "Evidence",
+};
+
 async function apiFetch(path: string, options?: RequestInit) {
   const res = await fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -274,7 +279,7 @@ export default function ComplianceDetailPage() {
               {item.taskLinks.map((tl) => (
                 <tr key={tl.id}>
                   <td className="px-4 py-3 font-mono text-xs">{tl.taskId}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{tl.linkType}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{LINK_TYPE_LABEL[tl.linkType] ?? tl.linkType}</td>
                   <td className="px-4 py-3 text-muted-foreground">{new Date(tl.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}

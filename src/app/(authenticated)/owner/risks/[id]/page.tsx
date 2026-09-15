@@ -76,6 +76,21 @@ function severityVariant(s: number): "success" | "warning" | "destructive" | "de
   return "success";
 }
 
+// Verified against RiskCategory / CATEGORY_LABELS in the sibling list page (owner/risks/page.tsx).
+const CATEGORY_LABELS: Record<string, string> = {
+  OPERATIONAL: "Operational",
+  FINANCIAL: "Financial",
+  MARKET: "Market",
+  COMPLIANCE: "Compliance",
+  EXECUTION: "Execution",
+  STRATEGIC: "Strategic",
+};
+
+const LINK_TYPE_LABEL: Record<string, string> = {
+  MITIGATION: "Mitigation",
+  EVIDENCE: "Evidence",
+};
+
 async function apiFetch(path: string, options?: RequestInit) {
   const res = await fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -199,7 +214,7 @@ export default function RiskDetailPage() {
       <div className="flex gap-3 mb-6 flex-wrap items-center">
         <Badge variant={STATUS_VARIANT[risk.status]}>{STATUS_LABELS[risk.status]}</Badge>
         <Badge variant={severityVariant(risk.severity)}>Severity {risk.severity}</Badge>
-        <span className="text-sm text-muted-foreground">{risk.category}</span>
+        <span className="text-sm text-muted-foreground">{CATEGORY_LABELS[risk.category] ?? risk.category}</span>
       </div>
 
       {/* Details */}
@@ -257,7 +272,7 @@ export default function RiskDetailPage() {
               {risk.taskLinks.map((tl) => (
                 <tr key={tl.id}>
                   <td className="px-4 py-3 font-mono text-xs">{tl.taskId}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{tl.linkType}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{LINK_TYPE_LABEL[tl.linkType] ?? tl.linkType}</td>
                   <td className="px-4 py-3 text-muted-foreground">{new Date(tl.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
