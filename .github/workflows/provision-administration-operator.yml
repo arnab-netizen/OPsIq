@@ -17,6 +17,28 @@ name: Provision ADMINISTRATION_OPERATOR
 # migrate-production.yml already uses -- not a second implementation), and
 # an explicit confirmation phrase required before any mutation.
 #
+# STEP ORDERING CONTRACT: steps split into two groups, in this fixed order.
+# Group 1 (input-only; no repository content required): mode, expected_main_sha
+# format, target_email non-empty, workspace_id format, and the APPLY confirm
+# check -- these validate only the raw workflow_dispatch inputs and can run
+# before the repository is on disk. Group 2 (repository-dependent; everything
+# from Checkout main onward): checkout, then the exact-SHA-equality check
+# immediately after it, then every step that imports or executes a repository
+# file (expected_database_host format validation, npm ci, the workflow-level
+# DB host gate, the provisioning script itself) -- all of these come strictly
+# after checkout AND after the SHA-equality check has already succeeded. A
+# prior version of this file ran the expected_database_host format-validation
+# step (which imports scripts/validate-expected-db-host.mjs) before Checkout
+# main -- that repository file does not exist on the runner until checkout
+# happens, so the step failed closed with ERR_MODULE_NOT_FOUND on its first
+# real dispatch (no mutation occurred; the job never reached checkout, let
+# alone the database). Fixed by moving that validation step to run
+# immediately after the SHA-equality check succeeds, alongside every other
+# repository-dependent step. Guarded by a static regression test (see
+# src/__tests__/deployment/provision-administration-operator-workflow-safety.test.ts)
+# that asserts Checkout main precedes every repository-file-using step, and
+# that SHA-equality verification precedes every one of them too.
+#
 # DEFENSE IN DEPTH: the exact-host gate runs twice -- once here, at the
 # workflow level, before the provisioning script is ever invoked, and again
 # inside the script itself (scripts/provision-administration-operator.ts's
@@ -86,6 +108,8 @@ jobs:
     environment: production
 
     steps:
+      # ---- Group 1: input-only validation, no repository content needed ----
+
       - name: Validate mode input
         env:
           MODE: ${{ inputs.mode }}
@@ -129,17 +153,6 @@ jobs:
           fi
           echo "✓ workspace_id format valid"
 
-      - name: Validate expected_database_host format (bare hostname only)
-        env:
-          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
-        run: |
-          node --input-type=module -e "
-            const { isValidExpectedHost } = await import(process.cwd() + '/scripts/validate-expected-db-host.mjs');
-            const r = isValidExpectedHost(process.env.EXPECTED_DATABASE_HOST);
-            if (!r.ok) { console.error('::error::' + r.reason); process.exit(1); }
-            console.log('✓ expected_database_host format valid');
-          "
-
       - name: Confirm explicit intent (APPLY only)
         if: inputs.mode == 'APPLY'
         env:
@@ -150,6 +163,13 @@ jobs:
             exit 1
           fi
           echo "✓ Explicit confirmation received for APPLY"
+
+      # ---- Group 2: repository-dependent -- nothing above this line reads a
+      # repository file. Checkout happens first, SHA-equality is verified
+      # immediately after, and every step below that point (including the
+      # expected_database_host format check, which imports
+      # scripts/validate-expected-db-host.mjs) runs only once both have
+      # succeeded. ----
 
       - name: Checkout main
         uses: actions/checkout@v4
@@ -170,6 +190,17 @@ jobs:
           fi
           echo "✓ Checked-out SHA matches expected_main_sha exactly"
           echo "MAIN_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
+
+      - name: Validate expected_database_host format (bare hostname only)
+        env:
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+        run: |
+          node --input-type=module -e "
+            const { isValidExpectedHost } = await import(process.cwd() + '/scripts/validate-expected-db-host.mjs');
+            const r = isValidExpectedHost(process.env.EXPECTED_DATABASE_HOST);
+            if (!r.ok) { console.error('::error::' + r.reason); process.exit(1); }
+            console.log('✓ expected_database_host format valid');
+          "
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4

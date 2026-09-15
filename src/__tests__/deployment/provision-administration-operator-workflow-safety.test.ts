@@ -402,6 +402,157 @@ describe("scripts/provision-administration-operator.ts — verifyExpectedDatabas
   });
 });
 
+describe("provision-administration-operator.yml — checkout occurs before every repository-file-dependent step (regression for the ERR_MODULE_NOT_FOUND production failure)", () => {
+  // The real production run https://github.com/arnab-netizen/OPsIq/actions/runs/34938065673
+  // failed with ERR_MODULE_NOT_FOUND for scripts/validate-expected-db-host.mjs
+  // because the "Validate expected_database_host format" step -- which
+  // imports that repository file -- ran BEFORE "Checkout main" had ever put
+  // the repository on the runner's disk. No mutation occurred (the job died
+  // before checkout, long before any database code), but the workflow could
+  // never complete a dry run, let alone an apply. These tests parse the
+  // workflow's actual step order (not just step *content*, which the
+  // pre-existing tests in this file already covered) and assert the fixed
+  // invariant: nothing that reads a repository file may appear before
+  // Checkout main, and nothing repository-dependent may appear before the
+  // SHA-equality check that immediately follows it.
+  interface ParsedStep {
+    name: string;
+    body: string;
+  }
+
+  function parseSteps(workflowSrc: string): ParsedStep[] {
+    const stepsIdx = workflowSrc.indexOf("steps:\n");
+    expect(stepsIdx).toBeGreaterThan(-1);
+    const stepsSrc = workflowSrc.slice(stepsIdx);
+    const nameLineRe = /^ {0,6}- name: (.+)$/gm;
+    const positions: { name: string; index: number }[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = nameLineRe.exec(stepsSrc)) !== null) {
+      positions.push({ name: m[1]!.trim(), index: m.index });
+    }
+    return positions.map((entry, i) => {
+      const end = i + 1 < positions.length ? positions[i + 1]!.index : stepsSrc.length;
+      return { name: entry.name, body: stepsSrc.slice(entry.index, end) };
+    });
+  }
+
+  // Returns the subset of `repoDependentNames` that appear at or before
+  // `boundaryName` in `steps` -- i.e. the ordering violations. An empty
+  // array means every repo-dependent step correctly comes after the
+  // boundary (checkout, or the SHA-equality check).
+  function findOrderingViolations(
+    steps: ParsedStep[],
+    repoDependentNames: string[],
+    boundaryName: string
+  ): string[] {
+    const boundaryIdx = steps.findIndex((s) => s.name === boundaryName);
+    if (boundaryIdx === -1) return repoDependentNames; // boundary step missing entirely is itself a violation
+    return repoDependentNames.filter((name) => {
+      const idx = steps.findIndex((s) => s.name === name);
+      return idx === -1 || idx <= boundaryIdx;
+    });
+  }
+
+  const steps = parseSteps(src);
+  const CHECKOUT_STEP = "Checkout main";
+  const SHA_VERIFY_STEP = "Verify checked-out SHA exactly equals expected_main_sha";
+
+  // Every step that imports or executes a repository-tracked file.
+  const REPO_DEPENDENT_STEP_NAMES = [
+    "Validate expected_database_host format (bare hostname only)",
+    "Install dependencies",
+    "Verify exact production database host matches owner-pinned expectation (workflow-level gate)",
+    "Run provisioning script (DRY_RUN preview)",
+    "Run provisioning script (APPLY — grants the role)",
+  ];
+
+  it("44. Checkout main exists exactly once", () => {
+    const checkoutSteps = steps.filter((s) => s.body.includes("actions/checkout@"));
+    expect(checkoutSteps.length).toBe(1);
+    expect(checkoutSteps[0]!.name).toBe(CHECKOUT_STEP);
+  });
+
+  it("45. Checkout main occurs before every repository-file-dependent step", () => {
+    expect(findOrderingViolations(steps, REPO_DEPENDENT_STEP_NAMES, CHECKOUT_STEP)).toEqual([]);
+  });
+
+  it("46. SHA-equality verification runs as the step immediately after checkout", () => {
+    const checkoutIdx = steps.findIndex((s) => s.name === CHECKOUT_STEP);
+    const shaIdx = steps.findIndex((s) => s.name === SHA_VERIFY_STEP);
+    expect(checkoutIdx).toBeGreaterThan(-1);
+    expect(shaIdx).toBe(checkoutIdx + 1);
+  });
+
+  it("47. SHA-equality verification occurs before every repository-file-dependent step, including the expected_database_host format check that previously broke production", () => {
+    expect(findOrderingViolations(steps, REPO_DEPENDENT_STEP_NAMES, SHA_VERIFY_STEP)).toEqual([]);
+  });
+
+  it("48. expected_database_host format validation still imports the shared validator, now positioned after checkout and SHA verification", () => {
+    const step = steps.find((s) => s.name === "Validate expected_database_host format (bare hostname only)");
+    expect(step).toBeDefined();
+    expect(step!.body).toContain("scripts/validate-expected-db-host.mjs");
+  });
+
+  it("49. No step before Checkout main references any scripts/ path, npm, or npx — a name-agnostic proof that nothing repository-dependent can run before checkout", () => {
+    // Strip comment-only lines first: a trailing YAML comment attached to
+    // the last step before checkout (explaining the ordering contract in
+    // prose) legitimately mentions "scripts/..." to describe it -- that is
+    // not executable content and must not trip this check.
+    const stripComments = (body: string) =>
+      body
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("#"))
+        .join("\n");
+    const checkoutIdx = steps.findIndex((s) => s.name === CHECKOUT_STEP);
+    expect(checkoutIdx).toBeGreaterThan(-1);
+    for (const step of steps.slice(0, checkoutIdx)) {
+      const code = stripComments(step.body);
+      expect(code).not.toMatch(/\bscripts\//);
+      expect(code).not.toMatch(/\bnpm (ci|install|run)\b/);
+      expect(code).not.toMatch(/\bnpx\b/);
+    }
+  });
+
+  it("50. PRODUCTION_DATABASE_URL is never referenced by any step before checkout and SHA verification succeed", () => {
+    const shaIdx = steps.findIndex((s) => s.name === SHA_VERIFY_STEP);
+    expect(shaIdx).toBeGreaterThan(-1);
+    for (const step of steps.slice(0, shaIdx + 1)) {
+      expect(step.body).not.toContain("PRODUCTION_DATABASE_URL");
+    }
+  });
+
+  it("51. Regression guard: findOrderingViolations itself detects the exact defect that broke production — a fixture with the validator-import step before checkout must be reported as a violation", () => {
+    const BROKEN_FIXTURE = [
+      "steps:",
+      "  - name: Validate mode input",
+      "    run: echo ok",
+      "",
+      "  - name: Validate expected_database_host format (bare hostname only)",
+      "    run: |",
+      "      node --input-type=module -e \"",
+      "        const { isValidExpectedHost } = await import(process.cwd() + '/scripts/validate-expected-db-host.mjs');",
+      "      \"",
+      "",
+      "  - name: Checkout main",
+      "    uses: actions/checkout@v4",
+      "",
+      "  - name: Verify checked-out SHA exactly equals expected_main_sha",
+      "    run: echo ok",
+      "",
+    ].join("\n");
+    const brokenSteps = parseSteps(BROKEN_FIXTURE);
+    const violations = findOrderingViolations(
+      brokenSteps,
+      ["Validate expected_database_host format (bare hostname only)"],
+      CHECKOUT_STEP
+    );
+    expect(violations).toEqual(["Validate expected_database_host format (bare hostname only)"]);
+
+    // And the fixed real workflow, parsed the same way, must report none.
+    expect(findOrderingViolations(steps, REPO_DEPENDENT_STEP_NAMES, CHECKOUT_STEP)).toEqual([]);
+  });
+});
+
 describe("provision-administration-operator.yml — script-injection hardening", () => {
   it("31. Every ${{ inputs.* }} / ${{ secrets.* }} reference inside jobs: is used only via an env: key assignment or an if: condition — never interpolated directly into a shell command line", () => {
     const jobsIdx = src.indexOf("\njobs:");
