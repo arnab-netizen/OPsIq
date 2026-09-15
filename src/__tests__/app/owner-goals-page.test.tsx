@@ -27,7 +27,11 @@ const TRAJECTORY_RESULT = {
     trajectory: {
       projectedAchievementDate: "2027-04-15T00:00:00.000Z",
       onTrack: true,
-      confidence: "medium",
+      // Real TrajectoryConfidence values are uppercase (see
+      // src/services/owner-strategy/goal-trajectory.service.ts) -- this fixture
+      // previously used lowercase "medium", which never occurs in production and
+      // masked the G5 raw-enum-leak bug this page was fixed for (see CONFIDENCE_LABEL).
+      confidence: "MEDIUM",
       points: [],
       gapToTarget: 280000,
       percentComplete: 44,
@@ -113,9 +117,11 @@ describe("GoalsPage", () => {
     await findByText("44%");
   });
 
-  it("shows ACTIVE status badge", async () => {
-    const { findByText } = render(<GoalsPage />);
-    await findByText("ACTIVE");
+  it("shows the humanized status badge, not the raw ACTIVE enum value", async () => {
+    const { findByText, queryByText } = render(<GoalsPage />);
+    await findByText("Active");
+    // The raw GoalStatus enum value must never leak into the rendered badge.
+    expect(queryByText("ACTIVE")).toBeNull();
   });
 
   it("shows Update Goal button when a goal exists", async () => {
@@ -192,8 +198,11 @@ describe("GoalsPage", () => {
     await findByText(/Projected achievement/);
   });
 
-  it("renders confidence value from trajectory", async () => {
-    const { findByText } = render(<GoalsPage />);
-    await findByText("medium");
+  it("renders the humanized confidence value, not the raw MEDIUM enum value", async () => {
+    const { findByText, queryByText } = render(<GoalsPage />);
+    await findByText("Medium");
+    // The raw TrajectoryConfidence enum value must never leak into the rendered text.
+    expect(queryByText("MEDIUM")).toBeNull();
+    expect(queryByText("medium")).toBeNull();
   });
 });

@@ -60,15 +60,20 @@ describe("Owner Budget & Profit Plan page", () => {
     await waitFor(() => expect(container.textContent ?? "").toContain("Next best action"));
     const text = container.textContent ?? "";
     expect(text).toContain("Budget & Profit Plan");
-    expect(text).toContain("EMERGENCY");               // mode
-    expect(text).toContain("OPERATIONAL");             // confidence
+    // Humanized labels are shown -- the raw enum values must never leak (G5).
+    expect(text).toContain("Emergency");                // mode
+    expect(text).not.toContain("EMERGENCY");
+    expect(text).toContain("Operational");              // confidence
+    expect(text).not.toContain("OPERATIONAL");
     expect(text).toContain("Freeze discretionary spend"); // next best action
     expect(text).toContain("Cash forecast");           // forecast section
     expect(text).toContain("reserve breach wk 3");     // scenario breach
     expect(text).toContain("Fund allocation");
     expect(text).toContain("Spend governance");
-    expect(text).toContain("statutory_reserve_breach"); // signal surfaced
-    expect(text).toContain("OWNER_APPROVAL_REQUIRED");  // authority restriction
+    expect(text).toContain("Statutory reserve breach"); // signal surfaced, humanized
+    expect(text).not.toContain("statutory_reserve_breach");
+    expect(text).toContain("Owner approval required");  // authority restriction, humanized
+    expect(text).not.toContain("OWNER_APPROVAL_REQUIRED");
   });
 
   it("labels generated actions as advisory and shows the honest PARTIAL module banner", async () => {
