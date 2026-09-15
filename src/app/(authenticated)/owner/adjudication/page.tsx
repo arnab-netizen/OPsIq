@@ -21,7 +21,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Button, TableListSkeleton } from "@/ui/primitives";
+import { Button, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { AdjudicationQueue, type QueueItemView, type OutcomeOption, type AdjudicationResult } from "@/components/owner/AdjudicationQueue";
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -107,20 +107,17 @@ export default function OwnerAdjudicationPage() {
   );
 
   return (
-    <main style={{ padding: 24, maxWidth: 920, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <h1 style={{ margin: 0 }}>Proof-risk review queue</h1>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Link href="/owner/now" data-testid="back-to-now">Owner Now View</Link>
-          <Button onClick={() => void load()}>Refresh</Button>
-        </div>
-      </header>
-
-      <p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>
-        Review flagged proofs and decide. Dismissing or accepting a finding reduces noise; confirming or
-        requiring fresh proof keeps it active. New evidence can bring a cleared finding back. Every
-        decision is audited.
-      </p>
+    <PageContainer style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <PageHeader
+        title="Proof-risk review queue"
+        description="Review flagged proofs and decide. Dismissing or accepting a finding reduces noise; confirming or requiring fresh proof keeps it active. New evidence can bring a cleared finding back. Every decision is audited."
+        actions={
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link href="/owner/now" data-testid="back-to-now">Owner Now View</Link>
+            <Button onClick={() => void load()}>Refresh</Button>
+          </div>
+        }
+      />
 
       {summary && (
         <p style={{ margin: 0, fontSize: 13, color: "#374151" }} data-testid="queue-summary">
@@ -139,6 +136,6 @@ export default function OwnerAdjudicationPage() {
       {!loading && !error && (
         <AdjudicationQueue items={items} outcomeOptions={outcomeOptions} onAdjudicate={onAdjudicate} />
       )}
-    </main>
+    </PageContainer>
   );
 }
