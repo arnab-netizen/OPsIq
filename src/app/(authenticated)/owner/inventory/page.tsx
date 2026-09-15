@@ -195,14 +195,14 @@ export default function InventoryPage() {
 
       <Modal isOpen={isModalOpen} onClose={() => { setShowCreate(false); setEditItem(null); }} title={modalTitle}>
         <div className="space-y-3">
-          <Input placeholder="SKU" value={form.sku ?? ""} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} />
-          <Input placeholder="Name" value={form.name ?? ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          <Input placeholder="Unit (e.g. pcs)" value={form.unit ?? ""} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} />
-          <Input type="number" placeholder="Current Qty" value={form.currentQty ?? ""} onChange={(e) => setForm((f) => ({ ...f, currentQty: e.target.value }))} />
-          <Input type="number" placeholder="Reorder Point" value={form.reorderPoint ?? ""} onChange={(e) => setForm((f) => ({ ...f, reorderPoint: e.target.value }))} />
-          <Input type="number" placeholder="Safety Stock" value={form.safetyStock ?? ""} onChange={(e) => setForm((f) => ({ ...f, safetyStock: e.target.value }))} />
-          <Input type="number" placeholder="Lead Time (days)" value={form.leadTimeDays ?? ""} onChange={(e) => setForm((f) => ({ ...f, leadTimeDays: e.target.value }))} />
-          <Input type="number" placeholder="Daily Usage" value={form.dailyUsage ?? ""} onChange={(e) => setForm((f) => ({ ...f, dailyUsage: e.target.value }))} />
+          <Input label="SKU" placeholder="SKU" value={form.sku ?? ""} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} />
+          <Input label="Name" placeholder="Name" value={form.name ?? ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <Input label="Unit" placeholder="Unit (e.g. pcs)" value={form.unit ?? ""} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} />
+          <Input label="Current Qty" type="number" placeholder="Current Qty" value={form.currentQty ?? ""} onChange={(e) => setForm((f) => ({ ...f, currentQty: e.target.value }))} />
+          <Input label="Reorder Point" type="number" placeholder="Reorder Point" value={form.reorderPoint ?? ""} onChange={(e) => setForm((f) => ({ ...f, reorderPoint: e.target.value }))} />
+          <Input label="Safety Stock" type="number" placeholder="Safety Stock" value={form.safetyStock ?? ""} onChange={(e) => setForm((f) => ({ ...f, safetyStock: e.target.value }))} />
+          <Input label="Lead Time (days)" type="number" placeholder="Lead Time (days)" value={form.leadTimeDays ?? ""} onChange={(e) => setForm((f) => ({ ...f, leadTimeDays: e.target.value }))} />
+          <Input label="Daily Usage" type="number" placeholder="Daily Usage" value={form.dailyUsage ?? ""} onChange={(e) => setForm((f) => ({ ...f, dailyUsage: e.target.value }))} />
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={() => { setShowCreate(false); setEditItem(null); }}>Cancel</Button>

@@ -509,11 +509,11 @@ export default function StartupSessionPage({
         <div data-testid="startup-tab-content-ideas">
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>Ideas</h2>
           <form onSubmit={handleAddIdea} style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
-            <input placeholder="Idea name" value={newIdeaName}
+            <input placeholder="Idea name" aria-label="Idea name" value={newIdeaName}
               onChange={(e) => setNewIdeaName(e.target.value)}
               data-testid="new-idea-name-input"
               style={{ flex: 1, padding: "0.5rem", border: "1px solid #ccc", borderRadius: 4 }} />
-            <input placeholder="Industry" value={newIdeaIndustry}
+            <input placeholder="Industry" aria-label="Industry" value={newIdeaIndustry}
               onChange={(e) => setNewIdeaIndustry(e.target.value)}
               data-testid="new-idea-industry-input"
               style={{ flex: 1, padding: "0.5rem", border: "1px solid #ccc", borderRadius: 4 }} />

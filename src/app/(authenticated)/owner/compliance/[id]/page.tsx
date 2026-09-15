@@ -298,8 +298,9 @@ export default function ComplianceDetailPage() {
         <div className="flex flex-col gap-4">
           {reviewError && <p className="text-destructive text-sm">{reviewError}</p>}
           <div>
-            <label className="block text-sm font-medium mb-1">New status <span className="text-destructive">*</span></label>
+            <label htmlFor="compliance-review-status" className="block text-sm font-medium mb-1">New status <span className="text-destructive">*</span></label>
             <Select
+              id="compliance-review-status"
               value={reviewStatus}
               onChange={(e) => setReviewStatus(e.target.value as ComplianceStatus)}
               options={nextStatuses.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
@@ -307,8 +308,8 @@ export default function ComplianceDetailPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Compliance notes</label>
-            <Textarea value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} rows={3} placeholder="Notes for this review" />
+            <label htmlFor="compliance-review-notes" className="block text-sm font-medium mb-1">Compliance notes</label>
+            <Textarea id="compliance-review-notes" value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} rows={3} placeholder="Notes for this review" />
           </div>
         </div>
       </Modal>
@@ -328,12 +329,13 @@ export default function ComplianceDetailPage() {
         <div className="flex flex-col gap-4">
           {linkError && <p className="text-destructive text-sm">{linkError}</p>}
           <div>
-            <label className="block text-sm font-medium mb-1">Task ID <span className="text-destructive">*</span></label>
-            <Input value={linkTaskId} onChange={(e) => setLinkTaskId(e.target.value)} placeholder="UUID of the delegated task" />
+            <label htmlFor="compliance-link-task-id" className="block text-sm font-medium mb-1">Task ID <span className="text-destructive">*</span></label>
+            <Input id="compliance-link-task-id" value={linkTaskId} onChange={(e) => setLinkTaskId(e.target.value)} placeholder="UUID of the delegated task" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Link type</label>
+            <label htmlFor="compliance-link-type" className="block text-sm font-medium mb-1">Link type</label>
             <Select
+              id="compliance-link-type"
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as "REMEDIATION" | "EVIDENCE")}
               options={[

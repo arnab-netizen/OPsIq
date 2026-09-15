@@ -153,7 +153,9 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-2">
           <div className="text-sm font-medium">Complete a proof-gated task</div>
+          <label htmlFor="owner-action-task-id" className="sr-only">Task ID</label>
           <input
+            id="owner-action-task-id"
             className="w-full border rounded px-2 py-2 text-sm min-h-[44px]"
             placeholder="Task ID"
             value={taskId}
@@ -173,8 +175,10 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
 
         <div className="space-y-2">
           <div className="text-sm font-medium">Resolve an approval</div>
-          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Scope (e.g. pricing.discount)" value={scope} onChange={(e) => setScope(e.target.value)} />
-          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Action type (e.g. apply_discount)" value={actionType} onChange={(e) => setActionType(e.target.value)} />
+          <label htmlFor="owner-action-scope" className="sr-only">Scope</label>
+          <input id="owner-action-scope" className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Scope (e.g. pricing.discount)" value={scope} onChange={(e) => setScope(e.target.value)} />
+          <label htmlFor="owner-action-type" className="sr-only">Action type</label>
+          <input id="owner-action-type" className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Action type (e.g. apply_discount)" value={actionType} onChange={(e) => setActionType(e.target.value)} />
           <Select
             name="riskClass"
             label="Risk class"
@@ -182,7 +186,8 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
             onChange={(e: any) => setRiskClass(e.target.value)}
             options={["low", "medium", "high", "critical"].map((r) => ({ value: r, label: r }))}
           />
-          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Decision summary" value={content} onChange={(e) => setContent(e.target.value)} />
+          <label htmlFor="owner-action-decision-summary" className="sr-only">Decision summary</label>
+          <input id="owner-action-decision-summary" className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Decision summary" value={content} onChange={(e) => setContent(e.target.value)} />
           <Button className="min-h-[44px]" disabled={apprBusy || !scope.trim() || !actionType.trim() || !content.trim()} onClick={resolveApproval}>
             {apprBusy ? "Resolving…" : "Resolve approval"}
           </Button>
@@ -194,7 +199,8 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
         <div className="space-y-2">
           <div className="text-sm font-medium">Decide an opportunity</div>
           <p className="text-xs text-muted-foreground">OpsIQ uses this business&apos;s real capacity + margin.</p>
-          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Fit score 0–1" value={fitScore} onChange={(e) => setFitScore(e.target.value)} />
+          <label htmlFor="owner-action-fit-score" className="sr-only">Fit score</label>
+          <input id="owner-action-fit-score" className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Fit score 0–1" value={fitScore} onChange={(e) => setFitScore(e.target.value)} />
           <Select
             name="paymentRisk"
             label="Payment risk"

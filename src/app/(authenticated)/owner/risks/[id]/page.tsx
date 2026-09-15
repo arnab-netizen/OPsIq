@@ -281,8 +281,9 @@ export default function RiskDetailPage() {
         <div className="flex flex-col gap-4">
           {reviewError && <p className="text-destructive text-sm">{reviewError}</p>}
           <div>
-            <label className="block text-sm font-medium mb-1">New status <span className="text-destructive">*</span></label>
+            <label htmlFor="risk-review-status" className="block text-sm font-medium mb-1">New status <span className="text-destructive">*</span></label>
             <Select
+              id="risk-review-status"
               value={reviewStatus}
               onChange={(e) => setReviewStatus(e.target.value as RiskStatus)}
               options={nextStatuses.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
@@ -290,16 +291,16 @@ export default function RiskDetailPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Residual risk (0–100)</label>
-            <Input type="number" min={0} max={100} value={residualRisk} onChange={(e) => setResidualRisk(e.target.value)} placeholder="0–100" />
+            <label htmlFor="risk-residual-risk-review" className="block text-sm font-medium mb-1">Residual risk (0–100)</label>
+            <Input id="risk-residual-risk-review" type="number" min={0} max={100} value={residualRisk} onChange={(e) => setResidualRisk(e.target.value)} placeholder="0–100" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Acceptance rationale</label>
-            <Textarea value={acceptanceRationale} onChange={(e) => setAcceptanceRationale(e.target.value)} rows={2} placeholder="Required when accepting the risk" />
+            <label htmlFor="risk-acceptance-rationale" className="block text-sm font-medium mb-1">Acceptance rationale</label>
+            <Textarea id="risk-acceptance-rationale" value={acceptanceRationale} onChange={(e) => setAcceptanceRationale(e.target.value)} rows={2} placeholder="Required when accepting the risk" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Review notes</label>
-            <Textarea value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} rows={2} placeholder="Notes for this review" />
+            <label htmlFor="risk-review-notes" className="block text-sm font-medium mb-1">Review notes</label>
+            <Textarea id="risk-review-notes" value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} rows={2} placeholder="Notes for this review" />
           </div>
         </div>
       </Modal>
@@ -319,12 +320,13 @@ export default function RiskDetailPage() {
         <div className="flex flex-col gap-4">
           {linkError && <p className="text-destructive text-sm">{linkError}</p>}
           <div>
-            <label className="block text-sm font-medium mb-1">Task ID <span className="text-destructive">*</span></label>
-            <Input value={linkTaskId} onChange={(e) => setLinkTaskId(e.target.value)} placeholder="UUID of the delegated task" />
+            <label htmlFor="risk-link-task-id" className="block text-sm font-medium mb-1">Task ID <span className="text-destructive">*</span></label>
+            <Input id="risk-link-task-id" value={linkTaskId} onChange={(e) => setLinkTaskId(e.target.value)} placeholder="UUID of the delegated task" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Link type</label>
+            <label htmlFor="risk-link-type" className="block text-sm font-medium mb-1">Link type</label>
             <Select
+              id="risk-link-type"
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as "MITIGATION" | "EVIDENCE")}
               options={[

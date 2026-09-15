@@ -277,10 +277,11 @@ export default function GoalsPage() {
             </p>
           )}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="goal-target-type" className="block text-sm font-medium mb-1">
               Goal type <span className="text-destructive">*</span>
             </label>
             <Select
+              id="goal-target-type"
               value={form.targetType}
               onChange={(e) => setField("targetType", e.target.value as TargetType)}
               options={TARGET_TYPES.map((t) => ({ value: t, label: TARGET_LABELS[t] }))}
@@ -289,10 +290,11 @@ export default function GoalsPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label htmlFor="goal-target-amount" className="block text-sm font-medium mb-1">
                 Target amount <span className="text-destructive">*</span>
               </label>
               <Input
+                id="goal-target-amount"
                 type="number"
                 min={0}
                 value={form.targetAmount}
@@ -301,8 +303,9 @@ export default function GoalsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Currency</label>
+              <label htmlFor="goal-target-currency" className="block text-sm font-medium mb-1">Currency</label>
               <Input
+                id="goal-target-currency"
                 value={form.targetCurrency}
                 onChange={(e) => setField("targetCurrency", e.target.value.toUpperCase().slice(0, 3))}
                 placeholder="USD"
@@ -311,18 +314,20 @@ export default function GoalsPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="goal-target-date" className="block text-sm font-medium mb-1">
               Target date <span className="text-destructive">*</span>
             </label>
             <Input
+              id="goal-target-date"
               type="date"
               value={form.targetDate}
               onChange={(e) => setField("targetDate", e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Baseline amount (optional)</label>
+            <label htmlFor="goal-baseline-amount" className="block text-sm font-medium mb-1">Baseline amount (optional)</label>
             <Input
+              id="goal-baseline-amount"
               type="number"
               min={0}
               value={form.baselineAmount}

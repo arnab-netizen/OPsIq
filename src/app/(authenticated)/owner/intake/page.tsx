@@ -200,8 +200,9 @@ export default function OwnerIntakePage() {
                 <Select name="targetDomain" label="Target domain" required options={TARGET_DOMAINS.map((d) => ({ value: d, label: d }))} />
                 <Select name="source" label="Source" required options={SOURCES} />
               </div>
-              <label className="block text-sm font-medium">CSV content (first row = headers)</label>
+              <label htmlFor="intake-csv-text" className="block text-sm font-medium">CSV content (first row = headers)</label>
               <textarea
+                id="intake-csv-text"
                 name="csvText"
                 required
                 rows={6}

@@ -222,6 +222,7 @@ export default function VendorPage() {
 
       <div className="flex gap-3 mb-6 flex-wrap">
         <select
+          aria-label="Filter by status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded border border-border bg-background px-3 py-1.5 text-sm"
@@ -335,26 +336,29 @@ export default function VendorPage() {
         <div className="flex flex-col gap-4">
           {formError && <p className="text-destructive text-sm">{formError}</p>}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="vendor-name" className="block text-sm font-medium mb-1">
               Vendor name <span className="text-destructive">*</span>
             </label>
             <Input
+              id="vendor-name"
               value={form.name}
               onChange={(e) => setField("name", e.target.value)}
               placeholder="e.g. Acme Supplies Pty Ltd"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Bank account reference</label>
+            <label htmlFor="vendor-bank-account-ref" className="block text-sm font-medium mb-1">Bank account reference</label>
             <Input
+              id="vendor-bank-account-ref"
               value={form.bankAccountRef}
               onChange={(e) => setField("bankAccountRef", e.target.value)}
               placeholder="BSB/Account or IBAN (optional)"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Related party?</label>
+            <label htmlFor="vendor-related-party" className="block text-sm font-medium mb-1">Related party?</label>
             <Select
+              id="vendor-related-party"
               value={form.relatedParty}
               onChange={(e) => setField("relatedParty", e.target.value)}
               options={[
@@ -366,8 +370,9 @@ export default function VendorPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Payment terms (days)</label>
+              <label htmlFor="vendor-payment-terms-days" className="block text-sm font-medium mb-1">Payment terms (days)</label>
               <Input
+                id="vendor-payment-terms-days"
                 type="number"
                 min={0}
                 max={365}
@@ -377,8 +382,9 @@ export default function VendorPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Lead time to replace (days)</label>
+              <label htmlFor="vendor-replacement-lead-time-days" className="block text-sm font-medium mb-1">Lead time to replace (days)</label>
               <Input
+                id="vendor-replacement-lead-time-days"
                 type="number"
                 min={0}
                 value={form.replacementLeadTimeDays}
@@ -411,10 +417,11 @@ export default function VendorPage() {
             Suspended vendors are blocked from new orders. State the reason for this record.
           </p>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="vendor-suspend-reason" className="block text-sm font-medium mb-1">
               Reason <span className="text-destructive">*</span>
             </label>
             <Textarea
+              id="vendor-suspend-reason"
               value={suspendForm.reason}
               onChange={(e) => setSuspendForm({ reason: e.target.value })}
               placeholder="Reason for suspension"

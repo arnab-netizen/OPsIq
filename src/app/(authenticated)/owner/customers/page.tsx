@@ -499,10 +499,11 @@ export default function CustomersPage() {
         <div className="flex flex-col gap-4">
           {formError && <p className="text-destructive text-sm">{formError}</p>}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="customer-name" className="block text-sm font-medium mb-1">
               Name <span className="text-destructive">*</span>
             </label>
             <Input
+              id="customer-name"
               value={form.name}
               onChange={(e) => setField("name", e.target.value)}
               placeholder="Customer or company name"
@@ -510,8 +511,9 @@ export default function CustomersPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label htmlFor="customer-email" className="block text-sm font-medium mb-1">Email</label>
               <Input
+                id="customer-email"
                 type="email"
                 value={form.email}
                 onChange={(e) => setField("email", e.target.value)}
@@ -519,8 +521,9 @@ export default function CustomersPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Phone</label>
+              <label htmlFor="customer-phone" className="block text-sm font-medium mb-1">Phone</label>
               <Input
+                id="customer-phone"
                 value={form.phone}
                 onChange={(e) => setField("phone", e.target.value)}
                 placeholder="+1 555 000 0000"
@@ -529,8 +532,9 @@ export default function CustomersPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Segment</label>
+              <label htmlFor="customer-segment" className="block text-sm font-medium mb-1">Segment</label>
               <Select
+                id="customer-segment"
                 value={form.segment}
                 onChange={(e) => setField("segment", e.target.value)}
                 options={SEGMENTS.map((s) => ({ value: s, label: SEGMENT_LABEL[s] ?? s }))}
@@ -538,8 +542,9 @@ export default function CustomersPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Lifetime value ($)</label>
+              <label htmlFor="customer-ltv" className="block text-sm font-medium mb-1">Lifetime value ($)</label>
               <Input
+                id="customer-ltv"
                 type="number"
                 min={0}
                 value={form.ltv}
@@ -549,8 +554,9 @@ export default function CustomersPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Notes</label>
+            <label htmlFor="customer-notes" className="block text-sm font-medium mb-1">Notes</label>
             <Textarea
+              id="customer-notes"
               value={form.notes}
               onChange={(e) => setField("notes", e.target.value)}
               placeholder="Internal notes about this customer"
