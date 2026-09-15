@@ -20,20 +20,23 @@
 import { fileURLToPath } from "url";
 
 // RFC 1123 hostname: one or more dot-separated labels, each 1-63 chars,
-// alphanumeric with internal hyphens only. A single label with no dot
-// (e.g. "localhost", a bare Docker/CI service name) is deliberately valid
-// too -- production's real expected host is always a multi-label Neon FQDN
-// with dots, but non-production callers of this same script (this script's
-// own DB-backed tests, and provision-administration-operator.ts's local/CI
-// test runs) legitimately point at a bare local hostname. Widening format
-// acceptance here does not touch the actual security property: hostsMatch()
-// below is still exact string equality, so a real production mismatch is
-// caught identically regardless of this format change. This allow-list
-// still rejects "://", "@", "/", "?", "#", whitespace, control characters,
-// and every shell metacharacter by construction -- none of those characters
-// can appear in a match.
+// alphanumeric with internal hyphens only. A bare single-label host (e.g.
+// "localhost") is intentionally rejected here -- this is the production
+// format contract shared by every caller of this script, including
+// migrate-production.yml's PINNED_PREDEPLOY/MAIN gate. A real production
+// expected host is always a multi-label Neon FQDN with dots; accepting a
+// single-label value here would let a caller (accidentally or otherwise)
+// satisfy format validation with a bare service name like "localhost" or
+// "postgres", weakening this shared contract for every consumer. Callers
+// that legitimately need to test against a local/CI database (this
+// script's own DB-backed tests, provision-administration-operator.ts's
+// local/CI test runs) must not widen this shared validator -- see that
+// script's own narrowly-scoped, test-environment-gated allowance instead.
+// This allow-list still rejects "://", "@", "/", "?", "#", whitespace,
+// control characters, and every shell metacharacter by construction --
+// none of those characters can appear in a match.
 const HOSTNAME_PATTERN =
-  /^(?=.{1,253}$)[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  /^(?=.{1,253}$)[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
 const FORBIDDEN_SUBSTRINGS = ["://", "@", "/", "?", "#"];
 

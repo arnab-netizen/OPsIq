@@ -8,6 +8,8 @@
  */
 import { readFileSync } from "fs";
 import { join } from "path";
+import { afterEach, vi } from "vitest";
+import { verifyExpectedDatabaseHost } from "../../../scripts/provision-administration-operator";
 
 const WORKFLOW_PATH = join(process.cwd(), ".github/workflows/provision-administration-operator.yml");
 const src = readFileSync(WORKFLOW_PATH, "utf-8");
@@ -254,6 +256,149 @@ describe("scripts/provision-administration-operator.ts — expected-database-hos
   it("30. ROLE and SCOPE remain hard-coded constants — not derived from --expected-database-host or any other new input", () => {
     expect(scriptSrc).toContain("const ROLE = ROLES.ADMINISTRATION_OPERATOR;");
     expect(scriptSrc).toContain('const SCOPE = "workspace";');
+  });
+});
+
+describe("scripts/validate-expected-db-host.mjs — shared validator stays strict for every caller", () => {
+  const VALIDATOR_PATH = join(process.cwd(), "scripts/validate-expected-db-host.mjs");
+  const validatorSrc = readFileSync(VALIDATOR_PATH, "utf-8");
+
+  it("32. HOSTNAME_PATTERN requires at least one dot-separated label (no bare single-label host like 'localhost')", () => {
+    const idx = validatorSrc.indexOf("const HOSTNAME_PATTERN");
+    expect(idx).toBeGreaterThan(-1);
+    const block = validatorSrc.slice(idx, validatorSrc.indexOf(";", idx));
+    // The dot-group repetition must be `)+` (one or more), never `)*` (zero or more).
+    expect(block).toMatch(/\)\+\$\/;?$|\)\+\/$/);
+  });
+
+  it("33. The shared validator contains no test-environment / VITEST / NODE_ENV escape hatch — any local-only allowance lives in a caller, never here", () => {
+    expect(validatorSrc).not.toMatch(/VITEST/);
+    expect(validatorSrc).not.toMatch(/NODE_ENV/);
+  });
+});
+
+describe("scripts/provision-administration-operator.ts — narrow test-only local-host allowance is confined and production-unreachable", () => {
+  const SCRIPT_PATH = join(process.cwd(), "scripts/provision-administration-operator.ts");
+  const scriptSrc = readFileSync(SCRIPT_PATH, "utf-8");
+  const MIGRATE_WORKFLOW_PATH = join(process.cwd(), ".github/workflows/migrate-production.yml");
+  const migrateWorkflowSrc = readFileSync(MIGRATE_WORKFLOW_PATH, "utf-8");
+
+  it("34. The test-only allowance is gated on the same existing repo convention as src/lib/db.ts (process.env.VITEST || process.env.NODE_ENV === \"test\") — not a new convention", () => {
+    const idx = scriptSrc.indexOf("function isTestEnvironment()");
+    expect(idx).toBeGreaterThan(-1);
+    const block = scriptSrc.slice(idx, idx + 150);
+    expect(block).toContain('process.env.VITEST');
+    expect(block).toContain('process.env.NODE_ENV === "test"');
+  });
+
+  it("35. There is no CLI flag that disables, skips, or bypasses host validation (no --skip-host-check / --no-host-check / --unsafe / --force / --allow-local, etc.)", () => {
+    const parseArgsIdx = scriptSrc.indexOf("function parseArgs");
+    const parseArgsEndIdx = scriptSrc.indexOf("\n}", parseArgsIdx);
+    const parseArgsBody = scriptSrc.slice(parseArgsIdx, parseArgsEndIdx);
+    expect(parseArgsBody).not.toMatch(/skip|bypass|unsafe|force|allow-local|no-host-check/i);
+    // The only host-related flag is --expected-database-host itself.
+    const hostFlagMatches = parseArgsBody.match(/--[a-z-]*host[a-z-]*/gi) ?? [];
+    expect(hostFlagMatches).toEqual(["--expected-database-host"]);
+  });
+
+  it("36. The test-only allowance never touches hostsMatch() — exact-equality comparison against the real resolved DB host is identical in every environment", () => {
+    const allowanceIdx = scriptSrc.indexOf("TEST_ONLY_SINGLE_LABEL_HOST_PATTERN.test(expectedDatabaseHost)");
+    expect(allowanceIdx).toBeGreaterThan(-1);
+    const fnIdx = scriptSrc.indexOf("export function verifyExpectedDatabaseHost");
+    const fnEndIdx = scriptSrc.indexOf("\n}", scriptSrc.indexOf("if (!match)", fnIdx));
+    const fnBody = scriptSrc.slice(fnIdx, fnEndIdx);
+    // hostsMatch is called exactly once, unconditionally, regardless of which
+    // format-check branch (strict shared validator vs. test-only fallback) set formatCheck.ok.
+    // Match only real call sites (assignment or bare statement), not the word
+    // appearing inside a comment.
+    const hostsMatchCalls = (fnBody.match(/(?:=|^)\s*hostsMatch\(/gm) ?? []).length;
+    expect(hostsMatchCalls).toBe(1);
+  });
+
+  it("37. .github/workflows/provision-administration-operator.yml never sets VITEST or NODE_ENV=test anywhere — the test-only allowance is unreachable from DRY_RUN or APPLY", () => {
+    expect(src).not.toMatch(/VITEST/);
+    expect(src).not.toMatch(/NODE_ENV:\s*['"]?test['"]?/);
+    expect(src).not.toMatch(/NODE_ENV=test/);
+  });
+
+  it("38. .github/workflows/migrate-production.yml (the pre-existing shared-validator caller) also never sets VITEST or NODE_ENV=test", () => {
+    expect(migrateWorkflowSrc).not.toMatch(/VITEST/);
+    expect(migrateWorkflowSrc).not.toMatch(/NODE_ENV:\s*['"]?test['"]?/);
+    expect(migrateWorkflowSrc).not.toMatch(/NODE_ENV=test/);
+  });
+});
+
+describe("scripts/provision-administration-operator.ts — verifyExpectedDatabaseHost runtime behavior (no DB required)", () => {
+  const ORIGINAL_VITEST = process.env.VITEST;
+  const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
+  const ORIGINAL_DATABASE_URL = process.env.DATABASE_URL;
+  const ORIGINAL_TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (ORIGINAL_VITEST === undefined) delete process.env.VITEST;
+    else process.env.VITEST = ORIGINAL_VITEST;
+    if (ORIGINAL_NODE_ENV === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+    if (ORIGINAL_DATABASE_URL === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = ORIGINAL_DATABASE_URL;
+    if (ORIGINAL_TEST_DATABASE_URL === undefined) delete process.env.TEST_DATABASE_URL;
+    else process.env.TEST_DATABASE_URL = ORIGINAL_TEST_DATABASE_URL;
+  });
+
+  it("39. In a simulated production environment (VITEST unset, NODE_ENV != 'test'), a single-label host ('localhost') is still rejected", () => {
+    delete process.env.VITEST;
+    process.env.NODE_ENV = "production";
+    process.env.DATABASE_URL = "postgresql://user:pass@localhost:5432/db";
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`);
+    }) as never);
+    expect(() => verifyExpectedDatabaseHost("localhost")).toThrow("exit:1");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("40. In a simulated test environment (NODE_ENV='test'), a single-label host that exactly matches the resolved DB host is accepted", () => {
+    delete process.env.VITEST;
+    process.env.NODE_ENV = "test";
+    process.env.DATABASE_URL = "postgresql://user:pass@localhost:5432/db";
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+      throw new Error("unexpected exit");
+    }) as never);
+    expect(() => verifyExpectedDatabaseHost("localhost")).not.toThrow();
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it("41. In a simulated test environment, a single-label host that does NOT match the resolved DB host is still rejected (format allowance never weakens hostsMatch exact equality)", () => {
+    delete process.env.VITEST;
+    process.env.NODE_ENV = "test";
+    process.env.DATABASE_URL = "postgresql://user:pass@localhost:5432/db";
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`);
+    }) as never);
+    expect(() => verifyExpectedDatabaseHost("postgres")).toThrow("exit:1");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("42. In a simulated test environment, credentials embedded in a single-label-looking value are still rejected as malformed", () => {
+    process.env.VITEST = "true";
+    delete process.env.NODE_ENV;
+    process.env.DATABASE_URL = "postgresql://user:pass@localhost:5432/db";
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`);
+    }) as never);
+    expect(() => verifyExpectedDatabaseHost("user:pass@localhost")).toThrow("exit:1");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("43. A legitimate production FQDN passes with no test-environment gating needed at all", () => {
+    delete process.env.VITEST;
+    process.env.NODE_ENV = "production";
+    process.env.DATABASE_URL = "postgresql://user:pass@ep-abc-123.us-east-1.aws.neon.tech/db";
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+      throw new Error("unexpected exit");
+    }) as never);
+    expect(() => verifyExpectedDatabaseHost("ep-abc-123.us-east-1.aws.neon.tech")).not.toThrow();
+    expect(exitSpy).not.toHaveBeenCalled();
   });
 });
 

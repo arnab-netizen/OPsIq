@@ -46,7 +46,12 @@
  * getDbInstance() / before any database call, via the same allow-list
  * hostname validator and exact-string comparison scripts/validate-expected-
  * db-host.mjs already uses for migrate-production.yml's own exact-host gate
- * — reused here rather than reimplemented.
+ * — reused here rather than reimplemented, and NOT widened: that shared
+ * validator stays strict/FQDN-only for every caller, including production
+ * invocations of this script. A narrow, test-environment-gated allowance
+ * for bare local hostnames (e.g. "localhost") lives only in this file's own
+ * verifyExpectedDatabaseHost(), never in the shared .mjs — see that
+ * function's own comment for the exact scope of that allowance.
  *
  * Usage (dry run — always start here):
  *   npx tsx scripts/provision-administration-operator.ts --email owner@example.com --workspace-id <uuid> \
@@ -80,6 +85,36 @@ const GRANT_CONFIRM_PHRASE = "GRANT ADMINISTRATION OPERATOR";
 const REVOKE_CONFIRM_PHRASE = "REVOKE ADMINISTRATION OPERATOR";
 const ROLE = ROLES.ADMINISTRATION_OPERATOR;
 const SCOPE = "workspace";
+
+// Narrow, test-only local-hostname allowance -- exists solely so this
+// script's own DB-backed tests (src/__tests__/scripts/provision-
+// administration-operator.db.test.ts) can run --expected-database-host
+// against local Postgres (hostname "localhost") without widening the
+// shared, strict, FQDN-only scripts/validate-expected-db-host.mjs that
+// migrate-production.yml and this script's own production invocation both
+// depend on. This allowance:
+//   - lives here, in the caller, never in the shared .mjs validator;
+//   - is gated on the exact same test-environment convention already used
+//     elsewhere in this codebase (src/lib/db.ts's own pooler-URL-rewrite
+//     logic): process.env.VITEST || process.env.NODE_ENV === "test";
+//   - is not a CLI flag -- there is no argument a production caller (or a
+//     malicious one) could pass to reach it;
+//   - only ever loosens the FORMAT check for a bare single-label value
+//     (still rejecting "://", "@", "/", "?", "#", whitespace, and control
+//     characters exactly like the shared validator, by construction of the
+//     pattern below); hostsMatch() below remains the same exact
+//     string-equality comparison in every case, so a wrong-host mismatch is
+//     still caught identically whether format was validated by the shared
+//     strict path or this narrow test-only path;
+//   - is unreachable from .github/workflows/provision-administration-
+//     operator.yml in either DRY_RUN or APPLY mode: that workflow never
+//     sets VITEST and never sets NODE_ENV=test, so isTestEnvironment() is
+//     always false there, regardless of --apply.
+const TEST_ONLY_SINGLE_LABEL_HOST_PATTERN = /^(?=.{1,253}$)[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
+
+function isTestEnvironment(): boolean {
+  return !!(process.env.VITEST || process.env.NODE_ENV === "test");
+}
 
 interface Args {
   email?: string;
@@ -120,7 +155,20 @@ function parseArgs(argv: string[]): Args {
  * before getDbInstance() / before any db.* call.
  */
 export function verifyExpectedDatabaseHost(expectedDatabaseHost: string | undefined): void {
-  const formatCheck = isValidExpectedHost(expectedDatabaseHost);
+  let formatCheck = isValidExpectedHost(expectedDatabaseHost);
+  if (
+    !formatCheck.ok &&
+    isTestEnvironment() &&
+    typeof expectedDatabaseHost === "string" &&
+    TEST_ONLY_SINGLE_LABEL_HOST_PATTERN.test(expectedDatabaseHost)
+  ) {
+    // Test-only fallback: a bare single-label hostname (e.g. "localhost")
+    // failed the shared strict validator's format check purely because it
+    // has no dot -- accepted here ONLY under isTestEnvironment(), and ONLY
+    // as a format allowance. hostsMatch() below is untouched, so the actual
+    // host-equality security property is identical either way.
+    formatCheck = { ok: true };
+  }
   if (!formatCheck.ok) {
     console.error(`✗ --expected-database-host: ${formatCheck.reason}`);
     process.exit(1);
