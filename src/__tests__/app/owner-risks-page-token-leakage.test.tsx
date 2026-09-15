@@ -74,7 +74,7 @@ describe("RisksPage — G1/G6 accessibility regressions", () => {
     expect(getByLabelText("Filter by status")).toBeTruthy();
   });
 
-  it("preserves the IDENTIFIED status badge's semantic color category after the G6 accessible-variant migration", async () => {
+  it("preserves the IDENTIFIED status badge's semantic color category and uses the accessible text token (G6)", async () => {
     const { container, findByText } = render(<RisksPage />);
     // Wait for the row's own data to render first -- the filter dropdown's static
     // "Identified" option is present synchronously and would otherwise satisfy a
@@ -84,9 +84,12 @@ describe("RisksPage — G1/G6 accessibility regressions", () => {
       (el) => el.textContent === "Identified",
     );
     expect(badge).toBeTruthy();
-    // STATUS_VARIANT.IDENTIFIED migrated from "default" to "default-accessible" (G6):
-    // same bg-primary category, only the text-color token changed.
+    // STATUS_VARIANT.IDENTIFIED migrated from "default" to "default-accessible" (G6). "default"
+    // and "default-accessible" share the same bg-primary/10 fill (only the text-color token
+    // differs -- see badge.tsx), so a bg-primary-only assertion would pass even if the
+    // migration were fully reverted. Pin the accessible variant specifically.
     expect(badge!.className).toMatch(/bg-primary/);
+    expect(badge!.className).toMatch(/text-\[var\(--primary-text\)\]/);
     expect(badge!.className).not.toMatch(/bg-destructive|bg-warning/);
   });
 });

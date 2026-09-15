@@ -255,16 +255,19 @@ describe("VendorPage", () => {
     expect(getByLabelText("Lead time to replace (days)")).toBeTruthy();
   });
 
-  it("preserves the APPROVED badge's semantic color category after the G6 accessible-variant migration", async () => {
+  it("preserves the APPROVED badge's semantic color category and uses the accessible text token (G6)", async () => {
     const { container, findByText } = renderPage();
     await findByText("Delta Supplies");
     const badge = Array.from(container.querySelectorAll("span.inline-flex")).find(
       (el) => el.textContent === "Approved",
     );
     expect(badge).toBeTruthy();
-    // APPROVAL_VARIANT.APPROVED migrated from "success" to "success-accessible" (G6):
-    // same bg-success category, only the text-color token changed.
+    // APPROVAL_VARIANT.APPROVED migrated from "success" to "success-accessible" (G6). "success"
+    // and "success-accessible" share the same bg-success/10 fill (only the text-color token
+    // differs -- see badge.tsx), so a bg-success-only assertion would pass even if the
+    // migration were fully reverted. Pin the accessible variant specifically.
     expect(badge!.className).toMatch(/bg-success/);
+    expect(badge!.className).toMatch(/text-\[var\(--success-badge-text\)\]/);
     expect(badge!.className).not.toMatch(/bg-destructive|bg-warning/);
   });
 });
