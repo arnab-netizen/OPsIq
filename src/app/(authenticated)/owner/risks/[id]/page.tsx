@@ -181,7 +181,6 @@ export default function RiskDetailPage() {
       <div className="mb-6">
         <PageHeader
           title={risk.title}
-          description={risk.riskCode}
           actions={
             <div className="flex gap-2 flex-wrap justify-end">
               {nextStatuses.length > 0 && (
@@ -195,6 +194,7 @@ export default function RiskDetailPage() {
             </div>
           }
         />
+        <p className="text-xs font-mono text-muted-foreground mt-1">{risk.riskCode}</p>
       </div>
 
       {/* Status row */}

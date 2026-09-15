@@ -188,7 +188,6 @@ export default function ComplianceDetailPage() {
       <div className="mb-6">
         <PageHeader
           title={item.name}
-          description={item.kind.charAt(0).toUpperCase() + item.kind.slice(1)}
           actions={
             <div className="flex gap-2 flex-wrap justify-end">
               {nextStatuses.length > 0 && (
@@ -202,6 +201,7 @@ export default function ComplianceDetailPage() {
             </div>
           }
         />
+        <p className="text-xs text-muted-foreground mt-1 capitalize">{item.kind}</p>
       </div>
 
       {/* Status row */}
