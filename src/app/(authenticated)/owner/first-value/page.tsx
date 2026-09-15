@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { FirstValueDTO } from "@/lib/first-value/first-value.dto";
 import { toOperatorSafeError } from "@/lib/operator-safe-errors";
-import { CardDashboardSkeleton } from "@/ui/primitives";
+import { CardDashboardSkeleton, PageContainer } from "@/ui/primitives";
 
 export default function FirstValuePage() {
   const [firstValue, setFirstValue] = useState<FirstValueDTO | null>(null);
@@ -67,7 +67,8 @@ export default function FirstValuePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
+    <PageContainer>
+      <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -349,6 +350,7 @@ export default function FirstValuePage() {
       <div className="text-xs text-gray-500 text-center border-t pt-6">
         Generated: {new Date(firstValue.generatedAt).toLocaleString()}
       </div>
-    </div>
+      </div>
+    </PageContainer>
   );
 }
