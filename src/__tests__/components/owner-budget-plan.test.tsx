@@ -56,13 +56,18 @@ function mockFetch() {
 describe("Owner Budget & Profit Plan page", () => {
   it("renders the governed budget surface the owner can act on", async () => {
     mockFetch();
-    const { container } = render(<OwnerBudgetPlanPage />);
+    const { container, queryByText } = render(<OwnerBudgetPlanPage />);
     await waitFor(() => expect(container.textContent ?? "").toContain("Next best action"));
     const text = container.textContent ?? "";
     expect(text).toContain("Budget & Profit Plan");
     // Humanized labels are shown -- the raw enum values must never leak (G5).
     expect(text).toContain("Emergency");                // mode
-    expect(text).not.toContain("EMERGENCY");
+    // Note: the word "EMERGENCY" legitimately appears inside PLAN.fundAllocationChanges'
+    // free-text sentence ("...EMERGENCY mode protects survival.") -- that's fixture prose,
+    // not the mode badge, so a whole-page substring check would false-positive on it. Assert
+    // against the exact standalone text node instead: the raw badge value must not render as
+    // its own element.
+    expect(queryByText("EMERGENCY")).toBeNull();
     expect(text).toContain("Operational");              // confidence
     expect(text).not.toContain("OPERATIONAL");
     expect(text).toContain("Freeze discretionary spend"); // next best action
