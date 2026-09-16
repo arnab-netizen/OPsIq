@@ -43,7 +43,8 @@ async function fetchSchedulerStatus(): Promise<SchedulerStatus> {
 }
 
 function toLoadErrorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : "Failed to load automation status";
+  if (e instanceof Error) return e.message;
+  return "Failed to load automation status";
 }
 
 export default function OwnerAutomationPage() {

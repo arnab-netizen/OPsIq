@@ -69,7 +69,8 @@ async function fetchQueueData(): Promise<QueueData> {
 }
 
 function toLoadErrorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : "Failed to load the adjudication queue.";
+  if (e instanceof Error) return e.message;
+  return "Failed to load the adjudication queue.";
 }
 
 export default function OwnerAdjudicationPage() {
