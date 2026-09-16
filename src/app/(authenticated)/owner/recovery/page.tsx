@@ -1,18 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 import { humanizeMetricKey } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  low: "muted",
-  medium: "default",
-  high: "warning",
-  critical: "destructive",
+const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  low: "muted-accessible",
+  medium: "default-accessible",
+  high: "warning-accessible",
+  critical: "destructive-accessible",
 };
 const SEVERITY_LABEL: Record<string, string> = {
   low: "Low",
@@ -21,12 +21,12 @@ const SEVERITY_LABEL: Record<string, string> = {
   critical: "Critical",
 };
 
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  unverified: "muted",
-  verified_improved: "success",
-  verified_not_improved: "destructive",
-  inconclusive: "warning",
-  disputed: "warning",
+const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  unverified: "muted-accessible",
+  verified_improved: "success-accessible",
+  verified_not_improved: "destructive-accessible",
+  inconclusive: "warning-accessible",
+  disputed: "warning-accessible",
 };
 const VERIFY_LABEL: Record<string, string> = {
   unverified: "Not yet verified",
@@ -241,15 +241,13 @@ export default function OwnerRecoveryPage() {
   const cycle = dashboard?.latestCycle ?? null;
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Recovery</h1>
-          <p className="text-muted-foreground text-sm">
-            Diagnose, plan, assign, and verify real-business recovery — one cycle at a time.
-          </p>
-        </div>
-        <Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Owner Recovery"
+          description="Diagnose, plan, assign, and verify real-business recovery — one cycle at a time."
+          actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
+        />
       </div>
 
       {error && (
@@ -284,7 +282,7 @@ export default function OwnerRecoveryPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 flex items-end gap-3">
+          <div className="mb-6 flex flex-wrap items-end gap-3">
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
@@ -334,7 +332,7 @@ export default function OwnerRecoveryPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -410,7 +408,7 @@ function RecoveryCycleView({
                       {a.assignedToRole} · due {a.dueAt ? new Date(a.dueAt).toLocaleDateString() : "—"} · {PRIORITY_LABEL[a.priority] ?? a.priority}
                     </div>
                   </div>
-                  <Badge variant="muted">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
+                  <Badge variant="muted-accessible">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Move <strong>{humanizeMetricKey(a.metricToMove)}</strong> {a.direction} — baseline {String(a.baselineValue)} → target {String(a.targetValue)} (within {a.verificationWindowDays}d)
@@ -424,7 +422,7 @@ function RecoveryCycleView({
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
-                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted"}>
+                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">

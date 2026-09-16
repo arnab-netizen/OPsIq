@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select, CardDashboardSkeleton, Disclosure } from "@/ui/primitives";
+import { Badge, Button, Select, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { PriorityCommandStrip } from "@/components/owner/PriorityCommandStrip";
 import { SupervisorSummary } from "@/components/owner/SupervisorSummary";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
@@ -29,10 +29,10 @@ const MISSING_INPUT_REASON: Record<string, string> = {
   refundReworkCost: "needed to assess quality and rework drain",
 };
 
-const RISK_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
-  score >= 70 ? "destructive" : score >= 40 ? "warning" : score >= 20 ? "default" : "success";
-const HEALTH_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
-  score >= 70 ? "success" : score >= 50 ? "default" : score >= 30 ? "warning" : "destructive";
+const RISK_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  score >= 70 ? "destructive-accessible" : score >= 40 ? "warning-accessible" : score >= 20 ? "default-accessible" : "success-accessible";
+const HEALTH_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  score >= 70 ? "success-accessible" : score >= 50 ? "default-accessible" : score >= 30 ? "warning-accessible" : "destructive-accessible";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -229,7 +229,9 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-2">
           <div className="text-sm font-medium">Complete a proof-gated task</div>
+          <label htmlFor="owner-action-task-id" className="sr-only">Task ID</label>
           <input
+            id="owner-action-task-id"
             className="w-full border rounded px-2 py-2 text-sm min-h-[44px]"
             placeholder="Task ID"
             value={taskId}
@@ -249,8 +251,10 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
 
         <div className="space-y-2">
           <div className="text-sm font-medium">Resolve an approval</div>
-          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Scope (e.g. pricing.discount)" value={scope} onChange={(e) => setScope(e.target.value)} />
-          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Action type (e.g. apply_discount)" value={actionType} onChange={(e) => setActionType(e.target.value)} />
+          <label htmlFor="owner-action-scope" className="sr-only">Scope</label>
+          <input id="owner-action-scope" className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Scope (e.g. pricing.discount)" value={scope} onChange={(e) => setScope(e.target.value)} />
+          <label htmlFor="owner-action-type" className="sr-only">Action type</label>
+          <input id="owner-action-type" className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Action type (e.g. apply_discount)" value={actionType} onChange={(e) => setActionType(e.target.value)} />
           <Select
             name="riskClass"
             label="Risk class"
@@ -258,7 +262,8 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
             onChange={(e: any) => setRiskClass(e.target.value)}
             options={["low", "medium", "high", "critical"].map((r) => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))}
           />
-          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Decision summary" value={content} onChange={(e) => setContent(e.target.value)} />
+          <label htmlFor="owner-action-decision-summary" className="sr-only">Decision summary</label>
+          <input id="owner-action-decision-summary" className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Decision summary" value={content} onChange={(e) => setContent(e.target.value)} />
           <Button className="min-h-[44px]" disabled={apprBusy || !scope.trim() || !actionType.trim() || !content.trim()} onClick={resolveApproval}>
             {apprBusy ? "Resolving…" : "Resolve approval"}
           </Button>
@@ -270,7 +275,8 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
         <div className="space-y-2">
           <div className="text-sm font-medium">Decide an opportunity</div>
           <p className="text-xs text-muted-foreground">OpsIQ uses this business&apos;s real capacity + margin.</p>
-          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Fit score 0–1" value={fitScore} onChange={(e) => setFitScore(e.target.value)} />
+          <label htmlFor="owner-action-fit-score" className="sr-only">Fit score</label>
+          <input id="owner-action-fit-score" className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Fit score 0–1" value={fitScore} onChange={(e) => setFitScore(e.target.value)} />
           <Select
             name="paymentRisk"
             label="Payment risk"
@@ -377,13 +383,13 @@ export default function OwnerCommandCenterPage() {
 
   if (loading) return <CardDashboardSkeleton label="Loading owner command center" />;
   if (error && !data) return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
+    <PageContainer>
       <div className="rounded-md border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
         <p className="font-medium mb-2">Failed to load command center</p>
         <p className="mb-4">{error}</p>
         <Button onClick={() => load()} className="min-h-[44px]">Retry</Button>
       </div>
-    </div>
+    </PageContainer>
   );
 
   const businessList: any[] = businesses ?? data?.businesses ?? [];
@@ -393,16 +399,14 @@ export default function OwnerCommandCenterPage() {
   const missingWithPriority: Array<{ field: string; priority: string }> = data?.missingInputsWithPriority ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
+    <PageContainer>
       <div className="mb-6"><CanonicalCockpitLink from="command center" /></div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Command Center</h1>
-          <p className="text-muted-foreground text-sm">
-            One business condition. One highest-impact next action. Evidence, not guesses.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <div className="mb-6">
+        <PageHeader
+          title="Owner Command Center"
+          description="One business condition. One highest-impact next action. Evidence, not guesses."
+        />
+        <div className="mt-4 flex flex-wrap gap-2">
           {[
             // "Home" points at the canonical /owner/cockpit, not the legacy /owner/home duplicate
             // -- that page independently falls back to the most-recently-created business when no
@@ -476,15 +480,15 @@ export default function OwnerCommandCenterPage() {
                 <div className="text-xs uppercase text-muted-foreground">Whole-business plan (live runtime)</div>
                 <div className="flex flex-wrap gap-2">
                   <span data-testid="wbp-provider-status">
-                    <Badge variant={wbp.data.criticalDomainsRealProviderBacked ? "success" : "warning"}>
+                    <Badge variant={wbp.data.criticalDomainsRealProviderBacked ? "success-accessible" : "warning-accessible"}>
                       {wbp.data.criticalDomainsRealProviderBacked ? "Provider-backed data" : "Partial data"}
                     </Badge>
                   </span>
                   <span data-testid="wbp-confidence">
-                    <Badge variant="muted">Confidence: {CONFIDENCE_LABEL[wbp.data.overallConfidence] ?? wbp.data.overallConfidence}</Badge>
+                    <Badge variant="muted-accessible">Confidence: {CONFIDENCE_LABEL[wbp.data.overallConfidence] ?? wbp.data.overallConfidence}</Badge>
                   </span>
-                  <Badge variant="muted">Plan score {Math.round(wbp.collectiveScore)}/100</Badge>
-                  <Badge variant="muted">Stage: {String(wbp.stage).replace(/_/g, " ")}</Badge>
+                  <Badge variant="muted-accessible">Plan score {Math.round(wbp.collectiveScore)}/100</Badge>
+                  <Badge variant="muted-accessible">Stage: {String(wbp.stage).replace(/_/g, " ")}</Badge>
                 </div>
               </div>
 
@@ -509,7 +513,7 @@ export default function OwnerCommandCenterPage() {
 
               <div className="rounded-md border p-3 text-sm mb-3" data-testid="wbp-owner-workload">
                 <strong>Owner workload / offload:</strong> {wbp.ownerWorkload.offload}
-                {wbp.ownerWorkload.approvalRequired && <Badge variant="warning" className="ml-2">Owner approval required</Badge>}
+                {wbp.ownerWorkload.approvalRequired && <Badge variant="warning-accessible" className="ml-2">Owner approval required</Badge>}
                 {wbp.ownerWorkload.delegatedWork.length > 0 && (
                   <ul className="list-disc ml-5 mt-1">{wbp.ownerWorkload.delegatedWork.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
                 )}
@@ -575,7 +579,7 @@ export default function OwnerCommandCenterPage() {
                     </Badge>
                   </span>
                   <span data-testid="readiness-gate">
-                    <Badge variant={readiness.pilotReady ? "success" : "warning"}>
+                    <Badge variant={readiness.pilotReady ? "success-accessible" : "warning-accessible"}>
                       {readiness.pilotReady ? "Pilot-ready" : "Not pilot-ready yet"}
                     </Badge>
                   </span>
@@ -604,7 +608,7 @@ export default function OwnerCommandCenterPage() {
             <section className="border rounded-lg p-4 bg-card mb-6" data-testid="owner-input-guidance">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div className="text-xs uppercase text-muted-foreground">Improve accuracy</div>
-                <span data-testid="guidance-confidence"><Badge variant="muted">Confidence: {CONFIDENCE_LABEL[guidance.overallConfidence] ?? guidance.overallConfidence}</Badge></span>
+                <span data-testid="guidance-confidence"><Badge variant="muted-accessible">Confidence: {CONFIDENCE_LABEL[guidance.overallConfidence] ?? guidance.overallConfidence}</Badge></span>
               </div>
               <div className="text-sm mb-2" data-testid="guidance-next-input">
                 <span className="font-medium">Next best input:</span>{" "}
@@ -628,7 +632,7 @@ export default function OwnerCommandCenterPage() {
                     <li key={m.category} className="rounded-md border p-2 text-sm">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{m.label}</span>
-                        <Badge variant={m.severity === "critical" ? "destructive" : m.severity === "high" ? "warning" : "muted"}>{INPUT_SEVERITY_LABEL[m.severity] ?? m.severity}</Badge>
+                        <Badge variant={m.severity === "critical" ? "destructive-accessible" : m.severity === "high" ? "warning-accessible" : "muted-accessible"}>{INPUT_SEVERITY_LABEL[m.severity] ?? m.severity}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">{m.why}</p>
                       <p className="text-xs text-muted-foreground">Affects: {m.decisionAffected} · effort: {EFFORT_LABEL[m.ownerEffort] ?? m.ownerEffort}</p>
@@ -652,8 +656,8 @@ export default function OwnerCommandCenterPage() {
                   {actionPlan.assignment.assistedBy.length > 0 && (
                     <span className="text-muted-foreground"> (with {actionPlan.assignment.assistedBy.join(", ")})</span>
                   )}
-                  {actionPlan.assignment.ownerApprovalRequired && <Badge variant="warning" className="ml-2">Owner approval</Badge>}
-                  {actionPlan.assignment.delegatable && <Badge variant="muted" className="ml-2">Delegatable</Badge>}
+                  {actionPlan.assignment.ownerApprovalRequired && <Badge variant="warning-accessible" className="ml-2">Owner approval</Badge>}
+                  {actionPlan.assignment.delegatable && <Badge variant="muted-accessible" className="ml-2">Delegatable</Badge>}
                 </div>
                 <div className="rounded-md border p-2 text-sm" data-testid="action-opsiq-work">
                   <strong>OpsIQ prepared:</strong> {actionPlan.assignment.opsiqPreparedWork}
@@ -689,11 +693,11 @@ export default function OwnerCommandCenterPage() {
                   <Badge variant={RISK_VARIANT(profile.survivalRiskScore)}>
                     Survival risk {Math.round(profile.survivalRiskScore)}/100
                   </Badge>
-                  <Badge variant="default">Growth opportunity {Math.round(profile.growthOpportunityScore)}/100</Badge>
+                  <Badge variant="default-accessible">Growth opportunity {Math.round(profile.growthOpportunityScore)}/100</Badge>
                   <Badge variant={RISK_VARIANT(profile.executionRiskScore)}>
                     Execution risk {Math.round(profile.executionRiskScore)}/100
                   </Badge>
-                  <Badge variant="muted">Data confidence {Math.round(profile.dataConfidenceScore)}/100</Badge>
+                  <Badge variant="muted-accessible">Data confidence {Math.round(profile.dataConfidenceScore)}/100</Badge>
                 </div>
                 {(() => {
                   const topFindings: any[] = profile.topFindings ?? [];
@@ -714,14 +718,14 @@ export default function OwnerCommandCenterPage() {
 
               {control && (
                 <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card" data-testid="owner-control-center">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <div className="text-xs uppercase text-muted-foreground">OpsIQ control center</div>
                     <div className="flex flex-wrap gap-2">
-                      <Badge variant={control.needsOwnerAttention ? "warning" : "success"}>
+                      <Badge variant={control.needsOwnerAttention ? "warning-accessible" : "success-accessible"}>
                         {control.ownerActionsToday} owner action{control.ownerActionsToday === 1 ? "" : "s"} today
                       </Badge>
-                      <Badge variant="muted">{control.handledByOpsIQ} handled by OpsIQ</Badge>
-                      <Badge variant="success">{control.approvalsAvoided ?? 0} approvals avoided</Badge>
+                      <Badge variant="muted-accessible">{control.handledByOpsIQ} handled by OpsIQ</Badge>
+                      <Badge variant="success-accessible">{control.approvalsAvoided ?? 0} approvals avoided</Badge>
                     </div>
                   </div>
 
@@ -789,7 +793,7 @@ export default function OwnerCommandCenterPage() {
                   <div className="space-y-1 mt-1">
                     {missingWithPriority.map((m: any) => (
                       <div key={m.field} className="flex items-start gap-2">
-                        <Badge variant={m.priority === "CRITICAL" ? "destructive" : "warning"} className="mt-0.5 shrink-0">{MISSING_INPUT_PRIORITY_LABEL[m.priority] ?? m.priority}</Badge>
+                        <Badge variant={m.priority === "CRITICAL" ? "destructive-accessible" : "warning-accessible"} className="mt-0.5 shrink-0">{MISSING_INPUT_PRIORITY_LABEL[m.priority] ?? m.priority}</Badge>
                         <span>
                           <span className="font-medium">{humanizeMetricKey(m.field)}</span>
                           {MISSING_INPUT_REASON[m.field] && (
@@ -826,7 +830,7 @@ export default function OwnerCommandCenterPage() {
                       </p>
                     )}
                     <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2 items-center">
-                      <Badge variant="muted">{DOMAIN_LABEL[next.domain] ?? next.domain}</Badge>
+                      <Badge variant="muted-accessible">{DOMAIN_LABEL[next.domain] ?? next.domain}</Badge>
                       <span>priority {Math.round(next.priorityScore)}</span>
                       <span>· impact {Math.round(next.expectedImpactScore)}</span>
                       <span>· effort {Math.round(next.effortScore)}</span>
@@ -850,7 +854,7 @@ export default function OwnerCommandCenterPage() {
                     const findingCount: number = (d.topFindingCodes ?? []).length;
                     const actionCount: number = (d.topActionCodes ?? []).length;
                     return (
-                      <div key={d.domain} className="flex justify-between items-center border-b py-1 text-sm">
+                      <div key={d.domain} className="flex flex-wrap justify-between items-center gap-2 border-b py-1 text-sm">
                         <span className="font-medium">{DOMAIN_LABEL[d.domain] ?? d.domain}</span>
                         <span className="flex flex-wrap gap-2 items-center text-muted-foreground">
                           <Badge variant={HEALTH_VARIANT(d.healthScore)}>health {Math.round(d.healthScore)}</Badge>
@@ -905,6 +909,6 @@ export default function OwnerCommandCenterPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

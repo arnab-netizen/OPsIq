@@ -233,4 +233,41 @@ describe("VendorPage", () => {
     await findByText("Business A");
     await findByText("Business B");
   });
+
+  it("gives the status filter select an accessible name (G1)", async () => {
+    const { findByText, getByLabelText } = renderPage();
+    await findByText("Delta Supplies");
+    expect(getByLabelText("Filter by status")).toBeTruthy();
+  });
+
+  it("associates the New Vendor modal's fields with their visible labels (G1)", async () => {
+    const { findByText, getByLabelText } = renderPage();
+    await findByText("Vendors");
+    await waitFor(async () => {
+      const btn = await findByText("+ New Vendor");
+      fireEvent.click(btn);
+    });
+    await findByText("New Vendor");
+    expect(getByLabelText(/Vendor name/)).toBeTruthy();
+    expect(getByLabelText("Bank account reference")).toBeTruthy();
+    expect(getByLabelText("Related party?")).toBeTruthy();
+    expect(getByLabelText("Payment terms (days)")).toBeTruthy();
+    expect(getByLabelText("Lead time to replace (days)")).toBeTruthy();
+  });
+
+  it("preserves the APPROVED badge's semantic color category and uses the accessible text token (G6)", async () => {
+    const { container, findByText } = renderPage();
+    await findByText("Delta Supplies");
+    const badge = Array.from(container.querySelectorAll("span.inline-flex")).find(
+      (el) => el.textContent === "Approved",
+    );
+    expect(badge).toBeTruthy();
+    // APPROVAL_VARIANT.APPROVED migrated from "success" to "success-accessible" (G6). "success"
+    // and "success-accessible" share the same bg-success/10 fill (only the text-color token
+    // differs -- see badge.tsx), so a bg-success-only assertion would pass even if the
+    // migration were fully reverted. Pin the accessible variant specifically.
+    expect(badge!.className).toMatch(/bg-success/);
+    expect(badge!.className).toMatch(/text-\[var\(--success-badge-text\)\]/);
+    expect(badge!.className).not.toMatch(/bg-destructive|bg-warning/);
+  });
 });

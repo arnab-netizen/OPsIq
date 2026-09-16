@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -26,8 +26,8 @@ async function api(path: string) {
   }
 }
 
-const STATUS_VARIANT = (s: string): "success" | "default" | "warning" | "destructive" =>
-  s === "CRITICAL" ? "destructive" : s === "DANGER" ? "warning" : s === "WATCH" ? "default" : "success";
+const STATUS_VARIANT = (s: string): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  s === "CRITICAL" ? "destructive-accessible" : s === "DANGER" ? "warning-accessible" : s === "WATCH" ? "default-accessible" : "success-accessible";
 
 // Verified against AreaStatus (src/domain/owner-guidance/guidance-orchestrator.ts) -- covers all
 // eight area-status badges on this page (businessHealth, cashDangerStatus, ...).
@@ -148,10 +148,10 @@ export default function OwnerNowViewPage() {
 
   if (loading) return <CardDashboardSkeleton sections={4} label="Loading your Owner Now View" />;
   if (error) return (
-    <main style={{ padding: 24 }}>
+    <PageContainer>
       <p style={{ color: "#b91c1c" }}>{error}</p>
       <Button onClick={() => void load(businessId)}>Retry</Button>
-    </main>
+    </PageContainer>
   );
   if (!data) return null;
 
@@ -160,16 +160,18 @@ export default function OwnerNowViewPage() {
   const beginner = data.beginnerExplanation ?? {};
 
   return (
-    <main style={{ padding: 24, maxWidth: 920, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
+    <PageContainer style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <CanonicalCockpitLink from="Now View" />
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <h1 style={{ margin: 0 }}>Owner Now View</h1>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <Link href="/owner/process-intelligence" data-testid="process-intelligence-link">Where the process is breaking</Link>
-          <Link href="/owner/adjudication" data-testid="proof-risk-queue-link">Proof-risk review queue</Link>
-          <Button onClick={() => void load(businessId)}>Refresh</Button>
-        </div>
-      </header>
+      <PageHeader
+        title="Owner Now View"
+        actions={
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Link href="/owner/process-intelligence" data-testid="process-intelligence-link">Where the process is breaking</Link>
+            <Link href="/owner/adjudication" data-testid="proof-risk-queue-link">Proof-risk review queue</Link>
+            <Button onClick={() => void load(businessId)}>Refresh</Button>
+          </div>
+        }
+      />
 
       <BusinessContextSelector businesses={businesses} selectedId={businessId} onChange={onSwitchBusiness} />
       <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
@@ -189,8 +191,8 @@ export default function OwnerNowViewPage() {
         <Badge variant={STATUS_VARIANT(view.customerRetentionStatus)}>Retention: {STATUS_LABEL[view.customerRetentionStatus] ?? view.customerRetentionStatus}</Badge>
         <Badge variant={STATUS_VARIANT(view.supplierInventoryStatus)}>Supply: {STATUS_LABEL[view.supplierInventoryStatus] ?? view.supplierInventoryStatus}</Badge>
         <Badge variant={STATUS_VARIANT(view.growthReadinessStatus)}>Growth: {STATUS_LABEL[view.growthReadinessStatus] ?? view.growthReadinessStatus}</Badge>
-        <Badge variant="default">{CLASSIFICATION_LABEL[view.classification] ?? view.classification}</Badge>
-        {view.confidenceCapped && <Badge variant="warning">Low confidence ({CONFIDENCE_LEVEL_LABEL[view.confidence] ?? view.confidence})</Badge>}
+        <Badge variant="default-accessible">{CLASSIFICATION_LABEL[view.classification] ?? view.classification}</Badge>
+        {view.confidenceCapped && <Badge variant="warning-accessible">Low confidence ({CONFIDENCE_LEVEL_LABEL[view.confidence] ?? view.confidence})</Badge>}
       </section>
 
       {Array.isArray(view.missingDataRequests) && view.missingDataRequests.length > 0 && (
@@ -247,6 +249,6 @@ export default function OwnerNowViewPage() {
           {beginner.confidenceNote && <p style={{ color: "#6b7280" }}>{beginner.confidenceNote}</p>}
         </section>
       )}
-    </main>
+    </PageContainer>
   );
 }

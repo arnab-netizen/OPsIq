@@ -205,4 +205,33 @@ describe("GoalsPage", () => {
     expect(queryByText("MEDIUM")).toBeNull();
     expect(queryByText("medium")).toBeNull();
   });
+
+  it("associates the create-goal modal's fields with their visible labels (G1)", async () => {
+    const { findByText, getByLabelText } = render(<GoalsPage />);
+    const btn = await findByText("Update Goal");
+    fireEvent.click(btn);
+    await findByText("Update Financial Goal");
+
+    // getByLabelText resolves via the label's htmlFor -> input/select id association;
+    // it throws if no element has that accessible name, so this fails if the wiring
+    // (G1 fix) regresses even though the label text is still visually present.
+    expect(getByLabelText(/Goal type/)).toBeTruthy();
+    expect(getByLabelText(/Target amount/)).toBeTruthy();
+    expect(getByLabelText("Currency")).toBeTruthy();
+    expect(getByLabelText(/Target date/)).toBeTruthy();
+    expect(getByLabelText("Baseline amount (optional)")).toBeTruthy();
+  });
+
+  it("preserves the ACTIVE status badge's semantic color category and uses the accessible text token (G6)", async () => {
+    const { findByText } = render(<GoalsPage />);
+    const badge = await findByText("ACTIVE");
+    // STATUS_VARIANT.ACTIVE migrated from "default" to "default-accessible" (G6). "default"
+    // and "default-accessible" share the same bg-primary/10 fill (only the text-color token
+    // differs -- see badge.tsx), so a bg-primary-only assertion would pass even if the
+    // migration were fully reverted. Pin the accessible variant specifically by asserting the
+    // "default-accessible"-only text token, not just the shared category fill.
+    expect(badge.className).toMatch(/bg-primary/);
+    expect(badge.className).toMatch(/text-\[var\(--primary-text\)\]/);
+    expect(badge.className).not.toMatch(/bg-destructive|bg-warning/);
+  });
 });

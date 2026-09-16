@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { FindingCard } from "@/components/owner/FindingCard";
@@ -14,12 +14,12 @@ import { Disclosure } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
+const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
   unverified: "muted-accessible",
-  verified_improved: "success",
-  verified_not_improved: "destructive",
-  inconclusive: "warning",
-  disputed: "warning",
+  verified_improved: "success-accessible",
+  verified_not_improved: "destructive-accessible",
+  inconclusive: "warning-accessible",
+  disputed: "warning-accessible",
 };
 const VERIFY_LABEL: Record<string, string> = {
   unverified: "Not yet verified",
@@ -29,12 +29,12 @@ const VERIFY_LABEL: Record<string, string> = {
   disputed: "Disputed",
 };
 
-const SURVIVAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
-  SAFE: "success",
-  WATCH: "default",
-  AT_RISK: "warning",
-  CRITICAL: "destructive",
-  INSOLVENT_RISK: "destructive",
+const SURVIVAL_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  SAFE: "success-accessible",
+  WATCH: "default-accessible",
+  AT_RISK: "warning-accessible",
+  CRITICAL: "destructive-accessible",
+  INSOLVENT_RISK: "destructive-accessible",
 };
 
 // The survival-state badge previously rendered the raw enum token verbatim (e.g. "AT_RISK",
@@ -395,15 +395,13 @@ export default function OwnerFinancePage() {
   const snapshotDraft: FinanceDraft | null = selected && showSnapshotForm ? readFinanceDraft(selected) : null;
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Money</h1>
-          <p className="text-muted-foreground text-sm">
-            Diagnose money, find leaks, and act on the single highest-impact financial move — with verification.
-          </p>
-        </div>
-        <Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Money"
+          description="Diagnose money, find leaks, and act on the single highest-impact financial move — with verification."
+          actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
+        />
       </div>
 
       {error && (
@@ -565,7 +563,7 @@ export default function OwnerFinancePage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

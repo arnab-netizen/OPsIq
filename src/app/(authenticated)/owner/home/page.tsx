@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { humanizeMetricKey } from "@/lib/metric-label";
@@ -18,19 +18,19 @@ interface AlertSummary {
   unreadCount: number;
 }
 
-const DANGER_VARIANT: Record<string, "success" | "default" | "warning" | "destructive" | "muted"> = {
-  unknown: "muted",
-  none: "success",
-  low: "default",
-  elevated: "warning",
-  high: "destructive",
-  critical: "destructive",
+const DANGER_VARIANT: Record<string, "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  unknown: "muted-accessible",
+  none: "success-accessible",
+  low: "default-accessible",
+  elevated: "warning-accessible",
+  high: "destructive-accessible",
+  critical: "destructive-accessible",
 };
-const SEVERITY_VARIANT: Record<string, "success" | "default" | "warning" | "destructive"> = {
-  critical: "destructive",
-  high: "destructive",
-  medium: "warning",
-  low: "default",
+const SEVERITY_VARIANT: Record<string, "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible"> = {
+  critical: "destructive-accessible",
+  high: "destructive-accessible",
+  medium: "warning-accessible",
+  low: "default-accessible",
 };
 const SEVERITY_LABEL: Record<string, string> = {
   critical: "Critical",
@@ -46,8 +46,8 @@ const DANGER_LABEL: Record<string, string> = {
   high: "High",
   critical: "Critical",
 };
-const HEALTH_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
-  score >= 70 ? "success" : score >= 50 ? "default" : score >= 30 ? "warning" : "destructive";
+const HEALTH_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  score >= 70 ? "success-accessible" : score >= 50 ? "default-accessible" : score >= 30 ? "warning-accessible" : "destructive-accessible";
 
 const DOMAIN_LINK: Record<string, string> = {
   finance: "/owner/finance",
@@ -84,7 +84,7 @@ function DangerCard({ label, danger }: { label: string; danger: any }) {
     <div className="border rounded-lg p-3 bg-card">
       <div className="text-xs uppercase text-muted-foreground">{label}</div>
       <div className="mt-1 flex items-center gap-2">
-        <Badge variant={DANGER_VARIANT[level] || "muted"}>{DANGER_LABEL[level] ?? level}</Badge>
+        <Badge variant={DANGER_VARIANT[level] || "muted-accessible"}>{DANGER_LABEL[level] ?? level}</Badge>
         <span className="text-sm text-muted-foreground">
           {danger?.riskScore === null || danger?.riskScore === undefined ? "—" : `${Math.round(danger.riskScore)}/100`}
         </span>
@@ -129,17 +129,15 @@ export default function OwnerHomePage() {
   const s = data?.summary ?? null;
 
   return (
-    <div className="mx-auto max-w-md sm:max-w-2xl md:max-w-4xl py-6 px-4">
+    <div className="mx-auto max-w-md sm:max-w-2xl md:max-w-4xl">
       <div className="mb-4"><CanonicalCockpitLink from="home" /></div>
       <div className="mb-4">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Owner Home</h1>
-            <p className="text-muted-foreground text-xs">Risk first. Money first. One clear set of next actions.</p>
-          </div>
-          <Link href="/owner"><Button>Command Center</Button></Link>
-        </div>
-        <nav className="flex flex-wrap gap-1.5" aria-label="Domain navigation">
+        <PageHeader
+          title="Owner Home"
+          description="Risk first. Money first. One clear set of next actions."
+          actions={<Link href="/owner"><Button>Command Center</Button></Link>}
+        />
+        <nav className="flex flex-wrap gap-1.5 mt-3" aria-label="Domain navigation">
           {[
             { label: "Finance", href: "/owner/finance" },
             { label: "Cashflow", href: "/owner/cashflow" },
@@ -163,7 +161,7 @@ export default function OwnerHomePage() {
       {/* Alert summary — critical alerts and unread count */}
       {alertSummary && (alertSummary.unreadCount > 0 || alertSummary.alerts.length > 0) && (
         <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <span className="text-sm font-semibold text-destructive">
               {alertSummary.unreadCount > 0 ? `${alertSummary.unreadCount} unread alert${alertSummary.unreadCount === 1 ? "" : "s"}` : "Critical alerts"}
             </span>
@@ -216,7 +214,7 @@ export default function OwnerHomePage() {
                     {Math.round(s.businessHealthScore)}/100
                   </Badge>
                   {typeof s.dataConfidenceScore === "number" && (
-                    <Badge variant="muted">
+                    <Badge variant="muted-accessible">
                       confidence {Math.round(s.dataConfidenceScore)}/100
                     </Badge>
                   )}
@@ -247,7 +245,7 @@ export default function OwnerHomePage() {
                         >
                           <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
                           <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
-                            <Badge variant="muted">{DOMAIN_LABEL[a.domain] ?? a.domain}</Badge>
+                            <Badge variant="muted-accessible">{DOMAIN_LABEL[a.domain] ?? a.domain}</Badge>
                             <span>priority {Math.round(a.priorityScore)}</span>
                             <span>· impact {Math.round(a.expectedImpactScore)}</span>
                           </div>
@@ -256,7 +254,7 @@ export default function OwnerHomePage() {
                         <div key={`${a.domain}-${a.findingCode}-${i}`} className="py-3 px-3 border-b min-h-[44px]">
                           <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
                           <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
-                            <Badge variant="muted">{DOMAIN_LABEL[a.domain] ?? a.domain}</Badge>
+                            <Badge variant="muted-accessible">{DOMAIN_LABEL[a.domain] ?? a.domain}</Badge>
                             <span>priority {Math.round(a.priorityScore)}</span>
                           </div>
                         </div>
@@ -281,7 +279,7 @@ export default function OwnerHomePage() {
                           <div className="text-sm font-medium">{r.title}</div>
                           <div className="text-xs text-muted-foreground">{DOMAIN_LABEL[r.domain] ?? r.domain} · impact {Math.round(r.impactScore)}</div>
                         </div>
-                        <Badge variant={SEVERITY_VARIANT[r.severity] || "default"}>{SEVERITY_LABEL[r.severity] ?? r.severity}</Badge>
+                        <Badge variant={SEVERITY_VARIANT[r.severity] || "default-accessible"}>{SEVERITY_LABEL[r.severity] ?? r.severity}</Badge>
                       </div>
                     ))}
                   </div>
@@ -301,7 +299,7 @@ export default function OwnerHomePage() {
                           <div className="text-sm font-medium">{o.title}</div>
                           <div className="text-xs text-muted-foreground">{DOMAIN_LABEL[o.domain] ?? o.domain}</div>
                         </div>
-                        <Badge variant="success">impact {Math.round(o.impactScore)}</Badge>
+                        <Badge variant="success-accessible">impact {Math.round(o.impactScore)}</Badge>
                       </div>
                     ))}
                   </div>

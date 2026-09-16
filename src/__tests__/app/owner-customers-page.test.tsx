@@ -160,6 +160,22 @@ describe("CustomersPage", () => {
     expect(title).toBeTruthy();
   });
 
+  it("associates the New Customer modal's fields with their visible labels (G1)", async () => {
+    const { findByText, getByLabelText } = renderPage();
+    await findByText("Customers");
+    await waitFor(async () => {
+      const btn = await findByText("+ New Customer");
+      fireEvent.click(btn);
+    });
+    await findByText("New Customer");
+    expect(getByLabelText(/Name/)).toBeTruthy();
+    expect(getByLabelText("Email")).toBeTruthy();
+    expect(getByLabelText("Phone")).toBeTruthy();
+    expect(getByLabelText("Segment")).toBeTruthy();
+    expect(getByLabelText("Lifetime value ($)")).toBeTruthy();
+    expect(getByLabelText("Notes")).toBeTruthy();
+  });
+
   it("opens edit modal when Edit is clicked", async () => {
     const { findByText, findByTestId, findAllByText } = renderPage();
     const table = await findByTestId("customers-table");

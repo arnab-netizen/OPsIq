@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
+import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type RiskCategory = "OPERATIONAL" | "FINANCIAL" | "MARKET" | "COMPLIANCE" | "EXECUTION" | "STRATEGIC";
@@ -56,20 +56,20 @@ const STATUS_LABELS: Record<RiskStatus, string> = {
   CLOSED: "Closed",
 };
 
-const STATUS_VARIANT: Record<RiskStatus, "default" | "warning" | "success" | "destructive"> = {
-  IDENTIFIED: "default",
-  ASSESSED: "warning",
-  MITIGATING: "warning",
-  ACCEPTED: "default",
-  RESOLVED: "success",
-  CLOSED: "default",
+const STATUS_VARIANT: Record<RiskStatus, "default-accessible" | "warning-accessible" | "success-accessible" | "destructive-accessible"> = {
+  IDENTIFIED: "default-accessible",
+  ASSESSED: "warning-accessible",
+  MITIGATING: "warning-accessible",
+  ACCEPTED: "default-accessible",
+  RESOLVED: "success-accessible",
+  CLOSED: "default-accessible",
 };
 
-function severityVariant(severity: number): "success" | "warning" | "destructive" | "default" {
-  if (severity >= 75) return "destructive";
-  if (severity >= 50) return "destructive";
-  if (severity >= 25) return "warning";
-  return "success";
+function severityVariant(severity: number): "success-accessible" | "warning-accessible" | "destructive-accessible" | "default-accessible" {
+  if (severity >= 75) return "destructive-accessible";
+  if (severity >= 50) return "destructive-accessible";
+  if (severity >= 25) return "warning-accessible";
+  return "success-accessible";
 }
 
 function severityLabel(severity: number): string {
@@ -228,15 +228,18 @@ export default function RisksPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Risk Register</h1>
-        <Button size="sm" onClick={openCreate}>+ New Risk</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Risk Register"
+          actions={<Button size="sm" onClick={openCreate}>+ New Risk</Button>}
+        />
       </div>
 
       {/* Filters */}
       <div className="flex gap-3 mb-6 flex-wrap">
         <select
+          aria-label="Filter by category"
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="rounded border border-border bg-background px-3 py-1.5 text-sm"
@@ -247,6 +250,7 @@ export default function RisksPage() {
           ))}
         </select>
         <select
+          aria-label="Filter by status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded border border-border bg-background px-3 py-1.5 text-sm"
@@ -350,10 +354,11 @@ export default function RisksPage() {
           {formError && <p className="text-destructive text-sm">{formError}</p>}
 
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="risk-title" className="block text-sm font-medium mb-1">
               Title <span className="text-destructive">*</span>
             </label>
             <Input
+              id="risk-title"
               value={form.title}
               onChange={(e) => setField("title", e.target.value)}
               placeholder="Describe the risk"
@@ -361,10 +366,11 @@ export default function RisksPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="risk-category" className="block text-sm font-medium mb-1">
               Category <span className="text-destructive">*</span>
             </label>
             <Select
+              id="risk-category"
               value={form.category}
               onChange={(e) => setField("category", e.target.value as RiskCategory)}
               options={CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))}
@@ -374,8 +380,9 @@ export default function RisksPage() {
 
           {!editingRisk && (
             <div>
-              <label className="block text-sm font-medium mb-1">Risk Code (optional)</label>
+              <label htmlFor="risk-code" className="block text-sm font-medium mb-1">Risk Code (optional)</label>
               <Input
+                id="risk-code"
                 value={form.riskCode}
                 onChange={(e) => setField("riskCode", e.target.value)}
                 placeholder="e.g. RISK-001 (auto-generated if blank)"
@@ -384,8 +391,9 @@ export default function RisksPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
+            <label htmlFor="risk-description" className="block text-sm font-medium mb-1">Description</label>
             <Textarea
+              id="risk-description"
               value={form.description}
               onChange={(e) => setField("description", e.target.value)}
               placeholder="Describe the risk in detail"
@@ -395,8 +403,9 @@ export default function RisksPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Likelihood (0–100)</label>
+              <label htmlFor="risk-likelihood" className="block text-sm font-medium mb-1">Likelihood (0–100)</label>
               <Input
+                id="risk-likelihood"
                 type="number"
                 min={0}
                 max={100}
@@ -406,8 +415,9 @@ export default function RisksPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Impact (0–100)</label>
+              <label htmlFor="risk-impact" className="block text-sm font-medium mb-1">Impact (0–100)</label>
               <Input
+                id="risk-impact"
                 type="number"
                 min={0}
                 max={100}
@@ -419,8 +429,9 @@ export default function RisksPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Mitigation action</label>
+            <label htmlFor="risk-mitigation-action" className="block text-sm font-medium mb-1">Mitigation action</label>
             <Textarea
+              id="risk-mitigation-action"
               value={form.mitigationAction}
               onChange={(e) => setField("mitigationAction", e.target.value)}
               placeholder="Describe the mitigation plan"
@@ -431,16 +442,18 @@ export default function RisksPage() {
           {editingRisk && (
             <>
               <div>
-                <label className="block text-sm font-medium mb-1">Status</label>
+                <label htmlFor="risk-status" className="block text-sm font-medium mb-1">Status</label>
                 <Select
+                  id="risk-status"
                   value={form.status}
                   onChange={(e) => setField("status", e.target.value as RiskStatus)}
                   options={STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Residual risk (0–100)</label>
+                <label htmlFor="risk-residual-risk" className="block text-sm font-medium mb-1">Residual risk (0–100)</label>
                 <Input
+                  id="risk-residual-risk"
                   type="number"
                   min={0}
                   max={100}
@@ -453,6 +466,6 @@ export default function RisksPage() {
           )}
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

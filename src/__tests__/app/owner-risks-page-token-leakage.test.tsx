@@ -65,3 +65,31 @@ describe("RisksPage — raw riskCode is never owner-facing", () => {
     expect(headers).not.toContain("Code");
   });
 });
+
+describe("RisksPage — G1/G6 accessibility regressions", () => {
+  it("gives both filter selects an accessible name (G1)", async () => {
+    const { findByText, getByLabelText } = render(<RisksPage />);
+    await findByText("Demand risk — customers may not pay");
+    expect(getByLabelText("Filter by category")).toBeTruthy();
+    expect(getByLabelText("Filter by status")).toBeTruthy();
+  });
+
+  it("preserves the IDENTIFIED status badge's semantic color category and uses the accessible text token (G6)", async () => {
+    const { container, findByText } = render(<RisksPage />);
+    // Wait for the row's own data to render first -- the filter dropdown's static
+    // "Identified" option is present synchronously and would otherwise satisfy a
+    // plain findByText("Identified") before the async badge ever renders.
+    await findByText("Demand risk — customers may not pay");
+    const badge = Array.from(container.querySelectorAll("span.inline-flex")).find(
+      (el) => el.textContent === "Identified",
+    );
+    expect(badge).toBeTruthy();
+    // STATUS_VARIANT.IDENTIFIED migrated from "default" to "default-accessible" (G6). "default"
+    // and "default-accessible" share the same bg-primary/10 fill (only the text-color token
+    // differs -- see badge.tsx), so a bg-primary-only assertion would pass even if the
+    // migration were fully reverted. Pin the accessible variant specifically.
+    expect(badge!.className).toMatch(/bg-primary/);
+    expect(badge!.className).toMatch(/text-\[var\(--primary-text\)\]/);
+    expect(badge!.className).not.toMatch(/bg-destructive|bg-warning/);
+  });
+});

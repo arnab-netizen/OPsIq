@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- dynamic dashboard payloads are untyped */
 
@@ -219,14 +219,12 @@ export default function OwnerLearningGovernancePage() {
   if (loading) return <CardDashboardSkeleton label="Loading learning governance workspace" />;
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
+    <PageContainer>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Learning Governance</h1>
-        <p className="text-muted-foreground text-sm">
-          Review evidence, promote or reject controlled learning candidates, and roll back a
-          promoted learning if it turns out harmful. Candidates are produced by real domain
-          verification flows (e.g. Finance&rsquo;s closed loop) -- this page never creates one.
-        </p>
+        <PageHeader
+          title="Learning Governance"
+          description="Review evidence, promote or reject controlled learning candidates, and roll back a promoted learning if it turns out harmful. Candidates are produced by real domain verification flows (e.g. Finance's closed loop) -- this page never creates one."
+        />
       </div>
 
       {error && (
@@ -248,7 +246,7 @@ export default function OwnerLearningGovernancePage() {
             const isExpanded = expanded === c.id;
             return (
               <div key={c.id} className="border rounded-lg p-4 bg-card">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-wrap justify-between items-start gap-2">
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">
                       Business {c.businessId}
@@ -259,7 +257,7 @@ export default function OwnerLearningGovernancePage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <Badge variant={c.promotionLocked ? "success" : canPromote ? "default" : "muted"}>
+                    <Badge variant={c.promotionLocked ? "success-accessible" : canPromote ? "default-accessible" : "muted-accessible"}>
                       {ELIGIBILITY_LABEL[c.eligibilityStatus] ?? c.eligibilityStatus}
                     </Badge>
                     {c.promotionLocked && (
@@ -360,6 +358,6 @@ export default function OwnerLearningGovernancePage() {
           })}
         </section>
       )}
-    </div>
+    </PageContainer>
   );
 }

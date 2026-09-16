@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -9,11 +9,11 @@ import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  low: "muted",
-  medium: "default",
-  high: "warning",
-  critical: "destructive",
+const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  low: "muted-accessible",
+  medium: "default-accessible",
+  high: "warning-accessible",
+  critical: "destructive-accessible",
 };
 const SEVERITY_LABEL: Record<string, string> = {
   low: "Low",
@@ -26,12 +26,12 @@ const FINDING_TYPE_LABEL: Record<string, string> = {
   risk: "Risk",
 };
 
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  unverified: "muted",
-  verified_improved: "success",
-  verified_not_improved: "destructive",
-  inconclusive: "warning",
-  disputed: "warning",
+const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  unverified: "muted-accessible",
+  verified_improved: "success-accessible",
+  verified_not_improved: "destructive-accessible",
+  inconclusive: "warning-accessible",
+  disputed: "warning-accessible",
 };
 const VERIFY_LABEL: Record<string, string> = {
   unverified: "Not yet verified",
@@ -48,12 +48,12 @@ const ACTION_STATUS_LABEL: Record<string, string> = {
   blocked: "Blocked",
 };
 
-const STATE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  STRONG: "success",
-  STEADY: "default",
-  SOFT: "warning",
-  WEAK: "destructive",
-  CRITICAL: "destructive",
+const STATE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  STRONG: "success-accessible",
+  STEADY: "default-accessible",
+  SOFT: "warning-accessible",
+  WEAK: "destructive-accessible",
+  CRITICAL: "destructive-accessible",
 };
 const STATE_LABEL: Record<string, string> = {
   STRONG: "Strong",
@@ -266,15 +266,13 @@ export default function OwnerSalesPage() {
   const missing: string[] = dashboard?.missingCriticalData ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Sales</h1>
-          <p className="text-muted-foreground text-sm">
-            Where sales leak, who is churning, what to push next — with the single highest-impact sales move and verification.
-          </p>
-        </div>
-        <Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Owner Sales"
+          description="Where sales leak, who is churning, what to push next — with the single highest-impact sales move and verification."
+          actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
+        />
       </div>
 
       {error && (
@@ -309,7 +307,7 @@ export default function OwnerSalesPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 flex items-end gap-3">
+          <div className="mb-6 flex flex-wrap items-end gap-3">
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
@@ -374,7 +372,7 @@ export default function OwnerSalesPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -408,7 +406,7 @@ function SalesCycleView({
           </div>
         </div>
         <div className="text-right">
-          <Badge variant={STATE_VARIANT[state] || "muted"}>{STATE_LABEL[state] ?? state}</Badge>
+          <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
           <div className="text-xs text-muted-foreground mt-1">
             data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
           </div>
@@ -441,7 +439,7 @@ function SalesCycleView({
               <div className="flex justify-between">
                 <span className="font-semibold">{f.title}</span>
                 <span className="flex gap-1">
-                  <Badge variant="muted">{FINDING_TYPE_LABEL[f.findingType] ?? f.findingType}</Badge>
+                  <Badge variant="muted-accessible">{FINDING_TYPE_LABEL[f.findingType] ?? f.findingType}</Badge>
                   <Badge variant={SEVERITY_VARIANT[f.severity]}>{SEVERITY_LABEL[f.severity] ?? f.severity}</Badge>
                 </span>
               </div>
@@ -474,7 +472,7 @@ function SalesCycleView({
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
                   </div>
-                  <Badge variant="muted">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
+                  <Badge variant="muted-accessible">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
@@ -489,7 +487,7 @@ function SalesCycleView({
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
-                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted"}>
+                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">

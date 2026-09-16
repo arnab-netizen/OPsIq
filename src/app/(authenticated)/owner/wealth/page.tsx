@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- command-center payload is the service contract (typed server-side in WealthCommandCenter); rendered read-only here. load() on mount is intentional. */
@@ -25,8 +25,8 @@ async function api(path: string) {
   }
 }
 
-const MOVE_VARIANT = (d: string): "success" | "default" | "warning" | "destructive" =>
-  d === "BLOCKED" ? "destructive" : d === "VALIDATE_FIRST" ? "warning" : d === "CHOOSE_ALTERNATIVE" ? "default" : "success";
+const MOVE_VARIANT = (d: string): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  d === "BLOCKED" ? "destructive-accessible" : d === "VALIDATE_FIRST" ? "warning-accessible" : d === "CHOOSE_ALTERNATIVE" ? "default-accessible" : "success-accessible";
 
 // Verified against NextMoveDecision (src/domain/owner-strategy/command-center.types.ts).
 const MOVE_LABEL: Record<string, string> = {
@@ -90,10 +90,10 @@ export default function OwnerWealthPage() {
   if (loading) return <CardDashboardSkeleton sections={4} label="Loading your Wealth Command Center" />;
   if (error)
     return (
-      <main style={{ padding: 24 }}>
+      <PageContainer>
         <p style={{ color: "#b91c1c" }}>{error}</p>
         <Button onClick={() => void load(businessId)}>Retry</Button>
-      </main>
+      </PageContainer>
     );
   if (!data) return null;
 
@@ -104,10 +104,12 @@ export default function OwnerWealthPage() {
   const businesses: any[] = data.businesses ?? [];
 
   return (
-    <main style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700 }}>Wealth Command Center</h1>
-        <Link href="/owner"><Button>Command Center</Button></Link>
+    <PageContainer>
+      <div style={{ marginBottom: 16 }}>
+        <PageHeader
+          title="Wealth Command Center"
+          actions={<Link href="/owner"><Button>Command Center</Button></Link>}
+        />
       </div>
 
       <div style={{ marginBottom: 16 }}>
@@ -190,7 +192,7 @@ export default function OwnerWealthPage() {
           {cc.warnings.map((w: string, i: number) => <li key={i}>{w}</li>)}
         </ul>
       )}
-    </main>
+    </PageContainer>
   );
 }
 

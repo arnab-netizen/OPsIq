@@ -21,7 +21,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Button, TableListSkeleton } from "@/ui/primitives";
+import { Button, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { AdjudicationQueue, type QueueItemView, type OutcomeOption, type AdjudicationResult } from "@/components/owner/AdjudicationQueue";
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -64,34 +64,74 @@ function safeError(data: Record<string, unknown>, status: number): string {
   return `Could not complete the request (${status}).`;
 }
 
+type QueueSummary = { totalItems: number; adjudicableItems: number; blockedByDataItems: number };
+type QueueData = { items: QueueItemView[]; outcomeOptions: OutcomeOption[]; summary: QueueSummary | null };
+
+// Pure fetch + normalize -- no state setters here, so it is safe to call from either an effect body
+// or an event handler without the effect ever synchronously triggering a state update.
+async function fetchQueueData(): Promise<QueueData> {
+  const { res, data } = await api("/api/owner/proof-risk/queue");
+  if (!res.ok) throw new Error(safeError(data, res.status));
+  return {
+    items: (data.items as QueueItemView[]) ?? [],
+    outcomeOptions: (data.outcomeOptions as OutcomeOption[]) ?? [],
+    summary: (data.summary as QueueSummary) ?? null,
+  };
+}
+
+function toLoadErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  return "Failed to load the adjudication queue.";
+}
+
 export default function OwnerAdjudicationPage() {
   const [items, setItems] = useState<QueueItemView[]>([]);
   const [outcomeOptions, setOutcomeOptions] = useState<OutcomeOption[]>([]);
-  const [summary, setSummary] = useState<{ totalItems: number; adjudicableItems: number; blockedByDataItems: number } | null>(null);
+  const [summary, setSummary] = useState<QueueSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Event-driven reload (Refresh button, Retry button, post-adjudication silent refresh) -- never
+  // called from an effect body, so it is safe to set state synchronously before the fetch settles.
   // `silent` refreshes the data WITHOUT toggling the full-page loading state — used after a decision so
   // the queue (and the just-submitted result message) stays mounted instead of blanking to a spinner.
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const { res, data } = await api("/api/owner/proof-risk/queue");
-      if (!res.ok) throw new Error(safeError(data, res.status));
-      setItems((data.items as QueueItemView[]) ?? []);
-      setOutcomeOptions((data.outcomeOptions as OutcomeOption[]) ?? []);
-      setSummary((data.summary as { totalItems: number; adjudicableItems: number; blockedByDataItems: number }) ?? null);
+      const result = await fetchQueueData();
+      setItems(result.items);
+      setOutcomeOptions(result.outcomeOptions);
+      setSummary(result.summary);
     } catch (e) {
-      if (!silent) setError(e instanceof Error ? e.message : "Failed to load the adjudication queue.");
+      if (!silent) setError(toLoadErrorMessage(e));
     } finally {
       if (!silent) setLoading(false);
     }
   }, []);
 
+  // Mount-only fetch. `loading`/`error` already start at their post-mount-fetch-started values
+  // (true / null, see useState above), so this effect never sets state synchronously -- it only
+  // applies the async result once settled, and only if it is still the current (non-stale) fetch.
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    fetchQueueData()
+      .then((result) => {
+        if (cancelled) return;
+        setItems(result.items);
+        setOutcomeOptions(result.outcomeOptions);
+        setSummary(result.summary);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(toLoadErrorMessage(e));
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onAdjudicate = useCallback(
     async (item: QueueItemView, outcome: string, reason: string): Promise<AdjudicationResult> => {
@@ -118,20 +158,17 @@ export default function OwnerAdjudicationPage() {
   );
 
   return (
-    <main style={{ padding: 24, maxWidth: 920, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <h1 style={{ margin: 0 }}>Proof-risk review queue</h1>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Link href="/owner/now" data-testid="back-to-now">Owner Now View</Link>
-          <Button onClick={() => void load()}>Refresh</Button>
-        </div>
-      </header>
-
-      <p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>
-        Review flagged proofs and decide. Dismissing or accepting a finding reduces noise; confirming or
-        requiring fresh proof keeps it active. New evidence can bring a cleared finding back. Every
-        decision is audited.
-      </p>
+    <PageContainer style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <PageHeader
+        title="Proof-risk review queue"
+        description="Review flagged proofs and decide. Dismissing or accepting a finding reduces noise; confirming or requiring fresh proof keeps it active. New evidence can bring a cleared finding back. Every decision is audited."
+        actions={
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link href="/owner/now" data-testid="back-to-now">Owner Now View</Link>
+            <Button onClick={() => void load()}>Refresh</Button>
+          </div>
+        }
+      />
 
       {summary && (
         <p style={{ margin: 0, fontSize: 13, color: "#374151" }} data-testid="queue-summary">
@@ -150,6 +187,6 @@ export default function OwnerAdjudicationPage() {
       {!loading && !error && (
         <AdjudicationQueue items={items} outcomeOptions={outcomeOptions} onAdjudicate={onAdjudicate} />
       )}
-    </main>
+    </PageContainer>
   );
 }

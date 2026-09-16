@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Badge, Button, DetailPageSkeleton } from "@/ui/primitives";
+import { Badge, Button, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
 import { ProofStatus, ProofType, ProofRiskLevel } from "@/domain/execution/proof";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -257,8 +257,8 @@ export default function TaskDetailPage() {
   }
 
   if (loading) return <DetailPageSkeleton label="Loading" />;
-  if (error) return <div className="px-4 py-8 text-destructive text-sm">{error}</div>;
-  if (!task) return <div className="px-4 py-8 text-muted-foreground text-sm">Task not found.</div>;
+  if (error) return <PageContainer><p className="text-destructive text-sm">{error}</p></PageContainer>;
+  if (!task) return <PageContainer><p className="text-muted-foreground text-sm">Task not found.</p></PageContainer>;
 
   const isTerminal = [
     DelegatedTaskStatus.APPROVED_COMPLETE,
@@ -273,18 +273,20 @@ export default function TaskDetailPage() {
     [ProofStatus.SUBMITTED, ProofStatus.NEEDS_HUMAN_REVIEW, ProofStatus.AI_PRECHECK_PASSED, ProofStatus.AI_PRECHECK_FAILED].includes(task.proof.status as ProofStatus);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <PageContainer narrow className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <Link href="/owner/tasks" className="text-sm text-muted-foreground hover:underline mb-2 block">
-            ← Tasks
-          </Link>
-          <h1 className="text-2xl font-semibold">{task.title}</h1>
-        </div>
-        <Badge variant={STATUS_VARIANT[task.status] ?? "default-accessible"}>
-          {STATUS_LABELS[task.status] ?? task.status}
-        </Badge>
+      <div>
+        <Link href="/owner/tasks" className="text-sm text-muted-foreground hover:underline mb-2 block">
+          ← Tasks
+        </Link>
+        <PageHeader
+          title={task.title}
+          actions={
+            <Badge variant={STATUS_VARIANT[task.status] ?? "default-accessible"}>
+              {STATUS_LABELS[task.status] ?? task.status}
+            </Badge>
+          }
+        />
       </div>
 
       {/* Feedback */}
@@ -452,6 +454,6 @@ export default function TaskDetailPage() {
           </ol>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

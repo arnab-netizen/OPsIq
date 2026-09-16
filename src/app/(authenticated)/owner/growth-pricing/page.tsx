@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Textarea, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Textarea, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- dynamic dashboard payloads are untyped */
 
-const APPROVAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  draft: "muted",
-  pending_approval: "warning",
-  approved: "success",
-  archived: "muted",
+const APPROVAL_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  draft: "muted-accessible",
+  pending_approval: "warning-accessible",
+  approved: "success-accessible",
+  archived: "muted-accessible",
 };
 const APPROVAL_LABEL: Record<string, string> = {
   draft: "Draft",
@@ -172,18 +172,15 @@ export default function OwnerGrowthPricingPage() {
   if (loading) return <CardDashboardSkeleton label="Loading growth pricing workspace" />;
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Growth Pricing</h1>
-          <p className="text-muted-foreground text-sm">
-            Review price tiers, approve them for operational use, and create new versions.
-            Every tier requires explicit approval here before it is used operationally.
-          </p>
-        </div>
-        <Button onClick={() => setShowCreateForm((s) => !s)} disabled={busy}>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Growth Pricing"
+          description="Review price tiers, approve them for operational use, and create new versions. Every tier requires explicit approval here before it is used operationally."
+          actions={<Button onClick={() => setShowCreateForm((s) => !s)} disabled={busy}>
           {showCreateForm ? "Cancel" : "+ New price tier"}
-        </Button>
+        </Button>}
+        />
       </div>
 
       {error && (
@@ -280,7 +277,7 @@ export default function OwnerGrowthPricingPage() {
                     )}
                   </div>
                   <div className="text-right space-y-1">
-                    <Badge variant={APPROVAL_VARIANT[t.approvalStatus] || "muted"}>{APPROVAL_LABEL[t.approvalStatus] ?? t.approvalStatus}</Badge>
+                    <Badge variant={APPROVAL_VARIANT[t.approvalStatus] || "muted-accessible"}>{APPROVAL_LABEL[t.approvalStatus] ?? t.approvalStatus}</Badge>
                     <div className="text-xs text-muted-foreground">{TIER_STATUS_LABEL[t.status] ?? t.status}</div>
                   </div>
                 </div>
@@ -321,6 +318,6 @@ export default function OwnerGrowthPricingPage() {
           })}
         </section>
       )}
-    </div>
+    </PageContainer>
   );
 }
