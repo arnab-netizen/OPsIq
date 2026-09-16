@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic inventory payloads are untyped; fetch-on-mount is the intentional pattern */
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/ui/primitives/button";

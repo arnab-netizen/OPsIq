@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";

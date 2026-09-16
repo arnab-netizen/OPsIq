@@ -19,6 +19,8 @@
  * are queued, which it provably does not — it was deliberately not added.
  */
 
+/* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, TableListSkeleton } from "@/ui/primitives";
