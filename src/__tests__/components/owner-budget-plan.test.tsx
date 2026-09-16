@@ -86,7 +86,10 @@ describe("Owner Budget & Profit Plan page", () => {
     const { container } = render(<OwnerBudgetPlanPage />);
     await waitFor(() => expect(container.textContent ?? "").toContain("Generated actions"));
     const text = container.textContent ?? "";
-    expect(text).toContain("DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL");
+    // The module-status banner is honest about being partial, but must never leak the raw
+    // internal build-status token to the owner (G-post-merge-live-verification).
+    expect(text).toMatch(/partially integrated/i);
+    expect(text).not.toContain("DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL");
     // Generated actions are honestly labelled as the advisory plan snapshot.
     expect(text).toMatch(/advisory plan snapshot/i);
     expect(text).toMatch(/advisory recommendations from the current plan snapshot/i);

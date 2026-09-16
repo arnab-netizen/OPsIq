@@ -291,9 +291,11 @@ export default function OwnerBudgetPlanPage() {
         />
       </div>
 
-      {/* Honest module-status banner (never imply OWNER_MODE_READY). */}
+      {/* Honest module-status banner (never imply OWNER_MODE_READY). Plain-language text for the
+          owner -- the internal DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL build-status marker (see
+          the file header comment) is a developer-facing token and must never render raw here. */}
       <div className="mb-6 rounded-md border border-warning/30 bg-warning/5 p-3 text-xs space-y-1">
-        <div className="font-semibold break-words">Module status: DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL (backend governance DB/CI-proven; not Owner-Mode-complete)</div>
+        <div className="font-semibold break-words">Module status: Partially integrated — backend governance is DB/CI-proven, but Owner Mode is not yet feature-complete.</div>
         {PARTIAL_LIMITATIONS.map((l) => (<div key={l}>• {l}</div>))}
       </div>
 

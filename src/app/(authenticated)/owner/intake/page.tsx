@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { sourceQualityTier, type IntakeSource } from "@/domain/owner-intake/types";
+import { fieldSpecForDomain } from "@/domain/owner-intake/field-specs";
+import { humanizeMetricKey } from "@/lib/metric-label";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -45,6 +47,18 @@ const NORMALIZATION_LABEL: Record<string, string> = {
   normalized: "Normalized",
   not_normalized: "Not normalized",
 };
+
+// The candidate-preview table (below) renders the confirmed/normalized records' own column
+// names as headers, and the error list renders each error's raw `field`. Both are the intake
+// engine's internal field names (e.g. "cashOnHand", "periodStart") -- prefer the target domain's
+// own canonical IntakeFieldSpec.label where one is authored, otherwise fall back to the generic
+// camelCase humanizer so no raw internal identifier ever reaches the owner.
+function fieldLabel(domain: string, key: string): string {
+  const spec = fieldSpecForDomain(domain)?.find((f) => f.name === key);
+  if (spec?.label) return spec.label;
+  const words = humanizeMetricKey(key);
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -252,7 +266,7 @@ export default function OwnerIntakePage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted-accessible"}>{VALIDATION_LABEL[it.validationStatus] ?? it.validationStatus}</Badge>
                     {it.ownerConfirmed ? (
-                      <Badge variant="success-accessible">confirmed</Badge>
+                      <Badge variant="success-accessible">Confirmed</Badge>
                     ) : it.validationStatus !== "invalid" ? (
                       <Button onClick={() => confirm(it.id)} disabled={busy}>Confirm</Button>
                     ) : (
@@ -293,7 +307,7 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
           <strong>{errors.length} issue(s):</strong>
           <ul className="list-disc ml-4 mt-1">
             {errors.slice(0, 12).map((e: any, i: number) => (
-              <li key={i}>row {e.row} · {e.field}: {e.message}</li>
+              <li key={i}>row {e.row} · {fieldLabel(intake.targetDomain, e.field)}: {e.message}</li>
             ))}
           </ul>
         </div>
@@ -304,7 +318,7 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
           <table className="w-full text-xs">
             <thead>
               <tr className="text-left text-muted-foreground border-b">
-                {Object.keys(records[0]).map((k) => <th key={k} className="py-1 pr-3">{k}</th>)}
+                {Object.keys(records[0]).map((k) => <th key={k} className="py-1 pr-3">{fieldLabel(intake.targetDomain, k)}</th>)}
               </tr>
             </thead>
             <tbody>
