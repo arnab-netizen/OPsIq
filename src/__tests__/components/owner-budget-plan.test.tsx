@@ -40,7 +40,7 @@ const PLAN = {
 };
 
 function mockFetch() {
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input: any) => {
+  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
     const url = String(input);
     const json = (body: unknown) => ({ ok: true, json: async () => body } as unknown as Response);
     if (url.includes("/api/owner/recovery/businesses")) return json([{ id: "b1", name: "Acme", currency: "INR" }]);

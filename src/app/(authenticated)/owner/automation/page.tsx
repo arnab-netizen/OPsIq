@@ -36,27 +36,56 @@ async function api(path: string) {
   return data;
 }
 
+// Pure fetch -- no state setters, so it is safe to call from either an effect body or an event
+// handler without the effect ever synchronously triggering a state update.
+async function fetchSchedulerStatus(): Promise<SchedulerStatus> {
+  return api("/api/owner/scheduler-status");
+}
+
+function toLoadErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  return "Failed to load automation status";
+}
+
 export default function OwnerAutomationPage() {
   const [status, setStatus] = useState<SchedulerStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Event-driven reload (Refresh button) -- never called from an effect body, so it is safe to set
+  // state synchronously before the fetch settles.
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api("/api/owner/scheduler-status");
-      setStatus(data);
+      setStatus(await fetchSchedulerStatus());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load automation status");
+      setError(toLoadErrorMessage(e));
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Mount-only fetch. `loading`/`error` already start at their post-mount-fetch-started values
+  // (true / null, see useState above), so this effect never sets state synchronously -- it only
+  // applies the async result once settled, and only if it is still the current (non-stale) fetch.
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    fetchSchedulerStatus()
+      .then((data) => {
+        if (cancelled) return;
+        setStatus(data);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(toLoadErrorMessage(e));
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (loading) return <CardDashboardSkeleton label="Loading automation status" />;
 
