@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -230,15 +230,13 @@ export default function OwnerExecutionPage() {
   const missing: string[] = dashboard?.missingCriticalData ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Execution & SOP</h1>
-          <p className="text-muted-foreground text-sm">
-            Who must do what, by when, and whether it was actually done and verified — with the single highest-impact accountability move and what to turn into an SOP.
-          </p>
-        </div>
-        <Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Owner Execution & SOP"
+          description="Who must do what, by when, and whether it was actually done and verified — with the single highest-impact accountability move and what to turn into an SOP."
+          actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
+        />
       </div>
 
       {error && (
@@ -338,7 +336,7 @@ export default function OwnerExecutionPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 
