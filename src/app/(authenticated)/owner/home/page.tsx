@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 
@@ -103,17 +103,15 @@ export default function OwnerHomePage() {
   const s = data?.summary ?? null;
 
   return (
-    <div className="mx-auto max-w-md sm:max-w-2xl md:max-w-4xl py-6 px-4">
+    <div className="mx-auto max-w-md sm:max-w-2xl md:max-w-4xl">
       <div className="mb-4"><CanonicalCockpitLink from="home" /></div>
       <div className="mb-4">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Owner Home</h1>
-            <p className="text-muted-foreground text-xs">Risk first. Money first. One clear set of next actions.</p>
-          </div>
-          <Link href="/owner"><Button>Command Center</Button></Link>
-        </div>
-        <nav className="flex flex-wrap gap-1.5" aria-label="Domain navigation">
+        <PageHeader
+          title="Owner Home"
+          description="Risk first. Money first. One clear set of next actions."
+          actions={<Link href="/owner"><Button>Command Center</Button></Link>}
+        />
+        <nav className="flex flex-wrap gap-1.5 mt-3" aria-label="Domain navigation">
           {[
             { label: "Finance", href: "/owner/finance" },
             { label: "Cashflow", href: "/owner/cashflow" },
@@ -137,7 +135,7 @@ export default function OwnerHomePage() {
       {/* Alert summary — critical alerts and unread count */}
       {alertSummary && (alertSummary.unreadCount > 0 || alertSummary.alerts.length > 0) && (
         <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <span className="text-sm font-semibold text-destructive">
               {alertSummary.unreadCount > 0 ? `${alertSummary.unreadCount} unread alert${alertSummary.unreadCount === 1 ? "" : "s"}` : "Critical alerts"}
             </span>

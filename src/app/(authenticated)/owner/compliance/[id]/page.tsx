@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Badge, Button, Modal, Input, Select, Textarea, DetailPageSkeleton } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, Textarea, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type ComplianceStatus = "active" | "evidence_pending" | "review_pending" | "compliant" | "breached" | "waived";
@@ -177,29 +177,31 @@ export default function ComplianceDetailPage() {
   }
 
   if (loading) return <DetailPageSkeleton label="Loading" />;
-  if (error) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-destructive text-sm">{error}</p></div>;
+  if (error) return <PageContainer><p className="text-destructive text-sm">{error}</p></PageContainer>;
   if (!item) return null;
 
   const nextStatuses = VALID_TRANSITIONS[item.status] ?? [];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-start justify-between mb-6 gap-4">
-        <div>
-          <button onClick={() => router.back()} className="text-sm text-muted-foreground hover:underline mb-2 block">← Compliance Calendar</button>
-          <h1 className="text-2xl font-semibold">{item.name}</h1>
-          <p className="text-xs text-muted-foreground mt-1 capitalize">{item.kind}</p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
-          {nextStatuses.length > 0 && (
-            <Button size="sm" onClick={() => { setReviewStatus(""); setReviewNotes(""); setReviewError(null); setReviewOpen(true); }}>
-              Update status
-            </Button>
-          )}
-          <Button size="sm" variant="outline" onClick={() => { setLinkTaskId(""); setLinkType("REMEDIATION"); setLinkError(null); setLinkTaskOpen(true); }}>
-            Link task
-          </Button>
-        </div>
+    <PageContainer>
+      <button onClick={() => router.back()} className="text-sm text-muted-foreground hover:underline mb-2 block">← Compliance Calendar</button>
+      <div className="mb-6">
+        <PageHeader
+          title={item.name}
+          actions={
+            <div className="flex gap-2 flex-wrap justify-end">
+              {nextStatuses.length > 0 && (
+                <Button size="sm" onClick={() => { setReviewStatus(""); setReviewNotes(""); setReviewError(null); setReviewOpen(true); }}>
+                  Update status
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => { setLinkTaskId(""); setLinkType("REMEDIATION"); setLinkError(null); setLinkTaskOpen(true); }}>
+                Link task
+              </Button>
+            </div>
+          }
+        />
+        <p className="text-xs text-muted-foreground mt-1 capitalize">{item.kind}</p>
       </div>
 
       {/* Status row */}
@@ -346,7 +348,7 @@ export default function ComplianceDetailPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }
 

@@ -16,7 +16,7 @@
  * already covered for Money's snapshot-draft tests (finance-snapshot-draft-and-error.test.tsx).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, cleanup, fireEvent, waitFor, screen } from "@testing-library/react";
+import { render, cleanup, fireEvent, waitFor, screen, within } from "@testing-library/react";
 import OwnerSalesPage from "@/app/(authenticated)/owner/sales/page";
 import OwnerTrustPage from "@/app/(authenticated)/owner/trust/page";
 import OwnerExecutionPage from "@/app/(authenticated)/owner/execution/page";
@@ -120,5 +120,23 @@ describe("Header/content invariant: switching the shared business context re-fet
     fireEvent.change(screen.getByTestId("business-context-selector"), { target: { value: BIZ_A.id } });
     await waitFor(() => expect(dashboardRequests.some((u) => u.includes(`businessId=${BIZ_A.id}`))).toBe(true));
     await waitFor(() => expect(window.localStorage.getItem("opsiq.lastActiveBusinessId")).toBe(BIZ_A.id));
+  });
+});
+
+describe("Execution & SOP: business-selector action row retains all controls after the G9 mobile-wrap fix", () => {
+  it("keeps the business selector and both action buttons present, and the row wraps instead of overflowing", async () => {
+    installFetchMock("/api/owner/sop/dashboard");
+    renderWithProvider(<OwnerExecutionPage />);
+
+    const selector = await screen.findByTestId("business-context-selector");
+    const row = selector.closest("div.flex.items-end");
+    expect(row).toBeTruthy();
+    // G9 fix: the row must be allowed to wrap its children onto multiple lines at narrow
+    // widths, instead of forcing them onto one unbroken row that overflows the viewport.
+    expect(row!.className).toMatch(/flex-wrap/);
+
+    // The fix must not have dropped any control: same selector plus both action buttons.
+    expect(within(row as HTMLElement).getByText("+ Add execution snapshot")).toBeTruthy();
+    expect(within(row as HTMLElement).getByText("Run execution diagnosis")).toBeTruthy();
   });
 });

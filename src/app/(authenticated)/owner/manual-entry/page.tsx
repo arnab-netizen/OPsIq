@@ -9,7 +9,7 @@
  */
 /* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the intentional owner-page pattern */
 import { useCallback, useEffect, useState } from "react";
-import { Button, FormSkeleton } from "@/ui/primitives";
+import { Button, FormSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import {
   MANUAL_ENTRY_SECTIONS, MANUAL_ENTRY_WARNING, MANUAL_ENTRY_SAFE_COPY,
@@ -125,23 +125,23 @@ export default function OwnerManualEntryPage() {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  if (loading) return <main className="mx-auto max-w-3xl p-4 sm:p-6"><FormSkeleton label="Loading" fields={5} /></main>;
+  if (loading) return <PageContainer narrow><FormSkeleton label="Loading" fields={5} /></PageContainer>;
   if (error) return (
-    <main className="p-6">
+    <PageContainer narrow>
       <p data-testid="manual-entry-error" className="text-[var(--destructive-text)]">{error}</p>
       <Button onClick={() => void load()}>Retry</Button>
-    </main>
+    </PageContainer>
   );
 
   const essential = MANUAL_ENTRY_SECTIONS.filter((s) => s.essential);
   const optional = MANUAL_ENTRY_SECTIONS.filter((s) => !s.essential);
 
   return (
-    <main data-testid="manual-entry-page" className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Log business data</h1>
-        <p className="text-sm text-muted-foreground">Enter the operating facts OpsIQ needs. One thing at a time is fine.</p>
-      </header>
+    <PageContainer narrow data-testid="manual-entry-page" className="flex flex-col gap-6">
+      <PageHeader
+        title="Log business data"
+        description="Enter the operating facts OpsIQ needs. One thing at a time is fine."
+      />
 
       {/* Mandatory privacy warning + safe copy — always visible before submission. */}
       <section data-testid="manual-entry-warning" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
@@ -191,6 +191,6 @@ export default function OwnerManualEntryPage() {
           </div>
         </>
       )}
-    </main>
+    </PageContainer>
   );
 }

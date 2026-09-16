@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { FirstValueDTO } from "@/lib/first-value/first-value.dto";
 import { toOperatorSafeError } from "@/lib/operator-safe-errors";
-import { CardDashboardSkeleton } from "@/ui/primitives";
+import { CardDashboardSkeleton, PageContainer } from "@/ui/primitives";
 
 export default function FirstValuePage() {
   const [firstValue, setFirstValue] = useState<FirstValueDTO | null>(null);
@@ -67,9 +67,10 @@ export default function FirstValuePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
+    <PageContainer>
+      <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-3xl font-bold">First-Value Visibility</h1>
           {firstValue.isDemo && (
@@ -87,7 +88,7 @@ export default function FirstValuePage() {
       </div>
 
       {/* State and Confidence */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-gray-600">Readiness State</p>
           <p className="text-lg font-bold text-blue-900">{firstValue.state}</p>
@@ -104,7 +105,7 @@ export default function FirstValuePage() {
       {firstValue.businessSnapshot && (
         <div className="p-6 bg-card border border-gray-200 rounded-lg">
           <h2 className="text-xl font-bold mb-4">Business Snapshot</h2>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-gray-600">Consulting Stage</p>
               <p className="font-semibold">
@@ -213,7 +214,7 @@ export default function FirstValuePage() {
                 {firstValue.recommendedFirstAction.reason}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4 pt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
               <div>
                 <p className="text-xs text-gray-600">Expected Impact</p>
                 <p className="font-semibold">
@@ -349,6 +350,7 @@ export default function FirstValuePage() {
       <div className="text-xs text-gray-500 text-center border-t pt-6">
         Generated: {new Date(firstValue.generatedAt).toLocaleString()}
       </div>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

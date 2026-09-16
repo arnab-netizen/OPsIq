@@ -11,7 +11,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Modal, Input, Select, DetailPageSkeleton } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type TargetType = "PROFIT" | "REVENUE" | "NET_WORTH" | "MULTIPLE";
@@ -160,12 +160,16 @@ export default function GoalsPage() {
   const traj = trajectoryResult?.trajectory;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8" data-testid="goals-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Financial Goal</h1>
-        <Button size="sm" onClick={() => { setForm(EMPTY_FORM); setFormError(null); setModalOpen(true); }}>
-          {goal ? "Update Goal" : "+ Set Goal"}
-        </Button>
+    <PageContainer data-testid="goals-page">
+      <div className="mb-6">
+        <PageHeader
+          title="Financial Goal"
+          actions={
+            <Button size="sm" onClick={() => { setForm(EMPTY_FORM); setFormError(null); setModalOpen(true); }}>
+              {goal ? "Update Goal" : "+ Set Goal"}
+            </Button>
+          }
+        />
       </div>
 
       {loading && <DetailPageSkeleton label="Loading financial goal" />}
@@ -337,6 +341,6 @@ export default function GoalsPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

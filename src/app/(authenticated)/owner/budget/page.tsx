@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { assessWorkingCapitalAgeing } from "@/domain/owner-budget/working-capital-ageing";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -228,20 +228,18 @@ export default function OwnerBudgetPlanPage() {
     : [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Budget &amp; Profit Plan</h1>
-          <p className="text-muted-foreground text-sm">
-            Governed budget mode, capital allocation, cash/profit forecast, spend control, and your single next best action — evidence-gated, not guesses.
-          </p>
-        </div>
-        <Link href="/owner"><Button>← Command Center</Button></Link>
+    <PageContainer>
+      <div className="mb-2">
+        <PageHeader
+          title="Budget & Profit Plan"
+          description="Governed budget mode, capital allocation, cash/profit forecast, spend control, and your single next best action — evidence-gated, not guesses."
+          actions={<Link href="/owner"><Button>← Command Center</Button></Link>}
+        />
       </div>
 
       {/* Honest module-status banner (never imply OWNER_MODE_READY). */}
       <div className="mb-6 rounded-md border border-warning/30 bg-warning/5 p-3 text-xs space-y-1">
-        <div className="font-semibold">Module status: DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL (backend governance DB/CI-proven; not Owner-Mode-complete)</div>
+        <div className="font-semibold break-words">Module status: DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL (backend governance DB/CI-proven; not Owner-Mode-complete)</div>
         {PARTIAL_LIMITATIONS.map((l) => (<div key={l}>• {l}</div>))}
       </div>
 
@@ -273,7 +271,7 @@ export default function OwnerBudgetPlanPage() {
               <section className="border rounded-lg p-4 bg-card flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Current budget mode</div>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
                     <Badge variant={MODE_VARIANT[mode] ?? "muted-accessible"}>{mode ?? "—"}</Badge>
                     <Badge variant={CONFIDENCE_VARIANT[confidence] ?? "muted-accessible"}>confidence: {confidence ?? "—"}</Badge>
                     {plan?.highRiskBlocked && <Badge variant="destructive-accessible">high-risk recommendations blocked</Badge>}
@@ -474,7 +472,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* 9c: Working-capital ageing — owner-entered (manual / import-ready) */}
               <section className="border rounded-lg p-4 bg-card">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="font-bold">Working capital — receivables &amp; payables ageing</h2>
                   <Button onClick={() => setShowWcForm((s) => !s)}>{showWcForm ? "Cancel" : "Add receivable/payable"}</Button>
                 </div>
@@ -539,7 +537,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* 10: Owner override */}
               <section className="border rounded-lg p-4 bg-card">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="font-bold">Owner override</h2>
                   <Button onClick={() => setShowOverride((s) => !s)}>{showOverride ? "Cancel" : "Override this plan"}</Button>
                 </div>
@@ -562,6 +560,6 @@ export default function OwnerBudgetPlanPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

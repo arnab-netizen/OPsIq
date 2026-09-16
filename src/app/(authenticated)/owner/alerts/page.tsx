@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, TableListSkeleton } from "@/ui/primitives";
+import { Badge, Button, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 
 type AlertSeverity = "low" | "medium" | "high" | "critical";
 type AlertType = "blocked" | "threshold_breach" | "execution_failure";
@@ -188,27 +188,27 @@ export default function OwnerAlertsPage() {
   }, [load]);
 
   return (
-    <div className="mx-auto max-w-2xl py-6 px-4">
+    <PageContainer narrow>
       <div className="mb-5">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-          <h1 className="text-2xl font-bold">Alerts</h1>
-          <div className="flex items-center gap-2">
-            {unreadCount > 0 && (
-              <span className="inline-flex items-center justify-center rounded-full bg-destructive text-white text-xs font-bold px-2 py-0.5 min-w-[22px]">
-                {unreadCount}
-              </span>
-            )}
-            <Button onClick={() => void load()} disabled={loading || busy} className="min-h-[44px] text-xs px-3">
-              Refresh
-            </Button>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground mb-3">
-          Workspace-scoped. Acknowledge to log that you saw it; resolve to close it out.
-        </p>
+        <PageHeader
+          title="Alerts"
+          description="Workspace-scoped. Acknowledge to log that you saw it; resolve to close it out."
+          actions={
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <span className="inline-flex items-center justify-center rounded-full bg-destructive text-white text-xs font-bold px-2 py-0.5 min-w-[22px]">
+                  {unreadCount}
+                </span>
+              )}
+              <Button onClick={() => void load()} disabled={loading || busy} className="min-h-[44px] text-xs px-3">
+                Refresh
+              </Button>
+            </div>
+          }
+        />
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="mt-3 flex flex-wrap gap-2 items-center">
           <label className="flex items-center gap-1.5 text-sm cursor-pointer min-h-[44px]">
             <input
               type="checkbox"
@@ -267,6 +267,6 @@ export default function OwnerAlertsPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { sourceQualityTier, type IntakeSource } from "@/domain/owner-intake/types";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -114,21 +114,21 @@ export default function OwnerIntakePage() {
   const intakes: any[] = dashboard?.intakes ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Data Intake & Connectors</h1>
-          <p className="text-muted-foreground text-sm">
-            Upload a CSV (or paste rows) for a domain. We validate and normalize it, show every error, and nothing feeds a diagnosis until you confirm it.
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowUpload((s) => !s)}
-          disabled={businesses.length === 0}
-          aria-describedby={businesses.length === 0 ? "upload-blocked-reason" : undefined}
-        >
-          + Upload data
-        </Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Data Intake & Connectors"
+          description="Upload a CSV (or paste rows) for a domain. We validate and normalize it, show every error, and nothing feeds a diagnosis until you confirm it."
+          actions={
+            <Button
+              onClick={() => setShowUpload((s) => !s)}
+              disabled={businesses.length === 0}
+              aria-describedby={businesses.length === 0 ? "upload-blocked-reason" : undefined}
+            >
+              + Upload data
+            </Button>
+          }
+        />
       </div>
 
       {businesses.length === 0 && (
@@ -165,7 +165,7 @@ export default function OwnerIntakePage() {
       )}
 
       {confirmed && (
-        <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex items-center justify-between">
+        <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex flex-wrap items-center justify-between gap-2">
           <span>Data confirmed. OpsIQ is now ready to analyze your business.</span>
           <button
             onClick={() => router.push("/owner")}
@@ -224,13 +224,13 @@ export default function OwnerIntakePage() {
             {intakes.length === 0 && <p className="text-sm text-muted-foreground">No uploads yet.</p>}
             <div className="space-y-2">
               {intakes.map((it: any) => (
-                <div key={it.id} className="flex justify-between items-center border-b py-2 text-sm">
+                <div key={it.id} className="flex flex-wrap justify-between items-center gap-2 border-b py-2 text-sm">
                   <div>
                     <span className="font-medium">{it.targetDomain}</span>{" "}
                     <span className="text-muted-foreground">· {it.source} · {it.rowCount} row(s) · {new Date(it.createdAt).toLocaleDateString()}</span>
                     {it.source && <Badge variant="muted-accessible" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted-accessible"}>{it.validationStatus}</Badge>
                     {it.ownerConfirmed ? (
                       <Badge variant="success-accessible">confirmed</Badge>
@@ -246,7 +246,7 @@ export default function OwnerIntakePage() {
           </section>
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

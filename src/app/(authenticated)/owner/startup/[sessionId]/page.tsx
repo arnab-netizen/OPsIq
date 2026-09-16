@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { use } from "react";
-import { DetailPageSkeleton } from "@/ui/primitives";
+import { DetailPageSkeleton, PageContainer } from "@/ui/primitives";
 
 interface IdeaRecord {
   id: string;
@@ -394,9 +394,9 @@ export default function StartupSessionPage({
   if (!session) {
     if (pageMsg) {
       return (
-        <div style={{ padding: "2rem" }} data-testid="startup-session-loading">
+        <PageContainer data-testid="startup-session-loading">
           {pageMsg}
-        </div>
+        </PageContainer>
       );
     }
     return (
@@ -407,7 +407,7 @@ export default function StartupSessionPage({
   }
 
   return (
-    <div className="startup-session-shell" style={{ maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
+    <PageContainer className="startup-session-shell">
       {/* Header */}
       <div style={{ marginBottom: "1.5rem" }}>
         <h1 style={{ fontSize: "1.4rem", fontWeight: 700 }} data-testid="startup-session-title">
@@ -801,7 +801,7 @@ export default function StartupSessionPage({
           )}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

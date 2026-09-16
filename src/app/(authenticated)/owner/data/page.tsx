@@ -19,7 +19,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the established owner-page pattern */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Badge, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Select, CardDashboardSkeleton, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
@@ -554,7 +554,7 @@ export default function OwnerDataHubPage() {
   const hasBusiness = businesses.length > 0;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <PageContainer>
       <header>
         <h1 className="font-display text-[2rem] font-semibold tracking-tight text-foreground">My Business</h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -636,6 +636,6 @@ export default function OwnerDataHubPage() {
       <div className="mt-8 border-t border-border pt-4">
         <PlanNewBusinessLink />
       </div>
-    </div>
+    </PageContainer>
   );
 }

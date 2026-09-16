@@ -11,7 +11,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
+import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -196,12 +196,16 @@ export default function VendorPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8" data-testid="vendor-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Vendors</h1>
-        <Button size="sm" onClick={openCreate} disabled={!selectedBizId}>
-          + New Vendor
-        </Button>
+    <PageContainer data-testid="vendor-page">
+      <div className="mb-6">
+        <PageHeader
+          title="Vendors"
+          actions={
+            <Button size="sm" onClick={openCreate} disabled={!selectedBizId}>
+              + New Vendor
+            </Button>
+          }
+        />
       </div>
 
       <div className="mb-4">
@@ -430,6 +434,6 @@ export default function VendorPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

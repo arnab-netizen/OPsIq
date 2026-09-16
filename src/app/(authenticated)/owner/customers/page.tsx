@@ -11,7 +11,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
+import { Badge, Button, EmptyState, Modal, Input, Select, Textarea, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -333,17 +333,13 @@ export default function CustomersPage() {
   const currentBusiness = businesses.find((b) => b.id === selectedBizId) || null;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8" data-testid="customers-page">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
-        <div>
-          <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Customers</h1>
-          <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-muted-foreground">
-            Who your customers are, which ones matter most, and where the relationship needs attention.
-          </p>
-        </div>
-        <Button size="sm" onClick={openCreate} disabled={!selectedBizId}>
-          + New Customer
-        </Button>
+    <PageContainer data-testid="customers-page">
+      <div className="mb-6">
+        <PageHeader
+          title="Customers"
+          description="Who your customers are, which ones matter most, and where the relationship needs attention."
+          actions={<Button size="sm" onClick={openCreate} disabled={!selectedBizId}>+ New Customer</Button>}
+        />
       </div>
 
       <div className="mb-6">
@@ -565,6 +561,6 @@ export default function CustomersPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }
