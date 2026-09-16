@@ -117,11 +117,19 @@ describe("GoalsPage", () => {
     await findByText("44%");
   });
 
-  it("shows the humanized status badge, not the raw ACTIVE enum value", async () => {
+  it("shows the humanized status badge with its accessible semantic variant, and never leaks the raw ACTIVE enum value (G5 + G6)", async () => {
     const { findByText, queryByText } = render(<GoalsPage />);
-    await findByText("Active");
+    const badge = await findByText("Active");
     // The raw GoalStatus enum value must never leak into the rendered badge.
     expect(queryByText("ACTIVE")).toBeNull();
+    // STATUS_VARIANT.ACTIVE migrated from "default" to "default-accessible" (G6). "default"
+    // and "default-accessible" share the same bg-primary/10 fill (only the text-color token
+    // differs -- see badge.tsx), so a bg-primary-only assertion would pass even if the
+    // migration were fully reverted. Pin the accessible variant specifically by asserting the
+    // "default-accessible"-only text token, not just the shared category fill.
+    expect(badge.className).toMatch(/bg-primary/);
+    expect(badge.className).toMatch(/text-\[var\(--primary-text\)\]/);
+    expect(badge.className).not.toMatch(/bg-destructive|bg-warning/);
   });
 
   it("shows Update Goal button when a goal exists", async () => {
@@ -220,18 +228,5 @@ describe("GoalsPage", () => {
     expect(getByLabelText("Currency")).toBeTruthy();
     expect(getByLabelText(/Target date/)).toBeTruthy();
     expect(getByLabelText("Baseline amount (optional)")).toBeTruthy();
-  });
-
-  it("preserves the ACTIVE status badge's semantic color category and uses the accessible text token (G6)", async () => {
-    const { findByText } = render(<GoalsPage />);
-    const badge = await findByText("ACTIVE");
-    // STATUS_VARIANT.ACTIVE migrated from "default" to "default-accessible" (G6). "default"
-    // and "default-accessible" share the same bg-primary/10 fill (only the text-color token
-    // differs -- see badge.tsx), so a bg-primary-only assertion would pass even if the
-    // migration were fully reverted. Pin the accessible variant specifically by asserting the
-    // "default-accessible"-only text token, not just the shared category fill.
-    expect(badge.className).toMatch(/bg-primary/);
-    expect(badge.className).toMatch(/text-\[var\(--primary-text\)\]/);
-    expect(badge.className).not.toMatch(/bg-destructive|bg-warning/);
   });
 });
