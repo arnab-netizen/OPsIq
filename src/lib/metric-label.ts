@@ -36,3 +36,14 @@ const CAMEL_CASE_TOKEN = /\b([a-z][a-zA-Z0-9]*[A-Z][a-zA-Z0-9]*)\b/g;
 export function humanizeEvidenceLine(line: string): string {
   return line.replace(CAMEL_CASE_TOKEN, (token) => humanizeMetricKey(token));
 }
+
+/**
+ * Plain-language label for a lowercase_snake_case identifier (e.g. a stored classification or
+ * status column such as `businessStatus`'s "at_risk", or an owner-input category like
+ * "cash_debt") -- the snake_case counterpart to humanizeMetricKey's camelCase handling. Generic
+ * capitalize-first-word + underscore-to-space conversion, not a per-value lookup table.
+ */
+export function humanizeSnakeCase(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " ");
+}

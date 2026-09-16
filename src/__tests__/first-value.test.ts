@@ -59,15 +59,105 @@ describe("First-Value Service [db]", () => {
     mockDb = dbModule.db;
   });
 
-  it("should return EMPTY_WORKSPACE state when no engagement exists", async () => {
+  function mockWorkspace(name = "Test Workspace") {
     mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
       id: mockWorkspaceId,
-      name: "Test Workspace",
+      name,
       status: "ACTIVE",
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+  }
 
+  // Real Finding shape (prisma/schema.prisma `model Finding`) -- NO `category`, `description`,
+  // `source`, or `confidence` columns exist; `severity` is a real but lowercase column
+  // (RISK_SEVERITIES in domain/constants/statuses.ts). A fixture shaped like this is what
+  // production actually returns from Prisma.
+  function realFinding(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "finding-1",
+      engagementId: "engagement-123",
+      stageId: null,
+      primaryEvidenceId: "evidence-1",
+      title: "Cash reserve below threshold",
+      summary: "Cash on hand fell under the required reserve level.",
+      severity: "high",
+      impactArea: "cost",
+      status: "identified",
+      confidenceScore: 0.6,
+      priorityScore: null,
+      hypothesis: null,
+      rootCause: null,
+      consequence: null,
+      ownerId: null,
+      dueAt: null,
+      validatedAt: null,
+      resolvedAt: null,
+      dismissedAt: null,
+      metadata: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      archivedAt: null,
+      ...overrides,
+    };
+  }
+
+  // Real Action shape (prisma/schema.prisma `model Action`) -- NO `expectedOutcome`, `effort`,
+  // `riskLevel`, `actionType`, or `priority` columns exist; `status` is real but lowercase
+  // (ACTION_STATUSES in domain/constants/statuses.ts); the due-date column is `dueAt`, not
+  // `dueDate`.
+  function realAction(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "action-1",
+      engagementId: "engagement-123",
+      stageId: null,
+      recommendationId: null,
+      title: "Freeze discretionary spend",
+      description: "Pause non-essential spend until reserve is restored.",
+      status: "assigned",
+      assignedTo: null,
+      dueAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      startedAt: null,
+      completedAt: null,
+      verifiedAt: null,
+      metadata: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  // Real Engagement shape (prisma/schema.prisma `model Engagement`) -- `healthStatus` (not
+  // `health`) and `businessConditionProfiles` (a plural relation array, not a singular
+  // `businessConditionProfile` object) are the two real fields; `interventionMode` and
+  // `interventionPhase` were already correct.
+  function realEngagement(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "engagement-123",
+      code: "ENG-1",
+      title: "Test Engagement",
+      clientId: "client-1",
+      serviceTier: "standard",
+      engagementMode: "advisory",
+      status: "active",
+      healthStatus: "at_risk",
+      interventionMode: "recovery",
+      interventionPhase: "triage",
+      workspaceId: mockWorkspaceId,
+      findings: [],
+      actions: [],
+      kpis: [],
+      businessConditionProfiles: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  it("should return EMPTY_WORKSPACE state when no engagement exists", async () => {
+    mockWorkspace();
     mockDb.engagement.findFirst.mockResolvedValue(null);
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
@@ -77,46 +167,24 @@ describe("First-Value Service [db]", () => {
     expect(result.businessSnapshot).toBeNull();
   });
 
-  it("should return MINIMUM_DATA_PRESENT with findings but no actions", async () => {
-    mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
-      id: mockWorkspaceId,
-      name: "Test Workspace",
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+  // Reproduces the exact production failure this fix closes: an engagement with findings present,
+  // shaped exactly like a real Prisma row (no `category` column). Before the fix, accessing
+  // `f.category` on this shape threw `TypeError: Cannot read properties of undefined (reading
+  // 'includes')` inside the risks/opportunities filter and the route surfaced it as a raw 500.
+  it("does not throw when findings are present with the real (no `category` column) shape", async () => {
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({ findings: [realFinding()], actions: [] })
+    );
 
-    mockDb.engagement.findFirst.mockResolvedValue({
-      id: "engagement-123",
-      workspaceId: mockWorkspaceId,
-      name: "Test Engagement",
-      businessConditionProfile: { industry: "Software" },
-      interventionMode: "ADVISORY",
-      interventionPhase: "DISCOVERY",
-      health: "AT_RISK",
-      status: "ACTIVE",
-      findings: [
-        {
-          id: "finding-1",
-          title: "Test Risk",
-          description: "High risk identified",
-          category: "OPERATIONAL_RISK",
-          severity: "HIGH",
-          confidence: "HIGH_CONFIDENCE",
-          source: "ANALYSIS",
-          status: "ACTIVE",
-          createdAt: new Date(),
-          engagementId: "engagement-123",
-          externalId: "ext-1",
-          supportingEvidenceIds: [],
-          contradictingEvidenceIds: [],
-        },
-      ],
-      actions: [],
-      kpis: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    await expect(getFirstValue(mockCtx, mockWorkspaceId)).resolves.toBeDefined();
+  });
+
+  it("should return MINIMUM_DATA_PRESENT with findings but no actions", async () => {
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({ findings: [realFinding()], actions: [] })
+    );
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
 
@@ -126,62 +194,10 @@ describe("First-Value Service [db]", () => {
   });
 
   it("should return FIRST_VALUE_READY with findings and actions", async () => {
-    mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
-      id: mockWorkspaceId,
-      name: "Test Workspace",
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    mockDb.engagement.findFirst.mockResolvedValue({
-      id: "engagement-123",
-      workspaceId: mockWorkspaceId,
-      name: "Test Engagement",
-      businessConditionProfile: { industry: "Software" },
-      interventionMode: "ADVISORY",
-      interventionPhase: "DISCOVERY",
-      health: "AT_RISK",
-      status: "ACTIVE",
-      findings: [
-        {
-          id: "finding-1",
-          title: "Test Risk",
-          description: "High risk identified",
-          category: "OPERATIONAL_RISK",
-          severity: "HIGH",
-          confidence: "HIGH_CONFIDENCE",
-          source: "ANALYSIS",
-          status: "ACTIVE",
-          createdAt: new Date(),
-          engagementId: "engagement-123",
-          externalId: "ext-1",
-          supportingEvidenceIds: [],
-          contradictingEvidenceIds: [],
-        },
-      ],
-      actions: [
-        {
-          id: "action-1",
-          title: "Hire engineer",
-          description: "Bring in contractor",
-          actionType: "HIRING",
-          priority: "HIGH",
-          status: "RECOMMENDED",
-          expectedOutcome: "Unblock roadmap",
-          effort: "MEDIUM",
-          riskLevel: "MEDIUM",
-          recommendedBy: "ADVISOR",
-          createdAt: new Date(),
-          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          engagementId: "engagement-123",
-          externalId: "ext-action-1",
-        },
-      ],
-      kpis: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({ findings: [realFinding()], actions: [realAction()] })
+    );
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
 
@@ -190,171 +206,47 @@ describe("First-Value Service [db]", () => {
     expect(result.recommendedFirstAction).not.toBeNull();
   });
 
-  it("should extract top risks from findings", async () => {
-    mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
-      id: mockWorkspaceId,
-      name: "Test Workspace",
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    mockDb.engagement.findFirst.mockResolvedValue({
-      id: "engagement-123",
-      workspaceId: mockWorkspaceId,
-      name: "Test Engagement",
-      businessConditionProfile: { industry: "Software" },
-      interventionMode: "ADVISORY",
-      interventionPhase: "DISCOVERY",
-      health: "AT_RISK",
-      status: "ACTIVE",
-      findings: [
-        {
-          id: "finding-1",
-          title: "Critical Risk",
-          description: "Critical issue",
-          category: "OPERATIONAL_RISK",
-          severity: "CRITICAL",
-          confidence: "HIGH_CONFIDENCE",
-          source: "ANALYSIS",
-          status: "ACTIVE",
-          createdAt: new Date(),
-          engagementId: "engagement-123",
-          externalId: "ext-1",
-          supportingEvidenceIds: [],
-          contradictingEvidenceIds: [],
-        },
-        {
-          id: "finding-2",
-          title: "High Risk",
-          description: "High priority issue",
-          category: "OPERATIONAL_RISK",
-          severity: "HIGH",
-          confidence: "MEDIUM_CONFIDENCE",
-          source: "ANALYSIS",
-          status: "ACTIVE",
-          createdAt: new Date(),
-          engagementId: "engagement-123",
-          externalId: "ext-2",
-          supportingEvidenceIds: [],
-          contradictingEvidenceIds: [],
-        },
-      ],
-      actions: [],
-      kpis: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+  it("should extract top risks from findings, sorted by real (lowercase) severity", async () => {
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({
+        findings: [
+          realFinding({ id: "finding-1", title: "High risk", severity: "high" }),
+          realFinding({ id: "finding-2", title: "Critical risk", severity: "critical" }),
+        ],
+        actions: [],
+      })
+    );
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
 
-    expect(result.topRisks.length).toBeGreaterThan(0);
+    expect(result.topRisks.length).toBe(2);
     expect(result.topRisks[0].severity).toBe("CRITICAL");
+    expect(result.topRisks[0].description).toBe("Critical risk");
   });
 
-  it("should extract top opportunities from findings", async () => {
-    mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
-      id: mockWorkspaceId,
-      name: "Test Workspace",
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    mockDb.engagement.findFirst.mockResolvedValue({
-      id: "engagement-123",
-      workspaceId: mockWorkspaceId,
-      name: "Test Engagement",
-      businessConditionProfile: { industry: "Software" },
-      interventionMode: "ADVISORY",
-      interventionPhase: "DISCOVERY",
-      health: "STABLE",
-      status: "ACTIVE",
-      findings: [
-        {
-          id: "finding-1",
-          title: "Growth Opportunity",
-          description: "Market expansion possible",
-          category: "OPERATIONAL_OPPORTUNITY",
-          severity: "HIGH",
-          confidence: "HIGH_CONFIDENCE",
-          source: "MARKET_ANALYSIS",
-          status: "ACTIVE",
-          createdAt: new Date(),
-          engagementId: "engagement-123",
-          externalId: "ext-1",
-          supportingEvidenceIds: [],
-          contradictingEvidenceIds: [],
-        },
-      ],
-      actions: [],
-      kpis: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+  // Finding has no risk/opportunity polarity column anywhere in the schema -- every finding is
+  // honestly surfaced as a risk, and topOpportunities is intentionally always empty rather than
+  // invented from a classification that doesn't exist.
+  it("topOpportunities is always empty (no schema-backed opportunity classification exists)", async () => {
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({ findings: [realFinding()], actions: [] })
+    );
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
 
-    expect(result.topOpportunities.length).toBeGreaterThan(0);
+    expect(result.topOpportunities).toEqual([]);
   });
 
   it("should recommend first action when evidence exists", async () => {
-    mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
-      id: mockWorkspaceId,
-      name: "Test Workspace",
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    mockDb.engagement.findFirst.mockResolvedValue({
-      id: "engagement-123",
-      workspaceId: mockWorkspaceId,
-      name: "Test Engagement",
-      businessConditionProfile: { industry: "Software" },
-      interventionMode: "ADVISORY",
-      interventionPhase: "DISCOVERY",
-      health: "AT_RISK",
-      status: "ACTIVE",
-      findings: [
-        {
-          id: "finding-1",
-          title: "Risk",
-          description: "Issue",
-          category: "OPERATIONAL_RISK",
-          severity: "HIGH",
-          confidence: "HIGH_CONFIDENCE",
-          source: "ANALYSIS",
-          status: "ACTIVE",
-          createdAt: new Date(),
-          engagementId: "engagement-123",
-          externalId: "ext-1",
-          supportingEvidenceIds: [],
-          contradictingEvidenceIds: [],
-        },
-      ],
-      actions: [
-        {
-          id: "action-1",
-          title: "Take Action",
-          description: "Fix the issue",
-          actionType: "PROCESS_IMPROVEMENT",
-          priority: "HIGH",
-          status: "RECOMMENDED",
-          expectedOutcome: "Reduce risk",
-          effort: "SMALL",
-          riskLevel: "LOW",
-          recommendedBy: "ADVISOR",
-          createdAt: new Date(),
-          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          engagementId: "engagement-123",
-          externalId: "ext-action-1",
-        },
-      ],
-      kpis: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({
+        findings: [realFinding()],
+        actions: [realAction({ title: "Take Action", status: "assigned" })],
+      })
+    );
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
 
@@ -364,46 +256,10 @@ describe("First-Value Service [db]", () => {
   });
 
   it("should not recommend action without evidence", async () => {
-    mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
-      id: mockWorkspaceId,
-      name: "Test Workspace",
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    mockDb.engagement.findFirst.mockResolvedValue({
-      id: "engagement-123",
-      workspaceId: mockWorkspaceId,
-      name: "Test Engagement",
-      businessConditionProfile: { industry: "Software" },
-      interventionMode: "ADVISORY",
-      interventionPhase: "DISCOVERY",
-      health: "STABLE",
-      status: "ACTIVE",
-      findings: [],
-      actions: [
-        {
-          id: "action-1",
-          title: "Action",
-          description: "Action without evidence",
-          actionType: "PROCESS_IMPROVEMENT",
-          priority: "MEDIUM",
-          status: "RECOMMENDED",
-          expectedOutcome: "Unknown",
-          effort: "MEDIUM",
-          riskLevel: "MEDIUM",
-          recommendedBy: "ADVISOR",
-          createdAt: new Date(),
-          dueDate: new Date(),
-          engagementId: "engagement-123",
-          externalId: "ext-action-1",
-        },
-      ],
-      kpis: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({ findings: [], actions: [realAction()] })
+    );
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
 
@@ -411,15 +267,64 @@ describe("First-Value Service [db]", () => {
     expect(result.recommendedFirstActionReason).toBe("NO_ACTION_EVIDENCE");
   });
 
-  it("should identify missing data areas", async () => {
-    mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
-      id: mockWorkspaceId,
-      name: "Test Workspace",
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+  it("counts blocked/overdue actions using the real lowercase status values", async () => {
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({
+        findings: [realFinding()],
+        actions: [
+          realAction({ id: "a1", status: "blocked" }),
+          realAction({ id: "a2", status: "overdue" }),
+          realAction({ id: "a3", status: "assigned" }),
+        ],
+      })
+    );
 
+    const result = await getFirstValue(mockCtx, mockWorkspaceId);
+
+    expect(result.businessSnapshot.blockedActionCount).toBe(1);
+    expect(result.businessSnapshot.overdueActionCount).toBe(1);
+  });
+
+  it("derives businessCondition from the current (plural relation) BusinessConditionProfile", async () => {
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({
+        findings: [],
+        actions: [],
+        businessConditionProfiles: [{ businessStatus: "cash_constrained", isCurrent: true }],
+      })
+    );
+
+    const result = await getFirstValue(mockCtx, mockWorkspaceId);
+
+    expect(result.businessSnapshot.businessCondition).toBe("Cash constrained");
+  });
+
+  it("falls back to Unknown business condition with no current profile", async () => {
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({ findings: [], actions: [], businessConditionProfiles: [] })
+    );
+
+    const result = await getFirstValue(mockCtx, mockWorkspaceId);
+
+    expect(result.businessSnapshot.businessCondition).toBe("Unknown");
+  });
+
+  it("maps the real healthStatus column onto the DTO's uppercase enum", async () => {
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({ findings: [], actions: [], healthStatus: "critical" })
+    );
+
+    const result = await getFirstValue(mockCtx, mockWorkspaceId);
+
+    expect(result.businessSnapshot.healthStatus).toBe("CRITICAL");
+  });
+
+  it("should identify missing data areas", async () => {
+    mockWorkspace();
     mockDb.engagement.findFirst.mockResolvedValue(null);
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
@@ -429,14 +334,7 @@ describe("First-Value Service [db]", () => {
   });
 
   it("should generate DEMO badge for demo workspace", async () => {
-    mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
-      id: mockWorkspaceId,
-      name: "DEMO Workspace",
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
+    mockWorkspace("DEMO Workspace");
     mockDb.engagement.findFirst.mockResolvedValue(null);
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
@@ -445,14 +343,7 @@ describe("First-Value Service [db]", () => {
   });
 
   it("should include safety warnings for empty workspaces", async () => {
-    mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
-      id: mockWorkspaceId,
-      name: "Test Workspace",
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
+    mockWorkspace();
     mockDb.engagement.findFirst.mockResolvedValue(null);
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
@@ -462,77 +353,14 @@ describe("First-Value Service [db]", () => {
   });
 
   it("should return correct data readiness metrics", async () => {
-    mockDb.workspace.findUniqueOrThrow.mockResolvedValue({
-      id: mockWorkspaceId,
-      name: "Test Workspace",
-      status: "ACTIVE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    mockDb.engagement.findFirst.mockResolvedValue({
-      id: "engagement-123",
-      workspaceId: mockWorkspaceId,
-      name: "Test Engagement",
-      businessConditionProfile: { industry: "Software" },
-      interventionMode: "ADVISORY",
-      interventionPhase: "DISCOVERY",
-      health: "AT_RISK",
-      status: "ACTIVE",
-      findings: [
-        {
-          id: "finding-1",
-          title: "Risk",
-          description: "Issue",
-          category: "OPERATIONAL_RISK",
-          severity: "HIGH",
-          confidence: "HIGH_CONFIDENCE",
-          source: "ANALYSIS",
-          status: "ACTIVE",
-          createdAt: new Date(),
-          engagementId: "engagement-123",
-          externalId: "ext-1",
-          supportingEvidenceIds: [],
-          contradictingEvidenceIds: [],
-        },
-      ],
-      actions: [
-        {
-          id: "action-1",
-          title: "Action",
-          description: "Action",
-          actionType: "PROCESS_IMPROVEMENT",
-          priority: "HIGH",
-          status: "RECOMMENDED",
-          expectedOutcome: "Improve",
-          effort: "MEDIUM",
-          riskLevel: "MEDIUM",
-          recommendedBy: "ADVISOR",
-          createdAt: new Date(),
-          dueDate: new Date(),
-          engagementId: "engagement-123",
-          externalId: "ext-action-1",
-        },
-      ],
-      kpis: [
-        {
-          id: "kpi-1",
-          name: "Revenue",
-          metricType: "CURRENCY",
-          currentValue: 100000,
-          benchmarkValue: 150000,
-          trend: "INCREASING",
-          lastMeasuredAt: new Date(),
-          description: "Monthly revenue",
-          engagementId: "engagement-123",
-          externalId: "ext-kpi-1",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    mockWorkspace();
+    mockDb.engagement.findFirst.mockResolvedValue(
+      realEngagement({
+        findings: [realFinding()],
+        actions: [realAction()],
+        kpis: [{ id: "kpi-1", engagementId: "engagement-123" }],
+      })
+    );
 
     const result = await getFirstValue(mockCtx, mockWorkspaceId);
 
