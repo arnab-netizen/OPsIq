@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic inventory payloads are untyped; fetch-on-mount is the intentional pattern */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/ui/primitives/button";
@@ -17,6 +17,18 @@ async function apiFetch(path: string, init?: RequestInit) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error ?? "Request failed");
   return data;
+}
+
+// Pure fetch + normalize -- no state setters here, so it is safe to call from either an effect
+// body or an event handler without the effect ever synchronously triggering a state update.
+async function fetchInventoryData(businessId: string): Promise<{ items: any[]; suggestions: Record<string, any> }> {
+  const data = await apiFetch(`/api/owner/inventory/stock-items?businessId=${businessId}`);
+  const items: any[] = data.items ?? [];
+  const suggestions: Record<string, any> = {};
+  if (data.suggestions) {
+    for (const s of data.suggestions) suggestions[s.id] = s;
+  }
+  return { items, suggestions };
 }
 
 const RISK_COLOR: Record<string, string> = {
@@ -41,26 +53,37 @@ export default function InventoryPage() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  // Event-driven reload (post-save refresh) -- never called from an effect body, so it is safe to
+  // set state directly once the fetch settles.
   const loadItems = useCallback(async (bid: string) => {
     try {
-      const data = await apiFetch(`/api/owner/inventory/stock-items?businessId=${bid}`);
-      const list: any[] = data.items ?? [];
+      const { items: list, suggestions: sugMap } = await fetchInventoryData(bid);
       setItems(list);
-      // compute reorder suggestions client-side via API response inclusion
-      const sugMap: Record<string, any> = {};
-      if (data.suggestions) {
-        for (const s of data.suggestions) sugMap[s.id] = s;
-      }
       setSuggestions(sugMap);
     } catch (e: any) {
       setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
     }
   }, []);
 
+  // Mount / business-switch fetch. Guarded by `cancelled` so a slow response for a business the
+  // owner has since switched away from can never overwrite the newer business's state -- each
+  // effect run's own closure is invalidated by the previous run's cleanup before the new run starts.
   useEffect(() => {
     if (contextLoading || !activeBusinessId) return;
-    void loadItems(activeBusinessId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only on context resolution/switch, not on every loadItems identity change
+    let cancelled = false;
+    fetchInventoryData(activeBusinessId)
+      .then(({ items: list, suggestions: sugMap }) => {
+        if (cancelled) return;
+        setItems(list);
+        setSuggestions(sugMap);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [contextLoading, activeBusinessId]);
 
   const openCreate = () => {

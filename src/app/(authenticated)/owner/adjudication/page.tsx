@@ -19,8 +19,6 @@
  * are queued, which it provably does not — it was deliberately not added.
  */
 
-/* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
-
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, TableListSkeleton } from "@/ui/primitives";
@@ -55,34 +53,73 @@ function safeError(data: Record<string, unknown>, status: number): string {
   return `Could not complete the request (${status}).`;
 }
 
+type QueueSummary = { totalItems: number; adjudicableItems: number; blockedByDataItems: number };
+type QueueData = { items: QueueItemView[]; outcomeOptions: OutcomeOption[]; summary: QueueSummary | null };
+
+// Pure fetch + normalize -- no state setters here, so it is safe to call from either an effect body
+// or an event handler without the effect ever synchronously triggering a state update.
+async function fetchQueueData(): Promise<QueueData> {
+  const { res, data } = await api("/api/owner/proof-risk/queue");
+  if (!res.ok) throw new Error(safeError(data, res.status));
+  return {
+    items: (data.items as QueueItemView[]) ?? [],
+    outcomeOptions: (data.outcomeOptions as OutcomeOption[]) ?? [],
+    summary: (data.summary as QueueSummary) ?? null,
+  };
+}
+
+function toLoadErrorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : "Failed to load the adjudication queue.";
+}
+
 export default function OwnerAdjudicationPage() {
   const [items, setItems] = useState<QueueItemView[]>([]);
   const [outcomeOptions, setOutcomeOptions] = useState<OutcomeOption[]>([]);
-  const [summary, setSummary] = useState<{ totalItems: number; adjudicableItems: number; blockedByDataItems: number } | null>(null);
+  const [summary, setSummary] = useState<QueueSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Event-driven reload (Refresh button, Retry button, post-adjudication silent refresh) -- never
+  // called from an effect body, so it is safe to set state synchronously before the fetch settles.
   // `silent` refreshes the data WITHOUT toggling the full-page loading state — used after a decision so
   // the queue (and the just-submitted result message) stays mounted instead of blanking to a spinner.
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const { res, data } = await api("/api/owner/proof-risk/queue");
-      if (!res.ok) throw new Error(safeError(data, res.status));
-      setItems((data.items as QueueItemView[]) ?? []);
-      setOutcomeOptions((data.outcomeOptions as OutcomeOption[]) ?? []);
-      setSummary((data.summary as { totalItems: number; adjudicableItems: number; blockedByDataItems: number }) ?? null);
+      const result = await fetchQueueData();
+      setItems(result.items);
+      setOutcomeOptions(result.outcomeOptions);
+      setSummary(result.summary);
     } catch (e) {
-      if (!silent) setError(e instanceof Error ? e.message : "Failed to load the adjudication queue.");
+      if (!silent) setError(toLoadErrorMessage(e));
     } finally {
       if (!silent) setLoading(false);
     }
   }, []);
 
+  // Mount-only fetch. `loading`/`error` already start at their post-mount-fetch-started values
+  // (true / null, see useState above), so this effect never sets state synchronously -- it only
+  // applies the async result once settled, and only if it is still the current (non-stale) fetch.
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    fetchQueueData()
+      .then((result) => {
+        if (cancelled) return;
+        setItems(result.items);
+        setOutcomeOptions(result.outcomeOptions);
+        setSummary(result.summary);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(toLoadErrorMessage(e));
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onAdjudicate = useCallback(
     async (item: QueueItemView, outcome: string, reason: string): Promise<AdjudicationResult> => {
