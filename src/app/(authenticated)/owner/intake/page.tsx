@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { sourceQualityTier, type IntakeSource } from "@/domain/owner-intake/types";
 import { fieldSpecForDomain } from "@/domain/owner-intake/field-specs";
-import { humanizeMetricKey } from "@/lib/metric-label";
+import { INPUT_CATALOG, type OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
+import { humanizeMetricKey, humanizeSnakeCase } from "@/lib/metric-label";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -42,6 +43,20 @@ const DOMAIN_LABEL: Record<string, string> = {
   marketing: "Marketing",
 };
 const SOURCE_LABEL: Record<string, string> = Object.fromEntries(SOURCES.map((s) => [s.value, s.label]));
+// Intake history mixes two write paths: CSV uploads (owner-intake/intake.service.ts), whose
+// targetDomain is always one of the 5 keys in DOMAIN_LABEL above, and manual-entry submissions
+// (owner-manual-entry.service.ts), which persist the raw OwnerInputCategory (e.g. "cash_debt",
+// "equipment_logs") as targetDomain -- a different, 20-value taxonomy from the same
+// domain/owner-mode/input-catalog.ts source of truth used by onboarding/data-hub/readiness-score.
+// DOMAIN_LABEL doesn't cover those, so they rendered raw. INPUT_CATALOG is a total map over every
+// real OwnerInputCategory value; humanizeSnakeCase is the safety-net fallback for any future
+// targetDomain value from neither taxonomy, so nothing ever renders blank or raw.
+function intakeDomainLabel(value: string): string {
+  if (DOMAIN_LABEL[value]) return DOMAIN_LABEL[value];
+  const catalogEntry = INPUT_CATALOG[value as OwnerInputCategory];
+  if (catalogEntry) return catalogEntry.label;
+  return humanizeSnakeCase(value);
+}
 // Verified against IntakeNormalizationStatus / engine.ts's two possible values.
 const NORMALIZATION_LABEL: Record<string, string> = {
   normalized: "Normalized",
@@ -259,7 +274,7 @@ export default function OwnerIntakePage() {
               {intakes.map((it: any) => (
                 <div key={it.id} className="flex flex-wrap justify-between items-center gap-2 border-b py-2 text-sm">
                   <div>
-                    <span className="font-medium">{DOMAIN_LABEL[it.targetDomain] ?? it.targetDomain}</span>{" "}
+                    <span className="font-medium">{intakeDomainLabel(it.targetDomain)}</span>{" "}
                     <span className="text-muted-foreground">· {SOURCE_LABEL[it.source] ?? it.source} · {it.rowCount} row(s) · {new Date(it.createdAt).toLocaleDateString()}</span>
                     {it.source && <Badge variant="muted-accessible" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
                   </div>
