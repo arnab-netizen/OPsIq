@@ -13,6 +13,15 @@ vi.mock("@/lib/db", () => ({
       findFirst: vi.fn(),
     },
   },
+  getDbInstance: vi.fn(async () => ({
+    workspace: {
+      findUniqueOrThrow: vi.fn(),
+    },
+    engagement: {
+      findFirst: vi.fn(),
+    },
+    $disconnect: vi.fn(),
+  })),
 }));
 
 vi.mock("@/lib/service-auth", () => ({

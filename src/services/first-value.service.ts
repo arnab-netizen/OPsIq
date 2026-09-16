@@ -80,22 +80,21 @@ async function getFirstValue(ctx: CanonicalAuthContext, workspaceId: string): Pr
     : null;
 
   // Extract risks and opportunities from findings
+  const severityOrder: Record<string, number> = {
+    CRITICAL: 0,
+    HIGH: 1,
+    MEDIUM: 2,
+    LOW: 3,
+  };
+
   const risks: FirstValueRiskDTO[] = (engagement?.findings ?? [])
     .filter((f: any) =>
-      (f.category as string).includes("RISK") ||
       (f.category as string).includes("RISK")
     )
     .sort((a: any, b: any) => {
-      const severityOrder: Record<string, number> = {
-        CRITICAL: 0,
-        HIGH: 1,
-        MEDIUM: 2,
-        LOW: 3,
-      };
-      return (
-        (severityOrder[(a.severity as string) || "LOW"] || 999) -
-        (severityOrder[(b.severity as string) || "LOW"] || 999)
-      );
+      const aOrder = severityOrder[(a.severity as string)] ?? 999;
+      const bOrder = severityOrder[(b.severity as string)] ?? 999;
+      return aOrder - bOrder;
     })
     .slice(0, 3)
     .map((f: any) => ({
@@ -120,20 +119,12 @@ async function getFirstValue(ctx: CanonicalAuthContext, workspaceId: string): Pr
   const opportunities: FirstValueOpportunityDTO[] = (engagement?.findings ?? [])
     .filter(
       (f: any) =>
-        (f.category as string).includes("OPPORTUNITY") ||
         (f.category as string).includes("OPPORTUNITY")
     )
     .sort((a: any, b: any) => {
-      const severityOrder: Record<string, number> = {
-        CRITICAL: 0,
-        HIGH: 1,
-        MEDIUM: 2,
-        LOW: 3,
-      };
-      return (
-        (severityOrder[(a.severity as string) || "LOW"] || 999) -
-        (severityOrder[(b.severity as string) || "LOW"] || 999)
-      );
+      const aOrder = severityOrder[(a.severity as string)] ?? 999;
+      const bOrder = severityOrder[(b.severity as string)] ?? 999;
+      return aOrder - bOrder;
     })
     .slice(0, 3)
     .map((f: any) => ({
