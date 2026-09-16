@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton, Disclosure } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CreateBusinessPanel } from "@/components/owner/CreateBusinessPanel";
 import { inputTargetForCategory } from "@/domain/owner-mode/owner-data-hub";
@@ -529,15 +529,17 @@ export default function OwnerOnboardingPage() {
   const stepLabel = step === 1 ? "Business basics" : step === 2 ? "Essential numbers" : "First result";
 
   return (
-    <div className="mx-auto max-w-2xl py-8 px-4" data-testid="owner-onboarding">
+    <PageContainer narrow data-testid="owner-onboarding">
       <div className="mb-6">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Step {step} of 3 · {stepLabel}
         </p>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">Welcome to OpsIQ</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          OpsIQ helps you see what needs attention in your business, what to do next, and whether it worked.
-        </p>
+        <div className="mt-1">
+          <PageHeader
+            title="Welcome to OpsIQ"
+            description="OpsIQ helps you see what needs attention in your business, what to do next, and whether it worked."
+          />
+        </div>
       </div>
 
       {error && (
@@ -708,6 +710,6 @@ export default function OwnerOnboardingPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

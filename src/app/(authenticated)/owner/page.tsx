@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Select, CardDashboardSkeleton, Disclosure } from "@/ui/primitives";
+import { Badge, Button, Select, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { PriorityCommandStrip } from "@/components/owner/PriorityCommandStrip";
 import { SupervisorSummary } from "@/components/owner/SupervisorSummary";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
@@ -301,13 +301,13 @@ export default function OwnerCommandCenterPage() {
 
   if (loading) return <CardDashboardSkeleton label="Loading owner command center" />;
   if (error && !data) return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
+    <PageContainer>
       <div className="rounded-md border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
         <p className="font-medium mb-2">Failed to load command center</p>
         <p className="mb-4">{error}</p>
         <Button onClick={() => load()} className="min-h-[44px]">Retry</Button>
       </div>
-    </div>
+    </PageContainer>
   );
 
   const businessList: any[] = businesses ?? data?.businesses ?? [];
@@ -317,16 +317,14 @@ export default function OwnerCommandCenterPage() {
   const missingWithPriority: Array<{ field: string; priority: string }> = data?.missingInputsWithPriority ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
+    <PageContainer>
       <div className="mb-6"><CanonicalCockpitLink from="command center" /></div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Command Center</h1>
-          <p className="text-muted-foreground text-sm">
-            One business condition. One highest-impact next action. Evidence, not guesses.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <div className="mb-6">
+        <PageHeader
+          title="Owner Command Center"
+          description="One business condition. One highest-impact next action. Evidence, not guesses."
+        />
+        <div className="mt-4 flex flex-wrap gap-2">
           {[
             // "Home" points at the canonical /owner/cockpit, not the legacy /owner/home duplicate
             // -- that page independently falls back to the most-recently-created business when no
@@ -829,6 +827,6 @@ export default function OwnerCommandCenterPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

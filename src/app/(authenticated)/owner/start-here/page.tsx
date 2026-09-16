@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import {
   computeStartHereSteps,
@@ -124,31 +124,33 @@ export default function StartHerePage() {
 
   if (contextLoading || loading) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <PageContainer narrow>
         <CardDashboardSkeleton />
-      </div>
+      </PageContainer>
     );
   }
 
   if (needsBusinessRecovery) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8 text-sm text-muted-foreground">
-        Choose a business above to continue setup.
-      </div>
+      <PageContainer narrow>
+        <p className="text-sm text-muted-foreground">Choose a business above to continue setup.</p>
+      </PageContainer>
     );
   }
 
   if (!activeBusinessId || !steps) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="font-display text-[1.75rem] font-semibold tracking-tight mb-2">Start here</h1>
-        <p className="text-sm text-muted-foreground mb-4">
-          Add your business first, then come back here to get OpsIQ working for it.
-        </p>
+      <PageContainer narrow>
+        <div className="mb-4">
+          <PageHeader
+            title="Start here"
+            description="Add your business first, then come back here to get OpsIQ working for it."
+          />
+        </div>
         <Link href="/owner/data">
           <Button>Add your business</Button>
         </Link>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -157,11 +159,10 @@ export default function StartHerePage() {
   const completedCount = steps.filter((s) => s.complete).length;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8" data-testid="start-here-page">
-      <h1 className="font-display text-[1.75rem] font-semibold tracking-tight mb-1">Start here</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Get OpsIQ working for {businessName}
-      </p>
+    <PageContainer narrow data-testid="start-here-page">
+      <div className="mb-6">
+        <PageHeader title="Start here" description={`Get OpsIQ working for ${businessName}`} />
+      </div>
 
       {error && <p className="text-sm text-destructive mb-4">{error}</p>}
 
@@ -256,6 +257,6 @@ export default function StartHerePage() {
       <p className="mt-8 text-xs text-muted-foreground">
         {completedCount} of {steps.length} steps done. You can leave and come back anytime — nothing is lost.
       </p>
-    </div>
+    </PageContainer>
   );
 }

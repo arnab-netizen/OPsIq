@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CashProfitPanel, OpportunityPanel, ValidationPanel, PortfolioPanel, OpportunityOperatingPanel, ValidationOutcomePanel, OpportunityExecutionPanel, ProcessExecutionBridgePanel, CockpitGroup, CockpitSubsection, type ProcessExecutionBridgeView, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView, type CashProfitProtectionView, type ExternalOpportunityView, type OpportunityValidationView, type OpportunityPortfolioView, type OpportunityOperatingView, type ValidationOutcomeView, type OpportunityExecutionView } from "@/components/owner/ProcessIntelligencePanel";
 
@@ -159,20 +159,18 @@ export default function OwnerProcessIntelligencePage() {
   }, [load]);
 
   return (
-    <main style={{ padding: "clamp(12px, 4vw, 24px)", maxWidth: 920, width: "100%", margin: "0 auto", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 16 }}>
+    <PageContainer style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <CanonicalCockpitLink from="process detail" />
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <h1 style={{ margin: 0, fontSize: "clamp(20px, 5vw, 28px)" }}>Where your process is breaking</h1>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Link href="/owner/now" data-testid="back-to-now">Owner Now View</Link>
-          <Button onClick={() => void load()}>Refresh</Button>
-        </div>
-      </header>
-
-      <p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>
-        OpsIQ points to the single stage most worth fixing today — with the evidence behind it and one
-        recommended correction. Everything else is grouped below; open a group only when you need it.
-      </p>
+      <PageHeader
+        title="Where your process is breaking"
+        description="OpsIQ points to the single stage most worth fixing today — with the evidence behind it and one recommended correction. Everything else is grouped below; open a group only when you need it."
+        actions={
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link href="/owner/now" data-testid="back-to-now">Owner Now View</Link>
+            <Button onClick={() => void load()}>Refresh</Button>
+          </div>
+        }
+      />
 
       {loading && <CardDashboardSkeleton sections={5} label="Loading the process view" />}
       {error && (
@@ -240,6 +238,6 @@ export default function OwnerProcessIntelligencePage() {
           </CockpitGroup>
         </>
       )}
-    </main>
+    </PageContainer>
   );
 }

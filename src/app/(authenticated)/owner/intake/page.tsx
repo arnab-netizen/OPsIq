@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { sourceQualityTier, type IntakeSource } from "@/domain/owner-intake/types";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -114,21 +114,21 @@ export default function OwnerIntakePage() {
   const intakes: any[] = dashboard?.intakes ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Data Intake & Connectors</h1>
-          <p className="text-muted-foreground text-sm">
-            Upload a CSV (or paste rows) for a domain. We validate and normalize it, show every error, and nothing feeds a diagnosis until you confirm it.
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowUpload((s) => !s)}
-          disabled={businesses.length === 0}
-          aria-describedby={businesses.length === 0 ? "upload-blocked-reason" : undefined}
-        >
-          + Upload data
-        </Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Data Intake & Connectors"
+          description="Upload a CSV (or paste rows) for a domain. We validate and normalize it, show every error, and nothing feeds a diagnosis until you confirm it."
+          actions={
+            <Button
+              onClick={() => setShowUpload((s) => !s)}
+              disabled={businesses.length === 0}
+              aria-describedby={businesses.length === 0 ? "upload-blocked-reason" : undefined}
+            >
+              + Upload data
+            </Button>
+          }
+        />
       </div>
 
       {businesses.length === 0 && (
@@ -245,7 +245,7 @@ export default function OwnerIntakePage() {
           </section>
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 
