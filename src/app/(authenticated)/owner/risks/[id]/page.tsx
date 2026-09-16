@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Badge, Button, Modal, Input, Select, Textarea, DetailPageSkeleton } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, Textarea, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type RiskStatus = "IDENTIFIED" | "ASSESSED" | "MITIGATING" | "ACCEPTED" | "RESOLVED" | "CLOSED";
@@ -61,20 +61,35 @@ const STATUS_LABELS: Record<RiskStatus, string> = {
   CLOSED: "Closed",
 };
 
-const STATUS_VARIANT: Record<RiskStatus, "default" | "warning" | "success" | "destructive"> = {
-  IDENTIFIED: "default",
-  ASSESSED: "warning",
-  MITIGATING: "warning",
-  ACCEPTED: "default",
-  RESOLVED: "success",
-  CLOSED: "default",
+const STATUS_VARIANT: Record<RiskStatus, "default-accessible" | "warning-accessible" | "success-accessible" | "destructive-accessible"> = {
+  IDENTIFIED: "default-accessible",
+  ASSESSED: "warning-accessible",
+  MITIGATING: "warning-accessible",
+  ACCEPTED: "default-accessible",
+  RESOLVED: "success-accessible",
+  CLOSED: "default-accessible",
 };
 
-function severityVariant(s: number): "success" | "warning" | "destructive" | "default" {
-  if (s >= 50) return "destructive";
-  if (s >= 25) return "warning";
-  return "success";
+function severityVariant(s: number): "success-accessible" | "warning-accessible" | "destructive-accessible" | "default-accessible" {
+  if (s >= 50) return "destructive-accessible";
+  if (s >= 25) return "warning-accessible";
+  return "success-accessible";
 }
+
+// Verified against RiskCategory / CATEGORY_LABELS in the sibling list page (owner/risks/page.tsx).
+const CATEGORY_LABELS: Record<string, string> = {
+  OPERATIONAL: "Operational",
+  FINANCIAL: "Financial",
+  MARKET: "Market",
+  COMPLIANCE: "Compliance",
+  EXECUTION: "Execution",
+  STRATEGIC: "Strategic",
+};
+
+const LINK_TYPE_LABEL: Record<string, string> = {
+  MITIGATION: "Mitigation",
+  EVIDENCE: "Evidence",
+};
 
 async function apiFetch(path: string, options?: RequestInit) {
   const res = await fetch(path, {
@@ -170,36 +185,38 @@ export default function RiskDetailPage() {
   }
 
   if (loading) return <DetailPageSkeleton label="Loading" />;
-  if (error) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-destructive text-sm">{error}</p></div>;
+  if (error) return <PageContainer><p className="text-destructive text-sm">{error}</p></PageContainer>;
   if (!risk) return null;
 
   const nextStatuses = VALID_TRANSITIONS[risk.status] ?? [];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-start justify-between mb-6 gap-4">
-        <div>
-          <button onClick={() => router.back()} className="text-sm text-muted-foreground hover:underline mb-2 block">← Risk Register</button>
-          <h1 className="text-2xl font-semibold">{risk.title}</h1>
-          <p className="text-xs font-mono text-muted-foreground mt-1">{risk.riskCode}</p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
-          {nextStatuses.length > 0 && (
-            <Button size="sm" onClick={() => { setReviewStatus(""); setReviewNotes(""); setAcceptanceRationale(""); setResidualRisk(""); setReviewError(null); setReviewOpen(true); }}>
-              Review
-            </Button>
-          )}
-          <Button size="sm" variant="outline" onClick={() => { setLinkTaskId(""); setLinkType("MITIGATION"); setLinkError(null); setLinkTaskOpen(true); }}>
-            Link task
-          </Button>
-        </div>
+    <PageContainer>
+      <button onClick={() => router.back()} className="text-sm text-muted-foreground hover:underline mb-2 block">← Risk Register</button>
+      <div className="mb-6">
+        <PageHeader
+          title={risk.title}
+          actions={
+            <div className="flex gap-2 flex-wrap justify-end">
+              {nextStatuses.length > 0 && (
+                <Button size="sm" onClick={() => { setReviewStatus(""); setReviewNotes(""); setAcceptanceRationale(""); setResidualRisk(""); setReviewError(null); setReviewOpen(true); }}>
+                  Review
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => { setLinkTaskId(""); setLinkType("MITIGATION"); setLinkError(null); setLinkTaskOpen(true); }}>
+                Link task
+              </Button>
+            </div>
+          }
+        />
+        <p className="text-xs font-mono text-muted-foreground mt-1">{risk.riskCode}</p>
       </div>
 
       {/* Status row */}
       <div className="flex gap-3 mb-6 flex-wrap items-center">
         <Badge variant={STATUS_VARIANT[risk.status]}>{STATUS_LABELS[risk.status]}</Badge>
         <Badge variant={severityVariant(risk.severity)}>Severity {risk.severity}</Badge>
-        <span className="text-sm text-muted-foreground">{risk.category}</span>
+        <span className="text-sm text-muted-foreground">{CATEGORY_LABELS[risk.category] ?? risk.category}</span>
       </div>
 
       {/* Details */}
@@ -257,7 +274,7 @@ export default function RiskDetailPage() {
               {risk.taskLinks.map((tl) => (
                 <tr key={tl.id}>
                   <td className="px-4 py-3 font-mono text-xs">{tl.taskId}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{tl.linkType}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{LINK_TYPE_LABEL[tl.linkType] ?? tl.linkType}</td>
                   <td className="px-4 py-3 text-muted-foreground">{new Date(tl.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
@@ -281,8 +298,9 @@ export default function RiskDetailPage() {
         <div className="flex flex-col gap-4">
           {reviewError && <p className="text-destructive text-sm">{reviewError}</p>}
           <div>
-            <label className="block text-sm font-medium mb-1">New status <span className="text-destructive">*</span></label>
+            <label htmlFor="risk-review-status" className="block text-sm font-medium mb-1">New status <span className="text-destructive">*</span></label>
             <Select
+              id="risk-review-status"
               value={reviewStatus}
               onChange={(e) => setReviewStatus(e.target.value as RiskStatus)}
               options={nextStatuses.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
@@ -290,16 +308,16 @@ export default function RiskDetailPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Residual risk (0–100)</label>
-            <Input type="number" min={0} max={100} value={residualRisk} onChange={(e) => setResidualRisk(e.target.value)} placeholder="0–100" />
+            <label htmlFor="risk-residual-risk-review" className="block text-sm font-medium mb-1">Residual risk (0–100)</label>
+            <Input id="risk-residual-risk-review" type="number" min={0} max={100} value={residualRisk} onChange={(e) => setResidualRisk(e.target.value)} placeholder="0–100" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Acceptance rationale</label>
-            <Textarea value={acceptanceRationale} onChange={(e) => setAcceptanceRationale(e.target.value)} rows={2} placeholder="Required when accepting the risk" />
+            <label htmlFor="risk-acceptance-rationale" className="block text-sm font-medium mb-1">Acceptance rationale</label>
+            <Textarea id="risk-acceptance-rationale" value={acceptanceRationale} onChange={(e) => setAcceptanceRationale(e.target.value)} rows={2} placeholder="Required when accepting the risk" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Review notes</label>
-            <Textarea value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} rows={2} placeholder="Notes for this review" />
+            <label htmlFor="risk-review-notes" className="block text-sm font-medium mb-1">Review notes</label>
+            <Textarea id="risk-review-notes" value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} rows={2} placeholder="Notes for this review" />
           </div>
         </div>
       </Modal>
@@ -319,12 +337,13 @@ export default function RiskDetailPage() {
         <div className="flex flex-col gap-4">
           {linkError && <p className="text-destructive text-sm">{linkError}</p>}
           <div>
-            <label className="block text-sm font-medium mb-1">Task ID <span className="text-destructive">*</span></label>
-            <Input value={linkTaskId} onChange={(e) => setLinkTaskId(e.target.value)} placeholder="UUID of the delegated task" />
+            <label htmlFor="risk-link-task-id" className="block text-sm font-medium mb-1">Task ID <span className="text-destructive">*</span></label>
+            <Input id="risk-link-task-id" value={linkTaskId} onChange={(e) => setLinkTaskId(e.target.value)} placeholder="UUID of the delegated task" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Link type</label>
+            <label htmlFor="risk-link-type" className="block text-sm font-medium mb-1">Link type</label>
             <Select
+              id="risk-link-type"
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as "MITIGATION" | "EVIDENCE")}
               options={[
@@ -335,7 +354,7 @@ export default function RiskDetailPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }
 

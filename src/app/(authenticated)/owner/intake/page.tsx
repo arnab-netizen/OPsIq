@@ -3,16 +3,21 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { sourceQualityTier, type IntakeSource } from "@/domain/owner-intake/types";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const VALIDATION_VARIANT: Record<string, "success" | "warning" | "destructive" | "muted"> = {
-  valid: "success",
-  partial: "warning",
-  invalid: "destructive",
+const VALIDATION_VARIANT: Record<string, "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  valid: "success-accessible",
+  partial: "warning-accessible",
+  invalid: "destructive-accessible",
+};
+const VALIDATION_LABEL: Record<string, string> = {
+  valid: "Valid",
+  partial: "Partial",
+  invalid: "Invalid",
 };
 
 const TARGET_DOMAINS = ["finance", "sales", "operations", "sop", "marketing"];
@@ -26,6 +31,20 @@ const SOURCES = [
   { value: "bank_statement", label: "Bank statement" },
   { value: "lead_import", label: "Lead import" },
 ];
+// Verified against the domain nav array in owner/page.tsx (same domain keys, same labels).
+const DOMAIN_LABEL: Record<string, string> = {
+  finance: "Finance",
+  sales: "Sales",
+  operations: "Operations",
+  sop: "Execution",
+  marketing: "Marketing",
+};
+const SOURCE_LABEL: Record<string, string> = Object.fromEntries(SOURCES.map((s) => [s.value, s.label]));
+// Verified against IntakeNormalizationStatus / engine.ts's two possible values.
+const NORMALIZATION_LABEL: Record<string, string> = {
+  normalized: "Normalized",
+  not_normalized: "Not normalized",
+};
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -114,21 +133,21 @@ export default function OwnerIntakePage() {
   const intakes: any[] = dashboard?.intakes ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Data Intake & Connectors</h1>
-          <p className="text-muted-foreground text-sm">
-            Upload a CSV (or paste rows) for a domain. We validate and normalize it, show every error, and nothing feeds a diagnosis until you confirm it.
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowUpload((s) => !s)}
-          disabled={businesses.length === 0}
-          aria-describedby={businesses.length === 0 ? "upload-blocked-reason" : undefined}
-        >
-          + Upload data
-        </Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Data Intake & Connectors"
+          description="Upload a CSV (or paste rows) for a domain. We validate and normalize it, show every error, and nothing feeds a diagnosis until you confirm it."
+          actions={
+            <Button
+              onClick={() => setShowUpload((s) => !s)}
+              disabled={businesses.length === 0}
+              aria-describedby={businesses.length === 0 ? "upload-blocked-reason" : undefined}
+            >
+              + Upload data
+            </Button>
+          }
+        />
       </div>
 
       {businesses.length === 0 && (
@@ -165,7 +184,7 @@ export default function OwnerIntakePage() {
       )}
 
       {confirmed && (
-        <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex items-center justify-between">
+        <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex flex-wrap items-center justify-between gap-2">
           <span>Data confirmed. OpsIQ is now ready to analyze your business.</span>
           <button
             onClick={() => router.push("/owner")}
@@ -197,11 +216,12 @@ export default function OwnerIntakePage() {
             <form onSubmit={upload} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">Upload data</h2>
               <div className="grid grid-cols-2 gap-3">
-                <Select name="targetDomain" label="Target domain" required options={TARGET_DOMAINS.map((d) => ({ value: d, label: d }))} />
+                <Select name="targetDomain" label="Target domain" required options={TARGET_DOMAINS.map((d) => ({ value: d, label: DOMAIN_LABEL[d] ?? d }))} />
                 <Select name="source" label="Source" required options={SOURCES} />
               </div>
-              <label className="block text-sm font-medium">CSV content (first row = headers)</label>
+              <label htmlFor="intake-csv-text" className="block text-sm font-medium">CSV content (first row = headers)</label>
               <textarea
+                id="intake-csv-text"
                 name="csvText"
                 required
                 rows={6}
@@ -223,20 +243,20 @@ export default function OwnerIntakePage() {
             {intakes.length === 0 && <p className="text-sm text-muted-foreground">No uploads yet.</p>}
             <div className="space-y-2">
               {intakes.map((it: any) => (
-                <div key={it.id} className="flex justify-between items-center border-b py-2 text-sm">
+                <div key={it.id} className="flex flex-wrap justify-between items-center gap-2 border-b py-2 text-sm">
                   <div>
-                    <span className="font-medium">{it.targetDomain}</span>{" "}
-                    <span className="text-muted-foreground">· {it.source} · {it.rowCount} row(s) · {new Date(it.createdAt).toLocaleDateString()}</span>
-                    {it.source && <Badge variant="muted" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
+                    <span className="font-medium">{DOMAIN_LABEL[it.targetDomain] ?? it.targetDomain}</span>{" "}
+                    <span className="text-muted-foreground">· {SOURCE_LABEL[it.source] ?? it.source} · {it.rowCount} row(s) · {new Date(it.createdAt).toLocaleDateString()}</span>
+                    {it.source && <Badge variant="muted-accessible" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted"}>{it.validationStatus}</Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted-accessible"}>{VALIDATION_LABEL[it.validationStatus] ?? it.validationStatus}</Badge>
                     {it.ownerConfirmed ? (
-                      <Badge variant="success">confirmed</Badge>
+                      <Badge variant="success-accessible">confirmed</Badge>
                     ) : it.validationStatus !== "invalid" ? (
                       <Button onClick={() => confirm(it.id)} disabled={busy}>Confirm</Button>
                     ) : (
-                      <Badge variant="muted">unconfirmable</Badge>
+                      <Badge variant="muted-accessible">unconfirmable</Badge>
                     )}
                   </div>
                 </div>
@@ -245,7 +265,7 @@ export default function OwnerIntakePage() {
           </section>
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -256,12 +276,12 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
     <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card mb-6 space-y-3">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase text-muted-foreground">Candidate — review before confirming</div>
-        <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted"}>{intake.validationStatus}</Badge>
+        <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted-accessible"}>{VALIDATION_LABEL[intake.validationStatus] ?? intake.validationStatus}</Badge>
       </div>
       <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
-        <span>{intake.targetDomain} · {intake.source} · {intake.rowCount} row(s) · normalization {intake.normalizationStatus}</span>
+        <span>{DOMAIN_LABEL[intake.targetDomain] ?? intake.targetDomain} · {SOURCE_LABEL[intake.source] ?? intake.source} · {intake.rowCount} row(s) · normalization {NORMALIZATION_LABEL[intake.normalizationStatus] ?? intake.normalizationStatus}</span>
         {intake.source && (
-          <Badge variant="muted">Evidence quality: {sourceQualityTier(intake.source as IntakeSource)}</Badge>
+          <Badge variant="muted-accessible">Evidence quality: {sourceQualityTier(intake.source as IntakeSource)}</Badge>
         )}
       </div>
       {Array.isArray(intake.unmappedColumns) && intake.unmappedColumns.length > 0 && (

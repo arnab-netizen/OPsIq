@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, Textarea, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type ComplianceKind = "licence" | "permit" | "insurance" | "tax" | "document";
@@ -54,13 +54,13 @@ const STATUS_LABELS: Record<ComplianceStatus, string> = {
   waived: "Waived",
 };
 
-const STATUS_VARIANT: Record<ComplianceStatus, "default" | "warning" | "success" | "destructive"> = {
-  active: "default",
-  evidence_pending: "warning",
-  review_pending: "warning",
-  compliant: "success",
-  breached: "destructive",
-  waived: "default",
+const STATUS_VARIANT: Record<ComplianceStatus, "default-accessible" | "warning-accessible" | "success-accessible" | "destructive-accessible"> = {
+  active: "default-accessible",
+  evidence_pending: "warning-accessible",
+  review_pending: "warning-accessible",
+  compliant: "success-accessible",
+  breached: "destructive-accessible",
+  waived: "default-accessible",
 };
 
 const TEMPORAL_LABELS: Record<string, string> = {
@@ -69,10 +69,10 @@ const TEMPORAL_LABELS: Record<string, string> = {
   overdue: "Overdue",
 };
 
-const TEMPORAL_VARIANT: Record<string, "default" | "warning" | "success" | "destructive"> = {
-  upcoming: "default",
-  action_required: "warning",
-  overdue: "destructive",
+const TEMPORAL_VARIANT: Record<string, "default-accessible" | "warning-accessible" | "success-accessible" | "destructive-accessible"> = {
+  upcoming: "default-accessible",
+  action_required: "warning-accessible",
+  overdue: "destructive-accessible",
 };
 
 const PROVENANCE_LABELS: Record<ProvenanceSource, string> = {
@@ -207,10 +207,12 @@ export default function CompliancePage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Compliance Calendar</h1>
-        <Button size="sm" onClick={openCreate}>+ Add item</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Compliance Calendar"
+          actions={<Button size="sm" onClick={openCreate}>+ Add item</Button>}
+        />
       </div>
 
       {/* Warning banners */}
@@ -233,6 +235,7 @@ export default function CompliancePage() {
       {/* Status filter */}
       <div className="flex gap-3 mb-6 flex-wrap">
         <select
+          aria-label="Filter by status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded border border-border bg-background px-3 py-1.5 text-sm"
@@ -331,10 +334,11 @@ export default function CompliancePage() {
           {formError && <p className="text-destructive text-sm">{formError}</p>}
 
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="compliance-kind" className="block text-sm font-medium mb-1">
               Kind <span className="text-destructive">*</span>
             </label>
             <Select
+              id="compliance-kind"
               value={form.kind}
               onChange={(e) => setField("kind", e.target.value as ComplianceKind)}
               options={KINDS.map((k) => ({ value: k, label: KIND_LABELS[k] }))}
@@ -343,10 +347,11 @@ export default function CompliancePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="compliance-name" className="block text-sm font-medium mb-1">
               Name <span className="text-destructive">*</span>
             </label>
             <Input
+              id="compliance-name"
               value={form.name}
               onChange={(e) => setField("name", e.target.value)}
               placeholder="e.g. Business operating licence"
@@ -354,8 +359,9 @@ export default function CompliancePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Reference</label>
+            <label htmlFor="compliance-reference" className="block text-sm font-medium mb-1">Reference</label>
             <Input
+              id="compliance-reference"
               value={form.reference}
               onChange={(e) => setField("reference", e.target.value)}
               placeholder="Licence number, reference ID, etc."
@@ -363,8 +369,9 @@ export default function CompliancePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Expiry date</label>
+            <label htmlFor="compliance-expires-at" className="block text-sm font-medium mb-1">Expiry date</label>
             <Input
+              id="compliance-expires-at"
               type="date"
               value={form.expiresAt}
               onChange={(e) => setField("expiresAt", e.target.value)}
@@ -372,8 +379,9 @@ export default function CompliancePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Jurisdiction</label>
+            <label htmlFor="compliance-jurisdiction" className="block text-sm font-medium mb-1">Jurisdiction</label>
             <Input
+              id="compliance-jurisdiction"
               value={form.jurisdiction}
               onChange={(e) => setField("jurisdiction", e.target.value)}
               placeholder="e.g. NSW, AU"
@@ -381,8 +389,9 @@ export default function CompliancePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Legal basis</label>
+            <label htmlFor="compliance-legal-basis" className="block text-sm font-medium mb-1">Legal basis</label>
             <Input
+              id="compliance-legal-basis"
               value={form.legalBasis}
               onChange={(e) => setField("legalBasis", e.target.value)}
               placeholder="Legislation or regulatory basis"
@@ -390,8 +399,9 @@ export default function CompliancePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Obligation owner</label>
+            <label htmlFor="compliance-obligation-owner" className="block text-sm font-medium mb-1">Obligation owner</label>
             <Input
+              id="compliance-obligation-owner"
               value={form.obligationOwner}
               onChange={(e) => setField("obligationOwner", e.target.value)}
               placeholder="Person or role responsible"
@@ -400,8 +410,9 @@ export default function CompliancePage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Evidence validity (days)</label>
+              <label htmlFor="compliance-evidence-validity-days" className="block text-sm font-medium mb-1">Evidence validity (days)</label>
               <Input
+                id="compliance-evidence-validity-days"
                 type="number"
                 min={1}
                 max={3650}
@@ -411,8 +422,9 @@ export default function CompliancePage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Recurrence (months)</label>
+              <label htmlFor="compliance-recurrence-months" className="block text-sm font-medium mb-1">Recurrence (months)</label>
               <Input
+                id="compliance-recurrence-months"
                 type="number"
                 min={1}
                 max={120}
@@ -424,8 +436,9 @@ export default function CompliancePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Penalty description</label>
+            <label htmlFor="compliance-penalty-description" className="block text-sm font-medium mb-1">Penalty description</label>
             <Textarea
+              id="compliance-penalty-description"
               value={form.penaltyDescription}
               onChange={(e) => setField("penaltyDescription", e.target.value)}
               placeholder="Penalties for non-compliance"
@@ -434,8 +447,9 @@ export default function CompliancePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Provenance source</label>
+            <label htmlFor="compliance-provenance-source" className="block text-sm font-medium mb-1">Provenance source</label>
             <Select
+              id="compliance-provenance-source"
               value={form.provenanceSource}
               onChange={(e) => setField("provenanceSource", e.target.value as ProvenanceSource)}
               options={PROVENANCES.map((p) => ({ value: p, label: PROVENANCE_LABELS[p] }))}
@@ -444,6 +458,6 @@ export default function CompliancePage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

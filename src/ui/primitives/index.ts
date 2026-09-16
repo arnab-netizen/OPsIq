@@ -9,6 +9,7 @@ export { Table } from "./table";
 export { LoadingState, EmptyState, ErrorState } from "./states";
 export type { EmptyStateActionSpec } from "./states";
 export { PageHeader } from "./page-header";
+export { PageContainer } from "./page-container";
 export { Disclosure } from "./disclosure";
 export {
   Skeleton,

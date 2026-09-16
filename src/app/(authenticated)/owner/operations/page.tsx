@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { FindingCard } from "@/components/owner/FindingCard";
@@ -12,12 +12,12 @@ import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { formatHumanDate } from "@/lib/format-human-date";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
+const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
   unverified: "muted-accessible",
-  verified_improved: "success",
-  verified_not_improved: "destructive",
-  inconclusive: "warning",
-  disputed: "warning",
+  verified_improved: "success-accessible",
+  verified_not_improved: "destructive-accessible",
+  inconclusive: "warning-accessible",
+  disputed: "warning-accessible",
 };
 const VERIFY_LABEL: Record<string, string> = {
   unverified: "Not yet verified",
@@ -35,12 +35,12 @@ const ACTION_STATUS_LABEL: Record<string, string> = {
   blocked: "Blocked",
 };
 
-const STATE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted-accessible"> = {
-  SMOOTH: "success",
-  STEADY: "default",
-  STRAINED: "warning",
-  BOTTLENECKED: "destructive",
-  OVERLOADED: "destructive",
+const STATE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  SMOOTH: "success-accessible",
+  STEADY: "default-accessible",
+  STRAINED: "warning-accessible",
+  BOTTLENECKED: "destructive-accessible",
+  OVERLOADED: "destructive-accessible",
 };
 // operationsState previously rendered as the raw enum token (e.g. "BOTTLENECKED") in both the
 // position badge and the diagnosis-history rows -- same class of leak Money's SURVIVAL_LABEL
@@ -279,9 +279,9 @@ export default function OwnerOperationsPage() {
     setBusy(true);
     setError(null);
     try {
-      const beforeRaw = window.prompt(`BEFORE value for ${action.verificationMetric}:`);
+      const beforeRaw = window.prompt(`BEFORE value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (beforeRaw === null) { setBusy(false); return; }
-      const afterRaw = window.prompt(`AFTER value for ${action.verificationMetric}:`);
+      const afterRaw = window.prompt(`AFTER value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (afterRaw === null) { setBusy(false); return; }
       const dir = window.prompt("Target direction (up / down):", "up");
       if (dir === null) { setBusy(false); return; }
@@ -310,15 +310,13 @@ export default function OwnerOperationsPage() {
   const missing: string[] = dashboard?.missingCriticalData ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
-        <div>
-          <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Operations</h1>
-          <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-muted-foreground">
-            Where throughput stalls, where the bottleneck is, and what to fix next — with the single highest-impact execution move and verification.
-          </p>
-        </div>
-        <Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Operations"
+          description="Where throughput stalls, where the bottleneck is, and what to fix next — with the single highest-impact execution move and verification."
+          actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
+        />
       </div>
 
       {error && (
@@ -458,7 +456,7 @@ export default function OwnerOperationsPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -519,7 +517,7 @@ function OperationsCycleView({
 
       {missing.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
-          <strong>Missing critical data:</strong> {missing.join(", ")} — provide these to raise confidence.
+          <strong>Missing critical data:</strong> {missing.map(humanizeMetricKey).join(", ")} — provide these to raise confidence.
         </div>
       )}
 
@@ -554,7 +552,7 @@ function OperationsCycleView({
             const latestVerification = a.verifications?.[0];
             return (
               <div key={a.id} className="border-b border-border pb-3 last:border-0 last:pb-0">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-wrap justify-between items-start gap-2">
                   <div>
                     <div className="font-semibold">{a.title}</div>
                     <div className="text-xs text-muted-foreground">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- dynamic dashboard payloads are untyped */
 
@@ -16,17 +16,40 @@ const ELIGIBLE_FOR_PROMOTION = new Set([
   "LEARNING_ELIGIBLE_HUMAN_REVIEWED",
 ]);
 
+// Verified against ControlledLearningEligibilityStatus (src/domain/owner-mode/controlled-learning.ts,
+// "Eligibility Status (12 classes)") -- previously rendered as the raw 30+-char token.
+const ELIGIBILITY_LABEL: Record<string, string> = {
+  LEARNING_ELIGIBLE_VERIFIED_OUTCOME: "Eligible — verified outcome",
+  LEARNING_ELIGIBLE_HUMAN_REVIEWED: "Eligible — human reviewed",
+  LEARNING_INELIGIBLE_UNVERIFIED: "Ineligible — unverified",
+  LEARNING_INELIGIBLE_SYNTHETIC: "Ineligible — synthetic evidence",
+  LEARNING_INELIGIBLE_AI_GENERATED: "Ineligible — AI-generated evidence",
+  LEARNING_INELIGIBLE_CROSS_TENANT: "Ineligible — cross-tenant",
+  LEARNING_INELIGIBLE_NO_OWNER_DECISION: "Ineligible — no owner decision",
+  LEARNING_INELIGIBLE_NO_ACTION_TAKEN: "Ineligible — no action taken",
+  LEARNING_INELIGIBLE_NO_OUTCOME_WINDOW: "Ineligible — no outcome window",
+  LEARNING_INELIGIBLE_CONFLICTING_EVIDENCE: "Ineligible — conflicting evidence",
+  LEARNING_INELIGIBLE_SAFETY_RELATED: "Ineligible — safety related",
+  LEARNING_INELIGIBLE_PUBLIC_SOURCE_UNVERIFIED: "Ineligible — public source unverified",
+};
+
 const SOURCE_LABELS = [
   { value: "HUMAN_VERIFIED_CANDIDATE", label: "Human verified" },
   { value: "REAL_SOURCE_BACKED_CANDIDATE", label: "Real source backed" },
   { value: "SYNTHETIC_ONLY_CANDIDATE", label: "Synthetic only" },
 ];
+const SOURCE_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  SOURCE_LABELS.map((s) => [s.value, s.label])
+);
 
 const REVIEW_DECISIONS = [
   { value: "APPROVED", label: "Approved" },
   { value: "REJECTED", label: "Rejected" },
   { value: "DEFERRED", label: "Deferred" },
 ];
+const REVIEW_DECISION_LABEL: Record<string, string> = Object.fromEntries(
+  REVIEW_DECISIONS.map((d) => [d.value, d.label])
+);
 
 const ROLLBACK_CODES = [
   { value: "REGRESSION_DETECTED", label: "Regression detected" },
@@ -34,6 +57,9 @@ const ROLLBACK_CODES = [
   { value: "MANUAL_OVERRIDE", label: "Manual override" },
   { value: "POLICY_VIOLATION", label: "Policy violation" },
 ];
+const ROLLBACK_CODE_LABEL: Record<string, string> = Object.fromEntries(
+  ROLLBACK_CODES.map((c) => [c.value, c.label])
+);
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -193,14 +219,12 @@ export default function OwnerLearningGovernancePage() {
   if (loading) return <CardDashboardSkeleton label="Loading learning governance workspace" />;
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
+    <PageContainer>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Learning Governance</h1>
-        <p className="text-muted-foreground text-sm">
-          Review evidence, promote or reject controlled learning candidates, and roll back a
-          promoted learning if it turns out harmful. Candidates are produced by real domain
-          verification flows (e.g. Finance&rsquo;s closed loop) -- this page never creates one.
-        </p>
+        <PageHeader
+          title="Learning Governance"
+          description="Review evidence, promote or reject controlled learning candidates, and roll back a promoted learning if it turns out harmful. Candidates are produced by real domain verification flows (e.g. Finance's closed loop) -- this page never creates one."
+        />
       </div>
 
       {error && (
@@ -222,19 +246,19 @@ export default function OwnerLearningGovernancePage() {
             const isExpanded = expanded === c.id;
             return (
               <div key={c.id} className="border rounded-lg p-4 bg-card">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-wrap justify-between items-start gap-2">
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">
                       Business {c.businessId}
                     </div>
                     <div className="text-sm mt-1">{c.evidenceSummary}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Source: {c.evidenceSourceType}
+                      Source: {SOURCE_LABEL_MAP[c.evidenceSourceType] ?? c.evidenceSourceType}
                     </div>
                   </div>
                   <div className="text-right">
-                    <Badge variant={c.promotionLocked ? "success" : canPromote ? "default" : "muted"}>
-                      {c.eligibilityStatus}
+                    <Badge variant={c.promotionLocked ? "success-accessible" : canPromote ? "default-accessible" : "muted-accessible"}>
+                      {ELIGIBILITY_LABEL[c.eligibilityStatus] ?? c.eligibilityStatus}
                     </Badge>
                     {c.promotionLocked && (
                       <div className="text-xs text-muted-foreground mt-1">Promoted (locked)</div>
@@ -302,7 +326,7 @@ export default function OwnerLearningGovernancePage() {
                       <div className="space-y-2">
                         {(reviewsByCandidate[c.id] ?? []).map((r: any) => (
                           <div key={r.id} className="border-l-4 pl-3 py-1" style={{ borderColor: "#94a3b8" }}>
-                            <div className="text-xs font-medium">{r.reviewerId} &middot; {r.decision}</div>
+                            <div className="text-xs font-medium">{r.reviewerId} &middot; {REVIEW_DECISION_LABEL[r.decision] ?? r.decision}</div>
                             {r.reviewNotes && <div className="text-xs text-muted-foreground">{r.reviewNotes}</div>}
                           </div>
                         ))}
@@ -318,7 +342,7 @@ export default function OwnerLearningGovernancePage() {
                       <div className="space-y-2">
                         {(rollbacksByCandidate[c.id] ?? []).map((rb: any) => (
                           <div key={rb.id} className="border-l-4 pl-3 py-1" style={{ borderColor: "#f59e0b" }}>
-                            <div className="text-xs font-medium">{rb.rollbackCode} &middot; by {rb.rolledBackBy}</div>
+                            <div className="text-xs font-medium">{ROLLBACK_CODE_LABEL[rb.rollbackCode] ?? rb.rollbackCode} &middot; by {rb.rolledBackBy}</div>
                             <div className="text-xs text-muted-foreground">{rb.rollbackReason}</div>
                           </div>
                         ))}
@@ -334,6 +358,6 @@ export default function OwnerLearningGovernancePage() {
           })}
         </section>
       )}
-    </div>
+    </PageContainer>
   );
 }

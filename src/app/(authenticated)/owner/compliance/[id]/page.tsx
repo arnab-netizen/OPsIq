@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Badge, Button, Modal, Input, Select, Textarea, DetailPageSkeleton } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, Textarea, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type ComplianceStatus = "active" | "evidence_pending" | "review_pending" | "compliant" | "breached" | "waived";
@@ -66,13 +66,13 @@ const STATUS_LABELS: Record<ComplianceStatus, string> = {
   waived: "Waived",
 };
 
-const STATUS_VARIANT: Record<ComplianceStatus, "default" | "warning" | "success" | "destructive"> = {
-  active: "default",
-  evidence_pending: "warning",
-  review_pending: "warning",
-  compliant: "success",
-  breached: "destructive",
-  waived: "default",
+const STATUS_VARIANT: Record<ComplianceStatus, "default-accessible" | "warning-accessible" | "success-accessible" | "destructive-accessible"> = {
+  active: "default-accessible",
+  evidence_pending: "warning-accessible",
+  review_pending: "warning-accessible",
+  compliant: "success-accessible",
+  breached: "destructive-accessible",
+  waived: "default-accessible",
 };
 
 const TEMPORAL_LABELS: Record<string, string> = {
@@ -81,10 +81,24 @@ const TEMPORAL_LABELS: Record<string, string> = {
   overdue: "Overdue",
 };
 
-const TEMPORAL_VARIANT: Record<string, "default" | "warning" | "success" | "destructive"> = {
-  upcoming: "default",
-  action_required: "warning",
-  overdue: "destructive",
+const TEMPORAL_VARIANT: Record<string, "default-accessible" | "warning-accessible" | "success-accessible" | "destructive-accessible"> = {
+  upcoming: "default-accessible",
+  action_required: "warning-accessible",
+  overdue: "destructive-accessible",
+};
+
+const LINK_TYPE_LABEL: Record<string, string> = {
+  REMEDIATION: "Remediation",
+  EVIDENCE: "Evidence",
+};
+
+// Matches PROVENANCE_LABELS in the sibling list page (owner/compliance/page.tsx) exactly --
+// this detail page previously used a weaker `.replace(/_/g, " ")` that produced lowercase
+// "owner input" instead of "Owner input".
+const PROVENANCE_LABELS: Record<string, string> = {
+  owner_input: "Owner input",
+  professional_input: "Professional input",
+  authoritative_document: "Authoritative document",
 };
 
 async function apiFetch(path: string, options?: RequestInit) {
@@ -177,29 +191,31 @@ export default function ComplianceDetailPage() {
   }
 
   if (loading) return <DetailPageSkeleton label="Loading" />;
-  if (error) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-destructive text-sm">{error}</p></div>;
+  if (error) return <PageContainer><p className="text-destructive text-sm">{error}</p></PageContainer>;
   if (!item) return null;
 
   const nextStatuses = VALID_TRANSITIONS[item.status] ?? [];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-start justify-between mb-6 gap-4">
-        <div>
-          <button onClick={() => router.back()} className="text-sm text-muted-foreground hover:underline mb-2 block">← Compliance Calendar</button>
-          <h1 className="text-2xl font-semibold">{item.name}</h1>
-          <p className="text-xs text-muted-foreground mt-1 capitalize">{item.kind}</p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
-          {nextStatuses.length > 0 && (
-            <Button size="sm" onClick={() => { setReviewStatus(""); setReviewNotes(""); setReviewError(null); setReviewOpen(true); }}>
-              Update status
-            </Button>
-          )}
-          <Button size="sm" variant="outline" onClick={() => { setLinkTaskId(""); setLinkType("REMEDIATION"); setLinkError(null); setLinkTaskOpen(true); }}>
-            Link task
-          </Button>
-        </div>
+    <PageContainer>
+      <button onClick={() => router.back()} className="text-sm text-muted-foreground hover:underline mb-2 block">← Compliance Calendar</button>
+      <div className="mb-6">
+        <PageHeader
+          title={item.name}
+          actions={
+            <div className="flex gap-2 flex-wrap justify-end">
+              {nextStatuses.length > 0 && (
+                <Button size="sm" onClick={() => { setReviewStatus(""); setReviewNotes(""); setReviewError(null); setReviewOpen(true); }}>
+                  Update status
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => { setLinkTaskId(""); setLinkType("REMEDIATION"); setLinkError(null); setLinkTaskOpen(true); }}>
+                Link task
+              </Button>
+            </div>
+          }
+        />
+        <p className="text-xs text-muted-foreground mt-1 capitalize">{item.kind}</p>
       </div>
 
       {/* Status row */}
@@ -224,7 +240,7 @@ export default function ComplianceDetailPage() {
           {item.obligationOwner && <Stat label="Obligation owner" value={item.obligationOwner} />}
           {item.evidenceValidityDays != null && <Stat label="Evidence validity" value={`${item.evidenceValidityDays} days`} />}
           {item.recurrenceMonths != null && <Stat label="Recurrence" value={`${item.recurrenceMonths} months`} />}
-          {item.provenanceSource && <Stat label="Provenance" value={item.provenanceSource.replace(/_/g, " ")} />}
+          {item.provenanceSource && <Stat label="Provenance" value={PROVENANCE_LABELS[item.provenanceSource] ?? item.provenanceSource} />}
         </div>
         {item.legalBasis && (
           <div>
@@ -274,7 +290,7 @@ export default function ComplianceDetailPage() {
               {item.taskLinks.map((tl) => (
                 <tr key={tl.id}>
                   <td className="px-4 py-3 font-mono text-xs">{tl.taskId}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{tl.linkType}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{LINK_TYPE_LABEL[tl.linkType] ?? tl.linkType}</td>
                   <td className="px-4 py-3 text-muted-foreground">{new Date(tl.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
@@ -298,8 +314,9 @@ export default function ComplianceDetailPage() {
         <div className="flex flex-col gap-4">
           {reviewError && <p className="text-destructive text-sm">{reviewError}</p>}
           <div>
-            <label className="block text-sm font-medium mb-1">New status <span className="text-destructive">*</span></label>
+            <label htmlFor="compliance-review-status" className="block text-sm font-medium mb-1">New status <span className="text-destructive">*</span></label>
             <Select
+              id="compliance-review-status"
               value={reviewStatus}
               onChange={(e) => setReviewStatus(e.target.value as ComplianceStatus)}
               options={nextStatuses.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
@@ -307,8 +324,8 @@ export default function ComplianceDetailPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Compliance notes</label>
-            <Textarea value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} rows={3} placeholder="Notes for this review" />
+            <label htmlFor="compliance-review-notes" className="block text-sm font-medium mb-1">Compliance notes</label>
+            <Textarea id="compliance-review-notes" value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} rows={3} placeholder="Notes for this review" />
           </div>
         </div>
       </Modal>
@@ -328,12 +345,13 @@ export default function ComplianceDetailPage() {
         <div className="flex flex-col gap-4">
           {linkError && <p className="text-destructive text-sm">{linkError}</p>}
           <div>
-            <label className="block text-sm font-medium mb-1">Task ID <span className="text-destructive">*</span></label>
-            <Input value={linkTaskId} onChange={(e) => setLinkTaskId(e.target.value)} placeholder="UUID of the delegated task" />
+            <label htmlFor="compliance-link-task-id" className="block text-sm font-medium mb-1">Task ID <span className="text-destructive">*</span></label>
+            <Input id="compliance-link-task-id" value={linkTaskId} onChange={(e) => setLinkTaskId(e.target.value)} placeholder="UUID of the delegated task" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Link type</label>
+            <label htmlFor="compliance-link-type" className="block text-sm font-medium mb-1">Link type</label>
             <Select
+              id="compliance-link-type"
               value={linkType}
               onChange={(e) => setLinkType(e.target.value as "REMEDIATION" | "EVIDENCE")}
               options={[
@@ -344,7 +362,7 @@ export default function ComplianceDetailPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }
 

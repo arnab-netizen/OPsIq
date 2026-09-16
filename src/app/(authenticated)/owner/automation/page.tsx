@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 
 interface SchedulerStatus {
   workspaceId: string;
@@ -90,19 +90,16 @@ export default function OwnerAutomationPage() {
   if (loading) return <CardDashboardSkeleton label="Loading automation status" />;
 
   return (
-    <div className="mx-auto max-w-3xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Automation Health</h1>
-          <p className="text-muted-foreground text-sm">
-            Background task status (email retries, finance-learning reconciliation, and any
-            other scheduled work) — so a stalled automation is visible here, not only in logs.
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Automation Health"
+          description="Background task status (email retries, finance-learning reconciliation, and any other scheduled work) — so a stalled automation is visible here, not only in logs."
+          actions={<div className="flex gap-2">
           <Button onClick={() => load()}>Refresh</Button>
           <Link href="/owner"><Button>Command Center</Button></Link>
-        </div>
+        </div>}
+        />
       </div>
 
       {error && (
@@ -165,7 +162,7 @@ export default function OwnerAutomationPage() {
                   <div key={t.id} className="border-b pb-2 text-sm">
                     <div className="flex items-center justify-between">
                       <strong>{t.taskName}</strong>
-                      <Badge variant="warning">partial failure</Badge>
+                      <Badge variant="warning-accessible">partial failure</Badge>
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {new Date(t.updatedAt).toLocaleString()}
@@ -189,7 +186,7 @@ export default function OwnerAutomationPage() {
                   <div key={t.id} className="border-b pb-2 text-sm">
                     <div className="flex items-center justify-between">
                       <strong>{t.taskName}</strong>
-                      <Badge variant="destructive">
+                      <Badge variant="destructive-accessible">
                         {t.attempts}/{t.maxAttempts} attempts
                       </Badge>
                     </div>
@@ -204,6 +201,6 @@ export default function OwnerAutomationPage() {
           </div>
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

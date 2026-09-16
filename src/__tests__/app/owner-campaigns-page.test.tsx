@@ -6,6 +6,10 @@ import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import CampaignsPage from "@/app/(authenticated)/owner/marketing/campaigns/page";
 
 const BUSINESSES = [{ id: "biz-uuid-1", name: "Acme Trading" }];
+const TWO_BUSINESSES = [
+  { id: "biz-uuid-1", name: "Acme Trading" },
+  { id: "biz-uuid-2", name: "Beta Foods" },
+];
 
 const CAMPAIGNS = [
   {
@@ -111,9 +115,11 @@ describe("CampaignsPage", () => {
     await findByText("Search");
   });
 
-  it("renders ACTIVE status badge", async () => {
+  it("renders Active status badge", async () => {
+    // Presentation-only: the badge shows a sentence-case label ("Active") for
+    // the raw "ACTIVE" status value; the stored/submitted value is unchanged.
     const { findAllByText } = render(<CampaignsPage />);
-    const badges = await findAllByText("ACTIVE");
+    const badges = await findAllByText("Active");
     expect(badges.length).toBeGreaterThan(0);
   });
 
@@ -172,6 +178,110 @@ describe("CampaignsPage", () => {
         expect.stringContaining("/api/owner/marketing/campaigns"),
         expect.objectContaining({ method: "POST" }),
       );
+    });
+  });
+
+  describe("business switch — never shows stale rows tagged as the newly selected business", () => {
+    it("clears the previous business's rows immediately and shows a loading state while the new business's campaigns are in flight", async () => {
+      // A controllable promise lets the test hold business-2's fetch open so it can assert on the
+      // in-between render, the same window a slow network response would occupy in production.
+      let resolveBiz2: (v: unknown) => void = () => {};
+      const biz2Pending = new Promise((resolve) => { resolveBiz2 = resolve; });
+
+      fetchMock.mockImplementation((input: string | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/owner/recovery/businesses")) {
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(TWO_BUSINESSES) } as Response);
+        }
+        if (url.includes("businessId=biz-uuid-1")) {
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ campaigns: CAMPAIGNS, total: CAMPAIGNS.length }) } as Response);
+        }
+        if (url.includes("businessId=biz-uuid-2")) {
+          return biz2Pending.then(() => ({ ok: true, status: 200, json: () => Promise.resolve({ campaigns: [], total: 0 }) } as Response));
+        }
+        return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
+      });
+
+      const { findByText, queryByText, getByTestId } = render(<CampaignsPage />);
+      // Business 1's campaign is on screen before switching.
+      await findByText("Summer Email Blast");
+
+      fireEvent.change(getByTestId("business-context-selector"), { target: { value: "biz-uuid-2" } });
+
+      // While business-2's fetch is still pending, business-1's campaign must not still be
+      // rendered — it would otherwise be visually presented as if it belonged to business 2,
+      // whose name is already showing in the selector.
+      await waitFor(() => {
+        expect(queryByText("Summer Email Blast")).toBeNull();
+      });
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("businessId=biz-uuid-2"), expect.anything());
+
+      resolveBiz2(undefined);
+      await findByText("No campaigns yet");
+      expect(queryByText("Summer Email Blast")).toBeNull();
+    });
+
+    it("does not show the previous business's rows if the newly selected business's fetch fails", async () => {
+      fetchMock.mockImplementation((input: string | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/owner/recovery/businesses")) {
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(TWO_BUSINESSES) } as Response);
+        }
+        if (url.includes("businessId=biz-uuid-1")) {
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ campaigns: CAMPAIGNS, total: CAMPAIGNS.length }) } as Response);
+        }
+        if (url.includes("businessId=biz-uuid-2")) {
+          return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: "Simulated failure" }) } as Response);
+        }
+        return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
+      });
+
+      const { findByText, queryByText, getByTestId } = render(<CampaignsPage />);
+      await findByText("Summer Email Blast");
+
+      fireEvent.change(getByTestId("business-context-selector"), { target: { value: "biz-uuid-2" } });
+
+      await waitFor(() => {
+        expect(queryByText("Summer Email Blast")).toBeNull();
+      });
+      // The failure must surface as an error, not as a silent fallback to the old business's rows.
+      await findByText("No campaigns yet");
+      expect(queryByText("Summer Email Blast")).toBeNull();
+    });
+
+    it("ignores a late response for a business the owner has already switched away from", async () => {
+      // Regression for the out-of-order-response half of the fix: if business-1's own fetch is
+      // still in flight when the owner switches to business-2, and it resolves AFTER business-2's
+      // fetch already has, it must not clobber business-2's rows with business-1's.
+      let resolveBiz1: (v: unknown) => void = () => {};
+      const biz1Pending = new Promise((resolve) => { resolveBiz1 = resolve; });
+
+      fetchMock.mockImplementation((input: string | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/owner/recovery/businesses")) {
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(TWO_BUSINESSES) } as Response);
+        }
+        if (url.includes("businessId=biz-uuid-1")) {
+          return biz1Pending.then(() => ({ ok: true, status: 200, json: () => Promise.resolve({ campaigns: CAMPAIGNS, total: CAMPAIGNS.length }) } as Response));
+        }
+        if (url.includes("businessId=biz-uuid-2")) {
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ campaigns: [], total: 0 }) } as Response);
+        }
+        return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
+      });
+
+      const { findByText, queryByText, findByTestId } = render(<CampaignsPage />);
+      // Initial mount fetch for business-1 is the one we hold open.
+      const selector = await findByTestId("business-context-selector");
+      fireEvent.change(selector, { target: { value: "biz-uuid-2" } });
+      await findByText("No campaigns yet");
+
+      // Now let the stale business-1 request resolve, after business-2 already rendered.
+      resolveBiz1(undefined);
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(queryByText("Summer Email Blast")).toBeNull();
+      await findByText("No campaigns yet");
     });
   });
 });

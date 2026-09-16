@@ -2,15 +2,22 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  PENDING: "muted",
-  APPROVED: "success",
-  REJECTED: "destructive",
-  DEFERRED: "warning",
+const STATUS_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  PENDING: "muted-accessible",
+  APPROVED: "success-accessible",
+  REJECTED: "destructive-accessible",
+  DEFERRED: "warning-accessible",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  DEFERRED: "Deferred",
 };
 
 const EVIDENCE_TYPES = [
@@ -19,6 +26,9 @@ const EVIDENCE_TYPES = [
   { value: "data", label: "Data" },
   { value: "testimony", label: "Testimony" },
 ];
+const EVIDENCE_TYPE_LABEL: Record<string, string> = Object.fromEntries(
+  EVIDENCE_TYPES.map((t) => [t.value, t.label])
+);
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -115,7 +125,7 @@ export default function OwnerApprovalsPage() {
     setBusy(true);
     setError(null);
     try {
-      const rationale = window.prompt(`Rationale for ${decision} (optional):`) || undefined;
+      const rationale = window.prompt(`Rationale for ${STATUS_LABEL[decision] ?? decision} (optional):`) || undefined;
       await api("/api/owner/approval", {
         method: "PATCH",
         body: JSON.stringify({ action: "decide", approvalId: approval.id, decision, rationale }),
@@ -175,17 +185,15 @@ export default function OwnerApprovalsPage() {
   if (loading) return <CardDashboardSkeleton label="Loading approvals workspace" />;
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Approvals</h1>
-          <p className="text-muted-foreground text-sm">
-            Review evidence, decide, and track appeals for consulting approval requests -- one decision at a time.
-          </p>
-        </div>
-        <Button onClick={() => setShowCreateForm((s) => !s)} disabled={!selected}>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Owner Approvals"
+          description="Review evidence, decide, and track appeals for consulting approval requests -- one decision at a time."
+          actions={<Button onClick={() => setShowCreateForm((s) => !s)} disabled={!selected}>
           + New approval request
-        </Button>
+        </Button>}
+        />
       </div>
 
       {error && (
@@ -254,7 +262,7 @@ export default function OwnerApprovalsPage() {
                       {a.rationale && <div className="text-sm mt-1">{a.rationale}</div>}
                     </div>
                     <div className="text-right">
-                      <Badge variant={STATUS_VARIANT[a.status] || "muted"}>{a.status}</Badge>
+                      <Badge variant={STATUS_VARIANT[a.status] || "muted-accessible"}>{STATUS_LABEL[a.status] ?? a.status}</Badge>
                       {a.rescopeTriggered && (
                         <div className="text-xs text-destructive mt-1">Rescope triggered</div>
                       )}
@@ -266,7 +274,7 @@ export default function OwnerApprovalsPage() {
                     <div className="space-y-2">
                       {a.evidences.map((ev: any) => (
                         <div key={ev.id} className="border-l-4 pl-3 py-1" style={{ borderColor: "#94a3b8" }}>
-                          <div className="text-xs font-medium">{ev.evidenceType}</div>
+                          <div className="text-xs font-medium">{EVIDENCE_TYPE_LABEL[ev.evidenceType] ?? ev.evidenceType}</div>
                           <div className="text-xs text-muted-foreground">{ev.description}</div>
                           {ev.sourceUrl && (
                             <a href={ev.sourceUrl} className="text-xs underline" target="_blank" rel="noreferrer">
@@ -313,6 +321,6 @@ export default function OwnerApprovalsPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

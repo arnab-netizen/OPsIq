@@ -5,6 +5,8 @@ import { Button } from "@/ui/primitives/button";
 import { EmptyState } from "@/ui/primitives/states";
 import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
+import { PageHeader } from "@/ui/primitives/page-header";
+import { PageContainer } from "@/ui/primitives/page-container";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -147,17 +149,21 @@ export default function InventoryPage() {
   const modalTitle = editItem ? "Edit Stock Item" : "Add Stock Item";
 
   return (
-    <div className="p-6" data-testid="inventory-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Inventory</h1>
-        <div className="flex gap-3 items-center">
-          <BusinessContextSelector
-            businesses={businesses}
-            selectedId={businessId}
-            onChange={(id) => setActiveBusinessId(id)}
-          />
-          <Button onClick={openCreate}>+ Add Item</Button>
-        </div>
+    <PageContainer data-testid="inventory-page">
+      <div className="mb-6">
+        <PageHeader
+          title="Inventory"
+          actions={
+            <div className="flex gap-3 items-center">
+              <BusinessContextSelector
+                businesses={businesses}
+                selectedId={businessId}
+                onChange={(id) => setActiveBusinessId(id)}
+              />
+              <Button onClick={openCreate}>+ Add Item</Button>
+            </div>
+          }
+        />
       </div>
 
       {error && (
@@ -218,14 +224,14 @@ export default function InventoryPage() {
 
       <Modal isOpen={isModalOpen} onClose={() => { setShowCreate(false); setEditItem(null); }} title={modalTitle}>
         <div className="space-y-3">
-          <Input placeholder="SKU" value={form.sku ?? ""} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} />
-          <Input placeholder="Name" value={form.name ?? ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          <Input placeholder="Unit (e.g. pcs)" value={form.unit ?? ""} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} />
-          <Input type="number" placeholder="Current Qty" value={form.currentQty ?? ""} onChange={(e) => setForm((f) => ({ ...f, currentQty: e.target.value }))} />
-          <Input type="number" placeholder="Reorder Point" value={form.reorderPoint ?? ""} onChange={(e) => setForm((f) => ({ ...f, reorderPoint: e.target.value }))} />
-          <Input type="number" placeholder="Safety Stock" value={form.safetyStock ?? ""} onChange={(e) => setForm((f) => ({ ...f, safetyStock: e.target.value }))} />
-          <Input type="number" placeholder="Lead Time (days)" value={form.leadTimeDays ?? ""} onChange={(e) => setForm((f) => ({ ...f, leadTimeDays: e.target.value }))} />
-          <Input type="number" placeholder="Daily Usage" value={form.dailyUsage ?? ""} onChange={(e) => setForm((f) => ({ ...f, dailyUsage: e.target.value }))} />
+          <Input aria-label="SKU" placeholder="SKU" value={form.sku ?? ""} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} />
+          <Input aria-label="Name" placeholder="Name" value={form.name ?? ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <Input aria-label="Unit" placeholder="Unit (e.g. pcs)" value={form.unit ?? ""} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} />
+          <Input aria-label="Current Qty" type="number" placeholder="Current Qty" value={form.currentQty ?? ""} onChange={(e) => setForm((f) => ({ ...f, currentQty: e.target.value }))} />
+          <Input aria-label="Reorder Point" type="number" placeholder="Reorder Point" value={form.reorderPoint ?? ""} onChange={(e) => setForm((f) => ({ ...f, reorderPoint: e.target.value }))} />
+          <Input aria-label="Safety Stock" type="number" placeholder="Safety Stock" value={form.safetyStock ?? ""} onChange={(e) => setForm((f) => ({ ...f, safetyStock: e.target.value }))} />
+          <Input aria-label="Lead Time (days)" type="number" placeholder="Lead Time (days)" value={form.leadTimeDays ?? ""} onChange={(e) => setForm((f) => ({ ...f, leadTimeDays: e.target.value }))} />
+          <Input aria-label="Daily Usage" type="number" placeholder="Daily Usage" value={form.dailyUsage ?? ""} onChange={(e) => setForm((f) => ({ ...f, dailyUsage: e.target.value }))} />
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={() => { setShowCreate(false); setEditItem(null); }}>Cancel</Button>
@@ -234,6 +240,6 @@ export default function InventoryPage() {
           </Button>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

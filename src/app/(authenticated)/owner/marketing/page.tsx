@@ -1,34 +1,65 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
-const SEVERITY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  low: "muted",
-  medium: "default",
-  high: "warning",
-  critical: "destructive",
+const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  low: "muted-accessible",
+  medium: "default-accessible",
+  high: "warning-accessible",
+  critical: "destructive-accessible",
+};
+const SEVERITY_LABEL: Record<string, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  critical: "Critical",
+};
+const FINDING_TYPE_LABEL: Record<string, string> = {
+  opportunity: "Opportunity",
+  risk: "Risk",
 };
 
-const VERIFY_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  unverified: "muted",
-  verified_improved: "success",
-  verified_not_improved: "destructive",
-  inconclusive: "warning",
-  disputed: "warning",
+const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  unverified: "muted-accessible",
+  verified_improved: "success-accessible",
+  verified_not_improved: "destructive-accessible",
+  inconclusive: "warning-accessible",
+  disputed: "warning-accessible",
+};
+const VERIFY_LABEL: Record<string, string> = {
+  unverified: "Not yet verified",
+  verified_improved: "Verified — improved",
+  verified_not_improved: "Verified — no improvement",
+  inconclusive: "Inconclusive",
+  disputed: "Disputed",
+};
+const ACTION_STATUS_LABEL: Record<string, string> = {
+  proposed: "Proposed",
+  assigned: "Assigned",
+  in_progress: "In progress",
+  completed: "Completed",
+  blocked: "Blocked",
 };
 
-const STATE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  COMPOUNDING: "success",
-  GROWING: "default",
-  FLAT: "warning",
-  LEAKING: "destructive",
-  WASTING: "destructive",
+const STATE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  COMPOUNDING: "success-accessible",
+  GROWING: "default-accessible",
+  FLAT: "warning-accessible",
+  LEAKING: "destructive-accessible",
+  WASTING: "destructive-accessible",
+};
+const STATE_LABEL: Record<string, string> = {
+  COMPOUNDING: "Compounding",
+  GROWING: "Growing",
+  FLAT: "Flat",
+  LEAKING: "Leaking",
+  WASTING: "Wasting",
 };
 
 async function api(path: string, init?: RequestInit) {
@@ -188,9 +219,9 @@ export default function OwnerMarketingPage() {
     setBusy(true);
     setError(null);
     try {
-      const beforeRaw = window.prompt(`BEFORE value for ${action.verificationMetric}:`);
+      const beforeRaw = window.prompt(`BEFORE value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (beforeRaw === null) { setBusy(false); return; }
-      const afterRaw = window.prompt(`AFTER value for ${action.verificationMetric}:`);
+      const afterRaw = window.prompt(`AFTER value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (afterRaw === null) { setBusy(false); return; }
       const dir = window.prompt("Target direction (up / down):", "up");
       if (dir === null) { setBusy(false); return; }
@@ -219,15 +250,13 @@ export default function OwnerMarketingPage() {
   const missing: string[] = dashboard?.missingCriticalData ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Marketing & Growth</h1>
-          <p className="text-muted-foreground text-sm">
-            Which channel brings customers, which offer works, and what is wasting money — with the single highest-impact marketing move and how to verify it.
-          </p>
-        </div>
-        <Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Owner Marketing & Growth"
+          description="Which channel brings customers, which offer works, and what is wasting money — with the single highest-impact marketing move and how to verify it."
+          actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
+        />
       </div>
 
       {error && (
@@ -262,7 +291,7 @@ export default function OwnerMarketingPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 flex items-end gap-3">
+          <div className="mb-6 flex flex-wrap items-end gap-3">
             <BusinessContextSelector
               businesses={businesses}
               selectedId={selected}
@@ -327,7 +356,7 @@ export default function OwnerMarketingPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -361,7 +390,7 @@ function MarketingCycleView({
           </div>
         </div>
         <div className="text-right">
-          <Badge variant={STATE_VARIANT[state] || "muted"}>{state}</Badge>
+          <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
           <div className="text-xs text-muted-foreground mt-1">
             data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
           </div>
@@ -370,7 +399,7 @@ function MarketingCycleView({
 
       {missing.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
-          <strong>Missing critical data:</strong> {missing.join(", ")} — provide these to raise confidence.
+          <strong>Missing critical data:</strong> {missing.map(humanizeMetricKey).join(", ")} — provide these to raise confidence.
         </div>
       )}
 
@@ -394,8 +423,8 @@ function MarketingCycleView({
               <div className="flex justify-between">
                 <span className="font-semibold">{f.title}</span>
                 <span className="flex gap-1">
-                  <Badge variant="muted">{f.findingType}</Badge>
-                  <Badge variant={SEVERITY_VARIANT[f.severity]}>{f.severity}</Badge>
+                  <Badge variant="muted-accessible">{FINDING_TYPE_LABEL[f.findingType] ?? f.findingType}</Badge>
+                  <Badge variant={SEVERITY_VARIANT[f.severity]}>{SEVERITY_LABEL[f.severity] ?? f.severity}</Badge>
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
@@ -427,7 +456,7 @@ function MarketingCycleView({
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
                   </div>
-                  <Badge variant="muted">{a.status}</Badge>
+                  <Badge variant="muted-accessible">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{a.description}</p>
                 <p className="text-xs text-muted-foreground">
@@ -442,8 +471,8 @@ function MarketingCycleView({
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
-                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted"}>
-                      {latestVerification.status}
+                    <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
+                      {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">
                       before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
@@ -463,7 +492,7 @@ function MarketingCycleView({
             <div key={c.id} className="flex justify-between border-b py-1">
               <span>Cycle #{c.sequenceNumber} — {new Date(c.createdAt).toLocaleDateString()}</span>
               <span className="text-muted-foreground">
-                {c.marketingState} · {c.findingCount} findings · {c.actionCount} actions
+                {STATE_LABEL[c.marketingState] ?? c.marketingState} · {c.findingCount} findings · {c.actionCount} actions
               </span>
             </div>
           ))}

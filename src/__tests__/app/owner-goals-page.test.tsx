@@ -27,7 +27,11 @@ const TRAJECTORY_RESULT = {
     trajectory: {
       projectedAchievementDate: "2027-04-15T00:00:00.000Z",
       onTrack: true,
-      confidence: "medium",
+      // Real TrajectoryConfidence values are uppercase (see
+      // src/services/owner-strategy/goal-trajectory.service.ts) -- this fixture
+      // previously used lowercase "medium", which never occurs in production and
+      // masked the G5 raw-enum-leak bug this page was fixed for (see CONFIDENCE_LABEL).
+      confidence: "MEDIUM",
       points: [],
       gapToTarget: 280000,
       percentComplete: 44,
@@ -113,9 +117,19 @@ describe("GoalsPage", () => {
     await findByText("44%");
   });
 
-  it("shows ACTIVE status badge", async () => {
-    const { findByText } = render(<GoalsPage />);
-    await findByText("ACTIVE");
+  it("shows the humanized status badge with its accessible semantic variant, and never leaks the raw ACTIVE enum value (G5 + G6)", async () => {
+    const { findByText, queryByText } = render(<GoalsPage />);
+    const badge = await findByText("Active");
+    // The raw GoalStatus enum value must never leak into the rendered badge.
+    expect(queryByText("ACTIVE")).toBeNull();
+    // STATUS_VARIANT.ACTIVE migrated from "default" to "default-accessible" (G6). "default"
+    // and "default-accessible" share the same bg-primary/10 fill (only the text-color token
+    // differs -- see badge.tsx), so a bg-primary-only assertion would pass even if the
+    // migration were fully reverted. Pin the accessible variant specifically by asserting the
+    // "default-accessible"-only text token, not just the shared category fill.
+    expect(badge.className).toMatch(/bg-primary/);
+    expect(badge.className).toMatch(/text-\[var\(--primary-text\)\]/);
+    expect(badge.className).not.toMatch(/bg-destructive|bg-warning/);
   });
 
   it("shows Update Goal button when a goal exists", async () => {
@@ -192,8 +206,27 @@ describe("GoalsPage", () => {
     await findByText(/Projected achievement/);
   });
 
-  it("renders confidence value from trajectory", async () => {
-    const { findByText } = render(<GoalsPage />);
-    await findByText("medium");
+  it("renders the humanized confidence value, not the raw MEDIUM enum value", async () => {
+    const { findByText, queryByText } = render(<GoalsPage />);
+    await findByText("Medium");
+    // The raw TrajectoryConfidence enum value must never leak into the rendered text.
+    expect(queryByText("MEDIUM")).toBeNull();
+    expect(queryByText("medium")).toBeNull();
+  });
+
+  it("associates the create-goal modal's fields with their visible labels (G1)", async () => {
+    const { findByText, getByLabelText } = render(<GoalsPage />);
+    const btn = await findByText("Update Goal");
+    fireEvent.click(btn);
+    await findByText("Update Financial Goal");
+
+    // getByLabelText resolves via the label's htmlFor -> input/select id association;
+    // it throws if no element has that accessible name, so this fails if the wiring
+    // (G1 fix) regresses even though the label text is still visually present.
+    expect(getByLabelText(/Goal type/)).toBeTruthy();
+    expect(getByLabelText(/Target amount/)).toBeTruthy();
+    expect(getByLabelText("Currency")).toBeTruthy();
+    expect(getByLabelText(/Target date/)).toBeTruthy();
+    expect(getByLabelText("Baseline amount (optional)")).toBeTruthy();
   });
 });

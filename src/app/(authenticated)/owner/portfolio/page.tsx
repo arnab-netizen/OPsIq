@@ -2,20 +2,36 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { humanizeMetricKey } from "@/lib/metric-label";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic portfolio payload is untyped; load() fetch-on-mount is intentional */
 
-const HEALTH_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
-  score >= 70 ? "success" : score >= 50 ? "default" : score >= 30 ? "warning" : "destructive";
-const RISK_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
-  score >= 70 ? "destructive" : score >= 40 ? "warning" : score >= 20 ? "default" : "success";
+const HEALTH_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  score >= 70 ? "success-accessible" : score >= 50 ? "default-accessible" : score >= 30 ? "warning-accessible" : "destructive-accessible";
+const RISK_VARIANT = (score: number): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  score >= 70 ? "destructive-accessible" : score >= 40 ? "warning-accessible" : score >= 20 ? "default-accessible" : "success-accessible";
 
-const ALERT_VARIANT: Record<string, "warning" | "destructive"> = {
-  survival_risk: "destructive",
-  cash_risk: "destructive",
-  execution_risk: "warning",
+const ALERT_VARIANT: Record<string, "warning-accessible" | "destructive-accessible"> = {
+  survival_risk: "destructive-accessible",
+  cash_risk: "destructive-accessible",
+  execution_risk: "warning-accessible",
+};
+const ALERT_TYPE_LABEL: Record<string, string> = {
+  survival_risk: "Survival risk",
+  cash_risk: "Cash risk",
+  execution_risk: "Execution risk",
+};
+// Verified against the domain nav array in owner/page.tsx (same domain keys, same labels).
+const DOMAIN_LABEL: Record<string, string> = {
+  finance: "Finance",
+  cashflow: "Cashflow",
+  sales: "Sales",
+  operations: "Operations",
+  sop: "Execution",
+  marketing: "Marketing",
+  strategy: "Strategy",
+  recovery: "Recovery",
 };
 
 async function api(path: string) {
@@ -58,15 +74,13 @@ export default function OwnerPortfolioPage() {
   const ranking = view?.ranking ?? {};
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Portfolio Command Center</h1>
-          <p className="text-muted-foreground text-sm">
-            Every business in one view — which is healthiest, which needs attention today, where to spend time, and where to invest.
-          </p>
-        </div>
-        <Link href="/owner"><Button>Command Center</Button></Link>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Portfolio Command Center"
+          description="Every business in one view — which is healthiest, which needs attention today, where to spend time, and where to invest."
+          actions={<Link href="/owner"><Button>Command Center</Button></Link>}
+        />
       </div>
 
       {error && (
@@ -112,7 +126,7 @@ export default function OwnerPortfolioPage() {
                   <div key={p.action?.id ?? i} className="border-b py-1">
                     <div className="font-semibold">{i + 1}. {p.action?.title}</div>
                     <div className="text-xs text-muted-foreground">
-                      {p.businessName} · {p.action?.domain} · priority {Math.round(p.action?.priorityScore ?? 0)} · verify via {humanizeMetricKey(p.action?.verificationMetric)}
+                      {p.businessName} · {DOMAIN_LABEL[p.action?.domain] ?? p.action?.domain} · priority {Math.round(p.action?.priorityScore ?? 0)} · verify via {humanizeMetricKey(p.action?.verificationMetric)}
                     </div>
                   </div>
                 ))}
@@ -135,7 +149,7 @@ export default function OwnerPortfolioPage() {
                 {view.riskAlerts.map((a: any, i: number) => (
                   <div key={`${a.businessId}-${a.type}-${i}`} className="flex justify-between items-center border-b py-1 text-sm">
                     <span>{a.businessName} — {a.message}</span>
-                    <Badge variant={ALERT_VARIANT[a.type] || "warning"}>{a.type.replace("_", " ")}</Badge>
+                    <Badge variant={ALERT_VARIANT[a.type] || "warning-accessible"}>{ALERT_TYPE_LABEL[a.type] ?? a.type}</Badge>
                   </div>
                 ))}
               </div>
@@ -181,6 +195,6 @@ export default function OwnerPortfolioPage() {
           </section>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

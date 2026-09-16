@@ -45,6 +45,18 @@ const SEVERITY_VARIANT: Record<string, "default" | "warning" | "destructive" | "
   critical: "destructive",
 };
 
+const SEVERITY_LABEL: Record<string, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  critical: "Critical",
+};
+
+const FINDING_TYPE_LABEL: Record<string, string> = {
+  opportunity: "Opportunity",
+  risk: "Risk",
+};
+
 function sureLabel(confidencePct: number): string {
   return confidencePct >= 80 ? "Very sure" : confidencePct >= 50 ? "Reasonably sure" : "Not very sure yet";
 }
@@ -60,8 +72,8 @@ export function FindingCard({ finding }: { finding: FindingCardData }) {
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">What OpsIQ found</span>
         <span className="flex shrink-0 gap-1">
-          <Badge variant="muted-accessible">{finding.findingType}</Badge>
-          <Badge variant={SEVERITY_VARIANT[finding.severity?.toLowerCase()] ?? "default"}>{finding.severity}</Badge>
+          <Badge variant="muted-accessible">{FINDING_TYPE_LABEL[finding.findingType?.toLowerCase()] ?? finding.findingType}</Badge>
+          <Badge variant={SEVERITY_VARIANT[finding.severity?.toLowerCase()] ?? "default"}>{SEVERITY_LABEL[finding.severity?.toLowerCase()] ?? finding.severity}</Badge>
         </span>
       </div>
       <strong className="mt-1 block font-display text-[1.05rem] font-semibold leading-snug text-foreground">{finding.title}</strong>

@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, EmptyState, TableListSkeleton } from "@/ui/primitives";
+import { Badge, Button, EmptyState, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -113,11 +113,15 @@ const STATUS_GROUPS: Array<{ label: string; statuses: string[] }> = [
 const GROUP_FOR_STATUS: Record<string, string> = Object.fromEntries(
   STATUS_GROUPS.flatMap((g) => g.statuses.map((s) => [s, g.label]))
 );
-const GROUP_VARIANT: Record<string, "success" | "default" | "warning" | "destructive"> = {
-  "To do": "default",
-  "In progress": "default",
-  Waiting: "warning",
-  Done: "success",
+// Presentation-only: "-accessible" variants keep the exact same status ->
+// color mapping as before, only the badge text color changes to the
+// AA-contrast-checked token for that same tinted fill (see badge.tsx's own
+// PR #385 readable-text fix comment).
+const GROUP_VARIANT: Record<string, "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible"> = {
+  "To do": "default-accessible",
+  "In progress": "default-accessible",
+  Waiting: "warning-accessible",
+  Done: "success-accessible",
 };
 
 async function apiFetch(path: string) {
@@ -192,12 +196,12 @@ export default function OwnerTasksPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-[1.75rem] font-semibold tracking-tight">Actions</h1>
-        <Link href="/owner/tasks/new">
-          <Button size="sm">+ New Task</Button>
-        </Link>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Actions"
+          actions={<Link href="/owner/tasks/new"><Button size="sm">+ New Task</Button></Link>}
+        />
       </div>
 
       {/* My work: governed actions the owner started themselves (e.g. via Start Work on Home) --
@@ -215,7 +219,7 @@ export default function OwnerTasksPage() {
                     <Link href="/owner/cockpit" className="font-display text-[1.05rem] font-semibold text-foreground hover:underline">
                       {item.ownerVisibleSummary}
                     </Link>
-                    <Badge variant={isTerminal ? "destructive" : item.status === "COMPLETED" || item.status.startsWith("OUTCOME") ? "success" : "default"}>
+                    <Badge variant={isTerminal ? "destructive-accessible" : item.status === "COMPLETED" || item.status.startsWith("OUTCOME") ? "success-accessible" : "default-accessible"}>
                       {OWNER_WORK_STATUS_LABELS[item.status] ?? item.status}
                     </Badge>
                   </div>
@@ -331,6 +335,6 @@ export default function OwnerTasksPage() {
           )}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

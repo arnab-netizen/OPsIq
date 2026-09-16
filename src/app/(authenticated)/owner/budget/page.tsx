@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { assessWorkingCapitalAgeing } from "@/domain/owner-budget/working-capital-ageing";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -20,30 +20,30 @@ import { BusinessContextSelector } from "@/components/owner/BusinessContextSelec
  * Module honesty: DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL (not OWNER_MODE_READY).
  */
 
-const MODE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  EMERGENCY: "destructive",
-  STABILIZE: "warning",
-  HYBRID: "warning",
-  PROFIT_INCREASE: "default",
-  GROW: "success",
-  SCALE: "success",
-  DATA_INSUFFICIENT: "muted",
+const MODE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  EMERGENCY: "destructive-accessible",
+  STABILIZE: "warning-accessible",
+  HYBRID: "warning-accessible",
+  PROFIT_INCREASE: "default-accessible",
+  GROW: "success-accessible",
+  SCALE: "success-accessible",
+  DATA_INSUFFICIENT: "muted-accessible",
 };
 
-const CONFIDENCE_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  UNVERIFIED: "destructive",
-  PARTIAL: "warning",
-  OPERATIONAL: "default",
-  VERIFIED: "success",
-  AUDITED: "success",
+const CONFIDENCE_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  UNVERIFIED: "destructive-accessible",
+  PARTIAL: "warning-accessible",
+  OPERATIONAL: "default-accessible",
+  VERIFIED: "success-accessible",
+  AUDITED: "success-accessible",
 };
 
-const SIGNAL_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  INFO: "muted",
-  LOW: "muted",
-  MEDIUM: "warning",
-  HIGH: "destructive",
-  CRITICAL: "destructive",
+const SIGNAL_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  INFO: "muted-accessible",
+  LOW: "muted-accessible",
+  MEDIUM: "warning-accessible",
+  HIGH: "destructive-accessible",
+  CRITICAL: "destructive-accessible",
 };
 
 const PARTIAL_LIMITATIONS = [
@@ -53,14 +53,67 @@ const PARTIAL_LIMITATIONS = [
   "Runtime least-privilege RBAC denial is enforced by the server wrapper but not yet proven by an automated runtime test.",
 ];
 
-const TASK_STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  proposed: "muted",
-  assigned: "default",
-  in_progress: "warning",
-  blocked: "destructive",
-  completed: "success",
-  cancelled: "muted",
+const TASK_STATUS_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
+  proposed: "muted-accessible",
+  assigned: "default-accessible",
+  in_progress: "warning-accessible",
+  blocked: "destructive-accessible",
+  completed: "success-accessible",
+  cancelled: "muted-accessible",
 };
+
+// Verified against BudgetMode in src/domain/owner-budget/types.ts.
+const MODE_LABEL: Record<string, string> = {
+  EMERGENCY: "Emergency",
+  STABILIZE: "Stabilize",
+  HYBRID: "Hybrid",
+  PROFIT_INCREASE: "Profit increase",
+  GROW: "Grow",
+  SCALE: "Scale",
+  DATA_INSUFFICIENT: "Data insufficient",
+};
+// Verified against BudgetConfidenceLevel in src/domain/owner-budget/types.ts. Also reused for
+// the working-capital-ageing AgeingConfidence (working-capital-ageing.ts), which shares
+// UNVERIFIED/PARTIAL and adds INSUFFICIENT.
+const CONFIDENCE_LABEL: Record<string, string> = {
+  UNVERIFIED: "Unverified",
+  PARTIAL: "Partial",
+  OPERATIONAL: "Operational",
+  VERIFIED: "Verified",
+  AUDITED: "Audited",
+  INSUFFICIENT: "Insufficient",
+};
+// Verified against PlanDecisionType in src/domain/owner-budget/types.ts (used by
+// plan.decisionType / generated-action.decisionType -- distinct from SpendDecisionType).
+const DECISION_TYPE_LABEL: Record<string, string> = {
+  APPROVE: "Approve",
+  BLOCK: "Block",
+  PAUSE: "Pause",
+  REDUCE: "Reduce",
+  INCREASE: "Increase",
+  REALLOCATE: "Reallocate",
+  INVESTIGATE: "Investigate",
+  DEFER: "Defer",
+  ESCALATE: "Escalate",
+  COLLECT_EVIDENCE: "Collect evidence",
+};
+// Verified against BudgetAuthorityStatus in src/domain/owner-budget/budget-authority.ts.
+const AUTHORITY_STATUS_LABEL: Record<string, string> = {
+  NORMAL: "Normal",
+  WATCH: "Watch",
+  RESTRICTED: "Restricted",
+  OWNER_APPROVAL_REQUIRED: "Owner approval required",
+  SUSPENDED_FOR_CATEGORY: "Suspended for category",
+  RESTORED: "Restored",
+};
+
+// BudgetSignalType (src/domain/owner-budget/types.ts) is a 30+-value, mechanically-regular
+// lowercase_snake_case enum of plain English words -- a generic converter, not a hand-written
+// per-value map, matching this file's own "no invented meaning, just format" scope.
+function humanizeSignalType(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " ");
+}
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -212,6 +265,7 @@ export default function OwnerBudgetPlanPage() {
   const list: any[] = businesses ?? [];
   const mode = guidance?.mode ?? plan?.mode ?? null;
   const confidence = guidance?.confidence ?? plan?.confidence ?? null;
+  const decisionType = plan?.decisionType ?? guidance?.decisionType ?? null;
   const signals: any[] = plan?.signals ?? guidance?.signals ?? [];
   const actions: any[] = plan?.generatedActions ?? guidance?.generatedActions ?? [];
   // Owner-entered (manual / import-ready) working-capital ageing — computed client-side
@@ -228,20 +282,18 @@ export default function OwnerBudgetPlanPage() {
     : [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Budget &amp; Profit Plan</h1>
-          <p className="text-muted-foreground text-sm">
-            Governed budget mode, capital allocation, cash/profit forecast, spend control, and your single next best action — evidence-gated, not guesses.
-          </p>
-        </div>
-        <Link href="/owner"><Button>← Command Center</Button></Link>
+    <PageContainer>
+      <div className="mb-2">
+        <PageHeader
+          title="Budget & Profit Plan"
+          description="Governed budget mode, capital allocation, cash/profit forecast, spend control, and your single next best action — evidence-gated, not guesses."
+          actions={<Link href="/owner"><Button>← Command Center</Button></Link>}
+        />
       </div>
 
       {/* Honest module-status banner (never imply OWNER_MODE_READY). */}
       <div className="mb-6 rounded-md border border-warning/30 bg-warning/5 p-3 text-xs space-y-1">
-        <div className="font-semibold">Module status: DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL (backend governance DB/CI-proven; not Owner-Mode-complete)</div>
+        <div className="font-semibold break-words">Module status: DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL (backend governance DB/CI-proven; not Owner-Mode-complete)</div>
         {PARTIAL_LIMITATIONS.map((l) => (<div key={l}>• {l}</div>))}
       </div>
 
@@ -273,10 +325,10 @@ export default function OwnerBudgetPlanPage() {
               <section className="border rounded-lg p-4 bg-card flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Current budget mode</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant={MODE_VARIANT[mode] ?? "muted"}>{mode ?? "—"}</Badge>
-                    <Badge variant={CONFIDENCE_VARIANT[confidence] ?? "muted"}>confidence: {confidence ?? "—"}</Badge>
-                    {plan?.highRiskBlocked && <Badge variant="destructive">high-risk recommendations blocked</Badge>}
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <Badge variant={MODE_VARIANT[mode] ?? "muted-accessible"}>{mode ? (MODE_LABEL[mode] ?? mode) : "—"}</Badge>
+                    <Badge variant={CONFIDENCE_VARIANT[confidence] ?? "muted-accessible"}>confidence: {confidence ? (CONFIDENCE_LABEL[confidence] ?? confidence) : "—"}</Badge>
+                    {plan?.highRiskBlocked && <Badge variant="destructive-accessible">high-risk recommendations blocked</Badge>}
                   </div>
                 </div>
                 <div className="text-right text-xs text-muted-foreground">
@@ -287,7 +339,7 @@ export default function OwnerBudgetPlanPage() {
 
               {confidence && confidence !== "VERIFIED" && confidence !== "AUDITED" && (
                 <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
-                  ⚠ Data confidence is <strong>{confidence}</strong>. Irreversible spend (hiring, capex, new branch, major marketing) is blocked below VERIFIED — figures may be ranges, not precise amounts.
+                  ⚠ Data confidence is <strong>{CONFIDENCE_LABEL[confidence] ?? confidence}</strong>. Irreversible spend (hiring, capex, new branch, major marketing) is blocked below VERIFIED — figures may be ranges, not precise amounts.
                 </div>
               )}
 
@@ -310,7 +362,7 @@ export default function OwnerBudgetPlanPage() {
               <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card">
                 <div className="text-xs uppercase text-muted-foreground">Next best action</div>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="default">{plan?.decisionType ?? guidance?.decisionType ?? "—"}</Badge>
+                  <Badge variant="default-accessible">{decisionType ? (DECISION_TYPE_LABEL[decisionType] ?? decisionType) : "—"}</Badge>
                   <span className="font-semibold">{plan?.nextBestAction ?? guidance?.nextBestAction}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Why first: {plan?.topConstraint ?? guidance?.topRisk}</p>
@@ -326,11 +378,11 @@ export default function OwnerBudgetPlanPage() {
                 <section className="border rounded-lg p-4 bg-card">
                   <h2 className="font-bold mb-2">Cash forecast</h2>
                   <div className="flex flex-wrap gap-2 text-sm">
-                    <Badge variant="muted">7-day {Math.round(forecast.sevenDayCash)}</Badge>
-                    <Badge variant="muted">30-day {Math.round(forecast.thirtyDayCash)}</Badge>
-                    <Badge variant="muted">90-day {Math.round(forecast.ninetyDayCash)}</Badge>
-                    <Badge variant="muted">reserve required {Math.round(forecast.reserveRequired)}</Badge>
-                    {forecast.nextCriticalDueInDays != null && <Badge variant="warning">next due in {forecast.nextCriticalDueInDays}d</Badge>}
+                    <Badge variant="muted-accessible">7-day {Math.round(forecast.sevenDayCash)}</Badge>
+                    <Badge variant="muted-accessible">30-day {Math.round(forecast.thirtyDayCash)}</Badge>
+                    <Badge variant="muted-accessible">90-day {Math.round(forecast.ninetyDayCash)}</Badge>
+                    <Badge variant="muted-accessible">reserve required {Math.round(forecast.reserveRequired)}</Badge>
+                    {forecast.nextCriticalDueInDays != null && <Badge variant="warning-accessible">next due in {forecast.nextCriticalDueInDays}d</Badge>}
                   </div>
                   <div className="mt-2 space-y-1 text-xs">
                     {(forecast.scenarios ?? []).map((s: any) => (
@@ -371,7 +423,7 @@ export default function OwnerBudgetPlanPage() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     {signals.map((s: any, i: number) => (
                       <span key={i} title={s.message}>
-                        <Badge variant={SIGNAL_VARIANT[s.severity] ?? "muted"}>{s.type}</Badge>
+                        <Badge variant={SIGNAL_VARIANT[s.severity] ?? "muted-accessible"}>{humanizeSignalType(s.type)}</Badge>
                       </span>
                     ))}
                   </div>
@@ -390,7 +442,7 @@ export default function OwnerBudgetPlanPage() {
                       <div key={a.id} className="flex justify-between border-b py-1">
                         <span>{a.subjectRole ?? a.subjectUserId ?? "role"}{a.scopeCategory ? ` · ${a.scopeCategory}` : ""}</span>
                         <span className="flex items-center gap-2">
-                          <Badge variant={a.status === "NORMAL" || a.status === "RESTORED" ? "muted" : "warning"}>{a.status}</Badge>
+                          <Badge variant={a.status === "NORMAL" || a.status === "RESTORED" ? "muted-accessible" : "warning-accessible"}>{AUTHORITY_STATUS_LABEL[a.status] ?? a.status}</Badge>
                           {a.reason && <span className="text-muted-foreground">{a.reason}</span>}
                         </span>
                       </div>
@@ -409,7 +461,7 @@ export default function OwnerBudgetPlanPage() {
                       <div key={i} className="border rounded p-3">
                         <div className="flex justify-between items-start">
                           <span className="font-semibold">{a.title}</span>
-                          <Badge variant="muted">{a.decisionType}</Badge>
+                          <Badge variant="muted-accessible">{DECISION_TYPE_LABEL[a.decisionType] ?? a.decisionType}</Badge>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
                           {a.accountableRole} · review in {a.reviewInDays}d · impact: {a.expectedFinancialImpact}
@@ -436,10 +488,10 @@ export default function OwnerBudgetPlanPage() {
                         <div key={t.id} className="border rounded p-3">
                           <div className="flex justify-between items-start gap-2">
                             <span className="font-semibold">{t.title}</span>
-                            <Badge variant={TASK_STATUS_VARIANT[t.status] ?? "muted"}>{String(t.status).replace("_", " ")}</Badge>
+                            <Badge variant={TASK_STATUS_VARIANT[t.status] ?? "muted-accessible"}>{String(t.status).replace("_", " ")}</Badge>
                           </div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            {t.accountableRole} · {t.decisionType}
+                            {t.accountableRole} · {DECISION_TYPE_LABEL[t.decisionType] ?? t.decisionType}
                             {t.dueAt && <> · due {new Date(t.dueAt).toLocaleDateString()}</>}
                             {t.expectedFinancialImpact && <> · impact: {t.expectedFinancialImpact}</>}
                           </div>
@@ -474,7 +526,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* 9c: Working-capital ageing — owner-entered (manual / import-ready) */}
               <section className="border rounded-lg p-4 bg-card">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="font-bold">Working capital — receivables &amp; payables ageing</h2>
                   <Button onClick={() => setShowWcForm((s) => !s)}>{showWcForm ? "Cancel" : "Add receivable/payable"}</Button>
                 </div>
@@ -505,7 +557,7 @@ export default function OwnerBudgetPlanPage() {
                         <div className="text-xs uppercase text-muted-foreground mb-1">Receivables ageing</div>
                         <div className="flex flex-wrap gap-1">
                           {wcBuckets(wcAgeing.receivables).map(([label, amt]: any) => (
-                            <Badge key={label} variant={label === "90+" && amt > 0 ? "destructive" : "muted"}>{label}: {Math.round(amt)}</Badge>
+                            <Badge key={label} variant={label === "90+" && amt > 0 ? "destructive-accessible" : "muted-accessible"}>{label}: {Math.round(amt)}</Badge>
                           ))}
                         </div>
                       </div>
@@ -513,7 +565,7 @@ export default function OwnerBudgetPlanPage() {
                         <div className="text-xs uppercase text-muted-foreground mb-1">Payables ageing</div>
                         <div className="flex flex-wrap gap-1">
                           {wcBuckets(wcAgeing.payables).map(([label, amt]: any) => (
-                            <Badge key={label} variant={label === "90+" && amt > 0 ? "destructive" : "muted"}>{label}: {Math.round(amt)}</Badge>
+                            <Badge key={label} variant={label === "90+" && amt > 0 ? "destructive-accessible" : "muted-accessible"}>{label}: {Math.round(amt)}</Badge>
                           ))}
                         </div>
                       </div>
@@ -523,7 +575,7 @@ export default function OwnerBudgetPlanPage() {
                         Highest-risk to collect: {wcAgeing.collectionPriority.slice(0, 3).map((c: any) => `${c.counterparty} (${Math.round(c.amount)}, ${c.bucket})`).join("; ")}
                       </div>
                     )}
-                    <div className="text-xs text-muted-foreground">Data confidence: {wcAgeing.confidence} (manual/import — never auto-verified).</div>
+                    <div className="text-xs text-muted-foreground">Data confidence: {CONFIDENCE_LABEL[wcAgeing.confidence] ?? wcAgeing.confidence} (manual/import — never auto-verified).</div>
                   </div>
                 )}
                 {showWcForm && (
@@ -539,7 +591,7 @@ export default function OwnerBudgetPlanPage() {
 
               {/* 10: Owner override */}
               <section className="border rounded-lg p-4 bg-card">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="font-bold">Owner override</h2>
                   <Button onClick={() => setShowOverride((s) => !s)}>{showOverride ? "Cancel" : "Override this plan"}</Button>
                 </div>
@@ -549,7 +601,7 @@ export default function OwnerBudgetPlanPage() {
                 {showOverride && (
                   <form onSubmit={submitOverride} className="mt-3 space-y-3">
                     <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-xs">
-                      <strong>Risk:</strong> overriding the {mode} plan may accept the risk it was protecting against ({plan?.decisionType}: {plan?.nextBestAction}).
+                      <strong>Risk:</strong> overriding the {mode ? (MODE_LABEL[mode] ?? mode) : mode} plan may accept the risk it was protecting against ({plan?.decisionType ? (DECISION_TYPE_LABEL[plan.decisionType] ?? plan.decisionType) : plan?.decisionType}: {plan?.nextBestAction}).
                     </div>
                     <Input name="reason" label="Override reason (required)" required />
                     <Input name="expectedConsequence" label="Expected consequence (required)" required />
@@ -562,6 +614,6 @@ export default function OwnerBudgetPlanPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

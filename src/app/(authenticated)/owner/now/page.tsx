@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -26,8 +26,53 @@ async function api(path: string) {
   }
 }
 
-const STATUS_VARIANT = (s: string): "success" | "default" | "warning" | "destructive" =>
-  s === "CRITICAL" ? "destructive" : s === "DANGER" ? "warning" : s === "WATCH" ? "default" : "success";
+const STATUS_VARIANT = (s: string): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  s === "CRITICAL" ? "destructive-accessible" : s === "DANGER" ? "warning-accessible" : s === "WATCH" ? "default-accessible" : "success-accessible";
+
+// Verified against AreaStatus (src/domain/owner-guidance/guidance-orchestrator.ts) -- covers all
+// eight area-status badges on this page (businessHealth, cashDangerStatus, ...).
+const STATUS_LABEL: Record<string, string> = {
+  OK: "OK",
+  WATCH: "Watch",
+  DANGER: "Danger",
+  CRITICAL: "Critical",
+};
+// Verified against GuidanceClassification (src/domain/owner-guidance/guidance-classification.ts).
+const CLASSIFICATION_LABEL: Record<string, string> = {
+  GUIDANCE_READY: "Ready",
+  GUIDANCE_READY_WITH_LOW_CONFIDENCE: "Ready — low confidence",
+  GUIDANCE_BLOCKED_MISSING_DATA: "Blocked — missing data",
+  GUIDANCE_BLOCKED_UNSAFE: "Blocked — unsafe",
+  GUIDANCE_REQUIRES_OWNER_DECISION: "Requires owner decision",
+  GUIDANCE_REQUIRES_PROFESSIONAL_REVIEW: "Requires professional review",
+  GUIDANCE_REQUIRES_OUTCOME_CHECK: "Requires outcome check",
+  GUIDANCE_REQUIRES_ROLLBACK: "Requires rollback",
+  GUIDANCE_REQUIRES_REDESIGN: "Requires redesign",
+};
+// Verified against EvidenceConfidenceLevel (src/domain/business-impact/recommendation-business-impact.ts).
+const CONFIDENCE_LEVEL_LABEL: Record<string, string> = {
+  VERIFIED: "Verified",
+  STRONG: "Strong",
+  MODERATE: "Moderate",
+  WEAK: "Weak",
+  INSUFFICIENT: "Insufficient",
+};
+// Verified against ChangeCategory (src/domain/owner-guidance/change-detection.ts) -- a 15-value
+// enum with no existing owner-facing label anywhere; a generic SCREAMING_SNAKE_CASE -> sentence
+// case converter (rather than 15 hand-written entries) since the raw names are already plain
+// English words joined by underscores, not abbreviations needing a real gloss.
+function humanizeChangeCategory(value: string): string {
+  const words = value.toLowerCase().split("_");
+  if (words.length === 0) return value;
+  const rest = words.slice(1).join(" ");
+  return words[0].charAt(0).toUpperCase() + words[0].slice(1) + (rest ? " " + rest : "");
+}
+// step.proofType (owner-now-view.service.ts) is a free-text `string`, not a closed enum, but its
+// real values are all lowercase snake_case tokens ("checklist_completion", "before_after_image")
+// -- same underscore-join shape as ChangeCategory, just lowercase already.
+function humanizeProofType(value: string): string {
+  return value.split("_").join(" ");
+}
 
 /**
  * Owner Now View — the Real-Time 360° guided decision surface (Module 41).
@@ -103,10 +148,10 @@ export default function OwnerNowViewPage() {
 
   if (loading) return <CardDashboardSkeleton sections={4} label="Loading your Owner Now View" />;
   if (error) return (
-    <main style={{ padding: 24 }}>
+    <PageContainer>
       <p style={{ color: "#b91c1c" }}>{error}</p>
       <Button onClick={() => void load(businessId)}>Retry</Button>
-    </main>
+    </PageContainer>
   );
   if (!data) return null;
 
@@ -115,16 +160,18 @@ export default function OwnerNowViewPage() {
   const beginner = data.beginnerExplanation ?? {};
 
   return (
-    <main style={{ padding: 24, maxWidth: 920, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
+    <PageContainer style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <CanonicalCockpitLink from="Now View" />
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <h1 style={{ margin: 0 }}>Owner Now View</h1>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <Link href="/owner/process-intelligence" data-testid="process-intelligence-link">Where the process is breaking</Link>
-          <Link href="/owner/adjudication" data-testid="proof-risk-queue-link">Proof-risk review queue</Link>
-          <Button onClick={() => void load(businessId)}>Refresh</Button>
-        </div>
-      </header>
+      <PageHeader
+        title="Owner Now View"
+        actions={
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Link href="/owner/process-intelligence" data-testid="process-intelligence-link">Where the process is breaking</Link>
+            <Link href="/owner/adjudication" data-testid="proof-risk-queue-link">Proof-risk review queue</Link>
+            <Button onClick={() => void load(businessId)}>Refresh</Button>
+          </div>
+        }
+      />
 
       <BusinessContextSelector businesses={businesses} selectedId={businessId} onChange={onSwitchBusiness} />
       <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
@@ -136,16 +183,16 @@ export default function OwnerNowViewPage() {
       </p>
 
       <section style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Badge variant={STATUS_VARIANT(view.businessHealth)}>Health: {view.businessHealth}</Badge>
-        <Badge variant={STATUS_VARIANT(view.cashDangerStatus)}>Cash: {view.cashDangerStatus}</Badge>
-        <Badge variant={STATUS_VARIANT(view.staffOverloadStatus)}>Staff load: {view.staffOverloadStatus}</Badge>
-        <Badge variant={STATUS_VARIANT(view.ownerOverloadStatus)}>Owner load: {view.ownerOverloadStatus}</Badge>
-        <Badge variant={STATUS_VARIANT(view.qualityFailureStatus)}>Quality: {view.qualityFailureStatus}</Badge>
-        <Badge variant={STATUS_VARIANT(view.customerRetentionStatus)}>Retention: {view.customerRetentionStatus}</Badge>
-        <Badge variant={STATUS_VARIANT(view.supplierInventoryStatus)}>Supply: {view.supplierInventoryStatus}</Badge>
-        <Badge variant={STATUS_VARIANT(view.growthReadinessStatus)}>Growth: {view.growthReadinessStatus}</Badge>
-        <Badge variant="default">{view.classification}</Badge>
-        {view.confidenceCapped && <Badge variant="warning">Low confidence ({view.confidence})</Badge>}
+        <Badge variant={STATUS_VARIANT(view.businessHealth)}>Health: {STATUS_LABEL[view.businessHealth] ?? view.businessHealth}</Badge>
+        <Badge variant={STATUS_VARIANT(view.cashDangerStatus)}>Cash: {STATUS_LABEL[view.cashDangerStatus] ?? view.cashDangerStatus}</Badge>
+        <Badge variant={STATUS_VARIANT(view.staffOverloadStatus)}>Staff load: {STATUS_LABEL[view.staffOverloadStatus] ?? view.staffOverloadStatus}</Badge>
+        <Badge variant={STATUS_VARIANT(view.ownerOverloadStatus)}>Owner load: {STATUS_LABEL[view.ownerOverloadStatus] ?? view.ownerOverloadStatus}</Badge>
+        <Badge variant={STATUS_VARIANT(view.qualityFailureStatus)}>Quality: {STATUS_LABEL[view.qualityFailureStatus] ?? view.qualityFailureStatus}</Badge>
+        <Badge variant={STATUS_VARIANT(view.customerRetentionStatus)}>Retention: {STATUS_LABEL[view.customerRetentionStatus] ?? view.customerRetentionStatus}</Badge>
+        <Badge variant={STATUS_VARIANT(view.supplierInventoryStatus)}>Supply: {STATUS_LABEL[view.supplierInventoryStatus] ?? view.supplierInventoryStatus}</Badge>
+        <Badge variant={STATUS_VARIANT(view.growthReadinessStatus)}>Growth: {STATUS_LABEL[view.growthReadinessStatus] ?? view.growthReadinessStatus}</Badge>
+        <Badge variant="default-accessible">{CLASSIFICATION_LABEL[view.classification] ?? view.classification}</Badge>
+        {view.confidenceCapped && <Badge variant="warning-accessible">Low confidence ({CONFIDENCE_LEVEL_LABEL[view.confidence] ?? view.confidence})</Badge>}
       </section>
 
       {Array.isArray(view.missingDataRequests) && view.missingDataRequests.length > 0 && (
@@ -163,7 +210,7 @@ export default function OwnerNowViewPage() {
             <p style={{ margin: "0 0 6px", fontWeight: 600 }}>{s.exactStep}</p>
             <p style={{ margin: "0 0 4px", color: "#6b7280" }}>Why now: {s.reasonNow}</p>
             <p style={{ margin: "0 0 4px" }}>Who: {s.assignedRole} · Deadline: {s.deadline}</p>
-            <p style={{ margin: "0 0 4px" }}>Proof: {s.proofRequired ? s.proofType : "not required"}</p>
+            <p style={{ margin: "0 0 4px" }}>Proof: {s.proofRequired ? humanizeProofType(s.proofType) : "not required"}</p>
             <p style={{ margin: "0 0 4px" }}>Expected: {s.expectedOutcome}</p>
             <p style={{ margin: 0, color: "#b45309" }}>Rollback if: {s.rollbackTrigger}</p>
           </div>
@@ -180,7 +227,7 @@ export default function OwnerNowViewPage() {
       {Array.isArray(data.whatChanged) && data.whatChanged.length > 0 && (
         <section>
           <h2>What changed since last check</h2>
-          <ul>{data.whatChanged.map((c: any, i: number) => <li key={i}>{c.category}: {c.reason}</li>)}</ul>
+          <ul>{data.whatChanged.map((c: any, i: number) => <li key={i}>{humanizeChangeCategory(c.category)}: {c.reason}</li>)}</ul>
         </section>
       )}
 
@@ -202,6 +249,6 @@ export default function OwnerNowViewPage() {
           {beginner.confidenceNote && <p style={{ color: "#6b7280" }}>{beginner.confidenceNote}</p>}
         </section>
       )}
-    </main>
+    </PageContainer>
   );
 }

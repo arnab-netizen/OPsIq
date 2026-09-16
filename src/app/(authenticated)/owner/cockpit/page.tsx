@@ -28,7 +28,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
 import { useCallback, useEffect, useState } from "react";
-import { Button, CardDashboardSkeleton, EmptyState, PageHeader } from "@/ui/primitives";
+import { Button, CardDashboardSkeleton, EmptyState, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
@@ -90,6 +90,23 @@ async function apiPost(path: string, body: unknown) {
  * classifyOperatorError's more specific classifications (network/permission/validation/timeout).
  */
 const GENERIC_ACTION_DEFAULT = "Couldn't process this action. Please try again.";
+
+// Verified against the ProcessExecutionTask.status literals produced by
+// applyProcessExecutionAction (src/services/owner-mode/process-execution-bridge.service.ts).
+// Lowercase phrases for embedding in "task is now {phrase}." -- `.toLowerCase()` alone does not
+// humanize an underscored value like "OUTCOME_RECORDED" into "outcome recorded".
+const PROCESS_TASK_STATUS_PHRASE: Record<string, string> = {
+  PROPOSED: "proposed",
+  ACKNOWLEDGED: "acknowledged",
+  IN_PROGRESS: "in progress",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+  BLOCKED: "blocked",
+  NEEDS_DATA: "needs data",
+  OUTCOME_RECORDED: "outcome recorded",
+  OUTCOME_VERIFIED: "outcome verified",
+  COMPLETED: "completed",
+};
 
 function describeActionFailure(raw: { error?: unknown } | undefined, fallback: string): string {
   const serverText =
@@ -202,7 +219,8 @@ export default function OwnerCockpitPage() {
       if (!ok) {
         setMessage(describeActionFailure(data, "We couldn't complete this action. Nothing was changed."));
       } else {
-        setMessage(`Action applied — task is now ${String(data.status ?? "updated").toLowerCase()}.`);
+        const rawStatus = String(data.status ?? "updated");
+        setMessage(`Action applied — task is now ${PROCESS_TASK_STATUS_PHRASE[rawStatus] ?? rawStatus.toLowerCase()}.`);
         await load(activeBusinessId);
       }
     } catch (e) {
@@ -276,20 +294,20 @@ export default function OwnerCockpitPage() {
     }
   }, [load, activeBusinessId]);
 
-  if (contextLoading) return <main className="p-6"><CardDashboardSkeleton label="Loading your business" sections={2} /></main>;
+  if (contextLoading) return <PageContainer narrow><CardDashboardSkeleton label="Loading your business" sections={2} /></PageContainer>;
 
   // No business exists yet for this workspace. Never render a diagnosis/recommendation built
   // from workspace-wide fallback data for a business that doesn't exist — see the effect above.
   if (!needsBusinessRecovery && businesses.length === 0) {
     return (
-      <main className="flex max-w-2xl flex-col gap-6 p-6">
+      <PageContainer narrow className="flex flex-col gap-6">
         <PageHeader title="Home" description="How your business is doing, what needs your attention, and what to do next." />
         <EmptyState
           title="Set up your business to get your first assessment"
           description="OpsIQ needs at least one business on file before it can show you cash health, priorities, or recommendations. Add your business to get started."
           primaryAction={{ label: "Set up your business", href: "/owner/data" }}
         />
-      </main>
+      </PageContainer>
     );
   }
 
@@ -303,7 +321,7 @@ export default function OwnerCockpitPage() {
   // keeps it mounted (and its own fetch running) across that transition so all five calls this
   // page depends on genuinely overlap on the wire.
   return (
-    <main className="flex max-w-2xl flex-col gap-6 p-6">
+    <PageContainer narrow className="flex flex-col gap-6">
       <PageHeader
         title="Home"
         description="How your business is doing, what needs your attention, and what to do next."
@@ -352,6 +370,6 @@ export default function OwnerCockpitPage() {
           />
         </>
       )}
-    </main>
+    </PageContainer>
   );
 }

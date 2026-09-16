@@ -583,7 +583,9 @@ export function SidebarNav({
             </Badge>
           )}
         </span>
-        {item.blurb && <span className="pl-7 text-xs text-muted-foreground">{item.blurb}</span>}
+        {item.blurb && (
+          <span className={`text-xs text-muted-foreground ${item.icon ? "pl-7" : ""}`}>{item.blurb}</span>
+        )}
       </Link>
     );
   };

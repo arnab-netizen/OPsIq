@@ -12,9 +12,9 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Badge, Button, DetailPageSkeleton } from "@/ui/primitives";
+import { Badge, Button, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
-import { ProofStatus, ProofType } from "@/domain/execution/proof";
+import { ProofStatus, ProofType, ProofRiskLevel } from "@/domain/execution/proof";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface ProofDetail {
@@ -60,18 +60,22 @@ interface TaskDetail {
   }>;
 }
 
-const STATUS_VARIANT: Record<string, "success" | "default" | "warning" | "destructive"> = {
-  [DelegatedTaskStatus.APPROVED_COMPLETE]: "success",
-  [DelegatedTaskStatus.IN_PROGRESS]: "default",
-  [DelegatedTaskStatus.PROOF_REQUIRED]: "warning",
-  [DelegatedTaskStatus.PROOF_SUBMITTED]: "warning",
-  [DelegatedTaskStatus.BLOCKED]: "destructive",
-  [DelegatedTaskStatus.ESCALATED]: "destructive",
-  [DelegatedTaskStatus.REJECTED_INCOMPLETE]: "destructive",
-  [DelegatedTaskStatus.CANCELLED]: "destructive",
-  [DelegatedTaskStatus.EXPIRED]: "destructive",
-  [DelegatedTaskStatus.DISPUTED]: "warning",
-  [DelegatedTaskStatus.COMPLETED_PENDING_REVIEW]: "warning",
+// Presentation-only: "-accessible" variants keep the exact same status ->
+// color mapping as before, only the badge text color changes to the
+// AA-contrast-checked token for that same tinted fill (see badge.tsx's own
+// PR #385 readable-text fix comment).
+const STATUS_VARIANT: Record<string, "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible"> = {
+  [DelegatedTaskStatus.APPROVED_COMPLETE]: "success-accessible",
+  [DelegatedTaskStatus.IN_PROGRESS]: "default-accessible",
+  [DelegatedTaskStatus.PROOF_REQUIRED]: "warning-accessible",
+  [DelegatedTaskStatus.PROOF_SUBMITTED]: "warning-accessible",
+  [DelegatedTaskStatus.BLOCKED]: "destructive-accessible",
+  [DelegatedTaskStatus.ESCALATED]: "destructive-accessible",
+  [DelegatedTaskStatus.REJECTED_INCOMPLETE]: "destructive-accessible",
+  [DelegatedTaskStatus.CANCELLED]: "destructive-accessible",
+  [DelegatedTaskStatus.EXPIRED]: "destructive-accessible",
+  [DelegatedTaskStatus.DISPUTED]: "warning-accessible",
+  [DelegatedTaskStatus.COMPLETED_PENDING_REVIEW]: "warning-accessible",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -105,6 +109,31 @@ const PROOF_STATUS_LABELS: Record<string, string> = {
   [ProofStatus.RESUBMISSION_REQUIRED]: "Resubmission Required",
   [ProofStatus.DISPUTED]: "Disputed",
   [ProofStatus.OVERRIDDEN_NOT_VERIFIED]: "Override (Not Verified)",
+};
+
+const PROOF_TYPE_LABEL: Record<string, string> = {
+  [ProofType.PHOTO]: "Photo",
+  [ProofType.SCREENSHOT]: "Screenshot",
+  [ProofType.BEFORE_AFTER_IMAGE]: "Before/after image",
+  [ProofType.CALL_LOG]: "Call log",
+  [ProofType.MESSAGE_SCREENSHOT]: "Message screenshot",
+  [ProofType.CUSTOMER_RESPONSE_TAG]: "Customer response tag",
+  [ProofType.CSV_UPLOAD]: "CSV upload",
+  [ProofType.INVOICE]: "Invoice",
+  [ProofType.PAYMENT_CONFIRMATION]: "Payment confirmation",
+  [ProofType.DELIVERY_PROOF]: "Delivery proof",
+  [ProofType.PICKUP_PROOF]: "Pickup proof",
+  [ProofType.MANAGER_CONFIRMATION]: "Manager confirmation",
+  [ProofType.CUSTOMER_CONFIRMATION]: "Customer confirmation",
+  [ProofType.SHORT_NOTE]: "Short note",
+  [ProofType.CHECKLIST_COMPLETION]: "Checklist completion",
+  [ProofType.DOCUMENT]: "Document",
+};
+
+const RISK_LEVEL_LABEL: Record<string, string> = {
+  [ProofRiskLevel.LOW]: "Low",
+  [ProofRiskLevel.MEDIUM]: "Medium",
+  [ProofRiskLevel.HIGH]: "High",
 };
 
 async function apiFetch(path: string) {
@@ -216,7 +245,7 @@ export default function TaskDetailPage() {
         to: reviewTo,
         reason: reviewReason || undefined,
       });
-      setActionSuccess(`Proof review outcome: ${reviewTo}.`);
+      setActionSuccess(`Proof review outcome: ${PROOF_STATUS_LABELS[reviewTo] ?? reviewTo}.`);
       setReviewTo("");
       setReviewReason("");
       await load();
@@ -228,8 +257,8 @@ export default function TaskDetailPage() {
   }
 
   if (loading) return <DetailPageSkeleton label="Loading" />;
-  if (error) return <div className="px-4 py-8 text-destructive text-sm">{error}</div>;
-  if (!task) return <div className="px-4 py-8 text-muted-foreground text-sm">Task not found.</div>;
+  if (error) return <PageContainer><p className="text-destructive text-sm">{error}</p></PageContainer>;
+  if (!task) return <PageContainer><p className="text-muted-foreground text-sm">Task not found.</p></PageContainer>;
 
   const isTerminal = [
     DelegatedTaskStatus.APPROVED_COMPLETE,
@@ -244,18 +273,20 @@ export default function TaskDetailPage() {
     [ProofStatus.SUBMITTED, ProofStatus.NEEDS_HUMAN_REVIEW, ProofStatus.AI_PRECHECK_PASSED, ProofStatus.AI_PRECHECK_FAILED].includes(task.proof.status as ProofStatus);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <PageContainer narrow className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <Link href="/owner/tasks" className="text-sm text-muted-foreground hover:underline mb-2 block">
-            ← Tasks
-          </Link>
-          <h1 className="text-2xl font-semibold">{task.title}</h1>
-        </div>
-        <Badge variant={STATUS_VARIANT[task.status] ?? "default"}>
-          {STATUS_LABELS[task.status] ?? task.status}
-        </Badge>
+      <div>
+        <Link href="/owner/tasks" className="text-sm text-muted-foreground hover:underline mb-2 block">
+          ← Tasks
+        </Link>
+        <PageHeader
+          title={task.title}
+          actions={
+            <Badge variant={STATUS_VARIANT[task.status] ?? "default-accessible"}>
+              {STATUS_LABELS[task.status] ?? task.status}
+            </Badge>
+          }
+        />
       </div>
 
       {/* Feedback */}
@@ -285,14 +316,14 @@ export default function TaskDetailPage() {
           <h2 className="font-medium">Proof</h2>
           {task.proofRequirement && (
             <div className="text-muted-foreground">
-              Type: <span className="text-foreground">{task.proofRequirement.proofType}</span>
-              {task.proofRequirement.riskLevel && <> · Risk: <span className="text-foreground">{task.proofRequirement.riskLevel}</span></>}
+              Type: <span className="text-foreground">{PROOF_TYPE_LABEL[task.proofRequirement.proofType] ?? task.proofRequirement.proofType}</span>
+              {task.proofRequirement.riskLevel && <> · Risk: <span className="text-foreground">{RISK_LEVEL_LABEL[task.proofRequirement.riskLevel] ?? task.proofRequirement.riskLevel}</span></>}
             </div>
           )}
           {task.proof ? (
             <div className="space-y-1">
               <div>
-                Status: <Badge variant={task.proof.status === ProofStatus.ACCEPTED ? "success" : task.proof.duplicateFlagged ? "destructive" : "default"}>
+                Status: <Badge variant={task.proof.status === ProofStatus.ACCEPTED ? "success-accessible" : task.proof.duplicateFlagged ? "destructive-accessible" : "default-accessible"}>
                   {PROOF_STATUS_LABELS[task.proof.status] ?? task.proof.status}
                 </Badge>
                 {task.proof.duplicateFlagged && <span className="ml-2 text-destructive text-xs font-medium">DUPLICATE</span>}
@@ -317,7 +348,7 @@ export default function TaskDetailPage() {
               >
                 <option value="">Select proof type…</option>
                 {Object.values(ProofType).map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>{PROOF_TYPE_LABEL[t] ?? t}</option>
                 ))}
               </select>
               <input
@@ -423,6 +454,6 @@ export default function TaskDetailPage() {
           </ol>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

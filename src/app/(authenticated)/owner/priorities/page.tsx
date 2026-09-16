@@ -21,7 +21,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, CardDashboardSkeleton, EmptyState, ErrorState } from "@/ui/primitives";
+import { Badge, CardDashboardSkeleton, EmptyState, ErrorState, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -234,15 +234,12 @@ export default function OwnerPrioritiesPage() {
     };
   }, [activeBusinessId]);
 
-  if (loading) return <main className="p-6"><CardDashboardSkeleton label="Loading your priorities" sections={2} /></main>;
-  if (error) return <main className="p-6"><ErrorState message={error} onRetry={() => window.location.reload()} /></main>;
+  if (loading) return <PageContainer narrow><CardDashboardSkeleton label="Loading your priorities" sections={2} /></PageContainer>;
+  if (error) return <PageContainer narrow><ErrorState message={error} onRetry={() => window.location.reload()} /></PageContainer>;
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6" data-testid="owner-priorities">
-      <div>
-        <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Priorities</h1>
-        <p className="mt-1 text-sm text-muted-foreground">What needs your attention, in one place.</p>
-      </div>
+    <PageContainer narrow className="flex flex-col gap-6" data-testid="owner-priorities">
+      <PageHeader title="Priorities" description="What needs your attention, in one place." />
 
       {items && items.length === 0 ? (
         <EmptyState
@@ -283,6 +280,6 @@ export default function OwnerPrioritiesPage() {
           </p>
         </>
       )}
-    </main>
+    </PageContainer>
   );
 }

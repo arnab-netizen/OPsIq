@@ -165,6 +165,24 @@ describe("InventoryPage", () => {
     expect(title).toBeTruthy();
   });
 
+  it("gives every Add Stock Item field an accessible label (G1)", async () => {
+    const { findByText, getByLabelText } = renderPage();
+    await findByText("Inventory");
+    await waitFor(async () => {
+      const btn = await findByText("+ Add Item");
+      fireEvent.click(btn);
+    });
+    await findByText("Add Stock Item");
+    expect(getByLabelText("SKU")).toBeTruthy();
+    expect(getByLabelText("Name")).toBeTruthy();
+    expect(getByLabelText("Unit")).toBeTruthy();
+    expect(getByLabelText("Current Qty")).toBeTruthy();
+    expect(getByLabelText("Reorder Point")).toBeTruthy();
+    expect(getByLabelText("Safety Stock")).toBeTruthy();
+    expect(getByLabelText("Lead Time (days)")).toBeTruthy();
+    expect(getByLabelText("Daily Usage")).toBeTruthy();
+  });
+
   it("opens edit modal when Edit is clicked", async () => {
     const { findByText, findAllByText } = renderPage();
     await findByText("Widget A");

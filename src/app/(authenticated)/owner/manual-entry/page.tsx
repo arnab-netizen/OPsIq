@@ -9,7 +9,7 @@
  */
 /* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the intentional owner-page pattern */
 import { useCallback, useEffect, useState } from "react";
-import { Button, FormSkeleton } from "@/ui/primitives";
+import { Button, FormSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import {
   MANUAL_ENTRY_SECTIONS, MANUAL_ENTRY_WARNING, MANUAL_ENTRY_SAFE_COPY,
@@ -64,34 +64,34 @@ function SectionForm({ section, businessId }: { section: ManualEntrySection; bus
 
   return (
     <div data-testid={`manual-entry-section-${section.id}`} className="flex flex-col gap-3">
-      <p className="text-sm text-gray-500">{section.helper}</p>
+      <p className="text-sm text-muted-foreground">{section.helper}</p>
       {section.fields.map((f) => (
-        <label key={f.key} className="flex flex-col gap-1 text-sm text-gray-700">
+        <label key={f.key} className="flex flex-col gap-1 text-sm text-foreground">
           <span>{f.label}{f.required ? " *" : ""}</span>
           {f.kind === "text" ? (
             <textarea data-testid={`manual-entry-${f.key}-${section.id}`} rows={3} placeholder={f.placeholder}
-              className="w-full rounded-md border border-gray-300 p-2 text-sm" value={typeof values[f.key] === "string" ? (values[f.key] as string) : ""}
+              className="w-full rounded-md border border-border p-2 text-sm" value={typeof values[f.key] === "string" ? (values[f.key] as string) : ""}
               onChange={(e) => setField(f.key, e.target.value)} />
           ) : f.kind === "amount" ? (
             <input type="number" min={0} data-testid={`manual-entry-${f.key}-${section.id}`} placeholder={f.placeholder}
-              className="w-full rounded-md border border-gray-300 p-2 text-sm sm:w-60"
+              className="w-full rounded-md border border-border p-2 text-sm sm:w-60"
               value={typeof values[f.key] === "number" ? String(values[f.key]) : ""}
               onChange={(e) => setField(f.key, e.target.value === "" ? null : Number(e.target.value))} />
           ) : (
             <input type="text" data-testid={`manual-entry-${f.key}-${section.id}`} placeholder={f.placeholder}
-              className="w-full rounded-md border border-gray-300 p-2 text-sm"
+              className="w-full rounded-md border border-border p-2 text-sm"
               value={typeof values[f.key] === "string" ? (values[f.key] as string) : ""}
               onChange={(e) => setField(f.key, e.target.value)} />
           )}
         </label>
       ))}
       {errors.length > 0 && (
-        <ul data-testid={`manual-entry-error-${section.id}`} className="rounded-md bg-red-50 p-2 text-sm text-red-700">
+        <ul data-testid={`manual-entry-error-${section.id}`} className="rounded-md bg-destructive/10 p-2 text-sm text-[var(--destructive-text)]">
           {errors.map((e, i) => <li key={i}>{e}</li>)}
         </ul>
       )}
       {saved && (
-        <p data-testid={`manual-entry-saved-${section.id}`} className="rounded-md bg-green-50 p-2 text-sm text-green-700">
+        <p data-testid={`manual-entry-saved-${section.id}`} className="rounded-md bg-success/10 p-2 text-sm text-[var(--success-text)]">
           Saved. OpsIQ will route this through your governed cockpit — material actions still need your approval and evidence.
         </p>
       )}
@@ -125,23 +125,23 @@ export default function OwnerManualEntryPage() {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  if (loading) return <main className="mx-auto max-w-3xl p-4 sm:p-6"><FormSkeleton label="Loading" fields={5} /></main>;
+  if (loading) return <PageContainer narrow><FormSkeleton label="Loading" fields={5} /></PageContainer>;
   if (error) return (
-    <main className="p-6">
-      <p data-testid="manual-entry-error" className="text-red-700">{error}</p>
+    <PageContainer narrow>
+      <p data-testid="manual-entry-error" className="text-[var(--destructive-text)]">{error}</p>
       <Button onClick={() => void load()}>Retry</Button>
-    </main>
+    </PageContainer>
   );
 
   const essential = MANUAL_ENTRY_SECTIONS.filter((s) => s.essential);
   const optional = MANUAL_ENTRY_SECTIONS.filter((s) => !s.essential);
 
   return (
-    <main data-testid="manual-entry-page" className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Log business data</h1>
-        <p className="text-sm text-gray-500">Enter the operating facts OpsIQ needs. One thing at a time is fine.</p>
-      </header>
+    <PageContainer narrow data-testid="manual-entry-page" className="flex flex-col gap-6">
+      <PageHeader
+        title="Log business data"
+        description="Enter the operating facts OpsIQ needs. One thing at a time is fine."
+      />
 
       {/* Mandatory privacy warning + safe copy — always visible before submission. */}
       <section data-testid="manual-entry-warning" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
@@ -152,7 +152,7 @@ export default function OwnerManualEntryPage() {
       </section>
 
       {businesses.length === 0 ? (
-        <p data-testid="manual-entry-no-business" className="rounded-md bg-gray-50 p-3 text-sm text-gray-600">
+        <p data-testid="manual-entry-no-business" className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
           Create a business first (use “+ New business” on an owner page), then come back to log data.
         </p>
       ) : (
@@ -166,7 +166,7 @@ export default function OwnerManualEntryPage() {
           {businessId && (
             <>
               {essential.map((s) => (
-                <section key={s.id} className="rounded-lg border border-gray-200 p-4">
+                <section key={s.id} className="rounded-lg border border-border p-4">
                   <h2 className="mb-2 text-lg font-medium">{s.title}</h2>
                   <SectionForm section={s} businessId={businessId} />
                 </section>
@@ -174,7 +174,7 @@ export default function OwnerManualEntryPage() {
 
               {/* Optional sections collapsed by default (progressive disclosure). */}
               {optional.map((s) => (
-                <details key={s.id} data-testid={`manual-entry-optional-${s.id}`} className="rounded-lg border border-gray-200 p-4">
+                <details key={s.id} data-testid={`manual-entry-optional-${s.id}`} className="rounded-lg border border-border p-4">
                   <summary className="cursor-pointer text-lg font-medium">{s.title}</summary>
                   <div className="mt-3">
                     <SectionForm section={s} businessId={businessId} />
@@ -184,13 +184,13 @@ export default function OwnerManualEntryPage() {
             </>
           )}
 
-          <div data-testid="manual-entry-success" className="rounded-md bg-gray-50 p-3 text-sm text-gray-700">
-            When you’re done, review your next step in the cockpit.{" "}
-            <a data-testid="manual-entry-cockpit-link" href="/owner/cockpit" className="font-medium underline">Go to your cockpit</a>.
+          <div data-testid="manual-entry-success" className="rounded-md bg-muted p-3 text-sm text-foreground">
+            When you’re done, review your next step on Home.{" "}
+            <a data-testid="manual-entry-cockpit-link" href="/owner/cockpit" className="font-medium underline">Go to Home</a>.
             OpsIQ won’t contact anyone or take any external action.
           </div>
         </>
       )}
-    </main>
+    </PageContainer>
   );
 }

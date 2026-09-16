@@ -11,7 +11,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-mount is the intentional pattern */
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Modal, Input, Select, DetailPageSkeleton } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type TargetType = "PROFIT" | "REVENUE" | "NET_WORTH" | "MULTIPLE";
@@ -53,10 +53,21 @@ const TARGET_LABELS: Record<TargetType, string> = {
   MULTIPLE: "Business Multiple",
 };
 
-const STATUS_VARIANT: Record<GoalStatus, "default" | "success" | "warning" | "destructive"> = {
-  ACTIVE: "default",
-  ACHIEVED: "success",
-  REVISED: "warning",
+const STATUS_VARIANT: Record<GoalStatus, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible"> = {
+  ACTIVE: "default-accessible",
+  ACHIEVED: "success-accessible",
+  REVISED: "warning-accessible",
+};
+const STATUS_LABEL: Record<GoalStatus, string> = {
+  ACTIVE: "Active",
+  ACHIEVED: "Achieved",
+  REVISED: "Revised",
+};
+// Verified against TrajectoryConfidence in src/services/owner-strategy/goal-trajectory.service.ts.
+const CONFIDENCE_LABEL: Record<string, string> = {
+  HIGH: "High",
+  MEDIUM: "Medium",
+  LOW: "Low",
 };
 
 const TARGET_TYPES: TargetType[] = ["PROFIT", "REVENUE", "NET_WORTH", "MULTIPLE"];
@@ -160,12 +171,16 @@ export default function GoalsPage() {
   const traj = trajectoryResult?.trajectory;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8" data-testid="goals-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Financial Goal</h1>
-        <Button size="sm" onClick={() => { setForm(EMPTY_FORM); setFormError(null); setModalOpen(true); }}>
-          {goal ? "Update Goal" : "+ Set Goal"}
-        </Button>
+    <PageContainer data-testid="goals-page">
+      <div className="mb-6">
+        <PageHeader
+          title="Financial Goal"
+          actions={
+            <Button size="sm" onClick={() => { setForm(EMPTY_FORM); setFormError(null); setModalOpen(true); }}>
+              {goal ? "Update Goal" : "+ Set Goal"}
+            </Button>
+          }
+        />
       </div>
 
       {loading && <DetailPageSkeleton label="Loading financial goal" />}
@@ -196,7 +211,7 @@ export default function GoalsPage() {
                   </p>
                 )}
               </div>
-              <Badge variant={STATUS_VARIANT[goal.status]}>{goal.status}</Badge>
+              <Badge variant={STATUS_VARIANT[goal.status]}>{STATUS_LABEL[goal.status]}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
               Target date: <span className="font-medium text-foreground">{formatDate(goal.targetDate)}</span>
@@ -221,14 +236,14 @@ export default function GoalsPage() {
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">On track</p>
                   <p className="text-lg font-semibold">
-                    <Badge variant={traj.onTrack ? "success" : "warning"}>
+                    <Badge variant={traj.onTrack ? "success-accessible" : "warning-accessible"}>
                       {traj.onTrack ? "Yes" : "No"}
                     </Badge>
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Confidence</p>
-                  <p className="text-lg font-semibold capitalize">{traj.confidence}</p>
+                  <p className="text-lg font-semibold">{CONFIDENCE_LABEL[traj.confidence] ?? traj.confidence}</p>
                 </div>
               </div>
               {traj.projectedAchievementDate && (
@@ -277,10 +292,11 @@ export default function GoalsPage() {
             </p>
           )}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="goal-target-type" className="block text-sm font-medium mb-1">
               Goal type <span className="text-destructive">*</span>
             </label>
             <Select
+              id="goal-target-type"
               value={form.targetType}
               onChange={(e) => setField("targetType", e.target.value as TargetType)}
               options={TARGET_TYPES.map((t) => ({ value: t, label: TARGET_LABELS[t] }))}
@@ -289,10 +305,11 @@ export default function GoalsPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label htmlFor="goal-target-amount" className="block text-sm font-medium mb-1">
                 Target amount <span className="text-destructive">*</span>
               </label>
               <Input
+                id="goal-target-amount"
                 type="number"
                 min={0}
                 value={form.targetAmount}
@@ -301,8 +318,9 @@ export default function GoalsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Currency</label>
+              <label htmlFor="goal-target-currency" className="block text-sm font-medium mb-1">Currency</label>
               <Input
+                id="goal-target-currency"
                 value={form.targetCurrency}
                 onChange={(e) => setField("targetCurrency", e.target.value.toUpperCase().slice(0, 3))}
                 placeholder="USD"
@@ -311,18 +329,20 @@ export default function GoalsPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor="goal-target-date" className="block text-sm font-medium mb-1">
               Target date <span className="text-destructive">*</span>
             </label>
             <Input
+              id="goal-target-date"
               type="date"
               value={form.targetDate}
               onChange={(e) => setField("targetDate", e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Baseline amount (optional)</label>
+            <label htmlFor="goal-baseline-amount" className="block text-sm font-medium mb-1">Baseline amount (optional)</label>
             <Input
+              id="goal-baseline-amount"
               type="number"
               min={0}
               value={form.baselineAmount}
@@ -332,6 +352,6 @@ export default function GoalsPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

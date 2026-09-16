@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/ui/primitives/button";
-import { EmptyState } from "@/ui/primitives/states";
+import { EmptyState, LoadingState } from "@/ui/primitives/states";
 import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
+import { Select } from "@/ui/primitives/select";
+import { PageHeader } from "@/ui/primitives/page-header";
+import { PageContainer } from "@/ui/primitives/page-container";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -19,6 +22,17 @@ async function apiFetch(path: string, init?: RequestInit) {
 }
 
 const CHANNELS = ["Email", "Social", "Search", "Display", "Referral", "Event", "Direct", "Other"];
+const STATUSES = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"] as const;
+// Presentation-only sentence-case mapping. The underlying stored/submitted
+// value is always the raw enum in STATUSES — this only changes what text is
+// shown to the owner, never what is saved or compared.
+const STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Draft",
+  ACTIVE: "Active",
+  PAUSED: "Paused",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
 const STATUS_COLOR: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-700",
   ACTIVE: "bg-green-100 text-green-700",
@@ -32,6 +46,11 @@ export default function CampaignsPage() {
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Presentation-only: prevents rendering EmptyState before the business
+  // list and its campaigns have actually finished loading (see G8 in the
+  // 14 Sep 2026 audit — this route previously showed a false "No campaigns
+  // yet" flash while data was still in flight).
+  const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editCampaign, setEditCampaign] = useState<any | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -42,22 +61,48 @@ export default function CampaignsPage() {
       const data = await apiFetch("/api/owner/recovery/businesses");
       const list = Array.isArray(data) ? data : data.businesses ?? [];
       setBusinesses(list);
-      if (list.length > 0) setBusinessId(list[0].id);
+      if (list.length > 0) {
+        setBusinessId(list[0].id);
+      } else {
+        // No business to load campaigns for — nothing else will resolve loading.
+        setLoading(false);
+      }
     } catch (e: any) {
       setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
+      setLoading(false);
     }
   }, []);
 
+  // Presentation-only: guards against two ordering bugs when the owner switches
+  // business via BusinessContextSelector — (a) the previous business's rows
+  // staying on screen (still tagged in the UI as belonging to whichever
+  // business the selector now shows) while the new business's request is in
+  // flight, and (b) an in-flight request for a business the owner has since
+  // switched away from resolving late and clobbering the newer selection's
+  // rows. requestIdRef makes each loadCampaigns call ignore any response that
+  // isn't for the most recently started request. No endpoint/param/payload
+  // change — this is purely which local render each response is allowed to
+  // produce.
+  const requestIdRef = useRef(0);
   const loadCampaigns = useCallback(async (bid: string) => {
+    const requestId = ++requestIdRef.current;
+    setCampaigns([]);
+    setLoading(true);
     try {
       const data = await apiFetch(`/api/owner/marketing/campaigns?businessId=${bid}`);
+      if (requestIdRef.current !== requestId) return;
       setCampaigns(data.campaigns ?? []);
     } catch (e: any) {
+      if (requestIdRef.current !== requestId) return;
       setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
+    } finally {
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-existing fetch-on-mount pattern used throughout the app; unrelated to this cosmetic pass, not refactored here to avoid a data-loading behavior change.
   useEffect(() => { loadBusinesses(); }, [loadBusinesses]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- same pre-existing pattern as above.
   useEffect(() => { if (businessId) loadCampaigns(businessId); }, [businessId, loadCampaigns]);
 
   const openCreate = () => {
@@ -126,24 +171,30 @@ export default function CampaignsPage() {
   };
 
   return (
-    <div className="p-6" data-testid="campaigns-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Marketing Campaigns</h1>
-        <div className="flex gap-3 items-center">
-          <BusinessContextSelector
-            businesses={businesses}
-            selectedId={businessId}
-            onChange={(id) => setBusinessId(id)}
-          />
-          <Button onClick={openCreate}>+ New Campaign</Button>
-        </div>
+    <PageContainer data-testid="campaigns-page">
+      <div className="mb-6">
+        <PageHeader
+          title="Marketing Campaigns"
+          actions={
+            <>
+              <BusinessContextSelector
+                businesses={businesses}
+                selectedId={businessId}
+                onChange={(id) => setBusinessId(id)}
+              />
+              <Button onClick={openCreate}>+ New Campaign</Button>
+            </>
+          }
+        />
       </div>
 
       {error && (
         <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded text-sm">{error}</div>
       )}
 
-      {campaigns.length === 0 ? (
+      {loading ? (
+        <LoadingState message="Loading campaigns…" />
+      ) : campaigns.length === 0 ? (
         <EmptyState
           title="No campaigns yet"
           description="Create your first marketing campaign to start tracking spend and results."
@@ -171,7 +222,7 @@ export default function CampaignsPage() {
                   <td className="px-4 py-2">{c.channel}</td>
                   <td className="px-4 py-2">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLOR[c.status] ?? ""}`}>
-                      {c.status}
+                      {STATUS_LABEL[c.status] ?? c.status}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right">{c.spend != null ? `$${Number(c.spend).toLocaleString()}` : "—"}</td>
@@ -195,28 +246,54 @@ export default function CampaignsPage() {
 
       <Modal isOpen={isModalOpen} onClose={() => { setShowCreate(false); setEditCampaign(null); }} title={modalTitle}>
         <div className="space-y-3">
-          <Input placeholder="Campaign name" value={form.name ?? ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          <select
-            className="w-full border rounded px-3 py-2 text-sm"
+          <Input
+            label="Campaign name"
+            value={form.name ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
+          <Select
+            label="Channel"
+            options={CHANNELS.map((ch) => ({ value: ch, label: ch }))}
             value={form.channel ?? CHANNELS[0]}
             onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))}
-          >
-            {CHANNELS.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
-          </select>
-          <select
-            className="w-full border rounded px-3 py-2 text-sm"
+          />
+          <Select
+            label="Status"
+            options={STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s]! }))}
             value={form.status ?? "DRAFT"}
             onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-          >
-            {["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"].map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <Input type="number" placeholder="Budget (optional)" value={form.budget ?? ""} onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))} />
-          <Input type="number" placeholder="Spend" value={form.spend ?? ""} onChange={(e) => setForm((f) => ({ ...f, spend: e.target.value }))} />
-          <Input type="number" placeholder="Leads" value={form.leads ?? ""} onChange={(e) => setForm((f) => ({ ...f, leads: e.target.value }))} />
-          <Input type="number" placeholder="Conversions" value={form.conversions ?? ""} onChange={(e) => setForm((f) => ({ ...f, conversions: e.target.value }))} />
-          <Input type="number" placeholder="Revenue" value={form.revenue ?? ""} onChange={(e) => setForm((f) => ({ ...f, revenue: e.target.value }))} />
+          />
+          <Input
+            type="number"
+            label="Budget"
+            hint="Optional"
+            value={form.budget ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))}
+          />
+          <Input
+            type="number"
+            label="Spend"
+            value={form.spend ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, spend: e.target.value }))}
+          />
+          <Input
+            type="number"
+            label="Leads"
+            value={form.leads ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, leads: e.target.value }))}
+          />
+          <Input
+            type="number"
+            label="Conversions"
+            value={form.conversions ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, conversions: e.target.value }))}
+          />
+          <Input
+            type="number"
+            label="Revenue"
+            value={form.revenue ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, revenue: e.target.value }))}
+          />
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={() => { setShowCreate(false); setEditCampaign(null); }}>Cancel</Button>
@@ -225,6 +302,6 @@ export default function CampaignsPage() {
           </Button>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

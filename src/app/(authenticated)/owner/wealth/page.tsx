@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- command-center payload is the service contract (typed server-side in WealthCommandCenter); rendered read-only here. load() on mount is intentional. */
@@ -25,8 +25,36 @@ async function api(path: string) {
   }
 }
 
-const MOVE_VARIANT = (d: string): "success" | "default" | "warning" | "destructive" =>
-  d === "BLOCKED" ? "destructive" : d === "VALIDATE_FIRST" ? "warning" : d === "CHOOSE_ALTERNATIVE" ? "default" : "success";
+const MOVE_VARIANT = (d: string): "success-accessible" | "default-accessible" | "warning-accessible" | "destructive-accessible" =>
+  d === "BLOCKED" ? "destructive-accessible" : d === "VALIDATE_FIRST" ? "warning-accessible" : d === "CHOOSE_ALTERNATIVE" ? "default-accessible" : "success-accessible";
+
+// Verified against NextMoveDecision (src/domain/owner-strategy/command-center.types.ts).
+const MOVE_LABEL: Record<string, string> = {
+  DO_THIS: "Do this",
+  CHOOSE_ALTERNATIVE: "Choose an alternative",
+  VALIDATE_FIRST: "Validate first",
+  BLOCKED: "Blocked",
+};
+// Verified against WealthCommandCenter.outcomeReviewState (command-center.types.ts).
+const OUTCOME_REVIEW_LABEL: Record<string, string> = {
+  no_actions_yet: "No actions yet",
+  pending_review: "Pending review",
+  all_reviewed: "All reviewed",
+};
+// Verified against CashSafetyOutcome (src/domain/owner-finance/cash-safety-gate.ts).
+const CASH_SAFETY_LABEL: Record<string, string> = {
+  ALLOWED: "Allowed",
+  BLOCKED_CASH_UNSAFE: "Blocked — cash unsafe",
+};
+// Verified against SpendDecisionType (src/domain/owner-budget/types.ts).
+const SPEND_DECISION_LABEL: Record<string, string> = {
+  AUTO_LOG: "Auto-logged",
+  REQUIRE_PROOF: "Requires proof",
+  REQUIRE_OWNER_APPROVAL: "Requires owner approval",
+  HOLD: "On hold",
+  BLOCK: "Blocked",
+  INVESTIGATE: "Needs investigation",
+};
 
 /**
  * Owner Wealth Command Center — the owner-facing surface for the wealth-loop
@@ -62,10 +90,10 @@ export default function OwnerWealthPage() {
   if (loading) return <CardDashboardSkeleton sections={4} label="Loading your Wealth Command Center" />;
   if (error)
     return (
-      <main style={{ padding: 24 }}>
+      <PageContainer>
         <p style={{ color: "#b91c1c" }}>{error}</p>
         <Button onClick={() => void load(businessId)}>Retry</Button>
-      </main>
+      </PageContainer>
     );
   if (!data) return null;
 
@@ -76,10 +104,12 @@ export default function OwnerWealthPage() {
   const businesses: any[] = data.businesses ?? [];
 
   return (
-    <main style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700 }}>Wealth Command Center</h1>
-        <Link href="/owner"><Button>Command Center</Button></Link>
+    <PageContainer>
+      <div style={{ marginBottom: 16 }}>
+        <PageHeader
+          title="Wealth Command Center"
+          actions={<Link href="/owner"><Button>Command Center</Button></Link>}
+        />
       </div>
 
       <div style={{ marginBottom: 16 }}>
@@ -100,7 +130,7 @@ export default function OwnerWealthPage() {
       <section style={{ border: "1px solid var(--border, #e5e7eb)", borderRadius: 10, padding: 16, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
           <span style={{ fontSize: 13, color: "#6b7280" }}>Next best move</span>
-          <Badge variant={MOVE_VARIANT(move.decision ?? "")}>{move.decision ?? "—"}</Badge>
+          <Badge variant={MOVE_VARIANT(move.decision ?? "")}>{(move.decision && MOVE_LABEL[move.decision]) ?? move.decision ?? "—"}</Badge>
         </div>
         <p style={{ fontSize: 18, fontWeight: 600 }}>{move.actionLabel ?? "No action proposed"}</p>
         {move.reason && <p style={{ fontSize: 14, color: "#4b5563", marginTop: 4 }}>{move.reason}</p>}
@@ -108,10 +138,10 @@ export default function OwnerWealthPage() {
 
       {/* Scores */}
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 16 }}>
-        <Metric label="Wealth path" value={cc.wealthPath?.label ?? cc.wealthPath?.pathType ?? "—"} />
+        <Metric label="Wealth path" value={cc.wealthPath?.label ?? "—"} />
         <Metric label="Business model quality" value={cc.businessModelQuality ? `${cc.businessModelQuality.score} (${cc.businessModelQuality.tier})` : "—"} />
         <Metric label="Risk-adjusted score" value={cc.riskAdjustedScore != null ? String(cc.riskAdjustedScore) : "—"} />
-        <Metric label="Outcome review" value={cc.outcomeReviewState ?? "—"} />
+        <Metric label="Outcome review" value={(cc.outcomeReviewState && OUTCOME_REVIEW_LABEL[cc.outcomeReviewState]) ?? cc.outcomeReviewState ?? "—"} />
       </section>
 
       {/* Financial governor / cash safety */}
@@ -120,12 +150,12 @@ export default function OwnerWealthPage() {
           <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Financial safety</h2>
           {cc.cashSafety && (
             <p style={{ fontSize: 14 }}>
-              Cash-safety gate: <strong>{cc.cashSafety.outcome ?? (cc.cashSafety.allowed ? "ALLOWED" : "BLOCKED")}</strong>
+              Cash-safety gate: <strong>{CASH_SAFETY_LABEL[cc.cashSafety.outcome] ?? cc.cashSafety.outcome}</strong>
               {cc.cashSafety.reason && <span style={{ color: "#6b7280" }}> — {cc.cashSafety.reason}</span>}
             </p>
           )}
           {cc.financialGovernor && (
-            <p style={{ fontSize: 14 }}>Spend governor: <strong>{cc.financialGovernor.decision ?? "—"}</strong></p>
+            <p style={{ fontSize: 14 }}>Spend governor: <strong>{(cc.financialGovernor.decision && SPEND_DECISION_LABEL[cc.financialGovernor.decision]) ?? cc.financialGovernor.decision ?? "—"}</strong></p>
           )}
         </section>
       )}
@@ -134,7 +164,7 @@ export default function OwnerWealthPage() {
       {wp && (
         <section style={{ border: "1px solid var(--border, #e5e7eb)", borderRadius: 10, padding: 16, marginBottom: 16 }}>
           <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Prepared Work Package</h2>
-          <p style={{ fontSize: 14, fontWeight: 600 }}>{wp.title ?? wp.kind ?? "Work Package"}</p>
+          <p style={{ fontSize: 14, fontWeight: 600 }}>{wp.title ?? "Work Package"}</p>
           {wp.assigneeRole && <p style={{ fontSize: 13, color: "#6b7280" }}>Assign to: {wp.assigneeRole}</p>}
           {Array.isArray(wp.steps) && wp.steps.length > 0 && (
             <ol style={{ fontSize: 13, marginTop: 8, paddingLeft: 18 }}>
@@ -162,7 +192,7 @@ export default function OwnerWealthPage() {
           {cc.warnings.map((w: string, i: number) => <li key={i}>{w}</li>)}
         </ul>
       )}
-    </main>
+    </PageContainer>
   );
 }
 
