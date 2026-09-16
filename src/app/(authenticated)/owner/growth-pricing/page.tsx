@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Textarea, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Textarea, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- dynamic dashboard payloads are untyped */
 
@@ -160,18 +160,15 @@ export default function OwnerGrowthPricingPage() {
   if (loading) return <CardDashboardSkeleton label="Loading growth pricing workspace" />;
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Growth Pricing</h1>
-          <p className="text-muted-foreground text-sm">
-            Review price tiers, approve them for operational use, and create new versions.
-            Every tier requires explicit approval here before it is used operationally.
-          </p>
-        </div>
-        <Button onClick={() => setShowCreateForm((s) => !s)} disabled={busy}>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Growth Pricing"
+          description="Review price tiers, approve them for operational use, and create new versions. Every tier requires explicit approval here before it is used operationally."
+          actions={<Button onClick={() => setShowCreateForm((s) => !s)} disabled={busy}>
           {showCreateForm ? "Cancel" : "+ New price tier"}
-        </Button>
+        </Button>}
+        />
       </div>
 
       {error && (
@@ -309,6 +306,6 @@ export default function OwnerGrowthPricingPage() {
           })}
         </section>
       )}
-    </div>
+    </PageContainer>
   );
 }

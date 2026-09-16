@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Button, Select, Textarea } from "@/ui/primitives";
+import { Button, Select, Textarea, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type Category = "BUG" | "CONFUSION" | "FEATURE_REQUEST" | "OTHER";
@@ -98,12 +98,13 @@ export default function FeedbackPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8" data-testid="feedback-page">
-      <h1 className="text-2xl font-semibold mb-2">Send beta feedback</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Report a problem, tell us what&apos;s confusing, or request something you wish OpsIQ could do.
-        This goes straight to the team building it.
-      </p>
+    <PageContainer narrow data-testid="feedback-page">
+      <div className="mb-6">
+        <PageHeader
+          title="Send beta feedback"
+          description="Report a problem, tell us what's confusing, or request something you wish OpsIQ could do. This goes straight to the team building it."
+        />
+      </div>
 
       {success ? (
         <div className="rounded-lg border border-border p-6 text-center">
@@ -154,6 +155,6 @@ export default function FeedbackPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

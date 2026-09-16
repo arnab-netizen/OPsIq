@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Modal, Input, Select, Textarea, TableListSkeleton } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, Textarea, TableListSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type ComplianceKind = "licence" | "permit" | "insurance" | "tax" | "document";
@@ -207,10 +207,12 @@ export default function CompliancePage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
-        <h1 className="text-2xl font-semibold">Compliance Calendar</h1>
-        <Button size="sm" onClick={openCreate}>+ Add item</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Compliance Calendar"
+          actions={<Button size="sm" onClick={openCreate}>+ Add item</Button>}
+        />
       </div>
 
       {/* Warning banners */}
@@ -444,6 +446,6 @@ export default function CompliancePage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

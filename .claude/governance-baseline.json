@@ -312,10 +312,10 @@
       "type": "unsafe-error-render",
       "category": "UNSAFE ERROR RENDER",
       "file": "src/app/(authenticated)/owner/start-here/page.tsx",
-      "line": 166,
+      "line": 167,
       "severity": "error",
       "code": "{error && <p className=\"text-sm text-destructive mb-4\">{error}</p>}",
-      "reason": "pre-existing (commit ca5f2be9, predates this PR series). error state is only ever set from this file's local api() helper, whose only throw is new Error(data?.error?.message || data?.error || `Request failed (${res.status})`) -- a governed server message, a governed server string, or a hardcoded status-code fallback; never a raw stack/SQL/provider payload. Line shifted 124->144 by the PR B \"Analyze my business\" orchestration addition (new imports/state/handler above this line), then 144->166 by the post-review false-success fix (new AnalyzeBusinessResult type + expanded handleAnalyze body added above this line); code itself unchanged both times, verified byte-identical."
+      "reason": "pre-existing (commit ca5f2be9, predates this PR series). error state is only ever set from this file's local api() helper, whose only throw is new Error(data?.error?.message || data?.error || `Request failed (${res.status})`) -- a governed server message, a governed server string, or a hardcoded status-code fallback; never a raw stack/SQL/provider payload. Line shifted 124->144 by the PR B \"Analyze my business\" orchestration addition (new imports/state/handler above this line), then 144->166 by the post-review false-success fix (new AnalyzeBusinessResult type + expanded handleAnalyze body added above this line), then 166->167 by PR #485's G3/G4 header/container normalization (the ad hoc header block above this line was wrapped in a PageHeader/PageContainer structure, adding one line); code itself unchanged all three times, verified byte-identical."
     },
     {
       "type": "unsafe-error-render",
@@ -323,8 +323,8 @@
       "file": "src/app/(authenticated)/owner/priorities/page.tsx",
       "line": 238,
       "severity": "error",
-      "code": "if (error) return <main className=\"p-6\"><ErrorState message={error} onRetry={() => window.location.reload()} /></main>;",
-      "reason": "pre-existing (commit ffb6c793, 2026-09-07, predates this PR series -- proven via three-point line/code comparison across ffb6c793/50277a6/8b8bec9: byte-identical code, only line number shifted by unrelated additions). error state is only ever set to the hardcoded literal \"Couldn't load your priorities. Please try again.\" -- never a caught error's message"
+      "code": "if (error) return <PageContainer narrow><ErrorState message={error} onRetry={() => window.location.reload()} /></PageContainer>;",
+      "reason": "pre-existing (commit ffb6c793, 2026-09-07, predates this PR series -- proven via three-point line/code comparison across ffb6c793/50277a6/8b8bec9: byte-identical code, only line number shifted by unrelated additions). error state is only ever set to the hardcoded literal \"Couldn't load your priorities. Please try again.\" -- never a caught error's message. Wrapping element changed from <main className=\"p-6\"> to <PageContainer narrow> by PR #485's G3/G4 header/container normalization; the error variable and the ErrorState message={error} prop are byte-identical, only the outer JSX tag changed, which is why the scanner's regex re-flagged this previously-frozen line."
     },
     {
       "type": "unsafe-error-render",

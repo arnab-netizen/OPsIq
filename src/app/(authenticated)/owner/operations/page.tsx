@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { FindingCard } from "@/components/owner/FindingCard";
@@ -310,15 +310,13 @@ export default function OwnerOperationsPage() {
   const missing: string[] = dashboard?.missingCriticalData ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
-        <div>
-          <h1 className="font-display text-[1.75rem] font-semibold tracking-tight text-foreground">Operations</h1>
-          <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-muted-foreground">
-            Where throughput stalls, where the bottleneck is, and what to fix next — with the single highest-impact execution move and verification.
-          </p>
-        </div>
-        <Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Operations"
+          description="Where throughput stalls, where the bottleneck is, and what to fix next — with the single highest-impact execution move and verification."
+          actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
+        />
       </div>
 
       {error && (
@@ -458,7 +456,7 @@ export default function OwnerOperationsPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

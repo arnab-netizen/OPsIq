@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { assessWorkingCapitalAgeing } from "@/domain/owner-budget/working-capital-ageing";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -228,15 +228,13 @@ export default function OwnerBudgetPlanPage() {
     : [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Budget &amp; Profit Plan</h1>
-          <p className="text-muted-foreground text-sm">
-            Governed budget mode, capital allocation, cash/profit forecast, spend control, and your single next best action — evidence-gated, not guesses.
-          </p>
-        </div>
-        <Link href="/owner"><Button>← Command Center</Button></Link>
+    <PageContainer>
+      <div className="mb-2">
+        <PageHeader
+          title="Budget & Profit Plan"
+          description="Governed budget mode, capital allocation, cash/profit forecast, spend control, and your single next best action — evidence-gated, not guesses."
+          actions={<Link href="/owner"><Button>← Command Center</Button></Link>}
+        />
       </div>
 
       {/* Honest module-status banner (never imply OWNER_MODE_READY). */}
@@ -562,6 +560,6 @@ export default function OwnerBudgetPlanPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

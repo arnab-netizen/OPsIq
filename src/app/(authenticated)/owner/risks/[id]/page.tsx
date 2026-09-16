@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Badge, Button, Modal, Input, Select, Textarea, DetailPageSkeleton } from "@/ui/primitives";
+import { Badge, Button, Modal, Input, Select, Textarea, DetailPageSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type RiskStatus = "IDENTIFIED" | "ASSESSED" | "MITIGATING" | "ACCEPTED" | "RESOLVED" | "CLOSED";
@@ -170,29 +170,31 @@ export default function RiskDetailPage() {
   }
 
   if (loading) return <DetailPageSkeleton label="Loading" />;
-  if (error) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-destructive text-sm">{error}</p></div>;
+  if (error) return <PageContainer><p className="text-destructive text-sm">{error}</p></PageContainer>;
   if (!risk) return null;
 
   const nextStatuses = VALID_TRANSITIONS[risk.status] ?? [];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex flex-wrap items-start justify-between mb-6 gap-4">
-        <div>
-          <button onClick={() => router.back()} className="text-sm text-muted-foreground hover:underline mb-2 block">← Risk Register</button>
-          <h1 className="text-2xl font-semibold">{risk.title}</h1>
-          <p className="text-xs font-mono text-muted-foreground mt-1">{risk.riskCode}</p>
-        </div>
-        <div className="flex gap-2 flex-wrap justify-end">
-          {nextStatuses.length > 0 && (
-            <Button size="sm" onClick={() => { setReviewStatus(""); setReviewNotes(""); setAcceptanceRationale(""); setResidualRisk(""); setReviewError(null); setReviewOpen(true); }}>
-              Review
-            </Button>
-          )}
-          <Button size="sm" variant="outline" onClick={() => { setLinkTaskId(""); setLinkType("MITIGATION"); setLinkError(null); setLinkTaskOpen(true); }}>
-            Link task
-          </Button>
-        </div>
+    <PageContainer>
+      <button onClick={() => router.back()} className="text-sm text-muted-foreground hover:underline mb-2 block">← Risk Register</button>
+      <div className="mb-6">
+        <PageHeader
+          title={risk.title}
+          actions={
+            <div className="flex gap-2 flex-wrap justify-end">
+              {nextStatuses.length > 0 && (
+                <Button size="sm" onClick={() => { setReviewStatus(""); setReviewNotes(""); setAcceptanceRationale(""); setResidualRisk(""); setReviewError(null); setReviewOpen(true); }}>
+                  Review
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => { setLinkTaskId(""); setLinkType("MITIGATION"); setLinkError(null); setLinkTaskOpen(true); }}>
+                Link task
+              </Button>
+            </div>
+          }
+        />
+        <p className="text-xs font-mono text-muted-foreground mt-1">{risk.riskCode}</p>
       </div>
 
       {/* Status row */}
@@ -335,7 +337,7 @@ export default function RiskDetailPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- dynamic dashboard payloads are untyped */
 
@@ -193,14 +193,12 @@ export default function OwnerLearningGovernancePage() {
   if (loading) return <CardDashboardSkeleton label="Loading learning governance workspace" />;
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
+    <PageContainer>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Learning Governance</h1>
-        <p className="text-muted-foreground text-sm">
-          Review evidence, promote or reject controlled learning candidates, and roll back a
-          promoted learning if it turns out harmful. Candidates are produced by real domain
-          verification flows (e.g. Finance&rsquo;s closed loop) -- this page never creates one.
-        </p>
+        <PageHeader
+          title="Learning Governance"
+          description="Review evidence, promote or reject controlled learning candidates, and roll back a promoted learning if it turns out harmful. Candidates are produced by real domain verification flows (e.g. Finance's closed loop) -- this page never creates one."
+        />
       </div>
 
       {error && (
@@ -334,6 +332,6 @@ export default function OwnerLearningGovernancePage() {
           })}
         </section>
       )}
-    </div>
+    </PageContainer>
   );
 }

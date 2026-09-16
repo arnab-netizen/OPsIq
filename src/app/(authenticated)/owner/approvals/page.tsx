@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -175,17 +175,15 @@ export default function OwnerApprovalsPage() {
   if (loading) return <CardDashboardSkeleton label="Loading approvals workspace" />;
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Approvals</h1>
-          <p className="text-muted-foreground text-sm">
-            Review evidence, decide, and track appeals for consulting approval requests -- one decision at a time.
-          </p>
-        </div>
-        <Button onClick={() => setShowCreateForm((s) => !s)} disabled={!selected}>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Owner Approvals"
+          description="Review evidence, decide, and track appeals for consulting approval requests -- one decision at a time."
+          actions={<Button onClick={() => setShowCreateForm((s) => !s)} disabled={!selected}>
           + New approval request
-        </Button>
+        </Button>}
+        />
       </div>
 
       {error && (
@@ -313,6 +311,6 @@ export default function OwnerApprovalsPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -217,15 +217,13 @@ export default function OwnerStrategyPage() {
   const missing: string[] = dashboard?.missingCriticalData ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Strategy & Scenarios</h1>
-          <p className="text-muted-foreground text-sm">
-            Should you add staff, buy equipment, raise price, or open a branch? Score one option&apos;s profit, payback, downside, and safe upside — then a clear go / no-go.
-          </p>
-        </div>
-        <Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Owner Strategy & Scenarios"
+          description="Should you add staff, buy equipment, raise price, or open a branch? Score one option's profit, payback, downside, and safe upside — then a clear go / no-go."
+          actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
+        />
       </div>
 
       {error && (
@@ -326,7 +324,7 @@ export default function OwnerStrategyPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

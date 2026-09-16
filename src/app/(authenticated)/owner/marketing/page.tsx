@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Input, Select, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
@@ -219,15 +219,13 @@ export default function OwnerMarketingPage() {
   const missing: string[] = dashboard?.missingCriticalData ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Owner Marketing & Growth</h1>
-          <p className="text-muted-foreground text-sm">
-            Which channel brings customers, which offer works, and what is wasting money — with the single highest-impact marketing move and how to verify it.
-          </p>
-        </div>
-        <Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>
+    <PageContainer>
+      <div className="mb-6">
+        <PageHeader
+          title="Owner Marketing & Growth"
+          description="Which channel brings customers, which offer works, and what is wasting money — with the single highest-impact marketing move and how to verify it."
+          actions={<Button onClick={() => setShowBusinessForm((s) => !s)}>+ New business</Button>}
+        />
       </div>
 
       {error && (
@@ -327,7 +325,7 @@ export default function OwnerMarketingPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

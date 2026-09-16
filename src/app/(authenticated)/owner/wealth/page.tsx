@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- command-center payload is the service contract (typed server-side in WealthCommandCenter); rendered read-only here. load() on mount is intentional. */
@@ -62,10 +62,10 @@ export default function OwnerWealthPage() {
   if (loading) return <CardDashboardSkeleton sections={4} label="Loading your Wealth Command Center" />;
   if (error)
     return (
-      <main style={{ padding: 24 }}>
+      <PageContainer>
         <p style={{ color: "#b91c1c" }}>{error}</p>
         <Button onClick={() => void load(businessId)}>Retry</Button>
-      </main>
+      </PageContainer>
     );
   if (!data) return null;
 
@@ -76,10 +76,12 @@ export default function OwnerWealthPage() {
   const businesses: any[] = data.businesses ?? [];
 
   return (
-    <main style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700 }}>Wealth Command Center</h1>
-        <Link href="/owner"><Button>Command Center</Button></Link>
+    <PageContainer>
+      <div style={{ marginBottom: 16 }}>
+        <PageHeader
+          title="Wealth Command Center"
+          actions={<Link href="/owner"><Button>Command Center</Button></Link>}
+        />
       </div>
 
       <div style={{ marginBottom: 16 }}>
@@ -162,7 +164,7 @@ export default function OwnerWealthPage() {
           {cc.warnings.map((w: string, i: number) => <li key={i}>{w}</li>)}
         </ul>
       )}
-    </main>
+    </PageContainer>
   );
 }
 

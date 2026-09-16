@@ -5,6 +5,8 @@ import { Button } from "@/ui/primitives/button";
 import { EmptyState } from "@/ui/primitives/states";
 import { Modal } from "@/ui/primitives/modal";
 import { Input } from "@/ui/primitives/input";
+import { PageHeader } from "@/ui/primitives/page-header";
+import { PageContainer } from "@/ui/primitives/page-container";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
@@ -17,6 +19,18 @@ async function apiFetch(path: string, init?: RequestInit) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error ?? "Request failed");
   return data;
+}
+
+// Pure fetch + normalize -- no state setters here, so it is safe to call from either an effect
+// body or an event handler without the effect ever synchronously triggering a state update.
+async function fetchInventoryData(businessId: string): Promise<{ items: any[]; suggestions: Record<string, any> }> {
+  const data = await apiFetch(`/api/owner/inventory/stock-items?businessId=${businessId}`);
+  const items: any[] = data.items ?? [];
+  const suggestions: Record<string, any> = {};
+  if (data.suggestions) {
+    for (const s of data.suggestions) suggestions[s.id] = s;
+  }
+  return { items, suggestions };
 }
 
 const RISK_COLOR: Record<string, string> = {
@@ -41,26 +55,37 @@ export default function InventoryPage() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  // Event-driven reload (post-save refresh) -- never called from an effect body, so it is safe to
+  // set state directly once the fetch settles.
   const loadItems = useCallback(async (bid: string) => {
     try {
-      const data = await apiFetch(`/api/owner/inventory/stock-items?businessId=${bid}`);
-      const list: any[] = data.items ?? [];
+      const { items: list, suggestions: sugMap } = await fetchInventoryData(bid);
       setItems(list);
-      // compute reorder suggestions client-side via API response inclusion
-      const sugMap: Record<string, any> = {};
-      if (data.suggestions) {
-        for (const s of data.suggestions) sugMap[s.id] = s;
-      }
       setSuggestions(sugMap);
     } catch (e: any) {
       setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
     }
   }, []);
 
+  // Mount / business-switch fetch. Guarded by `cancelled` so a slow response for a business the
+  // owner has since switched away from can never overwrite the newer business's state -- each
+  // effect run's own closure is invalidated by the previous run's cleanup before the new run starts.
   useEffect(() => {
     if (contextLoading || !activeBusinessId) return;
-    void loadItems(activeBusinessId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only on context resolution/switch, not on every loadItems identity change
+    let cancelled = false;
+    fetchInventoryData(activeBusinessId)
+      .then(({ items: list, suggestions: sugMap }) => {
+        if (cancelled) return;
+        setItems(list);
+        setSuggestions(sugMap);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [contextLoading, activeBusinessId]);
 
   const openCreate = () => {
@@ -124,17 +149,21 @@ export default function InventoryPage() {
   const modalTitle = editItem ? "Edit Stock Item" : "Add Stock Item";
 
   return (
-    <div className="p-6" data-testid="inventory-page">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
-        <h1 className="text-2xl font-bold">Inventory</h1>
-        <div className="flex gap-3 items-center">
-          <BusinessContextSelector
-            businesses={businesses}
-            selectedId={businessId}
-            onChange={(id) => setActiveBusinessId(id)}
-          />
-          <Button onClick={openCreate}>+ Add Item</Button>
-        </div>
+    <PageContainer data-testid="inventory-page">
+      <div className="mb-6">
+        <PageHeader
+          title="Inventory"
+          actions={
+            <div className="flex gap-3 items-center">
+              <BusinessContextSelector
+                businesses={businesses}
+                selectedId={businessId}
+                onChange={(id) => setActiveBusinessId(id)}
+              />
+              <Button onClick={openCreate}>+ Add Item</Button>
+            </div>
+          }
+        />
       </div>
 
       {error && (
@@ -211,6 +240,6 @@ export default function InventoryPage() {
           </Button>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

@@ -92,4 +92,27 @@ describe("OwnerAdjudicationPage", () => {
     expect(err.textContent ?? "").toMatch(/not authorized/i);
     expect(err.textContent ?? "").not.toMatch(/stack|Prisma|undefined/i);
   });
+
+  it("fetches the queue exactly once on mount (INITIAL_QUEUE_REQUEST_COUNT=1), and the post-decision silent refresh adds exactly one more request without re-showing the full-page loading skeleton (POST_ADJUDICATION_REFRESH_COUNT=1, SILENT_REFRESH_DOES_NOT_FULLPAGE_LOAD=YES)", async () => {
+    const { container, findByTestId, queryByTestId } = render(<OwnerAdjudicationPage />);
+    await findByTestId("adjudication-queue");
+
+    const queueCallsAfterMount = fetchMock.mock.calls.filter((c) => String(c[0]).includes("/api/owner/proof-risk/queue"));
+    expect(queueCallsAfterMount.length).toBe(1);
+
+    fireEvent.change(container.querySelector('[data-testid="item-outcome-select"]') as HTMLSelectElement, { target: { value: "DISMISS_FALSE_POSITIVE" } });
+    fireEvent.change(container.querySelector('[data-testid="item-reason"]') as HTMLTextAreaElement, { target: { value: "Confirmed legitimate." } });
+    fireEvent.click(container.querySelector('[data-testid="item-submit"]') as HTMLButtonElement);
+
+    // The queue and its testid stay mounted throughout the silent refresh -- no loading-skeleton
+    // flash, because `load(true)` (the silent path) never toggles the `loading` state.
+    await waitFor(() => expect(container.querySelector('[data-testid="item-result"]')?.textContent).toMatch(/recorded/i));
+    expect(queryByTestId("adjudication-queue")).not.toBeNull();
+
+    const adjudicatePost = fetchMock.mock.calls.find((c) => String(c[0]).includes("/api/proof-risk/adjudicate"));
+    expect(adjudicatePost).toBeTruthy();
+
+    const queueCallsAfterRefresh = fetchMock.mock.calls.filter((c) => String(c[0]).includes("/api/owner/proof-risk/queue"));
+    expect(queueCallsAfterRefresh.length).toBe(2);
+  });
 });

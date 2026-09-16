@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Input, Select, Button } from "@/ui/primitives";
+import { Input, Select, Button, PageHeader, PageContainer } from "@/ui/primitives";
 
 interface SessionSummary {
   sessionId: string;
@@ -141,13 +141,13 @@ export default function StartupModePage() {
   }
 
   return (
-    <div className="startup-mode-page" style={{ maxWidth: 900, margin: "0 auto", padding: "2rem" }}>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.5rem" }}>
-        Startup Mode
-      </h1>
-      <p style={{ color: "var(--text-secondary, #666)", marginBottom: "2rem" }}>
-        Zero-to-validated business engine. Screen ideas, validate hypotheses, and create execution blueprints.
-      </p>
+    <PageContainer className="startup-mode-page">
+      <div style={{ marginBottom: "2rem" }}>
+        <PageHeader
+          title="Startup Mode"
+          description="Zero-to-validated business engine. Screen ideas, validate hypotheses, and create execution blueprints."
+        />
+      </div>
 
       {pageMsg && (
         <div className="page-message" role="alert" style={{ color: "red", marginBottom: "1rem" }}>
@@ -345,6 +345,6 @@ export default function StartupModePage() {
           </tbody>
         </table>
       )}
-    </div>
+    </PageContainer>
   );
 }
