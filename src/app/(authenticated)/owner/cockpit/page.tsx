@@ -7,8 +7,8 @@
  * the server re-derives + re-checks every action. Presentation + safety layout live in MinimumOwnerCockpit.
  *
  * Business-context decision (revised — see docs/opsiq-governance, the P0-4 Home/Finance
- * consistency fix, and the controlled-beta cockpit business-scoping fix / D-cockpit below): NO
- * selector, by design — this page still has no visible business selector.
+ * consistency fix, and the controlled-beta cockpit business-scoping fix / D-cockpit below):
+ * NO selector, by design — this page still has no visible business selector.
  *
  * Read vs. write scoping of `processExecution` (the task bridge this page drives START/action/
  * progress against) are DIFFERENT and must not be conflated:
