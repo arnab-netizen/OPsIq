@@ -157,7 +157,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const key = `ro_missing_${randomUUID().slice(0, 8)}`;
       await seedCompletedTask(workspaceId, key, null);
 
-      const response = await POST(makePostRequest({ taskKey: key, action: "RECORD_OUTCOME", outcomeStatus: "worked" }));
+      const response = await POST(makePostRequest({ taskKey: key, action: "RECORD_OUTCOME", outcomeStatus: "worked" }), {
+        params: Promise.resolve({}),
+      });
       expect(response.status).toBe(400);
       const body = await response.json();
       expect(body.code).toBe("MISSING_INPUT");
@@ -172,7 +174,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       const key = `ro_fixed_${randomUUID().slice(0, 8)}`;
       await seedCompletedTask(workspaceId, key, businessId);
 
-      const response = await POST(makePostRequest({ taskKey: key, action: "RECORD_OUTCOME", outcomeStatus: "worked", businessId }));
+      const response = await POST(
+        makePostRequest({ taskKey: key, action: "RECORD_OUTCOME", outcomeStatus: "worked", businessId }),
+        { params: Promise.resolve({}) }
+      );
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.status).toBe("OUTCOME_RECORDED");
@@ -193,7 +198,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await seedCompletedTask(workspaceId, key, businessId);
 
       const response = await POST(
-        makePostRequest({ taskKey: key, action: "RECORD_OUTCOME", outcomeStatus: "worked", businessId: foreignBusinessId })
+        makePostRequest({ taskKey: key, action: "RECORD_OUTCOME", outcomeStatus: "worked", businessId: foreignBusinessId }),
+        { params: Promise.resolve({}) }
       );
       expect(response.status).toBe(403);
       const body = await response.json();
