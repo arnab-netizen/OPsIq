@@ -11,11 +11,21 @@
  * `processExecution` (the task bridge
  * this page drives START/action/progress against) is built via `buildProcessExecutionBridge(
  * processCorrections, cashProfitProtection, workspaceId, ...)` — workspace-scoped, not
- * businessId-scoped — and every mutation here is submitted by `taskKey` (POST
- * /api/owner/process-execution never sends a businessId; the server resolves task ownership from
- * the task record itself). That part is unchanged: it is a workspace-wide execution queue, the
- * same shape as /owner/tasks, and letting the owner "switch business" mid-task here would not
- * change which tasks are shown and could wrongly imply an in-flight task moved.
+ * businessId-scoped — and most mutations here are submitted by `taskKey` alone (POST
+ * /api/owner/process-execution resolves task ownership from the task record itself for those
+ * actions). That part is unchanged: it is a workspace-wide execution queue, the same shape as
+ * /owner/tasks, and letting the owner "switch business" mid-task here would not change which
+ * tasks are shown and could wrongly imply an in-flight task moved.
+ *
+ * REQUEST_REASSESSMENT is the one documented exception: process-execution-bridge.service.ts's
+ * REQUEST_REASSESSMENT branch requires `businessId` unconditionally (it opens an
+ * OwnerReassessmentEvent, which is a per-business record) and fails closed with
+ * MISSING_INPUT/400 without one. `onAction` below attaches `activeBusinessId` for that action
+ * only — never as a blanket default for every action — the same ActiveBusinessContext source
+ * this page already uses for now-view/recovery-status/public-signals. The server still
+ * independently re-validates that the supplied business belongs to the caller's workspace
+ * (`businessInWorkspace`) and that it matches the task's own `businessId` when the task has one,
+ * so this client-supplied value is never trusted on its own.
  *
  * BUT GET /api/owner/now-view's OTHER signals (cash, finance, business condition, retention) are
  * genuinely per-business, and a real human usability test proved that fetching now-view with no
@@ -215,6 +225,11 @@ export default function OwnerCockpitPage() {
       if (input.progressPct != null) body.progressPct = input.progressPct;
       if (input.stage) body.stage = input.stage;
       if (input.outcomeStatus) body.outcomeStatus = input.outcomeStatus;
+      // REQUEST_REASSESSMENT-only: the server requires businessId unconditionally for this action
+      // (see this file's header comment) — attach it from the same active-business source as this
+      // page's own reads. No other action gets a businessId here; each action wires its own
+      // requirement in its own branch, never a shared blanket attachment.
+      if (action === "REQUEST_REASSESSMENT" && activeBusinessId) body.businessId = activeBusinessId;
       const { ok, data } = await apiPost("/api/owner/process-execution", body);
       if (!ok) {
         setMessage(describeActionFailure(data, "We couldn't complete this action. Nothing was changed."));
