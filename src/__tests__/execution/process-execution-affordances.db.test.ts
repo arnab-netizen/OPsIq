@@ -124,7 +124,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Interactive Process-Execution Afford
 });
 
 // ── Additional guardrails: the remaining interactive transitions on their own fresh tasks ────────────────
-const wsB = randomUUID(), bizB = randomUUID(), ownerB = randomUUID();
+const wsB = randomUUID(), bizB = randomUUID(), bizB2 = randomUUID(), ownerB = randomUUID();
+const wsForeign = randomUUID(), bizForeign = randomUUID(), ownerForeign = randomUUID();
 function route(ws: string, key: string, over: Partial<BridgedExecutionRoute>): BridgedExecutionRoute {
   return {
     workspaceId: ws, taskKey: key, sourceFamily: "PROCESS_CORRECTION", sourceFindingKey: key.replace("pc:", ""),
@@ -140,8 +141,12 @@ function manualAnalysis(ws: string): ProcessExecutionBridgeAnalysis {
     route(ws, "pc:mgr2", {}),
     route(ws, "pc:corr", { executionRoute: "CREATE_CORRECTION_TASK", ownerVisibleSummary: "Fix the correction" }),
     route(ws, "pc:blk", { executionRoute: "BLOCK_UNSAFE_ACTION", approvalLevel: "NEVER_AUTO", actionOwner: "OWNER", ownerVisibleSummary: "Blocked unsafe action", severity: "CRITICAL" }),
+    // Business-scoped task (businessId stamped, unlike the workspace-level rows above) used by the
+    // REQUEST_REASSESSMENT businessId guardrail tests (PR H) -- needed to exercise the task/business
+    // mismatch guard, which only fires when the task itself carries a businessId.
+    route(ws, "pc:bizscoped", { businessId: bizB, ownerVisibleSummary: "Fix the business-scoped correction" }),
   ];
-  return { workspaceId: ws, routes, topRoute: routes[0], summary: { total: 3, ownerApproval: 0, managerStaff: 2, dataTasks: 0, monitorOnly: 0 }, evaluatedAt: AT };
+  return { workspaceId: ws, routes, topRoute: routes[0], summary: { total: 4, ownerApproval: 0, managerStaff: 3, dataTasks: 0, monitorOnly: 0 }, evaluatedAt: AT };
 }
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Interactive Process-Execution Affordances — additional guardrails", () => {
@@ -150,16 +155,25 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Interactive Process-Execution Afford
     await db.workspace.create({ data: { id: wsB, name: `WS ${wsB.slice(0, 8)}`, slug: `affb-${wsB.slice(0, 8)}`, createdBy: ownerB } });
     await db.clientAccount.create({ data: { id: wsB, workspaceId: wsB, name: "Sparkle Laundry B Client", updatedAt: new Date() } });
     await db.ownerBusiness.create({ data: { id: bizB, workspaceId: wsB, name: "Sparkle Laundry B", businessType: "laundry", updatedAt: new Date() } });
+    // A second, legitimate business in the SAME workspace -- valid on its own, but not the one
+    // "pc:bizscoped" belongs to. Used to prove the task/business mismatch guard (PR H).
+    await db.ownerBusiness.create({ data: { id: bizB2, workspaceId: wsB, name: "Sparkle Laundry B — Second Location", businessType: "laundry", updatedAt: new Date() } });
+    // A wholly separate workspace + business -- used to prove a foreign/spoofed businessId from
+    // another workspace is rejected (PR H).
+    await db.user.create({ data: { id: ownerForeign, email: `affb-foreign-${ownerForeign}@laundry.test`, name: "Owner Foreign", isActive: true, updatedAt: new Date() } });
+    await db.workspace.create({ data: { id: wsForeign, name: `WS ${wsForeign.slice(0, 8)}`, slug: `affb-foreign-${wsForeign.slice(0, 8)}`, createdBy: ownerForeign } });
+    await db.clientAccount.create({ data: { id: wsForeign, workspaceId: wsForeign, name: "Foreign Client", updatedAt: new Date() } });
+    await db.ownerBusiness.create({ data: { id: bizForeign, workspaceId: wsForeign, name: "Foreign Business", businessType: "laundry", updatedAt: new Date() } });
     await persistProcessExecutionRoutes(wsB, manualAnalysis(wsB), ownerB, deps);
   });
   afterAll(async () => {
     await db.processExecutionTask.deleteMany({ where: { workspaceId: wsB } });
-    await db.ownerReassessmentEvent.deleteMany({ where: { workspaceId: wsB } });
-    await db.auditEvent.deleteMany({ where: { workspaceId: wsB } });
-    await db.ownerBusiness.deleteMany({ where: { id: bizB } });
-    await db.clientAccount.deleteMany({ where: { id: wsB } });
-    await db.workspace.deleteMany({ where: { id: wsB } });
-    await db.user.deleteMany({ where: { id: ownerB } });
+    await db.ownerReassessmentEvent.deleteMany({ where: { workspaceId: { in: [wsB, wsForeign] } } });
+    await db.auditEvent.deleteMany({ where: { workspaceId: { in: [wsB, wsForeign] } } });
+    await db.ownerBusiness.deleteMany({ where: { id: { in: [bizB, bizB2, bizForeign] } } });
+    await db.clientAccount.deleteMany({ where: { id: { in: [wsB, wsForeign] } } });
+    await db.workspace.deleteMany({ where: { id: { in: [wsB, wsForeign] } } });
+    await db.user.deleteMany({ where: { id: { in: [ownerB, ownerForeign] } } });
   });
 
   it("an unsafe / NEVER_AUTO route stays blocked: it cannot be started, approved, or delegated", async () => {
@@ -240,12 +254,58 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Interactive Process-Execution Afford
   });
 
   it("REQUEST_REASSESSMENT re-opens the question on a completed task (needs a businessId)", async () => {
+    // This is exactly the failure a real owner hit before PR H: OwnerCockpitPage's onAction()
+    // never sent businessId for REQUEST_REASSESSMENT, so every real click reproduced this
+    // `noBiz` branch (MISSING_INPUT/400) and no reassessment was ever created.
     const noBiz = await applyProcessExecutionAction({ workspaceId: wsB, actorId: ownerB, actorRole: "owner", taskKey: "pc:corr", action: "REQUEST_REASSESSMENT" }, deps);
     expect(noBiz.ok).toBe(false);
+    expect((noBiz as { code?: string }).code).toBe("MISSING_INPUT");
     const before = await db.ownerReassessmentEvent.count({ where: { workspaceId: wsB } });
     const r = await applyProcessExecutionAction({ workspaceId: wsB, businessId: bizB, actorId: ownerB, actorRole: "owner", taskKey: "pc:corr", action: "REQUEST_REASSESSMENT", reason: "the breakdown came back" }, deps);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.reassessmentId).not.toBeNull();
     expect(await db.ownerReassessmentEvent.count({ where: { workspaceId: wsB } })).toBe(before + 1);
+    if (!r.ok) return;
+    // The row actually persists with the supplied businessId (not null, not some other business).
+    const row = await db.ownerReassessmentEvent.findUnique({ where: { id: r.reassessmentId! } });
+    expect(row?.businessId).toBe(bizB);
+    expect(row?.trigger).toBe("owner_dispute");
+    expect(row?.workspaceId).toBe(wsB);
+    // The correct audit event is emitted for the reassessment creation, in the same transaction.
+    const audit = await db.auditEvent.findFirst({
+      where: { workspaceId: wsB, eventName: "owner.reassessment_created", entityId: r.reassessmentId! },
+    });
+    expect(audit).not.toBeNull();
+    expect((audit?.payload as { businessId?: string } | null)?.businessId).toBe(bizB);
+  });
+
+  it("rejects a foreign businessId (a different workspace's business) — WRONG_WORKSPACE, no reassessment created", async () => {
+    const before = await db.ownerReassessmentEvent.count({ where: { workspaceId: wsB } });
+    const r = await applyProcessExecutionAction(
+      { workspaceId: wsB, businessId: bizForeign, actorId: ownerB, actorRole: "owner", taskKey: "pc:bizscoped", action: "REQUEST_REASSESSMENT" },
+      deps,
+    );
+    expect(r.ok).toBe(false);
+    expect((r as { code?: string }).code).toBe("WRONG_WORKSPACE");
+    expect(await db.ownerReassessmentEvent.count({ where: { workspaceId: wsB } })).toBe(before);
+  });
+
+  it("rejects a mismatched task/business pairing — a real, in-workspace business that is not this task's own business", async () => {
+    // bizB2 is a genuine business in wsB (passes businessInWorkspace), but "pc:bizscoped" belongs
+    // to bizB, not bizB2 -- defense-in-depth must still reject this as not-found.
+    const before = await db.ownerReassessmentEvent.count({ where: { workspaceId: wsB } });
+    const r = await applyProcessExecutionAction(
+      { workspaceId: wsB, businessId: bizB2, actorId: ownerB, actorRole: "owner", taskKey: "pc:bizscoped", action: "REQUEST_REASSESSMENT" },
+      deps,
+    );
+    expect(r.ok).toBe(false);
+    expect((r as { code?: string }).code).toBe("NOT_FOUND_OR_FORBIDDEN");
+    expect(await db.ownerReassessmentEvent.count({ where: { workspaceId: wsB } })).toBe(before);
+    // The correct (matching) businessId still succeeds on the same task.
+    const ok = await applyProcessExecutionAction(
+      { workspaceId: wsB, businessId: bizB, actorId: ownerB, actorRole: "owner", taskKey: "pc:bizscoped", action: "REQUEST_REASSESSMENT" },
+      deps,
+    );
+    expect(ok.ok).toBe(true);
   });
 });

@@ -286,6 +286,11 @@ export default function OwnerCockpitPage() {
       if ((action === "RECORD_OUTCOME" || action === "VERIFY_OUTCOME") && activeBusinessId) {
         body.businessId = activeBusinessId;
       }
+      // REQUEST_REASSESSMENT-only: the server requires businessId unconditionally for this action
+      // (see this file's header comment) — attach it from the same active-business source as this
+      // page's own reads. No other action gets a businessId here; each action wires its own
+      // requirement in its own branch, never a shared blanket attachment.
+      if (action === "REQUEST_REASSESSMENT" && activeBusinessId) body.businessId = activeBusinessId;
       const { ok, data } = await apiPost("/api/owner/process-execution", body);
       if (!ok) {
         setMessage(describeActionFailure(data, "We couldn't complete this action. Nothing was changed."));

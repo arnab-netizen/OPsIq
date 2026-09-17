@@ -299,6 +299,32 @@ describe("POST /api/owner/process-execution — non-DB mock tests", () => {
     });
   });
 
+  describe("REQUEST_REASSESSMENT businessId wiring (PR H)", () => {
+    const BIZ_A = "cccccccc-cccc-4000-8000-cccccccccccc";
+
+    it("passes a supplied businessId through to applyProcessExecutionAction unchanged", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: "pc:corr", action: "REQUEST_REASSESSMENT", businessId: BIZ_A });
+      mockApplyProcessExecutionAction.mockResolvedValue({ ok: true, taskId: TASK_ID, status: "IN_PROGRESS", reassessmentId: "re-1" });
+      const result = await processExecutionPost(makeCtx()) as { status: number; body: { reassessmentId: string | null } };
+      expect(mockApplyProcessExecutionAction).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "REQUEST_REASSESSMENT", businessId: BIZ_A })
+      );
+      expect(result.status).toBe(200);
+      expect(result.body.reassessmentId).toBe("re-1");
+    });
+
+    it("passes businessId: null through when the client omits it, and surfaces the service's MISSING_INPUT rejection as 400", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: "pc:corr", action: "REQUEST_REASSESSMENT" });
+      mockApplyProcessExecutionAction.mockResolvedValue({ ok: false, code: "MISSING_INPUT", reason: "businessId is required to open a reassessment." });
+      const result = await processExecutionPost(makeCtx()) as { status: number; body: { error: string; code: string } };
+      expect(mockApplyProcessExecutionAction).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "REQUEST_REASSESSMENT", businessId: null })
+      );
+      expect(result.status).toBe(400);
+      expect(result.body.code).toBe("MISSING_INPUT");
+    });
+  });
+
   describe("failed POST (action returns not-ok)", () => {
     it("returns 400 when action fails with non-auth code", async () => {
       mockApplyProcessExecutionAction.mockResolvedValue({
