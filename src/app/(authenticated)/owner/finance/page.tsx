@@ -229,7 +229,11 @@ export default function OwnerFinancePage() {
       // business rather than each independently re-deriving their own default.
       if (data.selectedBusinessId) setActiveBusinessId(data.selectedBusinessId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      // Governed classification, never the raw fetch/exception text -- see the P0-E pattern
+      // already used by addSnapshot() below and by the cockpit page's load handler. A thrown
+      // Error here can carry a server-side NotFoundError's raw `"<EntityType> not found: <uuid>"`
+      // message (see infra/errors.ts), which must never reach the owner verbatim.
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -271,7 +275,8 @@ export default function OwnerFinancePage() {
       await refreshBusinesses();
       await load(created.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create business");
+      // Governed classification -- see load()'s comment above.
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to create business"), { context: "save" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -328,7 +333,8 @@ export default function OwnerFinancePage() {
       });
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to run diagnosis");
+      // Governed classification -- see load()'s comment above.
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to run diagnosis"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -350,7 +356,8 @@ export default function OwnerFinancePage() {
       });
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update action");
+      // Governed classification -- see load()'s comment above.
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -376,7 +383,8 @@ export default function OwnerFinancePage() {
       });
       await load(selected);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to verify");
+      // Governed classification -- see load()'s comment above.
+      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to verify"), { context: "action" }).operatorMessage);
     } finally {
       setBusy(false);
     }
@@ -405,7 +413,11 @@ export default function OwnerFinancePage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+        <div
+          role="alert"
+          data-testid="finance-page-error"
+          className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
+        >
           {error}
         </div>
       )}
