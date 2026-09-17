@@ -27,9 +27,9 @@ describe("PrivacyPage — access/correction/deletion copy", () => {
 
   it("still promises the one mechanism that actually works: emailing support", () => {
     render(<PrivacyPage />);
-    const mailLinks = screen.getAllByRole("link", { name: /support@opsiq\.com/i });
+    const mailLinks = screen.getAllByRole("link", { name: /support@opsiq\.solutions/i });
     expect(mailLinks.length).toBeGreaterThan(0);
-    expect(mailLinks[0].getAttribute("href")).toBe("mailto:support@opsiq.com");
+    expect(mailLinks[0].getAttribute("href")).toBe("mailto:support@opsiq.solutions");
   });
 
   it("still discloses that fulfillment is manual, not instant", () => {

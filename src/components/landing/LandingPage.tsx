@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/ui/primitives";
 import { BetaAccessCta } from "@/components/landing/BetaAccessCta";
+import { PublicSiteHeader } from "@/components/landing/PublicSiteHeader";
 
 /**
  * Public, logged-out landing page for first-time visitors.
@@ -27,7 +28,7 @@ const primaryCta =
 const secondaryCta =
   "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-border bg-background text-foreground hover:bg-muted h-12 px-6 text-base rounded-lg";
 
-const SUPPORT_EMAIL = "support@opsiq.com";
+const SUPPORT_EMAIL = "support@opsiq.solutions";
 
 /** "How OpsIQ works" — the real loop: every domain diagnosis follows this order today. */
 const HOW_IT_WORKS = [
@@ -72,15 +73,7 @@ const TRUST_POINTS = [
 export default function LandingPage() {
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-        <span className="text-xl font-bold text-primary">OpsIQ</span>
-        <nav aria-label="Primary" className="flex items-center gap-3">
-          <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
-            Sign in
-          </Link>
-          <BetaAccessCta triggerClassName="border-0 bg-transparent p-0 text-sm font-medium text-[var(--primary-text)] hover:underline" />
-        </nav>
-      </header>
+      <PublicSiteHeader />
 
       {/* Hero + product proof, side by side at desktop so the proof is visible without scrolling
           (a first-time visitor sees the claim and the evidence for it in the same screen).
@@ -238,6 +231,18 @@ export default function LandingPage() {
             Sign in
           </Link>
         </div>
+      </section>
+
+      {/* Small, secondary disambiguation notice -- must not visually compete with the Final CTA
+          above it (muted, small text, no button styling). */}
+      <section className="mx-auto w-full max-w-2xl px-6 pb-12 text-center">
+        <p className="text-sm text-muted-foreground">
+          <strong>Looking for a different OpsIQ?</strong> There are several unrelated products
+          that also go by &quot;OpsIQ.&quot; We&apos;re not affiliated with any of them.{" "}
+          <Link href="/about" className="text-[var(--primary-text)] hover:underline">
+            Learn more →
+          </Link>
+        </p>
       </section>
 
       <footer className="mx-auto w-full max-w-6xl px-6 py-8 text-center text-sm text-muted-foreground">

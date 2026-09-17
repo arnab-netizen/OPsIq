@@ -1,6 +1,6 @@
 # Rebilix — Product Hunt Launch Copy
 
-> Rebilix is currently live in beta at https://o-ps-iq.vercel.app. Contact support@opsiq.com during
+> Rebilix is currently live in beta at https://o-ps-iq.vercel.app. Contact support@opsiq.solutions during
 > beta. (A dedicated Rebilix domain and email are not acquired yet — do not imply they exist.)
 >
 > Status: free beta. No payment provider, no credit card, no paid AI key required to get value.
@@ -70,7 +70,7 @@ I'll be in the comments all day — tell me where your business hurts and I'll s
    wired in at all. The whole signup → diagnosis → dashboard path works without billing.
 3. **"How is my data handled?"** — You create a private workspace at signup. Diagnosis runs on the
    inputs you provide; there's no third-party AI provider in the loop. See our support page for the
-   trust details, and email support@opsiq.com with any question.
+   trust details, and email support@opsiq.solutions with any question.
 4. **"Who is this for?"** — Owners, operators, and fractional/consulting folks who need a fast, honest
    read on a business and a prioritized next action — not a 30-page deck.
 5. **"What if the diagnosis is wrong for my situation?"** — It's a structured second opinion, not a
@@ -89,12 +89,12 @@ I'll be in the comments all day — tell me where your business hurts and I'll s
 6. **What do I get at the end?** Findings (with severity), recommendations (with priority), and an
    action plan where each action has an owner role, due window, and success metric.
 7. **Is my data shared with third parties?** No third-party AI provider is in the loop. You work in a
-   private workspace. Email support@opsiq.com for specifics.
+   private workspace. Email support@opsiq.solutions for specifics.
 8. **Can my team use it?** You create a workspace at signup; multi-user collaboration is on the roadmap
    beyond the beta.
 9. **What's not built yet?** Payments/upgrades, automated email/password recovery, and integrations.
-   Account recovery during beta is handled via support@opsiq.com.
-10. **How do I get help or report a bug?** Email support@opsiq.com with your workspace name and what
+   Account recovery during beta is handled via support@opsiq.solutions.
+10. **How do I get help or report a bug?** Email support@opsiq.solutions with your workspace name and what
     you were doing — see the support doc for exactly what to include.
 
 ## Target user statement
@@ -121,7 +121,7 @@ feedback over monetization right now; if/when paid plans arrive, beta users will
 - The diagnosis runs **algorithmically** — there is **no third-party AI provider** receiving your data
   to produce results.
 - Authentication is a standard database-backed session cookie; we don't ask for payment details.
-- Questions about data handling: **support@opsiq.com**.
+- Questions about data handling: **support@opsiq.solutions**.
 
 ## What it does today
 - Public landing page explaining the product to logged-out visitors.
@@ -133,6 +133,6 @@ feedback over monetization right now; if/when paid plans arrive, beta users will
 
 ## What it does not yet do
 - No payments / paid plans (Stripe is dormant/optional; no Lemon Squeezy).
-- No automated email verification or self-serve password reset (recovery via support@opsiq.com).
+- No automated email verification or self-serve password reset (recovery via support@opsiq.solutions).
 - No third-party integrations or multi-user team collaboration yet.
 - No mobile app (responsive web only).

@@ -46,9 +46,15 @@ function renderHeader() {
 
 describe("rendered product name", () => {
   it("the app header the owner sees on every authenticated page says OpsIQ", () => {
+    // The brand mark is now the real OpsIQ logo image (not styled text), so its name is
+    // carried in the accessible alt text rather than DOM textContent.
     const { container } = renderHeader();
+    const brandImages = Array.from(container.querySelectorAll("img"));
+    expect(brandImages.length).toBeGreaterThan(0);
+    for (const img of brandImages) {
+      expect(img.getAttribute("alt")).toBe("OpsIQ");
+    }
     const text = container.textContent ?? "";
-    expect(text).toContain("OpsIQ");
     expect(text).not.toContain("Rebilix");
   });
 

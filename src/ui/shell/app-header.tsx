@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
+import Image from "next/image";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { AccountMenu } from "@/components/owner/AccountMenu";
 import { BUSINESS_TYPE_LABELS } from "@/domain/owner-mode/owner-data-hub";
@@ -54,11 +55,28 @@ export const AppHeader = forwardRef<HTMLButtonElement, AppHeaderProps>(function 
         </button>
         {/* Brand mark, not the page heading -- each page supplies its own real <h1>. The
             surrounding <header> already carries the "banner" landmark, so assistive tech
-            doesn't need a heading here to identify the site name. Serif, matching the same
-            font-display used for every page's own headline and every "top priority" treatment
-            in the app -- a distinctive wordmark instead of the generic sans-serif-bold logotype
-            every SaaS admin shell defaults to. */}
-        <p className="shrink-0 font-display text-lg font-semibold tracking-tight text-[var(--primary-text)]">OpsIQ</p>
+            doesn't need a heading here to identify the site name. Below md the mobile-nav
+            hamburger button (above) shares this same row, so the compact symbol-only mark is
+            used there; at md and up (hamburger hidden) there's room for the full horizontal
+            lockup. */}
+        <span className="shrink-0">
+          <Image
+            src="/opsiq-mark.png"
+            alt="OpsIQ"
+            width={747}
+            height={541}
+            priority
+            className="h-7 w-auto md:hidden"
+          />
+          <Image
+            src="/opsiq-logo.png"
+            alt="OpsIQ"
+            width={1864}
+            height={541}
+            priority
+            className="hidden h-7 w-auto md:block"
+          />
+        </span>
         {!businessLoading && businesses.length > 0 && (
           <>
             <span aria-hidden="true" className="hidden h-5 w-px shrink-0 bg-border sm:block" />

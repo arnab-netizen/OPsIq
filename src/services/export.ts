@@ -61,9 +61,9 @@ export function convertToCSV(exportedData: ExportedData): string {
     lines.push(table.columns.map((col) => `"${col}"`).join(","));
 
     // CSV data rows
-    table.data.forEach((row: any) => {
+    table.data.forEach((row) => {
       const values = table.columns.map((col) => {
-        const value = row[col];
+        const value = (row as Record<string, unknown>)[col];
         if (value === null || value === undefined) {
           return '""';
         }
@@ -180,7 +180,7 @@ export function generateGDPRExportMetadata(workspaceId: string): string {
       "audit_events",
     ],
     note: "This export contains all personal data associated with the workspace.",
-    contact: "support@opsiq.com",
+    contact: "support@opsiq.solutions",
     version: "1.0",
   };
 

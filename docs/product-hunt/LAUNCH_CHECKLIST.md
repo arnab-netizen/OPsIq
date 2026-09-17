@@ -18,7 +18,7 @@ live-proven; free beta (no payment provider). Keep this file in sync with realit
 - [ ] Manually walk the stranger path on production: `/` (landing 200) → `/signup` → run a diagnosis →
       see findings/recommendations/actions on the dashboard.
 - [ ] Verify `/api/health` 200 and `/api/readiness` 200 on production.
-- [ ] Confirm `support@opsiq.com` inbox is monitored and auto-reply (optional) is set.
+- [ ] Confirm `support@opsiq.solutions` inbox is monitored and auto-reply (optional) is set.
 - [ ] Confirm landing copy, tagline, and screenshots all reflect "free beta / no payment / no AI key".
 - [ ] Decide demo workspace: seed a demo (`npm run demo:seed` against prod) only if you want a
       ready-made example; otherwise rely on live signup.
@@ -51,7 +51,7 @@ live-proven; free beta (no payment provider). Keep this file in sync with realit
 - [ ] Decide whether/when account-recovery (password reset) and billing move from roadmap to a slice.
 
 ## Support monitoring
-- [ ] `support@opsiq.com` checked at least 2–3×/day during launch week.
+- [ ] `support@opsiq.solutions` checked at least 2–3×/day during launch week.
 - [ ] Use `docs/support/SUPPORT.md` as the canonical response source.
 - [ ] Log each support contact (issue type, resolution) to spot patterns.
 - [ ] For account lockouts during beta, follow the manual recovery note in the support doc.

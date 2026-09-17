@@ -49,6 +49,20 @@ const softwareApplicationJsonLd = {
   },
 };
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "OpsIQ",
+  url: `${SITE_URL}/`,
+  logo: `${SITE_URL}/opsiq-logo.png`,
+  sameAs: [
+    "https://www.linkedin.com/company/opsiq-hq/",
+    "https://x.com/opsiqsolutions",
+  ],
+  description:
+    "OpsIQ reads a business's day-to-day numbers and returns one prioritized, explained action at a time. Not affiliated with any other company or product also named OpsIQ.",
+};
+
 export default async function HomePage() {
   const session = await getSession();
 
@@ -74,6 +88,10 @@ export default async function HomePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       <LandingPage />
     </>

@@ -24,7 +24,7 @@ describe("App route error boundary (src/app/error.tsx)", () => {
   it("offers retry and beta support contact", () => {
     const reset = vi.fn();
     const { container } = render(<AppError error={new Error("x")} reset={reset} />);
-    expect(container.querySelector('a[href="mailto:support@opsiq.com"]')).not.toBeNull();
+    expect(container.querySelector('a[href="mailto:support@opsiq.solutions"]')).not.toBeNull();
     expect(container.textContent ?? "").toMatch(/beta support/i);
     // retry control present
     expect(container.querySelector("button")).not.toBeNull();
