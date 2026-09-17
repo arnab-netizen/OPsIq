@@ -46,6 +46,19 @@ function mockBetaStatusThen(handler: (input: RequestInfo | URL) => Promise<unkno
   );
 }
 
+function mockBetaStatus(response: { enabled: boolean; admissionMode?: string }) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/auth/beta-status")) {
+        return Promise.resolve({ ok: true, json: async () => response });
+      }
+      return Promise.reject(new Error("unexpected fetch in this test"));
+    })
+  );
+}
+
 describe("SignupPage — governed error rendering", () => {
   it("renders the server's fixed governed error string on a 4xx/5xx JSON response", async () => {
     mockBetaStatusThen(() =>
@@ -96,5 +109,47 @@ describe("SignupPage — governed error rendering", () => {
       expect(screen.getByText(FIXED_FALLBACK)).toBeTruthy();
     });
     expect(screen.queryByText(/internal-auth-db/i)).toBeNull();
+  });
+});
+
+/**
+ * Root cause under regression test here: /signup previously showed a static
+ * "Create your account — open beta" heading and a fully-fillable form
+ * regardless of the real runtime admission mode, so an uninvited visitor
+ * under INVITE_ONLY saw no indication an invite was required until after
+ * submitting the whole form. The page now derives an invite-only notice from
+ * the same GET /api/auth/beta-status response that already gates form
+ * enablement (`admissionMode`), without adding a second client-side
+ * admission decision, and never renders "open beta" copy.
+ */
+describe("SignupPage — admission-mode wording", () => {
+  it("shows an invite-only notice and never says 'open beta' when the mode is INVITE_ONLY", async () => {
+    mockBetaStatus({ enabled: true, admissionMode: "INVITE_ONLY" });
+    render(<SignupPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/invite-only right now/i)).toBeTruthy();
+    });
+    expect(screen.getByText(/request beta access from the homepage/i)).toBeTruthy();
+    expect(screen.queryByText(/open beta/i)).toBeNull();
+  });
+
+  it("does not show the invite-only notice when the mode is OPEN_BETA, and never says 'open beta'", async () => {
+    mockBetaStatus({ enabled: true, admissionMode: "OPEN_BETA" });
+    render(<SignupPage />);
+
+    await waitFor(() => expect(screen.getByLabelText(/email/i)).not.toBeDisabled());
+    expect(screen.queryByText(/invite-only right now/i)).toBeNull();
+    expect(screen.queryByText(/open beta/i)).toBeNull();
+  });
+
+  it("shows a mode-neutral closed notice (not 'open beta registration is closed') when the form is disabled", async () => {
+    mockBetaStatus({ enabled: false, admissionMode: "CLOSED" });
+    render(<SignupPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/beta registration isn.t open right now/i)).toBeTruthy();
+    });
+    expect(screen.queryByText(/open beta/i)).toBeNull();
   });
 });

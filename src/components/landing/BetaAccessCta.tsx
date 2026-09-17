@@ -116,7 +116,7 @@ export function BetaAccessCta({ triggerClassName, triggerLabel = DEFAULT_LABEL }
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
-              OpsIQ is in a controlled beta. Tell us where to reach you and we&rsquo;ll follow up as access opens.
+              OpsIQ is in a controlled, invite-only beta. Tell us where to reach you and we&rsquo;ll follow up as access opens.
             </p>
             <Input
               label="Email"

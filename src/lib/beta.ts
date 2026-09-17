@@ -106,9 +106,9 @@ export const BETA_PRICE = "FREE" as const;
 
 /** Current version strings for the three policies a beta signup must accept. Bump on any material change. */
 export const CURRENT_POLICY_VERSIONS = {
-  TERMS: "2026-09-05",
-  PRIVACY: "2026-09-05",
-  BETA_NOTICE: "2026-09-05",
+  TERMS: "2026-09-17",
+  PRIVACY: "2026-09-17",
+  BETA_NOTICE: "2026-09-17",
 } as const;
 
 export type PolicyType = keyof typeof CURRENT_POLICY_VERSIONS;

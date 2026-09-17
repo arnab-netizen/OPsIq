@@ -96,7 +96,7 @@ function isEmailUniqueViolation(error: unknown): boolean {
  */
 const BETA_CLOSED_RESPONSE = {
   success: false,
-  error: "Open beta registration is currently closed. Please check back soon.",
+  error: "Beta registration isn't available for this account right now. Please check back soon.",
   reason: "beta_disabled",
 } as const;
 
@@ -357,7 +357,7 @@ const handleSignup = async (request: NextRequest) => {
         await provider.send({
           to: user.email,
           subject: "Verify your OpsIQ account",
-          html: `<p>Welcome to the OpsIQ open beta.</p><p><a href="${verifyUrl}">Verify your email to activate your account</a></p><p>This link expires in 7 days. Never share it — it grants access to your account.</p>`,
+          html: `<p>Welcome to the OpsIQ beta.</p><p><a href="${verifyUrl}">Verify your email to activate your account</a></p><p>This link expires in 7 days. Never share it — it grants access to your account.</p>`,
           text: `Verify your OpsIQ account: ${verifyUrl}\n\nThis link expires in 7 days. Never share it — it grants access to your account.`,
         });
       } else {

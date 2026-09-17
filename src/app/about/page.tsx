@@ -17,7 +17,8 @@ export default function AboutPage() {
           OpsIQ reads your business&apos;s day-to-day numbers, tells you what needs attention and
           why, and gives you one prioritized, explained action at a time — with the exact data and
           reasoning behind it. It&apos;s built for small and mid-size service business owners, not
-          enterprise IT or sales teams. Currently free, in open beta, no credit card required.
+          enterprise IT or sales teams. Currently free, in an invite-only controlled beta, no
+          credit card required.
         </p>
 
         <h2 className="font-display mt-8 text-xl font-semibold tracking-tight">Looking for a different OpsIQ?</h2>
