@@ -29,8 +29,13 @@ describe("root route (/) landing behavior", () => {
     const element = await HomePage();
 
     expect(redirectMock).not.toHaveBeenCalled();
-    // The logged-out branch returns the LandingPage component element.
-    expect((element as { type: unknown }).type).toBe(LandingPage);
+    // The logged-out branch returns a fragment containing the homepage JSON-LD
+    // script tag alongside the LandingPage component element.
+    const children = (element as { props: { children: unknown } }).props.children;
+    const childArray = Array.isArray(children) ? children : [children];
+    const types = childArray.map((child) => (child as { type?: unknown } | null)?.type);
+    expect(types).toContain(LandingPage);
+    expect(types).toContain("script");
   });
 
   it("still redirects authenticated visitors to /dashboard", async () => {

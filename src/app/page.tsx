@@ -1,9 +1,53 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession, getPolicyContext } from "@/services/auth";
 import { isSelfServeOwnerContext } from "@/policies/capability-check";
 import LandingPage from "@/components/landing/LandingPage";
 
 export const dynamic = "force-dynamic";
+
+const SITE_URL = "https://opsiq.solutions";
+const OG_TITLE = "OpsIQ - Diagnose your business. Know your next move.";
+const OG_DESCRIPTION =
+  "OpsIQ reads your business numbers, tells you what needs attention and why, and gives you an ordered plan for what to do next. Free beta, no card required.";
+
+export const metadata: Metadata = {
+  title: OG_TITLE,
+  description: OG_DESCRIPTION,
+  alternates: {
+    canonical: `${SITE_URL}/`,
+  },
+  openGraph: {
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    url: `${SITE_URL}/`,
+    type: "website",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    images: ["/og-image.png"],
+  },
+};
+
+const softwareApplicationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "OpsIQ",
+  url: `${SITE_URL}/`,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "OpsIQ reads a business's day-to-day numbers and returns one prioritized, explained action at a time.",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+    description: "Free open beta, no credit card required",
+  },
+};
 
 export default async function HomePage() {
   const session = await getSession();
@@ -25,5 +69,13 @@ export default async function HomePage() {
     redirect(ownerHome ? "/owner/cockpit" : "/dashboard");
   }
 
-  return <LandingPage />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+      />
+      <LandingPage />
+    </>
+  );
 }
