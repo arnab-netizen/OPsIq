@@ -365,6 +365,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(verify.status).toBe(400);
       expect(verify.body.code).toBe("NOT_FOUND_OR_FORBIDDEN");
 
+      // CI ROOT CAUSE (fixed here, test-only): the real POST route unconditionally calls
+      // persistProcessExecutionRoutes(ctx.verifiedWorkspaceId, ..., ctx.verifiedActorId) BEFORE
+      // applyProcessExecutionAction runs (see route.ts) -- a pre-existing, correct
+      // "server-authoritative route materialisation" step from an earlier PASS, unrelated to this
+      // PR's diff. It writes an OWNER_PROCESS_EXECUTION_TASK_UPSERTED AuditEvent for
+      // (workspaceId: foreignWorkspaceId, actorId: foreignActorId) regardless of whether the
+      // caller's actual action (VERIFY_OUTCOME here) is subsequently accepted or rejected. The
+      // shared afterEach below does clean up audit_events for foreignWorkspaceId, but it runs
+      // AFTER this it() body -- deleting the User row first (as this cleanup previously did)
+      // violates audit_events_actor_id_fkey. Delete that actor's own audit events first.
+      await db.auditEvent.deleteMany({ where: { actorId: foreignActorId } });
       await db.userRoleAssignment.deleteMany({ where: { userId: foreignActorId } });
       await db.workspaceMembership.deleteMany({ where: { userId: foreignActorId } });
       await db.user.deleteMany({ where: { id: foreignActorId } });
