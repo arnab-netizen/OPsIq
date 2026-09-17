@@ -36,6 +36,27 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
+  async redirects() {
+    return [
+      // www.opsiq.solutions (any protocol) -> https://opsiq.solutions
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.opsiq.solutions" }],
+        destination: "https://opsiq.solutions/:path*",
+        permanent: true,
+      },
+      // http://opsiq.solutions (apex, insecure) -> https://opsiq.solutions
+      {
+        source: "/:path*",
+        has: [
+          { type: "host", value: "opsiq.solutions" },
+          { type: "header", key: "x-forwarded-proto", value: "http" },
+        ],
+        destination: "https://opsiq.solutions/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

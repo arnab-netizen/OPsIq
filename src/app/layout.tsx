@@ -16,6 +16,7 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://opsiq.solutions"),
   title: "OpsIQ - Business health & priorities",
   description:
     "OpsIQ helps business owners see how their business is doing, what needs attention, and what to do next.",
