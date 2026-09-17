@@ -454,13 +454,13 @@ function ExecutionLifecycleSection({
   // active business changes — see `activeBusinessId`'s doc comment on MinimumOwnerCockpitProps.
   // Without this, `onAction`'s businessId for RECORD_OUTCOME/VERIFY_OUTCOME (cockpit/page.tsx)
   // would be read from whatever business is active at Confirm-click time, not the one the owner
-  // was looking at when they opened this form, if a submit ever raced a business switch.
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to an external context
-  // change (ActiveBusinessContext), not deriving state from props/state already available during
-  // render. Inlined (not calling `resetForm`) so the effect's only real dependency is
-  // `activeBusinessId` -- setState setters are referentially stable and exhaustive-deps does not
-  // require them in the array.
+  // was looking at when they opened this form, if a submit ever raced a business switch. This is
+  // reacting to an external context change (ActiveBusinessContext), not deriving state from
+  // props/state already available during render. Inlined (not calling `resetForm`) so the
+  // effect's only real dependency is `activeBusinessId` -- setState setters are referentially
+  // stable and exhaustive-deps does not require them in the array.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see justification above
     setPending(null); setProgressPct(""); setStage(""); setOutcomeStatus("worked"); setReason("");
   }, [activeBusinessId]);
 
@@ -1100,9 +1100,10 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
   // DELEGATE/...) the instant the active business changes — see `activeBusinessId`'s doc comment
   // on MinimumOwnerCockpitProps. These actions never send a businessId (write path resolves by
   // taskKey alone), but leaving a stale evidence/reason/delegate form open across a business
-  // switch is the same "submitting against a context the owner no longer sees" hazard.
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to an external context change
+  // switch is the same "submitting against a context the owner no longer sees" hazard. This is
+  // reacting to an external context change, not deriving state from render-available props/state.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see justification above
     setPending(null); setEvidenceText(""); setReasonText(""); setDelegateRole("MANAGER");
   }, [activeBusinessId]);
 

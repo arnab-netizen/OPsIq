@@ -31,7 +31,7 @@
  * modal.tsx or use-dialog-a11y.ts), so the jsdom-width-independent coverage below is
  * representative of mobile width too; this is noted rather than assumed silently.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, fireEvent, screen } from "@testing-library/react";
 import { Modal } from "@/ui/primitives/modal";
@@ -52,13 +52,16 @@ function ControlledModalHarness({ onCloseCount }: { onCloseCount?: (n: number) =
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [unrelated, setUnrelated] = useState(0);
-  let closeCalls = 0;
+  // A ref, not a plain local, so incrementing it across calls doesn't mutate render-scoped
+  // state outside React's render/commit lifecycle (refs are the sanctioned escape hatch for
+  // exactly this "persists across renders, doesn't affect output" counter shape).
+  const closeCallsRef = useRef(0);
 
   // Deliberately NOT useCallback-wrapped: a fresh function identity every render,
   // matching the real `resetAndClose` in BetaAccessCta.tsx.
   function closeModal() {
-    closeCalls += 1;
-    onCloseCount?.(closeCalls);
+    closeCallsRef.current += 1;
+    onCloseCount?.(closeCallsRef.current);
     setIsOpen(false);
     setEmail("");
     setFirstName("");
