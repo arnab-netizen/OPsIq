@@ -13,7 +13,8 @@ import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { buildProcessExecutionBridge } from "@/domain/owner-mode/process-execution-bridge";
 import {
-  persistProcessExecutionRoutes, getPersistedProcessTasks, completeProcessTask, type ProcessBridgeDb, type ProcessBridgeDeps,
+  persistProcessExecutionRoutes, getPersistedProcessTasks, completeProcessTask, applyProcessExecutionAction,
+  type ProcessBridgeDb, type ProcessBridgeDeps,
 } from "@/services/owner-mode/process-execution-bridge.service";
 import type { ProcessCorrection, ProcessCorrectionRouting, CorrectionType } from "@/domain/owner-mode/bottleneck-correction-routing";
 import type { CashProfitProtectionAnalysis, CashProfitSignal } from "@/domain/owner-mode/cash-profit-protection";
@@ -136,5 +137,77 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Process-Correction Execution Bridge 
     const foreign = await persistProcessExecutionRoutes(wsClean, analysisFor(wsL), owner, deps);
     expect(foreign.created).toBe(0);
     expect(await getPersistedProcessTasks(wsClean, deps)).toHaveLength(0);
+  });
+
+  // ── Regression: production COMPLETE 400 (detectFakeCompletion OR/AND bug) ──────────────────
+  // The owner cockpit's Complete form (MinimumOwnerCockpit.tsx) only ever collects evidenceRefs
+  // for COMPLETE -- it has no outcomeNotes field, so the frontend never sends outcomeNotes. Every
+  // pre-existing test above that completes a task successfully (lines 117, 124) always supplied
+  // outcomeNotes alongside evidenceRefs, which is why none of them caught this: with notes present,
+  // the fake-completion guard was never triggered regardless of the OR/AND bug. This test uses the
+  // exact request shape production actually sends -- evidence present, outcomeNotes absent -- for a
+  // task never touched by an earlier test in this file (pc:c-train), on a fresh business.
+  it("completes a task with evidence and no outcomeNotes (the exact shape the owner cockpit's Complete form sends) — was a false EVIDENCE_REQUIRED 400 before the detectFakeCompletion fix", async () => {
+    const res = await completeProcessTask(
+      { workspaceId: wsL, businessId: bizL, actorId: mgr, actorRole: "manager", taskKey: "pc:c-train", evidenceRefs: ["training completion certificate #4471"] },
+      deps,
+    );
+    expect(res.ok).toBe(true);
+    const row = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-train")!;
+    expect(row.status).toBe("COMPLETED");
+    expect(row.evidenceRefs).toContain("training completion certificate #4471");
+  });
+
+  it("rejects completion with no evidence at all — no mutation", async () => {
+    const before = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-sop")!;
+    expect(before.status).not.toBe("COMPLETED");
+    const res = await completeProcessTask(
+      { workspaceId: wsL, businessId: bizL, actorId: mgr, actorRole: "manager", taskKey: "pc:c-sop", evidenceRefs: [] },
+      deps,
+    );
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.code).toBe("EVIDENCE_REQUIRED");
+    const after = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-sop")!;
+    expect(after.status).toBe(before.status); // unchanged — no partial/silent mutation
+  });
+
+  it("denies completing a task through the wrong workspace — no mutation, no cross-tenant existence leak", async () => {
+    const res = await completeProcessTask(
+      { workspaceId: wsClean, businessId: null, actorId: owner, actorRole: "owner", taskKey: "pc:c-reassess", evidenceRefs: ["evidence"] },
+      deps,
+    );
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.code).toBe("NOT_FOUND_OR_FORBIDDEN");
+    // The task must still exist, untouched, under its real workspace.
+    const row = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-reassess")!;
+    expect(row.status).not.toBe("COMPLETED");
+  });
+
+  it("replaying COMPLETE on an already-completed task is rejected as an invalid transition, not re-processed", async () => {
+    // pc:c-owner was completed by the owner earlier in this file (line ~118).
+    const before = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-owner")!;
+    expect(before.status).toBe("COMPLETED");
+    const res = await completeProcessTask(
+      { workspaceId: wsL, businessId: bizL, actorId: owner, actorRole: "owner", taskKey: "pc:c-owner", evidenceRefs: ["another decision memo"] },
+      deps,
+    );
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.code).toBe("INVALID_TRANSITION");
+    const after = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-owner")!;
+    expect(after.status).toBe("COMPLETED");
+    // Evidence from the rejected replay must never be appended.
+    expect(after.evidenceRefs).not.toContain("another decision memo");
+  });
+
+  it("a sibling transition (SUBMIT_EVIDENCE) on the shared process-execution path is unaffected by the COMPLETE fix", async () => {
+    const before = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "cp:MISSING_UNIT_ECONOMICS")!;
+    const res = await applyProcessExecutionAction(
+      { workspaceId: wsL, businessId: bizL, actorId: mgr, actorRole: "manager", taskKey: "cp:MISSING_UNIT_ECONOMICS", action: "SUBMIT_EVIDENCE", evidenceRefs: ["per-job cost worksheet"] },
+      deps,
+    );
+    expect(res.ok).toBe(true);
+    const after = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "cp:MISSING_UNIT_ECONOMICS")!;
+    expect(after.evidenceRefs).toContain("per-job cost worksheet");
+    expect(after.evidenceRefs.length).toBe(before.evidenceRefs.length + 1);
   });
 });
