@@ -312,7 +312,7 @@ export async function verifyOwnerActionOutcome(
 
   return deps.db.$transaction(async (tx: typeof db) => {
     // 1. Load outcome — workspace-isolated
-    const outcome = await (tx as any).ownerActionOutcome.findFirst({
+    const outcome = await tx.ownerActionOutcome.findFirst({
       where: { id: outcomeId, workspaceId },
     }) as OutcomeRowForClassification | null;
 
@@ -322,7 +322,7 @@ export async function verifyOwnerActionOutcome(
     // 2. Load associated task for metric context + window check
     let task: TaskRowForClassification | null = null;
     if (outcome.taskKey) {
-      task = await (tx as any).processExecutionTask.findFirst({
+      task = await tx.processExecutionTask.findFirst({
         where: { workspaceId, taskKey: outcome.taskKey },
         select: {
           id: true,
@@ -403,7 +403,7 @@ export async function verifyOwnerActionOutcome(
     ) ? "verified" : (verificationClassification === "OBSERVATION_WINDOW_OPEN" ? "observation_window_open" : "insufficient_evidence");
 
     // 6. Optimistic lock: update only when verificationClassification IS NULL
-    const updated = await (tx as any).ownerActionOutcome.updateMany({
+    const updated = await tx.ownerActionOutcome.updateMany({
       where: { id: outcomeId, workspaceId, verificationClassification: null },
       data: {
         verificationClassification,
@@ -450,7 +450,7 @@ export async function verifyOwnerActionOutcome(
         },
         visibility: "internal",
       },
-      tx as any
+      tx
     );
 
     return { ok: true, verificationClassification, verificationStatus, selfVerified };
