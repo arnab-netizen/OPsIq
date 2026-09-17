@@ -180,7 +180,7 @@ export function generateGDPRExportMetadata(workspaceId: string): string {
       "audit_events",
     ],
     note: "This export contains all personal data associated with the workspace.",
-    contact: "support@opsiq.com",
+    contact: "support@opsiq.solutions",
     version: "1.0",
   };
 

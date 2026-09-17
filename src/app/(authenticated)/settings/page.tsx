@@ -87,8 +87,8 @@ export default function SettingsPage() {
           <h2 className="text-lg font-semibold text-foreground">Data and account help</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             To request data or account deletion during beta, contact{" "}
-            <a href="mailto:support@opsiq.com" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.com
+            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
+              support@opsiq.solutions
             </a>
             .
           </p>

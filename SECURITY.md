@@ -7,7 +7,7 @@
 If you believe you've found a security vulnerability in OpsIQ, report it privately using one of the following channels:
 
 1. **Preferred:** Use [GitHub's private vulnerability reporting](../../security/advisories/new) for this repository (Security tab → "Report a vulnerability"). This creates a private advisory visible only to maintainers until a fix is ready.
-2. **Alternative:** Email **support@opsiq.com** with a description of the issue, steps to reproduce, and any relevant proof-of-concept. Please use a subject line starting with `[SECURITY]`.
+2. **Alternative:** Email **support@opsiq.solutions** with a description of the issue, steps to reproduce, and any relevant proof-of-concept. Please use a subject line starting with `[SECURITY]`.
 
 We ask that you:
 - Give us a reasonable amount of time to investigate and address the issue before any public disclosure.

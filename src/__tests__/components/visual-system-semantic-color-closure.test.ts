@@ -264,9 +264,15 @@ describe("app-wide migration: the shared Badge/Button primitives and every bg-to
     expect(accountMenuSource).toMatch(/<span className="text-xs font-medium text-primary">/);
   });
 
-  it("the app-header 'OpsIQ' wordmark (plain text, no own background) was migrated to the arbitrary-value form of --primary-text", () => {
+  it("the app-header brand mark is the real OpsIQ logo image, not styled text -- no --primary-text token applies to it anymore", () => {
+    // Brand-PR follow-up: the wordmark used to be plain text colored via the arbitrary-value
+    // form of --primary-text (this test's original assertion). It is now the real OpsIQ logo
+    // PNG (public/opsiq-logo.png / public/opsiq-mark.png), whose navy/blue are baked into the
+    // asset's own pixels, not read from any CSS custom property -- so this token-migration
+    // concern no longer applies to this element at all.
     const headerSource = read("src/ui/shell/app-header.tsx");
-    expect(headerSource).toMatch(/text-\[var\(--primary-text\)\]/);
+    expect(headerSource).toMatch(/opsiq-logo\.png/);
+    expect(headerSource).toMatch(/opsiq-mark\.png/);
   });
 
   it("large-text (>=24px, or >=18.66px+font-bold) instances that already pass AA at the large-text 3:1 threshold under the base token were deliberately left unmigrated (no blanket recolor)", () => {

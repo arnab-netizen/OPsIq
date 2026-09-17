@@ -47,8 +47,8 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           </div>
           <p style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "1rem" }}>
             Contact beta support:{" "}
-            <a href="mailto:support@opsiq.com" style={{ color: "#4f46e5" }}>
-              support@opsiq.com
+            <a href="mailto:support@opsiq.solutions" style={{ color: "#4f46e5" }}>
+              support@opsiq.solutions
             </a>
           </p>
         </div>

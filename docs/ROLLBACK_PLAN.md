@@ -332,7 +332,7 @@ We experienced a brief service disruption (<X minutes) while deploying updates t
 
 The issue was detected and immediately rolled back. All systems are now operating normally.
 
-If you experienced data loss or have questions, please contact support@opsiq.com.
+If you experienced data loss or have questions, please contact support@opsiq.solutions.
 
 We apologize for the inconvenience and are implementing additional safeguards.
 ```

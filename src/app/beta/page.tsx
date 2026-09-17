@@ -83,8 +83,8 @@ export default function BetaNoticePage() {
           <p className="mt-1">
             Use the &ldquo;Send beta feedback / Report a problem&rdquo; link inside the product, or
             email{" "}
-            <a href="mailto:support@opsiq.com" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.com
+            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
+              support@opsiq.solutions
             </a>
             . Beta feedback directly shapes what we build next.
           </p>

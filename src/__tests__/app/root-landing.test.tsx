@@ -97,8 +97,11 @@ describe("LandingPage content", () => {
   it("introduces no Product Hunt copy or asset dependency", () => {
     const { container } = render(<LandingPage />);
     expect(container.textContent ?? "").not.toMatch(/product hunt/i);
-    // No external image/script assets are required by the landing page.
-    expect(container.querySelectorAll("img").length).toBe(0);
+    // The only image the landing page renders is the real OpsIQ brand logo (header) -- no
+    // Product-Hunt-specific badge/screenshot asset, and no script tags.
+    const imgs = container.querySelectorAll("img");
+    expect(imgs.length).toBe(1);
+    expect(imgs[0].getAttribute("alt")).toBe("OpsIQ");
     expect(container.querySelectorAll("script").length).toBe(0);
   });
 });
