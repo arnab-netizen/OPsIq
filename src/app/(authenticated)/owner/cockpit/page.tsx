@@ -8,14 +8,29 @@
  *
  * Business-context decision (revised — see docs/opsiq-governance and the P0-4 Home/Finance
  * consistency fix): NO selector, by design — this page still has no visible business selector.
- * `processExecution` (the task bridge
- * this page drives START/action/progress against) is built via `buildProcessExecutionBridge(
- * processCorrections, cashProfitProtection, workspaceId, ...)` — workspace-scoped, not
- * businessId-scoped — and every mutation here is submitted by `taskKey` (POST
- * /api/owner/process-execution never sends a businessId; the server resolves task ownership from
- * the task record itself). That part is unchanged: it is a workspace-wide execution queue, the
- * same shape as /owner/tasks, and letting the owner "switch business" mid-task here would not
- * change which tasks are shown and could wrongly imply an in-flight task moved.
+ * `processExecution` (the task bridge this page drives START/action/progress against) is
+ * submitted by `taskKey`, and most actions (START/APPROVE/REJECT/DELEGATE/SUBMIT_EVIDENCE/
+ * COMPLETE/MARK_BLOCKED/REQUEST_MISSING_DATA/ACKNOWLEDGE/RECORD_PROGRESS) resolve task ownership
+ * from the task record itself and do not require a businessId on the request body.
+ *
+ * CORRECTION (fix/cockpit-record-outcome-businessid — this comment previously, and incorrectly,
+ * claimed POST /api/owner/process-execution "never sends a businessId"; that stopped being true
+ * once Phase 3 added RECORD_OUTCOME): `RECORD_OUTCOME` is REQUIRED server-side to carry a
+ * `businessId` (see `applyProcessExecutionAction`'s RECORD_OUTCOME branch in
+ * process-execution-bridge.service.ts, which returns `MISSING_INPUT` — a 400 — without one) so the
+ * recorded outcome can be attributed to a specific business. `onAction()` below now attaches the
+ * shared `activeBusinessId` to the POST body for RECORD_OUTCOME (and VERIFY_OUTCOME, which does
+ * not strictly require it server-side but uses it, when present, to scope its best-effort
+ * post-verification reassessment side effect to the right business instead of falling back to the
+ * task's sourceFindingKey). This is safe to do with the page's shared `activeBusinessId` — not a
+ * per-task business id the client would otherwise have to track — because the execution-lifecycle
+ * items rendered here were themselves fetched from `now-view` scoped to that same
+ * `activeBusinessId` (see `buildExecutionLifecycle`'s businessId scoping), so a task offering
+ * RECORD_OUTCOME/VERIFY_OUTCOME always either belongs to the active business or is a genuinely
+ * workspace-level task with no business of its own. The server independently re-validates that any
+ * supplied businessId belongs to the caller's workspace before using it (`businessInWorkspace` in
+ * process-execution-bridge.service.ts) and rejects a foreign one with `WRONG_WORKSPACE` — this
+ * client-side wiring is a convenience, never a trust boundary.
  *
  * BUT GET /api/owner/now-view's OTHER signals (cash, finance, business condition, retention) are
  * genuinely per-business, and a real human usability test proved that fetching now-view with no
@@ -215,6 +230,18 @@ export default function OwnerCockpitPage() {
       if (input.progressPct != null) body.progressPct = input.progressPct;
       if (input.stage) body.stage = input.stage;
       if (input.outcomeStatus) body.outcomeStatus = input.outcomeStatus;
+      // RECORD_OUTCOME requires a businessId server-side (applyProcessExecutionAction returns
+      // MISSING_INPUT/400 without one) so the recorded outcome can be attributed to a business;
+      // VERIFY_OUTCOME doesn't require it but uses it, when present, to correctly scope its
+      // best-effort post-verification reassessment side effect. See the doc comment at the top of
+      // this file for why `activeBusinessId` is the right, server-revalidated value to send here.
+      // Scoped to just these two actions -- not attached to every action -- because other actions
+      // reach tasks via a bare taskKey and the service's defense-in-depth business-isolation guard
+      // (process-execution-bridge.service.ts) would incorrectly reject a task whose own businessId
+      // happens to differ from whatever is currently active.
+      if ((action === "RECORD_OUTCOME" || action === "VERIFY_OUTCOME") && activeBusinessId) {
+        body.businessId = activeBusinessId;
+      }
       const { ok, data } = await apiPost("/api/owner/process-execution", body);
       if (!ok) {
         setMessage(describeActionFailure(data, "We couldn't complete this action. Nothing was changed."));
