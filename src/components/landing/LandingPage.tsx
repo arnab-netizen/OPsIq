@@ -237,10 +237,10 @@ export default function LandingPage() {
           above it (muted, small text, no button styling). */}
       <section className="mx-auto w-full max-w-2xl px-6 pb-12 text-center">
         <p className="text-sm text-muted-foreground">
-          Looking for a different OpsIQ? There are several unrelated products that also go by
-          &ldquo;OpsIQ.&rdquo; We&rsquo;re not affiliated with any of them.{" "}
+          <strong>Looking for a different OpsIQ?</strong> There are several unrelated products
+          that also go by &quot;OpsIQ.&quot; We&apos;re not affiliated with any of them.{" "}
           <Link href="/about" className="text-[var(--primary-text)] hover:underline">
-            Learn more &rarr;
+            Learn more →
           </Link>
         </p>
       </section>

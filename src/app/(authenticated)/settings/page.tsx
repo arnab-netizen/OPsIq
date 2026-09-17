@@ -56,6 +56,8 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    // Intentional one-shot data fetch on mount; fetchProfile() sets state from the API response.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProfile();
   }, []);
 
