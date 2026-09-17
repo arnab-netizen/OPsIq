@@ -26,6 +26,16 @@
  * If Engagement ever gains a businessId/OwnerBusiness relation, this read must be
  * revisited; until then, do not "fix" this into a fabricated business-scoped filter.
  * See write-isolation-recommendation-capacity-equipment-scope.db.test.ts.
+ *
+ * Re-verified 2026-09-17 (fix/recommendation-safety-scoping): the same root cause
+ * (same call chain, same missing businessId on the legacy Recommendation model, same
+ * RECOMMENDATION_APPROVE-gated unreachability) was independently confirmed for the
+ * sibling gates recommendation-cash-safety.service.ts and
+ * recommendation-margin-safety.service.ts, which now carry matching documentation and
+ * db-test proof (recommendation-cash-safety-cycle-scope.db.test.ts,
+ * recommendation-margin-safety-snapshot-scope.db.test.ts). No code change was made to
+ * any of the three services: forcing a businessId onto this call chain would be
+ * exactly the "fabricated business-scoped filter" this comment already warns against.
  */
 
 import {

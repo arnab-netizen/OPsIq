@@ -6,6 +6,31 @@
  * sensitivity from its linked finding, and runs the fail-closed cash-safety gate.
  * Enforced only when the workspace opted into the Owner Mode governance suite
  * (same flag as M1/M2/M3). Reuses the proven owner-finance/owner-cashflow domains.
+ *
+ * WORKSPACE-WIDE BY NECESSITY, NOT BY OMISSION (re-verified 2026-09-17 against the
+ * fix/recommendation-safety-scoping cross-business-scoping audit): the reads below
+ * filter OwnerCashflowCycle/OwnerFinanceCycle by workspaceId only, even though both
+ * models carry a required businessId (see prisma/schema.prisma). This function is
+ * reachable ONLY via updateRecommendationStatus (services/recommendation.ts) ->
+ * enforceOwnerGatesForPromotion (gate-enforcement-policy.ts) -> here, and that whole
+ * chain operates on the LEGACY consultant/engagement Recommendation/Finding/Engagement
+ * models. Recommendation has workspaceId + findingId only; Finding has engagementId
+ * only; Engagement has a clientId (ClientAccount), not a businessId/OwnerBusiness
+ * relation -- there is no OwnerBusiness concept anywhere in this call's data model to
+ * scope by, so "workspace-wide" is the only coherent contract available here, not a
+ * missing filter. Confirmed unreachable by any self-serve owner: the route this
+ * hangs off, PATCH /api/recommendations/[recommendationId], requires
+ * CAPABILITIES.RECOMMENDATION_APPROVE, which is in INTERNAL_ONLY_CAPABILITIES and
+ * absent from OWNER_SCOPED_CAPABILITIES (capability-check.ts) -- no self-serve owner
+ * can ever trigger this path. Contrast with owner-action-gate.service.ts's bizScope()
+ * helper, the correct precedent for a TRUE business-scoped read of these same tables,
+ * used by the (reachable) owner.finance/cashflow.action gates registered in
+ * material-gate-registry.ts. If Engagement ever gains a businessId/OwnerBusiness
+ * relation, this read must be revisited; until then, do not "fix" this into a
+ * fabricated business-scoped filter. See
+ * recommendation-cash-safety-cycle-scope.db.test.ts. Same conclusion as the sibling
+ * finding already proven for recommendation-capacity-safety.service.ts (commit
+ * 0af781ee9) and recommendation-margin-safety.service.ts.
  */
 
 import {
