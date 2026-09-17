@@ -15,7 +15,7 @@
  * money. Owner action inputs use labelled controls — never window.prompt(). The server re-checks every action.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge, Disclosure } from "@/ui/primitives";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
@@ -242,6 +242,28 @@ export interface MinimumOwnerCockpitProps {
    * still surfaces as a secondary signal card (same tier as `topProfitLeak`), so it is never hidden.
    */
   financeTopPriority?: CockpitFinancePriority | null;
+  /**
+   * The currently active business (ActiveBusinessContext) — used ONLY to reset any open inline
+   * action form (the top-priority action form and each execution-lifecycle item's Phase 3
+   * RECORD_OUTCOME/VERIFY_OUTCOME/etc. form) when it changes, never to decide what to submit.
+   *
+   * Root cause this guards against: every inline form here is local component state
+   * (`pending`/`reasonText`/`evidenceText`/... in this component, and the equivalent state in
+   * `ExecutionLifecycleSection`) that is NOT bound to the business that was active when the form
+   * was opened. `onAction`'s businessId (for RECORD_OUTCOME/VERIFY_OUTCOME — see the doc comment
+   * atop cockpit/page.tsx) is read from the page's LIVE `activeBusinessId` at submit time via a
+   * closure, not a value captured at form-open time. This page currently renders no business
+   * selector of its own, so nothing today drives `activeBusinessId` to change while this
+   * component stays mounted with a form open — but that is an accident of this page's layout, not
+   * a guarantee, and every other owner page in this repo (Sales, Finance, Operations, ...) does
+   * have one. Rather than thread a captured-at-open-time business id through every action's input
+   * (which would only cover RECORD_OUTCOME/VERIFY_OUTCOME and leave every other pending form's
+   * reason/evidence/delegate input silently stale against a switched business context), this
+   * closes the whole class at once: any open inline form is discarded the instant the active
+   * business changes, exactly like a modal closing when the context it was opened for goes away.
+   * Never used to alter what gets sent for a submit that happens before that change.
+   */
+  activeBusinessId?: string | null;
 }
 
 /** F3: the Finance-diagnosis top-action card, shared by the primary (clean-state) and secondary renders. */
@@ -413,10 +435,12 @@ function ExecutionLifecycleSection({
   lifecycle,
   onAction,
   busy = false,
+  activeBusinessId = null,
 }: {
   lifecycle: OwnerExecutionLifecycleView;
   onAction?: (taskKey: string, action: string, input: CockpitActionInput) => void;
   busy?: boolean;
+  activeBusinessId?: string | null;
 }) {
   const [pending, setPending] = useState<{ taskKey: string; action: string } | null>(null);
   const [progressPct, setProgressPct] = useState("");
@@ -425,6 +449,20 @@ function ExecutionLifecycleSection({
   const [reason, setReason] = useState("");
 
   const resetForm = () => { setPending(null); setProgressPct(""); setStage(""); setOutcomeStatus("worked"); setReason(""); };
+
+  // Discard any open Phase 3 form (RECORD_OUTCOME/VERIFY_OUTCOME/RECORD_PROGRESS) the instant the
+  // active business changes — see `activeBusinessId`'s doc comment on MinimumOwnerCockpitProps.
+  // Without this, `onAction`'s businessId for RECORD_OUTCOME/VERIFY_OUTCOME (cockpit/page.tsx)
+  // would be read from whatever business is active at Confirm-click time, not the one the owner
+  // was looking at when they opened this form, if a submit ever raced a business switch.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to an external context
+  // change (ActiveBusinessContext), not deriving state from props/state already available during
+  // render. Inlined (not calling `resetForm`) so the effect's only real dependency is
+  // `activeBusinessId` -- setState setters are referentially stable and exhaustive-deps does not
+  // require them in the array.
+  useEffect(() => {
+    setPending(null); setProgressPct(""); setStage(""); setOutcomeStatus("worked"); setReason("");
+  }, [activeBusinessId]);
 
   const submitPhase3 = (taskKey: string, action: string) => {
     if (!onAction) return;
@@ -1051,12 +1089,22 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, financeTopPriority = null }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, financeTopPriority = null, activeBusinessId = null }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
   const [reasonText, setReasonText] = useState("");
   const [delegateRole, setDelegateRole] = useState<"MANAGER" | "STAFF">("MANAGER");
+
+  // Discard the top-priority action's own open inline form (REJECT/MARK_BLOCKED/SUBMIT_EVIDENCE/
+  // DELEGATE/...) the instant the active business changes — see `activeBusinessId`'s doc comment
+  // on MinimumOwnerCockpitProps. These actions never send a businessId (write path resolves by
+  // taskKey alone), but leaving a stale evidence/reason/delegate form open across a business
+  // switch is the same "submitting against a context the owner no longer sees" hazard.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to an external context change
+  useEffect(() => {
+    setPending(null); setEvidenceText(""); setReasonText(""); setDelegateRole("MANAGER");
+  }, [activeBusinessId]);
 
   // ── Clean state: no governed process-execution route. Nothing is fabricated to fill the primary
   // slot — but a real Finance diagnosis, when one exists, is a real prioritized recommendation, not a
@@ -1081,7 +1129,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             </p>
           </div>
         )}
-        {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} />}
+        {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} activeBusinessId={activeBusinessId} />}
         {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} onBosAction={onBosAction} busy={busy} />}
         {recovery && <RecoverySection recovery={recovery} />}
         {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
@@ -1559,7 +1607,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       {businessCondition && <BusinessConditionSection condition={businessCondition} dataFreshnessWeak={dataFreshnessWeak} />}
 
       {/* Phase 3 — Execution lifecycle (collapsed by default). Server-computed can* booleans drive visibility. */}
-      {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} />}
+      {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} activeBusinessId={activeBusinessId} />}
 
       {/* Phase 4 — Business Operating System summary (collapsed, read-only). */}
       {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} />}

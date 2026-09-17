@@ -39,6 +39,18 @@
  * active business said SAFE). This page now reads the shared ActiveBusinessContext and passes its
  * businessId to now-view so those signals resolve to the SAME business as every other owner page,
  * without adding a selector control or touching the workspace-wide task queue above.
+ *
+ * Pending action forms vs. a business switch (controlled-beta hardening, independent of the
+ * scoping fix above): this page has no business selector of its own, but `activeBusinessId` is
+ * shared app-wide (ActiveBusinessContext) and every other owner page has a selector, so it CAN
+ * change while this page stays mounted. `MinimumOwnerCockpit` renders every action as a local,
+ * ephemeral inline form (the top-priority action's evidence/reason/delegate form, and each
+ * execution-lifecycle item's own Phase 3 form) that is opened for a specific task and business
+ * context and otherwise has no way to notice that context changed before the owner clicks
+ * Confirm. `activeBusinessId` is passed down to `MinimumOwnerCockpit` here for exactly one
+ * purpose — see its doc comment on `MinimumOwnerCockpitProps` — discarding any such open form the
+ * instant it changes, so a switch never lets a stale form submit an action whose taskKey/business
+ * context the owner is no longer looking at.
  */
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
@@ -387,6 +399,7 @@ export default function OwnerCockpitPage() {
             businessOperatingSystem={businessOperatingSystem}
             onBosAction={onBosAction}
             financeTopPriority={financeTopPriority}
+            activeBusinessId={activeBusinessId}
             busy={busy}
           />
         </>
