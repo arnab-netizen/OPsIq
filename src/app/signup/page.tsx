@@ -23,30 +23,43 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [betaEnabled, setBetaEnabled] = useState<boolean | null>(null);
+  const [admissionMode, setAdmissionMode] = useState<string | null>(null);
   const [pendingVerification, setPendingVerification] = useState(false);
 
   // Display-only: the server independently re-checks real admission on every
   // POST /api/auth/signup regardless of what this returns, so this check can
   // never be used to open a registration window the server has closed — it
   // only controls whether the form is shown/submittable or a "closed" notice
-  // is. `enabled` reflects whether the FORM is worth attempting (true under
-  // INVITE_ONLY or OPEN_BETA — an invited visitor must be able to submit;
-  // the server decides per-email whether they're actually admitted), not
-  // whether every visitor will succeed.
+  // is, and (via `admissionMode`) which non-authoritative copy is shown above
+  // the form. `enabled` reflects whether the FORM is worth attempting (true
+  // under INVITE_ONLY or OPEN_BETA — an invited visitor must be able to
+  // submit; the server decides per-email whether they're actually admitted),
+  // not whether every visitor will succeed. `admissionMode` is read from the
+  // same response only to pick which already-true copy to show (e.g. an
+  // "invite required" note under INVITE_ONLY) — it never gates the form
+  // itself and introduces no second admission decision.
   useEffect(() => {
     let cancelled = false;
     fetch("/api/auth/beta-status")
       .then((res) => res.json())
       .then((data) => {
-        if (!cancelled) setBetaEnabled(Boolean(data?.enabled));
+        if (!cancelled) {
+          setBetaEnabled(Boolean(data?.enabled));
+          setAdmissionMode(typeof data?.admissionMode === "string" ? data.admissionMode : null);
+        }
       })
       .catch(() => {
-        if (!cancelled) setBetaEnabled(false);
+        if (!cancelled) {
+          setBetaEnabled(false);
+          setAdmissionMode(null);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const isInviteOnly = admissionMode === "INVITE_ONLY";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -116,19 +129,28 @@ export default function SignupPage() {
           <h1 className="text-2xl font-bold text-primary">
             <Link href="/">OpsIQ</Link>
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Create your account &mdash; open beta
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Create your account &mdash; beta access</p>
         </div>
 
         {betaEnabled === false && (
           <div className="rounded bg-muted p-3 text-sm text-muted-foreground">
-            Open beta registration is currently closed. Please check back soon.
+            Beta registration isn&rsquo;t open right now. Please check back soon.
           </div>
         )}
 
         {betaEnabled !== false && (
           <>
+            {isInviteOnly && (
+              <div className="rounded border border-border bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
+                OpsIQ is invite-only right now. If you&rsquo;ve been invited, enter your details
+                below to finish creating your account. If you don&rsquo;t have an invite, you can{" "}
+                <Link href="/" className="text-[var(--primary-text)] hover:underline">
+                  request beta access from the homepage
+                </Link>{" "}
+                instead.
+              </div>
+            )}
+
             <div className="rounded border border-border bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
               <strong>Do not upload:</strong> passwords, API keys, payment-card data, government
               IDs, health data, sensitive employee/customer personal data, or other regulated

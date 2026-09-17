@@ -2,10 +2,10 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Beta Notice | OpsIQ",
-  description: "What to expect from the OpsIQ open beta.",
+  description: "What to expect from the OpsIQ controlled beta.",
 };
 
-const POLICY_VERSION = "2026-09-05";
+const POLICY_VERSION = "2026-09-17";
 
 export default function BetaNoticePage() {
   return (
@@ -22,11 +22,17 @@ export default function BetaNoticePage() {
 
       <div className="mt-8 space-y-5 text-sm leading-relaxed text-muted-foreground">
         <section>
-          <h2 className="font-semibold text-foreground">OpsIQ is in open beta</h2>
+          <h2 className="font-semibold text-foreground">OpsIQ is in a controlled, invite-only beta</h2>
           <p className="mt-1">
-            Anyone can sign up during open beta — no invitation is required. The product is real
-            and functional, but it is still early: features may change, bugs exist, and we are
-            actively improving it based on what beta users tell us.
+            Access currently requires an invitation. If you don&rsquo;t have one, you can request
+            beta access from the homepage — submitting a request does not guarantee access; we
+            follow up by email if you&rsquo;re selected. If you&rsquo;ve been invited, you can
+            complete your account at{" "}
+            <Link href="/signup" className="text-[var(--primary-text)] hover:underline">
+              /signup
+            </Link>
+            . The product is real and functional, but it is still early: features may change,
+            bugs exist, and we are actively improving it based on what beta users tell us.
           </p>
         </section>
 
@@ -61,12 +67,13 @@ export default function BetaNoticePage() {
         </section>
 
         <section>
-          <h2 className="font-semibold text-foreground">Registration can be closed at any time</h2>
+          <h2 className="font-semibold text-foreground">Admission can change at any time</h2>
           <p className="mt-1">
-            Open beta has an initial capacity limit, and registration can be closed at any time —
-            for example, if capacity is reached, or if a security or tenant-isolation issue is
-            found that needs to be fixed before more people sign up. If registration is closed,
-            the signup page will say so.
+            Beta has an initial capacity limit, and who can be admitted — including whether it is
+            invite-only, open, or temporarily closed to new signups — can change at any time, for
+            example if capacity is reached, or if a security or tenant-isolation issue is found
+            that needs to be fixed before more people are admitted. The signup page always
+            reflects the current admission mode.
           </p>
         </section>
 

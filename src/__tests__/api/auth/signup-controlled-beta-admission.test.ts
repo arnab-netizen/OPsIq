@@ -76,7 +76,7 @@ describe("POST /api/auth/signup — controlled-beta admission (PUBLIC_BETA_ENABL
     const json = await res.json();
     expect(json).toEqual({
       success: false,
-      error: "Open beta registration is currently closed. Please check back soon.",
+      error: "Beta registration isn't available for this account right now. Please check back soon.",
       reason: "beta_disabled",
     });
   });

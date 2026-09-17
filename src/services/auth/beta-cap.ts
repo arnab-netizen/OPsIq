@@ -8,14 +8,14 @@ import {
 
 export class BetaCapExceededError extends Error {
   constructor() {
-    super("Open beta capacity has been reached. Please check back soon.");
+    super("Beta capacity has been reached. Please check back soon.");
     this.name = "BetaCapExceededError";
   }
 }
 
 export class BetaCapUnavailableError extends Error {
   constructor(cause: unknown) {
-    super("Open beta capacity could not be verified.");
+    super("Beta capacity could not be verified.");
     this.name = "BetaCapUnavailableError";
     this.cause = cause;
   }

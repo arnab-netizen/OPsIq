@@ -45,7 +45,7 @@ const softwareApplicationJsonLd = {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
-    description: "Free open beta, no credit card required",
+    description: "Free invite-only beta, no credit card required",
   },
 };
 

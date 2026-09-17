@@ -5,7 +5,7 @@ export const metadata = {
   description: "Beta terms for using OpsIQ.",
 };
 
-const POLICY_VERSION = "2026-09-05";
+const POLICY_VERSION = "2026-09-17";
 
 export default function TermsPage() {
   return (
@@ -15,7 +15,7 @@ export default function TermsPage() {
       </Link>
       <h1 className="mt-6 text-3xl font-bold tracking-tight">Terms</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        OpsIQ is currently in open beta. Version {POLICY_VERSION}.
+        OpsIQ is currently in a controlled, invite-only beta. Version {POLICY_VERSION}.
       </p>
       <p className="mt-2 rounded bg-muted p-3 text-xs text-muted-foreground">
         This page is written in plain language by the OpsIQ team. It has{" "}
@@ -27,7 +27,7 @@ export default function TermsPage() {
         <section>
           <h2 className="font-semibold text-foreground">Beta, and free</h2>
           <p className="mt-1">
-            OpsIQ is a free, open beta. There is no charge to use it during beta, no payment method
+            OpsIQ is a free, invite-only beta. There is no charge to use it during beta, no payment method
             is required to sign up, and no automatic paid entitlement is granted. If OpsIQ ever
             introduces paid plans, that will be a separate, clearly communicated decision — beta
             access does not roll into a paid subscription automatically.

@@ -5,7 +5,7 @@ export const metadata = {
   description: "How OpsIQ handles your information during beta.",
 };
 
-const POLICY_VERSION = "2026-09-05";
+const POLICY_VERSION = "2026-09-17";
 
 export default function PrivacyPage() {
   return (
@@ -15,7 +15,7 @@ export default function PrivacyPage() {
       </Link>
       <h1 className="mt-6 text-3xl font-bold tracking-tight">Privacy</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        OpsIQ is currently in open beta. Version {POLICY_VERSION}.
+        OpsIQ is currently in a controlled, invite-only beta. Version {POLICY_VERSION}.
       </p>
       <p className="mt-2 rounded bg-muted p-3 text-xs text-muted-foreground">
         This page is written in plain language by the OpsIQ team. It has{" "}
