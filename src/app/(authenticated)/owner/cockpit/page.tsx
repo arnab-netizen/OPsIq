@@ -7,15 +7,41 @@
  * the server re-derives + re-checks every action. Presentation + safety layout live in MinimumOwnerCockpit.
  *
  * Business-context decision (revised — see docs/opsiq-governance, the P0-4 Home/Finance
- * consistency fix, and the controlled-beta cockpit business-scoping fix / D-cockpit below):
- * NO selector, by design — this page still has no visible business selector.
+ * consistency fix, the controlled-beta cockpit business-scoping fix / D-cockpit, and the
+ * RECORD_OUTCOME/VERIFY_OUTCOME/REQUEST_REASSESSMENT businessId fixes folded into the WRITE
+ * bullet below): NO selector, by design — this page still has no visible business selector.
  *
  * Read vs. write scoping of `processExecution` (the task bridge this page drives START/action/
  * progress against) are DIFFERENT and must not be conflated:
- *  - WRITE: every mutation is still submitted by `taskKey` alone (POST /api/owner/process-execution
- *    never sends a businessId as the resolving key; the server resolves task ownership from the
- *    task record itself). That is unchanged and correct — it is why "switching business" mid-task
- *    never moves or hides an in-flight task the owner is actively working.
+ *  - WRITE: most mutations (START/APPROVE/REJECT/DELEGATE/SUBMIT_EVIDENCE/COMPLETE/MARK_BLOCKED/
+ *    REQUEST_MISSING_DATA/ACKNOWLEDGE/RECORD_PROGRESS) are still submitted by `taskKey` alone —
+ *    POST /api/owner/process-execution does not send a businessId as the resolving key for these;
+ *    the server resolves task ownership from the task record itself. That is unchanged and
+ *    correct — it is why "switching business" mid-task never moves or hides an in-flight task
+ *    the owner is actively working.
+ *
+ *    CORRECTION (fix/cockpit-record-outcome-businessid — this comment previously, and
+ *    incorrectly, claimed the route "never sends a businessId" for every action; that stopped
+ *    being universally true once Phase 3 added RECORD_OUTCOME): `RECORD_OUTCOME` IS REQUIRED
+ *    server-side to carry a `businessId` (see `applyProcessExecutionAction`'s RECORD_OUTCOME
+ *    branch in process-execution-bridge.service.ts, which returns `MISSING_INPUT` — a 400 —
+ *    without one) so the recorded outcome can be attributed to a specific business.
+ *    `REQUEST_REASSESSMENT` (fix/reassessment-businessid-wiring) has the identical server-side
+ *    requirement. `onAction()` below attaches the shared `activeBusinessId` to the POST body for
+ *    exactly these actions (RECORD_OUTCOME, VERIFY_OUTCOME, REQUEST_REASSESSMENT) — never
+ *    blanket-attached to every action; each action wires its own requirement in its own branch.
+ *    VERIFY_OUTCOME does not strictly require businessId server-side but uses it, when present,
+ *    to scope its best-effort post-verification reassessment side effect to the right business
+ *    instead of falling back to the task's sourceFindingKey. This is safe to source from the
+ *    page's shared `activeBusinessId` — not a per-task business id the client would otherwise
+ *    have to track — because the execution-lifecycle items rendered here were themselves fetched
+ *    from `now-view` scoped to that same `activeBusinessId` (see `buildExecutionLifecycle`'s
+ *    businessId scoping), so a task offering these actions always either belongs to the active
+ *    business or is a genuinely workspace-level task with no business of its own. The server
+ *    independently re-validates that any supplied businessId belongs to the caller's workspace
+ *    before using it (`businessInWorkspace` in process-execution-bridge.service.ts) and rejects a
+ *    foreign one with `WRONG_WORKSPACE` — this client-side wiring is a convenience, never a trust
+ *    boundary.
  *  - READ (what this page DISPLAYS as "Top Priority" / "Execution lifecycle"): `processExecution`
  *    is built from `processCorrections` + `cashProfitProtection` via `buildProcessExecutionBridge`.
  *    `cashProfitProtection` is genuinely per-business (arbitrated cash/finance state). But
@@ -248,6 +274,18 @@ export default function OwnerCockpitPage() {
       if (input.progressPct != null) body.progressPct = input.progressPct;
       if (input.stage) body.stage = input.stage;
       if (input.outcomeStatus) body.outcomeStatus = input.outcomeStatus;
+      // RECORD_OUTCOME requires a businessId server-side (applyProcessExecutionAction returns
+      // MISSING_INPUT/400 without one) so the recorded outcome can be attributed to a business;
+      // VERIFY_OUTCOME doesn't require it but uses it, when present, to correctly scope its
+      // best-effort post-verification reassessment side effect. See the doc comment at the top of
+      // this file for why `activeBusinessId` is the right, server-revalidated value to send here.
+      // Scoped to just these two actions -- not attached to every action -- because other actions
+      // reach tasks via a bare taskKey and the service's defense-in-depth business-isolation guard
+      // (process-execution-bridge.service.ts) would incorrectly reject a task whose own businessId
+      // happens to differ from whatever is currently active.
+      if ((action === "RECORD_OUTCOME" || action === "VERIFY_OUTCOME") && activeBusinessId) {
+        body.businessId = activeBusinessId;
+      }
       const { ok, data } = await apiPost("/api/owner/process-execution", body);
       if (!ok) {
         setMessage(describeActionFailure(data, "We couldn't complete this action. Nothing was changed."));
