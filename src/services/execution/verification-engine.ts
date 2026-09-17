@@ -98,7 +98,13 @@ export function verifyCompletion(
 }
 
 /**
- * Detect fake completion patterns
+ * Detect fake completion patterns: a claimed completion is only "fake" when there is NEITHER
+ * evidence NOR an operator note to back it up (and the KPI hasn't moved). Either one alone is
+ * enough to make a completion verifiable -- this must be AND, not OR: with OR, a completion
+ * with real evidence attached but no operator note was incorrectly flagged as fake on every call
+ * (production bug: POST /api/owner/process-execution COMPLETE always returned 400
+ * EVIDENCE_REQUIRED, because the owner cockpit's Complete form has no operator-notes field, so
+ * operator_notes_empty was always true regardless of evidence_attached).
  */
 export function detectFakeCompletion(
   claimed_complete: boolean,
@@ -108,7 +114,7 @@ export function detectFakeCompletion(
 ): boolean {
   return (
     claimed_complete &&
-    (!evidence_attached || operator_notes_empty) &&
+    (!evidence_attached && operator_notes_empty) &&
     !kpi_moved
   );
 }
