@@ -298,14 +298,27 @@ export async function completeProcessTask(
   }
   const evidenceRefs = (input.evidenceRefs ?? []).map((e) => e.trim()).filter(Boolean);
   const notesEmpty = !input.outcomeNotes || !input.outcomeNotes.trim();
+  // Evidence gate + fake-completion check must both count everything the task already holds (e.g. from
+  // an earlier SUBMIT_EVIDENCE call, or evidence attached when the route was created) PLUS whatever this
+  // call adds -- not just this call's own evidenceRefs. Using only the fresh, per-request evidenceRefs
+  // here (as before) is inconsistent with how "is evidence complete" is computed everywhere else evidence
+  // sufficiency is displayed (owner-now-view.service.ts's evidenceComplete: cumulative
+  // task.evidenceRefs.length >= task.requiredEvidence.length), and it silently breaks completion for any
+  // route requiring more than one distinct evidence item (e.g. CREATE_SOP_CHECKLIST_TASK, which requires
+  // both "the drafted SOP/checklist change" and "evidence of adoption before it is marked done" -- see
+  // evidenceForRoute in process-execution-bridge-expansion.ts): a single inline evidence entry on COMPLETE
+  // was rejected even though it was valid evidence, and evidence already submitted via the separate
+  // SUBMIT_EVIDENCE workflow never counted toward completion at all. Deduplicated so the same evidence
+  // string is never persisted twice.
+  const combinedEvidenceRefs = Array.from(new Set([...task.evidenceRefs, ...evidenceRefs]));
   if (EVIDENCE_REQUIRED_ROUTES.has(route)) {
     const minRequired = task.requiredEvidence.length > 0 ? task.requiredEvidence.length : 1;
-    if (evidenceRefs.length < minRequired) {
+    if (combinedEvidenceRefs.length < minRequired) {
       return { ok: false, reason: "This task requires completion evidence — it cannot be completed without it.", code: "EVIDENCE_REQUIRED" };
     }
   }
   // Fake-completion guard (verification-engine): claimed complete but no evidence and no notes (kpi unknown here).
-  if (detectFakeCompletion(true, evidenceRefs.length > 0, false, notesEmpty) && EVIDENCE_REQUIRED_ROUTES.has(route)) {
+  if (detectFakeCompletion(true, combinedEvidenceRefs.length > 0, false, notesEmpty) && EVIDENCE_REQUIRED_ROUTES.has(route)) {
     return { ok: false, reason: "Completion looks unverifiable (no evidence and no outcome note) — rejected.", code: "EVIDENCE_REQUIRED" };
   }
 
@@ -314,7 +327,7 @@ export async function completeProcessTask(
     await tx.processExecutionTask.updateMany({
       where: { workspaceId: input.workspaceId, taskKey: input.taskKey },
       data: {
-        status: "COMPLETED", evidenceRefs: [...task.evidenceRefs, ...evidenceRefs],
+        status: "COMPLETED", evidenceRefs: combinedEvidenceRefs,
         completedByUserId: input.actorId ?? null, completedByRole: input.actorRole ?? null, completedAt: now, updatedAt: now,
       },
     });
@@ -323,7 +336,7 @@ export async function completeProcessTask(
         id: deps.uuid(), workspaceId: input.workspaceId, eventName: AUDIT_EVENTS.OWNER_PROCESS_EXECUTION_TASK_COMPLETED,
         actorId: input.actorId ?? null, actorType: input.actorId ? "user" : "system",
         entityType: "process_execution_task", entityId: task.id,
-        payload: { taskKey: input.taskKey, executionRoute: route, evidenceCount: evidenceRefs.length, completedByRole: input.actorRole ?? null },
+        payload: { taskKey: input.taskKey, executionRoute: route, evidenceCount: combinedEvidenceRefs.length, newEvidenceCount: evidenceRefs.length, completedByRole: input.actorRole ?? null },
         visibility: "internal", occurredAt: now,
       },
     });

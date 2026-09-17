@@ -1241,6 +1241,25 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
                 {needsEvidence(pending) && (
                   <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                     Evidence reference(s), comma-separated{pending === "SUBMIT_EVIDENCE" ? " (required)" : ""}
+                    {/* Makes the count-of-evidence requirement visible before the owner submits, instead of a
+                        confusing 400 after Confirm. Some routes (e.g. an SOP/checklist change) require more than
+                        one distinct evidence item -- one per line below -- and evidence already on file (from an
+                        earlier Submit evidence step) counts toward that total, so completing here never requires
+                        re-entering it. */}
+                    {pending === "COMPLETE" && (() => {
+                      const requiredCount = top.requiredEvidence.length > 0 ? top.requiredEvidence.length : 1;
+                      const already = top.evidenceRefs.length;
+                      const remaining = Math.max(0, requiredCount - already);
+                      return (
+                        <span data-testid="cockpit-evidence-required-hint" style={{ display: "block", fontWeight: 400, marginTop: 2 }}>
+                          {already > 0
+                            ? remaining > 0
+                              ? `${already} evidence item(s) already on file. Add at least ${remaining} more to complete: ${top.requiredEvidence.slice(already).join("; ") || "additional evidence the action was carried out"}.`
+                              : `${already} evidence item(s) already on file — that already satisfies completion; you don't need to add more here.`
+                            : `Requires ${requiredCount} evidence item(s) — one entry per requirement: ${top.requiredEvidence.join("; ") || "evidence the action was carried out"}.`}
+                        </span>
+                      );
+                    })()}
                     <input data-testid="cockpit-evidence-input" value={evidenceText} onChange={(e) => setEvidenceText(e.target.value)}
                       style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--background)", color: "var(--foreground)" }} />
                   </label>

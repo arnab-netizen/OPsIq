@@ -145,7 +145,23 @@ export default function OwnerProcessIntelligencePage() {
         if (reason) body.reason = reason;
       }
       if (action === "SUBMIT_EVIDENCE" || action === "COMPLETE") {
-        const raw = window.prompt("Evidence reference(s) — comma-separated (link, doc id, or note):")?.trim();
+        // Surface the count-of-evidence requirement (and what's already on file) up front, so COMPLETE with
+        // inline evidence in one step doesn't come back as a confusing 400 -- some routes (e.g. an
+        // SOP/checklist change) require more than one distinct evidence item, and evidence already submitted
+        // via a prior Submit evidence call counts toward that total (it never needs to be re-entered here).
+        const top = bridge?.topRoute && bridge.topRoute.taskKey === taskKey ? bridge.topRoute : null;
+        let promptLabel = "Evidence reference(s) — comma-separated (link, doc id, or note):";
+        if (action === "COMPLETE" && top) {
+          const requiredCount = top.requiredEvidence.length > 0 ? top.requiredEvidence.length : 1;
+          const already = top.evidenceRefs.length;
+          const remaining = Math.max(0, requiredCount - already);
+          promptLabel = already > 0
+            ? remaining > 0
+              ? `${already} evidence item(s) already on file. Add at least ${remaining} more, comma-separated: ${top.requiredEvidence.slice(already).join("; ") || "additional evidence the action was carried out"}`
+              : `${already} evidence item(s) already on file — that satisfies completion. Add more only if you have it, or leave blank and continue:`
+            : `Requires ${requiredCount} evidence item(s), comma-separated — one per requirement: ${top.requiredEvidence.join("; ") || "evidence the action was carried out"}`;
+        }
+        const raw = window.prompt(promptLabel)?.trim();
         const refs = (raw ?? "").split(",").map((s) => s.trim()).filter(Boolean);
         if (refs.length > 0) body.evidenceRefs = refs;
         else if (action === "SUBMIT_EVIDENCE") { setActionBusy(false); return; }
@@ -168,7 +184,7 @@ export default function OwnerProcessIntelligencePage() {
     } finally {
       setActionBusy(false);
     }
-  }, [load]);
+  }, [load, bridge]);
 
   useEffect(() => {
     // Intentional one-shot data fetch on mount; load() sets state from the API response.
