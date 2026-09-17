@@ -84,4 +84,78 @@ describe("Owner Data Intake page", () => {
     await findByText("Confirmed");
     expect(queryByText("confirmed")).toBeNull();
   });
+
+  // Live production verification (post-#488) found "Intake history" rendering raw
+  // OwnerInputCategory values ("cash_debt", "equipment_logs") -- these come from the
+  // manual-entry write path (owner-manual-entry.service.ts persists the raw category as
+  // targetDomain), a different source than the CSV-upload path's 5-value DOMAIN_LABEL map that
+  // PR #488 already covered for the candidate-preview table.
+  it("humanizes manual-entry OwnerInputCategory values in the intake history list, without leaking the raw snake_case identifier", async () => {
+    mockFetch([
+      {
+        id: "intake-1",
+        targetDomain: "cash_debt",
+        source: "manual_form",
+        rowCount: 1,
+        createdAt: "2026-05-01T00:00:00Z",
+        validationStatus: "valid",
+        ownerConfirmed: true,
+      },
+      {
+        id: "intake-2",
+        targetDomain: "equipment_logs",
+        source: "manual_form",
+        rowCount: 1,
+        createdAt: "2026-05-02T00:00:00Z",
+        validationStatus: "valid",
+        ownerConfirmed: true,
+      },
+    ]);
+    const { container, findByText } = render(<OwnerIntakePage />);
+    await findByText("Intake history (2)");
+    const text = container.textContent ?? "";
+
+    // Real canonical labels from domain/owner-mode/input-catalog.ts's INPUT_CATALOG.
+    expect(text).toContain("Cash / debt / EMI obligations");
+    expect(text).toContain("Machine / equipment logs");
+    expect(text).not.toContain("cash_debt");
+    expect(text).not.toContain("equipment_logs");
+  });
+
+  it("still humanizes CSV-upload targetDomain values (DOMAIN_LABEL) in the intake history list, unchanged from before", async () => {
+    mockFetch([
+      {
+        id: "intake-1",
+        targetDomain: "finance",
+        source: "csv_upload",
+        rowCount: 3,
+        createdAt: "2026-05-01T00:00:00Z",
+        validationStatus: "valid",
+        ownerConfirmed: true,
+      },
+    ]);
+    const { container, findByText } = render(<OwnerIntakePage />);
+    await findByText("Intake history (1)");
+    const text = container.textContent ?? "";
+    expect(text).toContain("Finance");
+  });
+
+  it("falls back to a human-readable label (never raw or blank) for a targetDomain outside both known taxonomies", async () => {
+    mockFetch([
+      {
+        id: "intake-1",
+        targetDomain: "some_future_category",
+        source: "manual_form",
+        rowCount: 1,
+        createdAt: "2026-05-01T00:00:00Z",
+        validationStatus: "valid",
+        ownerConfirmed: true,
+      },
+    ]);
+    const { container, findByText } = render(<OwnerIntakePage />);
+    await findByText("Intake history (1)");
+    const text = container.textContent ?? "";
+    expect(text).toContain("Some future category");
+    expect(text).not.toContain("some_future_category");
+  });
 });
