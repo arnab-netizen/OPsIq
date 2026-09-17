@@ -377,7 +377,7 @@ export interface ProcessActionInput {
   outcomeStatus?: string | null;
 }
 export type ProcessActionResult =
-  | { ok: true; taskId: string; status: string; reassessmentId?: string | null; outcomeId?: string | null; progressRecordId?: string | null; verificationClassification?: string | null }
+  | { ok: true; taskId: string; status: string; reassessmentId?: string | null; outcomeId?: string | null; progressRecordId?: string | null; verificationClassification?: string | null; selfVerified?: boolean }
   | { ok: false; reason: string; code: ProcessActionCode };
 
 /** True when this task's material decision is owner-only (owner-approval or an unsafe/never-auto action). */
@@ -543,9 +543,11 @@ export async function applyProcessExecutionAction(
     }
     const { verifyOwnerActionOutcome, triggerPostVerificationSideEffects } = await import("@/services/owner-mode/owner-outcome-verification.service");
     let verificationClassification: string;
+    let selfVerified = false;
     try {
       const result = await verifyOwnerActionOutcome(input.workspaceId, task.outcomeId, input.actorId ?? "system", input.reason ?? null);
       verificationClassification = result.verificationClassification;
+      selfVerified = result.selfVerified ?? false;
     } catch (err: unknown) {
       if (err && typeof err === "object" && "statusCode" in err) {
         const e = err as { statusCode: number; message: string; code: string };
@@ -578,7 +580,12 @@ export async function applyProcessExecutionAction(
           id: deps.uuid(), workspaceId: input.workspaceId, eventName: AUDIT_EVENTS.OWNER_PROCESS_EXECUTION_OUTCOME_VERIFIED,
           actorId: input.actorId ?? null, actorType: input.actorId ? "user" : "system",
           entityType: "process_execution_task", entityId: task.id,
-          payload: { taskKey: input.taskKey, outcomeId: task.outcomeId, verificationClassification },
+          // PR G: selfVerified carries the same truthful self-vs-independent distinction
+          // that owner-outcome-verification.service.ts already wrote on the
+          // owner_action_outcome audit event — mirrored here on the task-lifecycle
+          // audit event so both records agree. Never true for an ordinary
+          // independent verification.
+          payload: { taskKey: input.taskKey, outcomeId: task.outcomeId, verificationClassification, selfVerified },
           visibility: "internal", occurredAt: now,
         },
       });
@@ -592,7 +599,7 @@ export async function applyProcessExecutionAction(
         input.actorId ?? "system"
       ).catch((err) => console.error("[phase3] post-verification side effects failed", err));
     });
-    return { ok: true, taskId: task.id, status: "OUTCOME_VERIFIED", verificationClassification };
+    return { ok: true, taskId: task.id, status: "OUTCOME_VERIFIED", verificationClassification, selfVerified };
   }
 
   // COMPLETE reuses the evidence-gated completion path (owner-only + fake-completion guard + reassessment).
