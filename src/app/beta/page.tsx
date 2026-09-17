@@ -72,8 +72,8 @@ export default function BetaNoticePage() {
             Beta has an initial capacity limit, and who can be admitted — including whether it is
             invite-only, open, or temporarily closed to new signups — can change at any time, for
             example if capacity is reached, or if a security or tenant-isolation issue is found
-            that needs to be fixed before more people are admitted. The signup page always
-            reflects the current admission mode.
+            that needs to be fixed before more people are admitted. The signup page will show the
+            current access guidance.
           </p>
         </section>
 
