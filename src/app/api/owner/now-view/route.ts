@@ -16,7 +16,15 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
     const businessId = url.searchParams.get("businessId");
-    const payload = await getOwnerNowView(ctx.verifiedWorkspaceId, businessId, undefined, ctx.verifiedActorId);
+    // Opt-in only (controlled-beta cockpit business-scoping fix, D-cockpit) — see
+    // GetOwnerNowViewOptions' doc comment in owner-now-view.service.ts. Only the Owner Cockpit page
+    // sends this; every other caller of this same route (/owner/priorities, /owner/process-intelligence,
+    // /owner/now) omits it and keeps today's exact, already-documented workspace-wide payload for
+    // processExecution/executionLifecycle.
+    const restrictExecutionToAttributableBusiness = url.searchParams.get("restrictExecutionToBusiness") === "true";
+    const payload = await getOwnerNowView(ctx.verifiedWorkspaceId, businessId, undefined, ctx.verifiedActorId, {
+      restrictExecutionToAttributableBusiness,
+    });
     // F3: additive, best-effort — a failure here must never break the rest of the cockpit payload.
     const financeTopPriority = await getCockpitFinancePriority(ctx.verifiedWorkspaceId, businessId).catch(() => null);
     return { ...payload, financeTopPriority };
