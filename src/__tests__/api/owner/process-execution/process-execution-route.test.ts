@@ -325,6 +325,46 @@ describe("POST /api/owner/process-execution — non-DB mock tests", () => {
     });
   });
 
+  describe("materialisation businessId derivation (fresh cockpit priority fix)", () => {
+    const BIZ_A = "cccccccc-cccc-4000-8000-cccccccccccc";
+
+    it("START (no explicit businessId): re-derives getOwnerNowView with the businessId embedded in a CASH_PROFIT taskKey, not null", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_A);
+      // applyProcessExecutionAction's own businessId input is completely unchanged by this fix —
+      // still null when the client didn't send one, whatever the taskKey embeds.
+      expect(mockApplyProcessExecutionAction).toHaveBeenCalledWith(
+        expect.objectContaining({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, businessId: null })
+      );
+    });
+
+    it("COMPLETE (no explicit businessId): re-derives getOwnerNowView with the businessId embedded in a PROCESS_CORRECTION taskKey", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: `pc:${BIZ_A}:some-correction-id`, action: "COMPLETE" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_A);
+    });
+
+    it("an explicit businessId (RECORD_OUTCOME/VERIFY_OUTCOME/REQUEST_REASSESSMENT) still wins over any taskKey-embedded one", async () => {
+      const OTHER_BIZ = "dddddddd-dddd-4000-8000-dddddddddddd";
+      mockParseRequestBody.mockResolvedValue({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, action: "VERIFY_OUTCOME", businessId: OTHER_BIZ });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, OTHER_BIZ);
+    });
+
+    it("a workspace-level taskKey (no embedded businessId) still re-derives with null, unchanged", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: "wl:overload", action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, null);
+    });
+
+    it("a legacy/no-businessId CASH_PROFIT taskKey shape (no embedded uuid) re-derives with null, unchanged", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: "cp:CASH_SAFETY_RISK", action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, null);
+    });
+  });
+
   describe("failed POST (action returns not-ok)", () => {
     it("returns 400 when action fails with non-auth code", async () => {
       mockApplyProcessExecutionAction.mockResolvedValue({

@@ -20,6 +20,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody } from "@/lib/validation";
 import { applyProcessExecutionAction, getPersistedProcessTasks, persistProcessExecutionRoutes } from "@/services/owner-mode/process-execution-bridge.service";
 import { getOwnerNowView } from "@/services/owner-guidance/owner-now-view.service";
+import { parseBusinessIdFromTaskKey } from "@/domain/owner-mode/process-execution-bridge";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,7 +79,30 @@ export const POST = withCanonicalEnforcement(
     // Server-authoritative materialisation: re-derive the bridge routes on the server and persist them
     // (idempotent) so the task the owner is acting on is the SERVER's governed route — the client never
     // supplies route fields, so a crafted request can't downgrade an approval level or bypass a guardrail.
-    const view = await getOwnerNowView(ctx.verifiedWorkspaceId, input.businessId ?? null);
+    //
+    // ROOT-CAUSE FIX (fresh cockpit priority never materialised): most actions
+    // (START/APPROVE/REJECT/DELEGATE/SUBMIT_EVIDENCE/COMPLETE/MARK_BLOCKED/REQUEST_MISSING_DATA/
+    // ACKNOWLEDGE/RECORD_PROGRESS) never carry `input.businessId` — by design, see cockpit/page.tsx's
+    // onAction doc comment: the actual task lookup below is taskKey+workspaceId only, so it doesn't
+    // need one. But re-deriving with `input.businessId ?? null` for THIS materialisation step meant a
+    // freshly-surfaced (never-before-persisted) PROCESS_CORRECTION/CASH_PROFIT route was recomputed for
+    // businessId=null instead of whichever business the cockpit actually read it under — producing a
+    // DIFFERENT, non-business-prefixed taskKey than the one the owner is acting on (these two families
+    // embed businessId directly in the key; see bridgeCorrection/bridgeCashSignal). The exact task the
+    // cockpit showed was therefore never created, and the lookup below always failed
+    // NOT_FOUND_OR_FORBIDDEN — until some later action that DOES send businessId (e.g.
+    // REQUEST_REASSESSMENT) happened to materialise it first.
+    //
+    // taskKey already canonically encodes the businessId these two families were computed for;
+    // parseBusinessIdFromTaskKey recovers it so this step re-derives the SAME view the cockpit's own
+    // read produced, without trusting a business the client didn't send. This changes ONLY which
+    // routes get recomputed/persisted here — the taskKey lookup and businessId handling below (and
+    // every existing guardrail: cross-workspace, defense-in-depth isolation, RECORD_OUTCOME/
+    // VERIFY_OUTCOME/REQUEST_REASSESSMENT's own explicit businessId requirement) are unchanged. A
+    // wrong or fabricated businessId parsed from a malformed taskKey can only ever reproduce a route
+    // keyed to that SAME businessId, so it can never materialise (or leak) a different business's task.
+    const materialisationBusinessId = input.businessId ?? parseBusinessIdFromTaskKey(input.taskKey);
+    const view = await getOwnerNowView(ctx.verifiedWorkspaceId, materialisationBusinessId);
     if (view.processExecution && view.processExecution.routes.length > 0) {
       await persistProcessExecutionRoutes(ctx.verifiedWorkspaceId, view.processExecution, ctx.verifiedActorId);
     }

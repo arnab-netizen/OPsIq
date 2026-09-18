@@ -228,6 +228,42 @@ function bridgeCashSignal(s: CashProfitSignal, rank: number, businessId: string 
   };
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** taskKey prefixes for the two source families that embed a businessId directly in the key
+ *  (see bridgeCorrection/bridgeCashSignal above: `pc:<businessId>:<correctionId>` /
+ *  `cp:<businessId>:<signalType>`, or the prefix-only form with no businessId segment for a
+ *  genuinely workspace-level finding). Every other taskKey shape (`wl:`, `cap:`, `sop:`, `tr:`,
+ *  `eff:`, `startup_...`) is either workspace-level by design or carries its businessId as a
+ *  column rather than in the key — see WORKSPACE_LEVEL_SOURCE_FAMILIES's doc comment. */
+const BUSINESS_SCOPED_TASK_KEY_PREFIXES = ["pc:", "cp:"] as const;
+
+/**
+ * Recover the businessId a taskKey was minted for, when one of the two business-scoped source
+ * families produced it — the exact inverse of bridgeCorrection/bridgeCashSignal's own
+ * `businessId ? \`prefix:${businessId}:${key}\` : \`prefix:${key}\`` construction. Returns null for
+ * every other shape (workspace-level families, an already-null-businessId key, or a taskKey this
+ * bridge never produced at all).
+ *
+ * This exists so a caller that only has a taskKey (not the businessId that was active when it was
+ * displayed) can still re-derive the SAME bridge view that produced it — see
+ * POST /api/owner/process-execution's materialisation step, which needs this for every action that
+ * doesn't otherwise carry an explicit businessId. It is not a trust boundary: feeding a
+ * wrong/fabricated businessId back into buildProcessExecutionBridge can only ever reproduce a route
+ * whose taskKey embeds that SAME businessId, so it can never manufacture a match for some other,
+ * unrelated taskKey.
+ */
+export function parseBusinessIdFromTaskKey(taskKey: string): string | null {
+  for (const prefix of BUSINESS_SCOPED_TASK_KEY_PREFIXES) {
+    if (!taskKey.startsWith(prefix)) continue;
+    const rest = taskKey.slice(prefix.length);
+    const sep = rest.indexOf(":");
+    if (sep === -1) return null; // the null-businessId variant of this family — workspace-level
+    const candidate = rest.slice(0, sep);
+    return UUID_RE.test(candidate) ? candidate : null;
+  }
+  return null;
+}
+
 /** PASS 23 expansion routes (workload/capability/SOP/training/effectiveness) already built by
  *  buildBridgeExpansion, plus the collapse sets telling the bridge which generic correction routes a specific
  *  SOP/training route now supersedes. Passed in (not imported) so this stays a pure, cycle-free data merge. */
