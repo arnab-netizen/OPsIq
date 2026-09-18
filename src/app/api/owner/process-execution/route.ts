@@ -18,8 +18,9 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody } from "@/lib/validation";
-import { applyProcessExecutionAction, getPersistedProcessTasks, persistProcessExecutionRoutes } from "@/services/owner-mode/process-execution-bridge.service";
+import { applyProcessExecutionAction, getPersistedProcessTasks, persistProcessExecutionRoutes, isBusinessInWorkspace } from "@/services/owner-mode/process-execution-bridge.service";
 import { getOwnerNowView } from "@/services/owner-guidance/owner-now-view.service";
+import { parseBusinessIdFromTaskKey } from "@/domain/owner-mode/process-execution-bridge";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,7 +79,58 @@ export const POST = withCanonicalEnforcement(
     // Server-authoritative materialisation: re-derive the bridge routes on the server and persist them
     // (idempotent) so the task the owner is acting on is the SERVER's governed route — the client never
     // supplies route fields, so a crafted request can't downgrade an approval level or bypass a guardrail.
-    const view = await getOwnerNowView(ctx.verifiedWorkspaceId, input.businessId ?? null);
+    //
+    // ROOT-CAUSE FIX (fresh cockpit priority never materialised): most actions
+    // (START/APPROVE/REJECT/DELEGATE/SUBMIT_EVIDENCE/COMPLETE/MARK_BLOCKED/REQUEST_MISSING_DATA/
+    // ACKNOWLEDGE/RECORD_PROGRESS) never carry `input.businessId` — by design, see cockpit/page.tsx's
+    // onAction doc comment: the actual task lookup below is taskKey+workspaceId only, so it doesn't
+    // need one. But re-deriving with `input.businessId ?? null` for THIS materialisation step meant a
+    // freshly-surfaced (never-before-persisted) PROCESS_CORRECTION/CASH_PROFIT route was recomputed for
+    // businessId=null instead of whichever business the cockpit actually read it under — producing a
+    // DIFFERENT, non-business-prefixed taskKey than the one the owner is acting on (these two families
+    // embed businessId directly in the key; see bridgeCorrection/bridgeCashSignal). The exact task the
+    // cockpit showed was therefore never created, and the lookup below always failed
+    // NOT_FOUND_OR_FORBIDDEN — until some later action that DOES send businessId (e.g.
+    // REQUEST_REASSESSMENT) happened to materialise it first.
+    //
+    // taskKey already canonically encodes the businessId these two families were computed for;
+    // parseBusinessIdFromTaskKey recovers it so this step re-derives the SAME view the cockpit's own
+    // read produced, without trusting a business the client didn't send. This changes ONLY which
+    // routes get recomputed/persisted here — the taskKey lookup and businessId handling below (and
+    // every existing guardrail: cross-workspace, defense-in-depth isolation, RECORD_OUTCOME/
+    // VERIFY_OUTCOME/REQUEST_REASSESSMENT's own explicit businessId requirement) are unchanged.
+    //
+    // HOSTILE SAFETY CORRECTION: the embedded businessId is AUTHORITATIVE for a pc:/cp: taskKey — a
+    // client-supplied businessId may match it or be absent, but must never override it. Letting the
+    // client value win here (as an earlier version of this fix did) let a crafted request
+    // (taskKey scoped to business A, businessId claiming business B) re-derive and PERSIST business
+    // B's own execution routes via getOwnerNowView/persistProcessExecutionRoutes as a side effect —
+    // cash/profit protection always emits MISSING_UNIT_ECONOMICS/PROFIT_DATA_INSUFFICIENT data-gap
+    // routes for a business even with zero real financial data, so this is a real, persisted
+    // cross-business materialisation, not just a wasted read. This happens BEFORE
+    // applyProcessExecutionAction's own later taskKey lookup and defense-in-depth isolation check
+    // (which already rejects this same mismatch — just too late to prevent the materialisation side
+    // effect). Reject up front with that SAME NOT_FOUND_OR_FORBIDDEN code/message: not a new trust
+    // boundary or a new public error shape, only moving the existing rejection earlier so it also
+    // guards materialisation, not just the later lookup.
+    const embeddedBusinessId = parseBusinessIdFromTaskKey(input.taskKey);
+    if (embeddedBusinessId && input.businessId && input.businessId.toLowerCase() !== embeddedBusinessId.toLowerCase()) {
+      return canonicalJson({ error: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" }, { status: 400 });
+    }
+    const materialisationBusinessId = embeddedBusinessId ?? input.businessId ?? null;
+    // A businessId RECOVERED FROM THE TASKKEY must belong to THIS workspace before it can compute/
+    // persist routes — closes the same class of gap for a taskKey crafted with a foreign
+    // (different-workspace or nonexistent) business UUID. Scoped to embeddedBusinessId only (never a
+    // purely client-supplied one with no taskKey embedding): a non-embedding family's explicit
+    // businessId already gets its own, more specific WRONG_WORKSPACE/403 check downstream in
+    // applyProcessExecutionAction — duplicating that here with this route's less-specific
+    // NOT_FOUND_OR_FORBIDDEN/400 would regress that existing, more informative contract for no gain
+    // (a foreign businessId is never authoritative for materialisation unless the taskKey itself
+    // embeds it).
+    if (embeddedBusinessId && !(await isBusinessInWorkspace(ctx.verifiedWorkspaceId, embeddedBusinessId))) {
+      return canonicalJson({ error: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" }, { status: 400 });
+    }
+    const view = await getOwnerNowView(ctx.verifiedWorkspaceId, materialisationBusinessId);
     if (view.processExecution && view.processExecution.routes.length > 0) {
       await persistProcessExecutionRoutes(ctx.verifiedWorkspaceId, view.processExecution, ctx.verifiedActorId);
     }

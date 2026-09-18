@@ -141,4 +141,20 @@ describe("Owner Cockpit — REQUEST_REASSESSMENT businessId wiring (PR H)", () =
     expect(call.body.businessId).toBeUndefined();
     expect(call.body.reason).toBe("need current delivery-time evidence");
   });
+
+  it("shows a clear 'Reassessment requested.' acknowledgement on success (Workstream C)", async () => {
+    // LIVE-PROVEN GAP: a real acceptance test found REQUEST_REASSESSMENT returned 200 with no clear
+    // visible confirmation — the generic "Action applied — task is now {status}" message (built from
+    // the server's unchanged task.status, since REQUEST_REASSESSMENT never changes it) said something
+    // unrelated to what the owner just did.
+    const { getByTestId, findByTestId } = renderPage();
+
+    const button = await waitFor(() => getByTestId("cockpit-action-REQUEST_REASSESSMENT"));
+    fireEvent.click(button);
+    const confirm = await waitFor(() => getByTestId("cockpit-confirm"));
+    fireEvent.click(confirm);
+
+    const message = await findByTestId("cockpit-message");
+    await waitFor(() => expect(message.textContent).toBe("Reassessment requested."));
+  });
 });

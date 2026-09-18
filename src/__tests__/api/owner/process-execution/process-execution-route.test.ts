@@ -15,6 +15,7 @@ const {
   mockGetPersistedProcessTasks,
   mockPersistProcessExecutionRoutes,
   mockGetOwnerNowView,
+  mockIsBusinessInWorkspace,
   mockParseRequestBody,
   mockCanonicalJson,
   mockWithCanonical,
@@ -23,6 +24,7 @@ const {
   mockGetPersistedProcessTasks: vi.fn(),
   mockPersistProcessExecutionRoutes: vi.fn(),
   mockGetOwnerNowView: vi.fn(),
+  mockIsBusinessInWorkspace: vi.fn(),
   mockParseRequestBody: vi.fn(),
   mockCanonicalJson: vi.fn(),
   mockWithCanonical: vi.fn(),
@@ -32,6 +34,7 @@ vi.mock("@/services/owner-mode/process-execution-bridge.service", () => ({
   applyProcessExecutionAction: mockApplyProcessExecutionAction,
   getPersistedProcessTasks: mockGetPersistedProcessTasks,
   persistProcessExecutionRoutes: mockPersistProcessExecutionRoutes,
+  isBusinessInWorkspace: mockIsBusinessInWorkspace,
 }));
 
 vi.mock("@/services/owner-guidance/owner-now-view.service", () => ({
@@ -148,6 +151,7 @@ beforeEach(() => {
   mockGetOwnerNowView.mockResolvedValue({ processExecution: null });
   mockApplyProcessExecutionAction.mockResolvedValue(MOCK_ACTION_RESULT);
   mockPersistProcessExecutionRoutes.mockResolvedValue(undefined);
+  mockIsBusinessInWorkspace.mockResolvedValue(true);
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -322,6 +326,131 @@ describe("POST /api/owner/process-execution — non-DB mock tests", () => {
       );
       expect(result.status).toBe(400);
       expect(result.body.code).toBe("MISSING_INPUT");
+    });
+  });
+
+  describe("materialisation businessId derivation (fresh cockpit priority fix)", () => {
+    const BIZ_A = "cccccccc-cccc-4000-8000-cccccccccccc";
+
+    it("START (no explicit businessId): re-derives getOwnerNowView with the businessId embedded in a CASH_PROFIT taskKey, not null", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_A);
+      // applyProcessExecutionAction's own businessId input is completely unchanged by this fix —
+      // still null when the client didn't send one, whatever the taskKey embeds.
+      expect(mockApplyProcessExecutionAction).toHaveBeenCalledWith(
+        expect.objectContaining({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, businessId: null })
+      );
+    });
+
+    it("COMPLETE (no explicit businessId): re-derives getOwnerNowView with the businessId embedded in a PROCESS_CORRECTION taskKey", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: `pc:${BIZ_A}:some-correction-id`, action: "COMPLETE" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_A);
+    });
+
+    it("a workspace-level taskKey (no embedded businessId) still re-derives with null, unchanged", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: "wl:overload", action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, null);
+    });
+
+    it("a legacy/no-businessId CASH_PROFIT taskKey shape (no embedded uuid) re-derives with null, unchanged", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: "cp:CASH_SAFETY_RISK", action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, null);
+    });
+
+    it("a malformed embedded segment (not a UUID) parses to null — no fabricated business identity", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: "cp:not-a-uuid:CASH_SAFETY_RISK", action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, null);
+    });
+  });
+
+  describe("business-identity conflict guard (hostile safety correction — PART 1-3)", () => {
+    const BIZ_A = "cccccccc-cccc-4000-8000-cccccccccccc";
+    const BIZ_B = "dddddddd-dddd-4000-8000-dddddddddddd";
+
+    it("1. cp:A + no input.businessId -> materialises A", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_A);
+    });
+
+    it("2. pc:A + no input.businessId -> materialises A", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: `pc:${BIZ_A}:some-correction-id`, action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_A);
+    });
+
+    it("3. cp:A + input.businessId=A -> succeeds/materialises A", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, action: "VERIFY_OUTCOME", businessId: BIZ_A });
+      const result = await processExecutionPost(makeCtx()) as { status: number };
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_A);
+      expect(result.status).toBe(200);
+    });
+
+    it("4. pc:A + input.businessId=A -> succeeds/materialises A", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: `pc:${BIZ_A}:some-correction-id`, action: "RECORD_OUTCOME", businessId: BIZ_A });
+      const result = await processExecutionPost(makeCtx()) as { status: number };
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_A);
+      expect(result.status).toBe(200);
+    });
+
+    it("5. cp:A + input.businessId=B -> governed rejection; getOwnerNowView/persistProcessExecutionRoutes/applyProcessExecutionAction never called for B", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, action: "VERIFY_OUTCOME", businessId: BIZ_B });
+      const result = await processExecutionPost(makeCtx()) as { status: number; body: { code: string } };
+      expect(mockGetOwnerNowView).not.toHaveBeenCalled();
+      expect(mockPersistProcessExecutionRoutes).not.toHaveBeenCalled();
+      expect(mockApplyProcessExecutionAction).not.toHaveBeenCalled();
+      expect(result.status).toBe(400);
+      expect(result.body.code).toBe("NOT_FOUND_OR_FORBIDDEN");
+    });
+
+    it("6. pc:A + input.businessId=B -> same governed rejection, no materialisation for B", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: `pc:${BIZ_A}:some-correction-id`, action: "RECORD_OUTCOME", businessId: BIZ_B });
+      const result = await processExecutionPost(makeCtx()) as { status: number; body: { code: string } };
+      expect(mockGetOwnerNowView).not.toHaveBeenCalled();
+      expect(mockPersistProcessExecutionRoutes).not.toHaveBeenCalled();
+      expect(mockApplyProcessExecutionAction).not.toHaveBeenCalled();
+      expect(result.status).toBe(400);
+      expect(result.body.code).toBe("NOT_FOUND_OR_FORBIDDEN");
+    });
+
+    it("7. taskKey businessId not a member of this workspace -> governed rejection before materialisation", async () => {
+      mockIsBusinessInWorkspace.mockResolvedValue(false);
+      mockParseRequestBody.mockResolvedValue({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, action: "START" });
+      const result = await processExecutionPost(makeCtx()) as { status: number; body: { code: string } };
+      expect(mockIsBusinessInWorkspace).toHaveBeenCalledWith(WS_A, BIZ_A);
+      expect(mockGetOwnerNowView).not.toHaveBeenCalled();
+      expect(mockPersistProcessExecutionRoutes).not.toHaveBeenCalled();
+      expect(result.status).toBe(400);
+      expect(result.body.code).toBe("NOT_FOUND_OR_FORBIDDEN");
+    });
+
+    it("8. non-business-scoped key + legitimate explicit businessId -> existing behavior preserved (materialises, not rejected)", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: "wl:overload", action: "RECORD_OUTCOME", businessId: BIZ_A });
+      const result = await processExecutionPost(makeCtx()) as { status: number };
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_A);
+      expect(result.status).toBe(200);
+    });
+
+    it("9. workspace-level key + no businessId -> existing behavior preserved (null, no membership check)", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: "wl:overload", action: "START" });
+      const result = await processExecutionPost(makeCtx()) as { status: number };
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, null);
+      expect(mockIsBusinessInWorkspace).not.toHaveBeenCalled();
+      expect(result.status).toBe(200);
+    });
+
+    it("11. malformed embedded segment in a business-scoped prefix -> parses null, no fabricated identity, no membership check needed", async () => {
+      mockParseRequestBody.mockResolvedValue({ taskKey: "cp:not-a-uuid:CASH_SAFETY_RISK", action: "START", businessId: BIZ_B });
+      const result = await processExecutionPost(makeCtx()) as { status: number };
+      // embeddedBusinessId is null here (malformed) so the conflict-equality check never triggers;
+      // the explicit businessId (BIZ_B) is used as-is, same as any non-embedding family.
+      expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_B);
+      expect(result.status).toBe(200);
     });
   });
 

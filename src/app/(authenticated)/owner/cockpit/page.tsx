@@ -294,6 +294,15 @@ export default function OwnerCockpitPage() {
       const { ok, data } = await apiPost("/api/owner/process-execution", body);
       if (!ok) {
         setMessage(describeActionFailure(data, "We couldn't complete this action. Nothing was changed."));
+      } else if (action === "REQUEST_REASSESSMENT") {
+        // REQUEST_REASSESSMENT never changes task.status (the server returns the task's unchanged
+        // status alongside the new reassessmentId — see applyProcessExecutionAction's
+        // REQUEST_REASSESSMENT branch), so the generic "task is now {status}" phrase below said
+        // something unrelated to what the owner just did (e.g. "task is now completed") and gave no
+        // indication the reassessment itself succeeded. A live acceptance test confirmed the owner
+        // saw no clear confirmation after a real 200 response.
+        setMessage("Reassessment requested.");
+        await load(activeBusinessId);
       } else {
         const rawStatus = String(data.status ?? "updated");
         setMessage(`Action applied — task is now ${PROCESS_TASK_STATUS_PHRASE[rawStatus] ?? rawStatus.toLowerCase()}.`);
