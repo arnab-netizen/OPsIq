@@ -109,6 +109,11 @@ export const POST = withCanonicalEnforcement(
       outcomeId: r.outcomeId ?? null,
       progressRecordId: r.progressRecordId ?? null,
       verificationClassification: r.verificationClassification ?? null,
+      // PR G: only ever present (and only ever true) for a VERIFY_OUTCOME response where
+      // the verifying actor completed the task themselves AND no other eligible
+      // independent verifier existed in the workspace. Never true for an ordinary
+      // independent verification.
+      selfVerified: r.selfVerified ?? null,
     }, { status: 200 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
