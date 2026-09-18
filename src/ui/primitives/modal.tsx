@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { useDialogA11y } from "./use-dialog-a11y";
 
 interface ModalProps {
   isOpen: boolean;
@@ -10,52 +11,27 @@ interface ModalProps {
   footer?: ReactNode;
 }
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // Focus trap + initial focus + focus restoration -- a modal dialog previously left the
-    // background reachable by Tab (real WCAG 2.4.3/2.1.2 gap, found during a manual accessibility
-    // pass) and never moved focus into itself or gave it back to the trigger on close.
-    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-    (firstFocusable ?? dialogRef.current)?.focus();
-
-    function handleKeydown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (e.key !== "Tab" || !dialogRef.current) return;
-      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeydown);
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", handleKeydown);
-      document.body.style.overflow = "";
-      previouslyFocusedRef.current?.focus();
-    };
-  }, [isOpen, onClose]);
+  // Escape-to-close, Tab focus trap, background scroll lock, initial focus on
+  // open, and focus restoration on close -- delegated to the shared
+  // `useDialogA11y` hook (./use-dialog-a11y.ts) instead of a second,
+  // separately-derived copy of the same logic.
+  //
+  // This delegation is itself the fix for a real production bug: Modal used
+  // to run its own "focus the first focusable element" effect with `onClose`
+  // in that effect's dependency array. Any parent re-render that passed a
+  // fresh `onClose` closure -- e.g. a controlled `<input>` inside the modal
+  // re-rendering the parent on every keystroke, which is normal React, not a
+  // caller mistake -- re-ran that effect and threw focus to the dialog's
+  // first focusable element (the Close button) on every keystroke, wiping
+  // out whatever the visitor had just typed. `useDialogA11y`'s initial-focus
+  // effect depends only on `isOpen` (plus the stable `containerRef`), so it
+  // fires exactly once per open/close cycle no matter how many times the
+  // parent re-renders while the modal stays open.
+  useDialogA11y({ isOpen, onClose, containerRef: dialogRef });
 
   if (!isOpen) return null;
 
