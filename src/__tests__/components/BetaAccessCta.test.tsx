@@ -157,6 +157,48 @@ describe("BetaAccessCta", () => {
     await screen.findByText(/received/i);
   });
 
+  it("preserves the full typed email across keystrokes and never steals focus to Close (regression)", () => {
+    // Regression for a production bug: BetaAccessCta's `resetAndClose` (passed as
+    // Modal's `onClose`) is intentionally not useCallback-wrapped, so it is a fresh
+    // closure on every render. Typing into the controlled Email input re-renders the
+    // component on every keystroke; Modal must not treat that as a reason to re-run its
+    // "focus the first focusable element" step, or focus jumps to Close and the input's
+    // value is effectively lost after the first character.
+    renderCta();
+    fireEvent.click(screen.getByRole("button", { name: "Request beta access" }));
+
+    const email = screen.getByLabelText("Email") as HTMLInputElement;
+    email.focus();
+
+    let value = "";
+    for (const ch of "person@example.com") {
+      value += ch;
+      fireEvent.change(email, { target: { value } });
+      expect(document.activeElement).toBe(email);
+      expect(document.activeElement).not.toBe(screen.getByRole("button", { name: "Close" }));
+    }
+
+    expect(email.value).toBe("person@example.com");
+  });
+
+  it("preserves the full typed first name across keystrokes and never steals focus to Close (regression)", () => {
+    renderCta();
+    fireEvent.click(screen.getByRole("button", { name: "Request beta access" }));
+
+    const firstName = screen.getByLabelText("First name (optional)") as HTMLInputElement;
+    firstName.focus();
+
+    let value = "";
+    for (const ch of "Ada") {
+      value += ch;
+      fireEvent.change(firstName, { target: { value } });
+      expect(document.activeElement).toBe(firstName);
+      expect(document.activeElement).not.toBe(screen.getByRole("button", { name: "Close" }));
+    }
+
+    expect(firstName.value).toBe("Ada");
+  });
+
   it("resets the form when reopened after a success", async () => {
     vi.stubGlobal(
       "fetch",
