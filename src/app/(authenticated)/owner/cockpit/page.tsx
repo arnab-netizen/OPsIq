@@ -80,7 +80,7 @@
  */
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, CardDashboardSkeleton, EmptyState, PageHeader, PageContainer } from "@/ui/primitives";
 import { useActiveBusiness } from "@/context/active-business-context";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -199,7 +199,39 @@ export default function OwnerCockpitPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  // HOME BUSINESS-CONTEXT LEAK FIX (forensic remediation, live-proven across 3 real businesses in
+  // one workspace: ZZ-TEST-FIELD-SERVICE -> Trinity Services -> ZZ-TEST-SANDBOX).
+  //
+  // ROOT CAUSE: `load()` had no request-generation guard. Every call fires
+  // `Promise.all([now-view, recovery-status, public-signals])` for whichever `businessId` was
+  // active at call time, and unconditionally commits the result on resolution. If the active
+  // business changes while an OLDER load() for a DIFFERENT business is still in flight, and that
+  // older request happens to resolve AFTER the newer one (a normal, unpredictable race on the
+  // network — nothing guarantees request/response ordering), its stale response silently
+  // overwrote the correctly-rendered newer business's `bridge`/`executionLifecycle`/
+  // `financeTopPriority` state — with no error and no visible loading transition, since the
+  // loading skeleton had already been dismissed by the newer, faster request. The header (driven
+  // directly by ActiveBusinessContext, never by this response) stayed correct throughout, which is
+  // exactly why the live report saw a correct header alongside stale cockpit widgets. A stale
+  // REJECTION had the same hazard in the other direction: it could overwrite an already-successful
+  // newer render with an error/Retry screen.
+  //
+  // Server-side now-view scoping for businessId+restrictExecutionToBusiness is already proven
+  // correct by real-Postgres tests (cockpit-business-scoping.db.test.ts's suppress=true A/B/C
+  // isolation + CASH_PROFIT-attribution tests; cockpit-finance-priority.db.test.ts's "returns ONLY
+  // that business's action" test) — this is a pure client-side async race, not a server defect.
+  //
+  // FIX: a monotonically increasing generation number (a ref, not state, so incrementing it never
+  // itself triggers a render) is stamped at the start of every load() call. Every state commit —
+  // the successful result, a thrown error, and the `loading` flag itself — is guarded by "is this
+  // still the latest generation?" immediately before it runs. A stale response (success or
+  // failure) arriving after a newer load() has started is a correctly detected no-op: it can
+  // never turn `loading` back on/off for a request that's no longer current, and it can never
+  // overwrite state a newer, current request already rendered.
+  const loadGenerationRef = useRef(0);
+
   const load = useCallback(async (businessId: string | null) => {
+    const generation = ++loadGenerationRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -220,6 +252,10 @@ export default function OwnerCockpitPage() {
         apiGet(`/api/owner/recovery-status${qs}`).catch(() => null),
         apiGet(`/api/owner/public-signals${qs}`).catch(() => null),
       ]);
+      // A newer load() has since started (the active business changed again while this request
+      // was in flight) — this response is stale and must never commit. See this function's own
+      // doc comment above for the full mechanism.
+      if (loadGenerationRef.current !== generation) return;
       setBridge((data.processExecution as ProcessExecutionBridgeView) ?? null);
       const avoidList = (data?.view?.actionsToAvoid as AvoidItem[] | undefined) ?? [];
       setAvoid(avoidList.map((a) => a.avoid ?? "").filter(Boolean));
@@ -239,9 +275,16 @@ export default function OwnerCockpitPage() {
       // Read-only outside signals (best-effort; a failure here must not break the cockpit).
       setPublicSignals(sig && typeof sig === "object" && "publicSignalStatus" in sig ? (sig as OwnerPublicSignalsResponse) : null);
     } catch (e) {
+      // A stale failure (e.g. a slow request for a business the owner already switched away from
+      // timing out or erroring) must never clobber an already-successful, current render with an
+      // error/Retry screen.
+      if (loadGenerationRef.current !== generation) return;
       setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
     } finally {
-      setLoading(false);
+      // A stale request's completion must never toggle the loading flag for a request that's no
+      // longer current — it could otherwise dismiss the skeleton for a newer request still in
+      // flight, or (harmlessly but pointlessly) re-set an already-false flag.
+      if (loadGenerationRef.current === generation) setLoading(false);
     }
   }, []);
 
