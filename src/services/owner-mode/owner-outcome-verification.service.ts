@@ -32,6 +32,7 @@ import {
   AiMutationAttemptStatus,
 } from "@/domain/execution/learning-gate";
 import { createReassessmentEvent } from "@/services/owner-mode/reassessment-event.service";
+import { hasEligibleIndependentVerifier } from "@/services/workspace/verifier-eligibility.service";
 
 // ─── Classification types ────────────────────────────────────────────────────
 
@@ -271,6 +272,15 @@ export interface VerifyOutcomeResult {
   ok: boolean;
   verificationClassification: OwnerOutcomeVerificationClass;
   verificationStatus: OutcomeVerificationStatus;
+  /**
+   * True only when the verifying actor is proven to be the same actor who completed
+   * the underlying task (task.completedByUserId) AND no other eligible independent
+   * verifier existed in the workspace at verification time (see
+   * hasEligibleIndependentVerifier). This is the sole-operator exception to
+   * separation-of-duty (PR G) — never set true for an ordinary independent
+   * verification, and never used to claim independence that didn't happen.
+   */
+  selfVerified?: boolean;
   reason?: string;
   code?: string;
 }
@@ -302,7 +312,7 @@ export async function verifyOwnerActionOutcome(
 
   return deps.db.$transaction(async (tx: typeof db) => {
     // 1. Load outcome — workspace-isolated
-    const outcome = await (tx as any).ownerActionOutcome.findFirst({
+    const outcome = await tx.ownerActionOutcome.findFirst({
       where: { id: outcomeId, workspaceId },
     }) as OutcomeRowForClassification | null;
 
@@ -312,7 +322,7 @@ export async function verifyOwnerActionOutcome(
     // 2. Load associated task for metric context + window check
     let task: TaskRowForClassification | null = null;
     if (outcome.taskKey) {
-      task = await (tx as any).processExecutionTask.findFirst({
+      task = await tx.processExecutionTask.findFirst({
         where: { workspaceId, taskKey: outcome.taskKey },
         select: {
           id: true,
@@ -358,7 +368,34 @@ export async function verifyOwnerActionOutcome(
 
     // 5. Separation-of-duty (use task's completedByUserId as the recorder)
     const recorderActorId = task?.completedByUserId ?? null;
-    assertVerificationSeparationOfDuty(recorderActorId, verificationActorId);
+
+    // Solo-operator exception (PR G): the pure assertVerificationSeparationOfDuty()
+    // guard above is intentionally unconditional (recorder === verifier always
+    // throws — see its own doc comment and unit tests). Before invoking it, check
+    // whether the strict rule's justification actually holds: is there another
+    // eligible independent verifier in this workspace at all? When one exists,
+    // fall through to the guard unchanged — separation of duty is preserved
+    // exactly as today. When none exists (a genuine single-operator workspace),
+    // permit the same actor to close their own loop, but the write below marks
+    // this outcome as self-verified — never as an independently verified one.
+    let selfVerified = false;
+    if (recorderActorId && recorderActorId === verificationActorId) {
+      const eligibleVerifierExists = await hasEligibleIndependentVerifier(
+        tx as unknown as import("@/services/workspace/verifier-eligibility.service").VerifierEligibilityDb,
+        workspaceId,
+        recorderActorId
+      );
+      if (!eligibleVerifierExists) {
+        selfVerified = true;
+      }
+    }
+    if (!selfVerified) {
+      // Unchanged path for every case except the proven, eligibility-checked
+      // solo-operator exception above: different actors (no-op), unknown
+      // recorder (no-op, same as before PR G), or same actor with another
+      // eligible verifier available (throws, exactly as today).
+      assertVerificationSeparationOfDuty(recorderActorId, verificationActorId);
+    }
 
     // Determine status
     const verificationStatus: OutcomeVerificationStatus = TERMINAL_VERIFIED_CLASSES.has(
@@ -366,7 +403,7 @@ export async function verifyOwnerActionOutcome(
     ) ? "verified" : (verificationClassification === "OBSERVATION_WINDOW_OPEN" ? "observation_window_open" : "insufficient_evidence");
 
     // 6. Optimistic lock: update only when verificationClassification IS NULL
-    const updated = await (tx as any).ownerActionOutcome.updateMany({
+    const updated = await tx.ownerActionOutcome.updateMany({
       where: { id: outcomeId, workspaceId, verificationClassification: null },
       data: {
         verificationClassification,
@@ -403,13 +440,20 @@ export async function verifyOwnerActionOutcome(
           taskKey: outcome.taskKey ?? null,
           businessId: outcome.businessId,
           notes: verificationNotes ?? null,
+          // PR G — truthful self-verification distinction. selfVerified is true ONLY
+          // when the verifying actor equals task.completedByUserId AND no other
+          // eligible independent verifier existed in the workspace (see
+          // hasEligibleIndependentVerifier above). This is never set true for an
+          // ordinary independent verification, and this event never claims
+          // independent verification when selfVerified is true.
+          selfVerified,
         },
         visibility: "internal",
       },
-      tx as any
+      tx
     );
 
-    return { ok: true, verificationClassification, verificationStatus };
+    return { ok: true, verificationClassification, verificationStatus, selfVerified };
   });
 }
 

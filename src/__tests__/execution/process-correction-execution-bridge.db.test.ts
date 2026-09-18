@@ -210,4 +210,54 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Process-Correction Execution Bridge 
     expect(after.evidenceRefs).toContain("per-job cost worksheet");
     expect(after.evidenceRefs.length).toBe(before.evidenceRefs.length + 1);
   });
+
+  // ── Regression: production live-defect — Complete + evidence UX/API contract mismatch ────────────
+  // pc:c-sop is a CREATE_SOP_CHECKLIST_TASK route, whose requiredEvidence always has TWO distinct items
+  // (evidenceForRoute in process-execution-bridge-expansion.ts: "the drafted SOP/checklist change" and
+  // "evidence of adoption before it is marked done"). Before this fix, completeProcessTask counted only
+  // the CURRENT request's evidenceRefs against that count, so evidence submitted earlier via the separate
+  // SUBMIT_EVIDENCE workflow never counted toward completion -- exactly reproducing the live report: the
+  // owner entered evidence via Submit evidence, then Complete still failed unless enough evidence was
+  // ALSO re-typed into that same Complete call. This proves the full persisted round trip through the real
+  // route-facing service functions (SUBMIT_EVIDENCE, then COMPLETE with no new evidence) now succeeds once
+  // total accumulated evidence meets the route's requirement, and not before.
+  it("[DB completion-persistence] SOP/checklist task (2 required evidence items): partial evidence via Submit evidence is not yet enough to Complete", async () => {
+    const before = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-sop")!;
+    expect(before.status).not.toBe("COMPLETED");
+    const submit = await applyProcessExecutionAction(
+      { workspaceId: wsL, businessId: bizL, actorId: mgr, actorRole: "manager", taskKey: "pc:c-sop", action: "SUBMIT_EVIDENCE", evidenceRefs: ["drafted checklist v2"] },
+      deps,
+    );
+    expect(submit.ok).toBe(true);
+    const afterSubmit = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-sop")!;
+    expect(afterSubmit.evidenceRefs).toContain("drafted checklist v2");
+    // Only 1 of the 2 required items is on file -- Complete with no new evidence must still be rejected.
+    const completeTooEarly = await completeProcessTask(
+      { workspaceId: wsL, businessId: bizL, actorId: mgr, actorRole: "manager", taskKey: "pc:c-sop", evidenceRefs: [] },
+      deps,
+    );
+    expect(completeTooEarly.ok).toBe(false);
+    if (!completeTooEarly.ok) expect(completeTooEarly.code).toBe("EVIDENCE_REQUIRED");
+    const stillNotCompleted = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-sop")!;
+    expect(stillNotCompleted.status).not.toBe("COMPLETED");
+  });
+
+  it("[DB completion-persistence] once accumulated evidence (separate Submit evidence + this Complete call) meets the requirement, Complete succeeds without duplicating evidence", async () => {
+    // Continues from the previous test: pc:c-sop already has "drafted checklist v2" on file from
+    // SUBMIT_EVIDENCE. Completing now with the second required item (and re-sending the first, as an
+    // owner retrying the same form might) must succeed exactly once, with no duplicate evidence entries.
+    const res = await completeProcessTask(
+      { workspaceId: wsL, businessId: bizL, actorId: mgr, actorRole: "manager", taskKey: "pc:c-sop",
+        evidenceRefs: ["drafted checklist v2", "adoption confirmed by 3 staff"] },
+      deps,
+    );
+    expect(res.ok).toBe(true);
+    const row = (await getPersistedProcessTasks(wsL, deps)).find((t) => t.taskKey === "pc:c-sop")!;
+    expect(row.status).toBe("COMPLETED");
+    expect(row.evidenceRefs).toContain("drafted checklist v2");
+    expect(row.evidenceRefs).toContain("adoption confirmed by 3 staff");
+    // Evidence persists exactly once -- the resubmitted "drafted checklist v2" is not duplicated.
+    expect(row.evidenceRefs.filter((r) => r === "drafted checklist v2")).toHaveLength(1);
+    expect(row.evidenceRefs).toHaveLength(2);
+  });
 });

@@ -6,34 +6,77 @@
  * POST /api/owner/process-execution (applyProcessExecutionAction). No business logic, no duplicate backend:
  * the server re-derives + re-checks every action. Presentation + safety layout live in MinimumOwnerCockpit.
  *
- * Business-context decision (revised — see docs/opsiq-governance and the P0-4 Home/Finance
- * consistency fix): NO selector, by design — this page still has no visible business selector.
- * `processExecution` (the task bridge
- * this page drives START/action/progress against) is built via `buildProcessExecutionBridge(
- * processCorrections, cashProfitProtection, workspaceId, ...)` — workspace-scoped, not
- * businessId-scoped — and most mutations here are submitted by `taskKey` alone (POST
- * /api/owner/process-execution resolves task ownership from the task record itself for those
- * actions). That part is unchanged: it is a workspace-wide execution queue, the same shape as
- * /owner/tasks, and letting the owner "switch business" mid-task here would not change which
- * tasks are shown and could wrongly imply an in-flight task moved.
+ * Business-context decision (revised — see docs/opsiq-governance, the P0-4 Home/Finance
+ * consistency fix, the controlled-beta cockpit business-scoping fix / D-cockpit, and the
+ * RECORD_OUTCOME/VERIFY_OUTCOME/REQUEST_REASSESSMENT businessId fixes folded into the WRITE
+ * bullet below): NO selector, by design — this page still has no visible business selector.
  *
- * REQUEST_REASSESSMENT is the one documented exception: process-execution-bridge.service.ts's
- * REQUEST_REASSESSMENT branch requires `businessId` unconditionally (it opens an
- * OwnerReassessmentEvent, which is a per-business record) and fails closed with
- * MISSING_INPUT/400 without one. `onAction` below attaches `activeBusinessId` for that action
- * only — never as a blanket default for every action — the same ActiveBusinessContext source
- * this page already uses for now-view/recovery-status/public-signals. The server still
- * independently re-validates that the supplied business belongs to the caller's workspace
- * (`businessInWorkspace`) and that it matches the task's own `businessId` when the task has one,
- * so this client-supplied value is never trusted on its own.
+ * Read vs. write scoping of `processExecution` (the task bridge this page drives START/action/
+ * progress against) are DIFFERENT and must not be conflated:
+ *  - WRITE: most mutations (START/APPROVE/REJECT/DELEGATE/SUBMIT_EVIDENCE/COMPLETE/MARK_BLOCKED/
+ *    REQUEST_MISSING_DATA/ACKNOWLEDGE/RECORD_PROGRESS) are still submitted by `taskKey` alone —
+ *    POST /api/owner/process-execution does not send a businessId as the resolving key for these;
+ *    the server resolves task ownership from the task record itself. That is unchanged and
+ *    correct — it is why "switching business" mid-task never moves or hides an in-flight task
+ *    the owner is actively working.
  *
- * BUT GET /api/owner/now-view's OTHER signals (cash, finance, business condition, retention) are
+ *    CORRECTION (fix/cockpit-record-outcome-businessid — this comment previously, and
+ *    incorrectly, claimed the route "never sends a businessId" for every action; that stopped
+ *    being universally true once Phase 3 added RECORD_OUTCOME): `RECORD_OUTCOME` IS REQUIRED
+ *    server-side to carry a `businessId` (see `applyProcessExecutionAction`'s RECORD_OUTCOME
+ *    branch in process-execution-bridge.service.ts, which returns `MISSING_INPUT` — a 400 —
+ *    without one) so the recorded outcome can be attributed to a specific business.
+ *    `REQUEST_REASSESSMENT` (fix/reassessment-businessid-wiring) has the identical server-side
+ *    requirement — it opens an OwnerReassessmentEvent, a per-business record. `onAction()` below
+ *    attaches the shared `activeBusinessId` to the POST body for exactly these actions
+ *    (RECORD_OUTCOME, VERIFY_OUTCOME, REQUEST_REASSESSMENT) — never blanket-attached to every
+ *    action; each action wires its own requirement in its own branch. VERIFY_OUTCOME does not
+ *    strictly require businessId server-side but uses it, when present, to scope its best-effort
+ *    post-verification reassessment side effect to the right business instead of falling back to
+ *    the task's sourceFindingKey. This is safe to source from the page's shared
+ *    `activeBusinessId` — not a per-task business id the client would otherwise have to track —
+ *    because the execution-lifecycle items rendered here were themselves fetched from `now-view`
+ *    scoped to that same `activeBusinessId` (see `buildExecutionLifecycle`'s businessId scoping),
+ *    so a task offering these actions always either belongs to the active business or is a
+ *    genuinely workspace-level task with no business of its own. The server independently
+ *    re-validates that any supplied businessId belongs to the caller's workspace before using it
+ *    (`businessInWorkspace` in process-execution-bridge.service.ts) and rejects a foreign one
+ *    with `WRONG_WORKSPACE` — this client-side wiring is a convenience, never a trust boundary.
+ *  - READ (what this page DISPLAYS as "Top Priority" / "Execution lifecycle"): `processExecution`
+ *    is built from `processCorrections` + `cashProfitProtection` via `buildProcessExecutionBridge`.
+ *    `cashProfitProtection` is genuinely per-business (arbitrated cash/finance state). But
+ *    `processCorrections` (and the PASS23 workload/capability/SOP/training/effectiveness expansion
+ *    families) are derived from a workspace-wide proof scan with NO per-business attribution at
+ *    all — real human/live-production usability testing across 3 real businesses in one workspace
+ *    (ZZ-TEST-FIELD-SERVICE / Trinity Services / ZZ-TEST-SANDBOX) proved that switching the active
+ *    business left these two widgets stuck showing whichever business's evidence happened to
+ *    dominate, while the finance diagnosis below correctly updated. This page now sends
+ *    `restrictExecutionToBusiness=true` to now-view (see now-view/route.ts and
+ *    GetOwnerNowViewOptions in owner-now-view.service.ts) so that, whenever the workspace holds
+ *    more than one real business, only the genuinely business-attributable content (CASH_PROFIT /
+ *    STARTUP_MODE) is shown as this business's own Top Priority / Execution lifecycle — never a
+ *    workspace-wide finding mislabeled as belonging to whichever business is selected. A
+ *    single-business workspace is unaffected (unambiguous by definition).
+ *
+ * GET /api/owner/now-view's OTHER signals (cash, finance, business condition, retention) are
  * genuinely per-business, and a real human usability test proved that fetching now-view with no
  * businessId let it silently fall back to a workspace-wide "most recent row" — sometimes a stale
  * or different business's cash/finance state entirely (Home said "at risk" while Finance for the
  * active business said SAFE). This page now reads the shared ActiveBusinessContext and passes its
  * businessId to now-view so those signals resolve to the SAME business as every other owner page,
  * without adding a selector control or touching the workspace-wide task queue above.
+ *
+ * Pending action forms vs. a business switch (controlled-beta hardening, independent of the
+ * scoping fix above): this page has no business selector of its own, but `activeBusinessId` is
+ * shared app-wide (ActiveBusinessContext) and every other owner page has a selector, so it CAN
+ * change while this page stays mounted. `MinimumOwnerCockpit` renders every action as a local,
+ * ephemeral inline form (the top-priority action's evidence/reason/delegate form, and each
+ * execution-lifecycle item's own Phase 3 form) that is opened for a specific task and business
+ * context and otherwise has no way to notice that context changed before the owner clicks
+ * Confirm. `activeBusinessId` is passed down to `MinimumOwnerCockpit` here for exactly one
+ * purpose — see its doc comment on `MinimumOwnerCockpitProps` — discarding any such open form the
+ * instant it changes, so a switch never lets a stale form submit an action whose taskKey/business
+ * context the owner is no longer looking at.
  */
 
 /* eslint-disable react-hooks/set-state-in-effect -- load() on mount is the intentional fetch-on-mount pattern used across the owner pages */
@@ -160,7 +203,13 @@ export default function OwnerCockpitPage() {
     setLoading(true);
     setError(null);
     try {
-      const qs = businessId ? `?businessId=${encodeURIComponent(businessId)}` : "";
+      // restrictExecutionToBusiness=true (only ever sent here — see now-view/route.ts's doc comment)
+      // closes the cockpit business-scoping bug where switching the active business changed the
+      // finance diagnosis but left Top Priority / Execution lifecycle stuck on whichever business's
+      // workspace-wide process-intelligence evidence happened to dominate. It has no effect without a
+      // businessId, and no effect at all in a single-business workspace (see
+      // GetOwnerNowViewOptions' doc comment in owner-now-view.service.ts).
+      const qs = businessId ? `?businessId=${encodeURIComponent(businessId)}&restrictExecutionToBusiness=true` : "";
       // now-view / recovery-status / public-signals each depend only on businessId, not on one
       // another's response -- they were previously three sequential awaits (a measured request
       // waterfall). recovery-status and public-signals keep their existing best-effort
@@ -225,6 +274,18 @@ export default function OwnerCockpitPage() {
       if (input.progressPct != null) body.progressPct = input.progressPct;
       if (input.stage) body.stage = input.stage;
       if (input.outcomeStatus) body.outcomeStatus = input.outcomeStatus;
+      // RECORD_OUTCOME requires a businessId server-side (applyProcessExecutionAction returns
+      // MISSING_INPUT/400 without one) so the recorded outcome can be attributed to a business;
+      // VERIFY_OUTCOME doesn't require it but uses it, when present, to correctly scope its
+      // best-effort post-verification reassessment side effect. See the doc comment at the top of
+      // this file for why `activeBusinessId` is the right, server-revalidated value to send here.
+      // Scoped to just these two actions -- not attached to every action -- because other actions
+      // reach tasks via a bare taskKey and the service's defense-in-depth business-isolation guard
+      // (process-execution-bridge.service.ts) would incorrectly reject a task whose own businessId
+      // happens to differ from whatever is currently active.
+      if ((action === "RECORD_OUTCOME" || action === "VERIFY_OUTCOME") && activeBusinessId) {
+        body.businessId = activeBusinessId;
+      }
       // REQUEST_REASSESSMENT-only: the server requires businessId unconditionally for this action
       // (see this file's header comment) — attach it from the same active-business source as this
       // page's own reads. No other action gets a businessId here; each action wires its own
@@ -381,6 +442,7 @@ export default function OwnerCockpitPage() {
             businessOperatingSystem={businessOperatingSystem}
             onBosAction={onBosAction}
             financeTopPriority={financeTopPriority}
+            activeBusinessId={activeBusinessId}
             busy={busy}
           />
         </>
