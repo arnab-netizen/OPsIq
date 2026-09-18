@@ -8,7 +8,7 @@ import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { parseRequestBody } from "@/lib/validation";
+import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { DelegatedTaskStatus } from "@/domain/execution/delegated-task";
 import {
   transitionTaskStatus,
@@ -26,6 +26,10 @@ const statusSchema = z.object({
 
 export const PATCH = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    // Route-defense: `taskId` is a UUID-backed column. A malformed segment (e.g. "new") must fail
+    // closed with a governed 400 before it ever reaches the database as a raw string — see
+    // [taskId]/route.ts's identical guard for the live-proven defect this closes.
+    parseOrThrow(uuidSchema, params.taskId);
     const input = await parseRequestBody(ctx.request!, statusSchema);
     try {
       const status = await transitionTaskStatus({
