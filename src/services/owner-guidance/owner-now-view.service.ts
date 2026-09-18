@@ -1165,11 +1165,31 @@ async function buildExecutionLifecycle(
    * keep the two lists in sync if the family set ever changes.
    */
   businessId: string | null = null,
+  /**
+   * Controlled-beta cockpit business-scoping fix (D-cockpit) — see GetOwnerNowViewOptions' doc
+   * comment in getOwnerNowView. OFF by default (byte-for-byte the pre-existing query); when true
+   * (only ever passed by getOwnerNowView when the caller opted in AND the workspace is ambiguous —
+   * more than one real business), rows are further restricted to RELIABLY_ATTRIBUTABLE_SOURCE_FAMILIES
+   * below, so a PROCESS_CORRECTION/expansion-family row — whose businessId is stamped from whichever
+   * business happened to be active when it was computed, not from anything proving the underlying
+   * proof/gaming/credibility evidence is actually about that business (see the workspace-wide
+   * `deps.db.proof.findMany` scan in getOwnerNowView) — can never be shown as if it were the selected
+   * business's own execution lifecycle item.
+   */
+  suppressUnattributableFamilies: boolean = false,
 ): Promise<OwnerExecutionLifecycleView | null> {
   try {
     const cutoff = new Date(Date.now() - RECENTLY_VERIFIED_WINDOW_DAYS * 24 * 60 * 60 * 1000);
     const dbUntyped = db as unknown as ProcessExecutionTaskDb;
     const WORKSPACE_LEVEL_SOURCE_FAMILIES = ["WORKLOAD_REDUCTION", "CAPABILITY_GAP", "SOP_CHECKLIST", "TRAINING", "EFFECTIVENESS_RECHECK"] as const;
+    // The only source families whose CONTENT (not just their persisted businessId column) is verified
+    // to genuinely belong to the business it is stamped with: CASH_PROFIT is arbitrated per-business
+    // cash/finance state (see cashFinanceEffectiveState in getOwnerNowView); STARTUP_MODE is always
+    // stamped from the owning OwnerStartupSession.businessId by createBlueprint(). Every other family
+    // (PROCESS_CORRECTION plus the PASS23 WORKSPACE_LEVEL_SOURCE_FAMILIES above) is derived, directly or
+    // indirectly, from the workspace-wide process-intelligence/proof scan and carries no verified
+    // per-business attribution, whatever businessId happens to be stamped on the persisted row.
+    const RELIABLY_ATTRIBUTABLE_SOURCE_FAMILIES = ["CASH_PROFIT", "STARTUP_MODE"] as const;
     const tasks = await dbUntyped.processExecutionTask.findMany({
       where: {
         workspaceId,
@@ -1177,7 +1197,9 @@ async function buildExecutionLifecycle(
         // must never surface a QA blueprint's task to a real owner.
         isFixtureRecord: false,
         ...(businessId
-          ? { OR: [{ businessId }, { businessId: null, sourceFamily: { in: WORKSPACE_LEVEL_SOURCE_FAMILIES } }] }
+          ? (suppressUnattributableFamilies
+              ? { businessId, sourceFamily: { in: RELIABLY_ATTRIBUTABLE_SOURCE_FAMILIES } }
+              : { OR: [{ businessId }, { businessId: null, sourceFamily: { in: WORKSPACE_LEVEL_SOURCE_FAMILIES } }] })
           : {}),
         AND: [
           {
@@ -1273,8 +1295,9 @@ export async function queryExecutionLifecycle(
   workspaceId: string,
   db: GuidanceDeps["db"],
   businessId: string | null = null,
+  suppressUnattributableFamilies: boolean = false,
 ): Promise<OwnerExecutionLifecycleView | null> {
-  return buildExecutionLifecycle(workspaceId, db, businessId);
+  return buildExecutionLifecycle(workspaceId, db, businessId, suppressUnattributableFamilies);
 }
 
 // ── Phase 4: Business Operating System summary ───────────────────────────────
@@ -1531,12 +1554,51 @@ async function buildBusinessOperatingSystem(
   }
 }
 
+/**
+ * Optional read-time restriction (controlled-beta cockpit business-scoping fix, D-cockpit).
+ *
+ * `processCorrections` / `sopChecklistCorrections` / `trainingAssignments` / `ownerWorkloadReduction` /
+ * `capabilityGaps` / `sopTrainingEffectiveness` (and therefore the PROCESS_CORRECTION routes and the
+ * PASS23 expansion families they feed into `processExecution`) are ALL ultimately derived from
+ * `processIntelligence`, which is built from a workspace-wide proof scan
+ * (`deps.db.proof.findMany({ where: { workspaceId } })` above — deliberately workspace-wide so
+ * anti-gaming/credibility detection catches an operator gaming proof ACROSS businesses in the same
+ * workspace, not a per-business bug). `ProcessIntelligenceAnalysis` carries no per-finding business
+ * attribution at all. `buildProcessExecutionBridge`'s `businessId` parameter only stamps the CURRENTLY
+ * ACTIVE business onto a PROCESS_CORRECTION/expansion route's `businessId`/`taskKey` for persistence
+ * identity — it does not (and cannot, from this input) prove the underlying finding is actually about
+ * that business. In a workspace with more than one real business this makes a workspace-wide finding
+ * indistinguishable, from the owner's side, from a genuine cross-business leak: switching the selected
+ * business does not change this content, so a Cockpit "Top Priority" / "Execution lifecycle" widget can
+ * silently keep showing one business's evidence under every other business's name.
+ *
+ * `restrictExecutionToAttributableBusiness: true` closes exactly that display gap using the SAME
+ * precedented pattern this file already uses for BusinessRiskEntry (see hasExactlyOneRealBusiness's own
+ * doc comment): when a `businessId` is supplied and the workspace holds MORE than one real business,
+ * `processExecution` and `executionLifecycle` are restricted to the source families that ARE genuinely,
+ * verifiably attributable to the stamped business (CASH_PROFIT — arbitrated per-business cash/finance
+ * state, see cashFinanceEffectiveState below — and STARTUP_MODE — createBlueprint() always stamps the
+ * owning session's real businessId). With zero or exactly one real business this is a no-op (unambiguous
+ * by definition), so a single-business workspace is byte-for-byte unaffected.
+ *
+ * OFF by default (`undefined`/`false` preserves the exact pre-existing payload for every caller). Used
+ * ONLY by the cockpit's own now-view read (see src/app/api/owner/now-view/route.ts's opt-in query
+ * parameter and MinimumOwnerCockpitPage's fetch) — never by the process-execution POST route's
+ * server-authoritative re-derivation+persist step, nor by /owner/priorities, /owner/process-intelligence,
+ * or /owner/now, which already document and rely on today's workspace-wide semantics for these exact
+ * signals and are out of scope for this fix.
+ */
+export interface GetOwnerNowViewOptions {
+  restrictExecutionToAttributableBusiness?: boolean;
+}
+
 /** Produce the live Owner Now View: assemble, diff vs prior snapshot, run orchestrator, persist. */
 export async function getOwnerNowView(
   workspaceId: string,
   businessId: string | null,
   injected?: GuidanceDeps,
   actorId?: string,
+  options?: GetOwnerNowViewOptions,
 ): Promise<OwnerNowViewPayload> {
   // Best-effort overdue risk alert evaluation on every owner now-view load.
   if (actorId) {
@@ -2028,9 +2090,22 @@ export async function getOwnerNowView(
     },
     workspaceId,
   );
+  // See GetOwnerNowViewOptions' doc comment: only when the caller opts in AND a specific business is
+  // selected AND the workspace holds more than one real business (ambiguous attribution) do we drop the
+  // PROCESS_CORRECTION / expansion-family inputs from the bridge below — CASH_PROFIT stays in either way,
+  // since it is genuinely per-business (arbitrated cash/finance state, not the workspace-wide proof scan).
+  const restrictExecutionToBusiness = Boolean(options?.restrictExecutionToAttributableBusiness) && businessId !== null;
+  const executionAttributionAmbiguous = restrictExecutionToBusiness ? !(await hasExactlyOneRealBusiness(workspaceId)) : false;
   const processExecution: ProcessExecutionBridgeAnalysis | null =
     (processCorrections || cashProfitProtection || bridgeExpansion.routes.length > 0)
-      ? buildProcessExecutionBridge(processCorrections, cashProfitProtection, workspaceId, new Date(deps.now()).toISOString(), bridgeExpansion, businessId)
+      ? buildProcessExecutionBridge(
+          executionAttributionAmbiguous ? null : processCorrections,
+          cashProfitProtection,
+          workspaceId,
+          new Date(deps.now()).toISOString(),
+          executionAttributionAmbiguous ? null : bridgeExpansion,
+          businessId,
+        )
       : null;
   // Reflect persisted task state so the cockpit shows the REAL status (PROPOSED/IN_PROGRESS/APPROVED/COMPLETED/…)
   // and the interactive controls only offer valid transitions. Best-effort read: if the table is unavailable,
@@ -2371,7 +2446,7 @@ export async function getOwnerNowView(
     topActionImpactArea
       ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
       : Promise.resolve(null),
-    buildExecutionLifecycle(workspaceId, deps.db, businessId),
+    buildExecutionLifecycle(workspaceId, deps.db, businessId, executionAttributionAmbiguous),
     buildBusinessOperatingSystem(workspaceId, businessId, deps.db),
   ]);
 
