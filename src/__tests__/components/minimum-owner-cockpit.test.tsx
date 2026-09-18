@@ -147,6 +147,45 @@ describe("MinimumOwnerCockpit", () => {
     expect(onAction).toHaveBeenCalledWith("pc:c-owner", "SUBMIT_EVIDENCE", { evidenceRefs: ["photo-123"] });
   });
 
+  // ── Regression: production live-defect — Complete + evidence UX/API contract mismatch ─────────
+  // A real usability report: the owner typed evidence into the Complete form, got HTTP 400, then had to
+  // separately use Submit evidence before Complete finally worked. These prove (a) the Complete form's
+  // typed evidence really is included in the constructed onAction call (the exact shape POSTed to
+  // /api/owner/process-execution) -- this is the test that would have caught a field never making it into
+  // the request body -- and (b) the form now tells the owner up front how many distinct evidence items a
+  // route needs and whether evidence already on file already satisfies it, instead of a same-page 400.
+  it("19. COMPLETE: the owner's typed evidence is included in the onAction request payload (UI request-body regression)", () => {
+    const onAction = vi.fn();
+    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={onAction} />);
+    fireEvent.click(getByTestId("cockpit-action-COMPLETE")); // opens the labelled form
+    fireEvent.change(getByTestId("cockpit-evidence-input"), { target: { value: "invoice-4471" } });
+    fireEvent.click(getByTestId("cockpit-confirm"));
+    expect(onAction).toHaveBeenCalledWith("pc:c-owner", "COMPLETE", { evidenceRefs: ["invoice-4471"] });
+  });
+
+  it("20. COMPLETE: a multi-item evidence route tells the owner how many distinct references it requires", () => {
+    const twoItemRoute = route({
+      requiredEvidence: ["the drafted SOP/checklist change", "evidence of adoption before it is marked done"],
+      evidenceRefs: [],
+    });
+    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view({ topRoute: twoItemRoute, routes: [twoItemRoute] })} onAction={vi.fn()} />);
+    fireEvent.click(getByTestId("cockpit-action-COMPLETE"));
+    expect(getByTestId("cockpit-evidence-required-hint").textContent).toMatch(/Requires 2 evidence item/);
+  });
+
+  it("21. COMPLETE: evidence already on file (e.g. from an earlier Submit evidence step) is recognised, and Complete succeeds without re-entering it", () => {
+    const satisfiedRoute = route({
+      requiredEvidence: ["the drafted SOP/checklist change", "evidence of adoption before it is marked done"],
+      evidenceRefs: ["sop-draft-1", "adoption-proof-1"],
+    });
+    const onAction = vi.fn();
+    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view({ topRoute: satisfiedRoute, routes: [satisfiedRoute] })} onAction={onAction} />);
+    fireEvent.click(getByTestId("cockpit-action-COMPLETE"));
+    expect(getByTestId("cockpit-evidence-required-hint").textContent).toMatch(/already on file/i);
+    fireEvent.click(getByTestId("cockpit-confirm")); // no new evidence typed -- prior evidence already satisfies it
+    expect(onAction).toHaveBeenCalledWith("pc:c-owner", "COMPLETE", {});
+  });
+
   it("18. a clean workspace (no bridged action) fabricates nothing", () => {
     const { getByTestId, queryByTestId } = render(<MinimumOwnerCockpit bridge={{ routes: [], topRoute: null, summary: { total: 0, ownerApproval: 0, managerStaff: 0, dataTasks: 0, monitorOnly: 0 } }} onAction={noop} />);
     expect(getByTestId("cockpit-clean").textContent).toMatch(/no urgent action/i);
