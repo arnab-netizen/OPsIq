@@ -8,7 +8,7 @@ import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { parseRequestBody } from "@/lib/validation";
+import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { ProofType } from "@/domain/execution/proof";
 import {
   submitProofForTask,
@@ -31,6 +31,8 @@ const submitSchema = z.object({
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    // Route-defense: `taskId` is a UUID-backed column — see [taskId]/route.ts's identical guard.
+    parseOrThrow(uuidSchema, params.taskId);
     const input = await parseRequestBody(ctx.request!, submitSchema);
     try {
       const result = await submitProofForTask({
