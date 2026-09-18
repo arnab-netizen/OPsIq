@@ -118,10 +118,16 @@ export const POST = withCanonicalEnforcement(
       return canonicalJson({ error: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" }, { status: 400 });
     }
     const materialisationBusinessId = embeddedBusinessId ?? input.businessId ?? null;
-    // A businessId driving materialisation — from the taskKey or the client — must belong to THIS
-    // workspace before it can compute/persist routes. Closes the same class of gap for a taskKey
-    // crafted with a foreign (different-workspace or nonexistent) business UUID.
-    if (materialisationBusinessId && !(await isBusinessInWorkspace(ctx.verifiedWorkspaceId, materialisationBusinessId))) {
+    // A businessId RECOVERED FROM THE TASKKEY must belong to THIS workspace before it can compute/
+    // persist routes — closes the same class of gap for a taskKey crafted with a foreign
+    // (different-workspace or nonexistent) business UUID. Scoped to embeddedBusinessId only (never a
+    // purely client-supplied one with no taskKey embedding): a non-embedding family's explicit
+    // businessId already gets its own, more specific WRONG_WORKSPACE/403 check downstream in
+    // applyProcessExecutionAction — duplicating that here with this route's less-specific
+    // NOT_FOUND_OR_FORBIDDEN/400 would regress that existing, more informative contract for no gain
+    // (a foreign businessId is never authoritative for materialisation unless the taskKey itself
+    // embeds it).
+    if (embeddedBusinessId && !(await isBusinessInWorkspace(ctx.verifiedWorkspaceId, embeddedBusinessId))) {
       return canonicalJson({ error: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" }, { status: 400 });
     }
     const view = await getOwnerNowView(ctx.verifiedWorkspaceId, materialisationBusinessId);

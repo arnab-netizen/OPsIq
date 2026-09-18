@@ -149,6 +149,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     });
 
     afterEach(async () => {
+      // OwnerActionOutcome.workspaceId FKs to ClientAccount (same quirk as OwnerReassessmentEvent
+      // above) -- the RECORD_OUTCOME regression test below creates one, and it must be deleted
+      // before clientAccount.deleteMany or the FK constraint rejects the delete.
+      await db.ownerActionOutcome.deleteMany({ where: { workspaceId } });
       await db.processExecutionTask.deleteMany({ where: { workspaceId } });
       await db.ownerReassessmentEvent.deleteMany({ where: { workspaceId } });
       await db.ownerGuidanceSnapshot.deleteMany({ where: { workspaceId } });
