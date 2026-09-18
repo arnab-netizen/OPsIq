@@ -15,7 +15,7 @@
  * money. Owner action inputs use labelled controls — never window.prompt(). The server re-checks every action.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge, Disclosure } from "@/ui/primitives";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
@@ -451,17 +451,29 @@ function ExecutionLifecycleSection({
   const resetForm = () => { setPending(null); setProgressPct(""); setStage(""); setOutcomeStatus("worked"); setReason(""); };
 
   // Discard any open Phase 3 form (RECORD_OUTCOME/VERIFY_OUTCOME/RECORD_PROGRESS) the instant the
-  // active business changes — see `activeBusinessId`'s doc comment on MinimumOwnerCockpitProps.
-  // Without this, `onAction`'s businessId for RECORD_OUTCOME/VERIFY_OUTCOME (cockpit/page.tsx)
-  // would be read from whatever business is active at Confirm-click time, not the one the owner
-  // was looking at when they opened this form, if a submit ever raced a business switch. This is
-  // reacting to an external context change (ActiveBusinessContext), not deriving state from
-  // props/state already available during render. Inlined (not calling `resetForm`) so the
-  // effect's only real dependency is `activeBusinessId` -- setState setters are referentially
-  // stable and exhaustive-deps does not require them in the array.
+  // active business SWITCHES (not the initial mount-time settling from null to the first resolved
+  // business) — see `activeBusinessId`'s doc comment on MinimumOwnerCockpitProps. Without this,
+  // `onAction`'s businessId for RECORD_OUTCOME/VERIFY_OUTCOME (cockpit/page.tsx) would be read
+  // from whatever business is active at Confirm-click time, not the one the owner was looking at
+  // when they opened this form, if a submit ever raced a business switch. This is reacting to an
+  // external context change (ActiveBusinessContext), not deriving state from props/state already
+  // available during render.
+  //
+  // ROOT CAUSE (found via integrated CI, PR #502): `activeBusinessId` starts `null` and resolves
+  // asynchronously to the real id shortly after mount (ActiveBusinessProvider's own businesses
+  // fetch). A plain `useEffect(..., [activeBusinessId])` fires on that null -> real-id transition
+  // too, not just on a genuine switch between two real businesses -- so a form opened in the brief
+  // window between the click and that first resolution could be wiped out before Confirm, even
+  // though the business never actually "switched". `prevBusinessIdRef` distinguishes a genuine
+  // switch (previous ref value was already a real, different id) from the initial settle (previous
+  // ref value was null) and only resets on the former.
+  const prevBusinessIdRef = useRef(activeBusinessId);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- see justification above
-    setPending(null); setProgressPct(""); setStage(""); setOutcomeStatus("worked"); setReason("");
+    const previous = prevBusinessIdRef.current;
+    prevBusinessIdRef.current = activeBusinessId;
+    if (previous !== null && previous !== activeBusinessId) {
+      setPending(null); setProgressPct(""); setStage(""); setOutcomeStatus("worked"); setReason("");
+    }
   }, [activeBusinessId]);
 
   const submitPhase3 = (taskKey: string, action: string) => {
@@ -1097,14 +1109,24 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
   const [delegateRole, setDelegateRole] = useState<"MANAGER" | "STAFF">("MANAGER");
 
   // Discard the top-priority action's own open inline form (REJECT/MARK_BLOCKED/SUBMIT_EVIDENCE/
-  // DELEGATE/...) the instant the active business changes — see `activeBusinessId`'s doc comment
-  // on MinimumOwnerCockpitProps. These actions never send a businessId (write path resolves by
+  // DELEGATE/...) the instant the active business SWITCHES (not the initial mount-time settling
+  // from null to the first resolved business) — see `activeBusinessId`'s doc comment on
+  // MinimumOwnerCockpitProps. These actions never send a businessId (write path resolves by
   // taskKey alone), but leaving a stale evidence/reason/delegate form open across a business
   // switch is the same "submitting against a context the owner no longer sees" hazard. This is
   // reacting to an external context change, not deriving state from render-available props/state.
+  //
+  // Same root cause and fix as ExecutionLifecycleSection's identical effect above (found via
+  // integrated CI, PR #502): `activeBusinessId` starts `null` and resolves asynchronously shortly
+  // after mount, so a plain `[activeBusinessId]`-keyed effect fires on that settling transition
+  // too, not just a genuine switch — `prevBusinessIdRef` distinguishes the two.
+  const prevBusinessIdRef = useRef(activeBusinessId);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- see justification above
-    setPending(null); setEvidenceText(""); setReasonText(""); setDelegateRole("MANAGER");
+    const previous = prevBusinessIdRef.current;
+    prevBusinessIdRef.current = activeBusinessId;
+    if (previous !== null && previous !== activeBusinessId) {
+      setPending(null); setEvidenceText(""); setReasonText(""); setDelegateRole("MANAGER");
+    }
   }, [activeBusinessId]);
 
   // ── Clean state: no governed process-execution route. Nothing is fabricated to fill the primary
