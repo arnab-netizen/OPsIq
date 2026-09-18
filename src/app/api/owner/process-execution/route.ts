@@ -18,7 +18,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody } from "@/lib/validation";
-import { applyProcessExecutionAction, getPersistedProcessTasks, persistProcessExecutionRoutes } from "@/services/owner-mode/process-execution-bridge.service";
+import { applyProcessExecutionAction, getPersistedProcessTasks, persistProcessExecutionRoutes, isBusinessInWorkspace } from "@/services/owner-mode/process-execution-bridge.service";
 import { getOwnerNowView } from "@/services/owner-guidance/owner-now-view.service";
 import { parseBusinessIdFromTaskKey } from "@/domain/owner-mode/process-execution-bridge";
 
@@ -98,10 +98,32 @@ export const POST = withCanonicalEnforcement(
     // read produced, without trusting a business the client didn't send. This changes ONLY which
     // routes get recomputed/persisted here — the taskKey lookup and businessId handling below (and
     // every existing guardrail: cross-workspace, defense-in-depth isolation, RECORD_OUTCOME/
-    // VERIFY_OUTCOME/REQUEST_REASSESSMENT's own explicit businessId requirement) are unchanged. A
-    // wrong or fabricated businessId parsed from a malformed taskKey can only ever reproduce a route
-    // keyed to that SAME businessId, so it can never materialise (or leak) a different business's task.
-    const materialisationBusinessId = input.businessId ?? parseBusinessIdFromTaskKey(input.taskKey);
+    // VERIFY_OUTCOME/REQUEST_REASSESSMENT's own explicit businessId requirement) are unchanged.
+    //
+    // HOSTILE SAFETY CORRECTION: the embedded businessId is AUTHORITATIVE for a pc:/cp: taskKey — a
+    // client-supplied businessId may match it or be absent, but must never override it. Letting the
+    // client value win here (as an earlier version of this fix did) let a crafted request
+    // (taskKey scoped to business A, businessId claiming business B) re-derive and PERSIST business
+    // B's own execution routes via getOwnerNowView/persistProcessExecutionRoutes as a side effect —
+    // cash/profit protection always emits MISSING_UNIT_ECONOMICS/PROFIT_DATA_INSUFFICIENT data-gap
+    // routes for a business even with zero real financial data, so this is a real, persisted
+    // cross-business materialisation, not just a wasted read. This happens BEFORE
+    // applyProcessExecutionAction's own later taskKey lookup and defense-in-depth isolation check
+    // (which already rejects this same mismatch — just too late to prevent the materialisation side
+    // effect). Reject up front with that SAME NOT_FOUND_OR_FORBIDDEN code/message: not a new trust
+    // boundary or a new public error shape, only moving the existing rejection earlier so it also
+    // guards materialisation, not just the later lookup.
+    const embeddedBusinessId = parseBusinessIdFromTaskKey(input.taskKey);
+    if (embeddedBusinessId && input.businessId && input.businessId.toLowerCase() !== embeddedBusinessId.toLowerCase()) {
+      return canonicalJson({ error: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" }, { status: 400 });
+    }
+    const materialisationBusinessId = embeddedBusinessId ?? input.businessId ?? null;
+    // A businessId driving materialisation — from the taskKey or the client — must belong to THIS
+    // workspace before it can compute/persist routes. Closes the same class of gap for a taskKey
+    // crafted with a foreign (different-workspace or nonexistent) business UUID.
+    if (materialisationBusinessId && !(await isBusinessInWorkspace(ctx.verifiedWorkspaceId, materialisationBusinessId))) {
+      return canonicalJson({ error: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" }, { status: 400 });
+    }
     const view = await getOwnerNowView(ctx.verifiedWorkspaceId, materialisationBusinessId);
     if (view.processExecution && view.processExecution.routes.length > 0) {
       await persistProcessExecutionRoutes(ctx.verifiedWorkspaceId, view.processExecution, ctx.verifiedActorId);

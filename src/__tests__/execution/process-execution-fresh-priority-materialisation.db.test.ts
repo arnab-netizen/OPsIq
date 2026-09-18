@@ -316,5 +316,125 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await db.workspaceMembership.deleteMany({ where: { userId: otherActorId } });
       await db.user.deleteMany({ where: { id: otherActorId } });
     });
+
+    // ── HOSTILE SAFETY CORRECTION: businessId conflict guard (FINAL LIVE P1 REMEDIATION addendum) ──
+    //
+    // The materialisation fix above (`input.businessId ?? parseBusinessIdFromTaskKey(taskKey)`) let a
+    // client-supplied businessId WIN over a pc:/cp: taskKey's own embedded businessId. Because
+    // cash/profit protection always emits MISSING_UNIT_ECONOMICS/PROFIT_DATA_INSUFFICIENT data-gap
+    // routes for a business even with zero real financial data, a crafted request
+    // (taskKey scoped to business A, businessId claiming business B) could make
+    // getOwnerNowView/persistProcessExecutionRoutes actually PERSIST business B's own execution
+    // routes as a real ProcessExecutionTask row — a genuine same-workspace cross-business
+    // materialisation side effect — before applyProcessExecutionAction's later taskKey lookup ever
+    // ran (and regardless of whether that later lookup ultimately rejected the action). The embedded
+    // businessId is now authoritative: a conflicting explicit businessId is rejected BEFORE any
+    // materialisation, and a businessId (embedded or explicit) that doesn't belong to this workspace
+    // is rejected the same way.
+    describe("[db] businessId conflict guard — real Postgres side-effect proof", () => {
+      it("cp:A + businessId=B is rejected and creates ZERO rows for business B (RED before the guard, GREEN after)", async () => {
+        const viewA = await getOwnerNowView(workspaceId, businessId, undefined, actorId, { restrictExecutionToAttributableBusiness: true });
+        const topA = viewA.processExecution!.topRoute!;
+        expect(topA.taskKey).toBe(`cp:${businessId}:${topA.sourceFindingKey}`);
+
+        expect(await db.processExecutionTask.findMany({ where: { workspaceId, businessId: businessBId } })).toHaveLength(0);
+
+        const { POST } = await import("@/app/api/owner/process-execution/route");
+        const response = await POST(
+          makePostRequest({ taskKey: topA.taskKey, action: "VERIFY_OUTCOME", businessId: businessBId }),
+          { params: Promise.resolve({}) },
+        );
+        const body = await response.json();
+        expect(response.status).toBe(400);
+        expect(body.code).toBe("NOT_FOUND_OR_FORBIDDEN");
+
+        // The real-Postgres proof: no side-effect row was ever created for the conflicting business,
+        // whatever the eventual action outcome. Pre-fix, this failed here (rows WERE created for B).
+        const rowsForB = await db.processExecutionTask.findMany({ where: { workspaceId, businessId: businessBId } });
+        expect(rowsForB).toHaveLength(0);
+        // The original, targeted task (business A) must also remain untouched/unmaterialised by this
+        // rejected request — the guard fires before ANY materialisation, not just B's.
+        expect(await db.processExecutionTask.findFirst({ where: { workspaceId, taskKey: topA.taskKey } })).toBeNull();
+      });
+
+      it("pc:A (crafted) + businessId=B is rejected before any materialisation — zero rows for B", async () => {
+        const craftedTaskKey = `pc:${businessId}:some-correction-id`;
+
+        const { POST } = await import("@/app/api/owner/process-execution/route");
+        const response = await POST(
+          makePostRequest({ taskKey: craftedTaskKey, action: "RECORD_OUTCOME", businessId: businessBId, outcomeStatus: "worked" }),
+          { params: Promise.resolve({}) },
+        );
+        const body = await response.json();
+        expect(response.status).toBe(400);
+        expect(body.code).toBe("NOT_FOUND_OR_FORBIDDEN");
+
+        expect(await db.processExecutionTask.findMany({ where: { workspaceId, businessId: businessBId } })).toHaveLength(0);
+      });
+
+      it("a taskKey embedding a genuinely foreign (different-workspace) business is rejected — no cross-workspace materialisation", async () => {
+        const foreignBusiness = await db.ownerBusiness.create({
+          data: { id: randomUUID(), workspaceId: foreignWorkspaceId, name: "Foreign Business", businessType: "generic_local_service", createdBy: actorId },
+        });
+        const craftedTaskKey = `cp:${foreignBusiness.id}:CASH_SAFETY_RISK`;
+
+        const { POST } = await import("@/app/api/owner/process-execution/route");
+        const response = await POST(
+          makePostRequest({ taskKey: craftedTaskKey, action: "START" }),
+          { params: Promise.resolve({}) },
+        );
+        const body = await response.json();
+        // Governed rejection, never a 500/raw error, and never a 200 materialising foreign data.
+        expect(response.status).toBe(400);
+        expect(body.code).toBe("NOT_FOUND_OR_FORBIDDEN");
+
+        expect(await db.processExecutionTask.findMany({ where: { workspaceId, businessId: foreignBusiness.id } })).toHaveLength(0);
+        expect(await db.processExecutionTask.findFirst({ where: { taskKey: craftedTaskKey } })).toBeNull();
+
+        await db.ownerBusiness.deleteMany({ where: { id: foreignBusiness.id } });
+      });
+
+      it("non-business-scoped key + legitimate explicit businessId: existing behavior preserved (not rejected by the new guard)", async () => {
+        // "wl:" (WORKLOAD_REDUCTION) never embeds a businessId in its taskKey, so the conflict guard
+        // must never fire for it — a genuinely nonexistent workload taskKey still fails, but for the
+        // pre-existing reason (task not found), never for the NEW conflict-guard reason.
+        const craftedTaskKey = "wl:some-workload-key-that-does-not-exist";
+
+        const { POST } = await import("@/app/api/owner/process-execution/route");
+        const response = await POST(
+          makePostRequest({ taskKey: craftedTaskKey, action: "RECORD_OUTCOME", businessId, outcomeStatus: "worked" }),
+          { params: Promise.resolve({}) },
+        );
+        expect(response.status).toBe(400);
+        // Still a lookup failure at applyProcessExecutionAction (real behavior, unchanged) — proves
+        // the request reached materialisation/lookup instead of being rejected up front by the guard.
+        const body = await response.json();
+        expect(body.code).toBe("NOT_FOUND_OR_FORBIDDEN");
+      });
+
+      it("matching explicit businessId (RECORD_OUTCOME) on a freshly-materialised task: regression green", async () => {
+        const cockpitView = await getOwnerNowView(workspaceId, businessId, undefined, actorId, { restrictExecutionToAttributableBusiness: true });
+        const top = cockpitView.processExecution!.topRoute!;
+
+        const { POST } = await import("@/app/api/owner/process-execution/route");
+        const completeRes = await POST(
+          makePostRequest({ taskKey: top.taskKey, action: "COMPLETE", evidenceRefs: ["confirmed with bookkeeper"] }),
+          { params: Promise.resolve({}) },
+        );
+        expect(completeRes.status).toBe(200);
+
+        const outcomeRes = await POST(
+          makePostRequest({ taskKey: top.taskKey, action: "RECORD_OUTCOME", businessId, outcomeStatus: "worked" }),
+          { params: Promise.resolve({}) },
+        );
+        expect(outcomeRes.status).toBe(200);
+        const outcomeBody = await outcomeRes.json();
+        expect(outcomeBody.outcomeId).toEqual(expect.any(String));
+
+        const row = await db.processExecutionTask.findFirst({ where: { workspaceId, taskKey: top.taskKey } });
+        expect(row?.status).toBe("OUTCOME_RECORDED");
+        expect(row?.businessId).toBe(businessId);
+      });
+    });
   },
 );

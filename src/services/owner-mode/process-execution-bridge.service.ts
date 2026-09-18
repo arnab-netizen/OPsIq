@@ -288,6 +288,27 @@ async function businessInWorkspace(deps: ProcessBridgeDeps, workspaceId: string,
 }
 
 /**
+ * Public wrapper around the same workspace-membership check this file already uses internally for
+ * governed writes (completeProcessTask / applyProcessExecutionAction). Reused by
+ * POST /api/owner/process-execution's pre-materialisation guard (hostile safety correction) so a
+ * businessId — whether taken from the client or recovered from a pc:/cp: taskKey via
+ * parseBusinessIdFromTaskKey — is confirmed to belong to THIS workspace before it can drive
+ * getOwnerNowView/persistProcessExecutionRoutes. Without this, a taskKey crafted with a genuinely
+ * foreign (different-workspace, or nonexistent) business UUID would still reach materialisation and
+ * could persist a dangling ProcessExecutionTask row stamped with a businessId that has no
+ * corresponding OwnerBusiness in this workspace. Same fail-closed semantics as the internal check;
+ * not a new trust boundary.
+ */
+export async function isBusinessInWorkspace(
+  workspaceId: string,
+  businessId: string,
+  injected?: ProcessBridgeDeps,
+): Promise<boolean> {
+  const deps = injected ?? (await resolveDefaultDeps());
+  return businessInWorkspace(deps, workspaceId, businessId);
+}
+
+/**
  * Complete a process-execution task with governed guards. Fail-closed: unknown/foreign task, non-completable
  * route, owner-approval by a non-owner, or missing/void evidence all reject. On success, opens a governed
  * reassessment for correction/SOP/training/reassessment routes and records its id.
