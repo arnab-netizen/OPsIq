@@ -128,6 +128,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await db.user.create({ data: { id: actorId, email: `${actorId}@example.com`, updatedAt: new Date() } });
       await db.workspace.create({ data: { id: workspaceId, name: "WS Fresh Priority", slug: `ws-fp-${workspaceId.substring(0, 8)}` } });
       await db.workspace.create({ data: { id: foreignWorkspaceId, name: "WS Foreign", slug: `ws-fp-foreign-${foreignWorkspaceId.substring(0, 8)}` } });
+      // FK anchor for OwnerReassessmentEvent.workspaceId (see process-execution-bridge.service.ts /
+      // reassessment-event.service.ts -- OwnerReassessmentEvent.workspace references ClientAccount,
+      // not Workspace, exactly like OwnerActionOutcome's own quirk in
+      // process-execution-record-outcome-route.db.test.ts). Without this, REQUEST_REASSESSMENT's
+      // createReassessmentEvent() insert violates its FK constraint and the route 500s.
+      await db.clientAccount.create({ data: { id: workspaceId, name: "WS Fresh Priority (client anchor)", status: "active", visibility: "internal", updatedAt: new Date() } });
       await db.workspaceMembership.create({ data: { userId: actorId, workspaceId, role: "admin", isActive: true } });
 
       const bizA = await db.ownerBusiness.create({
@@ -151,6 +157,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await db.auditEvent.deleteMany({ where: { workspaceId } });
       await db.ownerBusiness.deleteMany({ where: { workspaceId } });
       await db.workspaceMembership.deleteMany({ where: { userId: actorId } });
+      await db.clientAccount.deleteMany({ where: { id: workspaceId } });
       await db.workspace.deleteMany({ where: { id: { in: [workspaceId, foreignWorkspaceId] } } });
       await db.user.deleteMany({ where: { id: actorId } });
     });
@@ -301,6 +308,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       expect(await db.processExecutionTask.findFirst({ where: { workspaceId: foreignWorkspaceId, taskKey: top.taskKey } })).toBeNull();
       expect(await db.processExecutionTask.findFirst({ where: { workspaceId, taskKey: top.taskKey } })).toBeNull();
 
+      // Delete audit_events before the user row -- the same fkey-ordering fixture bug fixed
+      // elsewhere in this repo (see #501's D1 test): the route's own materialisation step can write
+      // an OWNER_PROCESS_EXECUTION_TASK_UPSERTED audit event for (workspaceId, actorId) on a POST,
+      // and audit_events_actor_id_fkey rejects deleting a User row one still references.
+      await db.auditEvent.deleteMany({ where: { actorId: otherActorId } });
       await db.workspaceMembership.deleteMany({ where: { userId: otherActorId } });
       await db.user.deleteMany({ where: { id: otherActorId } });
     });
