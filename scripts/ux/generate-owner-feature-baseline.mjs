@@ -419,18 +419,61 @@ function buildAllApiRoutesFlat() {
  * capability, not part of OWNER_SCOPED_CAPABILITIES) — restricting the index to /api/owner/* would
  * silently under-report that page's real apiCapabilityRequirements as empty.
  */
-function buildAllApiCapabilityIndex() {
-  const apiFiles = walkFiles(path.join(ROOT, "src/app/api"), "route.ts");
+/** A route's own `[segment]` normalized to ":param" so it keys identically to an extracted call's
+ * own ":param" placeholder — e.g. /api/owner/finance/actions/[actionId] and the extracted call
+ * /api/owner/finance/actions/:param both become /api/owner/finance/actions/:param. */
+function normalizeRoutePath(routePath) {
+  return routePath
+    .split("/")
+    .map((seg) => (/^\[.+\]$/.test(seg) ? ":param" : seg))
+    .join("/");
+}
+
+/**
+ * Per-method capability extraction: every route file in this codebase exports each HTTP method as
+ * `export const METHOD = withCanonicalEnforcement(handler, { requireCapabilities: [...], ... })`
+ * (confirmed: every /api/owner/* route uses this pattern; ~36 non-owner infra/auth routes across
+ * the whole api tree do not). For each `export const METHOD = withCanonicalEnforcement(` site,
+ * the search for `requireCapabilities` is bounded to that exact call's own argument list (via the
+ * existing bracket-matcher) — never the union of every CAPABILITIES.* reference anywhere in the
+ * file, which previously conflated a GET-only capability with a PATCH-only one, or a dynamic
+ * route's real requirement with an unrelated sibling method's.
+ */
+function extractMethodCapabilities(src, method) {
+  const siteRe = new RegExp(`export\\s+const\\s+${method}\\s*=\\s*withCanonicalEnforcement\\s*\\(`);
+  const siteMatch = siteRe.exec(src);
+  if (!siteMatch) return null; // this route doesn't use the withCanonicalEnforcement pattern for this method
+  const callParenOpen = src.indexOf("(", siteMatch.index + siteMatch[0].length - 1);
+  const callParenClose = matchBracket(src, callParenOpen, "(", ")");
+  const argsText = src.slice(callParenOpen, callParenClose + 1);
+  const reqCapsMatch = argsText.match(/requireCapabilities\s*:\s*\[([^\]]*)\]/);
+  if (!reqCapsMatch) return [];
+  return [...reqCapsMatch[1].matchAll(/CAPABILITIES\.([A-Z0-9_]+)/g)].map((m) => m[1]).sort();
+}
+
+/** Capability index keyed by "METHOD normalizedPath" — never by path alone — so a route with
+ * different requirements per method (the confirmed norm: GET=OWNER_VIEW, PATCH=OWNER_MANAGE on the
+ * same file) is never collapsed into one path-wide capability set. */
+function buildAllApiCapabilityIndex(allApiRoutesFlat) {
   const index = new Map();
-  for (const f of apiFiles) {
-    const src = fs.readFileSync(f, "utf8");
-    const caps = new Set();
-    let m;
-    const capRe = new RegExp(CAP_RE);
-    while ((m = capRe.exec(src))) caps.add(m[1]);
-    if (!caps.size) continue;
-    const relPath = path.relative(path.join(ROOT, "src/app/api"), path.dirname(f));
-    index.set("/api/" + relPath.split(path.sep).join("/"), [...caps].sort());
+  for (const r of allApiRoutesFlat) {
+    const src = fs.readFileSync(path.join(ROOT, r.sourceFile), "utf8");
+    const normalizedPath = normalizeRoutePath(r.path);
+    for (const method of r.httpMethods) {
+      if (method === "NOT_VERIFIED") continue;
+      const methodCaps = extractMethodCapabilities(src, method);
+      if (methodCaps !== null) {
+        index.set(`${method} ${normalizedPath}`, methodCaps);
+      } else {
+        // Route doesn't use withCanonicalEnforcement for this method (the ~36 non-owner infra/auth
+        // routes without it) — fall back to a file-wide CAPABILITIES.* scan rather than silently
+        // reporting NOT_APPLICABLE/[] for a route this generator simply doesn't recognize the shape
+        // of. Still per-route (not global), just not per-method within that one file.
+        const caps = new Set();
+        for (const m of src.matchAll(CAP_RE)) caps.add(m[1]);
+        index.set(`${method} ${normalizedPath}`, caps.size ? [...caps].sort() : []);
+      }
+    }
   }
   return index;
 }
@@ -497,6 +540,47 @@ function crossValidateRouteMethods(allApiRoutesFlat, contexts) {
   return { mismatches, validated };
 }
 
+/**
+ * Independent re-check of every apiCapabilityRequirements entry against a FRESH, direct re-parse
+ * of its matching route file/method (via extractMethodCapabilities, not a re-read of the same map
+ * lookup that produced the entry) — catches any normalizeRoutePath/segment-matching misalignment
+ * (e.g. multi-dynamic-segment or catch-all routes) that would otherwise silently produce a wrong
+ * [] rather than surfacing as a mismatch.
+ */
+function crossValidateCapabilities(allApiRoutesFlat, ownerPageRoutes) {
+  const mismatches = [];
+  let validated = 0;
+  for (const page of ownerPageRoutes) {
+    for (const req of page.apiCapabilityRequirements) {
+      const matches = findMatchingRoutes(allApiRoutesFlat, req.endpoint).filter((r) => r.httpMethods.includes(req.method));
+      if (matches.length === 0) continue; // no local route/method found — not a validation target (already flagged by route-method validation if the path matched but method didn't)
+      for (const route of matches) {
+        const src = fs.readFileSync(path.join(ROOT, route.sourceFile), "utf8");
+        const direct = extractMethodCapabilities(src, req.method);
+        let expectedCaps;
+        if (direct !== null) {
+          expectedCaps = direct;
+        } else {
+          const caps = new Set();
+          for (const m of src.matchAll(CAP_RE)) caps.add(m[1]);
+          expectedCaps = caps.size ? [...caps].sort() : [];
+        }
+        validated++;
+        if (JSON.stringify(req.capabilities) !== JSON.stringify(expectedCaps)) {
+          mismatches.push({
+            context: page.route,
+            call: `${req.method} ${req.endpoint}`,
+            generated: req.capabilities,
+            expected: expectedCaps,
+            routeFile: route.sourceFile,
+          });
+        }
+      }
+    }
+  }
+  return { mismatches, validated };
+}
+
 function buildOwnerPageRoutes(sidebarItems, allApiCapabilityIndex) {
   const pageFiles = walkFiles(OWNER_PAGE_ROOT, "page.tsx");
   const primaryHrefs = new Set(sidebarItems.filter((i) => i.href && i.href.startsWith("/owner")).map((i) => i.href));
@@ -543,7 +627,7 @@ function buildOwnerPageRoutes(sidebarItems, allApiCapabilityIndex) {
     const apiCapabilityRequirements = apiCalls.map((call) => ({
       endpoint: call.path,
       method: call.method,
-      capabilities: allApiCapabilityIndex.get(call.path) ?? [],
+      capabilities: allApiCapabilityIndex.get(`${call.method} ${call.path}`) ?? [],
     }));
 
     return {
@@ -598,6 +682,43 @@ function findFilesByKeywords(keywords) {
   return all.filter((f) => {
     const rel = relSrc(f).toLowerCase();
     return keywords.some((kw) => rel.includes(kw.toLowerCase()));
+  });
+}
+
+const SHARED_ACTION_STATUS_MODULE = "src/domain/founder-recovery/action-status.ts";
+const SHARED_ACTION_STATUS_IMPORT_RE = /from\s+["'](?:@\/domain\/founder-recovery\/action-status|(?:\.\.?\/)+founder-recovery\/action-status)["']/;
+
+/** Parses the canonical shared recovery-action state machine directly from its own source — never
+ * hardcoded. Values come from `export const RECOVERY_ACTION_STATUSES = [...]`; the transition map
+ * from the `TRANSITIONS: Record<...> = { ... }` object literal (each `key: [...]` pair). */
+function parseSharedRecoveryActionStatus() {
+  const file = path.join(ROOT, SHARED_ACTION_STATUS_MODULE);
+  const src = stripComments(fs.readFileSync(file, "utf8"));
+  const statusesMatch = src.match(/export const RECOVERY_ACTION_STATUSES\s*=\s*\[([^\]]+)\]/);
+  const values = statusesMatch ? [...statusesMatch[1].matchAll(/"([a-z0-9_]+)"/g)].map((m) => m[1]) : [];
+  const transitionsMatch = /const\s+TRANSITIONS\s*:\s*Record<[^=]+=\s*\{/.exec(src);
+  let transitionMap = {};
+  if (transitionsMatch) {
+    const braceOpen = src.indexOf("{", transitionsMatch.index);
+    const braceClose = matchBracket(src, braceOpen, "{", "}");
+    const body = src.slice(braceOpen + 1, braceClose);
+    for (const m of body.matchAll(/([a-z0-9_]+)\s*:\s*\[([^\]]*)\]/g)) {
+      transitionMap[m[1]] = [...m[2].matchAll(/"([a-z0-9_]+)"/g)].map((x) => x[1]);
+    }
+  }
+  return { values, transitionMap, sourceFile: relSrc(file) };
+}
+
+/** Does this family's own matched files import the shared recovery-action-status module? Attach
+ * the shared FSM only when a real import is found — never assumed from the family name/list in
+ * the correction prompt, which is explicitly not guaranteed complete. */
+function findsSharedActionStatusImport(files) {
+  return files.some((f) => {
+    try {
+      return SHARED_ACTION_STATUS_IMPORT_RE.test(fs.readFileSync(f, "utf8"));
+    } catch {
+      return false;
+    }
   });
 }
 
@@ -676,7 +797,19 @@ function extractFamilyStates(files) {
     } catch {
       continue;
     }
-    commands.push(...extractByRegex(COMMAND_TYPE_RE, src, f));
+    // A type ending in Action/Command only belongs in `commands` when source proves it's accepted
+    // as an owner-triggerable mutation's input, not merely produced as an evaluation engine's
+    // recommendation — confirmed defect: `NextAction` (KEEP/MODIFY/ESCALATE/...) is the OUTPUT of
+    // sop-training-effectiveness-loop.ts's `nextActionFor()`, assigned to a
+    // `recommendedNextAction` field, never accepted as an input anywhere. The precise, mechanical
+    // test used here: does a field/parameter literally named `action` or `command` (not a compound
+    // name like `recommendedNextAction`) carry this exact type? True for ProcessExecutionAction
+    // (`action: ProcessExecutionAction` in ProcessActionInput) and false for NextAction.
+    for (const hit of extractByRegex(COMMAND_TYPE_RE, src, f)) {
+      const inputEvidenceRe = new RegExp(`\\b(?:action|command)\\s*:\\s*${hit.typeName}\\b`);
+      if (inputEvidenceRe.test(src)) commands.push(hit);
+      else domainResultStates.push({ ...hit, note: "Excluded from commands: no `action:`/`command:`-named field or parameter of this exact type found (may be a recommendation/output type, not an accepted mutation input)." });
+    }
     domainResultStates.push(...extractByRegex(DOMAIN_RESULT_TYPE_RE, src, f));
     const statusTypeHits = extractByRegex(STATUS_STATE_TYPE_RE, src, f);
     const enforced = hasEnforcedTransitionEvidence(src);
@@ -703,22 +836,36 @@ function extractFamilyStates(files) {
 }
 
 function buildOwnerActionFamilies(allApiRoutesFlat) {
+  const sharedFsm = parseSharedRecoveryActionStatus();
   return OWNER_ACTION_FAMILIES.map((fam) => {
     const files = findFilesByKeywords(fam.sourceKeywords);
     const { commands, workflowStatuses, domainResultStates, transitions } = extractFamilyStates(files);
     const mutationEndpoints = allApiRoutesFlat.filter(
       (r) => fam.apiPrefixes.some((p) => r.path.startsWith(p)) && r.httpMethods.some((m) => m !== "GET" && m !== "NOT_VERIFIED")
     );
+
+    // Shared recovery-action-status FSM: attached ONLY when this family's own matched files
+    // (action.service.ts / validation.ts) actually import the module — never assumed from a
+    // fixed list of "known consumers" (the correction prompt itself warns that list may be
+    // incomplete). Values/transitions are parsed once from the canonical source, never hardcoded.
+    const usesSharedFsm = findsSharedActionStatusImport(files);
+    const effectiveWorkflowStatuses = usesSharedFsm
+      ? [...workflowStatuses, { typeName: "RecoveryActionStatus (shared)", values: sharedFsm.values, sourceFile: sharedFsm.sourceFile }]
+      : workflowStatuses;
+
     return {
       family: fam.family,
       source: files.length ? files.map(relSrc) : [],
       sourceNote: files.length ? undefined : `No file under src/domain or src/services matched keywords [${fam.sourceKeywords.join(", ")}]; this family's mutation endpoints and UI pages are still recorded from source below.`,
       commands,
-      commandsNote: commands.length ? undefined : "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
-      workflowStatuses,
-      workflowStatusesNote: workflowStatuses.length
+      commandsNote: commands.length ? undefined : "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      workflowModel: usesSharedFsm ? "SHARED_RECOVERY_ACTION_STATUS" : effectiveWorkflowStatuses.length ? "FAMILY_SPECIFIC" : "NONE_FOUND",
+      workflowStatuses: effectiveWorkflowStatuses,
+      workflowStatusesNote: effectiveWorkflowStatuses.length
         ? undefined
-        : "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+        : "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files, and no import of the shared founder-recovery/action-status module either.",
+      transitionSource: usesSharedFsm ? sharedFsm.sourceFile : undefined,
+      knownTransitionMap: usesSharedFsm ? sharedFsm.transitionMap : undefined,
       domainResultStates,
       knownTransitionMaps: transitions,
       mutationEndpoints: mutationEndpoints.map((r) => ({ path: r.path, methods: r.httpMethods.filter((m) => m !== "GET"), sourceFile: r.sourceFile })),
@@ -732,9 +879,17 @@ function buildWorkflowStateFamilies(ownerActionFamilies) {
     .filter((f) => f.workflowStatuses.length > 0)
     .map((f) => ({
       family: f.family,
+      workflowModel: f.workflowModel,
       source: f.source,
       states: f.workflowStatuses,
-      transitions: f.knownTransitionMaps.length ? f.knownTransitionMaps : "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
+      // The shared FSM's own parsed transition map takes precedence (it's the actual enforced
+      // transition rule, not a regex-matched `*_TRANSITIONS`-named const, which may not exist at
+      // all in a family-specific file even when it genuinely reuses the shared FSM's transitions).
+      transitions: f.knownTransitionMap
+        ? { source: f.transitionSource, map: f.knownTransitionMap }
+        : f.knownTransitionMaps.length
+        ? f.knownTransitionMaps
+        : "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files, and this family does not import the shared founder-recovery/action-status module.",
       ownerUiLocation: f.currentOwnerUiPages,
     }));
 }
@@ -782,22 +937,30 @@ function classifyBusinessIdCategory(text, call, argsText) {
  * session; kept as a small lookup (not derived by a generic response-DTO tracer) because mapping
  * a Promise.all destructuring target back to its originating call requires binding-level tracing
  * this generator's simple regex parser does not (and per scope, should not) perform generically. */
-const COCKPIT_FIELDS_CONSUMED = {
-  "GET /api/owner/now-view": [
-    "processExecution", "view.actionsToAvoid", "derivedBusinessCondition", "view.confidenceCapped",
-    "goalAttentionSignal", "topProfitLeak", "policyAttentionSignal", "trendAlerts",
-    "doNotRepeatAnnotation", "activeEscalations", "executionLifecycle", "businessOperatingSystem",
-    "financeTopPriority",
-  ],
-  "GET /api/owner/recovery-status": ["recoveryStatus (presence check gates whether the response is used at all)"],
-  "GET /api/owner/public-signals": ["publicSignalStatus (presence check gates whether the response is used at all)"],
-  "GET /api/owner/onboarding": ["found", "canRunFirstDiagnosis", "missingMinimum", "requirements"],
-  "GET /api/owner/process-execution": ["tasks[].status"],
-  "POST /api/owner/process-execution": ["status", "reassessmentId (implied by REQUEST_REASSESSMENT branch)"],
-  "POST /api/owner/goal-arbitration": ["NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"],
-  "POST /api/owner/override-arbitration": ["NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"],
-  "POST /api/owner/constraints": ["NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"],
-  "POST /api/escalation/acknowledge": ["NOT_VERIFIED — ok is checked; data is only passed to a generic failure-message helper, no specific field destructured on success"],
+/** responseUsage: FIELDS (real success-path field access exists — fieldsConsumed lists them),
+ * SUCCESS_STATUS_ONLY (success path checks only `ok`/presence, no field is read), ERROR_ONLY
+ * (response data is only ever passed to a generic failure-message helper), NOT_VERIFIED (genuinely
+ * indeterminate). fieldsConsumed is always a real field-name array (empty when responseUsage isn't
+ * FIELDS) — never an explanatory sentence standing in for a field name. */
+const COCKPIT_RESPONSE_USAGE = {
+  "GET /api/owner/now-view": {
+    responseUsage: "FIELDS",
+    fieldsConsumed: [
+      "processExecution", "view.actionsToAvoid", "derivedBusinessCondition", "view.confidenceCapped",
+      "goalAttentionSignal", "topProfitLeak", "policyAttentionSignal", "trendAlerts",
+      "doNotRepeatAnnotation", "activeEscalations", "executionLifecycle", "businessOperatingSystem",
+      "financeTopPriority",
+    ],
+  },
+  "GET /api/owner/recovery-status": { responseUsage: "SUCCESS_STATUS_ONLY", fieldsConsumed: [], note: "Only a `\"recoveryStatus\" in rec` presence check gates whether the response is stored at all; no field value is read out of it here." },
+  "GET /api/owner/public-signals": { responseUsage: "SUCCESS_STATUS_ONLY", fieldsConsumed: [], note: "Only a `\"publicSignalStatus\" in sig` presence check gates whether the response is stored at all; no field value is read out of it here." },
+  "GET /api/owner/onboarding": { responseUsage: "FIELDS", fieldsConsumed: ["found", "canRunFirstDiagnosis", "missingMinimum", "requirements"] },
+  "GET /api/owner/process-execution": { responseUsage: "FIELDS", fieldsConsumed: ["tasks[].status"] },
+  "POST /api/owner/process-execution": { responseUsage: "FIELDS", fieldsConsumed: ["status", "reassessmentId (implied by REQUEST_REASSESSMENT branch)"] },
+  "POST /api/owner/goal-arbitration": { responseUsage: "ERROR_ONLY", fieldsConsumed: [], note: "result.ok is checked; result.data is only passed to a generic failure-message helper on failure." },
+  "POST /api/owner/override-arbitration": { responseUsage: "ERROR_ONLY", fieldsConsumed: [], note: "result.ok is checked; result.data is only passed to a generic failure-message helper on failure." },
+  "POST /api/owner/constraints": { responseUsage: "ERROR_ONLY", fieldsConsumed: [], note: "result.ok is checked; result.data is only passed to a generic failure-message helper on failure." },
+  "POST /api/escalation/acknowledge": { responseUsage: "ERROR_ONLY", fieldsConsumed: [], note: "ok is checked; data is only passed to a generic failure-message helper on failure." },
 };
 
 function buildCockpitExternalFeeds() {
@@ -834,6 +997,7 @@ function buildCockpitExternalFeeds() {
       const failureBehaviors = sites.map((s) =>
         s.nonFatalChain ? "BEST_EFFORT_NULL_ON_FAILURE" : s.hasAnyImmediateChain ? "NOT_VERIFIED (a .then/.catch is chained but its exact null-safety shape wasn't recognized)" : "NOT_VERIFIED"
       );
+      const usage = COCKPIT_RESPONSE_USAGE[key.split(" ").slice(0, 2).join(" ")];
       return {
         endpoint: first.path,
         method: first.method,
@@ -844,7 +1008,9 @@ function buildCockpitExternalFeeds() {
             ? distinctCategories[0]
             : { multipleCallSites: distinctCategories },
         failureBehavior: [...new Set(failureBehaviors)].length === 1 ? failureBehaviors[0] : failureBehaviors,
-        fieldsConsumed: COCKPIT_FIELDS_CONSUMED[key.split(" ").slice(0, 2).join(" ")] ?? ["NOT_VERIFIED"],
+        responseUsage: usage?.responseUsage ?? "NOT_VERIFIED",
+        fieldsConsumed: usage?.fieldsConsumed ?? [],
+        responseUsageNote: usage?.note,
       };
     });
 }
@@ -896,7 +1062,7 @@ function main() {
 
   const ownerApiRoutes = buildOwnerApiRoutes();
   const allApiRoutesFlat = buildAllApiRoutesFlat();
-  const allApiCapabilityIndex = buildAllApiCapabilityIndex();
+  const allApiCapabilityIndex = buildAllApiCapabilityIndex(allApiRoutesFlat);
   const ownerPageRoutes = buildOwnerPageRoutes(sidebarItems, allApiCapabilityIndex);
 
   const ownerActionFamilies = buildOwnerActionFamilies(allApiRoutesFlat);
@@ -915,6 +1081,19 @@ function main() {
     process.exit(1);
   }
   console.log(`Route-method cross-validation: ${validated} calls validated, 0 mismatches.`);
+
+  // ── Capability cross-validation (hard fail on mismatch, never silently corrected) ──
+  const capValidation = crossValidateCapabilities(allApiRoutesFlat, ownerPageRoutes);
+  if (capValidation.mismatches.length > 0) {
+    console.error(`CAPABILITY CROSS-VALIDATION FAILED: ${capValidation.mismatches.length} mismatch(es) found (out of ${capValidation.validated} calls validated against a locally-found route/method).`);
+    for (const mm of capValidation.mismatches) {
+      console.error(`  [${mm.context}] "${mm.call}" — generated ${JSON.stringify(mm.generated)}, expected ${JSON.stringify(mm.expected)} (${mm.routeFile})`);
+    }
+    console.error("Generation ABORTED. Fix the capability extractor before regenerating.");
+    process.exit(1);
+  }
+  console.log(`Capability cross-validation: ${capValidation.validated} calls validated, 0 mismatches.`);
+
   for (const p of ownerPageRoutes) delete p._rawApiCalls;
 
   // ── Pre-existing correctness findings: recorded only, never fixed here (see instruction §7) ──

@@ -63,18 +63,21 @@
         {
           "endpoint": "/api/owner/alerts/:param/read",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/alerts/:param/resolve",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/alerts",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         }
@@ -146,9 +149,7 @@
           "endpoint": "/api/owner/recovery/businesses",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_VIEW"
           ]
         }
       ],
@@ -237,7 +238,9 @@
         {
           "endpoint": "/api/owner/budget/actions/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/budget/actions",
@@ -250,7 +253,6 @@
           "endpoint": "/api/owner/budget/authority",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -286,7 +288,6 @@
           "endpoint": "/api/owner/budget/working-capital",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -294,17 +295,14 @@
           "endpoint": "/api/owner/budget/working-capital",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         },
         {
           "endpoint": "/api/owner/recovery/businesses",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_VIEW"
           ]
         }
       ],
@@ -388,22 +386,30 @@
         {
           "endpoint": "/api/owner/cashflow/actions/:param/verify",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/cashflow/actions/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/cashflow/businesses/:param/diagnoses",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/cashflow/businesses/:param/snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/cashflow/dashboard",
@@ -416,9 +422,7 @@
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -655,17 +659,23 @@
         {
           "endpoint": "/api/owner/compliance/:param/review",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/compliance/:param/tasks",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/compliance/:param",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
@@ -714,8 +724,7 @@
           "endpoint": "/api/owner/compliance",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -750,13 +759,14 @@
         {
           "endpoint": "/api/owner/sales/customers/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/sales/customers",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -764,8 +774,7 @@
           "endpoint": "/api/owner/sales/customers",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -821,15 +830,15 @@
         {
           "endpoint": "/api/owner/recovery/businesses/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -879,30 +888,36 @@
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         },
         {
           "endpoint": "/api/owner/sop/actions/:param/verify",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/sop/actions/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/sop/businesses/:param/diagnoses",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/sop/businesses/:param/snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/sop/dashboard",
@@ -1018,22 +1033,30 @@
         {
           "endpoint": "/api/owner/finance/actions/:param/verify",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/finance/actions/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/finance/businesses/:param/diagnoses",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/finance/businesses/:param/snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/finance/dashboard",
@@ -1046,9 +1069,7 @@
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -1162,7 +1183,6 @@
           "endpoint": "/api/owner/goals",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -1170,8 +1190,7 @@
           "endpoint": "/api/owner/goals",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -1215,12 +1234,16 @@
         {
           "endpoint": "/api/growth/pricing-tiers/:param/approve",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "ENGAGEMENT_UPDATE"
+          ]
         },
         {
           "endpoint": "/api/growth/pricing-tiers/:param/supersede",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "ENGAGEMENT_UPDATE"
+          ]
         },
         {
           "endpoint": "/api/growth/pricing-tiers/analysis",
@@ -1233,8 +1256,7 @@
           "endpoint": "/api/growth/pricing-tiers",
           "method": "POST",
           "capabilities": [
-            "ENGAGEMENT_UPDATE",
-            "ENGAGEMENT_VIEW"
+            "ENGAGEMENT_UPDATE"
           ]
         }
       ],
@@ -1313,7 +1335,6 @@
           "endpoint": "/api/owner/alerts",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -1360,7 +1381,9 @@
         {
           "endpoint": "/api/owner/intake/businesses/:param/uploads",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/intake/dashboard",
@@ -1372,7 +1395,9 @@
         {
           "endpoint": "/api/owner/intake/uploads/:param/confirm",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
@@ -1431,13 +1456,14 @@
         {
           "endpoint": "/api/owner/inventory/stock-items/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/inventory/stock-items",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -1445,8 +1471,7 @@
           "endpoint": "/api/owner/inventory/stock-items",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -1495,18 +1520,21 @@
         {
           "endpoint": "/api/owner/learning-candidates/:param/promote",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/learning-candidates/:param/reject",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/learning-candidates",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -1514,7 +1542,6 @@
           "endpoint": "/api/owner/learning-reviews",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -1522,15 +1549,13 @@
           "endpoint": "/api/owner/learning-reviews",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         },
         {
           "endpoint": "/api/owner/learning-rollback-events",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -1538,8 +1563,7 @@
           "endpoint": "/api/owner/learning-rollback-events",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -1671,13 +1695,14 @@
         {
           "endpoint": "/api/owner/marketing/campaigns/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/marketing/campaigns",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -1685,17 +1710,14 @@
           "endpoint": "/api/owner/marketing/campaigns",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         },
         {
           "endpoint": "/api/owner/recovery/businesses",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_VIEW"
           ]
         }
       ],
@@ -1748,22 +1770,30 @@
         {
           "endpoint": "/api/owner/marketing/actions/:param/verify",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/marketing/actions/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/marketing/businesses/:param/diagnoses",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/marketing/businesses/:param/snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/marketing/dashboard",
@@ -1776,9 +1806,7 @@
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -1908,32 +1936,44 @@
         {
           "endpoint": "/api/owner/cashflow/businesses/:param/snapshots",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/cashflow/businesses/:param/snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/finance/businesses/:param/diagnoses",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/finance/businesses/:param/snapshots",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/finance/businesses/:param/snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/finance/snapshots/:param/amend",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/onboarding",
@@ -1953,9 +1993,7 @@
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -2051,32 +2089,44 @@
         {
           "endpoint": "/api/owner/operations/actions/:param/verify",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/operations/actions/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/operations/businesses/:param/capacity-snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/operations/businesses/:param/diagnoses",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/operations/businesses/:param/snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/operations/businesses/:param/workload-snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/operations/dashboard",
@@ -2089,9 +2139,7 @@
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -2409,7 +2457,6 @@
           "endpoint": "/api/owner/alerts",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -2515,13 +2562,14 @@
         {
           "endpoint": "/api/owner/procurement/purchase-orders/:param/transition",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/procurement/purchase-orders",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -2529,8 +2577,7 @@
           "endpoint": "/api/owner/procurement/purchase-orders",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -2579,30 +2626,36 @@
         {
           "endpoint": "/api/owner/recovery/actions/:param/verify",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/recovery/actions/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/recovery/businesses/:param/cycles",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/recovery/businesses/:param/snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         },
         {
@@ -2685,17 +2738,23 @@
         {
           "endpoint": "/api/owner/risks/:param/review",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/risks/:param/tasks",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/risks/:param",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         }
       ],
       "previewState": "HIDDEN_FOR_SAFETY",
@@ -2792,30 +2851,36 @@
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         },
         {
           "endpoint": "/api/owner/sales/actions/:param/verify",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/sales/actions/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/sales/businesses/:param/diagnoses",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/sales/businesses/:param/snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/sales/dashboard",
@@ -2897,7 +2962,9 @@
         {
           "endpoint": "/api/owner/businesses/:param/analyze",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/onboarding",
@@ -2954,62 +3021,86 @@
         {
           "endpoint": "/api/owner/startup/sessions/:param/activate",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param/analysis",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param/arbitrate",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param/blueprint",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param/decision",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param/decision",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param/evidence/freshness",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param/explanation",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param/ideas/:param/execution-plan",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param/ideas",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         },
         {
           "endpoint": "/api/owner/startup/sessions/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
@@ -3109,18 +3200,14 @@
           "endpoint": "/api/owner/startup/sessions",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_VIEW"
           ]
         },
         {
           "endpoint": "/api/owner/startup/sessions",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -3161,30 +3248,36 @@
           "endpoint": "/api/owner/recovery/businesses",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW",
-            "SYSTEM_ADMIN"
+            "OWNER_MANAGE"
           ]
         },
         {
           "endpoint": "/api/owner/strategy/actions/:param/verify",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/strategy/actions/:param",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/strategy/businesses/:param/diagnoses",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/strategy/businesses/:param/snapshots",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/strategy/dashboard",
@@ -3266,22 +3359,30 @@
         {
           "endpoint": "/api/owner/tasks/:param/proof/review",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/tasks/:param/proof/submit",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/tasks/:param/status",
           "method": "PATCH",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/tasks/:param",
           "method": "GET",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_VIEW"
+          ]
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
@@ -3339,8 +3440,7 @@
           "endpoint": "/api/owner/tasks",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -3383,7 +3483,6 @@
           "endpoint": "/api/owner/tasks",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         }
@@ -3469,18 +3568,21 @@
         {
           "endpoint": "/api/owner/vendor/:param/approve",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/vendor/:param/suspend",
           "method": "POST",
-          "capabilities": []
+          "capabilities": [
+            "OWNER_MANAGE"
+          ]
         },
         {
           "endpoint": "/api/owner/vendor",
           "method": "GET",
           "capabilities": [
-            "OWNER_MANAGE",
             "OWNER_VIEW"
           ]
         },
@@ -3488,8 +3590,7 @@
           "endpoint": "/api/owner/vendor",
           "method": "POST",
           "capabilities": [
-            "OWNER_MANAGE",
-            "OWNER_VIEW"
+            "OWNER_MANAGE"
           ]
         }
       ],
@@ -8148,6 +8249,7 @@
         "note": "Query string (via interpolated variable `qs`)."
       },
       "failureBehavior": "NOT_VERIFIED",
+      "responseUsage": "FIELDS",
       "fieldsConsumed": [
         "processExecution",
         "view.actionsToAvoid",
@@ -8174,6 +8276,7 @@
         "note": "Query string (direct)."
       },
       "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
+      "responseUsage": "FIELDS",
       "fieldsConsumed": [
         "found",
         "canRunFirstDiagnosis",
@@ -8191,6 +8294,7 @@
         "note": "No businessId found in this call's URL or argument list."
       },
       "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
+      "responseUsage": "FIELDS",
       "fieldsConsumed": [
         "tasks[].status"
       ]
@@ -8205,9 +8309,9 @@
         "note": "Query string (via interpolated variable `qs`)."
       },
       "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
-      "fieldsConsumed": [
-        "publicSignalStatus (presence check gates whether the response is used at all)"
-      ]
+      "responseUsage": "SUCCESS_STATUS_ONLY",
+      "fieldsConsumed": [],
+      "responseUsageNote": "Only a `\"publicSignalStatus\" in sig` presence check gates whether the response is stored at all; no field value is read out of it here."
     },
     {
       "endpoint": "/api/owner/recovery-status",
@@ -8219,9 +8323,9 @@
         "note": "Query string (via interpolated variable `qs`)."
       },
       "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
-      "fieldsConsumed": [
-        "recoveryStatus (presence check gates whether the response is used at all)"
-      ]
+      "responseUsage": "SUCCESS_STATUS_ONLY",
+      "fieldsConsumed": [],
+      "responseUsageNote": "Only a `\"recoveryStatus\" in rec` presence check gates whether the response is stored at all; no field value is read out of it here."
     },
     {
       "endpoint": "/api/escalation/acknowledge",
@@ -8233,9 +8337,9 @@
         "note": "Request identifies a specific task/escalation record directly, with no explicit businessId."
       },
       "failureBehavior": "NOT_VERIFIED",
-      "fieldsConsumed": [
-        "NOT_VERIFIED — ok is checked; data is only passed to a generic failure-message helper, no specific field destructured on success"
-      ]
+      "responseUsage": "ERROR_ONLY",
+      "fieldsConsumed": [],
+      "responseUsageNote": "ok is checked; data is only passed to a generic failure-message helper on failure."
     },
     {
       "endpoint": "/api/owner/constraints",
@@ -8247,9 +8351,9 @@
         "note": "Request body argument is the identifier `payload`; its construction was not found to reference businessId in this file (may be passed in as an opaque prop from a child component, out of this bounded trace's scope)."
       },
       "failureBehavior": "NOT_VERIFIED",
-      "fieldsConsumed": [
-        "NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"
-      ]
+      "responseUsage": "ERROR_ONLY",
+      "fieldsConsumed": [],
+      "responseUsageNote": "result.ok is checked; result.data is only passed to a generic failure-message helper on failure."
     },
     {
       "endpoint": "/api/owner/goal-arbitration",
@@ -8261,9 +8365,9 @@
         "note": "Call takes no body argument (or an empty object) — no businessId is sent."
       },
       "failureBehavior": "NOT_VERIFIED",
-      "fieldsConsumed": [
-        "NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"
-      ]
+      "responseUsage": "ERROR_ONLY",
+      "fieldsConsumed": [],
+      "responseUsageNote": "result.ok is checked; result.data is only passed to a generic failure-message helper on failure."
     },
     {
       "endpoint": "/api/owner/override-arbitration",
@@ -8275,9 +8379,9 @@
         "note": "Request body argument is the identifier `payload`; its construction was not found to reference businessId in this file (may be passed in as an opaque prop from a child component, out of this bounded trace's scope)."
       },
       "failureBehavior": "NOT_VERIFIED",
-      "fieldsConsumed": [
-        "NOT_VERIFIED — result.ok is checked; result.data is only passed to a generic failure-message helper, no specific field destructured on success"
-      ]
+      "responseUsage": "ERROR_ONLY",
+      "fieldsConsumed": [],
+      "responseUsageNote": "result.ok is checked; result.data is only passed to a generic failure-message helper on failure."
     },
     {
       "endpoint": "/api/owner/process-execution",
@@ -8297,6 +8401,7 @@
         ]
       },
       "failureBehavior": "NOT_VERIFIED",
+      "responseUsage": "FIELDS",
       "fieldsConsumed": [
         "status",
         "reassessmentId (implied by REQUEST_REASSESSMENT branch)"
@@ -8332,6 +8437,7 @@
           "sourceFile": "src/services/owner-mode/process-execution-bridge.service.ts"
         }
       ],
+      "workflowModel": "FAMILY_SPECIFIC",
       "workflowStatuses": [
         {
           "typeName": "(status literals, no single union type declared)",
@@ -8397,6 +8503,7 @@
           "sourceFile": "src/services/owner-mode/process-execution-bridge.service.ts"
         }
       ],
+      "workflowModel": "FAMILY_SPECIFIC",
       "workflowStatuses": [
         {
           "typeName": "(status literals, no single union type declared)",
@@ -8482,9 +8589,10 @@
         "src/services/execution/reused-hash-precheck.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "NONE_FOUND",
       "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files, and no import of the shared founder-recovery/action-status module either.",
       "domainResultStates": [
         {
           "typeName": "AdjudicationStatus",
@@ -8685,9 +8793,46 @@
         "src/services/owner-finance/verification.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
-      "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "workflowStatuses": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitionSource": "src/domain/founder-recovery/action-status.ts",
+      "knownTransitionMap": {
+        "proposed": [
+          "assigned",
+          "cancelled"
+        ],
+        "assigned": [
+          "in_progress",
+          "blocked",
+          "cancelled"
+        ],
+        "in_progress": [
+          "blocked",
+          "completed",
+          "cancelled"
+        ],
+        "blocked": [
+          "assigned",
+          "in_progress",
+          "cancelled"
+        ],
+        "completed": [],
+        "cancelled": []
+      },
       "domainResultStates": [
         {
           "typeName": "FinancialHealthState",
@@ -8804,9 +8949,46 @@
         "src/services/owner-cashflow/verification.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
-      "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "workflowStatuses": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitionSource": "src/domain/founder-recovery/action-status.ts",
+      "knownTransitionMap": {
+        "proposed": [
+          "assigned",
+          "cancelled"
+        ],
+        "assigned": [
+          "in_progress",
+          "blocked",
+          "cancelled"
+        ],
+        "in_progress": [
+          "blocked",
+          "completed",
+          "cancelled"
+        ],
+        "blocked": [
+          "assigned",
+          "in_progress",
+          "cancelled"
+        ],
+        "completed": [],
+        "cancelled": []
+      },
       "domainResultStates": [],
       "knownTransitionMaps": [],
       "mutationEndpoints": [
@@ -8865,9 +9047,46 @@
         "src/services/owner-sales/verification.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
-      "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "workflowStatuses": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitionSource": "src/domain/founder-recovery/action-status.ts",
+      "knownTransitionMap": {
+        "proposed": [
+          "assigned",
+          "cancelled"
+        ],
+        "assigned": [
+          "in_progress",
+          "blocked",
+          "cancelled"
+        ],
+        "in_progress": [
+          "blocked",
+          "completed",
+          "cancelled"
+        ],
+        "blocked": [
+          "assigned",
+          "in_progress",
+          "cancelled"
+        ],
+        "completed": [],
+        "cancelled": []
+      },
       "domainResultStates": [],
       "knownTransitionMaps": [],
       "mutationEndpoints": [
@@ -8942,9 +9161,46 @@
         "src/services/owner-operations/verification.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
-      "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "workflowStatuses": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitionSource": "src/domain/founder-recovery/action-status.ts",
+      "knownTransitionMap": {
+        "proposed": [
+          "assigned",
+          "cancelled"
+        ],
+        "assigned": [
+          "in_progress",
+          "blocked",
+          "cancelled"
+        ],
+        "in_progress": [
+          "blocked",
+          "completed",
+          "cancelled"
+        ],
+        "blocked": [
+          "assigned",
+          "in_progress",
+          "cancelled"
+        ],
+        "completed": [],
+        "cancelled": []
+      },
       "domainResultStates": [],
       "knownTransitionMaps": [],
       "mutationEndpoints": [
@@ -9032,22 +9288,47 @@
         "src/services/owner-sop/snapshot.service.ts",
         "src/services/owner-sop/verification.service.ts"
       ],
-      "commands": [
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "workflowStatuses": [
         {
-          "typeName": "NextAction",
+          "typeName": "RecoveryActionStatus (shared)",
           "values": [
-            "KEEP",
-            "MODIFY",
-            "ESCALATE",
-            "RETRAIN",
-            "COLLECT_MORE_DATA",
-            "DISMISS_AS_INEFFECTIVE"
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
           ],
-          "sourceFile": "src/domain/owner-mode/sop-training-effectiveness-loop.ts"
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
         }
       ],
-      "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "transitionSource": "src/domain/founder-recovery/action-status.ts",
+      "knownTransitionMap": {
+        "proposed": [
+          "assigned",
+          "cancelled"
+        ],
+        "assigned": [
+          "in_progress",
+          "blocked",
+          "cancelled"
+        ],
+        "in_progress": [
+          "blocked",
+          "completed",
+          "cancelled"
+        ],
+        "blocked": [
+          "assigned",
+          "in_progress",
+          "cancelled"
+        ],
+        "completed": [],
+        "cancelled": []
+      },
       "domainResultStates": [
         {
           "typeName": "SopDraftStatus",
@@ -9059,6 +9340,19 @@
             "NEEDS_DATA"
           ],
           "sourceFile": "src/domain/owner-mode/sop-checklist-correction-engine.ts"
+        },
+        {
+          "typeName": "NextAction",
+          "values": [
+            "KEEP",
+            "MODIFY",
+            "ESCALATE",
+            "RETRAIN",
+            "COLLECT_MORE_DATA",
+            "DISMISS_AS_INEFFECTIVE"
+          ],
+          "sourceFile": "src/domain/owner-mode/sop-training-effectiveness-loop.ts",
+          "note": "Excluded from commands: no `action:`/`command:`-named field or parameter of this exact type found (may be a recommendation/output type, not an accepted mutation input)."
         },
         {
           "typeName": "EvaluationType",
@@ -9167,9 +9461,46 @@
         "src/services/founder-recovery/verification.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
-      "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "workflowStatuses": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitionSource": "src/domain/founder-recovery/action-status.ts",
+      "knownTransitionMap": {
+        "proposed": [
+          "assigned",
+          "cancelled"
+        ],
+        "assigned": [
+          "in_progress",
+          "blocked",
+          "cancelled"
+        ],
+        "in_progress": [
+          "blocked",
+          "completed",
+          "cancelled"
+        ],
+        "blocked": [
+          "assigned",
+          "in_progress",
+          "cancelled"
+        ],
+        "completed": [],
+        "cancelled": []
+      },
       "domainResultStates": [
         {
           "typeName": "VerificationStatus",
@@ -9295,7 +9626,8 @@
         "src/services/owner-strategy/wealth-path.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
       "workflowStatuses": [
         {
           "typeName": "StartupSessionStatus",
@@ -9356,8 +9688,44 @@
             "DRAFT"
           ],
           "sourceFile": "src/services/owner-strategy/startup-session.service.ts"
+        },
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
         }
       ],
+      "transitionSource": "src/domain/founder-recovery/action-status.ts",
+      "knownTransitionMap": {
+        "proposed": [
+          "assigned",
+          "cancelled"
+        ],
+        "assigned": [
+          "in_progress",
+          "blocked",
+          "cancelled"
+        ],
+        "in_progress": [
+          "blocked",
+          "completed",
+          "cancelled"
+        ],
+        "blocked": [
+          "assigned",
+          "in_progress",
+          "cancelled"
+        ],
+        "completed": [],
+        "cancelled": []
+      },
       "domainResultStates": [
         {
           "typeName": "MarketSizingStatus",
@@ -9532,9 +9900,46 @@
         "src/services/owner-marketing/verification.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
-      "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "workflowStatuses": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitionSource": "src/domain/founder-recovery/action-status.ts",
+      "knownTransitionMap": {
+        "proposed": [
+          "assigned",
+          "cancelled"
+        ],
+        "assigned": [
+          "in_progress",
+          "blocked",
+          "cancelled"
+        ],
+        "in_progress": [
+          "blocked",
+          "completed",
+          "cancelled"
+        ],
+        "blocked": [
+          "assigned",
+          "in_progress",
+          "cancelled"
+        ],
+        "completed": [],
+        "cancelled": []
+      },
       "domainResultStates": [],
       "knownTransitionMaps": [],
       "mutationEndpoints": [
@@ -9596,7 +10001,8 @@
         "src/services/owner-mode/owner-approval-resolution.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "FAMILY_SPECIFIC",
       "workflowStatuses": [
         {
           "typeName": "ApprovalStatus",
@@ -9740,9 +10146,10 @@
         "src/services/execution/proof-risk-adjudication.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "NONE_FOUND",
       "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files, and no import of the shared founder-recovery/action-status module either.",
       "domainResultStates": [
         {
           "typeName": "AdjudicationStatus",
@@ -9828,9 +10235,10 @@
         "src/services/owner-mode/opportunity-execution.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "NONE_FOUND",
       "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files, and no import of the shared founder-recovery/action-status module either.",
       "domainResultStates": [
         {
           "typeName": "ExternalOpportunityIntakeType",
@@ -10056,9 +10464,10 @@
         "src/domain/owner-mode/objective-portfolio.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "NONE_FOUND",
       "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files, and no import of the shared founder-recovery/action-status module either.",
       "domainResultStates": [
         {
           "typeName": "ObjectiveType",
@@ -10135,7 +10544,8 @@
         "src/services/owner-mode/compliance.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "FAMILY_SPECIFIC",
       "workflowStatuses": [
         {
           "typeName": "ComplianceStatus",
@@ -10218,9 +10628,10 @@
         "src/services/owner-procurement/purchase-order.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "NONE_FOUND",
       "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files, and no import of the shared founder-recovery/action-status module either.",
       "domainResultStates": [],
       "knownTransitionMaps": [
         {
@@ -10260,9 +10671,10 @@
         "src/services/owner-budget/vendor.service.ts"
       ],
       "commands": [],
-      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command found via keyword-matched files.",
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "NONE_FOUND",
       "workflowStatuses": [],
-      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files.",
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files, and no import of the shared founder-recovery/action-status module either.",
       "domainResultStates": [
         {
           "typeName": "VendorRiskClassification",
@@ -10347,6 +10759,7 @@
   "workflowStateFamilies": [
     {
       "family": "process_execution",
+      "workflowModel": "FAMILY_SPECIFIC",
       "source": [
         "src/domain/owner-mode/process-execution-bridge-expansion.ts",
         "src/domain/owner-mode/process-execution-bridge.ts",
@@ -10373,7 +10786,7 @@
           "sourceFile": "src/services/owner-mode/process-execution-bridge.service.ts"
         }
       ],
-      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
+      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files, and this family does not import the shared founder-recovery/action-status module.",
       "ownerUiLocation": [
         "/owner/execution",
         "/owner/cockpit"
@@ -10381,6 +10794,7 @@
     },
     {
       "family": "tasks",
+      "workflowModel": "FAMILY_SPECIFIC",
       "source": [
         "src/domain/owner-mode/process-execution-bridge-expansion.ts",
         "src/domain/owner-mode/process-execution-bridge.ts",
@@ -10407,7 +10821,7 @@
           "sourceFile": "src/services/owner-mode/process-execution-bridge.service.ts"
         }
       ],
-      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
+      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files, and this family does not import the shared founder-recovery/action-status module.",
       "ownerUiLocation": [
         "/owner/tasks",
         "/owner/tasks/new",
@@ -10415,7 +10829,415 @@
       ]
     },
     {
+      "family": "finance_actions",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "source": [
+        "src/domain/owner-finance/actions.ts",
+        "src/domain/owner-finance/cash-safety-gate.ts",
+        "src/domain/owner-finance/data-confidence.ts",
+        "src/domain/owner-finance/diagnosis.ts",
+        "src/domain/owner-finance/index.ts",
+        "src/domain/owner-finance/margin-safety-gate.ts",
+        "src/domain/owner-finance/metrics.ts",
+        "src/domain/owner-finance/opportunity-rules.ts",
+        "src/domain/owner-finance/outcome-signals.ts",
+        "src/domain/owner-finance/pricing-analysis.ts",
+        "src/domain/owner-finance/pricing-analysis.validation.ts",
+        "src/domain/owner-finance/recommendations.ts",
+        "src/domain/owner-finance/risk-rules.ts",
+        "src/domain/owner-finance/thresholds.ts",
+        "src/domain/owner-finance/types.ts",
+        "src/domain/owner-finance/unit-economics.ts",
+        "src/domain/owner-finance/validation.ts",
+        "src/services/owner-finance/action.service.ts",
+        "src/services/owner-finance/dashboard.service.ts",
+        "src/services/owner-finance/diagnosis.service.ts",
+        "src/services/owner-finance/effectiveness.service.ts",
+        "src/services/owner-finance/learning-bridge.service.ts",
+        "src/services/owner-finance/recommendation-cash-safety.service.ts",
+        "src/services/owner-finance/recommendation-margin-safety.service.ts",
+        "src/services/owner-finance/service-economics.service.ts",
+        "src/services/owner-finance/snapshot.service.ts",
+        "src/services/owner-finance/verification.service.ts"
+      ],
+      "states": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitions": {
+        "source": "src/domain/founder-recovery/action-status.ts",
+        "map": {
+          "proposed": [
+            "assigned",
+            "cancelled"
+          ],
+          "assigned": [
+            "in_progress",
+            "blocked",
+            "cancelled"
+          ],
+          "in_progress": [
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "blocked": [
+            "assigned",
+            "in_progress",
+            "cancelled"
+          ],
+          "completed": [],
+          "cancelled": []
+        }
+      },
+      "ownerUiLocation": [
+        "/owner/finance"
+      ]
+    },
+    {
+      "family": "cashflow_actions",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "source": [
+        "src/domain/owner-cashflow/actions.ts",
+        "src/domain/owner-cashflow/data-confidence.ts",
+        "src/domain/owner-cashflow/diagnosis.ts",
+        "src/domain/owner-cashflow/index.ts",
+        "src/domain/owner-cashflow/metrics.ts",
+        "src/domain/owner-cashflow/opportunity-rules.ts",
+        "src/domain/owner-cashflow/recommendations.ts",
+        "src/domain/owner-cashflow/risk-rules.ts",
+        "src/domain/owner-cashflow/thresholds.ts",
+        "src/domain/owner-cashflow/types.ts",
+        "src/domain/owner-cashflow/validation.ts",
+        "src/services/owner-cashflow/action.service.ts",
+        "src/services/owner-cashflow/dashboard.service.ts",
+        "src/services/owner-cashflow/diagnosis.service.ts",
+        "src/services/owner-cashflow/snapshot.service.ts",
+        "src/services/owner-cashflow/verification.service.ts"
+      ],
+      "states": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitions": {
+        "source": "src/domain/founder-recovery/action-status.ts",
+        "map": {
+          "proposed": [
+            "assigned",
+            "cancelled"
+          ],
+          "assigned": [
+            "in_progress",
+            "blocked",
+            "cancelled"
+          ],
+          "in_progress": [
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "blocked": [
+            "assigned",
+            "in_progress",
+            "cancelled"
+          ],
+          "completed": [],
+          "cancelled": []
+        }
+      },
+      "ownerUiLocation": [
+        "/owner/cashflow"
+      ]
+    },
+    {
+      "family": "sales_actions",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "source": [
+        "src/domain/owner-sales/actions.ts",
+        "src/domain/owner-sales/data-confidence.ts",
+        "src/domain/owner-sales/diagnosis.ts",
+        "src/domain/owner-sales/index.ts",
+        "src/domain/owner-sales/metrics.ts",
+        "src/domain/owner-sales/opportunity-rules.ts",
+        "src/domain/owner-sales/recommendations.ts",
+        "src/domain/owner-sales/risk-rules.ts",
+        "src/domain/owner-sales/thresholds.ts",
+        "src/domain/owner-sales/types.ts",
+        "src/domain/owner-sales/validation.ts",
+        "src/services/owner-sales/action.service.ts",
+        "src/services/owner-sales/customer.service.ts",
+        "src/services/owner-sales/dashboard.service.ts",
+        "src/services/owner-sales/diagnosis.service.ts",
+        "src/services/owner-sales/snapshot.service.ts",
+        "src/services/owner-sales/verification.service.ts"
+      ],
+      "states": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitions": {
+        "source": "src/domain/founder-recovery/action-status.ts",
+        "map": {
+          "proposed": [
+            "assigned",
+            "cancelled"
+          ],
+          "assigned": [
+            "in_progress",
+            "blocked",
+            "cancelled"
+          ],
+          "in_progress": [
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "blocked": [
+            "assigned",
+            "in_progress",
+            "cancelled"
+          ],
+          "completed": [],
+          "cancelled": []
+        }
+      },
+      "ownerUiLocation": [
+        "/owner/sales"
+      ]
+    },
+    {
+      "family": "operations_actions",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "source": [
+        "src/domain/owner-operations/actions.ts",
+        "src/domain/owner-operations/data-confidence.ts",
+        "src/domain/owner-operations/diagnosis.ts",
+        "src/domain/owner-operations/index.ts",
+        "src/domain/owner-operations/metrics.ts",
+        "src/domain/owner-operations/opportunity-rules.ts",
+        "src/domain/owner-operations/recommendations.ts",
+        "src/domain/owner-operations/risk-rules.ts",
+        "src/domain/owner-operations/thresholds.ts",
+        "src/domain/owner-operations/types.ts",
+        "src/domain/owner-operations/validation.ts",
+        "src/services/owner-operations/action.service.ts",
+        "src/services/owner-operations/capacity-snapshot.service.ts",
+        "src/services/owner-operations/dashboard.service.ts",
+        "src/services/owner-operations/diagnosis.service.ts",
+        "src/services/owner-operations/employee-workload-snapshot.service.ts",
+        "src/services/owner-operations/owner-workload-snapshot.service.ts",
+        "src/services/owner-operations/snapshot.service.ts",
+        "src/services/owner-operations/verification.service.ts"
+      ],
+      "states": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitions": {
+        "source": "src/domain/founder-recovery/action-status.ts",
+        "map": {
+          "proposed": [
+            "assigned",
+            "cancelled"
+          ],
+          "assigned": [
+            "in_progress",
+            "blocked",
+            "cancelled"
+          ],
+          "in_progress": [
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "blocked": [
+            "assigned",
+            "in_progress",
+            "cancelled"
+          ],
+          "completed": [],
+          "cancelled": []
+        }
+      },
+      "ownerUiLocation": [
+        "/owner/operations"
+      ]
+    },
+    {
+      "family": "sop_actions",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "source": [
+        "src/domain/owner-mode/sop-checklist-correction-engine.ts",
+        "src/domain/owner-mode/sop-training-effectiveness-loop.ts",
+        "src/domain/owner-mode/staff-training-assignment-engine.ts",
+        "src/domain/owner-sop/actions.ts",
+        "src/domain/owner-sop/data-confidence.ts",
+        "src/domain/owner-sop/diagnosis.ts",
+        "src/domain/owner-sop/index.ts",
+        "src/domain/owner-sop/metrics.ts",
+        "src/domain/owner-sop/opportunity-rules.ts",
+        "src/domain/owner-sop/recommendations.ts",
+        "src/domain/owner-sop/risk-rules.ts",
+        "src/domain/owner-sop/thresholds.ts",
+        "src/domain/owner-sop/types.ts",
+        "src/domain/owner-sop/validation.ts",
+        "src/services/owner-sop/action.service.ts",
+        "src/services/owner-sop/dashboard.service.ts",
+        "src/services/owner-sop/diagnosis.service.ts",
+        "src/services/owner-sop/snapshot.service.ts",
+        "src/services/owner-sop/verification.service.ts"
+      ],
+      "states": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitions": {
+        "source": "src/domain/founder-recovery/action-status.ts",
+        "map": {
+          "proposed": [
+            "assigned",
+            "cancelled"
+          ],
+          "assigned": [
+            "in_progress",
+            "blocked",
+            "cancelled"
+          ],
+          "in_progress": [
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "blocked": [
+            "assigned",
+            "in_progress",
+            "cancelled"
+          ],
+          "completed": [],
+          "cancelled": []
+        }
+      },
+      "ownerUiLocation": [
+        "/owner/execution"
+      ]
+    },
+    {
+      "family": "recovery_actions",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "source": [
+        "src/domain/founder-recovery/action-status.ts",
+        "src/domain/founder-recovery/diagnosis.ts",
+        "src/domain/founder-recovery/legacy-fixture-classification.ts",
+        "src/domain/founder-recovery/metrics.ts",
+        "src/domain/founder-recovery/recovery-actions.ts",
+        "src/domain/founder-recovery/thresholds.ts",
+        "src/domain/founder-recovery/types.ts",
+        "src/domain/founder-recovery/validation.ts",
+        "src/domain/founder-recovery/verification.ts",
+        "src/services/founder-recovery/action.service.ts",
+        "src/services/founder-recovery/business.service.ts",
+        "src/services/founder-recovery/cycle.service.ts",
+        "src/services/founder-recovery/dashboard.service.ts",
+        "src/services/founder-recovery/snapshot.service.ts",
+        "src/services/founder-recovery/verification.service.ts"
+      ],
+      "states": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitions": {
+        "source": "src/domain/founder-recovery/action-status.ts",
+        "map": {
+          "proposed": [
+            "assigned",
+            "cancelled"
+          ],
+          "assigned": [
+            "in_progress",
+            "blocked",
+            "cancelled"
+          ],
+          "in_progress": [
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "blocked": [
+            "assigned",
+            "in_progress",
+            "cancelled"
+          ],
+          "completed": [],
+          "cancelled": []
+        }
+      },
+      "ownerUiLocation": [
+        "/owner/recovery"
+      ]
+    },
+    {
       "family": "strategy_actions",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
       "source": [
         "src/domain/owner-strategy/actions.ts",
         "src/domain/owner-strategy/business-wisdom.ts",
@@ -10531,15 +11353,120 @@
             "DRAFT"
           ],
           "sourceFile": "src/services/owner-strategy/startup-session.service.ts"
+        },
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
         }
       ],
-      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files.",
+      "transitions": {
+        "source": "src/domain/founder-recovery/action-status.ts",
+        "map": {
+          "proposed": [
+            "assigned",
+            "cancelled"
+          ],
+          "assigned": [
+            "in_progress",
+            "blocked",
+            "cancelled"
+          ],
+          "in_progress": [
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "blocked": [
+            "assigned",
+            "in_progress",
+            "cancelled"
+          ],
+          "completed": [],
+          "cancelled": []
+        }
+      },
       "ownerUiLocation": [
         "/owner/strategy"
       ]
     },
     {
+      "family": "marketing_actions",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "source": [
+        "src/domain/owner-marketing/actions.ts",
+        "src/domain/owner-marketing/data-confidence.ts",
+        "src/domain/owner-marketing/diagnosis.ts",
+        "src/domain/owner-marketing/index.ts",
+        "src/domain/owner-marketing/metrics.ts",
+        "src/domain/owner-marketing/opportunity-rules.ts",
+        "src/domain/owner-marketing/recommendations.ts",
+        "src/domain/owner-marketing/risk-rules.ts",
+        "src/domain/owner-marketing/thresholds.ts",
+        "src/domain/owner-marketing/types.ts",
+        "src/domain/owner-marketing/validation.ts",
+        "src/services/owner-marketing-campaigns/campaign.service.ts",
+        "src/services/owner-marketing/action.service.ts",
+        "src/services/owner-marketing/dashboard.service.ts",
+        "src/services/owner-marketing/diagnosis.service.ts",
+        "src/services/owner-marketing/snapshot.service.ts",
+        "src/services/owner-marketing/verification.service.ts"
+      ],
+      "states": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitions": {
+        "source": "src/domain/founder-recovery/action-status.ts",
+        "map": {
+          "proposed": [
+            "assigned",
+            "cancelled"
+          ],
+          "assigned": [
+            "in_progress",
+            "blocked",
+            "cancelled"
+          ],
+          "in_progress": [
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "blocked": [
+            "assigned",
+            "in_progress",
+            "cancelled"
+          ],
+          "completed": [],
+          "cancelled": []
+        }
+      },
+      "ownerUiLocation": [
+        "/owner/marketing",
+        "/owner/marketing/campaigns"
+      ]
+    },
+    {
       "family": "approvals",
+      "workflowModel": "FAMILY_SPECIFIC",
       "source": [
         "src/domain/owner-mode/approval-threshold-policy.ts",
         "src/services/external-systems/browser-import-approval.service.ts",
@@ -10584,6 +11511,7 @@
     },
     {
       "family": "compliance_actions",
+      "workflowModel": "FAMILY_SPECIFIC",
       "source": [
         "src/domain/domain-training/domains/risk-compliance.cases.ts",
         "src/domain/domain-training/domains/risk-compliance.ts",
@@ -10638,8 +11566,8 @@
         "POST /api/growth/pricing-tiers"
       ],
       "apiCapabilities": [
-        "ENGAGEMENT_VIEW",
-        "ENGAGEMENT_UPDATE"
+        "ENGAGEMENT_UPDATE",
+        "ENGAGEMENT_VIEW"
       ],
       "reachabilityEvidence": {
         "navigationState": "NOT_IN_SIDEBAR",
