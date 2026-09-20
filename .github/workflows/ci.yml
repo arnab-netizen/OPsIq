@@ -5,9 +5,13 @@ name: CI - Build & Test
 #
 # CI-MIN-01: main-integration.yml no longer auto-runs on push to main (kept
 # workflow_dispatch-only, for disaster-recovery / release re-verification).
-# DB-risk changes get their DB validation pre-merge instead, via
-# db-verification.yml's own pull_request trigger -- a normal merge to main
-# does not re-run an already-passed PR's suite.
+# DB-risk changes get their DB validation pre-merge instead, via THIS
+# workflow's own `db-verify` job (gated on the classifier's `db_required`
+# output) -- db-verification.yml's separate pull_request trigger was removed
+# (owner correction, CI-MIN-01 items 1-3): branch-protection is the only
+# required GitHub status check on main, so a separate workflow's own passing
+# check was never actually a merge gate. A normal merge to main does not
+# re-run an already-passed PR's suite.
 # Scenario packs and browser proof are dispatch-only (deep-proof.yml).
 # Target: <15 runner-minutes per PR, zero postgres service, zero browser shards.
 
@@ -47,6 +51,11 @@ jobs:
       risk_class: ${{ steps.classify.outputs.risk_class }}
       run_non_db_suite: ${{ steps.classify.outputs.run_non_db_suite }}
       suite_mode: ${{ steps.classify.outputs.suite_mode }}
+      # CI-MIN-01 owner correction: the single authoritative DB-risk signal.
+      # Drives the db-verify job below directly -- no second, separate
+      # static path-filter system decides DB risk anywhere in this repo's
+      # required PR gate.
+      db_required: ${{ steps.classify.outputs.db_required }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -108,10 +117,17 @@ jobs:
       # CI-MIN-01: every step from here through "Production build" is skipped
       # for a DOCS_ONLY change (docs/*.md-only PRs pay for nothing but
       # checkout + Node setup), and the app-specific steps (everything except
-      # "Run linter"/"Lint ratchet"/"CI workflow governance check") are ALSO
-      # skipped for a pure CI_GOVERNANCE change (workflow YAML / named CI
-      # scripts only) -- if application source were touched, the path would
-      # already classify at a higher tier via max-wins, so a genuine
+      # "CI workflow governance check") are ALSO skipped for a pure
+      # CI_GOVERNANCE change (workflow YAML / named CI scripts only) --
+      # owner correction: a full-repo ESLint traversal is not "genuinely
+      # relevant cheap validation" for a workflow-only change either, so
+      # "Run linter"/"Lint ratchet" are skipped for CI_GOVERNANCE too now.
+      # What CI_GOVERNANCE actually gets instead: actionlint (below, gated on
+      # whether workflow YAML changed), the CI workflow governance check, and
+      # the TARGETED_CI_GOVERNANCE suite step's own classifier/CI-trigger
+      # tests plus a syntax check on any changed CI script. If application
+      # source were touched, the path would already classify at a higher
+      # tier via max-wins, so a genuine
       # CI_GOVERNANCE-tier PR by definition has none of these steps' targets
       # in its diff. A step skipped by its own `if:` does not change the
       # job's own success/failure result, so branch-protection's per-job
@@ -232,13 +248,17 @@ jobs:
       # ratchet consumes. continue-on-error stays because ESLint exits 1 while
       # the baseline error count is non-zero; the ratchet, not this step, is
       # what decides the job.
+      #
+      # CI-MIN-01 owner correction: skipped for CI_GOVERNANCE too, not just
+      # DOCS_ONLY -- a full-repo ESLint traversal is not "genuinely relevant
+      # cheap validation" for a workflow-YAML/named-CI-script-only change.
       - name: Run linter (single traversal -> JSON report)
-        if: needs.classify.outputs.risk_class != 'DOCS_ONLY'
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
         run: npm run lint -- -f json -o eslint-report.json
         continue-on-error: true
 
       - name: Lint ratchet (block new lint debt)
-        if: needs.classify.outputs.risk_class != 'DOCS_ONLY'
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
         run: npm run lint:ratchet -- --from-result eslint-report.json
         continue-on-error: false
 
@@ -282,17 +302,30 @@ jobs:
 
       - name: Run targeted CI-governance validation (CI_GOVERNANCE tier; no broad suite)
         if: needs.classify.outputs.suite_mode == 'TARGETED_CI_GOVERNANCE'
-        # CI-MIN-01: a change confined to workflow YAML / named CI scripts
-        # (no application source touched -- see scripts/ci-risk-classifier.mjs's
-        # CI_GOVERNANCE tier) cannot affect the ~28,000-test broad application
-        # suite, so it does not run it. This runs only the classifier's own
-        # regression tests and the CI-trigger-governance structural tests --
-        # exactly the tests a workflow/CI-script change can actually break.
+        # CI-MIN-01 owner correction: a change confined to workflow YAML /
+        # named CI scripts (no application source touched -- see
+        # scripts/ci-risk-classifier.mjs's CI_GOVERNANCE tier) cannot affect
+        # the ~28,000-test broad application suite, or need a full-repo
+        # ESLint traversal, so this tier gets neither (see the lint steps'
+        # own `if:` below). What it DOES get: actionlint (already
+        # unconditionally wired below, gated on whether workflow YAML
+        # changed), the CI workflow governance check (above), the
+        # classifier's own regression tests, the CI-trigger-governance
+        # structural tests, and a syntax check on any changed CI script.
         timeout-minutes: 10
         run: |
+          set -euo pipefail
           npx vitest run --maxWorkers 1 \
             src/__tests__/workflows/ci-risk-classifier.test.ts \
             src/__tests__/ci-cd/ci-trigger-governance.test.ts
+          CHANGED_SCRIPTS=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" -- 'scripts/*.mjs' 'scripts/*.js' 'scripts/*.cjs' || true)
+          if [ -n "$CHANGED_SCRIPTS" ]; then
+            echo "Syntax check (node --check) on changed CI scripts:"
+            echo "$CHANGED_SCRIPTS"
+            echo "$CHANGED_SCRIPTS" | xargs -r -n1 node --check
+          else
+            echo "No changed CI scripts in this PR."
+          fi
         env:
           TEST_WITH_DB: "false"
           NODE_ENV: test
@@ -340,6 +373,105 @@ jobs:
         env:
           TEST_WITH_DB: "false"
           NODE_ENV: test
+        continue-on-error: false
+
+  # CI-MIN-01 owner correction: DB validation now runs INSIDE ci.yml (the
+  # one required PR gate) instead of db-verification.yml's own pull_request
+  # trigger -- branch-protection is the ONLY required GitHub status context
+  # on main (confirmed via the repo's branch ruleset), so a separate
+  # workflow's own passing check was never actually a merge gate; a DB-risk
+  # PR could merge with a red or entirely-absent db-verification.yml run.
+  # Gated on the classifier's own `db_required` output -- ONE classifier is
+  # authoritative for DB risk (DB_RUNTIME or UNKNOWN tier: prisma
+  # schema/migrations, any `*.db.test.ts` file anywhere, DB-interacting
+  # scripts, or a DB-related package.json/package-lock.json dependency
+  # change -- see classifyPackageJsonDiffText/classifyPackageLockDiffText).
+  # db-verification.yml's pull_request trigger is removed; it is
+  # workflow_dispatch-only now, for explicit Neon/throwaway-Postgres
+  # re-verification, never a second source of truth for DB risk.
+  #
+  # Deliberately minimal: build-and-test already proved tsc, the production
+  # build, lint, the owner-preservation gate, and the broad non-DB suite on
+  # this exact PR -- this job's only job is the DB-dependent behavior those
+  # runs skip (DB tests self-skip without TEST_WITH_DB=true, and are also
+  # explicitly excluded by path in build-and-test's broad-suite step).
+  db-verify:
+    name: 'DB Verification (throwaway Postgres)'
+    needs: classify
+    if: needs.classify.outputs.db_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      TEST_WITH_DB: 'true'
+      NODE_ENV: test
+      SKIP_ENV_VALIDATION: 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            echo "npm ci failed (attempt $i); retrying in $((i*10))s..."
+            sleep $((i*10))
+          done
+
+      - name: Verify rolldown native binding
+        run: node -e "require.resolve('@rolldown/binding-linux-x64-gnu'); console.log('✓ rolldown binding present')"
+
+      - name: Configure local test environment
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          MIGRATION_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          NODE_ENV=test
+          SKIP_ENV_VALIDATION=true
+          EOF
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Prisma validate
+        run: npx prisma validate
+
+      # MIGRATION_DATABASE_URL is the local throwaway container -- safe to
+      # deploy. migrate reset and db push are never run here.
+      - name: Prisma migrate deploy (throwaway container)
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.MIGRATION_DATABASE_URL }}
+
+      - name: Run DB test suite (*.db.test.ts only)
+        run: npm test -- '.db.test.ts' --maxWorkers=1
         continue-on-error: false
 
   # Root cause: PR #332 merged a workflow file with a YAML syntax error (a
@@ -412,10 +544,22 @@ jobs:
   # already used in main-integration.yml's `summary` job. Regression-tested
   # by executing this exact step's script against all 9 named scenarios in
   # src/__tests__/ci-cd/ci-trigger-governance.test.ts.
+  #
+  # CI-MIN-01 owner correction (item 1): db-verify is CONDITIONALLY skipped
+  # (db_required=false) by design -- a plain "must be success" check like
+  # the loop above would wrongly fail the gate on every PR that doesn't
+  # need DB validation. db-verify gets its own explicit rule instead: when
+  # db_required=true it must be literally "success" (skipped, failed, and
+  # cancelled all fail closed exactly like every other required job);
+  # when db_required=false, "skipped" is the expected, correct outcome and
+  # passes, but a "failure" or "cancelled" (which should be impossible given
+  # the job's own `if:` gate, but is checked defensively) still fails
+  # closed. This is the ONLY required job allowed a non-"success" passing
+  # result, and only for this one classifier-driven reason.
   branch-protection:
     if: ${{ always() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
-    needs: [classify, build-and-test, actionlint]
+    needs: [classify, build-and-test, actionlint, db-verify]
     steps:
       - name: Verify all required jobs succeeded (fail closed)
         run: |
@@ -433,6 +577,22 @@ jobs:
               FAILED=1
             fi
           done
+
+          DB_REQUIRED="${{ needs.classify.outputs.db_required }}"
+          DB_RESULT="${{ needs.db-verify.result }}"
+          echo "db-verify -> $DB_RESULT (db_required=$DB_REQUIRED)"
+          if [ "$DB_REQUIRED" = "true" ]; then
+            if [ "$DB_RESULT" != "success" ]; then
+              echo "::error::db-verify was required (db_required=true) but did not succeed (status: $DB_RESULT)"
+              FAILED=1
+            fi
+          else
+            if [ "$DB_RESULT" = "failure" ] || [ "$DB_RESULT" = "cancelled" ]; then
+              echo "::error::db-verify unexpectedly ${DB_RESULT} despite db_required=false"
+              FAILED=1
+            fi
+          fi
+
           if [ "$FAILED" -ne 0 ]; then
             echo "One or more required checks did not succeed -- branch-protection fails closed."
             exit 1

@@ -308,17 +308,45 @@ function suiteModeForTier(tier) {
   return SUITE_MODES.BROAD_NON_DB;
 }
 
+// CI-MIN-01 owner correction: dbRequired is the SINGLE authoritative signal
+// that drives ci.yml's own pre-merge `db-verify` job (throwaway Postgres +
+// migrate deploy + *.db.test.ts). There is no second, separate static
+// path-filter system deciding DB risk -- db-verification.yml's own
+// pull_request trigger was removed for exactly this reason (one classifier,
+// one decision). True for DB_RUNTIME (prisma schema/migrations,
+// `*.db.test.ts` files anywhere, DB-interacting scripts, a DB-related
+// package.json/package-lock.json dependency change) and for UNKNOWN
+// (unrecognized path -- "ambiguous -> FULL" applies to the DB dimension
+// exactly as it already does to the non-DB suite dimension; this repo's
+// classifier has never treated an unrecognized path as cheap on any other
+// axis, and DB risk is not an exception). Deliberately narrower than the
+// (now-unused-in-practice) runMainIntegrationFullSuite flag below: a
+// SECURITY_AUTH_TENANCY_ENTITLEMENT-tier change (e.g. src/lib/auth/**) does
+// NOT by itself require the throwaway-Postgres job -- only an actual
+// DB_RUNTIME-tier path (which includes every *.db.test.ts file, so an auth
+// change that also touches its own DB test still classifies DB_RUNTIME via
+// max-wins).
+function dbRequiredForTier(tier) {
+  return tier === TIERS.DB_RUNTIME || tier === TIERS.UNKNOWN;
+}
+
 /**
  * Classify a full changed-file list for a PR/push. Returns:
  *   - tier: the numeric max tier across all paths (empty list -> DOCS_ONLY,
  *     i.e. a genuinely empty diff, which should not occur in practice)
  *   - tierName: its string name
  *   - perPath: map of path -> its own tier (for audit/debugging)
- *   - suiteMode: 'NONE' | 'TARGETED_RECOVERY' | 'BROAD_NON_DB' -- what the
- *     PR-side non-DB validation should run (see SUITE_MODES above)
+ *   - suiteMode: 'NONE' | 'TARGETED_RECOVERY' | 'TARGETED_CI_GOVERNANCE' |
+ *     'BROAD_NON_DB' -- what the PR-side non-DB validation should run (see
+ *     SUITE_MODES above)
  *   - runNonDbSuite: true whenever suiteMode is not 'NONE' (kept for
  *     backward-compatible callers that only care about "was anything run")
- *   - runMainIntegrationFullSuite: true for SECURITY/DB_RUNTIME/UNKNOWN tiers
+ *   - dbRequired: true iff ci.yml's own db-verify job must run pre-merge on
+ *     this PR (see dbRequiredForTier above) -- the sole DB-risk signal
+ *   - runMainIntegrationFullSuite: true for SECURITY/DB_RUNTIME/UNKNOWN tiers.
+ *     Retained for backward compatibility and for main-integration.yml's own
+ *     (now workflow_dispatch-only) push-diff classification path; no longer
+ *     consulted by ci.yml, which uses dbRequired instead.
  */
 export function classifyChangeSet(paths, options = {}) {
   if (paths.length === 0) {
@@ -328,6 +356,7 @@ export function classifyChangeSet(paths, options = {}) {
       perPath: {},
       suiteMode: SUITE_MODES.NONE,
       runNonDbSuite: false,
+      dbRequired: false,
       runMainIntegrationFullSuite: false,
     };
   }
@@ -357,6 +386,7 @@ export function classifyChangeSet(paths, options = {}) {
     perPath,
     suiteMode,
     runNonDbSuite: suiteMode !== SUITE_MODES.NONE,
+    dbRequired: dbRequiredForTier(maxTier),
     runMainIntegrationFullSuite: maxTier >= TIERS.SECURITY_AUTH_TENANCY_ENTITLEMENT,
   };
 }
@@ -446,6 +476,7 @@ export function classifyPushEvent({ before, after, cwd }) {
       perPath: {},
       suiteMode: SUITE_MODES.BROAD_NON_DB,
       runNonDbSuite: true,
+      dbRequired: true,
       runMainIntegrationFullSuite: true,
       pushDiffUnresolvable: true,
     };
@@ -489,5 +520,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log(`risk_class=${result.tierName}`);
   console.log(`suite_mode=${result.suiteMode}`);
   console.log(`run_non_db_suite=${result.runNonDbSuite}`);
+  console.log(`db_required=${result.dbRequired}`);
   console.log(`run_main_integration_full_suite=${result.runMainIntegrationFullSuite}`);
 }

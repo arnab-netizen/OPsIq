@@ -17,6 +17,84 @@ import {
   TIERS,
 } from "../../../scripts/ci-risk-classifier.mjs";
 
+// Shared package.json/package-lock.json diff fixtures, used by both the
+// "Content-aware package.json / package-lock.json classification" describe
+// block and the "dbRequired" required-test-matrix describe block below.
+const scriptsOnlyDiff = [
+  "diff --git a/package.json b/package.json",
+  "index 1111111..2222222 100644",
+  "--- a/package.json",
+  "+++ b/package.json",
+  "@@ -10,7 +10,7 @@",
+  '   "scripts": {',
+  '     "dev": "next dev",',
+  '-    "lint": "eslint .",',
+  '+    "lint": "eslint",',
+  '     "build": "next build"',
+  "   },",
+].join("\n");
+
+const nonDbDependencyDiff = [
+  "diff --git a/package.json b/package.json",
+  "index 1111111..2222222 100644",
+  "--- a/package.json",
+  "+++ b/package.json",
+  "@@ -20,6 +20,7 @@",
+  '   "dependencies": {',
+  '     "next": "14.0.0",',
+  '+    "lodash": "^4.17.21",',
+  '     "react": "18.2.0"',
+  "   },",
+].join("\n");
+
+const dbDependencyDiff = [
+  "diff --git a/package.json b/package.json",
+  "index 1111111..2222222 100644",
+  "--- a/package.json",
+  "+++ b/package.json",
+  "@@ -20,6 +20,7 @@",
+  '   "dependencies": {',
+  '     "next": "14.0.0",',
+  '+    "prisma": "^5.10.0",',
+  '     "react": "18.2.0"',
+  "   },",
+].join("\n");
+
+const scopedDbDependencyDiff = [
+  "diff --git a/package.json b/package.json",
+  "index 1111111..2222222 100644",
+  "--- a/package.json",
+  "+++ b/package.json",
+  "@@ -20,6 +20,7 @@",
+  '   "dependencies": {',
+  '     "next": "14.0.0",',
+  '+    "@neondatabase/serverless": "^0.9.0",',
+  '     "react": "18.2.0"',
+  "   },",
+].join("\n");
+
+const lockDbDiff = [
+  "diff --git a/package-lock.json b/package-lock.json",
+  "index 1111111..2222222 100644",
+  "--- a/package-lock.json",
+  "+++ b/package-lock.json",
+  "@@ -100,6 +100,9 @@",
+  '+    "node_modules/prisma": {',
+  '+      "version": "5.10.0"',
+  "+    },",
+].join("\n");
+
+const lockNonDbDiff = [
+  "diff --git a/package-lock.json b/package-lock.json",
+  "index 1111111..2222222 100644",
+  "--- a/package-lock.json",
+  "+++ b/package-lock.json",
+  "@@ -100,6 +100,9 @@",
+  '+    "node_modules/lodash": {',
+  '+      "version": "4.17.21"',
+  "+    },",
+].join("\n");
+
 // ROOT CAUSE this classifier closes: main-integration.yml ran its full DB
 // suite unconditionally on every push to main regardless of what changed --
 // confirmed directly on a real merge (PR #373, a 1-line whitespace fix to
@@ -353,81 +431,6 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
   // reimplementation of git's diff format, actual `diff --git` hunks built
   // by hand the way `git diff` itself would produce them.
   describe("Content-aware package.json / package-lock.json classification (CI-MIN-01)", () => {
-    const scriptsOnlyDiff = [
-      "diff --git a/package.json b/package.json",
-      "index 1111111..2222222 100644",
-      "--- a/package.json",
-      "+++ b/package.json",
-      "@@ -10,7 +10,7 @@",
-      '   "scripts": {',
-      '     "dev": "next dev",',
-      '-    "lint": "eslint .",',
-      '+    "lint": "eslint",',
-      '     "build": "next build"',
-      "   },",
-    ].join("\n");
-
-    const nonDbDependencyDiff = [
-      "diff --git a/package.json b/package.json",
-      "index 1111111..2222222 100644",
-      "--- a/package.json",
-      "+++ b/package.json",
-      "@@ -20,6 +20,7 @@",
-      '   "dependencies": {',
-      '     "next": "14.0.0",',
-      '+    "lodash": "^4.17.21",',
-      '     "react": "18.2.0"',
-      "   },",
-    ].join("\n");
-
-    const dbDependencyDiff = [
-      "diff --git a/package.json b/package.json",
-      "index 1111111..2222222 100644",
-      "--- a/package.json",
-      "+++ b/package.json",
-      "@@ -20,6 +20,7 @@",
-      '   "dependencies": {',
-      '     "next": "14.0.0",',
-      '+    "prisma": "^5.10.0",',
-      '     "react": "18.2.0"',
-      "   },",
-    ].join("\n");
-
-    const scopedDbDependencyDiff = [
-      "diff --git a/package.json b/package.json",
-      "index 1111111..2222222 100644",
-      "--- a/package.json",
-      "+++ b/package.json",
-      "@@ -20,6 +20,7 @@",
-      '   "dependencies": {',
-      '     "next": "14.0.0",',
-      '+    "@neondatabase/serverless": "^0.9.0",',
-      '     "react": "18.2.0"',
-      "   },",
-    ].join("\n");
-
-    const lockDbDiff = [
-      "diff --git a/package-lock.json b/package-lock.json",
-      "index 1111111..2222222 100644",
-      "--- a/package-lock.json",
-      "+++ b/package-lock.json",
-      "@@ -100,6 +100,9 @@",
-      '+    "node_modules/prisma": {',
-      '+      "version": "5.10.0"',
-      "+    },",
-    ].join("\n");
-
-    const lockNonDbDiff = [
-      "diff --git a/package-lock.json b/package-lock.json",
-      "index 1111111..2222222 100644",
-      "--- a/package-lock.json",
-      "+++ b/package-lock.json",
-      "@@ -100,6 +100,9 @@",
-      '+    "node_modules/lodash": {',
-      '+      "version": "4.17.21"',
-      "+    },",
-    ].join("\n");
-
     it("classifyPackageJsonDiffText: a scripts-only diff classifies APPLICATION_NON_DB, never UNKNOWN", () => {
       expect(classifyPackageJsonDiffText(scriptsOnlyDiff)).toBe(TIERS.APPLICATION_NON_DB);
     });
@@ -602,6 +605,74 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
       const result = classifyChangeSet([".github/workflows/ci.yml", "src/services/foo.service.ts"]);
       expect(result.tier).toBe(TIERS.APPLICATION_NON_DB);
       expect(result.suiteMode).toBe(SUITE_MODES.BROAD_NON_DB);
+    });
+  });
+
+  // CI-MIN-01 owner correction: dbRequired is the SINGLE authoritative
+  // signal driving ci.yml's own pre-merge db-verify job. This is the
+  // required test matrix from the correction directive, proven directly
+  // against the classifier -- no separate path-filter system is consulted
+  // anywhere in this file.
+  describe("dbRequired — required test matrix (CI-MIN-01 owner correction)", () => {
+    it("docs only: dbRequired=false", () => {
+      expect(classifyChangeSet(["README.md"]).dbRequired).toBe(false);
+    });
+
+    it("workflow only: dbRequired=false", () => {
+      expect(classifyChangeSet([".github/workflows/ci.yml"]).dbRequired).toBe(false);
+    });
+
+    it("normal src change: dbRequired=false", () => {
+      expect(classifyChangeSet(["src/services/foo.service.ts"]).dbRequired).toBe(false);
+    });
+
+    it("package.json scripts-only change: dbRequired=false", () => {
+      const result = classifyChangeSet(["package.json"], { packageDiffText: scriptsOnlyDiff });
+      expect(result.dbRequired).toBe(false);
+    });
+
+    it("normal (non-DB) package.json dependency change: dbRequired=false", () => {
+      const result = classifyChangeSet(["package.json"], { packageDiffText: nonDbDependencyDiff });
+      expect(result.dbRequired).toBe(false);
+    });
+
+    it("Prisma/Neon/Postgres package.json dependency change: dbRequired=true", () => {
+      expect(classifyChangeSet(["package.json"], { packageDiffText: dbDependencyDiff }).dbRequired).toBe(true);
+      expect(
+        classifyChangeSet(["package.json"], { packageDiffText: scopedDbDependencyDiff }).dbRequired,
+      ).toBe(true);
+    });
+
+    it("Prisma/Neon/Postgres package-lock.json dependency change: dbRequired=true", () => {
+      expect(classifyChangeSet(["package-lock.json"], { packageDiffText: lockDbDiff }).dbRequired).toBe(true);
+    });
+
+    it("prisma schema change: dbRequired=true", () => {
+      expect(classifyChangeSet(["prisma/schema.prisma"]).dbRequired).toBe(true);
+    });
+
+    it("prisma migration change: dbRequired=true", () => {
+      expect(
+        classifyChangeSet(["prisma/migrations/20260101_x/migration.sql"]).dbRequired,
+      ).toBe(true);
+    });
+
+    it("*.db.test.ts change anywhere in the repo: dbRequired=true", () => {
+      expect(classifyChangeSet(["src/services/foo.db.test.ts"]).dbRequired).toBe(true);
+      expect(classifyChangeSet(["src/__tests__/scripts/foo.db.test.ts"]).dbRequired).toBe(true);
+    });
+
+    it("a genuinely unrecognized path stays dbRequired=true (ambiguous -> FULL applies to the DB dimension too)", () => {
+      expect(classifyChangeSet(["newfeature/index.ts"]).dbRequired).toBe(true);
+    });
+
+    it("SECURITY_AUTH_TENANCY_ENTITLEMENT alone (no DB_RUNTIME path) does not by itself require the DB job", () => {
+      expect(classifyChangeSet(["src/lib/auth/session.ts"]).dbRequired).toBe(false);
+    });
+
+    it("a DB-tier path in the same PR pulls dbRequired to true even when mixed with lower tiers", () => {
+      const result = classifyChangeSet(["README.md", "src/services/foo.service.ts", "prisma/schema.prisma"]);
+      expect(result.dbRequired).toBe(true);
     });
   });
 });

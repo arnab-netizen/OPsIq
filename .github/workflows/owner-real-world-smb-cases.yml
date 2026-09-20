@@ -1,16 +1,14 @@
 name: Owner Mode — Real-World SMB Cases
 
+# CI-MIN-01 correction: this workflow's own test path
+# (tests/owner-mode/real-world-smb-cases/**) is already covered by ci.yml's
+# build-and-test broad non-DB suite, whose vitest.config.ts include glob is
+# "tests/owner-mode/**/*.test.ts" -- any PR touching these paths already runs
+# these exact tests once, in build-and-test. The automatic push/pull_request
+# triggers here duplicated that run on every PR unconditionally. Kept
+# workflow_dispatch-only for manual/ad-hoc re-runs; tests and jobs are
+# unchanged.
 on:
-  push:
-    paths:
-      - "tests/owner-mode/real-world-smb-cases/**"
-      - "src/services/consulting-engine/**"
-      - "src/domain/consulting-engine/**"
-  pull_request:
-    paths:
-      - "tests/owner-mode/real-world-smb-cases/**"
-      - "src/services/consulting-engine/**"
-      - "src/domain/consulting-engine/**"
   workflow_dispatch:
 
 jobs:

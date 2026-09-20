@@ -236,8 +236,17 @@ describe("ci.yml — branch-protection fails closed on any required-job non-succ
    * template-expression substitution works (plain text replacement, before
    * the shell interpreter runs) -- then actually executes the resulting
    * script via bash and returns its real exit code.
+   *
+   * db-verify (CI-MIN-01 owner correction, item 1) is handled separately
+   * from the generic per-job loop above: it is the one required job allowed
+   * a non-"success" passing result (a legitimate "skipped" when
+   * db_required=false), driven by the classifier's own db_required output,
+   * so its two tokens are substituted independently via `dbOpts`.
    */
-  function runBranchProtectionStep(results: Record<string, string>): { exitCode: number; stdout: string } {
+  function runBranchProtectionStep(
+    results: Record<string, string>,
+    dbOpts: { dbRequired?: string; dbVerifyResult?: string } = {},
+  ): { exitCode: number; stdout: string } {
     let script = bp?.steps?.[0]?.run ?? "";
     for (const job of requiredJobs) {
       const token = `\${{ needs.${job}.result }}`;
@@ -245,6 +254,10 @@ describe("ci.yml — branch-protection fails closed on any required-job non-succ
       expect(value, `test fixture must stub a result for '${job}'`).toBeDefined();
       script = script.split(token).join(value);
     }
+    const dbRequired = dbOpts.dbRequired ?? "false";
+    const dbVerifyResult = dbOpts.dbVerifyResult ?? "skipped";
+    script = script.split("${{ needs.classify.outputs.db_required }}").join(dbRequired);
+    script = script.split("${{ needs.db-verify.result }}").join(dbVerifyResult);
     expect(script, "unstubbed GitHub template expression remains in the script").not.toContain("${{");
     try {
       const stdout = execFileSync("bash", ["-c", script], { encoding: "utf8" });
@@ -257,6 +270,10 @@ describe("ci.yml — branch-protection fails closed on any required-job non-succ
 
   it("branch-protection still depends on every required job", () => {
     expect(bp?.needs).toEqual(expect.arrayContaining(requiredJobs));
+  });
+
+  it("branch-protection also depends on db-verify (CI-MIN-01 owner correction, item 1)", () => {
+    expect(bp?.needs).toEqual(expect.arrayContaining(["db-verify"]));
   });
 
   it("branch-protection's if-condition uses always() so it is never silently skipped when a dependency fails or is skipped", () => {
@@ -329,6 +346,48 @@ describe("ci.yml — branch-protection fails closed on any required-job non-succ
       // asserted again here under its own name because it is the specific
       // case Issue 2's suiteMode design depends on.
       const { exitCode } = runBranchProtectionStep(ALL_SUCCESS);
+      expect(exitCode).toBe(0);
+    });
+  });
+
+  // CI-MIN-01 owner correction, item 1: db-verify is the one required job
+  // allowed a non-"success" passing result -- but ONLY when the classifier's
+  // own db_required output says it was legitimately not needed. These
+  // scenarios prove the real script's handling of that conditional exactly,
+  // via the same real-script-execution technique as the block above.
+  describe("db-verify conditional requirement (CI-MIN-01 owner correction, item 1)", () => {
+    it("db_required=true, db-verify=success -> aggregate PASS", () => {
+      const { exitCode } = runBranchProtectionStep(ALL_SUCCESS, { dbRequired: "true", dbVerifyResult: "success" });
+      expect(exitCode).toBe(0);
+    });
+
+    it("db_required=false, db-verify=skipped (the normal case for a non-DB-risk PR) -> aggregate PASS", () => {
+      const { exitCode } = runBranchProtectionStep(ALL_SUCCESS, { dbRequired: "false", dbVerifyResult: "skipped" });
+      expect(exitCode).toBe(0);
+    });
+
+    it("db_required=true, db-verify=skipped -> aggregate FAIL (a DB-risk PR must not merge with no DB validation)", () => {
+      const { exitCode } = runBranchProtectionStep(ALL_SUCCESS, { dbRequired: "true", dbVerifyResult: "skipped" });
+      expect(exitCode).not.toBe(0);
+    });
+
+    it("db_required=true, db-verify=failure -> aggregate FAIL", () => {
+      const { exitCode } = runBranchProtectionStep(ALL_SUCCESS, { dbRequired: "true", dbVerifyResult: "failure" });
+      expect(exitCode).not.toBe(0);
+    });
+
+    it("db_required=true, db-verify=cancelled -> aggregate FAIL", () => {
+      const { exitCode } = runBranchProtectionStep(ALL_SUCCESS, { dbRequired: "true", dbVerifyResult: "cancelled" });
+      expect(exitCode).not.toBe(0);
+    });
+
+    it("db_required=false, db-verify=failure (defensive -- should be unreachable given db-verify's own if: gate, but must still fail closed) -> aggregate FAIL", () => {
+      const { exitCode } = runBranchProtectionStep(ALL_SUCCESS, { dbRequired: "false", dbVerifyResult: "failure" });
+      expect(exitCode).not.toBe(0);
+    });
+
+    it("db_required=false, db-verify=success (also should be unreachable, but a job that ran and succeeded must never fail the gate) -> aggregate PASS", () => {
+      const { exitCode } = runBranchProtectionStep(ALL_SUCCESS, { dbRequired: "false", dbVerifyResult: "success" });
       expect(exitCode).toBe(0);
     });
   });
