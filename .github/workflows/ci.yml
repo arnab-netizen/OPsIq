@@ -130,6 +130,17 @@ jobs:
         run: npx prisma validate
         continue-on-error: false
 
+      - name: Owner feature-preservation gate (UX-00B)
+        # Compares a freshly generated candidate inventory against the accepted
+        # docs/opsiq/ux/OWNER_FEATURE_PRESERVATION_BASELINE.json — blocks any PR that silently
+        # drops an owner page/API/method, narrows or broadens a capability, exposes a hidden-for-
+        # safety route, or loses an OwnerNowView field, owner action, workflow state, or Cockpit-
+        # consumed field. Pure Node script, no DB/build required. See
+        # scripts/ux/verify-owner-feature-preservation.mjs and
+        # docs/opsiq/ux/PRESERVATION_CHANGE_PROCESS.md for how an intentional change is approved.
+        run: npm run verify:owner-preservation
+        continue-on-error: false
+
       - name: Wrapped handlers ratchet (prevent new violations)
         run: npm run audit:wrapped-handlers:ratchet
         continue-on-error: false

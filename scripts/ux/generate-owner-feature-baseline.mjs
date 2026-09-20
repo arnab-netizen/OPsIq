@@ -40,6 +40,21 @@ const OWNER_PAGE_ROOT = path.join(ROOT, "src/app/(authenticated)/owner");
 const OWNER_API_ROOT = path.join(ROOT, "src/app/api/owner");
 const OUT_FILE = path.join(ROOT, "docs/opsiq/ux/OWNER_FEATURE_PRESERVATION_BASELINE.json");
 
+// ── minimal CLI flags (UX-00B) ──────────────────────────────────────────────
+// Default behavior (no flags) is completely unchanged: writes OUT_FILE, reports to stdout.
+// --stdout: prints ONLY the generated JSON to stdout (for a verifier to pipe + JSON.parse); every
+//   informational report line moves to stderr instead, and the committed baseline is NOT written.
+// --output <path>: writes the JSON to <path> instead of OUT_FILE; report lines stay on stdout.
+// No extraction semantics changed by either flag -- only where the same JSON is written/printed.
+const CLI_ARGS = process.argv.slice(2);
+const STDOUT_MODE = CLI_ARGS.includes("--stdout");
+const OUTPUT_ARG_IDX = CLI_ARGS.indexOf("--output");
+const OUTPUT_PATH_ARG = OUTPUT_ARG_IDX !== -1 ? CLI_ARGS[OUTPUT_ARG_IDX + 1] : null;
+/** Informational progress/report line — goes to stderr in --stdout mode so stdout stays pure JSON. */
+function report(...vals) {
+  (STDOUT_MODE ? console.error : console.log)(...vals);
+}
+
 function relSrc(p) {
   return path.relative(ROOT, p);
 }
@@ -945,7 +960,7 @@ function buildNonWorkflowMutationFamilies(allApiRoutesFlat) {
  * generation rather than being silently resolved, so a family's apiPrefixes can never silently
  * drop or duplicate a real mutation as the source tree evolves.
  */
-function validateMutationCoverage(ownerPageRoutes, ownerActionFamilies, nonWorkflowMutationFamilies) {
+export function validateMutationCoverage(ownerPageRoutes, ownerActionFamilies, nonWorkflowMutationFamilies) {
   // mutationEndpoints' own `path` is the literal filesystem route path (e.g. "[actionId]"); a
   // page's majorActions endpoint is the extractor's ":param"-normalized form of the same route.
   // Both must be normalized identically before comparing, or every dynamic-segment mutation would
@@ -1262,7 +1277,7 @@ function main() {
     console.error("Generation ABORTED. Fix the extractor or the source mismatch before regenerating.");
     process.exit(1);
   }
-  console.log(`Route-method cross-validation: ${validated} calls validated, 0 mismatches.`);
+  report(`Route-method cross-validation: ${validated} calls validated, 0 mismatches.`);
 
   // ── Capability cross-validation (hard fail on mismatch, never silently corrected) ──
   const capValidation = crossValidateCapabilities(allApiRoutesFlat, ownerPageRoutes);
@@ -1274,7 +1289,7 @@ function main() {
     console.error("Generation ABORTED. Fix the capability extractor before regenerating.");
     process.exit(1);
   }
-  console.log(`Capability cross-validation: ${capValidation.validated} calls validated, 0 mismatches.`);
+  report(`Capability cross-validation: ${capValidation.validated} calls validated, 0 mismatches.`);
 
   // ── Mutation-coverage validation (hard fail on unaccounted OR duplicately-accounted) ──
   const coverage = validateMutationCoverage(ownerPageRoutes, ownerActionFamilies, nonWorkflowMutationFamilies);
@@ -1290,7 +1305,7 @@ function main() {
     console.error("Generation ABORTED. Add/adjust an ownerActions or nonWorkflowMutationFamilies entry before regenerating -- never silently pick a family.");
     process.exit(1);
   }
-  console.log(`Mutation-coverage validation: ${coverage.pageMajorActionCount} page majorActions, ${coverage.coveredByOwnerActions} via ownerActions, ${coverage.coveredByNonWorkflow} via nonWorkflowMutationFamilies, 0 unaccounted, 0 duplicates.`);
+  report(`Mutation-coverage validation: ${coverage.pageMajorActionCount} page majorActions, ${coverage.coveredByOwnerActions} via ownerActions, ${coverage.coveredByNonWorkflow} via nonWorkflowMutationFamilies, 0 unaccounted, 0 duplicates.`);
 
   for (const p of ownerPageRoutes) delete p._rawApiCalls;
 
@@ -1458,8 +1473,14 @@ function main() {
     adminRoutesTouchedBySharedComponents,
   };
 
-  fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
-  fs.writeFileSync(OUT_FILE, JSON.stringify(baseline, null, 2) + "\n");
+  const jsonText = JSON.stringify(baseline, null, 2) + "\n";
+  const targetFile = OUTPUT_PATH_ARG ? path.resolve(OUTPUT_PATH_ARG) : OUT_FILE;
+  if (STDOUT_MODE) {
+    process.stdout.write(jsonText);
+  } else {
+    fs.mkdirSync(path.dirname(targetFile), { recursive: true });
+    fs.writeFileSync(targetFile, jsonText);
+  }
 
   // ── two deterministic, unambiguous NOT_VERIFIED counts (never conflated into one number) ──
   function countNotVerified(obj) {
@@ -1479,25 +1500,28 @@ function main() {
   }
   const nv = countNotVerified(baseline);
 
-  // ── report to stdout ──
-  console.log("Wrote", relSrc(OUT_FILE));
-  console.log("ownerPageRoutes:", ownerPageRoutes.length);
-  console.log("ownerApiRoutes:", ownerApiRoutes.length);
-  console.log("ownerNowViewFields:", ownerNowViewFieldNames.length);
-  console.log("ownerNowViewCoreFields:", ownerNowViewCoreFieldNames.length);
-  console.log("ownerActions families:", ownerActionFamilies.length);
-  console.log("workflowStateFamilies:", workflowStateFamilies.length);
-  console.log("cockpitExternalFeeds:", cockpitExternalFeeds.length);
-  console.log("preExistingCorrectnessFindings:", preExistingCorrectnessFindings.length);
+  // ── report ──
+  if (!STDOUT_MODE) report("Wrote", relSrc(targetFile));
+  report("ownerPageRoutes:", ownerPageRoutes.length);
+  report("ownerApiRoutes:", ownerApiRoutes.length);
+  report("ownerNowViewFields:", ownerNowViewFieldNames.length);
+  report("ownerNowViewCoreFields:", ownerNowViewCoreFieldNames.length);
+  report("ownerActions families:", ownerActionFamilies.length);
+  report("workflowStateFamilies:", workflowStateFamilies.length);
+  report("cockpitExternalFeeds:", cockpitExternalFeeds.length);
+  report("preExistingCorrectnessFindings:", preExistingCorrectnessFindings.length);
   const pagesWithSessionOnlyAccess = ownerPageRoutes.filter((p) => p.pageAccessGate === "AUTHENTICATED_SESSION_ONLY").length;
-  console.log("pages with pageAccessGate AUTHENTICATED_SESSION_ONLY:", pagesWithSessionOnlyAccess);
+  report("pages with pageAccessGate AUTHENTICATED_SESSION_ONLY:", pagesWithSessionOnlyAccess);
   const processExecFamily = ownerActionFamilies.find((f) => f.family === "process_execution");
   const tasksFamily = ownerActionFamilies.find((f) => f.family === "tasks");
-  console.log("process_execution commands:", processExecFamily?.commands?.flatMap((c) => c.values).length ?? 0);
-  console.log("process_execution workflowStatuses:", processExecFamily?.workflowStatuses?.flatMap((c) => c.values).length ?? 0);
-  console.log("tasks workflowStatuses:", tasksFamily?.workflowStatuses?.flatMap((c) => c.values).length ?? 0);
-  console.log("exactNotVerifiedCount:", nv.exact);
-  console.log("notVerifiedPrefixedCount:", nv.prefixed);
+  report("process_execution commands:", processExecFamily?.commands?.flatMap((c) => c.values).length ?? 0);
+  report("process_execution workflowStatuses:", processExecFamily?.workflowStatuses?.flatMap((c) => c.values).length ?? 0);
+  report("tasks workflowStatuses:", tasksFamily?.workflowStatuses?.flatMap((c) => c.values).length ?? 0);
+  report("exactNotVerifiedCount:", nv.exact);
+  report("notVerifiedPrefixedCount:", nv.prefixed);
 }
 
-main();
+// Only run when executed directly, not when imported (e.g. by the verifier's test suite for
+// validateMutationCoverage) — importing this module must never itself walk the filesystem or write
+// output.
+if (import.meta.url === `file://${process.argv[1]}`) main();
