@@ -1,15 +1,21 @@
 /**
  * /owner/now — business-context selector + stale-response race safety.
  *
- * This page (Phase 2 of the business-context selector coverage session) newly gained a
- * BusinessContextSelector: previously it had NO way to switch business at all (never sent
- * `?businessId=`), so rapid A→B switching was not reachable before this change — it is now, which is
- * why this page (unlike the pure-swap migrations covered by business-context-selector-migration.test.ts)
- * needed a request-sequence guard, proven here with out-of-order fetch resolution.
+ * UX-01: this page now sources its business list and active-business id from the shared
+ * ActiveBusinessProvider (useActiveBusiness()) instead of its own `GET /api/owner/businesses`
+ * fetch — the provider is the one that calls that route now, and the page reads its resolved
+ * `businesses`/`activeBusinessId` instead. The request-sequence guard on the now-view fetch
+ * itself is unchanged.
  */
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
 import OwnerNowViewPage from "@/app/(authenticated)/owner/now/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
+
+beforeEach(() => {
+  window.sessionStorage.clear();
+  window.localStorage.clear();
+});
 
 afterEach(() => {
   cleanup();
@@ -43,8 +49,16 @@ function viewFor(label: string) {
   };
 }
 
+function renderPage() {
+  return render(
+    <ActiveBusinessProvider>
+      <OwnerNowViewPage />
+    </ActiveBusinessProvider>
+  );
+}
+
 describe("OwnerNowViewPage — business selector", () => {
-  it("fetches the business list and defaults to the first active business, then renders the selector", async () => {
+  it("resolves the active business from the shared provider and renders the selector", async () => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url.includes("/api/owner/businesses")) {
         return { ok: true, json: async () => ({ businesses: BUSINESSES }) } as Response;
@@ -53,7 +67,7 @@ describe("OwnerNowViewPage — business selector", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<OwnerNowViewPage />);
+    renderPage();
 
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Business" })).toBeInTheDocument());
     const select = screen.getByRole("combobox", { name: "Business" }) as HTMLSelectElement;
@@ -70,7 +84,7 @@ describe("OwnerNowViewPage — business selector", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<OwnerNowViewPage />);
+    renderPage();
     const select = await screen.findByRole("combobox", { name: "Business" });
     fireEvent.change(select, { target: { value: "biz-b" } });
 
@@ -82,15 +96,16 @@ describe("OwnerNowViewPage — business selector", () => {
   // STALE-RESPONSE RACE — REACHABILITY FINDING (not a skipped assertion, a documented result):
   //
   // This page — like every other page in this audit — gates its ENTIRE render behind
-  // `if (loading) return <Loading/>`. Selecting a business calls `load(id)`, which sets
-  // `loading=true` before awaiting the fetch; React (via RTL's act-wrapped fireEvent, which
-  // matches real synchronous browser event dispatch + commit) re-renders to the loading screen
-  // BEFORE a second interaction is possible, which unmounts the <select> itself for the duration
-  // of the in-flight request. A directly-reproduced attempt at "select A, then immediately select
-  // B before A's response lands" was written for this page and found NOT reproducible: the second
-  // change event, fired against the selector, lands on an already-detached DOM node once the first
-  // selection's loading state commits, and never reaches React's event system. This was verified
-  // empirically (not assumed) while writing this test file.
+  // `if (loading) return <Loading/>`. Selecting a business calls setActiveBusinessId(id) via
+  // onSwitchBusiness, which sets `loading=true` synchronously before the context update commits;
+  // React (via RTL's act-wrapped fireEvent, which matches real synchronous browser event dispatch
+  // + commit) re-renders to the loading screen BEFORE a second interaction is possible, which
+  // unmounts the <select> itself for the duration of the in-flight request. A directly-reproduced
+  // attempt at "select A, then immediately select B before A's response lands" was written for
+  // this page and found NOT reproducible: the second change event, fired against the selector,
+  // lands on an already-detached DOM node once the first selection's loading state commits, and
+  // never reaches React's event system. This was verified empirically (not assumed) while writing
+  // this test file.
   //
   // Conclusion: the literal "rapid reselect before the earlier response lands" race is NOT
   // reachable through this control on this page (or on any of the other pages audited this
@@ -102,7 +117,8 @@ describe("OwnerNowViewPage — business selector", () => {
   // gating the whole page on `loading` (e.g. an inline spinner next to the selector instead of a
   // full-page replacement), which would make the scenario reachable. See PHASE2 report,
   // STALE_RESPONSE_RACE_AUDIT, for the same finding applied to every other page touched this
-  // session.
+  // session. UX-01's own out-of-order coverage (business-context-behavioral.test.tsx) exercises
+  // the same guard on a page whose loading indicator is inline rather than full-page.
   it.todo(
     "documented above: rapid A→B reselect is not reachable via this page's full-page loading gate — see comment"
   );

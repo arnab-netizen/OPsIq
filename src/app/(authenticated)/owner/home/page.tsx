@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Badge, Button, CardDashboardSkeleton, PageHeader } from "@/ui/primitives";
+import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
+import { useActiveBusiness } from "@/context/active-business-context";
 import { humanizeMetricKey } from "@/lib/metric-label";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic owner-home payload is untyped; load() fetch-on-mount is intentional */
@@ -94,38 +95,53 @@ function DangerCard({ label, danger }: { label: string; danger: any }) {
 }
 
 export default function OwnerHomePage() {
+  const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
   const [data, setData] = useState<any | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [alertSummary, setAlertSummary] = useState<AlertSummary | null>(null);
+  const requestSeq = useRef(0);
 
-  const load = useCallback(async (businessId?: string | null) => {
+  const load = useCallback(async (businessId: string) => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
-      const qs = businessId ? `?businessId=${businessId}` : "";
-      const res = await api(`/api/owner/home${qs}`);
+      const res = await api(`/api/owner/home?businessId=${businessId}`);
+      if (requestSeq.current !== seq) return;
       setData(res);
-      setSelected(res.selectedBusinessId);
       // Load alert summary (best-effort — must not break home if alerts API is down)
       api("/api/owner/alerts?severity=critical&limit=3")
-        .then((d) => setAlertSummary({ alerts: d.alerts ?? [], unreadCount: d.unreadCount ?? 0 }))
+        .then((d) => { if (requestSeq.current === seq) setAlertSummary({ alerts: d.alerts ?? [], unreadCount: d.unreadCount ?? 0 }); })
         .catch(() => {});
     } catch (e) {
+      if (requestSeq.current !== seq) return;
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      if (requestSeq.current === seq) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (contextLoading) return;
+    if (needsBusinessRecovery) return;
+    if (!activeBusinessId) { setData(null); setLoading(false); return; }
+    void load(activeBusinessId);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery, load]);
 
-  if (loading) return <CardDashboardSkeleton label="Loading owner home" />;
+  const onSwitchBusiness = useCallback((id: string) => {
+    setLoading(true);
+    setActiveBusinessId(id);
+  }, [setActiveBusinessId]);
 
-  const businesses: any[] = data?.businesses ?? [];
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading owner home" />;
+  if (needsBusinessRecovery) return (
+    <PageContainer>
+      <p>Your previously selected business is no longer available. Choose a business to continue.</p>
+      <BusinessContextSelector businesses={businesses} selectedId={null} onChange={onSwitchBusiness} />
+    </PageContainer>
+  );
+
   const s = data?.summary ?? null;
 
   return (
@@ -194,8 +210,8 @@ export default function OwnerHomePage() {
           <div className="mb-4">
             <BusinessContextSelector
               businesses={businesses}
-              selectedId={selected}
-              onChange={(businessId) => load(businessId)}
+              selectedId={activeBusinessId}
+              onChange={onSwitchBusiness}
             />
           </div>
 

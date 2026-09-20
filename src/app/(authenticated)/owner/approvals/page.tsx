@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -46,8 +47,7 @@ function newIdempotencyKey(): string {
 }
 
 export default function OwnerApprovalsPage() {
-  const [businesses, setBusinesses] = useState<any[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
   const [approvals, setApprovals] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
@@ -55,56 +55,47 @@ export default function OwnerApprovalsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [evidenceFormFor, setEvidenceFormFor] = useState<string | null>(null);
+  const requestSeq = useRef(0);
 
-  const loadApprovals = useCallback(async (businessId: string | null, status: string) => {
-    if (!businessId) {
-      setApprovals([]);
-      return;
+  const loadApprovals = useCallback(async (businessId: string, status: string) => {
+    const seq = ++requestSeq.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const qs = new URLSearchParams({ businessId });
+      if (status) qs.set("status", status);
+      const data = await api(`/api/owner/approval?${qs.toString()}`);
+      if (requestSeq.current !== seq) return;
+      setApprovals(data.approvals ?? []);
+    } catch (e) {
+      if (requestSeq.current !== seq) return;
+      setError(e instanceof Error ? e.message : "Failed to load approvals");
+    } finally {
+      if (requestSeq.current === seq) setLoading(false);
     }
-    const qs = new URLSearchParams({ businessId });
-    if (status) qs.set("status", status);
-    const data = await api(`/api/owner/approval?${qs.toString()}`);
-    setApprovals(data.approvals ?? []);
   }, []);
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const list = await api("/api/owner/recovery/businesses");
-        setBusinesses(list);
-        const first = list[0]?.id ?? null;
-        setSelected(first);
-        await loadApprovals(first, "");
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load");
-      } finally {
-        setLoading(false);
-      }
-    })();
-    // Intentional one-shot mount effect -- loadApprovals is called directly
-    // above with the freshly-resolved business id rather than depending on
-    // `selected` state, which would not yet be updated in this same tick.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (contextLoading) return;
+    if (needsBusinessRecovery) return;
+    if (!activeBusinessId) { setApprovals([]); setLoading(false); return; }
+    void loadApprovals(activeBusinessId, statusFilter);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery, statusFilter, loadApprovals]);
 
-  useEffect(() => {
-    if (!selected) return;
-    loadApprovals(selected, statusFilter).catch((e) =>
-      setError(e instanceof Error ? e.message : "Failed to load approvals")
-    );
-  }, [selected, statusFilter, loadApprovals]);
+  const onSwitchBusiness = useCallback((id: string) => {
+    setLoading(true);
+    setActiveBusinessId(id);
+  }, [setActiveBusinessId]);
 
   async function createApprovalRequest(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!selected) return;
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
     const body: Record<string, unknown> = {
       idempotencyKey: newIdempotencyKey(),
-      businessId: selected,
+      businessId: activeBusinessId,
     };
     const actionId = fd.get("actionId");
     const actionDomain = fd.get("actionDomain");
@@ -113,7 +104,7 @@ export default function OwnerApprovalsPage() {
     try {
       await api("/api/owner/approval", { method: "POST", body: JSON.stringify(body) });
       setShowCreateForm(false);
-      await loadApprovals(selected, statusFilter);
+      await loadApprovals(activeBusinessId, statusFilter);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create approval request");
     } finally {
@@ -122,6 +113,7 @@ export default function OwnerApprovalsPage() {
   }
 
   async function decide(approval: any, decision: "APPROVED" | "REJECTED" | "DEFERRED") {
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     try {
@@ -130,7 +122,7 @@ export default function OwnerApprovalsPage() {
         method: "PATCH",
         body: JSON.stringify({ action: "decide", approvalId: approval.id, decision, rationale }),
       });
-      await loadApprovals(selected, statusFilter);
+      await loadApprovals(activeBusinessId, statusFilter);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to record decision");
     } finally {
@@ -140,6 +132,7 @@ export default function OwnerApprovalsPage() {
 
   async function submitEvidence(e: React.FormEvent<HTMLFormElement>, approvalId: string) {
     e.preventDefault();
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
@@ -154,7 +147,7 @@ export default function OwnerApprovalsPage() {
     try {
       await api("/api/owner/approval", { method: "PATCH", body: JSON.stringify(body) });
       setEvidenceFormFor(null);
-      await loadApprovals(selected, statusFilter);
+      await loadApprovals(activeBusinessId, statusFilter);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to submit evidence");
     } finally {
@@ -163,6 +156,7 @@ export default function OwnerApprovalsPage() {
   }
 
   async function initiateAppeal(approval: any) {
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     try {
@@ -174,7 +168,7 @@ export default function OwnerApprovalsPage() {
           priorApprovalId: approval.id,
         }),
       });
-      await loadApprovals(selected, statusFilter);
+      await loadApprovals(activeBusinessId, statusFilter);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to initiate appeal");
     } finally {
@@ -182,7 +176,13 @@ export default function OwnerApprovalsPage() {
     }
   }
 
-  if (loading) return <CardDashboardSkeleton label="Loading approvals workspace" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading approvals workspace" />;
+  if (needsBusinessRecovery) return (
+    <PageContainer>
+      <p>Your previously selected business is no longer available. Choose a business to continue.</p>
+      <BusinessContextSelector businesses={businesses} selectedId={null} onChange={onSwitchBusiness} />
+    </PageContainer>
+  );
 
   return (
     <PageContainer>
@@ -190,7 +190,7 @@ export default function OwnerApprovalsPage() {
         <PageHeader
           title="Owner Approvals"
           description="Review evidence, decide, and track appeals for consulting approval requests -- one decision at a time."
-          actions={<Button onClick={() => setShowCreateForm((s) => !s)} disabled={!selected}>
+          actions={<Button onClick={() => setShowCreateForm((s) => !s)} disabled={!activeBusinessId}>
           + New approval request
         </Button>}
         />
@@ -211,8 +211,8 @@ export default function OwnerApprovalsPage() {
           <div className="mb-6 flex items-end gap-3">
             <BusinessContextSelector
               businesses={businesses}
-              selectedId={selected}
-              onChange={(businessId) => setSelected(businessId)}
+              selectedId={activeBusinessId}
+              onChange={onSwitchBusiness}
             />
             <div className="w-48">
               <Select

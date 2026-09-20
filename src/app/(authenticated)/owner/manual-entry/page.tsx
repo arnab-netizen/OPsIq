@@ -7,23 +7,15 @@
  * logic here: the server validates, scopes, classifies, gates, and audits. The page blocks PII client-side
  * (the API blocks it again server-side) and never collects personal identities.
  */
-/* eslint-disable react-hooks/set-state-in-effect -- load() fetch-on-mount is the intentional owner-page pattern */
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Button, FormSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 import {
   MANUAL_ENTRY_SECTIONS, MANUAL_ENTRY_WARNING, MANUAL_ENTRY_SAFE_COPY,
   validateManualEntry, buildManualEntryFields, type ManualEntrySection, type ManualFieldValue,
 } from "@/domain/owner-mode/owner-manual-entry-form";
 
-interface BusinessLite { id: string; name?: string }
-
-async function apiGet(path: string) {
-  const res = await fetch(path, { headers: { "Content-Type": "application/json" } });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
-  return data;
-}
 async function apiPost(path: string, body: unknown) {
   const res = await fetch(path, {
     method: "POST",
@@ -105,31 +97,13 @@ function SectionForm({ section, businessId }: { section: ManualEntrySection; bus
 }
 
 export default function OwnerManualEntryPage() {
-  const [businesses, setBusinesses] = useState<BusinessLite[]>([]);
-  const [businessId, setBusinessId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const data = await apiGet("/api/owner/businesses");
-      const list: BusinessLite[] = Array.isArray(data?.businesses) ? data.businesses : [];
-      setBusinesses(list);
-      setBusinessId(list[0]?.id ?? null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load your businesses.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  useEffect(() => { void load(); }, [load]);
-
-  if (loading) return <PageContainer narrow><FormSkeleton label="Loading" fields={5} /></PageContainer>;
-  if (error) return (
+  if (contextLoading) return <PageContainer narrow><FormSkeleton label="Loading" fields={5} /></PageContainer>;
+  if (needsBusinessRecovery) return (
     <PageContainer narrow>
-      <p data-testid="manual-entry-error" className="text-[var(--destructive-text)]">{error}</p>
-      <Button onClick={() => void load()}>Retry</Button>
+      <p>Your previously selected business is no longer available. Choose a business to continue.</p>
+      <BusinessContextSelector businesses={businesses} selectedId={null} onChange={(id) => setActiveBusinessId(id)} />
     </PageContainer>
   );
 
@@ -158,17 +132,17 @@ export default function OwnerManualEntryPage() {
       ) : (
         <>
           <BusinessContextSelector
-            businesses={businesses.map((b) => ({ id: b.id, name: b.name ?? b.id }))}
-            selectedId={businessId}
-            onChange={(id) => setBusinessId(id)}
+            businesses={businesses}
+            selectedId={activeBusinessId}
+            onChange={(id) => setActiveBusinessId(id)}
           />
 
-          {businessId && (
+          {activeBusinessId && (
             <>
               {essential.map((s) => (
                 <section key={s.id} className="rounded-lg border border-border p-4">
                   <h2 className="mb-2 text-lg font-medium">{s.title}</h2>
-                  <SectionForm section={s} businessId={businessId} />
+                  <SectionForm section={s} businessId={activeBusinessId} />
                 </section>
               ))}
 
@@ -177,7 +151,7 @@ export default function OwnerManualEntryPage() {
                 <details key={s.id} data-testid={`manual-entry-optional-${s.id}`} className="rounded-lg border border-border p-4">
                   <summary className="cursor-pointer text-lg font-medium">{s.title}</summary>
                   <div className="mt-3">
-                    <SectionForm section={s} businessId={businessId} />
+                    <SectionForm section={s} businessId={activeBusinessId} />
                   </div>
                 </details>
               ))}

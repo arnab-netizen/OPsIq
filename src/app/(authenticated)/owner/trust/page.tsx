@@ -154,7 +154,7 @@ export default function OwnerTrustPage() {
         <PageHeader
           title="Trust & Explainability"
           description="For every recommendation: what was detected, why it matters, the data and calculation used, confidence, risk if ignored, expected impact, and how to verify it — with a full audit trail. Nothing is invented."
-          actions={<Link href="/owner"><Button>Command Center</Button></Link>}
+          actions={<Link href="/owner/cockpit"><Button>Home</Button></Link>}
         />
       </div>
 

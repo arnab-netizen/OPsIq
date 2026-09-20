@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Select, CardDashboardSkeleton, Disclosure, PageHeader, PageContainer } from "@/ui/primitives";
 import { PriorityCommandStrip } from "@/components/owner/PriorityCommandStrip";
 import { SupervisorSummary } from "@/components/owner/SupervisorSummary";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 import { formatHumanDate } from "@/lib/format-human-date";
@@ -297,6 +298,7 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
 }
 
 export default function OwnerCommandCenterPage() {
+  const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
   const [data, setData] = useState<any | null>(null);
   const [control, setControl] = useState<any | null>(null);
   const [wbp, setWbp] = useState<any | null>(null);
@@ -304,95 +306,103 @@ export default function OwnerCommandCenterPage() {
   const [readiness, setReadiness] = useState<any | null>(null);
   const [actionPlan, setActionPlan] = useState<any | null>(null);
   const [priorities, setPriorities] = useState<any | null>(null);
-  const [businesses, setBusinesses] = useState<any[] | null>(null);
-  const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const requestSeq = useRef(0);
 
-  const loadProfile = useCallback(async (businessId?: string | null) => {
+  const loadProfile = useCallback(async (businessId: string) => {
+    const seq = ++requestSeq.current;
     setProfileLoading(true);
     setError(null);
     try {
-      const qs = businessId ? `?businessId=${businessId}` : "";
+      const qs = `?businessId=${businessId}`;
       const res = await api(`/api/owner/command-center${qs}`);
+      if (requestSeq.current !== seq) return;
       setData(res);
-      setSelected(res.selectedBusinessId);
       // Owner control center (safety/blocked/attention/what-not-to-do). Non-fatal if it fails.
       try {
-        setControl(await api(`/api/owner/control-center${qs}`));
+        const c = await api(`/api/owner/control-center${qs}`);
+        if (requestSeq.current === seq) setControl(c);
       } catch {
-        setControl(null);
+        if (requestSeq.current === seq) setControl(null);
       }
       // NEW production owner-advice runtime → whole-business plan (provider-backed). Non-fatal.
-      const bizId = res.selectedBusinessId ?? businessId ?? null;
       try {
-        setWbp(bizId ? await api(`/api/owner/whole-business-plan?businessId=${bizId}`) : null);
+        const w = await api(`/api/owner/whole-business-plan${qs}`);
+        if (requestSeq.current === seq) setWbp(w);
       } catch {
-        setWbp(null);
+        if (requestSeq.current === seq) setWbp(null);
       }
       // Dynamic input-accuracy guidance (next best input / missing data). Non-fatal.
       try {
-        setGuidance(bizId ? await api(`/api/owner/input-guidance?businessId=${bizId}`) : null);
+        const g = await api(`/api/owner/input-guidance${qs}`);
+        if (requestSeq.current === seq) setGuidance(g);
       } catch {
-        setGuidance(null);
+        if (requestSeq.current === seq) setGuidance(null);
       }
       // Owner Pilot Readiness Score. Non-fatal.
       try {
-        setReadiness(bizId ? await api(`/api/owner/readiness?businessId=${bizId}`) : null);
+        const r = await api(`/api/owner/readiness${qs}`);
+        if (requestSeq.current === seq) setReadiness(r);
       } catch {
-        setReadiness(null);
+        if (requestSeq.current === seq) setReadiness(null);
       }
       // Action assignment + proof framing for the live next best action. Non-fatal.
       try {
-        setActionPlan(bizId ? await api(`/api/owner/action-plan?businessId=${bizId}`) : null);
+        const a = await api(`/api/owner/action-plan${qs}`);
+        if (requestSeq.current === seq) setActionPlan(a);
       } catch {
-        setActionPlan(null);
+        if (requestSeq.current === seq) setActionPlan(null);
       }
       // Top 3–5 priority command strip (runtime-fed). Non-fatal.
       try {
-        setPriorities(bizId ? await api(`/api/owner/priorities?businessId=${bizId}`) : null);
+        const p = await api(`/api/owner/priorities${qs}`);
+        if (requestSeq.current === seq) setPriorities(p);
       } catch {
-        setPriorities(null);
+        if (requestSeq.current === seq) setPriorities(null);
       }
     } catch (e) {
+      if (requestSeq.current !== seq) return;
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setProfileLoading(false);
+      if (requestSeq.current === seq) setProfileLoading(false);
     }
   }, []);
 
-  const load = useCallback(async (businessId?: string | null) => {
-    if (businesses === null) {
-      setLoading(true);
-      try {
-        const biz = await api("/api/owner/businesses");
-        setBusinesses(biz.businesses ?? []);
-      } catch {
-        // fall through to full load
-      } finally {
-        setLoading(false);
-      }
-    }
-    await loadProfile(businessId);
-  }, [businesses, loadProfile]);
-
   useEffect(() => {
-    load();
-  }, [load]);
+    if (contextLoading) return;
+    if (needsBusinessRecovery) return;
+    if (!activeBusinessId) {
+      setData(null); setControl(null); setWbp(null); setGuidance(null);
+      setReadiness(null); setActionPlan(null); setPriorities(null);
+      return;
+    }
+    void loadProfile(activeBusinessId);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery, loadProfile]);
 
-  if (loading) return <CardDashboardSkeleton label="Loading owner command center" />;
+  const onSwitchBusiness = useCallback((id: string) => {
+    setProfileLoading(true);
+    setActiveBusinessId(id);
+  }, [setActiveBusinessId]);
+
+  if (contextLoading) return <CardDashboardSkeleton label="Loading owner command center" />;
+  if (needsBusinessRecovery) return (
+    <PageContainer>
+      <p>Your previously selected business is no longer available. Choose a business to continue.</p>
+      <BusinessContextSelector businesses={businesses} selectedId={null} onChange={onSwitchBusiness} />
+    </PageContainer>
+  );
   if (error && !data) return (
     <PageContainer>
       <div className="rounded-md border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
         <p className="font-medium mb-2">Failed to load command center</p>
         <p className="mb-4">{error}</p>
-        <Button onClick={() => load()} className="min-h-[44px]">Retry</Button>
+        <Button onClick={() => activeBusinessId && void loadProfile(activeBusinessId)} className="min-h-[44px]">Retry</Button>
       </div>
     </PageContainer>
   );
 
-  const businessList: any[] = businesses ?? data?.businesses ?? [];
+  const businessList: any[] = businesses;
   const profile = data?.profile ?? null;
   const next = profile?.recommendedNextAction ?? null;
   const missing: string[] = profile?.missingCriticalData ?? [];
@@ -459,14 +469,14 @@ export default function OwnerCommandCenterPage() {
           <div className="mb-6">
             <BusinessContextSelector
               businesses={businessList}
-              selectedId={selected}
-              onChange={(businessId) => load(businessId)}
+              selectedId={activeBusinessId}
+              onChange={onSwitchBusiness}
             />
           </div>
 
-          {businessList.length > 1 && selected && (
+          {businessList.length > 1 && activeBusinessId && (
             <h2 className="text-xl font-semibold text-foreground mb-2">
-              {businessList.find((b) => b.id === selected)?.name ?? ""}
+              {businessList.find((b) => b.id === activeBusinessId)?.name ?? ""}
             </h2>
           )}
 
@@ -753,7 +763,7 @@ export default function OwnerCommandCenterPage() {
                     </div>
                   )}
 
-                  <div className="mb-3"><OwnerActions businessId={selected} /></div>
+                  <div className="mb-3"><OwnerActions businessId={activeBusinessId} /></div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                     {[

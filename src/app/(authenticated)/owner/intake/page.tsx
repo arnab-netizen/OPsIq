@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
@@ -9,6 +9,7 @@ import { fieldSpecForDomain } from "@/domain/owner-intake/field-specs";
 import { INPUT_CATALOG, type OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
 import { humanizeMetricKey, humanizeSnakeCase } from "@/lib/metric-label";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -87,42 +88,53 @@ async function api(path: string, init?: RequestInit) {
 
 export default function OwnerIntakePage() {
   const router = useRouter();
+  const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [preview, setPreview] = useState<any | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const requestSeq = useRef(0);
 
-  const load = useCallback(async (businessId?: string | null) => {
+  const load = useCallback(async (businessId: string) => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
-      const qs = businessId ? `?businessId=${businessId}` : "";
-      const data = await api(`/api/owner/intake/dashboard${qs}`);
+      const data = await api(`/api/owner/intake/dashboard?businessId=${businessId}`);
+      if (requestSeq.current !== seq) return;
       setDashboard(data);
-      setSelected(data.selectedBusinessId);
     } catch (e) {
+      if (requestSeq.current !== seq) return;
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      if (requestSeq.current === seq) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (contextLoading) return;
+    if (needsBusinessRecovery) return;
+    if (!activeBusinessId) { setDashboard(null); setLoading(false); return; }
+    void load(activeBusinessId);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery, load]);
+
+  const onSwitchBusiness = useCallback((id: string) => {
+    setLoading(true);
+    setPreview(null);
+    setActiveBusinessId(id);
+  }, [setActiveBusinessId]);
 
   async function upload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!selected) return;
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
     try {
-      const intake = await api(`/api/owner/intake/businesses/${selected}/uploads`, {
+      const intake = await api(`/api/owner/intake/businesses/${activeBusinessId}/uploads`, {
         method: "POST",
         body: JSON.stringify({
           source: fd.get("source"),
@@ -133,7 +145,7 @@ export default function OwnerIntakePage() {
       });
       setPreview(intake);
       setShowUpload(false);
-      await load(selected);
+      await load(activeBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to upload");
     } finally {
@@ -142,12 +154,13 @@ export default function OwnerIntakePage() {
   }
 
   async function confirm(intakeId: string) {
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     try {
       await api(`/api/owner/intake/uploads/${intakeId}/confirm`, { method: "POST" });
       setPreview(null);
-      await load(selected);
+      await load(activeBusinessId);
       setConfirmed(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to confirm");
@@ -156,9 +169,14 @@ export default function OwnerIntakePage() {
     }
   }
 
-  if (loading) return <CardDashboardSkeleton label="Loading data intake" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading data intake" />;
+  if (needsBusinessRecovery) return (
+    <PageContainer>
+      <p>Your previously selected business is no longer available. Choose a business to continue.</p>
+      <BusinessContextSelector businesses={businesses} selectedId={null} onChange={onSwitchBusiness} />
+    </PageContainer>
+  );
 
-  const businesses: any[] = dashboard?.businesses ?? [];
   const intakes: any[] = dashboard?.intakes ?? [];
 
   return (
@@ -236,8 +254,8 @@ export default function OwnerIntakePage() {
           <div className="mb-6">
             <BusinessContextSelector
               businesses={businesses}
-              selectedId={selected}
-              onChange={(businessId) => { setPreview(null); load(businessId); }}
+              selectedId={activeBusinessId}
+              onChange={onSwitchBusiness}
             />
           </div>
 

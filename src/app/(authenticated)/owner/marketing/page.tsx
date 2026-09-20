@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -91,32 +92,42 @@ const MARKETING_FIELDS: Array<{ name: string; label: string }> = [
 ];
 
 export default function OwnerMarketingPage() {
+  const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, refreshBusinesses, loading: contextLoading } = useActiveBusiness();
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
   const [showBusinessForm, setShowBusinessForm] = useState(false);
   const [showSnapshotForm, setShowSnapshotForm] = useState(false);
+  const requestSeq = useRef(0);
 
-  const load = useCallback(async (businessId?: string | null) => {
+  const load = useCallback(async (businessId: string) => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
-      const qs = businessId ? `?businessId=${businessId}` : "";
-      const data = await api(`/api/owner/marketing/dashboard${qs}`);
+      const data = await api(`/api/owner/marketing/dashboard?businessId=${businessId}`);
+      if (requestSeq.current !== seq) return;
       setDashboard(data);
-      setSelected(data.selectedBusinessId);
     } catch (e) {
+      if (requestSeq.current !== seq) return;
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      if (requestSeq.current === seq) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (contextLoading) return;
+    if (needsBusinessRecovery) return;
+    if (!activeBusinessId) { setDashboard(null); setLoading(false); return; }
+    void load(activeBusinessId);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery, load]);
+
+  const onSwitchBusiness = useCallback((id: string) => {
+    setLoading(true);
+    setActiveBusinessId(id);
+  }, [setActiveBusinessId]);
 
   async function createBusiness(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -137,7 +148,8 @@ export default function OwnerMarketingPage() {
         }),
       });
       setShowBusinessForm(false);
-      await load(created.id);
+      setActiveBusinessId(created.id);
+      await refreshBusinesses();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create business");
     } finally {
@@ -147,7 +159,7 @@ export default function OwnerMarketingPage() {
 
   async function addSnapshot(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!selected) return;
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
@@ -163,12 +175,12 @@ export default function OwnerMarketingPage() {
       if (v && typeof v === "string" && v.trim()) body[f.name] = parseFloat(v);
     }
     try {
-      await api(`/api/owner/marketing/businesses/${selected}/snapshots`, {
+      await api(`/api/owner/marketing/businesses/${activeBusinessId}/snapshots`, {
         method: "POST",
         body: JSON.stringify(body),
       });
       setShowSnapshotForm(false);
-      await load(selected);
+      await load(activeBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save snapshot");
     } finally {
@@ -177,15 +189,15 @@ export default function OwnerMarketingPage() {
   }
 
   async function runDiagnosis() {
-    if (!selected || !dashboard?.latestSnapshot) return;
+    if (!activeBusinessId || !dashboard?.latestSnapshot) return;
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/owner/marketing/businesses/${selected}/diagnoses`, {
+      await api(`/api/owner/marketing/businesses/${activeBusinessId}/diagnoses`, {
         method: "POST",
         body: JSON.stringify({ snapshotId: dashboard.latestSnapshot.id }),
       });
-      await load(selected);
+      await load(activeBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to run diagnosis");
     } finally {
@@ -194,6 +206,7 @@ export default function OwnerMarketingPage() {
   }
 
   async function updateAction(action: any, status: string) {
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     try {
@@ -207,7 +220,7 @@ export default function OwnerMarketingPage() {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      await load(selected);
+      await load(activeBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update action");
     } finally {
@@ -216,6 +229,7 @@ export default function OwnerMarketingPage() {
   }
 
   async function verifyAction(action: any) {
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     try {
@@ -233,7 +247,7 @@ export default function OwnerMarketingPage() {
           targetDirection: dir === "down" ? "down" : "up",
         }),
       });
-      await load(selected);
+      await load(activeBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to verify");
     } finally {
@@ -241,10 +255,15 @@ export default function OwnerMarketingPage() {
     }
   }
 
-  if (loading) return <CardDashboardSkeleton label="Loading marketing workspace" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading marketing workspace" />;
+  if (needsBusinessRecovery) return (
+    <PageContainer>
+      <p>Your previously selected business is no longer available. Choose a business to continue.</p>
+      <BusinessContextSelector businesses={businesses} selectedId={null} onChange={onSwitchBusiness} />
+    </PageContainer>
+  );
 
-  const businesses: any[] = dashboard?.businesses ?? [];
-  const currentBusiness = businesses.find((b) => b.id === selected) || null;
+  const currentBusiness = businesses.find((b) => b.id === activeBusinessId) || null;
   const cycle = dashboard?.latestCycle ?? null;
   const score = dashboard?.domainScore ?? null;
   const missing: string[] = dashboard?.missingCriticalData ?? [];
@@ -294,13 +313,13 @@ export default function OwnerMarketingPage() {
           <div className="mb-6 flex flex-wrap items-end gap-3">
             <BusinessContextSelector
               businesses={businesses}
-              selectedId={selected}
-              onChange={(businessId) => load(businessId)}
+              selectedId={activeBusinessId}
+              onChange={onSwitchBusiness}
             />
-            <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
+            <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!activeBusinessId}>
               + Add marketing snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy}>
+            <Button onClick={runDiagnosis} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy}>
               Run marketing diagnosis
             </Button>
           </div>
