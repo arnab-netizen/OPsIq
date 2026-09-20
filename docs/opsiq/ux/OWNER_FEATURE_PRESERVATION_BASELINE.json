@@ -8309,9 +8309,21 @@
         "note": "Query string (via interpolated variable `qs`)."
       },
       "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
-      "responseUsage": "SUCCESS_STATUS_ONLY",
-      "fieldsConsumed": [],
-      "responseUsageNote": "Only a `\"publicSignalStatus\" in sig` presence check gates whether the response is stored at all; no field value is read out of it here."
+      "responseUsage": "FIELDS",
+      "fieldsConsumed": [
+        "blockedUnsafeActions",
+        "evidenceStrengthSummary",
+        "missingData",
+        "noLiveIngestionStatement",
+        "ownerApprovalRequired",
+        "publicSignalStatus",
+        "sourceQualitySummary",
+        "topPublicSignalAction",
+        "uncertaintyCaveat",
+        "validationRequired",
+        "whyThisMatters"
+      ],
+      "responseUsageNote": "Mechanically traced: stored via a `\"publicSignalStatus\" in <rawVar>` presence check, then passed as a prop into a child component in the same traced tree that reads these fields directly (see deriveCockpitFieldsConsumed)."
     },
     {
       "endpoint": "/api/owner/recovery-status",
@@ -8323,9 +8335,21 @@
         "note": "Query string (via interpolated variable `qs`)."
       },
       "failureBehavior": "BEST_EFFORT_NULL_ON_FAILURE",
-      "responseUsage": "SUCCESS_STATUS_ONLY",
-      "fieldsConsumed": [],
-      "responseUsageNote": "Only a `\"recoveryStatus\" in rec` presence check gates whether the response is stored at all; no field value is read out of it here."
+      "responseUsage": "FIELDS",
+      "fieldsConsumed": [
+        "blockedUnsafeActions",
+        "linkedProcessExecutionTaskIds",
+        "noGuaranteeStatement",
+        "ownerApprovalRequired",
+        "recoveryStatus",
+        "requiredEvidence",
+        "requiredReassessment",
+        "stabilizationGate",
+        "thriveGate",
+        "topRecoveryBottleneck",
+        "uncertaintyCaveat"
+      ],
+      "responseUsageNote": "Mechanically traced: stored via a `\"recoveryStatus\" in <rawVar>` presence check, then passed as a prop into a child component in the same traced tree that reads these fields directly (see deriveCockpitFieldsConsumed)."
     },
     {
       "endpoint": "/api/escalation/acknowledge",
@@ -8748,15 +8772,7 @@
         }
       ],
       "knownTransitionMaps": [],
-      "mutationEndpoints": [
-        {
-          "path": "/api/proof-risk/adjudicate",
-          "methods": [
-            "POST"
-          ],
-          "sourceFile": "src/app/api/proof-risk/adjudicate/route.ts"
-        }
-      ],
+      "mutationEndpoints": [],
       "currentOwnerUiPages": [
         "/owner/adjudication"
       ]
@@ -9587,22 +9603,6 @@
         "src/domain/owner-strategy/risk-adjusted-wealth.types.ts",
         "src/domain/owner-strategy/risk-rules.ts",
         "src/domain/owner-strategy/scales.ts",
-        "src/domain/owner-strategy/startup-arbitration.ts",
-        "src/domain/owner-strategy/startup-economics.ts",
-        "src/domain/owner-strategy/startup-evidence-evaluation.ts",
-        "src/domain/owner-strategy/startup-explainability.ts",
-        "src/domain/owner-strategy/startup-hypothesis-engine.ts",
-        "src/domain/owner-strategy/startup-idea-generation.ts",
-        "src/domain/owner-strategy/startup-initiative-lifecycle.ts",
-        "src/domain/owner-strategy/startup-lifecycle.ts",
-        "src/domain/owner-strategy/startup-mode.ts",
-        "src/domain/owner-strategy/startup-mode.types.ts",
-        "src/domain/owner-strategy/startup-mode.validation.ts",
-        "src/domain/owner-strategy/startup-readiness.ts",
-        "src/domain/owner-strategy/startup-research-planner.ts",
-        "src/domain/owner-strategy/startup-screening.ts",
-        "src/domain/owner-strategy/startup-validation-planner.ts",
-        "src/domain/owner-strategy/startup-verification-windows.ts",
         "src/domain/owner-strategy/thresholds.ts",
         "src/domain/owner-strategy/types.ts",
         "src/domain/owner-strategy/validation.ts",
@@ -9617,11 +9617,6 @@
         "src/services/owner-strategy/goal-trajectory.service.ts",
         "src/services/owner-strategy/goal.service.ts",
         "src/services/owner-strategy/snapshot.service.ts",
-        "src/services/owner-strategy/startup-execution-blueprint.service.ts",
-        "src/services/owner-strategy/startup-handoff.service.ts",
-        "src/services/owner-strategy/startup-initiative-outcome.service.ts",
-        "src/services/owner-strategy/startup-session.service.ts",
-        "src/services/owner-strategy/startup.service.ts",
         "src/services/owner-strategy/verification.service.ts",
         "src/services/owner-strategy/wealth-path.service.ts"
       ],
@@ -9630,29 +9625,6 @@
       "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
       "workflowStatuses": [
         {
-          "typeName": "StartupSessionStatus",
-          "values": [
-            "DRAFT",
-            "CONTEXT_CAPTURE",
-            "DISCOVERY",
-            "IDEA_GENERATION",
-            "SCREENING",
-            "VALIDATION_PLANNED",
-            "VALIDATION_IN_PROGRESS",
-            "ECONOMICS_REVIEW",
-            "READINESS_REVIEW",
-            "OWNER_DECISION_REQUIRED",
-            "APPROVED",
-            "MODIFICATION_REQUIRED",
-            "ON_HOLD",
-            "REJECTED",
-            "EXECUTION_PLANNED",
-            "STALE_REAPPROVAL_REQUIRED",
-            "ACTIVE"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-lifecycle.ts"
-        },
-        {
           "typeName": "(status literals, no single union type declared)",
           "values": [
             "ACHIEVED",
@@ -9660,34 +9632,6 @@
             "REVISED"
           ],
           "sourceFile": "src/services/owner-strategy/goal.service.ts"
-        },
-        {
-          "typeName": "(status literals, no single union type declared)",
-          "values": [
-            "ACTIVE",
-            "ALLOCATED",
-            "CANCELLED",
-            "PENDING",
-            "PROPOSED",
-            "SUPERSEDED"
-          ],
-          "sourceFile": "src/services/owner-strategy/startup-execution-blueprint.service.ts"
-        },
-        {
-          "typeName": "(status literals, no single union type declared)",
-          "values": [
-            "ACTIVE",
-            "COMPLETED"
-          ],
-          "sourceFile": "src/services/owner-strategy/startup-handoff.service.ts"
-        },
-        {
-          "typeName": "(status literals, no single union type declared)",
-          "values": [
-            "ACQUIRED",
-            "DRAFT"
-          ],
-          "sourceFile": "src/services/owner-strategy/startup-session.service.ts"
         },
         {
           "typeName": "RecoveryActionStatus (shared)",
@@ -9734,113 +9678,6 @@
             "INSUFFICIENT_EVIDENCE_TO_ESTIMATE"
           ],
           "sourceFile": "src/domain/owner-strategy/market-sizing.ts"
-        },
-        {
-          "typeName": "EconomicClassification",
-          "values": [
-            "VIABLE",
-            "MARGINAL",
-            "UNVIABLE",
-            "INSUFFICIENT_DATA"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-economics.ts"
-        },
-        {
-          "typeName": "EvidenceFreshnessState",
-          "values": [
-            "FRESH",
-            "NEARING_EXPIRY",
-            "STALE",
-            "CURRENT_VERIFICATION_REQUIRED",
-            "NO_EXPIRY_POLICY"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-evidence-evaluation.ts"
-        },
-        {
-          "typeName": "HypothesisType",
-          "values": [
-            "DEMAND",
-            "PRICING",
-            "DELIVERY",
-            "ACQUISITION",
-            "ECONOMIC",
-            "REGULATORY",
-            "SUPPLIER"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-hypothesis-engine.ts"
-        },
-        {
-          "typeName": "HypothesisMemoryType",
-          "values": [
-            "STARTUP_VALIDATED_HYPOTHESIS",
-            "STARTUP_FAILED_HYPOTHESIS"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-hypothesis-engine.ts"
-        },
-        {
-          "typeName": "IdeaOriginType",
-          "values": [
-            "OWNER_SUBMITTED",
-            "DISCOVERED_FROM_EVIDENCE",
-            "DERIVED_FROM_EXISTING_ASSETS",
-            "DERIVED_FROM_CUSTOMER_PROBLEM",
-            "DERIVED_FROM_EXTERNAL_OPPORTUNITY",
-            "SYSTEM_SYNTHESIZED"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-idea-generation.ts"
-        },
-        {
-          "typeName": "StartupInitiativeStatus",
-          "values": [
-            "ACTIVE",
-            "PAUSED",
-            "COMPLETED",
-            "CANCELLED",
-            "SUPERSEDED"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-initiative-lifecycle.ts"
-        },
-        {
-          "typeName": "StartupInitiativeClosedStatus",
-          "values": [
-            "COMPLETED",
-            "CANCELLED"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-initiative-lifecycle.ts"
-        },
-        {
-          "typeName": "ReadinessStatus",
-          "values": [
-            "READY",
-            "CONDITIONALLY_READY",
-            "NOT_READY",
-            "BLOCKED"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-readiness.ts"
-        },
-        {
-          "typeName": "OwnerTaskType",
-          "values": [
-            "OWNER_PRIVATE_FACT_REQUIRED",
-            "OWNER_AUTHORIZATION_REQUIRED",
-            "OWNER_CONNECTOR_REQUIRED",
-            "OWNER_OUTREACH_APPROVAL_REQUIRED",
-            "OWNER_PHYSICAL_ACTION_REQUIRED",
-            "OWNER_PROFESSIONAL_ADVICE_REQUIRED",
-            "OWNER_NEGOTIATION_REQUIRED"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-research-planner.ts"
-        },
-        {
-          "typeName": "ScreeningStatus",
-          "values": [
-            "PASSED",
-            "CONDITIONALLY_PASSED",
-            "REJECTED",
-            "EVIDENCE_REQUIRED",
-            "UNSCREENED"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-screening.ts"
         }
       ],
       "knownTransitionMaps": [],
@@ -10754,6 +10591,838 @@
       "currentOwnerUiPages": [
         "/owner/vendor"
       ]
+    },
+    {
+      "family": "budget_actions",
+      "source": [
+        "src/services/owner-budget/action-link.service.ts"
+      ],
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "workflowStatuses": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitionSource": "src/domain/founder-recovery/action-status.ts",
+      "knownTransitionMap": {
+        "proposed": [
+          "assigned",
+          "cancelled"
+        ],
+        "assigned": [
+          "in_progress",
+          "blocked",
+          "cancelled"
+        ],
+        "in_progress": [
+          "blocked",
+          "completed",
+          "cancelled"
+        ],
+        "blocked": [
+          "assigned",
+          "in_progress",
+          "cancelled"
+        ],
+        "completed": [],
+        "cancelled": []
+      },
+      "domainResultStates": [],
+      "knownTransitionMaps": [],
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/budget/actions/[actionId]",
+          "methods": [
+            "PATCH"
+          ],
+          "sourceFile": "src/app/api/owner/budget/actions/[actionId]/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/budget"
+      ]
+    },
+    {
+      "family": "startup_actions",
+      "source": [
+        "src/domain/owner-strategy/startup-arbitration.ts",
+        "src/domain/owner-strategy/startup-economics.ts",
+        "src/domain/owner-strategy/startup-evidence-evaluation.ts",
+        "src/domain/owner-strategy/startup-explainability.ts",
+        "src/domain/owner-strategy/startup-hypothesis-engine.ts",
+        "src/domain/owner-strategy/startup-idea-generation.ts",
+        "src/domain/owner-strategy/startup-initiative-lifecycle.ts",
+        "src/domain/owner-strategy/startup-lifecycle.ts",
+        "src/domain/owner-strategy/startup-mode.ts",
+        "src/domain/owner-strategy/startup-mode.types.ts",
+        "src/domain/owner-strategy/startup-mode.validation.ts",
+        "src/domain/owner-strategy/startup-readiness.ts",
+        "src/domain/owner-strategy/startup-research-planner.ts",
+        "src/domain/owner-strategy/startup-screening.ts",
+        "src/domain/owner-strategy/startup-validation-planner.ts",
+        "src/domain/owner-strategy/startup-verification-windows.ts",
+        "src/services/__tests__/startup-claim-fail-closed.test.ts",
+        "src/services/owner-strategy/startup-execution-blueprint.service.ts",
+        "src/services/owner-strategy/startup-handoff.service.ts",
+        "src/services/owner-strategy/startup-initiative-outcome.service.ts",
+        "src/services/owner-strategy/startup-session.service.ts",
+        "src/services/owner-strategy/startup.service.ts",
+        "src/services/startup-status.ts"
+      ],
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "FAMILY_SPECIFIC",
+      "workflowStatuses": [
+        {
+          "typeName": "StartupSessionStatus",
+          "values": [
+            "DRAFT",
+            "CONTEXT_CAPTURE",
+            "DISCOVERY",
+            "IDEA_GENERATION",
+            "SCREENING",
+            "VALIDATION_PLANNED",
+            "VALIDATION_IN_PROGRESS",
+            "ECONOMICS_REVIEW",
+            "READINESS_REVIEW",
+            "OWNER_DECISION_REQUIRED",
+            "APPROVED",
+            "MODIFICATION_REQUIRED",
+            "ON_HOLD",
+            "REJECTED",
+            "EXECUTION_PLANNED",
+            "STALE_REAPPROVAL_REQUIRED",
+            "ACTIVE"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-lifecycle.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACTIVE",
+            "ALLOCATED",
+            "CANCELLED",
+            "PENDING",
+            "PROPOSED",
+            "SUPERSEDED"
+          ],
+          "sourceFile": "src/services/owner-strategy/startup-execution-blueprint.service.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACTIVE",
+            "COMPLETED"
+          ],
+          "sourceFile": "src/services/owner-strategy/startup-handoff.service.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACQUIRED",
+            "DRAFT"
+          ],
+          "sourceFile": "src/services/owner-strategy/startup-session.service.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "FAILED",
+            "NOT_STARTED",
+            "READY",
+            "STARTING"
+          ],
+          "sourceFile": "src/services/startup-status.ts"
+        }
+      ],
+      "domainResultStates": [
+        {
+          "typeName": "EconomicClassification",
+          "values": [
+            "VIABLE",
+            "MARGINAL",
+            "UNVIABLE",
+            "INSUFFICIENT_DATA"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-economics.ts"
+        },
+        {
+          "typeName": "EvidenceFreshnessState",
+          "values": [
+            "FRESH",
+            "NEARING_EXPIRY",
+            "STALE",
+            "CURRENT_VERIFICATION_REQUIRED",
+            "NO_EXPIRY_POLICY"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-evidence-evaluation.ts"
+        },
+        {
+          "typeName": "HypothesisType",
+          "values": [
+            "DEMAND",
+            "PRICING",
+            "DELIVERY",
+            "ACQUISITION",
+            "ECONOMIC",
+            "REGULATORY",
+            "SUPPLIER"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-hypothesis-engine.ts"
+        },
+        {
+          "typeName": "HypothesisMemoryType",
+          "values": [
+            "STARTUP_VALIDATED_HYPOTHESIS",
+            "STARTUP_FAILED_HYPOTHESIS"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-hypothesis-engine.ts"
+        },
+        {
+          "typeName": "IdeaOriginType",
+          "values": [
+            "OWNER_SUBMITTED",
+            "DISCOVERED_FROM_EVIDENCE",
+            "DERIVED_FROM_EXISTING_ASSETS",
+            "DERIVED_FROM_CUSTOMER_PROBLEM",
+            "DERIVED_FROM_EXTERNAL_OPPORTUNITY",
+            "SYSTEM_SYNTHESIZED"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-idea-generation.ts"
+        },
+        {
+          "typeName": "StartupInitiativeStatus",
+          "values": [
+            "ACTIVE",
+            "PAUSED",
+            "COMPLETED",
+            "CANCELLED",
+            "SUPERSEDED"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-initiative-lifecycle.ts"
+        },
+        {
+          "typeName": "StartupInitiativeClosedStatus",
+          "values": [
+            "COMPLETED",
+            "CANCELLED"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-initiative-lifecycle.ts"
+        },
+        {
+          "typeName": "ReadinessStatus",
+          "values": [
+            "READY",
+            "CONDITIONALLY_READY",
+            "NOT_READY",
+            "BLOCKED"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-readiness.ts"
+        },
+        {
+          "typeName": "OwnerTaskType",
+          "values": [
+            "OWNER_PRIVATE_FACT_REQUIRED",
+            "OWNER_AUTHORIZATION_REQUIRED",
+            "OWNER_CONNECTOR_REQUIRED",
+            "OWNER_OUTREACH_APPROVAL_REQUIRED",
+            "OWNER_PHYSICAL_ACTION_REQUIRED",
+            "OWNER_PROFESSIONAL_ADVICE_REQUIRED",
+            "OWNER_NEGOTIATION_REQUIRED"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-research-planner.ts"
+        },
+        {
+          "typeName": "ScreeningStatus",
+          "values": [
+            "PASSED",
+            "CONDITIONALLY_PASSED",
+            "REJECTED",
+            "EVIDENCE_REQUIRED",
+            "UNSCREENED"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-screening.ts"
+        },
+        {
+          "typeName": "StartupStatusType",
+          "values": [
+            "NOT_STARTED",
+            "STARTING",
+            "READY",
+            "FAILED"
+          ],
+          "sourceFile": "src/services/startup-status.ts"
+        }
+      ],
+      "knownTransitionMaps": [],
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/startup-validate",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup-validate/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/initiatives/[initiativeId]/close",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/initiatives/[initiativeId]/close/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/activate",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/activate/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/analysis",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/analysis/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/arbitrate",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/arbitrate/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/blueprint",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/blueprint/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/candidates/[batchId]/[conceptIndex]/accept",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/candidates/[batchId]/[conceptIndex]/accept/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/candidates/[batchId]/[conceptIndex]/reject",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/candidates/[batchId]/[conceptIndex]/reject/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/decision",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/decision/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/evidence",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/evidence/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/explanation",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/explanation/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/generate-ideas",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/generate-ideas/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/economics",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/economics/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/market-sizing",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/market-sizing/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/revise",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/revise/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/validation-plan",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/validation-plan/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/ideas",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/profile",
+          "methods": [
+            "PATCH"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/profile/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]/research",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/research/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions/[sessionId]",
+          "methods": [
+            "PATCH"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/route.ts"
+        },
+        {
+          "path": "/api/owner/startup/sessions",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/startup/sessions/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/startup",
+        "/owner/startup/[sessionId]"
+      ]
+    },
+    {
+      "family": "risk_actions",
+      "source": [
+        "src/services/owner-mode/business-risk.service.ts"
+      ],
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "FAMILY_SPECIFIC",
+      "workflowStatuses": [
+        {
+          "typeName": "RiskStatus",
+          "values": [
+            "IDENTIFIED",
+            "ASSESSED",
+            "MITIGATING",
+            "ACCEPTED",
+            "RESOLVED",
+            "CLOSED"
+          ],
+          "sourceFile": "src/services/owner-mode/business-risk.service.ts"
+        }
+      ],
+      "domainResultStates": [
+        {
+          "typeName": "RiskCategory",
+          "values": [
+            "OPERATIONAL",
+            "FINANCIAL",
+            "MARKET",
+            "COMPLIANCE",
+            "EXECUTION",
+            "STRATEGIC"
+          ],
+          "sourceFile": "src/services/owner-mode/business-risk.service.ts"
+        }
+      ],
+      "knownTransitionMaps": [
+        {
+          "name": "VALID_REVIEW_TRANSITIONS",
+          "sourceFile": "src/services/owner-mode/business-risk.service.ts"
+        }
+      ],
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/risks/[riskId]/review",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/risks/[riskId]/review/route.ts"
+        },
+        {
+          "path": "/api/owner/risks/[riskId]/tasks",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/risks/[riskId]/tasks/route.ts"
+        },
+        {
+          "path": "/api/owner/risks",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/risks/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/risks",
+        "/owner/risks/[id]"
+      ]
+    },
+    {
+      "family": "learning_actions",
+      "source": [
+        "src/domain/owner-mode/controlled-learning.ts",
+        "src/services/controlled-learning-admission.service.ts",
+        "src/services/controlled-learning-attribution.service.ts",
+        "src/services/controlled-learning-candidate.service.ts",
+        "src/services/controlled-learning-consent.service.ts",
+        "src/services/controlled-learning-harm.service.ts",
+        "src/services/controlled-learning-privacy.service.ts",
+        "src/services/controlled-learning-regression.service.ts",
+        "src/services/controlled-learning-rejection.service.ts",
+        "src/services/controlled-learning-retention.service.ts",
+        "src/services/controlled-learning-review.service.ts",
+        "src/services/controlled-learning-rollback.service.ts",
+        "src/services/controlled-learning-rollout.service.ts"
+      ],
+      "commands": [],
+      "commandsNote": "No `type X = \"A\"|\"B\"` union ending in Action/Command, used as an `action:`/`command:`-typed input, found via keyword-matched files.",
+      "workflowModel": "NONE_FOUND",
+      "workflowStatuses": [],
+      "workflowStatusesNote": "No status/state values with persistence/transition-guard evidence (a `.update`/`.updateMany` touching `status`, or an INVALID_TRANSITION/`*_TRANSITIONS` marker) found in keyword-matched files, and no import of the shared founder-recovery/action-status module either.",
+      "domainResultStates": [
+        {
+          "typeName": "ControlledLearningEligibilityStatus",
+          "values": [
+            "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
+            "LEARNING_ELIGIBLE_HUMAN_REVIEWED",
+            "LEARNING_INELIGIBLE_UNVERIFIED",
+            "LEARNING_INELIGIBLE_SYNTHETIC",
+            "LEARNING_INELIGIBLE_AI_GENERATED",
+            "LEARNING_INELIGIBLE_CROSS_TENANT",
+            "LEARNING_INELIGIBLE_NO_OWNER_DECISION",
+            "LEARNING_INELIGIBLE_NO_ACTION_TAKEN",
+            "LEARNING_INELIGIBLE_NO_OUTCOME_WINDOW",
+            "LEARNING_INELIGIBLE_CONFLICTING_EVIDENCE",
+            "LEARNING_INELIGIBLE_SAFETY_RELATED",
+            "LEARNING_INELIGIBLE_PUBLIC_SOURCE_UNVERIFIED"
+          ],
+          "sourceFile": "src/domain/owner-mode/controlled-learning.ts"
+        }
+      ],
+      "knownTransitionMaps": [
+        {
+          "name": "ALLOWED_VERDICTS",
+          "sourceFile": "src/services/controlled-learning-regression.service.ts"
+        }
+      ],
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/learning-candidates/[candidateId]/promote",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/learning-candidates/[candidateId]/promote/route.ts"
+        },
+        {
+          "path": "/api/owner/learning-candidates/[candidateId]/reject",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/learning-candidates/[candidateId]/reject/route.ts"
+        },
+        {
+          "path": "/api/owner/learning-candidates",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/learning-candidates/route.ts"
+        },
+        {
+          "path": "/api/owner/learning-reviews",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/learning-reviews/route.ts"
+        },
+        {
+          "path": "/api/owner/learning-rollback-events",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/learning-rollback-events/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/learning"
+      ]
+    }
+  ],
+  "nonWorkflowMutationFamilies": [
+    {
+      "family": "alerts",
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/alerts/[id]/read",
+          "methods": [
+            "PATCH"
+          ],
+          "sourceFile": "src/app/api/owner/alerts/[id]/read/route.ts"
+        },
+        {
+          "path": "/api/owner/alerts/[id]/resolve",
+          "methods": [
+            "PATCH"
+          ],
+          "sourceFile": "src/app/api/owner/alerts/[id]/resolve/route.ts"
+        },
+        {
+          "path": "/api/owner/alerts",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/alerts/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/alerts"
+      ],
+      "sourceFiles": [
+        "src/app/api/owner/alerts/[id]/read/route.ts",
+        "src/app/api/owner/alerts/[id]/resolve/route.ts",
+        "src/app/api/owner/alerts/route.ts"
+      ]
+    },
+    {
+      "family": "cockpit_governance_arbitration",
+      "mutationEndpoints": [
+        {
+          "path": "/api/escalation/acknowledge",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/escalation/acknowledge/route.ts"
+        },
+        {
+          "path": "/api/owner/constraints",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/constraints/route.ts"
+        },
+        {
+          "path": "/api/owner/override-arbitration",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/override-arbitration/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/cockpit"
+      ],
+      "sourceFiles": [
+        "src/app/api/escalation/acknowledge/route.ts",
+        "src/app/api/owner/constraints/route.ts",
+        "src/app/api/owner/override-arbitration/route.ts"
+      ]
+    },
+    {
+      "family": "feedback_submission",
+      "mutationEndpoints": [
+        {
+          "path": "/api/feedback",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/feedback/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/feedback"
+      ],
+      "sourceFiles": [
+        "src/app/api/feedback/route.ts"
+      ]
+    },
+    {
+      "family": "growth_pricing",
+      "mutationEndpoints": [
+        {
+          "path": "/api/growth/pricing-tiers/[tierId]/approve",
+          "methods": [
+            "PATCH"
+          ],
+          "sourceFile": "src/app/api/growth/pricing-tiers/[tierId]/approve/route.ts"
+        },
+        {
+          "path": "/api/growth/pricing-tiers/[tierId]/supersede",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/growth/pricing-tiers/[tierId]/supersede/route.ts"
+        },
+        {
+          "path": "/api/growth/pricing-tiers",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/growth/pricing-tiers/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/growth-pricing"
+      ],
+      "sourceFiles": [
+        "src/app/api/growth/pricing-tiers/[tierId]/approve/route.ts",
+        "src/app/api/growth/pricing-tiers/[tierId]/supersede/route.ts",
+        "src/app/api/growth/pricing-tiers/route.ts"
+      ],
+      "note": "See preExistingCorrectnessFindings -- capability mismatch recorded, not fixed. Mutations preserved here regardless."
+    },
+    {
+      "family": "intake_uploads",
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/intake/businesses/[businessId]/uploads",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/intake/businesses/[businessId]/uploads/route.ts"
+        },
+        {
+          "path": "/api/owner/intake/uploads/[intakeId]/confirm",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/intake/uploads/[intakeId]/confirm/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/intake"
+      ],
+      "sourceFiles": [
+        "src/app/api/owner/intake/businesses/[businessId]/uploads/route.ts",
+        "src/app/api/owner/intake/uploads/[intakeId]/confirm/route.ts"
+      ]
+    },
+    {
+      "family": "inventory_stock_items",
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/inventory/stock-items/[stockItemId]",
+          "methods": [
+            "PATCH"
+          ],
+          "sourceFile": "src/app/api/owner/inventory/stock-items/[stockItemId]/route.ts"
+        },
+        {
+          "path": "/api/owner/inventory/stock-items",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/inventory/stock-items/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/inventory"
+      ],
+      "sourceFiles": [
+        "src/app/api/owner/inventory/stock-items/[stockItemId]/route.ts",
+        "src/app/api/owner/inventory/stock-items/route.ts"
+      ]
+    },
+    {
+      "family": "manual_entry",
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/manual-entry",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/manual-entry/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/manual-entry"
+      ],
+      "sourceFiles": [
+        "src/app/api/owner/manual-entry/route.ts"
+      ]
+    },
+    {
+      "family": "start_here_analysis",
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/businesses/[businessId]/analyze",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/businesses/[businessId]/analyze/route.ts"
+        },
+        {
+          "path": "/api/owner/businesses/[businessId]/outcomes",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/businesses/[businessId]/outcomes/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/start-here"
+      ],
+      "sourceFiles": [
+        "src/app/api/owner/businesses/[businessId]/analyze/route.ts",
+        "src/app/api/owner/businesses/[businessId]/outcomes/route.ts"
+      ]
+    },
+    {
+      "family": "budget_non_workflow",
+      "mutationEndpoints": [
+        {
+          "path": "/api/owner/budget/override",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/budget/override/route.ts"
+        },
+        {
+          "path": "/api/owner/budget/working-capital",
+          "methods": [
+            "POST"
+          ],
+          "sourceFile": "src/app/api/owner/budget/working-capital/route.ts"
+        }
+      ],
+      "currentOwnerUiPages": [
+        "/owner/budget"
+      ],
+      "sourceFiles": [
+        "src/app/api/owner/budget/override/route.ts",
+        "src/app/api/owner/budget/working-capital/route.ts"
+      ]
     }
   ],
   "workflowStateFamilies": [
@@ -11255,22 +11924,6 @@
         "src/domain/owner-strategy/risk-adjusted-wealth.types.ts",
         "src/domain/owner-strategy/risk-rules.ts",
         "src/domain/owner-strategy/scales.ts",
-        "src/domain/owner-strategy/startup-arbitration.ts",
-        "src/domain/owner-strategy/startup-economics.ts",
-        "src/domain/owner-strategy/startup-evidence-evaluation.ts",
-        "src/domain/owner-strategy/startup-explainability.ts",
-        "src/domain/owner-strategy/startup-hypothesis-engine.ts",
-        "src/domain/owner-strategy/startup-idea-generation.ts",
-        "src/domain/owner-strategy/startup-initiative-lifecycle.ts",
-        "src/domain/owner-strategy/startup-lifecycle.ts",
-        "src/domain/owner-strategy/startup-mode.ts",
-        "src/domain/owner-strategy/startup-mode.types.ts",
-        "src/domain/owner-strategy/startup-mode.validation.ts",
-        "src/domain/owner-strategy/startup-readiness.ts",
-        "src/domain/owner-strategy/startup-research-planner.ts",
-        "src/domain/owner-strategy/startup-screening.ts",
-        "src/domain/owner-strategy/startup-validation-planner.ts",
-        "src/domain/owner-strategy/startup-verification-windows.ts",
         "src/domain/owner-strategy/thresholds.ts",
         "src/domain/owner-strategy/types.ts",
         "src/domain/owner-strategy/validation.ts",
@@ -11285,38 +11938,10 @@
         "src/services/owner-strategy/goal-trajectory.service.ts",
         "src/services/owner-strategy/goal.service.ts",
         "src/services/owner-strategy/snapshot.service.ts",
-        "src/services/owner-strategy/startup-execution-blueprint.service.ts",
-        "src/services/owner-strategy/startup-handoff.service.ts",
-        "src/services/owner-strategy/startup-initiative-outcome.service.ts",
-        "src/services/owner-strategy/startup-session.service.ts",
-        "src/services/owner-strategy/startup.service.ts",
         "src/services/owner-strategy/verification.service.ts",
         "src/services/owner-strategy/wealth-path.service.ts"
       ],
       "states": [
-        {
-          "typeName": "StartupSessionStatus",
-          "values": [
-            "DRAFT",
-            "CONTEXT_CAPTURE",
-            "DISCOVERY",
-            "IDEA_GENERATION",
-            "SCREENING",
-            "VALIDATION_PLANNED",
-            "VALIDATION_IN_PROGRESS",
-            "ECONOMICS_REVIEW",
-            "READINESS_REVIEW",
-            "OWNER_DECISION_REQUIRED",
-            "APPROVED",
-            "MODIFICATION_REQUIRED",
-            "ON_HOLD",
-            "REJECTED",
-            "EXECUTION_PLANNED",
-            "STALE_REAPPROVAL_REQUIRED",
-            "ACTIVE"
-          ],
-          "sourceFile": "src/domain/owner-strategy/startup-lifecycle.ts"
-        },
         {
           "typeName": "(status literals, no single union type declared)",
           "values": [
@@ -11325,34 +11950,6 @@
             "REVISED"
           ],
           "sourceFile": "src/services/owner-strategy/goal.service.ts"
-        },
-        {
-          "typeName": "(status literals, no single union type declared)",
-          "values": [
-            "ACTIVE",
-            "ALLOCATED",
-            "CANCELLED",
-            "PENDING",
-            "PROPOSED",
-            "SUPERSEDED"
-          ],
-          "sourceFile": "src/services/owner-strategy/startup-execution-blueprint.service.ts"
-        },
-        {
-          "typeName": "(status literals, no single union type declared)",
-          "values": [
-            "ACTIVE",
-            "COMPLETED"
-          ],
-          "sourceFile": "src/services/owner-strategy/startup-handoff.service.ts"
-        },
-        {
-          "typeName": "(status literals, no single union type declared)",
-          "values": [
-            "ACQUIRED",
-            "DRAFT"
-          ],
-          "sourceFile": "src/services/owner-strategy/startup-session.service.ts"
         },
         {
           "typeName": "RecoveryActionStatus (shared)",
@@ -11552,6 +12149,184 @@
       "ownerUiLocation": [
         "/owner/compliance",
         "/owner/compliance/[id]"
+      ]
+    },
+    {
+      "family": "budget_actions",
+      "workflowModel": "SHARED_RECOVERY_ACTION_STATUS",
+      "source": [
+        "src/services/owner-budget/action-link.service.ts"
+      ],
+      "states": [
+        {
+          "typeName": "RecoveryActionStatus (shared)",
+          "values": [
+            "proposed",
+            "assigned",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "sourceFile": "src/domain/founder-recovery/action-status.ts"
+        }
+      ],
+      "transitions": {
+        "source": "src/domain/founder-recovery/action-status.ts",
+        "map": {
+          "proposed": [
+            "assigned",
+            "cancelled"
+          ],
+          "assigned": [
+            "in_progress",
+            "blocked",
+            "cancelled"
+          ],
+          "in_progress": [
+            "blocked",
+            "completed",
+            "cancelled"
+          ],
+          "blocked": [
+            "assigned",
+            "in_progress",
+            "cancelled"
+          ],
+          "completed": [],
+          "cancelled": []
+        }
+      },
+      "ownerUiLocation": [
+        "/owner/budget"
+      ]
+    },
+    {
+      "family": "startup_actions",
+      "workflowModel": "FAMILY_SPECIFIC",
+      "source": [
+        "src/domain/owner-strategy/startup-arbitration.ts",
+        "src/domain/owner-strategy/startup-economics.ts",
+        "src/domain/owner-strategy/startup-evidence-evaluation.ts",
+        "src/domain/owner-strategy/startup-explainability.ts",
+        "src/domain/owner-strategy/startup-hypothesis-engine.ts",
+        "src/domain/owner-strategy/startup-idea-generation.ts",
+        "src/domain/owner-strategy/startup-initiative-lifecycle.ts",
+        "src/domain/owner-strategy/startup-lifecycle.ts",
+        "src/domain/owner-strategy/startup-mode.ts",
+        "src/domain/owner-strategy/startup-mode.types.ts",
+        "src/domain/owner-strategy/startup-mode.validation.ts",
+        "src/domain/owner-strategy/startup-readiness.ts",
+        "src/domain/owner-strategy/startup-research-planner.ts",
+        "src/domain/owner-strategy/startup-screening.ts",
+        "src/domain/owner-strategy/startup-validation-planner.ts",
+        "src/domain/owner-strategy/startup-verification-windows.ts",
+        "src/services/__tests__/startup-claim-fail-closed.test.ts",
+        "src/services/owner-strategy/startup-execution-blueprint.service.ts",
+        "src/services/owner-strategy/startup-handoff.service.ts",
+        "src/services/owner-strategy/startup-initiative-outcome.service.ts",
+        "src/services/owner-strategy/startup-session.service.ts",
+        "src/services/owner-strategy/startup.service.ts",
+        "src/services/startup-status.ts"
+      ],
+      "states": [
+        {
+          "typeName": "StartupSessionStatus",
+          "values": [
+            "DRAFT",
+            "CONTEXT_CAPTURE",
+            "DISCOVERY",
+            "IDEA_GENERATION",
+            "SCREENING",
+            "VALIDATION_PLANNED",
+            "VALIDATION_IN_PROGRESS",
+            "ECONOMICS_REVIEW",
+            "READINESS_REVIEW",
+            "OWNER_DECISION_REQUIRED",
+            "APPROVED",
+            "MODIFICATION_REQUIRED",
+            "ON_HOLD",
+            "REJECTED",
+            "EXECUTION_PLANNED",
+            "STALE_REAPPROVAL_REQUIRED",
+            "ACTIVE"
+          ],
+          "sourceFile": "src/domain/owner-strategy/startup-lifecycle.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACTIVE",
+            "ALLOCATED",
+            "CANCELLED",
+            "PENDING",
+            "PROPOSED",
+            "SUPERSEDED"
+          ],
+          "sourceFile": "src/services/owner-strategy/startup-execution-blueprint.service.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACTIVE",
+            "COMPLETED"
+          ],
+          "sourceFile": "src/services/owner-strategy/startup-handoff.service.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "ACQUIRED",
+            "DRAFT"
+          ],
+          "sourceFile": "src/services/owner-strategy/startup-session.service.ts"
+        },
+        {
+          "typeName": "(status literals, no single union type declared)",
+          "values": [
+            "FAILED",
+            "NOT_STARTED",
+            "READY",
+            "STARTING"
+          ],
+          "sourceFile": "src/services/startup-status.ts"
+        }
+      ],
+      "transitions": "NOT_VERIFIED — no *_TRANSITIONS/ALLOWED_* map literal found directly in the matched source files, and this family does not import the shared founder-recovery/action-status module.",
+      "ownerUiLocation": [
+        "/owner/startup",
+        "/owner/startup/[sessionId]"
+      ]
+    },
+    {
+      "family": "risk_actions",
+      "workflowModel": "FAMILY_SPECIFIC",
+      "source": [
+        "src/services/owner-mode/business-risk.service.ts"
+      ],
+      "states": [
+        {
+          "typeName": "RiskStatus",
+          "values": [
+            "IDENTIFIED",
+            "ASSESSED",
+            "MITIGATING",
+            "ACCEPTED",
+            "RESOLVED",
+            "CLOSED"
+          ],
+          "sourceFile": "src/services/owner-mode/business-risk.service.ts"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "VALID_REVIEW_TRANSITIONS",
+          "sourceFile": "src/services/owner-mode/business-risk.service.ts"
+        }
+      ],
+      "ownerUiLocation": [
+        "/owner/risks",
+        "/owner/risks/[id]"
       ]
     }
   ],

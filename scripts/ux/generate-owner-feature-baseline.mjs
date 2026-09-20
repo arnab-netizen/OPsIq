@@ -659,29 +659,78 @@ function buildOwnerPageRoutes(sidebarItems, allApiCapabilityIndex) {
 const OWNER_ACTION_FAMILIES = [
   { family: "process_execution", apiPrefixes: ["/api/owner/process-execution", "/api/owner/execution-plan"], uiPages: ["/owner/execution", "/owner/cockpit"], sourceKeywords: ["process-execution"] },
   { family: "tasks", apiPrefixes: ["/api/owner/tasks", "/api/owner/action-plan", "/api/owner/action-assignments"], uiPages: ["/owner/tasks", "/owner/tasks/new", "/owner/tasks/[taskId]"], sourceKeywords: ["process-execution"] },
-  { family: "proof_submit_review", apiPrefixes: ["/api/owner/proof-risk", "/api/proof-risk"], uiPages: ["/owner/adjudication"], sourceKeywords: ["proof-risk-adjudication", "reused-hash-precheck", "evidence-credibility-graph", "timing-evidence"] },
+  // apiPrefixes scoped to ONLY /api/owner/proof-risk (the read-only queue) -- the actual proof
+  // submit/review WRITE actions live under /api/owner/tasks/[taskId]/proof/{submit,review} and are
+  // already claimed by the "tasks" family's own /api/owner/tasks prefix; giving them to both would
+  // be double-coverage. /api/proof-risk (the adjudication decision itself, no /owner/ prefix) is
+  // exclusively adjudication's below -- a confirmed duplicate-coverage defect otherwise, since both
+  // families previously listed both prefixes and both matched POST /api/proof-risk/adjudicate.
+  { family: "proof_submit_review", apiPrefixes: ["/api/owner/proof-risk"], uiPages: ["/owner/adjudication"], sourceKeywords: ["proof-risk-adjudication", "reused-hash-precheck", "evidence-credibility-graph", "timing-evidence"] },
   { family: "finance_actions", apiPrefixes: ["/api/owner/finance"], uiPages: ["/owner/finance"], sourceKeywords: ["owner-finance"] },
   { family: "cashflow_actions", apiPrefixes: ["/api/owner/cashflow"], uiPages: ["/owner/cashflow"], sourceKeywords: ["owner-cashflow"] },
   { family: "sales_actions", apiPrefixes: ["/api/owner/sales"], uiPages: ["/owner/sales"], sourceKeywords: ["owner-sales"] },
   { family: "operations_actions", apiPrefixes: ["/api/owner/operations", "/api/owner/capacity", "/api/owner/equipment"], uiPages: ["/owner/operations"], sourceKeywords: ["owner-operations"] },
   { family: "sop_actions", apiPrefixes: ["/api/owner/sop", "/api/owner/sop-documents", "/api/owner/sop-intelligence"], uiPages: ["/owner/execution"], sourceKeywords: ["owner-sop", "sop-checklist-correction-engine", "staff-training-assignment-engine", "sop-training-effectiveness-loop"] },
   { family: "recovery_actions", apiPrefixes: ["/api/owner/recovery", "/api/owner/recovery-status"], uiPages: ["/owner/recovery"], sourceKeywords: ["founder-recovery"] },
-  { family: "strategy_actions", apiPrefixes: ["/api/owner/strategy"], uiPages: ["/owner/strategy"], sourceKeywords: ["owner-strategy"] },
+  // excludeKeywords: "startup" -- confirmed defect: src/domain/owner-strategy/ and
+  // src/services/owner-strategy/ both hold Startup's own files (startup-lifecycle.ts,
+  // startup-session.service.ts, etc.) alongside genuine Strategy files; a directory-only keyword
+  // match previously merged Startup's StartupSessionStatus/StartupInitiativeStatus and 4 of its
+  // services into strategy_actions. See the dedicated startup_actions family below.
+  { family: "strategy_actions", apiPrefixes: ["/api/owner/strategy"], uiPages: ["/owner/strategy"], sourceKeywords: ["owner-strategy"], excludeKeywords: ["startup"] },
   { family: "marketing_actions", apiPrefixes: ["/api/owner/marketing"], uiPages: ["/owner/marketing", "/owner/marketing/campaigns"], sourceKeywords: ["owner-marketing"] },
   { family: "approvals", apiPrefixes: ["/api/owner/approval", "/api/owner/approvals"], uiPages: ["/owner/approvals"], sourceKeywords: ["approval-threshold-policy", "approval.service", "approval-resolution"] },
-  { family: "adjudication", apiPrefixes: ["/api/owner/proof-risk", "/api/proof-risk"], uiPages: ["/owner/adjudication"], sourceKeywords: ["proof-risk-adjudication"] },
+  { family: "adjudication", apiPrefixes: ["/api/proof-risk"], uiPages: ["/owner/adjudication"], sourceKeywords: ["proof-risk-adjudication"] },
   { family: "opportunity_decisions_execution", apiPrefixes: ["/api/owner/opportunities"], uiPages: ["/owner/cockpit"], sourceKeywords: ["opportunity-"] },
   { family: "goal_related", apiPrefixes: ["/api/owner/goals", "/api/owner/goal-arbitration", "/api/owner/objectives"], uiPages: ["/owner/goals"], sourceKeywords: ["objective-portfolio", "objective-arbitration", "goal-attention"] },
   { family: "compliance_actions", apiPrefixes: ["/api/owner/compliance"], uiPages: ["/owner/compliance", "/owner/compliance/[id]"], sourceKeywords: ["compliance"] },
   { family: "procurement_transitions", apiPrefixes: ["/api/owner/procurement"], uiPages: ["/owner/procurement"], sourceKeywords: ["procurement"] },
   { family: "vendor_actions", apiPrefixes: ["/api/owner/vendor"], uiPages: ["/owner/vendor"], sourceKeywords: ["vendor"] },
+  // New in UX-00A.4 -- closing confirmed mutation-coverage gaps, each backed by direct source
+  // evidence (see the generator's commit message for the grep citations):
+  // Budget: src/services/owner-budget/action-link.service.ts imports the shared
+  // founder-recovery/action-status FSM directly and powers PATCH .../budget/actions/[actionId].
+  { family: "budget_actions", apiPrefixes: ["/api/owner/budget/actions"], uiPages: ["/owner/budget"], sourceKeywords: ["owner-budget/action-link"] },
+  // Startup: its own dedicated family, kept OUT of strategy_actions (see that entry's comment)
+  // even though both live under the owner-strategy domain/service directories.
+  { family: "startup_actions", apiPrefixes: ["/api/owner/startup", "/api/owner/startup-validate"], uiPages: ["/owner/startup", "/owner/startup/[sessionId]"], sourceKeywords: ["startup"] },
+  // Risk: src/services/owner-mode/business-risk.service.ts declares its own RiskStatus (IDENTIFIED
+  // / ASSESSED / MITIGATING / ACCEPTED / RESOLVED / CLOSED) with real `.update`-backed persistence.
+  // Hidden-for-safety route (see hiddenSafetyRoutes) -- preserved here regardless; preservation is
+  // not exposure.
+  { family: "risk_actions", apiPrefixes: ["/api/owner/risks"], uiPages: ["/owner/risks", "/owner/risks/[id]"], sourceKeywords: ["business-risk"] },
+  // Learning: src/services/controlled-learning-candidate.service.ts governs a real
+  // ControlledLearningEligibilityStatus lifecycle (PROMOTED/REJECTED actions, an allowedStatuses
+  // transition guard, and a `.update` call).
+  { family: "learning_actions", apiPrefixes: ["/api/owner/learning-candidates", "/api/owner/learning-reviews", "/api/owner/learning-rollback-events"], uiPages: ["/owner/learning"], sourceKeywords: ["controlled-learning"] },
 ];
 
-function findFilesByKeywords(keywords) {
+/**
+ * Mutations that are real and owner-triggerable but do not represent a governed workflow/state-
+ * machine in current source (no persisted status enum with transition-guard evidence was found
+ * for these specific endpoints) -- e.g. a one-shot submission, upload confirmation, or trigger.
+ * Each entry is populated purely from already-computed data (majorActions grouped by a shared
+ * page/route-prefix), no new parsing.
+ */
+const NON_WORKFLOW_MUTATION_FAMILIES = [
+  { family: "alerts", apiPrefixes: ["/api/owner/alerts"], uiPages: ["/owner/alerts"] },
+  { family: "cockpit_governance_arbitration", apiPrefixes: ["/api/escalation/acknowledge", "/api/owner/constraints", "/api/owner/override-arbitration"], uiPages: ["/owner/cockpit"] },
+  { family: "feedback_submission", apiPrefixes: ["/api/feedback"], uiPages: ["/owner/feedback"] },
+  { family: "growth_pricing", apiPrefixes: ["/api/growth/pricing-tiers"], uiPages: ["/owner/growth-pricing"], note: "See preExistingCorrectnessFindings -- capability mismatch recorded, not fixed. Mutations preserved here regardless." },
+  { family: "intake_uploads", apiPrefixes: ["/api/owner/intake/businesses", "/api/owner/intake/uploads"], uiPages: ["/owner/intake"] },
+  { family: "inventory_stock_items", apiPrefixes: ["/api/owner/inventory/stock-items"], uiPages: ["/owner/inventory"] },
+  { family: "manual_entry", apiPrefixes: ["/api/owner/manual-entry"], uiPages: ["/owner/manual-entry"] },
+  { family: "start_here_analysis", apiPrefixes: ["/api/owner/businesses"], uiPages: ["/owner/start-here"] },
+  // Budget mutations proven NOT part of the shared FSM (see budget_actions above) -- override and
+  // working-capital submission have no status/transition evidence of their own in source.
+  { family: "budget_non_workflow", apiPrefixes: ["/api/owner/budget/override", "/api/owner/budget/working-capital"], uiPages: ["/owner/budget"] },
+];
+
+function findFilesByKeywords(keywords, excludeKeywords = []) {
   const all = [...walkAllFiles(path.join(ROOT, "src/domain"), [".ts"]), ...walkAllFiles(path.join(ROOT, "src/services"), [".ts"])];
   return all.filter((f) => {
     const rel = relSrc(f).toLowerCase();
-    return keywords.some((kw) => rel.includes(kw.toLowerCase()));
+    return keywords.some((kw) => rel.includes(kw.toLowerCase())) && !excludeKeywords.some((kw) => rel.includes(kw.toLowerCase()));
   });
 }
 
@@ -838,7 +887,7 @@ function extractFamilyStates(files) {
 function buildOwnerActionFamilies(allApiRoutesFlat) {
   const sharedFsm = parseSharedRecoveryActionStatus();
   return OWNER_ACTION_FAMILIES.map((fam) => {
-    const files = findFilesByKeywords(fam.sourceKeywords);
+    const files = findFilesByKeywords(fam.sourceKeywords, fam.excludeKeywords ?? []);
     const { commands, workflowStatuses, domainResultStates, transitions } = extractFamilyStates(files);
     const mutationEndpoints = allApiRoutesFlat.filter(
       (r) => fam.apiPrefixes.some((p) => r.path.startsWith(p)) && r.httpMethods.some((m) => m !== "GET" && m !== "NOT_VERIFIED")
@@ -872,6 +921,64 @@ function buildOwnerActionFamilies(allApiRoutesFlat) {
       currentOwnerUiPages: fam.uiPages,
     };
   });
+}
+
+function buildNonWorkflowMutationFamilies(allApiRoutesFlat) {
+  return NON_WORKFLOW_MUTATION_FAMILIES.map((fam) => {
+    const mutationEndpoints = allApiRoutesFlat.filter(
+      (r) => fam.apiPrefixes.some((p) => r.path.startsWith(p)) && r.httpMethods.some((m) => m !== "GET" && m !== "NOT_VERIFIED")
+    );
+    return {
+      family: fam.family,
+      mutationEndpoints: mutationEndpoints.map((r) => ({ path: r.path, methods: r.httpMethods.filter((m) => m !== "GET"), sourceFile: r.sourceFile })),
+      currentOwnerUiPages: fam.uiPages,
+      sourceFiles: [...new Set(mutationEndpoints.map((r) => r.sourceFile))],
+      note: fam.note,
+    };
+  });
+}
+
+/**
+ * Every page-level majorAction (an owner-triggerable mutation reachable from a traced page) must
+ * be accounted for in EXACTLY ONE of ownerActions[].mutationEndpoints or
+ * nonWorkflowMutationFamilies[].mutationEndpoints -- zero coverage or double coverage both fail
+ * generation rather than being silently resolved, so a family's apiPrefixes can never silently
+ * drop or duplicate a real mutation as the source tree evolves.
+ */
+function validateMutationCoverage(ownerPageRoutes, ownerActionFamilies, nonWorkflowMutationFamilies) {
+  // mutationEndpoints' own `path` is the literal filesystem route path (e.g. "[actionId]"); a
+  // page's majorActions endpoint is the extractor's ":param"-normalized form of the same route.
+  // Both must be normalized identically before comparing, or every dynamic-segment mutation would
+  // wrongly show as unaccounted (confirmed while drafting this check).
+  const ownerActionsCovered = new Set();
+  for (const fam of ownerActionFamilies) {
+    for (const m of fam.mutationEndpoints) for (const meth of m.methods) ownerActionsCovered.add(`${meth} ${normalizeRoutePath(m.path)}|${fam.family}`);
+  }
+  const nonWorkflowCovered = new Set();
+  for (const fam of nonWorkflowMutationFamilies) {
+    for (const m of fam.mutationEndpoints) for (const meth of m.methods) nonWorkflowCovered.add(`${meth} ${normalizeRoutePath(m.path)}|${fam.family}`);
+  }
+  const byKey = (set, key) => [...set].filter((k) => k.startsWith(`${key}|`)).map((k) => k.split("|")[1]);
+
+  let pageMajorActionCount = 0;
+  let coveredByOwnerActions = 0;
+  let coveredByNonWorkflow = 0;
+  const unaccounted = [];
+  const duplicates = [];
+  for (const page of ownerPageRoutes) {
+    for (const a of page.majorActions) {
+      pageMajorActionCount++;
+      const key = `${a.method} ${a.endpoint}`;
+      const ownerFams = byKey(ownerActionsCovered, key);
+      const nonWfFams = byKey(nonWorkflowCovered, key);
+      const totalFams = ownerFams.length + nonWfFams.length;
+      if (totalFams === 0) unaccounted.push({ page: page.route, call: key });
+      else if (totalFams > 1) duplicates.push({ page: page.route, call: key, families: [...ownerFams, ...nonWfFams] });
+      else if (ownerFams.length) coveredByOwnerActions++;
+      else coveredByNonWorkflow++;
+    }
+  }
+  return { pageMajorActionCount, coveredByOwnerActions, coveredByNonWorkflow, unaccounted, duplicates };
 }
 
 function buildWorkflowStateFamilies(ownerActionFamilies) {
@@ -937,11 +1044,61 @@ function classifyBusinessIdCategory(text, call, argsText) {
  * session; kept as a small lookup (not derived by a generic response-DTO tracer) because mapping
  * a Promise.all destructuring target back to its originating call requires binding-level tracing
  * this generator's simple regex parser does not (and per scope, should not) perform generically. */
+/**
+ * Mechanically derives the real fields consumed for a state value that's gated by a presence
+ * check (`"discriminatorField" in rawVar`) and then handed to a child component further down the
+ * SAME already-traced Cockpit component tree — the exact case the prior pass got wrong for
+ * recovery-status/public-signals: the state is stored via a presence check (which looked like
+ * "no field read"), but the object is then passed as a prop and its fields are read inside a
+ * child component (RecoverySection/OutsideSignalsSection in MinimumOwnerCockpit.tsx), not near
+ * the fetch call itself. Chain: find the `set<X>(...)` wrapping the presence check → the
+ * `useState<TYPE | null>` pairing that setter to its state var and TYPE → every OTHER destructured
+ * parameter/annotation of that exact TYPE anywhere in the traced tree (catches a prop renamed
+ * across a component boundary, e.g. page.tsx's `publicSignals` becoming `signals` inside
+ * OutsideSignalsSection) → every first-level `localName.field` member access on each such local
+ * name. Bounded to the files already in the Cockpit trace; no repo-wide DTO lineage.
+ */
+function deriveCockpitFieldsConsumed(pageText, allFilesText, discriminatorField) {
+  const presenceMatch = pageText.match(new RegExp(`"${discriminatorField}"\\s*in\\s*(\\w+)`));
+  if (!presenceMatch) return null;
+  const beforeText = pageText.slice(0, presenceMatch.index);
+  const setterMatches = [...beforeText.matchAll(/\bset([A-Z]\w*)\(/g)];
+  const setterSuffix = setterMatches.length ? setterMatches[setterMatches.length - 1][1] : null;
+  if (!setterSuffix) return null;
+  const useStateRe = new RegExp(`const\\s*\\[(\\w+),\\s*set${setterSuffix}\\]\\s*=\\s*useState<([\\w.]+)`);
+  const useStateMatch = pageText.match(useStateRe);
+  if (!useStateMatch) return null;
+  const typeName = useStateMatch[2].replace(/\./g, "\\.");
+
+  const localNames = new Set();
+  for (const text of allFilesText) {
+    for (const m of text.matchAll(new RegExp(`\\{\\s*(\\w+)\\s*\\}\\s*:\\s*\\{\\s*\\w+\\s*:\\s*${typeName}\\b`, "g"))) localNames.add(m[1]);
+    for (const m of text.matchAll(new RegExp(`\\b(\\w+)\\s*:\\s*${typeName}\\b`, "g"))) localNames.add(m[1]);
+  }
+  if (localNames.size === 0) return null;
+
+  const NON_FIELD_MEMBERS = new Set(["length", "map", "slice", "join", "filter", "some", "every", "includes", "find", "forEach", "reduce", "sort", "toString", "keys", "values", "entries"]);
+  const fields = new Set();
+  for (const text of allFilesText) {
+    for (const local of localNames) {
+      for (const m of text.matchAll(new RegExp(`\\b${local}\\.(\\w+)\\b`, "g"))) {
+        if (!NON_FIELD_MEMBERS.has(m[1])) fields.add(m[1]);
+      }
+    }
+  }
+  return [...fields].sort();
+}
+
 /** responseUsage: FIELDS (real success-path field access exists — fieldsConsumed lists them),
  * SUCCESS_STATUS_ONLY (success path checks only `ok`/presence, no field is read), ERROR_ONLY
  * (response data is only ever passed to a generic failure-message helper), NOT_VERIFIED (genuinely
  * indeterminate). fieldsConsumed is always a real field-name array (empty when responseUsage isn't
- * FIELDS) — never an explanatory sentence standing in for a field name. */
+ * FIELDS) — never an explanatory sentence standing in for a field name. Recovery-status and
+ * public-signals are derived mechanically (see deriveCockpitFieldsConsumed) rather than listed
+ * here, because their consumption happens in a child component, not near the fetch call — a
+ * confirmed defect in the prior pass, which only checked the immediate call-site window and
+ * concluded "presence check only" without following the value into MinimumOwnerCockpit's
+ * RecoverySection/OutsideSignalsSection. */
 const COCKPIT_RESPONSE_USAGE = {
   "GET /api/owner/now-view": {
     responseUsage: "FIELDS",
@@ -952,8 +1109,6 @@ const COCKPIT_RESPONSE_USAGE = {
       "financeTopPriority",
     ],
   },
-  "GET /api/owner/recovery-status": { responseUsage: "SUCCESS_STATUS_ONLY", fieldsConsumed: [], note: "Only a `\"recoveryStatus\" in rec` presence check gates whether the response is stored at all; no field value is read out of it here." },
-  "GET /api/owner/public-signals": { responseUsage: "SUCCESS_STATUS_ONLY", fieldsConsumed: [], note: "Only a `\"publicSignalStatus\" in sig` presence check gates whether the response is stored at all; no field value is read out of it here." },
   "GET /api/owner/onboarding": { responseUsage: "FIELDS", fieldsConsumed: ["found", "canRunFirstDiagnosis", "missingMinimum", "requirements"] },
   "GET /api/owner/process-execution": { responseUsage: "FIELDS", fieldsConsumed: ["tasks[].status"] },
   "POST /api/owner/process-execution": { responseUsage: "FIELDS", fieldsConsumed: ["status", "reassessmentId (implied by REQUEST_REASSESSMENT branch)"] },
@@ -961,6 +1116,14 @@ const COCKPIT_RESPONSE_USAGE = {
   "POST /api/owner/override-arbitration": { responseUsage: "ERROR_ONLY", fieldsConsumed: [], note: "result.ok is checked; result.data is only passed to a generic failure-message helper on failure." },
   "POST /api/owner/constraints": { responseUsage: "ERROR_ONLY", fieldsConsumed: [], note: "result.ok is checked; result.data is only passed to a generic failure-message helper on failure." },
   "POST /api/escalation/acknowledge": { responseUsage: "ERROR_ONLY", fieldsConsumed: [], note: "ok is checked; data is only passed to a generic failure-message helper on failure." },
+};
+
+/** discriminatorField anchors used only to LOCATE the mechanical derivation chain in source (the
+ * presence-check key the code itself already branches on) — never used as, or substituted for,
+ * the derived field list itself. */
+const COCKPIT_DERIVED_FIELD_ANCHORS = {
+  "GET /api/owner/recovery-status": "recoveryStatus",
+  "GET /api/owner/public-signals": "publicSignalStatus",
 };
 
 function buildCockpitExternalFeeds() {
@@ -997,7 +1160,25 @@ function buildCockpitExternalFeeds() {
       const failureBehaviors = sites.map((s) =>
         s.nonFatalChain ? "BEST_EFFORT_NULL_ON_FAILURE" : s.hasAnyImmediateChain ? "NOT_VERIFIED (a .then/.catch is chained but its exact null-safety shape wasn't recognized)" : "NOT_VERIFIED"
       );
-      const usage = COCKPIT_RESPONSE_USAGE[key.split(" ").slice(0, 2).join(" ")];
+      const endpointKey = key.split(" ").slice(0, 2).join(" ");
+      const usage = COCKPIT_RESPONSE_USAGE[endpointKey];
+      let responseUsage = usage?.responseUsage ?? "NOT_VERIFIED";
+      let fieldsConsumed = usage?.fieldsConsumed ?? [];
+      let responseUsageNote = usage?.note;
+      const anchor = COCKPIT_DERIVED_FIELD_ANCHORS[endpointKey];
+      if (anchor) {
+        const pageText = files.find((f) => f.endsWith("cockpit/page.tsx")) ? fs.readFileSync(files.find((f) => f.endsWith("cockpit/page.tsx")), "utf8") : "";
+        const allFilesText = files.map((f) => fs.readFileSync(f, "utf8"));
+        const derived = deriveCockpitFieldsConsumed(pageText, allFilesText, anchor);
+        if (derived && derived.length) {
+          responseUsage = "FIELDS";
+          fieldsConsumed = derived;
+          responseUsageNote = `Mechanically traced: stored via a \`"${anchor}" in <rawVar>\` presence check, then passed as a prop into a child component in the same traced tree that reads these fields directly (see deriveCockpitFieldsConsumed).`;
+        } else {
+          responseUsage = "SUCCESS_STATUS_ONLY";
+          responseUsageNote = `Only a \`"${anchor}" in <rawVar>\` presence check gates whether the response is stored at all; no downstream field access was found in the traced component tree.`;
+        }
+      }
       return {
         endpoint: first.path,
         method: first.method,
@@ -1008,9 +1189,9 @@ function buildCockpitExternalFeeds() {
             ? distinctCategories[0]
             : { multipleCallSites: distinctCategories },
         failureBehavior: [...new Set(failureBehaviors)].length === 1 ? failureBehaviors[0] : failureBehaviors,
-        responseUsage: usage?.responseUsage ?? "NOT_VERIFIED",
-        fieldsConsumed: usage?.fieldsConsumed ?? [],
-        responseUsageNote: usage?.note,
+        responseUsage,
+        fieldsConsumed,
+        responseUsageNote,
       };
     });
 }
@@ -1066,6 +1247,7 @@ function main() {
   const ownerPageRoutes = buildOwnerPageRoutes(sidebarItems, allApiCapabilityIndex);
 
   const ownerActionFamilies = buildOwnerActionFamilies(allApiRoutesFlat);
+  const nonWorkflowMutationFamilies = buildNonWorkflowMutationFamilies(allApiRoutesFlat);
   const workflowStateFamilies = buildWorkflowStateFamilies(ownerActionFamilies);
   const cockpitExternalFeeds = buildCockpitExternalFeeds();
 
@@ -1093,6 +1275,22 @@ function main() {
     process.exit(1);
   }
   console.log(`Capability cross-validation: ${capValidation.validated} calls validated, 0 mismatches.`);
+
+  // ── Mutation-coverage validation (hard fail on unaccounted OR duplicately-accounted) ──
+  const coverage = validateMutationCoverage(ownerPageRoutes, ownerActionFamilies, nonWorkflowMutationFamilies);
+  if (coverage.unaccounted.length > 0 || coverage.duplicates.length > 0) {
+    if (coverage.unaccounted.length > 0) {
+      console.error(`MUTATION-COVERAGE VALIDATION FAILED: ${coverage.unaccounted.length} page majorAction(s) belong to ZERO preservation family:`);
+      for (const u of coverage.unaccounted) console.error(`  [${u.page}] ${u.call}`);
+    }
+    if (coverage.duplicates.length > 0) {
+      console.error(`MUTATION-COVERAGE VALIDATION FAILED: ${coverage.duplicates.length} page majorAction(s) belong to MORE THAN ONE preservation family:`);
+      for (const d of coverage.duplicates) console.error(`  [${d.page}] ${d.call} -> ${d.families.join(", ")}`);
+    }
+    console.error("Generation ABORTED. Add/adjust an ownerActions or nonWorkflowMutationFamilies entry before regenerating -- never silently pick a family.");
+    process.exit(1);
+  }
+  console.log(`Mutation-coverage validation: ${coverage.pageMajorActionCount} page majorActions, ${coverage.coveredByOwnerActions} via ownerActions, ${coverage.coveredByNonWorkflow} via nonWorkflowMutationFamilies, 0 unaccounted, 0 duplicates.`);
 
   for (const p of ownerPageRoutes) delete p._rawApiCalls;
 
@@ -1247,6 +1445,7 @@ function main() {
     ownerNowViewCoreFields: ownerNowViewCoreFieldNames,
     cockpitExternalFeeds,
     ownerActions: ownerActionFamilies,
+    nonWorkflowMutationFamilies,
     workflowStateFamilies,
     preExistingCorrectnessFindings,
     domainPackages,
