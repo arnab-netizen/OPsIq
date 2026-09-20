@@ -8,13 +8,22 @@
  * never leaks as its own text node, and the "Confirmed" badge matches the page's Title Case
  * convention.
  */
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/owner/intake" }));
 
 import OwnerIntakePage from "@/app/(authenticated)/owner/intake/page";
 
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<ActiveBusinessProvider>{ui}</ActiveBusinessProvider>);
+}
+
+beforeEach(() => {
+  window.sessionStorage.clear();
+  window.localStorage.clear();
+});
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const BUSINESS = { id: "b1", name: "Acme", businessType: "retail", currency: "INR", isActive: true };
@@ -23,8 +32,11 @@ function mockFetch(intakes: unknown[] = []) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const json = (body: unknown) => ({ ok: true, json: async () => body } as unknown as Response);
+    if (url.includes("/api/owner/businesses")) {
+      return json({ businesses: [BUSINESS] });
+    }
     if (url.includes("/api/owner/intake/dashboard")) {
-      return json({ businesses: [BUSINESS], selectedBusinessId: "b1", intakes, hasData: intakes.length > 0 });
+      return json({ intakes, hasData: intakes.length > 0 });
     }
     if (url.includes("/uploads") && init?.method === "POST") {
       return json({
@@ -46,7 +58,7 @@ function mockFetch(intakes: unknown[] = []) {
 describe("Owner Data Intake page", () => {
   it("humanizes internal field identifiers in the candidate preview table and error list, without leaking the raw camelCase token", async () => {
     mockFetch();
-    const { container, findByText, getByLabelText } = render(<OwnerIntakePage />);
+    const { container, findByText, getByLabelText } = renderWithProvider(<OwnerIntakePage />);
     await waitFor(() => expect(container.textContent ?? "").toContain("Data Intake"));
 
     fireEvent.click(await findByText("+ Upload data"));
@@ -80,7 +92,7 @@ describe("Owner Data Intake page", () => {
         ownerConfirmed: true,
       },
     ]);
-    const { findByText, queryByText } = render(<OwnerIntakePage />);
+    const { findByText, queryByText } = renderWithProvider(<OwnerIntakePage />);
     await findByText("Confirmed");
     expect(queryByText("confirmed")).toBeNull();
   });
@@ -111,7 +123,7 @@ describe("Owner Data Intake page", () => {
         ownerConfirmed: true,
       },
     ]);
-    const { container, findByText } = render(<OwnerIntakePage />);
+    const { container, findByText } = renderWithProvider(<OwnerIntakePage />);
     await findByText("Intake history (2)");
     const text = container.textContent ?? "";
 
@@ -134,7 +146,7 @@ describe("Owner Data Intake page", () => {
         ownerConfirmed: true,
       },
     ]);
-    const { container, findByText } = render(<OwnerIntakePage />);
+    const { container, findByText } = renderWithProvider(<OwnerIntakePage />);
     await findByText("Intake history (1)");
     const text = container.textContent ?? "";
     expect(text).toContain("Finance");
@@ -152,7 +164,7 @@ describe("Owner Data Intake page", () => {
         ownerConfirmed: true,
       },
     ]);
-    const { container, findByText } = render(<OwnerIntakePage />);
+    const { container, findByText } = renderWithProvider(<OwnerIntakePage />);
     await findByText("Intake history (1)");
     const text = container.textContent ?? "";
     expect(text).toContain("Some future category");

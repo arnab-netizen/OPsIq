@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- fetch-on-mount / fetch-on-business-switch is the intentional owner-page pattern */
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/ui/primitives/button";
@@ -10,6 +10,7 @@ import { PageHeader } from "@/ui/primitives/page-header";
 import { PageContainer } from "@/ui/primitives/page-container";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 async function apiFetch(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -42,8 +43,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function CampaignsPage() {
-  const [businesses, setBusinesses] = useState<any[]>([]);
-  const [businessId, setBusinessId] = useState<string | null>(null);
+  const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Presentation-only: prevents rendering EmptyState before the business
@@ -56,54 +56,42 @@ export default function CampaignsPage() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  const loadBusinesses = useCallback(async () => {
-    try {
-      const data = await apiFetch("/api/owner/recovery/businesses");
-      const list = Array.isArray(data) ? data : data.businesses ?? [];
-      setBusinesses(list);
-      if (list.length > 0) {
-        setBusinessId(list[0].id);
-      } else {
-        // No business to load campaigns for — nothing else will resolve loading.
-        setLoading(false);
-      }
-    } catch (e: any) {
-      setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
-      setLoading(false);
-    }
-  }, []);
-
-  // Presentation-only: guards against two ordering bugs when the owner switches
-  // business via BusinessContextSelector — (a) the previous business's rows
-  // staying on screen (still tagged in the UI as belonging to whichever
-  // business the selector now shows) while the new business's request is in
-  // flight, and (b) an in-flight request for a business the owner has since
-  // switched away from resolving late and clobbering the newer selection's
-  // rows. requestIdRef makes each loadCampaigns call ignore any response that
-  // isn't for the most recently started request. No endpoint/param/payload
-  // change — this is purely which local render each response is allowed to
-  // produce.
-  const requestIdRef = useRef(0);
+  // Guards against two ordering bugs when the owner switches business via
+  // BusinessContextSelector — (a) the previous business's rows staying on
+  // screen while the new business's request is in flight, and (b) an
+  // in-flight request for a business the owner has since switched away from
+  // resolving late and clobbering the newer selection's rows. requestSeq
+  // makes each loadCampaigns call ignore any response that isn't for the
+  // most recently started request.
+  const requestSeq = useRef(0);
   const loadCampaigns = useCallback(async (bid: string) => {
-    const requestId = ++requestIdRef.current;
+    const seq = ++requestSeq.current;
     setCampaigns([]);
     setLoading(true);
     try {
       const data = await apiFetch(`/api/owner/marketing/campaigns?businessId=${bid}`);
-      if (requestIdRef.current !== requestId) return;
+      if (requestSeq.current !== seq) return;
       setCampaigns(data.campaigns ?? []);
     } catch (e: any) {
-      if (requestIdRef.current !== requestId) return;
+      if (requestSeq.current !== seq) return;
       setError(classifyOperatorError(e, { context: "load" }).operatorMessage);
     } finally {
-      if (requestIdRef.current === requestId) setLoading(false);
+      if (requestSeq.current === seq) setLoading(false);
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-existing fetch-on-mount pattern used throughout the app; unrelated to this cosmetic pass, not refactored here to avoid a data-loading behavior change.
-  useEffect(() => { loadBusinesses(); }, [loadBusinesses]);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- same pre-existing pattern as above.
-  useEffect(() => { if (businessId) loadCampaigns(businessId); }, [businessId, loadCampaigns]);
+  useEffect(() => {
+    if (contextLoading) return;
+    if (needsBusinessRecovery) return;
+    if (!activeBusinessId) { setLoading(false); return; }
+    void loadCampaigns(activeBusinessId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the shared context resolves or the owner explicitly switches business
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery]);
+
+  const onSwitchBusiness = useCallback((id: string) => {
+    setLoading(true);
+    setActiveBusinessId(id);
+  }, [setActiveBusinessId]);
 
   const openCreate = () => {
     setForm({ name: "", channel: CHANNELS[0], status: "DRAFT", budget: "", spend: "0", leads: "0", conversions: "0", revenue: "0" });
@@ -125,11 +113,11 @@ export default function CampaignsPage() {
   };
 
   const handleSave = async () => {
-    if (!businessId) return;
+    if (!activeBusinessId) return;
     setSaving(true);
     try {
       const payload = {
-        businessId,
+        businessId: activeBusinessId,
         name: form.name,
         channel: form.channel,
         status: form.status || "DRAFT",
@@ -152,7 +140,7 @@ export default function CampaignsPage() {
         });
         setShowCreate(false);
       }
-      loadCampaigns(businessId);
+      loadCampaigns(activeBusinessId);
     } catch (e: any) {
       setError(classifyOperatorError(e, { context: "save" }).operatorMessage);
     } finally {
@@ -179,8 +167,8 @@ export default function CampaignsPage() {
             <>
               <BusinessContextSelector
                 businesses={businesses}
-                selectedId={businessId}
-                onChange={(id) => setBusinessId(id)}
+                selectedId={activeBusinessId}
+                onChange={onSwitchBusiness}
               />
               <Button onClick={openCreate}>+ New Campaign</Button>
             </>
@@ -192,7 +180,9 @@ export default function CampaignsPage() {
         <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded text-sm">{error}</div>
       )}
 
-      {loading ? (
+      {needsBusinessRecovery ? (
+        <p>Your previously selected business is no longer available. Choose a business to continue.</p>
+      ) : contextLoading || loading ? (
         <LoadingState message="Loading campaigns…" />
       ) : campaigns.length === 0 ? (
         <EmptyState

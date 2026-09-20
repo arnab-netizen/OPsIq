@@ -10,10 +10,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import OwnerManualEntryPage from "@/app/(authenticated)/owner/manual-entry/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
 
 const posted: Array<{ path: string; body: unknown }> = [];
 
 beforeEach(() => {
+  window.sessionStorage.clear();
+  window.localStorage.clear();
   posted.length = 0;
   vi.stubGlobal("fetch", vi.fn(async (path: string, init?: RequestInit) => {
     if (typeof path === "string" && path.includes("/api/owner/businesses")) {
@@ -30,7 +33,11 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 async function renderReady() {
-  render(<OwnerManualEntryPage />);
+  render(
+    <ActiveBusinessProvider>
+      <OwnerManualEntryPage />
+    </ActiveBusinessProvider>
+  );
   await waitFor(() => expect(screen.getByTestId("manual-entry-page")).toBeTruthy());
 }
 

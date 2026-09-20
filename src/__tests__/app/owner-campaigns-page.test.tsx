@@ -4,6 +4,11 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import CampaignsPage from "@/app/(authenticated)/owner/marketing/campaigns/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<ActiveBusinessProvider>{ui}</ActiveBusinessProvider>);
+}
 
 const BUSINESSES = [{ id: "biz-uuid-1", name: "Acme Trading" }];
 const TWO_BUSINESSES = [
@@ -43,14 +48,16 @@ const CAMPAIGNS = [
 let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
+  window.sessionStorage.clear();
+  window.localStorage.clear();
   fetchMock = vi.fn((input: string | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
     const method = (init?.method ?? "GET").toUpperCase();
 
-    if (url.includes("/api/owner/recovery/businesses") && method === "GET") {
+    if (url.includes("/api/owner/businesses") && method === "GET") {
       return Promise.resolve({
         ok: true, status: 200,
-        json: () => Promise.resolve(BUSINESSES),
+        json: () => Promise.resolve({ businesses: BUSINESSES }),
       } as Response);
     }
     if (url.includes("/api/owner/marketing/campaigns") && method === "GET" && !url.match(/campaigns\/[a-z]/)) {
@@ -86,15 +93,16 @@ afterEach(() => {
 
 describe("CampaignsPage", () => {
   it("renders the page heading", async () => {
-    const { findByText } = render(<CampaignsPage />);
+    const { findByText } = renderWithProvider(<CampaignsPage />);
     await findByText("Marketing Campaigns");
   });
 
   it("fetches businesses then campaigns on mount", async () => {
-    const { findByTestId } = render(<CampaignsPage />);
+    const { findByTestId } = renderWithProvider(<CampaignsPage />);
     await findByTestId("campaigns-table");
+    // The shared ActiveBusinessProvider owns the business-list fetch now, not the page itself.
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/owner/recovery/businesses"),
+      expect.stringContaining("/api/owner/businesses"),
       expect.anything(),
     );
     expect(fetchMock).toHaveBeenCalledWith(
@@ -104,13 +112,13 @@ describe("CampaignsPage", () => {
   });
 
   it("renders campaign names in the table", async () => {
-    const { findByText } = render(<CampaignsPage />);
+    const { findByText } = renderWithProvider(<CampaignsPage />);
     await findByText("Summer Email Blast");
     await findByText("Google Search Q3");
   });
 
   it("renders channel names", async () => {
-    const { findByText } = render(<CampaignsPage />);
+    const { findByText } = renderWithProvider(<CampaignsPage />);
     await findByText("Email");
     await findByText("Search");
   });
@@ -118,13 +126,13 @@ describe("CampaignsPage", () => {
   it("renders Active status badge", async () => {
     // Presentation-only: the badge shows a sentence-case label ("Active") for
     // the raw "ACTIVE" status value; the stored/submitted value is unchanged.
-    const { findAllByText } = render(<CampaignsPage />);
+    const { findAllByText } = renderWithProvider(<CampaignsPage />);
     const badges = await findAllByText("Active");
     expect(badges.length).toBeGreaterThan(0);
   });
 
   it("renders ROI percentage for active campaign", async () => {
-    const { findByText } = render(<CampaignsPage />);
+    const { findByText } = renderWithProvider(<CampaignsPage />);
     // ROI = (7500-2500)/2500 * 100 = 200%
     await findByText("200%");
   });
@@ -132,20 +140,20 @@ describe("CampaignsPage", () => {
   it("shows a true-empty state (with a create CTA) when the business has no campaigns yet", async () => {
     fetchMock.mockImplementation((input: string | URL) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url.includes("/api/owner/recovery/businesses")) {
-        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(BUSINESSES) } as Response);
+      if (url.includes("/api/owner/businesses")) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: BUSINESSES }) } as Response);
       }
       if (url.includes("/api/owner/marketing/campaigns")) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ campaigns: [], total: 0 }) } as Response);
       }
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
     });
-    const { findByText } = render(<CampaignsPage />);
+    const { findByText } = renderWithProvider(<CampaignsPage />);
     await findByText("No campaigns yet");
   });
 
   it("opens create modal when + New Campaign is clicked", async () => {
-    const { findByText } = render(<CampaignsPage />);
+    const { findByText } = renderWithProvider(<CampaignsPage />);
     await findByText("Marketing Campaigns");
     await waitFor(async () => {
       const btn = await findByText("+ New Campaign");
@@ -156,7 +164,7 @@ describe("CampaignsPage", () => {
   });
 
   it("opens edit modal when Edit is clicked", async () => {
-    const { findByText, findAllByText } = render(<CampaignsPage />);
+    const { findByText, findAllByText } = renderWithProvider(<CampaignsPage />);
     await findByText("Summer Email Blast");
     const editBtns = await findAllByText("Edit");
     fireEvent.click(editBtns[0]);
@@ -165,7 +173,7 @@ describe("CampaignsPage", () => {
   });
 
   it("submits new campaign via POST", async () => {
-    const { findByText } = render(<CampaignsPage />);
+    const { findByText } = renderWithProvider(<CampaignsPage />);
     const addBtn = await findByText("+ New Campaign");
     fireEvent.click(addBtn);
     await findByText("New Campaign");
@@ -190,8 +198,8 @@ describe("CampaignsPage", () => {
 
       fetchMock.mockImplementation((input: string | URL) => {
         const url = typeof input === "string" ? input : input.toString();
-        if (url.includes("/api/owner/recovery/businesses")) {
-          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(TWO_BUSINESSES) } as Response);
+        if (url.includes("/api/owner/businesses")) {
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: TWO_BUSINESSES }) } as Response);
         }
         if (url.includes("businessId=biz-uuid-1")) {
           return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ campaigns: CAMPAIGNS, total: CAMPAIGNS.length }) } as Response);
@@ -202,7 +210,7 @@ describe("CampaignsPage", () => {
         return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
       });
 
-      const { findByText, queryByText, getByTestId } = render(<CampaignsPage />);
+      const { findByText, queryByText, getByTestId } = renderWithProvider(<CampaignsPage />);
       // Business 1's campaign is on screen before switching.
       await findByText("Summer Email Blast");
 
@@ -224,8 +232,8 @@ describe("CampaignsPage", () => {
     it("does not show the previous business's rows if the newly selected business's fetch fails", async () => {
       fetchMock.mockImplementation((input: string | URL) => {
         const url = typeof input === "string" ? input : input.toString();
-        if (url.includes("/api/owner/recovery/businesses")) {
-          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(TWO_BUSINESSES) } as Response);
+        if (url.includes("/api/owner/businesses")) {
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: TWO_BUSINESSES }) } as Response);
         }
         if (url.includes("businessId=biz-uuid-1")) {
           return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ campaigns: CAMPAIGNS, total: CAMPAIGNS.length }) } as Response);
@@ -236,7 +244,7 @@ describe("CampaignsPage", () => {
         return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
       });
 
-      const { findByText, queryByText, getByTestId } = render(<CampaignsPage />);
+      const { findByText, queryByText, getByTestId } = renderWithProvider(<CampaignsPage />);
       await findByText("Summer Email Blast");
 
       fireEvent.change(getByTestId("business-context-selector"), { target: { value: "biz-uuid-2" } });
@@ -258,8 +266,8 @@ describe("CampaignsPage", () => {
 
       fetchMock.mockImplementation((input: string | URL) => {
         const url = typeof input === "string" ? input : input.toString();
-        if (url.includes("/api/owner/recovery/businesses")) {
-          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(TWO_BUSINESSES) } as Response);
+        if (url.includes("/api/owner/businesses")) {
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ businesses: TWO_BUSINESSES }) } as Response);
         }
         if (url.includes("businessId=biz-uuid-1")) {
           return biz1Pending.then(() => ({ ok: true, status: 200, json: () => Promise.resolve({ campaigns: CAMPAIGNS, total: CAMPAIGNS.length }) } as Response));
@@ -270,7 +278,7 @@ describe("CampaignsPage", () => {
         return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
       });
 
-      const { findByText, queryByText, findByTestId } = render(<CampaignsPage />);
+      const { findByText, queryByText, findByTestId } = renderWithProvider(<CampaignsPage />);
       // Initial mount fetch for business-1 is the one we hold open.
       const selector = await findByTestId("business-context-selector");
       fireEvent.change(selector, { target: { value: "biz-uuid-2" } });

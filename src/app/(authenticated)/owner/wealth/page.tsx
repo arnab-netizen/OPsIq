@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- command-center payload is the service contract (typed server-side in WealthCommandCenter); rendered read-only here. load() on mount is intentional. */
 
@@ -63,36 +64,58 @@ const SPEND_DECISION_LABEL: Record<string, string> = {
  * Read-only: all logic and authorization live in /api/owner/wealth-command-center.
  */
 export default function OwnerWealthPage() {
+  const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
   const [data, setData] = useState<any | null>(null);
-  const [businessId, setBusinessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestSeq = useRef(0);
 
-  const load = useCallback(async (bizId?: string | null) => {
+  const load = useCallback(async (bizId: string) => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
-      const qs = bizId ? `?businessId=${encodeURIComponent(bizId)}` : "";
-      const res = await api(`/api/owner/wealth-command-center${qs}`);
+      const res = await api(`/api/owner/wealth-command-center?businessId=${encodeURIComponent(bizId)}`);
+      if (requestSeq.current !== seq) return;
       setData(res);
-      setBusinessId(res.selectedBusinessId ?? null);
     } catch (e) {
+      if (requestSeq.current !== seq) return;
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      if (requestSeq.current === seq) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (contextLoading) return;
+    if (needsBusinessRecovery) return;
+    if (!activeBusinessId) { setLoading(false); return; }
+    void load(activeBusinessId);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery, load]);
 
+  const onSwitchBusiness = useCallback((id: string) => {
+    setLoading(true);
+    setActiveBusinessId(id);
+  }, [setActiveBusinessId]);
+
+  if (contextLoading) return <CardDashboardSkeleton sections={4} label="Loading your Wealth Command Center" />;
+  if (needsBusinessRecovery) return (
+    <PageContainer>
+      <p>Your previously selected business is no longer available. Choose a business to continue.</p>
+      <BusinessContextSelector businesses={businesses} selectedId={null} onChange={onSwitchBusiness} />
+    </PageContainer>
+  );
+  if (!activeBusinessId) return (
+    <PageContainer>
+      <p>No businesses yet. Create one to see your Wealth Command Center.</p>
+    </PageContainer>
+  );
   if (loading) return <CardDashboardSkeleton sections={4} label="Loading your Wealth Command Center" />;
   if (error)
     return (
       <PageContainer>
         <p style={{ color: "#b91c1c" }}>{error}</p>
-        <Button onClick={() => void load(businessId)}>Retry</Button>
+        <Button onClick={() => void load(activeBusinessId)}>Retry</Button>
       </PageContainer>
     );
   if (!data) return null;
@@ -101,7 +124,6 @@ export default function OwnerWealthPage() {
   const move = cc.nextBestMove ?? {};
   const wp = cc.workPackage ?? null;
   const transfer = cc.ownerWorkloadTransfer ?? null;
-  const businesses: any[] = data.businesses ?? [];
 
   return (
     <PageContainer>
@@ -115,8 +137,8 @@ export default function OwnerWealthPage() {
       <div style={{ marginBottom: 16 }}>
         <BusinessContextSelector
           businesses={businesses}
-          selectedId={businessId}
-          onChange={(id) => void load(id)}
+          selectedId={activeBusinessId}
+          onChange={onSwitchBusiness}
         />
       </div>
 

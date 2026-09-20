@@ -82,9 +82,9 @@ const SECTIONS: HelpSection[] = [
       {
         question: "What should I do next?",
         answer:
-          "Priorities lists what needs your attention right now, ranked by how much it matters.",
-        linkHref: "/owner/priorities",
-        linkLabel: "Go to Priorities",
+          "Home shows what needs your attention right now and the next governed action for the active business.",
+        linkHref: "/owner/cockpit",
+        linkLabel: "Go to Home",
       },
       {
         question: "Where do I track tasks I've started?",

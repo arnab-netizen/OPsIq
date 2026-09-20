@@ -17,6 +17,11 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePat
 import OwnerActivationPanel from "@/components/dashboard/OwnerActivationPanel";
 import DiagnosisEvidenceScopeNotice from "@/components/diagnosis/DiagnosisEvidenceScopeNotice";
 import OwnerIntakePage from "@/app/(authenticated)/owner/intake/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<ActiveBusinessProvider>{ui}</ActiveBusinessProvider>);
+}
 
 const fetchMock = vi.fn();
 
@@ -25,6 +30,8 @@ function jsonResponse(body: unknown, ok = true) {
 }
 
 beforeEach(() => {
+  window.sessionStorage.clear();
+  window.localStorage.clear();
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -103,7 +110,7 @@ describe("dashboard activation panel", () => {
 describe("intake upload prerequisite", () => {
   it("explains why upload is unavailable and links to the fix", async () => {
     fetchMock.mockImplementation(() => jsonResponse({ businesses: [], intakes: [], selectedBusinessId: null }));
-    render(<OwnerIntakePage />);
+    renderWithProvider(<OwnerIntakePage />);
     await waitFor(() => expect(screen.getByTestId("intake-upload-blocked")).toBeTruthy());
 
     const notice = screen.getByTestId("intake-upload-blocked");
@@ -113,7 +120,7 @@ describe("intake upload prerequisite", () => {
 
   it("keeps the disabled control described by its explanation for screen readers", async () => {
     fetchMock.mockImplementation(() => jsonResponse({ businesses: [], intakes: [], selectedBusinessId: null }));
-    const { container } = render(<OwnerIntakePage />);
+    const { container } = renderWithProvider(<OwnerIntakePage />);
     await waitFor(() => expect(screen.getByTestId("intake-upload-blocked")).toBeTruthy());
 
     const uploadButton = Array.from(container.querySelectorAll("button")).find((b) =>
@@ -133,15 +140,22 @@ describe("intake upload prerequisite", () => {
         selectedBusinessId: "b1",
       }),
     );
-    const { container } = render(<OwnerIntakePage />);
+    const { container } = renderWithProvider(<OwnerIntakePage />);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     await waitFor(() =>
       expect(container.querySelector('[data-testid="intake-upload-blocked"]')).toBeNull(),
     );
-    const uploadButton = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("Upload data"),
-    );
-    expect(uploadButton!.hasAttribute("disabled")).toBe(false);
+    // The business list now resolves through the shared provider before the page's own
+    // dashboard fetch even starts (an extra async hop the old single-response architecture
+    // didn't have), so the enabled button may not exist yet at the first tick after the
+    // notice disappears -- wait for it rather than asserting synchronously.
+    await waitFor(() => {
+      const uploadButton = Array.from(container.querySelectorAll("button")).find((b) =>
+        (b.textContent ?? "").includes("Upload data"),
+      );
+      expect(uploadButton).toBeDefined();
+      expect(uploadButton!.hasAttribute("disabled")).toBe(false);
+    });
   });
 });
 

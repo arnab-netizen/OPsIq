@@ -1,5 +1,5 @@
 {
-  "baselineSha": "646b06b97dee7283f5bf6db1d38027e843e3efbc",
+  "baselineSha": "e5d6fd8b73d6a1619b89377b764b6ec0046335fd",
   "generatorPath": "scripts/ux/generate-owner-feature-baseline.mjs",
   "ownerPageRoutes": [
     {
@@ -144,25 +144,14 @@
           "capabilities": [
             "CONSULTING_APPROVE"
           ]
-        },
-        {
-          "endpoint": "/api/owner/recovery/businesses",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
           "path": "/api/owner/approval"
-        },
-        {
-          "method": "GET",
-          "path": "/api/owner/recovery/businesses"
         }
       ],
       "writeApis": [
@@ -297,17 +286,10 @@
           "capabilities": [
             "OWNER_MANAGE"
           ]
-        },
-        {
-          "endpoint": "/api/owner/recovery/businesses",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
@@ -332,10 +314,6 @@
         {
           "method": "GET",
           "path": "/api/owner/budget/working-capital"
-        },
-        {
-          "method": "GET",
-          "path": "/api/owner/recovery/businesses"
         }
       ],
       "writeApis": [
@@ -427,7 +405,7 @@
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
@@ -1347,7 +1325,7 @@
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
@@ -1401,7 +1379,7 @@
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
@@ -1639,13 +1617,6 @@
       "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
       "apiCapabilityRequirements": [
         {
-          "endpoint": "/api/owner/businesses",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
-        },
-        {
           "endpoint": "/api/owner/manual-entry",
           "method": "POST",
           "capabilities": [
@@ -1654,13 +1625,8 @@
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
-      "readApis": [
-        {
-          "method": "GET",
-          "path": "/api/owner/businesses"
-        }
-      ],
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
+      "readApis": [],
       "writeApis": [
         {
           "method": "POST",
@@ -1712,25 +1678,14 @@
           "capabilities": [
             "OWNER_MANAGE"
           ]
-        },
-        {
-          "endpoint": "/api/owner/recovery/businesses",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
         }
       ],
       "previewState": "preview",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
           "path": "/api/owner/marketing/campaigns"
-        },
-        {
-          "method": "GET",
-          "path": "/api/owner/recovery/businesses"
         }
       ],
       "writeApis": [
@@ -1811,7 +1766,7 @@
         }
       ],
       "previewState": "preview",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
@@ -1880,13 +1835,6 @@
       "pageAccessGateNote": "No sidebar entry for this route (hidden-for-safety or not-in-nav); current source establishes no page-level gate beyond the (authenticated) layout's session-required redirect.",
       "apiCapabilityRequirements": [
         {
-          "endpoint": "/api/owner/businesses",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
-        },
-        {
           "endpoint": "/api/owner/now-view",
           "method": "GET",
           "capabilities": [
@@ -1895,12 +1843,8 @@
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
-        {
-          "method": "GET",
-          "path": "/api/owner/businesses"
-        },
         {
           "method": "GET",
           "path": "/api/owner/now-view"
@@ -2245,13 +2189,6 @@
           ]
         },
         {
-          "endpoint": "/api/owner/businesses",
-          "method": "GET",
-          "capabilities": [
-            "OWNER_VIEW"
-          ]
-        },
-        {
           "endpoint": "/api/owner/command-center",
           "method": "GET",
           "capabilities": [
@@ -2309,15 +2246,11 @@
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
           "path": "/api/owner/action-plan"
-        },
-        {
-          "method": "GET",
-          "path": "/api/owner/businesses"
         },
         {
           "method": "GET",
@@ -2398,7 +2331,6 @@
         "src/app/(authenticated)/owner/tasks/[taskId]/page.tsx",
         "src/app/(authenticated)/owner/tasks/new/page.tsx",
         "src/app/(authenticated)/owner/tasks/page.tsx",
-        "src/app/(authenticated)/owner/trust/page.tsx",
         "src/app/(authenticated)/owner/wealth/page.tsx",
         "src/domain/owner-mode/owner-data-hub.ts",
         "src/services/owner-guidance/cockpit-finance-priority.service.ts",
@@ -2667,7 +2599,7 @@
         }
       ],
       "previewState": "preview",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
@@ -3288,7 +3220,7 @@
         }
       ],
       "previewState": "preview",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
@@ -3654,7 +3586,7 @@
         }
       ],
       "previewState": "NOT_IN_SIDEBAR",
-      "businessContextBehavior": "LOCAL_BUSINESS_STATE",
+      "businessContextBehavior": "SHARED_ACTIVE_BUSINESS",
       "readApis": [
         {
           "method": "GET",
@@ -12530,51 +12462,41 @@
     "src/services/workspace"
   ],
   "businessContextPages": [
+    "src/app/(authenticated)/owner/approvals/page.tsx",
+    "src/app/(authenticated)/owner/budget/page.tsx",
+    "src/app/(authenticated)/owner/cashflow/page.tsx",
     "src/app/(authenticated)/owner/cockpit/page.tsx",
     "src/app/(authenticated)/owner/customers/page.tsx",
     "src/app/(authenticated)/owner/data/page.tsx",
     "src/app/(authenticated)/owner/execution/page.tsx",
     "src/app/(authenticated)/owner/finance/page.tsx",
+    "src/app/(authenticated)/owner/home/page.tsx",
+    "src/app/(authenticated)/owner/intake/page.tsx",
     "src/app/(authenticated)/owner/inventory/page.tsx",
+    "src/app/(authenticated)/owner/manual-entry/page.tsx",
+    "src/app/(authenticated)/owner/marketing/campaigns/page.tsx",
+    "src/app/(authenticated)/owner/marketing/page.tsx",
+    "src/app/(authenticated)/owner/now/page.tsx",
     "src/app/(authenticated)/owner/operations/page.tsx",
+    "src/app/(authenticated)/owner/page.tsx",
     "src/app/(authenticated)/owner/priorities/page.tsx",
     "src/app/(authenticated)/owner/procurement/page.tsx",
+    "src/app/(authenticated)/owner/recovery/page.tsx",
     "src/app/(authenticated)/owner/sales/page.tsx",
     "src/app/(authenticated)/owner/start-here/page.tsx",
+    "src/app/(authenticated)/owner/strategy/page.tsx",
     "src/app/(authenticated)/owner/tasks/page.tsx",
     "src/app/(authenticated)/owner/trust/page.tsx",
-    "src/app/(authenticated)/owner/vendor/page.tsx"
+    "src/app/(authenticated)/owner/vendor/page.tsx",
+    "src/app/(authenticated)/owner/wealth/page.tsx"
   ],
   "businessContextClassificationCounts": {
     "NO_BUSINESS_CONTEXT": 11,
     "NOT_APPLICABLE": 5,
-    "LOCAL_BUSINESS_STATE": 13,
-    "WORKSPACE_ONLY": 3,
-    "SHARED_ACTIVE_BUSINESS": 15
+    "SHARED_ACTIVE_BUSINESS": 28,
+    "WORKSPACE_ONLY": 3
   },
-  "businessContextFindings": [
-    {
-      "finding": "LOCAL_BUSINESS_STATE_CANDIDATE",
-      "pages": [
-        "/owner/approvals",
-        "/owner/budget",
-        "/owner/cashflow",
-        "/owner/home",
-        "/owner/intake",
-        "/owner/manual-entry",
-        "/owner/marketing/campaigns",
-        "/owner/marketing",
-        "/owner/now",
-        "/owner",
-        "/owner/recovery",
-        "/owner/strategy",
-        "/owner/wealth"
-      ],
-      "evidence": "These pages render <BusinessContextSelector> but do not call the shared useActiveBusiness() hook that other pages (e.g. cockpit, finance, sales, operations) read from — each threads businessId through local component state/callbacks only.",
-      "missionRelevance": "Mission section 17 names Recovery, Strategy, Marketing, and Marketing Campaigns for special business-context inspection; this mechanical classification confirms the suspected gap with source evidence and is deferred to UX-01's full 8-invariant business-context audit. Not fixed in UX-00A.1.",
-      "disposition": "BLOCKED_NEEDS_EVIDENCE_FOR_FIX (evidence sufficient to flag; fix scope belongs to UX-01)"
-    }
-  ],
+  "businessContextFindings": [],
   "publicRoutesTouchedBySharedComponents": [
     {
       "route": "/about",

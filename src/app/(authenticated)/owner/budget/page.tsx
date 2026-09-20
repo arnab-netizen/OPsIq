@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { assessWorkingCapitalAgeing } from "@/domain/owner-budget/working-capital-ageing";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic budget plan payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -126,8 +127,7 @@ async function api(path: string, init?: RequestInit) {
 }
 
 export default function OwnerBudgetPlanPage() {
-  const [businesses, setBusinesses] = useState<any[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
   const [guidance, setGuidance] = useState<any | null>(null);
   const [plan, setPlan] = useState<any | null>(null);
   const [forecast, setForecast] = useState<any | null>(null);
@@ -139,21 +139,14 @@ export default function OwnerBudgetPlanPage() {
   const [busy, setBusy] = useState(false);
   const [showOverride, setShowOverride] = useState(false);
   const [showWcForm, setShowWcForm] = useState(false);
+  const requestSeq = useRef(0);
 
-  const load = useCallback(async (businessId?: string | null) => {
+  const load = useCallback(async (businessId: string) => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
-      let list = businesses;
-      if (list === null) {
-        list = await api("/api/owner/recovery/businesses");
-        setBusinesses(Array.isArray(list) ? list : []);
-      }
-      const bid = businessId ?? selected ?? (Array.isArray(list) && list[0] ? list[0].id : null);
-      setSelected(bid);
-      if (!bid) { setGuidance(null); setPlan(null); setForecast(null); setAuthorities([]); setTasks([]); setWcItems([]); return; }
-
-      const qs = `?businessId=${bid}`;
+      const qs = `?businessId=${businessId}`;
       const [g, snaps, fc, auth, tk, wc] = await Promise.all([
         api(`/api/owner/budget/guidance${qs}`).catch(() => null),
         api(`/api/owner/budget/snapshots${qs}`).catch(() => []),
@@ -162,6 +155,7 @@ export default function OwnerBudgetPlanPage() {
         api(`/api/owner/budget/actions${qs}`).catch(() => []),
         api(`/api/owner/budget/working-capital${qs}`).catch(() => []),
       ]);
+      if (requestSeq.current !== seq) return;
       setGuidance(g);
       const current = Array.isArray(snaps) ? (snaps.find((s: any) => s.isCurrent) ?? snaps[0] ?? null) : null;
       setPlan(current?.plan ?? null);
@@ -170,17 +164,32 @@ export default function OwnerBudgetPlanPage() {
       setTasks(Array.isArray(tk) ? tk : []);
       setWcItems(Array.isArray(wc) ? wc : []);
     } catch (e) {
+      if (requestSeq.current !== seq) return;
       setError(e instanceof Error ? e.message : "Failed to load budget plan");
     } finally {
-      setLoading(false);
+      if (requestSeq.current === seq) setLoading(false);
     }
-  }, [businesses, selected]);
+  }, []);
 
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (contextLoading) return;
+    if (needsBusinessRecovery) return;
+    if (!activeBusinessId) {
+      setGuidance(null); setPlan(null); setForecast(null); setAuthorities([]); setTasks([]); setWcItems([]);
+      setLoading(false);
+      return;
+    }
+    void load(activeBusinessId);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery, load]);
+
+  const onSwitchBusiness = useCallback((id: string) => {
+    setLoading(true);
+    setActiveBusinessId(id);
+  }, [setActiveBusinessId]);
 
   async function submitOverride(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!selected || !plan) return;
+    if (!activeBusinessId || !plan) return;
     setBusy(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
@@ -188,7 +197,7 @@ export default function OwnerBudgetPlanPage() {
       await api("/api/owner/budget/override", {
         method: "POST",
         body: JSON.stringify({
-          businessId: selected,
+          businessId: activeBusinessId,
           originalRecommendation: plan.nextBestAction,
           riskWarning: `Overriding the ${plan.mode} plan's recommendation ("${plan.decisionType}") may accept the risk it was protecting against.`,
           reason: fd.get("reason"),
@@ -198,7 +207,7 @@ export default function OwnerBudgetPlanPage() {
         }),
       });
       setShowOverride(false);
-      await load(selected);
+      await load(activeBusinessId);
     } catch (e) {
       // The server refuses illegal/unsafe overrides (vendor-bank-unverified, statutory
       // reserve, unlawful action) — surface that refusal honestly.
@@ -209,7 +218,7 @@ export default function OwnerBudgetPlanPage() {
   }
 
   async function updateTask(actionId: string, status: string) {
-    if (!selected) return;
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     try {
@@ -223,7 +232,7 @@ export default function OwnerBudgetPlanPage() {
         body.completionEvidence = evidence.split(",").map((s) => s.trim()).filter(Boolean);
       }
       await api(`/api/owner/budget/actions/${actionId}`, { method: "PATCH", body: JSON.stringify(body) });
-      await load(selected);
+      await load(activeBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update execution task");
     } finally {
@@ -233,7 +242,7 @@ export default function OwnerBudgetPlanPage() {
 
   async function submitWcItem(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!selected) return;
+    if (!activeBusinessId) return;
     setBusy(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
@@ -242,7 +251,7 @@ export default function OwnerBudgetPlanPage() {
       await api("/api/owner/budget/working-capital", {
         method: "POST",
         body: JSON.stringify({
-          businessId: selected,
+          businessId: activeBusinessId,
           kind: fd.get("kind"),
           counterparty: fd.get("counterparty"),
           amount: Number(fd.get("amount")),
@@ -252,7 +261,7 @@ export default function OwnerBudgetPlanPage() {
         }),
       });
       setShowWcForm(false);
-      await load(selected);
+      await load(activeBusinessId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to record working-capital item");
     } finally {
@@ -260,7 +269,13 @@ export default function OwnerBudgetPlanPage() {
     }
   }
 
-  if (loading) return <CardDashboardSkeleton label="Loading Budget & Profit Plan" />;
+  if (contextLoading || loading) return <CardDashboardSkeleton label="Loading Budget & Profit Plan" />;
+  if (needsBusinessRecovery) return (
+    <PageContainer>
+      <p>Your previously selected business is no longer available. Choose a business to continue.</p>
+      <BusinessContextSelector businesses={businesses} selectedId={null} onChange={onSwitchBusiness} />
+    </PageContainer>
+  );
 
   const list: any[] = businesses ?? [];
   const mode = guidance?.mode ?? plan?.mode ?? null;
@@ -312,8 +327,8 @@ export default function OwnerBudgetPlanPage() {
           <div className="mb-6">
             <BusinessContextSelector
               businesses={list}
-              selectedId={selected}
-              onChange={(businessId) => load(businessId)}
+              selectedId={activeBusinessId}
+              onChange={onSwitchBusiness}
             />
           </div>
 

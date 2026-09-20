@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
+import { useActiveBusiness } from "@/context/active-business-context";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- guidance payload is the service contract (untyped here); load() on mount is intentional */
 
@@ -94,23 +95,20 @@ function humanizeProofType(value: string): string {
  * shape, not something a page-level selector can fix without a service-level change.
  */
 export default function OwnerNowViewPage() {
-  const [businesses, setBusinesses] = useState<any[]>([]);
-  const [businessId, setBusinessId] = useState<string | null>(null);
+  const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Request-sequence guard: this page did not previously support switching business (no selector
-  // existed), so adding one newly makes rapid A→B switching reachable. A stale in-flight response
-  // for a business the owner has since switched away from must not overwrite the newer selection.
+  // Request-sequence guard: a stale in-flight response for a business the owner has since
+  // switched away from must not overwrite the newer selection.
   const requestSeq = useRef(0);
 
-  const load = useCallback(async (bizId?: string | null) => {
+  const load = useCallback(async (bizId: string) => {
     const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
-      const qs = bizId ? `?businessId=${encodeURIComponent(bizId)}` : "";
-      const result = await api(`/api/owner/now-view${qs}`);
+      const result = await api(`/api/owner/now-view?businessId=${encodeURIComponent(bizId)}`);
       if (requestSeq.current !== seq) return; // a newer request has since started — discard this stale response
       setData(result);
     } catch (e) {
@@ -121,36 +119,36 @@ export default function OwnerNowViewPage() {
     }
   }, []);
 
-  const loadBusinesses = useCallback(async () => {
-    try {
-      const res = await api("/api/owner/businesses");
-      const list: any[] = Array.isArray(res?.businesses) ? res.businesses : [];
-      setBusinesses(list);
-      const active = list.find((b) => b.isActive) ?? list[0] ?? null;
-      const id = active?.id ?? null;
-      setBusinessId(id);
-      await load(id);
-    } catch {
-      // Business list is a progressive enhancement for the selector only — if it fails, still
-      // load the workspace-default now-view so the page remains usable.
-      await load(null);
-    }
-  }, [load]);
-
   useEffect(() => {
-    void loadBusinesses();
-  }, [loadBusinesses]);
+    if (contextLoading) return;
+    if (needsBusinessRecovery) return;
+    if (!activeBusinessId) { setLoading(false); return; }
+    void load(activeBusinessId);
+  }, [contextLoading, activeBusinessId, needsBusinessRecovery, load]);
 
   const onSwitchBusiness = useCallback((id: string) => {
-    setBusinessId(id);
-    void load(id);
-  }, [load]);
+    setLoading(true);
+    setActiveBusinessId(id);
+  }, [setActiveBusinessId]);
 
+  if (contextLoading) return <CardDashboardSkeleton sections={4} label="Loading your Owner Now View" />;
+  if (needsBusinessRecovery) return (
+    <PageContainer>
+      <p>Your previously selected business is no longer available. Choose a business to continue.</p>
+      <BusinessContextSelector businesses={businesses} selectedId={null} onChange={onSwitchBusiness} />
+    </PageContainer>
+  );
+  if (!activeBusinessId) return (
+    <PageContainer>
+      <CanonicalCockpitLink from="Now View" />
+      <p>No businesses yet. Create one to see your Owner Now View.</p>
+    </PageContainer>
+  );
   if (loading) return <CardDashboardSkeleton sections={4} label="Loading your Owner Now View" />;
   if (error) return (
     <PageContainer>
       <p style={{ color: "#b91c1c" }}>{error}</p>
-      <Button onClick={() => void load(businessId)}>Retry</Button>
+      <Button onClick={() => void load(activeBusinessId)}>Retry</Button>
     </PageContainer>
   );
   if (!data) return null;
@@ -168,12 +166,12 @@ export default function OwnerNowViewPage() {
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <Link href="/owner/process-intelligence" data-testid="process-intelligence-link">Where the process is breaking</Link>
             <Link href="/owner/adjudication" data-testid="proof-risk-queue-link">Proof-risk review queue</Link>
-            <Button onClick={() => void load(businessId)}>Refresh</Button>
+            <Button onClick={() => void load(activeBusinessId)}>Refresh</Button>
           </div>
         }
       />
 
-      <BusinessContextSelector businesses={businesses} selectedId={businessId} onChange={onSwitchBusiness} />
+      <BusinessContextSelector businesses={businesses} selectedId={activeBusinessId} onChange={onSwitchBusiness} />
       <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
         Business selection scopes cash, finance, quality and retention signals below. Staff workload,
         supply/capacity, process-breakdown, and proof-risk signals are workspace-wide and do not change

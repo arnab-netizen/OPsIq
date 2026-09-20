@@ -7,10 +7,19 @@
  * control, and the honest PARTIAL module-status banner. This is component-level
  * proof (jsdom) — not a live browser run (documented limitation).
  */
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, waitFor } from "@testing-library/react";
 import OwnerBudgetPlanPage from "@/app/(authenticated)/owner/budget/page";
+import { ActiveBusinessProvider } from "@/context/active-business-context";
 
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<ActiveBusinessProvider>{ui}</ActiveBusinessProvider>);
+}
+
+beforeEach(() => {
+  window.sessionStorage.clear();
+  window.localStorage.clear();
+});
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const PLAN = {
@@ -43,7 +52,7 @@ function mockFetch() {
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
     const url = String(input);
     const json = (body: unknown) => ({ ok: true, json: async () => body } as unknown as Response);
-    if (url.includes("/api/owner/recovery/businesses")) return json([{ id: "b1", name: "Acme", currency: "INR" }]);
+    if (url.includes("/api/owner/businesses")) return json({ businesses: [{ id: "b1", name: "Acme", currency: "INR" }] });
     if (url.includes("/api/owner/budget/guidance")) return json({ hasPlan: true, mode: "EMERGENCY", confidence: "OPERATIONAL", version: 2, reassessedAt: "2026-06-27T00:00:00Z", decisionType: "BLOCK", nextBestAction: PLAN.nextBestAction, topRisk: PLAN.topConstraint, signals: PLAN.signals, generatedActions: PLAN.generatedActions });
     if (url.includes("/api/owner/budget/snapshots")) return json([{ id: "s2", isCurrent: true, version: 2, plan: PLAN }]);
     if (url.includes("/api/owner/budget/forecast")) return json({ hasData: true, startingCash: 40000, reserveRequired: 50000, sevenDayCash: 35000, thirtyDayCash: 10000, ninetyDayCash: -50000, nextCriticalDueInDays: 5, scenarios: [{ name: "base", weeklyEndingCash: [], endingCash: -50000, minCash: -60000, reserveBreachWeek: 3 }] });
@@ -56,7 +65,7 @@ function mockFetch() {
 describe("Owner Budget & Profit Plan page", () => {
   it("renders the governed budget surface the owner can act on", async () => {
     mockFetch();
-    const { container, queryByText } = render(<OwnerBudgetPlanPage />);
+    const { container, queryByText } = renderWithProvider(<OwnerBudgetPlanPage />);
     await waitFor(() => expect(container.textContent ?? "").toContain("Next best action"));
     const text = container.textContent ?? "";
     expect(text).toContain("Budget & Profit Plan");
@@ -83,7 +92,7 @@ describe("Owner Budget & Profit Plan page", () => {
 
   it("labels generated actions as advisory and shows the honest PARTIAL module banner", async () => {
     mockFetch();
-    const { container } = render(<OwnerBudgetPlanPage />);
+    const { container } = renderWithProvider(<OwnerBudgetPlanPage />);
     await waitFor(() => expect(container.textContent ?? "").toContain("Generated actions"));
     const text = container.textContent ?? "";
     // The module-status banner is honest about being partial, but must never leak the raw
@@ -98,7 +107,7 @@ describe("Owner Budget & Profit Plan page", () => {
 
   it("shows persisted execution tasks as a distinct, governed section (not merely advisory)", async () => {
     mockFetch();
-    const { container } = render(<OwnerBudgetPlanPage />);
+    const { container } = renderWithProvider(<OwnerBudgetPlanPage />);
     await waitFor(() => expect(container.textContent ?? "").toContain("Execution tasks"));
     const text = container.textContent ?? "";
     // The persisted execution-task section is present and labelled distinctly from advisory.
@@ -113,7 +122,7 @@ describe("Owner Budget & Profit Plan page", () => {
 
   it("does not present unverified confidence as verified", async () => {
     mockFetch();
-    const { container } = render(<OwnerBudgetPlanPage />);
+    const { container } = renderWithProvider(<OwnerBudgetPlanPage />);
     await waitFor(() => expect(container.textContent ?? "").toContain("confidence:"));
     const text = container.textContent ?? "";
     // OPERATIONAL confidence must trigger the below-VERIFIED warning, not a verified claim.

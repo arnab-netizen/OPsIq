@@ -25,7 +25,7 @@ import { execFileSync } from "node:child_process";
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "..");
 const BASELINE_PATH = path.join(ROOT, "docs/opsiq/ux/OWNER_FEATURE_PRESERVATION_BASELINE.json");
 const GENERATOR_PATH = path.join(ROOT, "scripts/ux/generate-owner-feature-baseline.mjs");
-const ACCEPTED_BASELINE_SHA = "646b06b97dee7283f5bf6db1d38027e843e3efbc";
+const ACCEPTED_BASELINE_SHA = "e5d6fd8b73d6a1619b89377b764b6ec0046335fd";
 
 function loadBaseline() {
   if (!fs.existsSync(BASELINE_PATH)) {
@@ -134,11 +134,18 @@ function checkApiCapabilities(baseline, candidate, add) {
  * baseline already records per-page GET/write dependencies, but until now nothing compared them,
  * so a future change could drop a page's read dependency on an API (the page and the API route
  * both still exist) with no finding at all. Additions are fine; only removal fails. Compared by
- * (method, endpoint) — endpoint is already ":param"-normalized identically by the generator on
- * both sides, so no extra normalization is needed here. */
+ * (method, path) — the generator's readApis/writeApis entries carry a `path` field (not
+ * `endpoint`; that name is only used by the separate majorActions/cockpit structures), already
+ * ":param"-normalized identically by the generator on both sides, so no extra normalization is
+ * needed here. Root cause of a real defect found in UX-01 (session 2026-09-20): this function
+ * previously read `a.endpoint`, which is undefined on these entries, collapsing every GET call on
+ * a page to the same key ("GET undefined") and silently masking the removal of any one specific
+ * dependency as long as the page still had another GET call left — verified by reproducing it
+ * against UX-01's own six intentional dependency removals, five of which this bug suppressed
+ * entirely and the sixth of which it reported with an "undefined" endpoint. */
 function checkPageApiDependencies(baseline, candidate, add) {
   const candByRoute = new Map(candidate.ownerPageRoutes.map((p) => [p.route, p]));
-  const keyOf = (a) => `${a.method} ${a.endpoint}`;
+  const keyOf = (a) => `${a.method} ${a.path}`;
   for (const p of baseline.ownerPageRoutes) {
     const cand = candByRoute.get(p.route);
     if (!cand) continue; // already reported by checkOwnerPages
