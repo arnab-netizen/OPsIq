@@ -1,0 +1,5896 @@
+{
+  "baselineSha": "646b06b97dee7283f5bf6db1d38027e843e3efbc",
+  "generatedAt": "2026-09-20T10:05:35.969Z",
+  "ownerPageRoutes": [
+    {
+      "route": "/owner/adjudication",
+      "sourceFile": "src/app/(authenticated)/owner/adjudication/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/app/(authenticated)/owner/now/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/alerts",
+      "sourceFile": "src/app/(authenticated)/owner/alerts/page.tsx",
+      "navigationState": "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/approvals",
+      "sourceFile": "src/app/(authenticated)/owner/approvals/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/app/(authenticated)/owner/home/page.tsx",
+        "src/app/(authenticated)/owner/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/automation",
+      "sourceFile": "src/app/(authenticated)/owner/automation/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/app/(authenticated)/owner/home/page.tsx",
+        "src/app/(authenticated)/owner/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/budget",
+      "sourceFile": "src/app/(authenticated)/owner/budget/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/app/(authenticated)/owner/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/cashflow",
+      "sourceFile": "src/app/(authenticated)/owner/cashflow/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/__tests__/owner-activation/onboarding-cash-wiring.test.tsx",
+        "src/app/(authenticated)/owner/home/page.tsx",
+        "src/app/(authenticated)/owner/onboarding/page.tsx",
+        "src/app/(authenticated)/owner/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/cockpit",
+      "sourceFile": "src/app/(authenticated)/owner/cockpit/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/compliance/[id]",
+      "sourceFile": "src/app/(authenticated)/owner/compliance/[id]/page.tsx",
+      "navigationState": "IN_SIDEBAR_VIA_PARENT(/owner/compliance)",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/compliance",
+      "sourceFile": "src/app/(authenticated)/owner/compliance/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/customers",
+      "sourceFile": "src/app/(authenticated)/owner/customers/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/data",
+      "sourceFile": "src/app/(authenticated)/owner/data/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/execution",
+      "sourceFile": "src/app/(authenticated)/owner/execution/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/feedback",
+      "sourceFile": "src/app/(authenticated)/owner/feedback/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/finance",
+      "sourceFile": "src/app/(authenticated)/owner/finance/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/first-value",
+      "sourceFile": "src/app/(authenticated)/owner/first-value/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": []
+    },
+    {
+      "route": "/owner/goals",
+      "sourceFile": "src/app/(authenticated)/owner/goals/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/growth-pricing",
+      "sourceFile": "src/app/(authenticated)/owner/growth-pricing/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/app/(authenticated)/owner/home/page.tsx",
+        "src/app/(authenticated)/owner/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/help",
+      "sourceFile": "src/app/(authenticated)/owner/help/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/home",
+      "sourceFile": "src/app/(authenticated)/owner/home/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/__tests__/owner-activation/navigation-activation.test.tsx",
+        "src/__tests__/owner-home/home-page.test.ts",
+        "src/__tests__/services/owner-diagnosis-action-ordering-governance.test.ts",
+        "src/app/(authenticated)/owner/alerts/page.tsx",
+        "src/app/(authenticated)/owner/startup/[sessionId]/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/intake",
+      "sourceFile": "src/app/(authenticated)/owner/intake/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/__tests__/app/owner-intake-page.test.tsx",
+        "src/__tests__/owner-activation/activation-surfaces.test.tsx",
+        "src/__tests__/owner-activation/nav-targets-inside-shell.test.ts",
+        "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
+        "src/__tests__/owner-activation/owner-data-hub-page.test.tsx",
+        "src/app/(authenticated)/owner/data/page.tsx",
+        "src/app/(authenticated)/owner/home/page.tsx",
+        "src/app/(authenticated)/owner/onboarding/page.tsx",
+        "src/app/(authenticated)/owner/page.tsx",
+        "src/domain/owner-mode/owner-data-hub.ts"
+      ]
+    },
+    {
+      "route": "/owner/inventory",
+      "sourceFile": "src/app/(authenticated)/owner/inventory/page.tsx",
+      "navigationState": "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/learning",
+      "sourceFile": "src/app/(authenticated)/owner/learning/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/app/(authenticated)/owner/home/page.tsx",
+        "src/app/(authenticated)/owner/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/manual-entry",
+      "sourceFile": "src/app/(authenticated)/owner/manual-entry/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/__tests__/owner-activation/nav-targets-inside-shell.test.ts",
+        "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
+        "src/__tests__/owner-activation/owner-data-hub-page.test.tsx",
+        "src/app/(authenticated)/owner/data/page.tsx",
+        "src/domain/owner-mode/owner-data-hub.ts"
+      ]
+    },
+    {
+      "route": "/owner/marketing/campaigns",
+      "sourceFile": "src/app/(authenticated)/owner/marketing/campaigns/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/marketing",
+      "sourceFile": "src/app/(authenticated)/owner/marketing/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/now",
+      "sourceFile": "src/app/(authenticated)/owner/now/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/__tests__/app/owner-adjudication-page.test.tsx",
+        "src/__tests__/app/owner-process-intelligence-page.test.tsx",
+        "src/__tests__/owner-activation/navigation-activation.test.tsx",
+        "src/app/(authenticated)/owner/adjudication/page.tsx",
+        "src/app/(authenticated)/owner/process-intelligence/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/onboarding",
+      "sourceFile": "src/app/(authenticated)/owner/onboarding/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/__tests__/owner-activation/owner-data-hub-page.test.tsx",
+        "src/app/(authenticated)/owner/data/page.tsx",
+        "src/app/(authenticated)/owner/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/operations",
+      "sourceFile": "src/app/(authenticated)/owner/operations/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner",
+      "sourceFile": "src/app/(authenticated)/owner/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/__tests__/components/sidebar-nav-risk-hidden.test.tsx",
+        "src/__tests__/components/visual-system-semantic-color-closure.test.ts",
+        "src/__tests__/owner-activation/navigation-activation.test.tsx",
+        "src/__tests__/owner-activation/owner-data-hub-domain.test.ts",
+        "src/__tests__/owner-condition/owner-home-page.test.ts",
+        "src/__tests__/owner-finance/finance-page.test.ts",
+        "src/__tests__/owner-home/home-page.test.ts",
+        "src/__tests__/owner-trust/trust-page.test.ts",
+        "src/__tests__/services/owner-diagnosis-action-ordering-governance.test.ts",
+        "src/app/(authenticated)/owner/automation/page.tsx",
+        "src/app/(authenticated)/owner/budget/page.tsx",
+        "src/app/(authenticated)/owner/compliance/page.tsx",
+        "src/app/(authenticated)/owner/home/page.tsx",
+        "src/app/(authenticated)/owner/intake/page.tsx",
+        "src/app/(authenticated)/owner/portfolio/page.tsx",
+        "src/app/(authenticated)/owner/risks/page.tsx",
+        "src/app/(authenticated)/owner/startup/[sessionId]/page.tsx",
+        "src/app/(authenticated)/owner/startup/page.tsx",
+        "src/app/(authenticated)/owner/tasks/[taskId]/page.tsx",
+        "src/app/(authenticated)/owner/tasks/new/page.tsx",
+        "src/app/(authenticated)/owner/tasks/page.tsx",
+        "src/app/(authenticated)/owner/trust/page.tsx",
+        "src/app/(authenticated)/owner/wealth/page.tsx",
+        "src/domain/owner-mode/owner-data-hub.ts",
+        "src/services/owner-guidance/cockpit-finance-priority.service.ts",
+        "src/services/workspace/employee-lifecycle.service.ts"
+      ]
+    },
+    {
+      "route": "/owner/portfolio",
+      "sourceFile": "src/app/(authenticated)/owner/portfolio/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/app/(authenticated)/owner/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/priorities",
+      "sourceFile": "src/app/(authenticated)/owner/priorities/page.tsx",
+      "navigationState": "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/process-intelligence",
+      "sourceFile": "src/app/(authenticated)/owner/process-intelligence/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/app/(authenticated)/owner/now/page.tsx"
+      ]
+    },
+    {
+      "route": "/owner/procurement",
+      "sourceFile": "src/app/(authenticated)/owner/procurement/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/recovery",
+      "sourceFile": "src/app/(authenticated)/owner/recovery/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/risks/[id]",
+      "sourceFile": "src/app/(authenticated)/owner/risks/[id]/page.tsx",
+      "navigationState": "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/risks",
+      "sourceFile": "src/app/(authenticated)/owner/risks/page.tsx",
+      "navigationState": "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/sales",
+      "sourceFile": "src/app/(authenticated)/owner/sales/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/start-here",
+      "sourceFile": "src/app/(authenticated)/owner/start-here/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/startup/[sessionId]",
+      "sourceFile": "src/app/(authenticated)/owner/startup/[sessionId]/page.tsx",
+      "navigationState": "IN_SIDEBAR_VIA_PARENT(/owner/startup)",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/startup",
+      "sourceFile": "src/app/(authenticated)/owner/startup/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/strategy",
+      "sourceFile": "src/app/(authenticated)/owner/strategy/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/tasks/[taskId]",
+      "sourceFile": "src/app/(authenticated)/owner/tasks/[taskId]/page.tsx",
+      "navigationState": "IN_SIDEBAR_VIA_PARENT(/owner/tasks)",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/tasks/new",
+      "sourceFile": "src/app/(authenticated)/owner/tasks/new/page.tsx",
+      "navigationState": "IN_SIDEBAR_VIA_PARENT(/owner/tasks)",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/tasks",
+      "sourceFile": "src/app/(authenticated)/owner/tasks/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/trust",
+      "sourceFile": "src/app/(authenticated)/owner/trust/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/vendor",
+      "sourceFile": "src/app/(authenticated)/owner/vendor/page.tsx",
+      "navigationState": "IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "OWNER_VIEW (requiresOwner, see sidebar-nav.tsx)",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": "N/A_IN_NAV"
+    },
+    {
+      "route": "/owner/wealth",
+      "sourceFile": "src/app/(authenticated)/owner/wealth/page.tsx",
+      "navigationState": "NOT_IN_SIDEBAR",
+      "persona": "owner",
+      "capabilityGate": "NOT_VERIFIED",
+      "previewState": "SEE_sidebarItems_previewItems_comingSoonItems",
+      "businessContextBehavior": "NOT_VERIFIED",
+      "readApis": "NOT_VERIFIED",
+      "writeApis": "NOT_VERIFIED",
+      "majorActions": "NOT_VERIFIED",
+      "currentTests": "NOT_VERIFIED",
+      "deepLinkedFrom": [
+        "src/__tests__/owner-mode/wealth-command-center-wiring.test.ts",
+        "src/app/(authenticated)/owner/page.tsx"
+      ]
+    }
+  ],
+  "ownerApiRoutes": [
+    {
+      "path": "/api/owner/action-assignments",
+      "sourceFile": "src/app/api/owner/action-assignments/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/action-plan",
+      "sourceFile": "src/app/api/owner/action-plan/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/alerts/[id]/read",
+      "sourceFile": "src/app/api/owner/alerts/[id]/read/route.ts",
+      "httpMethods": [
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/alerts/[id]/resolve",
+      "sourceFile": "src/app/api/owner/alerts/[id]/resolve/route.ts",
+      "httpMethods": [
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/alerts",
+      "sourceFile": "src/app/api/owner/alerts/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/approval",
+      "sourceFile": "src/app/api/owner/approval/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "capability": [
+        "CONSULTING_APPROVE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/approvals/memory",
+      "sourceFile": "src/app/api/owner/approvals/memory/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/approvals/resolve",
+      "sourceFile": "src/app/api/owner/approvals/resolve/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/arbitrate",
+      "sourceFile": "src/app/api/owner/arbitrate/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/bcp",
+      "sourceFile": "src/app/api/owner/bcp/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/budget/actions/[actionId]",
+      "sourceFile": "src/app/api/owner/budget/actions/[actionId]/route.ts",
+      "httpMethods": [
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/budget/actions",
+      "sourceFile": "src/app/api/owner/budget/actions/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/budget/archetype-metrics",
+      "sourceFile": "src/app/api/owner/budget/archetype-metrics/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/budget/authority",
+      "sourceFile": "src/app/api/owner/budget/authority/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/budget/forecast",
+      "sourceFile": "src/app/api/owner/budget/forecast/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/budget/guidance",
+      "sourceFile": "src/app/api/owner/budget/guidance/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/budget/override",
+      "sourceFile": "src/app/api/owner/budget/override/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/budget/snapshots",
+      "sourceFile": "src/app/api/owner/budget/snapshots/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/budget/spend",
+      "sourceFile": "src/app/api/owner/budget/spend/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/budget/working-capital",
+      "sourceFile": "src/app/api/owner/budget/working-capital/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/businesses/[businessId]/analyze",
+      "sourceFile": "src/app/api/owner/businesses/[businessId]/analyze/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/businesses/[businessId]/outcomes",
+      "sourceFile": "src/app/api/owner/businesses/[businessId]/outcomes/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/businesses/[businessId]/progress",
+      "sourceFile": "src/app/api/owner/businesses/[businessId]/progress/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/businesses",
+      "sourceFile": "src/app/api/owner/businesses/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/capacity/assess",
+      "sourceFile": "src/app/api/owner/capacity/assess/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cashflow/actions/[actionId]",
+      "sourceFile": "src/app/api/owner/cashflow/actions/[actionId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cashflow/actions/[actionId]/verify",
+      "sourceFile": "src/app/api/owner/cashflow/actions/[actionId]/verify/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cashflow/businesses/[businessId]/diagnoses",
+      "sourceFile": "src/app/api/owner/cashflow/businesses/[businessId]/diagnoses/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cashflow/businesses/[businessId]/snapshots",
+      "sourceFile": "src/app/api/owner/cashflow/businesses/[businessId]/snapshots/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cashflow/dashboard",
+      "sourceFile": "src/app/api/owner/cashflow/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cashflow/diagnoses/[cycleId]/actions",
+      "sourceFile": "src/app/api/owner/cashflow/diagnoses/[cycleId]/actions/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cashflow/diagnoses/[cycleId]/findings",
+      "sourceFile": "src/app/api/owner/cashflow/diagnoses/[cycleId]/findings/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cashflow/diagnoses/[cycleId]",
+      "sourceFile": "src/app/api/owner/cashflow/diagnoses/[cycleId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cashflow/snapshots/[snapshotId]",
+      "sourceFile": "src/app/api/owner/cashflow/snapshots/[snapshotId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/collective-decision",
+      "sourceFile": "src/app/api/owner/collective-decision/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/command-center",
+      "sourceFile": "src/app/api/owner/command-center/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/complaints",
+      "sourceFile": "src/app/api/owner/complaints/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/compliance/[itemId]/review",
+      "sourceFile": "src/app/api/owner/compliance/[itemId]/review/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/compliance/[itemId]",
+      "sourceFile": "src/app/api/owner/compliance/[itemId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/compliance/[itemId]/tasks",
+      "sourceFile": "src/app/api/owner/compliance/[itemId]/tasks/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/compliance/classify",
+      "sourceFile": "src/app/api/owner/compliance/classify/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/compliance",
+      "sourceFile": "src/app/api/owner/compliance/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/config",
+      "sourceFile": "src/app/api/owner/config/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/connectors",
+      "sourceFile": "src/app/api/owner/connectors/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "capability": [
+        "INTEGRATION_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/constraints",
+      "sourceFile": "src/app/api/owner/constraints/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/control-center",
+      "sourceFile": "src/app/api/owner/control-center/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cost-attribution",
+      "sourceFile": "src/app/api/owner/cost-attribution/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/cost-intelligence",
+      "sourceFile": "src/app/api/owner/cost-intelligence/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/dashboard",
+      "sourceFile": "src/app/api/owner/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/dev/seed-archetype",
+      "sourceFile": "src/app/api/owner/dev/seed-archetype/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/do-not-repeat",
+      "sourceFile": "src/app/api/owner/do-not-repeat/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/equipment",
+      "sourceFile": "src/app/api/owner/equipment/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/execution-plan",
+      "sourceFile": "src/app/api/owner/execution-plan/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/finance/actions/[actionId]",
+      "sourceFile": "src/app/api/owner/finance/actions/[actionId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/finance/actions/[actionId]/verify",
+      "sourceFile": "src/app/api/owner/finance/actions/[actionId]/verify/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/finance/businesses/[businessId]/diagnoses",
+      "sourceFile": "src/app/api/owner/finance/businesses/[businessId]/diagnoses/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/finance/businesses/[businessId]/snapshots",
+      "sourceFile": "src/app/api/owner/finance/businesses/[businessId]/snapshots/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/finance/dashboard",
+      "sourceFile": "src/app/api/owner/finance/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/finance/diagnoses/[cycleId]/actions",
+      "sourceFile": "src/app/api/owner/finance/diagnoses/[cycleId]/actions/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/finance/diagnoses/[cycleId]/findings",
+      "sourceFile": "src/app/api/owner/finance/diagnoses/[cycleId]/findings/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/finance/diagnoses/[cycleId]",
+      "sourceFile": "src/app/api/owner/finance/diagnoses/[cycleId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/finance/snapshots/[snapshotId]/amend",
+      "sourceFile": "src/app/api/owner/finance/snapshots/[snapshotId]/amend/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/finance/snapshots/[snapshotId]",
+      "sourceFile": "src/app/api/owner/finance/snapshots/[snapshotId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/first-value",
+      "sourceFile": "src/app/api/owner/first-value/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/gates/opt-out",
+      "sourceFile": "src/app/api/owner/gates/opt-out/route.ts",
+      "httpMethods": [
+        "POST",
+        "DELETE"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/goal-arbitration",
+      "sourceFile": "src/app/api/owner/goal-arbitration/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/goals",
+      "sourceFile": "src/app/api/owner/goals/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/goals/trajectory",
+      "sourceFile": "src/app/api/owner/goals/trajectory/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/guardrails/screen",
+      "sourceFile": "src/app/api/owner/guardrails/screen/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/guided-choice",
+      "sourceFile": "src/app/api/owner/guided-choice/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/home",
+      "sourceFile": "src/app/api/owner/home/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/input-guidance",
+      "sourceFile": "src/app/api/owner/input-guidance/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/intake/businesses/[businessId]/uploads",
+      "sourceFile": "src/app/api/owner/intake/businesses/[businessId]/uploads/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/intake/dashboard",
+      "sourceFile": "src/app/api/owner/intake/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/intake/uploads/[intakeId]/confirm",
+      "sourceFile": "src/app/api/owner/intake/uploads/[intakeId]/confirm/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/intake/uploads/[intakeId]",
+      "sourceFile": "src/app/api/owner/intake/uploads/[intakeId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/integration-events",
+      "sourceFile": "src/app/api/owner/integration-events/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "INTEGRATION_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/inventory/stock-items/[stockItemId]",
+      "sourceFile": "src/app/api/owner/inventory/stock-items/[stockItemId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/inventory/stock-items",
+      "sourceFile": "src/app/api/owner/inventory/stock-items/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/kpi-ownership",
+      "sourceFile": "src/app/api/owner/kpi-ownership/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-admissions",
+      "sourceFile": "src/app/api/owner/learning-admissions/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-attribution-reviews",
+      "sourceFile": "src/app/api/owner/learning-attribution-reviews/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-candidates/[candidateId]/promote",
+      "sourceFile": "src/app/api/owner/learning-candidates/[candidateId]/promote/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-candidates/[candidateId]/reject",
+      "sourceFile": "src/app/api/owner/learning-candidates/[candidateId]/reject/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-candidates",
+      "sourceFile": "src/app/api/owner/learning-candidates/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-consent",
+      "sourceFile": "src/app/api/owner/learning-consent/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-harm-events",
+      "sourceFile": "src/app/api/owner/learning-harm-events/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-privacy",
+      "sourceFile": "src/app/api/owner/learning-privacy/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-regression-results",
+      "sourceFile": "src/app/api/owner/learning-regression-results/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-rejections",
+      "sourceFile": "src/app/api/owner/learning-rejections/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-retention",
+      "sourceFile": "src/app/api/owner/learning-retention/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-reviews/[reviewId]",
+      "sourceFile": "src/app/api/owner/learning-reviews/[reviewId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-reviews",
+      "sourceFile": "src/app/api/owner/learning-reviews/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-rollback-events",
+      "sourceFile": "src/app/api/owner/learning-rollback-events/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/learning-rollout-flags",
+      "sourceFile": "src/app/api/owner/learning-rollout-flags/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/local-mode/status",
+      "sourceFile": "src/app/api/owner/local-mode/status/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/manual-entry",
+      "sourceFile": "src/app/api/owner/manual-entry/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/actions/[actionId]",
+      "sourceFile": "src/app/api/owner/marketing/actions/[actionId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/actions/[actionId]/verify",
+      "sourceFile": "src/app/api/owner/marketing/actions/[actionId]/verify/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/businesses/[businessId]/diagnoses",
+      "sourceFile": "src/app/api/owner/marketing/businesses/[businessId]/diagnoses/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/businesses/[businessId]/snapshots",
+      "sourceFile": "src/app/api/owner/marketing/businesses/[businessId]/snapshots/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/campaigns/[campaignId]",
+      "sourceFile": "src/app/api/owner/marketing/campaigns/[campaignId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/campaigns",
+      "sourceFile": "src/app/api/owner/marketing/campaigns/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/dashboard",
+      "sourceFile": "src/app/api/owner/marketing/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/diagnoses/[cycleId]/actions",
+      "sourceFile": "src/app/api/owner/marketing/diagnoses/[cycleId]/actions/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/diagnoses/[cycleId]/findings",
+      "sourceFile": "src/app/api/owner/marketing/diagnoses/[cycleId]/findings/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/diagnoses/[cycleId]",
+      "sourceFile": "src/app/api/owner/marketing/diagnoses/[cycleId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/marketing/snapshots/[snapshotId]",
+      "sourceFile": "src/app/api/owner/marketing/snapshots/[snapshotId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/now-view",
+      "sourceFile": "src/app/api/owner/now-view/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/objectives/[objectiveId]",
+      "sourceFile": "src/app/api/owner/objectives/[objectiveId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/objectives",
+      "sourceFile": "src/app/api/owner/objectives/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/onboarding-lifecycle",
+      "sourceFile": "src/app/api/owner/onboarding-lifecycle/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_ONBOARD"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/onboarding",
+      "sourceFile": "src/app/api/owner/onboarding/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operating-memory",
+      "sourceFile": "src/app/api/owner/operating-memory/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/actions/[actionId]",
+      "sourceFile": "src/app/api/owner/operations/actions/[actionId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/actions/[actionId]/verify",
+      "sourceFile": "src/app/api/owner/operations/actions/[actionId]/verify/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/businesses/[businessId]/capacity-snapshots",
+      "sourceFile": "src/app/api/owner/operations/businesses/[businessId]/capacity-snapshots/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/businesses/[businessId]/diagnoses",
+      "sourceFile": "src/app/api/owner/operations/businesses/[businessId]/diagnoses/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/businesses/[businessId]/snapshots",
+      "sourceFile": "src/app/api/owner/operations/businesses/[businessId]/snapshots/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/businesses/[businessId]/workload-snapshots",
+      "sourceFile": "src/app/api/owner/operations/businesses/[businessId]/workload-snapshots/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/dashboard",
+      "sourceFile": "src/app/api/owner/operations/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/diagnoses/[cycleId]/actions",
+      "sourceFile": "src/app/api/owner/operations/diagnoses/[cycleId]/actions/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/diagnoses/[cycleId]/findings",
+      "sourceFile": "src/app/api/owner/operations/diagnoses/[cycleId]/findings/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/diagnoses/[cycleId]",
+      "sourceFile": "src/app/api/owner/operations/diagnoses/[cycleId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/operations/snapshots/[snapshotId]",
+      "sourceFile": "src/app/api/owner/operations/snapshots/[snapshotId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/opportunities/decide",
+      "sourceFile": "src/app/api/owner/opportunities/decide/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/opportunities/execution-task",
+      "sourceFile": "src/app/api/owner/opportunities/execution-task/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/opportunities/signals",
+      "sourceFile": "src/app/api/owner/opportunities/signals/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/opportunities/validation-outcome",
+      "sourceFile": "src/app/api/owner/opportunities/validation-outcome/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/override-arbitration",
+      "sourceFile": "src/app/api/owner/override-arbitration/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/policies/[policyKey]/overrides/[overrideId]",
+      "sourceFile": "src/app/api/owner/policies/[policyKey]/overrides/[overrideId]/route.ts",
+      "httpMethods": [
+        "DELETE"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/policies/[policyKey]/overrides",
+      "sourceFile": "src/app/api/owner/policies/[policyKey]/overrides/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/policies/[policyKey]",
+      "sourceFile": "src/app/api/owner/policies/[policyKey]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/policies",
+      "sourceFile": "src/app/api/owner/policies/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/portfolio/actions",
+      "sourceFile": "src/app/api/owner/portfolio/actions/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/portfolio/dashboard",
+      "sourceFile": "src/app/api/owner/portfolio/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/portfolio/ranking",
+      "sourceFile": "src/app/api/owner/portfolio/ranking/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/portfolio/risks",
+      "sourceFile": "src/app/api/owner/portfolio/risks/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/pricing-analysis",
+      "sourceFile": "src/app/api/owner/pricing-analysis/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/priorities",
+      "sourceFile": "src/app/api/owner/priorities/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/process-execution",
+      "sourceFile": "src/app/api/owner/process-execution/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/processes",
+      "sourceFile": "src/app/api/owner/processes/route.ts",
+      "httpMethods": [
+        "POST",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/procurement/purchase-orders/[poId]",
+      "sourceFile": "src/app/api/owner/procurement/purchase-orders/[poId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/procurement/purchase-orders/[poId]/transition",
+      "sourceFile": "src/app/api/owner/procurement/purchase-orders/[poId]/transition/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/procurement/purchase-orders",
+      "sourceFile": "src/app/api/owner/procurement/purchase-orders/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/profit-leak",
+      "sourceFile": "src/app/api/owner/profit-leak/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/proof-risk/queue",
+      "sourceFile": "src/app/api/owner/proof-risk/queue/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/public-signals",
+      "sourceFile": "src/app/api/owner/public-signals/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/reactivation/assess",
+      "sourceFile": "src/app/api/owner/reactivation/assess/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/readiness",
+      "sourceFile": "src/app/api/owner/readiness/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/recovery-status",
+      "sourceFile": "src/app/api/owner/recovery-status/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/recovery/actions/[actionId]",
+      "sourceFile": "src/app/api/owner/recovery/actions/[actionId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/recovery/actions/[actionId]/verify",
+      "sourceFile": "src/app/api/owner/recovery/actions/[actionId]/verify/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/recovery/businesses/[businessId]/cycles",
+      "sourceFile": "src/app/api/owner/recovery/businesses/[businessId]/cycles/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/recovery/businesses/[businessId]",
+      "sourceFile": "src/app/api/owner/recovery/businesses/[businessId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/recovery/businesses/[businessId]/snapshots",
+      "sourceFile": "src/app/api/owner/recovery/businesses/[businessId]/snapshots/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/recovery/businesses",
+      "sourceFile": "src/app/api/owner/recovery/businesses/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW",
+        "SYSTEM_ADMIN"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/recovery/cycles/[cycleId]",
+      "sourceFile": "src/app/api/owner/recovery/cycles/[cycleId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/recovery/dashboard",
+      "sourceFile": "src/app/api/owner/recovery/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/resource-pools",
+      "sourceFile": "src/app/api/owner/resource-pools/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/risks/[riskId]/review",
+      "sourceFile": "src/app/api/owner/risks/[riskId]/review/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/risks/[riskId]",
+      "sourceFile": "src/app/api/owner/risks/[riskId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/risks/[riskId]/tasks",
+      "sourceFile": "src/app/api/owner/risks/[riskId]/tasks/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/risks",
+      "sourceFile": "src/app/api/owner/risks/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/actions/[actionId]",
+      "sourceFile": "src/app/api/owner/sales/actions/[actionId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/actions/[actionId]/verify",
+      "sourceFile": "src/app/api/owner/sales/actions/[actionId]/verify/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/businesses/[businessId]/diagnoses",
+      "sourceFile": "src/app/api/owner/sales/businesses/[businessId]/diagnoses/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/businesses/[businessId]/snapshots",
+      "sourceFile": "src/app/api/owner/sales/businesses/[businessId]/snapshots/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/customers/[customerId]",
+      "sourceFile": "src/app/api/owner/sales/customers/[customerId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/customers",
+      "sourceFile": "src/app/api/owner/sales/customers/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/dashboard",
+      "sourceFile": "src/app/api/owner/sales/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/diagnoses/[cycleId]/actions",
+      "sourceFile": "src/app/api/owner/sales/diagnoses/[cycleId]/actions/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/diagnoses/[cycleId]/findings",
+      "sourceFile": "src/app/api/owner/sales/diagnoses/[cycleId]/findings/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/diagnoses/[cycleId]",
+      "sourceFile": "src/app/api/owner/sales/diagnoses/[cycleId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sales/snapshots/[snapshotId]",
+      "sourceFile": "src/app/api/owner/sales/snapshots/[snapshotId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/scheduler-status",
+      "sourceFile": "src/app/api/owner/scheduler-status/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/self-evaluation",
+      "sourceFile": "src/app/api/owner/self-evaluation/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop-documents",
+      "sourceFile": "src/app/api/owner/sop-documents/route.ts",
+      "httpMethods": [
+        "POST",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop-intelligence",
+      "sourceFile": "src/app/api/owner/sop-intelligence/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "capability": [
+        "SOP_MANAGE"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop/actions/[actionId]",
+      "sourceFile": "src/app/api/owner/sop/actions/[actionId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop/actions/[actionId]/verify",
+      "sourceFile": "src/app/api/owner/sop/actions/[actionId]/verify/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop/businesses/[businessId]/diagnoses",
+      "sourceFile": "src/app/api/owner/sop/businesses/[businessId]/diagnoses/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop/businesses/[businessId]/snapshots",
+      "sourceFile": "src/app/api/owner/sop/businesses/[businessId]/snapshots/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop/dashboard",
+      "sourceFile": "src/app/api/owner/sop/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop/diagnoses/[cycleId]/actions",
+      "sourceFile": "src/app/api/owner/sop/diagnoses/[cycleId]/actions/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop/diagnoses/[cycleId]/findings",
+      "sourceFile": "src/app/api/owner/sop/diagnoses/[cycleId]/findings/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop/diagnoses/[cycleId]",
+      "sourceFile": "src/app/api/owner/sop/diagnoses/[cycleId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/sop/snapshots/[snapshotId]",
+      "sourceFile": "src/app/api/owner/sop/snapshots/[snapshotId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/staff-training",
+      "sourceFile": "src/app/api/owner/staff-training/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/standing-instructions",
+      "sourceFile": "src/app/api/owner/standing-instructions/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup-validate",
+      "sourceFile": "src/app/api/owner/startup-validate/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/initiatives/[initiativeId]/close",
+      "sourceFile": "src/app/api/owner/startup/initiatives/[initiativeId]/close/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/activate",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/activate/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/analysis",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/analysis/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/arbitrate",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/arbitrate/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/blueprint",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/blueprint/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW",
+        "SYSTEM_ADMIN"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/candidates/[batchId]/[conceptIndex]/accept",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/candidates/[batchId]/[conceptIndex]/accept/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/candidates/[batchId]/[conceptIndex]/reject",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/candidates/[batchId]/[conceptIndex]/reject/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/candidates",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/candidates/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/decision",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/decision/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/evidence/freshness",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/evidence/freshness/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/evidence",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/evidence/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/explanation",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/explanation/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/generate-ideas",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/generate-ideas/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/economics",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/economics/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/execution-plan",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/execution-plan/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/market-sizing",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/market-sizing/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/revise",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/revise/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/validation-plan",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/[ideaId]/validation-plan/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/ideas",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/ideas/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/profile",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/profile/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]/research",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/research/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions/[sessionId]",
+      "sourceFile": "src/app/api/owner/startup/sessions/[sessionId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/startup/sessions",
+      "sourceFile": "src/app/api/owner/startup/sessions/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW",
+        "SYSTEM_ADMIN"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/strategy/actions/[actionId]",
+      "sourceFile": "src/app/api/owner/strategy/actions/[actionId]/route.ts",
+      "httpMethods": [
+        "GET",
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/strategy/actions/[actionId]/verify",
+      "sourceFile": "src/app/api/owner/strategy/actions/[actionId]/verify/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/strategy/businesses/[businessId]/diagnoses",
+      "sourceFile": "src/app/api/owner/strategy/businesses/[businessId]/diagnoses/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/strategy/businesses/[businessId]/snapshots",
+      "sourceFile": "src/app/api/owner/strategy/businesses/[businessId]/snapshots/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/strategy/dashboard",
+      "sourceFile": "src/app/api/owner/strategy/dashboard/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/strategy/diagnoses/[cycleId]/actions",
+      "sourceFile": "src/app/api/owner/strategy/diagnoses/[cycleId]/actions/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/strategy/diagnoses/[cycleId]/findings",
+      "sourceFile": "src/app/api/owner/strategy/diagnoses/[cycleId]/findings/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/strategy/diagnoses/[cycleId]",
+      "sourceFile": "src/app/api/owner/strategy/diagnoses/[cycleId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/strategy/snapshots/[snapshotId]",
+      "sourceFile": "src/app/api/owner/strategy/snapshots/[snapshotId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/tasks/[taskId]/proof/review",
+      "sourceFile": "src/app/api/owner/tasks/[taskId]/proof/review/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/tasks/[taskId]/proof/submit",
+      "sourceFile": "src/app/api/owner/tasks/[taskId]/proof/submit/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/tasks/[taskId]",
+      "sourceFile": "src/app/api/owner/tasks/[taskId]/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/tasks/[taskId]/status",
+      "sourceFile": "src/app/api/owner/tasks/[taskId]/status/route.ts",
+      "httpMethods": [
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/tasks/complete",
+      "sourceFile": "src/app/api/owner/tasks/complete/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/tasks",
+      "sourceFile": "src/app/api/owner/tasks/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/tender/application-pack",
+      "sourceFile": "src/app/api/owner/tender/application-pack/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/tender/screen",
+      "sourceFile": "src/app/api/owner/tender/screen/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/trust/audit-trail",
+      "sourceFile": "src/app/api/owner/trust/audit-trail/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/trust/cycles",
+      "sourceFile": "src/app/api/owner/trust/cycles/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/trust/explanations",
+      "sourceFile": "src/app/api/owner/trust/explanations/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/vendor/[vendorId]/approve",
+      "sourceFile": "src/app/api/owner/vendor/[vendorId]/approve/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/vendor/[vendorId]/contracts",
+      "sourceFile": "src/app/api/owner/vendor/[vendorId]/contracts/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/vendor/[vendorId]/deliveries",
+      "sourceFile": "src/app/api/owner/vendor/[vendorId]/deliveries/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/vendor/[vendorId]/performance",
+      "sourceFile": "src/app/api/owner/vendor/[vendorId]/performance/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/vendor/[vendorId]/suspend",
+      "sourceFile": "src/app/api/owner/vendor/[vendorId]/suspend/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "NOT_VERIFIED",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/vendor/assess",
+      "sourceFile": "src/app/api/owner/vendor/assess/route.ts",
+      "httpMethods": [
+        "POST"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/vendor",
+      "sourceFile": "src/app/api/owner/vendor/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/waste-leakage/[eventId]/status",
+      "sourceFile": "src/app/api/owner/waste-leakage/[eventId]/status/route.ts",
+      "httpMethods": [
+        "PATCH"
+      ],
+      "capability": [
+        "OWNER_MANAGE"
+      ],
+      "readOrWrite": "write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/waste-leakage",
+      "sourceFile": "src/app/api/owner/waste-leakage/route.ts",
+      "httpMethods": [
+        "GET",
+        "POST"
+      ],
+      "capability": [
+        "OWNER_MANAGE",
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read+write",
+      "scope": "workspace-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/wealth-command-center",
+      "sourceFile": "src/app/api/owner/wealth-command-center/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/wealth-path",
+      "sourceFile": "src/app/api/owner/wealth-path/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    },
+    {
+      "path": "/api/owner/whole-business-plan",
+      "sourceFile": "src/app/api/owner/whole-business-plan/route.ts",
+      "httpMethods": [
+        "GET"
+      ],
+      "capability": [
+        "OWNER_VIEW"
+      ],
+      "readOrWrite": "read",
+      "scope": "business-scoped",
+      "knownUiCallers": "NOT_VERIFIED",
+      "knownTests": "NOT_VERIFIED"
+    }
+  ],
+  "sidebarItems": [
+    {
+      "section": "primary",
+      "label": "Start Here",
+      "href": "/owner/start-here",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "primary",
+      "label": "Home",
+      "href": "/owner/cockpit",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "primary",
+      "label": "My Business",
+      "href": "/owner/data",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "evidence-trust",
+      "label": "Evidence & Trust",
+      "href": "/owner/trust",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "business",
+      "label": "Money",
+      "href": "/owner/finance",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "business",
+      "label": "Sales",
+      "href": "/owner/sales",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "business",
+      "label": "Operations",
+      "href": "/owner/operations",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "business",
+      "label": "Customer records",
+      "href": "/owner/customers",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "business",
+      "label": "Compliance",
+      "href": "/owner/compliance",
+      "requiresOwner": true,
+      "state": "preview",
+      "blurb": "Track licences, permits, and deadlines; blocks other actions when one has expired."
+    },
+    {
+      "section": "business",
+      "label": "Goals",
+      "href": "/owner/goals",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "business",
+      "label": "Procurement",
+      "href": "/owner/procurement",
+      "requiresOwner": true,
+      "state": "preview",
+      "blurb": "Track purchase orders through their own lifecycle. Not yet connected to Inventory or Vendors."
+    },
+    {
+      "section": "business",
+      "label": "Vendors",
+      "href": "/owner/vendor",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "business",
+      "label": "Diagnosis",
+      "href": "/diagnosis",
+      "requiresCapability": "ENGAGEMENT_CREATE",
+      "state": "core",
+      "note": "consulting-engagement diagnosis, NOT the self-serve owner diagnosis surface"
+    },
+    {
+      "section": "priorities",
+      "label": "Decision Inbox",
+      "href": "/dashboard/inbox",
+      "requiresCapability": "ENGAGEMENT_VIEW",
+      "state": "core"
+    },
+    {
+      "section": "actions",
+      "label": "Tasks",
+      "href": "/owner/tasks",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "actions",
+      "label": "Execution & SOP",
+      "href": "/owner/execution",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "actions",
+      "label": "Check a decision",
+      "href": "/decision",
+      "requiresCapability": "ENGAGEMENT_VIEW",
+      "state": "core"
+    },
+    {
+      "section": "more-from-opsiq",
+      "label": "Recovery",
+      "href": "/owner/recovery",
+      "requiresOwner": true,
+      "state": "preview",
+      "blurb": "Guided turnaround steps for a business in serious distress."
+    },
+    {
+      "section": "more-from-opsiq",
+      "label": "Strategy",
+      "href": "/owner/strategy",
+      "requiresOwner": true,
+      "state": "preview",
+      "blurb": "Longer-range scenario and strategic-move planning."
+    },
+    {
+      "section": "more-from-opsiq",
+      "label": "Marketing",
+      "href": "/owner/marketing",
+      "requiresOwner": true,
+      "state": "preview",
+      "blurb": "Campaign and channel performance tracking."
+    },
+    {
+      "section": "more-from-opsiq",
+      "label": "Campaigns",
+      "href": "/owner/marketing/campaigns",
+      "requiresOwner": true,
+      "state": "preview"
+    },
+    {
+      "section": "more-from-opsiq",
+      "label": "Starting up",
+      "href": "/owner/startup",
+      "requiresOwner": true,
+      "state": "preview",
+      "blurb": "Tools for screening and validating a brand-new business idea -- not for a business you're already running."
+    },
+    {
+      "section": "more-from-opsiq",
+      "label": "AI Copilot",
+      "href": null,
+      "requiresOwner": true,
+      "state": "coming-soon",
+      "blurb": "Ask OpsIQ questions about your business in plain language."
+    },
+    {
+      "section": "more-from-opsiq",
+      "label": "Integrations",
+      "href": null,
+      "requiresOwner": true,
+      "state": "coming-soon",
+      "blurb": "Connect QuickBooks, HubSpot, and other tools you already use."
+    },
+    {
+      "section": "more-from-opsiq",
+      "label": "What if…",
+      "href": "/scenario",
+      "requiresCapability": "ACTION_VIEW",
+      "state": "core"
+    },
+    {
+      "section": "settings-account",
+      "label": "Reports",
+      "href": "/report",
+      "requiresCapability": "SYSTEM_VIEW_AUDIT",
+      "state": "core"
+    },
+    {
+      "section": "settings-account",
+      "label": "Settings",
+      "href": "/settings",
+      "state": "core"
+    },
+    {
+      "section": "settings-account",
+      "label": "User accounts",
+      "href": "/users",
+      "requiresCapability": "USER_VIEW",
+      "state": "core"
+    },
+    {
+      "section": "settings-account",
+      "label": "Help",
+      "href": "/owner/help",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "settings-account",
+      "label": "Send beta feedback",
+      "href": "/owner/feedback",
+      "requiresOwner": true,
+      "state": "core"
+    },
+    {
+      "section": "consulting",
+      "label": "Consulting workspace",
+      "href": "/dashboard",
+      "requiresCapability": "ENGAGEMENT_VIEW",
+      "state": "core"
+    },
+    {
+      "section": "consulting",
+      "label": "Clients",
+      "href": "/clients",
+      "requiresCapability": "CLIENT_VIEW",
+      "state": "core"
+    },
+    {
+      "section": "consulting",
+      "label": "Engagements",
+      "href": "/engagements",
+      "requiresCapability": "ENGAGEMENT_VIEW",
+      "state": "core"
+    },
+    {
+      "section": "consulting",
+      "label": "Leads",
+      "href": "/leads",
+      "requiresCapability": "LEAD_VIEW",
+      "state": "core"
+    },
+    {
+      "section": "admin",
+      "label": "Billing diagnostics",
+      "href": "/admin/billing",
+      "requiresCapability": "SYSTEM_ADMIN",
+      "state": "core"
+    },
+    {
+      "section": "admin",
+      "label": "Beta requests",
+      "href": "/admin/beta-requests",
+      "requiresCapability": "BETA_REQUEST_REVIEW",
+      "state": "core"
+    },
+    {
+      "section": "admin",
+      "label": "Overview",
+      "href": "/admin/overview",
+      "requiresCapability": "CUSTOMER_ACCESS_MANAGE",
+      "state": "core"
+    },
+    {
+      "section": "admin",
+      "label": "Beta programme",
+      "href": "/admin/beta-programme",
+      "requiresCapability": "BETA_PROGRAM_MANAGE",
+      "state": "core"
+    },
+    {
+      "section": "admin",
+      "label": "Customers",
+      "href": "/admin/customers",
+      "requiresCapability": "CUSTOMER_ACCESS_MANAGE",
+      "state": "core"
+    },
+    {
+      "section": "admin",
+      "label": "Audit log",
+      "href": "/admin/audit",
+      "requiresCapability": "CUSTOMER_ACCESS_MANAGE",
+      "state": "core"
+    }
+  ],
+  "capabilityGates": [
+    {
+      "constant": "SYSTEM_ADMIN",
+      "value": "system:admin"
+    },
+    {
+      "constant": "SYSTEM_VIEW_AUDIT",
+      "value": "system:view_audit"
+    },
+    {
+      "constant": "USER_CREATE",
+      "value": "user:create"
+    },
+    {
+      "constant": "USER_UPDATE",
+      "value": "user:update"
+    },
+    {
+      "constant": "USER_DEACTIVATE",
+      "value": "user:deactivate"
+    },
+    {
+      "constant": "USER_VIEW",
+      "value": "user:view"
+    },
+    {
+      "constant": "USER_ASSIGN_ROLE",
+      "value": "user:assign_role"
+    },
+    {
+      "constant": "LEAD_CREATE",
+      "value": "lead:create"
+    },
+    {
+      "constant": "LEAD_UPDATE",
+      "value": "lead:update"
+    },
+    {
+      "constant": "LEAD_VIEW",
+      "value": "lead:view"
+    },
+    {
+      "constant": "CLIENT_CREATE",
+      "value": "client:create"
+    },
+    {
+      "constant": "CLIENT_UPDATE",
+      "value": "client:update"
+    },
+    {
+      "constant": "CLIENT_VIEW",
+      "value": "client:view"
+    },
+    {
+      "constant": "CLIENT_ARCHIVE",
+      "value": "client:archive"
+    },
+    {
+      "constant": "ENGAGEMENT_CREATE",
+      "value": "engagement:create"
+    },
+    {
+      "constant": "ENGAGEMENT_UPDATE",
+      "value": "engagement:update"
+    },
+    {
+      "constant": "ENGAGEMENT_VIEW",
+      "value": "engagement:view"
+    },
+    {
+      "constant": "ENGAGEMENT_MANAGE_MEMBERS",
+      "value": "engagement:manage_members"
+    },
+    {
+      "constant": "ENGAGEMENT_CLOSE",
+      "value": "engagement:close"
+    },
+    {
+      "constant": "STAGE_CREATE",
+      "value": "stage:create"
+    },
+    {
+      "constant": "STAGE_TRANSITION",
+      "value": "stage:transition"
+    },
+    {
+      "constant": "STAGE_VIEW",
+      "value": "stage:view"
+    },
+    {
+      "constant": "STAGE_RESOLVE_SOFT_BLOCKER",
+      "value": "stage:resolve_soft_blocker"
+    },
+    {
+      "constant": "FINDING_VALIDATE",
+      "value": "finding:validate"
+    },
+    {
+      "constant": "EVIDENCE_SUBMIT",
+      "value": "evidence:submit"
+    },
+    {
+      "constant": "EVIDENCE_VALIDATE",
+      "value": "evidence:validate"
+    },
+    {
+      "constant": "EVIDENCE_VIEW",
+      "value": "evidence:view"
+    },
+    {
+      "constant": "FINDING_CREATE",
+      "value": "finding:create"
+    },
+    {
+      "constant": "FINDING_UPDATE",
+      "value": "finding:update"
+    },
+    {
+      "constant": "FINDING_VIEW",
+      "value": "finding:view"
+    },
+    {
+      "constant": "RECOMMENDATION_CREATE",
+      "value": "recommendation:create"
+    },
+    {
+      "constant": "RECOMMENDATION_APPROVE",
+      "value": "recommendation:approve"
+    },
+    {
+      "constant": "RECOMMENDATION_VIEW",
+      "value": "recommendation:view"
+    },
+    {
+      "constant": "ACTION_CREATE",
+      "value": "action:create"
+    },
+    {
+      "constant": "ACTION_UPDATE",
+      "value": "action:update"
+    },
+    {
+      "constant": "ACTION_VIEW",
+      "value": "action:view"
+    },
+    {
+      "constant": "KPI_DEFINE",
+      "value": "kpi:define"
+    },
+    {
+      "constant": "KPI_RECORD",
+      "value": "kpi:record"
+    },
+    {
+      "constant": "KPI_VIEW",
+      "value": "kpi:view"
+    },
+    {
+      "constant": "DELIVERABLE_CREATE",
+      "value": "deliverable:create"
+    },
+    {
+      "constant": "DELIVERABLE_SUBMIT_VERSION",
+      "value": "deliverable:submit_version"
+    },
+    {
+      "constant": "DELIVERABLE_APPROVE",
+      "value": "deliverable:approve"
+    },
+    {
+      "constant": "DELIVERABLE_ISSUE",
+      "value": "deliverable:issue"
+    },
+    {
+      "constant": "DELIVERABLE_VIEW",
+      "value": "deliverable:view"
+    },
+    {
+      "constant": "APPROVAL_REQUEST",
+      "value": "approval:request"
+    },
+    {
+      "constant": "APPROVAL_DECIDE",
+      "value": "approval:decide"
+    },
+    {
+      "constant": "OVERRIDE_REQUEST",
+      "value": "override:request"
+    },
+    {
+      "constant": "OVERRIDE_DECIDE",
+      "value": "override:decide"
+    },
+    {
+      "constant": "CONDITION_ASSESS",
+      "value": "condition:assess"
+    },
+    {
+      "constant": "CONDITION_VIEW",
+      "value": "condition:view"
+    },
+    {
+      "constant": "INTERVENTION_MANAGE",
+      "value": "intervention:manage"
+    },
+    {
+      "constant": "INTERVENTION_VIEW",
+      "value": "intervention:view"
+    },
+    {
+      "constant": "RISK_MANAGE",
+      "value": "risk:manage"
+    },
+    {
+      "constant": "RISK_VIEW",
+      "value": "risk:view"
+    },
+    {
+      "constant": "SCOPE_MANAGE",
+      "value": "scope:manage"
+    },
+    {
+      "constant": "SCOPE_VIEW",
+      "value": "scope:view"
+    },
+    {
+      "constant": "REVIEW_MANAGE",
+      "value": "review:manage"
+    },
+    {
+      "constant": "REVIEW_VIEW",
+      "value": "review:view"
+    },
+    {
+      "constant": "DECISION_CREATE",
+      "value": "decision:create"
+    },
+    {
+      "constant": "DECISION_UPDATE",
+      "value": "decision:update"
+    },
+    {
+      "constant": "DECISION_ACCEPT",
+      "value": "decision:accept"
+    },
+    {
+      "constant": "DECISION_REJECT",
+      "value": "decision:reject"
+    },
+    {
+      "constant": "DECISION_CLOSE",
+      "value": "decision:close"
+    },
+    {
+      "constant": "DIAGNOSIS_READ",
+      "value": "diagnosis:read"
+    },
+    {
+      "constant": "DIAGNOSIS_CREATE",
+      "value": "diagnosis:create"
+    },
+    {
+      "constant": "FILE_UPLOAD",
+      "value": "file:upload"
+    },
+    {
+      "constant": "FILE_VIEW",
+      "value": "file:view"
+    },
+    {
+      "constant": "FILE_DELETE",
+      "value": "file:delete"
+    },
+    {
+      "constant": "OWNER_VIEW",
+      "value": "owner:view"
+    },
+    {
+      "constant": "OWNER_MANAGE",
+      "value": "owner:manage"
+    },
+    {
+      "constant": "CONSULTING_APPROVE",
+      "value": "consulting:approve"
+    },
+    {
+      "constant": "OWNER_ONBOARD",
+      "value": "owner:onboard"
+    },
+    {
+      "constant": "SOP_MANAGE",
+      "value": "sop:manage"
+    },
+    {
+      "constant": "AUDIT_VIEW",
+      "value": "audit:view"
+    },
+    {
+      "constant": "AUDIT_EXPORT",
+      "value": "audit:export"
+    },
+    {
+      "constant": "WEBHOOK_MANAGE",
+      "value": "webhook:manage"
+    },
+    {
+      "constant": "INTEGRATION_MANAGE",
+      "value": "integration:manage"
+    },
+    {
+      "constant": "INTEGRATION_VIEW",
+      "value": "integration:view"
+    },
+    {
+      "constant": "CONSULTING_WRITE",
+      "value": "consulting:write"
+    },
+    {
+      "constant": "CONSULTING_READ",
+      "value": "consulting:read"
+    },
+    {
+      "constant": "BETA_REQUEST_REVIEW",
+      "value": "beta_request:review"
+    },
+    {
+      "constant": "BETA_REQUEST_INVITE",
+      "value": "beta_request:invite"
+    },
+    {
+      "constant": "BETA_PROGRAM_MANAGE",
+      "value": "beta_program:manage"
+    },
+    {
+      "constant": "CUSTOMER_ACCESS_MANAGE",
+      "value": "customer_access:manage"
+    }
+  ],
+  "previewItems": [
+    {
+      "label": "Compliance",
+      "href": "/owner/compliance",
+      "blurb": "Track licences, permits, and deadlines; blocks other actions when one has expired."
+    },
+    {
+      "label": "Procurement",
+      "href": "/owner/procurement",
+      "blurb": "Track purchase orders through their own lifecycle. Not yet connected to Inventory or Vendors."
+    },
+    {
+      "label": "Recovery",
+      "href": "/owner/recovery",
+      "blurb": "Guided turnaround steps for a business in serious distress."
+    },
+    {
+      "label": "Strategy",
+      "href": "/owner/strategy",
+      "blurb": "Longer-range scenario and strategic-move planning."
+    },
+    {
+      "label": "Marketing",
+      "href": "/owner/marketing",
+      "blurb": "Campaign and channel performance tracking."
+    },
+    {
+      "label": "Campaigns",
+      "href": "/owner/marketing/campaigns",
+      "blurb": null
+    },
+    {
+      "label": "Starting up",
+      "href": "/owner/startup",
+      "blurb": "Tools for screening and validating a brand-new business idea -- not for a business you're already running."
+    }
+  ],
+  "comingSoonItems": [
+    {
+      "label": "AI Copilot",
+      "blurb": "Ask OpsIQ questions about your business in plain language."
+    },
+    {
+      "label": "Integrations",
+      "blurb": "Connect QuickBooks, HubSpot, and other tools you already use."
+    }
+  ],
+  "hiddenSafetyRoutes": [
+    {
+      "route": "/owner/priorities",
+      "reason": "Removed from nav: page merges 4 separate governed sources (risks, alerts, decision inbox, now-view topRoute) into a claimed-complete 'what needs attention' list, but a reproducible case exists where Priorities shows 'nothing needs attention' while Cockpit simultaneously shows an actionable Finance item as its primary card. Home/Cockpit remains the single authoritative surface for controlled beta.",
+      "routeStatus": "PRESENT_UNCHANGED",
+      "apiStatus": "PRESENT_UNCHANGED",
+      "sourceCitation": "src/ui/shell/sidebar-nav.tsx lines ~294-312"
+    },
+    {
+      "route": "/owner/alerts",
+      "reason": "Removed from nav: Alert model is workspaceId-scoped only (no businessId column, confirmed via schema) -- a multi-business owner would see every business's alerts merged with no attribution, with no narrow filter fix possible without a schema change.",
+      "routeStatus": "PRESENT_UNCHANGED",
+      "apiStatus": "PRESENT_UNCHANGED",
+      "sourceCitation": "src/ui/shell/sidebar-nav.tsx lines ~309-312"
+    },
+    {
+      "route": "/owner/risks",
+      "reason": "Removed from nav (previously Preview, now fully commented out): BusinessRiskEntry has no businessId column at all (workspace-scoped only) -- live production browser acceptance proved the SAME risk record IDs render under every business selected in a multi-business workspace. Closing requires a schema change (add businessId, backfill, filter), out of scope for a launch-blocker UX fix.",
+      "routeStatus": "PRESENT_UNCHANGED",
+      "apiStatus": "PRESENT_UNCHANGED",
+      "sourceCitation": "src/ui/shell/sidebar-nav.tsx lines ~234-254"
+    },
+    {
+      "route": "/owner/inventory",
+      "reason": "No nav entry: its one system-generated signal (reorder-risk badge) is wired to nothing -- getReorderSuggestions is never called from the live API route, so the badge always renders 'NONE' regardless of real stock levels. A known-wrong live feature, not merely unfinished.",
+      "routeStatus": "PRESENT_UNCHANGED",
+      "apiStatus": "PRESENT_UNCHANGED",
+      "sourceCitation": "src/ui/shell/sidebar-nav.tsx lines ~267-271"
+    }
+  ],
+  "ownerNowViewFields": [
+    {
+      "field": "view",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "whatChanged",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "beginnerExplanation",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "stepByStep",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "archetype",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "generatedFromLiveData",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "workloadBudget",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "topConstraint",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "topProfitLeak",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "topGamingSignal",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "topCredibilityConcern",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "businessControlHealth",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "controlCorrelations",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "proofOutcomeLinkage",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "disputeRisk",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "complaintReworkLinks",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "operationalEventHealth",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "reusedProofFindings",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "proofRiskAdjudications",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "proofRiskAdjudicationSummary",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "timingEvidence",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "processIntelligence",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "processCorrections",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "sopChecklistCorrections",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "trainingAssignments",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "sopTrainingEffectiveness",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "processExecution",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "ownerWorkloadReduction",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "approvalPolicy",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "capabilityGaps",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "cashProfitProtection",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "externalOpportunityIntelligence",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "opportunityValidation",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "opportunityPortfolio",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "opportunityOperating",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "opportunityValidationOutcomes",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "opportunityExecution",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "salesPipelineSummary",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "goalAttentionSignal",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "policyAttentionSignal",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "trendAlerts",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "doNotRepeatAnnotation",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "activeEscalations",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "derivedBusinessCondition",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "executionLifecycle",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    },
+    {
+      "field": "businessOperatingSystem",
+      "presentationDisposition": "NOT_CLASSIFIED_YET",
+      "note": "Classification (PRIMARY/SUMMARY/DETAIL/DEDICATED_PAGE/API_ONLY_ALREADY/NOT_CURRENTLY_RENDERED) is a UX-02A/UX-14 Feature Destination Matrix task, out of scope for UX-00A inventory."
+    }
+  ],
+  "ownerNowViewCoreFields": [
+    "workspaceId",
+    "businessId",
+    "classification",
+    "topOwnerActions",
+    "actionsToAvoid",
+    "urgentRisks",
+    "whatChanged",
+    "missingDataRequests",
+    "confidence",
+    "confidenceCapped",
+    "emergency",
+    "reasoningSummary",
+    "businessHealth",
+    "cashDangerStatus",
+    "profitLeakStatus",
+    "staffOverloadStatus",
+    "ownerOverloadStatus",
+    "qualityFailureStatus",
+    "customerRetentionStatus",
+    "supplierInventoryStatus",
+    "capacityStatus",
+    "growthReadinessStatus"
+  ],
+  "cockpitExternalFeeds": "NOT_VERIFIED — requires per-source tracing of /owner/cockpit's data dependencies; deferred to UX-02A (Assessment-Source Reconciliation), which explicitly performs this trace.",
+  "ownerActions": "NOT_VERIFIED — per-page action inventory (buttons/mutations/legal state transitions) requires page-by-page audit; will be populated incrementally as each domain's UX PR (UX-04A..UX-09D) touches that page, per mission section 27/40.",
+  "workflowStateFamilies": "NOT_VERIFIED — requires per-domain state-machine enumeration (proof FSM, task lifecycle, adjudication, approval, escalation, opportunity execution, etc.); deferred to the OWNER_STATE_LANGUAGE_MATRIX.json artifact (mission section 28/76), produced per-domain in its own UX PR.",
+  "domainPackages": [
+    "src/domain/audit",
+    "src/domain/audit-export",
+    "src/domain/auth",
+    "src/domain/badges",
+    "src/domain/benchmark",
+    "src/domain/beta",
+    "src/domain/business-condition",
+    "src/domain/business-facts",
+    "src/domain/business-impact",
+    "src/domain/calibration",
+    "src/domain/case-studies",
+    "src/domain/collective-training",
+    "src/domain/constants",
+    "src/domain/consulting",
+    "src/domain/consulting-engine",
+    "src/domain/data-intake",
+    "src/domain/data-parsers",
+    "src/domain/data-quality",
+    "src/domain/decision",
+    "src/domain/decision-confidence",
+    "src/domain/decisions",
+    "src/domain/diagnostic",
+    "src/domain/domain-training",
+    "src/domain/entity",
+    "src/domain/event-audit",
+    "src/domain/evidence",
+    "src/domain/execution",
+    "src/domain/experiment",
+    "src/domain/external-systems",
+    "src/domain/file-intake",
+    "src/domain/finance",
+    "src/domain/founder-recovery",
+    "src/domain/governance",
+    "src/domain/growth",
+    "src/domain/integration",
+    "src/domain/integration-fabric",
+    "src/domain/mapping-engine",
+    "src/domain/monitoring",
+    "src/domain/operator",
+    "src/domain/outcome",
+    "src/domain/override",
+    "src/domain/owner-briefing",
+    "src/domain/owner-budget",
+    "src/domain/owner-cashflow",
+    "src/domain/owner-finance",
+    "src/domain/owner-guidance",
+    "src/domain/owner-home",
+    "src/domain/owner-intake",
+    "src/domain/owner-marketing",
+    "src/domain/owner-mode",
+    "src/domain/owner-operations",
+    "src/domain/owner-portfolio",
+    "src/domain/owner-sales",
+    "src/domain/owner-sop",
+    "src/domain/owner-spine",
+    "src/domain/owner-strategy",
+    "src/domain/owner-trust",
+    "src/domain/policy",
+    "src/domain/private-mode",
+    "src/domain/public",
+    "src/domain/rate-limit",
+    "src/domain/reality",
+    "src/domain/remote-operations",
+    "src/domain/report",
+    "src/domain/scenario",
+    "src/domain/scenarios",
+    "src/domain/survival",
+    "src/domain/sync-engine",
+    "src/domain/system-truth",
+    "src/domain/trust-benchmarks",
+    "src/domain/validation",
+    "src/domain/webhooks",
+    "src/domain/workspace"
+  ],
+  "domainServices": [
+    "src/services/__tests__",
+    "src/services/admin",
+    "src/services/ai",
+    "src/services/alerts",
+    "src/services/approval",
+    "src/services/audit",
+    "src/services/auth",
+    "src/services/badges",
+    "src/services/baseline",
+    "src/services/benchmark",
+    "src/services/best-path-engine",
+    "src/services/beta",
+    "src/services/business-condition",
+    "src/services/business-impact",
+    "src/services/cache",
+    "src/services/calibration",
+    "src/services/consulting",
+    "src/services/consulting-engine",
+    "src/services/contradiction-detector",
+    "src/services/control",
+    "src/services/dashboard",
+    "src/services/data-review",
+    "src/services/decision",
+    "src/services/decision-confidence",
+    "src/services/decision-control",
+    "src/services/decision-core",
+    "src/services/decision-evidence",
+    "src/services/decision-validation",
+    "src/services/decisions",
+    "src/services/diagnostic-core",
+    "src/services/entity",
+    "src/services/execution",
+    "src/services/execution-core",
+    "src/services/execution-drift",
+    "src/services/experiment",
+    "src/services/explanation",
+    "src/services/external-systems",
+    "src/services/failure-containment",
+    "src/services/file-intake",
+    "src/services/finance",
+    "src/services/financial",
+    "src/services/financial-normalization",
+    "src/services/firstwin",
+    "src/services/founder-recovery",
+    "src/services/funnel-analysis",
+    "src/services/governance",
+    "src/services/growth",
+    "src/services/integration",
+    "src/services/integration-fabric",
+    "src/services/integrity",
+    "src/services/intelligence",
+    "src/services/lifecycle",
+    "src/services/monitoring",
+    "src/services/notifications",
+    "src/services/observability",
+    "src/services/onboarding",
+    "src/services/operator",
+    "src/services/outcome",
+    "src/services/outcome-core",
+    "src/services/override",
+    "src/services/owner-budget",
+    "src/services/owner-cashflow",
+    "src/services/owner-collective",
+    "src/services/owner-condition",
+    "src/services/owner-finance",
+    "src/services/owner-guidance",
+    "src/services/owner-home",
+    "src/services/owner-intake",
+    "src/services/owner-inventory",
+    "src/services/owner-marketing",
+    "src/services/owner-marketing-campaigns",
+    "src/services/owner-mode",
+    "src/services/owner-operations",
+    "src/services/owner-portfolio",
+    "src/services/owner-procurement",
+    "src/services/owner-sales",
+    "src/services/owner-sop",
+    "src/services/owner-strategy",
+    "src/services/owner-trust",
+    "src/services/policy",
+    "src/services/private-mode",
+    "src/services/problem",
+    "src/services/production",
+    "src/services/reality-awareness",
+    "src/services/recommendation",
+    "src/services/report",
+    "src/services/routes",
+    "src/services/scenario",
+    "src/services/scheduler",
+    "src/services/segmentation",
+    "src/services/system",
+    "src/services/thresholds",
+    "src/services/validation-contracts",
+    "src/services/value",
+    "src/services/value-proof",
+    "src/services/workspace"
+  ],
+  "businessContextPages": [
+    "src/app/(authenticated)/owner/cockpit/page.tsx",
+    "src/app/(authenticated)/owner/customers/page.tsx",
+    "src/app/(authenticated)/owner/data/page.tsx",
+    "src/app/(authenticated)/owner/execution/page.tsx",
+    "src/app/(authenticated)/owner/finance/page.tsx",
+    "src/app/(authenticated)/owner/inventory/page.tsx",
+    "src/app/(authenticated)/owner/operations/page.tsx",
+    "src/app/(authenticated)/owner/priorities/page.tsx",
+    "src/app/(authenticated)/owner/procurement/page.tsx",
+    "src/app/(authenticated)/owner/sales/page.tsx",
+    "src/app/(authenticated)/owner/start-here/page.tsx",
+    "src/app/(authenticated)/owner/tasks/page.tsx",
+    "src/app/(authenticated)/owner/trust/page.tsx",
+    "src/app/(authenticated)/owner/vendor/page.tsx"
+  ],
+  "businessContextFindings": [
+    {
+      "finding": "PATTERN_INCONSISTENCY_CANDIDATE",
+      "pages": [
+        "/owner/recovery",
+        "/owner/strategy",
+        "/owner/marketing"
+      ],
+      "evidence": "These pages do NOT call the shared useActiveBusiness() hook. Each instead renders its own <BusinessContextSelector onChange={(businessId) => load(businessId)}> and threads businessId through local component state/callbacks only, independent of the shared ActiveBusinessContext other pages (e.g. cockpit, finance, sales, operations) read from.",
+      "sourceCitation": "grep of businessId/useActiveBusiness/BusinessContextSelector in each page.tsx, this session",
+      "missionRelevance": "Mission section 17 explicitly names Recovery, Strategy, Marketing, Marketing Campaigns for special business-context inspection; this finding confirms the suspected gap with source evidence and is deferred to UX-01 for the full 8-invariant business-context audit -- no fix applied in UX-00A.",
+      "disposition": "BLOCKED_NEEDS_EVIDENCE_FOR_FIX (evidence sufficient to flag; fix scope belongs to UX-01)"
+    },
+    {
+      "finding": "LOCAL_STATE_ONLY_CANDIDATE",
+      "pages": [
+        "/owner/marketing/campaigns"
+      ],
+      "evidence": "Uses useState<string | null> for businessId entirely locally, populated via its own <BusinessContextSelector>, with no reference to useActiveBusiness() or the shared ActiveBusinessContext found in this page.",
+      "sourceCitation": "src/app/(authenticated)/owner/marketing/campaigns/page.tsx lines 46, 92, 106, 128, 132, 180",
+      "missionRelevance": "Same class of gap as above; the header business, selector business, and this page's own business could diverge from the shared active-business context used elsewhere in the app. Deferred to UX-01.",
+      "disposition": "BLOCKED_NEEDS_EVIDENCE_FOR_FIX (evidence sufficient to flag; fix scope belongs to UX-01)"
+    }
+  ],
+  "publicRoutesTouchedBySharedComponents": [
+    {
+      "route": "/about",
+      "sourceFile": "src/app/about/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/beta",
+      "sourceFile": "src/app/beta/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/calibration",
+      "sourceFile": "src/app/calibration/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/control",
+      "sourceFile": "src/app/control/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/decisions",
+      "sourceFile": "src/app/decisions/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/entity",
+      "sourceFile": "src/app/entity/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/forgot-password",
+      "sourceFile": "src/app/forgot-password/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/login",
+      "sourceFile": "src/app/login/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/my-day",
+      "sourceFile": "src/app/my-day/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/onboarding",
+      "sourceFile": "src/app/onboarding/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/operator",
+      "sourceFile": "src/app/operator/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/privacy",
+      "sourceFile": "src/app/privacy/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/quick-start",
+      "sourceFile": "src/app/quick-start/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/resend-verification",
+      "sourceFile": "src/app/resend-verification/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/reset-password",
+      "sourceFile": "src/app/reset-password/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/signup",
+      "sourceFile": "src/app/signup/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/terms",
+      "sourceFile": "src/app/terms/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/value",
+      "sourceFile": "src/app/value/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    },
+    {
+      "route": "/verify-email",
+      "sourceFile": "src/app/verify-email/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT"
+      ]
+    }
+  ],
+  "consultingRoutesTouchedBySharedComponents": [
+    {
+      "route": "/clients/[clientId]",
+      "sourceFile": "src/app/(authenticated)/clients/[clientId]/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/clients/new",
+      "sourceFile": "src/app/(authenticated)/clients/new/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/clients",
+      "sourceFile": "src/app/(authenticated)/clients/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/dashboard/inbox",
+      "sourceFile": "src/app/(authenticated)/dashboard/inbox/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT (may still consume AppShell/SidebarNav via layout)"
+      ]
+    },
+    {
+      "route": "/dashboard",
+      "sourceFile": "src/app/(authenticated)/dashboard/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/decision",
+      "sourceFile": "src/app/(authenticated)/decision/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT (may still consume AppShell/SidebarNav via layout)"
+      ]
+    },
+    {
+      "route": "/engagements/[engagementId]/business-impact",
+      "sourceFile": "src/app/(authenticated)/engagements/[engagementId]/business-impact/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/engagements/[engagementId]/decision-evidence",
+      "sourceFile": "src/app/(authenticated)/engagements/[engagementId]/decision-evidence/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/engagements/[engagementId]/evidence/[evidenceId]",
+      "sourceFile": "src/app/(authenticated)/engagements/[engagementId]/evidence/[evidenceId]/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/engagements/[engagementId]/evidence/bundles/[bundleId]",
+      "sourceFile": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/engagements/[engagementId]/evidence/bundles",
+      "sourceFile": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/engagements/[engagementId]/evidence",
+      "sourceFile": "src/app/(authenticated)/engagements/[engagementId]/evidence/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/engagements/[engagementId]",
+      "sourceFile": "src/app/(authenticated)/engagements/[engagementId]/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/engagements/[engagementId]/report",
+      "sourceFile": "src/app/(authenticated)/engagements/[engagementId]/report/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/engagements/new",
+      "sourceFile": "src/app/(authenticated)/engagements/new/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/engagements",
+      "sourceFile": "src/app/(authenticated)/engagements/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/leads/[leadId]",
+      "sourceFile": "src/app/(authenticated)/leads/[leadId]/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/leads/new",
+      "sourceFile": "src/app/(authenticated)/leads/new/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/leads",
+      "sourceFile": "src/app/(authenticated)/leads/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/report",
+      "sourceFile": "src/app/(authenticated)/report/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/scenario",
+      "sourceFile": "src/app/(authenticated)/scenario/page.tsx",
+      "sharedComponentsImported": [
+        "NONE_DIRECT (may still consume AppShell/SidebarNav via layout)"
+      ]
+    },
+    {
+      "route": "/settings",
+      "sourceFile": "src/app/(authenticated)/settings/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/users",
+      "sourceFile": "src/app/(authenticated)/users/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    }
+  ],
+  "adminRoutesTouchedBySharedComponents": [
+    {
+      "route": "/admin/audit",
+      "sourceFile": "src/app/(authenticated)/admin/audit/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/admin/beta-programme",
+      "sourceFile": "src/app/(authenticated)/admin/beta-programme/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/admin/beta-requests",
+      "sourceFile": "src/app/(authenticated)/admin/beta-requests/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/admin/billing",
+      "sourceFile": "src/app/(authenticated)/admin/billing/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/admin/customers",
+      "sourceFile": "src/app/(authenticated)/admin/customers/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    },
+    {
+      "route": "/admin/overview",
+      "sourceFile": "src/app/(authenticated)/admin/overview/page.tsx",
+      "sharedComponentsImported": [
+        "@/ui/primitives"
+      ]
+    }
+  ]
+}
