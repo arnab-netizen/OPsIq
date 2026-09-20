@@ -73,6 +73,17 @@ const RULES = [
       p !== '.github/workflows/restore-rehearsal.yml' },
   { tier: TIERS.CI_GOVERNANCE, test: (p) =>
       /^scripts\/(ci-governance-check|ci-risk-classifier|scan-recurrence-defects|validate-bundle-manifests|validate-evidence-artifacts|validate-stage-acceptance)\.mjs$/.test(p) },
+  // CI-MIN-01 owner correction (item 2): these are tests OF the CI
+  // infrastructure itself (the classifier, the branch-protection fail-closed
+  // script, the non-DB suite capacity guards), not application tests -- a
+  // change confined to them should get the same TARGETED_CI_GOVERNANCE
+  // treatment as editing the classifier script itself, never the
+  // ~28,000-test broad application suite. Excluded from the generic src/**
+  // APPLICATION_NON_DB rule below the same way backup-restore.test.ts is.
+  { tier: TIERS.CI_GOVERNANCE, test: (p) =>
+      p === 'src/__tests__/ci-cd/ci-trigger-governance.test.ts' ||
+      p === 'src/__tests__/ci-cd/non-db-suite-capacity.test.ts' ||
+      p === 'src/__tests__/workflows/ci-risk-classifier.test.ts' },
 
   // ---- Tier 5: DB runtime (checked before the generic src/** rule below,
   //      order doesn't matter since we take the max, but grouped here for
@@ -81,6 +92,15 @@ const RULES = [
   { tier: TIERS.DB_RUNTIME, test: (p) => /\.db\.test\.ts$/.test(p) },
   { tier: TIERS.DB_RUNTIME, test: (p) =>
       /^scripts\/(seed-|reset-|migrate).*\.(ts|mjs|sh)$/.test(p) || (/migrate/i.test(p) && /^scripts\//.test(p)) },
+  // CI-MIN-01 owner correction (item 3): restored from the old
+  // db-verification.yml pull_request path list -- these four services were
+  // explicitly treated as DB-sensitive there. Named exactly, not a broader
+  // directory rule (the owner explicitly said not to invent one).
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      p === 'src/services/owner-mode/owner-bcp.service.ts' ||
+      p === 'src/services/consulting/consulting-engagement.service.ts' ||
+      p === 'src/services/integration-fabric/connector-registry.service.ts' ||
+      p === 'src/services/integration-fabric/integration-event.service.ts' },
 
   // ---- Tier 4: security / auth / tenancy / entitlement ----
   { tier: TIERS.SECURITY_AUTH_TENANCY_ENTITLEMENT, test: (p) =>
@@ -117,7 +137,11 @@ const RULES = [
   // RECOVERY_INFRA_ONLY -- exactly the defect class the workflow/scripts
   // exclusions above already guard against. Excluded here the same way.
   { tier: TIERS.APPLICATION_NON_DB, test: (p) =>
-      /^src\//.test(p) && p !== 'src/__tests__/scripts/backup-restore.test.ts' },
+      /^src\//.test(p) &&
+      p !== 'src/__tests__/scripts/backup-restore.test.ts' &&
+      p !== 'src/__tests__/ci-cd/ci-trigger-governance.test.ts' &&
+      p !== 'src/__tests__/ci-cd/non-db-suite-capacity.test.ts' &&
+      p !== 'src/__tests__/workflows/ci-risk-classifier.test.ts' },
   { tier: TIERS.APPLICATION_NON_DB, test: (p) =>
       /^scripts\/.*\.(ts|mjs|sh)$/.test(p) &&
       !/^scripts\/(ci-governance-check|ci-risk-classifier|scan-recurrence-defects|validate-bundle-manifests|validate-evidence-artifacts|validate-stage-acceptance)\.mjs$/.test(p) &&
@@ -136,6 +160,166 @@ export function classifyPath(path) {
   return tier === -1 ? TIERS.UNKNOWN : tier;
 }
 
+// CI-MIN-01 ROOT-CAUSE FIX: package.json/package-lock.json were classified
+// UNKNOWN (max tier) by PATH ALONE, which forces db_required/
+// runMainIntegrationFullSuite for ANY edit to either file -- including a
+// pure `scripts` alias rename with zero dependency or runtime impact. Path
+// alone cannot distinguish a scripts-only edit from a dependency change
+// from a DB-package dependency change, so this needs the actual content.
+// package.json is classified via classifyPackageJsonChange (git show +
+// JSON comparison, below); package-lock.json via classifyPackageLockDiffText
+// (its own diff text, since a lockfile has no "scripts" section to
+// distinguish). classifyChangeSet uses these INSTEAD OF the blind path rule
+// only when the caller actually supplied what each needs -- callers that
+// don't keep the prior conservative UNKNOWN behavior unchanged, preserving
+// "ambiguous -> FULL" whenever the file can't be read/parsed.
+export const DB_PACKAGE_NAMES = [
+  'prisma', '@prisma/client', '@prisma/extension-accelerate', '@prisma/adapter-pg', '@prisma/adapter-neon',
+  'pg', 'pg-native', 'pg-pool', 'pg-cursor', 'postgres',
+  'mysql', 'mysql2',
+  'mongodb', 'mongoose',
+  'drizzle-orm', 'knex', 'sequelize', 'typeorm', 'kysely',
+  'ioredis', 'redis',
+  'sqlite3', 'better-sqlite3',
+  '@planetscale/database', '@neondatabase/serverless', '@vercel/postgres',
+  'mssql', 'tedious',
+];
+const DB_PACKAGE_ALTERNATION = DB_PACKAGE_NAMES
+  .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('|');
+// A package name is only counted when it appears as a whole path segment
+// bounded by a quote or a slash on both sides (e.g. `"prisma"`,
+// `"node_modules/prisma"`, `"node_modules/@prisma/client"`) -- never as a
+// prefix of an unrelated package name (e.g. "pg" must not match
+// "pg-connection-string-unrelated-thing").
+export const DB_PACKAGE_RE = new RegExp(`(^|["/])(${DB_PACKAGE_ALTERNATION})(["/]|$)`, 'i');
+
+const DB_PACKAGE_NAME_SET = new Set(DB_PACKAGE_NAMES.map((n) => n.toLowerCase()));
+
+function isDbPackageName(name) {
+  return DB_PACKAGE_NAME_SET.has(String(name).toLowerCase());
+}
+
+const PACKAGE_JSON_DEPENDENCY_SECTIONS = [
+  'dependencies',
+  'devDependencies',
+  'peerDependencies',
+  'optionalDependencies',
+];
+
+/**
+ * Compare two already-parsed package.json objects and classify the change.
+ * Pure -- no I/O, no diff-text parsing. See classifyPackageJsonChange for the
+ * git-backed wrapper actually used by the classifier.
+ *
+ * ROOT-CAUSE FIX (owner correction, CI-MIN-01): the prior implementation
+ * (classifyPackageJsonDiffText, since removed) tracked JSON section
+ * membership by scanning the unified diff hunk's own text for a
+ * `"scripts": {` / `"dependencies": {` header line and counting braces from
+ * there. That is unsound: git's default 3-line context does not guarantee
+ * the section header is visible in the hunk at all. Confirmed directly on
+ * this repo's own PR removing one line from a `scripts` block many lines
+ * long -- the hunk's context started well after `"scripts": {`, the parser
+ * never saw a section open, and fell through to UNKNOWN, wrongly forcing
+ * the DB job for a scripts-only change. Comparing the two FULL, parsed
+ * files by key membership makes this failure mode structurally impossible.
+ */
+export function comparePackageJson(baseJson, headJson) {
+  let touchedDbPackage = false;
+
+  for (const section of PACKAGE_JSON_DEPENDENCY_SECTIONS) {
+    const baseSection = (baseJson && baseJson[section]) || {};
+    const headSection = (headJson && headJson[section]) || {};
+    const names = new Set([...Object.keys(baseSection), ...Object.keys(headSection)]);
+    for (const name of names) {
+      if (baseSection[name] !== headSection[name] && isDbPackageName(name)) {
+        touchedDbPackage = true;
+      }
+    }
+  }
+
+  // A scripts-only change, a non-DB dependency change, or any other
+  // top-level field (name/version/private/...) all classify the same: real
+  // application-level metadata, never DB risk.
+  return touchedDbPackage ? TIERS.DB_RUNTIME : TIERS.APPLICATION_NON_DB;
+}
+
+/**
+ * Classify package.json's change via a robust base-vs-head JSON comparison
+ * -- reads each side's FULL file with `git show <ref>:package.json` and
+ * parses it, so section membership is never guessed from limited diff-hunk
+ * context (see comparePackageJson above for why that mattered). Returns
+ * TIERS.UNKNOWN on any failure to read or parse either side -- a
+ * parse/read failure is exactly the kind of ambiguity this classifier never
+ * treats as cheap.
+ */
+export function classifyPackageJsonChange({ before, after, cwd }) {
+  if (!before || !after || before === ZERO_SHA || after === ZERO_SHA) return TIERS.UNKNOWN;
+  const opts = { cwd: cwd || process.cwd(), encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 };
+  let baseRaw, headRaw;
+  try {
+    baseRaw = execFileSync('git', ['show', `${before}:package.json`], opts);
+    headRaw = execFileSync('git', ['show', `${after}:package.json`], opts);
+  } catch {
+    return TIERS.UNKNOWN;
+  }
+  let baseJson, headJson;
+  try {
+    baseJson = JSON.parse(baseRaw);
+    headJson = JSON.parse(headRaw);
+  } catch {
+    return TIERS.UNKNOWN;
+  }
+  return comparePackageJson(baseJson, headJson);
+}
+
+/**
+ * Classify package-lock.json's own unified diff text. The lockfile has no
+ * "scripts" section to distinguish -- every line it can change reflects a
+ * dependency-graph change -- so this only asks whether any added/removed
+ * line mentions a DB-related package name.
+ */
+export function classifyPackageLockDiffText(diffText) {
+  if (!diffText) return TIERS.UNKNOWN;
+  let touchedAny = false;
+  let touchedDbPackage = false;
+  for (const rawLine of diffText.split('\n')) {
+    if (rawLine.startsWith('+++') || rawLine.startsWith('---')) continue;
+    const marker = rawLine[0];
+    if (marker !== '+' && marker !== '-') continue;
+    touchedAny = true;
+    if (DB_PACKAGE_RE.test(rawLine)) touchedDbPackage = true;
+  }
+  if (!touchedAny) return TIERS.UNKNOWN;
+  return touchedDbPackage ? TIERS.DB_RUNTIME : TIERS.APPLICATION_NON_DB;
+}
+
+/**
+ * Split a multi-file unified diff (as produced by `git diff -- fileA fileB`)
+ * into per-file segments, keyed by the diff's "b/" (post-change) path.
+ */
+export function splitUnifiedDiffByFile(diffText) {
+  const segments = {};
+  if (!diffText) return segments;
+  let currentFile = null;
+  let buffer = [];
+  const flush = () => {
+    if (currentFile) segments[currentFile] = buffer.join('\n');
+  };
+  for (const line of diffText.split('\n')) {
+    const m = line.match(/^diff --git a\/(.+?) b\/(.+)$/);
+    if (m) {
+      flush();
+      currentFile = m[2];
+      buffer = [line];
+    } else {
+      buffer.push(line);
+    }
+  }
+  flush();
+  return segments;
+}
+
 // SUITE_MODES: what the PR-side non-DB validation should actually run for a
 // given tier. ROOT-CAUSE FIX (2026-08-29, owner correction pass): the first
 // version of this classifier gave every tier above DOCS_ONLY the full
@@ -145,19 +329,49 @@ export function classifyPath(path) {
 // A RECOVERY_INFRA_ONLY change instead gets TARGETED_RECOVERY: only the
 // recovery-specific test files (backup-restore.test.ts,
 // ci-risk-classifier.test.ts) plus bash -n on any changed shell scripts.
+// CI-MIN-01: a pure CI_GOVERNANCE change (workflow YAML / named CI scripts,
+// no application source touched -- if src/** were touched the path would
+// already classify at a higher tier via max-wins) gets the same treatment
+// for the same reason: TARGETED_CI_GOVERNANCE runs only the classifier's own
+// test file and the CI-trigger-governance regression suite, never the broad
+// ~28,000-test application suite a workflow-only change cannot affect.
 // Every other non-DOCS_ONLY tier gets the broad suite, but -- per the
 // existing run_test_suite: false wiring in ci.yml/reusable-pr-validation.yml
 // -- EXACTLY ONCE per PR, never twice, regardless of tier.
 export const SUITE_MODES = {
   NONE: 'NONE',
   TARGETED_RECOVERY: 'TARGETED_RECOVERY',
+  TARGETED_CI_GOVERNANCE: 'TARGETED_CI_GOVERNANCE',
   BROAD_NON_DB: 'BROAD_NON_DB',
 };
 
 function suiteModeForTier(tier) {
   if (tier === TIERS.DOCS_ONLY) return SUITE_MODES.NONE;
   if (tier === TIERS.RECOVERY_INFRA_ONLY) return SUITE_MODES.TARGETED_RECOVERY;
+  if (tier === TIERS.CI_GOVERNANCE) return SUITE_MODES.TARGETED_CI_GOVERNANCE;
   return SUITE_MODES.BROAD_NON_DB;
+}
+
+// CI-MIN-01 owner correction: dbRequired is the SINGLE authoritative signal
+// that drives ci.yml's own pre-merge `db-verify` job (throwaway Postgres +
+// migrate deploy + *.db.test.ts). There is no second, separate static
+// path-filter system deciding DB risk -- db-verification.yml's own
+// pull_request trigger was removed for exactly this reason (one classifier,
+// one decision). True for DB_RUNTIME (prisma schema/migrations,
+// `*.db.test.ts` files anywhere, DB-interacting scripts, a DB-related
+// package.json/package-lock.json dependency change) and for UNKNOWN
+// (unrecognized path -- "ambiguous -> FULL" applies to the DB dimension
+// exactly as it already does to the non-DB suite dimension; this repo's
+// classifier has never treated an unrecognized path as cheap on any other
+// axis, and DB risk is not an exception). Deliberately narrower than the
+// (now-unused-in-practice) runMainIntegrationFullSuite flag below: a
+// SECURITY_AUTH_TENANCY_ENTITLEMENT-tier change (e.g. src/lib/auth/**) does
+// NOT by itself require the throwaway-Postgres job -- only an actual
+// DB_RUNTIME-tier path (which includes every *.db.test.ts file, so an auth
+// change that also touches its own DB test still classifies DB_RUNTIME via
+// max-wins).
+function dbRequiredForTier(tier) {
+  return tier === TIERS.DB_RUNTIME || tier === TIERS.UNKNOWN;
 }
 
 /**
@@ -166,13 +380,19 @@ function suiteModeForTier(tier) {
  *     i.e. a genuinely empty diff, which should not occur in practice)
  *   - tierName: its string name
  *   - perPath: map of path -> its own tier (for audit/debugging)
- *   - suiteMode: 'NONE' | 'TARGETED_RECOVERY' | 'BROAD_NON_DB' -- what the
- *     PR-side non-DB validation should run (see SUITE_MODES above)
+ *   - suiteMode: 'NONE' | 'TARGETED_RECOVERY' | 'TARGETED_CI_GOVERNANCE' |
+ *     'BROAD_NON_DB' -- what the PR-side non-DB validation should run (see
+ *     SUITE_MODES above)
  *   - runNonDbSuite: true whenever suiteMode is not 'NONE' (kept for
  *     backward-compatible callers that only care about "was anything run")
- *   - runMainIntegrationFullSuite: true for SECURITY/DB_RUNTIME/UNKNOWN tiers
+ *   - dbRequired: true iff ci.yml's own db-verify job must run pre-merge on
+ *     this PR (see dbRequiredForTier above) -- the sole DB-risk signal
+ *   - runMainIntegrationFullSuite: true for SECURITY/DB_RUNTIME/UNKNOWN tiers.
+ *     Retained for backward compatibility and for main-integration.yml's own
+ *     (now workflow_dispatch-only) push-diff classification path; no longer
+ *     consulted by ci.yml, which uses dbRequired instead.
  */
-export function classifyChangeSet(paths) {
+export function classifyChangeSet(paths, options = {}) {
   if (paths.length === 0) {
     return {
       tier: TIERS.DOCS_ONLY,
@@ -180,13 +400,30 @@ export function classifyChangeSet(paths) {
       perPath: {},
       suiteMode: SUITE_MODES.NONE,
       runNonDbSuite: false,
+      dbRequired: false,
       runMainIntegrationFullSuite: false,
     };
   }
+  // CI-MIN-01: package.json/package-lock.json use content-aware
+  // classification INSTEAD OF the blind path rule, but only when the caller
+  // actually supplied it -- absent that, behavior is unchanged from before
+  // (blind UNKNOWN via classifyPath). package.json's tier is precomputed by
+  // the caller via classifyPackageJsonChange (a robust git-show + JSON
+  // comparison, not diff-hunk text parsing -- see that function's own
+  // comment for why). package-lock.json still uses its own diff text, kept
+  // fail-closed exactly as before.
+  const packageSegments = splitUnifiedDiffByFile(options.packageDiffText);
   const perPath = {};
   let maxTier = TIERS.DOCS_ONLY;
   for (const p of paths) {
-    const t = classifyPath(p);
+    let t;
+    if (p === 'package.json' && options.packageJsonTier != null) {
+      t = options.packageJsonTier;
+    } else if (p === 'package-lock.json' && packageSegments['package-lock.json']) {
+      t = classifyPackageLockDiffText(packageSegments['package-lock.json']);
+    } else {
+      t = classifyPath(p);
+    }
     perPath[p] = TIER_NAMES[t];
     maxTier = Math.max(maxTier, t);
   }
@@ -197,11 +434,39 @@ export function classifyChangeSet(paths) {
     perPath,
     suiteMode,
     runNonDbSuite: suiteMode !== SUITE_MODES.NONE,
+    dbRequired: dbRequiredForTier(maxTier),
     runMainIntegrationFullSuite: maxTier >= TIERS.SECURITY_AUTH_TENANCY_ENTITLEMENT,
   };
 }
 
 const ZERO_SHA = '0000000000000000000000000000000000000000';
+
+/**
+ * Resolve the unified diff text for package-lock.json in a before/after
+ * range, but only when it's actually in the changed-file list -- avoids a
+ * wasted git invocation on every classify run. package.json is NOT included
+ * here any more (owner correction, CI-MIN-01): it is classified via
+ * classifyPackageJsonChange's git-show + JSON comparison instead, since
+ * diff-hunk text cannot reliably reveal which JSON section a change falls
+ * in (see that function's own comment). Returns null (never throws) on any
+ * git failure or an unusable range; callers already treat null/missing diff
+ * text as "fall back to the conservative path-only rule", which preserves
+ * "ambiguous -> FULL".
+ */
+export function resolvePackageDiffText({ before, after, cwd, paths }) {
+  const targets = ['package-lock.json'].filter((p) => paths.includes(p));
+  if (targets.length === 0) return null;
+  if (!before || !after || before === ZERO_SHA || after === ZERO_SHA) return null;
+  try {
+    return execFileSync('git', ['diff', before, after, '--', ...targets], {
+      cwd: cwd || process.cwd(),
+      encoding: 'utf8',
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Resolve the changed-file list for a push event's before/after commit
@@ -263,17 +528,27 @@ export function classifyPushEvent({ before, after, cwd }) {
       perPath: {},
       suiteMode: SUITE_MODES.BROAD_NON_DB,
       runNonDbSuite: true,
+      dbRequired: true,
       runMainIntegrationFullSuite: true,
       pushDiffUnresolvable: true,
     };
   }
-  return classifyChangeSet(files);
+  const packageDiffText = resolvePackageDiffText({ before, after, cwd, paths: files });
+  const packageJsonTier = files.includes('package.json')
+    ? classifyPackageJsonChange({ before, after, cwd })
+    : undefined;
+  return classifyChangeSet(files, { packageDiffText, packageJsonTier });
 }
 
 // CLI entry point.
-//   Non-push mode (PR): node scripts/ci-risk-classifier.mjs < changed-files.txt
+//   Non-push mode (PR): node scripts/ci-risk-classifier.mjs [--base <sha> --head <sha>] < changed-files.txt
 //   Push mode:          node scripts/ci-risk-classifier.mjs --push <before> <after>
 // Used by ci.yml (non-push mode) and main-integration.yml (push mode).
+// --base/--head (PR mode only) let the CLI compute package.json's tier via
+// classifyPackageJsonChange (git show + JSON comparison) and
+// package-lock.json's own diff text for content-aware classification (see
+// resolvePackageDiffText) -- optional and backward compatible: omitting them
+// keeps the prior blind-UNKNOWN behavior for those two files.
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { readFileSync } = await import('node:fs');
   const args = process.argv.slice(2);
@@ -281,16 +556,30 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (args[0] === '--push') {
     result = classifyPushEvent({ before: args[1], after: args[2] });
   } else {
-    let paths = args;
+    let base, head;
+    const rest = [];
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === '--base') base = args[++i];
+      else if (args[i] === '--head') head = args[++i];
+      else rest.push(args[i]);
+    }
+    let paths = rest;
     if (paths.length === 0) {
       const stdin = readFileSync(0, 'utf8');
       paths = stdin.split('\n').map((l) => l.trim()).filter(Boolean);
     }
-    result = classifyChangeSet(paths);
+    const packageDiffText =
+      base && head ? resolvePackageDiffText({ before: base, after: head, cwd: process.cwd(), paths }) : null;
+    const packageJsonTier =
+      base && head && paths.includes('package.json')
+        ? classifyPackageJsonChange({ before: base, after: head, cwd: process.cwd() })
+        : undefined;
+    result = classifyChangeSet(paths, { packageDiffText, packageJsonTier });
   }
   console.error(JSON.stringify(result, null, 2));
   console.log(`risk_class=${result.tierName}`);
   console.log(`suite_mode=${result.suiteMode}`);
   console.log(`run_non_db_suite=${result.runNonDbSuite}`);
+  console.log(`db_required=${result.dbRequired}`);
   console.log(`run_main_integration_full_suite=${result.runMainIntegrationFullSuite}`);
 }

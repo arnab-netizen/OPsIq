@@ -41,7 +41,11 @@ const ciWorkflow = yamlLoad(fs.readFileSync(CI_WORKFLOW, "utf8")) as {
   jobs: Record<string, { steps: WorkflowStep[]; "timeout-minutes"?: number }>;
 };
 
-const lintSteps = ciWorkflow.jobs.lint.steps.filter((s) => typeof s.run === "string");
+// CI-MIN-01: the standalone `lint` job was merged into `build-and-test` as
+// steps (it previously paid for its own separate `npm ci` on every PR --
+// see ci.yml's build-and-test job comments), so the lint traversal and
+// ratchet steps now live there.
+const lintSteps = ciWorkflow.jobs["build-and-test"].steps.filter((s) => typeof s.run === "string");
 
 let tmpDir: string;
 

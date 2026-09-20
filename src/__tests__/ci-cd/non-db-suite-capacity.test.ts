@@ -104,12 +104,13 @@ describe("CI capacity — the fix did not weaken what CI asserts", () => {
   });
 
   it("branch-protection still depends on build-and-test", () => {
+    // CI-MIN-01: `lint` and `bundle-validate` were merged into build-and-test
+    // as steps (each previously paid for its own separate `npm ci`), so they
+    // are no longer separate job-level dependencies.
     const bp = ci.jobs["branch-protection"];
     expect(bp).toBeDefined();
     const needs = Array.isArray(bp.needs) ? bp.needs : [bp.needs].filter(Boolean);
     expect(needs).toContain("build-and-test");
-    expect(needs).toContain("lint");
-    expect(needs).toContain("bundle-validate");
   });
 
   it("the quarantine ledger is still a real file the step can read", () => {

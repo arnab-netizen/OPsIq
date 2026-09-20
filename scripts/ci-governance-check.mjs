@@ -7,7 +7,13 @@
  *  2. ci.yml must NOT have push triggers to feature/** or claude/**
  *  3. b12-s3-db-verification.yml must NOT have a push trigger with no branch filter
  *  4. Cron schedules must NOT exist on smoke test workflows
- *  5. ci-cd-foundations.yml and mvp-readiness.yml must NOT have push/PR automatic triggers
+ *  5. ci-cd-foundations.yml, mvp-readiness.yml, and (CI-MIN-01) the three
+ *     owner-mode consulting-engine workflows must NOT have push/PR automatic
+ *     triggers (their tests are already covered by ci.yml's broad suite)
+ *  14. db-verification.yml must NOT have a pull_request trigger (CI-MIN-01:
+ *      DB validation moved into ci.yml's own db-verify job)
+ *  15. ci.yml must wire db_required from the classifier directly into a
+ *      db-verify job — one authoritative DB-risk signal, no second system
  */
 
 import { readFileSync } from 'fs';
@@ -39,6 +45,15 @@ const CRON_BANNED = [
 const PUSH_BANNED_OVERLAPPING = [
   'ci-cd-foundations.yml',
   'mvp-readiness.yml',
+  // CI-MIN-01 owner correction, item 4: these three workflows' own test
+  // paths (tests/owner-mode/holdout/**, real-world-smb-cases/**,
+  // real-world-simulation/**) are already covered by ci.yml's build-and-test
+  // broad non-DB suite (vitest.config.ts include: "tests/owner-mode/**/*.test.ts").
+  // Automatic push/pull_request triggers here duplicated that run on every
+  // consulting-engine-touching PR unconditionally.
+  'owner-mode-holdout.yml',
+  'owner-real-world-smb-cases.yml',
+  'owner-real-world-simulation.yml',
 ];
 
 let violations = 0;
@@ -241,8 +256,37 @@ if (captureContent && verifierContent) {
   );
 }
 
+// 14. db-verification.yml must NOT have a pull_request trigger (CI-MIN-01
+//     owner correction, items 1-3): DB validation now runs inside ci.yml's
+//     own db-verify job, gated by the classifier's db_required output --
+//     branch-protection is the ONLY required GitHub status check on main
+//     (confirmed via the repo's branch ruleset), so a separate workflow's
+//     own passing check was never actually a merge gate. db-verification.yml
+//     stays workflow_dispatch-only, for explicit Neon/throwaway-Postgres
+//     re-verification, never a second source of truth for DB risk.
+const dbVerificationContent = readWorkflow('db-verification.yml');
+if (dbVerificationContent) {
+  const hasPullRequest = /^\s+pull_request:/m.test(dbVerificationContent);
+  check(!hasPullRequest, 'db-verification.yml must NOT have a pull_request trigger — DB validation runs pre-merge inside ci.yml\'s own db-verify job now (CI-MIN-01)');
+  const hasDispatch = /^\s+workflow_dispatch:/m.test(dbVerificationContent);
+  check(hasDispatch, 'db-verification.yml must have a workflow_dispatch trigger — kept for explicit Neon/throwaway-Postgres re-verification');
+}
+
+// 15. ci.yml must wire a single authoritative DB-risk signal: the classify
+//     job must expose db_required, and the db-verify job must be gated on
+//     it directly (needs.classify.outputs.db_required == 'true') -- not on
+//     any second, separate path-filter mechanism.
+if (ciContent) {
+  const hasDbRequiredOutput = /db_required:\s*\$\{\{\s*steps\.classify\.outputs\.db_required\s*\}\}/.test(ciContent);
+  check(hasDbRequiredOutput, "ci.yml's classify job must output db_required from the classifier script");
+  const hasDbVerifyJob = /^\s*db-verify:/m.test(ciContent);
+  check(hasDbVerifyJob, 'ci.yml must have a db-verify job (CI-MIN-01 owner correction, item 1)');
+  const dbVerifyGatedOnClassifier = /db-verify:[\s\S]*?if:\s*needs\.classify\.outputs\.db_required\s*==\s*'true'/.test(ciContent);
+  check(dbVerifyGatedOnClassifier, "ci.yml's db-verify job must be gated on needs.classify.outputs.db_required == 'true' — one classifier, one decision");
+}
+
 // Summary
-const rulesChecked = SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 12;
+const rulesChecked = SCENARIO_PACKS.length + CRON_BANNED.length + PUSH_BANNED_OVERLAPPING.length + 14;
 if (violations === 0) {
   console.log(`✓ CI governance check passed (${rulesChecked} rules checked)`);
   process.exit(0);

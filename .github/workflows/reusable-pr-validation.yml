@@ -1,8 +1,14 @@
 name: Reusable PR Validation
 
-# Reusable workflow called by the main CI gate (ci.yml) and bundle-specific
-# verification workflows. Encapsulates the standard non-DB validation steps
-# so every PR gate uses the same scanning and type-check sequence.
+# CI-MIN-01: no longer called by ci.yml. Its steps (governance scans, tsc,
+# prisma validate, recurrence scanners, bundle manifest + Stage 7 evidence
+# validators) were merged directly into ci.yml's build-and-test job so a PR
+# pays for `npm ci` once instead of once per job that used to call this
+# reusable workflow -- confirmed duplicate: this workflow ran as its own
+# job with its own checkout + npm ci on every single PR, unconditionally.
+# Left in place (still a valid, self-contained workflow_call-only workflow)
+# for any future bundle-specific verification workflow that wants the same
+# standard sequence without duplicating it.
 #
 # Usage from a caller workflow:
 #   jobs:
