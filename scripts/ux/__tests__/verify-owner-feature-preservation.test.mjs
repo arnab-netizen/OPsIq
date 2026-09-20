@@ -29,8 +29,8 @@ function makeBaseline() {
         navigationState: "IN_SIDEBAR",
         apiCapabilityRequirements: [{ endpoint: "/api/owner/finance/actions/:param", method: "PATCH", capabilities: ["OWNER_MANAGE"] }],
         majorActions: [{ endpoint: "/api/owner/finance/actions/:param", method: "PATCH" }],
-        readApis: [{ method: "GET", endpoint: "/api/owner/finance/dashboard" }],
-        writeApis: [{ method: "PATCH", endpoint: "/api/owner/finance/actions/:param" }],
+        readApis: [{ method: "GET", path: "/api/owner/finance/dashboard" }],
+        writeApis: [{ method: "PATCH", path: "/api/owner/finance/actions/:param" }],
       },
       {
         route: "/owner/risks",
@@ -164,8 +164,8 @@ test("(B) detects a removed page WRITE API dependency", () => {
 test("(C) a newly added page API dependency does not fail", () => {
   const baseline = makeBaseline();
   const candidate = clone(baseline);
-  candidate.ownerPageRoutes[0].readApis.push({ method: "GET", endpoint: "/api/owner/finance/new-widget" });
-  candidate.ownerPageRoutes[0].writeApis.push({ method: "POST", endpoint: "/api/owner/finance/new-widget" });
+  candidate.ownerPageRoutes[0].readApis.push({ method: "GET", path: "/api/owner/finance/new-widget" });
+  candidate.ownerPageRoutes[0].writeApis.push({ method: "POST", path: "/api/owner/finance/new-widget" });
   assertNone(runAllChecks(baseline, candidate));
 });
 
