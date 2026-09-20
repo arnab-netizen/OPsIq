@@ -29,6 +29,8 @@ function makeBaseline() {
         navigationState: "IN_SIDEBAR",
         apiCapabilityRequirements: [{ endpoint: "/api/owner/finance/actions/:param", method: "PATCH", capabilities: ["OWNER_MANAGE"] }],
         majorActions: [{ endpoint: "/api/owner/finance/actions/:param", method: "PATCH" }],
+        readApis: [{ method: "GET", endpoint: "/api/owner/finance/dashboard" }],
+        writeApis: [{ method: "PATCH", endpoint: "/api/owner/finance/actions/:param" }],
       },
       {
         route: "/owner/risks",
@@ -36,9 +38,14 @@ function makeBaseline() {
         navigationState: "HIDDEN_FOR_SAFETY_NO_NAV_ENTRY",
         apiCapabilityRequirements: [],
         majorActions: [],
+        readApis: [],
+        writeApis: [],
       },
     ],
-    ownerApiRoutes: [{ path: "/api/owner/finance/actions/[actionId]", httpMethods: ["GET", "PATCH"] }],
+    ownerApiRoutes: [
+      { path: "/api/owner/finance/actions/[actionId]", httpMethods: ["GET", "PATCH"], capability: ["OWNER_MANAGE"] },
+      { path: "/api/owner/finance/dashboard", httpMethods: ["GET"], capability: ["OWNER_VIEW"] },
+    ],
     hiddenSafetyRoutes: [{ route: "/owner/risks", reason: "test" }],
     ownerNowViewFields: ["view", "topConstraint"],
     ownerNowViewCoreFields: ["businessId", "confidence"],
@@ -131,6 +138,55 @@ test("detects a BROADENED API capability too (not just narrowed/removed)", () =>
   candidate.ownerPageRoutes[0].apiCapabilityRequirements[0].capabilities = ["OWNER_MANAGE", "SYSTEM_ADMIN"];
   const findings = runAllChecks(baseline, candidate);
   assertOnly(findings, "CAPABILITY_CHANGED");
+});
+
+// ── UX-00B.1: page-level read/write API dependency loss (A, B, C) ──────────
+
+test("(A) detects a removed page READ API dependency", () => {
+  const baseline = makeBaseline();
+  const candidate = clone(baseline);
+  candidate.ownerPageRoutes[0].readApis = []; // GET /api/owner/finance/dashboard dropped
+  const findings = runAllChecks(baseline, candidate);
+  assertOnly(findings, "REMOVED_PAGE_API_DEPENDENCY");
+  assert.deepEqual(findings[0].lines, ["/owner/finance", "GET /api/owner/finance/dashboard"]);
+});
+
+test("(B) detects a removed page WRITE API dependency", () => {
+  const baseline = makeBaseline();
+  const candidate = clone(baseline);
+  candidate.ownerPageRoutes[0].writeApis = []; // PATCH .../actions/:param dropped
+  const findings = runAllChecks(baseline, candidate);
+  const removed = findings.filter((f) => f.type === "REMOVED_PAGE_API_DEPENDENCY");
+  assert.equal(removed.length, 1);
+  assert.deepEqual(removed[0].lines, ["/owner/finance", "PATCH /api/owner/finance/actions/:param"]);
+});
+
+test("(C) a newly added page API dependency does not fail", () => {
+  const baseline = makeBaseline();
+  const candidate = clone(baseline);
+  candidate.ownerPageRoutes[0].readApis.push({ method: "GET", endpoint: "/api/owner/finance/new-widget" });
+  candidate.ownerPageRoutes[0].writeApis.push({ method: "POST", endpoint: "/api/owner/finance/new-widget" });
+  assertNone(runAllChecks(baseline, candidate));
+});
+
+// ── UX-00B.1: whole-route owner API capability-set safety net (D, E) ───────
+
+test("(D) detects a whole-route owner API capability-set removal", () => {
+  const baseline = makeBaseline();
+  const candidate = clone(baseline);
+  candidate.ownerApiRoutes[0].capability = []; // OWNER_MANAGE dropped from the route file entirely
+  const findings = runAllChecks(baseline, candidate);
+  assertOnly(findings, "OWNER_API_CAPABILITY_SET_CHANGED");
+  assert.equal(findings[0].lines[0], "/api/owner/finance/actions/[actionId]");
+});
+
+test("(E) detects a whole-route owner API capability-set change (incl. addition)", () => {
+  const baseline = makeBaseline();
+  const candidate = clone(baseline);
+  candidate.ownerApiRoutes[1].capability = ["OWNER_VIEW", "SYSTEM_ADMIN"]; // silently broadened
+  const findings = runAllChecks(baseline, candidate);
+  assertOnly(findings, "OWNER_API_CAPABILITY_SET_CHANGED");
+  assert.equal(findings[0].lines[0], "/api/owner/finance/dashboard");
 });
 
 // ── 4. hidden-for-safety route becoming visible ─────────────────────────────

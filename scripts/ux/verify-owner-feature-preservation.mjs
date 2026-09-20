@@ -119,9 +119,53 @@ function checkApiCapabilities(baseline, candidate, add) {
   const candMap = buildCapabilityMap(candidate.ownerPageRoutes);
   for (const [key, caps] of baseMap) {
     const candCaps = candMap.get(key);
-    if (candCaps === undefined) continue; // endpoint no longer called by any page — covered by REMOVED_ACTION/page checks
+    // A missing entry here means the page no longer calls this endpoint at all -- that loss is
+    // now a REMOVED_PAGE_API_DEPENDENCY (checkPageApiDependencies) and/or REMOVED_ACTION; reporting
+    // CAPABILITY_CHANGED for the same disappearance too would be a redundant second finding for one
+    // underlying event, so this check only compares capability VALUES for calls still present.
+    if (candCaps === undefined) continue;
     if (!sortedEq(caps, candCaps)) {
       add("CAPABILITY_CHANGED", [key, `baseline: ${JSON.stringify(caps)}`, `candidate: ${JSON.stringify(candCaps)}`]);
+    }
+  }
+}
+
+/** Every baseline page's readApis/writeApis must remain a subset of the candidate's — the
+ * baseline already records per-page GET/write dependencies, but until now nothing compared them,
+ * so a future change could drop a page's read dependency on an API (the page and the API route
+ * both still exist) with no finding at all. Additions are fine; only removal fails. Compared by
+ * (method, endpoint) — endpoint is already ":param"-normalized identically by the generator on
+ * both sides, so no extra normalization is needed here. */
+function checkPageApiDependencies(baseline, candidate, add) {
+  const candByRoute = new Map(candidate.ownerPageRoutes.map((p) => [p.route, p]));
+  const keyOf = (a) => `${a.method} ${a.endpoint}`;
+  for (const p of baseline.ownerPageRoutes) {
+    const cand = candByRoute.get(p.route);
+    if (!cand) continue; // already reported by checkOwnerPages
+    const candRead = new Set((cand.readApis ?? []).map(keyOf));
+    const candWrite = new Set((cand.writeApis ?? []).map(keyOf));
+    for (const a of p.readApis ?? []) {
+      if (!candRead.has(keyOf(a))) add("REMOVED_PAGE_API_DEPENDENCY", [p.route, keyOf(a)]);
+    }
+    for (const a of p.writeApis ?? []) {
+      if (!candWrite.has(keyOf(a))) add("REMOVED_PAGE_API_DEPENDENCY", [p.route, keyOf(a)]);
+    }
+  }
+}
+
+/** Coarse, whole-route safety net using the baseline's OWN ownerApiRoutes[].capability field (a
+ * whole-file CAPABILITIES.* union, not method-scoped -- see buildCapabilityMap's comment). Exact
+ * equality in either direction: this field is a security/access signal, so a silently broadened
+ * capability set is exactly as much a finding as a narrowed one. This does not replace the
+ * precise, method-specific checkApiCapabilities above; it additionally covers every owner API
+ * route, not only the ones a traced page component tree happens to call. */
+function checkOwnerApiCapabilitySets(baseline, candidate, add) {
+  const candByPath = new Map(candidate.ownerApiRoutes.map((r) => [r.path, r]));
+  for (const r of baseline.ownerApiRoutes) {
+    const cand = candByPath.get(r.path);
+    if (!cand) continue; // already reported by checkOwnerApiRoutesAndMethods
+    if (!sortedEq(r.capability, cand.capability)) {
+      add("OWNER_API_CAPABILITY_SET_CHANGED", [r.path, `baseline: ${JSON.stringify(r.capability)}`, `candidate: ${JSON.stringify(cand.capability)}`]);
     }
   }
 }
@@ -254,6 +298,8 @@ export function runAllChecks(baseline, candidate) {
   checkOwnerApiRoutesAndMethods(baseline, candidate, add);
   checkPageAccessGates(baseline, candidate, add);
   checkApiCapabilities(baseline, candidate, add);
+  checkPageApiDependencies(baseline, candidate, add);
+  checkOwnerApiCapabilitySets(baseline, candidate, add);
   checkHiddenForSafety(baseline, candidate, add);
   checkOwnerNowViewFields(baseline, candidate, add);
   checkOwnerNowViewCoreFields(baseline, candidate, add);
