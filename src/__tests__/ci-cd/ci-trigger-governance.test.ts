@@ -95,10 +95,14 @@ describe("ci.yml — pull_request trigger coverage (CI_TRIGGER_GAP_PR284)", () =
 describe("main-integration.yml — workflow_dispatch trigger (CI_RECOVERY_DISPATCH_ABSENT)", () => {
   const on = mi.on as Record<string, unknown>;
 
-  it("push trigger is still present targeting main", () => {
-    const push = on.push as { branches?: string[] } | undefined;
-    expect(push).toBeDefined();
-    expect(push?.branches ?? []).toContain("main");
+  // CI-MIN-01: normal pushes to main no longer auto-run the full DB
+  // integration suite -- DB-risk validation now runs pre-merge on the PR
+  // itself (db-verification.yml), so a PR that already passed the merge
+  // gate does not pay for the identical suite a second time post-merge.
+  // This workflow is kept available via workflow_dispatch only, for
+  // disaster-recovery / release re-verification of main.
+  it("push trigger is NOT present (CI-MIN-01 -- DB validation moved pre-merge)", () => {
+    expect(on).not.toHaveProperty("push");
   });
 
   it("workflow_dispatch trigger is present", () => {
@@ -217,7 +221,12 @@ describe("main-integration.yml — identity gate step (fail-closed dispatch)", (
 // behavior, not a reimplementation that could drift from it.
 describe("ci.yml — branch-protection fails closed on any required-job non-success (Issue 9, 2026-08-29)", () => {
   const bp = ci.jobs["branch-protection"];
-  const requiredJobs = ["classify", "build-and-test", "lint", "bundle-validate", "actionlint"];
+  // CI-MIN-01: the standalone `lint` and `bundle-validate` jobs were merged
+  // into build-and-test (each previously paid for its own separate `npm ci`
+  // on every PR -- see ci.yml's build-and-test job comments). Their steps
+  // now run inside build-and-test, so a failure in either surfaces as a
+  // build-and-test failure, not a separate job result.
+  const requiredJobs = ["classify", "build-and-test", "actionlint"];
   const ALL_SUCCESS: Record<string, string> = Object.fromEntries(requiredJobs.map((j) => [j, "success"]));
 
   /**
@@ -262,48 +271,42 @@ describe("ci.yml — branch-protection fails closed on any required-job non-succ
     expect((bp?.if ?? "").trim()).not.toBe("github.event_name == 'pull_request'");
   });
 
-  describe("real script execution against all 9 owner-named scenarios", () => {
+  // CI-MIN-01: the standalone `lint` and `bundle-validate` jobs were merged
+  // into build-and-test, so scenarios that used to name them individually
+  // now exercise the same code path via build-and-test's own result --
+  // renumbered to match the 3 required jobs that remain.
+  describe("real script execution against all required-job scenarios", () => {
     it("1. all upstream success -> aggregate PASS", () => {
       const { exitCode } = runBranchProtectionStep(ALL_SUCCESS);
       expect(exitCode).toBe(0);
     });
 
-    it("2. build-and-test failure -> aggregate FAIL", () => {
+    it("2. build-and-test failure (covers a governance/tsc/prisma/preservation/lint-ratchet/bundle-manifest/build/suite step failing inside it) -> aggregate FAIL", () => {
       const { exitCode } = runBranchProtectionStep({ ...ALL_SUCCESS, "build-and-test": "failure" });
       expect(exitCode).not.toBe(0);
     });
 
-    it("3. lint failure -> aggregate FAIL", () => {
-      const { exitCode } = runBranchProtectionStep({ ...ALL_SUCCESS, lint: "failure" });
-      expect(exitCode).not.toBe(0);
-    });
-
-    it("4. bundle-validate failure -> aggregate FAIL", () => {
-      const { exitCode } = runBranchProtectionStep({ ...ALL_SUCCESS, "bundle-validate": "failure" });
-      expect(exitCode).not.toBe(0);
-    });
-
-    it("5. actionlint failure -> aggregate FAIL", () => {
+    it("3. actionlint failure -> aggregate FAIL", () => {
       const { exitCode } = runBranchProtectionStep({ ...ALL_SUCCESS, actionlint: "failure" });
       expect(exitCode).not.toBe(0);
     });
 
-    it("6. classifier (classify job) failure -> aggregate FAIL", () => {
+    it("4. classifier (classify job) failure -> aggregate FAIL", () => {
       const { exitCode } = runBranchProtectionStep({ ...ALL_SUCCESS, classify: "failure" });
       expect(exitCode).not.toBe(0);
     });
 
-    it("7. cancelled dependency -> aggregate FAIL", () => {
+    it("5. cancelled dependency -> aggregate FAIL", () => {
       const { exitCode } = runBranchProtectionStep({ ...ALL_SUCCESS, "build-and-test": "cancelled" });
       expect(exitCode).not.toBe(0);
     });
 
-    it("8. unexpected skipped dependency -> aggregate FAIL", () => {
-      const { exitCode } = runBranchProtectionStep({ ...ALL_SUCCESS, lint: "skipped" });
+    it("6. unexpected skipped dependency -> aggregate FAIL", () => {
+      const { exitCode } = runBranchProtectionStep({ ...ALL_SUCCESS, "build-and-test": "skipped" });
       expect(exitCode).not.toBe(0);
     });
 
-    it("9. RECOVERY_INFRA_ONLY (only the expensive step inside build-and-test is conditionally skipped; the job itself still completes success) -> aggregate PASS", () => {
+    it("7. RECOVERY_INFRA_ONLY (only the expensive step inside build-and-test is conditionally skipped; the job itself still completes success) -> aggregate PASS", () => {
       // A step skipped via its own `if:` does not make the enclosing job's
       // result anything other than success -- that is GitHub Actions'
       // platform behavior, not something this repo's YAML can override. What

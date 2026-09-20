@@ -136,6 +136,146 @@ export function classifyPath(path) {
   return tier === -1 ? TIERS.UNKNOWN : tier;
 }
 
+// CI-MIN-01 ROOT-CAUSE FIX: package.json/package-lock.json were classified
+// UNKNOWN (max tier) by PATH ALONE, which forces runMainIntegrationFullSuite
+// for ANY edit to either file -- including a pure `scripts` alias rename with
+// zero dependency or runtime impact. Path alone cannot distinguish a
+// scripts-only edit from a dependency change from a DB-package dependency
+// change, so this needs the actual diff text. These two functions classify
+// each file from its own unified diff hunk; classifyChangeSet uses them
+// INSTEAD OF the blind path rule only when diff text was actually supplied
+// (see resolvePackageDiffText / splitUnifiedDiffByFile below) -- callers that
+// don't supply diff text keep the prior conservative UNKNOWN behavior
+// unchanged, preserving "ambiguous -> FULL" whenever the diff can't be read.
+export const DB_PACKAGE_NAMES = [
+  'prisma', '@prisma/client', '@prisma/extension-accelerate', '@prisma/adapter-pg', '@prisma/adapter-neon',
+  'pg', 'pg-native', 'pg-pool', 'pg-cursor', 'postgres',
+  'mysql', 'mysql2',
+  'mongodb', 'mongoose',
+  'drizzle-orm', 'knex', 'sequelize', 'typeorm', 'kysely',
+  'ioredis', 'redis',
+  'sqlite3', 'better-sqlite3',
+  '@planetscale/database', '@neondatabase/serverless', '@vercel/postgres',
+  'mssql', 'tedious',
+];
+const DB_PACKAGE_ALTERNATION = DB_PACKAGE_NAMES
+  .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('|');
+// A package name is only counted when it appears as a whole path segment
+// bounded by a quote or a slash on both sides (e.g. `"prisma"`,
+// `"node_modules/prisma"`, `"node_modules/@prisma/client"`) -- never as a
+// prefix of an unrelated package name (e.g. "pg" must not match
+// "pg-connection-string-unrelated-thing").
+export const DB_PACKAGE_RE = new RegExp(`(^|["/])(${DB_PACKAGE_ALTERNATION})(["/]|$)`, 'i');
+
+/**
+ * Classify package.json's own unified diff text. Tracks which top-level JSON
+ * section (scripts / dependencies / devDependencies / ...) each added or
+ * removed line falls inside via simple brace-depth tracking over the diff's
+ * content lines (context ' ', added '+', removed '-'). A scripts-only change
+ * classifies at APPLICATION_NON_DB (same as any other non-DB app change,
+ * never the inflated UNKNOWN tier); a dependency change classifies
+ * APPLICATION_NON_DB unless it touches a DB-related package, in which case it
+ * classifies DB_RUNTIME. If no recognized section could be identified at all
+ * (e.g. a diff format this parser doesn't understand), stays UNKNOWN --
+ * ambiguous is never treated as cheap.
+ */
+export function classifyPackageJsonDiffText(diffText) {
+  if (!diffText) return TIERS.UNKNOWN;
+  let currentSection = null;
+  let sectionDepth = 0;
+  let touchedAnySection = false;
+  let touchedDbPackage = false;
+
+  for (const rawLine of diffText.split('\n')) {
+    if (rawLine.startsWith('+++') || rawLine.startsWith('---')) continue;
+    const marker = rawLine[0];
+    if (marker !== ' ' && marker !== '+' && marker !== '-') continue;
+    const line = rawLine.slice(1);
+
+    if (sectionDepth === 0) {
+      const sectionOpen = line.match(
+        /^\s*"(scripts|dependencies|devDependencies|peerDependencies|optionalDependencies)"\s*:\s*\{/,
+      );
+      if (sectionOpen) {
+        currentSection = sectionOpen[1];
+        sectionDepth = 1;
+      }
+      continue;
+    }
+
+    // Inside a tracked section: naive brace counting on this content line to
+    // detect the section's closing brace (package.json's own values never
+    // contain literal unescaped braces at this nesting depth).
+    const opens = (line.match(/\{/g) || []).length;
+    const closes = (line.match(/\}/g) || []).length;
+    sectionDepth += opens - closes;
+
+    if (marker === '+' || marker === '-') {
+      touchedAnySection = true;
+      if (currentSection !== 'scripts' && DB_PACKAGE_RE.test(line)) {
+        touchedDbPackage = true;
+      }
+    }
+
+    if (sectionDepth <= 0) {
+      currentSection = null;
+      sectionDepth = 0;
+    }
+  }
+
+  if (!touchedAnySection) return TIERS.UNKNOWN;
+  if (touchedDbPackage) return TIERS.DB_RUNTIME;
+  return TIERS.APPLICATION_NON_DB;
+}
+
+/**
+ * Classify package-lock.json's own unified diff text. The lockfile has no
+ * "scripts" section to distinguish -- every line it can change reflects a
+ * dependency-graph change -- so this only asks whether any added/removed
+ * line mentions a DB-related package name.
+ */
+export function classifyPackageLockDiffText(diffText) {
+  if (!diffText) return TIERS.UNKNOWN;
+  let touchedAny = false;
+  let touchedDbPackage = false;
+  for (const rawLine of diffText.split('\n')) {
+    if (rawLine.startsWith('+++') || rawLine.startsWith('---')) continue;
+    const marker = rawLine[0];
+    if (marker !== '+' && marker !== '-') continue;
+    touchedAny = true;
+    if (DB_PACKAGE_RE.test(rawLine)) touchedDbPackage = true;
+  }
+  if (!touchedAny) return TIERS.UNKNOWN;
+  return touchedDbPackage ? TIERS.DB_RUNTIME : TIERS.APPLICATION_NON_DB;
+}
+
+/**
+ * Split a multi-file unified diff (as produced by `git diff -- fileA fileB`)
+ * into per-file segments, keyed by the diff's "b/" (post-change) path.
+ */
+export function splitUnifiedDiffByFile(diffText) {
+  const segments = {};
+  if (!diffText) return segments;
+  let currentFile = null;
+  let buffer = [];
+  const flush = () => {
+    if (currentFile) segments[currentFile] = buffer.join('\n');
+  };
+  for (const line of diffText.split('\n')) {
+    const m = line.match(/^diff --git a\/(.+?) b\/(.+)$/);
+    if (m) {
+      flush();
+      currentFile = m[2];
+      buffer = [line];
+    } else {
+      buffer.push(line);
+    }
+  }
+  flush();
+  return segments;
+}
+
 // SUITE_MODES: what the PR-side non-DB validation should actually run for a
 // given tier. ROOT-CAUSE FIX (2026-08-29, owner correction pass): the first
 // version of this classifier gave every tier above DOCS_ONLY the full
@@ -145,18 +285,26 @@ export function classifyPath(path) {
 // A RECOVERY_INFRA_ONLY change instead gets TARGETED_RECOVERY: only the
 // recovery-specific test files (backup-restore.test.ts,
 // ci-risk-classifier.test.ts) plus bash -n on any changed shell scripts.
+// CI-MIN-01: a pure CI_GOVERNANCE change (workflow YAML / named CI scripts,
+// no application source touched -- if src/** were touched the path would
+// already classify at a higher tier via max-wins) gets the same treatment
+// for the same reason: TARGETED_CI_GOVERNANCE runs only the classifier's own
+// test file and the CI-trigger-governance regression suite, never the broad
+// ~28,000-test application suite a workflow-only change cannot affect.
 // Every other non-DOCS_ONLY tier gets the broad suite, but -- per the
 // existing run_test_suite: false wiring in ci.yml/reusable-pr-validation.yml
 // -- EXACTLY ONCE per PR, never twice, regardless of tier.
 export const SUITE_MODES = {
   NONE: 'NONE',
   TARGETED_RECOVERY: 'TARGETED_RECOVERY',
+  TARGETED_CI_GOVERNANCE: 'TARGETED_CI_GOVERNANCE',
   BROAD_NON_DB: 'BROAD_NON_DB',
 };
 
 function suiteModeForTier(tier) {
   if (tier === TIERS.DOCS_ONLY) return SUITE_MODES.NONE;
   if (tier === TIERS.RECOVERY_INFRA_ONLY) return SUITE_MODES.TARGETED_RECOVERY;
+  if (tier === TIERS.CI_GOVERNANCE) return SUITE_MODES.TARGETED_CI_GOVERNANCE;
   return SUITE_MODES.BROAD_NON_DB;
 }
 
@@ -172,7 +320,7 @@ function suiteModeForTier(tier) {
  *     backward-compatible callers that only care about "was anything run")
  *   - runMainIntegrationFullSuite: true for SECURITY/DB_RUNTIME/UNKNOWN tiers
  */
-export function classifyChangeSet(paths) {
+export function classifyChangeSet(paths, options = {}) {
   if (paths.length === 0) {
     return {
       tier: TIERS.DOCS_ONLY,
@@ -183,10 +331,22 @@ export function classifyChangeSet(paths) {
       runMainIntegrationFullSuite: false,
     };
   }
+  // CI-MIN-01: package.json/package-lock.json use content-aware
+  // classification INSTEAD OF the blind path rule, but only when their own
+  // diff text was actually supplied by the caller -- absent that, behavior
+  // is unchanged from before (blind UNKNOWN via classifyPath).
+  const packageSegments = splitUnifiedDiffByFile(options.packageDiffText);
   const perPath = {};
   let maxTier = TIERS.DOCS_ONLY;
   for (const p of paths) {
-    const t = classifyPath(p);
+    let t;
+    if (p === 'package.json' && packageSegments['package.json']) {
+      t = classifyPackageJsonDiffText(packageSegments['package.json']);
+    } else if (p === 'package-lock.json' && packageSegments['package-lock.json']) {
+      t = classifyPackageLockDiffText(packageSegments['package-lock.json']);
+    } else {
+      t = classifyPath(p);
+    }
     perPath[p] = TIER_NAMES[t];
     maxTier = Math.max(maxTier, t);
   }
@@ -202,6 +362,29 @@ export function classifyChangeSet(paths) {
 }
 
 const ZERO_SHA = '0000000000000000000000000000000000000000';
+
+/**
+ * Resolve the unified diff text for package.json/package-lock.json in a
+ * before/after range, but only when at least one of them is actually in the
+ * changed-file list -- avoids a wasted git invocation on every classify run.
+ * Returns null (never throws) on any git failure or an unusable range;
+ * callers already treat null/missing diff text as "fall back to the
+ * conservative path-only rule", which preserves "ambiguous -> FULL".
+ */
+export function resolvePackageDiffText({ before, after, cwd, paths }) {
+  const targets = ['package.json', 'package-lock.json'].filter((p) => paths.includes(p));
+  if (targets.length === 0) return null;
+  if (!before || !after || before === ZERO_SHA || after === ZERO_SHA) return null;
+  try {
+    return execFileSync('git', ['diff', before, after, '--', ...targets], {
+      cwd: cwd || process.cwd(),
+      encoding: 'utf8',
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Resolve the changed-file list for a push event's before/after commit
@@ -267,13 +450,18 @@ export function classifyPushEvent({ before, after, cwd }) {
       pushDiffUnresolvable: true,
     };
   }
-  return classifyChangeSet(files);
+  const packageDiffText = resolvePackageDiffText({ before, after, cwd, paths: files });
+  return classifyChangeSet(files, { packageDiffText });
 }
 
 // CLI entry point.
-//   Non-push mode (PR): node scripts/ci-risk-classifier.mjs < changed-files.txt
+//   Non-push mode (PR): node scripts/ci-risk-classifier.mjs [--base <sha> --head <sha>] < changed-files.txt
 //   Push mode:          node scripts/ci-risk-classifier.mjs --push <before> <after>
 // Used by ci.yml (non-push mode) and main-integration.yml (push mode).
+// --base/--head (PR mode only) let the CLI compute package.json/
+// package-lock.json's own diff text for content-aware classification (see
+// resolvePackageDiffText) -- optional and backward compatible: omitting them
+// keeps the prior blind-UNKNOWN behavior for those two files.
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { readFileSync } = await import('node:fs');
   const args = process.argv.slice(2);
@@ -281,12 +469,21 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (args[0] === '--push') {
     result = classifyPushEvent({ before: args[1], after: args[2] });
   } else {
-    let paths = args;
+    let base, head;
+    const rest = [];
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === '--base') base = args[++i];
+      else if (args[i] === '--head') head = args[++i];
+      else rest.push(args[i]);
+    }
+    let paths = rest;
     if (paths.length === 0) {
       const stdin = readFileSync(0, 'utf8');
       paths = stdin.split('\n').map((l) => l.trim()).filter(Boolean);
     }
-    result = classifyChangeSet(paths);
+    const packageDiffText =
+      base && head ? resolvePackageDiffText({ before: base, after: head, cwd: process.cwd(), paths }) : null;
+    result = classifyChangeSet(paths, { packageDiffText });
   }
   console.error(JSON.stringify(result, null, 2));
   console.log(`risk_class=${result.tierName}`);

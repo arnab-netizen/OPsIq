@@ -5,9 +5,14 @@ import * as os from "node:os";
 import * as path from "node:path";
 import {
   classifyChangeSet,
+  classifyPackageJsonDiffText,
+  classifyPackageLockDiffText,
   classifyPath,
   classifyPushEvent,
+  DB_PACKAGE_RE,
+  resolvePackageDiffText,
   resolvePushDiffFiles,
+  splitUnifiedDiffByFile,
   SUITE_MODES,
   TIERS,
 } from "../../../scripts/ci-risk-classifier.mjs";
@@ -189,9 +194,12 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
       expect(result.suiteMode).toBe(SUITE_MODES.TARGETED_RECOVERY);
     });
 
-    it("every tier above RECOVERY_INFRA_ONLY gets suiteMode BROAD_NON_DB", () => {
+    it("every tier above CI_GOVERNANCE gets suiteMode BROAD_NON_DB", () => {
+      // CI-MIN-01: CI_GOVERNANCE now gets its own TARGETED_CI_GOVERNANCE mode
+      // (see the dedicated describe block below), the same treatment already
+      // proven for RECOVERY_INFRA_ONLY -- so it moved out of this generic
+      // "gets the broad suite" list.
       const cases: [string, number][] = [
-        [".github/workflows/some-new-thing.yml", TIERS.CI_GOVERNANCE],
         ["src/services/foo.service.ts", TIERS.APPLICATION_NON_DB],
         ["src/lib/auth/session.ts", TIERS.SECURITY_AUTH_TENANCY_ENTITLEMENT],
         ["prisma/schema.prisma", TIERS.DB_RUNTIME],
@@ -335,6 +343,265 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
       const after = commitFiles(dir, { "README.md": "only commit\n" }, "only commit");
       const bogusSha = "f".repeat(40);
       expect(resolvePushDiffFiles({ before: bogusSha, after, cwd: dir })).toBeNull();
+    });
+  });
+
+  // CI-MIN-01: package.json/package-lock.json were classified UNKNOWN (max
+  // tier) by PATH ALONE, forcing runMainIntegrationFullSuite for ANY edit to
+  // either file, including a pure `scripts` alias rename. These tests prove
+  // the content-aware replacement against real unified diff text -- not a
+  // reimplementation of git's diff format, actual `diff --git` hunks built
+  // by hand the way `git diff` itself would produce them.
+  describe("Content-aware package.json / package-lock.json classification (CI-MIN-01)", () => {
+    const scriptsOnlyDiff = [
+      "diff --git a/package.json b/package.json",
+      "index 1111111..2222222 100644",
+      "--- a/package.json",
+      "+++ b/package.json",
+      "@@ -10,7 +10,7 @@",
+      '   "scripts": {',
+      '     "dev": "next dev",',
+      '-    "lint": "eslint .",',
+      '+    "lint": "eslint",',
+      '     "build": "next build"',
+      "   },",
+    ].join("\n");
+
+    const nonDbDependencyDiff = [
+      "diff --git a/package.json b/package.json",
+      "index 1111111..2222222 100644",
+      "--- a/package.json",
+      "+++ b/package.json",
+      "@@ -20,6 +20,7 @@",
+      '   "dependencies": {',
+      '     "next": "14.0.0",',
+      '+    "lodash": "^4.17.21",',
+      '     "react": "18.2.0"',
+      "   },",
+    ].join("\n");
+
+    const dbDependencyDiff = [
+      "diff --git a/package.json b/package.json",
+      "index 1111111..2222222 100644",
+      "--- a/package.json",
+      "+++ b/package.json",
+      "@@ -20,6 +20,7 @@",
+      '   "dependencies": {',
+      '     "next": "14.0.0",',
+      '+    "prisma": "^5.10.0",',
+      '     "react": "18.2.0"',
+      "   },",
+    ].join("\n");
+
+    const scopedDbDependencyDiff = [
+      "diff --git a/package.json b/package.json",
+      "index 1111111..2222222 100644",
+      "--- a/package.json",
+      "+++ b/package.json",
+      "@@ -20,6 +20,7 @@",
+      '   "dependencies": {',
+      '     "next": "14.0.0",',
+      '+    "@neondatabase/serverless": "^0.9.0",',
+      '     "react": "18.2.0"',
+      "   },",
+    ].join("\n");
+
+    const lockDbDiff = [
+      "diff --git a/package-lock.json b/package-lock.json",
+      "index 1111111..2222222 100644",
+      "--- a/package-lock.json",
+      "+++ b/package-lock.json",
+      "@@ -100,6 +100,9 @@",
+      '+    "node_modules/prisma": {',
+      '+      "version": "5.10.0"',
+      "+    },",
+    ].join("\n");
+
+    const lockNonDbDiff = [
+      "diff --git a/package-lock.json b/package-lock.json",
+      "index 1111111..2222222 100644",
+      "--- a/package-lock.json",
+      "+++ b/package-lock.json",
+      "@@ -100,6 +100,9 @@",
+      '+    "node_modules/lodash": {',
+      '+      "version": "4.17.21"',
+      "+    },",
+    ].join("\n");
+
+    it("classifyPackageJsonDiffText: a scripts-only diff classifies APPLICATION_NON_DB, never UNKNOWN", () => {
+      expect(classifyPackageJsonDiffText(scriptsOnlyDiff)).toBe(TIERS.APPLICATION_NON_DB);
+    });
+
+    it("classifyPackageJsonDiffText: a non-DB dependency diff classifies APPLICATION_NON_DB", () => {
+      expect(classifyPackageJsonDiffText(nonDbDependencyDiff)).toBe(TIERS.APPLICATION_NON_DB);
+    });
+
+    it("classifyPackageJsonDiffText: a DB-package dependency diff classifies DB_RUNTIME", () => {
+      expect(classifyPackageJsonDiffText(dbDependencyDiff)).toBe(TIERS.DB_RUNTIME);
+    });
+
+    it("classifyPackageJsonDiffText: a scoped DB-package (@neondatabase/serverless) diff classifies DB_RUNTIME", () => {
+      expect(classifyPackageJsonDiffText(scopedDbDependencyDiff)).toBe(TIERS.DB_RUNTIME);
+    });
+
+    it("classifyPackageJsonDiffText: empty/unparseable diff text stays UNKNOWN (ambiguous -> FULL)", () => {
+      expect(classifyPackageJsonDiffText("")).toBe(TIERS.UNKNOWN);
+      expect(classifyPackageJsonDiffText("not a real diff at all")).toBe(TIERS.UNKNOWN);
+    });
+
+    it("classifyPackageLockDiffText: a DB-package lockfile entry classifies DB_RUNTIME", () => {
+      expect(classifyPackageLockDiffText(lockDbDiff)).toBe(TIERS.DB_RUNTIME);
+    });
+
+    it("classifyPackageLockDiffText: a non-DB lockfile entry classifies APPLICATION_NON_DB", () => {
+      expect(classifyPackageLockDiffText(lockNonDbDiff)).toBe(TIERS.APPLICATION_NON_DB);
+    });
+
+    it("classifyPackageLockDiffText: empty diff text stays UNKNOWN", () => {
+      expect(classifyPackageLockDiffText("")).toBe(TIERS.UNKNOWN);
+    });
+
+    it("DB_PACKAGE_RE matches exact package names and node_modules paths, never a mere prefix of an unrelated package", () => {
+      expect(DB_PACKAGE_RE.test('"pg": "^8.0.0"')).toBe(true);
+      expect(DB_PACKAGE_RE.test('"node_modules/prisma": {')).toBe(true);
+      expect(DB_PACKAGE_RE.test('"node_modules/@prisma/client": {')).toBe(true);
+      expect(DB_PACKAGE_RE.test('"pg-connection-string-unrelated": "^1.0.0"')).toBe(false);
+      expect(DB_PACKAGE_RE.test('"some-postgres-adjacent-blog-post": "^1.0.0"')).toBe(false);
+    });
+
+    it("splitUnifiedDiffByFile separates a combined package.json + package-lock.json diff by file", () => {
+      const combined = `${scriptsOnlyDiff}\n${lockNonDbDiff}`;
+      const segments = splitUnifiedDiffByFile(combined);
+      expect(Object.keys(segments)).toEqual(["package.json", "package-lock.json"]);
+      expect(segments["package.json"]).toContain('"lint": "eslint",');
+      expect(segments["package-lock.json"]).toContain("node_modules/lodash");
+    });
+
+    it("REQUIRED OUTCOME: classifyChangeSet given a scripts-only package.json diff (and no lockfile change) never forces the DB suite", () => {
+      const result = classifyChangeSet(["package.json"], { packageDiffText: scriptsOnlyDiff });
+      expect(result.tier).toBe(TIERS.APPLICATION_NON_DB);
+      expect(result.runMainIntegrationFullSuite).toBe(false);
+    });
+
+    it("REQUIRED OUTCOME: a scripts-only change to BOTH package.json and package-lock.json never forces the DB suite", () => {
+      const combined = [scriptsOnlyDiff, lockNonDbDiff].join("\n");
+      const result = classifyChangeSet(["package.json", "package-lock.json"], { packageDiffText: combined });
+      expect(result.tier).toBe(TIERS.APPLICATION_NON_DB);
+      expect(result.runMainIntegrationFullSuite).toBe(false);
+    });
+
+    it("a DB-package dependency change to package.json forces the DB suite", () => {
+      const result = classifyChangeSet(["package.json"], { packageDiffText: dbDependencyDiff });
+      expect(result.tier).toBe(TIERS.DB_RUNTIME);
+      expect(result.runMainIntegrationFullSuite).toBe(true);
+    });
+
+    it("BACKWARD COMPATIBILITY: classifyChangeSet without packageDiffText keeps the prior conservative UNKNOWN behavior for package.json", () => {
+      const result = classifyChangeSet(["package.json"]);
+      expect(result.tier).toBe(TIERS.UNKNOWN);
+      expect(result.runMainIntegrationFullSuite).toBe(true);
+    });
+
+    describe("resolvePackageDiffText -- real git repo", () => {
+      const tempDirs: string[] = [];
+
+      afterEach(() => {
+        while (tempDirs.length > 0) {
+          const dir = tempDirs.pop();
+          if (dir) fs.rmSync(dir, { recursive: true, force: true });
+        }
+      });
+
+      function makeRepo(): string {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ci-risk-classifier-pkgdiff-test-"));
+        tempDirs.push(dir);
+        execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
+        execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: dir });
+        execFileSync("git", ["config", "user.name", "Test"], { cwd: dir });
+        execFileSync("git", ["config", "commit.gpgsign", "false"], { cwd: dir });
+        return dir;
+      }
+
+      function commitFiles(dir: string, files: Record<string, string>, message: string): string {
+        for (const [relPath, contents] of Object.entries(files)) {
+          const full = path.join(dir, relPath);
+          fs.mkdirSync(path.dirname(full), { recursive: true });
+          fs.writeFileSync(full, contents);
+          execFileSync("git", ["add", relPath], { cwd: dir });
+        }
+        execFileSync("git", ["commit", "-q", "-m", message], { cwd: dir });
+        return execFileSync("git", ["rev-parse", "HEAD"], { cwd: dir, encoding: "utf8" }).trim();
+      }
+
+      it("END-TO-END: a real scripts-only package.json commit, diffed and classified via classifyPushEvent, never forces the DB suite", () => {
+        const dir = makeRepo();
+        const before = commitFiles(
+          dir,
+          { "package.json": JSON.stringify({ name: "x", scripts: { lint: "eslint ." }, dependencies: { next: "14.0.0" } }, null, 2) + "\n" },
+          "baseline",
+        );
+        const after = commitFiles(
+          dir,
+          { "package.json": JSON.stringify({ name: "x", scripts: { lint: "eslint" }, dependencies: { next: "14.0.0" } }, null, 2) + "\n" },
+          "scripts-only change",
+        );
+        const result = classifyPushEvent({ before, after, cwd: dir });
+        expect(result.tier).toBe(TIERS.APPLICATION_NON_DB);
+        expect(result.runMainIntegrationFullSuite).toBe(false);
+      });
+
+      it("END-TO-END: a real DB-dependency package.json commit, diffed and classified via classifyPushEvent, forces the DB suite", () => {
+        const dir = makeRepo();
+        const before = commitFiles(
+          dir,
+          { "package.json": JSON.stringify({ name: "x", dependencies: { next: "14.0.0" } }, null, 2) + "\n" },
+          "baseline",
+        );
+        const after = commitFiles(
+          dir,
+          { "package.json": JSON.stringify({ name: "x", dependencies: { next: "14.0.0", prisma: "^5.10.0" } }, null, 2) + "\n" },
+          "add prisma dependency",
+        );
+        const result = classifyPushEvent({ before, after, cwd: dir });
+        expect(result.tier).toBe(TIERS.DB_RUNTIME);
+        expect(result.runMainIntegrationFullSuite).toBe(true);
+      });
+
+      it("resolvePackageDiffText returns null when neither package.json nor package-lock.json changed (no wasted git call)", () => {
+        const dir = makeRepo();
+        const before = commitFiles(dir, { "README.md": "a\n" }, "c1");
+        const after = commitFiles(dir, { "README.md": "b\n" }, "c2");
+        expect(resolvePackageDiffText({ before, after, cwd: dir, paths: ["README.md"] })).toBeNull();
+      });
+    });
+  });
+
+  // CI-MIN-01: a workflow-only / named-CI-script-only PR (CI_GOVERNANCE
+  // tier) must not run the ~28,000-test broad application suite -- it gets
+  // its own narrow TARGETED_CI_GOVERNANCE mode instead, the same pattern
+  // already proven for RECOVERY_INFRA_ONLY above.
+  describe("TARGETED_CI_GOVERNANCE suite mode (CI-MIN-01)", () => {
+    it("a pure CI_GOVERNANCE-tier change gets suiteMode TARGETED_CI_GOVERNANCE, never the broad suite", () => {
+      const result = classifyChangeSet([".github/workflows/ci.yml"]);
+      expect(result.tier).toBe(TIERS.CI_GOVERNANCE);
+      expect(result.suiteMode).toBe(SUITE_MODES.TARGETED_CI_GOVERNANCE);
+    });
+
+    it("a named CI-governance script change gets suiteMode TARGETED_CI_GOVERNANCE", () => {
+      const result = classifyChangeSet(["scripts/ci-governance-check.mjs"]);
+      expect(result.tier).toBe(TIERS.CI_GOVERNANCE);
+      expect(result.suiteMode).toBe(SUITE_MODES.TARGETED_CI_GOVERNANCE);
+    });
+
+    it("CI_GOVERNANCE tier still skips Main Integration's full DB suite", () => {
+      const result = classifyChangeSet([".github/workflows/ci.yml"]);
+      expect(result.runMainIntegrationFullSuite).toBe(false);
+    });
+
+    it("a workflow change mixed with an application source change is pulled up to APPLICATION_NON_DB, not TARGETED_CI_GOVERNANCE", () => {
+      const result = classifyChangeSet([".github/workflows/ci.yml", "src/services/foo.service.ts"]);
+      expect(result.tier).toBe(TIERS.APPLICATION_NON_DB);
+      expect(result.suiteMode).toBe(SUITE_MODES.BROAD_NON_DB);
     });
   });
 });

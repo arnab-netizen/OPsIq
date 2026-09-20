@@ -1,14 +1,16 @@
 name: Main Integration
 
-# Full integration suite — runs on push to main only.
+# CI-MIN-01: this no longer runs automatically on push to main. DB-risk
+# changes now get their pre-merge DB validation on the PR itself
+# (db-verification.yml), so a normal merge to main does not pay for this
+# full suite a second time post-merge -- the PR already proved it. This
+# workflow is kept dispatch-only for disaster-recovery / release
+# re-verification of main ("is main actually green"), not as a routine gate.
 # PR static + non-DB checks are handled by ci.yml (the required PR gate).
 # Scenario packs and browser proof are dispatch-only (deep-proof.yml).
 # Target: <40 runner-minutes, single postgres:16 job.
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 concurrency:

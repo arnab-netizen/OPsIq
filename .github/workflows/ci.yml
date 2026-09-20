@@ -1,7 +1,13 @@
 name: CI - Build & Test
 
-# PR gate only — runs on pull_request to main.
-# Push to main is handled by main-integration.yml (full DB suite).
+# PR gate only — runs on pull_request to main. The one required merge gate
+# (branch-protection) for PRs to main.
+#
+# CI-MIN-01: main-integration.yml no longer auto-runs on push to main (kept
+# workflow_dispatch-only, for disaster-recovery / release re-verification).
+# DB-risk changes get their DB validation pre-merge instead, via
+# db-verification.yml's own pull_request trigger -- a normal merge to main
+# does not re-run an already-passed PR's suite.
 # Scenario packs and browser proof are dispatch-only (deep-proof.yml).
 # Target: <15 runner-minutes per PR, zero postgres service, zero browser shards.
 
@@ -59,7 +65,14 @@ jobs:
           git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" > /tmp/changed_files.txt
           echo "Changed files in this PR:"
           cat /tmp/changed_files.txt
-          node scripts/ci-risk-classifier.mjs < /tmp/changed_files.txt >> "$GITHUB_OUTPUT"
+          # --base/--head (CI-MIN-01): lets the classifier read package.json's
+          # OWN diff text so a scripts-only edit doesn't get the same UNKNOWN
+          # tier as a real dependency change -- see
+          # scripts/ci-risk-classifier.mjs's classifyPackageJsonDiffText.
+          node scripts/ci-risk-classifier.mjs \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head "${{ github.event.pull_request.head.sha }}" \
+            < /tmp/changed_files.txt >> "$GITHUB_OUTPUT"
 
   build-and-test:
     needs: classify
@@ -92,7 +105,19 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
 
+      # CI-MIN-01: every step from here through "Production build" is skipped
+      # for a DOCS_ONLY change (docs/*.md-only PRs pay for nothing but
+      # checkout + Node setup), and the app-specific steps (everything except
+      # "Run linter"/"Lint ratchet"/"CI workflow governance check") are ALSO
+      # skipped for a pure CI_GOVERNANCE change (workflow YAML / named CI
+      # scripts only) -- if application source were touched, the path would
+      # already classify at a higher tier via max-wins, so a genuine
+      # CI_GOVERNANCE-tier PR by definition has none of these steps' targets
+      # in its diff. A step skipped by its own `if:` does not change the
+      # job's own success/failure result, so branch-protection's per-job
+      # `.result` check is unaffected either way.
       - name: Install dependencies
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY'
         run: |
           for i in 1 2 3; do
             npm ci && break
@@ -107,26 +132,32 @@ jobs:
       # passing (see scripts/a77-prevention-gates.ts's assertRgAvailable), so this
       # step is required for that gate to run at all, not just to run correctly.
       - name: Install ripgrep (required by governance:scan:a77)
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
         run: sudo apt-get update && sudo apt-get install -y ripgrep
 
       - name: Governance compliance scan
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
         run: npm run governance:scan:strict
         continue-on-error: false
 
       - name: Auth route governance scan (blocking)
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
         run: npm run governance:scan:auth
         continue-on-error: false
 
       - name: A7.7 recurrence prevention gates (blocking)
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
         run: npm run governance:scan:a77
         continue-on-error: false
 
       - name: TypeScript type checking
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
         run: npx tsc --noEmit
         continue-on-error: false
 
       - name: Prisma schema validation
         # prisma validate checks schema syntax only — no DB connectivity required.
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
         run: npx prisma validate
         continue-on-error: false
 
@@ -142,17 +173,82 @@ jobs:
         # Pure Node, no DB/build required. See scripts/ux/verify-owner-feature-preservation.mjs
         # and docs/opsiq/ux/PRESERVATION_CHANGE_PROCESS.md for how an intentional change is
         # approved.
+        #
+        # CI-MIN-01: calls the two commands directly instead of through the
+        # `verify:owner-preservation` package.json alias -- that alias existed
+        # solely for this one CI call site, so it was removed rather than kept
+        # as an indirection with a single caller.
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
         run: |
           node --test scripts/ux/__tests__/verify-owner-feature-preservation.test.mjs
-          npm run verify:owner-preservation
+          node scripts/ux/verify-owner-feature-preservation.mjs
         continue-on-error: false
 
       - name: Wrapped handlers ratchet (prevent new violations)
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
         run: npm run audit:wrapped-handlers:ratchet
         continue-on-error: false
 
       - name: CI workflow governance check (prevent trigger regressions)
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY'
         run: node scripts/ci-governance-check.mjs
+        continue-on-error: false
+
+      # CI-MIN-01 ROOT-CAUSE FIX: these three steps and the two lint steps
+      # below previously ran in SEPARATE jobs (bundle-validate, calling
+      # reusable-pr-validation.yml; lint) that each paid for their OWN
+      # `npm ci` and, for bundle-validate, its own duplicate governance
+      # scans/tsc/prisma-validate -- on every single PR, unconditionally.
+      # Moved into this job so "npm deps installed once" (the target
+      # architecture's own words) is actually true. reusable-pr-validation.yml
+      # itself is left in place (still valid on its own, still workflow_call
+      # only per ci-governance-check.mjs rule 7) but is no longer called here.
+      - name: Recurrence defect scanners
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
+        run: node scripts/scan-recurrence-defects.mjs
+        continue-on-error: false
+
+      - name: Bundle manifest validator (evidence and closure conditions)
+        # The only gate that reads every manifest in docs/opsiq/bundles/, including the
+        # invariant block of stage-closure contracts.
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
+        run: node scripts/validate-bundle-manifests.mjs
+        continue-on-error: false
+
+      # Default mode: blocks on REJECTED artifacts only, so a malformed or forged
+      # artifact fails on the PR that introduces it. Signature and provenance are not
+      # checked here — the PR gate holds no signing key, and a gate that cannot check
+      # provenance must never report it as verified. A closure gate runs the same
+      # validator with --require-accepted --require-provenance.
+      - name: Stage 7 evidence artifact validator
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
+        run: node scripts/validate-evidence-artifacts.mjs
+        continue-on-error: false
+
+      # ── One ESLint traversal per job ──────────────────────────────────────
+      # This step used to run in its own `lint` job with its own checkout +
+      # `npm ci` -- a second full dependency install paid on every PR solely
+      # so lint could run once. ESLint runs once here, to a JSON report the
+      # ratchet consumes. continue-on-error stays because ESLint exits 1 while
+      # the baseline error count is non-zero; the ratchet, not this step, is
+      # what decides the job.
+      - name: Run linter (single traversal -> JSON report)
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY'
+        run: npm run lint -- -f json -o eslint-report.json
+        continue-on-error: true
+
+      - name: Lint ratchet (block new lint debt)
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY'
+        run: npm run lint:ratchet -- --from-result eslint-report.json
+        continue-on-error: false
+
+      # CI-MIN-01: `npm run build` was not invoked anywhere in the PR gate --
+      # a PR could reach merge with passing types/tests but a broken Next.js
+      # build. Skipped for DOCS_ONLY/CI_GOVERNANCE, the same tiers with
+      # nothing under src/** or the build config in their diff to break.
+      - name: Production build
+        if: needs.classify.outputs.risk_class != 'DOCS_ONLY' && needs.classify.outputs.risk_class != 'CI_GOVERNANCE'
+        run: npm run build
         continue-on-error: false
 
       - name: Run targeted recovery validation (RECOVERY_INFRA_ONLY tier; no broad suite)
@@ -180,6 +276,23 @@ jobs:
           else
             echo "No changed .sh scripts in this PR."
           fi
+        env:
+          TEST_WITH_DB: "false"
+          NODE_ENV: test
+
+      - name: Run targeted CI-governance validation (CI_GOVERNANCE tier; no broad suite)
+        if: needs.classify.outputs.suite_mode == 'TARGETED_CI_GOVERNANCE'
+        # CI-MIN-01: a change confined to workflow YAML / named CI scripts
+        # (no application source touched -- see scripts/ci-risk-classifier.mjs's
+        # CI_GOVERNANCE tier) cannot affect the ~28,000-test broad application
+        # suite, so it does not run it. This runs only the classifier's own
+        # regression tests and the CI-trigger-governance structural tests --
+        # exactly the tests a workflow/CI-script change can actually break.
+        timeout-minutes: 10
+        run: |
+          npx vitest run --maxWorkers 1 \
+            src/__tests__/workflows/ci-risk-classifier.test.ts \
+            src/__tests__/ci-cd/ci-trigger-governance.test.ts
         env:
           TEST_WITH_DB: "false"
           NODE_ENV: test
@@ -229,66 +342,6 @@ jobs:
           NODE_ENV: test
         continue-on-error: false
 
-  lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    strategy:
-      matrix:
-        node-version: [20.x]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
-
-      - name: Install dependencies
-        run: |
-          for i in 1 2 3; do
-            npm ci && break
-            echo "npm ci failed (attempt $i); retrying in $((i*10))s..."
-            sleep $((i*10))
-          done
-
-      # ── One ESLint traversal per job ──────────────────────────────────────
-      # This step used to be `npm run lint` with continue-on-error, and the ratchet
-      # below then ran `npm run lint` a SECOND time internally. One job paid for two
-      # complete traversals of the repository inside timeout-minutes: 10 and overran
-      # it non-deterministically -- jobs 100920174479, 100939368880, 100945566301 and
-      # 100956290102 each ran 10m15s-10m18s and were killed mid-ratchet. GitHub
-      # reports a timeout as `cancelled` and branch-protection fails closed on it, so
-      # a lint result that was inside the baseline surfaced as a red required check
-      # four times and needed a manual re-run each time.
-      #
-      # ESLint now runs once, to a JSON report the ratchet consumes. continue-on-error
-      # stays because ESLint exits 1 while the baseline error count is non-zero; the
-      # ratchet, not this step, is what decides the job.
-      - name: Run linter (single traversal -> JSON report)
-        run: npm run lint -- -f json -o eslint-report.json
-        continue-on-error: true
-
-      - name: Lint ratchet (block new lint debt)
-        run: npm run lint:ratchet -- --from-result eslint-report.json
-        continue-on-error: false
-
-  # Calls the reusable PR validation workflow with bundle manifest validation enabled.
-  # This proves the reusable_ci_workflow component is wired into the PR gate.
-  # run_test_suite: false -- build-and-test above already runs this exact
-  # suite in the same PR; see reusable-pr-validation.yml's run_test_suite
-  # input comment for the confirmed-duplicate evidence this removes.
-  bundle-validate:
-    uses: ./.github/workflows/reusable-pr-validation.yml
-    with:
-      node_version: '20.x'
-      run_bundle_validator: true
-      run_recurrence_scanners: true
-      run_test_suite: false
-
   # Root cause: PR #332 merged a workflow file with a YAML syntax error (a
   # single-line `run:` value containing an unquoted colon) that no existing
   # check caught -- governance tests in this repo assert string content via
@@ -336,7 +389,7 @@ jobs:
   # functions (`success()`, `always()`, `cancelled()`, `failure()`). The old
   # condition here referenced none, so it was actually evaluated as
   # `success() && github.event_name == 'pull_request'` -- meaning that if
-  # build-and-test, lint, bundle-validate, or actionlint FAILED, this job's
+  # build-and-test or actionlint FAILED, this job's
   # effective condition was false and the job was SKIPPED, not executed.
   # The defect is what GitHub does with that skip: a SKIPPED job/check is
   # reported to the checks API as a passing (non-blocking) conclusion, and
@@ -362,7 +415,7 @@ jobs:
   branch-protection:
     if: ${{ always() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
-    needs: [classify, build-and-test, lint, bundle-validate, actionlint]
+    needs: [classify, build-and-test, actionlint]
     steps:
       - name: Verify all required jobs succeeded (fail closed)
         run: |
@@ -371,8 +424,6 @@ jobs:
           for entry in \
             "classify:${{ needs.classify.result }}" \
             "build-and-test:${{ needs.build-and-test.result }}" \
-            "lint:${{ needs.lint.result }}" \
-            "bundle-validate:${{ needs.bundle-validate.result }}" \
             "actionlint:${{ needs.actionlint.result }}"; do
             name="${entry%%:*}"
             status="${entry#*:}"

@@ -39,7 +39,27 @@ on:
       # them used to skip DB verification entirely.
       - prisma.config.ts
       - 'src/infra/prisma-datasource.ts'
-      - 'src/__tests__/**/*.db.test.ts'
+      # CI-MIN-01 ROOT-CAUSE FIX: this used to be scoped to
+      # 'src/__tests__/**/*.db.test.ts' only, which misses the majority of
+      # actual *.db.test.ts files in this repo -- they live throughout
+      # src/services/**/__tests__, src/app/**/__tests__, src/lib/__tests__,
+      # etc. That gap was masked before this PR because main-integration.yml
+      # ran the ENTIRE test suite (no path restriction) on every push to
+      # main regardless of what changed. Now that main-integration.yml no
+      # longer runs automatically post-merge (DB validation moved pre-merge,
+      # onto this workflow), this glob is the only thing that decides
+      # whether a given *.db.test.ts file's own DB behavior ever gets
+      # verified -- so it must match every one of them, not just the ones
+      # nested under src/__tests__/.
+      - '**/*.db.test.ts'
+      # DB-interacting scripts (seed/reset/migrate) -- same DB_RUNTIME
+      # definition scripts/ci-risk-classifier.mjs already uses for these.
+      - 'scripts/seed-*.ts'
+      - 'scripts/seed-*.mjs'
+      - 'scripts/reset-*.ts'
+      - 'scripts/reset-*.mjs'
+      - 'scripts/reset-*.sh'
+      - 'scripts/*migrate*'
       - 'src/services/owner-mode/owner-bcp.service.ts'
       - 'src/services/consulting/consulting-engagement.service.ts'
       - 'src/services/integration-fabric/connector-registry.service.ts'
