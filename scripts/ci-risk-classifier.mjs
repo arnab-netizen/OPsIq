@@ -73,6 +73,17 @@ const RULES = [
       p !== '.github/workflows/restore-rehearsal.yml' },
   { tier: TIERS.CI_GOVERNANCE, test: (p) =>
       /^scripts\/(ci-governance-check|ci-risk-classifier|scan-recurrence-defects|validate-bundle-manifests|validate-evidence-artifacts|validate-stage-acceptance)\.mjs$/.test(p) },
+  // CI-MIN-01 owner correction (item 2): these are tests OF the CI
+  // infrastructure itself (the classifier, the branch-protection fail-closed
+  // script, the non-DB suite capacity guards), not application tests -- a
+  // change confined to them should get the same TARGETED_CI_GOVERNANCE
+  // treatment as editing the classifier script itself, never the
+  // ~28,000-test broad application suite. Excluded from the generic src/**
+  // APPLICATION_NON_DB rule below the same way backup-restore.test.ts is.
+  { tier: TIERS.CI_GOVERNANCE, test: (p) =>
+      p === 'src/__tests__/ci-cd/ci-trigger-governance.test.ts' ||
+      p === 'src/__tests__/ci-cd/non-db-suite-capacity.test.ts' ||
+      p === 'src/__tests__/workflows/ci-risk-classifier.test.ts' },
 
   // ---- Tier 5: DB runtime (checked before the generic src/** rule below,
   //      order doesn't matter since we take the max, but grouped here for
@@ -81,6 +92,15 @@ const RULES = [
   { tier: TIERS.DB_RUNTIME, test: (p) => /\.db\.test\.ts$/.test(p) },
   { tier: TIERS.DB_RUNTIME, test: (p) =>
       /^scripts\/(seed-|reset-|migrate).*\.(ts|mjs|sh)$/.test(p) || (/migrate/i.test(p) && /^scripts\//.test(p)) },
+  // CI-MIN-01 owner correction (item 3): restored from the old
+  // db-verification.yml pull_request path list -- these four services were
+  // explicitly treated as DB-sensitive there. Named exactly, not a broader
+  // directory rule (the owner explicitly said not to invent one).
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      p === 'src/services/owner-mode/owner-bcp.service.ts' ||
+      p === 'src/services/consulting/consulting-engagement.service.ts' ||
+      p === 'src/services/integration-fabric/connector-registry.service.ts' ||
+      p === 'src/services/integration-fabric/integration-event.service.ts' },
 
   // ---- Tier 4: security / auth / tenancy / entitlement ----
   { tier: TIERS.SECURITY_AUTH_TENANCY_ENTITLEMENT, test: (p) =>
@@ -117,7 +137,11 @@ const RULES = [
   // RECOVERY_INFRA_ONLY -- exactly the defect class the workflow/scripts
   // exclusions above already guard against. Excluded here the same way.
   { tier: TIERS.APPLICATION_NON_DB, test: (p) =>
-      /^src\//.test(p) && p !== 'src/__tests__/scripts/backup-restore.test.ts' },
+      /^src\//.test(p) &&
+      p !== 'src/__tests__/scripts/backup-restore.test.ts' &&
+      p !== 'src/__tests__/ci-cd/ci-trigger-governance.test.ts' &&
+      p !== 'src/__tests__/ci-cd/non-db-suite-capacity.test.ts' &&
+      p !== 'src/__tests__/workflows/ci-risk-classifier.test.ts' },
   { tier: TIERS.APPLICATION_NON_DB, test: (p) =>
       /^scripts\/.*\.(ts|mjs|sh)$/.test(p) &&
       !/^scripts\/(ci-governance-check|ci-risk-classifier|scan-recurrence-defects|validate-bundle-manifests|validate-evidence-artifacts|validate-stage-acceptance)\.mjs$/.test(p) &&
@@ -137,16 +161,18 @@ export function classifyPath(path) {
 }
 
 // CI-MIN-01 ROOT-CAUSE FIX: package.json/package-lock.json were classified
-// UNKNOWN (max tier) by PATH ALONE, which forces runMainIntegrationFullSuite
-// for ANY edit to either file -- including a pure `scripts` alias rename with
-// zero dependency or runtime impact. Path alone cannot distinguish a
-// scripts-only edit from a dependency change from a DB-package dependency
-// change, so this needs the actual diff text. These two functions classify
-// each file from its own unified diff hunk; classifyChangeSet uses them
-// INSTEAD OF the blind path rule only when diff text was actually supplied
-// (see resolvePackageDiffText / splitUnifiedDiffByFile below) -- callers that
-// don't supply diff text keep the prior conservative UNKNOWN behavior
-// unchanged, preserving "ambiguous -> FULL" whenever the diff can't be read.
+// UNKNOWN (max tier) by PATH ALONE, which forces db_required/
+// runMainIntegrationFullSuite for ANY edit to either file -- including a
+// pure `scripts` alias rename with zero dependency or runtime impact. Path
+// alone cannot distinguish a scripts-only edit from a dependency change
+// from a DB-package dependency change, so this needs the actual content.
+// package.json is classified via classifyPackageJsonChange (git show +
+// JSON comparison, below); package-lock.json via classifyPackageLockDiffText
+// (its own diff text, since a lockfile has no "scripts" section to
+// distinguish). classifyChangeSet uses these INSTEAD OF the blind path rule
+// only when the caller actually supplied what each needs -- callers that
+// don't keep the prior conservative UNKNOWN behavior unchanged, preserving
+// "ambiguous -> FULL" whenever the file can't be read/parsed.
 export const DB_PACKAGE_NAMES = [
   'prisma', '@prisma/client', '@prisma/extension-accelerate', '@prisma/adapter-pg', '@prisma/adapter-neon',
   'pg', 'pg-native', 'pg-pool', 'pg-cursor', 'postgres',
@@ -168,65 +194,83 @@ const DB_PACKAGE_ALTERNATION = DB_PACKAGE_NAMES
 // "pg-connection-string-unrelated-thing").
 export const DB_PACKAGE_RE = new RegExp(`(^|["/])(${DB_PACKAGE_ALTERNATION})(["/]|$)`, 'i');
 
+const DB_PACKAGE_NAME_SET = new Set(DB_PACKAGE_NAMES.map((n) => n.toLowerCase()));
+
+function isDbPackageName(name) {
+  return DB_PACKAGE_NAME_SET.has(String(name).toLowerCase());
+}
+
+const PACKAGE_JSON_DEPENDENCY_SECTIONS = [
+  'dependencies',
+  'devDependencies',
+  'peerDependencies',
+  'optionalDependencies',
+];
+
 /**
- * Classify package.json's own unified diff text. Tracks which top-level JSON
- * section (scripts / dependencies / devDependencies / ...) each added or
- * removed line falls inside via simple brace-depth tracking over the diff's
- * content lines (context ' ', added '+', removed '-'). A scripts-only change
- * classifies at APPLICATION_NON_DB (same as any other non-DB app change,
- * never the inflated UNKNOWN tier); a dependency change classifies
- * APPLICATION_NON_DB unless it touches a DB-related package, in which case it
- * classifies DB_RUNTIME. If no recognized section could be identified at all
- * (e.g. a diff format this parser doesn't understand), stays UNKNOWN --
- * ambiguous is never treated as cheap.
+ * Compare two already-parsed package.json objects and classify the change.
+ * Pure -- no I/O, no diff-text parsing. See classifyPackageJsonChange for the
+ * git-backed wrapper actually used by the classifier.
+ *
+ * ROOT-CAUSE FIX (owner correction, CI-MIN-01): the prior implementation
+ * (classifyPackageJsonDiffText, since removed) tracked JSON section
+ * membership by scanning the unified diff hunk's own text for a
+ * `"scripts": {` / `"dependencies": {` header line and counting braces from
+ * there. That is unsound: git's default 3-line context does not guarantee
+ * the section header is visible in the hunk at all. Confirmed directly on
+ * this repo's own PR removing one line from a `scripts` block many lines
+ * long -- the hunk's context started well after `"scripts": {`, the parser
+ * never saw a section open, and fell through to UNKNOWN, wrongly forcing
+ * the DB job for a scripts-only change. Comparing the two FULL, parsed
+ * files by key membership makes this failure mode structurally impossible.
  */
-export function classifyPackageJsonDiffText(diffText) {
-  if (!diffText) return TIERS.UNKNOWN;
-  let currentSection = null;
-  let sectionDepth = 0;
-  let touchedAnySection = false;
+export function comparePackageJson(baseJson, headJson) {
   let touchedDbPackage = false;
 
-  for (const rawLine of diffText.split('\n')) {
-    if (rawLine.startsWith('+++') || rawLine.startsWith('---')) continue;
-    const marker = rawLine[0];
-    if (marker !== ' ' && marker !== '+' && marker !== '-') continue;
-    const line = rawLine.slice(1);
-
-    if (sectionDepth === 0) {
-      const sectionOpen = line.match(
-        /^\s*"(scripts|dependencies|devDependencies|peerDependencies|optionalDependencies)"\s*:\s*\{/,
-      );
-      if (sectionOpen) {
-        currentSection = sectionOpen[1];
-        sectionDepth = 1;
-      }
-      continue;
-    }
-
-    // Inside a tracked section: naive brace counting on this content line to
-    // detect the section's closing brace (package.json's own values never
-    // contain literal unescaped braces at this nesting depth).
-    const opens = (line.match(/\{/g) || []).length;
-    const closes = (line.match(/\}/g) || []).length;
-    sectionDepth += opens - closes;
-
-    if (marker === '+' || marker === '-') {
-      touchedAnySection = true;
-      if (currentSection !== 'scripts' && DB_PACKAGE_RE.test(line)) {
+  for (const section of PACKAGE_JSON_DEPENDENCY_SECTIONS) {
+    const baseSection = (baseJson && baseJson[section]) || {};
+    const headSection = (headJson && headJson[section]) || {};
+    const names = new Set([...Object.keys(baseSection), ...Object.keys(headSection)]);
+    for (const name of names) {
+      if (baseSection[name] !== headSection[name] && isDbPackageName(name)) {
         touchedDbPackage = true;
       }
     }
-
-    if (sectionDepth <= 0) {
-      currentSection = null;
-      sectionDepth = 0;
-    }
   }
 
-  if (!touchedAnySection) return TIERS.UNKNOWN;
-  if (touchedDbPackage) return TIERS.DB_RUNTIME;
-  return TIERS.APPLICATION_NON_DB;
+  // A scripts-only change, a non-DB dependency change, or any other
+  // top-level field (name/version/private/...) all classify the same: real
+  // application-level metadata, never DB risk.
+  return touchedDbPackage ? TIERS.DB_RUNTIME : TIERS.APPLICATION_NON_DB;
+}
+
+/**
+ * Classify package.json's change via a robust base-vs-head JSON comparison
+ * -- reads each side's FULL file with `git show <ref>:package.json` and
+ * parses it, so section membership is never guessed from limited diff-hunk
+ * context (see comparePackageJson above for why that mattered). Returns
+ * TIERS.UNKNOWN on any failure to read or parse either side -- a
+ * parse/read failure is exactly the kind of ambiguity this classifier never
+ * treats as cheap.
+ */
+export function classifyPackageJsonChange({ before, after, cwd }) {
+  if (!before || !after || before === ZERO_SHA || after === ZERO_SHA) return TIERS.UNKNOWN;
+  const opts = { cwd: cwd || process.cwd(), encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 };
+  let baseRaw, headRaw;
+  try {
+    baseRaw = execFileSync('git', ['show', `${before}:package.json`], opts);
+    headRaw = execFileSync('git', ['show', `${after}:package.json`], opts);
+  } catch {
+    return TIERS.UNKNOWN;
+  }
+  let baseJson, headJson;
+  try {
+    baseJson = JSON.parse(baseRaw);
+    headJson = JSON.parse(headRaw);
+  } catch {
+    return TIERS.UNKNOWN;
+  }
+  return comparePackageJson(baseJson, headJson);
 }
 
 /**
@@ -361,16 +405,20 @@ export function classifyChangeSet(paths, options = {}) {
     };
   }
   // CI-MIN-01: package.json/package-lock.json use content-aware
-  // classification INSTEAD OF the blind path rule, but only when their own
-  // diff text was actually supplied by the caller -- absent that, behavior
-  // is unchanged from before (blind UNKNOWN via classifyPath).
+  // classification INSTEAD OF the blind path rule, but only when the caller
+  // actually supplied it -- absent that, behavior is unchanged from before
+  // (blind UNKNOWN via classifyPath). package.json's tier is precomputed by
+  // the caller via classifyPackageJsonChange (a robust git-show + JSON
+  // comparison, not diff-hunk text parsing -- see that function's own
+  // comment for why). package-lock.json still uses its own diff text, kept
+  // fail-closed exactly as before.
   const packageSegments = splitUnifiedDiffByFile(options.packageDiffText);
   const perPath = {};
   let maxTier = TIERS.DOCS_ONLY;
   for (const p of paths) {
     let t;
-    if (p === 'package.json' && packageSegments['package.json']) {
-      t = classifyPackageJsonDiffText(packageSegments['package.json']);
+    if (p === 'package.json' && options.packageJsonTier != null) {
+      t = options.packageJsonTier;
     } else if (p === 'package-lock.json' && packageSegments['package-lock.json']) {
       t = classifyPackageLockDiffText(packageSegments['package-lock.json']);
     } else {
@@ -394,15 +442,19 @@ export function classifyChangeSet(paths, options = {}) {
 const ZERO_SHA = '0000000000000000000000000000000000000000';
 
 /**
- * Resolve the unified diff text for package.json/package-lock.json in a
- * before/after range, but only when at least one of them is actually in the
- * changed-file list -- avoids a wasted git invocation on every classify run.
- * Returns null (never throws) on any git failure or an unusable range;
- * callers already treat null/missing diff text as "fall back to the
- * conservative path-only rule", which preserves "ambiguous -> FULL".
+ * Resolve the unified diff text for package-lock.json in a before/after
+ * range, but only when it's actually in the changed-file list -- avoids a
+ * wasted git invocation on every classify run. package.json is NOT included
+ * here any more (owner correction, CI-MIN-01): it is classified via
+ * classifyPackageJsonChange's git-show + JSON comparison instead, since
+ * diff-hunk text cannot reliably reveal which JSON section a change falls
+ * in (see that function's own comment). Returns null (never throws) on any
+ * git failure or an unusable range; callers already treat null/missing diff
+ * text as "fall back to the conservative path-only rule", which preserves
+ * "ambiguous -> FULL".
  */
 export function resolvePackageDiffText({ before, after, cwd, paths }) {
-  const targets = ['package.json', 'package-lock.json'].filter((p) => paths.includes(p));
+  const targets = ['package-lock.json'].filter((p) => paths.includes(p));
   if (targets.length === 0) return null;
   if (!before || !after || before === ZERO_SHA || after === ZERO_SHA) return null;
   try {
@@ -482,14 +534,18 @@ export function classifyPushEvent({ before, after, cwd }) {
     };
   }
   const packageDiffText = resolvePackageDiffText({ before, after, cwd, paths: files });
-  return classifyChangeSet(files, { packageDiffText });
+  const packageJsonTier = files.includes('package.json')
+    ? classifyPackageJsonChange({ before, after, cwd })
+    : undefined;
+  return classifyChangeSet(files, { packageDiffText, packageJsonTier });
 }
 
 // CLI entry point.
 //   Non-push mode (PR): node scripts/ci-risk-classifier.mjs [--base <sha> --head <sha>] < changed-files.txt
 //   Push mode:          node scripts/ci-risk-classifier.mjs --push <before> <after>
 // Used by ci.yml (non-push mode) and main-integration.yml (push mode).
-// --base/--head (PR mode only) let the CLI compute package.json/
+// --base/--head (PR mode only) let the CLI compute package.json's tier via
+// classifyPackageJsonChange (git show + JSON comparison) and
 // package-lock.json's own diff text for content-aware classification (see
 // resolvePackageDiffText) -- optional and backward compatible: omitting them
 // keeps the prior blind-UNKNOWN behavior for those two files.
@@ -514,7 +570,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     }
     const packageDiffText =
       base && head ? resolvePackageDiffText({ before: base, after: head, cwd: process.cwd(), paths }) : null;
-    result = classifyChangeSet(paths, { packageDiffText });
+    const packageJsonTier =
+      base && head && paths.includes('package.json')
+        ? classifyPackageJsonChange({ before: base, after: head, cwd: process.cwd() })
+        : undefined;
+    result = classifyChangeSet(paths, { packageDiffText, packageJsonTier });
   }
   console.error(JSON.stringify(result, null, 2));
   console.log(`risk_class=${result.tierName}`);

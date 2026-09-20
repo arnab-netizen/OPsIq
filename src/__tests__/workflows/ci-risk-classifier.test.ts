@@ -5,10 +5,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import {
   classifyChangeSet,
-  classifyPackageJsonDiffText,
+  classifyPackageJsonChange,
   classifyPackageLockDiffText,
   classifyPath,
   classifyPushEvent,
+  comparePackageJson,
   DB_PACKAGE_RE,
   resolvePackageDiffText,
   resolvePushDiffFiles,
@@ -17,62 +18,37 @@ import {
   TIERS,
 } from "../../../scripts/ci-risk-classifier.mjs";
 
-// Shared package.json/package-lock.json diff fixtures, used by both the
-// "Content-aware package.json / package-lock.json classification" describe
-// block and the "dbRequired" required-test-matrix describe block below.
-const scriptsOnlyDiff = [
-  "diff --git a/package.json b/package.json",
-  "index 1111111..2222222 100644",
-  "--- a/package.json",
-  "+++ b/package.json",
-  "@@ -10,7 +10,7 @@",
-  '   "scripts": {',
-  '     "dev": "next dev",',
-  '-    "lint": "eslint .",',
-  '+    "lint": "eslint",',
-  '     "build": "next build"',
-  "   },",
-].join("\n");
+// Shared package.json base/head object fixtures (CI-MIN-01 owner correction:
+// package.json is classified via a base-vs-head JSON comparison now, not
+// diff-hunk text -- see comparePackageJson/classifyPackageJsonChange), used
+// by both the "Content-aware package.json / package-lock.json
+// classification" describe block and the "dbRequired" required-test-matrix
+// describe block below.
+const scriptsOnlyChange = {
+  base: { scripts: { dev: "next dev", lint: "eslint .", build: "next build" }, dependencies: { next: "14.0.0" } },
+  head: { scripts: { dev: "next dev", lint: "eslint", build: "next build" }, dependencies: { next: "14.0.0" } },
+};
 
-const nonDbDependencyDiff = [
-  "diff --git a/package.json b/package.json",
-  "index 1111111..2222222 100644",
-  "--- a/package.json",
-  "+++ b/package.json",
-  "@@ -20,6 +20,7 @@",
-  '   "dependencies": {',
-  '     "next": "14.0.0",',
-  '+    "lodash": "^4.17.21",',
-  '     "react": "18.2.0"',
-  "   },",
-].join("\n");
+const nonDbDependencyChange = {
+  base: { dependencies: { next: "14.0.0", react: "18.2.0" } },
+  head: { dependencies: { next: "14.0.0", react: "18.2.0", lodash: "^4.17.21" } },
+};
 
-const dbDependencyDiff = [
-  "diff --git a/package.json b/package.json",
-  "index 1111111..2222222 100644",
-  "--- a/package.json",
-  "+++ b/package.json",
-  "@@ -20,6 +20,7 @@",
-  '   "dependencies": {',
-  '     "next": "14.0.0",',
-  '+    "prisma": "^5.10.0",',
-  '     "react": "18.2.0"',
-  "   },",
-].join("\n");
+const dbDependencyChange = {
+  base: { dependencies: { next: "14.0.0", react: "18.2.0" } },
+  head: { dependencies: { next: "14.0.0", react: "18.2.0", prisma: "^5.10.0" } },
+};
 
-const scopedDbDependencyDiff = [
-  "diff --git a/package.json b/package.json",
-  "index 1111111..2222222 100644",
-  "--- a/package.json",
-  "+++ b/package.json",
-  "@@ -20,6 +20,7 @@",
-  '   "dependencies": {',
-  '     "next": "14.0.0",',
-  '+    "@neondatabase/serverless": "^0.9.0",',
-  '     "react": "18.2.0"',
-  "   },",
-].join("\n");
+const scopedDbDependencyChange = {
+  base: { dependencies: { next: "14.0.0", react: "18.2.0" } },
+  head: { dependencies: { next: "14.0.0", react: "18.2.0", "@neondatabase/serverless": "^0.9.0" } },
+};
 
+// package-lock.json fixtures stay as real unified-diff text -- that side of
+// the classifier is unchanged by this correction (kept fail-closed exactly
+// as before; a lockfile has no "scripts" section to distinguish, so the
+// diff-hunk-visibility problem that motivated the package.json rewrite does
+// not apply to it).
 const lockDbDiff = [
   "diff --git a/package-lock.json b/package-lock.json",
   "index 1111111..2222222 100644",
@@ -426,86 +402,89 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
 
   // CI-MIN-01: package.json/package-lock.json were classified UNKNOWN (max
   // tier) by PATH ALONE, forcing runMainIntegrationFullSuite for ANY edit to
-  // either file, including a pure `scripts` alias rename. These tests prove
-  // the content-aware replacement against real unified diff text -- not a
-  // reimplementation of git's diff format, actual `diff --git` hunks built
-  // by hand the way `git diff` itself would produce them.
+  // either file, including a pure `scripts` alias rename.
+  //
+  // OWNER CORRECTION: the original fix here parsed package.json's own
+  // unified diff hunk text for a `"scripts": {` / `"dependencies": {`
+  // section header and tracked brace depth from there -- but git's default
+  // 3-line context does not guarantee that header is visible in the hunk at
+  // all. Confirmed directly on this repo's own PR (removing one line from a
+  // `scripts` block many lines deep): the hunk never showed `"scripts": {`,
+  // so the parser fell through to UNKNOWN, wrongly forcing the DB job. The
+  // fix compares each side's FULL, parsed package.json instead
+  // (comparePackageJson/classifyPackageJsonChange) -- section membership is
+  // read from the real JSON structure, never guessed from limited diff-hunk
+  // context. package-lock.json is unchanged: it still uses its own diff
+  // text (classifyPackageLockDiffText), kept fail-closed as before, since a
+  // lockfile has no "scripts" section to distinguish.
   describe("Content-aware package.json / package-lock.json classification (CI-MIN-01)", () => {
-    it("classifyPackageJsonDiffText: a scripts-only diff classifies APPLICATION_NON_DB, never UNKNOWN", () => {
-      expect(classifyPackageJsonDiffText(scriptsOnlyDiff)).toBe(TIERS.APPLICATION_NON_DB);
+    describe("comparePackageJson (pure, base-vs-head JSON comparison)", () => {
+      it("a scripts-only change classifies APPLICATION_NON_DB, never UNKNOWN", () => {
+        expect(comparePackageJson(scriptsOnlyChange.base, scriptsOnlyChange.head)).toBe(TIERS.APPLICATION_NON_DB);
+      });
+
+      it("a non-DB dependency change classifies APPLICATION_NON_DB", () => {
+        expect(comparePackageJson(nonDbDependencyChange.base, nonDbDependencyChange.head)).toBe(
+          TIERS.APPLICATION_NON_DB,
+        );
+      });
+
+      it("a DB-package dependency change classifies DB_RUNTIME", () => {
+        expect(comparePackageJson(dbDependencyChange.base, dbDependencyChange.head)).toBe(TIERS.DB_RUNTIME);
+      });
+
+      it("a scoped DB-package (@neondatabase/serverless) dependency change classifies DB_RUNTIME", () => {
+        expect(comparePackageJson(scopedDbDependencyChange.base, scopedDbDependencyChange.head)).toBe(
+          TIERS.DB_RUNTIME,
+        );
+      });
+
+      it("a DB-package added to devDependencies also classifies DB_RUNTIME", () => {
+        const base = { devDependencies: {} };
+        const head = { devDependencies: { "better-sqlite3": "^9.0.0" } };
+        expect(comparePackageJson(base, head)).toBe(TIERS.DB_RUNTIME);
+      });
+
+      it("removing a DB package still classifies DB_RUNTIME (the dependency section changed either way)", () => {
+        const base = { dependencies: { pg: "^8.0.0" } };
+        const head = { dependencies: {} };
+        expect(comparePackageJson(base, head)).toBe(TIERS.DB_RUNTIME);
+      });
+
+      it("a change to an unrelated top-level field (name/version) with no tracked section changes classifies APPLICATION_NON_DB", () => {
+        const base = { name: "opsiq", version: "0.1.0" };
+        const head = { name: "opsiq", version: "0.2.0" };
+        expect(comparePackageJson(base, head)).toBe(TIERS.APPLICATION_NON_DB);
+      });
+
+      it("REGRESSION GUARD: the EXACT current-PR change -- removing one script from a scripts block many lines deep -- classifies APPLICATION_NON_DB (this is the bug the diff-hunk parser hit: it never saw the scripts section's opening brace)", () => {
+        const scripts = {
+          postinstall: "prisma generate",
+          dev: "next dev",
+          build: "next build",
+          start: "next start",
+          lint: "eslint",
+          "lint:ratchet": "node scripts/lint-ratchet.mjs",
+          "verify:owner-preservation": "node scripts/ux/verify-owner-feature-preservation.mjs",
+          "validate:deployment": "tsx scripts/validate-deployment.ts",
+          "db:generate": "prisma generate",
+          "db:migrate:dev": "prisma migrate dev",
+        };
+        const scriptsAfter = { ...scripts };
+        delete (scriptsAfter as Record<string, string>)["verify:owner-preservation"];
+        const base = { name: "opsiq", version: "0.1.0", private: true, scripts, dependencies: { next: "14.0.0" } };
+        const head = {
+          name: "opsiq",
+          version: "0.1.0",
+          private: true,
+          scripts: scriptsAfter,
+          dependencies: { next: "14.0.0" },
+        };
+        expect(comparePackageJson(base, head)).toBe(TIERS.APPLICATION_NON_DB);
+      });
     });
 
-    it("classifyPackageJsonDiffText: a non-DB dependency diff classifies APPLICATION_NON_DB", () => {
-      expect(classifyPackageJsonDiffText(nonDbDependencyDiff)).toBe(TIERS.APPLICATION_NON_DB);
-    });
-
-    it("classifyPackageJsonDiffText: a DB-package dependency diff classifies DB_RUNTIME", () => {
-      expect(classifyPackageJsonDiffText(dbDependencyDiff)).toBe(TIERS.DB_RUNTIME);
-    });
-
-    it("classifyPackageJsonDiffText: a scoped DB-package (@neondatabase/serverless) diff classifies DB_RUNTIME", () => {
-      expect(classifyPackageJsonDiffText(scopedDbDependencyDiff)).toBe(TIERS.DB_RUNTIME);
-    });
-
-    it("classifyPackageJsonDiffText: empty/unparseable diff text stays UNKNOWN (ambiguous -> FULL)", () => {
-      expect(classifyPackageJsonDiffText("")).toBe(TIERS.UNKNOWN);
-      expect(classifyPackageJsonDiffText("not a real diff at all")).toBe(TIERS.UNKNOWN);
-    });
-
-    it("classifyPackageLockDiffText: a DB-package lockfile entry classifies DB_RUNTIME", () => {
-      expect(classifyPackageLockDiffText(lockDbDiff)).toBe(TIERS.DB_RUNTIME);
-    });
-
-    it("classifyPackageLockDiffText: a non-DB lockfile entry classifies APPLICATION_NON_DB", () => {
-      expect(classifyPackageLockDiffText(lockNonDbDiff)).toBe(TIERS.APPLICATION_NON_DB);
-    });
-
-    it("classifyPackageLockDiffText: empty diff text stays UNKNOWN", () => {
-      expect(classifyPackageLockDiffText("")).toBe(TIERS.UNKNOWN);
-    });
-
-    it("DB_PACKAGE_RE matches exact package names and node_modules paths, never a mere prefix of an unrelated package", () => {
-      expect(DB_PACKAGE_RE.test('"pg": "^8.0.0"')).toBe(true);
-      expect(DB_PACKAGE_RE.test('"node_modules/prisma": {')).toBe(true);
-      expect(DB_PACKAGE_RE.test('"node_modules/@prisma/client": {')).toBe(true);
-      expect(DB_PACKAGE_RE.test('"pg-connection-string-unrelated": "^1.0.0"')).toBe(false);
-      expect(DB_PACKAGE_RE.test('"some-postgres-adjacent-blog-post": "^1.0.0"')).toBe(false);
-    });
-
-    it("splitUnifiedDiffByFile separates a combined package.json + package-lock.json diff by file", () => {
-      const combined = `${scriptsOnlyDiff}\n${lockNonDbDiff}`;
-      const segments = splitUnifiedDiffByFile(combined);
-      expect(Object.keys(segments)).toEqual(["package.json", "package-lock.json"]);
-      expect(segments["package.json"]).toContain('"lint": "eslint",');
-      expect(segments["package-lock.json"]).toContain("node_modules/lodash");
-    });
-
-    it("REQUIRED OUTCOME: classifyChangeSet given a scripts-only package.json diff (and no lockfile change) never forces the DB suite", () => {
-      const result = classifyChangeSet(["package.json"], { packageDiffText: scriptsOnlyDiff });
-      expect(result.tier).toBe(TIERS.APPLICATION_NON_DB);
-      expect(result.runMainIntegrationFullSuite).toBe(false);
-    });
-
-    it("REQUIRED OUTCOME: a scripts-only change to BOTH package.json and package-lock.json never forces the DB suite", () => {
-      const combined = [scriptsOnlyDiff, lockNonDbDiff].join("\n");
-      const result = classifyChangeSet(["package.json", "package-lock.json"], { packageDiffText: combined });
-      expect(result.tier).toBe(TIERS.APPLICATION_NON_DB);
-      expect(result.runMainIntegrationFullSuite).toBe(false);
-    });
-
-    it("a DB-package dependency change to package.json forces the DB suite", () => {
-      const result = classifyChangeSet(["package.json"], { packageDiffText: dbDependencyDiff });
-      expect(result.tier).toBe(TIERS.DB_RUNTIME);
-      expect(result.runMainIntegrationFullSuite).toBe(true);
-    });
-
-    it("BACKWARD COMPATIBILITY: classifyChangeSet without packageDiffText keeps the prior conservative UNKNOWN behavior for package.json", () => {
-      const result = classifyChangeSet(["package.json"]);
-      expect(result.tier).toBe(TIERS.UNKNOWN);
-      expect(result.runMainIntegrationFullSuite).toBe(true);
-    });
-
-    describe("resolvePackageDiffText -- real git repo", () => {
+    describe("classifyPackageJsonChange -- real git repo (git show + JSON.parse)", () => {
       const tempDirs: string[] = [];
 
       afterEach(() => {
@@ -516,7 +495,7 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
       });
 
       function makeRepo(): string {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ci-risk-classifier-pkgdiff-test-"));
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ci-risk-classifier-pkgjson-test-"));
         tempDirs.push(dir);
         execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
         execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: dir });
@@ -536,21 +515,46 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
         return execFileSync("git", ["rev-parse", "HEAD"], { cwd: dir, encoding: "utf8" }).trim();
       }
 
-      it("END-TO-END: a real scripts-only package.json commit, diffed and classified via classifyPushEvent, never forces the DB suite", () => {
+      it("REQUIRED REGRESSION TEST: the EXACT current-PR package.json hunk (removing verify:owner-preservation, whose scripts-section opening brace is NOT within git's diff context) classifies APPLICATION_NON_DB via a real git repo, and dbRequired=false end-to-end", () => {
         const dir = makeRepo();
-        const before = commitFiles(
-          dir,
-          { "package.json": JSON.stringify({ name: "x", scripts: { lint: "eslint ." }, dependencies: { next: "14.0.0" } }, null, 2) + "\n" },
-          "baseline",
-        );
-        const after = commitFiles(
-          dir,
-          { "package.json": JSON.stringify({ name: "x", scripts: { lint: "eslint" }, dependencies: { next: "14.0.0" } }, null, 2) + "\n" },
-          "scripts-only change",
-        );
+        const pkg = (scripts: Record<string, string>) =>
+          JSON.stringify(
+            { name: "opsiq", version: "0.1.0", private: true, scripts, dependencies: { next: "14.0.0" } },
+            null,
+            2,
+          ) + "\n";
+        const scriptsBefore = {
+          postinstall: "prisma generate",
+          dev: "next dev",
+          build: "next build",
+          start: "next start",
+          lint: "eslint",
+          "lint:ratchet": "node scripts/lint-ratchet.mjs",
+          "verify:owner-preservation": "node scripts/ux/verify-owner-feature-preservation.mjs",
+          "validate:deployment": "tsx scripts/validate-deployment.ts",
+          "db:generate": "prisma generate",
+          "db:migrate:dev": "prisma migrate dev",
+        };
+        const scriptsAfter = { ...scriptsBefore };
+        delete (scriptsAfter as Record<string, string>)["verify:owner-preservation"];
+
+        const before = commitFiles(dir, { "package.json": pkg(scriptsBefore) }, "baseline");
+        const after = commitFiles(dir, { "package.json": pkg(scriptsAfter) }, "remove verify:owner-preservation script");
+
+        // Prove the actual git diff hunk does NOT contain the scripts
+        // section header -- the exact failure mode the old diff-text
+        // parser hit, reproduced against real git output, not simulated.
+        const diff = execFileSync("git", ["diff", before, after, "--", "package.json"], {
+          cwd: dir,
+          encoding: "utf8",
+        });
+        expect(diff).not.toContain('"scripts": {');
+
+        expect(classifyPackageJsonChange({ before, after, cwd: dir })).toBe(TIERS.APPLICATION_NON_DB);
+
         const result = classifyPushEvent({ before, after, cwd: dir });
         expect(result.tier).toBe(TIERS.APPLICATION_NON_DB);
-        expect(result.runMainIntegrationFullSuite).toBe(false);
+        expect(result.dbRequired).toBe(false);
       });
 
       it("END-TO-END: a real DB-dependency package.json commit, diffed and classified via classifyPushEvent, forces the DB suite", () => {
@@ -562,12 +566,29 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
         );
         const after = commitFiles(
           dir,
-          { "package.json": JSON.stringify({ name: "x", dependencies: { next: "14.0.0", prisma: "^5.10.0" } }, null, 2) + "\n" },
+          {
+            "package.json":
+              JSON.stringify({ name: "x", dependencies: { next: "14.0.0", prisma: "^5.10.0" } }, null, 2) + "\n",
+          },
           "add prisma dependency",
         );
         const result = classifyPushEvent({ before, after, cwd: dir });
         expect(result.tier).toBe(TIERS.DB_RUNTIME);
-        expect(result.runMainIntegrationFullSuite).toBe(true);
+        expect(result.dbRequired).toBe(true);
+      });
+
+      it("classifyPackageJsonChange returns UNKNOWN when package.json cannot be read at one ref (e.g. it did not exist yet)", () => {
+        const dir = makeRepo();
+        const before = commitFiles(dir, { "README.md": "x\n" }, "no package.json yet");
+        const after = commitFiles(dir, { "package.json": '{"name":"x"}\n' }, "add package.json");
+        expect(classifyPackageJsonChange({ before, after, cwd: dir })).toBe(TIERS.UNKNOWN);
+      });
+
+      it("classifyPackageJsonChange returns UNKNOWN when package.json contents are not valid JSON at either ref", () => {
+        const dir = makeRepo();
+        const before = commitFiles(dir, { "package.json": '{"name":"x"}\n' }, "baseline");
+        const after = commitFiles(dir, { "package.json": "{ not valid json\n" }, "corrupt package.json");
+        expect(classifyPackageJsonChange({ before, after, cwd: dir })).toBe(TIERS.UNKNOWN);
       });
 
       it("resolvePackageDiffText returns null when neither package.json nor package-lock.json changed (no wasted git call)", () => {
@@ -575,6 +596,85 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
         const before = commitFiles(dir, { "README.md": "a\n" }, "c1");
         const after = commitFiles(dir, { "README.md": "b\n" }, "c2");
         expect(resolvePackageDiffText({ before, after, cwd: dir, paths: ["README.md"] })).toBeNull();
+      });
+
+      it("resolvePackageDiffText returns null for package.json alone -- it is no longer a diff-text target (owner correction: package.json uses git show, not diff text)", () => {
+        const dir = makeRepo();
+        const before = commitFiles(dir, { "package.json": '{"name":"x"}\n' }, "c1");
+        const after = commitFiles(dir, { "package.json": '{"name":"y"}\n' }, "c2");
+        expect(resolvePackageDiffText({ before, after, cwd: dir, paths: ["package.json"] })).toBeNull();
+      });
+    });
+
+    describe("classifyPackageLockDiffText (unchanged by this correction -- still diff-text based, kept fail-closed)", () => {
+      it("a DB-package lockfile entry classifies DB_RUNTIME", () => {
+        expect(classifyPackageLockDiffText(lockDbDiff)).toBe(TIERS.DB_RUNTIME);
+      });
+
+      it("a non-DB lockfile entry classifies APPLICATION_NON_DB", () => {
+        expect(classifyPackageLockDiffText(lockNonDbDiff)).toBe(TIERS.APPLICATION_NON_DB);
+      });
+
+      it("empty diff text stays UNKNOWN", () => {
+        expect(classifyPackageLockDiffText("")).toBe(TIERS.UNKNOWN);
+      });
+    });
+
+    it("DB_PACKAGE_RE matches exact package names and node_modules paths, never a mere prefix of an unrelated package", () => {
+      expect(DB_PACKAGE_RE.test('"pg": "^8.0.0"')).toBe(true);
+      expect(DB_PACKAGE_RE.test('"node_modules/prisma": {')).toBe(true);
+      expect(DB_PACKAGE_RE.test('"node_modules/@prisma/client": {')).toBe(true);
+      expect(DB_PACKAGE_RE.test('"pg-connection-string-unrelated": "^1.0.0"')).toBe(false);
+      expect(DB_PACKAGE_RE.test('"some-postgres-adjacent-blog-post": "^1.0.0"')).toBe(false);
+    });
+
+    it("splitUnifiedDiffByFile separates a combined multi-file diff by file (generic utility, still used for package-lock.json)", () => {
+      const otherFileDiff = [
+        "diff --git a/some-other-file.json b/some-other-file.json",
+        "index 3333333..4444444 100644",
+        "--- a/some-other-file.json",
+        "+++ b/some-other-file.json",
+        "@@ -1,1 +1,1 @@",
+        '-{"a":1}',
+        '+{"a":2}',
+      ].join("\n");
+      const combined = `${lockDbDiff}\n${otherFileDiff}`;
+      const segments = splitUnifiedDiffByFile(combined);
+      expect(Object.keys(segments)).toEqual(["package-lock.json", "some-other-file.json"]);
+      expect(segments["package-lock.json"]).toContain("node_modules/prisma");
+      expect(segments["some-other-file.json"]).toContain('{"a":2}');
+    });
+
+    describe("classifyChangeSet wiring: packageJsonTier option", () => {
+      it("REQUIRED OUTCOME: a scripts-only packageJsonTier (and no lockfile change) never forces the DB suite", () => {
+        const result = classifyChangeSet(["package.json"], {
+          packageJsonTier: comparePackageJson(scriptsOnlyChange.base, scriptsOnlyChange.head),
+        });
+        expect(result.tier).toBe(TIERS.APPLICATION_NON_DB);
+        expect(result.dbRequired).toBe(false);
+      });
+
+      it("REQUIRED OUTCOME: a scripts-only change to BOTH package.json (via packageJsonTier) and package-lock.json (via diff text) never forces the DB suite", () => {
+        const result = classifyChangeSet(["package.json", "package-lock.json"], {
+          packageJsonTier: comparePackageJson(scriptsOnlyChange.base, scriptsOnlyChange.head),
+          packageDiffText: lockNonDbDiff,
+        });
+        expect(result.tier).toBe(TIERS.APPLICATION_NON_DB);
+        expect(result.dbRequired).toBe(false);
+      });
+
+      it("a DB-package dependency packageJsonTier forces the DB suite", () => {
+        const result = classifyChangeSet(["package.json"], {
+          packageJsonTier: comparePackageJson(dbDependencyChange.base, dbDependencyChange.head),
+        });
+        expect(result.tier).toBe(TIERS.DB_RUNTIME);
+        expect(result.dbRequired).toBe(true);
+      });
+
+      it("BACKWARD COMPATIBILITY: classifyChangeSet without packageJsonTier keeps the prior conservative UNKNOWN behavior for package.json", () => {
+        const result = classifyChangeSet(["package.json"]);
+        expect(result.tier).toBe(TIERS.UNKNOWN);
+        expect(result.dbRequired).toBe(true);
       });
     });
   });
@@ -627,20 +727,58 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
     });
 
     it("package.json scripts-only change: dbRequired=false", () => {
-      const result = classifyChangeSet(["package.json"], { packageDiffText: scriptsOnlyDiff });
+      const result = classifyChangeSet(["package.json"], {
+        packageJsonTier: comparePackageJson(scriptsOnlyChange.base, scriptsOnlyChange.head),
+      });
       expect(result.dbRequired).toBe(false);
     });
 
     it("normal (non-DB) package.json dependency change: dbRequired=false", () => {
-      const result = classifyChangeSet(["package.json"], { packageDiffText: nonDbDependencyDiff });
+      const result = classifyChangeSet(["package.json"], {
+        packageJsonTier: comparePackageJson(nonDbDependencyChange.base, nonDbDependencyChange.head),
+      });
       expect(result.dbRequired).toBe(false);
     });
 
     it("Prisma/Neon/Postgres package.json dependency change: dbRequired=true", () => {
-      expect(classifyChangeSet(["package.json"], { packageDiffText: dbDependencyDiff }).dbRequired).toBe(true);
       expect(
-        classifyChangeSet(["package.json"], { packageDiffText: scopedDbDependencyDiff }).dbRequired,
+        classifyChangeSet(["package.json"], {
+          packageJsonTier: comparePackageJson(dbDependencyChange.base, dbDependencyChange.head),
+        }).dbRequired,
       ).toBe(true);
+      expect(
+        classifyChangeSet(["package.json"], {
+          packageJsonTier: comparePackageJson(scopedDbDependencyChange.base, scopedDbDependencyChange.head),
+        }).dbRequired,
+      ).toBe(true);
+    });
+
+    it("named DB-adjacent service files classify DB_RUNTIME and dbRequired=true (restored from the old db-verification.yml path list)", () => {
+      const paths = [
+        "src/services/owner-mode/owner-bcp.service.ts",
+        "src/services/consulting/consulting-engagement.service.ts",
+        "src/services/integration-fabric/connector-registry.service.ts",
+        "src/services/integration-fabric/integration-event.service.ts",
+      ];
+      for (const p of paths) {
+        const result = classifyChangeSet([p]);
+        expect(result.tier).toBe(TIERS.DB_RUNTIME);
+        expect(result.dbRequired).toBe(true);
+      }
+    });
+
+    it("CI infrastructure test files classify CI_GOVERNANCE, never APPLICATION_NON_DB or DOCS_ONLY, and never require the DB job", () => {
+      const paths = [
+        "src/__tests__/ci-cd/ci-trigger-governance.test.ts",
+        "src/__tests__/ci-cd/non-db-suite-capacity.test.ts",
+        "src/__tests__/workflows/ci-risk-classifier.test.ts",
+      ];
+      for (const p of paths) {
+        const result = classifyChangeSet([p]);
+        expect(result.tier).toBe(TIERS.CI_GOVERNANCE);
+        expect(result.suiteMode).toBe(SUITE_MODES.TARGETED_CI_GOVERNANCE);
+        expect(result.dbRequired).toBe(false);
+      }
     });
 
     it("Prisma/Neon/Postgres package-lock.json dependency change: dbRequired=true", () => {
